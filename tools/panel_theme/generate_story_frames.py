@@ -180,7 +180,8 @@ def install_ember_v2() -> None:
     frame = Image.new("RGBA", (512, 322), (0, 0, 0, 0))
     frame.alpha_composite(scaled, (6, 6))
     frame.save(out / "panel_frame.png")
-    frame.save(out / "choice_frame.png")
+    ember = SPECS["story-ember"]
+    paint_choice(ember["base"], ember["edge"], ember["accent"]).save(out / "choice_frame.png")
 
     random.seed(1389)
     width, height = 640, 360
@@ -219,7 +220,10 @@ def main() -> None:
         out.mkdir(parents=True, exist_ok=True)
         if theme == "story-ember":
             install_ember_v2()
-            print("wrote story-ember authored frame=512x322 slice=48")
+            print(
+                f"wrote story-ember panel=512x322 slice={PANEL_SLICE} "
+                f"choice={CHOICE_W}x{CHOICE_H} slice={CHOICE_SLICE}"
+            )
             continue
         paint_panel(s["base"], s["edge"], s["accent"], s["style"]).save(out / "panel_frame.png")
         paint_choice(s["base"], s["edge"], s["accent"]).save(out / "choice_frame.png")

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
@@ -39,6 +38,7 @@ namespace NarrativeShowcaseMod.Runtime
         private const int ShowcaseLocalPlayerId = 1;
         private const float UiMargin = 24f;
         private const float NameplateLiftPx = 52f;
+        private const string ThemeAssetRoot = "NarrativeShowcaseMod:assets/PanelThemes";
         private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<CommandSourceSelectableTag, MapEntity>();
 
         private readonly IModContext _context;
@@ -49,8 +49,6 @@ namespace NarrativeShowcaseMod.Runtime
         private bool _taskHookInstalled;
         private readonly NarrativeShowcaseWorldEffects _worldEffects;
         private int _historySerial;
-        private string _panelFrameSrc = string.Empty;
-        private string _choiceFrameSrc = string.Empty;
 
         internal NarrativeShowcaseRuntime(IModContext context)
         {
@@ -265,35 +263,7 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             RebindEntities(engine);
-            ResolveThemeFrames(engine);
             frontend.Publish(BuildPage(engine, dialogue, sequencer, tasks));
-        }
-
-        private void ResolveThemeFrames(GameEngine engine)
-        {
-            string themeId = engine.MergedConfig?.PanelTheme?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(themeId))
-            {
-                _panelFrameSrc = string.Empty;
-                _choiceFrameSrc = string.Empty;
-                return;
-            }
-
-            _panelFrameSrc = ResolveThemeImage(engine, themeId, "panel_frame.png");
-            _choiceFrameSrc = ResolveThemeImage(engine, themeId, "choice_frame.png");
-        }
-
-        private static string ResolveThemeImage(GameEngine engine, string themeId, string fileName)
-        {
-            string vfsPath = $"NarrativeShowcaseMod:assets/PanelThemes/{themeId}/images/{fileName}";
-            if (engine.VFS != null &&
-                engine.VFS.TryResolveFullPath(vfsPath, out string resolved) &&
-                File.Exists(resolved))
-            {
-                return resolved;
-            }
-
-            return string.Empty;
         }
 
         internal void RebindEntities(GameEngine engine)
@@ -445,10 +415,8 @@ namespace NarrativeShowcaseMod.Runtime
                             $"Presentation profile '{dialogueView.PresentationProfile}' requires IScreenProjector and a bound speaker entity with WorldPositionCm. Speaker '{dialogueView.SpeakerId}' could not be projected.");
                     }
 
-                    worldX = screenX - UiMargin;
-                    worldY = screenY - UiMargin;
-                    engine.GlobalContext["NarrativeShowcase.LastWorldBubble"] =
-                        $"DialogueBubble|{profile.Width}|TopLeft|{worldX:0.###}|{worldY - profile.WorldScreenHeadOffsetPx:0.###}|{_frontendConfig.DialogueBubble.Eyebrow}";
+                    worldX = screenX;
+                    worldY = screenY;
                 }
 
                 StoryPresentationFrame frame = projector.ProjectDialogue(dialogueView, worldX, worldY);
@@ -459,7 +427,7 @@ namespace NarrativeShowcaseMod.Runtime
 
             return new NarrativeFrontendPageState(
                 _frontendConfig.OwnerId,
-                BuildSignature(engine, dialogue, sequencer, tasks, surfaces.Count),
+                BuildSignature(engine, dialogue, sequencer, tasks, surfaces),
                 true,
                 _frontendConfig.BackdropHex,
                 surfaces);
@@ -509,7 +477,7 @@ namespace NarrativeShowcaseMod.Runtime
             {
                 return surface with
                 {
-                    FrameImageSrc = ResolveFrameImageSrc(surface.Kind)
+                    FrameImageSrc = ResolveFrameImageSrc(engine, surface.Kind)
                 };
             }
 
@@ -543,7 +511,7 @@ namespace NarrativeShowcaseMod.Runtime
                 Title = title,
                 Subtitle = string.IsNullOrWhiteSpace(surface.Subtitle) ? Tr(engine, config.Eyebrow) : surface.Subtitle,
                 Footer = footer,
-                FrameImageSrc = ResolveFrameImageSrc(surface.Kind)
+                FrameImageSrc = ResolveFrameImageSrc(engine, surface.Kind)
             };
         }
 
@@ -552,14 +520,14 @@ namespace NarrativeShowcaseMod.Runtime
         /// PromptRibbon and chrome panels already have theme.css skins; wrapping them
         /// in panel_frame stacks a second dialog-looking bar behind OverlayDialogue.
         /// </summary>
-        private string ResolveFrameImageSrc(NarrativeFrontendSurfaceKind kind)
+        private static string ResolveFrameImageSrc(
+            GameEngine engine,
+            NarrativeFrontendSurfaceKind kind)
         {
-            return kind switch
-            {
-                NarrativeFrontendSurfaceKind.ChoiceList => _choiceFrameSrc,
-                NarrativeFrontendSurfaceKind.OverlayDialogue => _panelFrameSrc,
-                _ => string.Empty
-            };
+            return NarrativeFrontendThemeResolver.ResolveFrameImageSource(
+                engine,
+                ThemeAssetRoot,
+                kind);
         }
 
         private NarrativeShowcaseSurfaceConfig? ResolveChromeConfig(NarrativeFrontendSurfaceKind kind)
@@ -755,7 +723,6 @@ namespace NarrativeShowcaseMod.Runtime
                 BorderHex: config.BorderHex,
                 ForegroundHex: config.ForegroundHex,
                 MutedHex: config.MutedHex,
-                FrameImageSrc: ResolveFrameImageSrc(kind),
                 LayoutId: config.LayoutId,
                 StyleClass: config.StyleClass);
         }
@@ -1008,7 +975,7 @@ namespace NarrativeShowcaseMod.Runtime
             DialogueRuntime dialogue,
             SequencerRuntime sequencer,
             TaskRuntimeService tasks,
-            int surfaceCount)
+            IReadOnlyList<NarrativeFrontendSurfaceModel> surfaces)
         {
             string dialogueSig = dialogue.TryGetActiveView(out DialogueView dialogueView)
                 ? $"{dialogueView.DialogueId}|{dialogueView.NodeId}|{dialogueView.Choices.Count}|{dialogueView.Progress01:0.00}|{dialogueView.PresentationProfile}|{dialogueView.StandingImageId}|{dialogueView.PortraitImageId}"
@@ -1021,11 +988,25 @@ namespace NarrativeShowcaseMod.Runtime
                 BuildVariableSummary(engine),
                 dialogueSig,
                 sequenceSig,
-                surfaceCount,
+                BuildSurfaceLayoutSignature(surfaces),
                 _historySerial,
                 BeastSpawned(engine),
                 BeastDefeated(engine),
                 BuildCastSignature(engine));
+        }
+
+        private static string BuildSurfaceLayoutSignature(
+            IReadOnlyList<NarrativeFrontendSurfaceModel> surfaces)
+        {
+            var parts = new string[surfaces.Count];
+            for (int i = 0; i < surfaces.Count; i++)
+            {
+                NarrativeFrontendSurfaceModel surface = surfaces[i];
+                parts[i] =
+                    $"{surface.SurfaceId}:{surface.Anchor}:{surface.Width:0.###}:{surface.OffsetX:0.###}:{surface.OffsetY:0.###}:{surface.ZIndex}";
+            }
+
+            return string.Join(",", parts);
         }
 
         private string FormatVariable(GameEngine engine, MapVariableStore? variables, string variableId)

@@ -197,6 +197,14 @@ DialogueRuntime / SequencerRuntime
 
 Showcase 只负责：世界投影坐标补给、HUD（任务/回顾/提示）、把前端 chrome 叠到字符串袋上。不再手写「对话表面 / 选项表面 / 字幕表面」三套硬编码路由。
 
+Chrome 分三层，不能互相代写：
+
+1. `layout_templates.json` 只定义控件结构、绑定和排列关系。
+2. `theme.css` 只定义颜色、字体、背景、边框和 nine-slice 切边；panel 与 choice 分别使用 `.story-frame` 和 `.story-choice-frame`。
+3. NarrativeFrontend theme resolver 根据当前 `panelTheme` 注入 `panel_frame.png` / `choice_frame.png`。Showcase 不解析文件名，也不缓存主题路径。
+
+安全区、底部 lane 间距和 standing 组合尺寸由 NarrativeFrontend 的严格 layout metrics 配置提供。Composer 只消费配置；字段缺失、非正数或非有限值时启动失败，不保留代码默认值。
+
 ## 4. 场景
 
 - 玩家靠近守望者并交互 → 打开 `dialogue.briefing` → 看到 overlay 对话与条件过滤后的选项

@@ -33,7 +33,6 @@
   border-color: rgb(111, 83, 56);
   border-width: 1px;
   border-radius: 10px;
-  min-width: 420px;
   padding: 24px 28px 28px 24px;
   background-color: rgba(11, 13, 16, 246);
   background-image: url(images/panel_wash.png);
@@ -223,7 +222,7 @@
 
 .story-choice-frame {
   object-fit: fill;
-  image-slice: 48 48 48 48;
+  image-slice: 36 36 36 36;
   pointer-events: none;
 }
 
@@ -232,8 +231,14 @@
   overflow: visible;
 }
 
-/* 内容让出切边，避免字压在拟物框金边上 */
 .story-framed-body {
   position: relative;
-  padding: 42px 44px 40px 44px;
+}
+
+.story-panel-framed-body {
+  padding: 48px;
+}
+
+.story-choice-framed-body {
+  padding: 36px;
 }

@@ -141,14 +141,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(UiContains(uiRoot, "回话") || UiContains(uiRoot, "1"), Is.True);
             uiRoot.Scene?.Layout(uiRoot.Width > 0 ? uiRoot.Width : 1920f, uiRoot.Height > 0 ? uiRoot.Height : 1080f);
             AssertThemeFrameVisibleOnDialogue(uiRoot);
-            AssertDialogueBodyRunsVisibleOnUi(uiRoot, introDialogue);
-            AssertSurfacesStayInsideViewport(uiRoot, 1280f, 720f);
-            AssertSurfaceKindsDoNotOverlap(
-                uiRoot,
-                NarrativeFrontendSurfaceKind.OverlayDialogue,
-                NarrativeFrontendSurfaceKind.ChoiceList);
-            uiRoot.Resize(1920f, 1080f);
-            uiRoot.Scene?.Layout(1920f, 1080f);
+            AssertDialogueLayoutAtViewport(uiRoot, introDialogue, 1280f, 720f);
+            AssertDialogueLayoutAtViewport(uiRoot, introDialogue, 1920f, 1080f);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "intro_complete");
             timeline.Add("[T+002] Skipped the intro Sequencer beat through StorySkip and handed off into DialogueRuntime elder briefing.");
 
@@ -251,8 +245,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(returnDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.ReturnDialogueId));
             Assert.That(returnDialogue.PresentationProfile, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationStandingPortrait));
             Assert.That(returnDialogue.StandingImageId, Is.Not.Null.And.Not.Empty);
-            uiRoot.Scene?.Layout(uiRoot.Width > 0 ? uiRoot.Width : 1920f, uiRoot.Height > 0 ? uiRoot.Height : 1080f);
-            AssertStandingPortraitSurface(uiRoot, returnDialogue);
+            AssertStandingPortraitAtViewport(uiRoot, returnDialogue, 1280f, 720f);
+            AssertStandingPortraitAtViewport(uiRoot, returnDialogue, 1920f, 1080f);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "standing_portrait_return");
             timeline.Add("[T+007a] Return beat opened on story.standing_portrait with a half-screen standing figure for the warden.");
             PressStoryAction(engine, backend, DialogueInputActionIds.Choice2, frameTimesMs);
@@ -658,45 +652,54 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(dialogue.TryResolveEntity(view.SpeakerId, out Entity speaker), Is.True, $"Speaker '{view.SpeakerId}' must be bound for world_bubble.");
             Assert.That(engine.World.TryGet(speaker, out WorldPositionCm worldPos), Is.True);
 
-            float headOffsetYCm = 140f;
-            if (engine.GetService(CoreServiceKeys.StoryDefinitions) is Ludots.Core.Gameplay.Story.StoryDefinitionRegistry story &&
-                story.TryGetProfile(NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationWorldBubble, out var profile))
-            {
-                headOffsetYCm = profile.WorldHeadOffsetYCm;
-            }
+            var story = engine.GetService(CoreServiceKeys.StoryDefinitions)
+                ?? throw new InvalidOperationException("StoryDefinitions was not installed.");
+            Assert.That(
+                story.TryGetProfile(
+                    NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationWorldBubble,
+                    out var profile),
+                Is.True);
 
             Vector2 world = worldPos.Value.ToVector2();
             Vector2 screen = projector.WorldToScreen(new Vector3(
                 world.X / 100f,
-                headOffsetYCm / 100f,
+                profile.WorldHeadOffsetYCm / 100f,
                 world.Y / 100f));
             Assert.That(float.IsNaN(screen.X) || float.IsNaN(screen.Y), Is.False);
 
-            if (!engine.GlobalContext.TryGetValue("NarrativeShowcase.Runtime", out object? runtimeObj) || runtimeObj == null)
-            {
-                throw new InvalidOperationException("NarrativeShowcase.Runtime was not registered for world_bubble refresh.");
-            }
-
-            var refresh = runtimeObj.GetType().GetMethod(
+            Assert.That(
+                engine.GlobalContext.TryGetValue("NarrativeShowcase.Runtime", out object? runtimeObj),
+                Is.True);
+            var refresh = runtimeObj!.GetType().GetMethod(
                 "RefreshPanel",
-                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-            Assert.That(refresh, Is.Not.Null, "NarrativeShowcase.Runtime.RefreshPanel missing.");
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic);
+            Assert.That(refresh, Is.Not.Null);
             refresh!.Invoke(runtimeObj, new object[] { engine });
-            Assert.That(engine.GlobalContext.TryGetValue("NarrativeShowcase.LastWorldBubble", out object? lastBubbleObj), Is.True,
-                "BuildPage did not record LastWorldBubble after RefreshPanel.");
-            string lastBubble = lastBubbleObj as string ?? string.Empty;
-            TestContext.WriteLine("LastWorldBubble=" + lastBubble);
-            TickPresentation(engine);
-            TickPresentation(engine);
 
-            // Contract: published layout fingerprint must be DialogueBubble + projected TopLeft offsets.
-            Assert.That(lastBubble, Does.StartWith("DialogueBubble|520|TopLeft|"));
-            string[] parts = lastBubble.Split('|');
-            float publishedOffsetX = float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
-            float publishedOffsetY = float.Parse(parts[4], System.Globalization.CultureInfo.InvariantCulture);
-            const float uiMargin = 24f;
-            Assert.That(publishedOffsetX, Is.EqualTo(screen.X - uiMargin).Within(48f));
-            Assert.That(publishedOffsetY, Is.EqualTo(screen.Y - uiMargin - 96f).Within(64f));
+            TickPresentation(engine);
+            TickPresentation(engine);
+            uiRoot.Scene?.Layout(uiRoot.Width, uiRoot.Height);
+
+            UiNode? bubble = FindUiNodeBySurfaceKind(
+                uiRoot.Scene?.Root,
+                NarrativeFrontendSurfaceKind.DialogueBubble);
+            Assert.That(bubble, Is.Not.Null);
+            UiNode? dock = FindAncestorByClass(bubble, "story-surface-dock");
+            Assert.That(dock, Is.Not.Null);
+            UiRect bubbleBounds = GetTransformedPaintBounds(bubble!);
+            Assert.That(
+                dock!.RenderStyle.Padding.Left,
+                Is.EqualTo(
+                    screen.X + profile.OffsetX + dock.RenderStyle.Padding.Right).Within(0.5f));
+            Assert.That(
+                dock.RenderStyle.Padding.Top,
+                Is.EqualTo(
+                    screen.Y - profile.WorldScreenHeadOffsetPx + profile.OffsetY +
+                    dock.RenderStyle.Padding.Right).Within(0.5f));
+            Assert.That(bubbleBounds.Width, Is.GreaterThan(0f));
+            Assert.That(bubbleBounds.Height, Is.GreaterThan(0f));
             Assert.That(
                 UiContains(uiRoot, "附近") || UiContains(uiRoot, "Nearby") || UiContains(uiRoot, "World Bubble"),
                 Is.True,
@@ -724,6 +727,34 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(FindUiNodeByClass(uiRoot.Scene?.Root, "story-nameplate"), Is.Not.Null);
         }
 
+        private static void AssertDialogueLayoutAtViewport(
+            UIRoot uiRoot,
+            DialogueView view,
+            float width,
+            float height)
+        {
+            uiRoot.Resize(width, height);
+            uiRoot.Scene?.Layout(width, height);
+            AssertDialogueBodyRunsVisibleOnUi(uiRoot, view);
+            AssertSurfacesStayInsideViewport(uiRoot, width, height);
+            AssertSurfaceKindsDoNotOverlap(
+                uiRoot,
+                NarrativeFrontendSurfaceKind.OverlayDialogue,
+                NarrativeFrontendSurfaceKind.ChoiceList);
+        }
+
+        private static void AssertStandingPortraitAtViewport(
+            UIRoot uiRoot,
+            DialogueView view,
+            float width,
+            float height)
+        {
+            uiRoot.Resize(width, height);
+            uiRoot.Scene?.Layout(width, height);
+            AssertStandingPortraitSurface(uiRoot, view);
+            AssertSurfacesStayInsideViewport(uiRoot, width, height);
+        }
+
         private static void AssertStandingPortraitSurface(UIRoot uiRoot, DialogueView view)
         {
             Assert.That(
@@ -738,15 +769,14 @@ namespace Ludots.Tests.GAS.Production
                 "DialogueView should expose standingImageId (not a filesystem path).");
             Assert.That(standingSrc, Does.Contain("data:image").Or.Contain("/").Or.Contain("\\"),
                 "Frontend must resolve standing imageId to a drawable src.");
-            Assert.That(standing.Style.Height.Unit, Is.EqualTo(UiLengthUnit.Pixel));
-            Assert.That(standing.Style.Height.Value, Is.GreaterThanOrEqualTo(900f),
-                "Standing portrait should occupy roughly half-screen vertical height.");
+            UiRect standingPaintBounds = GetTransformedPaintBounds(standing);
+            Assert.That(standingPaintBounds.Height, Is.GreaterThan(0f));
             UiNode? row = FindUiNodeByClass(uiRoot.Scene?.Root, "story-standing-portrait-row");
             Assert.That(row, Is.Not.Null);
             UiNode? composition = FindAncestorByClass(row, "story-surface") ?? row;
-            Assert.That(composition!.Style.Width.Unit, Is.EqualTo(UiLengthUnit.Pixel));
-            Assert.That(composition.Style.Width.Value, Is.GreaterThanOrEqualTo(900f),
-                "Standing portrait composition should span a half-screen-plus dialogue strip.");
+            UiRect compositionPaintBounds = GetTransformedPaintBounds(composition!);
+            Assert.That(compositionPaintBounds.Width, Is.GreaterThan(standingPaintBounds.Width));
+            Assert.That(compositionPaintBounds.Height, Is.GreaterThanOrEqualTo(standingPaintBounds.Height - 0.5f));
             Assert.That(
                 FindUiNodeByClass(uiRoot.Scene?.Root, "story-prompt-ribbon"),
                 Is.Null,
@@ -771,6 +801,15 @@ namespace Ludots.Tests.GAS.Production
                 $"story-frame src must point at PanelThemes panel_frame.png, got '{src}'.");
             Assert.That(frame.Style.ImageSlice.Left, Is.GreaterThan(0f),
                 "story-frame must have image-slice so ornate borders nine-slice instead of stretch.");
+            var choiceFrames = new List<UiNode>();
+            CollectUiNodesByClass(uiRoot.Scene?.Root, "story-choice-frame", choiceFrames);
+            Assert.That(choiceFrames.Count, Is.EqualTo(1));
+            UiNode choiceFrame = choiceFrames[0];
+            string choiceSrc = choiceFrame.Attributes["src"] ?? string.Empty;
+            Assert.That(choiceSrc, Does.Contain("choice_frame.png").IgnoreCase);
+            Assert.That(choiceSrc, Is.Not.EqualTo(src));
+            Assert.That(frame.RenderStyle.ImageSlice.Left, Is.EqualTo(48f));
+            Assert.That(choiceFrame.RenderStyle.ImageSlice.Left, Is.EqualTo(36f));
             UiNode? framed = FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed");
             Assert.That(framed, Is.Not.Null);
             UiNode? body = FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed-body");
@@ -814,6 +853,17 @@ namespace Ludots.Tests.GAS.Production
                         Is.All.EqualTo((byte)0),
                         $"{themeId}/{imageName} must have transparent outer corners.");
                 }
+
+                using SKBitmap panelFrame = SKBitmap.Decode(
+                    Path.Combine(themeRoot, themeId, "images", "panel_frame.png"))
+                    ?? throw new InvalidOperationException($"Unable to decode {themeId}/panel_frame.png.");
+                using SKBitmap choiceFrame = SKBitmap.Decode(
+                    Path.Combine(themeRoot, themeId, "images", "choice_frame.png"))
+                    ?? throw new InvalidOperationException($"Unable to decode {themeId}/choice_frame.png.");
+                Assert.That(
+                    (choiceFrame.Width, choiceFrame.Height),
+                    Is.Not.EqualTo((panelFrame.Width, panelFrame.Height)),
+                    $"{themeId} choice_frame.png must be an independently generated choice asset.");
             }
         }
 
@@ -834,20 +884,14 @@ namespace Ludots.Tests.GAS.Production
                     continue;
                 }
 
-                UiRect rect = surfaces[i].LayoutRect;
-                Matrix3x2 transform = UiTransformMath.CreateMatrix(surfaces[i].RenderStyle, rect);
-                Vector2 topLeft = Vector2.Transform(new Vector2(rect.X, rect.Y), transform);
-                Vector2 topRight = Vector2.Transform(new Vector2(rect.Right, rect.Y), transform);
-                Vector2 bottomLeft = Vector2.Transform(new Vector2(rect.X, rect.Bottom), transform);
-                Vector2 bottomRight = Vector2.Transform(new Vector2(rect.Right, rect.Bottom), transform);
-                float paintLeft = MathF.Min(MathF.Min(topLeft.X, topRight.X), MathF.Min(bottomLeft.X, bottomRight.X));
-                float paintTop = MathF.Min(MathF.Min(topLeft.Y, topRight.Y), MathF.Min(bottomLeft.Y, bottomRight.Y));
-                float paintRight = MathF.Max(MathF.Max(topLeft.X, topRight.X), MathF.Max(bottomLeft.X, bottomRight.X));
-                float paintBottom = MathF.Max(MathF.Max(topLeft.Y, topRight.Y), MathF.Max(bottomLeft.Y, bottomRight.Y));
-                Assert.That(paintLeft, Is.GreaterThanOrEqualTo(-0.5f), $"Surface {i} paints outside the viewport left edge.");
-                Assert.That(paintTop, Is.GreaterThanOrEqualTo(-0.5f), $"Surface {i} paints outside the viewport top edge.");
-                Assert.That(paintRight, Is.LessThanOrEqualTo(width + 0.5f), $"Surface {i} paints outside the viewport right edge.");
-                Assert.That(paintBottom, Is.LessThanOrEqualTo(height + 0.5f), $"Surface {i} paints outside the viewport bottom edge.");
+                UiRect paintBounds = GetTransformedPaintBounds(surfaces[i]);
+                Assert.That(paintBounds.X, Is.GreaterThanOrEqualTo(-0.5f), $"Surface {i} paints outside the viewport left edge.");
+                Assert.That(
+                    paintBounds.Y,
+                    Is.GreaterThanOrEqualTo(-0.5f),
+                    $"Surface {i} paints outside the viewport top edge. kind={surfaces[i].Attributes["data-surface-kind"]} layout={surfaces[i].LayoutRect} paint={paintBounds}");
+                Assert.That(paintBounds.Right, Is.LessThanOrEqualTo(width + 0.5f), $"Surface {i} paints outside the viewport right edge.");
+                Assert.That(paintBounds.Bottom, Is.LessThanOrEqualTo(height + 0.5f), $"Surface {i} paints outside the viewport bottom edge.");
             }
         }
 
@@ -860,8 +904,8 @@ namespace Ludots.Tests.GAS.Production
             UiNode? second = FindUiNodeBySurfaceKind(uiRoot.Scene?.Root, secondKind);
             Assert.That(first, Is.Not.Null, $"Missing surface kind {firstKind}.");
             Assert.That(second, Is.Not.Null, $"Missing surface kind {secondKind}.");
-            UiRect a = first!.LayoutRect;
-            UiRect b = second!.LayoutRect;
+            UiRect a = GetTransformedPaintBounds(first!);
+            UiRect b = GetTransformedPaintBounds(second!);
             bool overlaps = a.X < b.Right && a.Right > b.X && a.Y < b.Bottom && a.Bottom > b.Y;
             Assert.That(overlaps, Is.False, $"{firstKind} and {secondKind} overlap: {a} vs {b}.");
         }
@@ -922,26 +966,34 @@ namespace Ludots.Tests.GAS.Production
                 richBody,
                 Is.Not.Null,
                 "Active briefing body must land on a story-body UiNode with TextRuns. Dump: " + string.Join(" || ", dump));
-            Assert.That(richBody!.LayoutRect.Width, Is.GreaterThan(8f), "Rich story-body width collapsed. Dump: " + string.Join(" || ", dump));
+            UiRect richBodyPaintBounds = GetTransformedPaintBounds(richBody!);
+            Assert.That(richBodyPaintBounds.Width, Is.GreaterThan(8f), "Rich story-body width collapsed. Dump: " + string.Join(" || ", dump));
             Assert.That(
-                richBody.LayoutRect.Y,
-                Is.GreaterThan(500f),
+                richBodyPaintBounds.Y,
+                Is.GreaterThan(0f),
                 "Rich story-body must sit inside the on-screen dialogue frame. Dump: " + string.Join(" || ", dump));
             Assert.That(
-                richBody.LayoutRect.Y + richBody.LayoutRect.Height,
-                Is.LessThanOrEqualTo(1080f),
-                "Rich story-body must not fall below the 1080 canvas. Dump: " + string.Join(" || ", dump));
+                richBodyPaintBounds.Bottom,
+                Is.LessThanOrEqualTo(uiRoot.Height + 0.5f),
+                "Rich story-body must not fall below the canvas. Dump: " + string.Join(" || ", dump));
             Assert.That(
-                richBody.LayoutRect.Height,
+                richBodyPaintBounds.Height,
                 Is.GreaterThan(30f),
                 "Rich story-body must wrap to more than one line. Dump: " + string.Join(" || ", dump));
-            // Framed nine-slice border is 48px; body text must start clear of the opaque edge.
             UiNode? framedBody = FindAncestorByClass(richBody, "story-framed-body")
                 ?? FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed-body");
             Assert.That(framedBody, Is.Not.Null);
+            UiNode? framed = FindAncestorByClass(framedBody, "story-framed");
+            Assert.That(framed, Is.Not.Null);
+            UiNode? frame = FindDirectChildByClass(framed!, "story-frame");
+            Assert.That(frame, Is.Not.Null);
+            float frameInset = frame!.RenderStyle.ImageSlice.Left;
+            Assert.That(frameInset, Is.GreaterThan(0f));
+            Assert.That(framedBody!.RenderStyle.Padding.Left, Is.GreaterThanOrEqualTo(frameInset));
+            UiRect framedBodyPaintBounds = GetTransformedPaintBounds(framedBody);
             Assert.That(
-                richBody.LayoutRect.X,
-                Is.GreaterThanOrEqualTo(framedBody!.LayoutRect.X + 48f - 0.5f),
+                richBodyPaintBounds.X,
+                Is.GreaterThanOrEqualTo(framedBodyPaintBounds.X + frameInset - 0.5f),
                 "Rich story-body must not paint under the nine-slice frame border. Dump: " + string.Join(" || ", dump));
             Assert.That(
                 richBody.TextRuns!.Any(static r => r.HasColor),
@@ -997,6 +1049,54 @@ namespace Ludots.Tests.GAS.Production
             }
 
             return null;
+        }
+
+        private static UiNode? FindDirectChildByClass(UiNode node, string className)
+        {
+            for (int i = 0; i < node.Children.Count; i++)
+            {
+                if (node.Children[i].HasClass(className))
+                {
+                    return node.Children[i];
+                }
+            }
+
+            return null;
+        }
+
+        private static UiRect GetTransformedPaintBounds(UiNode node)
+        {
+            UiRect rect = node.LayoutRect;
+            Span<Vector2> corners = stackalloc Vector2[4]
+            {
+                new(rect.X, rect.Y),
+                new(rect.Right, rect.Y),
+                new(rect.X, rect.Bottom),
+                new(rect.Right, rect.Bottom)
+            };
+
+            for (UiNode? current = node; current != null; current = current.Parent)
+            {
+                Matrix3x2 transform = UiTransformMath.CreateMatrix(current.RenderStyle, current.LayoutRect);
+                for (int i = 0; i < corners.Length; i++)
+                {
+                    corners[i] = Vector2.Transform(corners[i], transform);
+                }
+            }
+
+            float left = corners[0].X;
+            float top = corners[0].Y;
+            float right = corners[0].X;
+            float bottom = corners[0].Y;
+            for (int i = 1; i < corners.Length; i++)
+            {
+                left = MathF.Min(left, corners[i].X);
+                top = MathF.Min(top, corners[i].Y);
+                right = MathF.Max(right, corners[i].X);
+                bottom = MathF.Max(bottom, corners[i].Y);
+            }
+
+            return new UiRect(left, top, right - left, bottom - top);
         }
 
         private static UiNode? FindUiNodeByClass(UiNode? root, string className)

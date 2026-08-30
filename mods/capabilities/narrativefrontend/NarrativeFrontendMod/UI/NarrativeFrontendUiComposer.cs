@@ -12,12 +12,11 @@ namespace NarrativeFrontendMod.UI;
 
 internal static class NarrativeFrontendUiComposer
 {
-    private const float Margin = 24f;
-
     public static UiElementBuilder BuildRoot(
         ReactiveContext<NarrativeFrontendRenderState> context,
         PanelLayoutTemplateCatalog layouts,
-        PanelLayoutComposer layoutComposer)
+        PanelLayoutComposer layoutComposer,
+        NarrativeFrontendLayoutMetrics metrics)
     {
         NarrativeFrontendRenderState state = context.State;
         var children = new List<UiElementBuilder>(state.Surfaces.Count + 1);
@@ -44,7 +43,7 @@ internal static class NarrativeFrontendUiComposer
             PanelLayoutTemplate template = layouts.Require(surface.LayoutId);
             UiElementBuilder content = layoutComposer.Compose(
                 template.Root,
-                new NarrativeSurfaceBindingScope(surface),
+                new NarrativeSurfaceBindingScope(surface, metrics),
                 static resolvedSource => resolvedSource);
             if (surface.Anchor is NarrativeFrontendAnchor.BottomLeft
                 or NarrativeFrontendAnchor.BottomCenter
@@ -54,17 +53,17 @@ internal static class NarrativeFrontendUiComposer
             }
             else
             {
-                children.Add(BuildSurface(content, surface));
+                children.Add(BuildSurface(content, surface, metrics));
             }
         }
 
         if (bottomLane.Count == 1)
         {
-            children.Add(BuildSurface(bottomLane[0].Content, bottomLane[0].Surface));
+            children.Add(BuildSurface(bottomLane[0].Content, bottomLane[0].Surface, metrics));
         }
         else if (bottomLane.Count > 1)
         {
-            children.Add(BuildBottomLane(bottomLane));
+            children.Add(BuildBottomLane(bottomLane, metrics));
         }
 
         return Ui.Column(children.ToArray())
@@ -77,7 +76,8 @@ internal static class NarrativeFrontendUiComposer
 
     private static UiElementBuilder BuildSurface(
         UiElementBuilder content,
-        NarrativeFrontendSurfaceModel surface)
+        NarrativeFrontendSurfaceModel surface,
+        NarrativeFrontendLayoutMetrics metrics)
     {
         UiElementBuilder builder = PrepareSurface(content, surface);
 
@@ -114,10 +114,10 @@ internal static class NarrativeFrontendUiComposer
         bool rightAnchor = horizontal == UiAlignItems.End;
         bool topAnchor = vertical == UiJustifyContent.Start;
         bool bottomAnchor = vertical == UiJustifyContent.End;
-        float leftPadding = leftAnchor ? Math.Max(0f, Margin + surface.OffsetX) : Margin;
-        float rightPadding = rightAnchor ? Math.Max(0f, Margin + surface.OffsetX) : Margin;
-        float topPadding = topAnchor ? Math.Max(0f, Margin + surface.OffsetY) : 0f;
-        float bottomPadding = bottomAnchor ? Math.Max(0f, Margin + surface.OffsetY) : 0f;
+        float leftPadding = leftAnchor ? Math.Max(0f, metrics.SafeAreaMargin + surface.OffsetX) : metrics.SafeAreaMargin;
+        float rightPadding = rightAnchor ? Math.Max(0f, metrics.SafeAreaMargin + surface.OffsetX) : metrics.SafeAreaMargin;
+        float topPadding = topAnchor ? Math.Max(0f, metrics.SafeAreaMargin + surface.OffsetY) : 0f;
+        float bottomPadding = bottomAnchor ? Math.Max(0f, metrics.SafeAreaMargin + surface.OffsetY) : 0f;
         if (!leftAnchor && !rightAnchor && Math.Abs(surface.OffsetX) > 0.01f)
         {
             builder = builder.Translate(surface.OffsetX);
@@ -140,7 +140,8 @@ internal static class NarrativeFrontendUiComposer
     }
 
     private static UiElementBuilder BuildBottomLane(
-        List<(UiElementBuilder Content, NarrativeFrontendSurfaceModel Surface)> surfaces)
+        List<(UiElementBuilder Content, NarrativeFrontendSurfaceModel Surface)> surfaces,
+        NarrativeFrontendLayoutMetrics metrics)
     {
         surfaces.Sort(static (left, right) =>
         {
@@ -170,13 +171,13 @@ internal static class NarrativeFrontendUiComposer
                     .Class("story-bottom-lane-row")
                     .WidthPercent(100f)
                     .Wrap()
-                    .Gap(24f)
+                    .Gap(metrics.BottomLaneGap)
                     .Justify(UiJustifyContent.Center)
                     .Align(UiAlignItems.End))
             .Class("story-surface-dock")
             .WidthPercent(100f)
             .HeightPercent(100f)
-            .Padding(Margin)
+            .Padding(metrics.SafeAreaMargin)
             .Justify(UiJustifyContent.End)
             .Align(UiAlignItems.Stretch)
             .Absolute(0f, 0f)
@@ -203,11 +204,15 @@ internal static class NarrativeFrontendUiComposer
             return builder;
         }
 
-        string frameClass = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList
+        bool choiceFrame = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList;
+        string frameClass = choiceFrame
             ? "story-choice-frame"
             : "story-frame";
+        string bodyFrameClass = choiceFrame
+            ? "story-choice-framed-body"
+            : "story-panel-framed-body";
         return Ui.Panel(
-                builder.Class("story-framed-body"),
+                builder.Classes("story-framed-body", bodyFrameClass),
                 Ui.Image(surface.FrameImageSrc)
                     .Class(frameClass)
                     .Absolute(0f, 0f)
@@ -219,15 +224,15 @@ internal static class NarrativeFrontendUiComposer
 
     private sealed class NarrativeSurfaceBindingScope : IPanelLayoutBindingScope
     {
-        private const float StandingAspect = 1024f / 1536f;
-        private const float StandingCardGap = 32f;
-        private const float StandingCardMinWidth = 420f;
-
         private readonly NarrativeFrontendSurfaceModel _surface;
+        private readonly NarrativeFrontendLayoutMetrics _metrics;
 
-        public NarrativeSurfaceBindingScope(NarrativeFrontendSurfaceModel surface)
+        public NarrativeSurfaceBindingScope(
+            NarrativeFrontendSurfaceModel surface,
+            NarrativeFrontendLayoutMetrics metrics)
         {
             _surface = surface;
+            _metrics = metrics;
         }
 
         public string ReadText(string bind)
@@ -253,10 +258,10 @@ internal static class NarrativeFrontendUiComposer
             return bind switch
             {
                 "portraitSize" => _surface.PortraitSize,
-                "standingWidth" => _surface.PortraitSize * StandingAspect,
+                "standingWidth" => _surface.PortraitSize * _metrics.StandingImageAspect,
                 "standingCardWidth" => Math.Max(
-                    StandingCardMinWidth,
-                    _surface.Width - (_surface.PortraitSize * StandingAspect) - StandingCardGap),
+                    _metrics.StandingCardMinWidth,
+                    _surface.Width - (_surface.PortraitSize * _metrics.StandingImageAspect) - _metrics.StandingCardGap),
                 "progress01" => _surface.Progress01,
                 "countdownSeconds" => _surface.CountdownSeconds,
                 _ => throw new InvalidOperationException(

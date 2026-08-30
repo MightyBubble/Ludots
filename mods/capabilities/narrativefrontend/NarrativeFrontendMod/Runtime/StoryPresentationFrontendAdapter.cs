@@ -85,7 +85,6 @@ public static class StoryPresentationFrontendAdapter
                 items.Add(new NarrativeFrontendSurfaceItem(
                     Label: choice.Text,
                     Caption: string.Empty,
-                    Active: i == 0,
                     Shortcut: choice.Shortcut));
             }
         }

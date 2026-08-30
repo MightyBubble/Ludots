@@ -19,6 +19,7 @@ internal sealed class NarrativeFrontendUiController
     private UiSurfaceLeaseHandle _lease;
     private string? _mountedThemeId;
     private PanelLayoutTemplateCatalog? _layoutCatalog;
+    private NarrativeFrontendLayoutMetrics? _layoutMetrics;
     private readonly PanelLayoutComposer _layoutComposer = new();
 
     public void MountOrRefresh(UIRoot root, GameEngine engine, NarrativeFrontendRenderState state)
@@ -31,6 +32,8 @@ internal sealed class NarrativeFrontendUiController
 
         PanelTheme? theme = PanelThemeCatalog.TryLoad(engine);
         PanelLayoutTemplateCatalog layoutCatalog = _layoutCatalog ??= LoadLayoutCatalog(engine);
+        NarrativeFrontendLayoutMetrics layoutMetrics =
+            _layoutMetrics ??= NarrativeFrontendLayoutMetrics.Load(engine);
         string? themeId = theme?.Id;
         bool themeChanged = !string.Equals(_mountedThemeId, themeId, StringComparison.Ordinal);
 
@@ -48,7 +51,8 @@ internal sealed class NarrativeFrontendUiController
                 context => NarrativeFrontendUiComposer.BuildRoot(
                     context,
                     layoutCatalog,
-                    _layoutComposer),
+                    _layoutComposer,
+                    layoutMetrics),
                 theme: null,
                 sheets);
             _mountedThemeId = themeId;
