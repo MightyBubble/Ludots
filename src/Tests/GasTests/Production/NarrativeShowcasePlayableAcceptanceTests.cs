@@ -835,6 +835,18 @@ namespace Ludots.Tests.GAS.Production
                 }
 
                 UiRect rect = surfaces[i].LayoutRect;
+                // #region agent log
+                Matrix3x2 transform = UiTransformMath.CreateMatrix(surfaces[i].RenderStyle, rect);
+                Vector2 topLeft = Vector2.Transform(new Vector2(rect.X, rect.Y), transform);
+                Vector2 topRight = Vector2.Transform(new Vector2(rect.Right, rect.Y), transform);
+                Vector2 bottomLeft = Vector2.Transform(new Vector2(rect.X, rect.Bottom), transform);
+                Vector2 bottomRight = Vector2.Transform(new Vector2(rect.Right, rect.Bottom), transform);
+                float paintLeft = MathF.Min(MathF.Min(topLeft.X, topRight.X), MathF.Min(bottomLeft.X, bottomRight.X));
+                float paintTop = MathF.Min(MathF.Min(topLeft.Y, topRight.Y), MathF.Min(bottomLeft.Y, bottomRight.Y));
+                float paintRight = MathF.Max(MathF.Max(topLeft.X, topRight.X), MathF.Max(bottomLeft.X, bottomRight.X));
+                float paintBottom = MathF.Max(MathF.Max(topLeft.Y, topRight.Y), MathF.Max(bottomLeft.Y, bottomRight.Y));
+                File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new { hypothesisId = "B,C,D", location = "NarrativeShowcasePlayableAcceptanceTests.cs:838", message = "Surface layout and paint bounds", data = new { index = i, kind = surfaces[i].Attributes["data-surface-kind"], layout = new { rect.X, rect.Y, rect.Width, rect.Height, rect.Right, rect.Bottom }, transform = surfaces[i].RenderStyle.Transform.ToString(), paint = new { left = paintLeft, top = paintTop, right = paintRight, bottom = paintBottom }, viewport = new { width, height }, paintOutside = paintLeft < -0.5f || paintTop < -0.5f || paintRight > width + 0.5f || paintBottom > height + 0.5f }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n");
+                // #endregion
                 Assert.That(rect.X, Is.GreaterThanOrEqualTo(-0.5f), $"Surface {i} starts outside viewport.");
                 Assert.That(rect.Y, Is.GreaterThanOrEqualTo(-0.5f), $"Surface {i} starts outside viewport.");
                 Assert.That(rect.Right, Is.LessThanOrEqualTo(width + 0.5f), $"Surface {i} exceeds viewport width.");
