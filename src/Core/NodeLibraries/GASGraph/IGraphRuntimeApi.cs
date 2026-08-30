@@ -183,7 +183,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>
         /// True when Imm region id is present in the mounting map's Regions catalog
-        /// (#1108 LoadPlacedRegion). Regions never enter MapLoadEntityIndex.
+        /// (LoadPlacedRegion). Regions never enter MapLoadEntityIndex.
         /// </summary>
         bool TryHasPlacedRegion(int regionKeyId, MapId mapId)
         {
@@ -516,7 +516,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Fires a schema-checked Global-scope trigger event (#1123): delivery goes
+        /// Fires a schema-checked Global-scope trigger event: delivery goes
         /// through the TriggerManager global subscription table only. The origin map
         /// (empty when unmapped) rides MapTrigger.SourceMapId as transport metadata.
         /// Optional bridge — requires a bound TriggerManager.
@@ -539,7 +539,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// #1126: register an AwaitCallback waiter (Imm callback type) and park the slice.
+        /// Registers an AwaitCallback waiter (Imm callback type) and parks the slice.
         /// Completions resume through GraphCallbackContinuationSystem in registration order.
         /// </summary>
         void BeginAwaitCallback(string callbackType, MapId mapId, Entity scope, int resultBoolRegister)

@@ -27,7 +27,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly Ludots.Core.Scripting.EnumCatalog? _enums;
         private readonly Dictionary<string, GraphOutputSchema> _pendingOutputSchemas = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, GraphInstructionSourceMap> _pendingSourceMaps = new(StringComparer.OrdinalIgnoreCase);
-        // #1124 hook weaving source: the authored documents in compile order, consumed by
+        // Hook weaving source: the authored documents in compile order, consumed by
         // the weave pass after registration (WeaveHooks) and cleared afterwards.
         private readonly List<KeyValuePair<string, GraphControlFlowDocument>> _pendingDocuments = new();
 
@@ -218,7 +218,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// #1124 Route A weave pass: runs once every graph is registered (and ids are
+        /// Route A weave pass: runs once every graph is registered (and ids are
         /// frozen), before any map mounts. Hook-bearing TriggerGraph entries are spliced
         /// into their targets and the merged programs land via ReplaceProgram, which
         /// re-validates op policy, invoke targets, and cycles with rollback on failure.

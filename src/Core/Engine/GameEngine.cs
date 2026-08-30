@@ -893,7 +893,7 @@ namespace Ludots.Core.Engine
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry();
-            // Enums load before events (#1125): custom event params may annotate enumType
+            // Enums load before events: custom event params may annotate enumType
             // against this catalog, and graph compilation resolves enum-bound sugar through it.
             var enumCatalog = new Ludots.Core.Scripting.EnumCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.EnumCatalog, enumCatalog);
@@ -2236,7 +2236,7 @@ namespace Ludots.Core.Engine
                     inputTriggerActions),
                 SystemGroup.DeferredTriggerCollection);
 
-            // Phase 5.5: Continuation (#1126 AwaitCallback drain — registration order)
+            // Phase 5.5: Continuation (AwaitCallback drain — registration order)
             RegisterSystem(
                 new Ludots.Core.GraphRuntime.GraphCallbackContinuationSystem(
                     GetService(CoreServiceKeys.GraphCallbackService)
@@ -3041,7 +3041,7 @@ namespace Ludots.Core.Engine
         }
 
         /// <summary>
-        /// Registration exit for a loaded map's trigger batch (#1123 scope routing): the
+        /// Registration exit for a loaded map's trigger batch (scope routing): the
         /// session owns every instance, while dispatch registration splits by subscription
         /// scope — schema-declared Global entries go to the TriggerManager global table,
         /// everything else (legacy triggers, map-domain entries, resume companions,
@@ -3106,7 +3106,7 @@ namespace Ludots.Core.Engine
 
         private void SetMapEntitiesSuspended(MapId mapId, bool suspended)
         {
-            // Same suspension boundary drives global-scope subscriptions (#1123): a
+            // Same suspension boundary drives global-scope subscriptions: a
             // suspended map (lost focus, or still mid-load) detaches its global
             // subscriptions wholesale so FireGlobalEvent never dispatches into an
             // inactive map; resume reattaches them in priority order.
@@ -3382,7 +3382,7 @@ namespace Ludots.Core.Engine
                 // documented flat fallback: several existing showcases (mass_navigation,
                 // crowd_physics_arena, 250x250 macro tiles) are AUTHORED flat at this scale
                 // and load through this exact path on main; failing them here would break
-                // maps that never asked for projected terrain. Tier gating (#1347) will
+                // maps that never asked for projected terrain. Tier gating will
                 // replace this split with an explicit authored contract.
                 if (authoredBounds)
                 {

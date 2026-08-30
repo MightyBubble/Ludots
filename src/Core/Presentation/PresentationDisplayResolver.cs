@@ -7,7 +7,7 @@ using Ludots.Core.Presentation.Hud;
 namespace Ludots.Core.Presentation
 {
     /// <summary>
-    /// Shared display resolver for semantic text maps and 2D image assets (#128).
+    /// Shared display resolver for semantic text maps and 2D image assets.
     /// Text always exits through PresentationTextCatalog; images resolve via VFS.
     /// </summary>
     public sealed class PresentationDisplayResolver

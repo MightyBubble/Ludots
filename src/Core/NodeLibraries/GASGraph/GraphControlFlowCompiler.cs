@@ -39,7 +39,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public List<GraphDiagnostic> Diagnostics { get; }
         public GraphProgramPackage? Package { get; }
         public GraphOutputSchema OutputSchema { get; }
-        /// <summary>The authored document this result compiled from (#1124 weave input).</summary>
+        /// <summary>The authored document this result compiled from (weave input).</summary>
         public GraphControlFlowDocument? Document { get; init; }
         public bool Succeeded => !HasErrors(Diagnostics);
 
@@ -112,7 +112,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Per-compilation resolution of enum-bound case ports (#1125): authored
+        /// Per-compilation resolution of enum-bound case ports: authored
         /// case:{memberName} ports → declaration-order ints, plus the reverse map that keeps
         /// the authored member spelling for instruction source labels. Built once from the
         /// document + EnumCatalog; unregistered enumType, unknown member names, and raw int
@@ -229,7 +229,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             => CompileCore(document, eventSchemas: null, enums: null) with { Document = document };
 
         /// <summary>
-        /// Compiles with the event schema SSOT in scope (#1115): DispatchMapEvent nodes
+        /// Compiles with the event schema SSOT in scope: DispatchMapEvent nodes
         /// validate their event name, dispatch scope, and per-parameter payload ports
         /// against it. Hosts that never author DispatchMapEvent may compile without it.
         /// </summary>
@@ -237,7 +237,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             => CompileCore(document, eventSchemas, enums: null) with { Document = document };
 
         /// <summary>
-        /// Compiles with the enum catalog in scope (#1125): SwitchInt nodes bound to an
+        /// Compiles with the enum catalog in scope: SwitchInt nodes bound to an
         /// <c>enumType</c> and SelectByEnum nodes resolve their case:{memberName} ports to
         /// declaration-order ints here; unregistered types and unknown members fail closed.
         /// Hosts that never author enum-bound sugar may compile without it — but an authored
@@ -443,7 +443,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>
         /// Resolves every DispatchMapEvent node's event against the EventSchemaRegistry and
-        /// checks its dispatch scope (#1115 / #1123): "map" requires a Map-scope schema,
+        /// checks its dispatch scope: "map" requires a Map-scope schema,
         /// "self" an Entity-scope schema, "global" a Global-scope schema; any mismatch
         /// fails closed. Returns the nodeId → schema map used for port validation and emit.
         /// </summary>
@@ -684,7 +684,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
 
         /// <summary>
-        /// Normalizes a hook target (#1124): an entry with a hookAnchor / hookNodeBefore /
+        /// Normalizes a hook target: an entry with a hookAnchor / hookNodeBefore /
         /// hookNodeAfter block is a fragment woven into the target graph at compile time;
         /// at most one hook block per entry fails closed. Anchor-name conflicts across a
         /// graph's nodes are diagnosed here as well — anchor ids are the cross-mod contract.
@@ -2801,7 +2801,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Lowers SelectByEnum (#1125): per candidate a ConstInt(memberValue) +
+        /// Lowers SelectByEnum: per candidate a ConstInt(memberValue) +
         /// CompareEqInt(selector) + JumpIfFalse(next check) + MoveInt(candidate) +
         /// Jump(end) chain, an optional default MoveInt, and the shared linear next-jump.
         /// No new executor or opcode — the running VM only ever sees the existing int ops.

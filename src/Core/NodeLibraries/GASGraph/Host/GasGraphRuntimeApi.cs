@@ -263,7 +263,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Resolves a map id to its live placed-instance index (#1108). Bound by the engine
+        /// Resolves a map id to its live placed-instance index. Bound by the engine
         /// next to the variable-store resolver: LoadPlacedEntity reads the same session.
         /// </summary>
         public void BindPlacedInstanceIndexResolver(Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?> resolver)
@@ -272,7 +272,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Resolves a map id to its authored Regions id set (#1108 LoadPlacedRegion).
+        /// Resolves a map id to its authored Regions id set (LoadPlacedRegion).
         /// Bound next to the placed-instance index; never writes into EntityIndex.
         /// </summary>
         public void BindRegionCatalogResolver(Func<MapId, System.Collections.Generic.IReadOnlySet<string>?> resolver)
@@ -290,7 +290,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Binds #1126 AwaitCallback registration/completion service.
+        /// Binds the AwaitCallback registration/completion service.
         /// </summary>
         public void BindGraphCallbackService(Ludots.Core.GraphRuntime.GraphCallbackService callbacks)
         {
@@ -593,7 +593,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Structured map-event dispatch (#1115): assembles a ScriptContext from the StoreArg*
+        /// Structured map-event dispatch: assembles a ScriptContext from the StoreArg*
         /// staging table per the event schema and fires it map-scoped. Fire-time
         /// ValidateFirePayload backstops missing required params, type mismatches, and
         /// undeclared MapTrigger.* keys.
@@ -624,7 +624,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Global-scope dispatch (#1123): same schema-driven context assembly, then
+        /// Global-scope dispatch: same schema-driven context assembly, then
         /// TriggerManager.FireGlobalEvent — only the global subscription table sees it,
         /// regardless of how many maps or map triggers are live. The origin map (mount
         /// scope or caster anchor) rides MapTrigger.SourceMapId as transport metadata.
