@@ -3988,7 +3988,11 @@ namespace Ludots.Core.Engine
                 }
                 else
                 {
-                    pathService = navMeshService;
+                    // NavMesh-only map: PathDomain.Auto world-target requests must resolve the
+                    // request's agent type and select its nav layer/profile/area costs per request,
+                    // so the map routes through AutoPathService in navmesh-only mode instead of a
+                    // single first-profile adapter.
+                    pathService = new AutoPathService(navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig);
                 }
             }
             else if (loadedGraphRuntime != null)
