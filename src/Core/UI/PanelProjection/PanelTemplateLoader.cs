@@ -22,12 +22,6 @@ namespace Ludots.Core.UI.PanelProjection
         {
             "name", "collectionKey", "template"
         };
-        private static readonly HashSet<string> ControlFields = new(StringComparer.Ordinal)
-        {
-            "type", "class", "text", "bind", "prefix", "current", "max", "showWhen",
-            "viewportHeight", "itemExtent", "virtualize", "overscan"
-        };
-
         public static PanelTemplate Load(string json)
         {
             if (string.IsNullOrWhiteSpace(json))
@@ -285,138 +279,66 @@ namespace Ludots.Core.UI.PanelProjection
                 throw new InvalidOperationException($"Panel template '{templateId}' layout controls must be objects.");
             }
 
-            RejectUnknownFields(controlObject, ControlFields, $"panel template '{templateId}' layout control");
-            string typeText = RequireString(controlObject, "type", $"panel template '{templateId}' layout control");
-            PanelLayoutControlType type = typeText switch
-            {
-                "label" => PanelLayoutControlType.Label,
-                "progressBar" => PanelLayoutControlType.ProgressBar,
-                "badge" => PanelLayoutControlType.Badge,
-                "list" => subject == PanelSubjectKind.None
-                    ? PanelLayoutControlType.List
-                    : throw new InvalidOperationException(
-                        $"Panel template '{templateId}' element subject cannot declare arrangement control 'list'."),
-                _ => throw new InvalidOperationException(
-                    $"Panel template '{templateId}' layout control type '{typeText}' is unknown."),
-            };
-
-            string? className = OptionalString(controlObject, "class");
-            string? text = OptionalString(controlObject, "text");
-            string? bind = OptionalString(controlObject, "bind");
-            string? prefix = OptionalString(controlObject, "prefix");
-            string? current = OptionalString(controlObject, "current");
-            string? max = OptionalString(controlObject, "max");
-            bool? showWhen = null;
-            if (controlObject["showWhen"] is JsonValue showNode && showNode.TryGetValue<bool>(out bool showValue))
-            {
-                showWhen = showValue;
-            }
-
-            if (type == PanelLayoutControlType.List)
-            {
-                if (string.IsNullOrWhiteSpace(bind) || !collectionNames.Contains(bind))
-                {
-                    throw new InvalidOperationException(
-                        $"Panel template '{templateId}' list control requires bind to a declared collection name.");
-                }
-            }
-
-            float? viewportHeight = OptionalPositiveFloat(controlObject, "viewportHeight", templateId);
-            float? itemExtent = OptionalPositiveFloat(controlObject, "itemExtent", templateId);
-            bool virtualize = false;
-            if (controlObject["virtualize"] is JsonValue virtNode && virtNode.TryGetValue<bool>(out bool virtValue))
-            {
-                virtualize = virtValue;
-            }
-
-            int overscan = 2;
-            if (controlObject["overscan"] is JsonValue overscanNode)
-            {
-                if (!overscanNode.TryGetValue<int>(out overscan) || overscan < 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Panel template '{templateId}' list overscan must be a non-negative int.");
-                }
-            }
-
-            if (virtualize)
-            {
-                if (type != PanelLayoutControlType.List)
-                {
-                    throw new InvalidOperationException(
-                        $"Panel template '{templateId}' virtualize is only valid on list controls.");
-                }
-
-                if (!viewportHeight.HasValue)
-                {
-                    throw new InvalidOperationException(
-                        $"Panel template '{templateId}' list '{bind}' virtualize requires viewportHeight.");
-                }
-
-                if (!itemExtent.HasValue)
-                {
-                    itemExtent = 56f;
-                }
-            }
-            else if (itemExtent.HasValue && type != PanelLayoutControlType.List)
-            {
-                throw new InvalidOperationException(
-                    $"Panel template '{templateId}' itemExtent is only valid on list controls.");
-            }
-
-            ValidateControlBindings(templateId, type, bind, current, max, pinNames);
-
-            return new PanelLayoutControl(
-                type, className, text, bind, prefix, current, max, showWhen,
-                viewportHeight, itemExtent, virtualize, overscan);
+            var bindings = new HashSet<string>(pinNames, StringComparer.Ordinal);
+            bindings.UnionWith(collectionNames);
+            PanelLayoutControl control = PanelLayoutTemplateLoader.ParseControl(
+                templateId,
+                controlObject,
+                bindings,
+                allowList: subject == PanelSubjectKind.None);
+            ValidatePanelControlBindings(templateId, control, pinNames, collectionNames, nested: false);
+            return control;
         }
 
-        private static float? OptionalPositiveFloat(JsonObject controlObject, string field, string templateId)
-        {
-            if (controlObject[field] is null)
-            {
-                return null;
-            }
-
-            if (controlObject[field] is not JsonValue valueNode ||
-                !valueNode.TryGetValue<double>(out double raw) ||
-                raw <= 0d)
-            {
-                throw new InvalidOperationException(
-                    $"Panel template '{templateId}' {field} must be a positive number.");
-            }
-
-            return (float)raw;
-        }
-
-        private static void ValidateControlBindings(
+        private static void ValidatePanelControlBindings(
             string templateId,
-            PanelLayoutControlType type,
-            string? bind,
-            string? current,
-            string? max,
-            HashSet<string> pinNames)
+            PanelLayoutControl control,
+            IReadOnlySet<string> pinNames,
+            IReadOnlySet<string> collectionNames,
+            bool nested)
         {
-            switch (type)
+            switch (control.Type)
             {
                 case PanelLayoutControlType.Label:
                 case PanelLayoutControlType.Badge:
-                    if (!string.IsNullOrWhiteSpace(bind) && !pinNames.Contains(bind))
+                    if (!string.IsNullOrWhiteSpace(control.Bind) && !pinNames.Contains(control.Bind))
                     {
                         throw new InvalidOperationException(
-                            $"Panel template '{templateId}' control bind '{bind}' is not a known pin.");
+                            $"Panel template '{templateId}' control bind '{control.Bind}' is not a known pin.");
                     }
-
                     break;
                 case PanelLayoutControlType.ProgressBar:
-                    if (string.IsNullOrWhiteSpace(current) || string.IsNullOrWhiteSpace(max) ||
-                        !pinNames.Contains(current) || !pinNames.Contains(max))
+                    if (string.IsNullOrWhiteSpace(control.Current) ||
+                        string.IsNullOrWhiteSpace(control.Max) ||
+                        !pinNames.Contains(control.Current) ||
+                        !pinNames.Contains(control.Max))
                     {
                         throw new InvalidOperationException(
                             $"Panel template '{templateId}' progressBar requires current/max bound to pins.");
                     }
-
                     break;
+                case PanelLayoutControlType.List:
+                    if (nested)
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' list controls must remain top-level.");
+                    }
+                    if (string.IsNullOrWhiteSpace(control.Bind) || !collectionNames.Contains(control.Bind))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' list control requires bind to a declared collection name.");
+                    }
+                    break;
+            }
+
+            for (int i = 0; i < control.Children.Count; i++)
+            {
+                ValidatePanelControlBindings(
+                    templateId,
+                    control.Children[i],
+                    pinNames,
+                    collectionNames,
+                    nested: true);
             }
         }
 

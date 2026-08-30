@@ -66,7 +66,7 @@ public static class PanelLayoutTemplateLoader
         "type", "class", "text", "bind", "prefix", "current", "max", "showWhen",
         "children", "gap", "align", "justify", "width", "height", "widthBind", "heightBind",
         "fontSize", "bold", "textRunsBind", "objectFit", "visibleWhenNotEmpty", "classBind",
-        "colorBind", "backgroundBind"
+        "colorBind", "backgroundBind", "viewportHeight", "itemExtent", "virtualize", "overscan"
     };
 
     public static PanelLayoutTemplateCatalog LoadCatalog(Stream stream)
@@ -128,13 +128,14 @@ public static class PanelLayoutTemplateLoader
                 $"Panel layout template '{id}' requires a root control object.");
         }
 
-        return new PanelLayoutTemplate(id, bindings, ParseControl(id, rootControl, bindings));
+        return new PanelLayoutTemplate(id, bindings, ParseControl(id, rootControl, bindings, allowList: false));
     }
 
-    private static PanelLayoutControl ParseControl(
+    internal static PanelLayoutControl ParseControl(
         string templateId,
         JsonObject controlObject,
-        IReadOnlySet<string> bindings)
+        IReadOnlySet<string> bindings,
+        bool allowList)
     {
         RejectUnknownFields(controlObject, ControlFields, $"panel layout template '{templateId}' control");
         string typeText = RequireString(controlObject, "type", $"panel layout template '{templateId}' control");
@@ -143,6 +144,10 @@ public static class PanelLayoutTemplateLoader
             "label" => PanelLayoutControlType.Label,
             "progressBar" => PanelLayoutControlType.ProgressBar,
             "badge" => PanelLayoutControlType.Badge,
+            "list" => allowList
+                ? PanelLayoutControlType.List
+                : throw new InvalidOperationException(
+                    $"Panel layout template '{templateId}' cannot declare list without a PanelHost collection scope."),
             "row" => PanelLayoutControlType.Row,
             "column" => PanelLayoutControlType.Column,
             "image" => PanelLayoutControlType.Image,
@@ -174,7 +179,11 @@ public static class PanelLayoutTemplateLoader
         ValidateBinding(templateId, colorBind, bindings);
         ValidateBinding(templateId, backgroundBind, bindings);
 
-        IReadOnlyList<PanelLayoutControl> children = ParseChildren(templateId, controlObject, bindings);
+        IReadOnlyList<PanelLayoutControl> children = ParseChildren(
+            templateId,
+            controlObject,
+            bindings,
+            allowList);
         if (type is PanelLayoutControlType.Row or PanelLayoutControlType.Column or PanelLayoutControlType.Repeater)
         {
             if (children.Count == 0)
@@ -216,6 +225,37 @@ public static class PanelLayoutTemplateLoader
                 $"Panel layout template '{templateId}' progressBar requires bind or current/max.");
         }
 
+        float? viewportHeight = OptionalPositiveFloat(controlObject, "viewportHeight", templateId);
+        float? itemExtent = OptionalPositiveFloat(controlObject, "itemExtent", templateId);
+        bool virtualize = OptionalBool(controlObject, "virtualize") ?? false;
+        int overscan = OptionalNonNegativeInt(controlObject, "overscan", templateId) ?? 2;
+        if (type != PanelLayoutControlType.List &&
+            (viewportHeight.HasValue || itemExtent.HasValue || virtualize || controlObject["overscan"] is not null))
+        {
+            throw new InvalidOperationException(
+                $"Panel layout template '{templateId}' list viewport fields are only valid on list controls.");
+        }
+
+        if (type == PanelLayoutControlType.List)
+        {
+            if (string.IsNullOrWhiteSpace(bind))
+            {
+                throw new InvalidOperationException(
+                    $"Panel layout template '{templateId}' list control requires bind.");
+            }
+
+            if (virtualize && !viewportHeight.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"Panel layout template '{templateId}' virtualized list requires viewportHeight.");
+            }
+
+            if (virtualize && !itemExtent.HasValue)
+            {
+                itemExtent = 56f;
+            }
+        }
+
         bool? showWhen = OptionalBool(controlObject, "showWhen");
         bool bold = OptionalBool(controlObject, "bold") ?? false;
         return new PanelLayoutControl(
@@ -227,6 +267,10 @@ public static class PanelLayoutTemplateLoader
             current,
             max,
             showWhen,
+            viewportHeight,
+            itemExtent,
+            virtualize,
+            overscan,
             children: children,
             gap: OptionalNonNegativeFloat(controlObject, "gap", templateId),
             align: OptionalString(controlObject, "align"),
@@ -248,7 +292,8 @@ public static class PanelLayoutTemplateLoader
     private static IReadOnlyList<PanelLayoutControl> ParseChildren(
         string templateId,
         JsonObject controlObject,
-        IReadOnlySet<string> bindings)
+        IReadOnlySet<string> bindings,
+        bool allowList)
     {
         if (controlObject["children"] is null)
         {
@@ -270,7 +315,7 @@ public static class PanelLayoutTemplateLoader
                     $"Panel layout template '{templateId}' child control must be an object.");
             }
 
-            children.Add(ParseControl(templateId, childObject, bindings));
+            children.Add(ParseControl(templateId, childObject, bindings, allowList));
         }
 
         return children;
@@ -363,5 +408,26 @@ public static class PanelLayoutTemplateLoader
         }
 
         return (float)raw;
+    }
+
+    private static int? OptionalNonNegativeInt(
+        JsonObject node,
+        string field,
+        string templateId)
+    {
+        if (node[field] is null)
+        {
+            return null;
+        }
+
+        if (node[field] is JsonValue value &&
+            value.TryGetValue<int>(out int result) &&
+            result >= 0)
+        {
+            return result;
+        }
+
+        throw new InvalidOperationException(
+            $"Panel layout template '{templateId}' field '{field}' must be a non-negative int.");
     }
 }
