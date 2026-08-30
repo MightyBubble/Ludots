@@ -10,8 +10,8 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production;
 
 /// <summary>
-/// Per-op gallery acceptance for the TriggerGraph-only OfferActivity op: the vignette
-/// graph runs on the shared headless gallery engine (which owns the real
+/// Per-op gallery acceptance for the OfferActivity op: the vignette Script graph
+/// runs on the shared headless gallery engine (which owns the real
 /// ActivityRuntimeService and the activity-bound graph API), each think wave offers the
 /// gallery activity to the placed caster scope host, and the caption reports the roll-call.
 /// </summary>
@@ -27,7 +27,7 @@ public sealed class GraphOpsNodeGalleryOfferActivityAcceptanceTests
         runtime.BindOp("OfferActivity");
         runtime.EnsureWorld();
 
-        Assert.That(runtime.Vignette.GraphKind, Is.EqualTo("TriggerGraph"));
+        Assert.That(runtime.Vignette.GraphKind, Is.EqualTo("Script"));
 
         GameEngine engine = GraphOpsHeadlessGameEngine.SharedGallery(FindRepoRoot());
         var activities = engine.GetService(CoreServiceKeys.ActivityRuntimeService) as ActivityRuntimeService
@@ -42,13 +42,16 @@ public sealed class GraphOpsNodeGalleryOfferActivityAcceptanceTests
             "wave one must open exactly one new gallery activity instance (shared-engine totals are order-dependent, so assert the delta)");
         Assert.That(activities.CaptureViews().Any(v => v.ActivityId == "gallery.op.offer_activity" && v.State == ActivityInstanceState.Active),
             Is.True, "a forced activity must present immediately");
-        Assert.That(runtime.Metrics.Detail, Does.Contain("待办活动已上桌"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("活动已派发"));
         Assert.That(runtime.Metrics.Detail, Does.Not.Contains("{"));
 
         runtime.Tick(0.35f);
 
-        Assert.That(offeredCount() - before, Is.EqualTo(2),
-            "repeatable policy: the second roll-call wave opens a second instance");
+        // Script 画廊第一波跑到 Halt 后程序游标停机，后续波次不得重复供给（ScriptNodeDriver 语义）
+        Assert.That(offeredCount() - before, Is.EqualTo(1),
+            "the halted Script program must not re-offer on later waves");
+        Assert.That(activities.CaptureViews().Any(v => v.ActivityId == "gallery.op.offer_activity" && v.State == ActivityInstanceState.Active),
+            Is.True, "the offered activity must remain active across waves");
     }
 
     private static string FindRepoRoot()

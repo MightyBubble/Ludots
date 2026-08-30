@@ -2909,18 +2909,6 @@
       "codegenStatus": "covered"
     },
     {
-      "op": "OfferActivity",
-      "authorableKinds": [
-        "TriggerGraph",
-        "Script"
-      ],
-      "showcaseId": "capability_standard_graph_op_StartDialogue",
-      "status": "implemented",
-      "unitTestRefs": [
-        "GasTests/Graph/GraphNodeOpCoverageRegistryTests"
-      ]
-    },
-    {
       "op": "StartDialogue",
       "authorableKinds": [
         "TriggerGraph",
@@ -3267,7 +3255,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryOfferActivityAcceptanceTests.OfferActivity_GalleryCompilesAndMapLoads"
+        "GraphOpsNodeGalleryOfferActivityAcceptanceTests.OfferActivity_RollCallOffersGalleryActivityEachWave"
       ],
       "codegenStatus": "covered"
     }
