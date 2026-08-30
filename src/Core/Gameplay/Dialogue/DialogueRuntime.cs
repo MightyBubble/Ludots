@@ -122,7 +122,97 @@ namespace Ludots.Core.Gameplay.Dialogue
                 return;
             }
 
-            DialogueChoiceDefinition choice = _active.Choices[index];
+            CommitChoice(_active.Choices[index]);
+        }
+
+        public void ChooseByChoiceId(int choiceIntId)
+        {
+            if (_active == null)
+            {
+                throw new InvalidOperationException("ChooseByChoiceId requires an active dialogue session.");
+            }
+
+            if (!DialogueChoiceIdRegistry.TrySplit(choiceIntId, out string dialogueId, out string choiceId))
+            {
+                throw new InvalidOperationException(
+                    $"Choice int id {choiceIntId} is not registered in DialogueChoiceIdRegistry.");
+            }
+
+            if (!string.Equals(dialogueId, _active.Definition.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Choice '{choiceId}' belongs to dialogue '{dialogueId}', but active dialogue is '{_active.Definition.Id}'.");
+            }
+
+            for (int i = 0; i < _active.Choices.Count; i++)
+            {
+                if (string.Equals(_active.Choices[i].Id, choiceId, StringComparison.OrdinalIgnoreCase))
+                {
+                    CommitChoice(_active.Choices[i]);
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Choice '{choiceId}' is not currently available in dialogue '{dialogueId}'.");
+        }
+
+        public int CollectActiveChoiceIds(Span<int> buffer)
+        {
+            if (_active == null || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            string dialogueId = _active.Definition.Id;
+            for (int i = 0; i < _active.Choices.Count && written < buffer.Length; i++)
+            {
+                int id = DialogueChoiceIdRegistry.GetId(dialogueId, _active.Choices[i].Id);
+                if (id == DialogueChoiceIdRegistry.InvalidId)
+                {
+                    throw new InvalidOperationException(
+                        $"Active choice '{_active.Choices[i].Id}' in dialogue '{dialogueId}' is not registered.");
+                }
+
+                buffer[written++] = id;
+            }
+
+            return written;
+        }
+
+        public bool TryResolveChoiceDisplayText(int choiceIntId, out string text)
+        {
+            text = string.Empty;
+            if (_active == null ||
+                !DialogueChoiceIdRegistry.TrySplit(choiceIntId, out string dialogueId, out string choiceId) ||
+                !string.Equals(dialogueId, _active.Definition.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < _active.Choices.Count; i++)
+            {
+                DialogueChoiceDefinition choice = _active.Choices[i];
+                if (!string.Equals(choice.Id, choiceId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                text = ResolveLineText(choice.LineId);
+                return !string.IsNullOrWhiteSpace(text);
+            }
+
+            return false;
+        }
+
+        private void CommitChoice(DialogueChoiceDefinition choice)
+        {
+            if (_active == null)
+            {
+                throw new InvalidOperationException("CommitChoice requires an active dialogue session.");
+            }
+
             Entity subject = ResolveSubject();
             _graphs.ExecuteAction(choice.ActionGraphId, subject);
             // Choice commit is the Dialogue Completer for AwaitCallback(DialogConfirm).

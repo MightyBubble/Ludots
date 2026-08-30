@@ -3400,6 +3400,22 @@
       ]
     },
     {
+      "op": "QueryCollectActiveDialogueChoices",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryCollectActiveDialogueChoices",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectActiveDialogueChoices_ListsSeededChoices"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "QueryCollectEffectTemplates",
       "authorableKinds": [
         "Query"

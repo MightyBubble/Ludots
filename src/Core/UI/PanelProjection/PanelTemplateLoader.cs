@@ -43,6 +43,7 @@ namespace Ludots.Core.UI.PanelProjection
             "TaskInstanceCollection",
             "ActivityInstanceCollection",
             "ProgressionNodeCollection",
+            "DialogueChoiceCollection",
             "Bool",
             "Int",
             "Float",

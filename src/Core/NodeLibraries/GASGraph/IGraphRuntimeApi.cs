@@ -248,6 +248,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph progression-node query runtime is not available.");
         }
 
+        int CollectActiveDialogueChoices(Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph dialogue-choice query runtime is not available.");
+        }
+
         int CollectAbilityHolders(int abilityId, ReadOnlySpan<Entity> candidates, Span<Entity> buffer)
         {
             throw new InvalidOperationException("Graph ability-holder query runtime is not available.");

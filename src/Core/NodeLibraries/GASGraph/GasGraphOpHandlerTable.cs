@@ -262,6 +262,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.QueryCollectActiveActivities or
                 GraphNodeOp.QueryCollectProgressionNodes or
                 GraphNodeOp.QueryCollectAbilityHolders or
+                GraphNodeOp.QueryCollectActiveDialogueChoices or
                 GraphNodeOp.LoadEffectTiming or
                 GraphNodeOp.LoadEffectStack or
                 GraphNodeOp.QueryFilterTeam or
@@ -807,6 +808,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.QueryCollectActiveActivities, HandleQueryCollectActiveActivities, "QueryCollectActiveActivities graph opcode.");
             Register(GraphNodeOp.QueryCollectProgressionNodes, HandleQueryCollectProgressionNodes, "QueryCollectProgressionNodes graph opcode.");
             Register(GraphNodeOp.QueryCollectAbilityHolders, HandleQueryCollectAbilityHolders, "QueryCollectAbilityHolders graph opcode.");
+            Register(GraphNodeOp.QueryCollectActiveDialogueChoices, HandleQueryCollectActiveDialogueChoices, "QueryCollectActiveDialogueChoices graph opcode.");
             Register(GraphNodeOp.LoadEffectTiming, HandleLoadEffectTiming, "LoadEffectTiming graph opcode.");
             Register(GraphNodeOp.LoadEffectStack, HandleLoadEffectStack, "LoadEffectStack graph opcode.");
             Register(GraphNodeOp.QueryFilterTeam, HandleQueryFilterTeam, "QueryFilterTeam graph opcode.");
@@ -2019,6 +2021,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleQueryCollectProgressionNodes(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.IntIdList.SetCount(s.Api.CollectProgressionNodes(s.E[ins.A], s.IntIds));
+        }
+
+        private static void HandleQueryCollectActiveDialogueChoices(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.IntIdList.SetCount(s.Api.CollectActiveDialogueChoices(s.IntIds));
         }
 
         private static void HandleQueryCollectAbilityHolders(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

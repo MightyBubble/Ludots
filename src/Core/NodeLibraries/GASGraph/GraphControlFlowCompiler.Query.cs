@@ -65,6 +65,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
                 case GraphNodeOp.QueryCollectEffectTemplates:
                 case GraphNodeOp.QueryCollectItemDefinitions:
+                case GraphNodeOp.QueryCollectActiveDialogueChoices:
                     break;
                 case GraphNodeOp.QueryCollectAbilitySlots:
                 case GraphNodeOp.QueryCollectInventoryItems:
@@ -383,6 +384,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
                 case GraphNodeOp.QueryCollectEffectTemplates:
                 case GraphNodeOp.QueryCollectItemDefinitions:
+                case GraphNodeOp.QueryCollectActiveDialogueChoices:
                     break;
                 case GraphNodeOp.QueryCollectAbilitySlots:
                 case GraphNodeOp.QueryCollectInventoryItems:

@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.Progression.Components;
 using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Gameplay.Dialogue;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Registry;
 using Ludots.Platform.Abstractions;
@@ -87,6 +88,27 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
         {
             SeedActiveActivities(ctx);
         }
+        else if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectActiveDialogueChoices), StringComparison.Ordinal))
+        {
+            SeedActiveDialogueChoices(ctx);
+        }
+    }
+
+    private static void SeedActiveDialogueChoices(GraphOpsNodeDriverContext ctx)
+    {
+        int first = DialogueChoiceIdRegistry.Register("Dialogue.GraphOps.Gallery", "reply_a");
+        int second = DialogueChoiceIdRegistry.Register("Dialogue.GraphOps.Gallery", "reply_b");
+        ctx.Api.BindCollectActiveDialogueChoices(buffer =>
+        {
+            if (buffer.Length < 2)
+            {
+                return 0;
+            }
+
+            buffer[0] = first;
+            buffer[1] = second;
+            return 2;
+        });
     }
 
     private static void SeedEffectTemplates(GraphOpsNodeDriverContext ctx)
@@ -271,7 +293,8 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
             or nameof(GraphNodeOp.QueryCollectAbilitySlots)
             or nameof(GraphNodeOp.QueryCollectItemDefinitions)
             or nameof(GraphNodeOp.QueryCollectPresentTags)
-            or nameof(GraphNodeOp.QueryCollectProgressionNodes);
+            or nameof(GraphNodeOp.QueryCollectProgressionNodes)
+            or nameof(GraphNodeOp.QueryCollectActiveDialogueChoices);
 
     public void Tick(GraphOpsNodeDriverContext ctx)
     {

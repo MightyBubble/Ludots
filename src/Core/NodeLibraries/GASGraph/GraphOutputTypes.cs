@@ -17,6 +17,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         TaskInstanceCollection = 8,
         ActivityInstanceCollection = 9,
         ProgressionNodeCollection = 10,
+        DialogueChoiceCollection = 11,
     }
 
     public enum GraphOutputValueKind : byte
@@ -43,7 +44,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 or GraphOutputDestinationKind.AbilityDefinitionCollection
                 or GraphOutputDestinationKind.ItemDefinitionCollection
                 or GraphOutputDestinationKind.TagIdCollection
-                or GraphOutputDestinationKind.ProgressionNodeCollection;
+                or GraphOutputDestinationKind.ProgressionNodeCollection
+                or GraphOutputDestinationKind.DialogueChoiceCollection;
     }
 
     public readonly struct GraphOutputBinding

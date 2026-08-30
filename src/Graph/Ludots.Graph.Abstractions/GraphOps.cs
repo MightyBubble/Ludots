@@ -162,7 +162,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         QueryCollectProgressionNodes = 426, // IntIdList = progression ids on E[A]
         QueryCollectAbilityHolders = 427,   // TargetList = TargetList candidates holding Imm ability
         QueryCollectActiveActivities = 428, // TargetList = activity instances scoped to E[A]
-        // 429 free
 
         // ── Event evaluation context (410-412, RFC-0065 PROV-4b) ──
         LoadViewer           = 410,  // E[Dst] = state.Viewer (fixed register 2)
@@ -316,6 +315,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         OfferActivity = 466,
         /// <summary>Offer the task named by Symbols[Imm] to E[A] as scope host via TaskRuntimeService.</summary>
         OfferTask = 467,
+        /// <summary>IntIdList = currently available DialogueRuntime choice ids.</summary>
+        QueryCollectActiveDialogueChoices = 468,
 
     }
 

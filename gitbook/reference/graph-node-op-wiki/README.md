@@ -70,6 +70,7 @@
 - [把身上的效果全点名](QueryCollectActiveEffects.md) — 指挥身上三条效果被点名线牵住，头上浮出计数。
 - [按血量从厚到薄排队](QuerySortByAttribute.md) — 最厚的顶着三道杠，箭头顺着血条一路排下去。
 - [摘掉阵亡徽的留下](QueryFilterTagNone.md) — 戴阵亡徽的退成灰影，没戴徽的留着圈。
+- [点出当前对话选项](QueryCollectActiveDialogueChoices.md) — 能回的话被点名线牵住。
 - [点出技能格](QueryCollectAbilitySlots.md) — 英雄身上的技能格被点名线牵住。
 - [点出身上印记](QueryCollectPresentTags.md) — 身上的印记被点名线牵住。
 - [点出进度节点](QueryCollectProgressionNodes.md) — 进度节点被点名线牵住。

@@ -4,6 +4,7 @@ using System.Globalization;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.Dialogue;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -30,6 +31,7 @@ namespace Ludots.Core.UI.PanelProjection
         private readonly ItemDefinitionRegistry _itemDefinitions;
         private readonly PanelProjectionReader _reader;
         private readonly IPanelGraphEvaluator? _graphEvaluator;
+        private Func<int, string?>? _dialogueChoiceTextResolver;
 
         public PanelListProjector(
             World world,
@@ -37,7 +39,8 @@ namespace Ludots.Core.UI.PanelProjection
             IntIdCollectionStore intIdCollections,
             ItemDefinitionRegistry itemDefinitions,
             PanelProjectionReader reader,
-            IPanelGraphEvaluator? graphEvaluator = null)
+            IPanelGraphEvaluator? graphEvaluator = null,
+            Func<int, string?>? dialogueChoiceTextResolver = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _collections = collections ?? throw new ArgumentNullException(nameof(collections));
@@ -45,6 +48,13 @@ namespace Ludots.Core.UI.PanelProjection
             _itemDefinitions = itemDefinitions ?? throw new ArgumentNullException(nameof(itemDefinitions));
             _reader = reader ?? throw new ArgumentNullException(nameof(reader));
             _graphEvaluator = graphEvaluator;
+            _dialogueChoiceTextResolver = dialogueChoiceTextResolver;
+        }
+
+        public void BindDialogueChoiceTextResolver(Func<int, string?> resolver)
+        {
+            _dialogueChoiceTextResolver = resolver
+                ?? throw new ArgumentNullException(nameof(resolver));
         }
 
         public static void BindElements(PanelTemplate host, PanelTemplateRegistry templates)
@@ -507,9 +517,30 @@ namespace Ludots.Core.UI.PanelProjection
                 PanelSubjectKind.AbilityDefinition => AbilityIdRegistry.GetName(memberIntId),
                 PanelSubjectKind.Tag => TagRegistry.GetName(memberIntId),
                 PanelSubjectKind.ProgressionNode => ProgressionIdRegistry.GetName(memberIntId),
+                PanelSubjectKind.DialogueChoice => ReadDialogueChoiceDisplayName(memberIntId),
                 _ => throw new InvalidOperationException(
                     $"Panel int-id projection does not support subject '{PanelSubjectKinds.ToId(subject)}'."),
             };
+        }
+
+        private string ReadDialogueChoiceDisplayName(int choiceIntId)
+        {
+            if (_dialogueChoiceTextResolver != null &&
+                _dialogueChoiceTextResolver(choiceIntId) is string resolved &&
+                !string.IsNullOrWhiteSpace(resolved))
+            {
+                return resolved;
+            }
+
+            string name = DialogueChoiceIdRegistry.GetName(choiceIntId);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return string.Empty;
+            }
+
+            return DialogueChoiceIdRegistry.TrySplit(choiceIntId, out _, out string choiceId)
+                ? choiceId
+                : name;
         }
 
         private string ReadItemDefinitionDisplayName(int definitionId)
@@ -636,6 +667,7 @@ namespace Ludots.Core.UI.PanelProjection
                 "TaskInstanceCollection" => subject == PanelSubjectKind.Task,
                 "ActivityInstanceCollection" => subject == PanelSubjectKind.Activity,
                 "ProgressionNodeCollection" => subject == PanelSubjectKind.ProgressionNode,
+                "DialogueChoiceCollection" => subject == PanelSubjectKind.DialogueChoice,
                 _ => false,
             };
         }

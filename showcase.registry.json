@@ -9480,6 +9480,33 @@
         "g12",
         "progression_nodes"
       ]
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveDialogueChoices",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveDialogueChoicesEntryMod",
+      "projectPath": "CapabilityStandardGraphOpQueryCollectActiveDialogueChoicesEntryMod.csproj",
+      "title": "点出当前对话选项",
+      "summary": "能回的话被点名线牵住。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "QueryCollectActiveDialogueChoices"
+      ],
+      "binding": "capability_standard_graph_op_QueryCollectActiveDialogueChoices",
+      "preset": "capability_standard_graph_op_QueryCollectActiveDialogueChoices_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryCollectActiveDialogueChoices.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryCollectActiveDialogueChoices",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryCollectActiveDialogueChoices/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryCollectActiveDialogueChoices/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

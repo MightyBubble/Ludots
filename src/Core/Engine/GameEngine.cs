@@ -1107,17 +1107,18 @@ namespace Ludots.Core.Engine
                 graphOutputValueStore);
             var panelProjectionReader = new PanelProjectionReader(World, graphOutputValueStore);
             var panelGraphEvaluator = new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi);
+            var panelListProjector = new Ludots.Core.UI.PanelProjection.PanelListProjector(
+                World,
+                entityCollectionStore,
+                intIdCollectionStore,
+                itemDefinitions,
+                panelProjectionReader,
+                panelGraphEvaluator);
             var panelHost = new PanelHost(
                 panelTemplates,
                 panelProjectionReader,
                 panelGraphEvaluator,
-                new Ludots.Core.UI.PanelProjection.PanelListProjector(
-                    World,
-                    entityCollectionStore,
-                    intIdCollectionStore,
-                    itemDefinitions,
-                    panelProjectionReader,
-                    panelGraphEvaluator));
+                panelListProjector);
             gasGraphApi.BindPanelHost(panelHost);
             var panelActivationStore = new Ludots.Core.UI.PanelActivation.UiPanelActivationStore();
             var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);
@@ -2019,6 +2020,11 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.DialogueRuntime, dialogueRuntime);
             SetService(CoreServiceKeys.SequencerRuntime, sequencerRuntime);
             _gasGraphRuntimeApi?.BindStartDialogue(dialogueId => dialogueRuntime.StartDialogue(dialogueId));
+            _gasGraphRuntimeApi?.BindCollectActiveDialogueChoices(dialogueRuntime.CollectActiveChoiceIds);
+            _gasGraphRuntimeApi?.BindResolveDialogueChoiceDisplayText(choiceIntId =>
+                dialogueRuntime.TryResolveChoiceDisplayText(choiceIntId, out string text) ? text : null);
+            panelListProjector.BindDialogueChoiceTextResolver(choiceIntId =>
+                dialogueRuntime.TryResolveChoiceDisplayText(choiceIntId, out string text) ? text : null);
             SetService(
                 CoreServiceKeys.StoryPresentationProjector,
                 new StoryPresentationProjector(storyDefinitions));

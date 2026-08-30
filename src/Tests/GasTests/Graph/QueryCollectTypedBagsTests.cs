@@ -115,6 +115,7 @@ namespace Ludots.Tests.GasTests.Graph
         [TestCase("QueryCollectActiveActivities")]
         [TestCase("QueryCollectProgressionNodes")]
         [TestCase("QueryCollectAbilityHolders")]
+        [TestCase("QueryCollectActiveDialogueChoices")]
         public void TypedCollector_CompilesWithRequiredInputs(string op)
         {
             var document = new GraphControlFlowDocument
@@ -123,7 +124,7 @@ namespace Ludots.Tests.GasTests.Graph
                 Kind = "Query",
             };
             var collect = new GraphControlFlowNode { Id = "collect", Op = op };
-            if (op is "QueryCollectEffectTemplates" or "QueryCollectItemDefinitions")
+            if (op is "QueryCollectEffectTemplates" or "QueryCollectItemDefinitions" or "QueryCollectActiveDialogueChoices")
             {
                 document.Entry = collect.Id;
                 document.Nodes.Add(collect);

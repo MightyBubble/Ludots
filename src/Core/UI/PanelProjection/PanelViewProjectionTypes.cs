@@ -22,6 +22,7 @@ namespace Ludots.Core.UI.PanelProjection
         Activity = 10,
         Tag = 11,
         ProgressionNode = 12,
+        DialogueChoice = 13,
     }
 
     public enum PanelCollectionSourceKind : byte
@@ -338,8 +339,9 @@ namespace Ludots.Core.UI.PanelProjection
                 "Activity" => PanelSubjectKind.Activity,
                 "Tag" => PanelSubjectKind.Tag,
                 "ProgressionNode" => PanelSubjectKind.ProgressionNode,
+                "DialogueChoice" => PanelSubjectKind.DialogueChoice,
                 _ => throw new InvalidOperationException(
-                    $"{context} subject '{text}' is unknown (allowed: Entity, Task, Ability, EffectInstance, EffectTemplate, ItemInstance, ItemDefinition, AbilitySlot, AbilityDefinition, Activity, Tag, ProgressionNode)."),
+                    $"{context} subject '{text}' is unknown (allowed: Entity, Task, Ability, EffectInstance, EffectTemplate, ItemInstance, ItemDefinition, AbilitySlot, AbilityDefinition, Activity, Tag, ProgressionNode, DialogueChoice)."),
             };
         }
 
@@ -358,6 +360,7 @@ namespace Ludots.Core.UI.PanelProjection
             PanelSubjectKind.Activity => "Activity",
             PanelSubjectKind.Tag => "Tag",
             PanelSubjectKind.ProgressionNode => "ProgressionNode",
+            PanelSubjectKind.DialogueChoice => "DialogueChoice",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown panel subject kind."),
         };
 
@@ -375,7 +378,8 @@ namespace Ludots.Core.UI.PanelProjection
                 or PanelSubjectKind.AbilitySlot
                 or PanelSubjectKind.AbilityDefinition
                 or PanelSubjectKind.Tag
-                or PanelSubjectKind.ProgressionNode;
+                or PanelSubjectKind.ProgressionNode
+                or PanelSubjectKind.DialogueChoice;
 
         /// <summary>Entity / effect-instance subject surface available to layout binds (not graph pins).</summary>
         public const string EntityDisplayName = "displayName";

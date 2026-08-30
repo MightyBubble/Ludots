@@ -129,6 +129,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private GraphPresentationTextSink? _presentationTextSink;
         private PresentationTextCatalog? _presentationTextCatalog;
         private Action<string>? _startDialogue;
+        private Func<Span<int>, int>? _collectActiveDialogueChoices;
+        private Func<int, string?>? _resolveDialogueChoiceDisplayText;
         private LoadedGraphRuntime? _loadedGraphRuntime;
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
         private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
@@ -497,6 +499,31 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindStartDialogue(Action<string> startDialogue)
         {
             _startDialogue = startDialogue ?? throw new ArgumentNullException(nameof(startDialogue));
+        }
+
+        public void BindCollectActiveDialogueChoices(Func<Span<int>, int> collectActiveDialogueChoices)
+        {
+            _collectActiveDialogueChoices = collectActiveDialogueChoices
+                ?? throw new ArgumentNullException(nameof(collectActiveDialogueChoices));
+        }
+
+        public void BindResolveDialogueChoiceDisplayText(Func<int, string?> resolveDialogueChoiceDisplayText)
+        {
+            _resolveDialogueChoiceDisplayText = resolveDialogueChoiceDisplayText
+                ?? throw new ArgumentNullException(nameof(resolveDialogueChoiceDisplayText));
+        }
+
+        public int CollectActiveDialogueChoices(Span<int> buffer)
+        {
+            Func<Span<int>, int> collect = _collectActiveDialogueChoices
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.DialogueChoiceCollectorUnavailable");
+            return collect(buffer);
+        }
+
+        public string? ResolveDialogueChoiceDisplayText(int choiceIntId)
+        {
+            Func<int, string?>? resolve = _resolveDialogueChoiceDisplayText;
+            return resolve?.Invoke(choiceIntId);
         }
 
         public void StartDialogue(int dialogueKeyId)

@@ -90,6 +90,12 @@ public sealed class GraphOpsNodeGalleryQueryAcceptanceTests
     }
 
     [Test]
+    public void QueryCollectActiveDialogueChoices_ListsSeededChoices()
+    {
+        AssertIntIdCollector("QueryCollectActiveDialogueChoices", "可回的话");
+    }
+
+    [Test]
     public void QueryCollectAbilityHolders_ListsSeededHolders()
     {
         AssertEntityCollector("QueryCollectAbilityHolders", "会这招");

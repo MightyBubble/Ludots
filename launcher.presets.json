@@ -2959,6 +2959,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveDialogueChoices_raylib",
+      "name": "Graph Op QueryCollectActiveDialogueChoices Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectActiveDialogueChoices"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
