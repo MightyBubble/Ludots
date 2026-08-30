@@ -208,5 +208,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 InvokeArgs = InvokeArgs
             };
         }
+
+        internal void CopyBackExecutionState(ref GraphExecutionState state, bool copyCursor)
+        {
+            if (copyCursor)
+            {
+                Cursor.CallStackCount = state.CallStackCount;
+                Cursor.ReturnInt = state.ReturnInt;
+                Cursor.InvokeDepth = state.InvokeDepth;
+                Cursor.Status = state.Status;
+            }
+
+            TargetList = state.TargetList;
+            IntIdList = state.IntIdList;
+            SubjectIntId = state.SubjectIntId;
+        }
     }
 }

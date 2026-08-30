@@ -1180,7 +1180,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.I[ins.Dst] = s.I[ins.A];
         }
 
-        // ── TriggerGraph subgraph reuse + structured dispatch (#1116/#1115) ──
+        // ── TriggerGraph subgraph reuse + structured dispatch ──
 
         private static void HandleStoreArgInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
@@ -1356,7 +1356,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     : s.MapScope.Value;
             if (globalScope)
             {
-                // Global dispatch (#1123): the origin map rides the context as transport
+                // Global dispatch: the origin map rides the context as transport
                 // metadata; an unmapped caster only means no origin stamp, not an error.
                 s.Api.FireGlobalEventPayload(ins.Imm, mapId, s.InvokeArgs);
                 s.InvokeArgs?.Clear();
@@ -1405,7 +1405,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 : new MapId(string.Empty);
         }
 
-        // ── Generic lookup tables (#881) ──
+        // ── Generic lookup tables ──
 
         private static void HandleResolveTableRow(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
@@ -1421,7 +1421,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleShowPanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // Panel show request; the UI records the decision without orchestrating (#1014).
+            // Panel show request; the UI records the decision without orchestrating.
             s.Api.ShowPanel(ins.Imm);
         }
 
@@ -2224,11 +2224,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"GAS.GRAPH.ERR.EntryPayloadSymbolUnknown: payload key id {keyId} has no registered symbol.");
         }
 
-        // ── Placed-entity variable reads (#1108) ──
+        // ── Placed-entity variable reads ──
 
         private static void HandleLoadPlacedEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // A miss is a readable value, not a throw (#1108 contract): unregistered ids and
+            // A miss is a readable value, not a throw: unregistered ids and
             // destroyed entities both write Entity.Null so downstream ops branch on it.
             MapId mapId = RequireMapVariableScopeMap(ref s, s.Caster, nameof(GraphNodeOp.LoadPlacedEntity));
             s.E[ins.Dst] = s.Api.TryGetPlacedEntity(ins.Imm, mapId, out Entity entity) && s.World.IsAlive(entity)

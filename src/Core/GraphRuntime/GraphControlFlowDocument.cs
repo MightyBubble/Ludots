@@ -29,14 +29,14 @@ namespace Ludots.Core.GraphRuntime
         public string Start { get; set; } = string.Empty;
         public bool Once { get; set; }
         public string? Refire { get; set; }
-        /// <summary>Dispatch priority within one event key (#1124): ascending, negative earlier, default 0.</summary>
+        /// <summary>Dispatch priority within one event key: ascending, negative earlier, default 0.</summary>
         public int Priority { get; set; }
         public TriggerGraphEntryFiltersConfig? Filters { get; set; }
-        /// <summary>Authoring shape of <c>hookAnchor: { graphId, anchor, position }</c> (#1124).</summary>
+        /// <summary>Authoring shape of <c>hookAnchor: { graphId, anchor, position }</c>.</summary>
         public TriggerGraphHookAnchorConfig? HookAnchor { get; set; }
-        /// <summary>Authoring shape of <c>hookNodeBefore: { graphId, nodeId }</c> (#1124).</summary>
+        /// <summary>Authoring shape of <c>hookNodeBefore: { graphId, nodeId }</c>.</summary>
         public TriggerGraphHookNodeConfig? HookNodeBefore { get; set; }
-        /// <summary>Authoring shape of <c>hookNodeAfter: { graphId, nodeId }</c> (#1124).</summary>
+        /// <summary>Authoring shape of <c>hookNodeAfter: { graphId, nodeId }</c>.</summary>
         public TriggerGraphHookNodeConfig? HookNodeAfter { get; set; }
         /// <summary>Compiled filter struct produced by entry validation; default when no filters are authored.</summary>
         public TriggerGraphEntryFilters ParsedFilters { get; set; }
@@ -62,7 +62,7 @@ namespace Ludots.Core.GraphRuntime
     }
 
     /// <summary>
-    /// Normalized hook target of a TriggerGraph entry (#1124): the entry body is a
+    /// Normalized hook target of a TriggerGraph entry: the entry body is a
     /// fragment woven into another graph at compile time instead of dispatching on
     /// its own event. Exactly one of Anchor / NodeId is set.
     /// </summary>
@@ -189,7 +189,7 @@ namespace Ludots.Core.GraphRuntime
         public string? BuiltinHandler { get; set; }
         public string? BlackboardKey { get; set; }
         public string? ConfigKey { get; set; }
-        /// <summary>Panel type symbol for ShowPanel/HidePanel/CreatePanel/DestroyPanel ops (#1014).</summary>
+        /// <summary>Panel type symbol for ShowPanel/HidePanel/CreatePanel/DestroyPanel ops.</summary>
         public string? PanelType { get; set; }
         /// <summary>Placement anchor symbol for CreatePanel (surface-side region id).</summary>
         public string? PanelAnchor { get; set; }
@@ -209,15 +209,15 @@ namespace Ludots.Core.GraphRuntime
         public int Slot { get; set; }
         /// <summary>Named event payload key (a MapTriggerEventPayloadKeys constant) for LoadEntryPayload* ops.</summary>
         public string? PayloadKey { get; set; }
-        /// <summary>Placed InstanceId for LoadPlacedEntity / LoadPlacedRegion / LoadPlacedAnchor (#1108); validated fail-closed against the mounting map's catalog at mount time.</summary>
+        /// <summary>Placed InstanceId for LoadPlacedEntity / LoadPlacedRegion / LoadPlacedAnchor; validated fail-closed against the mounting map's catalog at mount time.</summary>
         public string? InstanceId { get; set; }
         /// <summary>Optional TriggerGraph entry label for InvokeGraph; omitted → target entry table [0].</summary>
         public string? EntryLabel { get; set; }
         /// <summary>Event name for DispatchMapEvent; must resolve in the EventSchemaRegistry.</summary>
         public string? Event { get; set; }
-        /// <summary>Dispatch domain for DispatchMapEvent: "map" (default), "self", or "global" (#1123).</summary>
+        /// <summary>Dispatch domain for DispatchMapEvent: "map" (default), "self", or "global".</summary>
         public string? Scope { get; set; }
-        /// <summary>#1126 AwaitCallback catalog name (Imm symbol); required on AwaitCallback nodes.</summary>
+        /// <summary>AwaitCallback catalog name (Imm symbol); required on AwaitCallback nodes.</summary>
         public string? CallbackType { get; set; }
         /// <summary>Literal / FormatText template for formal text ops (ConstText Imm → Symbols; FormatText brace scan).</summary>
         public string? Text { get; set; }
@@ -259,7 +259,7 @@ namespace Ludots.Core.GraphRuntime
         /// </summary>
         public string? DecoratorKind { get; set; }
         /// <summary>
-        /// Named hook point (#1124): another mod's TriggerGraph entry with a matching
+        /// Named hook point: another mod's TriggerGraph entry with a matching
         /// hookAnchor weaves its body before/after this node at compile time. Anchor
         /// names must be unique within one graph; empty means "no anchor".
         /// </summary>

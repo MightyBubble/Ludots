@@ -156,21 +156,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphExecutionState state = frame.CreateState();
             if (TryExecuteGenerated(ref frame, ref state))
             {
-                frame.Cursor.CallStackCount = state.CallStackCount;
-                frame.Cursor.ReturnInt = state.ReturnInt;
-                frame.Cursor.InvokeDepth = state.InvokeDepth;
-                frame.Cursor.Status = state.Status;
-                frame.TargetList = state.TargetList;
+                frame.CopyBackExecutionState(ref state, copyCursor: true);
                 return;
             }
 
             GasGraphOpHandlerTable.Execute(ref state, program, table);
-            frame.Cursor.CallStackCount = state.CallStackCount;
-            frame.Cursor.ReturnInt = state.ReturnInt;
-            frame.Cursor.InvokeDepth = state.InvokeDepth;
-            frame.Cursor.Status = state.Status;
-            frame.TargetList = state.TargetList;
-            frame.IntIdList = state.IntIdList;
+            frame.CopyBackExecutionState(ref state, copyCursor: true);
         }
 
         public static GraphSliceResult ExecuteSlice(
@@ -197,7 +188,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphExecutionState state = frame.CreateState();
             if (TryExecuteGeneratedSlice(ref frame, ref state, budgetSteps, out GraphSliceResult generated))
             {
-                frame.TargetList = state.TargetList;
+                frame.CopyBackExecutionState(ref state, copyCursor: false);
                 return generated;
             }
 
@@ -207,8 +198,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GasGraphOpHandlerTable.Instance,
                 ref frame.Cursor,
                 budgetSteps);
-            frame.TargetList = state.TargetList;
-            frame.IntIdList = state.IntIdList;
+            frame.CopyBackExecutionState(ref state, copyCursor: false);
             return result;
         }
 
