@@ -6,6 +6,6 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\LudotsCoreMod\LudotsCoreMod.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
   </ItemGroup>
 </Project>
