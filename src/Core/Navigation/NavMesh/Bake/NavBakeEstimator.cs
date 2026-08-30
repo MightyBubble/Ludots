@@ -164,6 +164,25 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             long terrainCellSampleCount = CountTargetTerrainCells(context);
             long recastColumnBudgetTotal = 0;
 
+            // Mirror the baker's per-tile footprint exactly (ComputeTileFootprintBounds):
+            // real world extents per target — hex HexWidth/RowSpacing and edge tiles differ
+            // from ChunkSizeCells*step, and only the footprint the baker will actually
+            // rasterize may drive the budget or the reject thresholds.
+            int maxTileSizeXVoxels = 0;
+            int maxTileSizeZVoxels = 0;
+            if (context.Algorithm == NavBakeAlgorithmKind.Recast && context.Targets.Count > 0)
+            {
+                foreach (NavBakeTileCoord target in context.Targets)
+                {
+                    RecastNavTileBaker.ComputeTileFootprintBounds(
+                        context.Terrain, target.ChunkX, target.ChunkY,
+                        out float tminX, out float tminZ, out float tmaxX, out float tmaxZ);
+                    float recastCellSizeMeters = SpatialScaleDefaults.CentimetersToMeters(cellCm);
+                    maxTileSizeXVoxels = Math.Max(maxTileSizeXVoxels, (int)MathF.Ceiling((tmaxX - tminX) / recastCellSizeMeters));
+                    maxTileSizeZVoxels = Math.Max(maxTileSizeZVoxels, (int)MathF.Ceiling((tmaxZ - tminZ) / recastCellSizeMeters));
+                }
+            }
+
             for (int i = 0; i < context.Config.Profiles.Count; i++)
             {
                 NavMeshAgentProfileConfig navProfile = context.Config.Profiles[i]
@@ -172,9 +191,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 NavBakeProfileEstimate profile = EstimateProfile(
                     agentProfile,
                     navProfile,
-                    tileWidthCm,
-                    cellCm,
-                    context.Algorithm);
+                    maxTileSizeXVoxels,
+                    maxTileSizeZVoxels,
+                    context.Algorithm,
+                    cellCm);
                 profiles.Add(profile);
                 recastColumnBudgetTotal = checked(recastColumnBudgetTotal + (long)targetTileCount * layerCount * profile.RecastColumnBudgetPerTile);
             }
@@ -272,9 +292,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         private static NavBakeProfileEstimate EstimateProfile(
             AgentProfileConfig agentProfile,
             NavMeshAgentProfileConfig navProfile,
-            int tileWidthCm,
-            int terrainCellCm,
-            NavBakeAlgorithmKind algorithm)
+            int tileWidthVoxels,
+            int tileHeightVoxels,
+            NavBakeAlgorithmKind algorithm,
+            int terrainCellCm)
         {
             if (navProfile.MaxClimbCm < 0)
             {
@@ -299,16 +320,19 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 float agentCellSizeCm = MathF.Max(5f, MathF.Min(50f, agentProfile.RadiusCm / 3f));
                 recastCellSizeCm = MathF.Max(agentCellSizeCm, terrainCellCm);
                 recastCellHeightCm = MathF.Max(recastCellSizeCm * 0.5f, MathF.Max(1f, navProfile.MaxClimbCm));
-                columnsPerAxis = checked((int)MathF.Ceiling(tileWidthCm / recastCellSizeCm));
-                // The real baker allocates (tileSize + 2*border)^2 solid columns and throws
-                // past MaxRecastVoxelsPerAxis / MaxSolidVoxelColumns — the estimate must
-                // count the same footprint and refuse the same budgets, or approval can
-                // green-light a bake that dies mid-run.
+                // The real baker allocates (tileSizeX + 2*border) x (tileSizeZ + 2*border)
+                // solid columns and throws past MaxRecastVoxelsPerAxis per axis or
+                // MaxSolidVoxelColumns total — the estimate must count the same footprint
+                // and refuse the same budgets, or approval can green-light a bake that
+                // dies mid-run. tileWidthVoxels/tileHeightVoxels arrive from the baker's
+                // own footprint function.
                 int borderVoxels = DotRecast.Recast.RcConfig.CalcBorder(
                     agentProfile.RadiusCm / SpatialScaleDefaults.CellCm,
                     recastCellSizeCm / SpatialScaleDefaults.CellCm);
-                int solidSide = checked(columnsPerAxis + 2 * borderVoxels);
-                columnBudget = checked(solidSide * solidSide);
+                columnsPerAxis = tileWidthVoxels;
+                int solidX = checked(tileWidthVoxels + 2 * borderVoxels);
+                int solidZ = checked(tileHeightVoxels + 2 * borderVoxels);
+                columnBudget = checked(solidX * solidZ);
                 walkableHeightVoxels = (int)MathF.Ceiling(agentProfile.HeightCm / recastCellHeightCm);
                 walkableClimbVoxels = (int)MathF.Floor(navProfile.MaxClimbCm / recastCellHeightCm);
             }

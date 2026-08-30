@@ -9,7 +9,7 @@ namespace Ludots.Core.Navigation.NavMesh
 {
     public static class NavTileBuilder
     {
-        private readonly struct Vtx
+        internal readonly struct Vtx
         {
             public readonly int C;
             public readonly int R;
@@ -35,7 +35,7 @@ namespace Ludots.Core.Navigation.NavMesh
             }
         }
 
-        private readonly struct SplitPoints
+        internal readonly struct SplitPoints
         {
             public readonly Vector3 HighExt;
             public readonly float HighWaterY;
@@ -225,7 +225,7 @@ namespace Ludots.Core.Navigation.NavMesh
             return true;
         }
 
-        private static Vtx GetVertex(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r, float originXm, float originZm, float heightScale)
+        internal static Vtx GetVertex(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r, float originXm, float originZm, float heightScale)
         {
             byte h = 0;
             byte w = 0;
@@ -271,29 +271,27 @@ namespace Ludots.Core.Navigation.NavMesh
             List<byte> triAreaIds,
             ref int walkableTriCount)
         {
-            if (p1.IsBlocked || p2.IsBlocked || p3.IsBlocked)
+            NavWalkableEmission emission = ClassifyTriangleEmission(p1, p2, p3, config);
+            if (emission.Kind == NavWalkableEmissionKind.Drop)
             {
                 return;
             }
 
             byte minH = Math.Min(p1.H, Math.Min(p2.H, p3.H));
             byte maxH = Math.Max(p1.H, Math.Max(p2.H, p3.H));
-            byte areaId = ResolveAreaId(p1.AreaId, p2.AreaId, p3.AreaId);
 
             if (minH == maxH)
             {
-                AppendWalkableTri(config, p1.Pos, p1.WaterY, p2.Pos, p2.WaterY, p3.Pos, p3.WaterY, areaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                AppendTri(p1.Pos, p1.WaterY, p2.Pos, p2.WaterY, p3.Pos, p3.WaterY, emission.AreaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
                 return;
             }
 
             bool isRamp = p1.IsRamp || p2.IsRamp || p3.IsRamp;
             if (isRamp)
             {
-                AppendWalkableTri(config, p1.Pos, p1.WaterY, p2.Pos, p2.WaterY, p3.Pos, p3.WaterY, areaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                AppendTri(p1.Pos, p1.WaterY, p2.Pos, p2.WaterY, p3.Pos, p3.WaterY, emission.AreaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
                 return;
             }
-
-            if (p1.H != p2.H && p1.H != p3.H && p2.H != p3.H) return;
 
             Vtx a = p1;
             Vtx b = p2;
@@ -311,10 +309,10 @@ namespace Ludots.Core.Navigation.NavMesh
                 if (TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h1, l, out var m1) &&
                     TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h2, l, out var m2))
                 {
-                    AppendWalkableTri(config, h1.Pos, h1.WaterY, h2.Pos, h2.WaterY, m1.HighExt, m1.HighWaterY, ResolveAreaId(h1.AreaId, h2.AreaId, h1.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
-                    AppendWalkableTri(config, h2.Pos, h2.WaterY, m2.HighExt, m2.HighWaterY, m1.HighExt, m1.HighWaterY, ResolveAreaId(h2.AreaId, h1.AreaId, h2.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                    AppendTri(h1.Pos, h1.WaterY, h2.Pos, h2.WaterY, m1.HighExt, m1.HighWaterY, ResolveAreaId(h1.AreaId, h2.AreaId, h1.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                    AppendTri(h2.Pos, h2.WaterY, m2.HighExt, m2.HighWaterY, m1.HighExt, m1.HighWaterY, ResolveAreaId(h2.AreaId, h1.AreaId, h2.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
 
-                    AppendWalkableTri(config, l.Pos, l.WaterY, m2.LowExt, m2.LowWaterY, m1.LowExt, m1.LowWaterY, l.AreaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                    AppendTri(l.Pos, l.WaterY, m2.LowExt, m2.LowWaterY, m1.LowExt, m1.LowWaterY, l.AreaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
                 }
 
                 return;
@@ -327,15 +325,19 @@ namespace Ludots.Core.Navigation.NavMesh
             if (TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h, l1, out var s1) &&
                 TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h, l2, out var s2))
             {
-                AppendWalkableTri(config, h.Pos, h.WaterY, s1.HighExt, s1.HighWaterY, s2.HighExt, s2.HighWaterY, h.AreaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                AppendTri(h.Pos, h.WaterY, s1.HighExt, s1.HighWaterY, s2.HighExt, s2.HighWaterY, h.AreaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
 
-                AppendWalkableTri(config, l1.Pos, l1.WaterY, l2.Pos, l2.WaterY, s1.LowExt, s1.LowWaterY, ResolveAreaId(l1.AreaId, l2.AreaId, l1.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
-                AppendWalkableTri(config, l2.Pos, l2.WaterY, s2.LowExt, s2.LowWaterY, s1.LowExt, s1.LowWaterY, ResolveAreaId(l2.AreaId, l1.AreaId, l2.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                AppendTri(l1.Pos, l1.WaterY, l2.Pos, l2.WaterY, s1.LowExt, s1.LowWaterY, ResolveAreaId(l1.AreaId, l2.AreaId, l1.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                AppendTri(l2.Pos, l2.WaterY, s2.LowExt, s2.LowWaterY, s1.LowExt, s1.LowWaterY, ResolveAreaId(l2.AreaId, l1.AreaId, l2.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
             }
         }
 
-        private static void AppendWalkableTri(
-            in NavBuildConfig config,
+        /// <summary>Pure geometry append; walkability decisions (water/slope) are owned by
+        /// ClassifyTriangleEmission on the base triangle — split sub-triangles are coplanar
+        /// with it, so re-checking here would be a second semantic source. Winding is still
+        /// normalized here: it is geometry, not semantics, and Recast drops down-facing
+        /// triangles.</summary>
+        private static void AppendTri(
             Vector3 a,
             float wa,
             Vector3 b,
@@ -353,21 +355,14 @@ namespace Ludots.Core.Navigation.NavMesh
             List<byte> triAreaIds,
             ref int walkableTriCount)
         {
-            if (wa > a.Y || wb > b.Y || wc > c.Y) return;
-
             Vector3 ab = b - a;
             Vector3 ac = c - a;
             Vector3 n = Vector3.Cross(ab, ac);
-            float len = n.Length();
-            if (len <= 1e-6f) return;
-            n /= len;
             if (n.Y < 0f)
             {
                 (b, c) = (c, b);
                 (wb, wc) = (wc, wb);
-                n = -n;
             }
-            if (n.Y < config.MinWalkableUpDot) return;
 
             int ia = GetOrAddVertex(a, vertexIndex, vx, vy, vz);
             int ib = GetOrAddVertex(b, vertexIndex, vx, vy, vz);
@@ -388,12 +383,13 @@ namespace Ludots.Core.Navigation.NavMesh
             return a;
         }
 
-        /// <summary>Per-triangle walkable emission decision, mirroring AddFace/AppendWalkableTri
-        /// order: blocked corners cut, water above ground cuts, ramps emit their full height
-        /// range unless too steep for MinWalkableUpDot, single-level floors emit flat,
-        /// three distinct levels drop, two-level triangles split at the lone-corner midpoint.
-        /// The direct heightfield feed consumes this classifier so both bake tracks share
-        /// one semantic source instead of hand-mirroring each other.</summary>
+        /// <summary>Per-triangle walkable emission decision — THE single semantic source for
+        /// both bake tracks. Rules in AddFace order: blocked corners cut, water above ground
+        /// cuts, ramps emit their full height range unless the real triangle normal misses
+        /// MinWalkableUpDot, single-level floors emit flat, three distinct levels drop,
+        /// two-level triangles split at the lone-corner midpoint line. The triangle track
+        /// (AddFace) and the direct heightfield feed both consume this; neither maintains
+        /// its own copy of these rules.</summary>
         internal enum NavWalkableEmissionKind : byte
         {
             Drop = 0,
@@ -409,44 +405,46 @@ namespace Ludots.Core.Navigation.NavMesh
             public byte LowLevel { get; init; }
             public byte HighLevel { get; init; }
             public byte LoneLevel { get; init; }
-            public bool LoneIsA { get; init; }
-            public bool LoneIsB { get; init; }
-
-            public static NavWalkableEmission Drop => default;
+            public byte PairLevel { get; init; }
+            public byte LoneIndex { get; init; }
         }
 
-        internal static NavWalkableEmission ClassifyTriangleEmission(
-            byte aLevel, byte aWater, bool aBlocked, bool aRamp, byte aArea,
-            byte bLevel, byte bWater, bool bBlocked, bool bRamp, byte bArea,
-            byte cLevel, byte cWater, bool cBlocked, bool cRamp, byte cArea,
-            float heightScaleMeters,
-            float minWalkableUpDot,
-            float horizontalRunMeters)
+        internal static NavWalkableEmission ClassifyTriangleEmission(in Vtx p1, in Vtx p2, in Vtx p3, in NavBuildConfig config)
         {
-            if (aBlocked || bBlocked || cBlocked)
+            if (p1.IsBlocked || p2.IsBlocked || p3.IsBlocked)
             {
-                return NavWalkableEmission.Drop;
+                return default;
             }
 
-            if (aWater * heightScaleMeters > aLevel * heightScaleMeters ||
-                bWater * heightScaleMeters > bLevel * heightScaleMeters ||
-                cWater * heightScaleMeters > cLevel * heightScaleMeters)
+            if (p1.WaterY > p1.Pos.Y || p2.WaterY > p2.Pos.Y || p3.WaterY > p3.Pos.Y)
             {
-                return NavWalkableEmission.Drop;
+                return default;
             }
 
-            byte area = ResolveAreaId(aArea, bArea, cArea);
-            byte lo = Math.Min(aLevel, Math.Min(bLevel, cLevel));
-            byte hi = Math.Max(aLevel, Math.Max(bLevel, cLevel));
+            byte area = ResolveAreaId(p1.AreaId, p2.AreaId, p3.AreaId);
+            byte lo = Math.Min(p1.H, Math.Min(p2.H, p3.H));
+            byte hi = Math.Max(p1.H, Math.Max(p2.H, p3.H));
 
-            if (aRamp || bRamp || cRamp)
+            if (p1.IsRamp || p2.IsRamp || p3.IsRamp)
             {
-                float rise = (hi - lo) * heightScaleMeters;
-                float run = MathF.Max(1e-4f, horizontalRunMeters);
-                float upDot = run / MathF.Sqrt(run * run + rise * rise);
-                if (upDot < minWalkableUpDot)
+                Vector3 ab = p2.Pos - p1.Pos;
+                Vector3 ac = p3.Pos - p1.Pos;
+                Vector3 n = Vector3.Cross(ab, ac);
+                float len = n.Length();
+                if (len <= 1e-6f)
                 {
-                    return NavWalkableEmission.Drop;
+                    return default;
+                }
+
+                n /= len;
+                if (n.Y < 0f)
+                {
+                    n = -n;
+                }
+
+                if (n.Y < config.MinWalkableUpDot)
+                {
+                    return default;
                 }
 
                 return new NavWalkableEmission { Kind = NavWalkableEmissionKind.RampRange, AreaId = area, LowLevel = lo, HighLevel = hi };
@@ -457,24 +455,23 @@ namespace Ludots.Core.Navigation.NavMesh
                 return new NavWalkableEmission { Kind = NavWalkableEmissionKind.FlatFloor, AreaId = area, LowLevel = lo };
             }
 
-            if (aLevel != bLevel && bLevel != cLevel && aLevel != cLevel)
+            if (p1.H != p2.H && p2.H != p3.H && p1.H != p3.H)
             {
                 return new NavWalkableEmission { Kind = NavWalkableEmissionKind.Drop, AreaId = area };
             }
 
-            bool loneIsA = aLevel != bLevel && aLevel != cLevel;
-            bool loneIsB = !loneIsA && bLevel != aLevel;
-            byte loneLevel = loneIsA ? aLevel : loneIsB ? bLevel : cLevel;
+            byte loneIndex =
+                p1.H != p2.H && p1.H != p3.H ? (byte)0 :
+                p2.H != p1.H && p2.H != p3.H ? (byte)1 : (byte)2;
+            byte loneLevel = loneIndex == 0 ? p1.H : loneIndex == 1 ? p2.H : p3.H;
             byte pairLevel = loneLevel == lo ? hi : lo;
             return new NavWalkableEmission
             {
                 Kind = NavWalkableEmissionKind.TwoLevelSplit,
                 AreaId = area,
-                LowLevel = pairLevel,
-                HighLevel = pairLevel,
                 LoneLevel = loneLevel,
-                LoneIsA = loneIsA,
-                LoneIsB = loneIsB
+                PairLevel = pairLevel,
+                LoneIndex = loneIndex
             };
         }
 
@@ -556,7 +553,7 @@ namespace Ludots.Core.Navigation.NavMesh
             else n2[triId] = neighborTriId;
         }
 
-        private static bool TryGetSplit(
+        internal static bool TryGetSplit(
             LogicTerrainField terrain,
             int mapWidth,
             int mapHeight,

@@ -405,7 +405,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return ms.ToArray();
         }
 
-        private static void ComputeTileFootprintBounds(
+        internal static void ComputeTileFootprintBounds(
             LogicTerrainField terrain,
             int chunkX,
             int chunkY,

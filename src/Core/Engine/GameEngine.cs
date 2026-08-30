@@ -3368,8 +3368,23 @@ namespace Ludots.Core.Engine
             const long MaxProjectedLogicCells = 100_000_000;
             if ((long)widthCells * heightCells > MaxProjectedLogicCells)
             {
-                throw new InvalidOperationException(
-                    $"Board '{boardName}' VisualHeightmap projection needs {(long)widthCells * heightCells:N0} logic cells (budget {MaxProjectedLogicCells:N0}); refusing to silently flatten the board. Coarsen GridCellSizeCm or shrink the board extent.");
+                // Authorized maps (WorldWidthCm binding) must not silently flatten — that is
+                // a load-time contract failure and gets a hard error. Legacy maps keep the
+                // documented flat fallback: several existing showcases (mass_navigation,
+                // crowd_physics_arena, 250x250 macro tiles) are AUTHORED flat at this scale
+                // and load through this exact path on main; failing them here would break
+                // maps that never asked for projected terrain. Tier gating (#1347) will
+                // replace this split with an explicit authored contract.
+                if (authoredBounds)
+                {
+                    throw new InvalidOperationException(
+                        $"Board '{boardName}' VisualHeightmap projection needs {(long)widthCells * heightCells:N0} logic cells (budget {MaxProjectedLogicCells:N0}); refusing to silently flatten an authorized heightmap board. Coarsen GridCellSizeCm or shrink the board extent.");
+                }
+
+                Diagnostics.Log.Info(
+                    in LogChannels.Engine,
+                    $"VisualHeightmap projection for board '{boardName}' needs {(long)widthCells * heightCells:N0} logic cells (budget {MaxProjectedLogicCells:N0}); keeping flat grid terrain.");
+                return null;
             }
 
             int heightStepCm = boardConfig.TerrainHeightStepCm > 0
