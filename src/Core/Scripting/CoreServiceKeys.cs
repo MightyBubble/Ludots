@@ -173,7 +173,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IScreenRayProvider> ScreenRayProvider = new("ScreenRayProvider");
         public static readonly ServiceKey<CameraCullingFocusOverride> CameraCullingFocusOverride = new("CameraCullingFocusOverride");
         public static readonly ServiceKey<IVisualGroundProjector> VisualGroundProjector = new("VisualGroundProjector");
-        public static readonly ServiceKey<IVisualHeightmap> VisualHeightmap = new("VisualHeightmap");
+        public static readonly ServiceKey<IContinuousHeightmap> ContinuousHeightmap = new("ContinuousHeightmap");
         public static readonly ServiceKey<Core.Presentation.Presenters.IBoneTransformProvider> BoneTransformProvider = new("BoneTransformProvider");
         public static readonly ServiceKey<StructureCollisionAsset> StructureCollisionAsset = new("StructureCollisionAsset");
         public static readonly ServiceKey<StructureCollisionRuntimeState> StructureCollisionRuntimeState = new("StructureCollisionRuntimeState");

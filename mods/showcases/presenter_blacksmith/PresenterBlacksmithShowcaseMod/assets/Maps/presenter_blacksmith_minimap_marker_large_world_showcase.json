@@ -1,7 +1,7 @@
 {
   "Id": "presenter_blacksmith_minimap_marker_large_world_showcase",
-  "VisualHeightmapAsset": "assets/terrain/presenter_blacksmith_minimap_marker_large_world_relief.vhtm",
-  "VisualHeightmap": {
+  "ContinuousHeightmapAsset": "assets/terrain/presenter_blacksmith_minimap_marker_large_world_relief.vhtm",
+  "ContinuousHeightmap": {
     "Asset": "assets/terrain/presenter_blacksmith_minimap_marker_large_world_relief.vhtm",
     "RenderProfile": {
       "WaterEnabled": true,

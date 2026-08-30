@@ -10,12 +10,12 @@ using Ludots.Raylib.Render;
 namespace Ludots.Tests.RaylibAdapter;
 
 [TestFixture]
-public sealed class RaylibVisualHeightmapRendererTests
+public sealed class RaylibContinuousHeightmapRendererTests
 {
     [Test]
     public void ShouldUseOverviewMesh_WhenCameraFramesEastAsiaScaleTerrain()
     {
-        var source = new FakeVisualHeightmapRenderSource(
+        var source = new FakeContinuousHeightmapRenderSource(
             new WorldAabbCm(-3_199_616, -1_828_352, 6_399_232, 3_656_704),
             chunkColumns: 224,
             chunkRows: 128);
@@ -27,7 +27,7 @@ public sealed class RaylibVisualHeightmapRendererTests
             projection = CameraProjection.CAMERA_PERSPECTIVE
         };
 
-        bool useOverview = RaylibVisualHeightmapRenderer.ShouldUseOverviewMesh(
+        bool useOverview = RaylibContinuousHeightmapRenderer.ShouldUseOverviewMesh(
             source,
             in camera,
             aspect: 16f / 9f,
@@ -40,7 +40,7 @@ public sealed class RaylibVisualHeightmapRendererTests
     [Test]
     public void ShouldUseOverviewMesh_WhenCameraIsNearTerrain_ReturnsFalse()
     {
-        var source = new FakeVisualHeightmapRenderSource(
+        var source = new FakeContinuousHeightmapRenderSource(
             new WorldAabbCm(-3_199_616, -1_828_352, 6_399_232, 3_656_704),
             chunkColumns: 224,
             chunkRows: 128);
@@ -52,7 +52,7 @@ public sealed class RaylibVisualHeightmapRendererTests
             projection = CameraProjection.CAMERA_PERSPECTIVE
         };
 
-        bool useOverview = RaylibVisualHeightmapRenderer.ShouldUseOverviewMesh(
+        bool useOverview = RaylibContinuousHeightmapRenderer.ShouldUseOverviewMesh(
             source,
             in camera,
             aspect: 16f / 9f,
@@ -66,31 +66,31 @@ public sealed class RaylibVisualHeightmapRendererTests
     public void ResolveAbsoluteHeightBand_TreatsOceanSentinelAbovePeakSpanAsOpenWater()
     {
         Assert.That(
-            RaylibVisualHeightmapRenderer.ResolveAbsoluteHeightBand(
+            RaylibContinuousHeightmapRenderer.ResolveAbsoluteHeightBand(
                 heightCm: 2_132f,
                 seaLevelCm: 0f,
                 absolutePeakSpanCm: 5_000f),
             Is.EqualTo(2_132f / 5_000f).Within(0.0001f));
         Assert.That(
-            RaylibVisualHeightmapRenderer.ResolveAbsoluteHeightBand(
+            RaylibContinuousHeightmapRenderer.ResolveAbsoluteHeightBand(
                 heightCm: 59_563f,
                 seaLevelCm: 0f,
                 absolutePeakSpanCm: 5_000f),
             Is.LessThan(0f));
         Assert.That(
-            RaylibVisualHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+            RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
                 heightCm: 59_563f,
                 seaLevelCm: 0f,
                 absolutePeakSpanCm: 5_000f),
             Is.EqualTo(0f));
         Assert.That(
-            RaylibVisualHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+            RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
                 heightCm: 2_132f,
                 seaLevelCm: 0f,
                 absolutePeakSpanCm: 5_000f),
             Is.EqualTo(2_132f));
         Assert.That(
-            RaylibVisualHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+            RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
                 heightCm: -6_000f,
                 seaLevelCm: 0f,
                 absolutePeakSpanCm: 5_000f),
@@ -101,13 +101,13 @@ public sealed class RaylibVisualHeightmapRendererTests
     [Test]
     public void ResolveOverviewStepChunks_KeepsLargeMapOverviewUnderRaylibVertexLimit()
     {
-        int step = RaylibVisualHeightmapRenderer.ResolveOverviewStepChunks(
+        int step = RaylibContinuousHeightmapRenderer.ResolveOverviewStepChunks(
             chunkColumns: 1024,
             chunkRows: 1024,
             maxVertices: 60_000);
 
-        int columns = RaylibVisualHeightmapRenderer.ResolveOverviewAxisPointCount(1024, step);
-        int rows = RaylibVisualHeightmapRenderer.ResolveOverviewAxisPointCount(1024, step);
+        int columns = RaylibContinuousHeightmapRenderer.ResolveOverviewAxisPointCount(1024, step);
+        int rows = RaylibContinuousHeightmapRenderer.ResolveOverviewAxisPointCount(1024, step);
 
         Assert.That(columns * rows, Is.LessThanOrEqualTo(60_000));
         Assert.That(columns * rows, Is.LessThanOrEqualTo(ushort.MaxValue));
@@ -116,7 +116,7 @@ public sealed class RaylibVisualHeightmapRendererTests
     [Test]
     public void ResolveOverviewTextureSize_UsesScreenScaledResolutionForEastAsiaEditing()
     {
-        RaylibVisualHeightmapRenderer.ResolveOverviewTextureSize(
+        RaylibContinuousHeightmapRenderer.ResolveOverviewTextureSize(
             new WorldAabbCm(-3_199_616, -1_828_352, 6_399_232, 3_656_704),
             screenWidth: 1600,
             screenHeight: 900,
@@ -132,24 +132,24 @@ public sealed class RaylibVisualHeightmapRendererTests
     [Test]
     public void ResolveChunkSampleStride_KeepsImportedEditorChunkUnderRaylibVertexLimit()
     {
-        int stride = RaylibVisualHeightmapRenderer.ResolveChunkSampleStride(
+        int stride = RaylibContinuousHeightmapRenderer.ResolveChunkSampleStride(
             sampleColumns: 257,
             sampleRows: 257);
 
-        int columns = RaylibVisualHeightmapRenderer.ResolveChunkSampleAxisPointCount(257, stride);
-        int rows = RaylibVisualHeightmapRenderer.ResolveChunkSampleAxisPointCount(257, stride);
+        int columns = RaylibContinuousHeightmapRenderer.ResolveChunkSampleAxisPointCount(257, stride);
+        int rows = RaylibContinuousHeightmapRenderer.ResolveChunkSampleAxisPointCount(257, stride);
 
         Assert.That(stride, Is.EqualTo(2));
         Assert.That(columns, Is.EqualTo(129));
         Assert.That(rows, Is.EqualTo(129));
         Assert.That(columns * rows, Is.LessThanOrEqualTo(ushort.MaxValue));
-        Assert.That(RaylibVisualHeightmapRenderer.ResolveChunkSourceSampleIndex(columns - 1, 257, stride), Is.EqualTo(256));
+        Assert.That(RaylibContinuousHeightmapRenderer.ResolveChunkSourceSampleIndex(columns - 1, 257, stride), Is.EqualTo(256));
     }
 
     [Test]
     public void ResolveChunkRenderSampling_UsesDecimatedGridForEditorChunk()
     {
-        RaylibVisualHeightmapRenderer.ResolveChunkRenderSampling(
+        RaylibContinuousHeightmapRenderer.ResolveChunkRenderSampling(
             sampleColumns: 257,
             sampleRows: 257,
             out int renderColumns,
@@ -161,13 +161,13 @@ public sealed class RaylibVisualHeightmapRendererTests
         Assert.That(renderRows, Is.EqualTo(129));
         Assert.That(renderColumns * renderRows, Is.LessThanOrEqualTo(ushort.MaxValue));
         Assert.That(
-            RaylibVisualHeightmapRenderer.ResolveChunkSourceSampleIndex(renderColumns - 1, 257, sampleStride),
+            RaylibContinuousHeightmapRenderer.ResolveChunkSourceSampleIndex(renderColumns - 1, 257, sampleStride),
             Is.EqualTo(256));
     }
 
-    private sealed class FakeVisualHeightmapRenderSource : IVisualHeightmapRenderSource
+    private sealed class FakeContinuousHeightmapRenderSource : IContinuousHeightmapRenderSource
     {
-        public FakeVisualHeightmapRenderSource(WorldAabbCm bounds, int chunkColumns, int chunkRows)
+        public FakeContinuousHeightmapRenderSource(WorldAabbCm bounds, int chunkColumns, int chunkRows)
         {
             Bounds = bounds;
             ChunkColumns = chunkColumns;
@@ -188,9 +188,9 @@ public sealed class RaylibVisualHeightmapRendererTests
 
         public int Revision => 0;
 
-        public VisualHeightmapRenderProfile RenderProfile { get; } = VisualHeightmapRenderProfile.CreateDefault();
+        public ContinuousHeightmapRenderProfile RenderProfile { get; } = ContinuousHeightmapRenderProfile.CreateDefault();
 
-        public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
+        public bool TryGetChunk(int chunkX, int chunkY, out ContinuousHeightmapRenderChunk chunk)
         {
             throw new NotSupportedException();
         }

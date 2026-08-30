@@ -39,7 +39,7 @@
     "DistanceCm": 16000,
     "FovYDeg": 60
   },
-  "visualHeightmap": {
+  "continuousHeightmap": {
     "asset": "assets/terrain/navmesh_debug_vhtm.vhtm",
     "renderProfile": {
       "absoluteColorPeakSpanCm": 1500,

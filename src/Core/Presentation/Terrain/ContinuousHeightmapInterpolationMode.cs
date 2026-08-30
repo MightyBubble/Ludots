@@ -1,6 +1,6 @@
 namespace Ludots.Core.Presentation.Terrain
 {
-    public enum VisualHeightmapInterpolationMode : byte
+    public enum ContinuousHeightmapInterpolationMode : byte
     {
         BilinearHeightfield = 0,
         TriangleHeightfield = 1,

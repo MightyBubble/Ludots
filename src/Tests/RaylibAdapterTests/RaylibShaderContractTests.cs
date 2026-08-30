@@ -46,7 +46,7 @@ public sealed class RaylibShaderContractTests
             "Client",
             "Ludots.Raylib.Render",
             "Rendering",
-            "RaylibVisualHeightmapRenderer.cs"));
+            "RaylibContinuousHeightmapRenderer.cs"));
 
         Assert.That(terrain, Does.Contain("uniform vec3 uSkyZenith"));
         Assert.That(terrain, Does.Contain("uniform vec3 uSkyGround"));
@@ -71,7 +71,7 @@ public sealed class RaylibShaderContractTests
             "Client",
             "Ludots.Raylib.Render",
             "Rendering",
-            "RaylibVisualHeightmapRenderer.cs"));
+            "RaylibContinuousHeightmapRenderer.cs"));
 
         Assert.That(terrain, Does.Contain("uniform sampler2D uNavWalkabilityMap"));
         Assert.That(terrain, Does.Contain("uniform int uUseNavWalkability"));

@@ -41,7 +41,7 @@ namespace Ludots.Raylib.Render
         private int _frameIndex;
         private Mesh _oceanPlaneMesh;
         private bool _oceanPlaneReady;
-        private IVisualHeightmap? _stampHeightSampleSource;
+        private IContinuousHeightmap? _stampHeightSampleSource;
 
         public int DrawnChunkCountLastFrame { get; private set; }
         public int BuiltChunkCountLastFrame { get; private set; }
@@ -76,7 +76,7 @@ namespace Ludots.Raylib.Render
         }
 
         /// <summary>
-        /// Draws a single reflective ocean plane for VisualHeightmap maps (no VertexMap water mesh).
+        /// Draws a single reflective ocean plane for ContinuousHeightmap maps (no VertexMap water mesh).
         /// Requires <see cref="BindReflectiveWater"/> first.
         /// </summary>
         public void DrawReflectiveOceanPlane(float planeYMeters, float halfExtentMeters, in Camera3D camera)
@@ -667,7 +667,7 @@ namespace Ludots.Raylib.Render
             return drawn;
         }
 
-        public void BindStampHeightSampleSource(IVisualHeightmap heightmap)
+        public void BindStampHeightSampleSource(IContinuousHeightmap heightmap)
         {
             _stampHeightSampleSource = heightmap ?? throw new ArgumentNullException(nameof(heightmap));
         }
@@ -678,7 +678,7 @@ namespace Ludots.Raylib.Render
             in Vector2 stampSizeMeters,
             int stableId)
         {
-            IVisualHeightmap heightmap = _stampHeightSampleSource
+            IContinuousHeightmap heightmap = _stampHeightSampleSource
                 ?? throw new InvalidOperationException(
                     $"{nameof(RaylibTerrainRenderer)} Decal stableId={stableId} has no stamp height sample source. Call {nameof(BindStampHeightSampleSource)} before projecting Decals.");
 

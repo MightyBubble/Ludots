@@ -1,6 +1,6 @@
 {
   "Id": "interaction_showcase_hub",
-  "VisualHeightmapAsset": "assets/terrain/interaction_showcase_flat.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/interaction_showcase_flat.vhtm",
   "Tags": ["interaction.showcase", "interaction.showcase.hub"],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",

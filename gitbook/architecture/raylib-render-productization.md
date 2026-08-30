@@ -41,7 +41,7 @@ Raylib 只消费 flush 后的 VFX 项与粒子 runtime snapshot。它不拥有�
 
 ## 地形环境
 
-正式 Showcase 地形路径包含天空、光照/雾、水面、后处理与大地图远景。地图可通过 `VisualHeightmapRenderProfile` 声明海平面、水体开关、高度夸张和颜色对比度。超大 chunk 必须降采样，避免索引上限；截图证据必须做完整 PNG 校验，不允许“有文件就算过”。
+正式 Showcase 地形路径包含天空、光照/雾、水面、后处理与大地图远景。地图可通过 `ContinuousHeightmapRenderProfile` 声明海平面、水体开关、高度夸张和颜色对比度。超大 chunk 必须降采样，避免索引上限；截图证据必须做完整 PNG 校验，不允许“有文件就算过”。
 
 大地图远景实拍（引擎画廊 `terrain_heightmap` 场景：绝对海拔色带 + 水下陆架 + 超密降采样）：
 

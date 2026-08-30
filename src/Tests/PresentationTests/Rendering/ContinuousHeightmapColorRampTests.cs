@@ -4,12 +4,12 @@ using NUnit.Framework;
 namespace Ludots.Tests.Presentation.Rendering;
 
 [TestFixture]
-public sealed class VisualHeightmapColorRampTests
+public sealed class ContinuousHeightmapColorRampTests
 {
     [Test]
     public void ResolveColorRanged_KeepsLowLandGreenWhenDeepSeaDominatesRange()
     {
-        var land = VisualHeightmapColorRamp.ResolveColorRanged(
+        var land = ContinuousHeightmapColorRamp.ResolveColorRanged(
             heightCm: 120f,
             slope: 0f,
             minHeightCm: -6000f,
@@ -24,7 +24,7 @@ public sealed class VisualHeightmapColorRampTests
     [Test]
     public void ResolveColorRanged_ShadesDeepWaterBlue()
     {
-        var water = VisualHeightmapColorRamp.ResolveColorRanged(
+        var water = ContinuousHeightmapColorRamp.ResolveColorRanged(
             heightCm: -5200f,
             slope: 0f,
             minHeightCm: -6000f,

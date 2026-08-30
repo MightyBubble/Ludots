@@ -1,8 +1,8 @@
 namespace Ludots.Core.Presentation.Terrain
 {
-    public readonly struct VisualHeightmapLayerDefinition
+    public readonly struct ContinuousHeightmapLayerDefinition
     {
-        public VisualHeightmapLayerDefinition(int layerId, string name, int sampleOffset, int sampleCount)
+        public ContinuousHeightmapLayerDefinition(int layerId, string name, int sampleOffset, int sampleCount)
         {
             LayerId = layerId;
             Name = name ?? string.Empty;

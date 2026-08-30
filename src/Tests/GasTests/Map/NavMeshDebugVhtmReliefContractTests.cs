@@ -14,7 +14,7 @@ namespace Ludots.Tests.Gas
 {
     /// <summary>
     /// vhtm board 的唯一验收口径（refs #413）：运行时障碍触发的增量重烤必须保留
-    /// VisualHeightmap 投影出来的地形起伏语义。历史缺陷形态是：重烤路径丢失
+    /// ContinuousHeightmap 投影出来的地形起伏语义。历史缺陷形态是：重烤路径丢失
     /// LogicTerrain 地形源，瓦片被平地烘焙覆盖——坡度不可行走区域整体消失。
     /// 本合同用真实 navmesh_debug_vhtm 资产走完整装载→烘焙→脏更新链路锁死该回归。
     /// </summary>
@@ -105,7 +105,7 @@ namespace Ludots.Tests.Gas
 
         /// <summary>
         /// vhtm board 的验收闸门（refs #413）：运行时障碍增量重烤必须保留
-        /// VisualHeightmap 起伏语义。历史缺陷（runtime-incremental 强制 CDT，
+        /// ContinuousHeightmap 起伏语义。历史缺陷（runtime-incremental 强制 CDT，
         /// CDT 在量化起伏地形上退化为近空瓦片，把离线 recast 的起伏 navmesh
         /// 整体替换成残片）已通过运行时改用 recast 烘焙器修复；本合同锁死该回归。
         /// </summary>

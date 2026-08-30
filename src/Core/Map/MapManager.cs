@@ -203,21 +203,21 @@ namespace Ludots.Core.Map
         private void MergeMapConfig(MapConfig target, MapConfig source)
         {
             if (!string.IsNullOrEmpty(source.ParentId)) target.ParentId = source.ParentId;
-            if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset))
+            if (!string.IsNullOrWhiteSpace(source.ContinuousHeightmapAsset))
             {
-                target.VisualHeightmapAsset = source.VisualHeightmapAsset;
-                if (target.VisualHeightmap != null && source.VisualHeightmap == null)
+                target.ContinuousHeightmapAsset = source.ContinuousHeightmapAsset;
+                if (target.ContinuousHeightmap != null && source.ContinuousHeightmap == null)
                 {
-                    target.VisualHeightmap.Asset = string.Empty;
+                    target.ContinuousHeightmap.Asset = string.Empty;
                 }
             }
 
-            if (source.VisualHeightmap != null)
+            if (source.ContinuousHeightmap != null)
             {
-                target.VisualHeightmap = source.VisualHeightmap.Clone();
-                if (!string.IsNullOrWhiteSpace(target.VisualHeightmap.Asset))
+                target.ContinuousHeightmap = source.ContinuousHeightmap.Clone();
+                if (!string.IsNullOrWhiteSpace(target.ContinuousHeightmap.Asset))
                 {
-                    target.VisualHeightmapAsset = target.VisualHeightmap.Asset;
+                    target.ContinuousHeightmapAsset = target.ContinuousHeightmap.Asset;
                 }
             }
 

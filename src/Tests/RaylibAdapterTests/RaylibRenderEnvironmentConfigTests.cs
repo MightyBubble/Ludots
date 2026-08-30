@@ -39,20 +39,20 @@ public sealed class RaylibRenderEnvironmentConfigTests
     }
 
     [Test]
-    public void VisualHeightmapRenderProfile_DisablesWaterByDefaultForFlatShowcaseMaps()
+    public void ContinuousHeightmapRenderProfile_DisablesWaterByDefaultForFlatShowcaseMaps()
     {
-        VisualHeightmapRenderProfile profile = VisualHeightmapRenderProfile.CreateDefault();
+        ContinuousHeightmapRenderProfile profile = ContinuousHeightmapRenderProfile.CreateDefault();
 
-        float effectiveSeaLevelCm = RaylibVisualHeightmapRenderer.ResolveEffectiveSeaLevelCm(profile, minHeightCm: 0f);
+        float effectiveSeaLevelCm = RaylibContinuousHeightmapRenderer.ResolveEffectiveSeaLevelCm(profile, minHeightCm: 0f);
 
         Assert.That(profile.WaterEnabled, Is.False);
         Assert.That(effectiveSeaLevelCm, Is.LessThan(0f));
     }
 
     [Test]
-    public void VisualHeightmapRenderProfile_WhenWaterEnabled_UsesAuthoredSeaLevel()
+    public void ContinuousHeightmapRenderProfile_WhenWaterEnabled_UsesAuthoredSeaLevel()
     {
-        var profile = new VisualHeightmapRenderProfile
+        var profile = new ContinuousHeightmapRenderProfile
         {
             WaterEnabled = true,
             SeaLevelCm = 125f,
@@ -60,17 +60,17 @@ public sealed class RaylibRenderEnvironmentConfigTests
             ColorContrast = 1.35f
         };
 
-        float effectiveSeaLevelCm = RaylibVisualHeightmapRenderer.ResolveEffectiveSeaLevelCm(profile, minHeightCm: -600f);
+        float effectiveSeaLevelCm = RaylibContinuousHeightmapRenderer.ResolveEffectiveSeaLevelCm(profile, minHeightCm: -600f);
 
         Assert.That(effectiveSeaLevelCm, Is.EqualTo(125f));
     }
 
     [Test]
-    public void VisualHeightmapRenderProfile_RejectsDisplayScaleOutsideCoreRange()
+    public void ContinuousHeightmapRenderProfile_RejectsDisplayScaleOutsideCoreRange()
     {
-        var profile = new VisualHeightmapRenderProfile
+        var profile = new ContinuousHeightmapRenderProfile
         {
-            DisplayHeightScale = VisualHeightmapRenderProfile.MaxDisplayHeightScale + 1f
+            DisplayHeightScale = ContinuousHeightmapRenderProfile.MaxDisplayHeightScale + 1f
         };
 
         Assert.Throws<ArgumentOutOfRangeException>(() => profile.NormalizeAndValidate());

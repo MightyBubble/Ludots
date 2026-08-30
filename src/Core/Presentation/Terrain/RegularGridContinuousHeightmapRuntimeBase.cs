@@ -5,7 +5,7 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Terrain
 {
-    internal abstract class RegularGridVisualHeightmapRuntimeBase : IVisualHeightmap
+    internal abstract class RegularGridContinuousHeightmapRuntimeBase : IContinuousHeightmap
     {
         private const float MToCm = 100f;
         private const float HitToleranceCm = 0.5f;
@@ -14,16 +14,16 @@ namespace Ludots.Core.Presentation.Terrain
         protected abstract WorldAabbCm Bounds { get; }
         protected abstract int SampleColumns { get; }
         protected abstract int SampleRows { get; }
-        protected abstract VisualHeightmapLayerDefinition[] Layers { get; }
+        protected abstract ContinuousHeightmapLayerDefinition[] Layers { get; }
         protected abstract int DefaultLayerIndex { get; }
-        protected abstract VisualHeightmapInterpolationMode InterpolationMode { get; }
+        protected abstract ContinuousHeightmapInterpolationMode InterpolationMode { get; }
 
         protected abstract bool TryReadSampleCm(int layerSampleOffset, int globalSampleX, int globalSampleY, out float heightCm);
 
         public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1)
         {
             heightCm = default;
-            if (!TryResolveLayer(layerIndex, out VisualHeightmapLayerDefinition layer) ||
+            if (!TryResolveLayer(layerIndex, out ContinuousHeightmapLayerDefinition layer) ||
                 !TryGetNormalizedCoordinates(worldXCm, worldYCm, out float sampleX, out float sampleY))
             {
                 return false;
@@ -78,7 +78,7 @@ namespace Ludots.Core.Presentation.Terrain
                 return true;
             }
 
-            if (InterpolationMode == VisualHeightmapInterpolationMode.TriangleHeightfield)
+            if (InterpolationMode == ContinuousHeightmapInterpolationMode.TriangleHeightfield)
             {
                 return TryRaycastTriangleGroundExact(in ray, resolvedLayer, out hit);
             }
@@ -304,7 +304,7 @@ namespace Ludots.Core.Presentation.Terrain
             out VisualGroundHit hit)
         {
             hit = default;
-            if (!TryResolveLayer(layerIndex, out VisualHeightmapLayerDefinition layer) ||
+            if (!TryResolveLayer(layerIndex, out ContinuousHeightmapLayerDefinition layer) ||
                 !TryReadCellSamples(layer.SampleOffset, cellX, cellY, out float h00, out float h10, out float h01, out float h11))
             {
                 return false;
@@ -474,7 +474,7 @@ namespace Ludots.Core.Presentation.Terrain
         private bool TryComputeNormal(float worldXCm, float worldYCm, int layerIndex, out Vector3 normal)
         {
             normal = Vector3.UnitY;
-            if (!TryResolveLayer(layerIndex, out VisualHeightmapLayerDefinition layer) ||
+            if (!TryResolveLayer(layerIndex, out ContinuousHeightmapLayerDefinition layer) ||
                 !TryGetNormalizedCoordinates(worldXCm, worldYCm, out float sampleX, out float sampleY) ||
                 !TryResolveCell(sampleX, sampleY, out int cellX, out int cellY, out float tx, out float ty) ||
                 !TryReadCellSamples(layer.SampleOffset, cellX, cellY, out float h00, out float h10, out float h01, out float h11))
@@ -484,7 +484,7 @@ namespace Ludots.Core.Presentation.Terrain
 
             float cellWidthCm = GetCellWidthCm();
             float cellHeightCm = GetCellHeightCm();
-            if (InterpolationMode == VisualHeightmapInterpolationMode.BilinearHeightfield)
+            if (InterpolationMode == ContinuousHeightmapInterpolationMode.BilinearHeightfield)
             {
                 float dHeightDxCm = ((h10 - h00) * (1f - ty)) + ((h11 - h01) * ty);
                 float dHeightDyCm = ((h01 - h00) * (1f - tx)) + ((h11 - h10) * tx);
@@ -538,7 +538,7 @@ namespace Ludots.Core.Presentation.Terrain
             return true;
         }
 
-        private bool TryResolveLayer(int layerIndex, out VisualHeightmapLayerDefinition layer)
+        private bool TryResolveLayer(int layerIndex, out ContinuousHeightmapLayerDefinition layer)
         {
             if (!TryResolveLayerIndex(layerIndex, out int resolvedLayer))
             {
@@ -630,9 +630,9 @@ namespace Ludots.Core.Presentation.Terrain
             return Math.Clamp(cellY, 0, Math.Max(0, SampleRows - 2));
         }
 
-        private static float SampleCell(float h00, float h10, float h01, float h11, float tx, float ty, VisualHeightmapInterpolationMode mode)
+        private static float SampleCell(float h00, float h10, float h01, float h11, float tx, float ty, ContinuousHeightmapInterpolationMode mode)
         {
-            return mode == VisualHeightmapInterpolationMode.TriangleHeightfield
+            return mode == ContinuousHeightmapInterpolationMode.TriangleHeightfield
                 ? SampleTriangleCell(h00, h10, h01, h11, tx, ty)
                 : SampleBilinearCell(h00, h10, h01, h11, tx, ty);
         }

@@ -22,7 +22,7 @@ namespace Ludots.Core.Engine
         private readonly Dictionary<MapId, PendingMapLoadState> _pendingMapLoads = new();
         private readonly Dictionary<MapId, PendingMapResumeState> _pendingMapResumes = new();
         private readonly Dictionary<MapId, MapLoadStatus> _mapLoadStatuses = new();
-        private VertexMapVisualHeightmap? _vertexMapVisualHeightmap;
+        private VertexMapContinuousHeightmap? _vertexMapContinuousHeightmap;
 
         private sealed class PendingMapLoadState
         {
@@ -108,7 +108,7 @@ namespace Ludots.Core.Engine
                 RemoveService(CoreServiceKeys.MapFeatureFlags);
                 RemoveService(CoreServiceKeys.MapLoadStatus);
                 RemoveService(CoreServiceKeys.MapLaunchContext);
-                RemoveService(CoreServiceKeys.VisualHeightmap);
+                RemoveService(CoreServiceKeys.ContinuousHeightmap);
                 RemoveService(CoreServiceKeys.StructureCollisionAsset);
                 RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
                 RemoveService(CoreServiceKeys.GroundSurfaceSampler);
@@ -129,20 +129,20 @@ namespace Ludots.Core.Engine
             {
                 RemoveService(CoreServiceKeys.MapLaunchContext);
             }
-            IVisualHeightmap? visualHeightmap = ResolveSessionVisualHeightmap(session);
-            if (visualHeightmap != null)
+            IContinuousHeightmap? continuousHeightmap = ResolveSessionContinuousHeightmap(session);
+            if (continuousHeightmap != null)
             {
-                SetService(CoreServiceKeys.VisualHeightmap, visualHeightmap);
+                SetService(CoreServiceKeys.ContinuousHeightmap, continuousHeightmap);
             }
             else
             {
-                RemoveService(CoreServiceKeys.VisualHeightmap);
+                RemoveService(CoreServiceKeys.ContinuousHeightmap);
             }
             if (session.StructureCollisionAsset != null)
             {
                 session.StructureCollisionRuntimeState ??= new StructureCollisionRuntimeState(session.StructureCollisionAsset);
                 session.GroundSurfaceSampler ??= new GroundSurfaceSampler(
-                    visualHeightmap,
+                    continuousHeightmap,
                     session.StructureCollisionAsset,
                     session.StructureCollisionRuntimeState);
                 SetService(CoreServiceKeys.StructureCollisionAsset, session.StructureCollisionAsset);
@@ -153,9 +153,9 @@ namespace Ludots.Core.Engine
             {
                 RemoveService(CoreServiceKeys.StructureCollisionAsset);
                 RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
-                if (visualHeightmap != null)
+                if (continuousHeightmap != null)
                 {
-                    session.GroundSurfaceSampler ??= new GroundSurfaceSampler(visualHeightmap, null, null);
+                    session.GroundSurfaceSampler ??= new GroundSurfaceSampler(continuousHeightmap, null, null);
                     SetService(CoreServiceKeys.GroundSurfaceSampler, session.GroundSurfaceSampler);
                 }
                 else
@@ -172,19 +172,19 @@ namespace Ludots.Core.Engine
             SetCurrentMapSession(session);
         }
 
-        private IVisualHeightmap? ResolveSessionVisualHeightmap(MapSession session)
+        private IContinuousHeightmap? ResolveSessionContinuousHeightmap(MapSession session)
         {
-            if (session.VisualHeightmap != null)
+            if (session.ContinuousHeightmap != null)
             {
-                return session.VisualHeightmap;
+                return session.ContinuousHeightmap;
             }
 
-            // .vhtm 是唯一权威视觉高度源；仅当会话未声明 vhtm 且引擎已持有 VertexMap 时用逻辑格点补高度服务。
+            // .height 是唯一权威视觉高度源；仅当会话未声明 .height 且引擎已持有 VertexMap 时用逻辑格点补高度服务。
             // 适配器按需读取当前 VertexMap，地图热切换不会绑定到上一张图。
             if (VertexMap != null)
             {
-                _vertexMapVisualHeightmap ??= new VertexMapVisualHeightmap(() => VertexMap);
-                return _vertexMapVisualHeightmap;
+                _vertexMapContinuousHeightmap ??= new VertexMapContinuousHeightmap(() => VertexMap);
+                return _vertexMapContinuousHeightmap;
             }
 
             return null;

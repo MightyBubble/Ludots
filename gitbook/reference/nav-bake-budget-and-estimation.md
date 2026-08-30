@@ -9,12 +9,12 @@ This page is a design reference for planning navmesh bake cost before running th
 The target production pipeline is:
 
 ```text
-Board -> VisualHeightmap -> LogicTerrain -> NavMesh
+Board -> ContinuousHeightmap -> LogicTerrain -> NavMesh
 ```
 
 NodeGraph boards use the short graph path and do not bake navmesh. Grid and HexGrid boards bake only when navigation is enabled and a `LogicTerrainField` exists for the board.
 
-Current status note: CLI `nav estimate-recast-react` / `nav bake-recast-react` and Editor Bridge resolve the primary navigation board and choose grid or hex `LogicTerrainField` by topology. NAV-15 #373 still owns the final single-source asset closure from official `VisualHeightmap`/classification assets into `LogicTerrain`; until then, React `map_data.bin` is the production editing upload format for the current toolchain.
+Current status note: CLI `nav estimate-recast-react` / `nav bake-recast-react` and Editor Bridge resolve the primary navigation board and choose grid or hex `LogicTerrainField` by topology. NAV-15 #373 still owns the final single-source asset closure from official `ContinuousHeightmap`/classification assets into `LogicTerrain`; until then, React `map_data.bin` is the production editing upload format for the current toolchain.
 
 The old branch `origin/codex/mass-navigation-bake-data-showcase` is useful as a reference for chunked logic-terrain materialization and tile-window reads. It must not be merged as-is: it carried a private `.lhtm` lane, huge baked fixtures, fallback-like heightmap sampling, hardcoded area classification, and baked/runtime scale mapping drift. Reuse the ideas, not the data source.
 

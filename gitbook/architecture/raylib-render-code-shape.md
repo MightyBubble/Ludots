@@ -37,7 +37,7 @@ Ludots.App.RaylibEngineGallery   Ludots.Adapter.Raylib（宿主：把 Core 服�
 | 覆盖层 | `GroundOverlayBuffer.cs`、`SplineRibbonBuffer.cs` | `RaylibWorldOverlayRenderer` |
 | 拖尾轨迹 | `TrailMeshBuffer.cs`、`TrailSampleHistory.cs`（采样/老化共享纯工具，Core runtime 与画廊场景共用） | `RaylibTrailMeshRenderer` |
 | 调试 | `DebugDrawCommandBuffer.cs` | `RaylibDebugDrawRenderer` |
-| 地形 | `ITerrainChunkMeshSource.cs`、`IVisualHeightmap(RenderSource).cs`、`VisualHeightmapRenderProfile.cs` | 地形/高度图渲染器 |
+| 地形 | `ITerrainChunkMeshSource.cs`、`IContinuousHeightmap(RenderSource).cs`、`ContinuousHeightmapRenderProfile.cs` | 地形/高度图渲染器 |
 | 相机/数学 | `CameraRenderState3D.cs`、`VisualMath.cs`、`LODLevel.cs` | 全部 |
 | 配置载体 | `MergedConfigEntry.cs` | 环境类渲染器（天空/水体） |
 | 基准直驱 | `IRaylibBenchmarkRenderer.cs` | `RaylibBenchmarkRenderer`（画廊与平台基准共用） |
@@ -52,7 +52,7 @@ Ludots.App.RaylibEngineGallery   Ludots.Adapter.Raylib（宿主：把 Core 服�
 | 蒙皮合批 | `RaylibGpuSkinnedBatchRenderer`、`RaylibGpuSkinnedModelCache`、`RaylibSkinnedPlayback` | `skinning_instanced` |
 | 单物体光照 | `RaylibLitModel`、`RaylibFrameLighting`、`RaylibSkyIbl`、`RaylibDirectionalShadowMap`、`RaylibShadowSampling` | `model_lit` + 深度 pass 族 |
 | 环境 | `RaylibSkyboxRenderer`、`RaylibSkyEnvironment`、`RaylibRenderEnvironment(Renderer/Config)`、`RaylibWaterPass`、`RaylibPostProcessRenderer` | `skybox` / `sky_daynight` / `water` / `postprocess` |
-| 地表 | `RaylibTerrainRenderer`、`RaylibVisualHeightmapRenderer`、`RaylibVegetationCutoutRenderer`、`RaylibDecalProjectorRenderer`、`IRaylibReceiverMeshProjector` | `terrain` / `vegetation_cutout` / `decal_project` |
+| 地表 | `RaylibTerrainRenderer`、`RaylibContinuousHeightmapRenderer`、`RaylibVegetationCutoutRenderer`、`RaylibDecalProjectorRenderer`、`IRaylibReceiverMeshProjector` | `terrain` / `vegetation_cutout` / `decal_project` |
 | 材质/着色 | `RaylibMaterialLibrary`、`RaylibShaderCatalog`、`RaylibLaneShader`、`RaylibShaderLoader`、`RaylibShaderBindingGuard`、`RaylibEffectShaderRegistry` | 装订与分派 |
 | 特效/覆盖 | `RaylibVfxRenderer`、`RaylibWorldOverlayRenderer`、`RaylibTrailMeshRenderer`、`TrailMeshGeometry`、`RaylibSkiaRenderer` + `SkiaRasterLayer` | `vfx_unlit_tint` / overlay / trail-mesh / Skia |
 | 工具 | `RaylibDebugDrawRenderer`、`RaylibBenchmarkRenderer`、`RaylibColorUtil`、`RenderDiagnostics` | 调试 / 基准 / 诊断出口 |

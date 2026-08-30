@@ -6,13 +6,13 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Presentation.Terrain
 {
     /// <summary>
-    /// IVisualHeightmap view over the VertexMap logic-height lattice. Sampled height is the nearest
+    /// IContinuousHeightmap view over the VertexMap logic-height lattice. Sampled height is the nearest
     /// vertex's height level scaled by HeightScaleMeters — the same scale the nav bake
     /// (NavTileBuilder) and the Raylib VertexMap terrain mesh apply, so grounding, overlay and decal
     /// fitting agree with the rendered surface. The map is read through a provider so hot-swapping
     /// focused maps never leaves the adapter bound to a stale VertexMap.
     /// </summary>
-    public sealed class VertexMapVisualHeightmap : IVisualHeightmap
+    public sealed class VertexMapContinuousHeightmap : IContinuousHeightmap
     {
         public const float DefaultHeightScaleMeters = 2f;
 
@@ -23,7 +23,7 @@ namespace Ludots.Core.Presentation.Terrain
         private readonly Func<VertexMap?> _mapProvider;
         private readonly float _heightScaleMeters;
 
-        public VertexMapVisualHeightmap(Func<VertexMap?> mapProvider, float heightScaleMeters = DefaultHeightScaleMeters)
+        public VertexMapContinuousHeightmap(Func<VertexMap?> mapProvider, float heightScaleMeters = DefaultHeightScaleMeters)
         {
             _mapProvider = mapProvider ?? throw new ArgumentNullException(nameof(mapProvider));
             if (!float.IsFinite(heightScaleMeters) || heightScaleMeters <= 0f)

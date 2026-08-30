@@ -3,9 +3,9 @@ namespace Ludots.Platform.Abstractions
 {
     /// <summary>
     /// Cross-adapter render contract for map-owned visual terrain. Adapters render chunks
-    /// from this source; they must not invent height semantics outside IVisualHeightmap.
+    /// from this source; they must not invent height semantics outside IContinuousHeightmap.
     /// </summary>
-    public interface IVisualHeightmapRenderSource
+    public interface IContinuousHeightmapRenderSource
     {
         WorldAabbCm Bounds { get; }
 
@@ -21,8 +21,8 @@ namespace Ludots.Platform.Abstractions
 
         int Revision { get; }
 
-        VisualHeightmapRenderProfile RenderProfile { get; }
+        ContinuousHeightmapRenderProfile RenderProfile { get; }
 
-        bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk);
+        bool TryGetChunk(int chunkX, int chunkY, out ContinuousHeightmapRenderChunk chunk);
     }
 }

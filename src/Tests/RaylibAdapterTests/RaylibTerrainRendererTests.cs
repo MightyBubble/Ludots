@@ -107,11 +107,11 @@ public sealed class RaylibTerrainRendererTests
                 "Rendering",
                 "RaylibFrameRenderer.cs"));
 
-            Assert.That(hostSource, Does.Contain("new MapLaneReceiverMeshProjector(engine, visualHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector)"));
-            Assert.That(frameRendererSource, Does.Contain("_visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap)"));
-            Assert.That(frameRendererSource, Does.Contain("_terrainRenderer.BindStampHeightSampleSource(visualHeightmap)"));
+            Assert.That(hostSource, Does.Contain("new MapLaneReceiverMeshProjector(engine, continuousHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector)"));
+            Assert.That(frameRendererSource, Does.Contain("_continuousHeightmapRenderer.BindStampHeightSampleSource(continuousHeightmap)"));
+            Assert.That(frameRendererSource, Does.Contain("_terrainRenderer.BindStampHeightSampleSource(continuousHeightmap)"));
             Assert.That(
-                hostSource.IndexOf("primitiveRenderer.BindReceiverMeshProjector(visualHeightmapRenderer)", StringComparison.Ordinal),
+                hostSource.IndexOf("primitiveRenderer.BindReceiverMeshProjector(continuousHeightmapRenderer)", StringComparison.Ordinal),
                 Is.EqualTo(-1),
                 "Decal receiver must follow the focused map lane, not hard-bind the visual heightmap renderer.");
         }

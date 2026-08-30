@@ -7,7 +7,7 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>
-    /// 投影贴花：RaylibVisualHeightmapRenderer 作为接收面网格投影器，decal_project shader
+    /// 投影贴花：RaylibContinuousHeightmapRenderer 作为接收面网格投影器，decal_project shader
     /// 把程序化贴花沿世界 Y 投到起伏地表；三枚贴花随时间在地表巡游。
     /// </summary>
     public sealed class DecalProjectionScene : IEngineScene
@@ -26,7 +26,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly GalleryMaterialAssets _materials = new();
         private readonly GalleryPrimitiveSnapshot _snapshot = new();
 
-        private RaylibVisualHeightmapRenderer _terrain = new() { VisibleRadiusCm = 60_000f };
+        private RaylibContinuousHeightmapRenderer _terrain = new() { VisibleRadiusCm = 60_000f };
         private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibPrimitiveRenderer _primitives = null!;
         private RaylibFrameLighting _lighting = null!;
@@ -121,7 +121,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _snapshot.Add(GalleryItems.Decal(1, RingMaterialId, ringPos, yawRad: t * 0.8f, stampWidth: 16f, stampDepth: 16f, tint: new Vector4(1f, 1f, 1f, 0.9f)));
             _snapshot.Add(GalleryItems.Decal(2, ArrowMaterialId, arrowPos, yawRad: -t * 0.6f, stampWidth: 10f, stampDepth: 10f, tint: Vector4.One));
             _snapshot.Add(GalleryItems.Decal(3, TargetMaterialId, targetPos, yawRad: 0f, stampWidth: 7f, stampDepth: 7f, tint: Vector4.One));
-            _primitives.Draw(_snapshot, camera, _meshes, visualHeightmap: _heightmap, timeSeconds: totalTimeSeconds);
+            _primitives.Draw(_snapshot, camera, _meshes, continuousHeightmap: _heightmap, timeSeconds: totalTimeSeconds);
             Rl.EndMode3D();
 
             GalleryFont.Draw($"decals painted last frame {_primitives.LastDecalVisualCount}", 12, 28, 20, GalleryColors.RayWhite);

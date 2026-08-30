@@ -5,12 +5,12 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Terrain
 {
-    internal interface IVisualHeightmapSampleAccessor
+    internal interface IContinuousHeightmapSampleAccessor
     {
         bool TryReadSampleCm(int layerSampleOffset, int sampleX, int sampleY, out float heightCm);
     }
 
-    internal static class VisualHeightmapQueries
+    internal static class ContinuousHeightmapQueries
     {
         private const float MToCm = 100f;
         private const float CmToM = 0.01f;
@@ -19,11 +19,11 @@ namespace Ludots.Core.Presentation.Terrain
         private const float TriangleEpsilon = 0.00001f;
 
         public static bool TrySampleHeightCm(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
-            VisualHeightmapInterpolationMode interpolationMode,
+            ContinuousHeightmapInterpolationMode interpolationMode,
             int layerSampleOffset,
             float worldXCm,
             float worldYCm,
@@ -56,11 +56,11 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         public static void SampleHeightsCm(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
-            VisualHeightmapInterpolationMode interpolationMode,
+            ContinuousHeightmapInterpolationMode interpolationMode,
             int layerSampleOffset,
             ReadOnlySpan<float> worldXCm,
             ReadOnlySpan<float> worldYCm,
@@ -96,11 +96,11 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         public static bool TrySampleSurface(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
-            VisualHeightmapInterpolationMode interpolationMode,
+            ContinuousHeightmapInterpolationMode interpolationMode,
             int layerSampleOffset,
             float worldXCm,
             float worldYCm,
@@ -135,11 +135,11 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         public static bool TryRaycastGround(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
-            VisualHeightmapInterpolationMode interpolationMode,
+            ContinuousHeightmapInterpolationMode interpolationMode,
             int layerIndex,
             int layerSampleOffset,
             in ScreenRay ray,
@@ -151,7 +151,7 @@ namespace Ludots.Core.Presentation.Terrain
                 return true;
             }
 
-            if (interpolationMode == VisualHeightmapInterpolationMode.TriangleHeightfield &&
+            if (interpolationMode == ContinuousHeightmapInterpolationMode.TriangleHeightfield &&
                 sampleColumns > 1 &&
                 sampleRows > 1 &&
                 TryRaycastTriangleHeightfieldExact(accessor, in bounds, sampleColumns, sampleRows, layerIndex, layerSampleOffset, in ray, out hit))
@@ -208,11 +208,11 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         private static bool TryRaycastVerticalGround(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
-            VisualHeightmapInterpolationMode interpolationMode,
+            ContinuousHeightmapInterpolationMode interpolationMode,
             int layerIndex,
             int layerSampleOffset,
             in ScreenRay ray,
@@ -248,11 +248,11 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         private static bool TryBuildHit(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
-            VisualHeightmapInterpolationMode interpolationMode,
+            ContinuousHeightmapInterpolationMode interpolationMode,
             int layerIndex,
             int layerSampleOffset,
             Vector3 origin,
@@ -276,7 +276,7 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         private static float EvaluateHeight(
-            VisualHeightmapInterpolationMode interpolationMode,
+            ContinuousHeightmapInterpolationMode interpolationMode,
             bool degenerateCell,
             float h00,
             float h10,
@@ -285,7 +285,7 @@ namespace Ludots.Core.Presentation.Terrain
             float tx,
             float ty)
         {
-            if (interpolationMode == VisualHeightmapInterpolationMode.TriangleHeightfield && !degenerateCell)
+            if (interpolationMode == ContinuousHeightmapInterpolationMode.TriangleHeightfield && !degenerateCell)
             {
                 if (tx + ty <= 1f)
                 {
@@ -301,11 +301,11 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         private static bool TryComputeNormal(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
-            VisualHeightmapInterpolationMode interpolationMode,
+            ContinuousHeightmapInterpolationMode interpolationMode,
             int layerSampleOffset,
             float worldXCm,
             float worldYCm,
@@ -335,7 +335,7 @@ namespace Ludots.Core.Presentation.Terrain
 
             float cellWidthCm = GetCellWidthCm(in bounds, sampleColumns);
             float cellHeightCm = GetCellHeightCm(in bounds, sampleRows);
-            if (interpolationMode == VisualHeightmapInterpolationMode.TriangleHeightfield &&
+            if (interpolationMode == ContinuousHeightmapInterpolationMode.TriangleHeightfield &&
                 x0 != x1 &&
                 y0 != y1)
             {
@@ -375,7 +375,7 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         private static bool TryRaycastTriangleHeightfieldExact(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
@@ -442,7 +442,7 @@ namespace Ludots.Core.Presentation.Terrain
                         in bounds,
                         sampleColumns,
                         sampleRows,
-                        VisualHeightmapInterpolationMode.TriangleHeightfield,
+                        ContinuousHeightmapInterpolationMode.TriangleHeightfield,
                         layerIndex,
                         layerSampleOffset,
                         ray.Origin,
@@ -471,7 +471,7 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         private static bool TryIntersectCellTriangles(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,
             float cellWidthCm,
             float cellHeightCm,
@@ -555,11 +555,11 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         private static float RefineHitT(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
-            VisualHeightmapInterpolationMode interpolationMode,
+            ContinuousHeightmapInterpolationMode interpolationMode,
             int layerSampleOffset,
             in ScreenRay ray,
             float lowT,
@@ -599,11 +599,11 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         private static bool TryEvaluateSignedDistance(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
-            VisualHeightmapInterpolationMode interpolationMode,
+            ContinuousHeightmapInterpolationMode interpolationMode,
             int layerSampleOffset,
             in ScreenRay ray,
             float t,
@@ -674,11 +674,11 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         private static bool TrySampleHeightCmFast(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
-            VisualHeightmapInterpolationMode interpolationMode,
+            ContinuousHeightmapInterpolationMode interpolationMode,
             int layerSampleOffset,
             float invWidth,
             float invHeight,
@@ -726,7 +726,7 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         private static bool TryReadCellSamples(
-            IVisualHeightmapSampleAccessor accessor,
+            IContinuousHeightmapSampleAccessor accessor,
             int layerSampleOffset,
             int x0,
             int x1,

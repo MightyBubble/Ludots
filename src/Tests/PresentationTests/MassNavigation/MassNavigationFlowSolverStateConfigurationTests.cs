@@ -445,12 +445,12 @@ namespace Ludots.Tests.Presentation
             config.ScenarioRuntime.AutoSpawnConfiguredScenario = false;
             engine.RemoveService(CoreServiceKeys.PresenterDefinitionRegistry);
             engine.RemoveService(CoreServiceKeys.PresentationMeshAssetRegistry);
-            engine.RemoveService(CoreServiceKeys.VisualHeightmap);
+            engine.RemoveService(CoreServiceKeys.ContinuousHeightmap);
 
             Assert.That(
                 () => MassNavigationAuthoringContract.Require(engine, config),
                 Throws.Nothing,
-                "Externally-authored MassNavigation maps must be able to prepare execution without Presentation presenter, mesh, or VisualHeightmap services.");
+                "Externally-authored MassNavigation maps must be able to prepare execution without Presentation presenter, mesh, or ContinuousHeightmap services.");
         }
 
         [Test]

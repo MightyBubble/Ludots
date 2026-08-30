@@ -9,37 +9,37 @@ namespace Ludots.Core.Presentation.Terrain
     /// Adjacent chunks share border samples, so total sample resolution is derived as:
     /// chunkCount * (samplesPerChunk - 1) + 1.
     /// </summary>
-    public sealed class ChunkedVisualHeightmapDescriptor
+    public sealed class ChunkedContinuousHeightmapDescriptor
     {
-        public ChunkedVisualHeightmapDescriptor(
+        public ChunkedContinuousHeightmapDescriptor(
             WorldAabbCm bounds,
             int chunkColumns,
             int chunkRows,
             int samplesPerChunkColumn,
             int samplesPerChunkRow,
-            VisualHeightmapLayerDefinition[] layers,
-            VisualHeightmapStorageLayout storageLayout = VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
+            ContinuousHeightmapLayerDefinition[] layers,
+            ContinuousHeightmapStorageLayout storageLayout = ContinuousHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
             int defaultLayerIndex = 0,
-            VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.BilinearHeightfield,
-            VisualHeightSampleScale? sampleScale = null)
+            ContinuousHeightmapInterpolationMode interpolationMode = ContinuousHeightmapInterpolationMode.BilinearHeightfield,
+            ContinuousHeightSampleScale? sampleScale = null)
         {
             if (chunkColumns <= 0) throw new ArgumentOutOfRangeException(nameof(chunkColumns));
             if (chunkRows <= 0) throw new ArgumentOutOfRangeException(nameof(chunkRows));
             if (samplesPerChunkColumn < 2) throw new ArgumentOutOfRangeException(nameof(samplesPerChunkColumn));
             if (samplesPerChunkRow < 2) throw new ArgumentOutOfRangeException(nameof(samplesPerChunkRow));
             if (layers == null || layers.Length == 0) throw new ArgumentException("At least one visual heightmap layer is required.", nameof(layers));
-            if (storageLayout == VisualHeightmapStorageLayout.None) throw new ArgumentOutOfRangeException(nameof(storageLayout));
+            if (storageLayout == ContinuousHeightmapStorageLayout.None) throw new ArgumentOutOfRangeException(nameof(storageLayout));
             if ((uint)defaultLayerIndex >= (uint)layers.Length) throw new ArgumentOutOfRangeException(nameof(defaultLayerIndex));
             if (bounds.Width <= 0 || bounds.Height <= 0) throw new ArgumentOutOfRangeException(nameof(bounds));
             if (bounds.Width % chunkColumns != 0) throw new ArgumentException("Chunked visual heightmap bounds width must be divisible by chunk column count.", nameof(bounds));
             if (bounds.Height % chunkRows != 0) throw new ArgumentException("Chunked visual heightmap bounds height must be divisible by chunk row count.", nameof(bounds));
-            VisualHeightSampleScale resolvedScale = sampleScale ?? VisualHeightSampleScale.IdentityCentimeters;
+            ContinuousHeightSampleScale resolvedScale = sampleScale ?? ContinuousHeightSampleScale.IdentityCentimeters;
             resolvedScale.Validate();
 
             int samplesPerLayerPerChunk = checked(samplesPerChunkColumn * samplesPerChunkRow);
             for (int i = 0; i < layers.Length; i++)
             {
-                VisualHeightmapLayerDefinition layer = layers[i];
+                ContinuousHeightmapLayerDefinition layer = layers[i];
                 if (layer.SampleOffset < 0 ||
                     layer.SampleCount != samplesPerLayerPerChunk ||
                     layer.SampleOffset + layer.SampleCount > checked(samplesPerLayerPerChunk * layers.Length))
@@ -70,15 +70,15 @@ namespace Ludots.Core.Presentation.Terrain
 
         public int SamplesPerChunkRow { get; }
 
-        public VisualHeightmapLayerDefinition[] Layers { get; }
+        public ContinuousHeightmapLayerDefinition[] Layers { get; }
 
-        public VisualHeightmapStorageLayout StorageLayout { get; }
+        public ContinuousHeightmapStorageLayout StorageLayout { get; }
 
         public int DefaultLayerIndex { get; }
 
-        public VisualHeightmapInterpolationMode InterpolationMode { get; }
+        public ContinuousHeightmapInterpolationMode InterpolationMode { get; }
 
-        public VisualHeightSampleScale SampleScale { get; }
+        public ContinuousHeightSampleScale SampleScale { get; }
 
         public int SamplesPerLayerPerChunk => checked(SamplesPerChunkColumn * SamplesPerChunkRow);
 
@@ -92,19 +92,19 @@ namespace Ludots.Core.Presentation.Terrain
 
         public int ChunkWorldHeightCm => Bounds.Height / ChunkRows;
 
-        public static ChunkedVisualHeightmapDescriptor CreateSingleLayer(
+        public static ChunkedContinuousHeightmapDescriptor CreateSingleLayer(
             WorldAabbCm bounds,
             int chunkColumns,
             int chunkRows,
             int samplesPerChunkColumn,
             int samplesPerChunkRow,
             string layerName = "base",
-            VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.BilinearHeightfield,
-            VisualHeightmapStorageLayout storageLayout = VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
-            VisualHeightSampleScale? sampleScale = null)
+            ContinuousHeightmapInterpolationMode interpolationMode = ContinuousHeightmapInterpolationMode.BilinearHeightfield,
+            ContinuousHeightmapStorageLayout storageLayout = ContinuousHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
+            ContinuousHeightSampleScale? sampleScale = null)
         {
             int samplesPerLayer = checked(samplesPerChunkColumn * samplesPerChunkRow);
-            return new ChunkedVisualHeightmapDescriptor(
+            return new ChunkedContinuousHeightmapDescriptor(
                 bounds,
                 chunkColumns,
                 chunkRows,
@@ -112,7 +112,7 @@ namespace Ludots.Core.Presentation.Terrain
                 samplesPerChunkRow,
                 new[]
                 {
-                    new VisualHeightmapLayerDefinition(
+                    new ContinuousHeightmapLayerDefinition(
                         layerId: 0,
                         name: layerName,
                         sampleOffset: 0,

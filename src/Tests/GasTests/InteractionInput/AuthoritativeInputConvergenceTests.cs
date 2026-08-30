@@ -523,7 +523,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
-                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ContinuousHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
@@ -548,7 +548,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
-                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ContinuousHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
                 [CoreServiceKeys.AuthoritativeGroundPointerOverride.Name] = groundOverride,
@@ -759,7 +759,7 @@ namespace Ludots.Tests.GAS
             engine.SetService(CoreServiceKeys.PointerInputCaptured, false);
             engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { CreateMinimapInputConsumer(minimap) });
             engine.SetService(CoreServiceKeys.ScreenRayProvider, rayProvider);
-            engine.SetService(CoreServiceKeys.VisualHeightmap, CreateFlatHeightmap());
+            engine.SetService(CoreServiceKeys.ContinuousHeightmap, CreateFlatHeightmap());
             engine.SetService(CoreServiceKeys.WorldSizeSpec, new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100));
 
             var input = new AuthoritativeInputAccumulator();
@@ -1124,10 +1124,10 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        private static IVisualHeightmap CreateFlatHeightmap()
+        private static IContinuousHeightmap CreateFlatHeightmap()
         {
-            return new VisualHeightmapRuntime(
-                VisualHeightmapAsset.CreateSingleLayer(
+            return new ContinuousHeightmapRuntime(
+                ContinuousHeightmapAsset.CreateSingleLayer(
                     new WorldAabbCm(-100000, -100000, 200000, 200000),
                     sampleColumns: 2,
                     sampleRows: 2,

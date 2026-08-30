@@ -182,12 +182,12 @@ internal static class VisualTerrainEditorPersistence
             throw new InvalidDataException("Visual terrain editor currently supports only a single default heightmap layer.");
         }
 
-        if (!Enum.TryParse(manifest.StorageLayout, ignoreCase: false, out VisualHeightmapStorageLayout storageLayout))
+        if (!Enum.TryParse(manifest.StorageLayout, ignoreCase: false, out ContinuousHeightmapStorageLayout storageLayout))
         {
             throw new InvalidDataException($"Unknown visual terrain storage layout '{manifest.StorageLayout}'.");
         }
 
-        if (!Enum.TryParse(manifest.InterpolationMode, ignoreCase: false, out VisualHeightmapInterpolationMode interpolationMode))
+        if (!Enum.TryParse(manifest.InterpolationMode, ignoreCase: false, out ContinuousHeightmapInterpolationMode interpolationMode))
         {
             throw new InvalidDataException($"Unknown visual terrain interpolation mode '{manifest.InterpolationMode}'.");
         }
@@ -215,7 +215,7 @@ internal static class VisualTerrainEditorPersistence
             new VisualTerrainBindingDescriptor(bindingKind, manifest.LogicalColumns, manifest.LogicalRows),
             storageLayout,
             interpolationMode,
-            new VisualHeightSampleScale(
+            new ContinuousHeightSampleScale(
                 manifest.SampleScaleOffsetCm,
                 manifest.SampleScaleUnitsPerSampleNumeratorCm,
                 manifest.SampleScaleUnitsPerSampleDenominator));

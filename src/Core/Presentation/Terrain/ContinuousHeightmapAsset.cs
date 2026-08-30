@@ -4,30 +4,30 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Terrain
 {
-    public sealed class VisualHeightmapAsset
+    public sealed class ContinuousHeightmapAsset
     {
-        public VisualHeightmapAsset(
+        public ContinuousHeightmapAsset(
             WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
             short[] heightSamplesCm,
-            VisualHeightmapLayerDefinition[] layers,
-            VisualHeightmapStorageLayout storageLayout = VisualHeightmapStorageLayout.RowMajorInt16Centimeters,
+            ContinuousHeightmapLayerDefinition[] layers,
+            ContinuousHeightmapStorageLayout storageLayout = ContinuousHeightmapStorageLayout.RowMajorInt16Centimeters,
             int defaultLayerIndex = 0,
-            VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.BilinearHeightfield)
+            ContinuousHeightmapInterpolationMode interpolationMode = ContinuousHeightmapInterpolationMode.BilinearHeightfield)
         {
             if (sampleColumns <= 0) throw new ArgumentOutOfRangeException(nameof(sampleColumns));
             if (sampleRows <= 0) throw new ArgumentOutOfRangeException(nameof(sampleRows));
             if (heightSamplesCm == null) throw new ArgumentNullException(nameof(heightSamplesCm));
             if (layers == null || layers.Length == 0) throw new ArgumentException("At least one visual heightmap layer is required.", nameof(layers));
-            if (storageLayout == VisualHeightmapStorageLayout.None) throw new ArgumentOutOfRangeException(nameof(storageLayout));
+            if (storageLayout == ContinuousHeightmapStorageLayout.None) throw new ArgumentOutOfRangeException(nameof(storageLayout));
             if ((uint)defaultLayerIndex >= (uint)layers.Length) throw new ArgumentOutOfRangeException(nameof(defaultLayerIndex));
             EnsureLayoutUsesInt16(storageLayout, nameof(storageLayout));
 
             int samplesPerLayer = checked(sampleColumns * sampleRows);
             for (int i = 0; i < layers.Length; i++)
             {
-                VisualHeightmapLayerDefinition layer = layers[i];
+                ContinuousHeightmapLayerDefinition layer = layers[i];
                 if (layer.SampleOffset < 0 ||
                     layer.SampleCount != samplesPerLayer ||
                     layer.SampleOffset + layer.SampleCount > heightSamplesCm.Length)
@@ -45,25 +45,25 @@ namespace Ludots.Core.Presentation.Terrain
             StorageLayout = storageLayout;
             DefaultLayerIndex = defaultLayerIndex;
             InterpolationMode = interpolationMode;
-            SampleScale = VisualHeightSampleScale.IdentityCentimeters;
+            SampleScale = ContinuousHeightSampleScale.IdentityCentimeters;
         }
 
-        public VisualHeightmapAsset(
+        public ContinuousHeightmapAsset(
             WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
             ushort[] heightSamplesRaw,
-            VisualHeightmapLayerDefinition[] layers,
-            VisualHeightSampleScale sampleScale,
-            VisualHeightmapStorageLayout storageLayout = VisualHeightmapStorageLayout.RowMajorUInt16Scaled,
+            ContinuousHeightmapLayerDefinition[] layers,
+            ContinuousHeightSampleScale sampleScale,
+            ContinuousHeightmapStorageLayout storageLayout = ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled,
             int defaultLayerIndex = 0,
-            VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.BilinearHeightfield)
+            ContinuousHeightmapInterpolationMode interpolationMode = ContinuousHeightmapInterpolationMode.BilinearHeightfield)
         {
             if (sampleColumns <= 0) throw new ArgumentOutOfRangeException(nameof(sampleColumns));
             if (sampleRows <= 0) throw new ArgumentOutOfRangeException(nameof(sampleRows));
             if (heightSamplesRaw == null) throw new ArgumentNullException(nameof(heightSamplesRaw));
             if (layers == null || layers.Length == 0) throw new ArgumentException("At least one visual heightmap layer is required.", nameof(layers));
-            if (storageLayout == VisualHeightmapStorageLayout.None) throw new ArgumentOutOfRangeException(nameof(storageLayout));
+            if (storageLayout == ContinuousHeightmapStorageLayout.None) throw new ArgumentOutOfRangeException(nameof(storageLayout));
             if ((uint)defaultLayerIndex >= (uint)layers.Length) throw new ArgumentOutOfRangeException(nameof(defaultLayerIndex));
             EnsureLayoutUsesUInt16(storageLayout, nameof(storageLayout));
             sampleScale.Validate();
@@ -71,7 +71,7 @@ namespace Ludots.Core.Presentation.Terrain
             int samplesPerLayer = checked(sampleColumns * sampleRows);
             for (int i = 0; i < layers.Length; i++)
             {
-                VisualHeightmapLayerDefinition layer = layers[i];
+                ContinuousHeightmapLayerDefinition layer = layers[i];
                 if (layer.SampleOffset < 0 ||
                     layer.SampleCount != samplesPerLayer ||
                     layer.SampleOffset + layer.SampleCount > heightSamplesRaw.Length)
@@ -102,38 +102,38 @@ namespace Ludots.Core.Presentation.Terrain
 
         public ushort[] HeightSamplesRaw { get; }
 
-        public VisualHeightmapLayerDefinition[] Layers { get; }
+        public ContinuousHeightmapLayerDefinition[] Layers { get; }
 
-        public VisualHeightmapStorageLayout StorageLayout { get; }
+        public ContinuousHeightmapStorageLayout StorageLayout { get; }
 
         public int DefaultLayerIndex { get; }
 
-        public VisualHeightmapInterpolationMode InterpolationMode { get; }
+        public ContinuousHeightmapInterpolationMode InterpolationMode { get; }
 
-        public VisualHeightSampleScale SampleScale { get; }
+        public ContinuousHeightSampleScale SampleScale { get; }
 
         public int SamplesPerLayer => checked(SampleColumns * SampleRows);
 
         public bool UsesRawUInt16Samples => HeightSamplesRaw.Length > 0;
 
-        public static VisualHeightmapAsset CreateSingleLayer(
+        public static ContinuousHeightmapAsset CreateSingleLayer(
             WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
             short[] heightSamplesCm,
             string layerName = "base",
-            VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.BilinearHeightfield)
+            ContinuousHeightmapInterpolationMode interpolationMode = ContinuousHeightmapInterpolationMode.BilinearHeightfield)
         {
             if (heightSamplesCm == null) throw new ArgumentNullException(nameof(heightSamplesCm));
 
-            return new VisualHeightmapAsset(
+            return new ContinuousHeightmapAsset(
                 bounds,
                 sampleColumns,
                 sampleRows,
                 heightSamplesCm,
                 new[]
                 {
-                    new VisualHeightmapLayerDefinition(
+                    new ContinuousHeightmapLayerDefinition(
                         layerId: 0,
                         name: layerName,
                         sampleOffset: 0,
@@ -142,25 +142,25 @@ namespace Ludots.Core.Presentation.Terrain
                 interpolationMode: interpolationMode);
         }
 
-        public static VisualHeightmapAsset CreateSingleLayerFromRawUInt16(
+        public static ContinuousHeightmapAsset CreateSingleLayerFromRawUInt16(
             WorldAabbCm bounds,
             int sampleColumns,
             int sampleRows,
             ushort[] heightSamplesRaw,
-            VisualHeightSampleScale sampleScale,
+            ContinuousHeightSampleScale sampleScale,
             string layerName = "base",
-            VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.BilinearHeightfield)
+            ContinuousHeightmapInterpolationMode interpolationMode = ContinuousHeightmapInterpolationMode.BilinearHeightfield)
         {
             if (heightSamplesRaw == null) throw new ArgumentNullException(nameof(heightSamplesRaw));
 
-            return new VisualHeightmapAsset(
+            return new ContinuousHeightmapAsset(
                 bounds,
                 sampleColumns,
                 sampleRows,
                 heightSamplesRaw,
                 new[]
                 {
-                    new VisualHeightmapLayerDefinition(
+                    new ContinuousHeightmapLayerDefinition(
                         layerId: 0,
                         name: layerName,
                         sampleOffset: 0,
@@ -170,19 +170,19 @@ namespace Ludots.Core.Presentation.Terrain
                 interpolationMode: interpolationMode);
         }
 
-        private static void EnsureLayoutUsesInt16(VisualHeightmapStorageLayout storageLayout, string paramName)
+        private static void EnsureLayoutUsesInt16(ContinuousHeightmapStorageLayout storageLayout, string paramName)
         {
-            if (storageLayout != VisualHeightmapStorageLayout.RowMajorInt16Centimeters &&
-                storageLayout != VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters)
+            if (storageLayout != ContinuousHeightmapStorageLayout.RowMajorInt16Centimeters &&
+                storageLayout != ContinuousHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters)
             {
                 throw new ArgumentOutOfRangeException(paramName, "This visual heightmap constructor requires an int16 storage layout.");
             }
         }
 
-        private static void EnsureLayoutUsesUInt16(VisualHeightmapStorageLayout storageLayout, string paramName)
+        private static void EnsureLayoutUsesUInt16(ContinuousHeightmapStorageLayout storageLayout, string paramName)
         {
-            if (storageLayout != VisualHeightmapStorageLayout.RowMajorUInt16Scaled &&
-                storageLayout != VisualHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled)
+            if (storageLayout != ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled &&
+                storageLayout != ContinuousHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled)
             {
                 throw new ArgumentOutOfRangeException(paramName, "This visual heightmap constructor requires a uint16 scaled storage layout.");
             }

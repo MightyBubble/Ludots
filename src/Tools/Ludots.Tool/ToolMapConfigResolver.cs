@@ -282,7 +282,7 @@ namespace Ludots.Tool
         {
             if (!string.IsNullOrWhiteSpace(source.Id)) target.Id = source.Id;
             if (!string.IsNullOrWhiteSpace(source.ParentId)) target.ParentId = source.ParentId;
-            if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset)) target.VisualHeightmapAsset = source.VisualHeightmapAsset;
+            if (!string.IsNullOrWhiteSpace(source.ContinuousHeightmapAsset)) target.ContinuousHeightmapAsset = source.ContinuousHeightmapAsset;
 
             if (source.Dependencies != null)
             {
@@ -345,7 +345,7 @@ namespace Ludots.Tool
             }
 
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
-            if (source.VisualHeightmap != null) target.VisualHeightmap = source.VisualHeightmap;
+            if (source.ContinuousHeightmap != null) target.ContinuousHeightmap = source.ContinuousHeightmap;
             if (source.ParticipantRelationships != null) target.ParticipantRelationships = source.ParticipantRelationships;
         }
 

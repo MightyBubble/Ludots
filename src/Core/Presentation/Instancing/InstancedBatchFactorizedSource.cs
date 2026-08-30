@@ -16,7 +16,7 @@ namespace Ludots.Core.Presentation.Instancing
             string assetUri,
             string setId,
             int instanceCount,
-            bool groundToVisualHeightmap,
+            bool groundToContinuousHeightmap,
             Vector3[] positionCm,
             Quaternion[] rotation,
             Vector3[] scale)
@@ -45,7 +45,7 @@ namespace Ludots.Core.Presentation.Instancing
             AssetUri = assetUri ?? throw new ArgumentNullException(nameof(assetUri));
             SetId = setId ?? throw new ArgumentNullException(nameof(setId));
             InstanceCount = instanceCount;
-            GroundToVisualHeightmap = groundToVisualHeightmap;
+            GroundToContinuousHeightmap = groundToContinuousHeightmap;
             PositionCm = positionCm;
             Rotation = rotation;
             Scale = scale;
@@ -55,7 +55,7 @@ namespace Ludots.Core.Presentation.Instancing
         public string AssetUri { get; }
         public string SetId { get; }
         public int InstanceCount { get; }
-        public bool GroundToVisualHeightmap { get; }
+        public bool GroundToContinuousHeightmap { get; }
         public Vector3[] PositionCm { get; }
         public Quaternion[] Rotation { get; }
         public Vector3[] Scale { get; }

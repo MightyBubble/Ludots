@@ -180,7 +180,7 @@ namespace Ludots.Core.Presentation.Config
                 source.AssetUri,
                 source.SetId,
                 instanceCount,
-                source.GroundToVisualHeightmap,
+                source.GroundToContinuousHeightmap,
                 positions,
                 rotations,
                 scales);

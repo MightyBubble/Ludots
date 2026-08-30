@@ -11,7 +11,7 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Tests.Gas
 {
     [TestFixture]
-    public sealed class MapVisualHeightmapContractTests
+    public sealed class MapContinuousHeightmapContractTests
     {
         private string _root = string.Empty;
         private string _coreRoot = string.Empty;
@@ -20,7 +20,7 @@ namespace Ludots.Tests.Gas
         [SetUp]
         public void SetUp()
         {
-            _root = Path.Combine(Path.GetTempPath(), "Ludots_MapVisualHeightmapContractTests", Guid.NewGuid().ToString("N"));
+            _root = Path.Combine(Path.GetTempPath(), "Ludots_MapContinuousHeightmapContractTests", Guid.NewGuid().ToString("N"));
             _coreRoot = Path.Combine(_root, "assets");
             _modRoot = Path.Combine(_root, "mods", "TestMapMod");
             Directory.CreateDirectory(Path.Combine(_coreRoot, "Maps"));
@@ -113,34 +113,34 @@ namespace Ludots.Tests.Gas
         }
 
         [Test]
-        public void LoadMap_BindsDeclaredVisualHeightmapThroughCoreService()
+        public void LoadMap_BindsDeclaredContinuousHeightmapThroughCoreService()
         {
-            WriteHeightmap("outer.vhtm", 50);
+            WriteHeightmap("outer.height", 50);
             WriteMap("outer_map", """
             {
               "id": "outer_map",
-              "visualHeightmapAsset": "assets/terrain/outer.vhtm"
+              "continuousHeightmapAsset": "assets/terrain/outer.height"
             }
             """);
 
             using var engine = CreateEngine();
             engine.LoadMap("outer_map");
 
-            IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
-            Assert.That(heightmap, Is.TypeOf<VisualHeightmapRuntime>());
+            IContinuousHeightmap heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap);
+            Assert.That(heightmap, Is.TypeOf<ContinuousHeightmapRuntime>());
             Assert.That(heightmap.TrySampleHeightCm(50f, 50f, out float heightCm), Is.True);
             Assert.That(heightCm, Is.EqualTo(50f).Within(0.001f));
         }
 
         [Test]
-        public void LoadMap_BindsVisualHeightmapRenderProfileThroughRenderSource()
+        public void LoadMap_BindsContinuousHeightmapRenderProfileThroughRenderSource()
         {
-            WriteHeightmap("outer.vhtm", -75);
+            WriteHeightmap("outer.height", -75);
             WriteMap("outer_map", """
             {
               "id": "outer_map",
-              "visualHeightmap": {
-                "asset": "assets/terrain/outer.vhtm",
+              "continuousHeightmap": {
+                "asset": "assets/terrain/outer.height",
                 "renderProfile": {
                   "waterEnabled": true,
                   "seaLevelCm": 0,
@@ -154,9 +154,9 @@ namespace Ludots.Tests.Gas
             using var engine = CreateEngine();
             engine.LoadMap("outer_map");
 
-            IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
-            Assert.That(heightmap, Is.AssignableTo<IVisualHeightmapRenderSource>());
-            var renderSource = (IVisualHeightmapRenderSource)heightmap;
+            IContinuousHeightmap heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap);
+            Assert.That(heightmap, Is.AssignableTo<IContinuousHeightmapRenderSource>());
+            var renderSource = (IContinuousHeightmapRenderSource)heightmap;
             Assert.That(renderSource.RenderProfile.WaterEnabled, Is.True);
             Assert.That(renderSource.RenderProfile.SeaLevelCm, Is.EqualTo(0f));
             Assert.That(renderSource.RenderProfile.DisplayHeightScale, Is.EqualTo(500f));
@@ -166,12 +166,12 @@ namespace Ludots.Tests.Gas
         [Test]
         public void LoadMap_WhenDisableDistanceFog_IsHonoredOnRenderProfile()
         {
-            WriteHeightmap("outer.vhtm", 40);
+            WriteHeightmap("outer.height", 40);
             WriteMap("outer_map", """
             {
               "id": "outer_map",
-              "visualHeightmap": {
-                "asset": "assets/terrain/outer.vhtm",
+              "continuousHeightmap": {
+                "asset": "assets/terrain/outer.height",
                 "renderProfile": {
                   "disableDistanceFog": true
                 }
@@ -182,19 +182,19 @@ namespace Ludots.Tests.Gas
             using var engine = CreateEngine();
             engine.LoadMap("outer_map");
 
-            var renderSource = (IVisualHeightmapRenderSource)engine.GetService(CoreServiceKeys.VisualHeightmap);
+            var renderSource = (IContinuousHeightmapRenderSource)engine.GetService(CoreServiceKeys.ContinuousHeightmap);
             Assert.That(renderSource.RenderProfile.DisableDistanceFog, Is.True);
         }
 
         [Test]
         public void LoadMap_WhenWorldWidthCmOverride_RemapsBoundsKeepingAspectAndSamples()
         {
-            WriteHeightmap("outer.vhtm", 40);
+            WriteHeightmap("outer.height", 40);
             WriteMap("outer_map", """
             {
               "id": "outer_map",
-              "visualHeightmap": {
-                "asset": "assets/terrain/outer.vhtm",
+              "continuousHeightmap": {
+                "asset": "assets/terrain/outer.height",
                 "worldWidthCm": 6400000
               }
             }
@@ -203,8 +203,8 @@ namespace Ludots.Tests.Gas
             using var engine = CreateEngine();
             engine.LoadMap("outer_map");
 
-            IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
-            var renderSource = (IVisualHeightmapRenderSource)heightmap;
+            IContinuousHeightmap heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap);
+            var renderSource = (IContinuousHeightmapRenderSource)heightmap;
             Assert.That(renderSource.Bounds.Width, Is.EqualTo(6_400_000));
             Assert.That(renderSource.Bounds.Height, Is.EqualTo(6_400_000),
                 "Fixture heightmap is square; scaled height must match width.");
@@ -215,14 +215,14 @@ namespace Ludots.Tests.Gas
         [Test]
         public void ApplyWorldWidthOverride_ScalesEastAsiaAspectAroundCenter()
         {
-            var source = VisualHeightmapAsset.CreateSingleLayer(
+            var source = ContinuousHeightmapAsset.CreateSingleLayer(
                 new WorldAabbCm(-450_326_016, -257_329_152, 900_652_032, 514_658_304),
                 sampleColumns: 3,
                 sampleRows: 3,
                 new short[] { 0, 0, 0, 0, 100, 0, 0, 0, 0 });
-            var binding = new VisualHeightmapBindingConfig { WorldWidthCm = 6_399_232 };
+            var binding = new ContinuousHeightmapBindingConfig { WorldWidthCm = 6_399_232 };
 
-            VisualHeightmapAsset scaled = MapVisualHeightmapLoader.ApplyWorldWidthOverride(source, binding);
+            ContinuousHeightmapAsset scaled = MapContinuousHeightmapLoader.ApplyWorldWidthOverride(source, binding);
 
             Assert.That(scaled.Bounds.Width, Is.EqualTo(6_399_232));
             Assert.That(scaled.Bounds.Height, Is.EqualTo(3_656_704));
@@ -232,12 +232,12 @@ namespace Ludots.Tests.Gas
         }
 
         [Test]
-        public void LoadMap_WhenDeclaredVisualHeightmapMissing_ThrowsExplicitly()
+        public void LoadMap_WhenDeclaredContinuousHeightmapMissing_ThrowsExplicitly()
         {
             WriteMap("outer_map", """
             {
               "id": "outer_map",
-              "visualHeightmapAsset": "assets/terrain/missing.vhtm"
+              "continuousHeightmapAsset": "assets/terrain/missing.height"
             }
             """);
 
@@ -247,42 +247,42 @@ namespace Ludots.Tests.Gas
         }
 
         [Test]
-        public void PushAndPopMap_RestoreFocusedMapVisualHeightmap()
+        public void PushAndPopMap_RestoreFocusedMapContinuousHeightmap()
         {
-            WriteHeightmap("outer.vhtm", 25);
-            WriteHeightmap("inner.vhtm", 125);
+            WriteHeightmap("outer.height", 25);
+            WriteHeightmap("inner.height", 125);
             WriteMap("outer_map", """
             {
               "id": "outer_map",
-              "visualHeightmapAsset": "assets/terrain/outer.vhtm"
+              "continuousHeightmapAsset": "assets/terrain/outer.height"
             }
             """);
             WriteMap("inner_map", """
             {
               "id": "inner_map",
-              "visualHeightmapAsset": "assets/terrain/inner.vhtm"
+              "continuousHeightmapAsset": "assets/terrain/inner.height"
             }
             """);
 
             using var engine = CreateEngine();
             engine.LoadMap("outer_map");
-            IVisualHeightmap outer = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            IContinuousHeightmap outer = engine.GetService(CoreServiceKeys.ContinuousHeightmap);
             Assert.That(outer.TrySampleHeightCm(50f, 50f, out float outerHeight), Is.True);
             Assert.That(outerHeight, Is.EqualTo(25f).Within(0.001f));
 
             engine.PushMap("inner_map");
-            IVisualHeightmap inner = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            IContinuousHeightmap inner = engine.GetService(CoreServiceKeys.ContinuousHeightmap);
             Assert.That(inner.TrySampleHeightCm(50f, 50f, out float innerHeight), Is.True);
             Assert.That(innerHeight, Is.EqualTo(125f).Within(0.001f));
 
             engine.PopMap();
-            IVisualHeightmap restored = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            IContinuousHeightmap restored = engine.GetService(CoreServiceKeys.ContinuousHeightmap);
             Assert.That(restored.TrySampleHeightCm(50f, 50f, out float restoredHeight), Is.True);
             Assert.That(restoredHeight, Is.EqualTo(25f).Within(0.001f));
         }
 
         [Test]
-        public void LoadMap_WhenNoVisualHeightmapDeclared_DoesNotBindFallbackTruth()
+        public void LoadMap_WhenNoContinuousHeightmapDeclared_DoesNotBindFallbackTruth()
         {
             WriteMap("outer_map", """
             {
@@ -293,13 +293,13 @@ namespace Ludots.Tests.Gas
             using var engine = CreateEngine();
             engine.LoadMap("outer_map");
 
-            Assert.That(engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap _), Is.False);
+            Assert.That(engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap _), Is.False);
         }
 
         [Test]
-        public void PushAndPopMap_WhenOuterMapHasNoVisualHeightmap_ClearsFocusedTruthOnRestore()
+        public void PushAndPopMap_WhenOuterMapHasNoContinuousHeightmap_ClearsFocusedTruthOnRestore()
         {
-            WriteHeightmap("inner.vhtm", 125);
+            WriteHeightmap("inner.height", 125);
             WriteMap("outer_map", """
             {
               "id": "outer_map"
@@ -308,34 +308,34 @@ namespace Ludots.Tests.Gas
             WriteMap("inner_map", """
             {
               "id": "inner_map",
-              "visualHeightmapAsset": "assets/terrain/inner.vhtm"
+              "continuousHeightmapAsset": "assets/terrain/inner.height"
             }
             """);
 
             using var engine = CreateEngine();
             engine.LoadMap("outer_map");
-            Assert.That(engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap _), Is.False);
+            Assert.That(engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap _), Is.False);
 
             engine.PushMap("inner_map");
-            Assert.That(engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap inner), Is.True);
+            Assert.That(engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap inner), Is.True);
             Assert.That(inner!.TrySampleHeightCm(50f, 50f, out float innerHeight), Is.True);
             Assert.That(innerHeight, Is.EqualTo(125f).Within(0.001f));
 
             engine.PopMap();
-            Assert.That(engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap _), Is.False);
+            Assert.That(engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap _), Is.False);
         }
 
         [Test]
-        public void LoadMap_WhenMapAndBoardDeclareDifferentVisualHeightmapAssets_ThrowsExplicitly()
+        public void LoadMap_WhenMapAndBoardDeclareDifferentContinuousHeightmapAssets_ThrowsExplicitly()
         {
             WriteMap("outer_map", """
             {
               "id": "outer_map",
-              "visualHeightmapAsset": "assets/terrain/map.vhtm",
+              "continuousHeightmapAsset": "assets/terrain/map.height",
               "boards": [
                 {
                   "name": "default",
-                  "visualHeightmapAsset": "assets/terrain/board.vhtm"
+                  "continuousHeightmapAsset": "assets/terrain/board.height"
                 }
               ]
             }
@@ -349,11 +349,11 @@ namespace Ludots.Tests.Gas
         [Test]
         public void LoadMap_WhenVisualHeightAssetResolvesToMultipleMountedSources_ThrowsExplicitly()
         {
-            WriteHeightmap("shared.vhtm", 80);
+            WriteHeightmap("shared.height", 80);
             Directory.CreateDirectory(Path.Combine(_coreRoot, "assets", "terrain"));
-            using (var stream = File.Create(Path.Combine(_coreRoot, "assets", "terrain", "shared.vhtm")))
+            using (var stream = File.Create(Path.Combine(_coreRoot, "assets", "terrain", "shared.height")))
             {
-                VisualHeightmapBinary.Write(stream, VisualHeightmapAsset.CreateSingleLayer(
+                ContinuousHeightmapBinary.Write(stream, ContinuousHeightmapAsset.CreateSingleLayer(
                     new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 100, 100),
                     sampleColumns: 2,
                     sampleRows: 2,
@@ -363,7 +363,7 @@ namespace Ludots.Tests.Gas
             WriteMap("outer_map", """
             {
               "id": "outer_map",
-              "visualHeightmapAsset": "assets/terrain/shared.vhtm"
+              "continuousHeightmapAsset": "assets/terrain/shared.height"
             }
             """);
 
@@ -395,14 +395,14 @@ namespace Ludots.Tests.Gas
 
         private void WriteHeightmap(string fileName, short heightCm)
         {
-            var asset = VisualHeightmapAsset.CreateSingleLayer(
+            var asset = ContinuousHeightmapAsset.CreateSingleLayer(
                 new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 100, 100),
                 sampleColumns: 2,
                 sampleRows: 2,
                 new[] { heightCm, heightCm, heightCm, heightCm });
 
             using var stream = File.Create(Path.Combine(_modRoot, "assets", "terrain", fileName));
-            VisualHeightmapBinary.Write(stream, asset);
+            ContinuousHeightmapBinary.Write(stream, asset);
         }
 
         private static string FindRepoRoot()

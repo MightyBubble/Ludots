@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace Ludots.Core.Presentation.Terrain
 {
-    public static class VisualHeightmapColorRamp
+    public static class ContinuousHeightmapColorRamp
     {
         public static float ResolveHeightBandContrast(float heightBand, float colorContrast)
         {

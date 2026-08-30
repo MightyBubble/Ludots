@@ -282,7 +282,7 @@ namespace Ludots.Tests.Architecture
             var service = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm());
 
             Assert.DoesNotThrow(() => _ = service.Bake(CreateRuntimeIncrementalContext(terrain, algorithm: NavBakeAlgorithmKind.Recast)),
-                "runtime-incremental + recast 是受纳组合（vhtm 起伏地形的运行时重烤口径）");
+                "runtime-incremental + recast 是受纳组合（.height 起伏地形的运行时重烤口径）");
             Assert.DoesNotThrow(() => _ = service.Bake(CreateRuntimeIncrementalContext(terrain, algorithm: NavBakeAlgorithmKind.Cdt)),
                 "runtime-incremental + cdt 是受纳组合");
 
