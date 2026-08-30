@@ -6,7 +6,7 @@ namespace Ludots.Core.Map.Hex
 {
     public static class VertexMapBinary
     {
-        private const string Magic = "VTXM";
+        private const string Magic = "HEXM";
         private const int Version = 2;
 
         public static VertexMap Read(Stream stream)

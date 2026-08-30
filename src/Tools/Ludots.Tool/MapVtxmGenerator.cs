@@ -35,7 +35,7 @@ namespace Ludots.Tool
             using var fs = File.Create(outFile);
             using var bw = new BinaryWriter(fs, Encoding.UTF8, leaveOpen: true);
 
-            bw.Write(Encoding.ASCII.GetBytes("VTXM"));
+            bw.Write(Encoding.ASCII.GetBytes("HEXM"));
             bw.Write(2);
             bw.Write(widthChunks);
             bw.Write(heightChunks);

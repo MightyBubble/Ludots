@@ -11,7 +11,7 @@ def height_cm(ix, iz):
     return int(round(h * 100.0))
 
 out = bytearray()
-out += b'VHTM'
+out += b'CHTM'
 out += struct.pack('<i', 2)                       # version
 out += struct.pack('<iiii', *BOUNDS)              # X, Y, Width, Height (cm)
 out += struct.pack('<ii', COLS, ROWS)             # samples

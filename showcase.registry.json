@@ -7346,7 +7346,7 @@
       "id": "navmesh_debug_vhtm_showcase",
       "path": "mods/showcases/navmesh_debug_vhtm/NavMeshDebugVhtmLaunchMod",
       "title": "NavMesh 脏更新·ContinuousHeightmap 地图",
-      "summary": "ContinuousHeightmap 地形上的运行时改路展示：.vhtm 起伏先投影为逻辑地形，再用同一套 P/O 操作演示结构墙如何触发局部导航重建。",
+      "summary": "ContinuousHeightmap 地形上的运行时改路展示：.height 起伏先投影为逻辑地形，再用同一套 P/O 操作演示结构墙如何触发局部导航重建。",
       "tier": "T2",
       "category": "capability",
       "binding": "navmesh_debug_vhtm_launch",

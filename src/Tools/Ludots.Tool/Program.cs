@@ -656,7 +656,7 @@ namespace {modId}
             name ??= Path.GetFileNameWithoutExtension(inputPath);
             if (string.IsNullOrWhiteSpace(name)) name = "map";
 
-            string outBin = Path.Combine(outDir, ${name}.hex");
+            string outBin = Path.Combine(outDir, $"{name}.hex");
             string outJson = Path.Combine(outDir, $"{name}.vertexmap.summary.json");
             if (!force && (File.Exists(outBin) || File.Exists(outJson)))
             {
