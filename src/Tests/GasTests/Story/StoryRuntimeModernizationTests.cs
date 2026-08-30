@@ -297,7 +297,9 @@ namespace Ludots.Tests.GAS.Story
             Assert.That(frame.Handle.StreamId, Is.EqualTo("dialogue.unit.choice"));
             Assert.That(frame.Surfaces.Count, Is.EqualTo(2));
             Assert.That(frame.Surfaces[0].Body, Is.EqualTo("story.unit.hello").Or.Not.Empty);
+            Assert.That(frame.Surfaces[0].LayoutId, Is.EqualTo("layout.narrative.overlay-dialogue"));
             Assert.That(frame.Surfaces[1].SurfaceKind, Is.EqualTo("ChoiceList"));
+            Assert.That(frame.Surfaces[1].LayoutId, Is.EqualTo("layout.narrative.choice-list"));
             Assert.That(frame.Surfaces[1].Choices![0].ChoiceId, Is.EqualTo("go"));
             Assert.That(frame.Surfaces[1].Choices![0].Text, Is.Not.Null);
 

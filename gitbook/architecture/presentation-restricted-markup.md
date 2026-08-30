@@ -52,7 +52,7 @@ text_locales.json 模板值
 | 出口 | 用途 |
 |------|------|
 | `Body` / `ResolvedText` | 纯文本投影：历史、日志、无障碍、桥接 |
-| `BodyRuns` | 可选；有样式时必填，composer 优先走 runs 绘制 |
+| `BodyRuns` | 可选；有样式时必填，声明布局的 `richText` 控件读取 runs 绘制 |
 
 ### 3.4 字符串参数（配套能力）
 

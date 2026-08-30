@@ -11,6 +11,7 @@
 | **查询图（容器）** | 圈人/圈任务/… → 写出集合 + 面板级 Summary |
 | **元素模板** | 声明 **subject（解什么类型）** + 自有 **graph/pins/layout**；不知道挂在 list 还是 grid |
 | **容器面板** | 集合键 + 引用哪个元素模板 + list/grid 编排；默认把成员 **透传** 给元素作 scope |
+| **布局模板** | 数据源中立的控件树；Panel、Dialogue、Sequencer 等只提供绑定值 |
 | **皮** | 长相 |
 
 同一份 `panel.unit.roster`：今天挂 list，明天挂 grid——元素配置不改。
@@ -187,6 +188,34 @@
 6. 结构错误 fail-closed；图失败 → pin 缺省，不炸面板  
 
 压测基线（`PanelListVirtualizationPerfTests`）：1000 成员时，窗口投影行数与分配量须显著低于全量。
+
+### 3.6 数据源中立的布局模板
+
+`PanelLayoutControl` 是通用声明控件词汇，不再由 `PanelPresentationSystem` 私有解释。`PanelLayoutComposer` 只面向 `IPanelLayoutBindingScope`：
+
+```text
+PanelVariableSet ── PanelBindingScope ─┐
+Dialogue surface ─ NarrativeScope ────┼─► PanelLayoutComposer ─► UiElementBuilder
+其他投影数据 ───── 自有 BindingScope ─┘
+```
+
+共享控件：
+
+- `label`、`progressBar`、`badge`、`list`
+- `row`、`column`
+- `image`、`richText`
+- `repeater`
+
+宿主面板仍可在 `panel_templates.json` 内联 `layout.controls`。其他数据源使用独立布局目录，格式为 `id + bindings + root`；Narrative 的正本在 `NarrativeFrontendMod/assets/UI/layout_templates.json`。两种入口共用 `PanelLayoutControl`、同一个严格解析器和同一个 Composer。
+
+布局模板只管结构，不接管数据生命周期：
+
+- Panel 仍从 graph pins 与类型化集合取值；
+- Dialogue / Sequencer 仍从 Story 投影取值；
+- `UiSurfaceHost` 仍是画面唯一写者；
+- `theme.css` 仍只负责视觉主题。
+
+未知控件、未知 bind、缺 `layoutId`、重复模板 id 均直接失败。Narrative 不提供“按 `surfaceKind` 临时拼一个默认卡片”的退路。
 
 ## 4. 场景
 
