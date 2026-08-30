@@ -711,7 +711,7 @@ namespace Ludots.Tests.Presentation
             }
         }
 
-        private sealed class FlatHeightmap : IVisualHeightmap
+        private sealed class FlatHeightmap : IContinuousHeightmap
         {
             private readonly float _heightCm;
 

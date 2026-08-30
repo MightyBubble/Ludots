@@ -11,10 +11,10 @@ namespace Ludots.AgentBridge.Tools
 {
     /// <summary>
     /// Seat-aware routing shared by the bridge tools: camera resolution per PresentBinding,
-    /// window-point routing to the owning binding (the same half-open containment rule as
-    /// PresentBindingScreenRayProvider), and per-seat semantic input channel resolution.
-    /// Omitted seatId keeps the sole-seat behavior; multi-binding defaults resolve the first
-    /// binding in seat order.
+    /// window-point routing to the owning binding via the shared Core primitive
+    /// (<see cref="PresentBindingRouting.RouteWindowPoint"/>), and per-seat semantic input
+    /// channel resolution. Omitted seatId keeps the sole-seat behavior; multi-binding defaults
+    /// resolve the first binding in seat order.
     /// </summary>
     internal static class SeatRouting
     {
@@ -69,10 +69,10 @@ namespace Ludots.AgentBridge.Tools
         }
 
         /// <summary>
-        /// Routes a host-window point to the binding whose normalized rect contains it. Rect
-        /// membership is half-open with the shared edge belonging to the later binding in seat
-        /// order; a point outside every rect falls back to the first binding — the routing rule
-        /// of PresentBindingScreenRayProvider. Returns false with no bindings or no host view.
+        /// Routes a host-window point to the binding whose normalized rect contains it, via the
+        /// shared <see cref="PresentBindingRouting.RouteWindowPoint"/> primitive (half-open
+        /// membership, shared edge to the later binding in seat order, out-of-rect fallback to the
+        /// first binding). Returns false with no bindings or no host view.
         /// </summary>
         public static bool TryRouteWindowPoint(
             AgentToolContext context,
@@ -94,19 +94,7 @@ namespace Ludots.AgentBridge.Tools
                 return false;
             }
 
-            float nx = windowPoint.X / view.Resolution.X;
-            float ny = windowPoint.Y / view.Resolution.Y;
-            for (int i = 0; i < bindings.Count; i++)
-            {
-                Vector4 rect = bindings[i].Binding.NormalizedScreenRect;
-                if (nx >= rect.X && nx < rect.X + rect.Z && ny >= rect.Y && ny < rect.Y + rect.W)
-                {
-                    routedIndex = i;
-                    return true;
-                }
-            }
-
-            routedIndex = 0;
+            routedIndex = PresentBindingRouting.RouteWindowPoint(windowPoint, view.Resolution, bindings);
             return true;
         }
 

@@ -101,7 +101,7 @@ namespace Ludots.Core.Presentation.Presenters
             Span<Vector3> positions,
             Span<GroundingMode> modes,
             Span<float> offsets,
-            IVisualHeightmap heightmap)
+            IContinuousHeightmap heightmap)
         {
             if (heightmap == null)
             {
@@ -131,7 +131,7 @@ namespace Ludots.Core.Presentation.Presenters
             Span<Quaternion> rotations,
             Span<GroundingMode> modes,
             Span<float> offsets,
-            IVisualHeightmap heightmap)
+            IContinuousHeightmap heightmap)
         {
             if (heightmap == null)
             {
@@ -222,7 +222,7 @@ namespace Ludots.Core.Presentation.Presenters
             };
         }
 
-        private static Vector3 ResolveSnappedPosition(Vector3 position, float offsetMeters, IVisualHeightmap heightmap)
+        private static Vector3 ResolveSnappedPosition(Vector3 position, float offsetMeters, IContinuousHeightmap heightmap)
         {
             if (!heightmap.TrySampleHeightCm(position.X * MetersToCm, position.Z * MetersToCm, out float heightCm))
             {
@@ -240,7 +240,7 @@ namespace Ludots.Core.Presentation.Presenters
             return position;
         }
 
-        private static Vector3 ResolveAlignedPosition(Vector3 position, float offsetMeters, IVisualHeightmap heightmap, out Vector3 normal)
+        private static Vector3 ResolveAlignedPosition(Vector3 position, float offsetMeters, IContinuousHeightmap heightmap, out Vector3 normal)
         {
             Span<float> originX = stackalloc float[1] { position.X };
             Span<float> originY = stackalloc float[1] { MathF.Max(position.Y + 1f, GroundRayOriginMeters) };

@@ -139,7 +139,7 @@ namespace Ludots.Tests.Presentation
                           "assetUri": "ExampleMod:assets/Presentation/example_instanced_source.json",
                           "setId": "set.alpha",
                           "instanceCount": 3,
-                          "groundToVisualHeightmap": true
+                          "groundToContinuousHeightmap": true
                         }
                       }
                     ]
@@ -159,14 +159,14 @@ namespace Ludots.Tests.Presentation
             Assert.That(group.Source.AssetUri, Is.EqualTo("ExampleMod:assets/Presentation/example_instanced_source.json"));
             Assert.That(group.Source.SetId, Is.EqualTo("set.alpha"));
             Assert.That(group.Source.InstanceCount, Is.EqualTo(3));
-            Assert.That(group.Source.GroundToVisualHeightmap, Is.True);
+            Assert.That(group.Source.GroundToContinuousHeightmap, Is.True);
             Assert.That(group.InstanceCount, Is.EqualTo(3));
             Assert.That(group.FactorizedSource, Is.Not.Null);
             Assert.That(group.FactorizedSource!.InstanceCount, Is.EqualTo(3));
             Assert.That(group.FactorizedSource.PositionCm[1], Is.EqualTo(new Vector3(4f, 5f, 6f)));
             Assert.That(group.FactorizedSource.Rotation[1], Is.EqualTo(Quaternion.Identity));
             Assert.That(group.FactorizedSource.Scale[1], Is.EqualTo(new Vector3(2f, 2f, 2f)));
-            Assert.That(group.FactorizedSource.GroundToVisualHeightmap, Is.True);
+            Assert.That(group.FactorizedSource.GroundToContinuousHeightmap, Is.True);
             Assert.That(asset.AddressTable.TryResolve("group.external", "bucket.external", "span.external", out InstancedBatchAddress address), Is.True);
             Assert.That(group.Address.Equals(address), Is.True);
         }
@@ -393,7 +393,7 @@ namespace Ludots.Tests.Presentation
                         assetUri,
                         "set.alpha",
                         instanceCount: 2,
-                        groundToVisualHeightmap: false),
+                        groundToContinuousHeightmap: false),
                     "batch.test",
                     "group.a"))!;
 
@@ -574,7 +574,7 @@ namespace Ludots.Tests.Presentation
         [TestCase("source must be an object", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"source\": [] }")]
         [TestCase("source.format must be a string", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"source\": { \"assetUri\": \"ExampleMod:assets/Presentation/source.json\", \"setId\": \"set.alpha\", \"instanceCount\": 5 } }")]
         [TestCase("source.instanceCount must be positive", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"source\": { \"format\": \"ludots.instanced_transform_factorized.v1\", \"assetUri\": \"ExampleMod:assets/Presentation/source.json\", \"setId\": \"set.alpha\", \"instanceCount\": 0 } }")]
-        [TestCase("source.groundToVisualHeightmap must be a boolean", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"source\": { \"format\": \"ludots.instanced_transform_factorized.v1\", \"assetUri\": \"ExampleMod:assets/Presentation/source.json\", \"setId\": \"set.alpha\", \"instanceCount\": 5, \"groundToVisualHeightmap\": \"true\" } }")]
+        [TestCase("source.groundToContinuousHeightmap must be a boolean", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"source\": { \"format\": \"ludots.instanced_transform_factorized.v1\", \"assetUri\": \"ExampleMod:assets/Presentation/source.json\", \"setId\": \"set.alpha\", \"instanceCount\": 5, \"groundToContinuousHeightmap\": \"true\" } }")]
         public void Load_RejectsMalformedBatchData(string expectedMessage, string groupJson)
         {
             string root = CreateTempCoreRoot();
@@ -1800,7 +1800,7 @@ namespace Ludots.Tests.Presentation
                           "assetUri": "ExampleMod:assets/Presentation/example_instanced_source.json",
                           "setId": "set.alpha",
                           "instanceCount": 5,
-                          "groundToVisualHeightmap": true
+                          "groundToContinuousHeightmap": true
                         }
                       }
                     ]
@@ -2056,7 +2056,7 @@ namespace Ludots.Tests.Presentation
                 "ExampleMod:assets/source.json",
                 "set.alpha",
                 instanceCount: 2,
-                groundToVisualHeightmap: false);
+                groundToContinuousHeightmap: false);
         }
 
         private sealed class StubFactorizedVfs : IVirtualFileSystem

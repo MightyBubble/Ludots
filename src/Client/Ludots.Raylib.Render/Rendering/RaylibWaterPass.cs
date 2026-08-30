@@ -10,7 +10,7 @@ namespace Ludots.Raylib.Render
 {
     /// <summary>
     /// Planar reflection + refraction RenderTexture pass for VertexMap water meshes
-    /// or VisualHeightmap + ocean plane.
+    /// or ContinuousHeightmap + ocean plane.
     /// Frame-graph intent mirrors tropical-island demos: reflection (camera flipped about waterPlaneY)
     /// then refraction, then main water sampling both RTs. Baseline omits GPU clip planes on terrain;
     /// submerged geometry may contribute to the mirrored RT until a future cullHeight lands.
@@ -173,8 +173,8 @@ namespace Ludots.Raylib.Render
             }
 
             UnloadRenderTargets();
-            _reflection = Rl.LoadRenderTexture(width, height);
-            _refraction = Rl.LoadRenderTexture(width, height);
+            _reflection = RaylibNativeResources.LoadRenderTexture(width, height);
+            _refraction = RaylibNativeResources.LoadRenderTexture(width, height);
             if (_reflection.id == 0 || _reflection.texture.id == 0 ||
                 _refraction.id == 0 || _refraction.texture.id == 0)
             {
@@ -313,12 +313,12 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibWaterPass)} water DUDV file missing: uri='{dudvUri}' fullPath='{fullPath}'.");
             }
 
-            Texture2D texture = Rl.LoadTexture(fullPath);
+            Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
             if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
             {
                 if (texture.id != 0)
                 {
-                    Rl.UnloadTexture(texture);
+                    RaylibNativeResources.UnloadTexture(texture);
                 }
 
                 throw new InvalidOperationException(
@@ -334,7 +334,7 @@ namespace Ludots.Raylib.Render
         {
             // RG = 0.5 → zero distortion when sampled as (xy * 2 - 1).
             Image image = Rl.GenImageColor(1, 1, new Color(128, 128, 128, 255));
-            Texture2D texture = Rl.LoadTextureFromImage(image);
+            Texture2D texture = RaylibNativeResources.LoadTextureFromImage(image);
             Rl.UnloadImage(image);
             if (texture.id == 0)
             {
@@ -349,13 +349,13 @@ namespace Ludots.Raylib.Render
         {
             if (_reflection.id != 0)
             {
-                Rl.UnloadRenderTexture(_reflection);
+                RaylibNativeResources.UnloadRenderTexture(_reflection);
                 _reflection = default;
             }
 
             if (_refraction.id != 0)
             {
-                Rl.UnloadRenderTexture(_refraction);
+                RaylibNativeResources.UnloadRenderTexture(_refraction);
                 _refraction = default;
             }
 
@@ -366,7 +366,7 @@ namespace Ludots.Raylib.Render
         {
             if (_ownsDudvTexture && _dudvTexture.id != 0)
             {
-                Rl.UnloadTexture(_dudvTexture);
+                RaylibNativeResources.UnloadTexture(_dudvTexture);
             }
 
             _dudvTexture = default;

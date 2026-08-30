@@ -25,7 +25,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Production;
 
 /// <summary>
-/// Dual-seat per-seat panel showcase acceptance (#1315): dual-seat map entry with the
+/// Dual-seat per-seat panel showcase acceptance: dual-seat map entry with the
 /// per-seat schemes, two per-seat template panels plus one shared panel instantiated by
 /// the MapLoaded trigger graphs, per-seat variable isolation through the shared graph,
 /// seat-attributed admission (own seat admitted / other seat refused with the engine's

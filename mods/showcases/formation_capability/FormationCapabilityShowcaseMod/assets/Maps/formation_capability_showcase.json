@@ -1,6 +1,6 @@
 {
   "Id": "formation_capability_showcase",
-  "VisualHeightmapAsset": "assets/terrain/formation_capability_showcase_relief.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/formation_capability_showcase_relief.height",
   "Tags": [
     "mass_navigation",
     "formation_capability_showcase_movement"

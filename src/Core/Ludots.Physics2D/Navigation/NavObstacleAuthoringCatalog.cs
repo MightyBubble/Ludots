@@ -337,9 +337,9 @@ public static class NavObstacleAuthoringCatalog
             target.ParentId = source.ParentId;
         }
 
-        if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset))
+        if (!string.IsNullOrWhiteSpace(source.ContinuousHeightmapAsset))
         {
-            target.VisualHeightmapAsset = source.VisualHeightmapAsset;
+            target.ContinuousHeightmapAsset = source.ContinuousHeightmapAsset;
         }
 
         if (source.Dependencies != null)
@@ -419,9 +419,9 @@ public static class NavObstacleAuthoringCatalog
             target.DefaultCamera = source.DefaultCamera;
         }
 
-        if (source.VisualHeightmap != null)
+        if (source.ContinuousHeightmap != null)
         {
-            target.VisualHeightmap = source.VisualHeightmap;
+            target.ContinuousHeightmap = source.ContinuousHeightmap;
         }
 
         if (source.ParticipantRelationships != null)

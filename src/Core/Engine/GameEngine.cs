@@ -1349,7 +1349,7 @@ namespace Ludots.Core.Engine
                 presentationEventStream,
                 presentationOwnerChanges,
                 soundRequestBuffer,
-                () => GetService(CoreServiceKeys.VisualHeightmap),
+                () => GetService(CoreServiceKeys.ContinuousHeightmap),
                 boneTransformProvider: () => GetService(CoreServiceKeys.BoneTransformProvider),
                 timingDiagnostics: presentationTimingDiagnostics,
                 extensionBehaviors: presenterBehaviorKinds,
@@ -1635,7 +1635,7 @@ namespace Ludots.Core.Engine
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
-            // Game-instance CommandPref seed (#1306 route ③): the player-level default intent +
+            // Game-instance CommandPref seed: the player-level default intent +
             // dispatch pair map binding plants on every bound player representative lacking the
             // component. Seed ids are the kernel registries' own id spaces — the spaces the
             // arbiter and mounted contexts resolve in.
@@ -1655,7 +1655,7 @@ namespace Ludots.Core.Engine
                 MergedConfig.StartupInputContexts);
 
 
-            // Interaction mode catalog (#1306): simulation-side modes projected onto handler IMC
+            // Interaction mode catalog: simulation-side modes projected onto handler IMC
             // contexts by InputContextProjectionSystem; the SetInteractionMode graph op writes the
             // sparse component against this map (unknown modes and undefined contexts fail fast).
             var interactionModeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1809,7 +1809,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CommandDeckRouteResolver, commandDeckRouteResolver);
             SetService(CoreServiceKeys.ProductionOverviewProfileRegistry, productionOverviewProfileRegistry);
             SetService(CoreServiceKeys.ContextBoundCollectionWriter, contextBoundCollectionWriter);
-            RemoveService(CoreServiceKeys.VisualHeightmap);
+            RemoveService(CoreServiceKeys.ContinuousHeightmap);
             RemoveService(CoreServiceKeys.StructureCollisionAsset);
             RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
             RemoveService(CoreServiceKeys.GroundSurfaceSampler);
@@ -1952,23 +1952,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ConditionProviderRegistry, providerServices.Conditions);
             SetService(CoreServiceKeys.EffectHandlerRegistry, providerServices.Effects);
             SetService(CoreServiceKeys.ProviderDefinitionValidator, providerServices.Validator);
-            var activityDefinitions = new ActivityDefinitionRegistry();
-            new ActivityConfigLoader(ConfigPipeline, activityDefinitions, providerServices.Validator)
-                .Load(ConfigCatalog, ConfigConflictReport);
-            var activityPresentation = new ActivityPresentationBuffer();
-            var activityLifecycle = new ActivityLifecycleBuffer();
-            var activityRuntime = new ActivityRuntimeService(
-                World,
-                activityDefinitions,
-                providerServices,
-                activityPresentation,
-                clock,
-                rngPickService,
-                activityLifecycle);
-            SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
-            SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
-            SetService(CoreServiceKeys.ActivityLifecycleBuffer, activityLifecycle);
-            SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
+            // Tasks install before Activities: their bridge registers the task.state_changed
+            // source / task.create effect that activity definitions reference at load time.
             var taskDefinitions = new TaskDefinitionRegistry();
             new TaskConfigLoader(ConfigPipeline, taskDefinitions, providerServices.Validator)
                 .Load(ConfigCatalog, ConfigConflictReport);
@@ -1984,6 +1969,27 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
             SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
             SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
+            // Activity bridge installs before activity configs load for the same reason
+            // (world.subject_attribute / activity.offer are load-time-validated keys).
+            var activityDefinitions = new ActivityDefinitionRegistry();
+            var activityPresentation = new ActivityPresentationBuffer();
+            var activityLifecycle = new ActivityLifecycleBuffer();
+            var activityRuntime = new ActivityRuntimeService(
+                World,
+                activityDefinitions,
+                providerServices,
+                activityPresentation,
+                clock,
+                rngPickService,
+                activityLifecycle);
+            ActivityBridgeProviderInstaller.Install(providerServices, activityRuntime);
+            _gasGraphRuntimeApi?.BindActivityRuntimeService(activityRuntime);
+            new ActivityConfigLoader(ConfigPipeline, activityDefinitions, providerServices.Validator)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
+            SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
+            SetService(CoreServiceKeys.ActivityLifecycleBuffer, activityLifecycle);
+            SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
             LegacyNarrativeConfigGuard.RejectIfPresent(ConfigCatalog);
             var storyDefinitions = new StoryDefinitionRegistry();
             new StoryConfigLoader(ConfigPipeline, storyDefinitions).Load(ConfigCatalog, ConfigConflictReport);
@@ -2028,7 +2034,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator, clientLocalSeatInputRuntime), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
-            // Local IMC projection (#1306): mode components on possessed reps and the mounted
+            // Local IMC projection: mode components on possessed reps and the mounted
             // active interaction context diff into per-seat (seatId, contextId, op) commands;
             // handler resolution mirrors scheme activation — per-seat channel handler where one
             // exists, the sole-seat global handler otherwise. Runs after possession sync so the
@@ -2255,6 +2261,11 @@ namespace Ludots.Core.Engine
             RegisterSystem(gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
             RegisterSystem(new ProgressionScopeTagRevisionSystem(World), SystemGroup.ClearPresentationFlags);
             RegisterSystem(new OrderAdmissionGenerationEndSystem(orderAdmissionResults), SystemGroup.ClearPresentationFlags);
+            RegisterSystem(
+                new ActivityPresentationDrainSystem(
+                    GetService(CoreServiceKeys.ActivityPresentationBuffer),
+                    GetService(CoreServiceKeys.ActivityLifecycleBuffer)),
+                SystemGroup.ClearPresentationFlags);
             RegisterSystem(clearPresentationFlagsSystem, SystemGroup.ClearPresentationFlags);
             _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(
                 _systemGroups,
@@ -2559,7 +2570,7 @@ namespace Ludots.Core.Engine
             if (mapConfig != null)
             {
                 var previousFocused = MapSessions.FocusedSession;
-                IVisualHeightmap? visualHeightmap = MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
+                IContinuousHeightmap? continuousHeightmap = MapContinuousHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
                 StructureCollisionAsset? structureCollision = MapStructureCollisionLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
 
                 // Create new session with boards (additive — old sessions stay)
@@ -2567,8 +2578,8 @@ namespace Ludots.Core.Engine
                 WireMapVariableChangedDispatcher(session);
                 // Bare LoadMap(mapId) has no launch seats; inject cold-start defaults (NO invent-local bypass).
                 session.LaunchContext = request.LaunchContext ?? MergedConfig?.CreateStartupLaunchContext();
-                session.VisualHeightmap = visualHeightmap;
-                BindStructureCollisionSession(session, visualHeightmap, structureCollision);
+                session.ContinuousHeightmap = continuousHeightmap;
+                BindStructureCollisionSession(session, continuousHeightmap, structureCollision);
                 CreateBoardsForSession(session, mapConfig);
                 CreateFieldsForSession(session, mapConfig);
                 if (previousFocused != null)
@@ -2694,7 +2705,7 @@ namespace Ludots.Core.Engine
 
         private static void BindStructureCollisionSession(
             MapSession session,
-            IVisualHeightmap? visualHeightmap,
+            IContinuousHeightmap? continuousHeightmap,
             StructureCollisionAsset? structureCollision)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -2702,8 +2713,8 @@ namespace Ludots.Core.Engine
             session.StructureCollisionRuntimeState = structureCollision != null
                 ? new StructureCollisionRuntimeState(structureCollision)
                 : null;
-            session.GroundSurfaceSampler = visualHeightmap != null || structureCollision != null
-                ? new GroundSurfaceSampler(visualHeightmap, structureCollision, session.StructureCollisionRuntimeState)
+            session.GroundSurfaceSampler = continuousHeightmap != null || structureCollision != null
+                ? new GroundSurfaceSampler(continuousHeightmap, structureCollision, session.StructureCollisionRuntimeState)
                 : null;
         }
 
@@ -2724,15 +2735,15 @@ namespace Ludots.Core.Engine
                 return;
             }
 
-            IVisualHeightmap? visualHeightmap = MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
+            IContinuousHeightmap? continuousHeightmap = MapContinuousHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
             StructureCollisionAsset? structureCollision = MapStructureCollisionLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
 
             // Create inner session with parent context from outer
             MapContext parentCtx = outerSession?.Context;
             var session = mapSessions.CreateSession(inner, mapConfig, parentCtx);
             WireMapVariableChangedDispatcher(session);
-            session.VisualHeightmap = visualHeightmap;
-            BindStructureCollisionSession(session, visualHeightmap, structureCollision);
+            session.ContinuousHeightmap = continuousHeightmap;
+            BindStructureCollisionSession(session, continuousHeightmap, structureCollision);
 
             // Pass through data to inner context
             if (passthrough != null)
@@ -3248,7 +3259,7 @@ namespace Ludots.Core.Engine
                     {
                         int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
                         int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
-                        LogicTerrainField? projected = TryProjectVisualHeightmapToGrid(
+                        LogicTerrainField? projected = TryProjectContinuousHeightmapToGrid(
                             session,
                             widthCells,
                             heightCells,
@@ -3274,7 +3285,7 @@ namespace Ludots.Core.Engine
                         Diagnostics.Log.Info(
                             in LogChannels.Engine,
                             projected != null
-                                ? $"Projected VisualHeightmap to grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'"
+                                ? $"Projected ContinuousHeightmap to grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'"
                                 : $"Created flat grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'");
                     }
                 }
@@ -3294,7 +3305,7 @@ namespace Ludots.Core.Engine
             return null;
         }
 
-        private LogicTerrainField? TryProjectVisualHeightmapToGrid(
+        private LogicTerrainField? TryProjectContinuousHeightmapToGrid(
             MapSession session,
             int widthCells,
             int heightCells,
@@ -3304,7 +3315,7 @@ namespace Ludots.Core.Engine
             out int originXcm,
             out int originZcm)
         {
-            Ludots.Platform.Abstractions.IVisualHeightmap? heightmap = session.VisualHeightmap;
+            Ludots.Platform.Abstractions.IContinuousHeightmap? heightmap = session.ContinuousHeightmap;
             if (heightmap == null)
             {
                 originXcm = 0;
@@ -3316,21 +3327,27 @@ namespace Ludots.Core.Engine
             int heightCm = checked(heightCells * cellSizeCm);
 
             // The origin-aware bounds contract (exact extent match + authored WorldWidthCm
-            // remap + TerrainBlockedAtOrBelow) is opt-in via the map's VisualHeightmap
-            // binding. Boards declared through the legacy VisualHeightmapAsset field keep
+            // remap + TerrainBlockedAtOrBelow) is opt-in via the map's ContinuousHeightmap
+            // binding. Boards declared through the legacy ContinuousHeightmapAsset field keep
             // the origin-0 positive-quadrant behavior they were authored against — their
             // flat fallback must stay origin-0 or origin-naive consumers miss by the
             // board's half extent (the 64km massnav relief is the canonical case).
-            bool authoredBounds = session.MapConfig?.VisualHeightmap?.WorldWidthCm > 0;
+            // WorldWidthCm alone is not authorization: the asset must also come from the
+            // map-level ContinuousHeightmap binding (Asset declared). A width without a binding
+            // asset would run the bounds contract against an unremapped legacy asset and
+            // land between the two contracts.
+            bool authoredBounds =
+                !string.IsNullOrWhiteSpace(session.MapConfig?.ContinuousHeightmap?.Asset) &&
+                session.MapConfig!.ContinuousHeightmap!.WorldWidthCm > 0;
             originXcm = 0;
             originZcm = 0;
-            if (authoredBounds && heightmap is IVisualHeightmapRenderSource renderSource)
+            if (authoredBounds && heightmap is IContinuousHeightmapRenderSource renderSource)
             {
                 WorldAabbCm bounds = renderSource.Bounds;
                 if (bounds.Width != widthCm || bounds.Height != heightCm)
                 {
                     throw new InvalidOperationException(
-                        $"VisualHeightmap bounds {bounds.Width}x{bounds.Height}cm do not match board '{boardName}' extent {widthCm}x{heightCm}cm.");
+                        $"ContinuousHeightmap bounds {bounds.Width}x{bounds.Height}cm do not match board '{boardName}' extent {widthCm}x{heightCm}cm.");
                 }
 
                 originXcm = bounds.Left;
@@ -3350,7 +3367,7 @@ namespace Ludots.Core.Engine
             {
                 Diagnostics.Log.Info(
                     in LogChannels.Engine,
-                    $"VisualHeightmap does not cover board '{boardName}' extent {widthCm}x{heightCm}cm; keeping flat grid terrain.");
+                    $"ContinuousHeightmap does not cover board '{boardName}' extent {widthCm}x{heightCm}cm; keeping flat grid terrain.");
                 return null;
             }
 
@@ -3360,16 +3377,29 @@ namespace Ludots.Core.Engine
             const long MaxProjectedLogicCells = 100_000_000;
             if ((long)widthCells * heightCells > MaxProjectedLogicCells)
             {
+                // Authorized maps (WorldWidthCm binding) must not silently flatten — that is
+                // a load-time contract failure and gets a hard error. Legacy maps keep the
+                // documented flat fallback: several existing showcases (mass_navigation,
+                // crowd_physics_arena, 250x250 macro tiles) are AUTHORED flat at this scale
+                // and load through this exact path on main; failing them here would break
+                // maps that never asked for projected terrain. Tier gating (#1347) will
+                // replace this split with an explicit authored contract.
+                if (authoredBounds)
+                {
+                    throw new InvalidOperationException(
+                        $"Board '{boardName}' VisualHeightmap projection needs {(long)widthCells * heightCells:N0} logic cells (budget {MaxProjectedLogicCells:N0}); refusing to silently flatten an authorized heightmap board. Coarsen GridCellSizeCm or shrink the board extent.");
+                }
+
                 Diagnostics.Log.Info(
                     in LogChannels.Engine,
-                    $"VisualHeightmap projection for board '{boardName}' needs {(long)widthCells * heightCells:N0} logic cells (budget {MaxProjectedLogicCells:N0}); keeping flat grid terrain.");
+                    $"ContinuousHeightmap projection for board '{boardName}' needs {(long)widthCells * heightCells:N0} logic cells (budget {MaxProjectedLogicCells:N0}); keeping flat grid terrain.");
                 return null;
             }
 
             int heightStepCm = boardConfig.TerrainHeightStepCm > 0
                 ? boardConfig.TerrainHeightStepCm
                 : SpatialScaleDefaults.CellCm;
-            return Ludots.Core.Navigation.Terrain.VisualHeightmapLogicTerrainProjection.ProjectToGrid(
+            return Ludots.Core.Navigation.Terrain.ContinuousHeightmapLogicTerrainProjection.ProjectToGrid(
                 heightmap,
                 widthCells,
                 heightCells,
@@ -4460,7 +4490,7 @@ namespace Ludots.Core.Engine
                     behaviorInput,
                     viewport,
                     () => WorldSizeSpec.Bounds,
-                    () => GetService(CoreServiceKeys.VisualHeightmap));
+                    () => GetService(CoreServiceKeys.ContinuousHeightmap));
             }
 
             if (!TryGetService(CoreServiceKeys.LogicViewRegistry, out Client.LogicViewRegistry? views) ||

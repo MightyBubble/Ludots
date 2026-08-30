@@ -169,10 +169,10 @@ namespace Ludots.App.RaylibEngineGallery
     }
 
     /// <summary>
-    /// 程序化岛屿高度场：同时实现 IVisualHeightmapRenderSource 与 IVisualHeightmap，
+    /// 程序化岛屿高度场：同时实现 IContinuousHeightmapRenderSource 与 IContinuousHeightmap，
     /// cm 精度的 short 采样、行主序布局，供视觉高度图与投影贴花两个场景共用。
     /// </summary>
-    public sealed class GalleryIslandHeightmap : IVisualHeightmapRenderSource, IVisualHeightmap
+    public sealed class GalleryIslandHeightmap : IContinuousHeightmapRenderSource, IContinuousHeightmap
     {
         private readonly int _chunksPerSide;
         private readonly int _samplesPerChunk;
@@ -211,7 +211,7 @@ namespace Ludots.App.RaylibEngineGallery
                 y: -(int)MathF.Round(half * 100f),
                 width: (int)MathF.Round(worldSizeMeters * 100f),
                 height: (int)MathF.Round(worldSizeMeters * 100f));
-            RenderProfile = new VisualHeightmapRenderProfile
+            RenderProfile = new ContinuousHeightmapRenderProfile
             {
                 WaterEnabled = true,
                 SeaLevelCm = 0f,
@@ -231,7 +231,7 @@ namespace Ludots.App.RaylibEngineGallery
         public int SamplesPerChunkRow => _samplesPerChunk;
         public int DefaultLayerIndex => 0;
         public int Revision => 1;
-        public VisualHeightmapRenderProfile RenderProfile { get; }
+        public ContinuousHeightmapRenderProfile RenderProfile { get; }
 
         private static float SampleIslandHeightCm(float worldX, float worldZ, int seed)
         {
@@ -248,7 +248,7 @@ namespace Ludots.App.RaylibEngineGallery
             return heightMeters * 100f;
         }
 
-        public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
+        public bool TryGetChunk(int chunkX, int chunkY, out ContinuousHeightmapRenderChunk chunk)
         {
             if ((uint)chunkX >= (uint)_chunksPerSide || (uint)chunkY >= (uint)_chunksPerSide)
             {
@@ -267,7 +267,7 @@ namespace Ludots.App.RaylibEngineGallery
                 Array.Copy(_heightsCm, sourceOffset, samples, y * _samplesPerChunk, _samplesPerChunk);
             }
 
-            chunk = new VisualHeightmapRenderChunk(
+            chunk = new ContinuousHeightmapRenderChunk(
                 chunkX,
                 chunkY,
                 new WorldAabbCm(
@@ -281,8 +281,8 @@ namespace Ludots.App.RaylibEngineGallery
                 sampleStepYCm: StepCm,
                 heightSamplesCm: samples,
                 heightSamplesRaw: Array.Empty<ushort>(),
-                sampleScale: VisualHeightSampleScale.IdentityCentimeters,
-                storageLayout: VisualHeightmapStorageLayout.RowMajorInt16Centimeters,
+                sampleScale: ContinuousHeightSampleScale.IdentityCentimeters,
+                storageLayout: ContinuousHeightmapStorageLayout.RowMajorInt16Centimeters,
                 sampleStride: _samplesPerChunk,
                 layerSampleOffset: 0,
                 revision: 1);

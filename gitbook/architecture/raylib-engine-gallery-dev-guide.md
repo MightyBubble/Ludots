@@ -55,7 +55,7 @@ dotnet run --project src/Apps/Raylib/Ludots.App.RaylibEngineGallery -- --scene v
 | 新着色行为（新光照模型/风格化） | 新 shader + `RaylibShaderCatalog` 注册 | 在现有 shader 里加开关 |
 | 新物体形态（新几何来源） | `mesh_assets.json` / host_assets Mesh 行 | 渲染器 |
 | 新渲染能力（新车道） | `Ludots.Raylib.Render` 新渲染器 + 画廊场景 + 本文环一 | Core、Adapter |
-| 大地图远景表现 | `VisualHeightmapRenderProfile`（海平面/夸张/对比度） | 逐 chunk 手调 |
+| 大地图远景表现 | `ContinuousHeightmapRenderProfile`（海平面/夸张/对比度） | 逐 chunk 手调 |
 
 ## 深读
 

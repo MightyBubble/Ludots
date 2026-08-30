@@ -550,7 +550,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void LargeWorldMap_UsesVisualHeightmapCameraProfile()
+        public void LargeWorldMap_UsesContinuousHeightmapCameraProfile()
         {
             string modRoot = MassNavigationModRoot();
             JsonObject map = ReadObject(Path.Combine(modRoot, "assets", "Maps", "mass_navigation.json"));
@@ -572,7 +572,7 @@ namespace Ludots.Tests.Presentation
 
             JsonArray cameras = ReadArray(Path.Combine(modRoot, "assets", "Camera", "virtual_cameras.json"));
             JsonObject camera = FindObjectById(cameras, LargeWorldCameraId);
-            Assert.That(camera["targetHeightMode"]?.GetValue<string>(), Is.EqualTo("VisualHeightmap"));
+            Assert.That(camera["targetHeightMode"]?.GetValue<string>(), Is.EqualTo("ContinuousHeightmap"));
             Assert.That(camera["targetHeightLayerIndex"]?.GetValue<int>(), Is.EqualTo(0));
 
             var vfs = new Ludots.Core.Modding.VirtualFileSystem();
@@ -588,7 +588,7 @@ namespace Ludots.Tests.Presentation
             new VirtualCameraDefinitionLoader(pipeline, registry).Load(loadedCatalog, new ConfigConflictReport());
 
             Assert.That(registry.TryGet(LargeWorldCameraId, out VirtualCameraDefinition? definition), Is.True);
-            Assert.That(definition!.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.VisualHeightmap));
+            Assert.That(definition!.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.ContinuousHeightmap));
             Assert.That(definition.TargetHeightLayerIndex, Is.EqualTo(0));
         }
 

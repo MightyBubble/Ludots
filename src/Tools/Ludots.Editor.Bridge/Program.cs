@@ -4441,7 +4441,7 @@ static class EditorRepo
 
     private static string BuildDefaultBoardDataFile(string mapId, string boardName, string spatialType)
     {
-        string extension = string.Equals(spatialType, "HexGrid", StringComparison.Ordinal) ? ".vtxm" : ".bin";
+        string extension = string.Equals(spatialType, "HexGrid", StringComparison.Ordinal) ? ".hex" : ".bin";
         return $"{SanitizeId(mapId)}_{SanitizeId(boardName)}{extension}";
     }
 

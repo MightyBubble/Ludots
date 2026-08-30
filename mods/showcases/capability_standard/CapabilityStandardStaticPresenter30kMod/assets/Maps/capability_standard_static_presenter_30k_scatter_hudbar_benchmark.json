@@ -1,7 +1,7 @@
 {
   "Id": "capability_standard_static_presenter_30k_scatter_hudbar_benchmark",
   "Tags": ["showcase", "presenter", "benchmark", "scatter", "capability_static_presenter", "hudbar"],
-  "VisualHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_showcase_flat.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_showcase_flat.height",
   "Metadata": {
     "capabilityStandardStaticPresenter30k": {
       "scatterInitialTarget": 30000,

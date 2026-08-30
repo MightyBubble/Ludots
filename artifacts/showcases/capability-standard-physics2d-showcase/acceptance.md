@@ -1,0 +1,8 @@
+# Capability Standard Physics2D Showcase Acceptance
+
+binding=capability_standard_physics2d_showcase
+preset=capability_standard_physics2d_showcase_raylib
+map=capability_standard_physics2d_showcase
+physics2D.tickHz=15
+physics2D.broadphase=UniformGrid
+physics2D.broadphaseCellSizeCm=256

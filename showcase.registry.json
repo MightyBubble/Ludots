@@ -5068,7 +5068,7 @@
       "id": "east_asia_playable_terrain",
       "path": "mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod",
       "title": "East Asia Playable Terrain",
-      "summary": "Shared Grid, HexGrid, and continuous VisualHeightmap terrain assets for playable East Asia showcases.",
+      "summary": "Shared Grid, HexGrid, and continuous ContinuousHeightmap terrain assets for playable East Asia showcases.",
       "tier": "T2",
       "category": "demo",
       "tags": [
@@ -5088,8 +5088,8 @@
     {
       "id": "east_asia_visual_heightmap_runtime",
       "path": "mods/showcases/east_asia_playable_terrain/EastAsiaVisualHeightmapRuntimeEntryMod",
-      "title": "East Asia VisualHeightmap Runtime Entry",
-      "summary": "Pure-runtime launcher entry for the continuous East Asia VisualHeightmap without terrain editing tools.",
+      "title": "East Asia ContinuousHeightmap Runtime Entry",
+      "summary": "Pure-runtime launcher entry for the continuous East Asia ContinuousHeightmap without terrain editing tools.",
       "tier": "T2",
       "category": "demo",
       "tags": [
@@ -5110,7 +5110,7 @@
       "id": "east_asia_navmesh_debug",
       "path": "mods/showcases/east_asia_navmesh_debug/EastAsiaNavMeshDebugMod",
       "title": "East Asia NavMesh Debug",
-      "summary": "Continental Recast NavMesh tiles and world-aligned walkability texture baked from the continuous East Asia VisualHeightmap at logic-cell resolution.",
+      "summary": "Continental Recast NavMesh tiles and world-aligned walkability texture baked from the continuous East Asia ContinuousHeightmap at logic-cell resolution.",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -5132,7 +5132,7 @@
       "id": "field_east_asia_admin",
       "path": "mods/showcases/field_east_asia_admin/FieldEastAsiaAdminMod",
       "title": "East Asia Admin MapField",
-      "summary": "Province-scale placeholder ownership regions materialize and project as DiscreteOwnership over the East Asia VisualHeightmap.",
+      "summary": "Province-scale placeholder ownership regions materialize and project as DiscreteOwnership over the East Asia ContinuousHeightmap.",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -5176,7 +5176,7 @@
       "id": "field_east_asia_country",
       "path": "mods/showcases/field_east_asia_country/FieldEastAsiaCountryMod",
       "title": "East Asia Country Borders",
-      "summary": "Natural Earth admin_0 national borders rasterized as DiscreteOwnership on the East Asia VisualHeightmap.",
+      "summary": "Natural Earth admin_0 national borders rasterized as DiscreteOwnership on the East Asia ContinuousHeightmap.",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -7332,7 +7332,7 @@
       "id": "navmesh_debug_showcase",
       "path": "mods/showcases/navmesh_debug/NavMeshDebugLaunchMod",
       "title": "NavMesh 脏更新控制器",
-      "summary": "三张地图共用的操作层：N 切换覆盖层，P 放结构墙，O 清墙；地图选择由 Hex/Grid/VisualHeightmap 入口负责。",
+      "summary": "三张地图共用的操作层：N 切换覆盖层，P 放结构墙，O 清墙；地图选择由 Hex/Grid/ContinuousHeightmap 入口负责。",
       "tier": "T2",
       "category": "capability",
       "binding": "navmesh_debug",
@@ -7350,8 +7350,8 @@
     {
       "id": "navmesh_debug_vhtm_showcase",
       "path": "mods/showcases/navmesh_debug_vhtm/NavMeshDebugVhtmLaunchMod",
-      "title": "NavMesh 脏更新·VisualHeightmap 地图",
-      "summary": "VisualHeightmap 地形上的运行时改路展示：.vhtm 起伏先投影为逻辑地形，再用同一套 P/O 操作演示结构墙如何触发局部导航重建。",
+      "title": "NavMesh 脏更新·ContinuousHeightmap 地图",
+      "summary": "ContinuousHeightmap 地形上的运行时改路展示：.height 起伏先投影为逻辑地形，再用同一套 P/O 操作演示结构墙如何触发局部导航重建。",
       "tier": "T2",
       "category": "capability",
       "binding": "navmesh_debug_vhtm_launch",
@@ -9429,6 +9429,33 @@
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadEffectStack",
       "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadEffectStack/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_LoadEffectStack/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_OfferActivity",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpOfferActivityEntryMod",
+      "projectPath": "CapabilityStandardGraphOpOfferActivityEntryMod.csproj",
+      "title": "点名派发待办活动",
+      "summary": "图节点点名活动 id；跑完，活动已上桌，字幕报「活动已派发」。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "OfferActivity"
+      ],
+      "binding": "capability_standard_graph_op_OfferActivity",
+      "preset": "capability_standard_graph_op_OfferActivity_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/OfferActivity.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_OfferActivity",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_OfferActivity/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_OfferActivity/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }

@@ -1,7 +1,7 @@
 {
   "name": "FieldEastAsiaAdminMod",
   "version": "1.0.0",
-  "description": "Province-scale discrete ownership overlay for the East Asia VisualHeightmap.",
+  "description": "Province-scale discrete ownership overlay for the East Asia ContinuousHeightmap.",
   "priority": 0,
   "dependencies": {
     "EastAsiaPlayableTerrainMod": "^1.0.0"

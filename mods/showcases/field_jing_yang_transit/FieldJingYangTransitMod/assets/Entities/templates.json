@@ -7,7 +7,7 @@
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 750, "Y": 150 } },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 3.14159 },
       "AttributeBuffer": { "base": { "Health": 100 } },
       "AbilityStateBuffer": {
@@ -31,7 +31,7 @@
       "Name": { "Value": "MarkerJing" },
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 150, "Y": 150 } },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "PresentationStaticTransform": {}
     }
@@ -42,7 +42,7 @@
       "Name": { "Value": "MarkerYang" },
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 750, "Y": 150 } },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "PresentationStaticTransform": {}
     }

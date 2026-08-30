@@ -158,6 +158,9 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         ApplyLinks(vignette, actors);
         ResolveConfigEffect(vignette);
 
+        var programRegistry = new GraphProgramRegistry();
+        GraphProgramPackage package = compiled.Package!.Value;
+        programRegistry.Register(1, package.Program, kind, GraphInstructionSourceMap.Empty, package.Symbols, package.TriggerGraphEntries);
         var ctx = new GraphOpsNodeDriverContext
         {
             AssetsRoot = assetsRoot,
@@ -187,7 +190,9 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             InventoryRuntime = _inventoryRuntime,
             BuiltinRuntime = _builtinRuntime,
             ConfigEffectTemplateId = _configEffectTemplateId,
-            OwnsSimulationWorld = _ownsWorld
+            OwnsSimulationWorld = _ownsWorld,
+            Programs = programRegistry,
+            FeaturedGraphId = 1,
         };
         ctx.SimActors = actors;
         ctx.ActorHealth = new float[actors.Length];

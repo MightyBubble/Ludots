@@ -18,7 +18,7 @@ string heightPath = args.Length > 0 && !args[0].StartsWith("--")
     ? args[0]
     : throw new ArgumentException("pass the east_asia_continuous.height path as the first argument");
 int repeats = 3;
-long worldWidthCm = 6_399_232; // east_asia_visual_heightmap.json VisualHeightmap.WorldWidthCm
+long worldWidthCm = 6_399_232; // east_asia_visual_heightmap.json ContinuousHeightmap.WorldWidthCm
 string feedName = NavBakeNames.TerrainFeedTriangles;
 for (int i = 1; i < args.Length - 1; i++)
 {
@@ -51,7 +51,7 @@ const byte MaxHeightLevel = (byte)SpatialScaleDefaults.LogicTerrainMaxHeightLeve
 const float HeightScaleMeters = 1.0f; // east_asia_navmesh_debug navmesh.json runtimeIncremental.heightScaleMeters
 
 using var stream = File.OpenRead(heightPath);
-var asset = VisualHeightmapBinary.Read(stream);
+var asset = ContinuousHeightmapBinary.Read(stream);
 short[] samples = asset.HeightSamplesCm.Length > 0 ? asset.HeightSamplesCm : throw new InvalidDataException("expected Int16-centimeter sample layout");
 int sampleCols = asset.SampleColumns;
 int sampleRows = asset.SampleRows;

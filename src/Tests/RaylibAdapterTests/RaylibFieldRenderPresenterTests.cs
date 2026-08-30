@@ -330,7 +330,7 @@ public sealed class RaylibFieldRenderPresenterTests
         GC.GetAllocatedBytesForCurrentThread();
     }
 
-    private sealed class RecordingHeightmap : IVisualHeightmap
+    private sealed class RecordingHeightmap : IContinuousHeightmap
     {
         private readonly bool _sampleResult;
         private readonly float _heightCm;

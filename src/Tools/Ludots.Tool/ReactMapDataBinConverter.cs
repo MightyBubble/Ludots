@@ -29,7 +29,7 @@ namespace Ludots.Tool
 
     public static class ReactMapDataBinConverter
     {
-        private const string Magic = "VTXM";
+        private const string Magic = "HEXM";
         private const int Version = 2;
         private const int ChunkSize = SpatialScaleDefaults.TerrainChunkCells;
         private const int CellsPerChunk = ChunkSize * ChunkSize;

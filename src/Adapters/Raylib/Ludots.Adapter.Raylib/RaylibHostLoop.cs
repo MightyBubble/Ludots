@@ -204,7 +204,7 @@ namespace Ludots.Adapter.Raylib
                 SimplifiedCliffRadius = 350f,
             };
             _terrainSource = new VertexMapTerrainChunkMeshSource(engine.VertexMap);
-            var visualHeightmapRenderer = new RaylibVisualHeightmapRenderer(engine.VFS)
+            var continuousHeightmapRenderer = new RaylibContinuousHeightmapRenderer(engine.VFS)
             {
                 VisibleRadiusCm = 140_000f,
             };
@@ -328,7 +328,7 @@ namespace Ludots.Adapter.Raylib
                 RaylibPrimitiveRenderMode primitiveMode = ResolvePrimitiveRenderMode();
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(primitiveMode, engine.VFS, materials, Ludots.Core.Presentation.Assets.AnimationChannelRegistry.Register);
                 primitiveRenderer.BindReceiverMeshProjector(
-                    new MapLaneReceiverMeshProjector(engine, visualHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector));
+                    new MapLaneReceiverMeshProjector(engine, continuousHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector));
                 primitiveRenderer.BindInstancedBatchLaneSource(setup.InstancedBatchLaneStore);
                 engine.SetService(
                     CoreServiceKeys.BoneTransformProvider,
@@ -346,8 +346,8 @@ namespace Ludots.Adapter.Raylib
                 using var waterPass = new RaylibWaterPass(engine.VFS);
                 waterPass.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
                     engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibWaterPass.DefaultRelativePath));
-                visualHeightmapRenderer.LoadAlbedoDescriptors(PresentationCatalogMerge.MergeEntries(
-                    engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibVisualHeightmapRenderer.DefaultAlbedoRelativePath));
+                continuousHeightmapRenderer.LoadAlbedoDescriptors(PresentationCatalogMerge.MergeEntries(
+                    engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibContinuousHeightmapRenderer.DefaultAlbedoRelativePath));
                 GlobalPresentationEventBuffer? globalPresentationEvents = engine.GetService(CoreServiceKeys.GlobalPresentationEventBuffer);
                 skyEnvironment.SetPhaseSourceRequirement(requiredWhenActive: true);
                 skyEnvironment.ApplyDayPhase(frameLighting.DayPhase01);
@@ -469,11 +469,11 @@ namespace Ludots.Adapter.Raylib
                             activeMapHidesDebugGuides ||
                             benchmarkController is { IsActive: true, SuppressHostDebugGuides: true };
                         bool drawTerrain = renderDebug.DrawTerrain && !cleanPerformanceMode;
-                        bool drawVisualHeightmap = renderDebug.DrawTerrain;
-                        bool hasVisualHeightmap = engine.TryGetService(
-                            CoreServiceKeys.VisualHeightmap,
-                            out IVisualHeightmap? visualHeightmapForFrame) &&
-                            visualHeightmapForFrame is IVisualHeightmapRenderSource;
+                        bool drawContinuousHeightmap = renderDebug.DrawTerrain;
+                        bool hasContinuousHeightmap = engine.TryGetService(
+                            CoreServiceKeys.ContinuousHeightmap,
+                            out IContinuousHeightmap? continuousHeightmapForFrame) &&
+                            continuousHeightmapForFrame is IContinuousHeightmapRenderSource;
                         bool drawPrimitives = renderDebug.DrawPrimitives;
                         bool drawDebugDraw = renderDebug.DrawDebugDraw && !cleanPerformanceMode;
                         bool drawFieldOverlays = renderDebug.DrawFieldOverlays && !cleanPerformanceMode;
@@ -534,8 +534,8 @@ namespace Ludots.Adapter.Raylib
                         setup.InstancedBatchLaneStore.ApplyRequests(
                             engine.GetService(CoreServiceKeys.InstancedBatchRequestBuffer).GetSpan(),
                             engine.GetService(CoreServiceKeys.InstancedBatchAssetRegistry),
-                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? coreVisualHeightmap)
-                                ? coreVisualHeightmap
+                            engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? coreContinuousHeightmap)
+                                ? coreContinuousHeightmap
                                 : null);
                         long postTickStart = Stopwatch.GetTimestamp();
                         if (autoOrbitDegPerSecond != 0f)
@@ -630,11 +630,11 @@ namespace Ludots.Adapter.Raylib
                         string? activeMapId = engine.CurrentMapSession?.MapId.Value;
                         skyEnvironment.EnsureActiveForMap(activeMapId);
                         waterPass.EnsureActiveForMap(activeMapId);
-                        visualHeightmapRenderer.EnsureAlbedoActiveForMap(activeMapId);
+                        continuousHeightmapRenderer.EnsureAlbedoActiveForMap(activeMapId);
                         ConfigureNavWalkabilityOverlay(
                             engine.CurrentMapSession,
                             engine.VFS,
-                            visualHeightmapRenderer,
+                            continuousHeightmapRenderer,
                             renderDebug.DrawNavWalkabilityTexture,
                             ref navWalkabilityOverlayMapId);
                         Color frameClearColor = skyEnvironment.IsActive
@@ -657,18 +657,18 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         terrainRenderer.ApplyFrameLighting(frameLighting);
-                        visualHeightmapRenderer.ApplyFrameLighting(frameLighting);
+                        continuousHeightmapRenderer.ApplyFrameLighting(frameLighting);
                         primitiveRenderer.DrawSurfaceWireBoxes = drawDebugDraw;
 
-                        bool waterOnVisualHeightmap = waterPass.IsActive &&
+                        bool waterOnContinuousHeightmap = waterPass.IsActive &&
                                                       drawTerrain &&
-                                                      drawVisualHeightmap &&
-                                                      hasVisualHeightmap;
+                                                      drawContinuousHeightmap &&
+                                                      hasContinuousHeightmap;
                         bool waterOnVertexMap = waterPass.IsActive &&
                                                 drawTerrain &&
-                                                !waterOnVisualHeightmap &&
+                                                !waterOnContinuousHeightmap &&
                                                 engine.VertexMap != null;
-                        bool waterFboEnabled = waterOnVisualHeightmap || waterOnVertexMap;
+                        bool waterFboEnabled = waterOnContinuousHeightmap || waterOnVertexMap;
                         bool postProcessWorldFrame = !waterFboEnabled;
                         if (postProcessWorldFrame)
                         {
@@ -694,14 +694,14 @@ namespace Ludots.Adapter.Raylib
                                 Restore3DDepthState();
                             }
 
-                            if (waterOnVisualHeightmap &&
-                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhReflect) &&
-                                vhReflect is IVisualHeightmapRenderSource reflectSource)
+                            if (waterOnContinuousHeightmap &&
+                                engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? vhReflect) &&
+                                vhReflect is IContinuousHeightmapRenderSource reflectSource)
                             {
-                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
-                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = reflectSource.RenderProfile.AbsoluteColorPeakSpanCm;
-                                visualHeightmapRenderer.DisplayHeightScale = reflectSource.RenderProfile.DisplayHeightScale;
-                                visualHeightmapRenderer.Render(reflectSource, reflectionCamera);
+                                continuousHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                continuousHeightmapRenderer.AbsoluteColorPeakSpanCm = reflectSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                                continuousHeightmapRenderer.DisplayHeightScale = reflectSource.RenderProfile.DisplayHeightScale;
+                                continuousHeightmapRenderer.Render(reflectSource, reflectionCamera);
                             }
                             else
                             {
@@ -721,14 +721,14 @@ namespace Ludots.Adapter.Raylib
                                 Restore3DDepthState();
                             }
 
-                            if (waterOnVisualHeightmap &&
-                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhRefract) &&
-                                vhRefract is IVisualHeightmapRenderSource refractSource)
+                            if (waterOnContinuousHeightmap &&
+                                engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? vhRefract) &&
+                                vhRefract is IContinuousHeightmapRenderSource refractSource)
                             {
-                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
-                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = refractSource.RenderProfile.AbsoluteColorPeakSpanCm;
-                                visualHeightmapRenderer.DisplayHeightScale = refractSource.RenderProfile.DisplayHeightScale;
-                                visualHeightmapRenderer.Render(refractSource, activeCamera);
+                                continuousHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                continuousHeightmapRenderer.AbsoluteColorPeakSpanCm = refractSource.RenderProfile.AbsoluteColorPeakSpanCm;
+                                continuousHeightmapRenderer.DisplayHeightScale = refractSource.RenderProfile.DisplayHeightScale;
+                                continuousHeightmapRenderer.Render(refractSource, activeCamera);
                             }
                             else
                             {
@@ -776,7 +776,7 @@ namespace Ludots.Adapter.Raylib
                             }
 
                             if (drawDebugDraw &&
-                                !(drawVisualHeightmap && hasVisualHeightmap) &&
+                                !(drawContinuousHeightmap && hasContinuousHeightmap) &&
                                 !hostDebugGuidesSuppressed)
                             {
                                 DrawInfiniteGrid(viewportCamera.target, 300, 1.0f, 10);
@@ -787,24 +787,24 @@ namespace Ludots.Adapter.Raylib
                                 Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
                             }
 
-                            if (drawVisualHeightmap &&
-                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
-                                visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
+                            if (drawContinuousHeightmap &&
+                                engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? continuousHeightmapForTerrain) &&
+                                continuousHeightmapForTerrain is IContinuousHeightmapRenderSource visualTerrainSource)
                             {
                                 long terrainStart = Stopwatch.GetTimestamp();
                                 // Absolute elevation tint keeps continental land readable even when the
                                 // reflective water pass is off; water FBO still overrides sea from the plane.
-                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm =
+                                continuousHeightmapRenderer.AbsoluteColorPeakSpanCm =
                                     visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
-                                visualHeightmapRenderer.DisplayHeightScale =
+                                continuousHeightmapRenderer.DisplayHeightScale =
                                     visualTerrainSource.RenderProfile.DisplayHeightScale;
-                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterOnVisualHeightmap
+                                continuousHeightmapRenderer.AbsoluteColorSeaLevelCm = waterOnContinuousHeightmap
                                     ? waterPass.WaterPlaneY * 100f
                                     : visualTerrainSource.RenderProfile.SeaLevelCm;
 
-                                visualHeightmapRenderer.Render(visualTerrainSource, viewportCamera);
+                                continuousHeightmapRenderer.Render(visualTerrainSource, viewportCamera);
 
-                                if (waterOnVisualHeightmap)
+                                if (waterOnContinuousHeightmap)
                                 {
                                     terrainRenderer.EnsureWaterShadersReady();
                                     terrainRenderer.BindReflectiveWater(waterPass);
@@ -821,9 +821,9 @@ namespace Ludots.Adapter.Raylib
 
                                 presentationTiming?.ObserveTerrain(
                                     ElapsedMs(terrainStart),
-                                    visualHeightmapRenderer.ChunkBuildMsLastFrame,
-                                    visualHeightmapRenderer.DrawnChunkCountLastFrame,
-                                    visualHeightmapRenderer.BuiltChunkCountLastFrame);
+                                    continuousHeightmapRenderer.ChunkBuildMsLastFrame,
+                                    continuousHeightmapRenderer.DrawnChunkCountLastFrame,
+                                    continuousHeightmapRenderer.BuiltChunkCountLastFrame);
                             }
                             else if (drawTerrain)
                             {
@@ -865,11 +865,11 @@ namespace Ludots.Adapter.Raylib
                             }
 
                             if (engine.TryGetService(
-                                    CoreServiceKeys.VisualHeightmap,
-                                    out IVisualHeightmap? fieldHeightSampleSource))
+                                    CoreServiceKeys.ContinuousHeightmap,
+                                    out IContinuousHeightmap? fieldHeightSampleSource))
                             {
                                 fieldRenderPresenter.HeightSampleSource = fieldHeightSampleSource;
-                                // Match RaylibVisualHeightmapRenderer mesh Y (heightCm * 0.01f) — that path
+                                // Match RaylibContinuousHeightmapRenderer mesh Y (heightCm * 0.01f) — that path
                                 // does not multiply DisplayHeightScale, so neither does the drape.
                                 fieldRenderPresenter.HeightSampleDisplayScale = 1f;
                             }
@@ -914,11 +914,11 @@ namespace Ludots.Adapter.Raylib
                                 long primitiveStart = Stopwatch.GetTimestamp();
                                 PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
                                 SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
-                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
-                                if (visualHeightmap != null)
+                                engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? continuousHeightmap);
+                                if (continuousHeightmap != null)
                                 {
-                                    visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap);
-                                    terrainRenderer.BindStampHeightSampleSource(visualHeightmap);
+                                    continuousHeightmapRenderer.BindStampHeightSampleSource(continuousHeightmap);
+                                    terrainRenderer.BindStampHeightSampleSource(continuousHeightmap);
                                 }
 
                                 primitiveRenderer.Draw(
@@ -928,7 +928,7 @@ namespace Ludots.Adapter.Raylib
                                     skinnedBatch,
                                     meshes,
                                     renderDebug.AcceptanceScaleMultiplier,
-                                    visualHeightmap,
+                                    continuousHeightmap,
                                     runtimeStopwatch.Elapsed.TotalSeconds);
                                 presentationTiming?.ObservePrimitiveRender(
                                     ElapsedMs(primitiveStart),
@@ -1131,7 +1131,7 @@ namespace Ludots.Adapter.Raylib
                 soundConsumer?.Dispose();
                 if (windowOpened) Rl.CloseWindow();
                 terrainRenderer.Dispose();
-                visualHeightmapRenderer.Dispose();
+                continuousHeightmapRenderer.Dispose();
                 engine.Dispose();
             }
         }
@@ -1443,7 +1443,7 @@ namespace Ludots.Adapter.Raylib
                 : defaultValue;
         }
 
-        private static float ReadEnvFloatOrDefault(string key, float defaultValue)
+        internal static float ReadEnvFloatOrDefault(string key, float defaultValue)
         {
             return float.TryParse(Environment.GetEnvironmentVariable(key), out float value)
                 ? value
@@ -1664,7 +1664,7 @@ namespace Ludots.Adapter.Raylib
         internal static void ConfigureNavWalkabilityOverlay(
             MapSession? session,
             IRenderAssetPathResolver assetPaths,
-            RaylibVisualHeightmapRenderer renderer,
+            RaylibContinuousHeightmapRenderer renderer,
             bool enabled,
             ref string? configuredMapId)
         {
@@ -2522,7 +2522,7 @@ namespace Ludots.Adapter.Raylib
     }
 
     /// <summary>
-    /// 按聚焦地图的车道组合 Decal 接收面：地形接收面（vhtm 渲染源优先，其次 VertexMap）承担 stamp 高度拟合；
+    /// 按聚焦地图的车道组合 Decal 接收面：地形接收面（.height 渲染源优先，其次 VertexMap）承担 stamp 高度拟合；
     /// 单件静态网格接收面与地形接收面同时重画相交网格——贴花可同时落在地面与道具/建筑上。
     /// Fit 永远只走地形车道（静态网格无高度采样，authored Y 不得存活）；无任何地形车道时抛错，
     /// Decal 没有可退化的占位接收面。
@@ -2530,18 +2530,18 @@ namespace Ludots.Adapter.Raylib
     internal sealed class MapLaneReceiverMeshProjector : Ludots.Raylib.Render.IRaylibReceiverMeshProjector
     {
         private readonly GameEngine _engine;
-        private readonly Ludots.Raylib.Render.IRaylibReceiverMeshProjector _visualHeightmapRenderer;
+        private readonly Ludots.Raylib.Render.IRaylibReceiverMeshProjector _continuousHeightmapRenderer;
         private readonly Ludots.Raylib.Render.IRaylibReceiverMeshProjector _terrainRenderer;
         private readonly Ludots.Raylib.Render.IRaylibReceiverMeshProjector _staticMeshReceiverProjector;
 
         public MapLaneReceiverMeshProjector(
             GameEngine engine,
-            Ludots.Raylib.Render.IRaylibReceiverMeshProjector visualHeightmapRenderer,
+            Ludots.Raylib.Render.IRaylibReceiverMeshProjector continuousHeightmapRenderer,
             Ludots.Raylib.Render.IRaylibReceiverMeshProjector terrainRenderer,
             Ludots.Raylib.Render.IRaylibReceiverMeshProjector staticMeshReceiverProjector)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-            _visualHeightmapRenderer = visualHeightmapRenderer ?? throw new ArgumentNullException(nameof(visualHeightmapRenderer));
+            _continuousHeightmapRenderer = continuousHeightmapRenderer ?? throw new ArgumentNullException(nameof(continuousHeightmapRenderer));
             _terrainRenderer = terrainRenderer ?? throw new ArgumentNullException(nameof(terrainRenderer));
             _staticMeshReceiverProjector = staticMeshReceiverProjector ?? throw new ArgumentNullException(nameof(staticMeshReceiverProjector));
         }
@@ -2584,10 +2584,10 @@ namespace Ludots.Adapter.Raylib
 
         private Ludots.Raylib.Render.IRaylibReceiverMeshProjector? TryResolveTerrainReceiver()
         {
-            if (_engine.TryGetService(CoreServiceKeys.VisualHeightmap, out Ludots.Platform.Abstractions.IVisualHeightmap? heightmap) &&
-                heightmap is Ludots.Platform.Abstractions.IVisualHeightmapRenderSource)
+            if (_engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out Ludots.Platform.Abstractions.IContinuousHeightmap? heightmap) &&
+                heightmap is Ludots.Platform.Abstractions.IContinuousHeightmapRenderSource)
             {
-                return _visualHeightmapRenderer;
+                return _continuousHeightmapRenderer;
             }
 
             if (_engine.VertexMap != null)

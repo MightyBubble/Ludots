@@ -26,7 +26,7 @@ namespace Ludots.App.RaylibEngineGallery
             new("sky_daynight", "昼夜天空", "RaylibSkyEnvironment 渐变烘焙 + 全天相位驱动", static () => new Scenes.SkyDayNightScene()),
             new("water", "反射水面", "RaylibWaterPass 反射/折射双通道 + DUDV 扭曲", static () => new Scenes.WaterScene()),
             new("terrain_surface", "地表着色", "RaylibTerrainRenderer chunk 网格 + 分带顶点色", static () => new Scenes.TerrainSurfaceScene()),
-            new("terrain_heightmap", "视觉高度图", "RaylibVisualHeightmapRenderer 程序化岛屿高度场", static () => new Scenes.TerrainHeightmapScene()),
+            new("terrain_heightmap", "视觉高度图", "RaylibContinuousHeightmapRenderer 程序化岛屿高度场", static () => new Scenes.TerrainHeightmapScene()),
             new("atmosphere_fog", "距离雾与环境", "RaylibRenderEnvironmentRenderer 雾 + 环境色调", static () => new Scenes.AtmosphereFogScene()),
             new("frame_lighting", "帧光照", "RaylibFrameLighting 日光/环境全天摆动", static () => new Scenes.FrameLightingScene()),
             new("postprocess", "后处理调色", "RaylibPostProcessRenderer 曝光/对比/饱和/暗角调制", static () => new Scenes.PostProcessScene()),

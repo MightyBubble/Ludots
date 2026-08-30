@@ -14,6 +14,6 @@
 | 后处理 | 曝光/对比/饱和/暗角 | `engine_raylib_postprocess` | 同目录 `screen.png` |
 | 植被镂空 | Billboard cutout + 打孔阴影 | `engine_raylib_vegetation_cutout` | 同目录 `screen.png` |
 | 地形（表面） | chunk surface 车道 | `engine_raylib_terrain_surface` | 同目录 `screen.png` |
-| 地形（高度图） | `.vhtm` 高度图 + 色带 | `engine_raylib_terrain_heightmap` | 同目录 `screen.png` |
+| 地形（高度图） | `.height` 高度图 + 色带 | `engine_raylib_terrain_heightmap` | 同目录 `screen.png` |
 
 环境配置树（雾/环境光 ramp/阴影参数/天空/水体条目）的作者面字段与装载规则见 [Raylib 渲染配置结构](../raylib-render-config-structure.md)；材质系统三轴（换贴图/换 shader/换参数）同见该页。

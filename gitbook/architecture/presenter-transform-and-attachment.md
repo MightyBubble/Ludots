@@ -156,11 +156,11 @@ public struct AssetBindingConfig
 WorldPosition = ComputeWorldPosition(...)
 if (config.Grounding != None)
 {
-    float groundHeight = visualHeightmap.SampleHeight(WorldPosition.X, WorldPosition.Z);
+    float groundHeight = continuousHeightmap.SampleHeight(WorldPosition.X, WorldPosition.Z);
     WorldPosition.Y = groundHeight + config.GroundingOffset;
     if (config.Grounding == AlignToSurface)
     {
-        WorldRotation = AlignToSurfaceNormal(visualHeightmap, WorldPosition);
+        WorldRotation = AlignToSurfaceNormal(continuousHeightmap, WorldPosition);
     }
 }
 ```
@@ -176,7 +176,7 @@ public static class PresenterGroundingUtility
         Span<Vector3> positions,        // in/out: 输入 XZ，输出 XYZ
         Span<GroundingMode> modes,      // in: 每个 presenter 的 grounding 模式
         Span<float> offsets,            // in: 每个 presenter 的 Y 偏移
-        IVisualHeightmap heightmap)
+        IContinuousHeightmap heightmap)
     {
         // 批量采样，只处理 mode != None 的项
     }
@@ -187,7 +187,7 @@ public static class PresenterGroundingUtility
 
 现有 `PrefabGroundingUtility` 和 `PrefabGroundingBatchContext` 随 Prefab 系统一起删除。新架构中 grounding 由 `PresenterGroundingUtility` 承载，接口更简洁，但核心原则不变（详见 [Prefab Grounding 与 Visual Height](prefab-grounding-and-visual-height.md)）：
 
-- visual height 是 map-owned 的 Core service（`IVisualHeightmap`）
+- visual height 是 map-owned 的 Core service（`IContinuousHeightmap`）
 - grounding 是 Core-owned 的 lowering 步骤，不是 adapter 私活
 - 所有 adapter 消费同一份 grounding 结果
 

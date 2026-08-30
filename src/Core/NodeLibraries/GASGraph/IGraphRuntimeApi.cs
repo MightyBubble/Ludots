@@ -101,7 +101,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void SetWorldPosition(Entity target, int xCm, int yCm);
 
         /// <summary>
-        /// Sets an entity's interaction mode (#1306): writes the sparse InteractionMode component,
+        /// Sets an entity's interaction mode: writes the sparse InteractionMode component,
         /// or removes it when the mode is the reserved normal default. Fail-closed on dead targets
         /// and mode key ids that do not resolve to an installed interaction mode.
         /// </summary>
@@ -524,6 +524,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void FireGlobalEventPayload(int eventKeyId, MapId originMapId, GraphEntryPayloadTable? stagedArgs)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+        }
+
+        /// <summary>
+        /// Offers an activity by definition id to the scope host through
+        /// ActivityRuntimeService. Repeat/admission policy decides the outcome;
+        /// policy rejection lands in the presentation buffer, while an unknown
+        /// activity id fails closed with the key in the message. Optional
+        /// bridge — requires a bound ActivityRuntimeService.
+        /// </summary>
+        void OfferActivity(string activityId, Entity scopeHost)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ActivityRuntimeUnavailable");
         }
 
         /// <summary>
