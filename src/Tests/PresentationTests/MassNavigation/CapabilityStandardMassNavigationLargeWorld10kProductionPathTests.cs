@@ -100,6 +100,14 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
             int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
+            var effectRequestQueue = RequireService(engine, CoreServiceKeys.EffectRequestQueue);
+            Assert.That(
+                effectRequestQueue.Capacity,
+                Is.EqualTo(engine.MergedConfig.GasRuntimeCapacity.EffectRequestQueueCapacity));
+            Assert.That(
+                effectRequestQueue.TotalCapacity,
+                Is.GreaterThanOrEqualTo(expectedAgents),
+                "Merged Mass Navigation capacity must cover every configured agent spawn effect.");
             Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderQueueCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
             Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderAdmissionResultCapacity, Is.GreaterThanOrEqualTo(expectedAgents * 2));
             Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderTerminalResultCapacity, Is.GreaterThanOrEqualTo(expectedAgents));

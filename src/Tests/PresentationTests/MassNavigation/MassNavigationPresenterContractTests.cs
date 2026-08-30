@@ -302,6 +302,57 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void SpawnEffectQueueCapacity_CoversAuthoredScenarioSpawnEffects()
+        {
+            string modRoot = MassNavigationModRoot();
+            JsonObject game = ReadObject(Path.Combine(modRoot, "assets", "game.json"));
+            JsonObject gasRuntimeCapacity = game["gasRuntimeCapacity"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigation game.json gasRuntimeCapacity missing.");
+            int effectRequestQueueCapacity = gasRuntimeCapacity["effectRequestQueueCapacity"]?.GetValue<int>()
+                ?? throw new InvalidOperationException(
+                    "MassNavigation game.json gasRuntimeCapacity.effectRequestQueueCapacity missing.");
+
+            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
+            JsonObject scenario = config["scenario"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario missing.");
+            JsonArray teams = scenario["teams"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.teams missing.");
+            int authoredAgentCount = checked(teams.Count * (scenario["agentsPerTeam"]?.GetValue<int>()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.agentsPerTeam missing.")));
+
+            JsonObject presentation = config["presentation"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.presentation missing.");
+            JsonArray presentationTeams = presentation["teams"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNavigationConfig.presentation.teams missing.");
+            string[] agentTemplateIds = presentationTeams
+                .SelectMany(team => new[]
+                {
+                    team?["lightTemplateId"]?.GetValue<string>(),
+                    team?["heavyTemplateId"]?.GetValue<string>()
+                })
+                .Where(templateId => !string.IsNullOrWhiteSpace(templateId))
+                .Select(templateId => templateId!)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            Assert.That(agentTemplateIds, Is.Not.Empty);
+
+            JsonArray templates = ReadArray(Path.Combine(modRoot, "assets", "Entities", "templates.json"));
+            foreach (string templateId in agentTemplateIds)
+            {
+                JsonObject template = FindObjectById(templates, templateId);
+                Assert.That(
+                    template["onSpawnEffect"]?.GetValue<string>(),
+                    Is.Not.Null.And.Not.Empty,
+                    $"MassNavigation agent template '{templateId}' must author an onSpawnEffect.");
+            }
+
+            Assert.That(
+                checked(effectRequestQueueCapacity * 2),
+                Is.GreaterThanOrEqualTo(authoredAgentCount),
+                "MassNavigation fixed EffectRequestQueue total capacity must cover every configured agent spawn effect.");
+        }
+
+        [Test]
         public void MassNavigationFlowRuntime_IsConfigDrivenForCadenceAndAgentProfiles()
         {
             string modRoot = MassNavigationModRoot();
