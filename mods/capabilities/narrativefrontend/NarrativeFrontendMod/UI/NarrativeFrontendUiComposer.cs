@@ -61,6 +61,7 @@ internal static class NarrativeFrontendUiComposer
     {
         UiElementBuilder builder = ApplyAuthorChrome(content, surface)
             .Class("story-surface")
+            .Attribute("data-surface-kind", surface.Kind.ToString())
             .Width(surface.Width)
             .ZIndex(surface.ZIndex);
 

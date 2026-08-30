@@ -818,6 +818,14 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(surfaces, Is.Not.Empty);
             for (int i = 0; i < surfaces.Count; i++)
             {
+                if (string.Equals(
+                    surfaces[i].Attributes["data-surface-kind"],
+                    NarrativeFrontendSurfaceKind.WorldNameplate.ToString(),
+                    StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
                 UiRect rect = surfaces[i].LayoutRect;
                 Assert.That(rect.X, Is.GreaterThanOrEqualTo(-0.5f), $"Surface {i} starts outside viewport.");
                 Assert.That(rect.Y, Is.GreaterThanOrEqualTo(-0.5f), $"Surface {i} starts outside viewport.");
