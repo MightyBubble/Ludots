@@ -45,7 +45,7 @@
 
 | profileId | 后端 | 锚点 | 复用 |
 |-----------|------|------|------|
-| `story.dialogue_overlay` | 屏幕 Skia（UIRoot Overlay segment） | 屏幕锚点（如 BottomCenter） | NarrativeFrontend `OverlayDialogue` + `ChoiceList` |
+| `story.dialogue_overlay` | 屏幕 Skia（UIRoot Overlay segment） | 屏幕锚点（如 BottomCenter） | NarrativeFrontend `OverlayDialogue`；选项走 PanelHost `panel.narrative.choices` |
 | `story.world_bubble` | 世界→屏幕投影后写入同一 Overlay | 说话者实体世界坐标 + 头顶偏移 | `IScreenProjector` 必填（缺则 fail-closed）+ Frontend `DialogueBubble` 动态 Absolute |
 | `story.immersive_subtitle` | 屏幕字幕轨（Sequencer 宿主，非独立 Subtitle 模块） | 屏幕锚点（如 BottomCenter） | Frontend `SubtitleBubble`；由 Sequencer `SubtitleTrack` 驱动 |
 | `story.standing_portrait` | 半屏全身立绘 + 旁侧台词 | 屏幕锚点（如 BottomLeft） | Frontend `StandingPortrait`；说话者 `standingImageId` 必填 |

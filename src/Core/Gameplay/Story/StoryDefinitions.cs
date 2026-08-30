@@ -69,11 +69,6 @@ namespace Ludots.Core.Gameplay.Story
 
         [JsonRequired]
         public int ZIndex { get; set; }
-        public string ChoiceAnchor { get; set; } = string.Empty;
-        public float ChoiceWidth { get; set; }
-        public float ChoiceOffsetY { get; set; }
-        public int ChoiceZIndex { get; set; }
-        public string ChoiceLayoutId { get; set; } = string.Empty;
     }
 
     public sealed class StoryDefinitionRegistry

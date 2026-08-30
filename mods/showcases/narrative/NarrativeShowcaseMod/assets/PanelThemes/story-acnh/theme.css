@@ -89,3 +89,11 @@
 .story-choice-framed-body {
   padding: 36px;
 }
+
+.panel-narrative-choices {
+  padding: 14px 16px;
+}
+
+.panel-narrative-choices .story-eyebrow {
+  margin-bottom: 8px;
+}

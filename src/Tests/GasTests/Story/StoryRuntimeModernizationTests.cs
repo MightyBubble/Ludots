@@ -480,12 +480,7 @@ namespace Ludots.Tests.GAS.Story
                 Anchor = "BottomCenter",
                 Width = 760f,
                 ImageSize = 112f,
-                ZIndex = 60,
-                ChoiceAnchor = "BottomRight",
-                ChoiceWidth = 440f,
-                ChoiceOffsetY = 12f,
-                ChoiceZIndex = 61,
-                ChoiceLayoutId = "layout.narrative.choice-list"
+                ZIndex = 60
             });
             dialogues.Register(new DialogueDefinition
             {

@@ -61,3 +61,10 @@
 - MapLoaded `CreatePanel(panel.narrative.choices)` once; Show/Hide from DialogueRuntime choice count.
 - `StoryPresentationProjector` no longer emits ChoiceList companion.
 - NarrativeShowcase playable acceptance green with PanelHost choice list.
+
+## Follow-up complete — Bridge + AuthorKit (2026-08-30)
+
+- Choice panel templates/graphs live in `NarrativeFrontendMod` (SSOT).
+- `NarrativeStoryBridgeSystem` SyncVisibility for tagged maps.
+- DialogueAuthorKit mounts `Graph.Narrative.Open.Choices`; acceptance asserts PanelHost, not ChoiceList.
+- Removed dead `choiceAnchor` / `choiceLayoutId` profile fields.

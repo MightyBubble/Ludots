@@ -263,27 +263,8 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             RebindEntities(engine);
-            SyncDialogueChoicePanel(engine, dialogue);
+            NarrativeDialogueChoicePanels.SyncVisibility(engine, dialogue);
             frontend.Publish(BuildPage(engine, dialogue, sequencer, tasks));
-        }
-
-        private static void SyncDialogueChoicePanel(GameEngine engine, DialogueRuntime dialogue)
-        {
-            if (engine.GetService(CoreServiceKeys.PanelActivationApi) is not Ludots.Core.UI.PanelActivation.PanelActivationApi activation)
-            {
-                throw new InvalidOperationException(
-                    "Narrative showcase requires PanelActivationApi to show dialogue choices on PanelHost.");
-            }
-
-            const string panelType = "panel.narrative.choices";
-            if (dialogue.TryGetActiveView(out DialogueView view) && view.Choices.Count > 0)
-            {
-                activation.ShowPanel(panelType);
-            }
-            else
-            {
-                activation.HidePanel(panelType);
-            }
         }
 
         internal void RebindEntities(GameEngine engine)
@@ -942,6 +923,8 @@ namespace NarrativeShowcaseMod.Runtime
             {
                 frontend.Clear(_frontendConfig.OwnerId);
             }
+
+            NarrativeDialogueChoicePanels.Hide(engine);
         }
 
         private void BindByName(GameEngine engine, DialogueRuntime dialogue, string alias, string name)
