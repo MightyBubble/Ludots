@@ -1,11 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Knowledge;
+using Ludots.Core.Map;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
@@ -22,6 +27,7 @@ using Ludots.UI;
 using Ludots.UI.Runtime;
 using NUnit.Framework;
 using PresenterBlacksmithShowcaseMod;
+using PresenterBlacksmithShowcaseMod.Runtime;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
@@ -178,6 +184,166 @@ namespace Ludots.Tests.Presentation
             {
                 tagOps.RemoveTag(engine.World, building, workingTagId);
             }
+        }
+
+        [Test]
+        public void BlacksmithShowcase_DeferredInitialLoad_DoesNotRunPresentationOrKnowledge()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
+            UIRoot uiRoot = PresenterBlacksmithShowcaseTestHarness.InstallHeadlessUi(engine);
+            var gate = new BlacksmithMapLoadGate(pendingLoad: true, pendingResume: false);
+            engine.SetService(CoreServiceKeys.MapLoadCompletionGate, gate);
+
+            Assert.DoesNotThrow(() =>
+            {
+                engine.LoadMap(PresenterBlacksmithShowcaseIds.ShowcaseMapId);
+                PresenterBlacksmithShowcaseTestHarness.Tick(engine, 4);
+            });
+
+            Assert.That(engine.GetService(CoreServiceKeys.MapLoadStatus), Is.EqualTo(MapLoadStatus.DeferredPending));
+            IBenchmarkSceneController controller = engine.GetService(CoreServiceKeys.BenchmarkSceneController)
+                ?? throw new InvalidOperationException("BenchmarkSceneController missing.");
+            Assert.That(controller.IsActive, Is.False, "A pending map must not activate the blacksmith showcase.");
+            Assert.That(uiRoot.Scene?.FindByElementId("presenter-blacksmith-showcase-panel"), Is.Null);
+
+            KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+                ?? throw new InvalidOperationException("KnowledgeProjectionStore missing.");
+            Assert.That(knowledge.RecordCount, Is.EqualTo(0), "Pending map entities must not publish blacksmith knowledge.");
+        }
+
+        [Test]
+        public void BlacksmithShowcase_DeferredResume_DoesNotReenterUntilMapSucceeds()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
+            UIRoot uiRoot = PresenterBlacksmithShowcaseTestHarness.InstallHeadlessUi(engine);
+            var gate = new BlacksmithMapLoadGate(pendingLoad: false, pendingResume: true);
+            engine.SetService(CoreServiceKeys.MapLoadCompletionGate, gate);
+
+            PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, PresenterBlacksmithShowcaseIds.ShowcaseMapId, frames: 8);
+            IBenchmarkSceneController controller = engine.GetService(CoreServiceKeys.BenchmarkSceneController)
+                ?? throw new InvalidOperationException("BenchmarkSceneController missing.");
+            Assert.That(controller.IsActive, Is.True);
+            Assert.That(uiRoot.Scene?.FindByElementId("presenter-blacksmith-showcase-panel"), Is.Not.Null);
+
+            engine.PushMap("entry");
+            PresenterBlacksmithShowcaseTestHarness.Tick(engine, 2);
+            engine.UnloadMap("entry");
+
+            Assert.That(engine.GetService(CoreServiceKeys.MapLoadStatus), Is.EqualTo(MapLoadStatus.DeferredPending));
+            Assert.DoesNotThrow(() => PresenterBlacksmithShowcaseTestHarness.Tick(engine, 4));
+            Assert.That(controller.IsActive, Is.False, "A pending resume must not reactivate the blacksmith showcase.");
+            Assert.That(uiRoot.Scene?.FindByElementId("presenter-blacksmith-showcase-panel"), Is.Null);
+
+            gate.PendingResume!.Complete();
+            PresenterBlacksmithShowcaseTestHarness.Tick(engine, 4);
+
+            Assert.That(engine.GetService(CoreServiceKeys.MapLoadStatus), Is.EqualTo(MapLoadStatus.DeferredSuccess));
+            Assert.That(controller.IsActive, Is.True);
+            Assert.That(uiRoot.Scene?.FindByElementId("presenter-blacksmith-showcase-panel"), Is.Not.Null);
+        }
+
+        [Test]
+        public void BlacksmithShowcase_DeferredWorkerLoad_DoesNotMoveSuspendedEntities()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
+            var gate = new BlacksmithMapLoadGate(pendingLoad: true, pendingResume: false);
+            engine.SetService(CoreServiceKeys.MapLoadCompletionGate, gate);
+            engine.LoadMap(PresenterBlacksmithShowcaseIds.DynamicWorkerBenchmarkMapId);
+
+            MapId mapId = engine.CurrentMapSession?.MapId
+                ?? throw new InvalidOperationException("Dynamic worker map session missing.");
+            Entity worker = engine.World.Create(
+                new MapEntity { MapId = mapId },
+                new DynamicWorkerCrowdTag(),
+                WorldPositionCm.FromCmFloat(0f, 0f),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromFloat(0f, 0f) },
+                new FacingDirection(),
+                new SuspendedTag());
+            Vector2 before = engine.World.Get<WorldPositionCm>(worker).Value.ToVector2();
+
+            Assert.DoesNotThrow(() => PresenterBlacksmithShowcaseTestHarness.Tick(engine, 4));
+
+            Vector2 after = engine.World.Get<WorldPositionCm>(worker).Value.ToVector2();
+            Assert.That(after, Is.EqualTo(before), "Suspended dynamic workers must keep their position while the map is pending.");
+        }
+
+        [Test]
+        public void BlacksmithShowcase_DeferredMinimapLoad_DoesNotMoveSuspendedEntities()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
+            var gate = new BlacksmithMapLoadGate(pendingLoad: true, pendingResume: false);
+            engine.SetService(CoreServiceKeys.MapLoadCompletionGate, gate);
+            engine.LoadMap(PresenterBlacksmithShowcaseIds.MinimapMarkerLargeWorldShowcaseMapId);
+
+            MapId mapId = engine.CurrentMapSession?.MapId
+                ?? throw new InvalidOperationException("Minimap marker map session missing.");
+            Entity marker = engine.World.Create(
+                new MapEntity { MapId = mapId },
+                new MinimapMarkerBallMovementTag(),
+                WorldPositionCm.FromCmFloat(0f, 0f),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromFloat(0f, 0f) },
+                new FacingDirection(),
+                new SuspendedTag());
+            Vector2 before = engine.World.Get<WorldPositionCm>(marker).Value.ToVector2();
+
+            Assert.DoesNotThrow(() => PresenterBlacksmithShowcaseTestHarness.Tick(engine, 4));
+
+            Vector2 after = engine.World.Get<WorldPositionCm>(marker).Value.ToVector2();
+            Assert.That(after, Is.EqualTo(before), "Suspended minimap markers must keep their position while the map is pending.");
+        }
+
+        [Test]
+        public void BlacksmithShowcase_LoadedDynamicWorkerMap_SkipsSuspendedEntities()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
+            PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, PresenterBlacksmithShowcaseIds.DynamicWorkerBenchmarkMapId, frames: 4);
+
+            MapId mapId = engine.CurrentMapSession?.MapId
+                ?? throw new InvalidOperationException("Dynamic worker map session missing.");
+            Entity worker = engine.World.Create(
+                new MapEntity { MapId = mapId },
+                new DynamicWorkerCrowdTag(),
+                WorldPositionCm.FromCmFloat(2500f, 2500f),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromFloat(2500f, 2500f) },
+                new FacingDirection(),
+                new SuspendedTag());
+            Vector2 before = engine.World.Get<WorldPositionCm>(worker).Value.ToVector2();
+
+            PresenterBlacksmithShowcaseTestHarness.Tick(engine, 4);
+
+            Vector2 after = engine.World.Get<WorldPositionCm>(worker).Value.ToVector2();
+            Assert.That(after, Is.EqualTo(before), "Suspended dynamic workers must not move on a loaded map.");
+        }
+
+        [Test]
+        public void BlacksmithShowcase_LoadedMinimapMap_SkipsSuspendedEntities()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
+            PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, PresenterBlacksmithShowcaseIds.ShowcaseMapId, frames: 4);
+
+            JsonObject metadata = engine.CurrentMapSession!.MapConfig.Metadata.TryGetValue("presenterBlacksmith", out JsonNode? sectionNode) &&
+                sectionNode is JsonObject sectionObject
+                ? sectionObject
+                : new JsonObject();
+            metadata["minimapMarkerMovementPaddingCm"] = 100f;
+            metadata["minimapMarkerMovementSpeedCmPerSecond"] = 50f;
+            metadata["minimapMarkerMovementTurnPeriodSeconds"] = 5f;
+            engine.CurrentMapSession!.MapConfig.Metadata["presenterBlacksmith"] = metadata;
+
+            MapId mapId = engine.CurrentMapSession.MapId;
+            Entity marker = engine.World.Create(
+                new MapEntity { MapId = mapId },
+                new MinimapMarkerBallMovementTag(),
+                WorldPositionCm.FromCmFloat(1000f, 1000f),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromFloat(1000f, 1000f) },
+                new FacingDirection(),
+                new SuspendedTag());
+            Vector2 before = engine.World.Get<WorldPositionCm>(marker).Value.ToVector2();
+
+            PresenterBlacksmithShowcaseTestHarness.Tick(engine, 4);
+
+            Vector2 after = engine.World.Get<WorldPositionCm>(marker).Value.ToVector2();
+            Assert.That(after, Is.EqualTo(before), "Suspended minimap markers must not move on a loaded map.");
         }
 
         [Test]
@@ -633,6 +799,57 @@ namespace Ludots.Tests.Presentation
             }
 
             return false;
+        }
+
+        private sealed class BlacksmithMapLoadGate : IMapLoadCompletionGate
+        {
+            private readonly bool _pendingLoad;
+            private readonly bool _pendingResume;
+
+            public BlacksmithMapLoadGate(bool pendingLoad, bool pendingResume)
+            {
+                _pendingLoad = pendingLoad;
+                _pendingResume = pendingResume;
+            }
+
+            public ControllablePendingMapLoad? PendingResume { get; private set; }
+
+            public IPendingMapLoad BeginPendingLoad(in MapLoadCompletionRequest request)
+            {
+                return _pendingLoad ? new ControllablePendingMapLoad() : null!;
+            }
+
+            public IPendingMapLoad BeginPendingResume(in MapResumeCompletionRequest request)
+            {
+                if (!_pendingResume)
+                {
+                    return null!;
+                }
+
+                PendingResume = new ControllablePendingMapLoad();
+                return PendingResume;
+            }
+        }
+
+        private sealed class ControllablePendingMapLoad : IPendingMapLoad
+        {
+            private bool _completed;
+
+            public void Complete()
+            {
+                _completed = true;
+            }
+
+            public MapLoadCompletionResult Poll()
+            {
+                return _completed
+                    ? MapLoadCompletionResult.Ready()
+                    : MapLoadCompletionResult.Pending();
+            }
+
+            public void Cancel()
+            {
+            }
         }
 
     }

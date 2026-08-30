@@ -84,15 +84,15 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
         private readonly PresenterBlacksmithShowcasePanelController _panelController;
         private static readonly QueryDescription KnowledgeTargetQuery = new QueryDescription()
             .WithAll<Name, MapEntity, AttributeBuffer>()
-            .WithNone<PresentationDestroyPending>();
+            .WithNone<PresentationDestroyPending, SuspendedTag>();
 
         private GameEngine? _activeEngine;
 
-        private int _workingTagId;
-        private int _durabilityAttributeId;
-        private int _durabilityIntactEffectId;
-        private int _durabilityDamagedEffectId;
-        private int _durabilityRuinedEffectId;
+        private int _workingTagId = TagRegistry.InvalidId;
+        private int _durabilityAttributeId = AttributeRegistry.InvalidId;
+        private int _durabilityIntactEffectId = EffectTemplateIdRegistry.InvalidId;
+        private int _durabilityDamagedEffectId = EffectTemplateIdRegistry.InvalidId;
+        private int _durabilityRuinedEffectId = EffectTemplateIdRegistry.InvalidId;
         private Entity _buildingEntity = Entity.Null;
         private bool _isWorking;
         private bool _isNight;
@@ -114,32 +114,56 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
         private PresenterBlacksmithShowcasePanelState _cachedPanelState = PresenterBlacksmithShowcasePanelState.Empty;
         private static readonly string[] RegionNames = { "NORTH", "SOUTH" };
 
-        public bool IsActive => _activeEngine != null && PresenterBlacksmithShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value);
+        public bool IsActive => _activeEngine != null && IsShowcaseMapReady(_activeEngine);
 
-        public bool SupportsScatterControl => _activeEngine != null && SupportsBlacksmithScatter(_activeEngine);
+        public bool SupportsScatterControl => _activeEngine != null && IsShowcaseMapReady(_activeEngine) && SupportsBlacksmithScatter(_activeEngine);
 
-        public bool IsCleanPerformanceScene => _activeEngine != null && ShouldUseCleanPerformanceScene(_activeEngine);
+        public bool IsCleanPerformanceScene => _activeEngine != null && IsShowcaseMapReady(_activeEngine) && ShouldUseCleanPerformanceScene(_activeEngine);
 
         public bool SuppressHostDiagnosticUi => _activeEngine != null &&
-            PresenterBlacksmithShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value) &&
+            IsShowcaseMapReady(_activeEngine) &&
             !IsInteractiveMode(_activeEngine) &&
             !ReadStrictBoolEnv(ForceBenchmarkUiEnvKey);
 
         public bool SuppressHostDebugGuides => _activeEngine != null &&
-            PresenterBlacksmithShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value) &&
+            IsShowcaseMapReady(_activeEngine) &&
             !PresenterBlacksmithShowcaseIds.IsMinimapMarkerLargeWorldShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value);
 
         public int ScatterMin => ScatterMinTotal;
 
-        public int ScatterMax => _activeEngine != null ? ResolveScatterUiMax(_activeEngine) : ScatterUiHardMaxTotal;
+        public int ScatterMax => _activeEngine != null && IsShowcaseMapReady(_activeEngine)
+            ? ResolveScatterUiMax(_activeEngine)
+            : ScatterUiHardMaxTotal;
 
         public int ScatterTarget => _scatterTargetTotal;
 
-        public int ScatterAppliedTotal => _activeEngine != null ? CountTrackedBlacksmithEntities(_activeEngine, out _) : 0;
+        public int ScatterAppliedTotal => _activeEngine != null && IsShowcaseMapReady(_activeEngine)
+            ? CountTrackedBlacksmithEntities(_activeEngine, out _)
+            : 0;
 
         public PresenterBlacksmithShowcaseRuntime()
         {
             _panelController = new PresenterBlacksmithShowcasePanelController(this);
+        }
+
+        internal void InitializeRegistryHandles()
+        {
+            _workingTagId = TagRegistry.GetId("working");
+            if (_workingTagId == TagRegistry.InvalidId)
+            {
+                throw new InvalidOperationException("Blacksmith showcase requires the 'working' gameplay tag to be registered before GameStart.");
+            }
+
+            _durabilityAttributeId = AttributeRegistry.RequireId("Durability");
+            _durabilityIntactEffectId = EffectTemplateIdRegistry.GetId(PresenterBlacksmithShowcaseIds.EffectSetDurabilityIntact);
+            _durabilityDamagedEffectId = EffectTemplateIdRegistry.GetId(PresenterBlacksmithShowcaseIds.EffectSetDurabilityDamaged);
+            _durabilityRuinedEffectId = EffectTemplateIdRegistry.GetId(PresenterBlacksmithShowcaseIds.EffectSetDurabilityRuined);
+            if (_durabilityIntactEffectId == EffectTemplateIdRegistry.InvalidId ||
+                _durabilityDamagedEffectId == EffectTemplateIdRegistry.InvalidId ||
+                _durabilityRuinedEffectId == EffectTemplateIdRegistry.InvalidId)
+            {
+                throw new InvalidOperationException("Blacksmith showcase durability effects must be registered before GameStart.");
+            }
         }
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -155,11 +179,12 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            _workingTagId = TagRegistry.Register("working");
-            _durabilityAttributeId = AttributeRegistry.Register("Durability");
-            _durabilityIntactEffectId = EffectTemplateIdRegistry.GetId(PresenterBlacksmithShowcaseIds.EffectSetDurabilityIntact);
-            _durabilityDamagedEffectId = EffectTemplateIdRegistry.GetId(PresenterBlacksmithShowcaseIds.EffectSetDurabilityDamaged);
-            _durabilityRuinedEffectId = EffectTemplateIdRegistry.GetId(PresenterBlacksmithShowcaseIds.EffectSetDurabilityRuined);
+            if (!IsShowcaseMapReady(engine))
+            {
+                Disable(engine);
+                return Task.CompletedTask;
+            }
+
             _activeEngine = engine;
             ResetControlState(engine);
             _buildingEntity = IsInteractiveMode(engine)
@@ -202,7 +227,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
 
         public void Update(GameEngine engine)
         {
-            if (!PresenterBlacksmithShowcaseIds.IsShowcaseMap(engine.CurrentMapSession?.MapId.Value))
+            if (!IsShowcaseMapReady(engine))
             {
                 Disable(engine);
                 return;
@@ -230,7 +255,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
 
         internal void UpdateKnowledgeProjection(GameEngine engine)
         {
-            if (!PresenterBlacksmithShowcaseIds.IsShowcaseMap(engine.CurrentMapSession?.MapId.Value))
+            if (!IsShowcaseMapReady(engine))
             {
                 return;
             }
@@ -334,7 +359,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                 _ => _durabilityRuinedEffectId,
             };
 
-            if (effectTemplateId <= 0)
+            if (effectTemplateId == EffectTemplateIdRegistry.InvalidId)
             {
                 throw new InvalidOperationException("Blacksmith durability control effects are not registered.");
             }
@@ -457,7 +482,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
         private GameEngine RequireShowcaseEngine()
         {
             if (_activeEngine != null &&
-                PresenterBlacksmithShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value))
+                IsShowcaseMapReady(_activeEngine))
             {
                 return _activeEngine;
             }
@@ -551,6 +576,12 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                    IsScatterBenchmarkMode(engine) ||
                    IsScatterHudBarBenchmarkMode(engine) ||
                    IsScatterHudTextBenchmarkMode(engine);
+        }
+
+        private static bool IsShowcaseMapReady(GameEngine engine)
+        {
+            return PresenterBlacksmithShowcaseIds.IsShowcaseMap(engine.CurrentMapSession?.MapId.Value) &&
+                   engine.GetService(CoreServiceKeys.MapLoadStatus).Succeeded;
         }
 
         private void RefreshRootEntity(GameEngine engine)
@@ -895,7 +926,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
 
         private void EnsureShowcaseKnowledgeProjection(GameEngine engine)
         {
-            if (_durabilityAttributeId <= 0)
+            if (!AttributeRegistry.IsValidId(_durabilityAttributeId))
             {
                 throw new InvalidOperationException("Blacksmith showcase Durability attribute must be registered before publishing HUD knowledge.");
             }
@@ -1968,8 +1999,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
 
         private void Disable(GameEngine engine)
         {
-            if (IsInteractiveMode(engine) &&
-                engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+            if (engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
             {
                 _panelController.ClearIfOwned(root);
             }

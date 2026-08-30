@@ -20,7 +20,8 @@ namespace PresenterBlacksmithShowcaseMod.Systems
         private const string MovementPaddingMetadataKey = "dynamicWorkerMovementPaddingCm";
         private const string MovementSpeedMetadataKey = "dynamicWorkerMovementSpeedCmPerSecond";
         private static readonly QueryDescription WorkerQuery = new QueryDescription()
-            .WithAll<DynamicWorkerCrowdTag, WorldPositionCm, PreviousWorldPositionCm, FacingDirection>();
+            .WithAll<DynamicWorkerCrowdTag, WorldPositionCm, PreviousWorldPositionCm, FacingDirection>()
+            .WithNone<SuspendedTag>();
 
         private readonly GameEngine _engine;
         private string _configuredMapId = string.Empty;
@@ -98,7 +99,8 @@ namespace PresenterBlacksmithShowcaseMod.Systems
 
         private bool ShouldRunForFocusedMap()
         {
-            return HasRequiredMovementMetadata();
+            return _engine.GetService(CoreServiceKeys.MapLoadStatus).Succeeded &&
+                   HasRequiredMovementMetadata();
         }
 
         private void EnsureConfiguredForFocusedMap()
