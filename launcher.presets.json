@@ -2726,16 +2726,6 @@
       "buildMode": "auto"
     },
     {
-      "id": "persistence_online_replay_showcase_raylib",
-      "name": "Persistence, Replay and Online Recovery Raylib",
-      "selectors": [
-        "$persistence_online_replay_showcase",
-        "$agent_bridge"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
       "id": "panel_effect_list_raylib",
       "name": "Panel Effect List Raylib",
       "selectors": [

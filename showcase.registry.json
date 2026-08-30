@@ -8787,50 +8787,6 @@
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
-      "id": "persistence_online_replay",
-      "path": "mods/showcases/persistence_online_replay/PersistenceOnlineReplayShowcaseMod",
-      "projectPath": "PersistenceOnlineReplayShowcaseMod.csproj",
-      "title": "Persistence, Replay and Online Recovery",
-      "summary": "A playable RTS scenario showing checkpoint restore, deterministic replay and explicit reconnect rejection.",
-      "tier": "T2",
-      "category": "demo",
-      "binding": "persistence_online_replay_showcase",
-      "preset": "persistence_online_replay_showcase_raylib",
-      "docsPath": "gitbook/architecture/persistence-online-replay-showcase-design.md",
-      "readmePath": null,
-      "acceptanceTest": "gitbook/acceptance/persistence-online-replay.feature",
-      "artifactDir": "artifacts/acceptance/persistence-online-replay",
-      "screenshot": "artifacts/acceptance/persistence-online-replay/persistence-first-viewport.png",
-      "status": "active",
-      "tags": [
-        "persistence",
-        "replay",
-        "online-recovery",
-        "showcase"
-      ]
-    },
-    {
-      "id": "physics2d_playground",
-      "path": "mods/Physics2DPlaygroundMod",
-      "projectPath": "Physics2DPlaygroundMod.csproj",
-      "title": "Physics2D 游乐场（旧）",
-      "summary": "旧 Physics2D 游乐场；已被 capability_standard Physics2D 根取代为正式入口，仅保留作本地调试材料。",
-      "tier": "T4",
-      "category": "demo",
-      "binding": null,
-      "preset": null,
-      "docsPath": null,
-      "readmePath": null,
-      "acceptanceTest": null,
-      "artifactDir": null,
-      "screenshot": null,
-      "status": "retired",
-      "tags": [
-        "physics",
-        "legacy"
-      ]
-    },
-    {
       "id": "panel_effect_list",
       "path": "mods/showcases/panel_effect_list/PanelEffectListShowcaseMod",
       "projectPath": null,

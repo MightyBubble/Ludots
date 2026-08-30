@@ -3295,7 +3295,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryAttrAcceptanceTests.LoadEffectTiming_ReadsSeededRemainingTicks"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadEffectStack",
@@ -3316,7 +3317,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryAttrAcceptanceTests.LoadEffectStack_ReadsSeededStackCount"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryCollectAbilityHolders",
@@ -3333,7 +3335,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectAbilityHolders_ListsSeededHolders",
         "QueryCollectTypedBagsTests.QueryCollectAbilityHolders_FiltersCandidatesByAbility",
         "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryCollectAbilitySlots",
@@ -3350,7 +3353,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectAbilitySlots_ListsSeededSlots",
         "QueryCollectTypedBagsTests.QueryCollectAbilitySlots_ListsResolvedSlotsInOrder",
         "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryCollectActiveEffects",
@@ -3365,7 +3369,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectActiveEffects_ListsSeededBuffs"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryCollectActiveTasks",
@@ -3381,7 +3386,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectActiveTasks_ListsSeededTasks",
         "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryCollectActiveActivities",
@@ -3397,7 +3403,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectActiveActivities_ListsSeededActivities",
         "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryCollectActiveDialogueChoices",
@@ -3430,7 +3437,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectEffectTemplates_ListsRegisteredTemplates",
         "QueryCollectTypedBagsTests.QueryCollectEffectTemplates_ReturnsRegisteredIdsSorted",
         "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryCollectInventoryItems",
@@ -3446,7 +3454,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectInventoryItems_ListsSeededItems",
         "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryCollectItemDefinitions",
@@ -3462,7 +3471,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectItemDefinitions_ListsRegisteredItems",
         "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryCollectPresentTags",
@@ -3479,7 +3489,8 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectPresentTags_ListsSeededTags",
         "QueryCollectTypedBagsTests.QueryCollectPresentTags_ReadsTagCountContainer",
         "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "QueryCollectProgressionNodes",
@@ -3495,7 +3506,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectProgressionNodes_ListsSeededProgressions",
         "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ]
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }
