@@ -40,6 +40,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private readonly IUiTextMeasurer _textMeasurer;
     private readonly IUiImageSizeProvider _imageSizeProvider;
     private readonly ClientLocalSeatRegistry? _seats;
+    private readonly PanelLayoutComposer _layoutComposer = new();
 
     private readonly Dictionary<string, MountedPanel> _mounted = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -287,7 +288,10 @@ public sealed class PanelPresentationSystem : ISystem<float>
         var dim = new UiColor(136, 136, 136);
 
         UiElementBuilder body = template.Layout != null
-            ? BuildDeclaredControls(template, template.Layout.Controls, values, lists, item: null, handle, reactiveContext)
+            ? _layoutComposer.ComposeControls(
+                template.Layout.Controls,
+                new PanelBindingScope(values, item: null),
+                control => BuildList(template, control, values, lists, handle, reactiveContext))
             : BuildRows(template, values);
 
         var builder = new UiElementBuilder(UiNodeKind.Container).Column()
@@ -314,140 +318,6 @@ public sealed class PanelPresentationSystem : ISystem<float>
                     .FontSize(11)
                     .Color(dim));
         return builder;
-    }
-
-    private UiElementBuilder BuildDeclaredControls(
-        PanelTemplate template,
-        IReadOnlyList<PanelLayoutControl> controls,
-        PanelVariableSet values,
-        IReadOnlyList<PanelListProjection> lists,
-        PanelListItemProjection? item,
-        PanelInstanceHandle handle,
-        ReactiveContext<PanelUiState>? reactiveContext)
-    {
-        var children = new List<UiElementBuilder>(controls.Count);
-        for (int i = 0; i < controls.Count; i++)
-        {
-            PanelLayoutControl control = controls[i];
-            UiElementBuilder? built = BuildControl(template, control, values, lists, item, handle, reactiveContext);
-            if (built != null)
-            {
-                children.Add(built);
-            }
-        }
-
-        return new UiElementBuilder(UiNodeKind.Container)
-            .Column()
-            .Class("layout")
-            .Gap(6)
-            .Children(children.ToArray());
-    }
-
-    private UiElementBuilder? BuildControl(
-        PanelTemplate template,
-        PanelLayoutControl control,
-        PanelVariableSet values,
-        IReadOnlyList<PanelListProjection> lists,
-        PanelListItemProjection? item,
-        PanelInstanceHandle handle,
-        ReactiveContext<PanelUiState>? reactiveContext)
-    {
-        return control.Type switch
-        {
-            PanelLayoutControlType.Label => BuildLabel(control, values, item),
-            PanelLayoutControlType.ProgressBar => BuildProgressBar(control, values, item),
-            PanelLayoutControlType.Badge => BuildBadge(control, values, item),
-            PanelLayoutControlType.List => BuildList(template, control, values, lists, handle, reactiveContext),
-            _ => null,
-        };
-    }
-
-    private static UiElementBuilder BuildLabel(
-        PanelLayoutControl control,
-        PanelVariableSet values,
-        PanelListItemProjection? item)
-    {
-        string text = control.Text ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(control.Bind))
-        {
-            text = ReadBoundText(control.Bind!, values, item);
-        }
-
-        if (!string.IsNullOrEmpty(control.Prefix))
-        {
-            text = control.Prefix + text;
-        }
-
-        return new UiElementBuilder(UiNodeKind.Text)
-            .Class("control-label")
-            .Class(control.ClassName ?? "label")
-            .Text(text)
-            .FontSize(14)
-            .Color(new UiColor(230, 230, 230));
-    }
-
-    private static UiElementBuilder BuildProgressBar(
-        PanelLayoutControl control,
-        PanelVariableSet values,
-        PanelListItemProjection? item)
-    {
-        float current = ReadBoundFloat(control.Current!, values, item);
-        float max = MathF.Max(0.0001f, ReadBoundFloat(control.Max!, values, item));
-        float ratio = Math.Clamp(current / max, 0f, 1f);
-        float trackWidth = PanelWidth - 48f;
-        float fillWidth = MathF.Max(2f, trackWidth * ratio);
-
-        return new UiElementBuilder(UiNodeKind.Container)
-            .Column()
-            .Class("control-progress")
-            .Class(control.ClassName ?? "progress-bar")
-            .Gap(2)
-            .Children(
-                new UiElementBuilder(UiNodeKind.Text)
-                    .Class("progress-caption")
-                    .Text($"{current:F0} / {max:F0}")
-                    .FontSize(11)
-                    .Color(new UiColor(200, 200, 200)),
-                new UiElementBuilder(UiNodeKind.Container)
-                    .Row()
-                    .Class("progress-track")
-                    .Width(trackWidth)
-                    .Height(10)
-                    .Background(new UiColor(40, 40, 55, 255))
-                    .Radius(4)
-                    .Children(
-                        new UiElementBuilder(UiNodeKind.Container)
-                            .Class("progress-fill")
-                            .Class("progress-fill-health")
-                            .Width(fillWidth)
-                            .Height(10)
-                            .Background(new UiColor(255, 68, 68, 255))
-                            .Radius(4)));
-    }
-
-    private static UiElementBuilder? BuildBadge(
-        PanelLayoutControl control,
-        PanelVariableSet values,
-        PanelListItemProjection? item)
-    {
-        bool flag = ReadBoundBool(control.Bind ?? string.Empty, values, item);
-        if (control.ShowWhen.HasValue && flag != control.ShowWhen.Value)
-        {
-            return null;
-        }
-
-        if (!control.ShowWhen.HasValue && !flag)
-        {
-            return null;
-        }
-
-        return new UiElementBuilder(UiNodeKind.Text)
-            .Class("control-badge")
-            .Class(control.ClassName ?? "badge")
-            .Text(control.Text ?? control.Bind ?? "!")
-            .FontSize(11)
-            .Bold()
-            .Color(new UiColor(255, 210, 80));
     }
 
     private UiElementBuilder BuildList(
@@ -531,14 +401,9 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 .Background(new UiColor(28, 28, 48, 180))
                 .Radius(4)
                 .Children(
-                    BuildDeclaredControls(
-                        template,
+                    _layoutComposer.ComposeControls(
                         elementTemplate.Layout.Controls,
-                        values,
-                        lists,
-                        item,
-                        handle,
-                        reactiveContext: null)));
+                        new PanelBindingScope(values, item))));
         }
 
         if (trailing > 0.01f)
@@ -593,49 +458,61 @@ public sealed class PanelPresentationSystem : ISystem<float>
         return null;
     }
 
-    private static string ReadBoundText(string bind, PanelVariableSet values, PanelListItemProjection? item)
+    private sealed class PanelBindingScope : IPanelLayoutBindingScope
     {
-        if (item != null)
+        private readonly PanelVariableSet _values;
+        private readonly PanelListItemProjection? _item;
+
+        public PanelBindingScope(PanelVariableSet values, PanelListItemProjection? item)
         {
-            if (item.Strings.TryGetValue(bind, out string? text))
-            {
-                return text;
-            }
-
-            if (item.Floats.TryGetValue(bind, out float number))
-            {
-                return number.ToString("F0");
-            }
-
-            if (item.Bools.TryGetValue(bind, out bool flag))
-            {
-                return flag ? "true" : "false";
-            }
-
-            return string.Empty;
+            _values = values;
+            _item = item;
         }
 
-        return values.TryGet(bind, out float pin) ? pin.ToString("F0") : string.Empty;
-    }
-
-    private static float ReadBoundFloat(string bind, PanelVariableSet values, PanelListItemProjection? item)
-    {
-        if (item != null && item.Floats.TryGetValue(bind, out float number))
+        public string ReadText(string bind)
         {
-            return number;
+            if (_item != null)
+            {
+                if (_item.Strings.TryGetValue(bind, out string? text))
+                {
+                    return text;
+                }
+
+                if (_item.Floats.TryGetValue(bind, out float number))
+                {
+                    return number.ToString("F0");
+                }
+
+                if (_item.Bools.TryGetValue(bind, out bool flag))
+                {
+                    return flag ? "true" : "false";
+                }
+
+                return string.Empty;
+            }
+
+            return _values.TryGet(bind, out float pin) ? pin.ToString("F0") : string.Empty;
         }
 
-        return values.TryGet(bind, out float pin) ? pin : 0f;
-    }
-
-    private static bool ReadBoundBool(string bind, PanelVariableSet values, PanelListItemProjection? item)
-    {
-        if (item != null && item.Bools.TryGetValue(bind, out bool flag))
+        public float ReadFloat(string bind)
         {
-            return flag;
+            if (_item != null && _item.Floats.TryGetValue(bind, out float number))
+            {
+                return number;
+            }
+
+            return _values.TryGet(bind, out float pin) ? pin : 0f;
         }
 
-        return values.TryGet(bind, out float pin) && pin != 0f;
+        public bool ReadBool(string bind)
+        {
+            if (_item != null && _item.Bools.TryGetValue(bind, out bool flag))
+            {
+                return flag;
+            }
+
+            return _values.TryGet(bind, out float pin) && pin != 0f;
+        }
     }
 
     private static UiElementBuilder BuildRows(PanelTemplate template, PanelVariableSet values)
