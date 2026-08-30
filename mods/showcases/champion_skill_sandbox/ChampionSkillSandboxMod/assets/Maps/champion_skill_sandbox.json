@@ -1,6 +1,6 @@
 {
   "Id": "champion_skill_sandbox",
-  "ContinuousHeightmapAsset": "assets/terrain/champion_skill_sandbox_flat.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/champion_skill_sandbox_flat.height",
   "Tags": ["champion.skill.sandbox", "showcase.3c"],
   "DefaultCamera": {
     "VirtualCameraId": "ChampionSkillSandbox.Camera.Tactical",

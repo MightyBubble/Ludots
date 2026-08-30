@@ -1,7 +1,7 @@
 {
   "Id": "presenter_blacksmith_scatter_hudbar_benchmark",
   "Tags": ["showcase", "presenter", "benchmark", "scatter", "blacksmith", "hudbar"],
-  "ContinuousHeightmapAsset": "assets/terrain/presenter_blacksmith_showcase_flat.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/presenter_blacksmith_showcase_flat.height",
   "Metadata": {
     "presenterBlacksmith": {
       "scatterInitialTarget": 30000,

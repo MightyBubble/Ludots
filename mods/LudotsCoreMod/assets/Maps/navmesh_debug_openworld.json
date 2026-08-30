@@ -16,7 +16,7 @@
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 16,
-      "DataFile": "navmesh_debug_openworld.vertexmap.bin",
+      "DataFile": "navmesh_debug_openworld.hex",
       "NavigationEnabled": true,
       "HexEdgeLengthCm": 100,
       "NavTileGrid": {

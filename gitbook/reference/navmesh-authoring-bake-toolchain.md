@@ -180,7 +180,7 @@ Current production commands:
 |---|---|---|
 | `nav estimate-recast-react` | estimate Recast bake cost from React editor `map_data.bin` | Resolves `mapId`/`modId`, chooses grid or hex logic terrain by board topology, prints budget and `estimateHash` |
 | `nav bake-recast-react` | bake Recast nav tiles from React editor `map_data.bin` | Uses the same `NavBakeContext`; large bakes require explicit approval and matching `estimateHash` |
-| `nav bake` | legacy `.vtxm` bake path | Kept for existing VertexMap fixtures; unified config is still required |
+| `nav bake` | legacy `.hex` bake path | Kept for existing VertexMap fixtures; unified config is still required |
 | `nav bake-react` | old CDT preview endpoint | Refuses generated defaults; use Recast path for production artifacts |
 
 The final NAV-15 asset pipeline should rename the React upload path once official ContinuousHeightmap/classification persistence lands, but the bake semantics already go through the shared service.
