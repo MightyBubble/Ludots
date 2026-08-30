@@ -58,18 +58,13 @@
 .story-notification { background-color: rgba(24, 10, 8, 230); border: 1px solid rgba(210, 160, 70, 0.45); border-radius: 2px; padding: 12px; background-image: none; }
 .story-nameplate { min-width: 0; padding: 6px 10px; border-radius: 2px; border-width: 1px; background-image: none; }
 
-/* Nine-slice ornate frame — images/panel_frame.png + choice_frame.png (0-code theme assets). */
+/* Nine-slice ornate frame — images/panel_frame.png (0-code theme assets). */
 .story-frame {
   object-fit: fill;
   image-slice: 48 48 48 48;
   pointer-events: none;
 }
 
-.story-choice-frame {
-  object-fit: fill;
-  image-slice: 36 36 36 36;
-  pointer-events: none;
-}
 
 .story-framed {
   position: relative;
@@ -84,9 +79,6 @@
   padding: 48px;
 }
 
-.story-choice-framed-body {
-  padding: 36px;
-}
 
 .panel-narrative-choices {
   padding: 14px 16px;
