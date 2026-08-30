@@ -218,7 +218,11 @@ internal static class NarrativeFrontendUiComposer
             var scopes = new IPanelLayoutBindingScope[items.Count];
             for (int i = 0; i < items.Count; i++)
             {
-                scopes[i] = new NarrativeItemBindingScope(items[i], _surface.Kind);
+                scopes[i] = new NarrativeItemBindingScope(
+                    items[i],
+                    _surface.Kind,
+                    _surface.ForegroundHex,
+                    _surface.MutedHex);
             }
 
             return scopes;
@@ -246,13 +250,19 @@ internal static class NarrativeFrontendUiComposer
     {
         private readonly NarrativeFrontendSurfaceItem _item;
         private readonly NarrativeFrontendSurfaceKind _surfaceKind;
+        private readonly string _foregroundHex;
+        private readonly string _mutedHex;
 
         public NarrativeItemBindingScope(
             NarrativeFrontendSurfaceItem item,
-            NarrativeFrontendSurfaceKind surfaceKind)
+            NarrativeFrontendSurfaceKind surfaceKind,
+            string foregroundHex,
+            string mutedHex)
         {
             _item = item;
             _surfaceKind = surfaceKind;
+            _foregroundHex = foregroundHex;
+            _mutedHex = mutedHex;
         }
 
         public string ReadText(string bind)
@@ -267,6 +277,8 @@ internal static class NarrativeFrontendUiComposer
                     ? (_item.Active ? "story-choice-item-active" : "story-choice-item")
                     : (_item.Active ? "story-item-row-active" : "story-item-row"),
                 "itemColor" => _item.AccentHex,
+                "foregroundHex" => _foregroundHex,
+                "mutedHex" => _mutedHex,
                 _ => throw new InvalidOperationException(
                     $"Narrative item binding '{bind}' is not a text binding.")
             };
