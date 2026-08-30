@@ -19,6 +19,7 @@
   },
   "selectionPanel": {
     "layoutId": "layout.narrative.card",
+    "styleClass": "story-status",
     "anchor": "TopLeft",
     "width": 430,
     "offsetX": 24,
@@ -35,6 +36,7 @@
   },
   "queryBoard": {
     "layoutId": "layout.narrative.card",
+    "styleClass": "story-inspect",
     "anchor": "TopRight",
     "width": 420,
     "offsetX": -340,
@@ -51,6 +53,7 @@
   },
   "relationBoard": {
     "layoutId": "layout.narrative.card",
+    "styleClass": "story-threat-banner",
     "anchor": "BottomRight",
     "width": 430,
     "offsetX": -340,
@@ -67,6 +70,7 @@
   },
   "cachePanel": {
     "layoutId": "layout.narrative.card",
+    "styleClass": "story-flow-review",
     "anchor": "BottomLeft",
     "width": 430,
     "offsetX": 24,

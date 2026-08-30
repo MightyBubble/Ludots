@@ -36,6 +36,7 @@ namespace Ludots.Core.Gameplay.Story
         public StoryPresentationBackend Backend { get; set; } = StoryPresentationBackend.ScreenOverlay;
         public string SurfaceKind { get; set; } = string.Empty;
         public string LayoutId { get; set; } = string.Empty;
+        public string StyleClass { get; set; } = string.Empty;
         public string Anchor { get; set; } = string.Empty;
         public float Width { get; set; } = 720f;
         public float OffsetX { get; set; }

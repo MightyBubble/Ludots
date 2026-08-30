@@ -290,7 +290,8 @@ namespace RelationshipShowcaseMod.Systems
                 BorderHex: config.BorderHex,
                 ForegroundHex: config.ForegroundHex,
                 MutedHex: config.MutedHex,
-                LayoutId: config.LayoutId);
+                LayoutId: config.LayoutId,
+                StyleClass: config.StyleClass);
         }
 
         private void ClearFrontend()

@@ -78,7 +78,8 @@ public sealed record NarrativeFrontendSurfaceModel(
     float PortraitSize = 96f,
     string FrameImageSrc = "",
     IReadOnlyList<Ludots.Core.Presentation.Hud.PresentationTextRun>? BodyRuns = null,
-    string LayoutId = "");
+    string LayoutId = "",
+    string StyleClass = "");
 
 public sealed record NarrativeFrontendPageState(
     string OwnerId,

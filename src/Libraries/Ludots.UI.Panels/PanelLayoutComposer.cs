@@ -352,12 +352,20 @@ public sealed class PanelLayoutComposer
 
         if (!string.IsNullOrWhiteSpace(control.ColorBind))
         {
-            builder = builder.Color(ParseColor(scope.ReadText(control.ColorBind), control.ColorBind));
+            string value = scope.ReadText(control.ColorBind);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                builder = builder.Color(ParseColor(value, control.ColorBind));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(control.BackgroundBind))
         {
-            builder = builder.Background(ParseColor(scope.ReadText(control.BackgroundBind), control.BackgroundBind));
+            string value = scope.ReadText(control.BackgroundBind);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                builder = builder.Background(ParseColor(value, control.BackgroundBind));
+            }
         }
 
         return builder;

@@ -36,6 +36,7 @@ namespace RelationshipShowcaseMod.Runtime
     public sealed class RelationshipShowcaseSurfaceConfig
     {
         public string LayoutId { get; set; } = string.Empty;
+        public string StyleClass { get; set; } = string.Empty;
         public string Anchor { get; set; } = "TopLeft";
         public float Width { get; set; } = 360f;
         public float OffsetX { get; set; }

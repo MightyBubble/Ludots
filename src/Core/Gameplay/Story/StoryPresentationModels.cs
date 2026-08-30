@@ -33,6 +33,7 @@ namespace Ludots.Core.Gameplay.Story
         string SurfaceKey,
         string SurfaceKind,
         string LayoutId,
+        string StyleClass,
         string Anchor,
         string Title,
         string Body = "",

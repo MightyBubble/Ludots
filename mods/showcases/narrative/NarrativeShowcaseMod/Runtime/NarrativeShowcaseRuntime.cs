@@ -559,7 +559,6 @@ namespace NarrativeShowcaseMod.Runtime
                 NarrativeFrontendSurfaceKind.ChoiceList => _choiceFrameSrc,
                 NarrativeFrontendSurfaceKind.OverlayDialogue
                     or NarrativeFrontendSurfaceKind.DialogueBubble
-                    or NarrativeFrontendSurfaceKind.StandingPortrait
                     or NarrativeFrontendSurfaceKind.SubtitleBubble
                     or NarrativeFrontendSurfaceKind.TransmissionOverlay
                     or NarrativeFrontendSurfaceKind.EventCard => _panelFrameSrc,
@@ -761,7 +760,8 @@ namespace NarrativeShowcaseMod.Runtime
                 ForegroundHex: config.ForegroundHex,
                 MutedHex: config.MutedHex,
                 FrameImageSrc: ResolveFrameImageSrc(kind),
-                LayoutId: config.LayoutId);
+                LayoutId: config.LayoutId,
+                StyleClass: config.StyleClass);
         }
 
         private void EnsureBootstrapped(GameEngine engine)
@@ -1287,7 +1287,8 @@ namespace NarrativeShowcaseMod.Runtime
                     BorderHex: plate.BorderHex,
                     ForegroundHex: plate.ForegroundHex,
                     MutedHex: plate.MutedHex,
-                    LayoutId: plate.LayoutId));
+                    LayoutId: plate.LayoutId,
+                    StyleClass: plate.StyleClass));
             }
         }
 

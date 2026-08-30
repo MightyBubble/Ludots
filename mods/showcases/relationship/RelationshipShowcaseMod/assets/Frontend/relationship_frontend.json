@@ -16,6 +16,7 @@
   },
   "statusPanel": {
     "layoutId": "layout.narrative.card",
+    "styleClass": "story-status",
     "anchor": "TopLeft",
     "width": 420,
     "zIndex": 40,
@@ -30,6 +31,7 @@
   },
   "relationshipNotebook": {
     "layoutId": "layout.narrative.card",
+    "styleClass": "story-relationship",
     "anchor": "TopRight",
     "width": 420,
     "zIndex": 42,
@@ -56,6 +58,7 @@
   },
   "threatBanner": {
     "layoutId": "layout.narrative.card",
+    "styleClass": "story-threat-banner",
     "anchor": "BottomLeft",
     "width": 520,
     "offsetX": 24,
@@ -72,6 +75,7 @@
   },
   "flowReview": {
     "layoutId": "layout.narrative.card",
+    "styleClass": "story-flow-review",
     "anchor": "BottomRight",
     "width": 460,
     "offsetY": 16,

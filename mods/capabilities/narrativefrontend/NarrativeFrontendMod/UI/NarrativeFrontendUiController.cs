@@ -1,5 +1,8 @@
+using System;
+using System.IO;
 using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
+using Ludots.Core.UI.PanelProjection;
 using Ludots.UI;
 using Ludots.UI.Panels;
 using Ludots.UI.Reactive;
@@ -15,6 +18,8 @@ internal sealed class NarrativeFrontendUiController
     private IUiSurfaceHost? _surfaceHost;
     private UiSurfaceLeaseHandle _lease;
     private string? _mountedThemeId;
+    private PanelLayoutTemplateCatalog? _layoutCatalog;
+    private readonly PanelLayoutComposer _layoutComposer = new();
 
     public void MountOrRefresh(UIRoot root, GameEngine engine, NarrativeFrontendRenderState state)
     {
@@ -25,6 +30,7 @@ internal sealed class NarrativeFrontendUiController
         _surfaceHost = surfaceHost;
 
         PanelTheme? theme = PanelThemeCatalog.TryLoad(engine);
+        PanelLayoutTemplateCatalog layoutCatalog = _layoutCatalog ??= LoadLayoutCatalog(engine);
         string? themeId = theme?.Id;
         bool themeChanged = !string.Equals(_mountedThemeId, themeId, StringComparison.Ordinal);
 
@@ -39,7 +45,12 @@ internal sealed class NarrativeFrontendUiController
                 textMeasurer,
                 imageSizeProvider,
                 state,
-                NarrativeFrontendUiComposer.BuildRoot,
+                context => NarrativeFrontendUiComposer.BuildRoot(
+                    context,
+                    layoutCatalog,
+                    _layoutComposer,
+                    root.Width,
+                    root.Height),
                 theme: null,
                 sheets);
             _mountedThemeId = themeId;
@@ -67,5 +78,20 @@ internal sealed class NarrativeFrontendUiController
 
         _page = null;
         _mountedThemeId = null;
+    }
+
+    private static PanelLayoutTemplateCatalog LoadLayoutCatalog(GameEngine engine)
+    {
+        const string path = "NarrativeFrontendMod:assets/UI/layout_templates.json";
+        if (engine.VFS == null ||
+            !engine.VFS.TryResolveFullPath(path, out string resolved) ||
+            !File.Exists(resolved))
+        {
+            throw new InvalidOperationException(
+                $"Narrative frontend layout catalog '{path}' is required.");
+        }
+
+        using FileStream stream = File.OpenRead(resolved);
+        return PanelLayoutTemplateLoader.LoadCatalog(stream);
     }
 }

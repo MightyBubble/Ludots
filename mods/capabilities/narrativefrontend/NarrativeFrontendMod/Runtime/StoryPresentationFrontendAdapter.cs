@@ -117,7 +117,8 @@ public static class StoryPresentationFrontendAdapter
             PortraitSize: surface.ImageSize,
             FrameImageSrc: frameImageSrc,
             BodyRuns: surface.BodyRuns,
-            LayoutId: surface.LayoutId);
+            LayoutId: surface.LayoutId,
+            StyleClass: surface.StyleClass);
     }
 
     private static NarrativeFrontendSurfaceKind ParseKind(string surfaceKind)

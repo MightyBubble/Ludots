@@ -71,6 +71,7 @@ namespace EntityQueryTacticsShowcaseMod.Runtime
     public sealed class EntityQueryTacticsSurfaceConfig
     {
         public string LayoutId { get; set; } = string.Empty;
+        public string StyleClass { get; set; } = string.Empty;
         public string Anchor { get; set; } = "TopLeft";
         public float Width { get; set; } = 420f;
         public float OffsetX { get; set; }

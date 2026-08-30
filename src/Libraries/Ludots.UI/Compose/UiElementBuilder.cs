@@ -594,6 +594,28 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
+	public UiElementBuilder AbsoluteEdges(
+		float? left = null,
+		float? top = null,
+		float? right = null,
+		float? bottom = null)
+	{
+		if (!left.HasValue && !top.HasValue && !right.HasValue && !bottom.HasValue)
+		{
+			throw new ArgumentException("AbsoluteEdges requires at least one authored edge.");
+		}
+
+		_style = _style with
+		{
+			PositionType = UiPositionType.Absolute,
+			Left = left.HasValue ? UiLength.Px(left.Value) : UiLength.Auto,
+			Top = top.HasValue ? UiLength.Px(top.Value) : UiLength.Auto,
+			Right = right.HasValue ? UiLength.Px(right.Value) : UiLength.Auto,
+			Bottom = bottom.HasValue ? UiLength.Px(bottom.Value) : UiLength.Auto
+		};
+		return this;
+	}
+
 	public UiElementBuilder ZIndex(int value)
 	{
 		_style = _style with

@@ -13,6 +13,7 @@
   },
   "objectiveTracker": {
     "layoutId": "layout.narrative.card",
+    "styleClass": "story-objective",
     "anchor": "TopLeft",
     "width": 390,
     "zIndex": 40,
@@ -23,6 +24,7 @@
   },
   "historyJournal": {
     "layoutId": "layout.narrative.card",
+    "styleClass": "story-history",
     "anchor": "TopRight",
     "width": 420,
     "zIndex": 42,
@@ -33,6 +35,7 @@
   },
   "variablesPanel": {
     "layoutId": "layout.narrative.card",
+    "styleClass": "story-status",
     "anchor": "TopLeft",
     "width": 390,
     "offsetY": 214,
