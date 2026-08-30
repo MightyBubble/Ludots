@@ -416,6 +416,20 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
+	public UiElementBuilder LineHeight(float multiplier)
+	{
+		if (multiplier <= 0f)
+		{
+			throw new ArgumentOutOfRangeException(nameof(multiplier), "Line height must be positive.");
+		}
+
+		_style = _style with
+		{
+			LineHeight = multiplier
+		};
+		return this;
+	}
+
 	public UiElementBuilder Bold()
 	{
 		_style = _style with

@@ -575,7 +575,7 @@ public static class UiTextLayout
 
 	private static float ResolveLineHeight(UiStyle style)
 	{
-		return style.FontSize * 1.4f;
+		return style.FontSize * style.LineHeight;
 	}
 
 	private static float ResolveAscent(UiStyle style)

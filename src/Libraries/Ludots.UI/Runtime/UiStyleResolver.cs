@@ -358,6 +358,10 @@ public sealed class UiStyleResolver
 		{
 			style.FontSize = parentStyle.FontSize;
 		}
+		if (!HasExplicitValue(declaration, "line-height") && Math.Abs(style.LineHeight - implicitStyle.LineHeight) < 0.01f)
+		{
+			style.LineHeight = parentStyle.LineHeight;
+		}
 		if (!HasExplicitValue(declaration, "font-weight") && style.Bold == implicitStyle.Bold)
 		{
 			style.Bold = parentStyle.Bold;
@@ -1032,6 +1036,16 @@ public sealed class UiStyleResolver
 			{
 				builder.FontSize = parsed7;
 			}
+			return;
+		}
+		case "line-height":
+		{
+			float lineHeight;
+			if (!TryParseFloat(text, out lineHeight) || lineHeight <= 0f)
+			{
+				throw new InvalidOperationException($"line-height must be a positive unitless number, got '{text}'.");
+			}
+			builder.LineHeight = lineHeight;
 			return;
 		}
 		case "font-family":
