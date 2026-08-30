@@ -208,7 +208,7 @@ namespace Ludots.Tests.Architecture
 
             try
             {
-                WriteAllChunkTileFiles(tempAssetsRoot, mapId, config, terrain, realTileCoord: (2, 1));
+                WriteAllChunkTileFiles(tempAssetsRoot, mapId, config, terrain, realTileCoords: (2, 1));
 
                 using var engine = CreateEngineWithTempNavAssets(repoRoot, tempAssetsRoot, mapId, terrain);
 
@@ -224,6 +224,131 @@ namespace Ludots.Tests.Architecture
                 Assert.That(path.Status, Is.EqualTo(NavPathStatus.Ok));
                 Assert.That(path.PathXcm[0], Is.EqualTo(33000));
                 Assert.That(path.PathXcm[path.PathXcm.Length - 1], Is.EqualTo(47000));
+            }
+            finally
+            {
+                Directory.Delete(tempAssetsRoot, recursive: true);
+            }
+        }
+
+        [Test]
+        public void GameEngine_NavBootstrap_PassesDeclaredGridOriginToQueryRegistry()
+        {
+            string repoRoot = FindRepoRoot();
+            string mapId = "nav_bootstrap_grid_origin_contract";
+            string tempAssetsRoot = CreateTempAssetsRootWithNavTiles(repoRoot, mapId);
+            var config = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot);
+            var terrain = new FlatGridLogicTerrainField(192, 128, cellSizeCm: 250, chunkSizeCells: 64);
+            const int originXcm = -8000;
+            const int originZcm = -4000;
+
+            try
+            {
+                WriteAllChunkTileFiles(tempAssetsRoot, mapId, config, terrain, originXcm, originZcm, (0, 0), (2, 1));
+
+                using var engine = CreateEngineWithTempNavAssets(repoRoot, tempAssetsRoot, mapId, terrain, originXcm, originZcm);
+
+                var registry = (NavQueryServiceRegistry)engine.GetService(CoreServiceKeys.NavQueryServices);
+                Assert.That(registry, Is.Not.Null);
+                Assert.That(registry.OriginXcm, Is.EqualTo(originXcm));
+                Assert.That(registry.OriginZcm, Is.EqualTo(originZcm));
+                Assert.That(registry.TryCreateQuery(layer: 0, profile: 0, areaCosts: null!, out NavQueryService query), Is.True);
+
+                // 世界点位于 tile (2,1)：x∈[24000,40000)，z∈[12000,28000)，local (1000,1000)
+                Assert.That(query.TryProject(25000, 13000, out NavLocation loc), Is.True);
+                Assert.That(loc.TileId, Is.EqualTo(new NavTileId(2, 1, 0)));
+                Assert.That(loc.LocalXcm, Is.EqualTo(1000));
+                Assert.That(loc.LocalZcm, Is.EqualTo(1000));
+
+                // 负世界坐标（仍在网格内）→ tile (0,0)，local (3000,1000)
+                Assert.That(query.TryProject(-5000, -3000, out NavLocation negLoc), Is.True);
+                Assert.That(negLoc.TileId, Is.EqualTo(new NavTileId(0, 0, 0)));
+                Assert.That(negLoc.LocalXcm, Is.EqualTo(3000));
+                Assert.That(negLoc.LocalZcm, Is.EqualTo(1000));
+
+                // 零边界：世界坐标恰为声明原点 → tile (0,0)，local (0,0)
+                Assert.That(query.TryProject(originXcm, originZcm, out NavLocation zeroLoc), Is.True);
+                Assert.That(zeroLoc.TileId, Is.EqualTo(new NavTileId(0, 0, 0)));
+                Assert.That(zeroLoc.LocalXcm, Is.EqualTo(0));
+                Assert.That(zeroLoc.LocalZcm, Is.EqualTo(0));
+
+                NavPathResult path = query.TryFindPath(25000, 13000, 39000, 27000);
+                Assert.That(path.Status, Is.EqualTo(NavPathStatus.Ok));
+                Assert.That(path.PathXcm[0], Is.EqualTo(25000));
+                Assert.That(path.PathXcm[path.PathXcm.Length - 1], Is.EqualTo(39000));
+            }
+            finally
+            {
+                Directory.Delete(tempAssetsRoot, recursive: true);
+            }
+        }
+
+        [Test]
+        public void GameEngine_NavBootstrap_RejectsInconsistentGridOriginsAcrossBoards()
+        {
+            string repoRoot = FindRepoRoot();
+            string mapId = "nav_bootstrap_grid_origin_conflict_contract";
+            string tempAssetsRoot = CreateTempAssetsRootWithNavTiles(repoRoot, mapId);
+            var config = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot);
+            var terrain = new FlatGridLogicTerrainField(192, 128, cellSizeCm: 250, chunkSizeCells: 64);
+
+            try
+            {
+                WriteAllChunkTileFiles(tempAssetsRoot, mapId, config, terrain, realTileCoords: (0, 0));
+
+                var engine = new GameEngine();
+                engine.InitializeWithConfigPipeline(
+                    new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
+                    tempAssetsRoot);
+
+                var vfs = (VirtualFileSystem)engine.VFS;
+                vfs.Unmount("Core");
+                vfs.Mount("Core", tempAssetsRoot);
+
+                typeof(GameEngine)
+                    .GetProperty(nameof(GameEngine.LogicTerrain), BindingFlags.Instance | BindingFlags.Public)!
+                    .SetValue(engine, terrain);
+
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                    () => engine.LoadNavForMapForTests(
+                        mapId,
+                        new MapConfig
+                        {
+                            Id = mapId,
+                            Tags = new List<string> { MapTags.FeatureNavMeshOn.Name },
+                            Boards = new List<BoardConfig>
+                            {
+                                new BoardConfig
+                                {
+                                    Name = "default",
+                                    NavTileGrid = new NavTileGridConfig
+                                    {
+                                        WidthChunks = terrain.WidthChunks,
+                                        HeightChunks = terrain.HeightChunks,
+                                        ChunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
+                                        CellSizeCm = 250,
+                                        OriginXcm = -8000,
+                                        OriginZcm = -4000
+                                    }
+                                },
+                                new BoardConfig
+                                {
+                                    Name = "strategic",
+                                    NavTileGrid = new NavTileGridConfig
+                                    {
+                                        WidthChunks = terrain.WidthChunks,
+                                        HeightChunks = terrain.HeightChunks,
+                                        ChunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
+                                        CellSizeCm = 250,
+                                        OriginXcm = 0,
+                                        OriginZcm = 0
+                                    }
+                                }
+                            }
+                        })
+                    )!;
+                Assert.That(ex.Message, Does.Contain("inconsistent NavTileGrid origins"));
+                engine.Dispose();
             }
             finally
             {
@@ -348,7 +473,13 @@ namespace Ludots.Tests.Architecture
             Assert.That(board.NavTileGrid.OriginXcm, Is.EqualTo(12_000));
         }
 
-        private static GameEngine CreateEngineWithTempNavAssets(string repoRoot, string tempAssetsRoot, string mapId, LogicTerrainField? terrain = null)
+        private static GameEngine CreateEngineWithTempNavAssets(
+            string repoRoot,
+            string tempAssetsRoot,
+            string mapId,
+            LogicTerrainField? terrain = null,
+            int gridOriginXcm = 0,
+            int gridOriginZcm = 0)
         {
             var effectiveTerrain = terrain ?? new FlatGridLogicTerrainField(
                 SpatialScaleDefaults.TerrainChunkCells,
@@ -386,7 +517,9 @@ namespace Ludots.Tests.Architecture
                                 WidthChunks = effectiveTerrain.WidthChunks,
                                 HeightChunks = effectiveTerrain.HeightChunks,
                                 ChunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
-                                CellSizeCm = 250
+                                CellSizeCm = 250,
+                                OriginXcm = gridOriginXcm,
+                                OriginZcm = gridOriginZcm
                             }
                         }
                     }
@@ -400,7 +533,9 @@ namespace Ludots.Tests.Architecture
             string mapId,
             NavMeshBakeConfig config,
             LogicTerrainField terrain,
-            (int ChunkX, int ChunkY) realTileCoord)
+            int gridOriginXcm = 0,
+            int gridOriginZcm = 0,
+            params (int ChunkX, int ChunkY)[] realTileCoords)
         {
             for (int layerIndex = 0; layerIndex < config.Layers.Count; layerIndex++)
             {
@@ -415,11 +550,23 @@ namespace Ludots.Tests.Architecture
                             string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, cx, cy);
                             string tilePath = Path.Combine(tempAssetsRoot, rel.Replace('/', Path.DirectorySeparatorChar));
                             Directory.CreateDirectory(Path.GetDirectoryName(tilePath)!);
-                            if (cx == realTileCoord.ChunkX && cy == realTileCoord.ChunkY)
+                            bool isRealTile = false;
+                            for (int i = 0; i < realTileCoords.Length; i++)
                             {
+                                if (realTileCoords[i] == (cx, cy))
+                                {
+                                    isRealTile = true;
+                                    break;
+                                }
+                            }
+
+                            if (isRealTile)
+                            {
+                                NavTile flat = DefaultGridNavTileFactory.CreateFlatTile(
+                                    cx, cy, layer, tileVersion: 1, chunkSizeCells: 64, cellSizeCm: 250);
+                                NavTile shifted = ShiftNavTileOrigin(flat, gridOriginXcm, gridOriginZcm);
                                 using var ms = new MemoryStream();
-                                NavTileBinary.Write(ms, DefaultGridNavTileFactory.CreateFlatTile(
-                                    cx, cy, layer, tileVersion: 1, chunkSizeCells: 64, cellSizeCm: 250));
+                                NavTileBinary.Write(ms, shifted);
                                 File.WriteAllBytes(tilePath, ms.ToArray());
                             }
                             else
@@ -430,6 +577,28 @@ namespace Ludots.Tests.Architecture
                     }
                 }
             }
+        }
+
+        private static NavTile ShiftNavTileOrigin(NavTile tile, int dxCm, int dzCm)
+        {
+            return new NavTile(
+                tile.TileId,
+                tile.TileVersion,
+                tile.BuildConfigHash,
+                tile.Checksum,
+                checked(tile.OriginXcm + dxCm),
+                checked(tile.OriginZcm + dzCm),
+                tile.VertexXcm,
+                tile.VertexYcm,
+                tile.VertexZcm,
+                tile.TriA,
+                tile.TriB,
+                tile.TriC,
+                tile.N0,
+                tile.N1,
+                tile.N2,
+                tile.TriAreaIds,
+                tile.Portals);
         }
 
         private static void RewriteTempNavmeshMode(string tempAssetsRoot, string mode, string algorithm)

@@ -3819,7 +3819,23 @@ namespace Ludots.Core.Engine
             }
 
             var chunkWidthCm = tileGrids.Max(g => g!.ChunkWidthCm);
-            var navRegistry = new NavQueryServiceRegistry(stores, chunkWidthCm, chunkWidthCm);
+            var chunkHeightCm = tileGrids.Max(g => g!.ChunkHeightCm);
+
+            // 寻址帧原点同样只认显式声明：一张地图的所有 board 必须声明同一个原点，
+            // 不一致直接显式失败，不做取最大/取第一个之类的猜测。
+            int originXcm = tileGrids[0]!.OriginXcm;
+            int originZcm = tileGrids[0]!.OriginZcm;
+            for (int i = 1; i < tileGrids.Count; i++)
+            {
+                NavTileGridConfig grid = tileGrids[i]!;
+                if (grid.OriginXcm != originXcm || grid.OriginZcm != originZcm)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' boards declare inconsistent NavTileGrid origins ({originXcm},{originZcm}) vs ({grid.OriginXcm},{grid.OriginZcm}); a map's nav tiles share one explicit addressing frame.");
+                }
+            }
+
+            var navRegistry = new NavQueryServiceRegistry(stores, chunkWidthCm, chunkHeightCm, originXcm, originZcm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {
