@@ -16,21 +16,34 @@ namespace PanelAuthorLayoutKitShowcaseMod;
 /// </summary>
 public sealed class PanelAuthorLayoutKitShowcaseModEntry : IMod
 {
+    private const string SeedSystemFactory = "PanelAuthorLayoutKit.SeedEffects";
+
     public void OnLoad(IModContext context)
     {
         context.Log("[PanelAuthorLayoutKitShowcaseMod] Loaded - author layout classroom");
+        context.SystemFactoryRegistry.Register(
+            SeedSystemFactory,
+            SystemGroup.SchemaUpdate,
+            scriptContext =>
+            {
+                if (!scriptContext.TryGet(CoreServiceKeys.Engine, out GameEngine? engine) || engine == null)
+                {
+                    throw new InvalidOperationException(
+                        "PanelAuthorLayoutKitShowcaseMod requires GameEngine when creating its seed system.");
+                }
+
+                return new SeedAuthorLayoutEffectsSystem(engine.World);
+            });
+
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            if (ctx.Get(CoreServiceKeys.Engine) is not GameEngine engine)
+            if (!ctx.TryGet(CoreServiceKeys.Engine, out GameEngine? engine) || engine == null)
             {
                 throw new InvalidOperationException(
                     "PanelAuthorLayoutKitShowcaseMod requires GameEngine on GameStart.");
             }
 
-            engine.RegisterSystem(
-                new SeedAuthorLayoutEffectsSystem(engine.World),
-                SystemGroup.SchemaUpdate);
-
+            context.SystemFactoryRegistry.TryActivate(SeedSystemFactory, ctx, engine);
             return Task.CompletedTask;
         });
     }

@@ -17,20 +17,33 @@ namespace PanelEffectListShowcaseMod;
 /// </summary>
 public sealed class PanelEffectListShowcaseModEntry : IMod
 {
+    private const string SeedSystemFactory = "PanelEffectList.SeedEffects";
+
     public void OnLoad(IModContext context)
     {
         context.Log("[PanelEffectListShowcaseMod] Loaded - active effect list panel showcase");
+        context.SystemFactoryRegistry.Register(
+            SeedSystemFactory,
+            SystemGroup.SchemaUpdate,
+            scriptContext =>
+            {
+                if (!scriptContext.TryGet(CoreServiceKeys.Engine, out GameEngine? engine) || engine == null)
+                {
+                    throw new InvalidOperationException(
+                        "PanelEffectListShowcaseMod requires GameEngine when creating its seed system.");
+                }
+
+                return new SeedActiveEffectsSystem(engine.World);
+            });
+
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            if (ctx.Get(CoreServiceKeys.Engine) is not GameEngine engine)
+            if (!ctx.TryGet(CoreServiceKeys.Engine, out GameEngine? engine) || engine == null)
             {
                 throw new InvalidOperationException("PanelEffectListShowcaseMod requires GameEngine on GameStart.");
             }
 
-            engine.RegisterSystem(
-                new SeedActiveEffectsSystem(engine.World),
-                SystemGroup.SchemaUpdate);
-
+            context.SystemFactoryRegistry.TryActivate(SeedSystemFactory, ctx, engine);
             return Task.CompletedTask;
         });
     }
