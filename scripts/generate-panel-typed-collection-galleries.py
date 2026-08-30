@@ -311,7 +311,9 @@ def write_single_purpose_panels(host: Path) -> None:
             "layout": {"controls": [
                 {"type": "label", "class": "collection-panel-title", "text": "背包堆叠"},
                 {"type": "list", "class": "collection-inventory-items", "bind": "items",
-                 "present": "aggregate", "viewportHeight": 80, "itemExtent": 48},
+                 "present": "aggregate",
+                 "aggregate": {"count": {"from": "totalCount", "prefix": "×"}},
+                 "viewportHeight": 80, "itemExtent": 48},
             ]},
         },
         "panel.collection.itemDefinitions": {
