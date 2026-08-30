@@ -201,9 +201,29 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
-            // 1. 姿势调色板：对每个 dirty 行，调 UpdateModelAnimationBones 后立刻按内存序复制。
-            // 骨骼槽位 = mesh 局部 boneId + 前序 mesh 的 boneCount 累计（多 mesh 合同），
-            // 全模型槽位总数超 MaxBoneCount 即 fail loud——静默截断会得到错误蒙皮。
+            // 0. 容量前置（一次定型）：扩容会重建纹理、丢弃已上传行，因此必须发生在本帧
+            // 任何行写入/上传之前，禁止在逐行循环中途触发（#1395 codex 复审结论）。
+            int maxBoneSlots = 0;
+            for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
+            {
+                Model model = _activeGpuSkinnedInstanceBatches[i].Model;
+                int slots = 0;
+                for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
+                {
+                    slots += model.meshes[meshIndex].boneCount;
+                }
+
+                if (slots > maxBoneSlots)
+                {
+                    maxBoneSlots = slots;
+                }
+            }
+
+            _posePalette.EnsureBoneSlotCapacity(maxBoneSlots);
+            _posePalette.EnsurePoseRowCapacity(_poseRowByKey.Count);
+
+            // 1. 姿势调色板：对每个 dirty 行，调 UpdateModelAnimationBones 后立刻按 texel 合同复制。
+            // 骨骼槽位 = mesh 局部 boneId + 前序 mesh 的 boneCount 累计（多 mesh 合同）。
             for (int i = 0; i < _dirtyPoseRows.Count; i++)
             {
                 (int poseRow, int meshAssetId, int clipIndex, int frameIndex) = _dirtyPoseRows[i];
@@ -217,15 +237,6 @@ namespace Ludots.Raylib.Render
                 ModelAnimation anim = batch.Animations[clipIndex];
                 Rl.UpdateModelAnimationBones(model, anim, frameIndex);
                 batch.BonesPrepared = true;
-
-                int totalBoneSlots = 0;
-                for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
-                {
-                    totalBoneSlots += model.meshes[meshIndex].boneCount;
-                }
-
-                // 多 mesh 模型按累计 boneCount 动态扩容调色板槽位（超出硬上限才 fail loud）
-                _posePalette.EnsureBoneSlotCapacity(totalBoneSlots);
 
                 int boneBase = 0;
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
@@ -245,7 +256,6 @@ namespace Ludots.Raylib.Render
                     boneBase += mesh.boneCount;
                 }
 
-                _posePalette.CommitPoseRow(poseRow);
                 _posePalette.FlushPaletteRow(poseRow);
             }
 
@@ -346,34 +356,32 @@ namespace Ludots.Raylib.Render
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
-                    if (mesh.vertexCount <= 0)
+                    // boneBase 累计必须覆盖全部 mesh（与 BuildAndUploadPoseTextures 一致），跳过绘制不跳过累计
+                    int nextBoneBase = boneBase + mesh.boneCount;
+                    if (mesh.vertexCount > 0)
                     {
-                        continue;
+                        RaylibInstancedMaterialPipeline.RequireMeshNormals(in mesh, "GpuSkinnedInstance");
+                        if (_materials.TryResolveInstancedModelMaterial(model, meshIndex, materialId, instancingShader, in instancingPbrLocs, skyIbl, _frameShadow, out Material material))
+                        {
+                            material.shader = _skinningShader;
+                            _materials.ApplyHostMaterialMaps(ref material, materialId, _skinningShader, in _skinningPbrLocs);
+                            RaylibInstancedMaterialPipeline.BindFrameShadow(ref material, _frameShadow);
+                            // tint 经实例表按实例传入（#1395）
+
+                            // 姿势纹理蒙皮：骨骼矩阵已在调色板纹理中，无需 uniform 上传
+                            BindPoseTextures(ref material);
+                            SetBoneBaseUniform(boneBase);
+                            for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
+                            {
+                                int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
+                                SetInstanceBaseUniform(batch.GlobalInstanceBase + offset);
+                                Rl.DrawMeshInstanced(mesh, material, transforms + offset, chunkCount);
+                                drawCalls++;
+                            }
+                        }
                     }
 
-                    RaylibInstancedMaterialPipeline.RequireMeshNormals(in mesh, "GpuSkinnedInstance");
-                    if (!_materials.TryResolveInstancedModelMaterial(model, meshIndex, materialId, instancingShader, in instancingPbrLocs, skyIbl, _frameShadow, out Material material))
-                    {
-                        continue;
-                    }
-
-                    material.shader = _skinningShader;
-                    _materials.ApplyHostMaterialMaps(ref material, materialId, _skinningShader, in _skinningPbrLocs);
-                    RaylibInstancedMaterialPipeline.BindFrameShadow(ref material, _frameShadow);
-                    // tint 经实例表按实例传入（#1395）
-
-                    // 姿势纹理蒙皮：骨骼矩阵已在调色板纹理中，无需 uniform 上传
-                    BindPoseTextures(ref material);
-                    SetBoneBaseUniform(boneBase);
-                    for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
-                    {
-                        int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
-                        SetInstanceBaseUniform(batch.GlobalInstanceBase + offset);
-                        Rl.DrawMeshInstanced(mesh, material, transforms + offset, chunkCount);
-                        drawCalls++;
-                    }
-
-                    boneBase += mesh.boneCount;
+                    boneBase = nextBoneBase;
                 }
             }
 
@@ -406,25 +414,24 @@ namespace Ludots.Raylib.Render
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
-                    if (mesh.vertexCount <= 0)
+                    int nextBoneBase = boneBase + mesh.boneCount;
+                    if (mesh.vertexCount > 0)
                     {
-                        continue;
+                        for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
+                        {
+                            int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
+                            shadow.DrawSkinnedMeshPoseTextureShadow(
+                                mesh,
+                                transforms + offset,
+                                chunkCount,
+                                _posePalette.BonePalette,
+                                _posePalette.InstanceTable,
+                                batch.GlobalInstanceBase + offset,
+                                boneBase);
+                        }
                     }
 
-                    for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
-                    {
-                        int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
-                        shadow.DrawSkinnedMeshPoseTextureShadow(
-                            mesh,
-                            transforms + offset,
-                            chunkCount,
-                            _posePalette.BonePalette,
-                            _posePalette.InstanceTable,
-                            batch.GlobalInstanceBase + offset,
-                            boneBase);
-                    }
-
-                    boneBase += mesh.boneCount;
+                    boneBase = nextBoneBase;
                 }
             }
         }

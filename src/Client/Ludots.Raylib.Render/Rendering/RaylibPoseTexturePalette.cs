@@ -48,7 +48,7 @@ namespace Ludots.Raylib.Render
         }
 
         /// <summary>扩容骨骼槽位（多 mesh 模型的累计 boneCount 超过当前容量时）。
-        /// 重建纹理会丢既有行内容，但每帧全部活跃姿势行都会重传，下一帧即恢复。</summary>
+        /// 重建纹理会丢既有行内容——必须在帧内任何行上传之前一次性定容（与 EnsurePoseRowCapacity 同款约束）。</summary>
         public void EnsureBoneSlotCapacity(int minSlots)
         {
             if (minSlots <= _boneSlotCapacity)
@@ -112,13 +112,14 @@ namespace Ludots.Raylib.Render
             _instanceStaging[baseIdx + 4] = a;
         }
 
-        public void CommitPoseRow(int poseRow)
+        /// <summary>姿势行容量前置保障。容量判定必须先于本帧任何调色板行上传：
+        /// 扩容会重建纹理，若发生在部分行已上传之后，已上传行内容即被丢弃（#1395 codex 复审结论）。</summary>
+        public void EnsurePoseRowCapacity(int minRows)
         {
-            if (poseRow >= _poseRowCapacity)
+            if (minRows > _poseRowCapacity)
             {
-                ResizePalette(poseRow + 1);
+                ResizePalette(minRows);
             }
-
         }
 
         /// <summary>把 staging 中的脏姿势行上传到 GPU（整行 UpdateTextureRec）。</summary>
