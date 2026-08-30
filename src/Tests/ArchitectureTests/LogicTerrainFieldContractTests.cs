@@ -51,7 +51,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void VisualHeightmap_DoesNotChangeLogicWalkabilityUnlessExplicitlyProjected()
+        public void ContinuousHeightmap_DoesNotChangeLogicWalkabilityUnlessExplicitlyProjected()
         {
             var terrain = new FlatGridLogicTerrainField(
                 SpatialScaleDefaults.TerrainChunkCells,
@@ -60,9 +60,9 @@ namespace Ludots.Tests.Architecture
             var config = new NavBuildConfig(heightScaleMeters: 1f, minWalkableUpDot: 0.6f, cliffHeightThreshold: 1);
             int before = WalkMaskBuilder.Build(terrain, 0, 0, config).WalkableTriangleCount;
 
-            var visual = CreateRaisedVisualHeightmap(SpatialScaleDefaults.TerrainChunkCells, SpatialScaleDefaults.TerrainChunkCells);
+            var visual = CreateRaisedContinuousHeightmap(SpatialScaleDefaults.TerrainChunkCells, SpatialScaleDefaults.TerrainChunkCells);
             int afterVisualOnly = WalkMaskBuilder.Build(terrain, 0, 0, config).WalkableTriangleCount;
-            var projected = VisualHeightmapLogicTerrainProjection.ProjectToGrid(
+            var projected = ContinuousHeightmapLogicTerrainProjection.ProjectToGrid(
                 visual,
                 SpatialScaleDefaults.TerrainChunkCells,
                 SpatialScaleDefaults.TerrainChunkCells,
@@ -74,18 +74,18 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void VisualHeightmapProjection_BlocksSamplesAtOrBelowConfiguredSeaLevel()
+        public void ContinuousHeightmapProjection_BlocksSamplesAtOrBelowConfiguredSeaLevel()
         {
             var bounds = new WorldAabbCm(-50, -50, 100, 100);
-            var asset = VisualHeightmapAsset.CreateSingleLayer(
+            var asset = ContinuousHeightmapAsset.CreateSingleLayer(
                 bounds,
                 sampleColumns: 2,
                 sampleRows: 2,
                 heightSamplesCm: new short[] { -1, 0, 1, 2 },
-                interpolationMode: VisualHeightmapInterpolationMode.BilinearHeightfield);
-            var visual = new VisualHeightmapRuntime(asset);
+                interpolationMode: ContinuousHeightmapInterpolationMode.BilinearHeightfield);
+            var visual = new ContinuousHeightmapRuntime(asset);
 
-            MutableGridLogicTerrainField projected = VisualHeightmapLogicTerrainProjection.ProjectToGrid(
+            MutableGridLogicTerrainField projected = ContinuousHeightmapLogicTerrainProjection.ProjectToGrid(
                 visual,
                 widthCells: 2,
                 heightCells: 2,
@@ -254,7 +254,7 @@ namespace Ludots.Tests.Architecture
             return map;
         }
 
-        private static VisualHeightmapRuntime CreateRaisedVisualHeightmap(int widthCells, int heightCells)
+        private static ContinuousHeightmapRuntime CreateRaisedContinuousHeightmap(int widthCells, int heightCells)
         {
             var samples = new short[checked(widthCells * heightCells)];
             samples[32 * widthCells + 32] = 500;
@@ -263,13 +263,13 @@ namespace Ludots.Tests.Architecture
                 0,
                 widthCells * SpatialScaleDefaults.CellCm,
                 heightCells * SpatialScaleDefaults.CellCm);
-            var asset = VisualHeightmapAsset.CreateSingleLayer(
+            var asset = ContinuousHeightmapAsset.CreateSingleLayer(
                 bounds,
                 widthCells,
                 heightCells,
                 samples,
-                interpolationMode: VisualHeightmapInterpolationMode.BilinearHeightfield);
-            return new VisualHeightmapRuntime(asset);
+                interpolationMode: ContinuousHeightmapInterpolationMode.BilinearHeightfield);
+            return new ContinuousHeightmapRuntime(asset);
         }
 
         private static void WriteReactStride4Map(

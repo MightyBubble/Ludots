@@ -48,7 +48,7 @@ Playable entries:
 |---|---|---|---|
 | NavMesh Dirty Update · Hex | `navmesh_debug_raylib` | `HexGrid` + VertexMap | Press `P` to place a structural wall; the overlay shows the rebuilt hole on the dirty tiles. |
 | NavMesh Dirty Update · Grid | `navmesh_debug_grid_raylib` | `Grid` DataFile | The same `P` / `O` controls prove runtime rebuild is independent of the map data source. |
-| NavMesh Dirty Update · VisualHeightmap | `navmesh_debug_vhtm_raylib` | `.vhtm` projected into `LogicTerrain` | The visible relief and the navigation overlay stay aligned while the dirty tile rebuilds. |
+| NavMesh Dirty Update · ContinuousHeightmap | `navmesh_debug_vhtm_raylib` | `.height` projected into `LogicTerrain` | The visible relief and the navigation overlay stay aligned while the dirty tile rebuilds. |
 
 | Operation | Feedback |
 |---|---|
@@ -76,8 +76,8 @@ Feature: Runtime navmesh dirty update showcase
     Then the spawned wall is removed
     And the navmesh overlay can return to the open tile shape after the dirty queue runs
 
-  Scenario: Rebuild over VisualHeightmap terrain
-    Given I launch the VisualHeightmap navmesh dirty update showcase
+  Scenario: Rebuild over ContinuousHeightmap terrain
+    Given I launch the ContinuousHeightmap navmesh dirty update showcase
     When I press P
     Then the visible relief and the navmesh overlay still describe the same walkable ground
     And only the dirty tiles are rebuilt
@@ -168,5 +168,5 @@ NAV-10 does not merge another branch. It builds on the NAV-3/NAV-5 code already 
 - No duplicate source: structural obstacle geometry comes from the Physics2D bridge SSOT, not MassNavigationFlow approximation or a private loader.
 - Strict casing: layer ids are matched with `StringComparison.Ordinal`.
 - Contract tests cover dirty AABB mapping, budget FIFO, failed bake preservation, bootstrap registration gating, obstacle layer strictness, SSOT dirty capture, and revision guarded reads.
-- Runtime dirty showcase entries cover HexGrid, Grid DataFile, and VisualHeightmap terrain sources with the same player controls: `N` overlay, `P` place wall, `O` clear wall.
+- Runtime dirty showcase entries cover HexGrid, Grid DataFile, and ContinuousHeightmap terrain sources with the same player controls: `N` overlay, `P` place wall, `O` clear wall.
 - GitBook indexes link this page, and this page links back to #281 and #304.

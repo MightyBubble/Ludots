@@ -7,7 +7,7 @@
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 50, "Y": 50 } },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 3.14159 },
       "AttributeBuffer": { "base": { "Health": 100 } },
       "OrderBuffer": {},
@@ -22,7 +22,7 @@
       "Name": { "Value": "MarkerZoneA1" },
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 50, "Y": 50 } },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "PresentationStaticTransform": {}
     }
@@ -33,7 +33,7 @@
       "Name": { "Value": "MarkerZoneA2" },
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 350, "Y": 50 } },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "PresentationStaticTransform": {}
     }
@@ -44,7 +44,7 @@
       "Name": { "Value": "MarkerZoneB1" },
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 650, "Y": 50 } },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "PresentationStaticTransform": {}
     }

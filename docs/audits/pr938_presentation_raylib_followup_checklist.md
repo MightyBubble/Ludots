@@ -14,7 +14,7 @@
 | R3 | 群体动画分组缓存只进不出 | ✅ 已修 | `RaylibPrimitiveRenderer.cs:689, 692-712, 95` | 长局越玩越卡 | 【日常】群体动画场景长时间游玩（颜色/动作帧组合持续变化时累积） |
 | R4 | 截图验收工具引用旧目录 | ✅ 已修 | `tools/raylib_client_parity_acceptance/Program.cs:54` | 无法出验收截图 | 【日常】开发者运行该工具即触发 |
 | R5 | 水面 4 项输入缺报错检查 | ✅ 已修 | `RaylibTerrainRenderer.cs:353-368` | 错误晚暴露 | 【误用】未来改 water 着色器时写漏 uniform |
-| R6 | 超密地形直接闪退、不降画质 | ✅ 已修 | `RaylibVisualHeightmapRenderer.cs:855, 882-893, 1119-1136`；测试：`RaylibVisualHeightmapRendererTests.cs:112-130` | 那张地图谁都玩不了 | 【日常/编辑器】visual terrain editor 默认 257×257 数据块会超过 Raylib 16 位索引上限；现在 Raylib 只对渲染网格按 stride 降采样，底层高度数据不变 |
+| R6 | 超密地形直接闪退、不降画质 | ✅ 已修 | `RaylibContinuousHeightmapRenderer.cs:855, 882-893, 1119-1136`；测试：`RaylibContinuousHeightmapRendererTests.cs:112-130` | 那张地图谁都玩不了 | 【日常/编辑器】visual terrain editor 默认 257×257 数据块会超过 Raylib 16 位索引上限；现在 Raylib 只对渲染网格按 stride 降采样，底层高度数据不变 |
 | R7 | 一套没人引用的贴花着色器进安装包 | ✅ 已清 | 删除 `src/Platforms/Desktop/decal_unlit.vs/.fs`；移除两个 csproj 复制条目 | 零影响，占体积 | 【无触发】全仓无加载方；按清理项删除，现役投影贴花仍使用 `decal_project.vs/.fs` |
 
 ## 二、Presentation runtime 层（Core：什么时候画、画哪个）

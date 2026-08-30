@@ -2,7 +2,7 @@
   "Id": "east_asia_hex",
   "ParentId": null,
   "Dependencies": {},
-  "VisualHeightmapAsset": "assets/samples/LudotsSample/east_asia/east_asia_continuous.height",
+  "ContinuousHeightmapAsset": "assets/samples/LudotsSample/east_asia/east_asia_continuous.height",
   "StructureCollisionAsset": "",
   "StructureAwareGrounding": false,
   "StructureAwareNavigation": false,
@@ -38,15 +38,15 @@
       "GridCellSizeCm": 125649,
       "HexEdgeLengthCm": 125649,
       "ChunkSizeCells": 64,
-      "DataFile": "samples/LudotsSample/east_asia/east_asia_hex.vtxm",
-      "VisualHeightmapAsset": null,
+      "DataFile": "samples/LudotsSample/east_asia/east_asia_hex.hex",
+      "ContinuousHeightmapAsset": null,
       "StructureCollisionAsset": "",
       "StructureAwareGrounding": false,
       "StructureAwareNavigation": false,
       "NavigationEnabled": false
     }
   ],
-  "VisualHeightmap": null,
+  "ContinuousHeightmap": null,
   "TriggerTypes": [],
   "DefaultCamera": {
     "VirtualCameraId": "EastAsia.Camera.PlayableTerrain",

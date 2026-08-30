@@ -4,7 +4,7 @@
     "showcase",
     "night-raid"
   ],
-  "VisualHeightmapAsset": "assets/terrain/night_raid_flat.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/night_raid_flat.height",
   "HeartbeatIntervalTicks": 6,
   "Variables": [
     {

@@ -247,8 +247,8 @@ namespace Ludots.Core.Config
                 Span<PreviousWorldPositionCm> previousPositions = chunk.GetSpan<PreviousWorldPositionCm>();
                 Span<FacingDirection> facings = chunk.GetSpan<FacingDirection>();
                 Span<VisualTransform> visuals = chunk.GetSpan<VisualTransform>();
-                Span<VisualHeightmapSampleState> heightSamples = includeDynamicHeightSampling
-                    ? chunk.GetSpan<VisualHeightmapSampleState>()
+                Span<ContinuousHeightmapSampleState> heightSamples = includeDynamicHeightSampling
+                    ? chunk.GetSpan<ContinuousHeightmapSampleState>()
                     : default;
                 Span<CullState> culls = chunk.GetSpan<CullState>();
                 Span<AttributeBuffer> attributes = descriptor.HasAttributeBuffer ? chunk.GetSpan<AttributeBuffer>() : default;
@@ -684,7 +684,7 @@ namespace Ludots.Core.Config
 
                 bool hasStaticTransform = template.Components.ContainsKey("PresentationStaticTransform");
                 bool hasStaticHeightPending = template.Components.ContainsKey("PresentationStaticHeightPending");
-                bool hasDynamicHeightSampling = template.Components.ContainsKey("VisualHeightmapSampleState");
+                bool hasDynamicHeightSampling = template.Components.ContainsKey("ContinuousHeightmapSampleState");
                 bool hasSpatialPartitionExcluded = template.Components.ContainsKey("SpatialPartitionExcluded");
                 bool hasAttributeBuffer = template.Components.ContainsKey("AttributeBuffer");
                 bool hasAbilityTagGrantReceiver = template.Components.ContainsKey("AbilityTagGrantReceiver");
@@ -749,7 +749,7 @@ namespace Ludots.Core.Config
 
                 if (hasDynamicHeightSampling)
                 {
-                    RequireEmptyObject(templateId, template.Components, "VisualHeightmapSampleState");
+                    RequireEmptyObject(templateId, template.Components, "ContinuousHeightmapSampleState");
                 }
 
                 if (hasSpatialPartitionExcluded)
@@ -799,7 +799,7 @@ namespace Ludots.Core.Config
 
                 if (hasDynamicHeightSampling)
                 {
-                    signature += Component<VisualHeightmapSampleState>.Signature;
+                    signature += Component<ContinuousHeightmapSampleState>.Signature;
                 }
 
                 if (hasStaticTransform)
@@ -932,7 +932,7 @@ namespace Ludots.Core.Config
                     if (string.Equals(componentName, "Name", StringComparison.Ordinal) ||
                         string.Equals(componentName, "WorldPositionCm", StringComparison.Ordinal) ||
                         string.Equals(componentName, "FacingDirection", StringComparison.Ordinal) ||
-                        string.Equals(componentName, "VisualHeightmapSampleState", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "ContinuousHeightmapSampleState", StringComparison.Ordinal) ||
                         string.Equals(componentName, "AttributeBuffer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "GameplayTagContainer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||
@@ -997,7 +997,7 @@ namespace Ludots.Core.Config
                 return string.Equals(componentName, "Name", StringComparison.Ordinal) ||
                        string.Equals(componentName, "WorldPositionCm", StringComparison.Ordinal) ||
                        string.Equals(componentName, "FacingDirection", StringComparison.Ordinal) ||
-                       string.Equals(componentName, "VisualHeightmapSampleState", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "ContinuousHeightmapSampleState", StringComparison.Ordinal) ||
                        string.Equals(componentName, "AttributeBuffer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "GameplayTagContainer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||

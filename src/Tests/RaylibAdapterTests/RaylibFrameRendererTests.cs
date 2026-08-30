@@ -11,7 +11,7 @@ public sealed class RaylibFrameRendererTests
     private static RaylibFramePassPlanInput PlanInput(
         bool drawDebugGuides = true,
         bool drawTerrain = true,
-        bool drawVisualHeightmap = false,
+        bool drawContinuousHeightmap = false,
         bool waterEnabled = false,
         bool hasShadowFrame = false,
         bool hasGlobalFieldBuffer = true,
@@ -30,7 +30,7 @@ public sealed class RaylibFrameRendererTests
         return new RaylibFramePassPlanInput(
             drawDebugGuides,
             drawTerrain,
-            drawVisualHeightmap,
+            drawContinuousHeightmap,
             waterEnabled,
             hasShadowFrame,
             hasGlobalFieldBuffer,

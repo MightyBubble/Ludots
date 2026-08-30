@@ -87,7 +87,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void DynamicWorkerBenchmarkMap_DeclaresProductionVisualHeightmapAndConfiguredTotal()
+        public void DynamicWorkerBenchmarkMap_DeclaresProductionContinuousHeightmapAndConfiguredTotal()
         {
             using GameEngine engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
             PresenterBlacksmithShowcaseTestHarness.LoadMap(
@@ -95,13 +95,13 @@ namespace Ludots.Tests.Presentation
                 PresenterBlacksmithShowcaseIds.DynamicWorkerBenchmarkMapId,
                 frames: 2);
 
-            Assert.That(engine.CurrentMapSession?.MapConfig.VisualHeightmapAsset, Is.EqualTo("assets/terrain/presenter_blacksmith_dynamic_worker_hills.vhtm"));
+            Assert.That(engine.CurrentMapSession?.MapConfig.ContinuousHeightmapAsset, Is.EqualTo("assets/terrain/presenter_blacksmith_dynamic_worker_hills.height"));
             Assert.That(
                 engine.CurrentMapSession!.MapConfig.Metadata["presenterBlacksmith"]!["dynamicWorkerBenchmarkTotal"]!.GetValue<int>(),
                 Is.EqualTo(ReadBlacksmithMetadataInt(engine, DynamicWorkerBenchmarkTotalMetadataKey)));
             Assert.That(engine.CurrentMapSession.MapConfig.Metadata["presenterBlacksmith"]!["dynamicWorkerScatterPaddingCm"]!.GetValue<float>(), Is.EqualTo(6000f));
             Assert.That(engine.CurrentMapSession.MapConfig.Metadata["presenterBlacksmith"]!["dynamicWorkerMovementPaddingCm"]!.GetValue<float>(), Is.EqualTo(6000f));
-            Assert.That(engine.GetService(CoreServiceKeys.VisualHeightmap), Is.AssignableTo<IVisualHeightmapRenderSource>());
+            Assert.That(engine.GetService(CoreServiceKeys.ContinuousHeightmap), Is.AssignableTo<IContinuousHeightmapRenderSource>());
         }
 
         [Test]
@@ -113,7 +113,7 @@ namespace Ludots.Tests.Presentation
                 PresenterBlacksmithShowcaseIds.DynamicWorkerLargeWorldBenchmarkMapId,
                 frames: 2);
 
-            Assert.That(engine.CurrentMapSession?.MapConfig.VisualHeightmapAsset, Is.EqualTo("assets/terrain/presenter_blacksmith_dynamic_worker_large_world.vhtm"));
+            Assert.That(engine.CurrentMapSession?.MapConfig.ContinuousHeightmapAsset, Is.EqualTo("assets/terrain/presenter_blacksmith_dynamic_worker_large_world.height"));
             Assert.That(engine.CurrentMapSession!.MapConfig.Boards, Has.Count.EqualTo(1));
             Assert.That(engine.CurrentMapSession.MapConfig.Boards[0].SpatialType, Is.EqualTo("Grid"));
             Assert.That(engine.CurrentMapSession.MapConfig.Boards[0].WidthInMacroTiles, Is.EqualTo(256));
@@ -122,8 +122,8 @@ namespace Ludots.Tests.Presentation
                 engine.CurrentMapSession.MapConfig.Metadata["presenterBlacksmith"]!["dynamicWorkerBenchmarkTotal"]!.GetValue<int>(),
                 Is.EqualTo(30_000));
 
-            IVisualHeightmapRenderSource renderSource = engine.GetService(CoreServiceKeys.VisualHeightmap) as IVisualHeightmapRenderSource
-                ?? throw new InvalidOperationException("VisualHeightmap render source missing.");
+            IContinuousHeightmapRenderSource renderSource = engine.GetService(CoreServiceKeys.ContinuousHeightmap) as IContinuousHeightmapRenderSource
+                ?? throw new InvalidOperationException("ContinuousHeightmap render source missing.");
             Assert.That(renderSource.Bounds.Width, Is.EqualTo(6_553_600));
             Assert.That(renderSource.Bounds.Height, Is.EqualTo(6_553_600));
             Assert.That(engine.WorldSizeSpec.Bounds.Width, Is.EqualTo(6_553_600));
@@ -131,7 +131,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MinimapMarkerLargeWorldShowcase_UsesVisualHeightmapSceneAndCameraProfile()
+        public void MinimapMarkerLargeWorldShowcase_UsesContinuousHeightmapSceneAndCameraProfile()
         {
             using GameEngine engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
             PresenterBlacksmithShowcaseTestHarness.LoadMap(
@@ -139,11 +139,11 @@ namespace Ludots.Tests.Presentation
                 PresenterBlacksmithShowcaseIds.MinimapMarkerLargeWorldShowcaseMapId,
                 frames: 2);
 
-            const string expectedHeightmapAsset = "assets/terrain/presenter_blacksmith_minimap_marker_large_world_relief.vhtm";
-            Assert.That(engine.CurrentMapSession?.MapConfig.VisualHeightmapAsset, Is.EqualTo(expectedHeightmapAsset));
+            const string expectedHeightmapAsset = "assets/terrain/presenter_blacksmith_minimap_marker_large_world_relief.height";
+            Assert.That(engine.CurrentMapSession?.MapConfig.ContinuousHeightmapAsset, Is.EqualTo(expectedHeightmapAsset));
             Assert.That(engine.CurrentMapSession?.MapConfig.DefaultCamera?.VirtualCameraId, Is.EqualTo("PresenterBlacksmith.Camera.LargeWorldHeightmap"));
-            IVisualHeightmapRenderSource renderSource = engine.GetService(CoreServiceKeys.VisualHeightmap) as IVisualHeightmapRenderSource
-                ?? throw new InvalidOperationException("VisualHeightmap render source missing.");
+            IContinuousHeightmapRenderSource renderSource = engine.GetService(CoreServiceKeys.ContinuousHeightmap) as IContinuousHeightmapRenderSource
+                ?? throw new InvalidOperationException("ContinuousHeightmap render source missing.");
             Assert.That(renderSource.RenderProfile.WaterEnabled, Is.True);
             Assert.That(renderSource.RenderProfile.SeaLevelCm, Is.EqualTo(0f));
             Assert.That(renderSource.RenderProfile.DisplayHeightScale, Is.EqualTo(1.25f));
@@ -152,11 +152,11 @@ namespace Ludots.Tests.Presentation
             VirtualCameraRegistry cameraRegistry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
                 ?? throw new InvalidOperationException("VirtualCameraRegistry missing.");
             Assert.That(cameraRegistry.TryGet("PresenterBlacksmith.Camera.LargeWorldHeightmap", out VirtualCameraDefinition? definition), Is.True);
-            Assert.That(definition.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.VisualHeightmap));
+            Assert.That(definition.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.ContinuousHeightmap));
             Assert.That(definition.TargetHeightLayerIndex, Is.EqualTo(0));
 
-            IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
-                ?? throw new InvalidOperationException("VisualHeightmap missing.");
+            IContinuousHeightmap heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap)
+                ?? throw new InvalidOperationException("ContinuousHeightmap missing.");
             Assert.That(heightmap.TrySampleHeightCm(
                 engine.AuthorityCamera().State.TargetCm.X,
                 engine.AuthorityCamera().State.TargetCm.Y,
@@ -171,16 +171,16 @@ namespace Ludots.Tests.Presentation
                 "PresenterBlacksmithShowcaseMod",
                 "assets",
                 "terrain",
-                "presenter_blacksmith_minimap_marker_large_world_relief.vhtm");
+                "presenter_blacksmith_minimap_marker_large_world_relief.height");
             using FileStream stream = File.OpenRead(assetPath);
-            VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
+            ContinuousHeightmapAsset asset = ContinuousHeightmapBinary.Read(stream);
             ReadHeightRange(asset, out float minHeight, out float maxHeight);
 
             Assert.Multiple(() =>
             {
                 Assert.That(asset.SampleColumns, Is.EqualTo(1025));
                 Assert.That(asset.SampleRows, Is.EqualTo(1025));
-                Assert.That(asset.InterpolationMode, Is.EqualTo(VisualHeightmapInterpolationMode.TriangleHeightfield));
+                Assert.That(asset.InterpolationMode, Is.EqualTo(ContinuousHeightmapInterpolationMode.TriangleHeightfield));
                 Assert.That(asset.Layers[0].Name, Is.EqualTo("relief"));
                 Assert.That(maxHeight - minHeight, Is.GreaterThan(19_500), "The minimap marker showcase surface must keep the authored 3x relief for visual acceptance.");
             });
@@ -683,7 +683,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(minimapMarker.MinimapMarker.OrientationLengthPx, Is.GreaterThan(0f));
         }
 
-        private static void ReadHeightRange(VisualHeightmapAsset asset, out float minHeight, out float maxHeight)
+        private static void ReadHeightRange(ContinuousHeightmapAsset asset, out float minHeight, out float maxHeight)
         {
             minHeight = float.PositiveInfinity;
             maxHeight = float.NegativeInfinity;
@@ -744,7 +744,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void DynamicWorkerBenchmark_DefaultStartupScatter_StaysInsideVisualHeightmapAndSamplesTerrain()
+        public void DynamicWorkerBenchmark_DefaultStartupScatter_StaysInsideContinuousHeightmapAndSamplesTerrain()
         {
             using GameEngine engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
             PresenterBlacksmithShowcaseTestHarness.LoadMap(
@@ -758,18 +758,18 @@ namespace Ludots.Tests.Presentation
             Assert.That(queue.Count, Is.EqualTo(expectedWorkers));
             WaitForDynamicWorkers(engine, expectedWorkers, maxFrames: 180);
 
-            IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
-                ?? throw new InvalidOperationException("VisualHeightmap missing.");
-            IVisualHeightmapRenderSource renderSource = heightmap as IVisualHeightmapRenderSource
-                ?? throw new InvalidOperationException("VisualHeightmap render source missing.");
+            IContinuousHeightmap heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap)
+                ?? throw new InvalidOperationException("ContinuousHeightmap missing.");
+            IContinuousHeightmapRenderSource renderSource = heightmap as IContinuousHeightmapRenderSource
+                ?? throw new InvalidOperationException("ContinuousHeightmap render source missing.");
 
             int count = 0;
             int sampled = 0;
             int centralSpawnCount = 0;
             float centralHalfWidthCm = (renderSource.Bounds.Right - renderSource.Bounds.Left) * 0.125f;
             float centralHalfHeightCm = (renderSource.Bounds.Bottom - renderSource.Bounds.Top) * 0.125f;
-            var query = new QueryDescription().WithAll<Name, WorldPositionCm, VisualHeightmapSampleState>();
-            engine.World.Query(in query, (ref Name name, ref WorldPositionCm position, ref VisualHeightmapSampleState state) =>
+            var query = new QueryDescription().WithAll<Name, WorldPositionCm, ContinuousHeightmapSampleState>();
+            engine.World.Query(in query, (ref Name name, ref WorldPositionCm position, ref ContinuousHeightmapSampleState state) =>
             {
                 if (!string.Equals(name.Value, PresenterBlacksmithShowcaseIds.DynamicWorkerEntityName, StringComparison.Ordinal))
                 {
@@ -796,7 +796,7 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(count, Is.EqualTo(expectedWorkers));
             Assert.That(sampled, Is.EqualTo(count));
-            Assert.That(centralSpawnCount, Is.GreaterThan(0), "Dynamic worker scatter must fill the VisualHeightmap area, not leave a ring-shaped center hole.");
+            Assert.That(centralSpawnCount, Is.GreaterThan(0), "Dynamic worker scatter must fill the ContinuousHeightmap area, not leave a ring-shaped center hole.");
         }
 
         private static DynamicWorkerBenchmarkResult RunScenario(int count)
@@ -1278,10 +1278,10 @@ namespace Ludots.Tests.Presentation
             int finiteFacing = 0;
 
             var query = new QueryDescription()
-                .WithAll<Name, WorldPositionCm, PreviousWorldPositionCm, VisualHeightmapSampleState, FacingDirection>();
+                .WithAll<Name, WorldPositionCm, PreviousWorldPositionCm, ContinuousHeightmapSampleState, FacingDirection>();
             engine.World.Query(
                 in query,
-                (Entity entity, ref Name name, ref WorldPositionCm position, ref PreviousWorldPositionCm previous, ref VisualHeightmapSampleState sampleState, ref FacingDirection facing) =>
+                (Entity entity, ref Name name, ref WorldPositionCm position, ref PreviousWorldPositionCm previous, ref ContinuousHeightmapSampleState sampleState, ref FacingDirection facing) =>
                 {
                     if (!string.Equals(name.Value, PresenterBlacksmithShowcaseIds.MinimapMarkerBallEntityName, StringComparison.Ordinal))
                     {
@@ -1719,12 +1719,12 @@ namespace Ludots.Tests.Presentation
         {
             if (state.OwnerEntity == Entity.Null ||
                 !engine.World.IsAlive(state.OwnerEntity) ||
-                !engine.World.Has<VisualHeightmapSampleState>(state.OwnerEntity))
+                !engine.World.Has<ContinuousHeightmapSampleState>(state.OwnerEntity))
             {
                 return false;
             }
 
-            VisualHeightmapSampleState sampleState = engine.World.Get<VisualHeightmapSampleState>(state.OwnerEntity);
+            ContinuousHeightmapSampleState sampleState = engine.World.Get<ContinuousHeightmapSampleState>(state.OwnerEntity);
             return sampleState.Sampled != 0;
         }
 

@@ -8,12 +8,12 @@ using Ludots.Platform.Abstractions;
 namespace RaylibVisualAtmosphereShowcaseMod.Runtime;
 
 /// <summary>
-/// Builds a continuous VisualHeightmap island (.vhtm).
+/// Builds a continuous ContinuousHeightmap island (.height).
 /// Land must rise above <see cref="SeaLevelCm"/>; water plane + refraction read shallow/deep from the submerged floor.
 /// </summary>
 internal static class IslandTerrainGenerator
 {
-    public const string RelativeAssetPath = "assets/terrain/tropical_island.vhtm";
+    public const string RelativeAssetPath = "assets/terrain/tropical_island.height";
     public const int SampleColumns = 513;
     public const int SampleRows = 513;
 
@@ -52,16 +52,16 @@ internal static class IslandTerrainGenerator
             }
         }
 
-        VisualHeightmapAsset asset = VisualHeightmapAsset.CreateSingleLayer(
+        ContinuousHeightmapAsset asset = ContinuousHeightmapAsset.CreateSingleLayer(
             BoundsCm,
             SampleColumns,
             SampleRows,
             samples,
             layerName: "tropical_island",
-            interpolationMode: VisualHeightmapInterpolationMode.BilinearHeightfield);
+            interpolationMode: ContinuousHeightmapInterpolationMode.BilinearHeightfield);
 
         using FileStream stream = File.Create(fullPath);
-        VisualHeightmapBinary.Write(stream, asset);
+        ContinuousHeightmapBinary.Write(stream, asset);
         context.Log(
             $"[RaylibVisualAtmosphereShowcaseMod] Generated continuous island heightmap {fullPath} ({new FileInfo(fullPath).Length} bytes)");
     }

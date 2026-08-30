@@ -113,7 +113,7 @@ Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapability
 - marker 位置唯一来自 presenter world position；颜色、尺寸、可见性和朝向来自 `MinimapMarker` behavior 配置/参数绑定
 - `Name`、`MapEntity`、`Team` 都不得作为 marker 存在性的推断入口
 - Visual heightmap、chunk streaming、camera culling、visual LOD 都不能 gate minimap 逻辑信号
-- `IVisualHeightmapRenderSource` / `WorldSizeSpec` 只用于 RTS full-map preset 解析地图 bounds
+- `IContinuousHeightmapRenderSource` / `WorldSizeSpec` 只用于 RTS full-map preset 解析地图 bounds
 - 256x256 大世界展示 authored presenter marker；不做名称推断、战略热力图或缺信号 fallback
 
 ## 4 仿真车道口径

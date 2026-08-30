@@ -116,8 +116,8 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
         }
 
         Assert.That(
-            engine.GetService(CoreServiceKeys.VisualHeightmap),
-            Is.AssignableTo<IVisualHeightmapRenderSource>(),
+            engine.GetService(CoreServiceKeys.ContinuousHeightmap),
+            Is.AssignableTo<IContinuousHeightmapRenderSource>(),
             "The four-team participant view showcase must bind the MassNavigation visual heightmap through the formal map service.");
         Assert.That(CountVisualTransforms(engine), Is.GreaterThan(0),
             "The showcase world must contain visual transforms for its authored team members.");

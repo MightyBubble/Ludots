@@ -1,6 +1,6 @@
 {
   "Id": "crowd_physics_arena",
-  "VisualHeightmapAsset": "assets/terrain/crowd_physics_arena_flat.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/crowd_physics_arena_flat.height",
   "Tags": [
     "crowd_physics_arena"
   ],

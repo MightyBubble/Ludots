@@ -58,7 +58,7 @@ internal sealed class VisualTerrainEditorRuntime
     private bool _previousDrawDebugDraw = true;
     private bool _previousDrawSkiaUi = true;
     private bool _forceChunkEntityRefresh = true;
-    private IVisualHeightmap? _previousVisualHeightmap;
+    private IContinuousHeightmap? _previousContinuousHeightmap;
     private VisualTerrainAssetDescriptor? _pendingAssetReplacement;
     private bool _mapDirty = true;
     private string _statusText = "Unsaved map.";
@@ -357,7 +357,7 @@ internal sealed class VisualTerrainEditorRuntime
         _cameraPrimed = false;
         EndBrushOverlay(engine);
         ClearRenderedChunks(engine);
-        RestoreVisualHeightmap(engine);
+        RestoreContinuousHeightmap(engine);
         RestoreRenderDebug(engine);
         ClearPanelIfOwned(engine);
     }
@@ -372,33 +372,33 @@ internal sealed class VisualTerrainEditorRuntime
 
     private void InstallHeightmap(GameEngine engine)
     {
-        IVisualHeightmap current = _document.HeightmapRuntime;
-        if (engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap existing) &&
+        IContinuousHeightmap current = _document.HeightmapRuntime;
+        if (engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap existing) &&
             !ReferenceEquals(existing, current))
         {
-            _previousVisualHeightmap = existing;
+            _previousContinuousHeightmap = existing;
         }
         else
         {
-            _previousVisualHeightmap = null;
+            _previousContinuousHeightmap = null;
         }
 
-        engine.SetService(CoreServiceKeys.VisualHeightmap, current);
+        engine.SetService(CoreServiceKeys.ContinuousHeightmap, current);
     }
 
-    private void RestoreVisualHeightmap(GameEngine engine)
+    private void RestoreContinuousHeightmap(GameEngine engine)
     {
-        if (_previousVisualHeightmap != null)
+        if (_previousContinuousHeightmap != null)
         {
-            engine.SetService(CoreServiceKeys.VisualHeightmap, _previousVisualHeightmap);
-            _previousVisualHeightmap = null;
+            engine.SetService(CoreServiceKeys.ContinuousHeightmap, _previousContinuousHeightmap);
+            _previousContinuousHeightmap = null;
             return;
         }
 
-        if (engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap existing) &&
+        if (engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap existing) &&
             ReferenceEquals(existing, _document.HeightmapRuntime))
         {
-            engine.RemoveService(CoreServiceKeys.VisualHeightmap);
+            engine.RemoveService(CoreServiceKeys.ContinuousHeightmap);
         }
     }
 

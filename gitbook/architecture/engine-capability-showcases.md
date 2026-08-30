@@ -22,7 +22,7 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 | 2 | sky_daynight | 昼夜天空/日照 | RaylibSkyEnvironment + sky_daynight |
 | 3 | water | 水面（反射/折射/DUDV） | RaylibWaterPass |
 | 4 | terrain_surface | 地表着色（hex chunk 网格） | RaylibTerrainRenderer + ITerrainChunkMeshSource |
-| 5 | terrain_heightmap | 视觉高度图（色带/降采样） | RaylibVisualHeightmapRenderer + IVisualHeightmapRenderSource |
+| 5 | terrain_heightmap | 视觉高度图（色带/降采样） | RaylibContinuousHeightmapRenderer + IContinuousHeightmapRenderSource |
 | 6 | atmosphere_fog | 距离雾 + 环境色 ramp | RaylibRenderEnvironmentConfig/Renderer |
 | 7 | frame_lighting | 帧光照 | RaylibFrameLighting |
 | 8 | postprocess | 后处理调色 | RaylibPostProcessRenderer |

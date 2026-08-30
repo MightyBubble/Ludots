@@ -1,6 +1,6 @@
 {
   "Id": "narrative_showcase_hub",
-  "VisualHeightmapAsset": "assets/terrain/interaction_showcase_flat.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/interaction_showcase_flat.height",
   "Tags": ["narrative.showcase", "task.dialogue.sequencer"],
   "Variables": [
     { "name": "trust", "type": "int", "initial": 0 },

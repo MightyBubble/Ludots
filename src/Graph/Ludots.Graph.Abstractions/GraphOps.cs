@@ -300,6 +300,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Imm = attribute symbol patched at load time.
         /// </summary>
         ModifyAttributeSet = 465,
+        /// <summary>#1296 Offer the activity named by Symbols[Imm] to E[A] as scope host via ActivityRuntimeService.</summary>
+        OfferActivity = 466,
 
     }
 

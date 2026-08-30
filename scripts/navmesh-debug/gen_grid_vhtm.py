@@ -10,7 +10,7 @@ def height_cm(ix, iz):
     return int(round(h * 100.0))
 
 out = bytearray()
-out += b'VHTM'
+out += b'CHTM'
 out += struct.pack('<i', 2)
 out += struct.pack('<iiii', *BOUNDS)
 out += struct.pack('<ii', COLS, ROWS)
@@ -30,7 +30,7 @@ for z in range(ROWS):
         v = max(-32768, min(32767, height_cm(x, z)))
         out += struct.pack('<h', v)
 
-path = 'mods/LudotsCoreMod/assets/terrain/navmesh_debug_grid.vhtm'
+path = 'mods/LudotsCoreMod/assets/terrain/navmesh_debug_grid.height'
 os.makedirs(os.path.dirname(path), exist_ok=True)
 open(path, 'wb').write(bytes(out))
 print('wrote', path, len(out), 'bytes', COLS, 'x', ROWS)

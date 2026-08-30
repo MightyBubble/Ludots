@@ -1,6 +1,6 @@
 {
   "Id": "east_asia_visual_heightmap",
-  "VisualHeightmap": {
+  "ContinuousHeightmap": {
     "Asset": "assets/samples/LudotsSample/east_asia/east_asia_continuous.height",
     "WorldWidthCm": 6399232,
     "RenderProfile": {
@@ -23,7 +23,7 @@
   ],
   "Metadata": {
     "terrainProfile": "assets/terrain/east_asia_terrain_profile.json",
-    "playableSurface": "Continuous VisualHeightmap",
+    "playableSurface": "Continuous ContinuousHeightmap",
     "projection": "Spherical Albers equal-area conic, sampled from the exported 14336x8192 East Asia canvas.",
     "coverage": "East Asia with complete Vietnam coverage; India is intentionally outside the primary frame.",
     "playableWorldWidthCm": 6399232,

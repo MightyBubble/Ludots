@@ -16,7 +16,7 @@
 | 承接渲染器 | `decal_project` 着色器 + `IRaylibReceiverMeshProjector`（接收面投影器） |
 | 注册表条目 | `engine_raylib_decal_projection`（`showcase.registry.json`，tier T1） |
 
-图元快照里一条 `GalleryItems.Decal(...)` 就是作者写法的全部：材质行挂贴花贴图，绘制条目给位置/朝向/幅面（`stampWidth`/`stampDepth`）；接收面可插（本场景由 `RaylibVisualHeightmapRenderer` 充当投影器）。脚印、弹坑、选中标记都属于这条车道，见[能力总览](../../architecture/raylib-engine-capabilities.md)的「渲染车道矩阵」。
+图元快照里一条 `GalleryItems.Decal(...)` 就是作者写法的全部：材质行挂贴花贴图，绘制条目给位置/朝向/幅面（`stampWidth`/`stampDepth`）；接收面可插（本场景由 `RaylibContinuousHeightmapRenderer` 充当投影器）。脚印、弹坑、选中标记都属于这条车道，见[能力总览](../../architecture/raylib-engine-capabilities.md)的「渲染车道矩阵」。
 
 ## 这场演的是什么
 

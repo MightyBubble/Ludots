@@ -30,7 +30,7 @@ namespace Ludots.Tests.Architecture
             var context = new NavBakeContext
             {
                 MapId = "nav_bake_contract",
-                SourceUri = "Core:Maps/nav_bake_contract.vtxm",
+                SourceUri = "Core:Maps/nav_bake_contract.hex",
                 Terrain = terrain,
                 Obstacles = new NavObstacleSet(),
                 Config = config,
@@ -282,7 +282,7 @@ namespace Ludots.Tests.Architecture
             var service = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm());
 
             Assert.DoesNotThrow(() => _ = service.Bake(CreateRuntimeIncrementalContext(terrain, algorithm: NavBakeAlgorithmKind.Recast)),
-                "runtime-incremental + recast 是受纳组合（vhtm 起伏地形的运行时重烤口径）");
+                "runtime-incremental + recast 是受纳组合（.height 起伏地形的运行时重烤口径）");
             Assert.DoesNotThrow(() => _ = service.Bake(CreateRuntimeIncrementalContext(terrain, algorithm: NavBakeAlgorithmKind.Cdt)),
                 "runtime-incremental + cdt 是受纳组合");
 
@@ -514,7 +514,7 @@ namespace Ludots.Tests.Architecture
             var context = new NavBakeContext
             {
                 MapId = "nav_estimate_contract",
-                SourceUri = "Core:Maps/nav_estimate_contract.vtxm",
+                SourceUri = "Core:Maps/nav_estimate_contract.hex",
                 Terrain = new FlatGridLogicTerrainField(8, 4, chunkSizeCells: 4),
                 Obstacles = new NavObstacleSet
                 {
@@ -592,7 +592,7 @@ namespace Ludots.Tests.Architecture
             var context = new NavBakeContext
             {
                 MapId = "nav_estimate_invalid_slope",
-                SourceUri = "Core:Maps/nav_estimate_invalid_slope.vtxm",
+                SourceUri = "Core:Maps/nav_estimate_invalid_slope.hex",
                 Terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
                 Obstacles = new NavObstacleSet(),
                 Config = config,
@@ -1145,7 +1145,7 @@ namespace Ludots.Tests.Architecture
             return new NavBakeContext
             {
                 MapId = "nav_runtime_incremental_contract",
-                SourceUri = "Core:Maps/nav_runtime_incremental_contract.vtxm",
+                SourceUri = "Core:Maps/nav_runtime_incremental_contract.hex",
                 Terrain = terrain,
                 Obstacles = obstacles ?? new NavObstacleSet(),
                 Config = CreateBakeConfig(NavBakeNames.ModeRuntimeIncremental, NavBakeNames.FormatAlgorithm(algorithm)),
@@ -1185,7 +1185,7 @@ namespace Ludots.Tests.Architecture
             return new NavBakeContext
             {
                 MapId = "nav_estimate_budget_contract",
-                SourceUri = "Core:Maps/nav_estimate_budget_contract.vtxm",
+                SourceUri = "Core:Maps/nav_estimate_budget_contract.hex",
                 Terrain = terrain,
                 Obstacles = new NavObstacleSet(),
                 Config = config,
@@ -1206,7 +1206,7 @@ namespace Ludots.Tests.Architecture
             return new NavBakeContext
             {
                 MapId = "nav_estimate_hash_contract",
-                SourceUri = "Core:Maps/nav_estimate_hash_contract.vtxm",
+                SourceUri = "Core:Maps/nav_estimate_hash_contract.hex",
                 Terrain = terrain,
                 Obstacles = new NavObstacleSet(),
                 Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),

@@ -5,7 +5,7 @@ using Rl = Raylib_cs.Raylib;
 
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
-    /// <summary>视觉高度图：RaylibVisualHeightmapRenderer 消费程序化岛屿高度场，绝对海拔色带 + 水下陆架。</summary>
+    /// <summary>视觉高度图：RaylibContinuousHeightmapRenderer 消费程序化岛屿高度场，绝对海拔色带 + 水下陆架。</summary>
     public sealed class TerrainHeightmapScene : IEngineScene
     {
         private readonly GalleryIslandHeightmap _heightmap = new(
@@ -14,7 +14,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             worldSizeMeters: 480,
             seed: 47);
 
-        private RaylibVisualHeightmapRenderer _renderer = new() { VisibleRadiusCm = 90_000f };
+        private RaylibContinuousHeightmapRenderer _renderer = new() { VisibleRadiusCm = 90_000f };
         private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibFrameLighting _lighting = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
@@ -22,7 +22,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public string Id => "terrain_heightmap";
         public string Title => "视觉高度图";
-        public string Summary => "RaylibVisualHeightmapRenderer 程序化岛屿高度场";
+        public string Summary => "RaylibContinuousHeightmapRenderer 程序化岛屿高度场";
 
         public void Load()
         {
