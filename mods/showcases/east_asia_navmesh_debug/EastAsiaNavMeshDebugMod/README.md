@@ -20,7 +20,7 @@ on terrain (`DrawFieldOverlays`, default on). Country cells are 7142 cm (~2× na
 Bake the authoritative continuous ContinuousHeightmap from the repository root:
 
 ```powershell
-dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- nav bake-vhtm `
+dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- nav bake-heightmap `
   --mapId east_asia_visual_heightmap `
   --modId EastAsiaNavMeshDebugMod `
   --in mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample/east_asia/east_asia_continuous.height `
@@ -48,7 +48,7 @@ dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- nav export-walk
   --minZcm -1828352 `
   --maxXcm 3199616 `
   --maxZcm 1828352 `
-  --vhtm mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample/east_asia/east_asia_continuous.height `
+  --heightmap mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample/east_asia/east_asia_continuous.height `
   --seaLevelCm 0
 ```
 

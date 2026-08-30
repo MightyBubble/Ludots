@@ -92,7 +92,7 @@
     "sourcePixelsPerCellX": 2,
     "sourcePixelsPerCellY": 2
   },
-  "visualHeightmap": {
+  "continuousHeightmap": {
     "sampleColumns": 7169,
     "sampleRows": 4097,
     "worldWidthCm": 6399232,
@@ -124,7 +124,7 @@
       "file": "assets/Data/Maps/east_asia_hex.vtxm",
       "sha256": "4FB59C9EEC450D301B405BD336CF37CC2B221532E8DBAD6186DE10AC89FF8293"
     },
-    "visualHeightmap": {
+    "continuousHeightmap": {
       "file": "assets/samples/LudotsSample/east_asia/east_asia_continuous.height",
       "sha256": "537704C2832D5B25C4EBEB4B9F781959E56BADD0D2D5ECD68FF0922D28E94487"
     },
