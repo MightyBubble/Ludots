@@ -21,6 +21,16 @@ public sealed class PanelLayoutComposer
 {
     private const float PanelWidth = 280f;
 
+    public UiElementBuilder Compose(
+        PanelLayoutControl root,
+        IPanelLayoutBindingScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+        ArgumentNullException.ThrowIfNull(scope);
+        return ComposeControl(root, scope, listComposer: null)
+            ?? throw new InvalidOperationException("Panel layout root cannot be hidden.");
+    }
+
     public UiElementBuilder ComposeControls(
         IReadOnlyList<PanelLayoutControl> controls,
         IPanelLayoutBindingScope scope,

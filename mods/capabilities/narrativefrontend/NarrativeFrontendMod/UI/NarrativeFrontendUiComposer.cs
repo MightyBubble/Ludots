@@ -42,8 +42,8 @@ internal static class NarrativeFrontendUiComposer
             }
 
             PanelLayoutTemplate template = layouts.Require(surface.LayoutId);
-            UiElementBuilder content = layoutComposer.ComposeControls(
-                new[] { template.Root },
+            UiElementBuilder content = layoutComposer.Compose(
+                template.Root,
                 new NarrativeSurfaceBindingScope(surface));
             children.Add(BuildSurface(content, surface, viewportWidth));
         }
@@ -129,23 +129,6 @@ internal static class NarrativeFrontendUiComposer
         UiElementBuilder builder,
         NarrativeFrontendSurfaceModel surface)
     {
-        if (!string.IsNullOrWhiteSpace(surface.BackgroundHex))
-        {
-            builder = builder.Background(surface.BackgroundHex);
-        }
-
-        if (string.IsNullOrWhiteSpace(surface.FrameImageSrc) &&
-            !string.IsNullOrWhiteSpace(surface.BorderHex))
-        {
-            if (!UiColor.TryParse(surface.BorderHex, out UiColor border))
-            {
-                throw new InvalidOperationException(
-                    $"Narrative surface '{surface.SurfaceId}' has invalid border color '{surface.BorderHex}'.");
-            }
-
-            builder = builder.Border(1f, border);
-        }
-
         if (string.IsNullOrWhiteSpace(surface.FrameImageSrc))
         {
             return builder;

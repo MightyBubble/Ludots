@@ -557,11 +557,7 @@ namespace NarrativeShowcaseMod.Runtime
             return kind switch
             {
                 NarrativeFrontendSurfaceKind.ChoiceList => _choiceFrameSrc,
-                NarrativeFrontendSurfaceKind.OverlayDialogue
-                    or NarrativeFrontendSurfaceKind.DialogueBubble
-                    or NarrativeFrontendSurfaceKind.SubtitleBubble
-                    or NarrativeFrontendSurfaceKind.TransmissionOverlay
-                    or NarrativeFrontendSurfaceKind.EventCard => _panelFrameSrc,
+                NarrativeFrontendSurfaceKind.OverlayDialogue => _panelFrameSrc,
                 _ => string.Empty
             };
         }
