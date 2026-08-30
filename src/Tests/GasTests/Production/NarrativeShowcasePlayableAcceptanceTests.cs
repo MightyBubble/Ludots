@@ -240,6 +240,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(returnDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.ReturnDialogueId));
             Assert.That(returnDialogue.PresentationProfile, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationStandingPortrait));
             Assert.That(returnDialogue.StandingImageId, Is.Not.Null.And.Not.Empty);
+            uiRoot.Scene?.Layout(uiRoot.Width > 0 ? uiRoot.Width : 1920f, uiRoot.Height > 0 ? uiRoot.Height : 1080f);
             AssertStandingPortraitSurface(uiRoot, returnDialogue);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "standing_portrait_return");
             timeline.Add("[T+007a] Return beat opened on story.standing_portrait with a half-screen standing figure for the warden.");
