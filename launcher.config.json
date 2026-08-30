@@ -2051,6 +2051,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpModifyAttributeSetEntryMod",
         "projectPath": "CapabilityStandardGraphOpModifyAttributeSetEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_OfferActivity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpOfferActivityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpOfferActivityEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

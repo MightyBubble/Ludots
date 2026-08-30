@@ -1,0 +1,22 @@
+{
+  "op": "OfferActivity",
+  "driver": "script",
+  "title": "点名派发待办活动",
+  "beat": "图节点点名活动 id；跑完，活动已上桌，字幕报「活动已派发」。",
+  "detailTemplate": "活动已派发。",
+  "assertDetailContains": ["活动"],
+  "featuredNodeId": "featured",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "作者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

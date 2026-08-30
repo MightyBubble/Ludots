@@ -1943,6 +1943,23 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ConditionProviderRegistry, providerServices.Conditions);
             SetService(CoreServiceKeys.EffectHandlerRegistry, providerServices.Effects);
             SetService(CoreServiceKeys.ProviderDefinitionValidator, providerServices.Validator);
+            // Tasks install before Activities: their bridge registers the task.state_changed
+            // source / task.create effect that activity definitions reference at load time.
+            var taskDefinitions = new TaskDefinitionRegistry();
+            new TaskConfigLoader(ConfigPipeline, taskDefinitions, providerServices.Validator)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var taskPresentation = new TaskPresentationBuffer();
+            var taskRuntime = new TaskRuntimeService(
+                World,
+                taskDefinitions,
+                providerServices,
+                taskPresentation,
+                GetService(CoreServiceKeys.PresentationTextCatalog),
+                GetService(CoreServiceKeys.PresentationDisplayResolver));
+            TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
+            SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
+            SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
+            SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
             var activityDefinitions = new ActivityDefinitionRegistry();
             new ActivityConfigLoader(ConfigPipeline, activityDefinitions, providerServices.Validator)
                 .Load(ConfigCatalog, ConfigConflictReport);
@@ -1960,21 +1977,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
             SetService(CoreServiceKeys.ActivityLifecycleBuffer, activityLifecycle);
             SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
-            var taskDefinitions = new TaskDefinitionRegistry();
-            new TaskConfigLoader(ConfigPipeline, taskDefinitions, providerServices.Validator)
-                .Load(ConfigCatalog, ConfigConflictReport);
-            var taskPresentation = new TaskPresentationBuffer();
-            var taskRuntime = new TaskRuntimeService(
-                World,
-                taskDefinitions,
-                providerServices,
-                taskPresentation,
-                GetService(CoreServiceKeys.PresentationTextCatalog),
-                GetService(CoreServiceKeys.PresentationDisplayResolver));
-            TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
-            SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
-            SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
-            SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
+            _gasGraphRuntimeApi?.BindActivityRuntimeService(activityRuntime);
             LegacyNarrativeConfigGuard.RejectIfPresent(ConfigCatalog);
             var storyDefinitions = new StoryDefinitionRegistry();
             new StoryConfigLoader(ConfigPipeline, storyDefinitions).Load(ConfigCatalog, ConfigConflictReport);

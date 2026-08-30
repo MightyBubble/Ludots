@@ -320,7 +320,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.FloatToText or
                 GraphNodeOp.SinkPresentationText or
                 GraphNodeOp.LoadTextKey or
-                GraphNodeOp.StartDialogue
+                GraphNodeOp.StartDialogue or
+                GraphNodeOp.OfferActivity
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -884,6 +885,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.FloatToText, HandleFloatToText, "FloatToText graph opcode.");
             Register(GraphNodeOp.SinkPresentationText, HandleSinkPresentationText, "SinkPresentationText graph opcode.");
             Register(GraphNodeOp.LoadTextKey, HandleLoadTextKey, "LoadTextKey graph opcode.");
+            Register(GraphNodeOp.OfferActivity, HandleOfferActivity, "OfferActivity graph opcode.");
             Register(GraphNodeOp.StartDialogue, HandleStartDialogue, "StartDialogue graph opcode.");
         }
 
@@ -968,6 +970,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             RequireTextHeap(ref s).Write(ins.Dst, s.Api.ResolvePresentationTextKey(ins.Imm));
         }
+
+        private static void HandleOfferActivity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (s.Programs == null ||
+                !s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration))
+            {
+                throw new InvalidOperationException(
+                    "OfferActivity requires a registered program so Symbols[Imm] can supply the activity id.");
+            }
+
+            if ((uint)ins.Imm >= (uint)registration.Symbols.Length)
+            {
+                throw new InvalidOperationException(
+                    $"OfferActivity Imm {ins.Imm} is outside program symbol table length {registration.Symbols.Length}.");
+            }
+
+            s.Api.OfferActivity(registration.Symbols[ins.Imm], s.E[ins.A]);
+        }
+
 
         private static void HandleStartDialogue(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
