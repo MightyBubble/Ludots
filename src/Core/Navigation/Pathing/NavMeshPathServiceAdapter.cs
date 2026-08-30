@@ -16,7 +16,11 @@ namespace Ludots.Core.Navigation.Pathing
 
         public bool TrySolve(in PathRequest request, out PathResult result)
         {
-            if (request.Domain != PathDomain.NavMesh)
+            // This adapter is registered as the map's default routing service when the map is
+            // navmesh-only (no node-graph board). PathDomain.Auto is the generic world-target
+            // routing contract used by the MassNavigation route sink and hybrid route builders;
+            // honor it here exactly like an explicit NavMesh request.
+            if (request.Domain != PathDomain.NavMesh && request.Domain != PathDomain.Auto)
             {
                 result = new PathResult(request.RequestId, request.Actor, PathStatus.InvalidRequest, default, 0, errorCode: 2);
                 return false;

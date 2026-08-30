@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Mathematics;
@@ -19,6 +22,38 @@ namespace Ludots.Tests.Presentation
         public void ResetProfiles()
         {
             MassNavigationProfileRegistry.Reset();
+        }
+
+        [Test]
+        public void RouteSink_ExecutesWorldTargetOrderThroughNavMeshOnlyPathService()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime runtime = CreateRuntime(world, out Entity routed, out _);
+            var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            var pathService = CreateNavMeshOnlyPathService(store);
+            var sink = new MassNavigationRouteExecutionSink(pathService, store, CreatePathingConfig());
+
+            sink.BeginSync();
+            MassNavigationRouteSinkResult track = sink.TrackRouteTarget(
+                runtime,
+                world,
+                routed,
+                agentIndex: 0,
+                destinationWorldCm: new Vector2(5_800, 5_000),
+                requestId: 1402,
+                maxExpanded: 128,
+                maxPoints: 8);
+            sink.EndSync();
+
+            MassNavigationRouteSinkResult applied = sink.TryApplyTrackedRouteTargets(runtime, world);
+
+            Assert.That(track.Tracked, Is.True);
+            Assert.That(applied.Applied, Is.True,
+                $"A navmesh-only map's path service must honor the world-target order: status={applied.Status}, pathStatus={applied.PathStatus}, domain={applied.ResolvedDomain}, errorCode={applied.ErrorCode}.");
+            Assert.That(applied.ResolvedDomain, Is.EqualTo(PathDomain.NavMesh));
+            Assert.That(applied.WaypointCount, Is.GreaterThan(0));
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float targetX, out float targetY), Is.True,
+                "A valid world target order must commit a navigation target to the flow solver.");
         }
 
         [Test]
@@ -419,6 +454,34 @@ namespace Ludots.Tests.Presentation
                 },
                 new[] { true, true });
             return runtime;
+        }
+
+        private static NavMeshPathServiceAdapter CreateNavMeshOnlyPathService(PathStore store)
+        {
+            const int cellSizeCm = 250;
+            const int chunkSizeCells = 64;
+            const int tileSizeCm = cellSizeCm * chunkSizeCells;
+            NavTile tile = DefaultGridNavTileFactory.CreateFlatTile(
+                chunkX: 0,
+                chunkY: 0,
+                layer: 0,
+                tileVersion: 1,
+                chunkSizeCells: chunkSizeCells,
+                cellSizeCm: cellSizeCm);
+            var blobs = new Dictionary<NavTileId, byte[]>();
+            using (var ms = new MemoryStream())
+            {
+                NavTileBinary.Write(ms, tile);
+                blobs[tile.TileId] = ms.ToArray();
+            }
+
+            var tileStore = new NavTileStore(id => new MemoryStream(blobs[id], writable: false));
+            var registry = new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore> { [new NavQueryServiceKey(0, 0)] = tileStore },
+                tileSizeCm,
+                tileSizeCm);
+            Assert.That(registry.TryCreateQuery(layer: 0, profile: 0, areaCosts: null!, out NavQueryService query), Is.True);
+            return new NavMeshPathServiceAdapter(query, store);
         }
 
         private static PathingConfig CreatePathingConfig()
