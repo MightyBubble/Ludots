@@ -319,6 +319,12 @@
     "IdField": "id"
   },
   {
+    "Path": "Presentation/raylib_scenes.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
     "Path": "Presentation/instanced_batches.json",
     "Policy": "ArrayById",
     "IdField": "id",

@@ -19,6 +19,7 @@ using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -39,6 +40,7 @@ namespace Ludots.Core.Systems
         private PresenterDefinitionRegistry _presenterDefinitions;
         private CompiledPresenterBootstrapRegistry _presenterBootstrap;
         private MeshAssetRegistry _meshAssets;
+        private InstancedBatchAssetRegistry _instancedBatchAssets;
         private readonly Entity[] _presenterBatchOwners = new Entity[TemplateBatchScratchCapacity];
         private readonly int[] _presenterBatchScopeIds = new int[TemplateBatchScratchCapacity];
         private readonly int[] _presenterBatchStableIds = new int[TemplateBatchScratchCapacity];
@@ -85,13 +87,15 @@ namespace Ludots.Core.Systems
             PresenterDefinitionRegistry presenterDefinitions,
             ISpatialPartitionWorld spatialPartition,
             WorldSizeSpec worldSizeSpec,
-            MeshAssetRegistry meshAssets = null)
+            MeshAssetRegistry meshAssets = null,
+            InstancedBatchAssetRegistry instancedBatchAssets = null)
         {
             _stableIds = stableIds;
             _presenterRuntime = presenterRuntime;
             _presenterDefinitions = presenterDefinitions;
             _presenterBootstrap = presenterDefinitions?.BootstrapRegistry;
             _meshAssets = meshAssets;
+            _instancedBatchAssets = instancedBatchAssets;
             _templateBatchSpawner = new TemplateEntityBatchSpawner(
                 _world,
                 EntityTemplateKeys,
@@ -123,6 +127,28 @@ namespace Ludots.Core.Systems
 
             var visitedTemplates = new HashSet<string>(StringComparer.Ordinal);
             var visitedDefinitions = new HashSet<int>();
+            var reachableDefinitionIds = new List<int>();
+            var instanceAssetIds = new Dictionary<int, HashSet<int>>();
+
+            for (int i = 0; i < mapConfig.Entities.Count; i++)
+            {
+                EntitySpawnData? entity = mapConfig.Entities[i];
+                if (entity?.PresenterParamOverrides == null)
+                {
+                    continue;
+                }
+
+                for (int overrideIndex = 0; overrideIndex < entity.PresenterParamOverrides.Count; overrideIndex++)
+                {
+                    ParamOverrideData? item = entity.PresenterParamOverrides[overrideIndex];
+                    if (item == null || item.Lane != ParamLane.Int || string.IsNullOrWhiteSpace(item.ParamKey))
+                    {
+                        continue;
+                    }
+
+                    AddInstanceAssetOverride(PresenterParamKeyRegistry.Register(item.ParamKey), item.IntValue);
+                }
+            }
 
             for (int i = 0; i < mapConfig.Entities.Count; i++)
             {
@@ -133,6 +159,23 @@ namespace Ludots.Core.Systems
                 }
 
                 AddTemplate(entity.Template);
+            }
+
+            for (int i = 0; i < reachableDefinitionIds.Count; i++)
+            {
+                int definitionId = reachableDefinitionIds[i];
+                if (!_presenterDefinitions.TryGet(definitionId, out PresenterDefinition definition))
+                {
+                    continue;
+                }
+
+                AddBehaviors(definition.Behaviors);
+                PresenterCreatePlan plan = _presenterDefinitions.GetOrCreateCreatePlan(definitionId);
+                PresenterCreatePlanNode[] nodes = plan.Nodes ?? Array.Empty<PresenterCreatePlanNode>();
+                for (int nodeIndex = 0; nodeIndex < nodes.Length; nodeIndex++)
+                {
+                    AddBehaviors(nodes[nodeIndex].InstanceOverride?.InstanceBehaviors);
+                }
             }
 
             manifest.SealManifest();
@@ -159,7 +202,7 @@ namespace Ludots.Core.Systems
                 {
                     for (int i = 0; i < rules.Length; i++)
                     {
-                        AddDefinition(rules[i].PresenterDefinitionId);
+                        CollectDefinition(rules[i].PresenterDefinitionId);
                     }
                 }
 
@@ -178,7 +221,7 @@ namespace Ludots.Core.Systems
                 }
             }
 
-            void AddDefinition(int definitionId)
+            void CollectDefinition(int definitionId)
             {
                 if (definitionId <= 0 || !visitedDefinitions.Add(definitionId) ||
                     !_presenterDefinitions.TryGet(definitionId, out PresenterDefinition definition))
@@ -186,23 +229,73 @@ namespace Ludots.Core.Systems
                     return;
                 }
 
-                BehaviorSlot[] behaviors = definition.Behaviors ?? Array.Empty<BehaviorSlot>();
-                for (int i = 0; i < behaviors.Length; i++)
-                {
-                    if (behaviors[i].Kind != BehaviorKind.AssetBinding)
-                    {
-                        continue;
-                    }
-
-                    AddAsset(in behaviors[i].AssetBinding);
-                }
-
+                reachableDefinitionIds.Add(definitionId);
                 PresenterCreatePlan plan = _presenterDefinitions.GetOrCreateCreatePlan(definitionId);
                 PresenterCreatePlanNode[] nodes = plan.Nodes ?? Array.Empty<PresenterCreatePlanNode>();
                 for (int i = 0; i < nodes.Length; i++)
                 {
-                    AddDefinition(nodes[i].DefinitionId);
+                    AddParamOverrides(nodes[i].ParamOverrides);
                 }
+
+                AddParamOverrides(definition.ParamDefaults);
+                for (int i = 0; i < nodes.Length; i++)
+                {
+                    CollectDefinition(nodes[i].DefinitionId);
+                }
+            }
+
+            void AddBehaviors(BehaviorSlot[]? behaviors)
+            {
+                if (behaviors == null)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < behaviors.Length; i++)
+                {
+                    ref readonly BehaviorSlot behavior = ref behaviors[i];
+                    if (behavior.Kind == BehaviorKind.AssetBinding)
+                    {
+                        AddAsset(in behavior.AssetBinding);
+                    }
+                    else if (behavior.Kind == BehaviorKind.InstancedBatch)
+                    {
+                        AddInstancedBatch(behavior.InstancedBatch.BatchAssetId);
+                    }
+                }
+            }
+
+            void AddParamOverrides(ParamDefault[]? overrides)
+            {
+                if (overrides == null)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < overrides.Length; i++)
+                {
+                    ref readonly ParamDefault item = ref overrides[i];
+                    if (item.Lane == ParamLane.Int)
+                    {
+                        AddInstanceAssetOverride(item.ParamKey, item.IntValue);
+                    }
+                }
+            }
+
+            void AddInstanceAssetOverride(int paramKey, int assetId)
+            {
+                if (paramKey < 0 || assetId <= 0)
+                {
+                    return;
+                }
+
+                if (!instanceAssetIds.TryGetValue(paramKey, out HashSet<int>? values))
+                {
+                    values = new HashSet<int>();
+                    instanceAssetIds.Add(paramKey, values);
+                }
+
+                values.Add(assetId);
             }
 
             void AddAsset(in AssetBindingConfig binding)
@@ -212,6 +305,42 @@ namespace Ludots.Core.Systems
                 for (int i = 0; i < swaps.Length; i++)
                 {
                     AddAssetId(binding.AssetKind, swaps[i].AssetId, binding.RenderPath);
+                }
+
+                if (binding.AssetIdParamKey >= 0 &&
+                    instanceAssetIds.TryGetValue(binding.AssetIdParamKey, out HashSet<int>? overrides))
+                {
+                    foreach (int assetId in overrides)
+                    {
+                        AddAssetId(binding.AssetKind, assetId, binding.RenderPath);
+                    }
+                }
+            }
+
+            void AddInstancedBatch(int batchAssetId)
+            {
+                if (batchAssetId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' reached an InstancedBatch presenter with an invalid batch asset id {batchAssetId}.");
+                }
+
+                if (_instancedBatchAssets == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' requires instanced batch asset id {batchAssetId}, but the InstancedBatchAssetRegistry is not installed.");
+                }
+
+                if (!_instancedBatchAssets.TryGet(batchAssetId, out InstancedBatchAsset batch))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' references unknown instanced batch asset id {batchAssetId}.");
+                }
+
+                InstancedBatchGroup[] groups = batch.Groups ?? Array.Empty<InstancedBatchGroup>();
+                for (int i = 0; i < groups.Length; i++)
+                {
+                    AddAssetId(AssetKind.Mesh, groups[i].MeshAssetId, batch.RenderPath);
                 }
             }
 

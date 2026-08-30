@@ -9,6 +9,7 @@ using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -86,6 +87,40 @@ public sealed class MapPresentationAssetManifestTests
             int templateChildMeshId = meshes.Register(
                 "manifest.template-child.mesh",
                 MeshAssetDescriptor.Model(0, "mod:template-child.glb"));
+            int batchMeshId = meshes.Register(
+                "manifest.batch.mesh",
+                MeshAssetDescriptor.Model(0, "mod:batch.glb"));
+            int overrideMeshId = meshes.Register(
+                "manifest.override.mesh",
+                MeshAssetDescriptor.Model(0, "mod:override.glb"));
+            int instanceOverrideMeshId = meshes.Register(
+                "manifest.instance-override.mesh",
+                MeshAssetDescriptor.Model(0, "mod:instance-override.glb"));
+            int instanceChildMeshId = meshes.Register(
+                "manifest.instance-child.mesh",
+                MeshAssetDescriptor.Model(0, "mod:instance-child.glb"));
+            int lateInstanceOverrideMeshId = meshes.Register(
+                "manifest.late-instance-override.mesh",
+                MeshAssetDescriptor.Model(0, "mod:late-instance-override.glb"));
+
+            var batches = new InstancedBatchAssetRegistry();
+            int batchAssetId = batches.Register(
+                "manifest.batch",
+                new InstancedBatchAsset
+                {
+                    RenderPath = VisualRenderPath.InstancedStaticMesh,
+                    Groups =
+                    [
+                        new InstancedBatchGroup
+                        {
+                            Id = "main",
+                            MeshAssetId = batchMeshId,
+                            Transforms = [new InstancedBatchTransform { Scale = System.Numerics.Vector3.One }],
+                        },
+                    ],
+                });
+            int instanceAssetParamKey = PresenterParamKeyRegistry.Register("manifest.dynamic.asset");
+            int childInstanceAssetParamKey = PresenterParamKeyRegistry.Register("manifest.child.dynamic.asset");
 
             var definitions = new PresenterDefinitionRegistry();
             int planChildDefinitionId = definitions.Register(
@@ -94,7 +129,22 @@ public sealed class MapPresentationAssetManifestTests
                 {
                     Behaviors =
                     [
-                        AssetBehavior(0, AssetKind.SkinnedMesh, planChildMeshId, VisualRenderPath.GpuSkinnedInstance),
+                        AssetBehavior(
+                            0,
+                            AssetKind.SkinnedMesh,
+                            planChildMeshId,
+                            VisualRenderPath.GpuSkinnedInstance,
+                            assetIdParamKey: childInstanceAssetParamKey),
+                        InstancedBatchBehavior(1, batchAssetId),
+                    ],
+                });
+            int instanceChildDefinitionId = definitions.Register(
+                "manifest.instance-child",
+                new PresenterDefinition
+                {
+                    Behaviors =
+                    [
+                        AssetBehavior(0, AssetKind.Mesh, instanceChildMeshId, VisualRenderPath.StaticMesh),
                     ],
                 });
             int rootDefinitionId = definitions.GetOrRegisterId("manifest.presenter-root");
@@ -103,7 +153,30 @@ public sealed class MapPresentationAssetManifestTests
                 "manifest.presenter-root",
                 new PresenterDefinition
                 {
-                    Children = [new ChildPresenterRef { DefinitionId = planChildDefinitionId }],
+                    Children =
+                    [
+                        new ChildPresenterRef
+                        {
+                            DefinitionId = planChildDefinitionId,
+                            ParamOverrides =
+                            [
+                                new ParamDefault
+                                {
+                                    ParamKey = childInstanceAssetParamKey,
+                                    Lane = ParamLane.Int,
+                                    IntValue = instanceOverrideMeshId,
+                                },
+                            ],
+                            InstanceOverride = new PresenterChildInstanceOverride
+                            {
+                                ChildrenMode = PresenterChildrenMode.Instance,
+                                InstanceChildren =
+                                [
+                                    new ChildPresenterRef { DefinitionId = instanceChildDefinitionId },
+                                ],
+                            },
+                        },
+                    ],
                     Behaviors =
                     [
                         AssetBehavior(
@@ -111,7 +184,8 @@ public sealed class MapPresentationAssetManifestTests
                             AssetKind.Mesh,
                             rootMeshId,
                             VisualRenderPath.StaticMesh,
-                            [new AssetSwapEntry { ParamValue = 1f, AssetId = swapMeshId }]),
+                            [new AssetSwapEntry { ParamValue = 1f, AssetId = swapMeshId }],
+                            instanceAssetParamKey),
                         AssetBehavior(1, AssetKind.WorldHud, 999_999, VisualRenderPath.None),
                     ],
                     Rules = [CreateOnSpawn(rootTemplateKey, rootDefinitionId)],
@@ -123,6 +197,22 @@ public sealed class MapPresentationAssetManifestTests
                 "manifest.presenter-template-child",
                 new PresenterDefinition
                 {
+                    Children =
+                    [
+                        new ChildPresenterRef
+                        {
+                            DefinitionId = planChildDefinitionId,
+                            ParamOverrides =
+                            [
+                                new ParamDefault
+                                {
+                                    ParamKey = childInstanceAssetParamKey,
+                                    Lane = ParamLane.Int,
+                                    IntValue = lateInstanceOverrideMeshId,
+                                },
+                            ],
+                        },
+                    ],
                     Behaviors =
                     [
                         AssetBehavior(0, AssetKind.Decal, templateChildMeshId, VisualRenderPath.StaticMesh),
@@ -136,21 +226,39 @@ public sealed class MapPresentationAssetManifestTests
                 definitions,
                 new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
                 new WorldSizeSpec(new WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100),
-                meshes);
+                meshes,
+                batches);
 
             var map = new MapConfig { Id = "manifest.map" };
-            map.Entities.Add(new EntitySpawnData { Template = "manifest.root" });
+            map.Entities.Add(new EntitySpawnData
+            {
+                Template = "manifest.root",
+                PresenterParamOverrides =
+                [
+                    new ParamOverrideData
+                    {
+                        ParamKey = "manifest.dynamic.asset",
+                        Lane = ParamLane.Int,
+                        IntValue = overrideMeshId,
+                    },
+                ],
+            });
 
             MapPresentationAssetManifest manifest = loader.BuildPresentationAssetManifest(map);
 
             Assert.That(manifest.IsSealed, Is.True);
-            Assert.That(manifest.Count, Is.EqualTo(4));
+            Assert.That(manifest.Count, Is.EqualTo(9));
             Assert.That(CollectAssetIds(manifest), Is.EquivalentTo(new[]
             {
                 rootMeshId,
                 swapMeshId,
                 planChildMeshId,
                 templateChildMeshId,
+                batchMeshId,
+                overrideMeshId,
+                instanceOverrideMeshId,
+                instanceChildMeshId,
+                lateInstanceOverrideMeshId,
             }));
         }
         finally
@@ -167,7 +275,8 @@ public sealed class MapPresentationAssetManifestTests
         AssetKind assetKind,
         int assetId,
         VisualRenderPath renderPath,
-        AssetSwapEntry[]? swaps = null)
+        AssetSwapEntry[]? swaps = null,
+        int assetIdParamKey = PresenterParamKeyRegistry.UnsetParamKey)
     {
         return new BehaviorSlot
         {
@@ -180,7 +289,19 @@ public sealed class MapPresentationAssetManifestTests
                 AssetId = assetId,
                 RenderPath = renderPath,
                 AssetSwapTable = swaps ?? Array.Empty<AssetSwapEntry>(),
+                AssetIdParamKey = assetIdParamKey,
             },
+        };
+    }
+
+    private static BehaviorSlot InstancedBatchBehavior(int slotIndex, int batchAssetId)
+    {
+        return new BehaviorSlot
+        {
+            SlotIndex = slotIndex,
+            Kind = BehaviorKind.InstancedBatch,
+            ActiveByDefault = true,
+            InstancedBatch = new InstancedBatchConfig { BatchAssetId = batchAssetId },
         };
     }
 

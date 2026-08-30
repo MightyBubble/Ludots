@@ -313,11 +313,60 @@ namespace Ludots.Raylib.Render
             _modelStore.FlushRetired();
         }
 
+        public void PumpAssetUploads()
+        {
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
+        }
+
         public int ResidentAssetCount => _modelStore.ResidentCount + _textureStore.ResidentCount;
 
         public int InFlightAssetCount => _modelStore.InFlightCount + _textureStore.InFlightCount + _gpuSkinnedModelCache.AnimationInFlightCount;
 
         public int RetiredAssetCount => _modelStore.RetiredCount + _textureStore.RetiredCount;
+
+        public RaylibAssetAcquireOutcome TryAcquireExternalModel(
+            string uri,
+            out RaylibAssetStore<Model>.Lease? lease,
+            out string? status)
+        {
+            if (string.IsNullOrWhiteSpace(uri))
+            {
+                throw new ArgumentException("External scene model URI must not be empty.", nameof(uri));
+            }
+
+            return _modelStore.TryAcquireOrBegin(uri, out lease, out status);
+        }
+
+        public void DrawExternalModel(
+            Model model,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            Vector4 tint)
+        {
+            if (model.meshCount <= 0 || model.materialCount <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot draw an external model without meshes and materials.");
+            }
+
+            EnsureImmediateLitFrame();
+            _immediateLit!.AttachToModel(model);
+            for (int i = 0; i < model.materialCount; i++)
+            {
+                _immediateLit.BindIblToMaterial(ref model.materials[i]);
+                if (_frameShadow != null)
+                {
+                    _immediateLit.BindShadowToMaterial(ref model.materials[i], _frameShadow);
+                }
+            }
+
+            _immediateLit.ApplyDrawUniforms(tint);
+            ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
+            RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
+            Rl.DrawModelEx(model, position, axis, angleDegrees, scale, ToRaylibColor(tint));
+        }
 
         /// <summary>
         /// Non-blocking backend bridge used by the map-load rendezvous. The residency lease is
@@ -562,8 +611,7 @@ namespace Ludots.Raylib.Render
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
-            _textureStore.PumpUploads();
-            _modelStore.PumpUploads();
+            PumpAssetUploads();
             BuildFrameFrustum(in camera);
             _frameViewPos = camera.position;
             _hasFrameViewPos = true;
@@ -650,8 +698,7 @@ namespace Ludots.Raylib.Render
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
-            _textureStore.PumpUploads();
-            _modelStore.PumpUploads();
+            PumpAssetUploads();
 
             EnsureInitialized();
             var span = draw.GetSpan();
@@ -685,8 +732,7 @@ namespace Ludots.Raylib.Render
             IRenderMeshAssets meshes,
             float scaleMul = 1f)
         {
-            _textureStore.PumpUploads();
-            _modelStore.PumpUploads();
+            PumpAssetUploads();
             if (skinnedBatch == null) throw new ArgumentNullException(nameof(skinnedBatch));
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));

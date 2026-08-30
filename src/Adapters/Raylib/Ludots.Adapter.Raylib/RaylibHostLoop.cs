@@ -34,7 +34,6 @@ using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.Vision;
-using Ludots.Platform.Abstractions;
 using Ludots.Presentation.Skia;
 using Ludots.UI;
 using Ludots.UI.Browser;
@@ -331,7 +330,16 @@ namespace Ludots.Adapter.Raylib
                     ?? throw new InvalidOperationException("Raylib map residency requires PresentationMeshAssetRegistry.");
                 primitiveRenderer.BindResidencyMeshAssets(residencyMeshes);
                 using var mapLoadResidencyGate = new RenderAssetMapLoadCompletionGate((IRenderAssetResidency)primitiveRenderer);
-                engine.SetService(CoreServiceKeys.MapLoadCompletionGate, (IMapLoadCompletionGate)mapLoadResidencyGate);
+                using var backendSceneRuntime = new RaylibBackendSceneRuntime(primitiveRenderer);
+                backendSceneRuntime.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
+                    engine.ConfigCatalog,
+                    engine.ConfigPipeline,
+                    engine.ConfigConflictReport,
+                    RaylibBackendSceneCatalog.DefaultRelativePath));
+                using var mapLoadCompletionGate = new RaylibSceneMapLoadCompletionGate(
+                    mapLoadResidencyGate,
+                    backendSceneRuntime);
+                engine.SetService(CoreServiceKeys.MapLoadCompletionGate, (IMapLoadCompletionGate)mapLoadCompletionGate);
                 primitiveRenderer.BindReceiverMeshProjector(
                     new MapLaneReceiverMeshProjector(engine, continuousHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector));
                 primitiveRenderer.BindInstancedBatchLaneSource(setup.InstancedBatchLaneStore);
@@ -539,6 +547,7 @@ namespace Ludots.Adapter.Raylib
                             cullingSystem);
 
                         engine.SetService(CoreServiceKeys.HostFrameIndex, frameIndex);
+                        primitiveRenderer.PumpAssetUploads();
                         engine.Tick(dt);
                         // Typed instanced batch requests live from tick end until the next tick's
                         // buffer clear; consuming them here hands resident lanes to this frame's draw.
@@ -860,6 +869,11 @@ namespace Ludots.Adapter.Raylib
                             else
                             {
                                 presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
+                            }
+
+                            if (activeMapId != null)
+                            {
+                                _ = backendSceneRuntime.Draw(activeMapId);
                             }
 
                             if (drawNavMeshOverlay)
