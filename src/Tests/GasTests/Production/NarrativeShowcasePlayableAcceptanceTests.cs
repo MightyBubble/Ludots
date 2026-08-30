@@ -846,7 +846,7 @@ namespace Ludots.Tests.GAS.Production
                 "assets",
                 "PanelThemes");
             string[] themeIds = { "story-ember", "story-sanguo", "story-fantasy", "story-acnh" };
-            string[] imageNames = { "panel_frame.png", "choice_frame.png", "portrait_warden.png", "standing_warden.png" };
+            string[] imageNames = { "panel_frame.png", "portrait_warden.png", "standing_warden.png" };
 
             foreach (string themeId in themeIds)
             {
@@ -870,13 +870,8 @@ namespace Ludots.Tests.GAS.Production
                 using SKBitmap panelFrame = SKBitmap.Decode(
                     Path.Combine(themeRoot, themeId, "images", "panel_frame.png"))
                     ?? throw new InvalidOperationException($"Unable to decode {themeId}/panel_frame.png.");
-                using SKBitmap choiceFrame = SKBitmap.Decode(
-                    Path.Combine(themeRoot, themeId, "images", "choice_frame.png"))
-                    ?? throw new InvalidOperationException($"Unable to decode {themeId}/choice_frame.png.");
-                Assert.That(
-                    (choiceFrame.Width, choiceFrame.Height),
-                    Is.Not.EqualTo((panelFrame.Width, panelFrame.Height)),
-                    $"{themeId} choice_frame.png must be an independently generated choice asset.");
+                Assert.That(panelFrame.Width, Is.GreaterThan(0));
+                Assert.That(panelFrame.Height, Is.GreaterThan(0));
             }
         }
 

@@ -72,11 +72,6 @@
     "eyebrow": "story.ui.subtitlebubble_eyebrow",
     "footer": "story.ui.subtitlebubble_footer"
   },
-  "choiceList": {
-    "eyebrow": "story.ui.choicelist_eyebrow",
-    "title": "story.ui.choicelist_title",
-    "footer": "story.ui.choicelist_footer"
-  },
   "transmissionOverlay": {
     "eyebrow": "story.ui.transmissionoverlay_eyebrow",
     "footer": ""

@@ -84,8 +84,6 @@ namespace Ludots.Tests.GAS.Production
                 "Tagged map must project OverlayDialogue and show choices on PanelHost.");
             Assert.That(frontend.Snapshot.Surfaces, Has.Some.Matches<NarrativeFrontendSurfaceModel>(
                 s => s.Kind == NarrativeFrontendSurfaceKind.OverlayDialogue));
-            Assert.That(frontend.Snapshot.Surfaces, Has.None.Matches<NarrativeFrontendSurfaceModel>(
-                s => s.Kind == NarrativeFrontendSurfaceKind.ChoiceList));
             Assert.That(PanelChoicesVisible(engine), Is.True,
                 "Active choices must Show panel.narrative.choices on PanelHost.");
 

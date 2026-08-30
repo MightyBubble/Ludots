@@ -128,7 +128,6 @@ public static class StoryPresentationFrontendAdapter
             Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.DialogueBubble => NarrativeFrontendSurfaceKind.DialogueBubble,
             Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.StandingPortrait => NarrativeFrontendSurfaceKind.StandingPortrait,
             Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.SubtitleBubble => NarrativeFrontendSurfaceKind.SubtitleBubble,
-            Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.ChoiceList => NarrativeFrontendSurfaceKind.ChoiceList,
             Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.TransmissionOverlay => NarrativeFrontendSurfaceKind.TransmissionOverlay,
             _ => throw new InvalidOperationException(
                 $"Unknown story surfaceKind '{surfaceKind}' for NarrativeFrontend."),

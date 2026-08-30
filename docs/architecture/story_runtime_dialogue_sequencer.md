@@ -201,7 +201,7 @@ Chrome 分三层，不能互相代写：
 
 1. `layout_templates.json` 只定义控件结构、绑定和排列关系。
 2. `theme.css` 只定义颜色、字体、背景、边框和 nine-slice 切边；panel 与 choice 分别使用 `.story-frame` 和 `.story-choice-frame`。
-3. NarrativeFrontend theme resolver 根据当前 `panelTheme` 注入 `panel_frame.png` / `choice_frame.png`。Showcase 不解析文件名，也不缓存主题路径。
+3. NarrativeFrontend theme resolver 根据当前 `panelTheme` 注入 `panel_frame.png`（主对话框九宫格框）。Showcase 不解析文件名，也不缓存主题路径。选项列表走 PanelHost，皮用主题 CSS（如 `.panel-narrative-choices`）。
 
 安全区、底部 lane 间距和 standing 组合尺寸由 NarrativeFrontend 的严格 layout metrics 配置提供。Composer 只消费配置；字段缺失、非正数或非有限值时启动失败，不保留代码默认值。
 

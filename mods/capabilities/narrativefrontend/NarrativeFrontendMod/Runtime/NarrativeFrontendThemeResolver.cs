@@ -25,7 +25,6 @@ public static class NarrativeFrontendThemeResolver
 
         string fileName = kind switch
         {
-            NarrativeFrontendSurfaceKind.ChoiceList => "choice_frame.png",
             NarrativeFrontendSurfaceKind.OverlayDialogue => "panel_frame.png",
             _ => string.Empty
         };

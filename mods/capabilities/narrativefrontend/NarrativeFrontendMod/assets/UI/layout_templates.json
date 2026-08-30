@@ -2,8 +2,19 @@
   {
     "id": "layout.narrative.card",
     "bindings": [
-      "title", "subtitle", "body", "bodyRuns", "footer", "items", "surfaceClass",
-      "foregroundHex", "mutedHex", "itemClass", "label", "value", "caption"
+      "title",
+      "subtitle",
+      "body",
+      "bodyRuns",
+      "footer",
+      "items",
+      "surfaceClass",
+      "foregroundHex",
+      "mutedHex",
+      "itemClass",
+      "label",
+      "value",
+      "caption"
     ],
     "root": {
       "type": "column",
@@ -11,9 +22,32 @@
       "classBind": "surfaceClass",
       "gap": 8,
       "children": [
-        { "type": "label", "bind": "subtitle", "class": "story-eyebrow", "fontSize": 10, "bold": true, "visibleWhenNotEmpty": "subtitle" },
-        { "type": "label", "bind": "title", "class": "story-title", "fontSize": 16, "bold": true, "colorBind": "foregroundHex", "visibleWhenNotEmpty": "title" },
-        { "type": "richText", "bind": "body", "textRunsBind": "bodyRuns", "class": "story-body", "fontSize": 13, "colorBind": "foregroundHex", "visibleWhenNotEmpty": "body" },
+        {
+          "type": "label",
+          "bind": "subtitle",
+          "class": "story-eyebrow",
+          "fontSize": 10,
+          "bold": true,
+          "visibleWhenNotEmpty": "subtitle"
+        },
+        {
+          "type": "label",
+          "bind": "title",
+          "class": "story-title",
+          "fontSize": 16,
+          "bold": true,
+          "colorBind": "foregroundHex",
+          "visibleWhenNotEmpty": "title"
+        },
+        {
+          "type": "richText",
+          "bind": "body",
+          "textRunsBind": "bodyRuns",
+          "class": "story-body",
+          "fontSize": 13,
+          "colorBind": "foregroundHex",
+          "visibleWhenNotEmpty": "body"
+        },
         {
           "type": "repeater",
           "bind": "items",
@@ -30,47 +64,121 @@
                   "gap": 8,
                   "justify": "space-between",
                   "children": [
-                    { "type": "label", "bind": "label", "class": "story-title", "fontSize": 12, "bold": true },
-                    { "type": "label", "bind": "value", "class": "story-body", "fontSize": 12, "visibleWhenNotEmpty": "value" }
+                    {
+                      "type": "label",
+                      "bind": "label",
+                      "class": "story-title",
+                      "fontSize": 12,
+                      "bold": true
+                    },
+                    {
+                      "type": "label",
+                      "bind": "value",
+                      "class": "story-body",
+                      "fontSize": 12,
+                      "visibleWhenNotEmpty": "value"
+                    }
                   ]
                 },
-                { "type": "label", "bind": "caption", "class": "story-muted", "fontSize": 11, "visibleWhenNotEmpty": "caption" }
+                {
+                  "type": "label",
+                  "bind": "caption",
+                  "class": "story-muted",
+                  "fontSize": 11,
+                  "visibleWhenNotEmpty": "caption"
+                }
               ]
             }
           ]
         },
-        { "type": "label", "bind": "footer", "class": "story-muted", "fontSize": 11, "colorBind": "mutedHex", "visibleWhenNotEmpty": "footer" }
+        {
+          "type": "label",
+          "bind": "footer",
+          "class": "story-muted",
+          "fontSize": 11,
+          "colorBind": "mutedHex",
+          "visibleWhenNotEmpty": "footer"
+        }
       ]
     }
   },
   {
     "id": "layout.narrative.overlay-dialogue",
     "bindings": [
-      "title", "subtitle", "body", "bodyRuns", "footer", "portraitSrc", "portraitSize",
-      "progress01", "progressPresent", "foregroundHex", "mutedHex"
+      "title",
+      "subtitle",
+      "body",
+      "bodyRuns",
+      "footer",
+      "portraitSrc",
+      "portraitSize",
+      "progress01",
+      "progressPresent",
+      "foregroundHex",
+      "mutedHex"
     ],
     "root": {
       "type": "column",
       "class": "story-overlay-dialogue story-card",
       "gap": 12,
       "children": [
-        { "type": "label", "bind": "subtitle", "class": "story-eyebrow", "fontSize": 12, "bold": true, "visibleWhenNotEmpty": "subtitle" },
+        {
+          "type": "label",
+          "bind": "subtitle",
+          "class": "story-eyebrow",
+          "fontSize": 12,
+          "bold": true,
+          "visibleWhenNotEmpty": "subtitle"
+        },
         {
           "type": "row",
           "class": "story-portrait-row",
           "gap": 20,
           "align": "start",
           "children": [
-            { "type": "image", "bind": "portraitSrc", "class": "story-portrait", "widthBind": "portraitSize", "heightBind": "portraitSize", "objectFit": "contain" },
+            {
+              "type": "image",
+              "bind": "portraitSrc",
+              "class": "story-portrait",
+              "widthBind": "portraitSize",
+              "heightBind": "portraitSize",
+              "objectFit": "contain"
+            },
             {
               "type": "column",
               "class": "story-overlay-copy",
               "gap": 10,
               "children": [
-                { "type": "label", "bind": "title", "class": "story-title", "fontSize": 24, "bold": true, "colorBind": "foregroundHex" },
-                { "type": "richText", "bind": "body", "textRunsBind": "bodyRuns", "class": "story-body", "fontSize": 18, "colorBind": "foregroundHex" },
-                { "type": "progressBar", "bind": "progress01", "class": "story-progress", "visibleWhenNotEmpty": "progressPresent" },
-                { "type": "label", "bind": "footer", "class": "story-muted", "fontSize": 12, "colorBind": "mutedHex", "visibleWhenNotEmpty": "footer" }
+                {
+                  "type": "label",
+                  "bind": "title",
+                  "class": "story-title",
+                  "fontSize": 24,
+                  "bold": true,
+                  "colorBind": "foregroundHex"
+                },
+                {
+                  "type": "richText",
+                  "bind": "body",
+                  "textRunsBind": "bodyRuns",
+                  "class": "story-body",
+                  "fontSize": 18,
+                  "colorBind": "foregroundHex"
+                },
+                {
+                  "type": "progressBar",
+                  "bind": "progress01",
+                  "class": "story-progress",
+                  "visibleWhenNotEmpty": "progressPresent"
+                },
+                {
+                  "type": "label",
+                  "bind": "footer",
+                  "class": "story-muted",
+                  "fontSize": 12,
+                  "colorBind": "mutedHex",
+                  "visibleWhenNotEmpty": "footer"
+                }
               ]
             }
           ]
@@ -81,8 +189,18 @@
   {
     "id": "layout.narrative.bubble",
     "bindings": [
-      "title", "subtitle", "body", "bodyRuns", "footer", "portraitSrc", "portraitSize",
-      "progress01", "progressPresent", "foregroundHex", "mutedHex", "surfaceClass"
+      "title",
+      "subtitle",
+      "body",
+      "bodyRuns",
+      "footer",
+      "portraitSrc",
+      "portraitSize",
+      "progress01",
+      "progressPresent",
+      "foregroundHex",
+      "mutedHex",
+      "surfaceClass"
     ],
     "root": {
       "type": "column",
@@ -90,68 +208,74 @@
       "classBind": "surfaceClass",
       "gap": 8,
       "children": [
-        { "type": "label", "bind": "subtitle", "class": "story-eyebrow", "fontSize": 10, "bold": true, "visibleWhenNotEmpty": "subtitle" },
+        {
+          "type": "label",
+          "bind": "subtitle",
+          "class": "story-eyebrow",
+          "fontSize": 10,
+          "bold": true,
+          "visibleWhenNotEmpty": "subtitle"
+        },
         {
           "type": "row",
           "class": "story-portrait-row",
           "gap": 16,
           "align": "center",
           "children": [
-            { "type": "image", "bind": "portraitSrc", "class": "story-portrait", "widthBind": "portraitSize", "heightBind": "portraitSize", "objectFit": "contain", "visibleWhenNotEmpty": "portraitSrc" },
-            { "type": "label", "bind": "title", "class": "story-title", "fontSize": 20, "bold": true, "colorBind": "foregroundHex" }
-          ]
-        },
-        { "type": "richText", "bind": "body", "textRunsBind": "bodyRuns", "class": "story-body", "fontSize": 15, "colorBind": "foregroundHex" },
-        { "type": "progressBar", "bind": "progress01", "class": "story-progress", "visibleWhenNotEmpty": "progressPresent" },
-        { "type": "label", "bind": "footer", "class": "story-muted", "fontSize": 11, "colorBind": "mutedHex", "visibleWhenNotEmpty": "footer" }
-      ]
-    }
-  },
-  {
-    "id": "layout.narrative.choice-list",
-    "bindings": [
-      "title", "subtitle", "footer", "items", "foregroundHex", "mutedHex",
-      "itemClass", "shortcut", "label", "caption"
-    ],
-    "root": {
-      "type": "column",
-      "class": "story-choice-list story-card",
-      "gap": 10,
-      "children": [
-        { "type": "label", "bind": "subtitle", "class": "story-eyebrow", "fontSize": 11, "bold": true, "visibleWhenNotEmpty": "subtitle" },
-        { "type": "label", "bind": "title", "class": "story-title", "fontSize": 18, "bold": true, "colorBind": "foregroundHex", "visibleWhenNotEmpty": "title" },
-        {
-          "type": "repeater",
-          "bind": "items",
-          "gap": 8,
-          "children": [
             {
-              "type": "row",
-              "classBind": "itemClass",
-              "gap": 12,
-              "align": "start",
-              "children": [
-                { "type": "label", "bind": "shortcut", "class": "story-eyebrow", "fontSize": 13, "bold": true },
-                {
-                  "type": "column",
-                  "gap": 4,
-                  "children": [
-                    { "type": "label", "bind": "label", "class": "story-title", "fontSize": 14, "bold": true, "colorBind": "foregroundHex" },
-                    { "type": "label", "bind": "caption", "class": "story-muted", "fontSize": 11, "colorBind": "mutedHex", "visibleWhenNotEmpty": "caption" }
-                  ]
-                }
-              ]
+              "type": "image",
+              "bind": "portraitSrc",
+              "class": "story-portrait",
+              "widthBind": "portraitSize",
+              "heightBind": "portraitSize",
+              "objectFit": "contain",
+              "visibleWhenNotEmpty": "portraitSrc"
+            },
+            {
+              "type": "label",
+              "bind": "title",
+              "class": "story-title",
+              "fontSize": 20,
+              "bold": true,
+              "colorBind": "foregroundHex"
             }
           ]
         },
-        { "type": "label", "bind": "footer", "class": "story-muted", "fontSize": 11, "colorBind": "mutedHex", "visibleWhenNotEmpty": "footer" }
+        {
+          "type": "richText",
+          "bind": "body",
+          "textRunsBind": "bodyRuns",
+          "class": "story-body",
+          "fontSize": 15,
+          "colorBind": "foregroundHex"
+        },
+        {
+          "type": "progressBar",
+          "bind": "progress01",
+          "class": "story-progress",
+          "visibleWhenNotEmpty": "progressPresent"
+        },
+        {
+          "type": "label",
+          "bind": "footer",
+          "class": "story-muted",
+          "fontSize": 11,
+          "colorBind": "mutedHex",
+          "visibleWhenNotEmpty": "footer"
+        }
       ]
     }
   },
   {
     "id": "layout.narrative.notification-stack",
     "bindings": [
-      "items", "itemClass", "label", "value", "caption", "foregroundHex", "mutedHex"
+      "items",
+      "itemClass",
+      "label",
+      "value",
+      "caption",
+      "foregroundHex",
+      "mutedHex"
     ],
     "root": {
       "type": "repeater",
@@ -164,13 +288,33 @@
           "class": "story-notification story-card",
           "gap": 8,
           "children": [
-            { "type": "label", "bind": "label", "class": "story-eyebrow", "fontSize": 11, "bold": true },
+            {
+              "type": "label",
+              "bind": "label",
+              "class": "story-eyebrow",
+              "fontSize": 11,
+              "bold": true
+            },
             {
               "type": "column",
               "gap": 2,
               "children": [
-                { "type": "label", "bind": "value", "class": "story-title", "fontSize": 12, "bold": true, "colorBind": "foregroundHex" },
-                { "type": "label", "bind": "caption", "class": "story-muted", "fontSize": 11, "colorBind": "mutedHex", "visibleWhenNotEmpty": "caption" }
+                {
+                  "type": "label",
+                  "bind": "value",
+                  "class": "story-title",
+                  "fontSize": 12,
+                  "bold": true,
+                  "colorBind": "foregroundHex"
+                },
+                {
+                  "type": "label",
+                  "bind": "caption",
+                  "class": "story-muted",
+                  "fontSize": 11,
+                  "colorBind": "mutedHex",
+                  "visibleWhenNotEmpty": "caption"
+                }
               ]
             }
           ]
@@ -180,37 +324,82 @@
   },
   {
     "id": "layout.narrative.prompt-ribbon",
-    "bindings": [ "title", "body", "bodyRuns", "foregroundHex" ],
+    "bindings": [
+      "title",
+      "body",
+      "bodyRuns",
+      "foregroundHex"
+    ],
     "root": {
       "type": "row",
       "class": "story-prompt-ribbon",
       "gap": 10,
       "align": "center",
       "children": [
-        { "type": "label", "bind": "title", "class": "story-eyebrow", "fontSize": 11, "bold": true },
-        { "type": "richText", "bind": "body", "textRunsBind": "bodyRuns", "class": "story-body", "fontSize": 13, "colorBind": "foregroundHex" }
+        {
+          "type": "label",
+          "bind": "title",
+          "class": "story-eyebrow",
+          "fontSize": 11,
+          "bold": true
+        },
+        {
+          "type": "richText",
+          "bind": "body",
+          "textRunsBind": "bodyRuns",
+          "class": "story-body",
+          "fontSize": 13,
+          "colorBind": "foregroundHex"
+        }
       ]
     }
   },
   {
     "id": "layout.narrative.nameplate",
-    "bindings": [ "title", "subtitle", "foregroundHex" ],
+    "bindings": [
+      "title",
+      "subtitle",
+      "foregroundHex"
+    ],
     "root": {
       "type": "column",
       "class": "story-nameplate story-card",
       "gap": 2,
       "align": "center",
       "children": [
-        { "type": "label", "bind": "subtitle", "class": "story-eyebrow", "fontSize": 10, "bold": true, "visibleWhenNotEmpty": "subtitle" },
-        { "type": "label", "bind": "title", "class": "story-title", "fontSize": 16, "bold": true, "colorBind": "foregroundHex" }
+        {
+          "type": "label",
+          "bind": "subtitle",
+          "class": "story-eyebrow",
+          "fontSize": 10,
+          "bold": true,
+          "visibleWhenNotEmpty": "subtitle"
+        },
+        {
+          "type": "label",
+          "bind": "title",
+          "class": "story-title",
+          "fontSize": 16,
+          "bold": true,
+          "colorBind": "foregroundHex"
+        }
       ]
     }
   },
   {
     "id": "layout.narrative.standing-portrait",
     "bindings": [
-      "title", "subtitle", "body", "bodyRuns", "footer", "portraitSrc", "portraitSize",
-      "standingWidth", "standingCardWidth", "foregroundHex", "mutedHex"
+      "title",
+      "subtitle",
+      "body",
+      "bodyRuns",
+      "footer",
+      "portraitSrc",
+      "portraitSize",
+      "standingWidth",
+      "standingCardWidth",
+      "foregroundHex",
+      "mutedHex"
     ],
     "root": {
       "type": "row",
@@ -218,17 +407,52 @@
       "gap": 28,
       "align": "end",
       "children": [
-        { "type": "image", "bind": "portraitSrc", "class": "story-standing-portrait", "widthBind": "standingWidth", "heightBind": "portraitSize", "objectFit": "contain" },
+        {
+          "type": "image",
+          "bind": "portraitSrc",
+          "class": "story-standing-portrait",
+          "widthBind": "standingWidth",
+          "heightBind": "portraitSize",
+          "objectFit": "contain"
+        },
         {
           "type": "column",
           "class": "story-standing-dialogue story-card",
           "widthBind": "standingCardWidth",
           "gap": 12,
           "children": [
-            { "type": "label", "bind": "subtitle", "class": "story-eyebrow", "fontSize": 11, "bold": true, "visibleWhenNotEmpty": "subtitle" },
-            { "type": "label", "bind": "title", "class": "story-title", "fontSize": 24, "bold": true, "colorBind": "foregroundHex" },
-            { "type": "richText", "bind": "body", "textRunsBind": "bodyRuns", "class": "story-body", "fontSize": 16, "colorBind": "foregroundHex" },
-            { "type": "label", "bind": "footer", "class": "story-muted", "fontSize": 11, "colorBind": "mutedHex", "visibleWhenNotEmpty": "footer" }
+            {
+              "type": "label",
+              "bind": "subtitle",
+              "class": "story-eyebrow",
+              "fontSize": 11,
+              "bold": true,
+              "visibleWhenNotEmpty": "subtitle"
+            },
+            {
+              "type": "label",
+              "bind": "title",
+              "class": "story-title",
+              "fontSize": 24,
+              "bold": true,
+              "colorBind": "foregroundHex"
+            },
+            {
+              "type": "richText",
+              "bind": "body",
+              "textRunsBind": "bodyRuns",
+              "class": "story-body",
+              "fontSize": 16,
+              "colorBind": "foregroundHex"
+            },
+            {
+              "type": "label",
+              "bind": "footer",
+              "class": "story-muted",
+              "fontSize": 11,
+              "colorBind": "mutedHex",
+              "visibleWhenNotEmpty": "footer"
+            }
           ]
         }
       ]

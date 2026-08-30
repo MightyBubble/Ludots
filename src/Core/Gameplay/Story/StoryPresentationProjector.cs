@@ -240,7 +240,6 @@ namespace Ludots.Core.Gameplay.Story
                 case StoryPresentationSurfaceKinds.DialogueBubble:
                 case StoryPresentationSurfaceKinds.StandingPortrait:
                 case StoryPresentationSurfaceKinds.SubtitleBubble:
-                case StoryPresentationSurfaceKinds.ChoiceList:
                 case StoryPresentationSurfaceKinds.TransmissionOverlay:
                     return;
                 default:

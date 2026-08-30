@@ -472,7 +472,7 @@ namespace NarrativeShowcaseMod.Runtime
             NarrativeFrontendSurfaceModel surface)
         {
             // Geometry and colors are profile-owned (single writer, Core projector).
-            // Chrome contributes skin text only: eyebrow / footer / choice title.
+            // Chrome contributes skin text only: eyebrow / footer.
             NarrativeShowcaseSurfaceConfig? config = ResolveChromeConfig(surface.Kind);
             if (config == null)
             {
@@ -482,10 +482,7 @@ namespace NarrativeShowcaseMod.Runtime
                 };
             }
 
-            string title = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList &&
-                           !string.IsNullOrWhiteSpace(config.Title)
-                ? Tr(engine, config.Title)
-                : surface.Title;
+            string title = surface.Title;
 
             string footer;
             if (surface.Kind is NarrativeFrontendSurfaceKind.SubtitleBubble
@@ -517,7 +514,7 @@ namespace NarrativeShowcaseMod.Runtime
         }
 
         /// <summary>
-        /// Ornate nine-slice frames belong on dialogue / choice surfaces only.
+        /// Ornate nine-slice frames belong on dialogue surfaces only.
         /// PromptRibbon and chrome panels already have theme.css skins; wrapping them
         /// in panel_frame stacks a second dialog-looking bar behind OverlayDialogue.
         /// </summary>
@@ -539,7 +536,6 @@ namespace NarrativeShowcaseMod.Runtime
                 NarrativeFrontendSurfaceKind.DialogueBubble => _frontendConfig.DialogueBubble,
                 NarrativeFrontendSurfaceKind.StandingPortrait => _frontendConfig.StandingPortrait,
                 NarrativeFrontendSurfaceKind.SubtitleBubble => _frontendConfig.SubtitleBubble,
-                NarrativeFrontendSurfaceKind.ChoiceList => _frontendConfig.ChoiceList,
                 NarrativeFrontendSurfaceKind.TransmissionOverlay => _frontendConfig.TransmissionOverlay,
                 _ => null
             };

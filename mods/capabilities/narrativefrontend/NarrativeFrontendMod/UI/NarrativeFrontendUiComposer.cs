@@ -204,17 +204,10 @@ internal static class NarrativeFrontendUiComposer
             return builder;
         }
 
-        bool choiceFrame = surface.Kind == NarrativeFrontendSurfaceKind.ChoiceList;
-        string frameClass = choiceFrame
-            ? "story-choice-frame"
-            : "story-frame";
-        string bodyFrameClass = choiceFrame
-            ? "story-choice-framed-body"
-            : "story-panel-framed-body";
         return Ui.Panel(
-                builder.Classes("story-framed-body", bodyFrameClass),
+                builder.Classes("story-framed-body", "story-panel-framed-body"),
                 Ui.Image(surface.FrameImageSrc)
-                    .Class(frameClass)
+                    .Class("story-frame")
                     .Absolute(0f, 0f)
                     .WidthPercent(100f)
                     .HeightPercent(100f)
@@ -301,7 +294,6 @@ internal static class NarrativeFrontendUiComposer
             {
                 scopes[i] = new NarrativeItemBindingScope(
                     items[i],
-                    _surface.Kind,
                     _surface.ForegroundHex,
                     _surface.MutedHex);
             }
@@ -330,18 +322,15 @@ internal static class NarrativeFrontendUiComposer
     private sealed class NarrativeItemBindingScope : IPanelLayoutBindingScope
     {
         private readonly NarrativeFrontendSurfaceItem _item;
-        private readonly NarrativeFrontendSurfaceKind _surfaceKind;
         private readonly string _foregroundHex;
         private readonly string _mutedHex;
 
         public NarrativeItemBindingScope(
             NarrativeFrontendSurfaceItem item,
-            NarrativeFrontendSurfaceKind surfaceKind,
             string foregroundHex,
             string mutedHex)
         {
             _item = item;
-            _surfaceKind = surfaceKind;
             _foregroundHex = foregroundHex;
             _mutedHex = mutedHex;
         }
@@ -354,9 +343,7 @@ internal static class NarrativeFrontendUiComposer
                 "value" => _item.Value,
                 "caption" => _item.Caption,
                 "shortcut" => _item.Shortcut,
-                "itemClass" => _surfaceKind == NarrativeFrontendSurfaceKind.ChoiceList
-                    ? (_item.Active ? "story-choice-item-active" : "story-choice-item")
-                    : (_item.Active ? "story-item-row-active" : "story-item-row"),
+                "itemClass" => _item.Active ? "story-item-row-active" : "story-item-row",
                 "itemColor" => _item.AccentHex,
                 "foregroundHex" => _foregroundHex,
                 "mutedHex" => _mutedHex,
