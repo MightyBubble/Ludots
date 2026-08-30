@@ -111,6 +111,9 @@ namespace Ludots.Tests.GAS.Production
             AssertCastIdentityVisible(uiRoot);
             Assert.That(UiContains(uiRoot, "米蕾勒") || UiContains(uiRoot, "灯火"), Is.True);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "map_loaded");
+            AssertSurfacesStayInsideViewport(uiRoot, 1280f, 720f);
+            uiRoot.Resize(1920f, 1080f);
+            uiRoot.Scene?.Layout(1920f, 1080f);
             timeline.Add("[T+001] Loaded the narrative showcase hub; HUD mounted and TaskRuntime entered the briefing beat.");
 
             SelectNamedEntity(engine, backend, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName, frameTimesMs);
@@ -803,6 +806,23 @@ namespace Ludots.Tests.GAS.Production
                         Is.All.EqualTo((byte)0),
                         $"{themeId}/{imageName} must have transparent outer corners.");
                 }
+            }
+        }
+
+        private static void AssertSurfacesStayInsideViewport(UIRoot uiRoot, float width, float height)
+        {
+            uiRoot.Resize(width, height);
+            uiRoot.Scene?.Layout(width, height);
+            var surfaces = new List<UiNode>();
+            CollectUiNodesByClass(uiRoot.Scene?.Root, "story-surface", surfaces);
+            Assert.That(surfaces, Is.Not.Empty);
+            for (int i = 0; i < surfaces.Count; i++)
+            {
+                UiRect rect = surfaces[i].LayoutRect;
+                Assert.That(rect.X, Is.GreaterThanOrEqualTo(-0.5f), $"Surface {i} starts outside viewport.");
+                Assert.That(rect.Y, Is.GreaterThanOrEqualTo(-0.5f), $"Surface {i} starts outside viewport.");
+                Assert.That(rect.Right, Is.LessThanOrEqualTo(width + 0.5f), $"Surface {i} exceeds viewport width.");
+                Assert.That(rect.Bottom, Is.LessThanOrEqualTo(height + 0.5f), $"Surface {i} exceeds viewport height.");
             }
         }
 
