@@ -410,3 +410,63 @@ Behavior remains in the existing TriggerGraph node shape (`attribute` symbol plu
 ### 8. Next variant test
 
 The next variant should modify graph wiring or attribute symbol data, not add another mutation path or enum.
+
+---
+
+## GAS Composition Gate — Panel Showcase Asset-only Seeds
+
+- **Task / Issue**: Convert the panel layout, effect-list, and typed-collection showcases from C# seed systems to authored Graph/config composition.
+- **Date**: 2026-08-30
+- **Agent / Author**: GPT-5.6 Sol
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: **A**
+
+结论: **PASS**
+
+一句话理由: 两个效果面板复用 `onSpawnEffect`、Effect graph 与 `ApplyEffectTemplate`；集合袋优先用实体模板、既有 `OfferActivity` 与配置目录。现有 TriggerGraph 没有创建 Task 实例的正式入口，因此只补一个单责 `OfferTask` 原子 op，不新增 profile、preset 开关、并行 loader 或第二套运行时。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer | 实现载体 |
+|-----------|-------|----------|
+| 地图物化后触发种子 | 2 | `EntityTemplate.onSpawnEffect` |
+| 创建效果实例与叠层 | 2 | Effect graph + `ApplyEffectTemplate` |
+| 技能、标签、物品实例初值 | 2 | 既有实体模板 `components` |
+| 活动实例 | 2 | MapLoaded TriggerGraph + `OfferActivity` |
+| 任务实例 | 0 + 2 | 新 `OfferTask` 原子 op + MapLoaded TriggerGraph |
+| 修行进度 | 2 | `CompleteProgression` on-spawn effect |
+| 面板创建与显示 | 2 | 既有 `CreatePanel` / `ShowPanel` TriggerGraph |
+
+### 3. Reuse list
+
+- Handlers: `ApplyEffectTemplate`, `OfferActivity`, `CompleteProgression`, `CreatePanel`, `ShowPanel`.
+- Queues / Systems: 既有 EffectRequest / EffectProcessing、TaskRuntimeService、ActivityRuntimeService、MapLoaded TriggerGraph。
+- Resolvers / Registries: EffectTemplateIdRegistry、TaskDefinitionRegistry、ActivityDefinitionRegistry、ItemDefinitionRegistry、OwnershipResolver。
+- Existing presets / graphs: Buff、CompleteProgression、实体 `onSpawnEffect`、面板 Query/Open graphs。
+
+### 4. New Layer 0 ops
+
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| `OfferTask` | 让指定 scope host 通过 `TaskRuntimeService.OfferOrStart` 创建/复用一个任务实例。 | `task.create` 只在 provider effect bridge 内；TriggerGraph 无 provider-effect 调用入口，也不能调用 Effect graph。 |
+
+### 5. Transaction boundary
+
+Buff 创建继续由既有 GAS Effect 事务承担。`OfferTask` 与 `OfferActivity` 分别调用各自 runtime 的原子 admission API；Showcase seed 不新建跨域 rollback 壳。
+
+### 6. Config SSOT
+
+行为配置落在现有 `Entities/templates.json`、`GAS/effects.json`、`GAS/graphs.json`、`Items/*.json`、`Tasks/tasks.json`、`Activities/activities.json` 与地图 TriggerGraph 挂载。是否新增 JSON schema: **NO** — 只给现有实体组件作者面补已存在的 `ItemInstanceCm` 数据，并给 Graph 节点增加与 `OfferActivity.activityId` 对称的 `taskId` 字段。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加默认 fallback；任一 id、scope 或实例创建失败均明确报错
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**。
