@@ -5,7 +5,9 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Mathematics;
@@ -30,8 +32,9 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             MassNavigationSimulationRuntime runtime = CreateRuntime(world, out Entity routed, out _);
             var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
-            var pathService = CreateNavMeshOnlyPathService(store);
-            var sink = new MassNavigationRouteExecutionSink(pathService, store, CreatePathingConfig());
+            PathingConfig pathingConfig = CreateNavMeshPathingConfig();
+            var pathService = CreateNavMeshOnlyPathService(store, pathingConfig);
+            var sink = new MassNavigationRouteExecutionSink(pathService, store, pathingConfig);
 
             sink.BeginSync();
             MassNavigationRouteSinkResult track = sink.TrackRouteTarget(
@@ -54,6 +57,98 @@ namespace Ludots.Tests.Presentation
             Assert.That(applied.WaypointCount, Is.GreaterThan(0));
             Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float targetX, out float targetY), Is.True,
                 "A valid world target order must commit a navigation target to the flow solver.");
+        }
+
+        [Test]
+        public void NavMeshPathServiceAdapter_KeepsStrictExplicitNavMeshContract()
+        {
+            var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            var adapter = new NavMeshPathServiceAdapter(CreateFlatNavQuery(), store);
+
+            var autoRequest = new PathRequest(
+                requestId: 1403,
+                actor: default,
+                domain: PathDomain.Auto,
+                start: PathEndpoint.FromWorldCm(1_000, 1_000),
+                goal: PathEndpoint.FromWorldCm(2_000, 2_000),
+                budget: new PathBudget(maxExpanded: 0, maxPoints: 8));
+            Assert.That(adapter.TrySolve(in autoRequest, out PathResult autoResult), Is.False,
+                "The adapter is the explicit NavMesh contract only; PathDomain.Auto must be rejected, never silently routed through the first profile.");
+            Assert.That(autoResult.Status, Is.EqualTo(PathStatus.InvalidRequest));
+            Assert.That(autoResult.ErrorCode, Is.EqualTo(2));
+
+            var navMeshRequest = new PathRequest(
+                requestId: 1403,
+                actor: default,
+                domain: PathDomain.NavMesh,
+                start: PathEndpoint.FromWorldCm(1_000, 1_000),
+                goal: PathEndpoint.FromWorldCm(2_000, 2_000),
+                budget: new PathBudget(maxExpanded: 0, maxPoints: 8));
+            Assert.That(adapter.TrySolve(in navMeshRequest, out PathResult navMeshResult), Is.True);
+            Assert.That(navMeshResult.Status, Is.EqualTo(PathStatus.Found));
+            Assert.That(navMeshResult.ResolvedDomain, Is.EqualTo(PathDomain.NavMesh));
+        }
+
+        [Test]
+        public void NavMeshOnlyAutoPathService_ResolvesPerRequestAgentProfile()
+        {
+            const int tileSizeCm = 250 * 64;
+            var agentProfiles = new AgentProfileRegistry(new[]
+            {
+                new AgentProfileConfig { Id = "light", RadiusCm = 20, HeightCm = 180, ClearanceCm = 40, Mass = 1, Layer = 0 },
+                new AgentProfileConfig { Id = "heavy", RadiusCm = 40, HeightCm = 220, ClearanceCm = 50, Mass = 4, Layer = 1 },
+            });
+            var navProfiles = new NavMeshProfileRegistry(
+                new NavMeshBakeConfig
+                {
+                    Profiles =
+                    {
+                        new NavMeshAgentProfileConfig { Id = "light", MaxClimbCm = 40, MaxSlopeDeg = 45 },
+                        new NavMeshAgentProfileConfig { Id = "heavy", MaxClimbCm = 40, MaxSlopeDeg = 45 },
+                    },
+                },
+                agentProfiles);
+            // Only the light profile ships a baked store (layer 0, profile 0); the heavy
+            // profile's (layer 1, profile 1) store is absent on purpose.
+            var navRegistry = new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore> { [new NavQueryServiceKey(0, 0)] = CreateFlatTileStore() },
+                tileSizeCm,
+                tileSizeCm);
+            var pathingConfig = new PathingConfig
+            {
+                AgentTypes =
+                {
+                    new PathingAgentTypeConfig { Id = "light.agent", ProfileId = "light", Selection = new PathingSelectionConfig { Mode = PathSelectionMode.PreferMesh } },
+                    new PathingAgentTypeConfig { Id = "heavy.agent", ProfileId = "heavy", Selection = new PathingSelectionConfig { Mode = PathSelectionMode.PreferMesh } },
+                },
+            };
+            var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            var service = new AutoPathService(navRegistry, navProfiles, agentProfiles, store, pathingConfig);
+
+            var lightRequest = new PathRequest(
+                requestId: 1404,
+                actor: default,
+                domain: PathDomain.Auto,
+                agentTypeId: "light.agent",
+                start: PathEndpoint.FromWorldCm(1_000, 1_000),
+                goal: PathEndpoint.FromWorldCm(2_000, 2_000),
+                budget: new PathBudget(maxExpanded: 0, maxPoints: 8));
+            Assert.That(service.TrySolve(in lightRequest, out PathResult lightResult), Is.True);
+            Assert.That(lightResult.Status, Is.EqualTo(PathStatus.Found));
+            Assert.That(lightResult.ResolvedDomain, Is.EqualTo(PathDomain.NavMesh));
+
+            var heavyRequest = new PathRequest(
+                requestId: 1405,
+                actor: default,
+                domain: PathDomain.Auto,
+                agentTypeId: "heavy.agent",
+                start: PathEndpoint.FromWorldCm(1_000, 1_000),
+                goal: PathEndpoint.FromWorldCm(2_000, 2_000),
+                budget: new PathBudget(maxExpanded: 0, maxPoints: 8));
+            Assert.That(service.TrySolve(in heavyRequest, out PathResult heavyResult), Is.True);
+            Assert.That(heavyResult.Status, Is.EqualTo(PathStatus.NotReady),
+                "The heavy agent's profile has no baked store; its request must not silently fall back to the light profile.");
+            Assert.That(heavyResult.ErrorCode, Is.EqualTo(21));
         }
 
         [Test]
@@ -456,11 +551,10 @@ namespace Ludots.Tests.Presentation
             return runtime;
         }
 
-        private static NavMeshPathServiceAdapter CreateNavMeshOnlyPathService(PathStore store)
+        private static NavTileStore CreateFlatTileStore()
         {
             const int cellSizeCm = 250;
             const int chunkSizeCells = 64;
-            const int tileSizeCm = cellSizeCm * chunkSizeCells;
             NavTile tile = DefaultGridNavTileFactory.CreateFlatTile(
                 chunkX: 0,
                 chunkY: 0,
@@ -475,13 +569,64 @@ namespace Ludots.Tests.Presentation
                 blobs[tile.TileId] = ms.ToArray();
             }
 
-            var tileStore = new NavTileStore(id => new MemoryStream(blobs[id], writable: false));
+            return new NavTileStore(id => new MemoryStream(blobs[id], writable: false));
+        }
+
+        private static NavQueryService CreateFlatNavQuery()
+        {
+            const int tileSizeCm = 250 * 64;
             var registry = new NavQueryServiceRegistry(
-                new Dictionary<NavQueryServiceKey, NavTileStore> { [new NavQueryServiceKey(0, 0)] = tileStore },
+                new Dictionary<NavQueryServiceKey, NavTileStore> { [new NavQueryServiceKey(0, 0)] = CreateFlatTileStore() },
                 tileSizeCm,
                 tileSizeCm);
             Assert.That(registry.TryCreateQuery(layer: 0, profile: 0, areaCosts: null!, out NavQueryService query), Is.True);
-            return new NavMeshPathServiceAdapter(query, store);
+            return query;
+        }
+
+        private static PathingConfig CreateNavMeshPathingConfig()
+        {
+            return new PathingConfig
+            {
+                AgentTypes =
+                {
+                    new PathingAgentTypeConfig
+                    {
+                        Id = "routed.agent",
+                        ProfileId = "routed",
+                        Selection = new PathingSelectionConfig { Mode = PathSelectionMode.PreferMesh },
+                    },
+                },
+            };
+        }
+
+        private static AutoPathService CreateNavMeshOnlyPathService(PathStore store, PathingConfig pathingConfig)
+        {
+            var agentProfiles = new AgentProfileRegistry(new[]
+            {
+                new AgentProfileConfig
+                {
+                    Id = "routed",
+                    RadiusCm = 30,
+                    HeightCm = 180,
+                    ClearanceCm = 40,
+                    Mass = 1,
+                    Layer = 0,
+                },
+            });
+            var navProfiles = new NavMeshProfileRegistry(
+                new NavMeshBakeConfig
+                {
+                    Profiles =
+                    {
+                        new NavMeshAgentProfileConfig { Id = "routed", MaxClimbCm = 40, MaxSlopeDeg = 45 },
+                    },
+                },
+                agentProfiles);
+            var navRegistry = new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore> { [new NavQueryServiceKey(0, 0)] = CreateFlatTileStore() },
+                250 * 64,
+                250 * 64);
+            return new AutoPathService(navRegistry, navProfiles, agentProfiles, store, pathingConfig);
         }
 
         private static PathingConfig CreatePathingConfig()

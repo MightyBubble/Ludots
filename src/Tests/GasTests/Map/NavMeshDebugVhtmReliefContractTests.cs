@@ -5,6 +5,8 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
+using Ludots.Core.Navigation.Pathing;
+using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Scripting;
 using System.Linq;
@@ -161,6 +163,34 @@ namespace Ludots.Tests.Gas
 
             Assert.That(farAfter.Checksum, Is.EqualTo(farBefore.Checksum), "远离障碍的瓦片不应被重烤");
             Assert.That(farAfter.TileVersion, Is.EqualTo(farBefore.TileVersion), "远离障碍的瓦片版本不应变化");
+        }
+
+        [Test]
+        public void LoadMap_NavMeshOnlyMap_BootstrapsAutoPathService_AndSolvesAutoWorldTarget()
+        {
+            using var engine = CreateEngine();
+            engine.LoadMap("navmesh_debug_grid");
+
+            IPathService pathService = engine.GetService(CoreServiceKeys.PathService)
+                ?? throw new InvalidOperationException("Pathing bootstrap must install a path service for the navmesh-only map.");
+            Assert.That(pathService, Is.TypeOf<AutoPathService>(),
+                "A navmesh-only map must route PathDomain.Auto through AutoPathService's per-request agent profile resolution, not a single first-profile NavMeshPathServiceAdapter.");
+            PathingConfig pathingConfig = engine.GetService(CoreServiceKeys.PathingConfig)
+                ?? throw new InvalidOperationException("Pathing bootstrap must register PathingConfig.");
+            Assert.That(pathingConfig.AgentTypes, Is.Not.Empty);
+
+            var request = new PathRequest(
+                requestId: 1402,
+                actor: default,
+                domain: PathDomain.Auto,
+                agentTypeId: pathingConfig.AgentTypes[0].Id,
+                start: PathEndpoint.FromWorldCm(1_600, 1_600),
+                goal: PathEndpoint.FromWorldCm(3_200, 3_200),
+                budget: new PathBudget(maxExpanded: 0, maxPoints: 16));
+            Assert.That(pathService.TrySolve(in request, out PathResult result), Is.True);
+            Assert.That(result.Status, Is.EqualTo(PathStatus.Found),
+                $"Auto world-target must resolve agent '{request.AgentTypeId}' to its baked navmesh profile: status={result.Status}, errorCode={result.ErrorCode}, domain={result.ResolvedDomain}.");
+            Assert.That(result.ResolvedDomain, Is.EqualTo(PathDomain.NavMesh));
         }
 
         private static void AssertReliefProjectedIntoLogicTerrain(GameEngine engine)
