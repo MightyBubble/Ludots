@@ -203,6 +203,11 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "GAS/graph_codegen_bake.json",
+    "Policy": "DeepObject",
+    "AllowEmpty": true
+  },
+  {
     "Path": "GAS/order_types.json",
     "Policy": "DeepObject"
   },

@@ -1,7 +1,12 @@
 using System;
+using System.IO;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Scripting;
 using Ludots.Graph.Codegen;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -94,7 +99,42 @@ namespace Ludots.Tests.Gas.Graph
         {
             var ex = Throws<InvalidOperationException>(() =>
                 GraphCodegenLoadModeParser.Parse("magic"));
-            That(ex!.Message, Does.Contain("graphExecutionBackend"));
+            That(ex!.Message, Does.Contain("GAS/graph_codegen_bake.json:mode"));
+        }
+        [Test]
+        public void BakeConfigLoader_ReadsModeFromCatalogDeepObject()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_GraphCodegenBake_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(root, "GAS"));
+            try
+            {
+                File.WriteAllText(
+                    Path.Combine(root, "config_catalog.json"),
+                    """[{"Path":"GAS/graph_codegen_bake.json","Policy":"DeepObject","AllowEmpty":true}]""");
+                File.WriteAllText(
+                    Path.Combine(root, "GAS", "graph_codegen_bake.json"),
+                    """{"mode":"codegen"}""");
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var modLoader = new ModLoader(
+                    vfs,
+                    new FunctionRegistry(),
+                    new TriggerManager());
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
+                var bake = new GraphCodegenBakeConfigLoader(pipeline).Load(catalog);
+
+                That(bake.Mode, Is.EqualTo("codegen"));
+                That(bake.ParsedMode, Is.EqualTo(GraphCodegenLoadMode.Codegen));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, recursive: true);
+                }
+            }
         }
     }
 }

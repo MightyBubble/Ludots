@@ -30,7 +30,9 @@ namespace Ludots.Core.GraphRuntime
 
     public static class GraphCodegenLoadModeParser
     {
-        public static GraphCodegenLoadMode Parse(string? raw)
+        public static GraphCodegenLoadMode Parse(
+            string? raw,
+            string sourcePath = "GAS/graph_codegen_bake.json:mode")
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
@@ -54,7 +56,7 @@ namespace Ludots.Core.GraphRuntime
             }
 
             throw new InvalidOperationException(
-                $"Unknown graphExecutionBackend '{raw}'. Expected interpret | codegen | codegen-prefer.");
+                $"Unknown {sourcePath} '{raw}'. Expected interpret | codegen | codegen-prefer.");
         }
     }
 }
