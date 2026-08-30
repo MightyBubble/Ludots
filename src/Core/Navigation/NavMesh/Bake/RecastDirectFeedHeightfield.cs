@@ -10,36 +10,15 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
     /// <summary>
     /// Terrain→Recast solid heightfield column feed: walks LogicTerrainField cell quads over
     /// the tile footprint plus the Recast border margin and writes floor spans per voxel column,
-    /// skipping the per-cell triangle re-meshing stage. Emission mirrors NavTileBuilder's
-    /// AddFace/AppendWalkableTri rules per containing base triangle: water above ground skips,
-    /// ramp triangles emit their full height range, single-level triangles emit one floor,
-    /// two-level triangles split at the lone-corner midpoint into high and low floors,
-    /// three-level triangles are dropped, and blocked cells do not affect emission (they only
-    /// feed the clearance/portal mask downstream). Obstacles are tested against the real
-    /// triangle corner coordinates. Area id 63 is the Recast walkable marker in this feed and
-    /// is rejected as an authored id.
+    /// skipping the per-cell triangle re-meshing stage. There is no hand-mirrored rule set here:
+    /// corner construction goes through NavTileBuilder.GetVertex, the walkable decision through
+    /// NavTileBuilder.ClassifyTriangleEmission, and the two-level cliff boundary through
+    /// NavTileBuilder.TryGetSplit (hex cliff-straighten inherited). Obstacles are tested against
+    /// the real triangle corner coordinates. Area id 63 is the Recast walkable marker in this
+    /// feed and is rejected as an authored id.
     /// </summary>
     internal static class RecastDirectFeedHeightfield
     {
-        private readonly struct Corner
-        {
-            public readonly byte Level;
-            public readonly byte Water;
-            public readonly bool Ramp;
-            public readonly byte AreaId;
-
-            public Corner(byte level, byte water, bool ramp, byte areaId)
-            {
-                Level = level;
-                Water = water;
-                Ramp = ramp;
-                AreaId = areaId;
-            }
-
-            public float GroundMeters(float heightScale) => Level * heightScale;
-            public float WaterMeters(float heightScale) => Water * heightScale;
-        }
-
         public static RcHeightfield? BuildSolidHeightfield(
             LogicTerrainField terrain,
             int chunkX,
@@ -115,6 +94,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int mergeThreshold = rcCfg.WalkableClimb;
             bool hasObstacles = obstacles?.Obstacles is { Count: > 0 };
 
+            terrain.GetWorldPositionMeters(0, 0, out float originXm, out float originZm);
+
             for (int r = startR; r < endR; r++)
             {
                 for (int c = startC; c < endC; c++)
@@ -132,14 +113,14 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         continue;
                     }
 
-                    Corner v00 = GetCorner(terrain, mapWidth, mapHeight, c, r);
-                    Corner v10 = GetCorner(terrain, mapWidth, mapHeight, c + 1, r);
-                    Corner v01 = GetCorner(terrain, mapWidth, mapHeight, c, r + 1);
-                    Corner v11 = GetCorner(terrain, mapWidth, mapHeight, c + 1, r + 1);
+                    NavTileBuilder.Vtx v00 = NavTileBuilder.GetVertex(terrain, mapWidth, mapHeight, c, r, originXm, originZm, heightScale);
+                    NavTileBuilder.Vtx v10 = NavTileBuilder.GetVertex(terrain, mapWidth, mapHeight, c + 1, r, originXm, originZm, heightScale);
+                    NavTileBuilder.Vtx v01 = NavTileBuilder.GetVertex(terrain, mapWidth, mapHeight, c, r + 1, originXm, originZm, heightScale);
+                    NavTileBuilder.Vtx v11 = NavTileBuilder.GetVertex(terrain, mapWidth, mapHeight, c + 1, r + 1, originXm, originZm, heightScale);
 
                     bool oddRow = isHex && (r & 1) == 1;
-                    Corner ta = v00, tb = v10, tc = v01;
-                    Corner ua = v10, ub = v11, uc = v01;
+                    NavTileBuilder.Vtx ta = v00, tb = v10, tc = v01;
+                    NavTileBuilder.Vtx ua = v10, ub = v11, uc = v01;
                     float tax = ax, taz = az, tbx = bx, tbz = bz, tcx = dx, tcz = dz;
                     float uax = bx, uaz = bz, ubx = ex, ubz = ez, ucx = dx, ucz = dz;
                     if (oddRow)
@@ -149,6 +130,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         tcx = ex; tcz = ez;
                         uax = ax; uaz = az; ucx = dx; ucz = dz;
                     }
+
+                    NavTileBuilder.NavWalkableEmission firstEmission = NavTileBuilder.ClassifyTriangleEmission(ta, tb, tc, legacyConfig);
+                    NavTileBuilder.NavWalkableEmission secondEmission = NavTileBuilder.ClassifyTriangleEmission(ua, ub, uc, legacyConfig);
+                    TwoLevelBoundary? firstBoundary = BuildSplitBoundary(terrain, mapWidth, mapHeight, originXm, originZm, heightScale, ta, tb, tc, firstEmission);
+                    TwoLevelBoundary? secondBoundary = BuildSplitBoundary(terrain, mapWidth, mapHeight, originXm, originZm, heightScale, ua, ub, uc, secondEmission);
 
                     bool firstBlockedByObstacle = false, secondBlockedByObstacle = false;
                     if (hasObstacles)
@@ -193,11 +179,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
                             if (first)
                             {
-                                EmitTriangleColumn(solid, x, z, wx, wz, ta, tb, tc, tax, taz, tbx, tbz, tcx, tcz, heightScale, bminY, ch, mergeThreshold);
+                                EmitTriangleColumn(solid, x, z, wx, wz, firstEmission, firstBoundary, tax, taz, heightScale, bminY, ch, mergeThreshold);
                             }
                             else
                             {
-                                EmitTriangleColumn(solid, x, z, wx, wz, ua, ub, uc, uax, uaz, ubx, ubz, ucx, ucz, heightScale, bminY, ch, mergeThreshold);
+                                EmitTriangleColumn(solid, x, z, wx, wz, secondEmission, secondBoundary, uax, uaz, heightScale, bminY, ch, mergeThreshold);
                             }
                         }
                     }
@@ -207,71 +193,103 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return solid;
         }
 
-        /// <summary>Mirrors AddFace/AppendWalkableTri per column: water skips, ramps emit the
-        /// full height range, one level emits one floor, two levels split at the lone-corner
-        /// midpoint into high/low floors, three distinct levels drop.</summary>
+        /// <summary>Two-level cliff boundary: the segment joining the two lone-to-pair split
+        /// midpoints (HighExt ends from NavTileBuilder.TryGetSplit, hex cliff-straighten
+        /// inherited); the lone corner's side of it takes LoneLevel, the other PairLevel.</summary>
+        private readonly struct TwoLevelBoundary
+        {
+            public float MidAx { get; init; }
+            public float MidAz { get; init; }
+            public float MidBx { get; init; }
+            public float MidBz { get; init; }
+            public float LoneX { get; init; }
+            public float LoneZ { get; init; }
+        }
+
+        private static TwoLevelBoundary? BuildSplitBoundary(
+            LogicTerrainField terrain,
+            int mapWidth,
+            int mapHeight,
+            float originXm,
+            float originZm,
+            float heightScale,
+            in NavTileBuilder.Vtx a,
+            in NavTileBuilder.Vtx b,
+            in NavTileBuilder.Vtx c,
+            NavTileBuilder.NavWalkableEmission emission)
+        {
+            if (emission.Kind != NavTileBuilder.NavWalkableEmissionKind.TwoLevelSplit)
+            {
+                return null;
+            }
+
+            NavTileBuilder.Vtx lone = emission.LoneIndex == 0 ? a : emission.LoneIndex == 1 ? b : c;
+            NavTileBuilder.Vtx p1 = emission.LoneIndex == 0 ? b : a;
+            NavTileBuilder.Vtx p2 = emission.LoneIndex == 2 ? b : c;
+            bool loneIsHigh = lone.H > p1.H;
+            bool okA = loneIsHigh
+                ? NavTileBuilder.TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, heightScale, lone, p1, out var s1)
+                : NavTileBuilder.TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, heightScale, p1, lone, out s1);
+            bool okB = loneIsHigh
+                ? NavTileBuilder.TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, heightScale, lone, p2, out var s2)
+                : NavTileBuilder.TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, heightScale, p2, lone, out s2);
+            if (!okA || !okB)
+            {
+                return null;
+            }
+
+            return new TwoLevelBoundary
+            {
+                MidAx = s1.HighExt.X,
+                MidAz = s1.HighExt.Z,
+                MidBx = s2.HighExt.X,
+                MidBz = s2.HighExt.Z,
+                LoneX = lone.Pos.X,
+                LoneZ = lone.Pos.Z
+            };
+        }
+
+        /// <summary>Per-column emission for a pre-classified base triangle. Flat floors emit one
+        /// level, ramps their full range, two-level triangles test the shared cliff boundary;
+        /// dropped triangles emit nothing.</summary>
         private static void EmitTriangleColumn(
             RcHeightfield solid,
             int x,
             int z,
             float wx,
             float wz,
-            in Corner a,
-            in Corner b,
-            in Corner c,
-            float ax, float az,
-            float bx, float bz,
-            float cx, float cz,
+            in NavTileBuilder.NavWalkableEmission emission,
+            in TwoLevelBoundary? boundary,
+            float loneWorldX,
+            float loneWorldZ,
             float heightScale,
             float bminY,
             float ch,
             int mergeThreshold)
         {
-            if (a.WaterMeters(heightScale) > a.GroundMeters(heightScale) ||
-                b.WaterMeters(heightScale) > b.GroundMeters(heightScale) ||
-                c.WaterMeters(heightScale) > c.GroundMeters(heightScale))
+            switch (emission.Kind)
             {
-                return;
+                case NavTileBuilder.NavWalkableEmissionKind.FlatFloor:
+                    EmitLevelRange(solid, x, z, emission.LowLevel * heightScale, emission.LowLevel * heightScale, bminY, ch, mergeThreshold, emission.AreaId);
+                    break;
+                case NavTileBuilder.NavWalkableEmissionKind.RampRange:
+                    EmitLevelRange(solid, x, z, emission.LowLevel * heightScale, emission.HighLevel * heightScale, bminY, ch, mergeThreshold, emission.AreaId);
+                    break;
+                case NavTileBuilder.NavWalkableEmissionKind.TwoLevelSplit:
+                    if (boundary is not TwoLevelBoundary b)
+                    {
+                        return;
+                    }
+
+                    float nx = b.MidBx - b.MidAx;
+                    float nz = b.MidBz - b.MidAz;
+                    float sideRef = (nx * (b.LoneZ - b.MidAz)) - (nz * (b.LoneX - b.MidAx));
+                    float side = (nx * (wz - b.MidAz)) - (nz * (wx - b.MidAx));
+                    bool loneSide = (sideRef >= 0f) == (side >= 0f);
+                    float level = loneSide ? emission.LoneLevel : emission.PairLevel;
+                    EmitLevelRange(solid, x, z, level * heightScale, level * heightScale, bminY, ch, mergeThreshold, emission.AreaId);
+                    break;
             }
-
-            byte area = ResolveAreaId(a.AreaId, b.AreaId, c.AreaId);
-            byte lo = Math.Min(a.Level, Math.Min(b.Level, c.Level));
-            byte hi = Math.Max(a.Level, Math.Max(b.Level, c.Level));
-
-            if (a.Ramp || b.Ramp || c.Ramp)
-            {
-                EmitLevelRange(solid, x, z, lo * heightScale, hi * heightScale, bminY, ch, mergeThreshold, area);
-                return;
-            }
-
-            if (lo == hi)
-            {
-                EmitLevelRange(solid, x, z, lo * heightScale, lo * heightScale, bminY, ch, mergeThreshold, area);
-                return;
-            }
-
-            int distinct = (a.Level != b.Level ? 1 : 0) + (b.Level != c.Level ? 1 : 0) + (a.Level != c.Level ? 1 : 0);
-            if (distinct >= 2)
-            {
-                return;
-            }
-
-            // two levels: the lone corner sits on one side of the midpoint split; columns on
-            // the lone corner's side take the lone level, the rest take the pair's level.
-            bool loneIsA = a.Level != b.Level && a.Level != c.Level;
-            bool loneIsB = b.Level != a.Level && b.Level != c.Level;
-            float loneX = loneIsA ? ax : loneIsB ? bx : cx;
-            float loneZ = loneIsA ? az : loneIsB ? bz : cz;
-            float loneLevel = loneIsA ? a.Level : loneIsB ? b.Level : c.Level;
-            float pairLevel = loneLevel == lo ? hi : lo;
-            float pairX = loneIsA ? bx : ax;
-            float pairZ = loneIsA ? bz : az;
-
-            float midX = (loneX + pairX) * 0.5f;
-            float midZ = (loneZ + pairZ) * 0.5f;
-            float towardsLone = (wx - midX) * (loneX - midX) + (wz - midZ) * (loneZ - midZ);
-            float level = towardsLone >= 0f ? loneLevel : pairLevel;
-            EmitLevelRange(solid, x, z, level * heightScale, level * heightScale, bminY, ch, mergeThreshold, area);
         }
 
         private static void EmitLevelRange(
@@ -294,24 +312,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
 
             RcRasterizations.AddSpan(solid, x, z, smin, smax, area > 0 ? area : RcRecast.RC_WALKABLE_AREA, mergeThreshold);
-        }
-
-        private static byte ResolveAreaId(byte a, byte b, byte c)
-        {
-            if (a == b || a == c) return a;
-            if (b == c) return b;
-            return a;
-        }
-
-        private static Corner GetCorner(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r)
-        {
-            if ((uint)c < (uint)mapWidth && (uint)r < (uint)mapHeight)
-            {
-                LogicTerrainCell cell = terrain.GetCell(c, r);
-                return new Corner(cell.HeightLevel, cell.WaterHeightLevel, cell.IsRamp, cell.AreaId);
-            }
-
-            return new Corner(0, 0, false, 0);
         }
 
         private static int ClampSpanY(int value)

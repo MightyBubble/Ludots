@@ -148,12 +148,11 @@ namespace Ludots.Tests.Architecture
             AssertFeatureAgreement(terrain, 64f, 68f, 64f, 68f, probes: 17);
         }
 
-        /// <summary>Blocked 只喂 clearance/portal 掩码,不参与三角形发射——直灌轨必须同样
-        /// 不切发射,被阻挡区保持可行走覆盖。注:体素=地形格体制下,三角轨对平面合成
-        /// 夹具存在亚体素光栅化混叠(网格近空),跨轨对拍在此夹具上不可判,混叠本身
-        /// 已留档 #1347;直灌轨逐列写入不受混叠影响,故此处直断直灌语义。</summary>
+        /// <summary>Blocked 切发射是两轨共同语义(NavTileBuilder.AddFace 对 blocked 角早退,
+        /// 共享分类器同判)——直灌轨在被阻挡区必须成洞。(审计更正:此前据混叠测量误断
+        /// "Blocked 不参与发射"并写反了测试,现已以共享分类器为单一语义源。)</summary>
         [Test]
-        public void DirectFeed_BlockedCells_DoNotCutEmission()
+        public void DirectFeed_BlockedCells_CutEmission()
         {
             var terrain = FlatTerrain();
             for (int r = 65; r <= 67; r++)
@@ -167,9 +166,8 @@ namespace Ludots.Tests.Architecture
             var legacy = new NavBuildConfig(1.0f, 0.6f, cliffHeightThreshold: 1);
             bool ok = RecastNavTileBaker.TryBake(terrain, 1, 1, 1, legacy, _agent, _nav, 0, "ground", new NavObstacleSet(), out NavTile tile, out _, out NavBakeArtifact artifact, NavTerrainFeedKind.Direct);
             Assert.That(ok, Is.True, artifact.Message);
-            AssertProbeOn(tile, 65.5f, 65.5f, "direct blocked patch center");
-            AssertProbeOn(tile, 66.5f, 66.5f, "direct blocked patch interior");
-            AssertProbeOn(tile, 100f, 100f, "direct far plain");
+            Assert.That(IsOnMesh(tile, 66f, 66f, out _), Is.False, "direct: blocked patch center must be a hole");
+            AssertProbeOn(tile, 100f, 100f, "direct far plain stays walkable");
         }
 
         [Test]
@@ -306,21 +304,10 @@ namespace Ludots.Tests.Architecture
                 "    \"cliffHeightThreshold\": 1\n" +
                 "  }\n" +
                 "}";
-            string root = Path.Combine(Path.GetTempPath(), "ludots-nav-feed-loader-" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path.Combine(root, "Navigation"));
-            File.WriteAllText(Path.Combine(root, "config_catalog.json"), "[ { \"Path\": \"Navigation/navmesh.json\", \"Policy\": \"DeepObject\" } ]");
-            File.WriteAllText(Path.Combine(root, "Navigation", "navmesh.json"), json);
+            string root = NavBakeConfigLoaderTestHelpers.CreateTempNavConfig(json);
             try
             {
-                var vfs = new VirtualFileSystem();
-                vfs.Mount("Core", root);
-                var pipeline = new ConfigPipeline(vfs, modLoader: null!);
-                var catalog = ConfigCatalogLoader.Load(pipeline);
-                var profiles = new AgentProfileRegistry(new[]
-                {
-                    new AgentProfileConfig { Id = "Small", RadiusCm = 30, HeightCm = 180, ClearanceCm = 40, Mass = 1, Layer = 0 }
-                });
-                return new NavMeshBakeConfigLoader(pipeline, profiles).Load(catalog).TerrainFeed;
+                return NavBakeConfigLoaderTestHelpers.Load(root).TerrainFeed;
             }
             finally
             {
