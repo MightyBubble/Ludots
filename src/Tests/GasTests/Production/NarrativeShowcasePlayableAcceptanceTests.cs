@@ -135,9 +135,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(introDialogue.ResolvedText, Does.Not.Contain("<color").And.Not.Contain("<b>"));
             Assert.That(UiContains(uiRoot, "守望者米蕾勒") || UiContains(uiRoot, "Warden Mirelle"), Is.True);
             Assert.That(UiContains(uiRoot, "回话") || UiContains(uiRoot, "1"), Is.True);
-            AssertThemeFrameVisibleOnDialogue(uiRoot);
-            // Match CaptureSnapshot layout path so viewport asserts see painted geometry.
             uiRoot.Scene?.Layout(uiRoot.Width > 0 ? uiRoot.Width : 1920f, uiRoot.Height > 0 ? uiRoot.Height : 1080f);
+            AssertThemeFrameVisibleOnDialogue(uiRoot);
             AssertDialogueBodyRunsVisibleOnUi(uiRoot, introDialogue);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "intro_complete");
             timeline.Add("[T+002] Skipped the intro Sequencer beat through StorySkip and handed off into DialogueRuntime elder briefing.");
