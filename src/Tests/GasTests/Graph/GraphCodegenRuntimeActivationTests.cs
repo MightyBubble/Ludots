@@ -119,7 +119,7 @@ namespace Ludots.Tests.Gas.Graph
             AssertGeneratedIntIdState(ref executeFrame);
 
             var slicePrograms = new GraphProgramRegistry();
-            slicePrograms.Register(4, program, GraphKind.TriggerGraph);
+            RegisterTriggerGraph(slicePrograms, 4, program);
             slicePrograms.AttachGenerated(
                 4,
                 PopulateGeneratedIntIdState,
@@ -146,7 +146,7 @@ namespace Ludots.Tests.Gas.Graph
                 new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ];
             var programs = new GraphProgramRegistry();
-            programs.Register(5, program, GraphKind.TriggerGraph);
+            RegisterTriggerGraph(programs, 5, program);
             programs.AttachGenerated(
                 5,
                 PopulateGeneratedIntIdState,
@@ -184,6 +184,23 @@ namespace Ludots.Tests.Gas.Graph
             That(result.Halted, Is.True);
             That(result.ReturnInt, Is.EqualTo(37));
             That(cursor.Status, Is.EqualTo(GraphExecutionStatus.Halted));
+        }
+
+        private static void RegisterTriggerGraph(
+            GraphProgramRegistry programs,
+            int graphId,
+            GraphInstruction[] program)
+        {
+            programs.Register(
+                graphId,
+                program,
+                GraphKind.TriggerGraph,
+                GraphInstructionSourceMap.Empty,
+                symbols: null,
+                triggerGraphEntries: new[]
+                {
+                    new TriggerGraphEntry("test", "MapLoaded", startPc: 0, once: false)
+                });
         }
 
         [Test]

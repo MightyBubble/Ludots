@@ -269,7 +269,7 @@ namespace Ludots.Tests.GAS.Story
 
                 Assert.That(
                     () => loader.Load(catalog),
-                    Throws.TypeOf<JsonException>().With.Message.Contains("Backend"));
+                    Throws.TypeOf<JsonException>().With.Message.Contains("backend"));
             }
             finally
             {
