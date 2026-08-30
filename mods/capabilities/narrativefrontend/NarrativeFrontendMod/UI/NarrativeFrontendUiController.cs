@@ -49,8 +49,7 @@ internal sealed class NarrativeFrontendUiController
                     context,
                     layoutCatalog,
                     _layoutComposer,
-                    root.Width,
-                    root.Height),
+                    root.Width),
                 theme: null,
                 sheets);
             _mountedThemeId = themeId;

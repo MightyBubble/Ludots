@@ -335,6 +335,15 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
+	public UiElementBuilder Padding(float left, float top, float right, float bottom)
+	{
+		_style = _style with
+		{
+			Padding = new UiThickness(left, top, right, bottom)
+		};
+		return this;
+	}
+
 	public UiElementBuilder Margin(float all)
 	{
 		_style = _style with

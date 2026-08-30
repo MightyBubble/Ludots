@@ -18,8 +18,7 @@ internal static class NarrativeFrontendUiComposer
         ReactiveContext<NarrativeFrontendRenderState> context,
         PanelLayoutTemplateCatalog layouts,
         PanelLayoutComposer layoutComposer,
-        float viewportWidth,
-        float viewportHeight)
+        float viewportWidth)
     {
         NarrativeFrontendRenderState state = context.State;
         var children = new List<UiElementBuilder>(state.Surfaces.Count + 1);
@@ -46,7 +45,7 @@ internal static class NarrativeFrontendUiComposer
             UiElementBuilder content = layoutComposer.ComposeControls(
                 new[] { template.Root },
                 new NarrativeSurfaceBindingScope(surface));
-            children.Add(BuildSurface(content, surface, viewportWidth, viewportHeight));
+            children.Add(BuildSurface(content, surface, viewportWidth));
         }
 
         return Ui.Column(children.ToArray())
@@ -60,45 +59,70 @@ internal static class NarrativeFrontendUiComposer
     private static UiElementBuilder BuildSurface(
         UiElementBuilder content,
         NarrativeFrontendSurfaceModel surface,
-        float viewportWidth,
-        float viewportHeight)
+        float viewportWidth)
     {
         UiElementBuilder builder = ApplyAuthorChrome(content, surface)
             .Class("story-surface")
             .Width(surface.Width)
             .ZIndex(surface.ZIndex);
 
+        if (surface.Anchor is NarrativeFrontendAnchor.BottomLeft
+            or NarrativeFrontendAnchor.BottomCenter
+            or NarrativeFrontendAnchor.BottomRight)
+        {
+            UiAlignItems align = surface.Anchor switch
+            {
+                NarrativeFrontendAnchor.BottomLeft => UiAlignItems.Start,
+                NarrativeFrontendAnchor.BottomCenter => UiAlignItems.Center,
+                NarrativeFrontendAnchor.BottomRight => UiAlignItems.End,
+                _ => throw new InvalidOperationException()
+            };
+            float bottomInset = Math.Max(0f, Margin - surface.OffsetY);
+            return Ui.Column(builder.Translate(surface.OffsetX))
+                .Class("story-surface-dock")
+                .WidthPercent(100f)
+                .HeightPercent(100f)
+                .Padding(Margin, 0f, Margin, bottomInset)
+                .Justify(UiJustifyContent.End)
+                .Align(align)
+                .Absolute(0f, 0f)
+                .ZIndex(surface.ZIndex);
+        }
+
+        if (surface.Anchor is NarrativeFrontendAnchor.LeftCenter
+            or NarrativeFrontendAnchor.Center
+            or NarrativeFrontendAnchor.RightCenter)
+        {
+            UiAlignItems align = surface.Anchor switch
+            {
+                NarrativeFrontendAnchor.LeftCenter => UiAlignItems.Start,
+                NarrativeFrontendAnchor.Center => UiAlignItems.Center,
+                NarrativeFrontendAnchor.RightCenter => UiAlignItems.End,
+                _ => throw new InvalidOperationException()
+            };
+            return Ui.Column(builder.Translate(surface.OffsetX, surface.OffsetY))
+                .Class("story-surface-dock")
+                .WidthPercent(100f)
+                .HeightPercent(100f)
+                .Padding(Margin, 0f, Margin, 0f)
+                .Justify(UiJustifyContent.Center)
+                .Align(align)
+                .Absolute(0f, 0f)
+                .ZIndex(surface.ZIndex);
+        }
+
         float left = surface.Anchor switch
         {
-            NarrativeFrontendAnchor.TopLeft
-                or NarrativeFrontendAnchor.LeftCenter
-                or NarrativeFrontendAnchor.BottomLeft => Margin + surface.OffsetX,
-            NarrativeFrontendAnchor.TopCenter
-                or NarrativeFrontendAnchor.Center
-                or NarrativeFrontendAnchor.BottomCenter =>
+            NarrativeFrontendAnchor.TopLeft => Margin + surface.OffsetX,
+            NarrativeFrontendAnchor.TopCenter =>
                 ((viewportWidth - surface.Width) * 0.5f) + surface.OffsetX,
-            _ => 0f
-        };
-
-        return surface.Anchor switch
-        {
-            NarrativeFrontendAnchor.TopLeft or NarrativeFrontendAnchor.TopCenter =>
-                builder.AbsoluteEdges(left: left, top: Margin + surface.OffsetY),
             NarrativeFrontendAnchor.TopRight =>
-                builder.AbsoluteEdges(top: Margin + surface.OffsetY, right: Margin + surface.OffsetX),
-            NarrativeFrontendAnchor.BottomLeft or NarrativeFrontendAnchor.BottomCenter =>
-                builder.AbsoluteEdges(left: left, bottom: Margin + surface.OffsetY),
-            NarrativeFrontendAnchor.BottomRight =>
-                builder.AbsoluteEdges(right: Margin + surface.OffsetX, bottom: Margin + surface.OffsetY),
-            NarrativeFrontendAnchor.LeftCenter =>
-                builder.AbsoluteEdges(left: left, top: (viewportHeight * 0.5f) + surface.OffsetY),
-            NarrativeFrontendAnchor.Center =>
-                builder.AbsoluteEdges(left: left, top: (viewportHeight * 0.5f) + surface.OffsetY),
-            NarrativeFrontendAnchor.RightCenter =>
-                builder.AbsoluteEdges(right: Margin + surface.OffsetX, top: (viewportHeight * 0.5f) + surface.OffsetY),
+                viewportWidth - surface.Width - Margin + surface.OffsetX,
             _ => throw new InvalidOperationException(
                 $"Narrative surface '{surface.SurfaceId}' has unsupported anchor '{surface.Anchor}'.")
         };
+
+        return builder.Absolute(left, Margin + surface.OffsetY);
     }
 
     private static UiElementBuilder ApplyAuthorChrome(
