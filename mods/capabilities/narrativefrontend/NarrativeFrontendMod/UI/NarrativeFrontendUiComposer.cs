@@ -21,6 +21,7 @@ internal static class NarrativeFrontendUiComposer
     {
         NarrativeFrontendRenderState state = context.State;
         var children = new List<UiElementBuilder>(state.Surfaces.Count + 1);
+        var bottomLane = new List<(UiElementBuilder Content, NarrativeFrontendSurfaceModel Surface)>();
         if (!string.IsNullOrWhiteSpace(state.BackdropHex))
         {
             children.Add(Ui.Text(" ")
@@ -44,7 +45,25 @@ internal static class NarrativeFrontendUiComposer
             UiElementBuilder content = layoutComposer.Compose(
                 template.Root,
                 new NarrativeSurfaceBindingScope(surface));
-            children.Add(BuildSurface(content, surface));
+            if (surface.Anchor is NarrativeFrontendAnchor.BottomLeft
+                or NarrativeFrontendAnchor.BottomCenter
+                or NarrativeFrontendAnchor.BottomRight)
+            {
+                bottomLane.Add((content, surface));
+            }
+            else
+            {
+                children.Add(BuildSurface(content, surface));
+            }
+        }
+
+        if (bottomLane.Count == 1)
+        {
+            children.Add(BuildSurface(bottomLane[0].Content, bottomLane[0].Surface));
+        }
+        else if (bottomLane.Count > 1)
+        {
+            children.Add(BuildBottomLane(bottomLane));
         }
 
         return Ui.Column(children.ToArray())
@@ -59,11 +78,7 @@ internal static class NarrativeFrontendUiComposer
         UiElementBuilder content,
         NarrativeFrontendSurfaceModel surface)
     {
-        UiElementBuilder builder = ApplyAuthorChrome(content, surface)
-            .Class("story-surface")
-            .Attribute("data-surface-kind", surface.Kind.ToString())
-            .Width(surface.Width)
-            .ZIndex(surface.ZIndex);
+        UiElementBuilder builder = PrepareSurface(content, surface);
 
         UiAlignItems horizontal = surface.Anchor switch
         {
@@ -120,6 +135,54 @@ internal static class NarrativeFrontendUiComposer
             .Justify(vertical)
             .Align(horizontal)
             .Absolute(0f, 0f)
+            .ZIndex(surface.ZIndex);
+    }
+
+    private static UiElementBuilder BuildBottomLane(
+        List<(UiElementBuilder Content, NarrativeFrontendSurfaceModel Surface)> surfaces)
+    {
+        surfaces.Sort(static (left, right) =>
+        {
+            int byAnchor = left.Surface.Anchor.CompareTo(right.Surface.Anchor);
+            return byAnchor != 0 ? byAnchor : left.Surface.ZIndex.CompareTo(right.Surface.ZIndex);
+        });
+
+        var children = new UiElementBuilder[surfaces.Count];
+        int maxZIndex = 0;
+        for (int i = 0; i < surfaces.Count; i++)
+        {
+            NarrativeFrontendSurfaceModel surface = surfaces[i].Surface;
+            children[i] = PrepareSurface(surfaces[i].Content, surface)
+                .Translate(surface.OffsetX, surface.OffsetY);
+            maxZIndex = Math.Max(maxZIndex, surface.ZIndex);
+        }
+
+        return Ui.Column(
+                Ui.Row(children)
+                    .Class("story-bottom-lane-row")
+                    .WidthPercent(100f)
+                    .Wrap()
+                    .Gap(24f)
+                    .Justify(UiJustifyContent.Center)
+                    .Align(UiAlignItems.End))
+            .Class("story-surface-dock")
+            .WidthPercent(100f)
+            .HeightPercent(100f)
+            .Padding(Margin)
+            .Justify(UiJustifyContent.End)
+            .Align(UiAlignItems.Stretch)
+            .Absolute(0f, 0f)
+            .ZIndex(maxZIndex);
+    }
+
+    private static UiElementBuilder PrepareSurface(
+        UiElementBuilder content,
+        NarrativeFrontendSurfaceModel surface)
+    {
+        return ApplyAuthorChrome(content, surface)
+            .Class("story-surface")
+            .Attribute("data-surface-kind", surface.Kind.ToString())
+            .Width(surface.Width)
             .ZIndex(surface.ZIndex);
     }
 

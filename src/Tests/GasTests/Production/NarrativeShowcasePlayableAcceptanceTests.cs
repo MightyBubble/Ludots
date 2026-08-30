@@ -142,6 +142,13 @@ namespace Ludots.Tests.GAS.Production
             uiRoot.Scene?.Layout(uiRoot.Width > 0 ? uiRoot.Width : 1920f, uiRoot.Height > 0 ? uiRoot.Height : 1080f);
             AssertThemeFrameVisibleOnDialogue(uiRoot);
             AssertDialogueBodyRunsVisibleOnUi(uiRoot, introDialogue);
+            AssertSurfacesStayInsideViewport(uiRoot, 1280f, 720f);
+            AssertSurfaceKindsDoNotOverlap(
+                uiRoot,
+                NarrativeFrontendSurfaceKind.OverlayDialogue,
+                NarrativeFrontendSurfaceKind.ChoiceList);
+            uiRoot.Resize(1920f, 1080f);
+            uiRoot.Scene?.Layout(1920f, 1080f);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "intro_complete");
             timeline.Add("[T+002] Skipped the intro Sequencer beat through StorySkip and handed off into DialogueRuntime elder briefing.");
 
@@ -833,6 +840,50 @@ namespace Ludots.Tests.GAS.Production
                 Assert.That(rect.Right, Is.LessThanOrEqualTo(width + 0.5f), $"Surface {i} exceeds viewport width.");
                 Assert.That(rect.Bottom, Is.LessThanOrEqualTo(height + 0.5f), $"Surface {i} exceeds viewport height.");
             }
+        }
+
+        private static void AssertSurfaceKindsDoNotOverlap(
+            UIRoot uiRoot,
+            NarrativeFrontendSurfaceKind firstKind,
+            NarrativeFrontendSurfaceKind secondKind)
+        {
+            UiNode? first = FindUiNodeBySurfaceKind(uiRoot.Scene?.Root, firstKind);
+            UiNode? second = FindUiNodeBySurfaceKind(uiRoot.Scene?.Root, secondKind);
+            Assert.That(first, Is.Not.Null, $"Missing surface kind {firstKind}.");
+            Assert.That(second, Is.Not.Null, $"Missing surface kind {secondKind}.");
+            UiRect a = first!.LayoutRect;
+            UiRect b = second!.LayoutRect;
+            bool overlaps = a.X < b.Right && a.Right > b.X && a.Y < b.Bottom && a.Bottom > b.Y;
+            Assert.That(overlaps, Is.False, $"{firstKind} and {secondKind} overlap: {a} vs {b}.");
+        }
+
+        private static UiNode? FindUiNodeBySurfaceKind(
+            UiNode? root,
+            NarrativeFrontendSurfaceKind kind)
+        {
+            if (root == null)
+            {
+                return null;
+            }
+
+            if (string.Equals(
+                root.Attributes["data-surface-kind"],
+                kind.ToString(),
+                StringComparison.Ordinal))
+            {
+                return root;
+            }
+
+            for (int i = 0; i < root.Children.Count; i++)
+            {
+                UiNode? found = FindUiNodeBySurfaceKind(root.Children[i], kind);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            return null;
         }
 
         private static void AssertDialogueBodyRunsVisibleOnUi(UIRoot uiRoot, DialogueView dialogueView)
