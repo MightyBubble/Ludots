@@ -79,6 +79,11 @@
     "IdField": "id"
   },
   {
+    "Path": "Panels/panel_templates.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
     "Path": "Frontend/narrative_frontend.json",
     "Policy": "DeepObject"
   }

@@ -15,7 +15,7 @@ namespace Ludots.Core.UI.PanelProjection
         private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal)
         {
             "id", "skin", "graph", "pins", "events", "intents", "inputs", "collections", "layout", "subject",
-            "ownerKind", "audienceSeats"
+            "ownerKind", "audienceSeats", "width"
         };
         private static readonly HashSet<string> PinFields = new(StringComparer.Ordinal) { "name", "key", "mode", "default" };
         private static readonly HashSet<string> InputFields = new(StringComparer.Ordinal)
@@ -149,6 +149,11 @@ namespace Ludots.Core.UI.PanelProjection
                     RequireString(rootObject, "ownerKind", $"panel template '{id}'"),
                     $"panel template '{id}'");
             PanelAudience audience = ParseAudience(id, rootObject);
+            float width = 0f;
+            if (rootObject["width"] is not null)
+            {
+                width = RequirePositiveFloat(rootObject, "width", $"panel template '{id}'");
+            }
 
             return new PanelTemplate(
                 id,
@@ -162,7 +167,8 @@ namespace Ludots.Core.UI.PanelProjection
                 subject,
                 ownerKind,
                 audience,
-                inputs);
+                inputs,
+                width);
         }
 
         private static PanelAudience ParseAudience(string templateId, JsonObject rootObject)
@@ -495,6 +501,32 @@ namespace Ludots.Core.UI.PanelProjection
             if (string.IsNullOrWhiteSpace(value))
             {
                 throw new InvalidOperationException($"{context} is missing required '{field}'.");
+            }
+
+            return value;
+        }
+
+        private static float RequirePositiveFloat(JsonObject obj, string field, string context)
+        {
+            JsonNode? node = obj[field];
+            if (node is null)
+            {
+                throw new InvalidOperationException($"{context} is missing required '{field}'.");
+            }
+
+            float value;
+            try
+            {
+                value = node.GetValue<float>();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"{context} field '{field}' must be a number.", ex);
+            }
+
+            if (value <= 0f || float.IsNaN(value) || float.IsInfinity(value))
+            {
+                throw new InvalidOperationException($"{context} field '{field}' must be a positive finite number.");
             }
 
             return value;

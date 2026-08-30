@@ -54,3 +54,10 @@
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: **graph 连线**（换 collectionKey / 元素 chip / CreatePanel），不改 Core enum。
+
+
+## Follow-up complete — Narrative choices on PanelHost (2026-08-30)
+
+- MapLoaded `CreatePanel(panel.narrative.choices)` once; Show/Hide from DialogueRuntime choice count.
+- `StoryPresentationProjector` no longer emits ChoiceList companion.
+- NarrativeShowcase playable acceptance green with PanelHost choice list.

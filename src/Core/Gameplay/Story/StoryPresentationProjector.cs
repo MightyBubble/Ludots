@@ -122,49 +122,6 @@ namespace Ludots.Core.Gameplay.Story
                     BodyRuns: view.BodyRuns)
             };
 
-            if (view.Choices.Count > 0)
-            {
-                var choices = new List<StoryPresentationChoice>(view.Choices.Count);
-                for (int i = 0; i < view.Choices.Count; i++)
-                {
-                    DialogueChoiceView choice = view.Choices[i];
-                    choices.Add(new StoryPresentationChoice(
-                        choice.ChoiceId,
-                        choice.ResolvedText,
-                        (i + 1).ToString()));
-                }
-
-                if (string.IsNullOrWhiteSpace(profile.ChoiceAnchor) || profile.ChoiceWidth <= 0f)
-                {
-                    throw new InvalidOperationException(
-                        $"Presentation profile '{view.PresentationProfile}' requires choiceAnchor and choiceWidth when the node offers choices.");
-                }
-
-                if (string.IsNullOrWhiteSpace(profile.ChoiceLayoutId))
-                {
-                    throw new InvalidOperationException(
-                        $"Presentation profile '{view.PresentationProfile}' requires choiceLayoutId when the node offers choices.");
-                }
-
-                // Choice list is a companion surface: geometry from the same profile (single writer).
-                surfaces.Add(new StoryPresentationSurface(
-                    SurfaceKey: $"dialogue.{view.DialogueId}.ChoiceList",
-                    SurfaceKind: StoryPresentationSurfaceKinds.ChoiceList,
-                    LayoutId: profile.ChoiceLayoutId,
-                    StyleClass: string.Empty,
-                    Anchor: profile.ChoiceAnchor,
-                    Title: string.Empty,
-                    Width: profile.ChoiceWidth,
-                    OffsetY: profile.ChoiceOffsetY,
-                    ZIndex: profile.ChoiceZIndex,
-                    Choices: choices,
-                    AccentHex: profile.AccentHex,
-                    BackgroundHex: profile.BackgroundHex,
-                    BorderHex: profile.BorderHex,
-                    ForegroundHex: profile.ForegroundHex,
-                    MutedHex: profile.MutedHex));
-            }
-
             _generation++;
             return new StoryPresentationFrame(
                 new StoryPresentationStreamHandle(view.DialogueId, _generation),

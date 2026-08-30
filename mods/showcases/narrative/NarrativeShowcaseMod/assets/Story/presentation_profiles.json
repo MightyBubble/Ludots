@@ -16,12 +16,7 @@
     "mutedHex": "#C6D3DE",
     "zIndex": 60,
     "imageSize": 112,
-    "backdropHex": "#00000099",
-    "choiceAnchor": "BottomRight",
-    "choiceWidth": 440,
-    "choiceOffsetY": 12,
-    "choiceZIndex": 61,
-    "choiceLayoutId": "layout.narrative.choice-list"
+    "backdropHex": "#00000099"
   },
   {
     "id": "story.world_bubble",
@@ -42,12 +37,7 @@
     "offsetY": -12,
     "zIndex": 58,
     "imageSize": 84,
-    "worldScreenHeadOffsetPx": 96,
-    "choiceAnchor": "BottomRight",
-    "choiceWidth": 440,
-    "choiceOffsetY": 12,
-    "choiceZIndex": 61,
-    "choiceLayoutId": "layout.narrative.choice-list"
+    "worldScreenHeadOffsetPx": 96
   },
   {
     "id": "story.immersive_subtitle",
@@ -84,11 +74,6 @@
     "mutedHex": "#C6D3DE",
     "zIndex": 62,
     "imageSize": 420,
-    "choiceAnchor": "BottomRight",
-    "choiceWidth": 440,
-    "choiceOffsetY": 12,
-    "choiceZIndex": 61,
-    "choiceLayoutId": "layout.narrative.choice-list",
     "backdropHex": "#00000099"
   },
   {

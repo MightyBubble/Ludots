@@ -25,7 +25,8 @@ namespace Ludots.Core.UI.PanelProjection
             PanelSubjectKind subject = PanelSubjectKind.None,
             PanelOwnerKind ownerKind = PanelOwnerKind.Seat,
             PanelAudience? audience = null,
-            IReadOnlyList<PanelInputBinding>? inputs = null)
+            IReadOnlyList<PanelInputBinding>? inputs = null,
+            float width = 0f)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -161,6 +162,7 @@ namespace Ludots.Core.UI.PanelProjection
             Subject = subject;
             OwnerKind = ownerKind;
             Audience = audience ?? PanelAudience.AllSeats;
+            Width = width;
         }
 
         public string Id { get; }
@@ -189,6 +191,9 @@ namespace Ludots.Core.UI.PanelProjection
 
         /// <summary>Per-template default skin; instance op param wins, then game.json default.</summary>
         public string? Skin { get; }
+
+        /// <summary>Optional presentation width in pixels; 0 keeps the built-in default.</summary>
+        public float Width { get; }
 
         public PanelOwnerKind OwnerKind { get; }
 

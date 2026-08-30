@@ -226,6 +226,29 @@
   pointer-events: none;
 }
 
+.panel-narrative-choices {
+  background-color: rgba(10, 12, 15, 246);
+  background-image: url(images/panel_wash.png);
+  background-size: cover;
+  border: 1px solid rgb(103, 78, 54);
+  border-radius: 10px;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.7), 0 3px 8px rgba(0, 0, 0, 0.6);
+  padding: 16px 18px;
+}
+
+.panel-narrative-choices .story-eyebrow {
+  margin-bottom: 10px;
+}
+
+.panel-narrative-choices .narrative-choice-chip,
+.panel-narrative-choices .story-choice-item {
+  background-color: rgba(5, 7, 9, 190);
+  border: 1px solid rgba(156, 119, 74, 0.42);
+  border-radius: 7px;
+  padding: 11px 13px;
+  color: rgb(242, 222, 188);
+}
+
 .story-framed {
   position: relative;
   overflow: visible;

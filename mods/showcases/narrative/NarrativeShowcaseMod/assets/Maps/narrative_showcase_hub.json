@@ -11,7 +11,8 @@
     { "name": "signal_ack", "type": "int", "initial": 0 }
   ],
   "TriggerGraphs": [
-    { "graph": "Graph.Narrative.Wire.AwaitDialogConfirm", "scopeInstanceId": "narrative_arcweaver" }
+    { "graph": "Graph.Narrative.Wire.AwaitDialogConfirm", "scopeInstanceId": "narrative_arcweaver" },
+    { "graph": "Graph.Narrative.Open.Choices", "scopeInstanceId": "narrative_arcweaver" }
   ],
   "Regions": [
     {

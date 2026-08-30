@@ -307,8 +307,6 @@ public sealed class PanelPresentationSystem : ISystem<float>
 
         PanelTemplate template = _templates.Require(values.TemplateId);
         _panelHost.TryGetListProjections(handle, out IReadOnlyList<PanelListProjection> lists);
-        var accent = new UiColor(skin.AccentR, skin.AccentG, skin.AccentB);
-        var dim = new UiColor(136, 136, 136);
 
         UiElementBuilder body = template.Layout != null
             ? ComposeDeclaredControls(
@@ -321,6 +319,19 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 reactiveContext)
             : BuildRows(template, values);
 
+        if (template.Layout != null)
+        {
+            return new UiElementBuilder(UiNodeKind.Container).Column()
+                .Class("panel")
+                .Class(TemplateClassToken(template.Id))
+                .Width(rect.Width)
+                .Overflow(UiOverflow.Clip)
+                .Absolute(rect.X, rect.Y)
+                .Children(body);
+        }
+
+        var accent = new UiColor(skin.AccentR, skin.AccentG, skin.AccentB);
+        var dim = new UiColor(136, 136, 136);
         var builder = new UiElementBuilder(UiNodeKind.Container).Column()
             .Class("panel")
             .Class(TemplateClassToken(template.Id))
@@ -820,18 +831,19 @@ public sealed class PanelPresentationSystem : ISystem<float>
         }
 
         bool top = anchorKey.Contains("top", StringComparison.OrdinalIgnoreCase);
+        float panelWidth = template.Width > 0f ? template.Width : PanelWidth;
         float x = left
             ? surfaceX + AnchorMargin
             : right
-                ? MathF.Max(surfaceX + AnchorMargin, surfaceX + surfaceWidth - PanelWidth - AnchorMargin)
-                : MathF.Max(surfaceX + AnchorMargin, surfaceX + (surfaceWidth - PanelWidth) * 0.5f);
+                ? MathF.Max(surfaceX + AnchorMargin, surfaceX + surfaceWidth - panelWidth - AnchorMargin)
+                : MathF.Max(surfaceX + AnchorMargin, surfaceX + (surfaceWidth - panelWidth) * 0.5f);
         float stackOffset = stackIndex * (contentHeight + PanelStackGap);
         float y = top
             ? surfaceY + AnchorMargin + stackOffset
             : MathF.Max(
                 surfaceY + AnchorMargin,
                 surfaceY + surfaceHeight - contentHeight - AnchorMargin - stackOffset);
-        return new UiRect(x, y, PanelWidth, contentHeight);
+        return new UiRect(x, y, panelWidth, contentHeight);
     }
 
     private sealed class MountedPanel

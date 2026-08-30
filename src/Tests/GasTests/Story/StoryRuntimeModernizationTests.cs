@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Ludots.Core.Config;
@@ -333,7 +334,7 @@ namespace Ludots.Tests.GAS.Story
         }
 
         [Test]
-        public void StoryPresentationProjector_ChoiceFieldsRemainRequiredWhenChoicesExist()
+        public void StoryPresentationProjector_DoesNotEmitChoiceListCompanion()
         {
             var story = new StoryDefinitionRegistry();
             StoryPresentationProfileDefinition profile = CreateValidPresentationProfile();
@@ -342,9 +343,9 @@ namespace Ludots.Tests.GAS.Story
                 profile.Id,
                 new[] { new DialogueChoiceView("continue", "line.choice", "Continue") });
 
-            Assert.That(
-                () => new StoryPresentationProjector(story).ProjectDialogue(view),
-                Throws.InvalidOperationException.With.Message.Contains("choiceAnchor"));
+            StoryPresentationFrame frame = new StoryPresentationProjector(story).ProjectDialogue(view);
+            Assert.That(frame.Surfaces.Count, Is.EqualTo(1));
+            Assert.That(frame.Surfaces[0].SurfaceKind, Is.Not.EqualTo("ChoiceList"));
         }
 
         [Test]
@@ -383,12 +384,7 @@ namespace Ludots.Tests.GAS.Story
                 Anchor = "BottomCenter",
                 Width = 760f,
                 ImageSize = 112f,
-                ZIndex = 60,
-                ChoiceAnchor = "BottomRight",
-                ChoiceWidth = 440f,
-                ChoiceOffsetY = 12f,
-                ChoiceZIndex = 61,
-                ChoiceLayoutId = "layout.narrative.choice-list"
+                ZIndex = 60
             });
             dialogues.Register(new DialogueDefinition
             {
@@ -432,13 +428,16 @@ namespace Ludots.Tests.GAS.Story
             StoryPresentationFrame frame = projector.ProjectDialogue(open);
             Assert.That(frame.Handle.IsValid, Is.True);
             Assert.That(frame.Handle.StreamId, Is.EqualTo("dialogue.unit.choice"));
-            Assert.That(frame.Surfaces.Count, Is.EqualTo(2));
+            Assert.That(frame.Surfaces.Count, Is.EqualTo(1));
             Assert.That(frame.Surfaces[0].Body, Is.EqualTo("story.unit.hello").Or.Not.Empty);
             Assert.That(frame.Surfaces[0].LayoutId, Is.EqualTo("layout.narrative.overlay-dialogue"));
-            Assert.That(frame.Surfaces[1].SurfaceKind, Is.EqualTo("ChoiceList"));
-            Assert.That(frame.Surfaces[1].LayoutId, Is.EqualTo("layout.narrative.choice-list"));
-            Assert.That(frame.Surfaces[1].Choices![0].ChoiceId, Is.EqualTo("go"));
-            Assert.That(frame.Surfaces[1].Choices![0].Text, Is.Not.Null);
+            Assert.That(frame.Surfaces.Any(static s => s.SurfaceKind == "ChoiceList"), Is.False);
+
+            Span<int> choiceIds = stackalloc int[4];
+            Assert.That(dialogue.CollectActiveChoiceIds(choiceIds), Is.EqualTo(1));
+            Assert.That(
+                DialogueChoiceIdRegistry.GetId("dialogue.unit.choice", "go"),
+                Is.EqualTo(choiceIds[0]));
 
             dialogue.ChooseOption(0);
             Assert.That(dialogue.TryGetActiveView(out DialogueView afterChoice), Is.True);

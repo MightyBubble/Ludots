@@ -141,6 +141,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(UiContains(uiRoot, "回话") || UiContains(uiRoot, "1"), Is.True);
             uiRoot.Scene?.Layout(uiRoot.Width > 0 ? uiRoot.Width : 1920f, uiRoot.Height > 0 ? uiRoot.Height : 1080f);
             AssertThemeFrameVisibleOnDialogue(uiRoot);
+            AssertPanelChoicesPanelVisible(uiRoot, dialogue);
             AssertDialogueLayoutAtViewport(uiRoot, introDialogue, 1280f, 720f);
             AssertDialogueLayoutAtViewport(uiRoot, introDialogue, 1920f, 1080f);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "intro_complete");
@@ -737,10 +738,6 @@ namespace Ludots.Tests.GAS.Production
             uiRoot.Scene?.Layout(width, height);
             AssertDialogueBodyRunsVisibleOnUi(uiRoot, view);
             AssertSurfacesStayInsideViewport(uiRoot, width, height);
-            AssertSurfaceKindsDoNotOverlap(
-                uiRoot,
-                NarrativeFrontendSurfaceKind.OverlayDialogue,
-                NarrativeFrontendSurfaceKind.ChoiceList);
         }
 
         private static void AssertStandingPortraitAtViewport(
@@ -803,13 +800,9 @@ namespace Ludots.Tests.GAS.Production
                 "story-frame must have image-slice so ornate borders nine-slice instead of stretch.");
             var choiceFrames = new List<UiNode>();
             CollectUiNodesByClass(uiRoot.Scene?.Root, "story-choice-frame", choiceFrames);
-            Assert.That(choiceFrames.Count, Is.EqualTo(1));
-            UiNode choiceFrame = choiceFrames[0];
-            string choiceSrc = choiceFrame.Attributes["src"] ?? string.Empty;
-            Assert.That(choiceSrc, Does.Contain("choice_frame.png").IgnoreCase);
-            Assert.That(choiceSrc, Is.Not.EqualTo(src));
+            Assert.That(choiceFrames.Count, Is.EqualTo(0),
+                "ChoiceList companion surface is retired; choices render on PanelHost.");
             Assert.That(frame.RenderStyle.ImageSlice.Left, Is.EqualTo(48f));
-            Assert.That(choiceFrame.RenderStyle.ImageSlice.Left, Is.EqualTo(36f));
             UiNode? framed = FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed");
             Assert.That(framed, Is.Not.Null);
             UiNode? body = FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed-body");
@@ -817,9 +810,29 @@ namespace Ludots.Tests.GAS.Production
             UiNode? prompt = FindUiNodeByClass(uiRoot.Scene?.Root, "story-prompt-ribbon");
             Assert.That(prompt, Is.Null, "Prompt ribbon must not run behind active dialogue.");
             Assert.That(
+                FindUiNodeByClass(uiRoot.Scene?.Root, "panel-narrative-choices"),
+                Is.Not.Null,
+                "Active dialogue choices must appear on PanelHost panel.narrative.choices.");
+            Assert.That(
                 FindUiNodeByClass(uiRoot.Scene?.Root, "story-overlay-copy"),
                 Is.Not.Null,
                 "Overlay dialogue must place speaker name and body in story-overlay-copy beside the portrait.");
+        }
+
+        private static void AssertPanelChoicesPanelVisible(UIRoot uiRoot, DialogueRuntime dialogue)
+        {
+            Assert.That(dialogue.TryGetActiveView(out DialogueView view), Is.True);
+            Assert.That(view.Choices.Count, Is.GreaterThan(0));
+            UiNode? panel = FindUiNodeByClass(uiRoot.Scene?.Root, "panel-narrative-choices");
+            Assert.That(panel, Is.Not.Null, "panel.narrative.choices must be visible while choices are available.");
+            for (int i = 0; i < view.Choices.Count; i++)
+            {
+                string text = view.Choices[i].ResolvedText;
+                Assert.That(
+                    UiContains(uiRoot, text),
+                    Is.True,
+                    $"PanelHost choices must show resolved text '{text}'.");
+            }
         }
 
         private static void AssertThemeAssetsHaveTransparentBackgrounds(string repoRoot)
