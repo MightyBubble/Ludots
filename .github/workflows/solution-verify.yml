@@ -99,6 +99,13 @@ jobs:
             exit $LASTEXITCODE
           }
 
+          # Bench instruments are manual (never run in CI) but must still compile, or API
+          # drift rots them silently between runs.
+          dotnet build src/Benchmarks/NavBake64Bench/NavBake64Bench.csproj -c Debug -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
       - name: Run architecture guard tests
         shell: pwsh
         run: |
