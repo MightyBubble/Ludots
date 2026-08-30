@@ -2724,15 +2724,6 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_OfferActivity_raylib",
-      "name": "Graph Op OfferActivity Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_OfferActivity"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
     }
   ]
 }

@@ -8785,33 +8785,6 @@
       "video": "artifacts/evidence/capability_standard_graph_op_ModifyAttributeSet/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
-    },
-    {
-      "id": "capability_standard_graph_op_OfferActivity",
-      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpOfferActivityEntryMod",
-      "projectPath": "CapabilityStandardGraphOpOfferActivityEntryMod.csproj",
-      "title": "点名派发待办活动",
-      "summary": "图节点点名活动 id；跑完，活动已上桌，字幕报「活动已派发」。",
-      "tier": "T2",
-      "category": "capability",
-      "tags": [
-        "graph",
-        "capability-standard",
-        "gas",
-        "graph-ops",
-        "per-op",
-        "OfferActivity"
-      ],
-      "binding": "capability_standard_graph_op_OfferActivity",
-      "preset": "capability_standard_graph_op_OfferActivity_raylib",
-      "docsPath": "gitbook/reference/graph-node-op-wiki/OfferActivity.md",
-      "readmePath": null,
-      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_OfferActivity",
-      "screenshot": "artifacts/evidence/capability_standard_graph_op_OfferActivity/poster.png",
-      "video": "artifacts/evidence/capability_standard_graph_op_OfferActivity/play.mp4",
-      "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }
