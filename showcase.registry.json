@@ -5082,7 +5082,7 @@
     },
     {
       "id": "east_asia_visual_heightmap_runtime",
-      "path": "mods/showcases/east_asia_playable_terrain/EastAsiaContinuousHeightmapRuntimeEntryMod",
+      "path": "mods/showcases/east_asia_playable_terrain/EastAsiaVisualHeightmapRuntimeEntryMod",
       "title": "East Asia ContinuousHeightmap Runtime Entry",
       "summary": "Pure-runtime launcher entry for the continuous East Asia ContinuousHeightmap without terrain editing tools.",
       "tier": "T2",

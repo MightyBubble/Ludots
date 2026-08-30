@@ -574,7 +574,7 @@
       "id": "east_asia_navmesh_debug_raylib",
       "name": "East Asia NavMesh Debug Raylib",
       "selectors": [
-        "mod:EastAsiaContinuousHeightmapRuntimeEntryMod",
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
         "mod:NavMeshDebugLaunchMod",
         "$east_asia_navmesh_debug",
         "$field_east_asia_country"
@@ -586,7 +586,7 @@
       "id": "east_asia_borders_land_sea_raylib",
       "name": "East Asia Borders Land Sea Raylib",
       "selectors": [
-        "mod:EastAsiaContinuousHeightmapRuntimeEntryMod",
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
         "mod:NavMeshDebugLaunchMod",
         "$east_asia_borders_land_sea"
       ],
@@ -597,7 +597,7 @@
       "id": "field_east_asia_country_raylib",
       "name": "Field East Asia Country Raylib",
       "selectors": [
-        "mod:EastAsiaContinuousHeightmapRuntimeEntryMod",
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
         "$field_east_asia_country"
       ],
       "adapterId": "raylib",
@@ -607,7 +607,7 @@
       "id": "field_east_asia_admin_raylib",
       "name": "Field East Asia Admin Raylib",
       "selectors": [
-        "mod:EastAsiaContinuousHeightmapRuntimeEntryMod",
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
         "$field_east_asia_admin"
       ],
       "adapterId": "raylib",
