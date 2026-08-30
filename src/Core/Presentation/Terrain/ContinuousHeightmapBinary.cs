@@ -8,7 +8,7 @@ namespace Ludots.Core.Presentation.Terrain
 {
     public static class ContinuousHeightmapBinary
     {
-        private const string Magic = "VHTM";
+        private const string Magic = "CHTM";
         private const int Version = 2;
 
         public static ContinuousHeightmapAsset Read(Stream stream)
