@@ -63,6 +63,13 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
             root.Scene!.EnumerateVisualNodes().Any(node => node.Kind == UiNodeKind.Image),
             Is.True,
             "classroom chips must render image controls");
+        UiNode[] progressTracks = root.Scene.EnumerateVisualNodes()
+            .Where(node => HasClass(node, "progress-track"))
+            .ToArray();
+        Assert.That(progressTracks, Is.Not.Empty, "default panel stylesheet must render progress tracks");
+        Assert.That(progressTracks, Is.All.Matches<UiNode>(node =>
+            node.Style.Height == UiLength.Px(10f) &&
+            node.Style.BackgroundColor.Alpha > 0));
 
         AssertColumnChipsStayInsidePanelFrame(root);
 

@@ -38,7 +38,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private readonly IUiSurfaceHost _surfaceHost;
     private readonly UIRoot _root;
     private readonly string? _globalSkin;
-    private readonly UiStyleSheet? _themeSheet;
+    private readonly UiStyleSheet[] _styleSheets;
     private readonly IUiTextMeasurer _textMeasurer;
     private readonly IUiImageSizeProvider _imageSizeProvider;
     private readonly PresentationDisplayResolver? _displayResolver;
@@ -67,7 +67,10 @@ public sealed class PanelPresentationSystem : ISystem<float>
         _surfaceHost = surfaceHost ?? throw new ArgumentNullException(nameof(surfaceHost));
         _root = root ?? throw new ArgumentNullException(nameof(root));
         _globalSkin = globalSkin;
-        _themeSheet = themeSheet;
+        UiStyleSheet defaultStyles = PanelDefaultStyles.Load();
+        _styleSheets = themeSheet == null
+            ? new[] { defaultStyles }
+            : new[] { defaultStyles, themeSheet };
         _textMeasurer = textMeasurer ?? new NullTextMeasurer();
         _imageSizeProvider = imageSizeProvider ?? new NullImageSizeProvider();
         _displayResolver = displayResolver;
@@ -221,7 +224,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
             {
                 _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
                     () => BuildPanel(info.Handle, rect, skin),
-                    styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
+                    styleSheets: _styleSheets));
                 mounted = new MountedPanel(lease, declaredLayout, page: null, info.Revision);
             }
 
@@ -242,7 +245,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         {
             _surfaceHost.Publish(mounted.Lease, UiSurfaceContribution.FromBuilder(
                 () => BuildPanel(info.Handle, rect, skin),
-                styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
+                styleSheets: _styleSheets));
         }
         else
         {
@@ -275,14 +278,13 @@ public sealed class PanelPresentationSystem : ISystem<float>
         uint revision)
     {
         var initial = new PanelUiState(handle, rect, skin, revision);
-        UiStyleSheet[] sheets = _themeSheet == null ? Array.Empty<UiStyleSheet>() : new[] { _themeSheet };
         return new ReactivePage<PanelUiState>(
             _textMeasurer,
             _imageSizeProvider,
             initial,
             ComposeVirtualPanel,
             theme: null,
-            sheets);
+            _styleSheets);
     }
 
     private UiElementBuilder ComposeVirtualPanel(ReactiveContext<PanelUiState> context)
