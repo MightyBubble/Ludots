@@ -69,14 +69,14 @@ namespace Ludots.Core.Gameplay.Story
                 }
 
                 anchor = "TopLeft";
-                offsetX = worldScreenX.Value;
+                offsetX = worldScreenX.Value + profile.OffsetX;
                 if (profile.WorldScreenHeadOffsetPx <= 0f)
                 {
                     throw new InvalidOperationException(
                         $"Presentation profile '{view.PresentationProfile}' requires worldScreenHeadOffsetPx > 0 (WorldProjected).");
                 }
 
-                offsetY = worldScreenY.Value - profile.WorldScreenHeadOffsetPx;
+                offsetY = worldScreenY.Value - profile.WorldScreenHeadOffsetPx + profile.OffsetY;
             }
 
             if (profile.ImageSize <= 0f)

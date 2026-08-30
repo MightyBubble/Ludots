@@ -85,9 +85,15 @@ namespace Ludots.Core.Presentation.Hud
                 {
                     scratch.Append(part.Literal);
                 }
-                else if ((uint)part.ArgIndex < packet.ArgCount)
+                else if (part.Kind == PresentationTextTemplatePartKind.Argument)
                 {
+                    ThrowIfArgIndexOutOfRange(part.ArgIndex, packet.ArgCount);
                     AppendArg(scratch, packet.GetArg(part.ArgIndex), stringPool);
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation text template part kind '{part.Kind}' is not supported.");
                 }
 
                 if (scratch.Length == 0)
@@ -123,17 +129,25 @@ namespace Ludots.Core.Presentation.Hud
 
                 if (part.Kind != PresentationTextTemplatePartKind.Argument)
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Presentation text template part kind '{part.Kind}' is not supported.");
                 }
 
-                if ((uint)part.ArgIndex >= packet.ArgCount)
-                {
-                    continue;
-                }
-
+                ThrowIfArgIndexOutOfRange(part.ArgIndex, packet.ArgCount);
                 PresentationTextArg arg = packet.GetArg(part.ArgIndex);
                 AppendArg(builder, in arg, stringPool);
             }
+        }
+
+        private static void ThrowIfArgIndexOutOfRange(int argIndex, byte argCount)
+        {
+            if ((uint)argIndex < argCount)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Presentation text template argument index {argIndex} is outside packet argument count {argCount}.");
         }
 
         private static void AppendArg(
@@ -160,6 +174,10 @@ namespace Ludots.Core.Presentation.Hud
 
                     builder.Append(stringPool.Get(in arg));
                     break;
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Presentation text argument type '{arg.Type}' is not supported.");
             }
         }
 

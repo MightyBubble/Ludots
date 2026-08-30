@@ -789,6 +789,37 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PresentationTextFormatter_ThrowsWhenTemplateArgumentExceedsPacketArguments()
+        {
+            var packet = PresentationTextPacket.FromToken(1);
+            var plainTemplate = new PresentationTextTemplate(
+                "{0}",
+                new[]
+                {
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Argument, string.Empty, 0)
+                });
+            var styledTemplate = new PresentationTextTemplate(
+                "<b>{0}</b>",
+                new[]
+                {
+                    new PresentationTextTemplatePart(
+                        PresentationTextTemplatePartKind.Argument,
+                        string.Empty,
+                        0,
+                        PresentationTextStyleOverride.CreateBold())
+                });
+
+            Assert.That(
+                () => PresentationTextFormatter.Format(plainTemplate, in packet),
+                Throws.InvalidOperationException.With.Message.Contains("index 0")
+                    .And.Message.Contains("count 0"));
+            Assert.That(
+                () => PresentationTextFormatter.FormatRuns(styledTemplate, in packet),
+                Throws.InvalidOperationException.With.Message.Contains("index 0")
+                    .And.Message.Contains("count 0"));
+        }
+
+        [Test]
         public void PresentationTextFormatter_PreservesEscapedBraces()
         {
             WriteFile("Core", "config_catalog.json",

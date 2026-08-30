@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -22,7 +23,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Story
 {
     /// <summary>
-    /// Cucumber-style Story Runtime modernization coverage for #1083 fail-closed migration paths
+    /// Cucumber-style Story Runtime modernization coverage for fail-closed migration paths
     /// and focused Sequencer section/signal behavior.
     /// </summary>
     [TestFixture]
@@ -208,6 +209,142 @@ namespace Ludots.Tests.GAS.Story
             {
                 DeleteTempRoot(root);
             }
+        }
+
+        [Test]
+        public void StoryConfigLoader_RejectsUnknownPresentationProfileFields()
+        {
+            string root = CreateTempRoot(out ConfigPipeline pipeline);
+            try
+            {
+                WriteStoryCatalogAndAssets(root, """
+                [
+                  {
+                    "id": "story.invalid",
+                    "surfaceKind": "OverlayDialogue",
+                    "layoutId": "layout.story.invalid",
+                    "anchor": "BottomCenter",
+                    "width": 640,
+                    "imageSize": 96,
+                    "unexpected": true
+                  }
+                ]
+                """);
+
+                ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
+                var loader = new StoryConfigLoader(pipeline, new StoryDefinitionRegistry());
+
+                Assert.That(
+                    () => loader.Load(catalog),
+                    Throws.TypeOf<JsonException>().With.Message.Contains("unexpected"));
+            }
+            finally
+            {
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void StoryConfigLoader_RejectsMissingRequiredPresentationProfileFields()
+        {
+            string root = CreateTempRoot(out ConfigPipeline pipeline);
+            try
+            {
+                WriteStoryCatalogAndAssets(root, """
+                [
+                  {
+                    "id": "story.missing.backend",
+                    "surfaceKind": "OverlayDialogue",
+                    "layoutId": "layout.story.invalid",
+                    "anchor": "BottomCenter",
+                    "width": 640,
+                    "imageSize": 96,
+                    "zIndex": 60
+                  }
+                ]
+                """);
+
+                ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
+                var loader = new StoryConfigLoader(pipeline, new StoryDefinitionRegistry());
+
+                Assert.That(
+                    () => loader.Load(catalog),
+                    Throws.TypeOf<JsonException>().With.Message.Contains("Backend"));
+            }
+            finally
+            {
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void StoryConfigLoader_AcceptsEmptyStoryArrayRoots()
+        {
+            string root = CreateTempRoot(out ConfigPipeline pipeline);
+            try
+            {
+                WriteStoryCatalogAndAssets(root, "[]");
+                ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
+                var registry = new StoryDefinitionRegistry();
+
+                Assert.DoesNotThrow(() => new StoryConfigLoader(pipeline, registry).Load(catalog));
+                Assert.That(registry.Lines, Is.Empty);
+                Assert.That(registry.Profiles, Is.Empty);
+                Assert.That(registry.Speakers, Is.Empty);
+            }
+            finally
+            {
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void StoryPresentationProfileRegistration_RejectsMissingRequiredAndBackdropCombination()
+        {
+            AssertInvalidProfile(profile => profile.Id = string.Empty, "id");
+            AssertInvalidProfile(profile => profile.SurfaceKind = string.Empty, "surfaceKind");
+            AssertInvalidProfile(profile => profile.LayoutId = string.Empty, "layoutId");
+            AssertInvalidProfile(profile => profile.Anchor = string.Empty, "anchor");
+            AssertInvalidProfile(profile => profile.Width = 0f, "width > 0");
+            AssertInvalidProfile(profile => profile.ImageSize = 0f, "imageSize > 0");
+            AssertInvalidProfile(profile => profile.DimBackdrop = true, "backdropHex");
+            AssertInvalidProfile(
+                profile => profile.Backend = StoryPresentationBackend.WorldProjected,
+                "worldHeadOffsetYCm");
+        }
+
+        [Test]
+        public void StoryPresentationProjector_WorldProjectedAddsAuthoredOffsets()
+        {
+            var story = new StoryDefinitionRegistry();
+            StoryPresentationProfileDefinition profile = CreateValidPresentationProfile();
+            profile.Backend = StoryPresentationBackend.WorldProjected;
+            profile.OffsetX = 28f;
+            profile.OffsetY = 12f;
+            profile.WorldHeadOffsetYCm = 140f;
+            profile.WorldScreenHeadOffsetPx = 96f;
+            story.Register(profile);
+
+            StoryPresentationFrame frame = new StoryPresentationProjector(story)
+                .ProjectDialogue(CreateDialogueView(profile.Id), worldScreenX: 400f, worldScreenY: 300f);
+
+            Assert.That(frame.Surfaces[0].OffsetX, Is.EqualTo(428f));
+            Assert.That(frame.Surfaces[0].OffsetY, Is.EqualTo(216f));
+        }
+
+        [Test]
+        public void StoryPresentationProjector_ChoiceFieldsRemainRequiredWhenChoicesExist()
+        {
+            var story = new StoryDefinitionRegistry();
+            StoryPresentationProfileDefinition profile = CreateValidPresentationProfile();
+            story.Register(profile);
+            DialogueView view = CreateDialogueView(
+                profile.Id,
+                new[] { new DialogueChoiceView("continue", "line.choice", "Continue") });
+
+            Assert.That(
+                () => new StoryPresentationProjector(story).ProjectDialogue(view),
+                Throws.InvalidOperationException.With.Message.Contains("choiceAnchor"));
         }
 
         [Test]
@@ -787,6 +924,67 @@ namespace Ludots.Tests.GAS.Story
                 : null;
             engine.GetService(CoreServiceKeys.GraphProgramRegistry)!
                 .Register(graphId, program, kind, GraphInstructionSourceMap.Empty, null, entries);
+        }
+
+        private static void AssertInvalidProfile(
+            Action<StoryPresentationProfileDefinition> invalidate,
+            string expectedMessage)
+        {
+            StoryPresentationProfileDefinition profile = CreateValidPresentationProfile();
+            invalidate(profile);
+
+            Assert.That(
+                () => new StoryDefinitionRegistry().Register(profile),
+                Throws.InvalidOperationException.With.Message.Contains(expectedMessage));
+        }
+
+        private static StoryPresentationProfileDefinition CreateValidPresentationProfile()
+        {
+            return new StoryPresentationProfileDefinition
+            {
+                Id = "story.unit.profile",
+                SurfaceKind = "DialogueBubble",
+                LayoutId = "layout.story.unit",
+                Anchor = "TopLeft",
+                Width = 520f,
+                ImageSize = 84f
+            };
+        }
+
+        private static DialogueView CreateDialogueView(
+            string presentationProfile,
+            DialogueChoiceView[]? choices = null)
+        {
+            return new DialogueView(
+                DialogueId: "dialogue.unit.projector",
+                DisplayName: "Projector",
+                NodeId: "root",
+                LineId: "line.unit.projector",
+                SpeakerId: "speaker.unit",
+                ResolvedSpeakerName: "Speaker",
+                PortraitImageId: string.Empty,
+                StandingImageId: string.Empty,
+                TextToken: "story.unit.projector",
+                ResolvedText: "Text",
+                PresentationProfile: presentationProfile,
+                CameraId: string.Empty,
+                AutoAdvanceSeconds: 0f,
+                ElapsedSeconds: 0f,
+                Choices: choices ?? Array.Empty<DialogueChoiceView>());
+        }
+
+        private static void WriteStoryCatalogAndAssets(string root, string profiles)
+        {
+            WriteCatalog(root, """
+            [
+              { "Path": "Story/lines.json", "Policy": "ArrayById", "IdField": "id" },
+              { "Path": "Story/presentation_profiles.json", "Policy": "ArrayById", "IdField": "id" },
+              { "Path": "Story/speakers.json", "Policy": "ArrayById", "IdField": "id" }
+            ]
+            """);
+            WriteAsset(root, StoryConfigLoader.LinesPath, "[]");
+            WriteAsset(root, StoryConfigLoader.ProfilesPath, profiles);
+            WriteAsset(root, StoryConfigLoader.SpeakersPath, "[]");
         }
 
         private static string CreateTempRoot(out ConfigPipeline pipeline)
