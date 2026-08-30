@@ -1,0 +1,16 @@
+{
+  "name": "PanelActiveTasksEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for typed collection panel showcase: 进行中的差事",
+  "main": "bin/net9.0/PanelActiveTasksEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PanelCollectionBagsShowcaseMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "panel",
+    "typed-collection",
+    "active_tasks"
+  ]
+}

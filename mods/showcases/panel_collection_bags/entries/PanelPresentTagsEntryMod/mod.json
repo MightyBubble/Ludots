@@ -1,0 +1,16 @@
+{
+  "name": "PanelPresentTagsEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for typed collection panel showcase: 身上的印记",
+  "main": "bin/net9.0/PanelPresentTagsEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PanelCollectionBagsShowcaseMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "panel",
+    "typed-collection",
+    "present_tags"
+  ]
+}

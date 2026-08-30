@@ -242,8 +242,8 @@
 
 | present（示意） | 画面 | 数据 |
 |---|---|---|
-| `list` / `grid` | 逐行/逐格展开成员 | 读窗口或全量成员袋 |
-| `aggregate` | 配置化聚合，例如首位图标 + `count` | 仍绑同一集合；`count` 来自袋 `TotalCount` 或并行 Summary |
+| `list` / `grid` / `column` | 逐行 / 按列折行 / 横向一排 | 读窗口或全量成员袋 |
+| `aggregate` | 配置化聚合（`aggregate.count`） | 仍绑同一集合；`count` 来自袋 `TotalCount` |
 
 `aggregate` **不是** 新的 destination，也 **不是** 「只输出第一个实体」的特殊集合类型。
 
@@ -388,13 +388,12 @@ squad.candidates ──inputs.candidates──► SlotCard 图 ──ability.slo
   "bind": "stacks",
   "present": "aggregate",
   "aggregate": {
-    "head": { "from": "first", "icon": "icon", "label": "displayName" },
-    "count": { "from": "totalCount" }
+    "count": { "from": "totalCount", "prefix": "×" }
   }
 }
 ```
 
-`bind` 指向的 collections 条目仍须满足 §2.4（`source` + 类型）。空袋：fail-closed 或作者显式 empty 控件——禁止静默画「有货」。
+首位外观（含图标）来自元素模板：在芯片 layout 里写 `type: "image"`（`bind: "imageId"` 或 `src`），不要另造 `aggregate.head.icon` 字段。空袋：fail-closed 或作者显式 empty 控件——禁止静默画「有货」。
 
 #### 3.7.4 对照
 

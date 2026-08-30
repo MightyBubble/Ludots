@@ -62,7 +62,16 @@
 "panelTheme": "ink-wash"    // 水墨|fantasy|极简——CSS/图/字体正交于皮
 ```
 
+## 布局三种编排（开箱教室）
+
+同一份效果芯片，换 `present` 就能变成竖列 / 网格 / 横栏；芯片上带剩余时间与层数。
+
+- 合同：[面板开箱布局套件](panel-author-layout-kit.md)
+- 进场：`scripts/run-mod-launcher.cmd cli launch $panel_author_layout_kit --adapter raylib`
+- 照抄资产：`mods/showcases/panel_author_layout_kit/PanelAuthorLayoutKitShowcaseMod/assets/Panels/panel_templates.json`
+
 ## 下一步
+
 
 - 35 个现成面板设计（线框+配置+验收）：[典型案例全设计](panel-case-designs.md)
 - 交互（按钮→意图→admission）：#1015 交付后开放，设计已就绪

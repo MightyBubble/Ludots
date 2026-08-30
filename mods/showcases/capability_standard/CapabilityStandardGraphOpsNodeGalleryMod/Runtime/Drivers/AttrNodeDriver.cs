@@ -43,6 +43,20 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
         GraphOpsNodeActorBinding.RequireMapActors(ctx);
+        if (string.Equals(ctx.Vignette.Op, "LoadEffectTiming", StringComparison.Ordinal))
+        {
+            SeedEffectTimingOnCaster(ctx);
+            GraphOpsNodeActorBinding.BindHud(ctx);
+            return;
+        }
+
+        if (string.Equals(ctx.Vignette.Op, "LoadEffectStack", StringComparison.Ordinal))
+        {
+            SeedEffectStackOnCaster(ctx);
+            GraphOpsNodeActorBinding.BindHud(ctx);
+            return;
+        }
+
         _markTemplateId = EffectTemplateIdRegistry.GetId(MarkEffectId);
         if (_markTemplateId <= 0)
         {
@@ -66,8 +80,78 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         GraphOpsNodeActorBinding.BindHud(ctx);
     }
 
+    private static void SeedEffectTimingOnCaster(GraphOpsNodeDriverContext ctx)
+    {
+        Entity caster = ctx.Caster;
+        var timing = new GameplayEffect
+        {
+            LifetimeKind = EffectLifetimeKind.Infinite,
+            TotalTicks = 100,
+            RemainingTicks = 55,
+        };
+        timing.State = EffectState.Committed;
+
+        if (ctx.SimWorld.Has<GameplayEffect>(caster))
+        {
+            ref GameplayEffect existing = ref ctx.SimWorld.Get<GameplayEffect>(caster);
+            existing = timing;
+            return;
+        }
+
+        ctx.SimWorld.Add(caster, timing);
+    }
+
+    private static void SeedEffectStackOnCaster(GraphOpsNodeDriverContext ctx)
+    {
+        Entity caster = ctx.Caster;
+        var stack = new EffectStack
+        {
+            Count = 3,
+            Limit = 5,
+            Policy = StackPolicy.RefreshDuration,
+            OverflowPolicy = StackOverflowPolicy.RejectNew,
+        };
+
+        if (ctx.SimWorld.Has<EffectStack>(caster))
+        {
+            ref EffectStack existing = ref ctx.SimWorld.Get<EffectStack>(caster);
+            existing = stack;
+            return;
+        }
+
+        ctx.SimWorld.Add(caster, stack);
+    }
+
     public void Tick(GraphOpsNodeDriverContext ctx)
     {
+        if (string.Equals(ctx.Vignette.Op, "LoadEffectTiming", StringComparison.Ordinal))
+        {
+            GraphOpsNodeExecuteResult timingResult = ctx.ExecuteFeaturedGraph();
+            if (timingResult.FloatValue <= 0f)
+            {
+                throw new InvalidOperationException("LoadEffectTiming gallery read no remaining ticks.");
+            }
+
+            ctx.CaptionValues["hp"] = timingResult.FloatValue.ToString("0");
+            ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
+            GraphOpsNodeActorBinding.SyncHud(ctx);
+            return;
+        }
+
+        if (string.Equals(ctx.Vignette.Op, "LoadEffectStack", StringComparison.Ordinal))
+        {
+            GraphOpsNodeExecuteResult stackResult = ctx.ExecuteFeaturedGraph();
+            if (stackResult.FloatValue < 1f)
+            {
+                throw new InvalidOperationException("LoadEffectStack gallery read no stacks.");
+            }
+
+            ctx.CaptionValues["hp"] = stackResult.FloatValue.ToString("0");
+            ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
+            GraphOpsNodeActorBinding.SyncHud(ctx);
+            return;
+        }
+
         if (ctx.EffectRequests == null)
         {
             throw new InvalidOperationException(
@@ -1000,6 +1084,16 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         if (string.Equals(op, "LoadSelfAttribute", StringComparison.Ordinal) && result.FloatValue <= 0f)
         {
             throw new InvalidOperationException("LoadSelfAttribute gallery read no caster health.");
+        }
+
+        if (string.Equals(op, "LoadEffectTiming", StringComparison.Ordinal) && result.FloatValue <= 0f)
+        {
+            throw new InvalidOperationException("LoadEffectTiming gallery read no remaining ticks.");
+        }
+
+        if (string.Equals(op, "LoadEffectStack", StringComparison.Ordinal) && result.FloatValue < 1f)
+        {
+            throw new InvalidOperationException("LoadEffectStack gallery read no stacks.");
         }
 
         if (string.Equals(op, "CompareLtInt", StringComparison.Ordinal) && !result.BoolValue)

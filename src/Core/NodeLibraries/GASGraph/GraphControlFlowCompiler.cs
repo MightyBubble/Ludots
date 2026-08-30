@@ -1320,7 +1320,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 GraphValueType outputType = GetOutputType(ops[i], registers.Kind);
                 outputTypes[i] = outputType;
-                if (outputType == GraphValueType.Void || outputType == GraphValueType.TargetList)
+                if (outputType == GraphValueType.Void || outputType == GraphValueType.TargetList || outputType == GraphValueType.IntIdList)
                 {
                     outputRegisters[i] = 0;
                     continue;
@@ -1342,7 +1342,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             for (int i = 0; i < nodes.Count; i++)
             {
                 GraphValueType outputType = outputTypes[i];
-                if (outputType == GraphValueType.Void || outputType == GraphValueType.TargetList || nodes[i].PinRegister >= 0)
+                if (outputType == GraphValueType.Void || outputType == GraphValueType.TargetList || outputType == GraphValueType.IntIdList || nodes[i].PinRegister >= 0)
                 {
                     continue;
                 }
@@ -3180,55 +3180,56 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
-                if (destination == GraphOutputDestinationKind.EntityCollection)
+                if (destination == GraphOutputDestinationKind.Summary)
                 {
-                    CompileCollectionOutput(graphId, output, outputId, valueKind, bindings, diagnostics);
+                    if (valueKind == GraphOutputValueKind.TargetList || valueKind == GraphOutputValueKind.IntIdList)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"ControlFlow summary output '{outputId}' has unsupported type '{output.Type}'.", outputId));
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(output.Source) ||
+                        !nodeIndices.TryGetValue(output.Source, out int sourceIndex))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"ControlFlow summary output '{outputId}' references missing source '{output.Source}'.", outputId));
+                        continue;
+                    }
+
+                    GraphValueType sourceType = outputTypes[sourceIndex];
+                    if (!MatchesOutputType(valueKind, sourceType))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"ControlFlow summary output '{outputId}' type {valueKind} does not match source '{output.Source}' type {sourceType}.",
+                            outputId));
+                        continue;
+                    }
+
+                    string key = string.IsNullOrWhiteSpace(output.Key) ? outputId : output.Key.Trim();
+                    bindings.Add(new GraphOutputBinding(
+                        outputId,
+                        GraphOutputDestinationKind.Summary,
+                        valueKind,
+                        outputRegisters[sourceIndex],
+                        keyId: 0,
+                        key,
+                        collectionKey: string.Empty,
+                        collectionRole: EntityCollectionRoleKind.Display,
+                        title: output.Title,
+                        summary: output.Summary));
                     continue;
                 }
 
-                if (destination != GraphOutputDestinationKind.Summary)
+                if (GraphOutputDestinationKinds.IsEntityBagDestination(destination) ||
+                    GraphOutputDestinationKinds.IsIntIdBagDestination(destination))
                 {
-                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
-                        $"ControlFlow graph output '{outputId}' has unsupported destination '{output.Destination}'.", outputId));
+                    CompileCollectionOutput(graphId, output, outputId, destination, valueKind, bindings, diagnostics);
                     continue;
                 }
 
-                if (valueKind == GraphOutputValueKind.TargetList)
-                {
-                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
-                        $"ControlFlow summary output '{outputId}' has unsupported type '{output.Type}'.", outputId));
-                    continue;
-                }
-
-                if (string.IsNullOrWhiteSpace(output.Source) ||
-                    !nodeIndices.TryGetValue(output.Source, out int sourceIndex))
-                {
-                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
-                        $"ControlFlow summary output '{outputId}' references missing source '{output.Source}'.", outputId));
-                    continue;
-                }
-
-                GraphValueType sourceType = outputTypes[sourceIndex];
-                if (!MatchesOutputType(valueKind, sourceType))
-                {
-                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
-                        $"ControlFlow summary output '{outputId}' type {valueKind} does not match source '{output.Source}' type {sourceType}.",
-                        outputId));
-                    continue;
-                }
-
-                string key = string.IsNullOrWhiteSpace(output.Key) ? outputId : output.Key.Trim();
-                bindings.Add(new GraphOutputBinding(
-                    outputId,
-                    GraphOutputDestinationKind.Summary,
-                    valueKind,
-                    outputRegisters[sourceIndex],
-                    keyId: 0,
-                    key,
-                    collectionKey: string.Empty,
-                    collectionRole: EntityCollectionRoleKind.Display,
-                    title: output.Title,
-                    summary: output.Summary));
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"ControlFlow graph output '{outputId}' has unsupported destination '{output.Destination}'.", outputId));
             }
 
             return bindings.Count == 0
@@ -3240,14 +3241,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             string graphId,
             GraphOutputConfig output,
             string outputId,
+            GraphOutputDestinationKind destination,
             GraphOutputValueKind valueKind,
             List<GraphOutputBinding> bindings,
             List<GraphDiagnostic> diagnostics)
         {
-            if (valueKind != GraphOutputValueKind.TargetList)
+            bool entityBag = GraphOutputDestinationKinds.IsEntityBagDestination(destination);
+            bool intBag = GraphOutputDestinationKinds.IsIntIdBagDestination(destination);
+            if (entityBag && valueKind != GraphOutputValueKind.TargetList)
             {
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
-                    $"ControlFlow collection output '{outputId}' must use type TargetList.", outputId));
+                    $"ControlFlow collection output '{outputId}' destination '{destination}' must use type TargetList.", outputId));
+                return;
+            }
+
+            if (intBag && valueKind != GraphOutputValueKind.IntIdList)
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"ControlFlow collection output '{outputId}' destination '{destination}' must use type IntIdList.", outputId));
                 return;
             }
 
@@ -3269,8 +3280,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             bindings.Add(new GraphOutputBinding(
                 outputId,
-                GraphOutputDestinationKind.EntityCollection,
-                GraphOutputValueKind.TargetList,
+                destination,
+                valueKind,
                 register: 0,
                 keyId: 0,
                 key: string.Empty,
@@ -3313,6 +3324,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphOutputValueKind.Float => graphType == GraphValueType.Float,
                 GraphOutputValueKind.Entity => graphType == GraphValueType.Entity,
                 GraphOutputValueKind.TargetList => graphType == GraphValueType.TargetList,
+                GraphOutputValueKind.IntIdList => graphType == GraphValueType.IntIdList,
                 _ => false,
             };
         }

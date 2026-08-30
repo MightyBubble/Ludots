@@ -322,7 +322,7 @@ namespace Ludots.Core.UI.PanelHosting
                 var counts = new List<PanelListProjection>(entry.Template.Collections.Count);
                 foreach (PanelCollectionBinding collection in entry.Template.Collections)
                 {
-                    int total = _listProjector.CountMembers(entry.Scope, collection);
+                    int total = _listProjector.CountMembers(entry.Scope, entry.Template, collection);
                     counts.Add(new PanelListProjection(
                         collection.Name,
                         Array.Empty<PanelListItemProjection>(),
@@ -368,7 +368,11 @@ namespace Ludots.Core.UI.PanelHosting
                 return false;
             }
 
-            projection = _listProjector.ProjectCollectionWindow(entry.Scope, collection, window);
+            projection = _listProjector.ProjectCollectionWindow(
+                entry.Scope,
+                entry.Template,
+                collection,
+                window);
             return true;
         }
 

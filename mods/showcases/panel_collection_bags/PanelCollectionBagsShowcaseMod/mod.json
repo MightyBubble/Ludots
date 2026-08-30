@@ -1,0 +1,10 @@
+{
+  "name": "PanelCollectionBagsShowcaseMod",
+  "version": "1.0.0",
+  "description": "Shared host for per-bag typed collection panel showcases; player entries live under entries/.",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "main": "bin/net9.0/PanelCollectionBagsShowcaseMod.dll"
+}

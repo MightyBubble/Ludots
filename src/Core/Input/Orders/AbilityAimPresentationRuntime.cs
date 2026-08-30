@@ -399,6 +399,7 @@ namespace Ludots.Core.Input.Orders
             Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             Span<Entity> targets = _candidateBuffer;
             GraphFrame frame = GraphFrame.Bind(
@@ -415,6 +416,7 @@ namespace Ludots.Core.Input.Orders
                 bools,
                 entities,
                 targets,
+                intIds,
                 callStack);
 
             _graphApi.SetConfigContext(in previewParams);

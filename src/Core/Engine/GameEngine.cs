@@ -13,6 +13,7 @@ using Ludots.Core.Config;
 using Arch.Core;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.EntityQueries;
+using Ludots.Core.TypedCollections;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Gameplay;
@@ -827,6 +828,7 @@ namespace Ludots.Core.Engine
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             RegisterBuiltInEntityCollectionKeys(entityCollectionKeyRegistry);
             var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
+            var intIdCollectionStore = new IntIdCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
             var relationshipCatalog = new RelationshipCatalogPipelineLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var relationshipCatalogRuntime = RelationshipCatalogInstaller.Install(
                 relationshipCatalog,
@@ -965,7 +967,8 @@ namespace Ludots.Core.Engine
                 graphOps,
                 builtinHandlers,
                 customEventCatalog.Schemas,
-                enumCatalog);
+                enumCatalog,
+                intIdCollectionStore);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes, builtinHandlers);
@@ -1082,6 +1085,8 @@ namespace Ludots.Core.Engine
                 controlDomainQuery,
                 knowledgeProjectionResolver,
                 clock,
+                inventoryRuntime,
+                itemDefinitions,
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             gasGraphApi.BindTriggerManager(TriggerManager);
@@ -1097,6 +1102,7 @@ namespace Ludots.Core.Engine
                 graphOutputSchemas,
                 graphHandlers,
                 entityCollectionStore,
+                intIdCollectionStore,
                 graphOutputValueStore);
             var panelProjectionReader = new PanelProjectionReader(World, graphOutputValueStore);
             var panelGraphEvaluator = new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi);
@@ -1107,6 +1113,8 @@ namespace Ludots.Core.Engine
                 new Ludots.Core.UI.PanelProjection.PanelListProjector(
                     World,
                     entityCollectionStore,
+                    intIdCollectionStore,
+                    itemDefinitions,
                     panelProjectionReader,
                     panelGraphEvaluator));
             gasGraphApi.BindPanelHost(panelHost);
@@ -1766,6 +1774,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.InputResponseBuffer, inputResponseBuffer);
             SetService(CoreServiceKeys.CommandSourceAcquisitionConfig, commandSourceConfig);
             SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
+            SetService(CoreServiceKeys.IntIdCollectionStore, intIdCollectionStore);
             SetService(CoreServiceKeys.EntityCollectionKeyRegistry, entityCollectionKeyRegistry);
             var clientLocalSeatRegistry = new Client.ClientLocalSeatRegistry();
             var logicViewRegistry = new Client.LogicViewRegistry();

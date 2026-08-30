@@ -62,6 +62,7 @@
   ],
   "layout": {
     "controls": [
+      { "type": "image", "bind": "imageId", "width": 28, "height": 28 },
       { "type": "label", "bind": "displayName" },
       { "type": "progressBar", "current": "health", "max": "healthMax" },
       { "type": "badge", "bind": "stunned", "text": "晕眩", "showWhen": true }
@@ -77,7 +78,9 @@
 | 元素 **可** 声明子 `collections` | **复合切片**：子袋须由图以该成员为 scope/owner 写出；禁止在元素里内联过滤排序 |
 | 平面名册切片 | 无子集合的元素仍合法（今日 `panel.unit.roster`） |
 | 数值 / bool | 一律元素 **graph → pins** |
-| `displayName`（Entity） | 主体表面，layout 可 bind；不是父级拆列 |
+| `displayName`（Entity 等） | 主体表面，layout 可 bind；不是父级拆列 |
+| `imageId`（主体表面） | 供 `type: image`；解析走 Presentation image assets；头像/立绘/图标同一控件 |
+| `list` / `grid` / `column` / `aggregate` | 只编排；**禁止** `itemControls` |
 
 ### 3.2 容器面板
 
@@ -115,8 +118,10 @@
 |---|---|
 | `collections[].collectionKey` | 容器图写出的集合 |
 | `collections[].template` | 元素模板 id（必须带匹配的 `subject`） |
-| `list` / 日后 `grid` | 只编排；**禁止** `itemControls` |
-| `present` | 消费形态：`list`（默认）/ `grid` / `aggregate`（见下） |
+| `list` / `grid` / `column` / `aggregate` | 只编排；**禁止** `itemControls` |
+| `present` | 消费形态：`list`（默认）/ `grid`（必填 `columns`）/ `column`（横向）/ `aggregate`（必填 `aggregate.count`） |
+| `columns` | 仅 `present=grid`；每行格数 ≥ 1 |
+| `aggregate.count` | 仅 `present=aggregate`；`from: totalCount` + 作者自有 `prefix` |
 
 #### list 滚动与虚拟窗口
 
@@ -232,7 +237,7 @@ Dialogue surface ─ NarrativeScope ────┼─► PanelLayoutComposer �
 - 父→子数据必须经显式 `inputs`/`source` 接线并类型校验；不做隐式同名撞袋  
 - 父→子额外「非引脚参数」本切片不做；需要时另立显式 `params` 合同  
 - Task/Ability/Effect 等集合类型未接线前，配置写了对应 subject/引用 → 装载或绑定 fail-closed（类型表见[查询图集合输出](query-graph-collection-outputs.md)）  
-- 不硬编码 EntityInfo / AbilityIcon / ItemStack 控件；复合靠配置  
+- 不硬编码 EntityInfo / AbilityIcon / ItemStack 控件；复合靠配置；头像/立绘/图标统一 `type: image`
 - 点击行选中仍属 #1015  
 - 小地图 marker 不进本投影  
 

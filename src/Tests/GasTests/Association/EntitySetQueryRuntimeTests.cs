@@ -23,6 +23,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Core.TypedCollections;
 using NUnit.Framework;
 using Ludots.Platform.Abstractions;
 
@@ -290,6 +291,7 @@ namespace Ludots.Tests.GAS
                 graph.OutputSchemas,
                 new GasGraphOpHandlerTable(),
                 graph.Collections,
+                graph.IntIdCollections,
                 graph.OutputValues);
 
             int graphId = GraphIdRegistry.GetId(GraphId);
@@ -446,7 +448,14 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 },
                 GraphKind.Query);
-            var writer = new GraphReturnWriter(world, programs, schemas, GasGraphOpHandlerTable.Instance, collections, outputValues);
+            var writer = new GraphReturnWriter(
+                world,
+                programs,
+                schemas,
+                GasGraphOpHandlerTable.Instance,
+                collections,
+                new IntIdCollectionStore(collections.KeyRegistry),
+                outputValues);
             var api = new GasGraphRuntimeApi(world, tagOps: setup.TagOps, relationshipRuntime: setup.Relationships, entityQueries: setup.EntityQueries);
             Entity owner = world.Create();
 
@@ -484,6 +493,7 @@ namespace Ludots.Tests.GAS
                 graph.OutputSchemas,
                 GasGraphOpHandlerTable.Instance,
                 graph.Collections,
+                graph.IntIdCollections,
                 graph.OutputValues);
 
             int graphId = GraphIdRegistry.GetId(GraphId);
@@ -516,7 +526,14 @@ namespace Ludots.Tests.GAS
                 GraphInstructionSourceMap.Empty,
                 symbols: null,
                 triggerGraphEntries: new[] { new TriggerGraphEntry("boot", "MapHeartbeat", 0, once: false) });
-            var writer = new GraphReturnWriter(world, programs, schemas, GasGraphOpHandlerTable.Instance, collections, outputValues);
+            var writer = new GraphReturnWriter(
+                world,
+                programs,
+                schemas,
+                GasGraphOpHandlerTable.Instance,
+                collections,
+                new IntIdCollectionStore(collections.KeyRegistry),
+                outputValues);
             var api = new GasGraphRuntimeApi(world, tagOps: setup.TagOps, relationshipRuntime: setup.Relationships, entityQueries: setup.EntityQueries);
             Entity owner = world.Create();
 
@@ -638,6 +655,7 @@ namespace Ludots.Tests.GAS
             var schemas = new GraphOutputSchemaRegistry();
             var outputKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var outputValues = new GraphOutputValueStore(outputKeys, initialCapacity: 16);
+            var intIdCollections = new IntIdCollectionStore(setup.Collections.KeyRegistry);
             var symbolResolver = new GasGraphSymbolResolver(
                 setup.RelationshipTypes,
                 setup.RelationshipMetrics,
@@ -646,11 +664,18 @@ namespace Ludots.Tests.GAS
                 setup.TargetDispatchPresets,
                 setup.TemplateKeys);
             GraphIdRegistry.Clear();
-            var loader = new GraphProgramConfigLoader(pipeline, programs, symbolResolver, schemas, outputKeys, setup.Collections);
+            var loader = new GraphProgramConfigLoader(
+                pipeline,
+                programs,
+                symbolResolver,
+                schemas,
+                outputKeys,
+                setup.Collections,
+                intIdCollections: intIdCollections);
             var packages = loader.LoadIdsAndCompile(catalog, relativePath: "GAS/graphs.json");
             loader.PatchAndRegister(packages);
 
-            return new GraphRuntimeSetup(programs, schemas, setup.Collections, outputValues);
+            return new GraphRuntimeSetup(programs, schemas, setup.Collections, intIdCollections, outputValues);
         }
 
         private static QueryRuntimeSetup CreateQueryRuntime(World world)
@@ -1114,6 +1139,7 @@ namespace Ludots.Tests.GAS
             GraphProgramRegistry Programs,
             GraphOutputSchemaRegistry OutputSchemas,
             EntityCollectionStore Collections,
+            IntIdCollectionStore IntIdCollections,
             GraphOutputValueStore OutputValues);
     }
 }

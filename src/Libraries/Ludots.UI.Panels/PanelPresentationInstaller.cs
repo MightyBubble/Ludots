@@ -38,6 +38,7 @@ public static class PanelPresentationInstaller
         var seats = engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out Ludots.Core.Client.ClientLocalSeatRegistry? seatRegistry)
             ? seatRegistry
             : null;
+        var displayResolver = engine.GetService(CoreServiceKeys.PresentationDisplayResolver);
         engine.RegisterPresentationSystem(new PanelPresentationSystem(
             panelHost,
             templates,
@@ -48,6 +49,7 @@ public static class PanelPresentationInstaller
             theme?.StyleSheet,
             textMeasurer,
             imageSizeProvider,
+            displayResolver,
             seats));
     }
 }

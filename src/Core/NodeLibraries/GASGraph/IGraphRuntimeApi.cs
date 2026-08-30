@@ -199,6 +199,60 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph entity collection runtime is not available.");
         }
 
+        /// <summary>
+        /// Enumerate alive effect-instance entities from the owner's <c>ActiveEffectContainer</c>
+        /// into <paramref name="buffer"/>. Truncates at buffer capacity (same contract as map collect).
+        /// </summary>
+        int CollectActiveEffects(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph active-effect query runtime is not available.");
+        }
+
+        int CollectEffectTemplateIds(Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph effect-template query runtime is not available.");
+        }
+
+        int CollectAbilitySlots(Entity owner, Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph ability-slot query runtime is not available.");
+        }
+
+        int CollectInventoryItems(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph inventory-item query runtime is not available.");
+        }
+
+        int CollectItemDefinitionIds(Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph item-definition query runtime is not available.");
+        }
+
+        int CollectPresentTags(Entity owner, Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph present-tag query runtime is not available.");
+        }
+
+        int CollectActiveTasks(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph active-task query runtime is not available.");
+        }
+
+        int CollectActiveActivities(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph active-activity query runtime is not available.");
+        }
+
+        int CollectProgressionNodes(Entity owner, Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph progression-node query runtime is not available.");
+        }
+
+        int CollectAbilityHolders(int abilityId, ReadOnlySpan<Entity> candidates, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph ability-holder query runtime is not available.");
+        }
+
         int FilterTeam(Span<Entity> entities, int count, int teamId)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
@@ -536,6 +590,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
+        int ResolveAbility(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references ability '{name}', but no ability resolver is available.");
+        }
         int ResolveRngDistribution(string name)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.RngDistributionUnavailable");

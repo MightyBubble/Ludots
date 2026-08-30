@@ -129,6 +129,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return id;
         }
 
+        public int ResolveAbility(string name)
+        {
+            int id = AbilityIdRegistry.GetId(name);
+            if (id <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references unknown ability '{name}'.");
+            }
+            return id;
+        }
+
         public int ResolveRelationshipType(string name)
         {
             return _types.GetId(name);

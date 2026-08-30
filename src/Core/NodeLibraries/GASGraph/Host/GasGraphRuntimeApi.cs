@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
@@ -20,6 +21,11 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Spatial;
+using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Progression.Components;
+using Ludots.Core.Gameplay.Tasks;
+using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -49,6 +55,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             ControlDomainQuery controlDomains,
             KnowledgeProjectionResolver knowledgeProjections,
             IClock clock,
+            InventoryRuntimeService inventoryRuntime,
+            ItemDefinitionRegistry itemDefinitions,
             GraphLookupTableRegistry? lookupTables = null)
         {
             World = world ?? throw new ArgumentNullException(nameof(world));
@@ -68,6 +76,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             ControlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             KnowledgeProjections = knowledgeProjections ?? throw new ArgumentNullException(nameof(knowledgeProjections));
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            InventoryRuntime = inventoryRuntime ?? throw new ArgumentNullException(nameof(inventoryRuntime));
+            ItemDefinitions = itemDefinitions ?? throw new ArgumentNullException(nameof(itemDefinitions));
             LookupTables = lookupTables;
         }
 
@@ -90,11 +100,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public ControlDomainQuery ControlDomains { get; }
         public KnowledgeProjectionResolver KnowledgeProjections { get; }
         public IClock Clock { get; }
+        public InventoryRuntimeService InventoryRuntime { get; }
+        public ItemDefinitionRegistry ItemDefinitions { get; }
     }
 
     public sealed class GasGraphRuntimeApi : IDerivedAttributeGraphRuntimeApi
     {
         public const string MissingBlackboardError = "GAS.GRAPH.ERR.MissingBlackboard";
+        private static readonly QueryDescription TaskInstanceQuery = new QueryDescription().WithAll<TaskInstanceCm>();
+        private static readonly QueryDescription ActivityInstanceQuery = new QueryDescription().WithAll<ActivityInstanceCm>();
 
         private readonly World _world;
         private readonly ISpatialQueryService? _spatialQueries;
@@ -107,6 +121,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
         private readonly GraphLookupTableRegistry? _lookupTables;
+        private readonly InventoryRuntimeService? _inventory;
+        private readonly ItemDefinitionRegistry? _itemDefinitions;
         private Gameplay.Rng.RngPickService? _rngPickService;
         private Ludots.Core.UI.PanelActivation.PanelActivationApi? _panelActivationApi;
         private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
@@ -175,7 +191,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 RequireService(services, CoreServiceKeys.EntitySetQueryRuntime),
                 RequireService(services, CoreServiceKeys.ControlDomainQuery),
                 RequireService(services, CoreServiceKeys.KnowledgeProjectionResolver),
-                RequireService(services, CoreServiceKeys.Clock)));
+                RequireService(services, CoreServiceKeys.Clock),
+                RequireService(services, CoreServiceKeys.InventoryRuntimeService),
+                RequireService(services, CoreServiceKeys.ItemDefinitionRegistry)));
         }
 
         public static GasGraphRuntimeApi CreateProduction(GasGraphRuntimeProductionServices services)
@@ -200,7 +218,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.TargetDispatchPresets,
                 services.EntityCollections,
                 services.EntityQueries,
-                lookupTables: services.LookupTables);
+                lookupTables: services.LookupTables,
+                inventory: services.InventoryRuntime,
+                itemDefinitions: services.ItemDefinitions);
             api.BindTopologyServices(
                 services.ControlDomains,
                 services.KnowledgeProjections,
@@ -312,7 +332,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TargetDispatchPresetRegistry? targetDispatchPresets = null,
             EntityCollectionStore? entityCollections = null,
             EntitySetQueryRuntime? entityQueries = null,
-            GraphLookupTableRegistry? lookupTables = null)
+            GraphLookupTableRegistry? lookupTables = null,
+            InventoryRuntimeService? inventory = null,
+            ItemDefinitionRegistry? itemDefinitions = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries;
@@ -325,6 +347,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _entityCollections = entityCollections;
             _entityQueries = entityQueries;
             _lookupTables = lookupTables;
+            _inventory = inventory;
+            _itemDefinitions = itemDefinitions;
             _ = typeRegistry;
             _ = metricRegistry;
             _ = flagRegistry;
@@ -1306,6 +1330,228 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return RequireEntityQueries().CopyCollection(_entityCollections, owner, collectionKeyId, buffer);
+        }
+
+        public int CollectActiveEffects(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || !_world.Has<ActiveEffectContainer>(owner))
+            {
+                return 0;
+            }
+
+            ref ActiveEffectContainer container = ref _world.Get<ActiveEffectContainer>(owner);
+            int written = 0;
+            for (int i = 0; i < container.Count && written < buffer.Length; i++)
+            {
+                Entity effectEntity = container.GetEntity(i);
+                if (!_world.IsAlive(effectEntity))
+                {
+                    continue;
+                }
+
+                buffer[written++] = effectEntity;
+            }
+
+            return written;
+        }
+
+        public int CollectEffectTemplateIds(Span<int> buffer)
+        {
+            RegistryMapping[] mappings = EffectTemplateIdRegistry.SnapshotMappings();
+            if (mappings.Length == 0 || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            Array.Sort(mappings, static (a, b) => a.Id.CompareTo(b.Id));
+            int written = 0;
+            for (int i = 0; i < mappings.Length && written < buffer.Length; i++)
+            {
+                if (mappings[i].Id <= 0)
+                {
+                    continue;
+                }
+
+                buffer[written++] = mappings[i].Id;
+            }
+
+            return written;
+        }
+
+        public int CollectAbilitySlots(Entity owner, Span<int> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            for (int slot = 0; slot < AbilityStateBuffer.CAPACITY && written < buffer.Length; slot++)
+            {
+                if (AbilitySlotResolver.TryResolve(_world, owner, slot, out _))
+                {
+                    buffer[written++] = slot;
+                }
+            }
+
+            return written;
+        }
+
+        public int CollectInventoryItems(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            if (_inventory == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingInventoryRuntime");
+            }
+
+            return _inventory.CollectOwnedItemInstances(owner, buffer);
+        }
+
+        public int CollectItemDefinitionIds(Span<int> buffer)
+        {
+            if (_itemDefinitions == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingItemDefinitionRegistry");
+            }
+
+            return _itemDefinitions.CopyRegisteredIds(buffer);
+        }
+
+        public int CollectPresentTags(Entity owner, Span<int> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            if (_world.Has<TagCountContainer>(owner))
+            {
+                ref TagCountContainer counts = ref _world.Get<TagCountContainer>(owner);
+                return counts.CopyTagIds(buffer);
+            }
+
+            if (!_world.Has<GameplayTagContainer>(owner))
+            {
+                return 0;
+            }
+
+            ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(owner);
+            RegistryMapping[] mappings = TagRegistry.SnapshotMappings();
+            Array.Sort(mappings, static (left, right) => left.Id.CompareTo(right.Id));
+            int written = 0;
+            for (int i = 0; i < mappings.Length && written < buffer.Length; i++)
+            {
+                int tagId = mappings[i].Id;
+                if (tagId > 0 && RequireTagOps().HasTag(ref tags, tagId, TagSense.Present))
+                {
+                    buffer[written++] = tagId;
+                }
+            }
+
+            return written;
+        }
+
+        public int CollectActiveTasks(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            foreach (ref var chunk in _world.Query(in TaskInstanceQuery))
+            {
+                ref Entity first = ref chunk.Entity(0);
+                Span<TaskInstanceCm> tasks = chunk.GetSpan<TaskInstanceCm>();
+                foreach (int index in chunk)
+                {
+                    if (written >= buffer.Length)
+                    {
+                        return written;
+                    }
+
+                    if (tasks[index].ScopeHost == owner &&
+                        tasks[index].State == TaskInstanceState.Active)
+                    {
+                        buffer[written++] = Unsafe.Add(ref first, index);
+                    }
+                }
+            }
+
+            return written;
+        }
+
+        public int CollectActiveActivities(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            foreach (ref var chunk in _world.Query(in ActivityInstanceQuery))
+            {
+                ref Entity first = ref chunk.Entity(0);
+                Span<ActivityInstanceCm> activities = chunk.GetSpan<ActivityInstanceCm>();
+                foreach (int index in chunk)
+                {
+                    if (written >= buffer.Length)
+                    {
+                        return written;
+                    }
+
+                    if (activities[index].ScopeHost == owner &&
+                        activities[index].State == ActivityInstanceState.Active)
+                    {
+                        buffer[written++] = Unsafe.Add(ref first, index);
+                    }
+                }
+            }
+
+            return written;
+        }
+
+        public int CollectProgressionNodes(Entity owner, Span<int> buffer)
+        {
+            if (!_world.IsAlive(owner) ||
+                !_world.Has<ProgressionStateBuffer>(owner) ||
+                buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            ref ProgressionStateBuffer state = ref _world.Get<ProgressionStateBuffer>(owner);
+            return state.CopyProgressionIds(buffer);
+        }
+
+        public int CollectAbilityHolders(int abilityId, ReadOnlySpan<Entity> candidates, Span<Entity> buffer)
+        {
+            if (abilityId <= 0 || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            for (int i = 0; i < candidates.Length && written < buffer.Length; i++)
+            {
+                Entity candidate = candidates[i];
+                if (candidate == Entity.Null || !_world.IsAlive(candidate))
+                {
+                    continue;
+                }
+
+                if (AbilitySlotResolver.TryFindAbility(_world, candidate, abilityId, out _))
+                {
+                    buffer[written++] = candidate;
+                }
+            }
+
+            return written;
         }
 
         public int FilterTeam(Span<Entity> entities, int count, int teamId)

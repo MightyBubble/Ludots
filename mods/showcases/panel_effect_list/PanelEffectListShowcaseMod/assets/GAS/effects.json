@@ -1,0 +1,32 @@
+[
+  {
+    "id": "祝福",
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Attack", "op": "Add", "value": 1.0 }
+    ],
+    "categories": ["Effect.Showcase.BuffStrip"]
+  },
+  {
+    "id": "迅捷",
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Attack", "op": "Add", "value": 2.0 }
+    ],
+    "categories": ["Effect.Showcase.BuffStrip"]
+  },
+  {
+    "id": "护盾",
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 1.0 }
+    ],
+    "categories": ["Effect.Showcase.BuffStrip"]
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "name": "PanelItemDefinitionsEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for typed collection panel showcase: 物品图鉴",
+  "main": "bin/net9.0/PanelItemDefinitionsEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PanelCollectionBagsShowcaseMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "panel",
+    "typed-collection",
+    "item_definitions"
+  ]
+}

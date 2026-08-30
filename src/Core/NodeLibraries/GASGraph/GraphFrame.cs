@@ -64,6 +64,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public Span<Entity> E;
         public Span<Entity> Targets;
         public GraphTargetList TargetList;
+        public Span<int> IntIds;
+        public GraphIntIdList IntIdList;
+        public int SubjectIntId;
         public Span<int> CallStack;
         public GraphTextHeap Text;
         public GraphExecutionCursor Cursor;
@@ -87,6 +90,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> bools,
             Span<Entity> entities,
             Span<Entity> targets,
+            Span<int> intIds,
             Span<int> callStack,
             GraphExecutionCursor cursor = default,
             uint randomSeed = 0,
@@ -94,7 +98,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphDebugTrace? debugTrace = null,
             MapId? mapScope = null,
             GraphEntryPayloadTable? entryPayload = null,
-            GraphEntryPayloadTable? invokeArgs = null)
+            GraphEntryPayloadTable? invokeArgs = null,
+            int subjectIntId = 0)
         {
             if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script or GraphKind.TriggerGraph))
             {
@@ -106,6 +111,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 bools.Length < GraphVmLimits.MaxBoolRegisters ||
                 entities.Length < GraphVmLimits.MaxEntityRegisters ||
                 targets.Length < GraphVmLimits.MaxTargets ||
+                intIds.Length < GraphVmLimits.MaxIntIds ||
                 callStack.Length < GraphVmLimits.MaxCallStackDepth)
             {
                 throw new ArgumentException("Graph frame register/call-stack spans are smaller than GraphVmLimits.");
@@ -152,6 +158,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 E = entities,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
+                IntIds = intIds,
+                IntIdList = new GraphIntIdList(intIds),
+                SubjectIntId = subjectIntId,
                 CallStack = callStack,
                 Text = GraphTextHeap.ForCurrentThread(),
                 Cursor = cursor,
@@ -183,6 +192,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 E = E,
                 Targets = Targets,
                 TargetList = TargetList,
+                IntIds = IntIds,
+                IntIdList = IntIdList,
+                SubjectIntId = SubjectIntId,
                 CallStack = CallStack,
                 Text = Text ?? throw new InvalidOperationException("Graph frame requires a GraphTextHeap."),
                 CallStackCount = Cursor.CallStackCount,

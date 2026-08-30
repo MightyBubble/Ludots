@@ -363,6 +363,7 @@ namespace Ludots.Core.Presentation.Systems
             Array.Clear(_entityRegs, 0, _entityRegs.Length);
             Array.Clear(_callStack, 0, _callStack.Length);
 
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             GraphFrame frame = GraphFrame.Bind(
                 kind,
                 GraphEntityPreset.Viewer(evt.Viewer),
@@ -377,6 +378,7 @@ namespace Ludots.Core.Presentation.Systems
                 _boolRegs,
                 _entityRegs,
                 _targets,
+                intIds,
                 _callStack,
                 eventPayload: new GraphEventPayload
                 {

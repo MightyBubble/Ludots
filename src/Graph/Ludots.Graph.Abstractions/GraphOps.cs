@@ -11,6 +11,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Entity = 4,
         TargetList = 5,
         Text = 6,
+        IntIdList = 7,
     }
 
     public enum GraphNodeOp : ushort
@@ -133,6 +134,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         RelationshipAggMaxEntityByMetric = 395,
         RelationshipAggMinEntityByMetric = 396,
         RelationshipHasLink = 397,          // B[Dst] = HasLink(E[A], E[B], type=Flags symbol)
+        QueryCollectActiveEffects = 398,    // TargetList = active effect instances on E[A]
+        LoadEffectTiming = 399,             // F[Dst] = RemainingTicks|TotalTicks on caster (Flags)
+        LoadEffectStack = 429,              // F[Dst] = EffectStack.Count on caster (missing → 1)
 
         // ── Entity lifecycle composition (400-401) ──
         BeginLifecycleTransaction = 400,
@@ -145,6 +149,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         IsPointInCircle = 405,
         SnapToNearestInCollection = 406,
         SnapToNearestGraphEdge = 407,
+
+        // ── Typed collection collectors (408-409, 419, 423-427) ──
+        QueryCollectEffectTemplates = 408,  // IntIdList = registered effect template ids
+        QueryCollectAbilitySlots = 409,     // IntIdList = resolved ability slot indices on E[A]
+        // 410-418 occupied
+        QueryCollectInventoryItems = 419,   // TargetList = owned item instance entities for E[A]
+        // 420-422 occupied
+        QueryCollectItemDefinitions = 423,  // IntIdList = registered item definition ids
+        QueryCollectPresentTags = 424,      // IntIdList = present tag ids on E[A]
+        QueryCollectActiveTasks = 425,      // TargetList = task instances scoped to E[A]
+        QueryCollectProgressionNodes = 426, // IntIdList = progression ids on E[A]
+        QueryCollectAbilityHolders = 427,   // TargetList = TargetList candidates holding Imm ability
+        QueryCollectActiveActivities = 428, // TargetList = activity instances scoped to E[A]
+        // 429 free
 
         // ── Event evaluation context (410-412, RFC-0065 PROV-4b) ──
         LoadViewer           = 410,  // E[Dst] = state.Viewer (fixed register 2)
