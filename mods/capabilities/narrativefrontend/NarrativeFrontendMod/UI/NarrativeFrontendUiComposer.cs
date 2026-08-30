@@ -35,9 +35,6 @@ internal static class NarrativeFrontendUiComposer
         for (int i = 0; i < state.Surfaces.Count; i++)
         {
             NarrativeFrontendSurfaceModel surface = state.Surfaces[i];
-            // #region agent log
-            System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "A", location = "NarrativeFrontendUiComposer.cs:39", message = "Narrative surface geometry input", data = new { surface.SurfaceId, kind = surface.Kind.ToString(), anchor = surface.Anchor.ToString(), surface.Width, surface.OffsetX, surface.OffsetY, surface.ZIndex }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n");
-            // #endregion
             if (string.IsNullOrWhiteSpace(surface.LayoutId))
             {
                 throw new InvalidOperationException(
@@ -118,9 +115,9 @@ internal static class NarrativeFrontendUiComposer
         bool topAnchor = vertical == UiJustifyContent.Start;
         bool bottomAnchor = vertical == UiJustifyContent.End;
         float leftPadding = leftAnchor ? Math.Max(0f, Margin + surface.OffsetX) : Margin;
-        float rightPadding = rightAnchor ? Math.Max(0f, Margin - surface.OffsetX) : Margin;
+        float rightPadding = rightAnchor ? Math.Max(0f, Margin + surface.OffsetX) : Margin;
         float topPadding = topAnchor ? Math.Max(0f, Margin + surface.OffsetY) : 0f;
-        float bottomPadding = bottomAnchor ? Math.Max(0f, Margin - surface.OffsetY) : 0f;
+        float bottomPadding = bottomAnchor ? Math.Max(0f, Margin + surface.OffsetY) : 0f;
         if (!leftAnchor && !rightAnchor && Math.Abs(surface.OffsetX) > 0.01f)
         {
             builder = builder.Translate(surface.OffsetX);
@@ -156,11 +153,15 @@ internal static class NarrativeFrontendUiComposer
         for (int i = 0; i < surfaces.Count; i++)
         {
             NarrativeFrontendSurfaceModel surface = surfaces[i].Surface;
-            // #region agent log
-            System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "A,B", location = "NarrativeFrontendUiComposer.cs:159", message = "Bottom lane applies post-layout translation", data = new { index = i, count = surfaces.Count, surface.SurfaceId, kind = surface.Kind.ToString(), anchor = surface.Anchor.ToString(), surface.OffsetX, surface.OffsetY, dockMargin = Margin, expectedBottomAfterTranslation = Margin - surface.OffsetY }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n");
-            // #endregion
-            children[i] = PrepareSurface(surfaces[i].Content, surface)
-                .Translate(surface.OffsetX, surface.OffsetY);
+            float leftInset = surface.Anchor == NarrativeFrontendAnchor.BottomRight
+                ? 0f
+                : Math.Max(0f, surface.OffsetX);
+            float rightInset = surface.Anchor == NarrativeFrontendAnchor.BottomRight
+                ? Math.Max(0f, surface.OffsetX)
+                : Math.Max(0f, -surface.OffsetX);
+            children[i] = Ui.Column(PrepareSurface(surfaces[i].Content, surface))
+                .Padding(leftInset, 0f, rightInset, Math.Max(0f, surface.OffsetY))
+                .Justify(UiJustifyContent.End);
             maxZIndex = Math.Max(maxZIndex, surface.ZIndex);
         }
 

@@ -50,6 +50,8 @@
 | `story.immersive_subtitle` | 屏幕字幕轨（Sequencer 宿主，非独立 Subtitle 模块） | 屏幕锚点（如 BottomCenter） | Frontend `SubtitleBubble`；由 Sequencer `SubtitleTrack` 驱动 |
 | `story.standing_portrait` | 半屏全身立绘 + 旁侧台词 | 屏幕锚点（如 BottomLeft） | Frontend `StandingPortrait`；说话者 `standingImageId` 必填 |
 
+屏幕锚点的 `offsetX` / `offsetY` 采用锚点内缩语义：正值表示从锚点所在的视口边缘向安全区内缩。比如 `TopLeft` 的正偏移向右、向下，`BottomRight` 的正偏移向左、向上。居中轴上的偏移仍按屏幕坐标正方向移动。偏移必须参与布局，不能用绘制阶段的 transform 挪动 surface；这样布局边界、命中区域和最终绘制位置使用同一套几何。
+
 不把世界气泡假装成「左下角换皮面板」。WebUI Panel Kit 本阶段不承载故事对话（浏览器面板合同另线）；故事表现留在 Skia Overlay + 世界投影，避免第三真相。
 
 ## 3. 详情
