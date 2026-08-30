@@ -326,6 +326,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.StoreArgEntity or
                 GraphNodeOp.DispatchMapEvent or
                 GraphNodeOp.OfferActivity or
+                GraphNodeOp.OfferTask or
                 GraphNodeOp.AwaitCallback or
                 GraphNodeOp.ConstText or
                 GraphNodeOp.ConcatText or
@@ -333,8 +334,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.FloatToText or
                 GraphNodeOp.SinkPresentationText or
                 GraphNodeOp.LoadTextKey or
-                GraphNodeOp.StartDialogue or
-                GraphNodeOp.OfferActivity
+                GraphNodeOp.StartDialogue
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -911,6 +911,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.SinkPresentationText, HandleSinkPresentationText, "SinkPresentationText graph opcode.");
             Register(GraphNodeOp.LoadTextKey, HandleLoadTextKey, "LoadTextKey graph opcode.");
             Register(GraphNodeOp.OfferActivity, HandleOfferActivity, "OfferActivity graph opcode.");
+            Register(GraphNodeOp.OfferTask, HandleOfferTask, "OfferTask graph opcode.");
             Register(GraphNodeOp.StartDialogue, HandleStartDialogue, "StartDialogue graph opcode.");
         }
 
@@ -1396,6 +1397,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             s.Api.OfferActivity(registration.Symbols[ins.Imm], s.E[ins.A]);
+        }
+
+        private static void HandleOfferTask(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (s.Programs == null ||
+                !s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration))
+            {
+                throw new InvalidOperationException(
+                    "OfferTask requires a registered program so Symbols[Imm] can supply the task id.");
+            }
+
+            if ((uint)ins.Imm >= (uint)registration.Symbols.Length)
+            {
+                throw new InvalidOperationException(
+                    $"OfferTask Imm {ins.Imm} is outside program symbol table length {registration.Symbols.Length}.");
+            }
+
+            s.Api.OfferTask(registration.Symbols[ins.Imm], s.E[ins.A]);
         }
 
         private static MapId ResolveMapOfEntity(ref GraphExecutionState s, Entity entity)

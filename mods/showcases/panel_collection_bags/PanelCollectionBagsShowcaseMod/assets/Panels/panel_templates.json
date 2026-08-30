@@ -456,12 +456,6 @@
           "class": "collection-inventory-items",
           "bind": "items",
           "present": "aggregate",
-          "aggregate": {
-            "count": {
-              "from": "totalCount",
-              "prefix": "×"
-            }
-          },
           "viewportHeight": 80,
           "itemExtent": 48
         }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Rng;
@@ -270,7 +271,9 @@ namespace Ludots.Core.Gameplay.Activities
                 component.DispatchTick = _clock!.Now(definition.RepeatCooldown!.ClockDomain);
             }
 
-            Entity entity = _world.Create(component);
+            Entity entity = _world.Create(
+                component,
+                new Name { Value = RequireInstanceName(definition) });
 
             EmitLifecycle(ActivityLifecycleKeys.Started, definition, component, string.Empty);
 
@@ -875,6 +878,17 @@ namespace Ludots.Core.Gameplay.Activities
             }
 
             return definition.Options[instance.SelectedOptionIndex].Id;
+        }
+
+        private static string RequireInstanceName(ActivityDefinition definition)
+        {
+            if (string.IsNullOrWhiteSpace(definition.DisplayName))
+            {
+                throw new InvalidOperationException(
+                    $"Activity definition '{definition.Id}' requires a non-empty display name.");
+            }
+
+            return definition.DisplayName;
         }
 
         private static int ScopeKey(Entity scopeHost) =>

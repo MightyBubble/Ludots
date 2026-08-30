@@ -983,6 +983,7 @@ namespace Ludots.Core.Engine
             var itemShapes = new ItemShapeRegistry();
             var itemLayouts = new ItemLayoutRegistry();
             var itemDefinitions = new ItemDefinitionRegistry();
+            componentAuthoringContext.Set(ComponentAuthoringServiceKeys.ItemDefinitionRegistry, itemDefinitions);
             var exchangeOperations = new ExchangeOperationRegistry();
             var exchangeScopedOperations = new ExchangeScopedOperationStore();
             abilityDefinitions.SetConflictReport(ConflictReport);
@@ -1966,6 +1967,7 @@ namespace Ludots.Core.Engine
                 GetService(CoreServiceKeys.PresentationTextCatalog),
                 GetService(CoreServiceKeys.PresentationDisplayResolver));
             TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
+            _gasGraphRuntimeApi?.BindTaskRuntimeService(taskRuntime);
             SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
             SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
             SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);

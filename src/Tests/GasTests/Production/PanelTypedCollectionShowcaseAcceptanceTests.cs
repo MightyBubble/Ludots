@@ -2,8 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Progression.Components;
+using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
@@ -82,6 +90,7 @@ public sealed class PanelTypedCollectionShowcaseAcceptanceTests
         Assert.That(panelHost.Count, Is.EqualTo(1), "one panel per showcase");
 
         Entity hero = FindEntity(engine.World, "名册守望者");
+        AssertConfiguredSeed(engine, hero, testCase.ArtifactSlug);
         PanelListProjection projection = ProjectAll(
             panelHost,
             FindPanel(panelHost, hero, testCase.PanelId),
@@ -122,6 +131,68 @@ public sealed class PanelTypedCollectionShowcaseAcceptanceTests
             where: "screen.topLeft",
             why: "一袋一面板验收",
             how: "typed collection bag showcase entry");
+    }
+
+    private static void AssertConfiguredSeed(GameEngine engine, Entity hero, string artifactSlug)
+    {
+        switch (artifactSlug)
+        {
+            case "present_tags":
+                ref GameplayTagContainer tags = ref engine.World.Get<GameplayTagContainer>(hero);
+                Assert.That(tags.HasTag(TagRegistry.GetId("勇气印记")), Is.True);
+                Assert.That(tags.HasTag(TagRegistry.GetId("洞察印记")), Is.True);
+                Assert.That(tags.HasTag(TagRegistry.GetId("守望印记")), Is.True);
+                break;
+
+            case "inventory_aggregate":
+                InventoryRuntimeService inventory =
+                    engine.GetService(CoreServiceKeys.InventoryRuntimeService)
+                    ?? throw new InvalidOperationException("InventoryRuntimeService missing.");
+                OwnershipResolver ownership =
+                    engine.GetService(CoreServiceKeys.OwnershipResolver)
+                    ?? throw new InvalidOperationException("OwnershipResolver missing.");
+                Span<Entity> items = stackalloc Entity[4];
+                int itemCount = inventory.CollectOwnedItemInstances(hero, items);
+                Assert.That(itemCount, Is.EqualTo(3));
+                for (int i = 0; i < itemCount; i++)
+                {
+                    Assert.That(ownership.IsOwnedBy(hero, items[i]), Is.True);
+                    Assert.That(engine.World.Get<PlayerOwner>(items[i]).PlayerId, Is.EqualTo(1));
+                }
+                break;
+
+            case "item_definitions":
+                ItemDefinitionRegistry definitions =
+                    engine.GetService(CoreServiceKeys.ItemDefinitionRegistry)
+                    ?? throw new InvalidOperationException("ItemDefinitionRegistry missing.");
+                Assert.That(definitions.GetId("Item.CollectionBags.Potion"), Is.GreaterThan(0));
+                Assert.That(definitions.GetId("Item.CollectionBags.Ration"), Is.GreaterThan(0));
+                break;
+
+            case "active_activities":
+                int activityCount = 0;
+                var activityQuery = new QueryDescription().WithAll<ActivityInstanceCm>();
+                engine.World.Query(in activityQuery, (Entity _, ref ActivityInstanceCm activity) =>
+                {
+                    if (activity.ScopeHost == hero && activity.State == ActivityInstanceState.Active)
+                    {
+                        activityCount++;
+                    }
+                });
+                Assert.That(activityCount, Is.EqualTo(1));
+                break;
+
+            case "ability_holders":
+                Entity apprentice = FindEntity(engine.World, "名册学徒");
+                Assert.That(engine.World.Get<AbilityStateBuffer>(hero).Count, Is.EqualTo(3));
+                Assert.That(engine.World.Get<AbilityStateBuffer>(apprentice).Count, Is.EqualTo(1));
+                break;
+
+            case "progression_nodes":
+                int progressionId = ProgressionIdRegistry.GetId("名册修行");
+                Assert.That(engine.World.Get<ProgressionStateBuffer>(hero).GetLevel(progressionId), Is.EqualTo(1));
+                break;
+        }
     }
 
     private static PanelListProjection ProjectAll(

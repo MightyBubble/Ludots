@@ -1,9 +1,26 @@
 [
   {
+    "id": "Effect.Showcase.EffectList.Seed",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "phaseGraphs": {
+      "OnApply": {
+        "main": "Graph.EffectList.Effects.Seed"
+      }
+    },
+    "categories": ["Effect.Showcase.EffectList.Seed"]
+  },
+  {
     "id": "祝福",
     "presetType": "Buff",
-    "lifetime": "Infinite",
+    "lifetime": "After",
     "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 100,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
     "modifiers": [
       { "attribute": "Attack", "op": "Add", "value": 1.0 }
     ],
@@ -12,8 +29,13 @@
   {
     "id": "迅捷",
     "presetType": "Buff",
-    "lifetime": "Infinite",
+    "lifetime": "After",
     "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 60,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
     "modifiers": [
       { "attribute": "Attack", "op": "Add", "value": 2.0 }
     ],
@@ -22,8 +44,13 @@
   {
     "id": "护盾",
     "presetType": "Buff",
-    "lifetime": "Infinite",
+    "lifetime": "After",
     "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 40,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
     "modifiers": [
       { "attribute": "Health", "op": "Add", "value": 1.0 }
     ],

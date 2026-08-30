@@ -885,6 +885,11 @@
         "op": "LoadExplicitTarget"
       },
       {
+        "id": "offer",
+        "op": "OfferTask",
+        "taskId": "Task.CollectionBags.NightWatch"
+      },
+      {
         "id": "create",
         "op": "CreatePanel",
         "panelType": "panel.collection.tasks",
@@ -909,6 +914,11 @@
       {
         "from": "scope",
         "fromPort": "next",
+        "to": "offer"
+      },
+      {
+        "from": "offer",
+        "fromPort": "next",
         "to": "create"
       },
       {
@@ -928,6 +938,12 @@
       }
     ],
     "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "offer",
+        "toPort": "source"
+      },
       {
         "from": "scope",
         "fromPort": "value",
@@ -959,6 +975,11 @@
         "op": "LoadExplicitTarget"
       },
       {
+        "id": "offer",
+        "op": "OfferActivity",
+        "activityId": "Activity.CollectionBags.Gathering"
+      },
+      {
         "id": "create",
         "op": "CreatePanel",
         "panelType": "panel.collection.activities",
@@ -983,6 +1004,11 @@
       {
         "from": "scope",
         "fromPort": "next",
+        "to": "offer"
+      },
+      {
+        "from": "offer",
+        "fromPort": "next",
         "to": "create"
       },
       {
@@ -1002,6 +1028,12 @@
       }
     ],
     "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "offer",
+        "toPort": "source"
+      },
       {
         "from": "scope",
         "fromPort": "value",

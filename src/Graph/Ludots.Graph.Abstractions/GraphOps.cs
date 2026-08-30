@@ -314,6 +314,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         ModifyAttributeSet = 465,
         /// <summary>Offer the activity named by Symbols[Imm] to E[A] as scope host via ActivityRuntimeService.</summary>
         OfferActivity = 466,
+        /// <summary>Offer the task named by Symbols[Imm] to E[A] as scope host via TaskRuntimeService.</summary>
+        OfferTask = 467,
 
     }
 

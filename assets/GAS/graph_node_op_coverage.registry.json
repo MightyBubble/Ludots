@@ -3255,8 +3255,24 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryOfferActivityAcceptanceTests.OfferActivity_RollCallOffersGalleryActivityEachWave",
-        "GraphOpsNodeGalleryOfferActivityAcceptanceTests.OfferActivity_GalleryCompilesAndMapLoads"
+        "GraphOpsNodeGalleryOfferActivityAcceptanceTests.OfferActivity_RollCallOffersGalleryActivityEachWave"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "OfferTask",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_OfferTask",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryOfferTaskAcceptanceTests.OfferTask_RollCallCreatesNamedScopedTask"
       ],
       "codegenStatus": "covered"
     },

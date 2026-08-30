@@ -20,6 +20,18 @@
     {
       "InstanceId": "collection-bags-apprentice",
       "Template": "collection_bags_apprentice"
+    },
+    {
+      "InstanceId": "collection-bags-potion-1",
+      "Template": "collection_bags_potion"
+    },
+    {
+      "InstanceId": "collection-bags-potion-2",
+      "Template": "collection_bags_potion"
+    },
+    {
+      "InstanceId": "collection-bags-potion-3",
+      "Template": "collection_bags_potion"
     }
   ],
   "Teams": [

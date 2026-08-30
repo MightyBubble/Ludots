@@ -2,7 +2,6 @@
   "name": "PanelRosterNestedEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for typed collection panel showcase: 编队档案",
-  "main": "bin/net9.0/PanelRosterNestedEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "PanelCollectionBagsShowcaseMod": "^1.0.0"

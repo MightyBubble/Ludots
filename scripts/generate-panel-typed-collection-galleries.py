@@ -153,29 +153,54 @@ def write_open_graphs(host: Path) -> None:
     for item in CATALOG:
         gid = open_graph_id(item["slug"])
         panel = item["panelType"]
+        nodes = [{"id": "scope", "op": "LoadExplicitTarget"}]
+        control_edges = []
+        value_edges = []
+        previous = "scope"
+        if item["slug"] == "active_tasks":
+            nodes.append({
+                "id": "offer",
+                "op": "OfferTask",
+                "taskId": "Task.CollectionBags.NightWatch",
+            })
+            control_edges.append({"from": "scope", "fromPort": "next", "to": "offer"})
+            value_edges.append({"from": "scope", "fromPort": "value", "to": "offer", "toPort": "source"})
+            previous = "offer"
+        elif item["slug"] == "active_activities":
+            nodes.append({
+                "id": "offer",
+                "op": "OfferActivity",
+                "activityId": "Activity.CollectionBags.Gathering",
+            })
+            control_edges.append({"from": "scope", "fromPort": "next", "to": "offer"})
+            value_edges.append({"from": "scope", "fromPort": "value", "to": "offer", "toPort": "source"})
+            previous = "offer"
+
+        nodes.extend([
+            {"id": "create", "op": "CreatePanel", "panelType": panel, "panelAnchor": "screen.topLeft"},
+            {"id": "show", "op": "ShowPanel", "panelType": panel},
+            {"id": "ok", "op": "ConstInt", "intValue": 1},
+            {"id": "halt", "op": "HaltReturnInt"},
+        ])
+        control_edges.extend([
+            {"from": previous, "fromPort": "next", "to": "create"},
+            {"from": "create", "fromPort": "next", "to": "show"},
+            {"from": "show", "fromPort": "next", "to": "ok"},
+            {"from": "ok", "fromPort": "next", "to": "halt"},
+        ])
+        value_edges.extend([
+            {"from": "scope", "fromPort": "value", "to": "create", "toPort": "source"},
+            {"from": "ok", "fromPort": "value", "to": "halt", "toPort": "value"},
+        ])
         kept.append({
             "id": gid,
             "kind": "TriggerGraph",
             "entries": [
                 {"label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": True}
             ],
-            "nodes": [
-                {"id": "scope", "op": "LoadExplicitTarget"},
-                {"id": "create", "op": "CreatePanel", "panelType": panel, "panelAnchor": "screen.topLeft"},
-                {"id": "show", "op": "ShowPanel", "panelType": panel},
-                {"id": "ok", "op": "ConstInt", "intValue": 1},
-                {"id": "halt", "op": "HaltReturnInt"},
-            ],
-            "controlEdges": [
-                {"from": "scope", "fromPort": "next", "to": "create"},
-                {"from": "create", "fromPort": "next", "to": "show"},
-                {"from": "show", "fromPort": "next", "to": "ok"},
-                {"from": "ok", "fromPort": "next", "to": "halt"},
-            ],
-            "valueEdges": [
-                {"from": "scope", "fromPort": "value", "to": "create", "toPort": "source"},
-                {"from": "ok", "fromPort": "value", "to": "halt", "toPort": "value"},
-            ],
+            "nodes": nodes,
+            "controlEdges": control_edges,
+            "valueEdges": value_edges,
         })
     dump(graphs_path, kept)
 
@@ -188,16 +213,22 @@ def write_maps(host: Path) -> None:
         mega.unlink()
     for item in CATALOG:
         mid = map_id(item["slug"])
+        entities = [
+            {"InstanceId": "collection-bags-hero", "Template": "collection_bags_hero"},
+            {"InstanceId": "collection-bags-apprentice", "Template": "collection_bags_apprentice"},
+        ]
+        if item["slug"] == "inventory_aggregate":
+            entities.extend([
+                {"InstanceId": f"collection-bags-potion-{index}", "Template": "collection_bags_potion"}
+                for index in range(1, 4)
+            ])
         dump(maps_dir / f"{mid}.json", {
             "Id": mid,
             "Tags": ["showcase", "panel", "typed-collection-bag", item["slug"]],
             "TriggerGraphs": [
                 {"graph": open_graph_id(item["slug"]), "scopeInstanceId": "collection-bags-hero"}
             ],
-            "Entities": [
-                {"InstanceId": "collection-bags-hero", "Template": "collection_bags_hero"},
-                {"InstanceId": "collection-bags-apprentice", "Template": "collection_bags_apprentice"},
-            ],
+            "Entities": entities,
             "Teams": [
                 {"TeamId": 1, "RepresentativeInstanceId": "collection-bags-hero"}
             ],
@@ -232,6 +263,7 @@ def write_host_game_json(host: Path) -> None:
         "Shared host for per-bag typed collection panel showcases; "
         "player entries live under entries/."
     )
+    mod.pop("main", None)
     dump(host / "mod.json", mod)
 
 
@@ -452,7 +484,6 @@ def write_entry(slug: str, title: str) -> None:
         "name": name,
         "version": "1.0.0",
         "description": f"Launcher entry for typed collection panel showcase: {title}",
-        "main": f"bin/net8.0/{name}.dll",
         "priority": 0,
         "dependencies": {"PanelCollectionBagsShowcaseMod": "^1.0.0"},
         "tags": ["showcase", "panel", "typed-collection", slug],
@@ -463,34 +494,8 @@ def write_entry(slug: str, title: str) -> None:
         "windowWidth": 1600,
         "windowHeight": 900,
     })
-    (root / f"{name}.csproj").write_text(
-        f"""<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <RootNamespace>{name}</RootNamespace>
-  </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\\..\\PanelCollectionBagsShowcaseMod\\PanelCollectionBagsShowcaseMod.csproj" />
-  </ItemGroup>
-</Project>
-""",
-        encoding="utf-8",
-    )
-    (root / f"{name}Entry.cs").write_text(
-        f"""using Ludots.Core.Modding;
-
-namespace {name};
-
-public sealed class {name}Entry : IMod
-{{
-    public void OnLoad(IModContext context) {{ }}
-    public void OnUnload() {{ }}
-}}
-""",
-        encoding="utf-8",
-    )
+    (root / f"{name}.csproj").unlink(missing_ok=True)
+    (root / f"{name}Entry.cs").unlink(missing_ok=True)
 
 
 def upsert_launcher() -> None:
@@ -514,7 +519,6 @@ def upsert_launcher() -> None:
             "target": {
                 "type": "path",
                 "value": path,
-                "projectPath": f"{name}.csproj",
             },
         })
         pid = f"{sid}_raylib"
@@ -554,12 +558,6 @@ def upsert_registry() -> None:
     ex_list = reg[ex_key]
     host_path = HOST_REL
     ex_list = [e for e in ex_list if e.get("value") != host_path]
-    ex_list.append({
-        "kind": "csproj",
-        "value": host_path,
-        "reason": "shared typed collection panel gallery host; player entries are thin mods under entries/",
-    })
-    # also binding exemption for host if needed
     reg[ex_key] = ex_list
 
     shows = reg.setdefault("showcases", [])
@@ -571,7 +569,7 @@ def upsert_registry() -> None:
         shows.append({
             "id": sid,
             "path": f"{ENTRY_ROOT_REL}/{name}",
-            "projectPath": f"{name}.csproj",
+            "projectPath": None,
             "title": item["title"],
             "summary": item["summary"],
             "tier": "T2",

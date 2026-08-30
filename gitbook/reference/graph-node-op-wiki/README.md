@@ -4,11 +4,6 @@
 
 生成器：`scripts/generate-graph-op-node-wiki.py`（从 vignette 与引擎描述表生成，勿手改正文）。
 
-## activity
-
-> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
-
-
 ## 事件与吸附
 
 > 作者语义与全量字段见手册分册 [事件与情境 · gr-op-01](../mod-editor-prd/config/gr-op-01-context.md)。
@@ -114,8 +109,8 @@
 - [把身上的状态摘掉](RemoveEffectTemplate.md) — 木桩头顶紫色标记先挂着，白弧扫过，标记碎掉消失，血条不动。
 - [点名谁就打谁](LoadExplicitTarget.md) — 红色准星飞出锁扣木桩，一刀沿线打下，木桩 100 掉到 85。
 - [直接在血条上做加法](ModifyAttributeAdd.md) — 一刀 -25 写进血条，木桩 100 掉到 75，头顶浮出 -25。
-- [看效果还剩多久](LoadEffectTiming.md) — 自查线绕回施法者身上的计时，头顶浮出剩余 55。
 - [看效果叠了几层](LoadEffectStack.md) — 自查线绕回施法者身上的层数，头顶浮出 ×3。
+- [看效果还剩多久](LoadEffectTiming.md) — 自查线绕回施法者身上的计时，头顶浮出剩余 55。
 - [看自己还剩多少血](LoadSelfAttribute.md) — 自查线绕回施法者自己，头顶浮出 62；木桩满血没人碰。
 - [给木桩挂上看得见的状态](ApplyEffectTemplate.md) — 红线贴附不扣血：木桩头顶钉上紫色标记，带光环，血条不动。
 - [血量过线没：过线轻击，没过线全力](CompareLtInt.md) — 木桩 50 血低于 80 刻线，标尺闪红，全力一击扣 18，掉到 32。
@@ -219,6 +214,7 @@
 - [按文案键出字幕](LoadTextKey.md) — 作者从名册里挑 gallery.hello；跑完，字幕口吐出本地化的「你好」。
 - [没满就再续一杯](JumpIfFalse.md) — 茶杯一格格见满：没满时绿箭头带着续一杯，满了那一下改走黄箭头，直接收工。
 - [满了就跳过续杯](Jump.md) — 杯是满的：续杯那几行被划掉，指针直接飞到收工行。
+- [点名派发任务](OfferTask.md) — 图节点指定任务 id；运行后，任务进入指定实体的任务列表，字幕显示「任务已派发」。
 - [点名派发待办活动](OfferActivity.md) — 图节点点名活动 id；跑完，活动已上桌，字幕报「活动已派发」。
 - [等回话再往下走](AwaitCallback.md) — 图停在门口等确认；回话一到，下一拍接着演。
 - [算出一个整数就收工](HaltReturnInt.md) — 数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。

@@ -10,6 +10,7 @@ namespace Ludots.Core.Gameplay.Items
     public sealed class InventoryRuntimeService
     {
         private static readonly QueryDescription ItemQuery = new QueryDescription().WithAll<ItemInstanceCm, ItemLocationCm>();
+        private static readonly QueryDescription OwnedItemQuery = new QueryDescription().WithAll<ItemInstanceCm>();
         private static readonly QueryDescription ContainerQuery = new QueryDescription().WithAll<ItemContainerCm>();
         private static readonly QueryDescription MountedContainerQuery = new QueryDescription().WithAll<ItemMountedContainerCm, ItemContainerCm>();
 
@@ -854,10 +855,9 @@ namespace Ludots.Core.Gameplay.Items
             }
 
             int written = 0;
-            foreach (ref var chunk in _world.Query(in ItemQuery))
+            foreach (ref var chunk in _world.Query(in OwnedItemQuery))
             {
                 ref Entity first = ref chunk.Entity(0);
-                Span<ItemLocationCm> locations = chunk.GetSpan<ItemLocationCm>();
                 foreach (int index in chunk)
                 {
                     if (written >= buffer.Length)
@@ -865,10 +865,10 @@ namespace Ludots.Core.Gameplay.Items
                         return written;
                     }
 
-                    if (TryResolveOwningActorFromContainer(locations[index].Container, out Entity actor) &&
-                        actor == owner)
+                    Entity item = Unsafe.Add(ref first, index);
+                    if (_ownership.IsOwnedBy(owner, item))
                     {
-                        buffer[written++] = Unsafe.Add(ref first, index);
+                        buffer[written++] = item;
                     }
                 }
             }

@@ -1,0 +1,22 @@
+{
+  "op": "OfferTask",
+  "driver": "script",
+  "title": "点名派发任务",
+  "beat": "图节点指定任务 id；运行后，任务进入指定实体的任务列表，字幕显示「任务已派发」。",
+  "detailTemplate": "任务已派发。",
+  "assertDetailContains": ["任务"],
+  "featuredNodeId": "featured",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "作者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

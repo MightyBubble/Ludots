@@ -2,7 +2,6 @@
   "name": "PanelProgressionNodesEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for typed collection panel showcase: 修行进度",
-  "main": "bin/net9.0/PanelProgressionNodesEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "PanelCollectionBagsShowcaseMod": "^1.0.0"

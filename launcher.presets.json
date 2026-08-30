@@ -2844,6 +2844,42 @@
       "buildMode": "auto"
     },
     {
+      "id": "panel_author_layout_kit_raylib",
+      "name": "Panel Author Layout Kit Raylib",
+      "selectors": [
+        "$panel_author_layout_kit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEffectStack_raylib",
+      "name": "Graph Op LoadEffectStack Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEffectStack"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_OfferActivity_raylib",
+      "name": "Graph Op OfferActivity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_OfferActivity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_OfferTask_raylib",
+      "name": "Graph Op OfferTask Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_OfferTask"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "panel_effect_templates_raylib",
       "name": "Panel 效果图鉴 Raylib",
       "selectors": [
@@ -2920,33 +2956,6 @@
       "name": "Panel 修行进度 Raylib",
       "selectors": [
         "$panel_progression_nodes"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "panel_author_layout_kit_raylib",
-      "name": "Panel Author Layout Kit Raylib",
-      "selectors": [
-        "$panel_author_layout_kit"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_LoadEffectStack_raylib",
-      "name": "Graph Op LoadEffectStack Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_LoadEffectStack"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_OfferActivity_raylib",
-      "name": "Graph Op OfferActivity Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_OfferActivity"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

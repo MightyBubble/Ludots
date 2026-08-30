@@ -1,0 +1,14 @@
+[
+  {
+    "id": "Item.CollectionBags.Potion",
+    "displayName": "试炼药剂",
+    "shape": "collection_bags_single",
+    "maxStack": 20
+  },
+  {
+    "id": "Item.CollectionBags.Ration",
+    "displayName": "干粮",
+    "shape": "collection_bags_single",
+    "maxStack": 10
+  }
+]

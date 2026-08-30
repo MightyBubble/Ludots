@@ -1,5 +1,26 @@
 [
   {
+    "id": "Graph.EffectList.Effects.Seed",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "blessing", "op": "ApplyEffectTemplate", "effectTemplate": "祝福" },
+      { "id": "haste", "op": "ApplyEffectTemplate", "effectTemplate": "迅捷" },
+      { "id": "shield", "op": "ApplyEffectTemplate", "effectTemplate": "护盾" }
+    ],
+    "controlEdges": [
+      { "from": "target", "fromPort": "next", "to": "blessing" },
+      { "from": "blessing", "fromPort": "next", "to": "haste" },
+      { "from": "haste", "fromPort": "next", "to": "shield" }
+    ],
+    "valueEdges": [
+      { "from": "target", "fromPort": "value", "to": "blessing", "toPort": "target" },
+      { "from": "target", "fromPort": "value", "to": "haste", "toPort": "target" },
+      { "from": "target", "fromPort": "value", "to": "shield", "toPort": "target" }
+    ]
+  },
+  {
     "id": "Graph.EffectList.Panel.Open",
     "kind": "TriggerGraph",
     "entries": [

@@ -28,5 +28,17 @@
       { "attribute": "Health", "op": "Add", "value": 1.0 }
     ],
     "categories": ["Effect.Showcase.CollectionBags"]
+  },
+  {
+    "id": "Effect.CollectionBags.CompleteTraining",
+    "presetType": "CompleteProgression",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "progression": {
+      "id": "名册修行",
+      "scope": "explicit",
+      "level": 1
+    },
+    "categories": ["Effect.Showcase.CollectionBags"]
   }
 ]

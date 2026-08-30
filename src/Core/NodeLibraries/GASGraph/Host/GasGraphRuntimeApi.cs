@@ -138,6 +138,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Gameplay.Spawning.RuntimeEntitySpawnQueue? _runtimeEntitySpawnQueue;
         private Gameplay.Spawning.EntityTemplateKeyRegistry? _entityTemplateKeys;
         private Gameplay.Activities.ActivityRuntimeService? _activityRuntime;
+        private Gameplay.Tasks.TaskRuntimeService? _taskRuntime;
         private Ludots.Core.Input.Interaction.InteractionModeMap? _interactionModeMap;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
@@ -377,6 +378,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             var activities = _activityRuntime
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ActivityRuntimeUnavailable");
             activities.OfferOrActivate(activityId, scopeHost);
+        }
+
+        public void BindTaskRuntimeService(Gameplay.Tasks.TaskRuntimeService taskRuntime)
+        {
+            _taskRuntime = taskRuntime ?? throw new ArgumentNullException(nameof(taskRuntime));
+        }
+
+        public void OfferTask(string taskId, Entity scopeHost)
+        {
+            if (scopeHost == Entity.Null || scopeHost == default || !_world.IsAlive(scopeHost))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.OfferTaskScopeInvalid: scope entity {scopeHost} is null or not alive.");
+            }
+
+            var tasks = _taskRuntime
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
+            tasks.OfferOrStart(taskId, scopeHost);
         }
 
         public int WeightedPick(int distributionKeyId, int modulationPermille)

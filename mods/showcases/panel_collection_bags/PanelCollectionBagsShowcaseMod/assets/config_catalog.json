@@ -48,5 +48,30 @@
     "Path": "Progression/progressions.json",
     "Policy": "ArrayById",
     "IdField": "id"
+  },
+  {
+    "Path": "Items/shapes.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Items/layouts.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Items/definitions.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Tasks/tasks.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Activities/activities.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
   }
 ]

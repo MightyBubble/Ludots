@@ -6,7 +6,6 @@
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"
   },
-  "main": "bin/net9.0/PanelAuthorLayoutKitShowcaseMod.dll",
   "tags": [
     "showcase",
     "panel",

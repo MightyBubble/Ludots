@@ -2,9 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
@@ -26,6 +30,7 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
     public void AuthorLayoutKit_ShowsListGridColumnWithTimingAndStacks()
     {
         string repoRoot = FindRepoRoot();
+        AssertResourceOnlyComposition(repoRoot);
         string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "panel_author_layout_kit");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
@@ -43,6 +48,7 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
         Assert.That(panelHost.Count, Is.EqualTo(3), "classroom shows list + grid + column");
 
         Entity hero = FindEntity(engine.World, "试炼者");
+        AssertRealActiveEffects(engine.World, hero);
         AssertBag(panelHost, hero, "panel.kit.effect.list", PanelPresentMode.List);
         AssertBag(panelHost, hero, "panel.kit.effect.grid", PanelPresentMode.Grid);
         AssertBag(panelHost, hero, "panel.kit.effect.column", PanelPresentMode.Column);
@@ -101,11 +107,11 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
 
         Assert.That(effects.Items[0].Strings["displayName"], Is.EqualTo("祝福"));
         Assert.That(effects.Items[0].Strings["imageId"], Is.EqualTo("effect.icon.祝福"));
-        Assert.That(effects.Items[0].Floats["remaining"], Is.EqualTo(80f).Within(0.001f));
-        Assert.That(effects.Items[0].Floats["total"], Is.EqualTo(100f).Within(0.001f));
+        AssertTiming(effects.Items[0]);
         Assert.That(effects.Items[0].Floats["stacks"], Is.EqualTo(3f).Within(0.001f));
 
         Assert.That(effects.Items[2].Strings["displayName"], Is.EqualTo("护盾"));
+        AssertTiming(effects.Items[2]);
         Assert.That(effects.Items[2].Floats["stacks"], Is.EqualTo(2f).Within(0.001f));
 
         // Present mode is config-side; projection content is shared. Spot-check template id.
@@ -116,6 +122,135 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
             PanelPresentMode.Column => "column",
             _ => "?",
         }));
+    }
+
+    private static void AssertTiming(PanelListItemProjection item)
+    {
+        float remaining = item.Floats["remaining"];
+        float total = item.Floats["total"];
+        Assert.That(remaining, Is.GreaterThan(0f));
+        Assert.That(remaining, Is.LessThan(total));
+    }
+
+    private static void AssertResourceOnlyComposition(string repoRoot)
+    {
+        string modPath = Path.Combine(
+            repoRoot,
+            "mods",
+            "showcases",
+            "panel_author_layout_kit",
+            "PanelAuthorLayoutKitShowcaseMod");
+        Assert.That(Directory.EnumerateFiles(modPath, "*.cs", SearchOption.TopDirectoryOnly), Is.Empty);
+        Assert.That(Directory.EnumerateFiles(modPath, "*.csproj", SearchOption.TopDirectoryOnly), Is.Empty);
+
+        using JsonDocument manifest = ParseStrict(Path.Combine(modPath, "mod.json"));
+        Assert.That(manifest.RootElement.TryGetProperty("main", out _), Is.False);
+
+        using JsonDocument templates = ParseStrict(Path.Combine(modPath, "assets", "Entities", "templates.json"));
+        Assert.That(
+            templates.RootElement[0].GetProperty("onSpawnEffect").GetString(),
+            Is.EqualTo("Effect.Showcase.AuthorLayoutKit.Seed"));
+
+        using JsonDocument effects = ParseStrict(Path.Combine(modPath, "assets", "GAS", "effects.json"));
+        JsonElement runner = effects.RootElement.EnumerateArray()
+            .Single(effect => effect.GetProperty("id").GetString() == "Effect.Showcase.AuthorLayoutKit.Seed");
+        Assert.That(runner.GetProperty("lifetime").GetString(), Is.EqualTo("Instant"));
+        Assert.That(
+            runner.GetProperty("phaseGraphs").GetProperty("OnApply").GetProperty("main").GetString(),
+            Is.EqualTo("Graph.AuthorLayoutKit.Effects.Seed"));
+        foreach (JsonElement effect in effects.RootElement.EnumerateArray().Where(
+                     effect => !effect.GetProperty("id").GetString()!
+                         .StartsWith("Effect.Showcase.AuthorLayoutKit.Seed", StringComparison.Ordinal)))
+        {
+            Assert.That(effect.GetProperty("lifetime").GetString(), Is.EqualTo("After"));
+            Assert.That(effect.GetProperty("duration").GetProperty("durationTicks").GetInt32(), Is.GreaterThan(0));
+        }
+
+        AssertStackConfig(effects, "祝福");
+        AssertStackConfig(effects, "护盾");
+
+        using JsonDocument graphs = ParseStrict(Path.Combine(modPath, "assets", "GAS", "graphs.json"));
+        string[] applications = graphs.RootElement.EnumerateArray()
+            .Where(graph => graph.GetProperty("id").GetString()!
+                .StartsWith("Graph.AuthorLayoutKit.Effects.Seed", StringComparison.Ordinal))
+            .SelectMany(graph => graph.GetProperty("nodes").EnumerateArray())
+            .Where(node => node.GetProperty("op").GetString() == "ApplyEffectTemplate")
+            .Select(node => node.GetProperty("effectTemplate").GetString()!)
+            .Where(id => id is "祝福" or "迅捷" or "护盾" or "洞察")
+            .ToArray();
+        Assert.That(applications.Count(id => id == "祝福"), Is.EqualTo(3));
+        Assert.That(applications.Count(id => id == "护盾"), Is.EqualTo(2));
+        Assert.That(applications.Count(id => id == "迅捷"), Is.EqualTo(1));
+        Assert.That(applications.Count(id => id == "洞察"), Is.EqualTo(1));
+
+        JsonElement panelGraph = graphs.RootElement.EnumerateArray()
+            .Single(graph => graph.GetProperty("id").GetString() == "Graph.AuthorLayoutKit.Panels.Open");
+        string[] panelOps = panelGraph.GetProperty("nodes").EnumerateArray()
+            .Select(node => node.GetProperty("op").GetString()!)
+            .ToArray();
+        string[] allowedPanelOps =
+        {
+            "LoadExplicitTarget",
+            "CreatePanel",
+            "ShowPanel",
+            "ConstInt",
+            "HaltReturnInt",
+        };
+        Assert.That(panelOps.All(allowedPanelOps.Contains), Is.True);
+    }
+
+    private static void AssertStackConfig(JsonDocument effects, string effectId)
+    {
+        JsonElement effect = effects.RootElement.EnumerateArray()
+            .Single(candidate => candidate.GetProperty("id").GetString() == effectId);
+        JsonElement stack = effect.GetProperty("stack");
+        Assert.That(stack.GetProperty("limit").GetInt32(), Is.GreaterThan(1));
+        Assert.That(stack.GetProperty("policy").GetString(), Is.EqualTo("RefreshDuration"));
+        Assert.That(stack.GetProperty("overflowPolicy").GetString(), Is.EqualTo("RejectNew"));
+    }
+
+    private static void AssertRealActiveEffects(World world, Entity hero)
+    {
+        Assert.That(world.Has<ActiveEffectContainer>(hero), Is.True);
+        ActiveEffectContainer container = world.Get<ActiveEffectContainer>(hero);
+        Assert.That(container.Count, Is.EqualTo(4));
+        var stacksByTemplate = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < container.Count; i++)
+        {
+            Entity effect = container.GetEntity(i);
+            Assert.That(world.IsAlive(effect), Is.True);
+            Assert.That(world.Has<EffectTemplateRef>(effect), Is.True);
+            Assert.That(world.Has<GameplayEffect>(effect), Is.True);
+
+            EffectTemplateRef templateRef = world.Get<EffectTemplateRef>(effect);
+            string templateName = EffectTemplateIdRegistry.GetName(templateRef.TemplateId);
+            GameplayEffect timing = world.Get<GameplayEffect>(effect);
+            Assert.That(timing.LifetimeKind, Is.EqualTo(EffectLifetimeKind.After));
+            Assert.That(timing.RemainingTicks, Is.GreaterThan(0));
+            Assert.That(timing.RemainingTicks, Is.LessThan(timing.TotalTicks));
+            stacksByTemplate[templateName] = world.Has<EffectStack>(effect)
+                ? world.Get<EffectStack>(effect).Count
+                : 1;
+        }
+
+        Assert.That(stacksByTemplate, Is.EquivalentTo(new Dictionary<string, int>
+        {
+            ["祝福"] = 3,
+            ["迅捷"] = 1,
+            ["护盾"] = 2,
+            ["洞察"] = 1,
+        }));
+    }
+
+    private static JsonDocument ParseStrict(string path)
+    {
+        return JsonDocument.Parse(
+            File.ReadAllText(path),
+            new JsonDocumentOptions
+            {
+                AllowTrailingCommas = false,
+                CommentHandling = JsonCommentHandling.Disallow,
+            });
     }
 
     private static GameEngine CreateEngine(string repoRoot)

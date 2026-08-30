@@ -1,6 +1,7 @@
 [
   {
     "id": "buff_hero",
+    "onSpawnEffect": "Effect.Showcase.AuthorLayoutKit.Seed",
     "components": {
       "Name": { "Value": "试炼者" },
       "Team": { "Id": 1 },

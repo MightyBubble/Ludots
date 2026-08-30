@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Providers.FixtureProviders;
 using Ludots.Core.Gameplay.Tasks;
@@ -120,6 +121,38 @@ namespace Ludots.Tests.GAS.Integration
             List<TaskView> views = runtime.CaptureViews();
             Assert.That(views, Has.Some.Matches<TaskView>(v =>
                 v.TaskId == "task.second" && v.State == TaskInstanceState.Active));
+        }
+
+        [Test]
+        public void OfferOrStart_AddsNonEmptyNameAndFallsBackWhenDisplayTokenCannotResolve()
+        {
+            using World world = World.Create();
+            var definitions = new TaskDefinitionRegistry();
+            definitions.Register("task.named", new TaskDefinition
+            {
+                DisplayName = "Fallback task name",
+                DisplayToken = "missing.task.name",
+                StartPolicy = TaskStartPolicy.Automatic,
+                Objectives =
+                {
+                    new TaskObjectiveDefinition
+                    {
+                        Id = "one",
+                        Kind = TaskObjectiveKind.Signal,
+                        SignalKey = "signal.one",
+                    },
+                },
+            });
+            var runtime = new TaskRuntimeService(
+                world,
+                definitions,
+                CreateServices(),
+                new TaskPresentationBuffer());
+
+            Entity task = runtime.OfferOrStart("task.named");
+
+            Assert.That(world.Has<Name>(task), Is.True);
+            Assert.That(world.Get<Name>(task).Value, Is.EqualTo("Fallback task name"));
         }
 
         [Test]

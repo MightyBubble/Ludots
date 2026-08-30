@@ -2,7 +2,6 @@
   "name": "PanelInventoryAggregateEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for typed collection panel showcase: 背包堆叠",
-  "main": "bin/net9.0/PanelInventoryAggregateEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "PanelCollectionBagsShowcaseMod": "^1.0.0"

@@ -539,6 +539,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// Offers a task by definition id to the scope host through
+        /// TaskRuntimeService. Existing live instances are reused; unknown task ids
+        /// and invalid scope hosts fail closed. Optional bridge — requires a bound
+        /// TaskRuntimeService.
+        /// </summary>
+        void OfferTask(string taskId, Entity scopeHost)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
+        }
+
+        /// <summary>
         /// Registers an AwaitCallback waiter (Imm callback type) and parks the slice.
         /// Completions resume through GraphCallbackContinuationSystem in registration order.
         /// </summary>
