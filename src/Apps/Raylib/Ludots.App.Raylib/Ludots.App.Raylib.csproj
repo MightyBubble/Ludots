@@ -54,8 +54,12 @@
       <Link>water.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\..\Platforms\Desktop\skinning_instanced.vs">
-      <Link>skinning_instanced.vs</Link>
+    <None Include="..\..\..\Platforms\Desktop\skinning_instanced_pose_texture.vs">
+      <Link>skinning_instanced_pose_texture.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\shadow_depth_skinning_pose_texture.vs">
+      <Link>shadow_depth_skinning_pose_texture.vs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\..\Platforms\Desktop\skinning_instanced.fs">

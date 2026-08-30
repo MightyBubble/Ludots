@@ -288,12 +288,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         LoadTextKey = 461,
 
-        /// <summary>
-        /// Start DialogueRuntime session. Imm = dialogueId config key (patched from dialogueId symbol).
-        /// TriggerGraph / Script only; MapLoaded entry is the data-driven auto-start path.
-        /// </summary>
-        OfferActivity = 466,
-
         StartDialogue = 462,
 
         /// Set the target entity's interaction mode: add/replace the sparse

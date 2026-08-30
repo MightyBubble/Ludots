@@ -2909,23 +2909,6 @@
       "codegenStatus": "covered"
     },
     {
-      "op": "OfferActivity",
-      "authorableKinds": [
-        "TriggerGraph",
-        "Script"
-      ],
-      "showcaseId": "capability_standard_graph_op_OfferActivity",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryOfferActivityAcceptanceTests.OfferActivity_GalleryCompilesAndMapLoads"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
       "op": "StartDialogue",
       "authorableKinds": [
         "TriggerGraph",
@@ -3256,6 +3239,24 @@
         "GraphOpsNodeGalleryScriptAcceptanceTests.Yield_FillsWaterAcrossTicks_AndCaptionRests",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "OfferActivity",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_OfferActivity",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryOfferActivityAcceptanceTests.OfferActivity_RollCallOffersGalleryActivityEachWave",
+        "GraphOpsNodeGalleryOfferActivityAcceptanceTests.OfferActivity_GalleryCompilesAndMapLoads"
       ],
       "codegenStatus": "covered"
     },
