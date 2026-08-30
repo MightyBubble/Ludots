@@ -75,7 +75,7 @@ namespace Ludots.Raylib.Render
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_CUBEMAP] = RequireLocation("uPrefilteredEnv");
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_BRDF] = RequireLocation("uBrdfLut");
 
-            _material = Rl.LoadMaterialDefault();
+            _material = RaylibNativeResources.LoadMaterialDefault();
             _material.shader = _shader;
 
             // 构造期已持 GL 上下文（LoadShader），把与光照无关的 BRDF LUT 烘焙移出首帧 Draw。
@@ -203,8 +203,8 @@ namespace Ludots.Raylib.Render
             _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP].texture = default;
             _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF].texture = default;
             _material.maps[ShadowMapSlot].texture = default;
-            Rl.UnloadMaterial(_material);
-            Rl.UnloadShader(_shader);
+            RaylibNativeResources.UnloadMaterial(_material);
+            RaylibNativeResources.UnloadShader(_shader);
             _disposed = true;
         }
 

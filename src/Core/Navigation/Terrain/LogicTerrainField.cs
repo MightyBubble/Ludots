@@ -423,16 +423,16 @@ namespace Ludots.Core.Navigation.Terrain
             new LogicTerrainProjectionOptions(SpatialScaleDefaults.CellCm);
     }
 
-    public static class VisualHeightmapLogicTerrainProjection
+    public static class ContinuousHeightmapLogicTerrainProjection
     {
         public static MutableGridLogicTerrainField ProjectToGrid(
-            IVisualHeightmap visualHeightmap,
+            IContinuousHeightmap continuousHeightmap,
             int widthCells,
             int heightCells,
             int cellSizeCm,
             LogicTerrainProjectionOptions options)
         {
-            if (visualHeightmap == null) throw new ArgumentNullException(nameof(visualHeightmap));
+            if (continuousHeightmap == null) throw new ArgumentNullException(nameof(continuousHeightmap));
 
             var field = new MutableGridLogicTerrainField(
                 widthCells,
@@ -446,7 +446,7 @@ namespace Ludots.Core.Navigation.Terrain
                 {
                     float xCm = options.OriginXcm + (col * cellSizeCm);
                     float yCm = options.OriginZcm + (row * cellSizeCm);
-                    if (!visualHeightmap.TrySampleHeightCm(xCm, yCm, out float heightCm, options.LayerIndex))
+                    if (!continuousHeightmap.TrySampleHeightCm(xCm, yCm, out float heightCm, options.LayerIndex))
                     {
                         throw new InvalidOperationException(
                             $"Visual heightmap projection failed at grid cell ({col},{row}).");

@@ -41,7 +41,7 @@ namespace Ludots.Raylib.Render
         private Mesh _sphereMesh;
         private Mesh _vfxBillboardMesh;
         private IRaylibReceiverMeshProjector? _receiverMeshProjector;
-        private IVisualHeightmap? _frameVisualHeightmap;
+        private IContinuousHeightmap? _frameContinuousHeightmap;
         private Shader _shader;
         private Material _material;
         private RaylibLaneShader _instancingLane = null!;
@@ -79,6 +79,13 @@ namespace Ludots.Raylib.Render
         private double _frameTimeSeconds;
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
+        private readonly RaylibAssetStore<Texture2D> _textureStore;
+        private Vector4[] _frameFrustumPlanes = Array.Empty<Vector4>();
+        private bool _frameFrustumValid;
+        private RaylibMatrix[] _laneCullScratch = Array.Empty<RaylibMatrix>();
+        private const float UnitCubeRadiusMeters = 0.867f;
+        public int LastInstancedLaneCullSkippedCount { get; private set; }
+        private readonly RaylibAssetStore<Model> _modelStore;
         private readonly Dictionary<int, CachedProceduralMesh> _proceduralMeshCache = new Dictionary<int, CachedProceduralMesh>();
         private readonly Dictionary<int, CachedTexture> _textureCache = new Dictionary<int, CachedTexture>();
         private readonly HashSet<int> _reportedMissingModelDraws = new HashSet<int>();
@@ -218,25 +225,95 @@ namespace Ludots.Raylib.Render
             _channelRegistrar = channelRegistrar ?? ThrowMissingChannelRegistrar;
             _vfs = vfs;
             _materials = materials;
+            bool syncAssetLoad = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_SYNC_ASSET_LOAD") == "1";
+            if (syncAssetLoad)
+            {
+                _textureStore = new RaylibAssetStore<Texture2D>(vfs, LoadTextureResource, RaylibNativeResources.UnloadTexture);
+                _modelStore = new RaylibAssetStore<Model>(vfs, LoadModelResource, RaylibNativeResources.UnloadModel);
+            }
+            else
+            {
+                _textureStore = new RaylibAssetStore<Texture2D>(
+                    vfs,
+                    LoadTextureResource,
+                    RaylibNativeResources.UnloadTexture,
+                    cpuPrepare: fullPath => RaylibNativeResources.LoadImageFile(fullPath),
+                    uploader: payload =>
+                    {
+                        var image = (Image)payload!;
+                        Texture2D texture = RaylibNativeResources.LoadTextureFromImage(image);
+                        Rl.UnloadImage(image);
+                        return ValidateTexture(texture, "cpu-prepared image");
+                    });
+                _modelStore = new RaylibAssetStore<Model>(
+                    vfs,
+                    LoadModelResource,
+                    RaylibNativeResources.UnloadModel,
+                    cpuPrepare: fullPath => RaylibModelFileLoader.PrepareNativeLoadable(fullPath),
+                    uploader: payload => LoadModelResource((string)payload!));
+            }
             _materialLibrary = vfs != null && materials != null
-                ? new RaylibMaterialLibrary(vfs, materials)
+                ? new RaylibMaterialLibrary(vfs, materials, _textureStore)
                 : null;
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
-            _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs);
+            _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs, _modelStore);
             _materialPipeline = new RaylibInstancedMaterialPipeline(_materialLibrary);
             _gpuSkinned = new RaylibGpuSkinnedBatchRenderer(_gpuSkinnedModelCache, _materialPipeline, _maxModelInstancesPerDraw);
-            _vfxRenderer = new RaylibVfxRenderer(vfs);
+            _vfxRenderer = new RaylibVfxRenderer(vfs, _textureStore);
             _decalRenderer = new RaylibDecalProjectorRenderer(materials, _materialLibrary);
         }
 
-        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
+        private static Texture2D LoadTextureResource(string fullPath)
         {
-            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
+            Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
+            return ValidateTexture(texture, fullPath);
         }
 
-        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IPrimitiveDrawSnapshot? snapshot, IRenderMeshAssets meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
+        private static Texture2D ValidateTexture(Texture2D texture, string fullPath)
         {
-            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
+            if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
+            {
+                if (texture.id != 0)
+                {
+                    RaylibNativeResources.UnloadTexture(texture);
+                }
+
+                throw new InvalidOperationException(
+                    $"raylib rejected texture '{fullPath}' (textureId={texture.id}, size={texture.width}x{texture.height}).");
+            }
+
+            return texture;
+        }
+
+        private static Model LoadModelResource(string fullPath)
+        {
+            // OBJ 直走 native LoadModel 是 #1050 的 AccessViolation 路径；统一经
+            // 装载入口分流（glTF native / OBJ、FBX、DAE 先转 GLB）。
+            Model model = RaylibModelFileLoader.LoadModel(fullPath);
+            if (model.meshCount <= 0)
+            {
+                RaylibNativeResources.UnloadModel(model);
+                throw new InvalidOperationException($"model '{fullPath}' loaded with meshCount=0.");
+            }
+
+            return model;
+        }
+
+        /// <summary>帧末冲刷引用归零的退役资产；由唯一帧执行者在 pass 序列后调用（#1327 帧末延迟销毁）。</summary>
+        public void FlushRetiredAssets()
+        {
+            _textureStore.FlushRetired();
+            _modelStore.FlushRetired();
+        }
+
+        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IContinuousHeightmap? continuousHeightmap = null, double timeSeconds = 0d)
+        {
+            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, continuousHeightmap, timeSeconds);
+        }
+
+        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IPrimitiveDrawSnapshot? snapshot, IRenderMeshAssets meshes, float scaleMul = 1f, IContinuousHeightmap? continuousHeightmap = null, double timeSeconds = 0d)
+        {
+            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, continuousHeightmap, timeSeconds);
         }
 
         public void Draw(
@@ -246,12 +323,15 @@ namespace Ludots.Raylib.Render
             ISkinnedVisualBatchSnapshot? skinnedBatch,
             IRenderMeshAssets meshes,
             float scaleMul = 1f,
-            IVisualHeightmap? visualHeightmap = null,
+            IContinuousHeightmap? continuousHeightmap = null,
             double timeSeconds = 0d)
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
+            BuildFrameFrustum(in camera);
             _frameViewPos = camera.position;
             _hasFrameViewPos = true;
             _frameTimeSeconds = timeSeconds;
@@ -266,6 +346,7 @@ namespace Ludots.Raylib.Render
             LastImmediateSkippedCount = 0;
             LastInstancedMatrixCacheHits = 0;
             LastInstancedMatrixCacheMisses = 0;
+            LastInstancedLaneCullSkippedCount = 0;
             LastPersistentCreates = 0;
             LastPersistentUpdates = 0;
             LastPersistentRemoves = 0;
@@ -278,7 +359,7 @@ namespace Ludots.Raylib.Render
             LastDecalVisualCount = 0;
             LastVfxVisualCount = 0;
             LastSurfaceVisualCount = 0;
-            _frameVisualHeightmap = visualHeightmap;
+            _frameContinuousHeightmap = continuousHeightmap;
             _vfxRenderer.BeginFrame();
             _staticMeshReceiverProjector.BeginFrame();
             try
@@ -321,7 +402,7 @@ namespace Ludots.Raylib.Render
             finally
             {
                 _vfxRenderer.EndFrame();
-                _frameVisualHeightmap = null;
+                _frameContinuousHeightmap = null;
             }
         }
 
@@ -335,6 +416,9 @@ namespace Ludots.Raylib.Render
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
 
             EnsureInitialized();
             var span = draw.GetSpan();
@@ -368,6 +452,8 @@ namespace Ludots.Raylib.Render
             IRenderMeshAssets meshes,
             float scaleMul = 1f)
         {
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
             if (skinnedBatch == null) throw new ArgumentNullException(nameof(skinnedBatch));
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
@@ -1365,8 +1451,13 @@ namespace Ludots.Raylib.Render
 
         private void DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera, int materialId)
         {
-            if (!TryGetOrLoadTexture(meshAssetId, desc, out var cached))
+            if (!TryGetOrLoadTexture(meshAssetId, desc, out var cached, out bool textureInFlight))
             {
+                if (textureInFlight)
+                {
+                    return;
+                }
+
                 throw new InvalidOperationException(
                     $"{BillboardTextureRequiredError}: meshAssetId={meshAssetId}, sourceUris={FormatSourceUris(desc.SourceUris)}.");
             }
@@ -1443,8 +1534,13 @@ namespace Ludots.Raylib.Render
             RaylibDirectionalShadowMap shadow,
             MaterialBlendMode blendMode)
         {
-            if (!TryGetOrLoadTexture(meshAssetId, desc, out CachedTexture cached))
+            if (!TryGetOrLoadTexture(meshAssetId, desc, out CachedTexture cached, out bool textureInFlight))
             {
+                if (textureInFlight)
+                {
+                    return;
+                }
+
                 throw new InvalidOperationException(
                     $"{BillboardTextureRequiredError}: meshAssetId={meshAssetId}, sourceUris={FormatSourceUris(desc.SourceUris)}.");
             }
@@ -1626,34 +1722,35 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
-            for (int u = 0; u < desc.SourceUris.Length; u++)
+            List<string>? failures = null;
+            foreach (string uri in desc.SourceUris)
             {
-                string uri = desc.SourceUris[u];
-                if (string.IsNullOrWhiteSpace(uri)) continue;
-
-                if (!_vfs.TryResolveFullPath(uri, out string fullPath)) continue;
-                if (!File.Exists(fullPath)) continue;
-
-                // OBJ 直走 native LoadModel 是 #1050 的 AccessViolation 路径；统一经
-                // 装载入口分流（glTF native / OBJ、FBX、DAE 先转 GLB）。
-                Model model;
-                try
+                if (string.IsNullOrWhiteSpace(uri))
                 {
-                    model = RaylibModelFileLoader.LoadModel(fullPath);
-                }
-                catch (Exception ex)
-                {
-                    RenderDiagnostics.Warn($"RaylibPrimitiveRenderer meshAssetId={meshAssetId} 模型装载失败（'{fullPath}'）：{ex.Message}");
                     continue;
                 }
 
-                if (model.meshCount > 0)
+                RaylibAssetAcquireOutcome outcome = _modelStore.TryAcquireOrBegin(uri, out RaylibAssetStore<Model>.Lease? lease, out string? status);
+                if (outcome == RaylibAssetAcquireOutcome.InFlight)
                 {
-                    Mesh[] modelMeshes = CopyModelMeshes(model);
+                    // 两阶段装载进行中：本帧不绘制、不记负缓存，下一帧重问（#1328）。
+                    return false;
+                }
+
+                if (outcome == RaylibAssetAcquireOutcome.Failed)
+                {
+                    failures ??= new List<string>();
+                    failures.Add($"'{uri}': {status}");
+                    continue;
+                }
+
+                try
+                {
+                    Mesh[] modelMeshes = CopyModelMeshes(lease!.Resource);
                     ComputeModelLocalAabbMeters(modelMeshes, out Vector3 localMin, out Vector3 localMax);
                     cached = new CachedModel
                     {
-                        Model = model,
+                        Lease = lease,
                         Meshes = modelMeshes,
                         LocalMin = localMin,
                         LocalMax = localMax,
@@ -1662,14 +1759,16 @@ namespace Ludots.Raylib.Render
                     _modelCache[meshAssetId] = cached;
                     return true;
                 }
-
-                Rl.UnloadModel(model);
+                catch
+                {
+                    lease!.Dispose();
+                    throw;
+                }
             }
 
-            _modelCache[meshAssetId] = cached;
-            return false;
+            throw new InvalidOperationException(
+                $"{nameof(RaylibPrimitiveRenderer)} meshAssetId={meshAssetId} could not load any sourceUri. Attempts: [{string.Join("; ", failures ?? new List<string>())}]");
         }
-
         private static Mesh[] CopyModelMeshes(Model model)
         {
             var modelMeshes = new Mesh[model.meshCount];
@@ -1757,8 +1856,9 @@ namespace Ludots.Raylib.Render
             return true;
         }
 
-        private bool TryGetOrLoadTexture(int meshAssetId, in MeshAssetDescriptor desc, out CachedTexture cached)
+        private bool TryGetOrLoadTexture(int meshAssetId, in MeshAssetDescriptor desc, out CachedTexture cached, out bool inFlight)
         {
+            inFlight = false;
             if (_textureCache.TryGetValue(meshAssetId, out cached))
                 return cached.Loaded;
 
@@ -1771,47 +1871,42 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
-            for (int u = 0; u < desc.SourceUris.Length; u++)
+            List<string>? failures = null;
+            foreach (string uri in desc.SourceUris)
             {
-                string uri = desc.SourceUris[u];
-                if (string.IsNullOrWhiteSpace(uri)) continue;
-
-                if (!_vfs.TryResolveFullPath(uri, out string fullPath))
+                if (string.IsNullOrWhiteSpace(uri))
                 {
-                    RenderDiagnostics.Detail("texture", meshAssetId, $"texture-resolve failed; uri={uri}");
                     continue;
                 }
 
-                if (!File.Exists(fullPath))
+                RaylibAssetAcquireOutcome outcome = _textureStore.TryAcquireOrBegin(uri, out RaylibAssetStore<Texture2D>.Lease? lease, out string? status);
+                if (outcome == RaylibAssetAcquireOutcome.InFlight)
                 {
-                    RenderDiagnostics.Detail("texture", meshAssetId, $"texture-file missing; uri={uri}; fullPath={fullPath}");
+                    inFlight = true;
+                    return false;
+                }
+
+                if (outcome == RaylibAssetAcquireOutcome.Failed)
+                {
+                    failures ??= new List<string>();
+                    failures.Add($"'{uri}': {status}");
                     continue;
                 }
 
-                var texture = Rl.LoadTexture(fullPath);
-                if (texture.id != 0 && texture.width > 0 && texture.height > 0)
+                Texture2D texture = lease!.Resource;
+                cached = new CachedTexture
                 {
-                    cached = new CachedTexture
-                    {
-                        Texture = texture,
-                        Loaded = true,
-                        AspectRatio = texture.height > 0 ? (float)texture.width / texture.height : 1f,
-                    };
-                    _textureCache[meshAssetId] = cached;
-                    RenderDiagnostics.Detail("texture", meshAssetId, $"texture-load success; uri={uri}; fullPath={fullPath}; size={texture.width}x{texture.height}");
-                    return true;
-                }
-
-                RenderDiagnostics.Detail("texture", meshAssetId, $"texture-load failed; uri={uri}; fullPath={fullPath}; textureId={texture.id}; size={texture.width}x{texture.height}");
-
-                if (texture.id != 0)
-                    Rl.UnloadTexture(texture);
+                    Lease = lease,
+                    Loaded = true,
+                    AspectRatio = texture.height > 0 ? (float)texture.width / texture.height : 1f,
+                };
+                _textureCache[meshAssetId] = cached;
+                return true;
             }
 
-            _textureCache[meshAssetId] = cached;
-            return false;
+            throw new InvalidOperationException(
+                $"{nameof(RaylibPrimitiveRenderer)} texture meshAssetId={meshAssetId} could not load any sourceUri. Attempts: [{string.Join("; ", failures ?? new List<string>())}]");
         }
-
         private static string FormatSourceUris(string[]? sourceUris)
         {
             return sourceUris == null || sourceUris.Length == 0
@@ -1884,7 +1979,7 @@ namespace Ludots.Raylib.Render
                 proceduralMesh.Colors32.AsSpan(0, colorByteCount).CopyTo(new Span<byte>(mesh.colors, colorByteCount));
             }
 
-            Rl.UploadMesh(ref mesh, false);
+            RaylibNativeResources.UploadMesh(ref mesh, false);
             return mesh;
         }
 
@@ -1897,7 +1992,7 @@ namespace Ludots.Raylib.Render
 
             if (cached.Mesh.vertexCount > 0)
             {
-                Rl.UnloadMesh(cached.Mesh);
+                RaylibNativeResources.UnloadMesh(cached.Mesh);
             }
 
             if (cached.SubmeshMeshes == null)
@@ -1909,7 +2004,7 @@ namespace Ludots.Raylib.Render
             {
                 if (cached.SubmeshMeshes[i].vertexCount > 0)
                 {
-                    Rl.UnloadMesh(cached.SubmeshMeshes[i]);
+                    RaylibNativeResources.UnloadMesh(cached.SubmeshMeshes[i]);
                 }
             }
         }
@@ -1921,7 +2016,7 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
-            _proceduralMeshMaterial = Rl.LoadMaterialDefault();
+            _proceduralMeshMaterial = RaylibNativeResources.LoadMaterialDefault();
             _proceduralMeshMaterialLoaded = true;
         }
 
@@ -2096,6 +2191,8 @@ namespace Ludots.Raylib.Render
 
         public void DrawInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, IRenderMeshAssets meshes, float scaleMul = 1f)
         {
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
             if (bucket == null) throw new ArgumentNullException(nameof(bucket));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
@@ -2154,6 +2251,8 @@ namespace Ludots.Raylib.Render
             RaylibDirectionalShadowMap shadow,
             float scaleMul = 1f)
         {
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
             if (bucket == null) throw new ArgumentNullException(nameof(bucket));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
@@ -2329,18 +2428,19 @@ namespace Ludots.Raylib.Render
             _materialPipeline.ApplyHostMaterialMaps(ref _material, lane.MaterialAssetId, laneShader.Shader, in laneShader.PbrLocs);
             BindFrameShadow(ref _material);
             int drawCalls = 0;
-            fixed (RaylibMatrix* transforms = batch.Transforms)
+            (RaylibMatrix[] visible, int visibleCount) = CompactVisibleInstances(batch, UnitCubeRadiusMeters);
+            fixed (RaylibMatrix* transforms = visible)
             {
-                for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
+                for (int offset = 0; offset < visibleCount; offset += _maxModelInstancesPerDraw)
                 {
-                    int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
+                    int chunkCount = Math.Min(_maxModelInstancesPerDraw, visibleCount - offset);
                     Rl.DrawMeshInstanced(mesh, _material, transforms + offset, chunkCount);
                     drawCalls++;
                 }
             }
 
             LastInstancedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000.0 / Stopwatch.Frequency;
-            LastInstancedInstances += batch.Count;
+            LastInstancedInstances += visibleCount;
             LastInstancedBatches += drawCalls;
         }
 
@@ -2358,9 +2458,126 @@ namespace Ludots.Raylib.Render
 
             uint colorKey = RaylibInstancedMaterialPipeline.PackRgba(Vector4.One);
             ModelInstanceBatch batch = ResolveTypedLaneBatch(_typedLaneBatches, lane, colorKey, scaleMul);
-            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey, lane.MaterialAssetId);
+            Vector3 localExtents = cached.LocalMax - cached.LocalMin;
+            float modelRadius = 0.5f * localExtents.Length();
+            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey, lane.MaterialAssetId, modelRadius);
             LastInstancedInstances += batch.Count;
             LastInstancedBatches += drawCalls;
+        }
+
+        /// <summary>
+        /// 帧级视锥侧平面（#1331）：System.Numerics 行向量约定下 clip = world*(view*proj)，
+        /// 平面取列组合 col1±col4 / col2±col4；只做四个侧平面的保守球筛选——近平面（near=0.05 收益可忽略）
+        /// 与远平面不参与，深度约定差异（GL -w..w vs D3D 0..w）因此不构成风险。平面构建失败兜底为全可见（保守方向）。
+        /// </summary>
+        private void BuildFrameFrustum(in Camera3D camera)
+        {
+            if (_frameFrustumPlanes.Length != 4)
+            {
+                _frameFrustumPlanes = new Vector4[4];
+            }
+
+            float aspect = MathF.Max(0.001f, Rl.GetScreenWidth() / (float)Math.Max(1, Rl.GetScreenHeight()));
+            Matrix4x4 view = Matrix4x4.CreateLookAt(camera.position, camera.target, camera.up);
+            Matrix4x4 proj = camera.projection == CameraProjection.CAMERA_ORTHOGRAPHIC
+                ? Matrix4x4.CreateOrthographic(camera.fovy * aspect, camera.fovy, 0.05f, 100000f)
+                : Matrix4x4.CreatePerspectiveFieldOfView(
+                    camera.fovy * MathF.PI / 180f,
+                    aspect,
+                    0.05f,
+                    100000f);
+            Matrix4x4 p = view * proj;
+            _frameFrustumPlanes[0] = NormalizePlane(new Vector4(p.M11 + p.M14, p.M21 + p.M24, p.M31 + p.M34, p.M41 + p.M44));
+            _frameFrustumPlanes[1] = NormalizePlane(new Vector4(p.M11 - p.M14, p.M21 - p.M24, p.M31 - p.M34, p.M41 - p.M44));
+            _frameFrustumPlanes[2] = NormalizePlane(new Vector4(p.M12 + p.M14, p.M22 + p.M24, p.M32 + p.M34, p.M42 + p.M44));
+            _frameFrustumPlanes[3] = NormalizePlane(new Vector4(p.M12 - p.M14, p.M22 - p.M24, p.M32 - p.M34, p.M42 - p.M44));
+            _frameFrustumValid = true;
+        }
+
+        private static Vector4 NormalizePlane(Vector4 plane)
+        {
+            float length = MathF.Sqrt(Vector4.Dot(plane, plane));
+            return length > 1e-9f ? plane / length : plane;
+        }
+
+        private static float InstanceRadiusMeters(in RaylibMatrix matrix, float localRadiusMeters)
+        {
+            float sx = MathF.Sqrt((matrix.m0 * matrix.m0) + (matrix.m1 * matrix.m1) + (matrix.m2 * matrix.m2));
+            float sy = MathF.Sqrt((matrix.m4 * matrix.m4) + (matrix.m5 * matrix.m5) + (matrix.m6 * matrix.m6));
+            float sz = MathF.Sqrt((matrix.m8 * matrix.m8) + (matrix.m9 * matrix.m9) + (matrix.m10 * matrix.m10));
+            return localRadiusMeters * MathF.Max(sx, MathF.Max(sy, sz));
+        }
+
+        private bool IsInstanceWithinFrameFrustum(in RaylibMatrix matrix, float localRadiusMeters)
+        {
+            if (!_frameFrustumValid)
+            {
+                return true;
+            }
+
+            Vector3 position = new(matrix.m12, matrix.m13, matrix.m14);
+            float radius = InstanceRadiusMeters(in matrix, localRadiusMeters);
+            Span<Vector4> planes = _frameFrustumPlanes;
+            for (int i = 0; i < planes.Length; i++)
+            {
+                Vector4 plane = planes[i];
+                if (plane.X * position.X + plane.Y * position.Y + plane.Z * position.Z + plane.W < -radius)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>主颜色 pass 提交点做逐实例压缩（#1331）：全可见时零拷贝直接用原批次；
+        /// 有剔除时压缩进复用 scratch。阴影 pass 不调用（光源视锥与主相机视锥不同，剔除语义不适用）。
+        /// revision 矩阵缓存不受剔除结果影响（缓存存原始全量，压缩每帧独立）。</summary>
+        private (RaylibMatrix[] Buffer, int Count) CompactVisibleInstances(ModelInstanceBatch batch, float localRadiusMeters)
+        {
+            Span<RaylibMatrix> source = batch.Transforms.AsSpan(0, batch.Count);
+            int firstInvisible = -1;
+            for (int i = 0; i < source.Length; i++)
+            {
+                if (!IsInstanceWithinFrameFrustum(in source[i], localRadiusMeters))
+                {
+                    firstInvisible = i;
+                    break;
+                }
+            }
+
+            if (firstInvisible < 0)
+            {
+                return (batch.Transforms, batch.Count);
+            }
+
+            if (_laneCullScratch.Length < batch.Count)
+            {
+                _laneCullScratch = new RaylibMatrix[Math.Max(64, batch.Count * 2)];
+            }
+
+            Span<RaylibMatrix> target = _laneCullScratch.AsSpan(0, batch.Count);
+            int kept = 0;
+            for (int i = 0; i < firstInvisible; i++)
+            {
+                target[kept++] = source[i];
+            }
+
+            int culled = 1;
+            for (int i = firstInvisible + 1; i < source.Length; i++)
+            {
+                if (IsInstanceWithinFrameFrustum(in source[i], localRadiusMeters))
+                {
+                    target[kept++] = source[i];
+                }
+                else
+                {
+                    culled++;
+                }
+            }
+
+            LastInstancedLaneCullSkippedCount += culled;
+            return (_laneCullScratch, kept);
         }
 
         private ModelInstanceBatch ResolveTypedLaneBatch(
@@ -2625,7 +2842,7 @@ namespace Ludots.Raylib.Render
             return ((long)meshAssetId << 32) | colorKey;
         }
 
-        private int DrawModelInstanceBatch(Model model, ModelInstanceBatch batch, uint colorKey, int materialId)
+        private int DrawModelInstanceBatch(Model model, ModelInstanceBatch batch, uint colorKey, int materialId, float cullLocalRadiusMeters = 0f)
         {
             if (model.meshCount <= 0 || batch.Count <= 0)
             {
@@ -2637,7 +2854,10 @@ namespace Ludots.Raylib.Render
             long drawStart = Stopwatch.GetTimestamp();
             RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
             RaylibLaneShader lane = ResolveInstancingLaneShader(materialId);
-            fixed (RaylibMatrix* transforms = batch.Transforms)
+            (RaylibMatrix[] buffer, int count) = cullLocalRadiusMeters > 0f
+                ? CompactVisibleInstances(batch, cullLocalRadiusMeters)
+                : (batch.Transforms, batch.Count);
+            fixed (RaylibMatrix* transforms = buffer)
             {
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
@@ -2648,9 +2868,9 @@ namespace Ludots.Raylib.Render
                         continue;
                     }
                     ApplyInstancedMaterialTint(ref material, colorKey, lane);
-                    for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
+                    for (int offset = 0; offset < count; offset += _maxModelInstancesPerDraw)
                     {
-                        int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
+                        int chunkCount = Math.Min(_maxModelInstancesPerDraw, count - offset);
                         Rl.DrawMeshInstanced(mesh, material, transforms + offset, chunkCount);
                         drawCalls++;
                     }
@@ -2792,37 +3012,37 @@ namespace Ludots.Raylib.Render
         {
             if (_initialized) return;
 
-            _cubeMesh = Rl.GenMeshCube(1f, 1f, 1f);
+            _cubeMesh = RaylibNativeResources.GenMeshCube(1f, 1f, 1f);
             if (_cubeMesh.colors == null)
             {
                 int bytes = _cubeMesh.vertexCount * 4;
                 _cubeMesh.colors = (byte*)Rl.MemAlloc(bytes);
                 for (int i = 0; i < bytes; i++) _cubeMesh.colors[i] = 255;
             }
-            Rl.UploadMesh(ref _cubeMesh, false);
+            RaylibNativeResources.UploadMesh(ref _cubeMesh, false);
 
-            _sphereMesh = Rl.GenMeshSphere(0.5f, 8, 8);
+            _sphereMesh = RaylibNativeResources.GenMeshSphere(0.5f, 8, 8);
             if (_sphereMesh.colors == null)
             {
                 int bytes = _sphereMesh.vertexCount * 4;
                 _sphereMesh.colors = (byte*)Rl.MemAlloc(bytes);
                 for (int i = 0; i < bytes; i++) _sphereMesh.colors[i] = 255;
             }
-            Rl.UploadMesh(ref _sphereMesh, false);
+            RaylibNativeResources.UploadMesh(ref _sphereMesh, false);
 
-            _vfxBillboardMesh = Rl.GenMeshCube(1f, 1f, 1f);
+            _vfxBillboardMesh = RaylibNativeResources.GenMeshCube(1f, 1f, 1f);
             if (_vfxBillboardMesh.colors == null)
             {
                 int bytes = _vfxBillboardMesh.vertexCount * 4;
                 _vfxBillboardMesh.colors = (byte*)Rl.MemAlloc(bytes);
                 for (int i = 0; i < bytes; i++) _vfxBillboardMesh.colors[i] = 255;
             }
-            Rl.UploadMesh(ref _vfxBillboardMesh, false);
+            RaylibNativeResources.UploadMesh(ref _vfxBillboardMesh, false);
 
             _billboardShadowMesh = CreateBillboardShadowMesh();
 
             RaylibEffectShader defaultVfx = _effectShaders.GetOrLoad(RaylibEffectShaderRegistry.DefaultUnlitTintKey);
-            _vfxMaterial = Rl.LoadMaterialDefault();
+            _vfxMaterial = RaylibNativeResources.LoadMaterialDefault();
             _vfxMaterial.shader = defaultVfx.Shader;
             _vfxMaterialLoaded = true;
 
@@ -2831,7 +3051,7 @@ namespace Ludots.Raylib.Render
             _shaderCatalog.RegisterInstancing(RaylibShaderKeys.Lit, _instancingLane);
             _shader = _instancingLane.Shader;
 
-            _material = Rl.LoadMaterialDefault();
+            _material = RaylibNativeResources.LoadMaterialDefault();
             _material.shader = _shader;
 
             _instancingPbrLocs = _instancingLane.PbrLocs;
@@ -2878,7 +3098,7 @@ namespace Ludots.Raylib.Render
             vertices.AsSpan().CopyTo(new Span<float>(mesh.vertices, vertices.Length));
             mesh.texcoords = (float*)Rl.MemAlloc(sizeof(float) * texcoords.Length);
             texcoords.AsSpan().CopyTo(new Span<float>(mesh.texcoords, texcoords.Length));
-            Rl.UploadMesh(ref mesh, false);
+            RaylibNativeResources.UploadMesh(ref mesh, false);
             return mesh;
         }
         private void EnsureFrameLightingAppliedForInstancing()
@@ -2947,9 +3167,8 @@ namespace Ludots.Raylib.Render
                     continue;
                 }
 
-                Model model = kvp.Value.Model;
-                _materialLibrary?.DetachOwnedMaps(model);
-                Rl.UnloadModel(model);
+                _materialLibrary?.DetachOwnedMaps(kvp.Value.Model);
+                kvp.Value.Lease?.Dispose();
             }
             _modelCache.Clear();
 
@@ -2963,7 +3182,7 @@ namespace Ludots.Raylib.Render
             foreach (var kvp in _textureCache)
             {
                 if (kvp.Value.Loaded)
-                    Rl.UnloadTexture(kvp.Value.Texture);
+                    kvp.Value.Lease?.Dispose();
             }
             _textureCache.Clear();
 
@@ -2971,14 +3190,14 @@ namespace Ludots.Raylib.Render
             {
                 _materialLibrary?.DetachOwnedMaps(ref _proceduralMeshMaterial);
                 RaylibShadowSampling.ClearTexture(ref _proceduralMeshMaterial);
-                Rl.UnloadMaterial(_proceduralMeshMaterial);
+                RaylibNativeResources.UnloadMaterial(_proceduralMeshMaterial);
                 _proceduralMeshMaterialLoaded = false;
             }
 
             if (_vfxMaterialLoaded)
             {
                 _vfxMaterial.shader = default;
-                Rl.UnloadMaterial(_vfxMaterial);
+                RaylibNativeResources.UnloadMaterial(_vfxMaterial);
                 _vfxMaterialLoaded = false;
             }
 
@@ -2998,36 +3217,43 @@ namespace Ludots.Raylib.Render
 
             if (!_initialized) return;
 
-            if (_cubeMesh.vertexCount > 0) Rl.UnloadMesh(_cubeMesh);
-            if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
-            if (_vfxBillboardMesh.vertexCount > 0) Rl.UnloadMesh(_vfxBillboardMesh);
-            if (_billboardShadowMesh.vertexCount > 0) Rl.UnloadMesh(_billboardShadowMesh);
+            if (_cubeMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(_cubeMesh);
+            if (_sphereMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(_sphereMesh);
+            if (_vfxBillboardMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(_vfxBillboardMesh);
+            if (_billboardShadowMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(_billboardShadowMesh);
             _material.shader = default;
             // UnloadMaterial 会删除材质槽上的全部纹理；IBL 纹理归 RaylibSkyIbl 所有，先清槽防双删。
             _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP].texture = default;
             _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF].texture = default;
             RaylibShadowSampling.ClearTexture(ref _material);
-            Rl.UnloadMaterial(_material);
-            Rl.UnloadShader(_shader);
+            RaylibNativeResources.UnloadMaterial(_material);
+            RaylibNativeResources.UnloadShader(_shader);
             _initialized = false;
+
+            // 存储销毁必须最晚：蒙皮缓存/材质库/VFX 的释放回调（DetachOwnedMaps 等）仍要触碰模型与贴图，
+            // 先销毁存储会产生悬空指针；模型先于贴图销毁保持与旧实现一致（模型内部纹理随模型释放）。
+            _modelStore.Dispose();
+            _textureStore.Dispose();
         }
 
         private struct CachedModel
         {
-            public Model Model;
+            public RaylibAssetStore<Model>.Lease? Lease;
             public Mesh[] Meshes;
             public Vector3 LocalMin;
             public Vector3 LocalMax;
             public bool Loaded;
-        }
 
+            public readonly Model Model => Lease!.Resource;
+        }
         private struct CachedTexture
         {
-            public Texture2D Texture;
+            public RaylibAssetStore<Texture2D>.Lease? Lease;
             public bool Loaded;
             public float AspectRatio;
-        }
 
+            public readonly Texture2D Texture => Lease!.Resource;
+        }
         private struct CachedProceduralMesh
         {
             public Mesh Mesh;

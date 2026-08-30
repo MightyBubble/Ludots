@@ -150,7 +150,7 @@ def main() -> int:
 
     profile = load_profile(args.profile)
     projection = profile["projection"]
-    vhtm = profile["visualHeightmap"]
+    vhtm = profile["continuousHeightmap"]
     source_w = float(vhtm["sourceWorldWidthCm"])
     playable_w = float(vhtm["playableWorldWidthOverrideCm"])
     playable_h = float(vhtm["worldHeightCm"])

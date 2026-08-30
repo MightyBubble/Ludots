@@ -219,7 +219,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     baseTile,
                     layer,
                     tileVersion,
-                    legacyConfig.ComputeHash(),
+                    legacyConfig.ComputeHash() ^ ((ulong)(byte)terrainFeed << 56),
                     rcResult.MeshDetail,
                     rcResult.Mesh,
                     areaFromPolymesh: areasFromPolymesh,
@@ -405,7 +405,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return ms.ToArray();
         }
 
-        private static void ComputeTileFootprintBounds(
+        internal static void ComputeTileFootprintBounds(
             LogicTerrainField terrain,
             int chunkX,
             int chunkY,
@@ -454,7 +454,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         // Agent-radius voxel clamp stays for tactical maps. Continental / strategy
         // boards raise LogicTerrain cell size above that clamp; Recast must follow the
         // coarser terrain step or a single tile allocates hundreds of thousands of columns.
-        private const int MaxRecastVoxelsPerAxis = 512;
+        internal const int MaxRecastVoxelsPerAxis = 512;
 
         private static RcConfig BuildRcConfig(
             LogicTerrainField terrain,

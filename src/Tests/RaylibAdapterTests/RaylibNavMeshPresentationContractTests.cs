@@ -50,6 +50,9 @@ public sealed class RaylibNavMeshPresentationContractTests
         string composerSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostComposer.cs"));
+        string frameRendererSource = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src/Adapters/Raylib/Ludots.Adapter.Raylib/Rendering/RaylibFrameRenderer.cs"));
         string rendererSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src/Client/Ludots.Client.Raylib/Rendering/RaylibNavMeshPresentationRenderer.cs"));
@@ -63,14 +66,14 @@ public sealed class RaylibNavMeshPresentationContractTests
         Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.InstancedStaticMeshBatch"));
         Assert.That(composerSource, Does.Not.Contain("PresentationVisualCapabilities.HierarchicalInstancedStaticMeshBatch"));
         Assert.That(hostSource, Does.Contain("GetService(CoreServiceKeys.NavMeshPresentationBuffer)"));
-        Assert.That(hostSource, Does.Contain("navMeshPresentationRenderer.Draw(navMeshPresentationBuffer)"));
+        Assert.That(frameRendererSource, Does.Contain("_navMeshPresentationRenderer.Draw(_navMeshPresentationBuffer)"));
         Assert.That(rendererSource, Does.Not.Contain("NavQueryServiceRegistry"));
         Assert.That(rendererSource, Does.Not.Contain("RuntimeIncrementalNavMeshRebuildQueue"));
         Assert.That(rendererSource, Does.Not.Contain("NavTileStore"));
 
-        int terrainDraw = hostSource.IndexOf("terrainRenderer.Render(TerrainSourceFor(engine.VertexMap), viewportCamera)", StringComparison.Ordinal);
-        int navMeshDraw = hostSource.IndexOf("navMeshPresentationRenderer.Draw(navMeshPresentationBuffer)", StringComparison.Ordinal);
-        int entityDraw = hostSource.IndexOf("primitiveRenderer.Draw", navMeshDraw, StringComparison.Ordinal);
+        int terrainDraw = frameRendererSource.IndexOf("_terrainRenderer.Render(TerrainSource(), frame.ActiveCamera)", StringComparison.Ordinal);
+        int navMeshDraw = frameRendererSource.IndexOf("_navMeshPresentationRenderer.Draw(_navMeshPresentationBuffer)", StringComparison.Ordinal);
+        int entityDraw = frameRendererSource.IndexOf("_primitiveRenderer.Draw", navMeshDraw, StringComparison.Ordinal);
         Assert.That(terrainDraw, Is.GreaterThanOrEqualTo(0));
         Assert.That(navMeshDraw, Is.GreaterThan(terrainDraw));
         Assert.That(entityDraw, Is.GreaterThan(navMeshDraw));

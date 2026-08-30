@@ -1,7 +1,7 @@
 {
   "Id": "capability_standard_static_presenter_30k_dynamic_worker_large_world_benchmark",
   "Tags": ["showcase", "presenter", "benchmark", "dynamic", "skinned", "animator", "large-world"],
-  "VisualHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_dynamic_worker_large_world.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_dynamic_worker_large_world.height",
   "Metadata": {
     "capabilityStandardStaticPresenter30k": {
       "dynamicWorkerBenchmarkTotal": 30000,

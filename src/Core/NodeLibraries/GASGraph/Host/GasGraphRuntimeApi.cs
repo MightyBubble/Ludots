@@ -291,7 +291,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         /// <summary>
         /// Binds the compiled interaction mode map so graph programs can switch entity modes via
-        /// <see cref="SetInteractionMode"/> (#1306); unbound maps fail closed per call.
+        /// <see cref="SetInteractionMode"/>; unbound maps fail closed per call.
         /// </summary>
         public void BindInteractionModeMap(Ludots.Core.Input.Interaction.InteractionModeMap modeMap)
         {

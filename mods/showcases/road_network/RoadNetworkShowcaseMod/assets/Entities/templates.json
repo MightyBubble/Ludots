@@ -9,7 +9,7 @@
         "IsEnabled": true
       },
       "WorldPositionCm": { "Value": { "X": -9000, "Y": 0 } },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0
       },
@@ -49,7 +49,7 @@
         "IsEnabled": true
       },
       "WorldPositionCm": { "Value": { "X": 9000, "Y": 0 } },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0
       },

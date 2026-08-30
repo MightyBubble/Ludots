@@ -235,6 +235,8 @@ namespace Ludots.Core.GraphRuntime
         public string? QueryCapacityPolicy { get; set; }
         public string? DroppedOutput { get; set; }
         public string? ValidOutput { get; set; }
+        /// <summary>Activity definition id symbol for OfferActivity (Imm: string symbol; resolved against the registry at execution time).</summary>
+        public string? ActivityId { get; set; }
         public float RadiusCm { get; set; }
         public float RangeCm { get; set; }
         public int DirectionDeg { get; set; }

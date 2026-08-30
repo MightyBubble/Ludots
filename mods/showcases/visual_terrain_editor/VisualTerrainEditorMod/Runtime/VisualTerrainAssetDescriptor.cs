@@ -19,9 +19,9 @@ internal sealed class VisualTerrainAssetDescriptor
         int renderRowsPerChunk,
         float defaultHeight01,
         VisualTerrainBindingDescriptor? binding = null,
-        VisualHeightmapStorageLayout storageLayout = VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
-        VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.TriangleHeightfield,
-        VisualHeightSampleScale? sampleScale = null)
+        ContinuousHeightmapStorageLayout storageLayout = ContinuousHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
+        ContinuousHeightmapInterpolationMode interpolationMode = ContinuousHeightmapInterpolationMode.TriangleHeightfield,
+        ContinuousHeightSampleScale? sampleScale = null)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -91,7 +91,7 @@ internal sealed class VisualTerrainAssetDescriptor
         Binding = binding ?? VisualTerrainBindingDescriptor.None;
         StorageLayout = storageLayout;
         InterpolationMode = interpolationMode;
-        SampleScale = sampleScale ?? VisualHeightSampleScale.IdentityCentimeters;
+        SampleScale = sampleScale ?? ContinuousHeightSampleScale.IdentityCentimeters;
         SampleScale.Validate();
     }
 
@@ -117,11 +117,11 @@ internal sealed class VisualTerrainAssetDescriptor
 
     public VisualTerrainBindingDescriptor Binding { get; }
 
-    public VisualHeightmapStorageLayout StorageLayout { get; }
+    public ContinuousHeightmapStorageLayout StorageLayout { get; }
 
-    public VisualHeightmapInterpolationMode InterpolationMode { get; }
+    public ContinuousHeightmapInterpolationMode InterpolationMode { get; }
 
-    public VisualHeightSampleScale SampleScale { get; }
+    public ContinuousHeightSampleScale SampleScale { get; }
 
     public int DefaultLayerIndex => 0;
 
@@ -147,9 +147,9 @@ internal sealed class VisualTerrainAssetDescriptor
 
     public int RuntimeVertexCapacity => RuntimeVertexCapacityPerChunk;
 
-    public ChunkedVisualHeightmapDescriptor CreateHeightmapDescriptor()
+    public ChunkedContinuousHeightmapDescriptor CreateHeightmapDescriptor()
     {
-        return ChunkedVisualHeightmapDescriptor.CreateSingleLayer(
+        return ChunkedContinuousHeightmapDescriptor.CreateSingleLayer(
             Bounds,
             ChunkColumns,
             ChunkRows,

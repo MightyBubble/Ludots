@@ -37,8 +37,8 @@ namespace Ludots.App.RaylibEngineGallery
 
             _lit = new RaylibLitModel();
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: DayPhase01);
-            _cube = Rl.GenMeshCube(1f, 1f, 1f);
-            _sphere = Rl.GenMeshSphere(0.5f, 24, 16);
+            _cube = RaylibNativeResources.GenMeshCube(1f, 1f, 1f);
+            _sphere = RaylibNativeResources.GenMeshSphere(0.5f, 24, 16);
             _loaded = true;
         }
 
@@ -90,8 +90,8 @@ namespace Ludots.App.RaylibEngineGallery
                 return;
             }
 
-            Rl.UnloadMesh(_cube);
-            Rl.UnloadMesh(_sphere);
+            RaylibNativeResources.UnloadMesh(_cube);
+            RaylibNativeResources.UnloadMesh(_sphere);
             _lit.Dispose();
             _loaded = false;
         }

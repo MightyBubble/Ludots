@@ -27,7 +27,7 @@ optional post   → fullscreen blit
 |-----------|-------------|
 | Skybox pass | New client env pass before opaque; Host URI for gradient/cubemap |
 | `rlights` directional | Client `RaylibFrameLighting` fed by day phase / map env |
-| Terrain heightmap shader | Upgrade `terrain.vs/fs` + VisualHeightmap / VertexMap |
+| Terrain heightmap shader | Upgrade `terrain.vs/fs` + ContinuousHeightmap / VertexMap |
 | Water RTs | New `RaylibWaterPass` beside existing `water.fs` |
 | Vegetation cutout | Billboard lane + cutout shader (extend Mesh Billboard) |
 | DayNight | Existing `GlobalDayNight` presentation event → drive lighting/sky |

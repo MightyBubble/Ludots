@@ -1,6 +1,6 @@
 {
   "Id": "capability_standard_static_presenter_30k_minimap_marker_large_world_showcase",
-  "VisualHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_minimap_marker_large_world_relief.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_minimap_marker_large_world_relief.height",
   "Tags": ["showcase", "presenter", "minimap", "large-world"],
   "Metadata": {
     "capabilityStandardStaticPresenter30k": {

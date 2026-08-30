@@ -17,7 +17,7 @@ namespace Ludots.Core.Config
         public string Id { get; set; }
         public string ParentId { get; set; }
         public Dictionary<string, string> Dependencies { get; set; } = new Dictionary<string, string>();
-        public string VisualHeightmapAsset { get; set; }
+        public string ContinuousHeightmapAsset { get; set; }
 
         /// <summary>Path to the cooked structure collision asset for building surfaces, blockers, portals, and grounding.</summary>
         public string StructureCollisionAsset { get; set; } = string.Empty;
@@ -41,10 +41,10 @@ namespace Ludots.Core.Config
 
         /// <summary>
         /// Map-owned visual height truth. When declared, map load must install this
-        /// as the core <see cref="IVisualHeightmap"/> service instead of relying on a
+        /// as the core <see cref="IContinuousHeightmap"/> service instead of relying on a
         /// startup-time flat heightmap.
         /// </summary>
-        public VisualHeightmapBindingConfig VisualHeightmap { get; set; }
+        public ContinuousHeightmapBindingConfig ContinuousHeightmap { get; set; }
 
         /// <summary>
         /// Trigger type names declared by this map (JSON data-first path).

@@ -1814,7 +1814,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TerrainHeightSyncSystem_DoesNotUseLegacyProjector_WhenVisualHeightmapIsMissing()
+        public void TerrainHeightSyncSystem_DoesNotUseLegacyProjector_WhenContinuousHeightmapIsMissing()
         {
             using var world = World.Create();
             world.Create(
@@ -1857,7 +1857,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TerrainHeightSyncSystem_DoesNotUseVertexMapFallback_WhenVisualHeightmapIsMissing()
+        public void TerrainHeightSyncSystem_DoesNotUseVertexMapFallback_WhenContinuousHeightmapIsMissing()
         {
             using var world = World.Create();
             var vertexMap = new VertexMap();
@@ -1893,13 +1893,13 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TerrainHeightSyncSystem_UsesVisualHeightmapSingleTruth_WhenRegistered()
+        public void TerrainHeightSyncSystem_UsesContinuousHeightmapSingleTruth_WhenRegistered()
         {
             using var world = World.Create();
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(400, 800),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(300, 700) },
-                new VisualHeightmapSampleState(),
+                new ContinuousHeightmapSampleState(),
                 new VisualTransform
                 {
                     Position = new Vector3(1f, 2f, 5f),
@@ -1908,8 +1908,8 @@ namespace Ludots.Tests.Presentation
                 });
 
             var projector = new UnavailableGroundProjector();
-            var heightmap = new VisualHeightmapRuntime(
-                VisualHeightmapAsset.CreateSingleLayer(
+            var heightmap = new ContinuousHeightmapRuntime(
+                ContinuousHeightmapAsset.CreateSingleLayer(
                     new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 1000, 1000),
                     sampleColumns: 2,
                     sampleRows: 2,
@@ -1920,7 +1920,7 @@ namespace Ludots.Tests.Presentation
                     }));
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.VisualHeightmap.Name] = heightmap,
+                [CoreServiceKeys.ContinuousHeightmap.Name] = heightmap,
                 [CoreServiceKeys.VisualGroundProjector.Name] = projector,
             };
 
@@ -1949,8 +1949,8 @@ namespace Ludots.Tests.Presentation
                     Scale = Vector3.One,
                 });
 
-            var heightmap = new VisualHeightmapRuntime(
-                VisualHeightmapAsset.CreateSingleLayer(
+            var heightmap = new ContinuousHeightmapRuntime(
+                ContinuousHeightmapAsset.CreateSingleLayer(
                     new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 1000, 1000),
                     sampleColumns: 2,
                     sampleRows: 2,
@@ -1961,7 +1961,7 @@ namespace Ludots.Tests.Presentation
                     }));
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.VisualHeightmap.Name] = heightmap,
+                [CoreServiceKeys.ContinuousHeightmap.Name] = heightmap,
             };
 
             using var system = new TerrainHeightSyncSystem(world, globals);

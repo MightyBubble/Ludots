@@ -19,7 +19,7 @@ namespace Ludots.Tests.Presentation
     /// <summary>
     /// Regression coverage for issue #639: static Once height pending may resolve flat y=0
     /// only when the focused map does not declare a visual heightmap. Declared maps keep
-    /// PresentationStaticHeightPending until a finite VisualHeightmap sample succeeds.
+    /// PresentationStaticHeightPending until a finite ContinuousHeightmap sample succeeds.
     /// MapLoadStatus alone is neither necessary nor sufficient for that invariant.
     /// </summary>
     [TestFixture]
@@ -58,7 +58,7 @@ namespace Ludots.Tests.Presentation
                 new MapConfig
                 {
                     Id = "declared_missing_heightmap",
-                    VisualHeightmapAsset = "assets/terrain/declared.vhtm",
+                    ContinuousHeightmapAsset = "assets/terrain/declared.height",
                 });
             var globals = new Dictionary<string, object>
             {
@@ -89,7 +89,7 @@ namespace Ludots.Tests.Presentation
                         new BoardConfig
                         {
                             Name = "default",
-                            VisualHeightmapAsset = "assets/terrain/board_declared.vhtm",
+                            ContinuousHeightmapAsset = "assets/terrain/board_declared.height",
                         },
                     },
                 });
@@ -117,13 +117,13 @@ namespace Ludots.Tests.Presentation
                 new MapConfig
                 {
                     Id = "declared_nonsampleable",
-                    VisualHeightmapAsset = "assets/terrain/declared.vhtm",
+                    ContinuousHeightmapAsset = "assets/terrain/declared.height",
                 });
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.MapSession.Name] = session,
                 [CoreServiceKeys.MapLoadStatus.Name] = MapLoadStatus.DeferredSuccess,
-                [CoreServiceKeys.VisualHeightmap.Name] = new NonSampleableHeightmap(),
+                [CoreServiceKeys.ContinuousHeightmap.Name] = new NonSampleableHeightmap(),
             };
 
             using var system = new TerrainHeightSyncSystem(world, globals);
@@ -144,13 +144,13 @@ namespace Ludots.Tests.Presentation
                 new MapConfig
                 {
                     Id = "declared_nonfinite",
-                    VisualHeightmapAsset = "assets/terrain/declared.vhtm",
+                    ContinuousHeightmapAsset = "assets/terrain/declared.height",
                 });
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.MapSession.Name] = session,
                 [CoreServiceKeys.MapLoadStatus.Name] = MapLoadStatus.DeferredSuccess,
-                [CoreServiceKeys.VisualHeightmap.Name] = new NonFiniteHeightmap(),
+                [CoreServiceKeys.ContinuousHeightmap.Name] = new NonFiniteHeightmap(),
             };
 
             using var system = new TerrainHeightSyncSystem(world, globals);
@@ -171,13 +171,13 @@ namespace Ludots.Tests.Presentation
                 new MapConfig
                 {
                     Id = "declared_pending_with_heightmap",
-                    VisualHeightmapAsset = "assets/terrain/declared.vhtm",
+                    ContinuousHeightmapAsset = "assets/terrain/declared.height",
                 });
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.MapSession.Name] = session,
                 [CoreServiceKeys.MapLoadStatus.Name] = MapLoadStatus.DeferredPending,
-                [CoreServiceKeys.VisualHeightmap.Name] = new FixedHeightmap(heightCm: 250f),
+                [CoreServiceKeys.ContinuousHeightmap.Name] = new FixedHeightmap(heightCm: 250f),
             };
 
             using var system = new TerrainHeightSyncSystem(world, globals);
@@ -199,13 +199,13 @@ namespace Ludots.Tests.Presentation
                 new MapConfig
                 {
                     Id = "declared_ready_finite",
-                    VisualHeightmapAsset = "assets/terrain/declared.vhtm",
+                    ContinuousHeightmapAsset = "assets/terrain/declared.height",
                 });
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.MapSession.Name] = session,
                 [CoreServiceKeys.MapLoadStatus.Name] = MapLoadStatus.DeferredSuccess,
-                [CoreServiceKeys.VisualHeightmap.Name] = new FixedHeightmap(heightCm: 250f),
+                [CoreServiceKeys.ContinuousHeightmap.Name] = new FixedHeightmap(heightCm: 250f),
             };
 
             using var system = new TerrainHeightSyncSystem(world, globals);
@@ -234,7 +234,7 @@ namespace Ludots.Tests.Presentation
                 new PresentationStaticHeightPending());
         }
 
-        private sealed class FixedHeightmap : IVisualHeightmap
+        private sealed class FixedHeightmap : IContinuousHeightmap
         {
             private readonly float _heightCm;
 
@@ -300,7 +300,7 @@ namespace Ludots.Tests.Presentation
             }
         }
 
-        private sealed class NonSampleableHeightmap : IVisualHeightmap
+        private sealed class NonSampleableHeightmap : IContinuousHeightmap
         {
             public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
             {
@@ -341,7 +341,7 @@ namespace Ludots.Tests.Presentation
             }
         }
 
-        private sealed class NonFiniteHeightmap : IVisualHeightmap
+        private sealed class NonFiniteHeightmap : IContinuousHeightmap
         {
             public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
             {

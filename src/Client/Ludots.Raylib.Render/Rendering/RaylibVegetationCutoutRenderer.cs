@@ -50,7 +50,7 @@ namespace Ludots.Raylib.Render
         {
             if (_shaderReady)
             {
-                Rl.UnloadShader(_shader);
+                RaylibNativeResources.UnloadShader(_shader);
                 _shader = default;
                 _shaderReady = false;
             }
@@ -80,7 +80,7 @@ namespace Ludots.Raylib.Render
                     fsPath);
             }
 
-            _shader = Rl.LoadShader(vsPath, fsPath);
+            _shader = RaylibNativeResources.LoadShader(vsPath, fsPath);
             if (_shader.id == 0)
             {
                 throw new InvalidOperationException(
@@ -98,7 +98,7 @@ namespace Ludots.Raylib.Render
             if (locVertexPosition < 0 || locMvp < 0 || locMapDiffuse < 0 ||
                 _locColDiffuse < 0 || _locAlphaCutoff < 0)
             {
-                Rl.UnloadShader(_shader);
+                RaylibNativeResources.UnloadShader(_shader);
                 _shader = default;
                 throw new InvalidOperationException(
                     $"{nameof(RaylibVegetationCutoutRenderer)} vegetation_cutout is missing required attribs/uniforms (vertexPosition/mvp/texture0/colDiffuse/alphaCutoff).");

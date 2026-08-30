@@ -12,7 +12,7 @@ namespace NavGateShowcaseMod.Systems;
 
 /// <summary>
 /// 解释层渲染：navmesh 之上的路径折线（绿=常规 / 黄=改道）、脏瓦片橙框、
-/// 城门红环、小队青圈、营地白环。所有几何的 Y 取自 VisualHeightmap 采样，
+/// 城门红环、小队青圈、营地白环。所有几何的 Y 取自 ContinuousHeightmap 采样，
 /// 贴合起伏地形；每帧 transient 重投，无稳定 Id 记账。
 /// </summary>
 public sealed class NavGateRenderSystem : ISystem<float>
@@ -52,7 +52,7 @@ public sealed class NavGateRenderSystem : ISystem<float>
             return;
         }
 
-        IVisualHeightmap? heightmap = _engine.GetService(CoreServiceKeys.VisualHeightmap) as IVisualHeightmap;
+        IContinuousHeightmap? heightmap = _engine.GetService(CoreServiceKeys.ContinuousHeightmap) as IContinuousHeightmap;
 
         DrawCamps(overlays, heightmap);
         DrawGate(overlays, heightmap);
@@ -60,7 +60,7 @@ public sealed class NavGateRenderSystem : ISystem<float>
         DrawSquad(overlays, heightmap);
     }
 
-    private void DrawCamps(GroundOverlayBuffer overlays, IVisualHeightmap? heightmap)
+    private void DrawCamps(GroundOverlayBuffer overlays, IContinuousHeightmap? heightmap)
     {
         AddRing(overlays, heightmap, NavGateIds.CampAXcm, NavGateIds.CampAYcm, 1400f, White, 3f);
         AddRing(overlays, heightmap, NavGateIds.CampBXcm, NavGateIds.CampBYcm, 1400f, White, 3f);
@@ -78,7 +78,7 @@ public sealed class NavGateRenderSystem : ISystem<float>
             innerRatio: 1f - (0.85f * arriveRatio));
     }
 
-    private void DrawGate(GroundOverlayBuffer overlays, IVisualHeightmap? heightmap)
+    private void DrawGate(GroundOverlayBuffer overlays, IContinuousHeightmap? heightmap)
     {
         if (!_state.GateDropped)
         {
@@ -108,7 +108,7 @@ public sealed class NavGateRenderSystem : ISystem<float>
         });
     }
 
-    private void DrawDirtyTiles(GroundOverlayBuffer overlays, IVisualHeightmap? heightmap)
+    private void DrawDirtyTiles(GroundOverlayBuffer overlays, IContinuousHeightmap? heightmap)
     {
         if (!_engine.TryGetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, out RuntimeIncrementalNavMeshRebuildQueue? queue) ||
             queue == null)
@@ -142,7 +142,7 @@ public sealed class NavGateRenderSystem : ISystem<float>
         }
     }
 
-    private void DrawSquad(GroundOverlayBuffer overlays, IVisualHeightmap? heightmap)
+    private void DrawSquad(GroundOverlayBuffer overlays, IContinuousHeightmap? heightmap)
     {
         for (int i = 0; i < _state.Agents.Count; i++)
         {
@@ -169,7 +169,7 @@ public sealed class NavGateRenderSystem : ISystem<float>
         }
     }
 
-    private void AddSegment(GroundOverlayBuffer overlays, IVisualHeightmap? heightmap, int axCm, int ayCm, int bxCm, int byCm, Vector4 color)
+    private void AddSegment(GroundOverlayBuffer overlays, IContinuousHeightmap? heightmap, int axCm, int ayCm, int bxCm, int byCm, Vector4 color)
     {
         float ax = axCm / 100f;
         float az = ayCm / 100f;
@@ -195,7 +195,7 @@ public sealed class NavGateRenderSystem : ISystem<float>
         });
     }
 
-    private void AddCircle(GroundOverlayBuffer overlays, IVisualHeightmap? heightmap, int xCm, int yCm, float radiusCm, Vector4 color)
+    private void AddCircle(GroundOverlayBuffer overlays, IContinuousHeightmap? heightmap, int xCm, int yCm, float radiusCm, Vector4 color)
     {
         overlays.TryAdd(new GroundOverlayItem
         {
@@ -208,7 +208,7 @@ public sealed class NavGateRenderSystem : ISystem<float>
         });
     }
 
-    private void AddRing(GroundOverlayBuffer overlays, IVisualHeightmap? heightmap, int xCm, int yCm, float radiusCm, Vector4 color, float width, float innerRatio = 0.86f)
+    private void AddRing(GroundOverlayBuffer overlays, IContinuousHeightmap? heightmap, int xCm, int yCm, float radiusCm, Vector4 color, float width, float innerRatio = 0.86f)
     {
         overlays.TryAdd(new GroundOverlayItem
         {
@@ -222,7 +222,7 @@ public sealed class NavGateRenderSystem : ISystem<float>
         });
     }
 
-    private void AddTileOutline(GroundOverlayBuffer overlays, IVisualHeightmap? heightmap, float cx, float cz, float w, float h, Vector4 color)
+    private void AddTileOutline(GroundOverlayBuffer overlays, IContinuousHeightmap? heightmap, float cx, float cz, float w, float h, Vector4 color)
     {
         int minX = (int)((cx - (w / 2)) * 100);
         int maxX = (int)((cx + (w / 2)) * 100);
@@ -234,7 +234,7 @@ public sealed class NavGateRenderSystem : ISystem<float>
         AddSegment(overlays, heightmap, minX, maxZ, minX, minZ, color);
     }
 
-    private static Vector3 SampleWorld(IVisualHeightmap? heightmap, int xCm, int yCm, float liftMeters)
+    private static Vector3 SampleWorld(IContinuousHeightmap? heightmap, int xCm, int yCm, float liftMeters)
     {
         float y = 0f;
         if (heightmap != null && heightmap.TrySampleHeightCm(xCm, yCm, out float heightCm))

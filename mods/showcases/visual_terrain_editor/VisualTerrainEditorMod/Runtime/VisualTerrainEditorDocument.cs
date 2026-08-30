@@ -18,8 +18,8 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     private readonly VisualTerrainAssetDescriptor _asset;
     private readonly int _defaultMaterialAssetId;
     private readonly VisualTerrainErosionParameters _parameters = new();
-    private readonly ChunkedVisualHeightmapStore _heightmapStore;
-    private readonly ChunkedVisualHeightmapRuntime _heightmapRuntime;
+    private readonly ChunkedContinuousHeightmapStore _heightmapStore;
+    private readonly ChunkedContinuousHeightmapRuntime _heightmapRuntime;
     private readonly Dictionary<long, ChunkState> _chunks = new();
     private readonly List<ChunkState> _dirtyChunksScratch = new();
 
@@ -32,8 +32,8 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         }
 
         _defaultMaterialAssetId = defaultMaterialAssetId;
-        _heightmapStore = new ChunkedVisualHeightmapStore(_asset.CreateHeightmapDescriptor());
-        _heightmapRuntime = new ChunkedVisualHeightmapRuntime(_heightmapStore.Descriptor, _heightmapStore);
+        _heightmapStore = new ChunkedContinuousHeightmapStore(_asset.CreateHeightmapDescriptor());
+        _heightmapRuntime = new ChunkedContinuousHeightmapRuntime(_heightmapStore.Descriptor, _heightmapStore);
         Reset();
     }
 
@@ -49,7 +49,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 
     public VisualTerrainAssetDescriptor Asset => _asset;
 
-    public IVisualHeightmap HeightmapRuntime => _heightmapRuntime;
+    public IContinuousHeightmap HeightmapRuntime => _heightmapRuntime;
 
     public float Scale => _parameters.Scale;
 
@@ -790,7 +790,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         float h01 = SampleFieldAtGlobalSample(x0, y1, field);
         float h11 = SampleFieldAtGlobalSample(x1, y1, field);
         bool degenerateCell = x0 == x1 || y0 == y1;
-        if (_asset.InterpolationMode == VisualHeightmapInterpolationMode.TriangleHeightfield && !degenerateCell)
+        if (_asset.InterpolationMode == ContinuousHeightmapInterpolationMode.TriangleHeightfield && !degenerateCell)
         {
             if (tx + ty <= 1f)
             {
@@ -1276,7 +1276,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
                 maxSubmeshCount: 1,
                 includeUv1: false,
                 includeColors32: true);
-            HeightChunk = new ChunkedVisualHeightmapChunk(chunkX, chunkY, HeightSamplesCm);
+            HeightChunk = new ChunkedContinuousHeightmapChunk(chunkX, chunkY, HeightSamplesCm);
             Dirty = true;
             MaterialAssetId = materialAssetId;
         }
@@ -1299,7 +1299,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 
         public int MaterialAssetId { get; }
 
-        public ChunkedVisualHeightmapChunk HeightChunk { get; }
+        public ChunkedContinuousHeightmapChunk HeightChunk { get; }
 
         public bool Dirty { get; set; }
 

@@ -11,7 +11,7 @@ using Ludots.Core.Scripting;
 namespace DualSeatPanelsShowcaseMod;
 
 /// <summary>
-/// Dual-seat panel showcase entry (#1315): panels are template panels created by the
+/// Dual-seat panel showcase entry: panels are template panels created by the
 /// map's MapLoaded trigger graphs (zero mod code); this mod contributes the seat-attributed
 /// operation layer (per-seat hotkeys → FireFromSeat admission → custom events) and the
 /// guidance/admission-feedback strip. The admitted boost settles here on the event bus —

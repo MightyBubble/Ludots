@@ -159,13 +159,13 @@ namespace Ludots.Tests.RaylibAdapter
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 2,
-                groundToVisualHeightmap: false);
+                groundToContinuousHeightmap: false);
             asset.Groups[0].FactorizedSource = new InstancedBatchFactorizedSource(
                 "ludots.instanced_transform_factorized.v1",
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 2,
-                groundToVisualHeightmap: false,
+                groundToContinuousHeightmap: false,
                 positionCm: new[] { new Vector3(200f, 50f, -300f), new Vector3(400f, 0f, 0f) },
                 rotation: new[] { Quaternion.Identity, Quaternion.Identity },
                 scale: new[] { new Vector3(2f, 2f, 2f), Vector3.One });
@@ -194,7 +194,7 @@ namespace Ludots.Tests.RaylibAdapter
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 2,
-                groundToVisualHeightmap: false);
+                groundToContinuousHeightmap: false);
             InstancedBatchAssetRegistry registry = new();
             int batchAssetId = registry.Register("demo.batch", asset);
             CompileAddresses(registry, batchAssetId, asset);
@@ -209,7 +209,7 @@ namespace Ludots.Tests.RaylibAdapter
         }
 
         [Test]
-        public void ApplyRequests_GroundsExternalSourceThroughCoreVisualHeightmapUsingAuthoredXZ()
+        public void ApplyRequests_GroundsExternalSourceThroughCoreContinuousHeightmapUsingAuthoredXZ()
         {
             InstancedBatchAsset asset = BuildAsset(VisualRenderPath.InstancedStaticMesh, BuildGridTransforms(count: 2));
             asset.Groups[0].Source = new InstancedBatchInstanceSource(
@@ -217,13 +217,13 @@ namespace Ludots.Tests.RaylibAdapter
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 2,
-                groundToVisualHeightmap: true);
+                groundToContinuousHeightmap: true);
             asset.Groups[0].FactorizedSource = new InstancedBatchFactorizedSource(
                 "ludots.instanced_transform_factorized.v1",
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 2,
-                groundToVisualHeightmap: true,
+                groundToContinuousHeightmap: true,
                 positionCm: new[] { new Vector3(200f, 50f, -300f), new Vector3(400f, 0f, 100f) },
                 rotation: new[] { Quaternion.Identity, Quaternion.Identity },
                 scale: new[] { Vector3.One, Vector3.One });
@@ -234,7 +234,7 @@ namespace Ludots.Tests.RaylibAdapter
             InstancedBatchRequestBuffer requests = new();
             var store = new RaylibInstancedBatchLaneStore();
             requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 2, finalChunk: true));
-            store.ApplyRequests(requests.GetSpan(), registry, new StubVisualHeightmap((x, z) => x + z));
+            store.ApplyRequests(requests.GetSpan(), registry, new StubContinuousHeightmap((x, z) => x + z));
 
             RaylibInstancedBatchLane lane = store.GetResidentLane(0);
             Assert.That(lane.Count, Is.EqualTo(2));
@@ -255,13 +255,13 @@ namespace Ludots.Tests.RaylibAdapter
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 1,
-                groundToVisualHeightmap: true);
+                groundToContinuousHeightmap: true);
             asset.Groups[0].FactorizedSource = new InstancedBatchFactorizedSource(
                 "ludots.instanced_transform_factorized.v1",
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 1,
-                groundToVisualHeightmap: true,
+                groundToContinuousHeightmap: true,
                 positionCm: new[] { new Vector3(200f, 50f, -300f) },
                 rotation: new[] { Quaternion.Identity },
                 scale: new[] { Vector3.One });
@@ -272,7 +272,7 @@ namespace Ludots.Tests.RaylibAdapter
             InstancedBatchRequestBuffer requests = new();
             var store = new RaylibInstancedBatchLaneStore();
             requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 1, finalChunk: true));
-            store.ApplyRequests(requests.GetSpan(), registry, new StubVisualHeightmap((x, z) => 999f, inBounds: false));
+            store.ApplyRequests(requests.GetSpan(), registry, new StubContinuousHeightmap((x, z) => 999f, inBounds: false));
 
             // Out-of-bounds samples keep the authored Y (50cm -> 0.5m); the adapter never
             // substitutes its own ground height truth.
@@ -290,13 +290,13 @@ namespace Ludots.Tests.RaylibAdapter
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 2,
-                groundToVisualHeightmap: false);
+                groundToContinuousHeightmap: false);
             asset.Groups[0].FactorizedSource = new InstancedBatchFactorizedSource(
                 "ludots.instanced_transform_factorized.v1",
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 3,
-                groundToVisualHeightmap: false,
+                groundToContinuousHeightmap: false,
                 positionCm: new[] { Vector3.Zero, Vector3.Zero, Vector3.Zero },
                 rotation: new[] { Quaternion.Identity, Quaternion.Identity, Quaternion.Identity },
                 scale: new[] { Vector3.One, Vector3.One, Vector3.One });
@@ -322,13 +322,13 @@ namespace Ludots.Tests.RaylibAdapter
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 1,
-                groundToVisualHeightmap: true);
+                groundToContinuousHeightmap: true);
             asset.Groups[0].FactorizedSource = new InstancedBatchFactorizedSource(
                 "ludots.instanced_transform_factorized.v1",
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 1,
-                groundToVisualHeightmap: true,
+                groundToContinuousHeightmap: true,
                 positionCm: new[] { Vector3.Zero },
                 rotation: new[] { Quaternion.Identity },
                 scale: new[] { Vector3.One });
@@ -348,7 +348,7 @@ namespace Ludots.Tests.RaylibAdapter
         [Test]
         public void ApplyRequests_ThrowsWhenFactorizedGroundingFlagDivergesFromCoreAuthoredFlag()
         {
-            // Core-authored group.Source.GroundToVisualHeightmap is the SSOT; a loaded factorized
+            // Core-authored group.Source.GroundToContinuousHeightmap is the SSOT; a loaded factorized
             // copy that contradicts it must fail fast even when a heightmap service is present.
             InstancedBatchAsset asset = BuildAsset(VisualRenderPath.InstancedStaticMesh, BuildGridTransforms(count: 1));
             asset.Groups[0].Source = new InstancedBatchInstanceSource(
@@ -356,13 +356,13 @@ namespace Ludots.Tests.RaylibAdapter
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 1,
-                groundToVisualHeightmap: false);
+                groundToContinuousHeightmap: false);
             asset.Groups[0].FactorizedSource = new InstancedBatchFactorizedSource(
                 "ludots.instanced_transform_factorized.v1",
                 "vfs://demo/transforms.json",
                 "set.0",
                 instanceCount: 1,
-                groundToVisualHeightmap: true,
+                groundToContinuousHeightmap: true,
                 positionCm: new[] { Vector3.Zero },
                 rotation: new[] { Quaternion.Identity },
                 scale: new[] { Vector3.One });
@@ -375,8 +375,8 @@ namespace Ludots.Tests.RaylibAdapter
             requests.Add(BuildCreateRequest(registry, presenterStableId: 1, start: 0, count: 1, finalChunk: true));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => store.ApplyRequests(requests.GetSpan(), registry, new StubVisualHeightmap((x, z) => 0f)))!;
-            Assert.That(ex.Message, Does.Contain("factorized groundToVisualHeightmap True diverges from Core-authored False"));
+                () => store.ApplyRequests(requests.GetSpan(), registry, new StubContinuousHeightmap((x, z) => 0f)))!;
+            Assert.That(ex.Message, Does.Contain("factorized groundToContinuousHeightmap True diverges from Core-authored False"));
         }
 
         [Test]
@@ -553,12 +553,12 @@ namespace Ludots.Tests.RaylibAdapter
             Assert.That(actual.M43, Is.EqualTo(expected.M43).Within(epsilon));
         }
 
-        private sealed class StubVisualHeightmap : IVisualHeightmap
+        private sealed class StubContinuousHeightmap : IContinuousHeightmap
         {
             private readonly Func<float, float, float> _heightCmFor;
             private readonly bool _inBounds;
 
-            public StubVisualHeightmap(Func<float, float, float> heightCmFor, bool inBounds = true)
+            public StubContinuousHeightmap(Func<float, float, float> heightCmFor, bool inBounds = true)
             {
                 _heightCmFor = heightCmFor;
                 _inBounds = inBounds;

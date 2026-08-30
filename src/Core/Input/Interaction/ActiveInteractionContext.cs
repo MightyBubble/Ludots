@@ -35,7 +35,6 @@ namespace Ludots.Core.Input.Interaction
     /// the same install order.
     /// </para>
     /// </summary>
-
     public struct ActiveInteractionContext
     {
         /// <summary>

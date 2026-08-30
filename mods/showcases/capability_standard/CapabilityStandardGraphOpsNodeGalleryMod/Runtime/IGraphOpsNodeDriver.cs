@@ -56,6 +56,9 @@ public sealed class GraphOpsNodeDriverContext
     public Entity TargetContext { get; set; } = Entity.Null;
     public Entity Viewer { get; set; } = Entity.Null;
     public GraphProgramRegistry? Programs { get; set; }
+
+    /// <summary>Registration id for Programs when the harness registers the featured program (symbol-bearing ops read Symbols[Imm] through it).</summary>
+    public int FeaturedGraphId { get; set; }
     public GraphEventPayload EventPayload { get; set; }
     public IntVector2 TargetPosCm { get; set; }
     public bool HasTargetPosCm { get; set; }
@@ -160,6 +163,7 @@ public sealed class GraphOpsNodeDriverContext
             TargetPosCm = HasTargetPosCm ? TargetPosCm : default,
             Api = Api,
             Programs = Programs,
+            CurrentGraphId = FeaturedGraphId,
             F = floats,
             I = ints,
             B = bools,

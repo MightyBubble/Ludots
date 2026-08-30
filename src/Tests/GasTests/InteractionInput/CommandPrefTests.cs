@@ -18,7 +18,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// CommandPref entity component (#1306 route ③): the player-owned order routing preferences
+    /// CommandPref entity component: the player-owned order routing preferences
     /// (player-level default intent + dispatch profile, per-ability-template overrides), the
     /// resolution chain reading the possessed representative instead of the active control
     /// scheme, the map-binding seed contract, and the world-save round trip.

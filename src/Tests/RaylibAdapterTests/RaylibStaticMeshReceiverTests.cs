@@ -112,7 +112,7 @@ public sealed class RaylibStaticMeshReceiverTests
     public void MapLaneComposite_DrawSumsTerrainAndStaticMeshReceivers()
     {
         using var engine = new GameEngine();
-        engine.SetService(CoreServiceKeys.VisualHeightmap, new RenderSourceHeightmapStub());
+        engine.SetService(CoreServiceKeys.ContinuousHeightmap, new RenderSourceHeightmapStub());
         var terrainReceiver = new CountingReceiverStub { DrawnCount = 2 };
         using var renderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Immediate);
         var composite = new RaylibHostLoop.MapLaneReceiverMeshProjector(
@@ -147,7 +147,7 @@ public sealed class RaylibStaticMeshReceiverTests
     public void MapLaneComposite_FitRoutesToTerrainReceiverNotStaticMesh()
     {
         using var engine = new GameEngine();
-        engine.SetService(CoreServiceKeys.VisualHeightmap, new RenderSourceHeightmapStub());
+        engine.SetService(CoreServiceKeys.ContinuousHeightmap, new RenderSourceHeightmapStub());
         var terrainReceiver = new CountingReceiverStub { FittedY = 7f };
         using var renderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Immediate);
         var composite = new RaylibHostLoop.MapLaneReceiverMeshProjector(
@@ -243,7 +243,7 @@ public sealed class RaylibStaticMeshReceiverTests
         }
     }
 
-    private sealed class RenderSourceHeightmapStub : IVisualHeightmap, IVisualHeightmapRenderSource
+    private sealed class RenderSourceHeightmapStub : IContinuousHeightmap, IContinuousHeightmapRenderSource
     {
         public WorldAabbCm Bounds => new(0, 0, 100, 100);
 
@@ -259,9 +259,9 @@ public sealed class RaylibStaticMeshReceiverTests
 
         public int Revision => 1;
 
-        public VisualHeightmapRenderProfile RenderProfile => new();
+        public ContinuousHeightmapRenderProfile RenderProfile => new();
 
-        public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
+        public bool TryGetChunk(int chunkX, int chunkY, out ContinuousHeightmapRenderChunk chunk)
         {
             chunk = default;
             return false;

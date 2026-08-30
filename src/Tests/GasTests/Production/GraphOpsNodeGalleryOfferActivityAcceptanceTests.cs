@@ -1,12 +1,19 @@
-using System.IO;
-using Ludots.Tests;
+using System;
+using System.Linq;
+using CapabilityStandardGraphBehaviorCommon;
+using CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
+using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production;
 
 /// <summary>
-/// Per-op acceptance for the OfferActivity op: the gallery vignette compiles to a program
-/// containing the OfferActivity opcode, and the generated map can be loaded without errors.
+/// Per-op gallery acceptance for the TriggerGraph-only OfferActivity op: the vignette
+/// graph runs on the shared headless gallery engine (which owns the real
+/// ActivityRuntimeService and the activity-bound graph API), each think wave offers the
+/// gallery activity to the placed caster scope host, and the caption reports the roll-call.
 /// </summary>
 [TestFixture]
 [NonParallelizable]
@@ -14,28 +21,44 @@ namespace Ludots.Tests.Gas.Production;
 public sealed class GraphOpsNodeGalleryOfferActivityAcceptanceTests
 {
     [Test]
-    public void OfferActivity_GalleryCompilesAndMapLoads()
+    public void OfferActivity_RollCallOffersGalleryActivityEachWave()
     {
-        string assets = Path.Combine(FindRepoRoot(),
-            "mods", "showcases", "capability_standard", "CapabilityStandardGraphOpsNodeGalleryMod", "assets");
-        string vignettePath = Path.Combine(assets, "Vignettes", "OfferActivity.json");
-        Assert.That(File.Exists(vignettePath), Is.True, "OfferActivity vignette must exist.");
-        string graphPath = Path.Combine(assets, "GAS", "graphs", "OfferActivity.json");
-        Assert.That(File.Exists(graphPath), Is.True, "OfferActivity graph must exist.");
-        string activitiesPath = Path.Combine(assets, "Activities", "activities.json");
-        Assert.That(File.Exists(activitiesPath), Is.True, "Gallery activities.json must exist.");
-        string mapPath = Path.Combine(assets, "Maps", "capability_standard_graph_op_OfferActivity.json");
-        Assert.That(File.Exists(mapPath), Is.True, "Generated gallery map must exist.");
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("OfferActivity");
+        runtime.EnsureWorld();
+
+        Assert.That(runtime.Vignette.GraphKind, Is.EqualTo("TriggerGraph"));
+
+        GameEngine engine = GraphOpsHeadlessGameEngine.SharedGallery(FindRepoRoot());
+        var activities = engine.GetService(CoreServiceKeys.ActivityRuntimeService) as ActivityRuntimeService
+            ?? throw new InvalidOperationException("ActivityRuntimeService missing from the shared gallery engine.");
+        Func<int> offeredCount = () => activities.CaptureViews()
+            .Count(v => v.ActivityId == "gallery.op.offer_activity" && v.State != ActivityInstanceState.Resolved);
+        int before = offeredCount();
+
+        runtime.Tick(0.35f);
+
+        Assert.That(offeredCount() - before, Is.EqualTo(1),
+            "wave one must open exactly one new gallery activity instance (shared-engine totals are order-dependent, so assert the delta)");
+        Assert.That(activities.CaptureViews().Any(v => v.ActivityId == "gallery.op.offer_activity" && v.State == ActivityInstanceState.Active),
+            Is.True, "a forced activity must present immediately");
+        Assert.That(runtime.Metrics.Detail, Does.Contain("待办活动已上桌"));
+        Assert.That(runtime.Metrics.Detail, Does.Not.Contains("{"));
+
+        runtime.Tick(0.35f);
+
+        Assert.That(offeredCount() - before, Is.EqualTo(2),
+            "repeatable policy: the second roll-call wave opens a second instance");
     }
 
     private static string FindRepoRoot()
     {
-        string? dir = Path.GetDirectoryName(typeof(GraphOpsNodeGalleryOfferActivityAcceptanceTests).Assembly.Location);
-        while (dir != null && !File.Exists(Path.Combine(dir, "showcase.registry.json")))
+        string? dir = AppDomain.CurrentDomain.BaseDirectory;
+        while (dir != null && !System.IO.File.Exists(System.IO.Path.Combine(dir, "showcase.registry.json")))
         {
-            dir = Path.GetDirectoryName(dir);
+            dir = System.IO.Path.GetDirectoryName(dir);
         }
 
-        return dir ?? throw new DirectoryNotFoundException("Repository root not found.");
+        return dir ?? throw new System.IO.DirectoryNotFoundException("Repository root not found.");
     }
 }

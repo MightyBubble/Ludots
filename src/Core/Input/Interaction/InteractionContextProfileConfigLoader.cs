@@ -47,7 +47,7 @@ namespace Ludots.Core.Input.Interaction
             return config;
         }
 
-        /// <summary>Structural fail-fast validation; id resolution happens at frame push.</summary>
+        /// <summary>Structural fail-fast validation; id resolution happens at profile registry install time.</summary>
         public static void Validate(InteractionContextProfilesConfig config, string source)
         {
             if (config == null)

@@ -194,7 +194,7 @@ namespace Ludots.Raylib.Render
         {
             if (_skinningShaderReady)
             {
-                Rl.UnloadShader(_skinningShader);
+                RaylibNativeResources.UnloadShader(_skinningShader);
                 _skinningShader = default;
                 _skinningShaderReady = false;
             }

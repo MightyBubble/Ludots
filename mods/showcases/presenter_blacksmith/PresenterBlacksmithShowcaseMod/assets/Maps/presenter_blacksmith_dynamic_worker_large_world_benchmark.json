@@ -1,7 +1,7 @@
 {
   "Id": "presenter_blacksmith_dynamic_worker_large_world_benchmark",
   "Tags": ["showcase", "presenter", "benchmark", "dynamic", "skinned", "animator", "large-world"],
-  "VisualHeightmapAsset": "assets/terrain/presenter_blacksmith_dynamic_worker_large_world.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/presenter_blacksmith_dynamic_worker_large_world.height",
   "Metadata": {
     "presenterBlacksmith": {
       "dynamicWorkerBenchmarkTotal": 30000,
