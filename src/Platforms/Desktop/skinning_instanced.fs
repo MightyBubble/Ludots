@@ -13,7 +13,6 @@ uniform sampler2D texture0;
 uniform sampler2D texture1;
 uniform sampler2D texture3;
 uniform vec4 colDiffuse;
-uniform vec4 tint;
 uniform vec3 uLightDir;
 uniform vec4 uAmbient;
 uniform vec3 uLightColor;
@@ -90,7 +89,9 @@ void main()
     {
         color = vec4(1.0);
     }
-    vec4 albedoSample = texel * colDiffuse * tint * color;
+    // per-instance tint 已由 VS 经实例表乘入 fragColor，这里不得再乘（否则无人赋值的
+    // uniform 默认 vec4(0) 会把整个角色染成透明黑——#1395 排障结论）
+    vec4 albedoSample = texel * colDiffuse * color;
     vec3 albedo = albedoSample.rgb;
 
     float roughness = uRoughness;
