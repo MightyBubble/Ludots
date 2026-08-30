@@ -499,10 +499,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
                         $"Panel '{template.Id}' list '{control.Bind}' present=aggregate missing aggregate.count.");
                 itemChildren.Add(new UiElementBuilder(UiNodeKind.Text)
                     .Class("aggregate-count")
-                    .Text($"{countSpec.Prefix}{projection.TotalCount}")
-                    .FontSize(11)
-                    .Bold()
-                    .Color(new UiColor(255, 210, 80)));
+                    .Text($"{countSpec.Prefix}{projection.TotalCount}"));
             }
 
             string presentClass = control.Present switch
