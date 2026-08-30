@@ -32,6 +32,7 @@ namespace Ludots.Core.Gameplay.Story
     public sealed record StoryPresentationSurface(
         string SurfaceKey,
         string SurfaceKind,
+        string LayoutId,
         string Anchor,
         string Title,
         string Body = "",

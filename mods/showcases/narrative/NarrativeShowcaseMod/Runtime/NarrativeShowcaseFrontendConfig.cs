@@ -80,6 +80,7 @@ namespace NarrativeShowcaseMod.Runtime
 
     internal sealed class NarrativeShowcaseSurfaceConfig
     {
+        public string LayoutId { get; set; } = string.Empty;
         public string Anchor { get; set; } = "TopLeft";
         public float Width { get; set; } = 360f;
         public float OffsetX { get; set; }

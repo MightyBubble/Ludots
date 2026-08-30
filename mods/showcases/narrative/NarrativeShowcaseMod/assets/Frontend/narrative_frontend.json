@@ -3,6 +3,7 @@
   "playerLocale": "zh-CN",
   "backdropHex": "#05080FCC",
   "promptRibbon": {
+    "layoutId": "layout.narrative.prompt-ribbon",
     "anchor": "BottomCenter",
     "width": 980,
     "offsetY": 140,
@@ -11,6 +12,7 @@
     "accentHex": "#F6C56B"
   },
   "objectiveTracker": {
+    "layoutId": "layout.narrative.card",
     "anchor": "TopLeft",
     "width": 390,
     "zIndex": 40,
@@ -20,6 +22,7 @@
     "accentHex": "#76D8FF"
   },
   "historyJournal": {
+    "layoutId": "layout.narrative.card",
     "anchor": "TopRight",
     "width": 420,
     "zIndex": 42,
@@ -29,6 +32,7 @@
     "accentHex": "#8BE9FD"
   },
   "variablesPanel": {
+    "layoutId": "layout.narrative.card",
     "anchor": "TopLeft",
     "width": 390,
     "offsetY": 214,
@@ -39,6 +43,7 @@
     "accentHex": "#A7F3D0"
   },
   "notificationStack": {
+    "layoutId": "layout.narrative.notification-stack",
     "anchor": "TopCenter",
     "width": 520,
     "offsetY": 12,
@@ -74,6 +79,7 @@
     "footer": ""
   },
   "nameplate": {
+    "layoutId": "layout.narrative.nameplate",
     "anchor": "TopLeft",
     "width": 200,
     "zIndex": 36,

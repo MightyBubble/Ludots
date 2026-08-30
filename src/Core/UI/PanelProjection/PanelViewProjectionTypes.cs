@@ -21,6 +21,11 @@ namespace Ludots.Core.UI.PanelProjection
         ProgressBar = 1,
         Badge = 2,
         List = 3,
+        Row = 4,
+        Column = 5,
+        Image = 6,
+        RichText = 7,
+        Repeater = 8,
     }
 
     /// <summary>
@@ -59,7 +64,23 @@ namespace Ludots.Core.UI.PanelProjection
             float? viewportHeight = null,
             float? itemExtent = null,
             bool virtualize = false,
-            int overscan = 2)
+            int overscan = 2,
+            IReadOnlyList<PanelLayoutControl>? children = null,
+            float? gap = null,
+            string? align = null,
+            string? justify = null,
+            float? width = null,
+            float? height = null,
+            string? widthBind = null,
+            string? heightBind = null,
+            float? fontSize = null,
+            bool bold = false,
+            string? textRunsBind = null,
+            string? objectFit = null,
+            string? visibleWhenNotEmpty = null,
+            string? classBind = null,
+            string? colorBind = null,
+            string? backgroundBind = null)
         {
             Type = type;
             ClassName = className;
@@ -73,6 +94,22 @@ namespace Ludots.Core.UI.PanelProjection
             ItemExtent = itemExtent;
             Virtualize = virtualize;
             Overscan = overscan;
+            Children = children ?? Array.Empty<PanelLayoutControl>();
+            Gap = gap;
+            Align = align;
+            Justify = justify;
+            Width = width;
+            Height = height;
+            WidthBind = widthBind;
+            HeightBind = heightBind;
+            FontSize = fontSize;
+            Bold = bold;
+            TextRunsBind = textRunsBind;
+            ObjectFit = objectFit;
+            VisibleWhenNotEmpty = visibleWhenNotEmpty;
+            ClassBind = classBind;
+            ColorBind = colorBind;
+            BackgroundBind = backgroundBind;
         }
 
         public PanelLayoutControlType Type { get; }
@@ -94,6 +131,22 @@ namespace Ludots.Core.UI.PanelProjection
         public bool Virtualize { get; }
 
         public int Overscan { get; }
+        public IReadOnlyList<PanelLayoutControl> Children { get; }
+        public float? Gap { get; }
+        public string? Align { get; }
+        public string? Justify { get; }
+        public float? Width { get; }
+        public float? Height { get; }
+        public string? WidthBind { get; }
+        public string? HeightBind { get; }
+        public float? FontSize { get; }
+        public bool Bold { get; }
+        public string? TextRunsBind { get; }
+        public string? ObjectFit { get; }
+        public string? VisibleWhenNotEmpty { get; }
+        public string? ClassBind { get; }
+        public string? ColorBind { get; }
+        public string? BackgroundBind { get; }
     }
 
     public sealed class PanelLayout

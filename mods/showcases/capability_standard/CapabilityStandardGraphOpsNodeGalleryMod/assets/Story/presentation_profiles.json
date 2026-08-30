@@ -3,6 +3,7 @@
     "id": "gallery.dialogue_overlay",
     "backend": "ScreenOverlay",
     "surfaceKind": "OverlayDialogue",
+    "layoutId": "layout.narrative.overlay-dialogue",
     "anchor": "BottomCenter",
     "width": 760,
     "offsetY": 28,
@@ -14,6 +15,7 @@
     "choiceAnchor": "BottomRight",
     "choiceWidth": 440,
     "choiceOffsetY": 12,
-    "choiceZIndex": 61
+    "choiceZIndex": 61,
+    "choiceLayoutId": "layout.narrative.choice-list"
   }
 ]

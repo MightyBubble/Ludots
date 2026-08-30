@@ -6,6 +6,7 @@ using Ludots.Core.Client;
 using Ludots.Core.UI.PanelActivation;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
+using Ludots.Core.Presentation.Hud;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
@@ -512,6 +513,29 @@ public sealed class PanelPresentationSystem : ISystem<float>
             }
 
             return _values.TryGet(bind, out float pin) && pin != 0f;
+        }
+
+        public IReadOnlyList<PresentationTextRun> ReadTextRuns(string bind)
+        {
+            throw new InvalidOperationException($"Panel binding '{bind}' is not a styled-text binding.");
+        }
+
+        public IReadOnlyList<IPanelLayoutBindingScope> ReadList(string bind)
+        {
+            throw new InvalidOperationException(
+                $"Panel binding '{bind}' must use the PanelHost list projection path.");
+        }
+
+        public bool IsPresent(string bind)
+        {
+            if (_item != null)
+            {
+                return _item.Strings.TryGetValue(bind, out string? text)
+                    ? !string.IsNullOrWhiteSpace(text)
+                    : _item.Floats.ContainsKey(bind) || _item.Bools.ContainsKey(bind);
+            }
+
+            return _values.TryGet(bind, out _);
         }
     }
 

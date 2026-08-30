@@ -732,6 +732,12 @@ namespace NarrativeShowcaseMod.Runtime
             float progress01 = -1f,
             float countdownSeconds = 0f)
         {
+            if (string.IsNullOrWhiteSpace(config.LayoutId))
+            {
+                throw new InvalidOperationException(
+                    $"Narrative frontend surface '{kind}' requires layoutId.");
+            }
+
             return new NarrativeFrontendSurfaceModel(
                 SurfaceId: $"{_frontendConfig.OwnerId}.{kind}.{config.ResolveAnchor()}",
                 Kind: kind,
@@ -754,7 +760,8 @@ namespace NarrativeShowcaseMod.Runtime
                 BorderHex: config.BorderHex,
                 ForegroundHex: config.ForegroundHex,
                 MutedHex: config.MutedHex,
-                FrameImageSrc: ResolveFrameImageSrc(kind));
+                FrameImageSrc: ResolveFrameImageSrc(kind),
+                LayoutId: config.LayoutId);
         }
 
         private void EnsureBootstrapped(GameEngine engine)
@@ -1279,7 +1286,8 @@ namespace NarrativeShowcaseMod.Runtime
                     BackgroundHex: plate.BackgroundHex,
                     BorderHex: plate.BorderHex,
                     ForegroundHex: plate.ForegroundHex,
-                    MutedHex: plate.MutedHex));
+                    MutedHex: plate.MutedHex,
+                    LayoutId: plate.LayoutId));
             }
         }
 

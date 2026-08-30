@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.UI.PanelProjection;
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
@@ -11,6 +12,9 @@ public interface IPanelLayoutBindingScope
     string ReadText(string bind);
     float ReadFloat(string bind);
     bool ReadBool(string bind);
+    IReadOnlyList<PresentationTextRun> ReadTextRuns(string bind);
+    IReadOnlyList<IPanelLayoutBindingScope> ReadList(string bind);
+    bool IsPresent(string bind);
 }
 
 public sealed class PanelLayoutComposer
@@ -42,11 +46,17 @@ public sealed class PanelLayoutComposer
             .Children(children.ToArray());
     }
 
-    private static UiElementBuilder? ComposeControl(
+    private UiElementBuilder? ComposeControl(
         PanelLayoutControl control,
         IPanelLayoutBindingScope scope,
         Func<PanelLayoutControl, UiElementBuilder>? listComposer)
     {
+        if (!string.IsNullOrWhiteSpace(control.VisibleWhenNotEmpty) &&
+            !scope.IsPresent(control.VisibleWhenNotEmpty))
+        {
+            return null;
+        }
+
         return control.Type switch
         {
             PanelLayoutControlType.Label => BuildLabel(control, scope),
@@ -54,8 +64,34 @@ public sealed class PanelLayoutComposer
             PanelLayoutControlType.Badge => BuildBadge(control, scope),
             PanelLayoutControlType.List => listComposer?.Invoke(control)
                 ?? throw new InvalidOperationException("Panel layout list control requires a list composer."),
+            PanelLayoutControlType.Row => BuildContainer(control, scope, row: true, listComposer),
+            PanelLayoutControlType.Column => BuildContainer(control, scope, row: false, listComposer),
+            PanelLayoutControlType.Image => BuildImage(control, scope),
+            PanelLayoutControlType.RichText => BuildRichText(control, scope),
+            PanelLayoutControlType.Repeater => BuildRepeater(control, scope, listComposer),
             _ => throw new InvalidOperationException($"Panel layout control type '{control.Type}' is not supported.")
         };
+    }
+
+    private UiElementBuilder BuildContainer(
+        PanelLayoutControl control,
+        IPanelLayoutBindingScope scope,
+        bool row,
+        Func<PanelLayoutControl, UiElementBuilder>? listComposer)
+    {
+        var children = new List<UiElementBuilder>(control.Children.Count);
+        for (int i = 0; i < control.Children.Count; i++)
+        {
+            UiElementBuilder? child = ComposeControl(control.Children[i], scope, listComposer);
+            if (child != null)
+            {
+                children.Add(child);
+            }
+        }
+
+        UiElementBuilder builder = new UiElementBuilder(UiNodeKind.Container);
+        builder = row ? builder.Row() : builder.Column();
+        return ApplyCommon(builder.Children(children.ToArray()), control, scope);
     }
 
     private static UiElementBuilder BuildLabel(
@@ -73,28 +109,44 @@ public sealed class PanelLayoutComposer
             text = control.Prefix + text;
         }
 
-        return new UiElementBuilder(UiNodeKind.Text)
+        UiElementBuilder builder = new UiElementBuilder(UiNodeKind.Text)
             .Class("control-label")
-            .Class(control.ClassName ?? "label")
             .Text(text)
-            .FontSize(14)
+            .FontSize(control.FontSize ?? 14)
             .Color(new UiColor(230, 230, 230));
+        if (control.Bold)
+        {
+            builder = builder.Bold();
+        }
+
+        return ApplyCommon(builder, control, scope, "label");
     }
 
     private static UiElementBuilder BuildProgressBar(
         PanelLayoutControl control,
         IPanelLayoutBindingScope scope)
     {
-        float current = scope.ReadFloat(control.Current!);
-        float max = MathF.Max(0.0001f, scope.ReadFloat(control.Max!));
-        float ratio = Math.Clamp(current / max, 0f, 1f);
+        float current;
+        float max;
+        float ratio;
+        if (!string.IsNullOrWhiteSpace(control.Bind))
+        {
+            ratio = Math.Clamp(scope.ReadFloat(control.Bind), 0f, 1f);
+            current = ratio;
+            max = 1f;
+        }
+        else
+        {
+            current = scope.ReadFloat(control.Current!);
+            max = MathF.Max(0.0001f, scope.ReadFloat(control.Max!));
+            ratio = Math.Clamp(current / max, 0f, 1f);
+        }
         float trackWidth = PanelWidth - 48f;
         float fillWidth = MathF.Max(2f, trackWidth * ratio);
 
-        return new UiElementBuilder(UiNodeKind.Container)
+        UiElementBuilder builder = new UiElementBuilder(UiNodeKind.Container)
             .Column()
             .Class("control-progress")
-            .Class(control.ClassName ?? "progress-bar")
             .Gap(2)
             .Children(
                 new UiElementBuilder(UiNodeKind.Text)
@@ -117,6 +169,7 @@ public sealed class PanelLayoutComposer
                             .Height(10)
                             .Background(new UiColor(255, 68, 68, 255))
                             .Radius(4)));
+        return ApplyCommon(builder, control, scope, "progress-bar");
     }
 
     private static UiElementBuilder? BuildBadge(
@@ -134,12 +187,236 @@ public sealed class PanelLayoutComposer
             return null;
         }
 
-        return new UiElementBuilder(UiNodeKind.Text)
+        UiElementBuilder builder = new UiElementBuilder(UiNodeKind.Text)
             .Class("control-badge")
-            .Class(control.ClassName ?? "badge")
             .Text(control.Text ?? control.Bind ?? "!")
             .FontSize(11)
             .Bold()
             .Color(new UiColor(255, 210, 80));
+        return ApplyCommon(builder, control, scope, "badge");
+    }
+
+    private static UiElementBuilder BuildRichText(
+        PanelLayoutControl control,
+        IPanelLayoutBindingScope scope)
+    {
+        if (string.IsNullOrWhiteSpace(control.Bind) || string.IsNullOrWhiteSpace(control.TextRunsBind))
+        {
+            throw new InvalidOperationException("RichText control requires bind and textRunsBind.");
+        }
+
+        IReadOnlyList<PresentationTextRun> sourceRuns = scope.ReadTextRuns(control.TextRunsBind);
+        var runs = new UiStyledTextRun[sourceRuns.Count];
+        for (int i = 0; i < sourceRuns.Count; i++)
+        {
+            PresentationTextStyleOverride style = sourceRuns[i].Style;
+            runs[i] = new UiStyledTextRun(
+                sourceRuns[i].Text,
+                style.Bold,
+                style.Italic,
+                style.HasColor,
+                style.HasColor ? new UiColor(style.R, style.G, style.B, style.A) : default);
+        }
+
+        UiElementBuilder builder = Ui.Text(scope.ReadText(control.Bind))
+            .TextRuns(runs)
+            .WhiteSpace(UiWhiteSpace.Normal);
+        if (control.FontSize.HasValue)
+        {
+            builder = builder.FontSize(control.FontSize.Value);
+        }
+
+        if (control.Bold)
+        {
+            builder = builder.Bold();
+        }
+
+        return ApplyCommon(builder, control, scope);
+    }
+
+    private static UiElementBuilder BuildImage(
+        PanelLayoutControl control,
+        IPanelLayoutBindingScope scope)
+    {
+        if (string.IsNullOrWhiteSpace(control.Bind))
+        {
+            throw new InvalidOperationException("Image control requires bind.");
+        }
+
+        UiElementBuilder builder = Ui.Image(scope.ReadText(control.Bind));
+        float? width = ResolveDimension(control.Width, control.WidthBind, scope);
+        float? height = ResolveDimension(control.Height, control.HeightBind, scope);
+        if (width.HasValue)
+        {
+            builder = builder.Width(width.Value);
+        }
+
+        if (height.HasValue)
+        {
+            builder = builder.Height(height.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(control.ObjectFit))
+        {
+            builder = builder.ObjectFit(ParseObjectFit(control.ObjectFit));
+        }
+
+        return ApplyCommon(builder, control, scope);
+    }
+
+    private UiElementBuilder BuildRepeater(
+        PanelLayoutControl control,
+        IPanelLayoutBindingScope scope,
+        Func<PanelLayoutControl, UiElementBuilder>? listComposer)
+    {
+        if (string.IsNullOrWhiteSpace(control.Bind))
+        {
+            throw new InvalidOperationException("Repeater control requires bind.");
+        }
+
+        IReadOnlyList<IPanelLayoutBindingScope> items = scope.ReadList(control.Bind);
+        var children = new List<UiElementBuilder>(items.Count * Math.Max(1, control.Children.Count));
+        for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
+        {
+            for (int childIndex = 0; childIndex < control.Children.Count; childIndex++)
+            {
+                UiElementBuilder? child = ComposeControl(control.Children[childIndex], items[itemIndex], listComposer);
+                if (child != null)
+                {
+                    children.Add(child);
+                }
+            }
+        }
+
+        return ApplyCommon(
+            new UiElementBuilder(UiNodeKind.Container).Column().Children(children.ToArray()),
+            control,
+            scope);
+    }
+
+    private static UiElementBuilder ApplyCommon(
+        UiElementBuilder builder,
+        PanelLayoutControl control,
+        IPanelLayoutBindingScope scope,
+        string? defaultClass = null)
+    {
+        if (!string.IsNullOrWhiteSpace(defaultClass) && string.IsNullOrWhiteSpace(control.ClassName))
+        {
+            builder = builder.Class(defaultClass);
+        }
+
+        if (!string.IsNullOrWhiteSpace(control.ClassName))
+        {
+            builder = builder.Classes(control.ClassName.Split(
+                ' ',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+
+        if (!string.IsNullOrWhiteSpace(control.ClassBind))
+        {
+            string classNames = scope.ReadText(control.ClassBind);
+            if (!string.IsNullOrWhiteSpace(classNames))
+            {
+                builder = builder.Classes(classNames.Split(
+                    ' ',
+                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            }
+        }
+
+        if (control.Gap.HasValue)
+        {
+            builder = builder.Gap(control.Gap.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(control.Align))
+        {
+            builder = builder.Align(ParseAlign(control.Align));
+        }
+
+        if (!string.IsNullOrWhiteSpace(control.Justify))
+        {
+            builder = builder.Justify(ParseJustify(control.Justify));
+        }
+
+        float? width = ResolveDimension(control.Width, control.WidthBind, scope);
+        float? height = ResolveDimension(control.Height, control.HeightBind, scope);
+        if (width.HasValue)
+        {
+            builder = builder.Width(width.Value);
+        }
+
+        if (height.HasValue)
+        {
+            builder = builder.Height(height.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(control.ColorBind))
+        {
+            builder = builder.Color(ParseColor(scope.ReadText(control.ColorBind), control.ColorBind));
+        }
+
+        if (!string.IsNullOrWhiteSpace(control.BackgroundBind))
+        {
+            builder = builder.Background(ParseColor(scope.ReadText(control.BackgroundBind), control.BackgroundBind));
+        }
+
+        return builder;
+    }
+
+    private static float? ResolveDimension(
+        float? authored,
+        string? bind,
+        IPanelLayoutBindingScope scope)
+    {
+        return string.IsNullOrWhiteSpace(bind) ? authored : scope.ReadFloat(bind);
+    }
+
+    private static UiObjectFit ParseObjectFit(string value)
+    {
+        return value switch
+        {
+            "fill" => UiObjectFit.Fill,
+            "contain" => UiObjectFit.Contain,
+            "cover" => UiObjectFit.Cover,
+            "none" => UiObjectFit.None,
+            "scale-down" => UiObjectFit.ScaleDown,
+            _ => throw new InvalidOperationException($"Unknown objectFit '{value}'.")
+        };
+    }
+
+    private static UiAlignItems ParseAlign(string value)
+    {
+        return value switch
+        {
+            "start" => UiAlignItems.Start,
+            "center" => UiAlignItems.Center,
+            "end" => UiAlignItems.End,
+            "stretch" => UiAlignItems.Stretch,
+            _ => throw new InvalidOperationException($"Unknown align '{value}'.")
+        };
+    }
+
+    private static UiJustifyContent ParseJustify(string value)
+    {
+        return value switch
+        {
+            "start" => UiJustifyContent.Start,
+            "center" => UiJustifyContent.Center,
+            "end" => UiJustifyContent.End,
+            "space-between" => UiJustifyContent.SpaceBetween,
+            "space-around" => UiJustifyContent.SpaceAround,
+            "space-evenly" => UiJustifyContent.SpaceEvenly,
+            _ => throw new InvalidOperationException($"Unknown justify '{value}'.")
+        };
+    }
+
+    private static UiColor ParseColor(string value, string bind)
+    {
+        if (!UiColor.TryParse(value, out UiColor color))
+        {
+            throw new InvalidOperationException($"Binding '{bind}' returned invalid color '{value}'.");
+        }
+
+        return color;
     }
 }

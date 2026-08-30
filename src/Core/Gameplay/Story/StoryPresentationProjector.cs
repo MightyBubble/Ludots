@@ -97,6 +97,7 @@ namespace Ludots.Core.Gameplay.Story
                 new StoryPresentationSurface(
                     SurfaceKey: $"dialogue.{view.DialogueId}.{surfaceKind}",
                     SurfaceKind: surfaceKind,
+                    LayoutId: profile.LayoutId,
                     Anchor: anchor,
                     Title: string.IsNullOrWhiteSpace(view.ResolvedSpeakerName) ? view.SpeakerId : view.ResolvedSpeakerName,
                     Body: view.ResolvedText ?? string.Empty,
@@ -138,10 +139,17 @@ namespace Ludots.Core.Gameplay.Story
                         $"Presentation profile '{view.PresentationProfile}' requires choiceAnchor and choiceWidth when the node offers choices.");
                 }
 
+                if (string.IsNullOrWhiteSpace(profile.ChoiceLayoutId))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation profile '{view.PresentationProfile}' requires choiceLayoutId when the node offers choices.");
+                }
+
                 // Choice list is a companion surface: geometry from the same profile (single writer).
                 surfaces.Add(new StoryPresentationSurface(
                     SurfaceKey: $"dialogue.{view.DialogueId}.ChoiceList",
                     SurfaceKind: StoryPresentationSurfaceKinds.ChoiceList,
+                    LayoutId: profile.ChoiceLayoutId,
                     Anchor: profile.ChoiceAnchor,
                     Title: string.Empty,
                     Width: profile.ChoiceWidth,
@@ -226,6 +234,7 @@ namespace Ludots.Core.Gameplay.Story
                     new StoryPresentationSurface(
                         SurfaceKey: $"sequence.{view.SequenceId}.{surfaceKind}",
                         SurfaceKind: surfaceKind,
+                        LayoutId: profile.LayoutId,
                         Anchor: profile.Anchor.Trim(),
                         Title: title,
                         Body: body,

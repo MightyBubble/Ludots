@@ -379,6 +379,7 @@ public sealed class SaveParticipantRegistryTests
             Id = "story.dialogue_overlay",
             Backend = StoryPresentationBackend.ScreenOverlay,
             SurfaceKind = "OverlayDialogue",
+            LayoutId = "layout.narrative.overlay-dialogue",
             Anchor = "BottomCenter",
             Width = 760f,
             ImageSize = 112f,

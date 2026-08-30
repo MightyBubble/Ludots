@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Text;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -21,6 +23,50 @@ namespace Ludots.Tests.GasTests.UI
           ]
         }
         """;
+
+        [Test]
+        public void LayoutTemplateLoader_LoadsNestedDataSourceNeutralControls()
+        {
+            const string json = """
+            [{
+              "id": "layout.tests.card",
+              "bindings": ["title", "portrait", "size"],
+              "root": {
+                "type": "row",
+                "gap": 8,
+                "children": [
+                  { "type": "image", "bind": "portrait", "widthBind": "size", "heightBind": "size", "objectFit": "contain" },
+                  { "type": "label", "bind": "title", "class": "title", "fontSize": 18, "bold": true }
+                ]
+              }
+            }]
+            """;
+
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+            PanelLayoutTemplate template = PanelLayoutTemplateLoader.LoadCatalog(stream).Require("layout.tests.card");
+
+            Assert.That(template.Root.Type, Is.EqualTo(PanelLayoutControlType.Row));
+            Assert.That(template.Root.Children.Count, Is.EqualTo(2));
+            Assert.That(template.Root.Children[0].Type, Is.EqualTo(PanelLayoutControlType.Image));
+            Assert.That(template.Root.Children[1].Bind, Is.EqualTo("title"));
+        }
+
+        [Test]
+        public void LayoutTemplateLoader_UnknownBinding_FailsClosed()
+        {
+            const string json = """
+            [{
+              "id": "layout.tests.bad",
+              "bindings": ["title"],
+              "root": { "type": "label", "bind": "missing" }
+            }]
+            """;
+
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+            Assert.That(
+                () => PanelLayoutTemplateLoader.LoadCatalog(stream),
+                Throws.InvalidOperationException.With.Message.Contains("missing"));
+        }
 
         [Test]
         public void Load_ValidTemplate_CarriesGraphAndPins()

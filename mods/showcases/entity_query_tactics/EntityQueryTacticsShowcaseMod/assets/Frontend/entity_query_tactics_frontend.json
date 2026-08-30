@@ -2,6 +2,7 @@
   "ownerId": "EntityQueryTactics",
   "backdropHex": "#071014D8",
   "promptRibbon": {
+    "layoutId": "layout.narrative.prompt-ribbon",
     "anchor": "TopLeft",
     "width": 760,
     "offsetX": 24,
@@ -17,6 +18,7 @@
     "mutedHex": "#93A4A7"
   },
   "selectionPanel": {
+    "layoutId": "layout.narrative.card",
     "anchor": "TopLeft",
     "width": 430,
     "offsetX": 24,
@@ -32,6 +34,7 @@
     "mutedHex": "#9FB3C8"
   },
   "queryBoard": {
+    "layoutId": "layout.narrative.card",
     "anchor": "TopRight",
     "width": 420,
     "offsetX": -340,
@@ -47,6 +50,7 @@
     "mutedHex": "#C5B98E"
   },
   "relationBoard": {
+    "layoutId": "layout.narrative.card",
     "anchor": "BottomRight",
     "width": 430,
     "offsetX": -340,
@@ -62,6 +66,7 @@
     "mutedHex": "#D5A2AA"
   },
   "cachePanel": {
+    "layoutId": "layout.narrative.card",
     "anchor": "BottomLeft",
     "width": 430,
     "offsetX": 24,

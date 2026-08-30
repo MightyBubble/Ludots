@@ -242,6 +242,7 @@ namespace Ludots.Tests.GAS.Story
                 Id = "story.dialogue_overlay",
                 Backend = StoryPresentationBackend.ScreenOverlay,
                 SurfaceKind = "OverlayDialogue",
+                LayoutId = "layout.narrative.overlay-dialogue",
                 Anchor = "BottomCenter",
                 Width = 760f,
                 ImageSize = 112f,
@@ -249,7 +250,8 @@ namespace Ludots.Tests.GAS.Story
                 ChoiceAnchor = "BottomRight",
                 ChoiceWidth = 440f,
                 ChoiceOffsetY = 12f,
-                ChoiceZIndex = 61
+                ChoiceZIndex = 61,
+                ChoiceLayoutId = "layout.narrative.choice-list"
             });
             dialogues.Register(new DialogueDefinition
             {
@@ -336,6 +338,7 @@ namespace Ludots.Tests.GAS.Story
                 Id = "story.dialogue_overlay",
                 Backend = StoryPresentationBackend.ScreenOverlay,
                 SurfaceKind = "OverlayDialogue",
+                LayoutId = "layout.narrative.overlay-dialogue",
                 Anchor = "BottomCenter",
                 Width = 760f,
                 ImageSize = 112f,
@@ -343,7 +346,8 @@ namespace Ludots.Tests.GAS.Story
                 ChoiceAnchor = "BottomRight",
                 ChoiceWidth = 440f,
                 ChoiceOffsetY = 12f,
-                ChoiceZIndex = 61
+                ChoiceZIndex = 61,
+                ChoiceLayoutId = "layout.narrative.choice-list"
             });
             dialogues.Register(new DialogueDefinition
             {

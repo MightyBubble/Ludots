@@ -35,6 +35,7 @@ namespace Ludots.Core.Gameplay.Story
         public string Id { get; set; } = string.Empty;
         public StoryPresentationBackend Backend { get; set; } = StoryPresentationBackend.ScreenOverlay;
         public string SurfaceKind { get; set; } = string.Empty;
+        public string LayoutId { get; set; } = string.Empty;
         public string Anchor { get; set; } = string.Empty;
         public float Width { get; set; } = 720f;
         public float OffsetX { get; set; }
@@ -55,6 +56,7 @@ namespace Ludots.Core.Gameplay.Story
         public float ChoiceWidth { get; set; }
         public float ChoiceOffsetY { get; set; }
         public int ChoiceZIndex { get; set; }
+        public string ChoiceLayoutId { get; set; } = string.Empty;
     }
 
     public sealed class StoryDefinitionRegistry
@@ -101,6 +103,11 @@ namespace Ludots.Core.Gameplay.Story
             if (string.IsNullOrWhiteSpace(definition.SurfaceKind))
             {
                 throw new InvalidOperationException($"Story presentation profile '{definition.Id}' requires surfaceKind.");
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.LayoutId))
+            {
+                throw new InvalidOperationException($"Story presentation profile '{definition.Id}' requires layoutId.");
             }
 
             _profiles[definition.Id] = definition;

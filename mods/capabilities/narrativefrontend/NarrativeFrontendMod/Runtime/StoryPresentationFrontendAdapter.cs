@@ -57,6 +57,12 @@ public static class StoryPresentationFrontendAdapter
     {
         NarrativeFrontendSurfaceKind kind = ParseKind(surface.SurfaceKind);
         NarrativeFrontendAnchor anchor = ParseAnchor(surface.Anchor);
+        if (string.IsNullOrWhiteSpace(surface.LayoutId))
+        {
+            throw new InvalidOperationException(
+                $"Story surface '{surface.SurfaceKey}' requires layoutId.");
+        }
+
         string portraitSrc = string.Empty;
         if (!string.IsNullOrWhiteSpace(surface.ImageId))
         {
@@ -110,7 +116,8 @@ public static class StoryPresentationFrontendAdapter
             PortraitSrc: portraitSrc,
             PortraitSize: surface.ImageSize,
             FrameImageSrc: frameImageSrc,
-            BodyRuns: surface.BodyRuns);
+            BodyRuns: surface.BodyRuns,
+            LayoutId: surface.LayoutId);
     }
 
     private static NarrativeFrontendSurfaceKind ParseKind(string surfaceKind)
