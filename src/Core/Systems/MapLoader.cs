@@ -16,10 +16,12 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Systems
 {
@@ -36,6 +38,7 @@ namespace Ludots.Core.Systems
         private PresenterEntityRuntime _presenterRuntime;
         private PresenterDefinitionRegistry _presenterDefinitions;
         private CompiledPresenterBootstrapRegistry _presenterBootstrap;
+        private MeshAssetRegistry _meshAssets;
         private readonly Entity[] _presenterBatchOwners = new Entity[TemplateBatchScratchCapacity];
         private readonly int[] _presenterBatchScopeIds = new int[TemplateBatchScratchCapacity];
         private readonly int[] _presenterBatchStableIds = new int[TemplateBatchScratchCapacity];
@@ -81,12 +84,14 @@ namespace Ludots.Core.Systems
             PresenterEntityRuntime presenterRuntime,
             PresenterDefinitionRegistry presenterDefinitions,
             ISpatialPartitionWorld spatialPartition,
-            WorldSizeSpec worldSizeSpec)
+            WorldSizeSpec worldSizeSpec,
+            MeshAssetRegistry meshAssets = null)
         {
             _stableIds = stableIds;
             _presenterRuntime = presenterRuntime;
             _presenterDefinitions = presenterDefinitions;
             _presenterBootstrap = presenterDefinitions?.BootstrapRegistry;
+            _meshAssets = meshAssets;
             _templateBatchSpawner = new TemplateEntityBatchSpawner(
                 _world,
                 EntityTemplateKeys,
@@ -94,6 +99,133 @@ namespace Ludots.Core.Systems
                 spatialPartition,
                 worldSizeSpec,
                 TemplateBatchScratchCapacity);
+        }
+
+        /// <summary>
+        /// Builds the deterministic set of map-owned presentation assets before entities are
+        /// materialized. Only assets reachable from map templates, bootstrap presenter roots,
+        /// compiled presenter child plans, and authored asset-swap entries are included;
+        /// transient runtime VFX are intentionally outside this contract.
+        /// </summary>
+        public MapPresentationAssetManifest BuildPresentationAssetManifest(MapConfig mapConfig)
+        {
+            if (mapConfig == null)
+            {
+                throw new ArgumentNullException(nameof(mapConfig));
+            }
+
+            var manifest = new MapPresentationAssetManifest();
+            if (_meshAssets == null || _presenterDefinitions == null || _presenterBootstrap == null || mapConfig.Entities == null)
+            {
+                manifest.SealManifest();
+                return manifest;
+            }
+
+            var visitedTemplates = new HashSet<string>(StringComparer.Ordinal);
+            var visitedDefinitions = new HashSet<int>();
+
+            for (int i = 0; i < mapConfig.Entities.Count; i++)
+            {
+                EntitySpawnData? entity = mapConfig.Entities[i];
+                if (entity == null || string.IsNullOrWhiteSpace(entity.Template))
+                {
+                    continue;
+                }
+
+                AddTemplate(entity.Template);
+            }
+
+            manifest.SealManifest();
+            return manifest;
+
+            void AddTemplate(string templateId)
+            {
+                if (!visitedTemplates.Add(templateId))
+                {
+                    return;
+                }
+
+                EntityTemplate? template = TemplateRegistry.Get(templateId);
+                if (template == null)
+                {
+                    return;
+                }
+
+                int templateKeyId = EntityTemplateKeys.GetId(templateId);
+                if (templateKeyId > 0 &&
+                    _presenterBootstrap.TryGetEntitySpawnCreates(
+                        templateKeyId,
+                        out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules))
+                {
+                    for (int i = 0; i < rules.Length; i++)
+                    {
+                        AddDefinition(rules[i].PresenterDefinitionId);
+                    }
+                }
+
+                if (template.Children == null)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < template.Children.Count; i++)
+                {
+                    EntityTemplateChild? child = template.Children[i];
+                    if (child != null && !string.IsNullOrWhiteSpace(child.Template))
+                    {
+                        AddTemplate(child.Template);
+                    }
+                }
+            }
+
+            void AddDefinition(int definitionId)
+            {
+                if (definitionId <= 0 || !visitedDefinitions.Add(definitionId) ||
+                    !_presenterDefinitions.TryGet(definitionId, out PresenterDefinition definition))
+                {
+                    return;
+                }
+
+                BehaviorSlot[] behaviors = definition.Behaviors ?? Array.Empty<BehaviorSlot>();
+                for (int i = 0; i < behaviors.Length; i++)
+                {
+                    if (behaviors[i].Kind != BehaviorKind.AssetBinding)
+                    {
+                        continue;
+                    }
+
+                    AddAsset(in behaviors[i].AssetBinding);
+                }
+
+                PresenterCreatePlan plan = _presenterDefinitions.GetOrCreateCreatePlan(definitionId);
+                PresenterCreatePlanNode[] nodes = plan.Nodes ?? Array.Empty<PresenterCreatePlanNode>();
+                for (int i = 0; i < nodes.Length; i++)
+                {
+                    AddDefinition(nodes[i].DefinitionId);
+                }
+            }
+
+            void AddAsset(in AssetBindingConfig binding)
+            {
+                AddAssetId(binding.AssetKind, binding.AssetId, binding.RenderPath);
+                AssetSwapEntry[] swaps = binding.AssetSwapTable ?? Array.Empty<AssetSwapEntry>();
+                for (int i = 0; i < swaps.Length; i++)
+                {
+                    AddAssetId(binding.AssetKind, swaps[i].AssetId, binding.RenderPath);
+                }
+            }
+
+            void AddAssetId(AssetKind assetKind, int assetId, VisualRenderPath renderPath)
+            {
+                if (assetKind is not (AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Surface) ||
+                    assetId <= 0 || !_meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor) ||
+                    descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)
+                {
+                    return;
+                }
+
+                manifest.Add(MapPresentationAsset.Create(assetKind, assetId, renderPath, descriptor.SourceUris));
+            }
         }
 
         public void LoadTemplates(ConfigCatalog catalog, ConfigConflictReport report = null)

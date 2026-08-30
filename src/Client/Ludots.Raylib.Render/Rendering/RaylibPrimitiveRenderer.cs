@@ -16,7 +16,7 @@ namespace Ludots.Raylib.Render
         Instanced = 1
     }
 
-    public sealed unsafe class RaylibPrimitiveRenderer : IDisposable
+    public sealed unsafe class RaylibPrimitiveRenderer : IDisposable, IRenderAssetResidency
     {
         private readonly RaylibPrimitiveRenderMode _mode;
         private readonly System.Func<string, int> _channelRegistrar;
@@ -88,6 +88,8 @@ namespace Ludots.Raylib.Render
         private readonly RaylibAssetStore<Model> _modelStore;
         private readonly Dictionary<int, CachedProceduralMesh> _proceduralMeshCache = new Dictionary<int, CachedProceduralMesh>();
         private readonly Dictionary<int, CachedTexture> _textureCache = new Dictionary<int, CachedTexture>();
+        private readonly Dictionary<string, Stack<IDisposable>> _residencyLeases = new(StringComparer.Ordinal);
+        private IRenderMeshAssets? _residencyMeshAssets;
         private readonly HashSet<int> _reportedMissingModelDraws = new HashSet<int>();
         private Material _proceduralMeshMaterial;
         private bool _proceduralMeshMaterialLoaded;
@@ -122,6 +124,11 @@ namespace Ludots.Raylib.Render
         public int TotalDrawnVfxCount => _vfxRenderer.TotalDrawnVfxCount;
 
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
+
+        public void BindResidencyMeshAssets(IRenderMeshAssets meshes)
+        {
+            _residencyMeshAssets = meshes ?? throw new ArgumentNullException(nameof(meshes));
+        }
 
         /// <summary>GPU 蒙皮模型/动画缓存；宿主骨骼挂点 provider 与绘制路径共用同一实例（同一动画数据源）。</summary>
         public RaylibGpuSkinnedModelCache GpuSkinnedModelCache => _gpuSkinnedModelCache;
@@ -306,6 +313,232 @@ namespace Ludots.Raylib.Render
             _modelStore.FlushRetired();
         }
 
+        public int ResidentAssetCount => _modelStore.ResidentCount + _textureStore.ResidentCount;
+
+        public int InFlightAssetCount => _modelStore.InFlightCount + _textureStore.InFlightCount + _gpuSkinnedModelCache.AnimationInFlightCount;
+
+        public int RetiredAssetCount => _modelStore.RetiredCount + _textureStore.RetiredCount;
+
+        /// <summary>
+        /// Non-blocking backend bridge used by the map-load rendezvous. The residency lease is
+        /// retained until <see cref="ReleaseAsset"/> so a focused map cannot lose its warm-up
+        /// assets between the gate completing and the first draw.
+        /// </summary>
+        public RenderAssetResidencySnapshot EnsureAssetResident(in MapPresentationAsset asset)
+        {
+            string key = BuildResidencyKey(in asset);
+            if (asset.SourceUris == null || asset.SourceUris.Length == 0)
+            {
+                return new RenderAssetResidencySnapshot(
+                    RenderAssetResidencyState.Failed,
+                    "required render asset has no source URI");
+            }
+
+            MeshAssetDescriptor descriptor = _residencyMeshAssets != null &&
+                _residencyMeshAssets.TryGetDescriptor(asset.AssetId, out MeshAssetDescriptor registered)
+                ? registered
+                : MeshAssetDescriptor.Model(asset.AssetId, asset.SourceUris);
+            if (asset.AssetKind is AssetKind.SkinnedMesh || asset.RenderPath == VisualRenderPath.GpuSkinnedInstance)
+            {
+                RaylibGpuSkinnedModelAcquireOutcome outcome = _gpuSkinnedModelCache.TryGetOrLoad(
+                    asset.AssetId,
+                    in descriptor,
+                    out _,
+                    out string? status);
+                if (outcome == RaylibGpuSkinnedModelAcquireOutcome.InFlight)
+                {
+                    return BuildSkinnedResidencySnapshot(status);
+                }
+
+                if (outcome == RaylibGpuSkinnedModelAcquireOutcome.Failed)
+                {
+                    return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Failed, status);
+                }
+
+                if (_gpuSkinnedModelCache.TryGetSelectedSourceUri(asset.AssetId, out string selectedUri))
+                {
+                    RaylibAssetAcquireOutcome selectedOutcome = _modelStore.TryAcquireOrBegin(
+                        selectedUri,
+                        out RaylibAssetStore<Model>.Lease? selectedLease,
+                        out string? selectedFailure);
+                    if (selectedOutcome == RaylibAssetAcquireOutcome.Resident)
+                    {
+                        RetainResidencyLease(key, selectedLease!);
+                        return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Resident);
+                    }
+
+                    if (selectedOutcome == RaylibAssetAcquireOutcome.InFlight)
+                    {
+                        return BuildResidencySnapshot(_modelStore, selectedUri, selectedFailure);
+                    }
+
+                    return new RenderAssetResidencySnapshot(
+                        RenderAssetResidencyState.Failed,
+                        $"selected skinned model source URI '{selectedUri}' is no longer resident: {selectedFailure}");
+                }
+
+                List<string>? failures = null;
+                for (int i = 0; i < asset.SourceUris.Length; i++)
+                {
+                    string uri = asset.SourceUris[i];
+                    RaylibAssetAcquireOutcome modelOutcome = _modelStore.TryAcquireOrBegin(
+                        uri,
+                        out RaylibAssetStore<Model>.Lease? lease,
+                        out string? failure);
+                    if (modelOutcome == RaylibAssetAcquireOutcome.InFlight)
+                    {
+                        return BuildResidencySnapshot(_modelStore, uri, failure);
+                    }
+
+                    if (modelOutcome == RaylibAssetAcquireOutcome.Resident)
+                    {
+                        RetainResidencyLease(key, lease!);
+                        return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Resident);
+                    }
+
+                    failures ??= new List<string>();
+                    failures.Add($"'{uri}': {failure}");
+                }
+
+                return new RenderAssetResidencySnapshot(
+                    RenderAssetResidencyState.Failed,
+                    $"no skinned model source URI loaded: {string.Join("; ", failures ?? new List<string>())}");
+            }
+
+            if (descriptor.Type == MeshAssetType.Billboard)
+            {
+                List<string>? failures = null;
+                for (int i = 0; i < asset.SourceUris.Length; i++)
+                {
+                    string uri = asset.SourceUris[i];
+                    RaylibAssetAcquireOutcome outcome = _textureStore.TryAcquireOrBegin(
+                        uri,
+                        out RaylibAssetStore<Texture2D>.Lease? lease,
+                        out string? status);
+                    if (outcome == RaylibAssetAcquireOutcome.InFlight)
+                    {
+                        return BuildResidencySnapshot(_textureStore, uri, status);
+                    }
+
+                    if (outcome == RaylibAssetAcquireOutcome.Resident)
+                    {
+                        RetainResidencyLease(key, lease!);
+                        return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Resident);
+                    }
+
+                    failures ??= new List<string>();
+                    failures.Add($"'{uri}': {status}");
+                }
+
+                return new RenderAssetResidencySnapshot(
+                    RenderAssetResidencyState.Failed,
+                    $"no billboard source URI loaded: {string.Join("; ", failures ?? new List<string>())}");
+            }
+
+            List<string>? modelFailures = null;
+            for (int i = 0; i < asset.SourceUris.Length; i++)
+            {
+                string uri = asset.SourceUris[i];
+                RaylibAssetAcquireOutcome modelOutcome = _modelStore.TryAcquireOrBegin(
+                    uri,
+                    out RaylibAssetStore<Model>.Lease? modelLease,
+                    out string? modelStatus);
+                if (modelOutcome == RaylibAssetAcquireOutcome.InFlight)
+                {
+                    return BuildResidencySnapshot(_modelStore, uri, modelStatus);
+                }
+
+                if (modelOutcome == RaylibAssetAcquireOutcome.Resident)
+                {
+                    RetainResidencyLease(key, modelLease!);
+                    return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Resident);
+                }
+
+                modelFailures ??= new List<string>();
+                modelFailures.Add($"'{uri}': {modelStatus}");
+            }
+
+            return new RenderAssetResidencySnapshot(
+                RenderAssetResidencyState.Failed,
+                $"no model source URI loaded: {string.Join("; ", modelFailures ?? new List<string>())}");
+        }
+
+        public void ReleaseAsset(in MapPresentationAsset asset)
+        {
+            string key = BuildResidencyKey(in asset);
+            if (!_residencyLeases.TryGetValue(key, out Stack<IDisposable>? leases) || leases.Count == 0)
+            {
+                return;
+            }
+
+            leases.Pop().Dispose();
+            if (leases.Count == 0)
+            {
+                _residencyLeases.Remove(key);
+            }
+        }
+
+        RenderAssetResidencySnapshot IRenderAssetResidency.EnsureResident(in MapPresentationAsset asset)
+            => EnsureAssetResident(in asset);
+
+        void IRenderAssetResidency.Release(in MapPresentationAsset asset)
+            => ReleaseAsset(in asset);
+
+        private static string BuildResidencyKey(in MapPresentationAsset asset)
+        {
+            string uris = asset.SourceUris == null ? string.Empty : string.Join('\u001f', asset.SourceUris);
+            return $"{(byte)asset.AssetKind}:{asset.AssetId}:{(byte)asset.RenderPath}:{uris}";
+        }
+
+        private void RetainResidencyLease(string key, IDisposable lease)
+        {
+            if (!_residencyLeases.TryGetValue(key, out Stack<IDisposable>? leases))
+            {
+                leases = new Stack<IDisposable>();
+                _residencyLeases.Add(key, leases);
+            }
+
+            leases.Push(lease);
+        }
+
+        private static RenderAssetResidencySnapshot BuildResidencySnapshot<T>(
+            RaylibAssetStore<T> store,
+            string uri,
+            string? status)
+            where T : struct
+        {
+            if (store.TryGetState(uri, out RaylibAssetState state, out string? failure, out _))
+            {
+                return new RenderAssetResidencySnapshot(MapResidencyState(state), failure ?? status);
+            }
+
+            return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Unrequested, status);
+        }
+
+        private static RenderAssetResidencySnapshot BuildSkinnedResidencySnapshot(string? status)
+        {
+            if (Enum.TryParse(status, ignoreCase: false, out RaylibAssetState state))
+            {
+                return new RenderAssetResidencySnapshot(MapResidencyState(state), status);
+            }
+
+            return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Preparing, status);
+        }
+
+        private static RenderAssetResidencyState MapResidencyState(RaylibAssetState state)
+        {
+            return state switch
+            {
+                RaylibAssetState.Unrequested => RenderAssetResidencyState.Unrequested,
+                RaylibAssetState.Preparing => RenderAssetResidencyState.Preparing,
+                RaylibAssetState.CpuReady => RenderAssetResidencyState.CpuReady,
+                RaylibAssetState.UploadQueued => RenderAssetResidencyState.UploadQueued,
+                RaylibAssetState.Resident => RenderAssetResidencyState.Resident,
+                RaylibAssetState.Failed => RenderAssetResidencyState.Failed,
+                _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unsupported raylib asset state."),
+            };
+        }
+
         public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IContinuousHeightmap? continuousHeightmap = null, double timeSeconds = 0d)
         {
             Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, continuousHeightmap, timeSeconds);
@@ -477,7 +710,12 @@ namespace Ludots.Raylib.Render
                     continue;
                 }
 
-                if (_gpuSkinned.TrySubmit(in item, meshes, scaleMul))
+                if (_gpuSkinned.TrySubmit(in item, meshes, scaleMul, out RaylibGpuSkinnedSubmitOutcome submitOutcome))
+                {
+                    continue;
+                }
+
+                if (submitOutcome == RaylibGpuSkinnedSubmitOutcome.InFlight)
                 {
                     continue;
                 }
@@ -881,7 +1119,12 @@ namespace Ludots.Raylib.Render
                     continue;
                 }
 
-                if (_gpuSkinned.TrySubmit(in item, meshes, scaleMul))
+                if (_gpuSkinned.TrySubmit(in item, meshes, scaleMul, out RaylibGpuSkinnedSubmitOutcome submitOutcome))
+                {
+                    continue;
+                }
+
+                if (submitOutcome == RaylibGpuSkinnedSubmitOutcome.InFlight)
                 {
                     continue;
                 }
@@ -3160,6 +3403,16 @@ namespace Ludots.Raylib.Render
 
         public void Dispose()
         {
+            foreach (Stack<IDisposable> leases in _residencyLeases.Values)
+            {
+                while (leases.Count > 0)
+                {
+                    leases.Pop().Dispose();
+                }
+            }
+
+            _residencyLeases.Clear();
+
             foreach (var kvp in _modelCache)
             {
                 if (!kvp.Value.Loaded)

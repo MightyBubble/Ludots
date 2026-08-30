@@ -9,6 +9,13 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Raylib.Render
 {
+    public enum RaylibGpuSkinnedSubmitOutcome : byte
+    {
+        Unsupported = 0,
+        Submitted = 1,
+        InFlight = 2,
+    }
+
     internal sealed unsafe class RaylibGpuSkinnedBatchRenderer : IDisposable
     {
         private readonly RaylibGpuSkinnedModelCache _modelCache;
@@ -102,6 +109,16 @@ namespace Ludots.Raylib.Render
 
         public bool TrySubmit(in SkinnedVisualBatchItem item, IRenderMeshAssets meshes, float scaleMul)
         {
+            return TrySubmit(in item, meshes, scaleMul, out _);
+        }
+
+        public bool TrySubmit(
+            in SkinnedVisualBatchItem item,
+            IRenderMeshAssets meshes,
+            float scaleMul,
+            out RaylibGpuSkinnedSubmitOutcome outcome)
+        {
+            outcome = RaylibGpuSkinnedSubmitOutcome.Unsupported;
             if (item.RenderPath != VisualRenderPath.GpuSkinnedInstance ||
                 !meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor) ||
                 descriptor.Type != MeshAssetType.Model)
@@ -109,7 +126,23 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
-            RaylibGpuSkinnedModelCache.Entry entry = _modelCache.GetOrLoad(item.MeshAssetId, in descriptor);
+            RaylibGpuSkinnedModelAcquireOutcome acquire = _modelCache.TryGetOrLoad(
+                item.MeshAssetId,
+                in descriptor,
+                out RaylibGpuSkinnedModelCache.Entry entry,
+                out string? status);
+            if (acquire == RaylibGpuSkinnedModelAcquireOutcome.InFlight)
+            {
+                outcome = RaylibGpuSkinnedSubmitOutcome.InFlight;
+                return false;
+            }
+
+            if (acquire == RaylibGpuSkinnedModelAcquireOutcome.Failed)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} meshAssetId={item.MeshAssetId} failed to load GpuSkinnedInstance: {status}");
+            }
+
             AnimatorPackedState animator = item.Animator;
             RaylibSkinnedPlayback.ResolveFromAnimator(
                 in animator,
@@ -160,6 +193,7 @@ namespace Ludots.Raylib.Render
                 poseRow,
                 item.Color);
             LastMatrixBuildMs += (Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency;
+            outcome = RaylibGpuSkinnedSubmitOutcome.Submitted;
             return true;
         }
 
