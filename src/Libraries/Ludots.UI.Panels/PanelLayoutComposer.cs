@@ -19,6 +19,96 @@ public interface IPanelLayoutBindingScope
 
 public delegate string PanelLayoutImageSourceResolver(string imageReference);
 
+public sealed class PanelBindingScope : IPanelLayoutBindingScope
+{
+    private readonly PanelVariableSet _values;
+    private readonly PanelListItemProjection? _item;
+
+    public PanelBindingScope(PanelVariableSet values, PanelListItemProjection? item = null)
+    {
+        _values = values ?? throw new ArgumentNullException(nameof(values));
+        _item = item;
+    }
+
+    public string ReadText(string bind)
+    {
+        RequireBind(bind);
+        if (_item != null)
+        {
+            if (_item.Strings.TryGetValue(bind, out string? text))
+            {
+                return text;
+            }
+
+            if (_item.Floats.TryGetValue(bind, out float number))
+            {
+                return number.ToString("F0");
+            }
+
+            if (_item.Bools.TryGetValue(bind, out bool flag))
+            {
+                return flag ? "true" : "false";
+            }
+
+            throw MissingBinding(bind);
+        }
+
+        return _values.Get(bind).ToString("F0");
+    }
+
+    public float ReadFloat(string bind)
+    {
+        RequireBind(bind);
+        if (_item != null)
+        {
+            return _item.Floats.TryGetValue(bind, out float number)
+                ? number
+                : throw MissingBinding(bind);
+        }
+
+        return _values.Get(bind);
+    }
+
+    public bool ReadBool(string bind)
+    {
+        RequireBind(bind);
+        if (_item != null)
+        {
+            return _item.Bools.TryGetValue(bind, out bool flag)
+                ? flag
+                : throw MissingBinding(bind);
+        }
+
+        return _values.Get(bind) != 0f;
+    }
+
+    public IReadOnlyList<PresentationTextRun> ReadTextRuns(string bind)
+    {
+        throw new InvalidOperationException(
+            $"Panel binding '{bind}' is not a styled-text binding.");
+    }
+
+    public IReadOnlyList<IPanelLayoutBindingScope> ReadList(string bind)
+    {
+        throw new InvalidOperationException(
+            $"Panel binding '{bind}' must use a panel list control.");
+    }
+
+    public bool IsPresent(string bind)
+        => !string.IsNullOrWhiteSpace(ReadText(bind));
+
+    private static void RequireBind(string bind)
+    {
+        if (string.IsNullOrWhiteSpace(bind))
+        {
+            throw new InvalidOperationException("Panel binding name is required.");
+        }
+    }
+
+    private InvalidOperationException MissingBinding(string bind)
+        => new($"Panel '{_values.TemplateId}' item has no binding value for '{bind}'.");
+}
+
 public sealed class PanelLayoutComposer
 {
     public UiElementBuilder Compose(
@@ -128,9 +218,12 @@ public sealed class PanelLayoutComposer
 
         UiElementBuilder builder = new UiElementBuilder(UiNodeKind.Text)
             .Class("control-label")
-            .Text(text)
-            .FontSize(control.FontSize ?? 14)
-            .Color(new UiColor(230, 230, 230));
+            .Text(text);
+        if (control.FontSize.HasValue)
+        {
+            builder = builder.FontSize(control.FontSize.Value);
+        }
+
         if (control.Bold)
         {
             builder = builder.Bold();
@@ -168,24 +261,16 @@ public sealed class PanelLayoutComposer
             .Children(
                 new UiElementBuilder(UiNodeKind.Text)
                     .Class("progress-caption")
-                    .Text($"{current:F0} / {max:F0}")
-                    .FontSize(11)
-                    .Color(new UiColor(200, 200, 200)),
+                    .Text($"{current:F0} / {max:F0}"),
                 new UiElementBuilder(UiNodeKind.Container)
                     .Row()
                     .Class("progress-track")
                     .WidthPercent(100f)
-                    .Height(10)
-                    .Background(new UiColor(40, 40, 55, 255))
-                    .Radius(4)
                     .Children(
                         new UiElementBuilder(UiNodeKind.Container)
                             .Class("progress-fill")
                             .Class("progress-fill-health")
-                            .WidthPercent(fillPercent)
-                            .Height(10)
-                            .Background(new UiColor(255, 68, 68, 255))
-                            .Radius(4)));
+                            .WidthPercent(fillPercent)));
         return ApplyCommon(builder, control, scope, "progress-bar");
     }
 
@@ -193,7 +278,8 @@ public sealed class PanelLayoutComposer
         PanelLayoutControl control,
         IPanelLayoutBindingScope scope)
     {
-        bool flag = scope.ReadBool(control.Bind ?? string.Empty);
+        bool flag = scope.ReadBool(control.Bind
+            ?? throw new InvalidOperationException("Badge control requires bind."));
         if (control.ShowWhen.HasValue && flag != control.ShowWhen.Value)
         {
             return null;
@@ -206,10 +292,8 @@ public sealed class PanelLayoutComposer
 
         UiElementBuilder builder = new UiElementBuilder(UiNodeKind.Text)
             .Class("control-badge")
-            .Text(control.Text ?? control.Bind ?? "!")
-            .FontSize(11)
-            .Bold()
-            .Color(new UiColor(255, 210, 80));
+            .Text(control.Text
+                ?? throw new InvalidOperationException("Badge control requires text."));
         return ApplyCommon(builder, control, scope, "badge");
     }
 

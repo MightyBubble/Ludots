@@ -16,7 +16,7 @@ using Ludots.UI.Surface;
 namespace Ludots.UI.Panels;
 
 /// <summary>
-/// Engine-side default panel presentation (#1011 author topology fix): every visible
+/// Engine-side default panel presentation: every visible
 /// <see cref="PanelHost"/> instance is rendered by the built-in auto-layout skin with
 /// zero mod code. Visibility truth is <see cref="UiPanelActivationStore"/> (contract
 /// five); values flow exclusively through <see cref="PanelHost.TryGetValues"/> — this
@@ -639,84 +639,6 @@ public sealed class PanelPresentationSystem : ISystem<float>
         }
 
         return null;
-    }
-
-    private static string ReadBoundText(string bind, PanelVariableSet values, PanelListItemProjection? item)
-    {
-        if (item != null)
-        {
-            if (item.Strings.TryGetValue(bind, out string? text))
-            {
-                return text;
-            }
-
-            if (item.Floats.TryGetValue(bind, out float number))
-            {
-                return number.ToString("F0");
-            }
-
-            if (item.Bools.TryGetValue(bind, out bool flag))
-            {
-                return flag ? "true" : "false";
-            }
-
-            return string.Empty;
-        }
-
-        return values.TryGet(bind, out float pin) ? pin.ToString("F0") : string.Empty;
-    }
-
-    private static float ReadBoundFloat(string bind, PanelVariableSet values, PanelListItemProjection? item)
-    {
-        if (item != null && item.Floats.TryGetValue(bind, out float number))
-        {
-            return number;
-        }
-
-        return values.TryGet(bind, out float pin) ? pin : 0f;
-    }
-
-    private static bool ReadBoundBool(string bind, PanelVariableSet values, PanelListItemProjection? item)
-    {
-        if (item != null && item.Bools.TryGetValue(bind, out bool flag))
-        {
-            return flag;
-        }
-
-        return values.TryGet(bind, out float pin) && pin != 0f;
-    }
-
-    private sealed class PanelBindingScope : IPanelLayoutBindingScope
-    {
-        private readonly PanelVariableSet _values;
-        private readonly PanelListItemProjection? _item;
-
-        public PanelBindingScope(PanelVariableSet values, PanelListItemProjection? item)
-        {
-            _values = values;
-            _item = item;
-        }
-
-        public string ReadText(string bind) => ReadBoundText(bind, _values, _item);
-
-        public float ReadFloat(string bind) => ReadBoundFloat(bind, _values, _item);
-
-        public bool ReadBool(string bind) => ReadBoundBool(bind, _values, _item);
-
-        public IReadOnlyList<PresentationTextRun> ReadTextRuns(string bind)
-        {
-            throw new InvalidOperationException(
-                $"Panel binding '{bind}' is not a styled-text binding.");
-        }
-
-        public IReadOnlyList<IPanelLayoutBindingScope> ReadList(string bind)
-        {
-            throw new InvalidOperationException(
-                $"Panel binding '{bind}' must use a panel list control.");
-        }
-
-        public bool IsPresent(string bind)
-            => !string.IsNullOrWhiteSpace(ReadBoundText(bind, _values, _item));
     }
 
     private static UiElementBuilder BuildRows(PanelTemplate template, PanelVariableSet values)

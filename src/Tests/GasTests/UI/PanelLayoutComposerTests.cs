@@ -91,6 +91,94 @@ public sealed class PanelLayoutComposerTests
             Throws.InvalidOperationException.With.Message.Contains("is not supported"));
     }
 
+    [Test]
+    public void PanelBindingScope_MissingDeclaredValueThrowsButZeroRemainsValid()
+    {
+        var values = new PanelVariableSet(
+            "tests.panel.bindings",
+            new Dictionary<string, float> { ["zero"] = 0f },
+            revision: 0);
+        var scope = new PanelBindingScope(values);
+
+        Assert.That(scope.ReadFloat("zero"), Is.Zero);
+        Assert.That(scope.ReadBool("zero"), Is.False);
+        Assert.That(scope.ReadText("zero"), Is.EqualTo("0"));
+        Assert.That(scope.IsPresent("zero"), Is.True);
+        Assert.That(
+            () => scope.ReadText("missing"),
+            Throws.InvalidOperationException.With.Message.Contains("missing"));
+        Assert.That(
+            () => scope.ReadFloat("missing"),
+            Throws.InvalidOperationException.With.Message.Contains("missing"));
+        Assert.That(
+            () => scope.ReadBool("missing"),
+            Throws.InvalidOperationException.With.Message.Contains("missing"));
+    }
+
+    [Test]
+    public void PanelBindingScope_MissingItemValueDoesNotFallBackToHostPin()
+    {
+        var values = new PanelVariableSet(
+            "tests.panel.bindings",
+            new Dictionary<string, float> { ["health"] = 100f },
+            revision: 0);
+        var item = new PanelListItemProjection(
+            new Dictionary<string, float>(),
+            new Dictionary<string, bool>(),
+            new Dictionary<string, string>());
+        var scope = new PanelBindingScope(values, item);
+
+        Assert.That(
+            () => scope.ReadFloat("health"),
+            Throws.InvalidOperationException.With.Message.Contains("health"));
+    }
+
+    [Test]
+    public void ComposeControls_DefaultTextProgressAndBadgeUseSemanticClassesWithoutSkinColors()
+    {
+        var controls = new[]
+        {
+            Control(PanelLayoutControlType.Label, bind: "label"),
+            Control(PanelLayoutControlType.ProgressBar, current: "current", max: "max"),
+            new PanelLayoutControl(
+                PanelLayoutControlType.Badge,
+                className: null,
+                text: "Ready",
+                bind: "ready",
+                prefix: null,
+                current: null,
+                max: null,
+                showWhen: true)
+        };
+        var scope = new DictionaryScope(
+            text: new Dictionary<string, string> { ["label"] = "Status" },
+            floats: new Dictionary<string, float> { ["current"] = 0f, ["max"] = 100f },
+            bools: new Dictionary<string, bool> { ["ready"] = true });
+
+        UiNode root = Build(new PanelLayoutComposer().ComposeControls(
+            controls,
+            scope,
+            static source => source));
+
+        UiNode label = root.Children[0];
+        UiNode progress = root.Children[1];
+        UiNode caption = progress.Children[0];
+        UiNode track = progress.Children[1];
+        UiNode fill = track.Children[0];
+        UiNode badge = root.Children[2];
+        Assert.That(label.ClassNames, Does.Contain("control-label"));
+        Assert.That(progress.ClassNames, Does.Contain("control-progress"));
+        Assert.That(caption.ClassNames, Does.Contain("progress-caption"));
+        Assert.That(track.ClassNames, Does.Contain("progress-track"));
+        Assert.That(fill.ClassNames, Does.Contain("progress-fill"));
+        Assert.That(badge.ClassNames, Does.Contain("control-badge"));
+        Assert.That(label.LocalStyle.Color, Is.EqualTo(UiStyle.Default.Color));
+        Assert.That(caption.LocalStyle.Color, Is.EqualTo(UiStyle.Default.Color));
+        Assert.That(track.LocalStyle.BackgroundColor, Is.EqualTo(UiStyle.Default.BackgroundColor));
+        Assert.That(fill.LocalStyle.BackgroundColor, Is.EqualTo(UiStyle.Default.BackgroundColor));
+        Assert.That(badge.LocalStyle.Color, Is.EqualTo(UiStyle.Default.Color));
+    }
+
     private static void AssertPercentProgress(UiNode root, float expectedFillPercent)
     {
         UiNode progress = root.Children[0];
@@ -134,20 +222,23 @@ public sealed class PanelLayoutComposerTests
     {
         private readonly IReadOnlyDictionary<string, string> _text;
         private readonly IReadOnlyDictionary<string, float> _floats;
+        private readonly IReadOnlyDictionary<string, bool> _bools;
 
         public DictionaryScope(
             IReadOnlyDictionary<string, string>? text = null,
-            IReadOnlyDictionary<string, float>? floats = null)
+            IReadOnlyDictionary<string, float>? floats = null,
+            IReadOnlyDictionary<string, bool>? bools = null)
         {
             _text = text ?? new Dictionary<string, string>();
             _floats = floats ?? new Dictionary<string, float>();
+            _bools = bools ?? new Dictionary<string, bool>();
         }
 
         public string ReadText(string bind) => _text[bind];
 
         public float ReadFloat(string bind) => _floats[bind];
 
-        public bool ReadBool(string bind) => throw new InvalidOperationException(bind);
+        public bool ReadBool(string bind) => _bools[bind];
 
         public IReadOnlyList<PresentationTextRun> ReadTextRuns(string bind)
             => throw new InvalidOperationException(bind);

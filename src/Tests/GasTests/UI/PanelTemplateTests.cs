@@ -69,6 +69,61 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
+        public void LayoutTemplateLoader_PreservesRichTextAndRepeaterTree()
+        {
+            const string json = """
+            [{
+              "id": "layout.tests.narrative",
+              "bindings": ["body", "runs", "choices", "choiceText"],
+              "root": {
+                "type": "column",
+                "children": [
+                  { "type": "richText", "bind": "body", "textRunsBind": "runs" },
+                  {
+                    "type": "repeater",
+                    "bind": "choices",
+                    "children": [
+                      {
+                        "type": "row",
+                        "children": [
+                          { "type": "label", "bind": "choiceText" }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }]
+            """;
+
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+            PanelLayoutControl root =
+                PanelLayoutTemplateLoader.LoadCatalog(stream).Require("layout.tests.narrative").Root;
+
+            Assert.That(root.Type, Is.EqualTo(PanelLayoutControlType.Column));
+            Assert.That(root.Children[0].Type, Is.EqualTo(PanelLayoutControlType.RichText));
+            Assert.That(root.Children[1].Type, Is.EqualTo(PanelLayoutControlType.Repeater));
+            Assert.That(root.Children[1].Children[0].Type, Is.EqualTo(PanelLayoutControlType.Row));
+        }
+
+        [Test]
+        public void LayoutTemplateLoader_PanelOnlyListType_FailsClosed()
+        {
+            const string json = """
+            [{
+              "id": "layout.tests.list",
+              "bindings": ["items"],
+              "root": { "type": "list", "bind": "items" }
+            }]
+            """;
+
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+            Assert.That(
+                () => PanelLayoutTemplateLoader.LoadCatalog(stream),
+                Throws.InvalidOperationException.With.Message.Contains("does not allow type 'list'"));
+        }
+
+        [Test]
         public void Load_ValidTemplate_CarriesGraphAndPins()
         {
             PanelTemplate template = PanelTemplateLoader.Load(AggregateTemplateJson);
@@ -396,6 +451,44 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(ok.Layout!.Controls[0].Type, Is.EqualTo(PanelLayoutControlType.Image));
             Assert.That(ok.Layout.Controls[0].Bind, Is.EqualTo("imageId"));
             Assert.That(ok.Layout.Controls[0].Width, Is.EqualTo(28f));
+        }
+
+        [Test]
+        public void Load_ImageControl_PreservesLiteralSource()
+        {
+            PanelTemplate template = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.image.literal",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "layout": {
+                "controls": [
+                  { "type": "image", "src": "icons.health", "width": 24, "height": 24 }
+                ]
+              }
+            }
+            """);
+
+            Assert.That(template.Layout!.Controls[0].Src, Is.EqualTo("icons.health"));
+            Assert.That(template.Layout.Controls[0].Bind, Is.Null);
+        }
+
+        [TestCase("""{ "type": "badge", "bind": "flag" }""")]
+        [TestCase("""{ "type": "badge", "text": "Ready" }""")]
+        public void Load_BadgeWithoutTextOrBind_FailsClosed(string control)
+        {
+            string json = $$"""
+            {
+              "id": "tests.panel.badge.invalid",
+              "graph": "g",
+              "pins": [ { "name": "flag", "key": "k" } ],
+              "layout": { "controls": [ {{control}} ] }
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("requires bind and text"));
         }
 
         [Test]
