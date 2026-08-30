@@ -66,10 +66,10 @@
   SlotIndex          宿主上的槽位下标（如技能栏）
   TagId              玩法标签 id
   NodeId             进度/树节点等非实体节点 id
-  （预留）ChoiceId   对话选项等嵌套 UI 成员——不进本页顶层表，见对话合同
+  ChoiceId           对话当前可选回复的稳定 int 身份（装载期登记；会话过滤后由查询图写出）
 
 轴 B · 域标签（Domain）——说明这袋成员「属于哪张表」
-  Entity | Effect | Ability | Item | Task | Activity | Tag | Progression | …
+  Entity | Effect | Ability | Item | Task | Activity | Tag | Progression | Dialogue | …
 ```
 
 **同一轴 A 可服务多域**：例如 `DefinitionId + Effect` 与 `DefinitionId + Item` 都是「模板 id 集」，但域不同，禁止混袋。
@@ -188,6 +188,7 @@
 | `TaskInstanceCollection` | InstanceEntity | Task | 任务实例 `Entity` |
 | `ActivityInstanceCollection` | InstanceEntity | Activity | 活动实例 `Entity` |
 | `ProgressionNodeCollection` | NodeId | Progression | 进度节点 id |
+| `DialogueChoiceCollection` | ChoiceId | Dialogue | 当前会话可选回复 id |
 
 > 实现策略（二选一，落地 PR 拍板，合同不绑死）：  
 > **A.** 每域独立 Store + destination；  
@@ -228,6 +229,7 @@
 | `Tag` | `TagIdCollection` |
 | `Task` / `Activity` | 对应实例袋 |
 | `ProgressionNode` | `ProgressionNodeCollection` |
+| `DialogueChoice` | `DialogueChoiceCollection` |
 
 旧预留名 `Ability` / `Task` 在落地时 **拆清身份**（槽 vs 定义、实例 vs 定义），避免一个单词对应两种成员。
 
@@ -416,7 +418,7 @@ squad.candidates ──inputs.candidates──► SlotCard 图 ──ability.slo
 | 5 | Ability 反查持有者名单（技能 → 实体） | 反查样板 |
 | 6 | Task / Activity 实例 | 跟 narrative 出口对齐 |
 | 7 | Tag 枚举 / Progression 节点 | 明确「全量枚举 vs 固定 mask」后再做 |
-| — | Dialogue | **不进本页顶层集合表**；选项列表属对话 UI 嵌套合同 |
+| 8 | DialogueChoice 集合 | `QueryCollectActiveDialogueChoices` → `DialogueChoiceCollection`；会话仍归 DialogueRuntime |
 
 点选/释放/追踪等交互仍属 **#1015**，与集合输出正交。
 
@@ -473,7 +475,7 @@ squad.candidates ──inputs.candidates──► SlotCard 图 ──ability.slo
 - **不** 把模板 id、tag id、槽位下标伪装成 `Entity` 写入现有 `EntityCollection` 以求「先能显示」。  
 - **不** 在面板模板内做过滤/排序替代查询图。  
 - **不** 用旁路扫容器作为正式 SSOT；旁路仅过渡，正式路径必须是图写出类型化集合。  
-- **不** 把 Dialogue 整场会话当成名册 subject；选项列表另约。  
+- **不** 把 Dialogue 整场会话当成名册 subject；只把当前可选回复写成 `DialogueChoiceCollection`。  
 - **不** 在本页规定皮层视觉（主题、动效）；只定数据类型与消费关系。  
 - **不** 在引擎内硬编码 EntityInfo / AbilityIcon / ItemStack 等业务控件；嵌套、反查、聚合一律配置表达。  
 - **不** 靠 collectionKey 同名或「当前成员上下文」隐式撞袋；跨层必须 `inputs`/`source` 明文 + 类型强校验。  
