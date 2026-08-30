@@ -78,8 +78,8 @@ namespace Ludots.Tool
             });
             mapCommand.AddCommand(importReactCommand);
 
-            var genVtxmCommand = new Command("gen-vtxm", "Generate a VertexMap v2 .vtxm test map");
-            var genOutOption = new Option<string>("--out", "Output .vtxm file path") { IsRequired = true };
+            var genVtxmCommand = new Command("gen-vtxm", "Generate a VertexMap v2 .hex test map");
+            var genOutOption = new Option<string>("--out", "Output .hex file path") { IsRequired = true };
             var genWidthOption = new Option<int>("--widthChunks", () => 16, "Map width in chunks");
             var genHeightOption = new Option<int>("--heightChunks", () => 16, "Map height in chunks");
             var genChunkSizeOption = new Option<int>("--chunkSize", () => SpatialScaleDefaults.TerrainChunkCells, "Chunk size (power-of-two)");
@@ -141,8 +141,8 @@ namespace Ludots.Tool
             rootCommand.AddCommand(mapCommand);
 
             var navCommand = new Command("nav", "Navigation utilities");
-            var bakeNavCommand = new Command("bake", "Bake NavTiles from VertexMap .vtxm");
-            var navInOption = new Option<string>("--in", "Input .vtxm path") { IsRequired = true };
+            var bakeNavCommand = new Command("bake", "Bake NavTiles from VertexMap .hex");
+            var navInOption = new Option<string>("--in", "Input .hex path") { IsRequired = true };
             var navOutDirOption = new Option<string?>("--outDir", () => null, "Output directory (default: assets/Data/Nav)");
             var navHeightScaleOption = new Option<float>("--heightScale", () => 2.0f, "Height scale in meters per height unit");
             var navHeightStepOption = new Option<int>("--heightStep", () => SpatialScaleDefaults.CellCm, "ContinuousHeightmap projection quantization step in cm");
@@ -656,7 +656,7 @@ namespace {modId}
             name ??= Path.GetFileNameWithoutExtension(inputPath);
             if (string.IsNullOrWhiteSpace(name)) name = "map";
 
-            string outBin = Path.Combine(outDir, $"{name}.vertexmap.bin");
+            string outBin = Path.Combine(outDir, ${name}.hex");
             string outJson = Path.Combine(outDir, $"{name}.vertexmap.summary.json");
             if (!force && (File.Exists(outBin) || File.Exists(outJson)))
             {

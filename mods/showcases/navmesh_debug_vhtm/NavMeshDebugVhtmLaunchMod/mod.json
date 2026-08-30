@@ -1,7 +1,7 @@
 {
   "name": "NavMeshDebugVhtmLaunchMod",
   "version": "1.0.0",
-  "description": "Launch overlay selecting the ContinuousHeightmap variant (navmesh_debug_vhtm) of the baked 4x4 navmesh debug map: runtime projects the .vhtm relief into LogicTerrain. Codeless map selector; overlay capability comes from NavMeshDebugLaunchMod.",
+  "description": "Launch overlay selecting the ContinuousHeightmap variant (navmesh_debug_vhtm) of the baked 4x4 navmesh debug map: runtime projects the .height relief into LogicTerrain. Codeless map selector; overlay capability comes from NavMeshDebugLaunchMod.",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

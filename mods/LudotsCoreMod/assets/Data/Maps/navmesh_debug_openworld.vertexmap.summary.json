@@ -1,6 +1,6 @@
 {
-  "InputPath": "mods/LudotsCoreMod/assets/Data/Maps/navmesh_debug_openworld.bin",
-  "OutputPath": "mods/LudotsCoreMod/assets/Data/Maps\\navmesh_debug_openworld.vertexmap.bin",
+  "InputPath": "mods/LudotsCoreMod/assets/Data/Maps/navmesh_debug_openworld.grid",
+  "OutputPath": "mods/LudotsCoreMod/assets/Data/Maps\\navmesh_debug_openworld.hex",
   "WidthChunks": 4,
   "HeightChunks": 4,
   "ChunkSize": 64,

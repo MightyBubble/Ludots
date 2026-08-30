@@ -7,7 +7,7 @@ namespace CameraAcceptanceMod.Runtime
 {
     internal static class CameraAcceptanceHotpathTerrainGenerator
     {
-        private const string FileName = "camera_acceptance_hotpath.vtxm";
+        private const string FileName = "camera_acceptance_hotpath.hex";
         private const int Version = 2;
         private const int ChunkSize = 64;
         private const int WidthChunks = 12;

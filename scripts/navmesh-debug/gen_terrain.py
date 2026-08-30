@@ -45,7 +45,7 @@ for cy in range(H_CHUNKS):
             for lx in range(CHUNK):
                 out += cell_bytes(cx * CHUNK + lx, cy * CHUNK + ly)
 
-path = 'mods/LudotsCoreMod/assets/Data/Maps/navmesh_debug_openworld.bin'
+path = 'mods/LudotsCoreMod/assets/Data/Maps/navmesh_debug_openworld.grid'
 os.makedirs(os.path.dirname(path), exist_ok=True)
 open(path, 'wb').write(bytes(out))
 print('wrote', path, len(out), 'bytes,', W_CELLS, 'x', H_CELLS, 'cells')

@@ -40,7 +40,7 @@
     "FovYDeg": 60
   },
   "continuousHeightmap": {
-    "asset": "assets/terrain/navmesh_debug_vhtm.vhtm",
+    "asset": "assets/terrain/navmesh_debug_vhtm.height",
     "renderProfile": {
       "absoluteColorPeakSpanCm": 1500,
       "colorContrast": 2.5

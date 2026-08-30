@@ -1,6 +1,6 @@
 {
   "Id": "capability_standard_participant_views",
-  "ContinuousHeightmapAsset": "assets/terrain/mass_navigation_large_world_relief.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/mass_navigation_large_world_relief.height",
   "Tags": [
     "capability_standard_participant_views",
     "capability.participant_view"

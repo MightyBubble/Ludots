@@ -33,7 +33,7 @@ namespace Ludots.Core.Map.Board
         /// <summary>Maximum simultaneously loaded graph chunks. Required for NodeGraph boards.</summary>
         public int LoadedChunkCapacity { get; set; }
 
-        /// <summary>Path to binary data file (.vtxm, .graph) — optional.</summary>
+        /// <summary>Path to binary data file (.hex, .graph) — optional.</summary>
         public string DataFile { get; set; }
 
         public string ContinuousHeightmapAsset { get; set; }

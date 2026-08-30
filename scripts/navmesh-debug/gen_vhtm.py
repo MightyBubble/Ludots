@@ -32,7 +32,7 @@ for z in range(ROWS):
         v = max(-32768, min(32767, v))
         out += struct.pack('<h', v)
 
-path = 'mods/LudotsCoreMod/assets/terrain/navmesh_debug_vhtm.vhtm'
+path = 'mods/LudotsCoreMod/assets/terrain/navmesh_debug_vhtm.height'
 os.makedirs(os.path.dirname(path), exist_ok=True)
 open(path, 'wb').write(bytes(out))
 print('wrote', path, len(out), 'bytes', COLS, 'x', ROWS)

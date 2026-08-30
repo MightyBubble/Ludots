@@ -10,7 +10,7 @@
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 16,
-      "DataFile": "nav_editor_grid.bin",
+      "DataFile": "nav_editor_grid.grid",
       "NavigationEnabled": true
     },
     {
@@ -22,7 +22,7 @@
       "HexEdgeLengthCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 256,
-      "DataFile": "nav_editor_grid_board_2.bin",
+      "DataFile": "nav_editor_grid_board_2.grid",
       "NavigationEnabled": true
     }
   ],

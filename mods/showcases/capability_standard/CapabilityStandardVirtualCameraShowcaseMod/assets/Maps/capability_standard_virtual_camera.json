@@ -1,6 +1,6 @@
 {
   "Id": "capability_standard_virtual_camera",
-  "ContinuousHeightmapAsset": "assets/terrain/capability_standard_virtual_camera_relief.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/capability_standard_virtual_camera_relief.height",
   "Tags": [
     "capability_standard",
     "capability_standard.virtual_camera",

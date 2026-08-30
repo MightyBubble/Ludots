@@ -56,7 +56,7 @@
       "GridCellSizeCm": 100,
       "HexEdgeLengthCm": 400,
       "ChunkSizeCells": 64,
-      "DataFile": "sc2_highlands.vtxm",
+      "DataFile": "sc2_highlands.hex",
       "NavigationEnabled": false
     }
   ],

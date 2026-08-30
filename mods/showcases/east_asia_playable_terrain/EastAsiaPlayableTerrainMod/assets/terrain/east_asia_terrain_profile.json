@@ -121,7 +121,7 @@
       "sha256": "3C738AE1495E9013BD229851FE365F93C4019A5F0854E8EA0386636245D6C553"
     },
     "hexVertexMap": {
-      "file": "assets/Data/Maps/east_asia_hex.vtxm",
+      "file": "assets/Data/Maps/east_asia_hex.hex",
       "sha256": "4FB59C9EEC450D301B405BD336CF37CC2B221532E8DBAD6186DE10AC89FF8293"
     },
     "continuousHeightmap": {

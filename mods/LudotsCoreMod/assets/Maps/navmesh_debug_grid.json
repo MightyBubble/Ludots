@@ -16,7 +16,7 @@
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 256,
-      "DataFile": "navmesh_debug_openworld.bin",
+      "DataFile": "navmesh_debug_openworld.grid",
       "NavigationEnabled": true,
       "NavTileGrid": {
         "widthChunks": 16,
@@ -40,7 +40,7 @@
     "FovYDeg": 60
   },
   "continuousHeightmap": {
-    "asset": "assets/terrain/navmesh_debug_grid.vhtm",
+    "asset": "assets/terrain/navmesh_debug_grid.height",
     "renderProfile": {
       "absoluteColorPeakSpanCm": 1500,
       "colorContrast": 2.5
