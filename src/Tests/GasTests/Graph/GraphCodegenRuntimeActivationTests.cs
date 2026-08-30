@@ -37,6 +37,7 @@ namespace Ludots.Tests.Gas.Graph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             GraphFrame frame = GraphFrame.Bind(
                 GraphKind.Effect,
@@ -52,6 +53,7 @@ namespace Ludots.Tests.Gas.Graph
                 b,
                 e,
                 targets,
+                intIds,
                 callStack);
             frame.GraphId = 1;
             GraphExecutor.ExecuteRegistered(registry, 1, GraphKind.Effect, ref frame);
