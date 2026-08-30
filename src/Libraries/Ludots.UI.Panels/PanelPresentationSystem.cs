@@ -43,6 +43,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private readonly IUiImageSizeProvider _imageSizeProvider;
     private readonly PresentationDisplayResolver? _displayResolver;
     private readonly ClientLocalSeatRegistry? _seats;
+    private readonly PanelLayoutComposer _layoutComposer = new();
 
     private readonly Dictionary<string, MountedPanel> _mounted = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -308,7 +309,14 @@ public sealed class PanelPresentationSystem : ISystem<float>
         var dim = new UiColor(136, 136, 136);
 
         UiElementBuilder body = template.Layout != null
-            ? BuildDeclaredControls(template, template.Layout.Controls, values, lists, item: null, handle, reactiveContext)
+            ? ComposeDeclaredControls(
+                template,
+                template.Layout.Controls,
+                values,
+                lists,
+                item: null,
+                handle,
+                reactiveContext)
             : BuildRows(template, values);
 
         var builder = new UiElementBuilder(UiNodeKind.Container).Column()
@@ -338,7 +346,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         return builder;
     }
 
-    private UiElementBuilder BuildDeclaredControls(
+    private UiElementBuilder ComposeDeclaredControls(
         PanelTemplate template,
         IReadOnlyList<PanelLayoutControl> controls,
         PanelVariableSet values,
@@ -347,167 +355,22 @@ public sealed class PanelPresentationSystem : ISystem<float>
         PanelInstanceHandle handle,
         ReactiveContext<PanelUiState>? reactiveContext)
     {
-        var children = new List<UiElementBuilder>(controls.Count);
-        for (int i = 0; i < controls.Count; i++)
-        {
-            PanelLayoutControl control = controls[i];
-            UiElementBuilder? built = BuildControl(template, control, values, lists, item, handle, reactiveContext);
-            if (built != null)
-            {
-                children.Add(built);
-            }
-        }
-
-        return new UiElementBuilder(UiNodeKind.Container)
-            .Column()
-            .Class("layout")
-            .WidthPercent(100f)
-            .Gap(6)
-            .Children(children.ToArray());
+        return _layoutComposer.ComposeControls(
+            controls,
+            new PanelBindingScope(values, item),
+            ResolvePanelImageSource,
+            control => BuildList(template, control, values, lists, item, handle, reactiveContext));
     }
 
-    private UiElementBuilder? BuildControl(
-        PanelTemplate template,
-        PanelLayoutControl control,
-        PanelVariableSet values,
-        IReadOnlyList<PanelListProjection> lists,
-        PanelListItemProjection? item,
-        PanelInstanceHandle handle,
-        ReactiveContext<PanelUiState>? reactiveContext)
+    private string ResolvePanelImageSource(string imageId)
     {
-        return control.Type switch
-        {
-            PanelLayoutControlType.Label => BuildLabel(control, values, item),
-            PanelLayoutControlType.ProgressBar => BuildProgressBar(control, values, item),
-            PanelLayoutControlType.Badge => BuildBadge(control, values, item),
-            PanelLayoutControlType.Image => BuildImage(control, values, item),
-            PanelLayoutControlType.List => BuildList(template, control, values, lists, item, handle, reactiveContext),
-            _ => null,
-        };
-    }
-
-    private static UiElementBuilder BuildLabel(
-        PanelLayoutControl control,
-        PanelVariableSet values,
-        PanelListItemProjection? item)
-    {
-        string text = control.Text ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(control.Bind))
-        {
-            text = ReadBoundText(control.Bind!, values, item);
-        }
-
-        if (!string.IsNullOrEmpty(control.Prefix))
-        {
-            text = control.Prefix + text;
-        }
-
-        return new UiElementBuilder(UiNodeKind.Text)
-            .Class("control-label")
-            .Class(control.ClassName ?? "label")
-            .Text(text)
-            .FontSize(14)
-            .Color(new UiColor(230, 230, 230));
-    }
-
-    private static UiElementBuilder BuildProgressBar(
-        PanelLayoutControl control,
-        PanelVariableSet values,
-        PanelListItemProjection? item)
-    {
-        float current = ReadBoundFloat(control.Current!, values, item);
-        float max = MathF.Max(0.0001f, ReadBoundFloat(control.Max!, values, item));
-        float ratio = Math.Clamp(current / max, 0f, 1f);
-        // Track/fill follow the owning cell width — never hardcode panel chrome width
-        // (that forced column chips to ~full panel width and painted past the frame).
-        float fillPercent = MathF.Max(0f, ratio * 100f);
-
-        return new UiElementBuilder(UiNodeKind.Container)
-            .Column()
-            .Class("control-progress")
-            .Class(control.ClassName ?? "progress-bar")
-            .WidthPercent(100f)
-            .Gap(2)
-            .Children(
-                new UiElementBuilder(UiNodeKind.Text)
-                    .Class("progress-caption")
-                    .Text($"{current:F0} / {max:F0}")
-                    .FontSize(11)
-                    .Color(new UiColor(200, 200, 200)),
-                new UiElementBuilder(UiNodeKind.Container)
-                    .Row()
-                    .Class("progress-track")
-                    .WidthPercent(100f)
-                    .Height(10)
-                    .Background(new UiColor(40, 40, 55, 255))
-                    .Radius(4)
-                    .Children(
-                        new UiElementBuilder(UiNodeKind.Container)
-                            .Class("progress-fill")
-                            .Class("progress-fill-health")
-                            .WidthPercent(fillPercent)
-                            .Height(10)
-                            .Background(new UiColor(255, 68, 68, 255))
-                            .Radius(4)));
-    }
-
-    private UiElementBuilder BuildImage(
-        PanelLayoutControl control,
-        PanelVariableSet values,
-        PanelListItemProjection? item)
-    {
-        string imageId = !string.IsNullOrWhiteSpace(control.Src)
-            ? control.Src!
-            : ReadBoundText(control.Bind!, values, item);
-        if (string.IsNullOrWhiteSpace(imageId))
-        {
-            throw new InvalidOperationException(
-                "Panel image control resolved an empty imageId (src/bind). Author image_assets or remove the control.");
-        }
-
         if (_displayResolver == null)
         {
             throw new InvalidOperationException(
                 "Panel image control requires PresentationDisplayResolver engine service.");
         }
 
-        string source = _displayResolver.ResolveImageSourceOrThrow(imageId);
-        float width = control.Width
-            ?? throw new InvalidOperationException("Panel image control missing width.");
-        float height = control.Height
-            ?? throw new InvalidOperationException("Panel image control missing height.");
-
-        return Ui.Image(source)
-            .Class("control-image")
-            .Class(control.ClassName ?? "image")
-            .Width(width)
-            .Height(height)
-            .FlexShrink(0f);
-    }
-
-    private static UiElementBuilder? BuildBadge(
-        PanelLayoutControl control,
-        PanelVariableSet values,
-        PanelListItemProjection? item)
-    {
-        bool flag = ReadBoundBool(control.Bind ?? string.Empty, values, item);
-        if (control.ShowWhen.HasValue && flag != control.ShowWhen.Value)
-        {
-            return null;
-        }
-
-        if (!control.ShowWhen.HasValue && !flag)
-        {
-            return null;
-        }
-
-        return new UiElementBuilder(UiNodeKind.Text)
-            .Class("control-badge")
-            .Class(control.ClassName ?? "badge")
-            .Text(control.Text ?? control.Bind ?? "!")
-            .FontSize(11)
-            .Bold()
-            .Color(new UiColor(255, 210, 80));
+        return _displayResolver.ResolveImageSourceOrThrow(imageId);
     }
 
     private UiElementBuilder BuildList(
@@ -618,7 +481,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
             PanelListItemProjection item = projection.Items[i];
             var itemChildren = new List<UiElementBuilder>(2)
             {
-                BuildDeclaredControls(
+                ComposeDeclaredControls(
                     elementTemplate,
                     elementTemplate.Layout.Controls,
                     values,
@@ -821,6 +684,39 @@ public sealed class PanelPresentationSystem : ISystem<float>
         }
 
         return values.TryGet(bind, out float pin) && pin != 0f;
+    }
+
+    private sealed class PanelBindingScope : IPanelLayoutBindingScope
+    {
+        private readonly PanelVariableSet _values;
+        private readonly PanelListItemProjection? _item;
+
+        public PanelBindingScope(PanelVariableSet values, PanelListItemProjection? item)
+        {
+            _values = values;
+            _item = item;
+        }
+
+        public string ReadText(string bind) => ReadBoundText(bind, _values, _item);
+
+        public float ReadFloat(string bind) => ReadBoundFloat(bind, _values, _item);
+
+        public bool ReadBool(string bind) => ReadBoundBool(bind, _values, _item);
+
+        public IReadOnlyList<PresentationTextRun> ReadTextRuns(string bind)
+        {
+            throw new InvalidOperationException(
+                $"Panel binding '{bind}' is not a styled-text binding.");
+        }
+
+        public IReadOnlyList<IPanelLayoutBindingScope> ReadList(string bind)
+        {
+            throw new InvalidOperationException(
+                $"Panel binding '{bind}' must use a panel list control.");
+        }
+
+        public bool IsPresent(string bind)
+            => !string.IsNullOrWhiteSpace(ReadBoundText(bind, _values, _item));
     }
 
     private static UiElementBuilder BuildRows(PanelTemplate template, PanelVariableSet values)

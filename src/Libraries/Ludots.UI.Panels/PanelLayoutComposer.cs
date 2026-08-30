@@ -17,32 +17,36 @@ public interface IPanelLayoutBindingScope
     bool IsPresent(string bind);
 }
 
+public delegate string PanelLayoutImageSourceResolver(string imageReference);
+
 public sealed class PanelLayoutComposer
 {
-    private const float PanelWidth = 280f;
-
     public UiElementBuilder Compose(
         PanelLayoutControl root,
-        IPanelLayoutBindingScope scope)
+        IPanelLayoutBindingScope scope,
+        PanelLayoutImageSourceResolver imageSourceResolver)
     {
         ArgumentNullException.ThrowIfNull(root);
         ArgumentNullException.ThrowIfNull(scope);
-        return ComposeControl(root, scope, listComposer: null)
+        ArgumentNullException.ThrowIfNull(imageSourceResolver);
+        return ComposeControl(root, scope, imageSourceResolver, listComposer: null)
             ?? throw new InvalidOperationException("Panel layout root cannot be hidden.");
     }
 
     public UiElementBuilder ComposeControls(
         IReadOnlyList<PanelLayoutControl> controls,
         IPanelLayoutBindingScope scope,
+        PanelLayoutImageSourceResolver imageSourceResolver,
         Func<PanelLayoutControl, UiElementBuilder>? listComposer = null)
     {
         ArgumentNullException.ThrowIfNull(controls);
         ArgumentNullException.ThrowIfNull(scope);
+        ArgumentNullException.ThrowIfNull(imageSourceResolver);
 
         var children = new List<UiElementBuilder>(controls.Count);
         for (int i = 0; i < controls.Count; i++)
         {
-            UiElementBuilder? child = ComposeControl(controls[i], scope, listComposer);
+            UiElementBuilder? child = ComposeControl(controls[i], scope, imageSourceResolver, listComposer);
             if (child != null)
             {
                 children.Add(child);
@@ -52,6 +56,7 @@ public sealed class PanelLayoutComposer
         return new UiElementBuilder(UiNodeKind.Container)
             .Column()
             .Class("layout")
+            .WidthPercent(100f)
             .Gap(6)
             .Children(children.ToArray());
     }
@@ -59,6 +64,7 @@ public sealed class PanelLayoutComposer
     private UiElementBuilder? ComposeControl(
         PanelLayoutControl control,
         IPanelLayoutBindingScope scope,
+        PanelLayoutImageSourceResolver imageSourceResolver,
         Func<PanelLayoutControl, UiElementBuilder>? listComposer)
     {
         if (!string.IsNullOrWhiteSpace(control.VisibleWhenNotEmpty) &&
@@ -74,11 +80,11 @@ public sealed class PanelLayoutComposer
             PanelLayoutControlType.Badge => BuildBadge(control, scope),
             PanelLayoutControlType.List => listComposer?.Invoke(control)
                 ?? throw new InvalidOperationException("Panel layout list control requires a list composer."),
-            PanelLayoutControlType.Row => BuildContainer(control, scope, row: true, listComposer),
-            PanelLayoutControlType.Column => BuildContainer(control, scope, row: false, listComposer),
-            PanelLayoutControlType.Image => BuildImage(control, scope),
+            PanelLayoutControlType.Row => BuildContainer(control, scope, imageSourceResolver, row: true, listComposer),
+            PanelLayoutControlType.Column => BuildContainer(control, scope, imageSourceResolver, row: false, listComposer),
+            PanelLayoutControlType.Image => BuildImage(control, scope, imageSourceResolver),
             PanelLayoutControlType.RichText => BuildRichText(control, scope),
-            PanelLayoutControlType.Repeater => BuildRepeater(control, scope, listComposer),
+            PanelLayoutControlType.Repeater => BuildRepeater(control, scope, imageSourceResolver, listComposer),
             _ => throw new InvalidOperationException($"Panel layout control type '{control.Type}' is not supported.")
         };
     }
@@ -86,13 +92,14 @@ public sealed class PanelLayoutComposer
     private UiElementBuilder BuildContainer(
         PanelLayoutControl control,
         IPanelLayoutBindingScope scope,
+        PanelLayoutImageSourceResolver imageSourceResolver,
         bool row,
         Func<PanelLayoutControl, UiElementBuilder>? listComposer)
     {
         var children = new List<UiElementBuilder>(control.Children.Count);
         for (int i = 0; i < control.Children.Count; i++)
         {
-            UiElementBuilder? child = ComposeControl(control.Children[i], scope, listComposer);
+            UiElementBuilder? child = ComposeControl(control.Children[i], scope, imageSourceResolver, listComposer);
             if (child != null)
             {
                 children.Add(child);
@@ -151,12 +158,12 @@ public sealed class PanelLayoutComposer
             max = MathF.Max(0.0001f, scope.ReadFloat(control.Max!));
             ratio = Math.Clamp(current / max, 0f, 1f);
         }
-        float trackWidth = PanelWidth - 48f;
-        float fillWidth = MathF.Max(2f, trackWidth * ratio);
+        float fillPercent = MathF.Max(0f, ratio * 100f);
 
         UiElementBuilder builder = new UiElementBuilder(UiNodeKind.Container)
             .Column()
             .Class("control-progress")
+            .WidthPercent(100f)
             .Gap(2)
             .Children(
                 new UiElementBuilder(UiNodeKind.Text)
@@ -167,7 +174,7 @@ public sealed class PanelLayoutComposer
                 new UiElementBuilder(UiNodeKind.Container)
                     .Row()
                     .Class("progress-track")
-                    .Width(trackWidth)
+                    .WidthPercent(100f)
                     .Height(10)
                     .Background(new UiColor(40, 40, 55, 255))
                     .Radius(4)
@@ -175,7 +182,7 @@ public sealed class PanelLayoutComposer
                         new UiElementBuilder(UiNodeKind.Container)
                             .Class("progress-fill")
                             .Class("progress-fill-health")
-                            .Width(fillWidth)
+                            .WidthPercent(fillPercent)
                             .Height(10)
                             .Background(new UiColor(255, 68, 68, 255))
                             .Radius(4)));
@@ -246,26 +253,44 @@ public sealed class PanelLayoutComposer
 
     private static UiElementBuilder BuildImage(
         PanelLayoutControl control,
-        IPanelLayoutBindingScope scope)
+        IPanelLayoutBindingScope scope,
+        PanelLayoutImageSourceResolver imageSourceResolver)
     {
-        if (string.IsNullOrWhiteSpace(control.Bind))
+        string imageReference = !string.IsNullOrWhiteSpace(control.Src)
+            ? control.Src
+            : !string.IsNullOrWhiteSpace(control.Bind)
+                ? scope.ReadText(control.Bind)
+                : string.Empty;
+        if (string.IsNullOrWhiteSpace(imageReference))
         {
-            throw new InvalidOperationException("Image control requires bind.");
+            throw new InvalidOperationException(
+                "Panel image control resolved an empty image reference (src/bind).");
         }
 
-        UiElementBuilder builder = Ui.Image(scope.ReadText(control.Bind));
+        string source = imageSourceResolver(imageReference);
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            throw new InvalidOperationException(
+                $"Panel image source resolver returned an empty source for '{imageReference}'.");
+        }
+
         float? width = ResolveDimension(control.Width, control.WidthBind, scope);
         float? height = ResolveDimension(control.Height, control.HeightBind, scope);
-        if (width.HasValue)
+        if (!width.HasValue)
         {
-            builder = builder.Width(width.Value);
+            throw new InvalidOperationException("Panel image control missing width/widthBind.");
         }
 
-        if (height.HasValue)
+        if (!height.HasValue)
         {
-            builder = builder.Height(height.Value);
+            throw new InvalidOperationException("Panel image control missing height/heightBind.");
         }
 
+        UiElementBuilder builder = Ui.Image(source)
+            .Class("control-image")
+            .Width(width.Value)
+            .Height(height.Value)
+            .FlexShrink(0f);
         if (!string.IsNullOrWhiteSpace(control.ObjectFit))
         {
             builder = builder.ObjectFit(ParseObjectFit(control.ObjectFit));
@@ -277,6 +302,7 @@ public sealed class PanelLayoutComposer
     private UiElementBuilder BuildRepeater(
         PanelLayoutControl control,
         IPanelLayoutBindingScope scope,
+        PanelLayoutImageSourceResolver imageSourceResolver,
         Func<PanelLayoutControl, UiElementBuilder>? listComposer)
     {
         if (string.IsNullOrWhiteSpace(control.Bind))
@@ -290,7 +316,11 @@ public sealed class PanelLayoutComposer
         {
             for (int childIndex = 0; childIndex < control.Children.Count; childIndex++)
             {
-                UiElementBuilder? child = ComposeControl(control.Children[childIndex], items[itemIndex], listComposer);
+                UiElementBuilder? child = ComposeControl(
+                    control.Children[childIndex],
+                    items[itemIndex],
+                    imageSourceResolver,
+                    listComposer);
                 if (child != null)
                 {
                     children.Add(child);

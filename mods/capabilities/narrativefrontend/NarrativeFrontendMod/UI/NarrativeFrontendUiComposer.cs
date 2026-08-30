@@ -44,7 +44,8 @@ internal static class NarrativeFrontendUiComposer
             PanelLayoutTemplate template = layouts.Require(surface.LayoutId);
             UiElementBuilder content = layoutComposer.Compose(
                 template.Root,
-                new NarrativeSurfaceBindingScope(surface));
+                new NarrativeSurfaceBindingScope(surface),
+                static resolvedSource => resolvedSource);
             if (surface.Anchor is NarrativeFrontendAnchor.BottomLeft
                 or NarrativeFrontendAnchor.BottomCenter
                 or NarrativeFrontendAnchor.BottomRight)
