@@ -10,18 +10,18 @@ namespace Ludots.Core.Presentation.Terrain
     /// Sparse loaded chunk store for visual terrain height data.
     /// Can subscribe to <see cref="ILoadedChunks"/> to release chunk payloads when streaming unloads them.
     /// </summary>
-    public sealed class ChunkedVisualHeightmapStore
+    public sealed class ChunkedContinuousHeightmapStore
     {
-        private readonly Dictionary<long, ChunkedVisualHeightmapChunk> _chunks = new Dictionary<long, ChunkedVisualHeightmapChunk>();
+        private readonly Dictionary<long, ChunkedContinuousHeightmapChunk> _chunks = new Dictionary<long, ChunkedContinuousHeightmapChunk>();
         private ILoadedChunks? _loadedChunks;
         [ThreadStatic] private static ThreadCache? s_threadCache;
 
-        public ChunkedVisualHeightmapStore(ChunkedVisualHeightmapDescriptor descriptor)
+        public ChunkedContinuousHeightmapStore(ChunkedContinuousHeightmapDescriptor descriptor)
         {
             Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
         }
 
-        public ChunkedVisualHeightmapDescriptor Descriptor { get; }
+        public ChunkedContinuousHeightmapDescriptor Descriptor { get; }
 
         public int Revision { get; private set; }
 
@@ -45,7 +45,7 @@ namespace Ludots.Core.Presentation.Terrain
             _loadedChunks = null;
         }
 
-        public void SetChunk(ChunkedVisualHeightmapChunk chunk)
+        public void SetChunk(ChunkedContinuousHeightmapChunk chunk)
         {
             if (chunk == null) throw new ArgumentNullException(nameof(chunk));
             ValidateChunkCoordinates(chunk.ChunkX, chunk.ChunkY);
@@ -54,7 +54,7 @@ namespace Ludots.Core.Presentation.Terrain
                 throw new ArgumentException("Chunk sample payload does not match descriptor layout.", nameof(chunk));
             }
 
-            bool expectsRaw = Descriptor.StorageLayout == VisualHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled;
+            bool expectsRaw = Descriptor.StorageLayout == ContinuousHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled;
             if (chunk.UsesRawUInt16Samples != expectsRaw)
             {
                 throw new ArgumentException("Chunk sample payload does not match the descriptor storage encoding.", nameof(chunk));
@@ -84,7 +84,7 @@ namespace Ludots.Core.Presentation.Terrain
             return removed;
         }
 
-        public bool TryGetChunk(int chunkX, int chunkY, out ChunkedVisualHeightmapChunk chunk)
+        public bool TryGetChunk(int chunkX, int chunkY, out ChunkedContinuousHeightmapChunk chunk)
         {
             ValidateChunkCoordinates(chunkX, chunkY);
             long key = GraphChunkKey.Pack(chunkX, chunkY);
@@ -107,7 +107,7 @@ namespace Ludots.Core.Presentation.Terrain
             return false;
         }
 
-        public bool TryGetChunk(long chunkKey, out ChunkedVisualHeightmapChunk chunk)
+        public bool TryGetChunk(long chunkKey, out ChunkedContinuousHeightmapChunk chunk)
         {
             ThreadCache cache = GetThreadCache();
             if (ReferenceEquals(cache.Owner, this) && cache.Key == chunkKey && cache.Chunk != null)
@@ -167,11 +167,11 @@ namespace Ludots.Core.Presentation.Terrain
 
         private sealed class ThreadCache
         {
-            public ChunkedVisualHeightmapStore? Owner;
+            public ChunkedContinuousHeightmapStore? Owner;
 
             public long Key = long.MinValue;
 
-            public ChunkedVisualHeightmapChunk? Chunk;
+            public ChunkedContinuousHeightmapChunk? Chunk;
         }
     }
 }

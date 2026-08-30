@@ -6,12 +6,12 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Terrain
 {
-    public static class VisualHeightmapBinary
+    public static class ContinuousHeightmapBinary
     {
         private const string Magic = "VHTM";
         private const int Version = 2;
 
-        public static VisualHeightmapAsset Read(Stream stream)
+        public static ContinuousHeightmapAsset Read(Stream stream)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
 
@@ -36,14 +36,14 @@ namespace Ludots.Core.Presentation.Terrain
 
             int sampleColumns = reader.ReadInt32();
             int sampleRows = reader.ReadInt32();
-            var storageLayout = (VisualHeightmapStorageLayout)reader.ReadInt32();
+            var storageLayout = (ContinuousHeightmapStorageLayout)reader.ReadInt32();
             int defaultLayerIndex = reader.ReadInt32();
-            VisualHeightmapInterpolationMode interpolationMode = version >= 2
-                ? (VisualHeightmapInterpolationMode)reader.ReadInt32()
-                : VisualHeightmapInterpolationMode.BilinearHeightfield;
-            VisualHeightSampleScale sampleScale = version >= 2
-                ? new VisualHeightSampleScale(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32())
-                : VisualHeightSampleScale.IdentityCentimeters;
+            ContinuousHeightmapInterpolationMode interpolationMode = version >= 2
+                ? (ContinuousHeightmapInterpolationMode)reader.ReadInt32()
+                : ContinuousHeightmapInterpolationMode.BilinearHeightfield;
+            ContinuousHeightSampleScale sampleScale = version >= 2
+                ? new ContinuousHeightSampleScale(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32())
+                : ContinuousHeightSampleScale.IdentityCentimeters;
 
             int layerCount = reader.ReadInt32();
             if (layerCount <= 0)
@@ -51,10 +51,10 @@ namespace Ludots.Core.Presentation.Terrain
                 throw new InvalidDataException("Visual heightmap binary must contain at least one layer.");
             }
 
-            var layers = new VisualHeightmapLayerDefinition[layerCount];
+            var layers = new ContinuousHeightmapLayerDefinition[layerCount];
             for (int i = 0; i < layerCount; i++)
             {
-                layers[i] = new VisualHeightmapLayerDefinition(
+                layers[i] = new ContinuousHeightmapLayerDefinition(
                     reader.ReadInt32(),
                     reader.ReadString(),
                     reader.ReadInt32(),
@@ -67,15 +67,15 @@ namespace Ludots.Core.Presentation.Terrain
                 throw new InvalidDataException("Visual heightmap binary sample count cannot be negative.");
             }
 
-            bool usesRawUInt16 = storageLayout == VisualHeightmapStorageLayout.RowMajorUInt16Scaled ||
-                                 storageLayout == VisualHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled;
+            bool usesRawUInt16 = storageLayout == ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled ||
+                                 storageLayout == ContinuousHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled;
             if (usesRawUInt16)
             {
                 byte[] rawSamples = ReadExact(reader, checked(sampleCount * sizeof(ushort)));
                 var heightSamplesRaw = new ushort[sampleCount];
                 Buffer.BlockCopy(rawSamples, 0, heightSamplesRaw, 0, rawSamples.Length);
 
-                return new VisualHeightmapAsset(
+                return new ContinuousHeightmapAsset(
                     bounds,
                     sampleColumns,
                     sampleRows,
@@ -91,7 +91,7 @@ namespace Ludots.Core.Presentation.Terrain
             var heightSamplesCm = new short[sampleCount];
             Buffer.BlockCopy(rawCmSamples, 0, heightSamplesCm, 0, rawCmSamples.Length);
 
-            return new VisualHeightmapAsset(
+            return new ContinuousHeightmapAsset(
                 bounds,
                 sampleColumns,
                 sampleRows,
@@ -102,7 +102,7 @@ namespace Ludots.Core.Presentation.Terrain
                 interpolationMode);
         }
 
-        public static void Write(Stream stream, VisualHeightmapAsset asset)
+        public static void Write(Stream stream, ContinuousHeightmapAsset asset)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
             if (asset == null) throw new ArgumentNullException(nameof(asset));
@@ -126,7 +126,7 @@ namespace Ludots.Core.Presentation.Terrain
 
             for (int i = 0; i < asset.Layers.Length; i++)
             {
-                VisualHeightmapLayerDefinition layer = asset.Layers[i];
+                ContinuousHeightmapLayerDefinition layer = asset.Layers[i];
                 writer.Write(layer.LayerId);
                 writer.Write(layer.Name ?? string.Empty);
                 writer.Write(layer.SampleOffset);

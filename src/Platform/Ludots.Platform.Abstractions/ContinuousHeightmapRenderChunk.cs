@@ -2,9 +2,9 @@ using System;
 
 namespace Ludots.Platform.Abstractions
 {
-    public readonly struct VisualHeightmapRenderChunk
+    public readonly struct ContinuousHeightmapRenderChunk
     {
-        public VisualHeightmapRenderChunk(
+        public ContinuousHeightmapRenderChunk(
             int chunkX,
             int chunkY,
             WorldAabbCm bounds,
@@ -14,8 +14,8 @@ namespace Ludots.Platform.Abstractions
             float sampleStepYCm,
             ReadOnlyMemory<short> heightSamplesCm,
             ReadOnlyMemory<ushort> heightSamplesRaw,
-            VisualHeightSampleScale sampleScale,
-            VisualHeightmapStorageLayout storageLayout,
+            ContinuousHeightSampleScale sampleScale,
+            ContinuousHeightmapStorageLayout storageLayout,
             int sampleStride,
             int layerSampleOffset,
             int revision)
@@ -33,8 +33,8 @@ namespace Ludots.Platform.Abstractions
             }
 
             int requiredLastIndex = checked(layerSampleOffset + ((sampleRows - 1) * sampleStride) + sampleColumns);
-            bool raw = storageLayout == VisualHeightmapStorageLayout.RowMajorUInt16Scaled ||
-                       storageLayout == VisualHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled;
+            bool raw = storageLayout == ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled ||
+                       storageLayout == ContinuousHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled;
             if (raw)
             {
                 if (heightSamplesRaw.Length < requiredLastIndex)
@@ -81,9 +81,9 @@ namespace Ludots.Platform.Abstractions
 
         public ReadOnlyMemory<ushort> HeightSamplesRaw { get; }
 
-        public VisualHeightSampleScale SampleScale { get; }
+        public ContinuousHeightSampleScale SampleScale { get; }
 
-        public VisualHeightmapStorageLayout StorageLayout { get; }
+        public ContinuousHeightmapStorageLayout StorageLayout { get; }
 
         public int SampleStride { get; }
 
@@ -102,13 +102,13 @@ namespace Ludots.Platform.Abstractions
             int index = LayerSampleOffset + (sampleY * SampleStride) + sampleX;
             switch (StorageLayout)
             {
-                case VisualHeightmapStorageLayout.RowMajorInt16Centimeters:
-                case VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters:
+                case ContinuousHeightmapStorageLayout.RowMajorInt16Centimeters:
+                case ContinuousHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters:
                     heightCm = HeightSamplesCm.Span[index];
                     return true;
 
-                case VisualHeightmapStorageLayout.RowMajorUInt16Scaled:
-                case VisualHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled:
+                case ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled:
+                case ContinuousHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled:
                     heightCm = SampleScale.Decode(HeightSamplesRaw.Span[index]);
                     return true;
 

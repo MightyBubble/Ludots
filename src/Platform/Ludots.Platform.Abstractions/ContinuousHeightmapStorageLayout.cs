@@ -1,6 +1,6 @@
 namespace Ludots.Platform.Abstractions
 {
-    public enum VisualHeightmapStorageLayout : byte
+    public enum ContinuousHeightmapStorageLayout : byte
     {
         None = 0,
         RowMajorInt16Centimeters = 1,

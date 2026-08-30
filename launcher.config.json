@@ -497,7 +497,7 @@
       "name": "east_asia_visual_heightmap_runtime",
       "target": {
         "type": "path",
-        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaVisualHeightmapRuntimeEntryMod"
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaContinuousHeightmapRuntimeEntryMod"
       }
     },
     {

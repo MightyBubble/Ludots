@@ -41,7 +41,7 @@ namespace Ludots.Raylib.Render
         private Mesh _sphereMesh;
         private Mesh _vfxBillboardMesh;
         private IRaylibReceiverMeshProjector? _receiverMeshProjector;
-        private IVisualHeightmap? _frameVisualHeightmap;
+        private IContinuousHeightmap? _frameContinuousHeightmap;
         private Shader _shader;
         private Material _material;
         private RaylibLaneShader _instancingLane = null!;
@@ -306,14 +306,14 @@ namespace Ludots.Raylib.Render
             _modelStore.FlushRetired();
         }
 
-        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
+        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IContinuousHeightmap? continuousHeightmap = null, double timeSeconds = 0d)
         {
-            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
+            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, continuousHeightmap, timeSeconds);
         }
 
-        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IPrimitiveDrawSnapshot? snapshot, IRenderMeshAssets meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
+        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IPrimitiveDrawSnapshot? snapshot, IRenderMeshAssets meshes, float scaleMul = 1f, IContinuousHeightmap? continuousHeightmap = null, double timeSeconds = 0d)
         {
-            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
+            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, continuousHeightmap, timeSeconds);
         }
 
         public void Draw(
@@ -323,7 +323,7 @@ namespace Ludots.Raylib.Render
             ISkinnedVisualBatchSnapshot? skinnedBatch,
             IRenderMeshAssets meshes,
             float scaleMul = 1f,
-            IVisualHeightmap? visualHeightmap = null,
+            IContinuousHeightmap? continuousHeightmap = null,
             double timeSeconds = 0d)
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
@@ -359,7 +359,7 @@ namespace Ludots.Raylib.Render
             LastDecalVisualCount = 0;
             LastVfxVisualCount = 0;
             LastSurfaceVisualCount = 0;
-            _frameVisualHeightmap = visualHeightmap;
+            _frameContinuousHeightmap = continuousHeightmap;
             _vfxRenderer.BeginFrame();
             _staticMeshReceiverProjector.BeginFrame();
             try
@@ -402,7 +402,7 @@ namespace Ludots.Raylib.Render
             finally
             {
                 _vfxRenderer.EndFrame();
-                _frameVisualHeightmap = null;
+                _frameContinuousHeightmap = null;
             }
         }
 

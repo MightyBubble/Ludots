@@ -1,7 +1,7 @@
 {
   "Id": "spline_surface_uat",
   "Tags": ["showcase", "uat", "surface_source", "procedural_mesh"],
-  "VisualHeightmapAsset": "assets/terrain/spline_surface_uat_flat.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/spline_surface_uat_flat.vhtm",
   "Boards": [
     {
       "Name": "default",

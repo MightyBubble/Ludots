@@ -17,4 +17,4 @@ git lfs pull --include "mods/showcases/east_asia_playable_terrain/EastAsiaPlayab
 
 Ludots.Tool 的 `EastAsiaTerrainAssetGenerator` / `TerrainControlMapBaker` 可再生等价资产，
 输出需指向 submodule 目录；规范路径见本 mod 各 `assets/Maps/*.json` 的
-`VisualHeightmapAsset` / `DataFile` 引用（`assets/samples/LudotsSample/east_asia/…`）。
+`ContinuousHeightmapAsset` / `DataFile` 引用（`assets/samples/LudotsSample/east_asia/…`）。

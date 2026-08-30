@@ -27,7 +27,7 @@
     "assetUri": "ExampleMod:assets/Presentation/example_instanced_source.json",
     "setId": "set.alpha",
     "instanceCount": 50000,
-    "groundToVisualHeightmap": true
+    "groundToContinuousHeightmap": true
   }
 }
 ```
@@ -44,9 +44,9 @@ Inline `transforms` 保持原有语义。外部 `source` group 的 `transforms` 
 | `assetUri` | 必填非空字符串 | VFS 可解析的 authored asset URI（`ModId:path`） |
 | `setId` | 必填非空字符串 | 外部资产内的实例集合标识 |
 | `instanceCount` | 必填正整数，不得超过 `MaxInstanceCount`（1,000,000） | Core progressive submission 使用的实例数量 |
-| `groundToVisualHeightmap` | 可选 bool，默认 `false` | 声明该 source 需要 Core visual-height grounding 语义 |
+| `groundToContinuousHeightmap` | 可选 bool，默认 `false` | 声明该 source 需要 Core visual-height grounding 语义 |
 
-`groundToVisualHeightmap` 不是 adapter 私有开关。若启用，它必须绑定到 Core-owned visual height contract；adapter 不得用自己的地面高度真相替代。
+`groundToContinuousHeightmap` 不是 adapter 私有开关。若启用，它必须绑定到 Core-owned visual height contract；adapter 不得用自己的地面高度真相替代。
 
 ## Loader Rules
 
@@ -57,7 +57,7 @@ Inline `transforms` 保持原有语义。外部 `source` group 的 `transforms` 
 - `source` 不是 object。
 - `source` 缺少 `format`、`assetUri`、`setId` 或 `instanceCount`。
 - `source.instanceCount <= 0`。
-- `source.groundToVisualHeightmap` 不是 bool。
+- `source.groundToContinuousHeightmap` 不是 bool。
 - `source` 或 group 上出现未声明字段。
 
 ## Factorized Source Loader（#1152 已实现）
@@ -96,4 +96,4 @@ Core 不做这些事情：
 - 不引入 importer/map side channel。
 - 不把外部实例展开为一实体一实例。
 
-平台适配层通过 typed InstancedBatch request 消费 Core 已加载的 factorized 组件数组（`group.FactorizedSource`），缓存只是执行细节，不能成为语义 SSOT。lane 边界必须断言 `FactorizedSource.InstanceCount == group.Source.InstanceCount`（Core-owned 计数），偏离即 fail fast，lane 只按 Core-owned 计数定容量。grounding 是否启用以 Core-authored `group.Source.GroundToVisualHeightmap` 为 SSOT，`FactorizedSource.GroundToVisualHeightmap` 必须与其一致，偏离即 fail fast（adapter 不得自行选择任一副本）。grounding 执行时在 lane 边界采样 Core-owned `IVisualHeightmap` 服务（以 authored X/Z 采样）；Core visual height 服务不可用时 fail loud，adapter 不得用自己的地面高度真相替代。采样越界（`TrySampleHeightCm` 返回 false）时保留 authored 高度——这是已决契约，adapter 不自行替换地面高度真相，也不构成 fallback。
+平台适配层通过 typed InstancedBatch request 消费 Core 已加载的 factorized 组件数组（`group.FactorizedSource`），缓存只是执行细节，不能成为语义 SSOT。lane 边界必须断言 `FactorizedSource.InstanceCount == group.Source.InstanceCount`（Core-owned 计数），偏离即 fail fast，lane 只按 Core-owned 计数定容量。grounding 是否启用以 Core-authored `group.Source.GroundToContinuousHeightmap` 为 SSOT，`FactorizedSource.GroundToContinuousHeightmap` 必须与其一致，偏离即 fail fast（adapter 不得自行选择任一副本）。grounding 执行时在 lane 边界采样 Core-owned `IContinuousHeightmap` 服务（以 authored X/Z 采样）；Core visual height 服务不可用时 fail loud，adapter 不得用自己的地面高度真相替代。采样越界（`TrySampleHeightCm` 返回 false）时保留 authored 高度——这是已决契约，adapter 不自行替换地面高度真相，也不构成 fallback。

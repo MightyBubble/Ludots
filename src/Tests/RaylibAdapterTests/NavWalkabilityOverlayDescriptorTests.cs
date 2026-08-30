@@ -78,7 +78,7 @@ public sealed class NavWalkabilityOverlayDescriptorTests
     [Test]
     public void SetNavWalkabilityOverlay_MissingTextureFailsBeforeGraphicsInitialization()
     {
-        using var renderer = new RaylibVisualHeightmapRenderer(
+        using var renderer = new RaylibContinuousHeightmapRenderer(
             new FixedAssetPathResolver(TextureUri, _texturePath));
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>

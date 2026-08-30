@@ -3,7 +3,7 @@
 This data-only overlay enables the offline Recast-baked `Small` navigation
 profile on `east_asia_visual_heightmap`. Recast voxels follow the board's
 3571 cm logic cells on a ~64 km playable board (source VHTM samples stay
-continental; `VisualHeightmap.WorldWidthCm` remaps world meters). Its 7x4
+continental; `ContinuousHeightmap.WorldWidthCm` remaps world meters). Its 7x4
 macro-tile board covers the complete 6399232x3656704 cm playable extent.
 
 The overlay also authors a simplified East Asia waterway `TransportNetwork`
@@ -13,17 +13,17 @@ into the same `NavObstacleSet` as map-authored obstacles. Corridor nodes are
 Albers-projected lon/lat samples scaled with the playable board; carve width
 comes from `widthCm`; presentation ribbon width stays on `visualWidthMeters`.
 
-It depends on `FieldEastAsiaCountryMod` so the same VisualHeightmap also draws
+It depends on `FieldEastAsiaCountryMod` so the same ContinuousHeightmap also draws
 Natural Earth national-border `ownership.east_asia.country` DiscreteOwnership colors
 on terrain (`DrawFieldOverlays`, default on). Country cells are 7142 cm (~2× nav cell).
 
-Bake the authoritative continuous VisualHeightmap from the repository root:
+Bake the authoritative continuous ContinuousHeightmap from the repository root:
 
 ```powershell
 dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- nav bake-vhtm `
   --mapId east_asia_visual_heightmap `
   --modId EastAsiaNavMeshDebugMod `
-  --in mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample/east_asia/east_asia_continuous.vhtm `
+  --in mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample/east_asia/east_asia_continuous.height `
   --outDir . `
   --seaLevelCm 0 `
   --heightStep 100 `
@@ -48,7 +48,7 @@ dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- nav export-walk
   --minZcm -1828352 `
   --maxXcm 3199616 `
   --maxZcm 1828352 `
-  --vhtm mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample/east_asia/east_asia_continuous.vhtm `
+  --vhtm mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample/east_asia/east_asia_continuous.height `
   --seaLevelCm 0
 ```
 

@@ -8,7 +8,7 @@ namespace Ludots.Core.Presentation.Terrain
     /// Explicit flat-ground heightmap for maps that author a flat visual terrain surface.
     /// Consumers still read a single height SSOT instead of inventing independent ground projection rules.
     /// </summary>
-    public sealed class FlatVisualHeightmap : IVisualHeightmap
+    public sealed class FlatContinuousHeightmap : IContinuousHeightmap
     {
         public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1)
         {
@@ -20,7 +20,7 @@ namespace Ludots.Core.Presentation.Terrain
         {
             if (worldXCm.Length != worldYCm.Length || worldXCm.Length != outHeightCm.Length)
             {
-                throw new ArgumentException("FlatVisualHeightmap batch spans must have identical lengths.");
+                throw new ArgumentException("FlatContinuousHeightmap batch spans must have identical lengths.");
             }
 
             if (ResolveLayerIndex(layerIndex) != 0)
@@ -114,7 +114,7 @@ namespace Ludots.Core.Presentation.Terrain
                 outLayerIndex.Length != count ||
                 outHitMask.Length != count)
             {
-                throw new ArgumentException("FlatVisualHeightmap raycast batch spans must have identical lengths.");
+                throw new ArgumentException("FlatContinuousHeightmap raycast batch spans must have identical lengths.");
             }
 
             for (int i = 0; i < count; i++)

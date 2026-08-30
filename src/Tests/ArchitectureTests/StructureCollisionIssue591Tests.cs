@@ -547,7 +547,7 @@ namespace Ludots.Tests.Architecture
             public byte HitMask { get; }
         }
 
-        private sealed class FlatHeightmap : IVisualHeightmap
+        private sealed class FlatHeightmap : IContinuousHeightmap
         {
             public FlatHeightmap(float heightCm)
             {

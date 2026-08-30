@@ -702,7 +702,7 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             }
 
             int seed = ReadRequiredMapMetadataInt(engine, MetadataSectionKey, DynamicWorkerScatterSeedMetadataKey);
-            IVisualHeightmapRenderSource heightmap = RequireVisualHeightmapRenderSource(engine);
+            IContinuousHeightmapRenderSource heightmap = RequireContinuousHeightmapRenderSource(engine);
             float jitterCm = ReadRequiredNonNegativeMapMetadataFloat(
                 engine,
                 MetadataSectionKey,
@@ -719,7 +719,7 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             if (leftCm >= rightCm || topCm >= bottomCm)
             {
                 throw new InvalidOperationException(
-                    $"Map '{engine.CurrentMapSession?.MapId.Value ?? "<none>"}' dynamic worker scatter padding leaves no valid VisualHeightmap spawn area.");
+                    $"Map '{engine.CurrentMapSession?.MapId.Value ?? "<none>"}' dynamic worker scatter padding leaves no valid ContinuousHeightmap spawn area.");
             }
 
             return CapabilityStandardStaticPresenter30kScatterPlanner.EnqueueTemplateAreaScatter(
@@ -830,17 +830,17 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             return queued;
         }
 
-        private static IVisualHeightmapRenderSource RequireVisualHeightmapRenderSource(GameEngine engine)
+        private static IContinuousHeightmapRenderSource RequireContinuousHeightmapRenderSource(GameEngine engine)
         {
-            IVisualHeightmap? heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
-            if (heightmap is IVisualHeightmapRenderSource renderSource)
+            IContinuousHeightmap? heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap);
+            if (heightmap is IContinuousHeightmapRenderSource renderSource)
             {
                 return renderSource;
             }
 
             string mapId = engine.CurrentMapSession?.MapId.Value ?? "<none>";
             throw new InvalidOperationException(
-                $"Map '{mapId}' must provide a VisualHeightmap render source for the dynamic worker benchmark production path.");
+                $"Map '{mapId}' must provide a ContinuousHeightmap render source for the dynamic worker benchmark production path.");
         }
 
         private Entity FindRootBuildingEntity(GameEngine engine)

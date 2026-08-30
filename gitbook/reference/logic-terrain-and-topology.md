@@ -4,7 +4,7 @@ Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). Subissue
 
 ## Background
 
-Before NAV-4, navmesh bake read logical terrain through `VertexMap` only. `WalkMaskBuilder`, `NavTileBuilder`, `BakePipeline`, and Recast all assumed hex vertex coordinates and `VertexChunk` storage. Grid maps such as `mass_navigation` could own a grid board and visual `.vhtm`, but had no logical terrain field for bake.
+Before NAV-4, navmesh bake read logical terrain through `VertexMap` only. `WalkMaskBuilder`, `NavTileBuilder`, `BakePipeline`, and Recast all assumed hex vertex coordinates and `VertexChunk` storage. Grid maps such as `mass_navigation` could own a grid board and visual `.height`, but had no logical terrain field for bake.
 
 Logical terrain and visual terrain remain separate:
 
@@ -92,7 +92,7 @@ Contract tests:
 
 - `LogicTerrainFieldContractTests.VertexMapAdapter_PreservesWalkMaskSemantics`
 - `LogicTerrainFieldContractTests.FlatGridLogicTerrainField_BuildsNavTile`
-- `LogicTerrainFieldContractTests.VisualHeightmap_DoesNotChangeLogicWalkabilityUnlessExplicitlyProjected`
+- `LogicTerrainFieldContractTests.ContinuousHeightmap_DoesNotChangeLogicWalkabilityUnlessExplicitlyProjected`
 
 Changing logical terrain flags changes the walk mask and resulting tile. Changing only visual height does not.
 

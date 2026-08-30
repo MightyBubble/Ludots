@@ -9,9 +9,9 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Terrain
 {
-    internal static class MapVisualHeightmapLoader
+    internal static class MapContinuousHeightmapLoader
     {
-        public static IVisualHeightmap? Load(IVirtualFileSystem vfs, IEnumerable<string>? loadedModIds, MapConfig mapConfig)
+        public static IContinuousHeightmap? Load(IVirtualFileSystem vfs, IEnumerable<string>? loadedModIds, MapConfig mapConfig)
         {
             if (vfs == null)
             {
@@ -30,17 +30,17 @@ namespace Ludots.Core.Presentation.Terrain
             }
 
             using Stream stream = OpenDeclaredAsset(vfs, loadedModIds, assetPath);
-            VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
-            asset = ApplyWorldWidthOverride(asset, mapConfig.VisualHeightmap);
-            return new VisualHeightmapRuntime(asset, ResolveRenderProfile(mapConfig));
+            ContinuousHeightmapAsset asset = ContinuousHeightmapBinary.Read(stream);
+            asset = ApplyWorldWidthOverride(asset, mapConfig.ContinuousHeightmap);
+            return new ContinuousHeightmapRuntime(asset, ResolveRenderProfile(mapConfig));
         }
 
         /// <summary>
         /// Uniformly scales asset world bounds to an authored playable width while keeping sample counts.
         /// </summary>
-        internal static VisualHeightmapAsset ApplyWorldWidthOverride(
-            VisualHeightmapAsset asset,
-            VisualHeightmapBindingConfig? binding)
+        internal static ContinuousHeightmapAsset ApplyWorldWidthOverride(
+            ContinuousHeightmapAsset asset,
+            ContinuousHeightmapBindingConfig? binding)
         {
             if (asset == null)
             {
@@ -80,11 +80,11 @@ namespace Ludots.Core.Presentation.Terrain
             return CloneWithBounds(asset, bounds);
         }
 
-        internal static VisualHeightmapAsset CloneWithBounds(VisualHeightmapAsset asset, WorldAabbCm bounds)
+        internal static ContinuousHeightmapAsset CloneWithBounds(ContinuousHeightmapAsset asset, WorldAabbCm bounds)
         {
             if (asset.UsesRawUInt16Samples)
             {
-                return new VisualHeightmapAsset(
+                return new ContinuousHeightmapAsset(
                     bounds,
                     asset.SampleColumns,
                     asset.SampleRows,
@@ -96,7 +96,7 @@ namespace Ludots.Core.Presentation.Terrain
                     asset.InterpolationMode);
             }
 
-            return new VisualHeightmapAsset(
+            return new ContinuousHeightmapAsset(
                 bounds,
                 asset.SampleColumns,
                 asset.SampleRows,
@@ -119,7 +119,7 @@ namespace Ludots.Core.Presentation.Terrain
             for (int i = 0; i < mapConfig.Boards.Count; i++)
             {
                 BoardConfig board = mapConfig.Boards[i];
-                string? boardAssetPath = MapDeclaredAssetResolver.NormalizeDeclaredAssetPath(board?.VisualHeightmapAsset);
+                string? boardAssetPath = MapDeclaredAssetResolver.NormalizeDeclaredAssetPath(board?.ContinuousHeightmapAsset);
                 if (boardAssetPath == null)
                 {
                     continue;
@@ -141,27 +141,27 @@ namespace Ludots.Core.Presentation.Terrain
             return resolved;
         }
 
-        public static VisualHeightmapRenderProfile ResolveRenderProfile(MapConfig mapConfig)
+        public static ContinuousHeightmapRenderProfile ResolveRenderProfile(MapConfig mapConfig)
         {
             if (mapConfig == null)
             {
                 throw new ArgumentNullException(nameof(mapConfig));
             }
 
-            return (mapConfig.VisualHeightmap?.RenderProfile ?? VisualHeightmapRenderProfile.CreateDefault())
+            return (mapConfig.ContinuousHeightmap?.RenderProfile ?? ContinuousHeightmapRenderProfile.CreateDefault())
                 .NormalizeAndValidate();
         }
 
         private static string? ResolveMapLevelDeclaredAssetPath(MapConfig mapConfig)
         {
-            string? legacy = MapDeclaredAssetResolver.NormalizeDeclaredAssetPath(mapConfig.VisualHeightmapAsset);
-            string? binding = MapDeclaredAssetResolver.NormalizeDeclaredAssetPath(mapConfig.VisualHeightmap?.Asset);
+            string? legacy = MapDeclaredAssetResolver.NormalizeDeclaredAssetPath(mapConfig.ContinuousHeightmapAsset);
+            string? binding = MapDeclaredAssetResolver.NormalizeDeclaredAssetPath(mapConfig.ContinuousHeightmap?.Asset);
             if (legacy != null &&
                 binding != null &&
                 !string.Equals(legacy, binding, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapConfig.Id}' declares conflicting visual heightmap assets. visualHeightmapAsset and visualHeightmap.asset must resolve to the same asset path.");
+                    $"Map '{mapConfig.Id}' declares conflicting visual heightmap assets. continuousHeightmapAsset and continuousHeightmap.asset must resolve to the same asset path.");
             }
 
             return binding ?? legacy;
@@ -174,7 +174,7 @@ namespace Ludots.Core.Presentation.Terrain
                 loadedModIds,
                 assetPath,
                 "visual heightmap",
-                "assets/terrain/example.vhtm",
+                "assets/terrain/example.height",
                 "Visual heightmap truth");
         }
     }

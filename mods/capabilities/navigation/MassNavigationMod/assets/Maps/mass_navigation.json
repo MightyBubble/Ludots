@@ -1,6 +1,6 @@
 {
   "Id": "mass_navigation",
-  "VisualHeightmapAsset": "assets/terrain/mass_navigation_large_world_relief.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/mass_navigation_large_world_relief.vhtm",
   "Tags": [
     "mass_navigation"
   ],

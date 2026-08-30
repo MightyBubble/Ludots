@@ -9,7 +9,7 @@ This page is the product and engineering contract for a real Ludots nav authorin
 The production target is:
 
 ```text
-Board -> VisualHeightmap -> LogicTerrain -> NavMesh
+Board -> ContinuousHeightmap -> LogicTerrain -> NavMesh
 ```
 
 Current code now has the shared bake route for CLI and Editor Bridge. Remaining work is concentrated on the terrain-classification SSOT, strict visual/logic single-source enforcement, and a dedicated Raylib navmesh debug view:
@@ -18,8 +18,8 @@ Current code now has the shared bake route for CLI and Editor Bridge. Remaining 
 |---|---|---|
 | Grid / HexGrid production bake | CLI `nav estimate-recast-react` / `nav bake-recast-react` and Editor Bridge resolve the primary navigation board and choose `MutableGridLogicTerrainField` for `Grid`, `VertexMapLogicTerrainField` for `HexGrid`; `NodeGraph` fails fast because it does not bake navmesh | Keep all production bake adapters on `NavBakeContext` + `NavBakeService`; do not reintroduce a topology-private bake entry |
 | Terrain classification | React terrain stride-4 preserves `areaId` and blocked flags into logic terrain and nav bake; `LogicTerrainCell.Cost` still exists as a design smell | NAV-14 must move terrain classification to map/terrain SSOT and keep cost as per-agent consumer data |
-| Pipeline order | Visual and logic terrain can still drift in authoring shape | NAV-15 must enforce `Board -> VisualHeightmap -> LogicTerrain -> NavMesh` and fail on conflicting independent sources |
-| Editor surface | React editor can paint height, blocked cells, `areaId`, obstacles, agent/profile/layer config, estimate bake cost, and call Bridge Recast bake through the shared context | The final product should persist the official VisualHeightmap/terrain-classification assets once NAV-15 closes the single-source contract |
+| Pipeline order | Visual and logic terrain can still drift in authoring shape | NAV-15 must enforce `Board -> ContinuousHeightmap -> LogicTerrain -> NavMesh` and fail on conflicting independent sources |
+| Editor surface | React editor can paint height, blocked cells, `areaId`, obstacles, agent/profile/layer config, estimate bake cost, and call Bridge Recast bake through the shared context | The final product should persist the official ContinuousHeightmap/terrain-classification assets once NAV-15 closes the single-source contract |
 | Raylib debug | Debug draw and primitive buffers exist, but navmesh inspection needs a dedicated accurate view | Raylib must render cached tile geometry from `NavTile` data, not frame-by-frame disconnected line commands |
 
 ## Reuse List
@@ -34,7 +34,7 @@ Any implementation of this page must reuse:
 | Bake profile | `Navigation/navmesh.json` through `NavMeshBakeConfig` |
 | Pathing cost | `Navigation/pathing.json` through `PathingConfig` |
 | Obstacles | `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState` |
-| Terrain input | official `VisualHeightmap` projection to official `LogicTerrainField` |
+| Terrain input | official `ContinuousHeightmap` projection to official `LogicTerrainField` |
 | Runtime query | `NavTileStore`, `NavQueryServiceRegistry` (constructed with map tile dimensions from `LogicTerrainField.ChunkWidthCm`/`ChunkHeightCm`), `NavQueryService` |
 | Presentation/debug | `PresentationPrimitiveDrawBuffer`, `GroundOverlayBuffer`, `DebugDrawCommandBuffer` where appropriate |
 
@@ -45,7 +45,7 @@ Do not add a second config loader, second obstacle file, direct navmesh authorin
 The target editor flow is:
 
 1. Create a board: choose `Grid`, `HexGrid`, or `NodeGraph`; set `WidthInMacroTiles`, `HeightInMacroTiles`, `GridCellSizeCm`, and `ChunkSizeCells`.
-2. Paint terrain height on `VisualHeightmap` in centimeters.
+2. Paint terrain height on `ContinuousHeightmap` in centimeters.
 3. Paint terrain classification as `areaId` and optional tags on the visual/terrain authoring layer.
 4. Draw static structural obstacles as official ECS authored shapes: circle, box, polygon, or compound.
 5. Configure agent geometry in `Navigation/agent_profiles.json`.
@@ -67,7 +67,7 @@ Ludots world-space authoring uses centimeters. This matches the Unreal-style con
 | Parameter | Unit | Source | Meaning | Required |
 |---|---:|---|---|---|
 | `CellCm` / `GridCellSizeCm` | cm | board config | Physical size of one logical board cell | Yes |
-| `VisualHeightmap.heightCm` | cm | terrain authoring | Continuous rendered/authoring height | Yes for visual terrain |
+| `ContinuousHeightmap.heightCm` | cm | terrain authoring | Continuous rendered/authoring height | Yes for visual terrain |
 | `LogicTerrain.heightLevel` | discrete level | projected logic terrain | Compact logic height after projection | Yes for nav bake |
 | `heightScaleMeters` | m per logic height unit | `NavBuildConfig` / runtime incremental config | Legacy conversion from height level to meters | Required today; target should be derived from projection profile |
 | `areaId` | integer key | terrain classification SSOT | Terrain class id; no cost embedded | Yes when terrain classification is enabled |
@@ -108,7 +108,7 @@ Current CDT/runtime legacy knobs are still present:
 |---|---|---|
 | `minWalkableUpDot` | normal-up dot threshold | Derive from `maxSlopeDeg` as `cos(maxSlopeDeg)` when CDT slope filtering is normalized |
 | `cliffHeightThreshold` | discrete height delta threshold | Replace or derive from `maxClimbCm` through projection metadata |
-| `heightScaleMeters` | level-to-meter conversion | Keep explicit until `VisualHeightmap -> LogicTerrain` projection profile owns quantization |
+| `heightScaleMeters` | level-to-meter conversion | Keep explicit until `ContinuousHeightmap -> LogicTerrain` projection profile owns quantization |
 
 Do not expose both `maxSlopeDeg` and `minWalkableUpDot` as independent user-facing knobs in the final editor. Show the derived value for debugging, but make `maxSlopeDeg` the authoring source.
 
@@ -183,7 +183,7 @@ Current production commands:
 | `nav bake` | legacy `.vtxm` bake path | Kept for existing VertexMap fixtures; unified config is still required |
 | `nav bake-react` | old CDT preview endpoint | Refuses generated defaults; use Recast path for production artifacts |
 
-The final NAV-15 asset pipeline should rename the React upload path once official VisualHeightmap/classification persistence lands, but the bake semantics already go through the shared service.
+The final NAV-15 asset pipeline should rename the React upload path once official ContinuousHeightmap/classification persistence lands, but the bake semantics already go through the shared service.
 
 ### 1. Estimate Before Bake
 
@@ -300,7 +300,7 @@ The web editor must be a production authoring surface with Bridge-backed persist
 | View | Purpose |
 |---|---|
 | Board setup | create/select board, show world size, chunk grid, FlowWindow fit |
-| Terrain height | paint `VisualHeightmap.heightCm` with raise/lower/smooth/flatten/ramp brushes |
+| Terrain height | paint `ContinuousHeightmap.heightCm` with raise/lower/smooth/flatten/ramp brushes |
 | Terrain area | paint `areaId` and tags with a palette and legend |
 | Obstacles | draw circle/box/polygon/compound shapes, assign nav/physics sinks and layer id |
 | Agents | edit geometry profiles, bake constraints, and pathing cost matrix side by side |
@@ -324,7 +324,7 @@ The editor writes only official data:
 
 ```text
 MapConfig.Boards[]
-VisualHeightmap asset + terrain area annotations
+ContinuousHeightmap asset + terrain area annotations
 ECS obstacle authoring components
 Navigation/agent_profiles.json
 Navigation/navmesh.json

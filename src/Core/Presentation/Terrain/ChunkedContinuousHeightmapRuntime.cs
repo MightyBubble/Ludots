@@ -6,33 +6,33 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Presentation.Terrain
 {
     /// <summary>
-    /// IVisualHeightmap runtime over a sparse loaded chunk store.
+    /// IContinuousHeightmap runtime over a sparse loaded chunk store.
     /// Missing chunks return false instead of inventing implicit global terrain.
     /// </summary>
-    public sealed class ChunkedVisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapRenderSource, IVisualHeightmapSampleAccessor
+    public sealed class ChunkedContinuousHeightmapRuntime : IContinuousHeightmap, IContinuousHeightmapRenderSource, IContinuousHeightmapSampleAccessor
     {
-        private readonly ChunkedVisualHeightmapDescriptor _descriptor;
-        private readonly ChunkedVisualHeightmapStore _store;
-        private readonly VisualHeightmapRenderProfile _renderProfile;
+        private readonly ChunkedContinuousHeightmapDescriptor _descriptor;
+        private readonly ChunkedContinuousHeightmapStore _store;
+        private readonly ContinuousHeightmapRenderProfile _renderProfile;
 
-        public ChunkedVisualHeightmapRuntime(ChunkedVisualHeightmapDescriptor descriptor, ChunkedVisualHeightmapStore store)
-            : this(descriptor, store, VisualHeightmapRenderProfile.CreateDefault())
+        public ChunkedContinuousHeightmapRuntime(ChunkedContinuousHeightmapDescriptor descriptor, ChunkedContinuousHeightmapStore store)
+            : this(descriptor, store, ContinuousHeightmapRenderProfile.CreateDefault())
         {
         }
 
-        public ChunkedVisualHeightmapRuntime(
-            ChunkedVisualHeightmapDescriptor descriptor,
-            ChunkedVisualHeightmapStore store,
-            VisualHeightmapRenderProfile renderProfile)
+        public ChunkedContinuousHeightmapRuntime(
+            ChunkedContinuousHeightmapDescriptor descriptor,
+            ChunkedContinuousHeightmapStore store,
+            ContinuousHeightmapRenderProfile renderProfile)
         {
             _descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _renderProfile = (renderProfile ?? throw new ArgumentNullException(nameof(renderProfile))).NormalizeAndValidate();
         }
 
-        public ChunkedVisualHeightmapDescriptor Descriptor => _descriptor;
+        public ChunkedContinuousHeightmapDescriptor Descriptor => _descriptor;
 
-        public ChunkedVisualHeightmapStore Store => _store;
+        public ChunkedContinuousHeightmapStore Store => _store;
 
         public WorldAabbCm Bounds => _descriptor.Bounds;
 
@@ -48,24 +48,24 @@ namespace Ludots.Core.Presentation.Terrain
 
         public int Revision => _store.Revision;
 
-        public VisualHeightmapRenderProfile RenderProfile => _renderProfile;
+        public ContinuousHeightmapRenderProfile RenderProfile => _renderProfile;
 
-        public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
+        public bool TryGetChunk(int chunkX, int chunkY, out ContinuousHeightmapRenderChunk chunk)
         {
             chunk = default;
-            if (!_store.TryGetChunk(chunkX, chunkY, out ChunkedVisualHeightmapChunk source) ||
+            if (!_store.TryGetChunk(chunkX, chunkY, out ChunkedContinuousHeightmapChunk source) ||
                 !TryResolveLayerIndex(_descriptor.DefaultLayerIndex, out int layerIndex))
             {
                 return false;
             }
 
-            VisualHeightmapLayerDefinition layer = _descriptor.Layers[layerIndex];
+            ContinuousHeightmapLayerDefinition layer = _descriptor.Layers[layerIndex];
             WorldAabbCm bounds = new WorldAabbCm(
                 _descriptor.Bounds.Left + (chunkX * _descriptor.ChunkWorldWidthCm),
                 _descriptor.Bounds.Top + (chunkY * _descriptor.ChunkWorldHeightCm),
                 _descriptor.ChunkWorldWidthCm,
                 _descriptor.ChunkWorldHeightCm);
-            chunk = new VisualHeightmapRenderChunk(
+            chunk = new ContinuousHeightmapRenderChunk(
                 chunkX,
                 chunkY,
                 bounds,
@@ -87,8 +87,8 @@ namespace Ludots.Core.Presentation.Terrain
         {
             heightCm = default;
             WorldAabbCm bounds = _descriptor.Bounds;
-            return TryResolveLayer(layerIndex, out VisualHeightmapLayerDefinition layer) &&
-                   VisualHeightmapQueries.TrySampleHeightCm(
+            return TryResolveLayer(layerIndex, out ContinuousHeightmapLayerDefinition layer) &&
+                   ContinuousHeightmapQueries.TrySampleHeightCm(
                        this,
                        in bounds,
                        _descriptor.GlobalSampleColumns,
@@ -105,8 +105,8 @@ namespace Ludots.Core.Presentation.Terrain
             heightCm = default;
             normal = Vector3.UnitY;
             WorldAabbCm bounds = _descriptor.Bounds;
-            return TryResolveLayer(layerIndex, out VisualHeightmapLayerDefinition layer) &&
-                   VisualHeightmapQueries.TrySampleSurface(
+            return TryResolveLayer(layerIndex, out ContinuousHeightmapLayerDefinition layer) &&
+                   ContinuousHeightmapQueries.TrySampleSurface(
                        this,
                        in bounds,
                        _descriptor.GlobalSampleColumns,
@@ -126,7 +126,7 @@ namespace Ludots.Core.Presentation.Terrain
                 throw new ArgumentException("Chunked visual heightmap batch sample spans must have identical lengths.");
             }
 
-            if (!TryResolveLayer(layerIndex, out VisualHeightmapLayerDefinition layer))
+            if (!TryResolveLayer(layerIndex, out ContinuousHeightmapLayerDefinition layer))
             {
                 return false;
             }
@@ -140,7 +140,7 @@ namespace Ludots.Core.Presentation.Terrain
             hit = default;
             WorldAabbCm bounds = _descriptor.Bounds;
             return TryResolveLayerIndex(layerIndex, out int resolvedLayer) &&
-                   VisualHeightmapQueries.TryRaycastGround(
+                   ContinuousHeightmapQueries.TryRaycastGround(
                        this,
                        in bounds,
                        _descriptor.GlobalSampleColumns,
@@ -229,7 +229,7 @@ namespace Ludots.Core.Presentation.Terrain
             return true;
         }
 
-        bool IVisualHeightmapSampleAccessor.TryReadSampleCm(int layerSampleOffset, int globalSampleX, int globalSampleY, out float heightCm)
+        bool IContinuousHeightmapSampleAccessor.TryReadSampleCm(int layerSampleOffset, int globalSampleX, int globalSampleY, out float heightCm)
         {
             heightCm = default;
             if ((uint)globalSampleX >= (uint)_descriptor.GlobalSampleColumns ||
@@ -245,7 +245,7 @@ namespace Ludots.Core.Presentation.Terrain
             int localX = ResolveLocalSampleIndex(globalSampleX, _descriptor.GlobalSampleColumns, chunkX, _descriptor.SamplesPerChunkColumn, chunkStepX);
             int localY = ResolveLocalSampleIndex(globalSampleY, _descriptor.GlobalSampleRows, chunkY, _descriptor.SamplesPerChunkRow, chunkStepY);
 
-            if (!_store.TryGetChunk(chunkX, chunkY, out ChunkedVisualHeightmapChunk chunk))
+            if (!_store.TryGetChunk(chunkX, chunkY, out ChunkedContinuousHeightmapChunk chunk))
             {
                 return false;
             }
@@ -253,13 +253,13 @@ namespace Ludots.Core.Presentation.Terrain
             int sampleIndex = layerSampleOffset + (localY * _descriptor.SamplesPerChunkColumn) + localX;
             switch (_descriptor.StorageLayout)
             {
-                case VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters:
-                case VisualHeightmapStorageLayout.RowMajorInt16Centimeters:
+                case ContinuousHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters:
+                case ContinuousHeightmapStorageLayout.RowMajorInt16Centimeters:
                     heightCm = chunk.HeightSamplesCm[sampleIndex];
                     return true;
 
-                case VisualHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled:
-                case VisualHeightmapStorageLayout.RowMajorUInt16Scaled:
+                case ContinuousHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled:
+                case ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled:
                     heightCm = _descriptor.SampleScale.Decode(chunk.HeightSamplesRaw[sampleIndex]);
                     return true;
 
@@ -269,7 +269,7 @@ namespace Ludots.Core.Presentation.Terrain
         }
 
         private void SampleHeightsCmDirect(
-            in VisualHeightmapLayerDefinition layer,
+            in ContinuousHeightmapLayerDefinition layer,
             ReadOnlySpan<float> worldXCm,
             ReadOnlySpan<float> worldYCm,
             Span<float> outHeightCm)
@@ -283,7 +283,7 @@ namespace Ludots.Core.Presentation.Terrain
             float sampleScaleY = sampleRows > 1 ? sampleRows - 1 : 0f;
             int maxCellX = Math.Max(0, sampleColumns - 2);
             int maxCellY = Math.Max(0, sampleRows - 2);
-            bool triangle = _descriptor.InterpolationMode == VisualHeightmapInterpolationMode.TriangleHeightfield;
+            bool triangle = _descriptor.InterpolationMode == ContinuousHeightmapInterpolationMode.TriangleHeightfield;
 
             for (int i = 0; i < outHeightCm.Length; i++)
             {
@@ -362,7 +362,7 @@ namespace Ludots.Core.Presentation.Terrain
             int localX1 = ResolveLocalSampleIndex(globalX1, _descriptor.GlobalSampleColumns, chunkX, _descriptor.SamplesPerChunkColumn, chunkStepX);
             int localY1 = ResolveLocalSampleIndex(globalY1, _descriptor.GlobalSampleRows, chunkY, _descriptor.SamplesPerChunkRow, chunkStepY);
 
-            if (!_store.TryGetChunk(chunkX, chunkY, out ChunkedVisualHeightmapChunk chunk))
+            if (!_store.TryGetChunk(chunkX, chunkY, out ChunkedContinuousHeightmapChunk chunk))
             {
                 return false;
             }
@@ -374,8 +374,8 @@ namespace Ludots.Core.Presentation.Terrain
             int sample11 = layerSampleOffset + (localY1 * sampleStride) + localX1;
             switch (_descriptor.StorageLayout)
             {
-                case VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters:
-                case VisualHeightmapStorageLayout.RowMajorInt16Centimeters:
+                case ContinuousHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters:
+                case ContinuousHeightmapStorageLayout.RowMajorInt16Centimeters:
                     short[] cm = chunk.HeightSamplesCm;
                     if ((uint)sample00 >= (uint)cm.Length ||
                         (uint)sample10 >= (uint)cm.Length ||
@@ -391,8 +391,8 @@ namespace Ludots.Core.Presentation.Terrain
                     h11 = cm[sample11];
                     return true;
 
-                case VisualHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled:
-                case VisualHeightmapStorageLayout.RowMajorUInt16Scaled:
+                case ContinuousHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled:
+                case ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled:
                     ushort[] raw = chunk.HeightSamplesRaw;
                     if ((uint)sample00 >= (uint)raw.Length ||
                         (uint)sample10 >= (uint)raw.Length ||
@@ -402,7 +402,7 @@ namespace Ludots.Core.Presentation.Terrain
                         return false;
                     }
 
-                    VisualHeightSampleScale sampleScale = _descriptor.SampleScale;
+                    ContinuousHeightSampleScale sampleScale = _descriptor.SampleScale;
                     h00 = sampleScale.Decode(raw[sample00]);
                     h10 = sampleScale.Decode(raw[sample10]);
                     h01 = sampleScale.Decode(raw[sample01]);
@@ -442,7 +442,7 @@ namespace Ludots.Core.Presentation.Terrain
             out float heightCm)
         {
             heightCm = default;
-            if (!_store.TryGetChunk(chunkX, chunkY, out ChunkedVisualHeightmapChunk chunk))
+            if (!_store.TryGetChunk(chunkX, chunkY, out ChunkedContinuousHeightmapChunk chunk))
             {
                 return false;
             }
@@ -450,13 +450,13 @@ namespace Ludots.Core.Presentation.Terrain
             int sampleIndex = layerSampleOffset + (localY * _descriptor.SamplesPerChunkColumn) + localX;
             switch (_descriptor.StorageLayout)
             {
-                case VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters:
-                case VisualHeightmapStorageLayout.RowMajorInt16Centimeters:
+                case ContinuousHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters:
+                case ContinuousHeightmapStorageLayout.RowMajorInt16Centimeters:
                     heightCm = chunk.HeightSamplesCm[sampleIndex];
                     return true;
 
-                case VisualHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled:
-                case VisualHeightmapStorageLayout.RowMajorUInt16Scaled:
+                case ContinuousHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled:
+                case ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled:
                     heightCm = _descriptor.SampleScale.Decode(chunk.HeightSamplesRaw[sampleIndex]);
                     return true;
 
@@ -490,7 +490,7 @@ namespace Ludots.Core.Presentation.Terrain
             return hx0 + ((hx1 - hx0) * ty);
         }
 
-        private bool TryResolveLayer(int layerIndex, out VisualHeightmapLayerDefinition layer)
+        private bool TryResolveLayer(int layerIndex, out ContinuousHeightmapLayerDefinition layer)
         {
             if (!TryResolveLayerIndex(layerIndex, out int resolvedIndex))
             {

@@ -115,11 +115,11 @@ namespace PresenterBlacksmithShowcaseMod.Systems
                 return;
             }
 
-            IVisualHeightmap? heightmap = _engine.GetService(CoreServiceKeys.VisualHeightmap);
-            if (heightmap is not IVisualHeightmapRenderSource renderSource)
+            IContinuousHeightmap? heightmap = _engine.GetService(CoreServiceKeys.ContinuousHeightmap);
+            if (heightmap is not IContinuousHeightmapRenderSource renderSource)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' must provide a VisualHeightmap render source before minimap marker ball movement starts.");
+                    $"Map '{mapId}' must provide a ContinuousHeightmap render source before minimap marker ball movement starts.");
             }
 
             float paddingCm = ReadRequiredMapMetadataFloat(_engine, MovementPaddingMetadataKey);
@@ -138,7 +138,7 @@ namespace PresenterBlacksmithShowcaseMod.Systems
             if (left >= right || top >= bottom)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' minimap marker movement padding leaves no valid VisualHeightmap walking area.");
+                    $"Map '{mapId}' minimap marker movement padding leaves no valid ContinuousHeightmap walking area.");
             }
 
             _leftCm = left;

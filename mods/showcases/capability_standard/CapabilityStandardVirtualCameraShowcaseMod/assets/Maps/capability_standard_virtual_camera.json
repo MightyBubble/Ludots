@@ -1,6 +1,6 @@
 {
   "Id": "capability_standard_virtual_camera",
-  "VisualHeightmapAsset": "assets/terrain/capability_standard_virtual_camera_relief.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/capability_standard_virtual_camera_relief.vhtm",
   "Tags": [
     "capability_standard",
     "capability_standard.virtual_camera",
@@ -18,7 +18,7 @@
         "Name": { "Value": "CapabilityStandardCameraAnchor" },
         "WorldPositionCm": { "Value": { "X": 1200, "Y": 800 } },
         "FacingDirection": { "AngleRad": 0.0 },
-        "VisualHeightmapSampleState": {}
+        "ContinuousHeightmapSampleState": {}
       }
     },
     {

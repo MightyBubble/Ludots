@@ -5,12 +5,12 @@ namespace Ludots.Platform.Abstractions
     /// <summary>
     /// Decodes imported raw height samples into canonical Core runtime centimeters.
     /// </summary>
-    public readonly record struct VisualHeightSampleScale(
+    public readonly record struct ContinuousHeightSampleScale(
         int OffsetCm,
         int UnitsPerSampleNumeratorCm,
         int UnitsPerSampleDenominator)
     {
-        public static VisualHeightSampleScale IdentityCentimeters { get; } = new(0, 1, 1);
+        public static ContinuousHeightSampleScale IdentityCentimeters { get; } = new(0, 1, 1);
 
         public float Decode(ushort rawSample)
         {

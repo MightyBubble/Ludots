@@ -2,7 +2,7 @@ using System;
 
 namespace Ludots.Platform.Abstractions
 {
-    public interface IVisualHeightmap
+    public interface IContinuousHeightmap
     {
         bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1);
 

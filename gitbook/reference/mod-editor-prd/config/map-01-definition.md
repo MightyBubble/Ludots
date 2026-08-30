@@ -34,7 +34,7 @@
 | `TriggerTypes[]` | 启用的触发器类型名（见 map-02）；合并为并集 |
 | `DefaultCamera` | 开局相机（虚拟相机 id 或显式参数）；后到者赢 |
 | `Tags` / `Metadata` | 地图标签与自由元数据 |
-| `VisualHeightmap*` / `StructureCollision*` / `StructureAware*` | 地形高度、结构碰撞资产引用与开关 |
+| `ContinuousHeightmap*` / `StructureCollision*` / `StructureAware*` | 地形高度、结构碰撞资产引用与开关 |
 
 ## 3. 文件结构
 

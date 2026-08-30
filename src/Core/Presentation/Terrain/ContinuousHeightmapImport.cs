@@ -2,7 +2,7 @@ using System;
 
 namespace Ludots.Core.Presentation.Terrain
 {
-    public static class VisualHeightmapImport
+    public static class ContinuousHeightmapImport
     {
         public static short[] ConvertUInt16SamplesToInt16Centimeters(
             ReadOnlySpan<ushort> rawSamples,

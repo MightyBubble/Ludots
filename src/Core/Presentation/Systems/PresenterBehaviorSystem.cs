@@ -60,7 +60,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationEventStream _events;
         private readonly PresentationOwnerChangeBuffer _ownerChanges;
         private readonly SoundRequestBuffer _soundRequests;
-        private readonly Func<IVisualHeightmap?> _heightmapProvider;
+        private readonly Func<IContinuousHeightmap?> _heightmapProvider;
         private readonly Func<IBoneTransformProvider?> _boneTransformProvider;
         private readonly PresenterBehaviorKindRegistry? _extensionBehaviors;
         private readonly PresenterBehaviorOps _extensionBehaviorOps;
@@ -124,7 +124,7 @@ namespace Ludots.Core.Presentation.Systems
             PresentationEventStream events,
             PresentationOwnerChangeBuffer ownerChanges,
             SoundRequestBuffer soundRequests,
-            IVisualHeightmap? heightmap = null,
+            IContinuousHeightmap? heightmap = null,
             IBoneTransformProvider? boneTransformProvider = null,
             PresentationTimingDiagnostics? timingDiagnostics = null,
             PresenterBehaviorKindRegistry? extensionBehaviors = null,
@@ -143,7 +143,7 @@ namespace Ludots.Core.Presentation.Systems
             PresentationEventStream events,
             PresentationOwnerChangeBuffer ownerChanges,
             SoundRequestBuffer soundRequests,
-            Func<IVisualHeightmap?> heightmapProvider,
+            Func<IContinuousHeightmap?> heightmapProvider,
             Func<IBoneTransformProvider?>? boneTransformProvider = null,
             PresentationTimingDiagnostics? timingDiagnostics = null,
             PresenterBehaviorKindRegistry? extensionBehaviors = null,
@@ -305,7 +305,7 @@ namespace Ludots.Core.Presentation.Systems
             _bootstrapClearList.Clear();
             _bootstrapGroundingDeferredEntityIds.Clear();
             _bootstrapPassActive = true;
-            IVisualHeightmap? heightmap = _heightmapProvider();
+            IContinuousHeightmap? heightmap = _heightmapProvider();
             try
             {
                 foreach (ref var chunk in World.Query(in _bootstrapPendingQuery))
@@ -374,7 +374,7 @@ namespace Ludots.Core.Presentation.Systems
             Span<PresenterState> states,
             PresenterDefinition definition,
             float tickDt,
-            IVisualHeightmap? heightmap)
+            IContinuousHeightmap? heightmap)
         {
             if (!CanProcessBootstrapChunkFast(definition))
             {
@@ -625,7 +625,7 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     }
 
-                    IVisualHeightmap? heightmap = _heightmapProvider();
+                    IContinuousHeightmap? heightmap = _heightmapProvider();
                     if (heightmap == null)
                     {
                         WarnMissingGroundingHeightmap();
@@ -704,7 +704,7 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     }
 
-                    IVisualHeightmap? heightmap = _heightmapProvider();
+                    IContinuousHeightmap? heightmap = _heightmapProvider();
                     if (heightmap == null)
                     {
                         WarnMissingGroundingHeightmap();
@@ -1922,7 +1922,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            IVisualHeightmap? heightmap = _heightmapProvider();
+            IContinuousHeightmap? heightmap = _heightmapProvider();
             bool requireResolvedSample = config.UpdatePolicy == GroundingUpdatePolicy.Once;
             if (heightmap == null)
             {
@@ -1969,7 +1969,7 @@ namespace Ludots.Core.Presentation.Systems
         private static bool TrySnapToGroundSingle(
             ref Vector3 position,
             float offsetMeters,
-            IVisualHeightmap heightmap,
+            IContinuousHeightmap heightmap,
             bool requireResolvedSample)
         {
             const float metersToCm = 100f;
@@ -1997,7 +1997,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Log.Warn(in LogChannels.Presentation, "Presenter grounding requested VisualHeightmap, but none is registered; one-shot grounding remains pending and every-frame grounding uses offset height.");
+            Log.Warn(in LogChannels.Presentation, "Presenter grounding requested ContinuousHeightmap, but none is registered; one-shot grounding remains pending and every-frame grounding uses offset height.");
             _warnedMissingGroundingHeightmap = true;
         }
 
@@ -2111,7 +2111,7 @@ namespace Ludots.Core.Presentation.Systems
                 config.Offset != 0f ||
                 state.AnchorKind != PresentationAnchorKind.Entity ||
                 transformSource != TransformSource.EntityTransform ||
-                !OwnerHasResolvedVisualHeightSample(state.OwnerEntity))
+                !OwnerHasResolvedContinuousHeightSample(state.OwnerEntity))
             {
                 return false;
             }
@@ -2129,7 +2129,7 @@ namespace Ludots.Core.Presentation.Systems
                 state.AnchorKind != PresentationAnchorKind.Entity ||
                 !World.Has<PresenterTransformSource>(presenter) ||
                 World.Get<PresenterTransformSource>(presenter).Value != TransformSource.EntityTransform ||
-                !OwnerHasResolvedVisualHeightSample(state.OwnerEntity))
+                !OwnerHasResolvedContinuousHeightSample(state.OwnerEntity))
             {
                 return false;
             }
@@ -2172,7 +2172,7 @@ namespace Ludots.Core.Presentation.Systems
                     }
 
                     if (!CanSkipOwnerBackedSnapToGroundPresenter(in states[index], transformSources[index].Value) ||
-                        !OwnerHasResolvedVisualHeightSample(states[index].OwnerEntity))
+                        !OwnerHasResolvedContinuousHeightSample(states[index].OwnerEntity))
                     {
                         return false;
                     }
@@ -2199,12 +2199,12 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool OwnerHasResolvedVisualHeightSample(Entity owner)
+        private bool OwnerHasResolvedContinuousHeightSample(Entity owner)
         {
             return owner != Entity.Null &&
                    World.IsAlive(owner) &&
-                   World.Has<VisualHeightmapSampleState>(owner) &&
-                   World.Get<VisualHeightmapSampleState>(owner).Sampled != 0;
+                   World.Has<ContinuousHeightmapSampleState>(owner) &&
+                   World.Get<ContinuousHeightmapSampleState>(owner).Sampled != 0;
         }
 
         private void ApplyGroundingBatch(
@@ -2213,7 +2213,7 @@ namespace Ludots.Core.Presentation.Systems
             Span<PresenterState> states,
             int[] tickBehaviorIndices,
             BehaviorSlot[] behaviors,
-            IVisualHeightmap heightmap,
+            IContinuousHeightmap heightmap,
             Chunk chunk)
         {
             if (tickBehaviorIndices.Length == 0)
@@ -2295,7 +2295,7 @@ namespace Ludots.Core.Presentation.Systems
             Span<PresenterState> states,
             int[] behaviorIndices,
             BehaviorSlot[] behaviors,
-            IVisualHeightmap heightmap,
+            IContinuousHeightmap heightmap,
             Chunk chunk)
         {
             bool resolved = true;
@@ -2397,7 +2397,7 @@ namespace Ludots.Core.Presentation.Systems
         /// </returns>
         private bool ApplySnapToGroundBatch(
             int count,
-            IVisualHeightmap heightmap,
+            IContinuousHeightmap heightmap,
             bool requireResolvedSample,
             out bool anyUnresolved)
         {

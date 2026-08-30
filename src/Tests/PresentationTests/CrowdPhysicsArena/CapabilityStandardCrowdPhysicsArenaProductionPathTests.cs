@@ -795,7 +795,7 @@ namespace Ludots.Tests.Presentation
         {
             // The relief heightmap sits hundreds of meters above y=0; projecting the ground point at
             // its sampled terrain height keeps it in front of the camera (finite screen coordinates).
-            var heightmap = RequireService(engine, CoreServiceKeys.VisualHeightmap);
+            var heightmap = RequireService(engine, CoreServiceKeys.ContinuousHeightmap);
             Assert.That(heightmap.TrySampleHeightCm(worldCm.X, worldCm.Y, out float groundHeightCm), Is.True,
                 $"Visual heightmap does not cover ground point {worldCm}.");
             var projector = RequireService(engine, CoreServiceKeys.ScreenProjector);

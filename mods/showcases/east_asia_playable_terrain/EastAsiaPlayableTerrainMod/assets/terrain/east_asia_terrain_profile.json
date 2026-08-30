@@ -60,7 +60,7 @@
     "standardParallel1Deg": 25,
     "standardParallel2Deg": 47,
     "earthRadiusM": 6371007.181,
-    "note": "Grid, HexGrid, and VisualHeightmap sample the projected Albers canvas directly. They are not stretched lon/lat rectangles."
+    "note": "Grid, HexGrid, and ContinuousHeightmap sample the projected Albers canvas directly. They are not stretched lon/lat rectangles."
   },
   "sourceRaster": {
     "widthPx": 14336,

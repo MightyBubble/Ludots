@@ -63,11 +63,11 @@ internal sealed class MassNavigationAuthoringContract
             ?? throw new InvalidOperationException("MassNavigation runtime auto-spawn requires PresenterDefinitionRegistry.");
         MeshAssetRegistry meshAssets = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
             ?? throw new InvalidOperationException("MassNavigation runtime auto-spawn requires PresentationMeshAssetRegistry.");
-        IVisualHeightmap visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
-            ?? throw new InvalidOperationException("MassNavigation runtime auto-spawn requires a map-owned VisualHeightmapAsset bound through CoreServiceKeys.VisualHeightmap.");
-        if (visualHeightmap is not IVisualHeightmapRenderSource)
+        IContinuousHeightmap continuousHeightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap)
+            ?? throw new InvalidOperationException("MassNavigation runtime auto-spawn requires a map-owned ContinuousHeightmapAsset bound through CoreServiceKeys.ContinuousHeightmap.");
+        if (continuousHeightmap is not IContinuousHeightmapRenderSource)
         {
-            throw new InvalidOperationException("MassNavigation runtime auto-spawn requires VisualHeightmap to implement IVisualHeightmapRenderSource so the large-world terrain is visible.");
+            throw new InvalidOperationException("MassNavigation runtime auto-spawn requires ContinuousHeightmap to implement IContinuousHeightmapRenderSource so the large-world terrain is visible.");
         }
 
         var templates = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal);

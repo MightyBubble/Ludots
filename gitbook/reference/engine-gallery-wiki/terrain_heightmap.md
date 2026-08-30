@@ -13,10 +13,10 @@
 | scene id | `terrain_heightmap` |
 | preset | `engine_raylib_terrain_heightmap` |
 | 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/TerrainHeightmapScene.cs` |
-| 承接渲染器 | `RaylibVisualHeightmapRenderer`（`IVisualHeightmapRenderSource` 合同） |
+| 承接渲染器 | `RaylibContinuousHeightmapRenderer`（`IContinuousHeightmapRenderSource` 合同） |
 | 注册表条目 | `engine_raylib_terrain_heightmap`（`showcase.registry.json`，tier T1） |
 
-`RaylibVisualHeightmapRenderer` 消费高度场源合同（本场景：16×16 chunk、每 chunk 33 采样、480m 世界、seed 47 的岛屿场），按绝对海拔色带着色——`AbsoluteColorSeaLevelCm`/`AbsoluteColorPeakSpanCm` 来自源的渲染档（`RenderProfile`），不硬编码。宿主里这条车道承担「超密高度场降采样」的大地图远景渲染。
+`RaylibContinuousHeightmapRenderer` 消费高度场源合同（本场景：16×16 chunk、每 chunk 33 采样、480m 世界、seed 47 的岛屿场），按绝对海拔色带着色——`AbsoluteColorSeaLevelCm`/`AbsoluteColorPeakSpanCm` 来自源的渲染档（`RenderProfile`），不硬编码。宿主里这条车道承担「超密高度场降采样」的大地图远景渲染。
 
 ## 这场演的是什么
 

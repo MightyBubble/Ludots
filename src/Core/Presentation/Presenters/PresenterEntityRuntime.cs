@@ -1878,8 +1878,8 @@ namespace Ludots.Core.Presentation.Presenters
                 state.OwnerEntity == Entity.Null ||
                 !_world.IsAlive(state.OwnerEntity) ||
                 !_world.Has<VisualTransform>(state.OwnerEntity) ||
-                !_world.Has<VisualHeightmapSampleState>(state.OwnerEntity) ||
-                _world.Get<VisualHeightmapSampleState>(state.OwnerEntity).Sampled == 0 ||
+                !_world.Has<ContinuousHeightmapSampleState>(state.OwnerEntity) ||
+                _world.Get<ContinuousHeightmapSampleState>(state.OwnerEntity).Sampled == 0 ||
                 !_world.Has<PresenterTransformSource>(presenter) ||
                 _world.Get<PresenterTransformSource>(presenter).Value != TransformSource.EntityTransform)
             {
@@ -1979,8 +1979,8 @@ namespace Ludots.Core.Presentation.Presenters
                 if (owner == Entity.Null ||
                     !_world.IsAlive(owner) ||
                     !_world.Has<VisualTransform>(owner) ||
-                    !_world.Has<VisualHeightmapSampleState>(owner) ||
-                    _world.Get<VisualHeightmapSampleState>(owner).Sampled == 0)
+                    !_world.Has<ContinuousHeightmapSampleState>(owner) ||
+                    _world.Get<ContinuousHeightmapSampleState>(owner).Sampled == 0)
                 {
                     return true;
                 }

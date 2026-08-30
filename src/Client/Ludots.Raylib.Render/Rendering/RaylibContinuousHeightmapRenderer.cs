@@ -11,7 +11,7 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Raylib.Render
 {
-    public sealed unsafe class RaylibVisualHeightmapRenderer : IDisposable, IRaylibReceiverMeshProjector
+    public sealed unsafe class RaylibContinuousHeightmapRenderer : IDisposable, IRaylibReceiverMeshProjector
     {
         public const string DefaultAlbedoRelativePath = "Presentation/terrain_albedo_environments.json";
         public const string BackendIdRaylib = "raylib";
@@ -56,7 +56,7 @@ namespace Ludots.Raylib.Render
         private int _locNavWalkabilityMap = -1;
         private TerrainAlbedoDescriptor? _activeAlbedo;
         private string? _activeAlbedoMapId;
-        private IVisualHeightmap? _stampHeightSampleSource;
+        private IContinuousHeightmap? _stampHeightSampleSource;
         private readonly Texture2D[] _albedoTextures = new Texture2D[TerrainAlbedoLayerCount];
         private Texture2D _controlMapTexture;
         private Texture2D _navWalkabilityTexture;
@@ -139,8 +139,8 @@ namespace Ludots.Raylib.Render
             {
                 float clamped = Math.Clamp(
                     value,
-                    VisualHeightmapRenderProfile.MinDisplayHeightScale,
-                    VisualHeightmapRenderProfile.MaxDisplayHeightScale);
+                    ContinuousHeightmapRenderProfile.MinDisplayHeightScale,
+                    ContinuousHeightmapRenderProfile.MaxDisplayHeightScale);
                 if (MathF.Abs(_displayHeightScale - clamped) <= 1e-4f)
                 {
                     return;
@@ -151,12 +151,12 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        public RaylibVisualHeightmapRenderer()
+        public RaylibContinuousHeightmapRenderer()
             : this(assetPathResolver: null)
         {
         }
 
-        public RaylibVisualHeightmapRenderer(
+        public RaylibContinuousHeightmapRenderer(
             IRenderAssetPathResolver? assetPathResolver,
             string backendId = BackendIdRaylib)
         {
@@ -375,7 +375,7 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        public void Render(IVisualHeightmapRenderSource source, in Camera3D camera)
+        public void Render(IContinuousHeightmapRenderSource source, in Camera3D camera)
         {
             if (source == null)
             {
@@ -383,7 +383,7 @@ namespace Ludots.Raylib.Render
             }
 
             EnsureInitialized();
-            VisualHeightmapRenderProfile profile = source.RenderProfile.NormalizeAndValidate();
+            ContinuousHeightmapRenderProfile profile = source.RenderProfile.NormalizeAndValidate();
             if (_controlMapEnabled)
             {
                 WorldAabbCm bounds = source.Bounds;
@@ -412,10 +412,10 @@ namespace Ludots.Raylib.Render
                 profile.OverviewSwitchChunkSpans);
             if (useOverview)
             {
-                if (source is not IVisualHeightmap heightSampleSource)
+                if (source is not IContinuousHeightmap heightSampleSource)
                 {
                     throw new InvalidOperationException(
-                        $"{nameof(RaylibVisualHeightmapRenderer)} overview mesh requires the render source to also implement {nameof(IVisualHeightmap)}.");
+                        $"{nameof(RaylibContinuousHeightmapRenderer)} overview mesh requires the render source to also implement {nameof(IContinuousHeightmap)}.");
                 }
 
                 long buildStart = Stopwatch.GetTimestamp();
@@ -443,7 +443,7 @@ namespace Ludots.Raylib.Render
             {
                 for (int x = minChunkX; x <= maxChunkX; x++)
                 {
-                    if (!source.TryGetChunk(x, y, out VisualHeightmapRenderChunk chunk))
+                    if (!source.TryGetChunk(x, y, out ContinuousHeightmapRenderChunk chunk))
                     {
                         MissingChunkCountLastFrame++;
                         continue;
@@ -464,7 +464,7 @@ namespace Ludots.Raylib.Render
             EvictUnusedChunks(240);
         }
 
-        public void RenderShadow(IVisualHeightmapRenderSource source, in Camera3D camera, RaylibDirectionalShadowMap shadow)
+        public void RenderShadow(IContinuousHeightmapRenderSource source, in Camera3D camera, RaylibDirectionalShadowMap shadow)
         {
             if (source == null)
             {
@@ -483,7 +483,7 @@ namespace Ludots.Raylib.Render
             {
                 for (int x = minChunkX; x <= maxChunkX; x++)
                 {
-                    if (!source.TryGetChunk(x, y, out VisualHeightmapRenderChunk chunk))
+                    if (!source.TryGetChunk(x, y, out ContinuousHeightmapRenderChunk chunk))
                     {
                         continue;
                     }
@@ -507,20 +507,20 @@ namespace Ludots.Raylib.Render
                 !float.IsFinite(maxX) || !float.IsFinite(maxY) || !float.IsFinite(maxZ))
             {
                 throw new ArgumentException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)}.{nameof(DrawMeshesOverlappingAabbMeters)} requires finite AABB bounds.");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)}.{nameof(DrawMeshesOverlappingAabbMeters)} requires finite AABB bounds.");
             }
 
             if (minX > maxX || minY > maxY || minZ > maxZ)
             {
                 throw new ArgumentException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)}.{nameof(DrawMeshesOverlappingAabbMeters)} AABB min must be <= max.");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)}.{nameof(DrawMeshesOverlappingAabbMeters)} AABB min must be <= max.");
             }
 
             EnsureInitialized();
             if (_chunks.Count == 0)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} has no cached terrain meshes for projected Decals. Render the visual heightmap before drawing Decals.");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} has no cached terrain meshes for projected Decals. Render the visual heightmap before drawing Decals.");
             }
 
             int drawn = 0;
@@ -541,7 +541,7 @@ namespace Ludots.Raylib.Render
             return drawn;
         }
 
-        public void BindStampHeightSampleSource(IVisualHeightmap heightmap)
+        public void BindStampHeightSampleSource(IContinuousHeightmap heightmap)
         {
             _stampHeightSampleSource = heightmap ?? throw new ArgumentNullException(nameof(heightmap));
         }
@@ -552,9 +552,9 @@ namespace Ludots.Raylib.Render
             in Vector2 stampSizeMeters,
             int stableId)
         {
-            IVisualHeightmap heightmap = _stampHeightSampleSource
+            IContinuousHeightmap heightmap = _stampHeightSampleSource
                 ?? throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} Decal stableId={stableId} has no stamp height sample source. Call {nameof(BindStampHeightSampleSource)} before projecting Decals.");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} Decal stableId={stableId} has no stamp height sample source. Call {nameof(BindStampHeightSampleSource)} before projecting Decals.");
 
             return RaylibDecalStampFit.FitCenter(
                 in stampCenter,
@@ -562,7 +562,7 @@ namespace Ludots.Raylib.Render
                 in stampSizeMeters,
                 stableId,
                 heightmap,
-                nameof(RaylibVisualHeightmapRenderer));
+                nameof(RaylibContinuousHeightmapRenderer));
         }
 
         private void EnsureInitialized()
@@ -650,7 +650,7 @@ namespace Ludots.Raylib.Render
             if (_frameLighting == null)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} requires {nameof(ApplyFrameLighting)} before Render.");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} requires {nameof(ApplyFrameLighting)} before Render.");
             }
 
             ApplySkyIrradianceUniforms();
@@ -824,7 +824,7 @@ namespace Ludots.Raylib.Render
             if (_assetPaths == null)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot activate albedo without an asset path resolver.");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} cannot activate albedo without an asset path resolver.");
             }
 
             EnsureInitialized();
@@ -891,13 +891,13 @@ namespace Ludots.Raylib.Render
             if (!_assetPaths!.TryResolveFullPath(uri, out string fullPath))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot resolve terrain albedo URI '{uri}' for '{descriptorId}' {fieldLabel}.");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} cannot resolve terrain albedo URI '{uri}' for '{descriptorId}' {fieldLabel}.");
             }
 
             if (!File.Exists(fullPath))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} terrain albedo file missing: uri='{uri}' fullPath='{fullPath}' (descriptor '{descriptorId}' {fieldLabel}).");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} terrain albedo file missing: uri='{uri}' fullPath='{fullPath}' (descriptor '{descriptorId}' {fieldLabel}).");
             }
 
             Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
@@ -909,7 +909,7 @@ namespace Ludots.Raylib.Render
                 }
 
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} LoadTexture failed for terrain albedo uri='{uri}' fullPath='{fullPath}' ({fieldLabel}).");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} LoadTexture failed for terrain albedo uri='{uri}' fullPath='{fullPath}' ({fieldLabel}).");
             }
 
             return texture;
@@ -920,19 +920,19 @@ namespace Ludots.Raylib.Render
             if (_assetPaths == null)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot load nav walkability texture without an asset path resolver.");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} cannot load nav walkability texture without an asset path resolver.");
             }
 
             if (!_assetPaths.TryResolveFullPath(uri, out string fullPath))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot resolve nav walkability texture URI '{uri}'.");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} cannot resolve nav walkability texture URI '{uri}'.");
             }
 
             if (!File.Exists(fullPath))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} nav walkability texture file missing: uri='{uri}' fullPath='{fullPath}'.");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} nav walkability texture file missing: uri='{uri}' fullPath='{fullPath}'.");
             }
 
             EnsureInitialized();
@@ -945,7 +945,7 @@ namespace Ludots.Raylib.Render
                 }
 
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} LoadTexture failed for nav walkability texture uri='{uri}' fullPath='{fullPath}'.");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} LoadTexture failed for nav walkability texture uri='{uri}' fullPath='{fullPath}'.");
             }
 
             return texture;
@@ -1118,7 +1118,7 @@ namespace Ludots.Raylib.Render
             return (long)(uint)x << 32 | (uint)y;
         }
 
-        private ref ChunkGpu GetOrCreateChunk(in VisualHeightmapRenderChunk chunk)
+        private ref ChunkGpu GetOrCreateChunk(in ContinuousHeightmapRenderChunk chunk)
         {
             long key = PackChunkKey(chunk.ChunkX, chunk.ChunkY);
             if (_chunks.TryGetValue(key, out ChunkGpu existing))
@@ -1153,7 +1153,7 @@ namespace Ludots.Raylib.Render
             return ref CollectionsMarshal.GetValueRefOrNullRef(_chunks, key);
         }
 
-        private Mesh CreateChunkMesh(in VisualHeightmapRenderChunk chunk)
+        private Mesh CreateChunkMesh(in ContinuousHeightmapRenderChunk chunk)
         {
             ResolveChunkRenderSampling(
                 chunk.SampleColumns,
@@ -1269,7 +1269,7 @@ namespace Ludots.Raylib.Render
             return mesh;
         }
 
-        private static void ResolveChunkHeightRange(in VisualHeightmapRenderChunk chunk, out float minHeightCm, out float maxHeightCm)
+        private static void ResolveChunkHeightRange(in ContinuousHeightmapRenderChunk chunk, out float minHeightCm, out float maxHeightCm)
         {
             minHeightCm = float.PositiveInfinity;
             maxHeightCm = float.NegativeInfinity;
@@ -1381,7 +1381,7 @@ namespace Ludots.Raylib.Render
         }
 
         private static Vector3 ComputeNormal(
-            in VisualHeightmapRenderChunk chunk,
+            in ContinuousHeightmapRenderChunk chunk,
             int x,
             int y,
             float stepXCm,
@@ -1406,7 +1406,7 @@ namespace Ludots.Raylib.Render
                 hBottom = ResolveAbsoluteDisplayHeightCm(hBottom, seaCm, absolutePeakSpanCm);
             }
 
-            float scale = MathF.Max(VisualHeightmapRenderProfile.MinDisplayHeightScale, displayHeightScale);
+            float scale = MathF.Max(ContinuousHeightmapRenderProfile.MinDisplayHeightScale, displayHeightScale);
             float dx = MathF.Max(1f, (right - left) * stepXCm);
             float dz = MathF.Max(1f, (bottom - top) * stepYCm);
             Vector3 normal = Vector3.Normalize(
@@ -1449,8 +1449,8 @@ namespace Ludots.Raylib.Render
         }
 
         private void EnsureOverviewMesh(
-            IVisualHeightmapRenderSource source,
-            IVisualHeightmap heightSampleSource,
+            IContinuousHeightmapRenderSource source,
+            IContinuousHeightmap heightSampleSource,
             int overviewVertexLimit)
         {
             long boundsKey = PackBoundsKey(source.Bounds);
@@ -1472,8 +1472,8 @@ namespace Ludots.Raylib.Render
         }
 
         private unsafe Mesh CreateOverviewMesh(
-            IVisualHeightmapRenderSource source,
-            IVisualHeightmap heightSampleSource,
+            IContinuousHeightmapRenderSource source,
+            IContinuousHeightmap heightSampleSource,
             int overviewVertexLimit)
         {
             int stepChunks = ResolveOverviewStepChunks(source.ChunkColumns, source.ChunkRows, overviewVertexLimit);
@@ -1483,7 +1483,7 @@ namespace Ludots.Raylib.Render
             if (vertexCount > ushort.MaxValue)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} overview mesh vertex count {vertexCount} exceeds Raylib ushort index limit.");
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} overview mesh vertex count {vertexCount} exceeds Raylib ushort index limit.");
             }
 
             int indexCount = checked((columns - 1) * (rows - 1) * 6);
@@ -1720,7 +1720,7 @@ namespace Ludots.Raylib.Render
         }
 
         internal static bool ShouldUseOverviewMesh(
-            IVisualHeightmapRenderSource source,
+            IContinuousHeightmapRenderSource source,
             in Camera3D camera,
             float aspect,
             float detailVisibleRadiusCm,
@@ -1808,14 +1808,14 @@ namespace Ludots.Raylib.Render
             return ((chunkCount + stepChunks - 1) / stepChunks) + 1;
         }
 
-        internal static float ResolveEffectiveSeaLevelCm(VisualHeightmapRenderProfile renderProfile, float minHeightCm)
+        internal static float ResolveEffectiveSeaLevelCm(ContinuousHeightmapRenderProfile renderProfile, float minHeightCm)
         {
             if (renderProfile == null)
             {
                 throw new ArgumentNullException(nameof(renderProfile));
             }
 
-            VisualHeightmapRenderProfile normalized = renderProfile.NormalizeAndValidate();
+            ContinuousHeightmapRenderProfile normalized = renderProfile.NormalizeAndValidate();
             if (!float.IsFinite(minHeightCm))
             {
                 throw new ArgumentOutOfRangeException(nameof(minHeightCm));

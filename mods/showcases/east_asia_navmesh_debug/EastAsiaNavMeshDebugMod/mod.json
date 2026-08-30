@@ -1,7 +1,7 @@
 {
   "name": "EastAsiaNavMeshDebugMod",
   "version": "1.0.0",
-  "description": "Data-only continental NavMesh and walkability texture overlay for the East Asia VisualHeightmap.",
+  "description": "Data-only continental NavMesh and walkability texture overlay for the East Asia ContinuousHeightmap.",
   "priority": 0,
   "dependencies": {
     "EastAsiaPlayableTerrainMod": "^1.0.0",

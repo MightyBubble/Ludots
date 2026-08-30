@@ -6,9 +6,9 @@ namespace Ludots.Core.Presentation.Terrain
     /// Loaded chunk payload for a chunked visual heightmap.
     /// Arrays are owned by the caller/streaming layer and reused across runtime systems.
     /// </summary>
-    public sealed class ChunkedVisualHeightmapChunk
+    public sealed class ChunkedContinuousHeightmapChunk
     {
-        public ChunkedVisualHeightmapChunk(int chunkX, int chunkY, short[] heightSamplesCm, int generation = 0)
+        public ChunkedContinuousHeightmapChunk(int chunkX, int chunkY, short[] heightSamplesCm, int generation = 0)
         {
             if (heightSamplesCm == null) throw new ArgumentNullException(nameof(heightSamplesCm));
 
@@ -20,7 +20,7 @@ namespace Ludots.Core.Presentation.Terrain
             Generation = generation;
         }
 
-        public ChunkedVisualHeightmapChunk(int chunkX, int chunkY, ushort[] heightSamplesRaw, int generation = 0)
+        public ChunkedContinuousHeightmapChunk(int chunkX, int chunkY, ushort[] heightSamplesRaw, int generation = 0)
         {
             if (heightSamplesRaw == null) throw new ArgumentNullException(nameof(heightSamplesRaw));
 

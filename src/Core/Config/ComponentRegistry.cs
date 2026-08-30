@@ -98,7 +98,7 @@ namespace Ludots.Core.Config
             Register<BlackboardFloatBuffer>("BlackboardFloatBuffer");
             Register("AbilityExecAimSync", SetAbilityExecAimSync);
             Register<VisualTransform>("VisualTransform");
-            Register<VisualHeightmapSampleState>("VisualHeightmapSampleState");
+            Register<ContinuousHeightmapSampleState>("ContinuousHeightmapSampleState");
             Register("PresentationStaticTransform", SetPresentationStaticTransform);
             Register<PresentationStaticHeightPending>("PresentationStaticHeightPending");
             Register("ManifestationObstacleIntent2D", SetManifestationObstacleIntent2D);

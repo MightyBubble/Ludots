@@ -1,6 +1,6 @@
 {
   "Id": "raylib_visual_atmosphere_showcase",
-  "VisualHeightmap": {
+  "ContinuousHeightmap": {
     "Asset": "assets/terrain/tropical_island.vhtm",
     "RenderProfile": {
       "WaterEnabled": true,

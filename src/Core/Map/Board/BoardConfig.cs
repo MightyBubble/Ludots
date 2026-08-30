@@ -36,7 +36,7 @@ namespace Ludots.Core.Map.Board
         /// <summary>Path to binary data file (.vtxm, .graph) — optional.</summary>
         public string DataFile { get; set; }
 
-        public string VisualHeightmapAsset { get; set; }
+        public string ContinuousHeightmapAsset { get; set; }
 
         public string StructureCollisionAsset { get; set; } = string.Empty;
 
@@ -48,7 +48,7 @@ namespace Ludots.Core.Map.Board
         public bool NavigationEnabled { get; set; }
 
         /// <summary>
-        /// VisualHeightmap → LogicTerrain 投影的高度量化步长（cm）。0 = 引擎默认
+        /// ContinuousHeightmap → LogicTerrain 投影的高度量化步长（cm）。0 = 引擎默认
         /// （SpatialScaleDefaults.CellCm）。起伏地图用细步长（如 25）可避免
         /// 粗量化把缓坡切成不可通行的陡崖，navmesh 高度语义需与烘焙
         /// heightScaleMeters（米/高度层）= 步长/100 保持一致。
@@ -77,7 +77,7 @@ namespace Ludots.Core.Map.Board
                 ChunkSizeCells = ChunkSizeCells,
                 LoadedChunkCapacity = LoadedChunkCapacity,
                 DataFile = DataFile,
-                VisualHeightmapAsset = VisualHeightmapAsset,
+                ContinuousHeightmapAsset = ContinuousHeightmapAsset,
                 StructureCollisionAsset = StructureCollisionAsset,
                 StructureAwareGrounding = StructureAwareGrounding,
                 StructureAwareNavigation = StructureAwareNavigation,

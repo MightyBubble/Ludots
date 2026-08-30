@@ -318,14 +318,14 @@ namespace Ludots.Tests.Presentation
             map.Initialize(widthInChunks: 1, heightInChunks: 1);
             map.SetHeight(5, 2, 3);
             map.SetHeight(8, 3, 7);
-            var heightmap = new VertexMapVisualHeightmap(() => map);
+            var heightmap = new VertexMapContinuousHeightmap(() => map);
 
             float evenRowVertexXCm = HexCoordinates.HexWidth * 5f * WorldUnits.CmPerMeter;
             float evenRowVertexZCm = HexCoordinates.RowSpacing * 2f * WorldUnits.CmPerMeter;
             Assert.That(
                 heightmap.TrySampleHeightCm(evenRowVertexXCm, evenRowVertexZCm, out float evenHeightCm),
                 Is.True);
-            Assert.That(evenHeightCm, Is.EqualTo(3 * VertexMapVisualHeightmap.DefaultHeightScaleMeters * WorldUnits.CmPerMeter).Within(0.001f));
+            Assert.That(evenHeightCm, Is.EqualTo(3 * VertexMapContinuousHeightmap.DefaultHeightScaleMeters * WorldUnits.CmPerMeter).Within(0.001f));
 
             // 奇数行顶点右移半列；偏移采样必须仍落回同一顶点
             float oddRowVertexXCm = HexCoordinates.HexWidth * (8f + 0.5f) * WorldUnits.CmPerMeter;
@@ -333,7 +333,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(
                 heightmap.TrySampleHeightCm(oddRowVertexXCm + 40f, oddRowVertexZCm - 25f, out float oddHeightCm),
                 Is.True);
-            Assert.That(oddHeightCm, Is.EqualTo(7 * VertexMapVisualHeightmap.DefaultHeightScaleMeters * WorldUnits.CmPerMeter).Within(0.001f));
+            Assert.That(oddHeightCm, Is.EqualTo(7 * VertexMapContinuousHeightmap.DefaultHeightScaleMeters * WorldUnits.CmPerMeter).Within(0.001f));
         }
 
         [Test]
@@ -342,7 +342,7 @@ namespace Ludots.Tests.Presentation
             var map = new VertexMap();
             map.Initialize(widthInChunks: 1, heightInChunks: 1);
             map.SetHeight(0, 0, 4);
-            var heightmap = new VertexMapVisualHeightmap(() => map);
+            var heightmap = new VertexMapContinuousHeightmap(() => map);
 
             float latticeMaxXCm = HexCoordinates.HexWidth * (63f + 0.5f) * WorldUnits.CmPerMeter;
             Assert.That(
@@ -365,7 +365,7 @@ namespace Ludots.Tests.Presentation
             var map = new VertexMap();
             map.Initialize(widthInChunks: 1, heightInChunks: 1);
             map.SetHeight(10, 4, 5);
-            var heightmap = new VertexMapVisualHeightmap(() => map);
+            var heightmap = new VertexMapContinuousHeightmap(() => map);
 
             float vertexXCm = HexCoordinates.HexWidth * 10f * WorldUnits.CmPerMeter;
             float vertexZCm = HexCoordinates.RowSpacing * 4f * WorldUnits.CmPerMeter;
@@ -377,7 +377,7 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(positions[0].X, Is.EqualTo(vertexXCm * 0.01f).Within(0.001f));
             Assert.That(positions[0].Z, Is.EqualTo(vertexZCm * 0.01f).Within(0.001f));
-            Assert.That(positions[0].Y, Is.EqualTo((5 * VertexMapVisualHeightmap.DefaultHeightScaleMeters) + 0.75f).Within(0.001f));
+            Assert.That(positions[0].Y, Is.EqualTo((5 * VertexMapContinuousHeightmap.DefaultHeightScaleMeters) + 0.75f).Within(0.001f));
         }
 
         [Test]
@@ -386,11 +386,11 @@ namespace Ludots.Tests.Presentation
             var map = new VertexMap();
             map.Initialize(widthInChunks: 1, heightInChunks: 1);
             map.SetHeight(6, 6, 4);
-            var heightmap = new VertexMapVisualHeightmap(() => map);
+            var heightmap = new VertexMapContinuousHeightmap(() => map);
 
             float vertexXCm = HexCoordinates.HexWidth * 6f * WorldUnits.CmPerMeter;
             float vertexZCm = HexCoordinates.RowSpacing * 6f * WorldUnits.CmPerMeter;
-            float expectedHeightCm = 4 * VertexMapVisualHeightmap.DefaultHeightScaleMeters * WorldUnits.CmPerMeter;
+            float expectedHeightCm = 4 * VertexMapContinuousHeightmap.DefaultHeightScaleMeters * WorldUnits.CmPerMeter;
             var ray = new ScreenRay(
                 new Vector3(vertexXCm * 0.01f, 500f, vertexZCm * 0.01f),
                 new Vector3(0f, -1f, 0f));
@@ -803,7 +803,7 @@ namespace Ludots.Tests.Presentation
                     Rotation = Quaternion.Identity,
                     Scale = Vector3.One,
                 },
-                new VisualHeightmapSampleState { FrameId = 7, Sampled = 1 });
+                new ContinuousHeightmapSampleState { FrameId = 7, Sampled = 1 });
 
             int defId = definitions.Register("entity.grounded.root", new PresenterDefinition
             {
@@ -838,7 +838,7 @@ namespace Ludots.Tests.Presentation
                 world.Remove<PresenterBootstrapPending>(presenter);
             }
             Assert.That(world.Has<PerfHasGrounding>(presenter), Is.False,
-                "Entity-backed zero-offset snap-to-ground should reuse the owner's VisualHeightmapSampleState instead of entering the presenter tick query.");
+                "Entity-backed zero-offset snap-to-ground should reuse the owner's ContinuousHeightmapSampleState instead of entering the presenter tick query.");
 
             using var system = new PresenterBehaviorSystem(
                 world,
@@ -870,7 +870,7 @@ namespace Ludots.Tests.Presentation
                     Rotation = Quaternion.Identity,
                     Scale = Vector3.One,
                 },
-                new VisualHeightmapSampleState { FrameId = 7, Sampled = 1 });
+                new ContinuousHeightmapSampleState { FrameId = 7, Sampled = 1 });
 
             int defId = definitions.Register("entity.grounded.offset.root", new PresenterDefinition
             {
@@ -1257,7 +1257,7 @@ namespace Ludots.Tests.Presentation
                     Rotation = Quaternion.Identity,
                     Scale = Vector3.One,
                 },
-                new VisualHeightmapSampleState { FrameId = 7, Sampled = 0 });
+                new ContinuousHeightmapSampleState { FrameId = 7, Sampled = 0 });
 
             int defId = definitions.Register("entity.grounded.owner.unresolved", new PresenterDefinition
             {
@@ -1295,7 +1295,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(
                 world.Has<PerfHasGrounding>(presenter),
                 Is.True,
-                "Owner VisualHeightmapSampleState with Sampled=0 is not resolved provenance; presenter must still ground.");
+                "Owner ContinuousHeightmapSampleState with Sampled=0 is not resolved provenance; presenter must still ground.");
 
             using var system = new PresenterBehaviorSystem(
                 world,
@@ -1438,17 +1438,17 @@ namespace Ludots.Tests.Presentation
                     Rotation = Quaternion.Identity,
                     Scale = Vector3.One,
                 },
-                new VisualHeightmapSampleState { FrameId = 16, Sampled = 1 });
+                new ContinuousHeightmapSampleState { FrameId = 16, Sampled = 1 });
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.VisualHeightmap.Name] = new NonFiniteHeightmap(),
+                [CoreServiceKeys.ContinuousHeightmap.Name] = new NonFiniteHeightmap(),
             };
 
             using var system = new TerrainHeightSyncSystem(world, globals);
 
             Assert.DoesNotThrow(() => system.Update(0.016f));
             Assert.That(world.Get<VisualTransform>(entity).Position.Y, Is.EqualTo(9f).Within(0.001f));
-            VisualHeightmapSampleState sampleState = world.Get<VisualHeightmapSampleState>(entity);
+            ContinuousHeightmapSampleState sampleState = world.Get<ContinuousHeightmapSampleState>(entity);
             Assert.That(sampleState.FrameId, Is.EqualTo(17));
             Assert.That(sampleState.Sampled, Is.EqualTo(0), "Non-finite height samples are not valid owner-height provenance.");
         }
@@ -1482,7 +1482,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(globals.Count, Is.EqualTo(0));
         }
 
-        private sealed class StubHeightmap : IVisualHeightmap
+        private sealed class StubHeightmap : IContinuousHeightmap
         {
             private readonly float _heightCm;
             private readonly Vector3 _normal;
@@ -1559,7 +1559,7 @@ namespace Ludots.Tests.Presentation
         /// <summary>
         /// Bound heightmap service that refuses batch sampling (declared Ready but not sampleable).
         /// </summary>
-        private sealed class UnsampleableHeightmap : IVisualHeightmap
+        private sealed class UnsampleableHeightmap : IContinuousHeightmap
         {
             public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
             {
@@ -1608,7 +1608,7 @@ namespace Ludots.Tests.Presentation
         /// <summary>
         /// Heightmap that reports success but yields non-finite heights.
         /// </summary>
-        private sealed class NonFiniteHeightmap : IVisualHeightmap
+        private sealed class NonFiniteHeightmap : IContinuousHeightmap
         {
             public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
             {
@@ -1654,7 +1654,7 @@ namespace Ludots.Tests.Presentation
             }
         }
 
-        private sealed class ThrowingHeightmap : IVisualHeightmap
+        private sealed class ThrowingHeightmap : IContinuousHeightmap
         {
             public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
             {

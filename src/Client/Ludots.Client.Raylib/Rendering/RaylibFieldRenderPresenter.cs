@@ -61,7 +61,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         public float FogOverlayY { get; set; } = 0.08f;
         public float DiscreteOwnershipOverlayY { get; set; } = 0.06f;
-        public IVisualHeightmap? HeightSampleSource { get; set; }
+        public IContinuousHeightmap? HeightSampleSource { get; set; }
         public float HeightSampleDisplayScale { get; set; } = 1f;
         public float DiscreteOwnershipDrapeOffsetMeters { get; set; } = 2f;
 
@@ -213,7 +213,7 @@ namespace Ludots.Client.Raylib.Rendering
                 FieldTextureState state = _stateById[plan.Id];
                 UploadDirtyRects(state);
                 if (state.Id.Kind == GlobalFieldVisualKind.DiscreteOwnership &&
-                    HeightSampleSource is IVisualHeightmap heightSampleSource &&
+                    HeightSampleSource is IContinuousHeightmap heightSampleSource &&
                     ShouldDrapeDiscreteOwnership(plan.CellSizeCm, DiscreteOwnershipDrapeMaxCellSizeCm))
                 {
                     DrawDrapedDiscreteOwnership(state, plan.CellSizeCm, heightSampleSource);
@@ -491,7 +491,7 @@ namespace Ludots.Client.Raylib.Rendering
         }
 
         internal static bool TryResolveDiscreteOwnershipDrape(
-            IVisualHeightmap heightSampleSource,
+            IContinuousHeightmap heightSampleSource,
             IntRect boundsCells,
             int cellSizeCm,
             int textureX,
@@ -731,7 +731,7 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawDrapedDiscreteOwnership(
             FieldTextureState state,
             int cellSizeCm,
-            IVisualHeightmap heightSampleSource)
+            IContinuousHeightmap heightSampleSource)
         {
             EnsureRaylibResources();
             Rl.rlEnableDepthTest();

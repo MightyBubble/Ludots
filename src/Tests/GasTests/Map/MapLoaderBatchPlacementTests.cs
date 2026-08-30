@@ -337,7 +337,7 @@ namespace GasTests
             var owners = FindTemplateEntities(world);
             That(owners.Count, Is.EqualTo(1));
             Entity owner = owners[0];
-            That(world.Has<VisualHeightmapSampleState>(owner), Is.True);
+            That(world.Has<ContinuousHeightmapSampleState>(owner), Is.True);
             That(world.Has<PresentationStaticTransform>(owner), Is.False);
             AssertPlacement(world, owner, authoredXCm, authoredYCm, authoredFacing);
 
@@ -473,7 +473,7 @@ namespace GasTests
                     @"[{ ""Path"": ""Entities/templates.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 string dynamicHeightComponent = includeDynamicHeightSampling
                     ? """
-                          "VisualHeightmapSampleState": {},
+                          "ContinuousHeightmapSampleState": {},
                     """
                     : string.Empty;
                 File.WriteAllText(

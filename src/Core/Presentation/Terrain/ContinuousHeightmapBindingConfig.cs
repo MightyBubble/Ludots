@@ -5,7 +5,7 @@ namespace Ludots.Core.Presentation.Terrain
     /// <summary>
     /// Map-authored declaration for the visual terrain height truth used by presentation.
     /// </summary>
-    public sealed class VisualHeightmapBindingConfig
+    public sealed class ContinuousHeightmapBindingConfig
     {
         /// <summary>
         /// Binary visual heightmap asset path. Resolved through the existing VFS map asset search path.
@@ -31,17 +31,17 @@ namespace Ludots.Core.Presentation.Terrain
         /// <summary>
         /// Presentation-only render profile for adapters. This never changes sampling truth.
         /// </summary>
-        public VisualHeightmapRenderProfile RenderProfile { get; set; } = VisualHeightmapRenderProfile.CreateDefault();
+        public ContinuousHeightmapRenderProfile RenderProfile { get; set; } = ContinuousHeightmapRenderProfile.CreateDefault();
 
-        public VisualHeightmapBindingConfig Clone()
+        public ContinuousHeightmapBindingConfig Clone()
         {
-            return new VisualHeightmapBindingConfig
+            return new ContinuousHeightmapBindingConfig
             {
                 Asset = Asset,
                 BoardName = BoardName,
                 DefaultLayerIndex = DefaultLayerIndex,
                 WorldWidthCm = WorldWidthCm,
-                RenderProfile = (RenderProfile ?? VisualHeightmapRenderProfile.CreateDefault()).NormalizeAndValidate(),
+                RenderProfile = (RenderProfile ?? ContinuousHeightmapRenderProfile.CreateDefault()).NormalizeAndValidate(),
             };
         }
     }

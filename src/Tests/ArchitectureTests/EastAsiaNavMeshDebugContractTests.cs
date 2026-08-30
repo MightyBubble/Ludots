@@ -16,16 +16,16 @@ public sealed class EastAsiaNavMeshDebugContractTests
     private const string MapId = "east_asia_visual_heightmap";
 
     [Test]
-    public void Overlay_EnablesContinentalRecastNavigationWithoutReplacingVisualHeightmap()
+    public void Overlay_EnablesContinentalRecastNavigationWithoutReplacingContinuousHeightmap()
     {
         string root = FindRepoRoot();
         var map = ToolMapConfigResolver.LoadMap(root, MapId, ModId);
         var board = ToolMapConfigResolver.ResolvePrimaryNavigationBoard(map);
         NavMeshBakeConfigContext nav = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(root, ModId);
 
-        Assert.That(map.VisualHeightmap, Is.Not.Null);
+        Assert.That(map.ContinuousHeightmap, Is.Not.Null);
         Assert.That(
-            map.VisualHeightmap.Asset,
+            map.ContinuousHeightmap.Asset,
             Is.EqualTo("assets/samples/LudotsSample/east_asia/east_asia_continuous.height"));
         Assert.That(map.Tags, Does.Contain("Feature.NavMesh:On"));
         Assert.That(board.WidthInMacroTiles, Is.EqualTo(7));

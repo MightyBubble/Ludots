@@ -91,7 +91,7 @@ namespace Ludots.Adapter.Raylib
                 VisibleRadius = 900f,
                 SimplifiedCliffRadius = 350f,
             };
-            var visualHeightmapRenderer = new RaylibVisualHeightmapRenderer(engine.VFS)
+            var continuousHeightmapRenderer = new RaylibContinuousHeightmapRenderer(engine.VFS)
             {
                 VisibleRadiusCm = 140_000f,
             };
@@ -208,7 +208,7 @@ namespace Ludots.Adapter.Raylib
                 RaylibPrimitiveRenderMode primitiveMode = ResolvePrimitiveRenderMode();
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(primitiveMode, engine.VFS, materials, Ludots.Core.Presentation.Assets.AnimationChannelRegistry.Register);
                 primitiveRenderer.BindReceiverMeshProjector(
-                    new MapLaneReceiverMeshProjector(engine, visualHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector));
+                    new MapLaneReceiverMeshProjector(engine, continuousHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector));
                 primitiveRenderer.BindInstancedBatchLaneSource(setup.InstancedBatchLaneStore);
                 engine.SetService(
                     CoreServiceKeys.BoneTransformProvider,
@@ -226,8 +226,8 @@ namespace Ludots.Adapter.Raylib
                 using var waterPass = new RaylibWaterPass(engine.VFS);
                 waterPass.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
                     engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibWaterPass.DefaultRelativePath));
-                visualHeightmapRenderer.LoadAlbedoDescriptors(PresentationCatalogMerge.MergeEntries(
-                    engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibVisualHeightmapRenderer.DefaultAlbedoRelativePath));
+                continuousHeightmapRenderer.LoadAlbedoDescriptors(PresentationCatalogMerge.MergeEntries(
+                    engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibContinuousHeightmapRenderer.DefaultAlbedoRelativePath));
                 GlobalPresentationEventBuffer? globalPresentationEvents = engine.GetService(CoreServiceKeys.GlobalPresentationEventBuffer);
                 skyEnvironment.SetPhaseSourceRequirement(requiredWhenActive: true);
                 skyEnvironment.ApplyDayPhase(frameLighting.DayPhase01);
@@ -273,7 +273,7 @@ namespace Ludots.Adapter.Raylib
                     waterPass,
                     frameLighting,
                     terrainRenderer,
-                    visualHeightmapRenderer,
+                    continuousHeightmapRenderer,
                     fieldRenderPresenter,
                     navMeshPresentationRenderer,
                     navMeshPresentationBuffer,
@@ -358,11 +358,11 @@ namespace Ludots.Adapter.Raylib
                             activeMapHidesDebugGuides ||
                             benchmarkController is { IsActive: true, SuppressHostDebugGuides: true };
                         bool drawTerrain = renderDebug.DrawTerrain && !cleanPerformanceMode;
-                        bool drawVisualHeightmap = renderDebug.DrawTerrain;
-                        bool hasVisualHeightmap = engine.TryGetService(
-                            CoreServiceKeys.VisualHeightmap,
-                            out IVisualHeightmap? visualHeightmapForFrame) &&
-                            visualHeightmapForFrame is IVisualHeightmapRenderSource;
+                        bool drawContinuousHeightmap = renderDebug.DrawTerrain;
+                        bool hasContinuousHeightmap = engine.TryGetService(
+                            CoreServiceKeys.ContinuousHeightmap,
+                            out IContinuousHeightmap? continuousHeightmapForFrame) &&
+                            continuousHeightmapForFrame is IContinuousHeightmapRenderSource;
                         bool drawPrimitives = renderDebug.DrawPrimitives;
                         bool drawDebugDraw = renderDebug.DrawDebugDraw && !cleanPerformanceMode;
                         bool drawFieldOverlays = renderDebug.DrawFieldOverlays && !cleanPerformanceMode;
@@ -418,8 +418,8 @@ namespace Ludots.Adapter.Raylib
                         setup.InstancedBatchLaneStore.ApplyRequests(
                             engine.GetService(CoreServiceKeys.InstancedBatchRequestBuffer).GetSpan(),
                             engine.GetService(CoreServiceKeys.InstancedBatchAssetRegistry),
-                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? coreVisualHeightmap)
-                                ? coreVisualHeightmap
+                            engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? coreContinuousHeightmap)
+                                ? coreContinuousHeightmap
                                 : null);
                         long postTickStart = Stopwatch.GetTimestamp();
                         if (autoOrbitDegPerSecond != 0f)
@@ -502,8 +502,8 @@ namespace Ludots.Adapter.Raylib
                             ActiveMapRequestsDeepBackground: activeMapRequestsDeepBackground,
                             HostDebugGuidesSuppressed: hostDebugGuidesSuppressed,
                             DrawTerrain: drawTerrain,
-                            DrawVisualHeightmap: drawVisualHeightmap,
-                            HasVisualHeightmap: hasVisualHeightmap,
+                            DrawContinuousHeightmap: drawContinuousHeightmap,
+                            HasContinuousHeightmap: hasContinuousHeightmap,
                             DrawPrimitives: drawPrimitives,
                             DrawDebugDraw: drawDebugDraw,
                             DrawFieldOverlays: drawFieldOverlays,
@@ -595,7 +595,7 @@ namespace Ludots.Adapter.Raylib
                 soundConsumer?.Dispose();
                 if (windowOpened) Rl.CloseWindow();
                 terrainRenderer.Dispose();
-                visualHeightmapRenderer.Dispose();
+                continuousHeightmapRenderer.Dispose();
                 engine.Dispose();
             }
         }
@@ -1009,7 +1009,7 @@ namespace Ludots.Adapter.Raylib
             return (Stopwatch.GetTimestamp() - startTicks) * 1000.0 / Stopwatch.Frequency;
         }
     /// <summary>
-    /// 按聚焦地图的车道组合 Decal 接收面：地形接收面（vhtm 渲染源优先，其次 VertexMap）承担 stamp 高度拟合；
+    /// 按聚焦地图的车道组合 Decal 接收面：地形接收面（.height 渲染源优先，其次 VertexMap）承担 stamp 高度拟合；
     /// 单件静态网格接收面与地形接收面同时重画相交网格——贴花可同时落在地面与道具/建筑上。
     /// Fit 永远只走地形车道（静态网格无高度采样，authored Y 不得存活）；无任何地形车道时抛错，
     /// Decal 没有可退化的占位接收面。
@@ -1017,18 +1017,18 @@ namespace Ludots.Adapter.Raylib
     internal sealed class MapLaneReceiverMeshProjector : Ludots.Raylib.Render.IRaylibReceiverMeshProjector
     {
         private readonly GameEngine _engine;
-        private readonly Ludots.Raylib.Render.IRaylibReceiverMeshProjector _visualHeightmapRenderer;
+        private readonly Ludots.Raylib.Render.IRaylibReceiverMeshProjector _continuousHeightmapRenderer;
         private readonly Ludots.Raylib.Render.IRaylibReceiverMeshProjector _terrainRenderer;
         private readonly Ludots.Raylib.Render.IRaylibReceiverMeshProjector _staticMeshReceiverProjector;
 
         public MapLaneReceiverMeshProjector(
             GameEngine engine,
-            Ludots.Raylib.Render.IRaylibReceiverMeshProjector visualHeightmapRenderer,
+            Ludots.Raylib.Render.IRaylibReceiverMeshProjector continuousHeightmapRenderer,
             Ludots.Raylib.Render.IRaylibReceiverMeshProjector terrainRenderer,
             Ludots.Raylib.Render.IRaylibReceiverMeshProjector staticMeshReceiverProjector)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-            _visualHeightmapRenderer = visualHeightmapRenderer ?? throw new ArgumentNullException(nameof(visualHeightmapRenderer));
+            _continuousHeightmapRenderer = continuousHeightmapRenderer ?? throw new ArgumentNullException(nameof(continuousHeightmapRenderer));
             _terrainRenderer = terrainRenderer ?? throw new ArgumentNullException(nameof(terrainRenderer));
             _staticMeshReceiverProjector = staticMeshReceiverProjector ?? throw new ArgumentNullException(nameof(staticMeshReceiverProjector));
         }
@@ -1071,10 +1071,10 @@ namespace Ludots.Adapter.Raylib
 
         private Ludots.Raylib.Render.IRaylibReceiverMeshProjector? TryResolveTerrainReceiver()
         {
-            if (_engine.TryGetService(CoreServiceKeys.VisualHeightmap, out Ludots.Platform.Abstractions.IVisualHeightmap? heightmap) &&
-                heightmap is Ludots.Platform.Abstractions.IVisualHeightmapRenderSource)
+            if (_engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out Ludots.Platform.Abstractions.IContinuousHeightmap? heightmap) &&
+                heightmap is Ludots.Platform.Abstractions.IContinuousHeightmapRenderSource)
             {
-                return _visualHeightmapRenderer;
+                return _continuousHeightmapRenderer;
             }
 
             if (_engine.VertexMap != null)

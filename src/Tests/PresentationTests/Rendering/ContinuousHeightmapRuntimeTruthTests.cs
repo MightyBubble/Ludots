@@ -17,12 +17,12 @@ using NUnit.Framework;
 namespace Ludots.Tests.Presentation
 {
     [TestFixture]
-    public sealed class VisualHeightmapRuntimeTruthTests
+    public sealed class ContinuousHeightmapRuntimeTruthTests
     {
         [Test]
-        public void VisualHeightmapBinary_RoundTripsAssetMetadataAndSamples()
+        public void ContinuousHeightmapBinary_RoundTripsAssetMetadataAndSamples()
         {
-            var asset = new VisualHeightmapAsset(
+            var asset = new ContinuousHeightmapAsset(
                 new WorldAabbCm(-500, 250, 1500, 2000),
                 sampleColumns: 3,
                 sampleRows: 2,
@@ -35,17 +35,17 @@ namespace Ludots.Tests.Presentation
                 },
                 new[]
                 {
-                    new VisualHeightmapLayerDefinition(10, "base", sampleOffset: 0, sampleCount: 6),
-                    new VisualHeightmapLayerDefinition(11, "detail", sampleOffset: 6, sampleCount: 6),
+                    new ContinuousHeightmapLayerDefinition(10, "base", sampleOffset: 0, sampleCount: 6),
+                    new ContinuousHeightmapLayerDefinition(11, "detail", sampleOffset: 6, sampleCount: 6),
                 },
-                VisualHeightmapStorageLayout.RowMajorInt16Centimeters,
+                ContinuousHeightmapStorageLayout.RowMajorInt16Centimeters,
                 defaultLayerIndex: 1);
 
             using var stream = new MemoryStream();
-            VisualHeightmapBinary.Write(stream, asset);
+            ContinuousHeightmapBinary.Write(stream, asset);
             stream.Position = 0;
 
-            VisualHeightmapAsset roundTripped = VisualHeightmapBinary.Read(stream);
+            ContinuousHeightmapAsset roundTripped = ContinuousHeightmapBinary.Read(stream);
 
             Assert.That(roundTripped.Bounds, Is.EqualTo(asset.Bounds));
             Assert.That(roundTripped.SampleColumns, Is.EqualTo(asset.SampleColumns));
@@ -59,37 +59,37 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void VisualHeightmapBinary_RoundTripsScaledUInt16ImportMetadata()
+        public void ContinuousHeightmapBinary_RoundTripsScaledUInt16ImportMetadata()
         {
-            var asset = new VisualHeightmapAsset(
+            var asset = new ContinuousHeightmapAsset(
                 new WorldAabbCm(0, 0, 2000, 1000),
                 sampleColumns: 2,
                 sampleRows: 2,
                 new ushort[] { 0, 100, 200, 300 },
                 new[]
                 {
-                    new VisualHeightmapLayerDefinition(20, "imported", sampleOffset: 0, sampleCount: 4),
+                    new ContinuousHeightmapLayerDefinition(20, "imported", sampleOffset: 0, sampleCount: 4),
                 },
-                new VisualHeightSampleScale(OffsetCm: 50, UnitsPerSampleNumeratorCm: 2, UnitsPerSampleDenominator: 1),
-                VisualHeightmapStorageLayout.RowMajorUInt16Scaled,
+                new ContinuousHeightSampleScale(OffsetCm: 50, UnitsPerSampleNumeratorCm: 2, UnitsPerSampleDenominator: 1),
+                ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled,
                 defaultLayerIndex: 0,
-                interpolationMode: VisualHeightmapInterpolationMode.TriangleHeightfield);
+                interpolationMode: ContinuousHeightmapInterpolationMode.TriangleHeightfield);
 
             using var stream = new MemoryStream();
-            VisualHeightmapBinary.Write(stream, asset);
+            ContinuousHeightmapBinary.Write(stream, asset);
             stream.Position = 0;
 
-            VisualHeightmapAsset roundTripped = VisualHeightmapBinary.Read(stream);
+            ContinuousHeightmapAsset roundTripped = ContinuousHeightmapBinary.Read(stream);
 
-            Assert.That(roundTripped.StorageLayout, Is.EqualTo(VisualHeightmapStorageLayout.RowMajorUInt16Scaled));
-            Assert.That(roundTripped.InterpolationMode, Is.EqualTo(VisualHeightmapInterpolationMode.TriangleHeightfield));
+            Assert.That(roundTripped.StorageLayout, Is.EqualTo(ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled));
+            Assert.That(roundTripped.InterpolationMode, Is.EqualTo(ContinuousHeightmapInterpolationMode.TriangleHeightfield));
             Assert.That(roundTripped.SampleScale, Is.EqualTo(asset.SampleScale));
             Assert.That(roundTripped.HeightSamplesRaw, Is.EqualTo(asset.HeightSamplesRaw));
             Assert.That(roundTripped.UsesRawUInt16Samples, Is.True);
         }
 
         [Test]
-        public void VisualHeightmapRuntime_SupportsBatchSamplingAndSoaRaycast()
+        public void ContinuousHeightmapRuntime_SupportsBatchSamplingAndSoaRaycast()
         {
             var runtime = CreateRuntime();
 
@@ -156,10 +156,10 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void VisualHeightmapRuntime_TriangleInterpolation_UsesExactTriangleTruth_ForSamplingAndRaycast()
+        public void ContinuousHeightmapRuntime_TriangleInterpolation_UsesExactTriangleTruth_ForSamplingAndRaycast()
         {
-            var runtime = new VisualHeightmapRuntime(
-                VisualHeightmapAsset.CreateSingleLayer(
+            var runtime = new ContinuousHeightmapRuntime(
+                ContinuousHeightmapAsset.CreateSingleLayer(
                     new WorldAabbCm(0, 0, 100, 100),
                     sampleColumns: 2,
                     sampleRows: 2,
@@ -168,7 +168,7 @@ namespace Ludots.Tests.Presentation
                         0, 100,
                         0, 0,
                     },
-                    interpolationMode: VisualHeightmapInterpolationMode.TriangleHeightfield));
+                    interpolationMode: ContinuousHeightmapInterpolationMode.TriangleHeightfield));
 
             Assert.That(runtime.TrySampleHeightCm(75f, 75f, out float heightCm), Is.True);
             Assert.That(heightCm, Is.EqualTo(25f).Within(0.001f));
@@ -183,7 +183,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void VisualHeightmapRuntime_RenderSource_SupportsUnevenChunkTailWithoutSecondTruth()
+        public void ContinuousHeightmapRuntime_RenderSource_SupportsUnevenChunkTailWithoutSecondTruth()
         {
             const int columns = 70;
             const int rows = 35;
@@ -196,18 +196,18 @@ namespace Ludots.Tests.Presentation
                 }
             }
 
-            var runtime = new VisualHeightmapRuntime(
-                VisualHeightmapAsset.CreateSingleLayer(
+            var runtime = new ContinuousHeightmapRuntime(
+                ContinuousHeightmapAsset.CreateSingleLayer(
                     new WorldAabbCm(-1200, -700, 6900, 3400),
                     columns,
                     rows,
                     samples));
-            IVisualHeightmapRenderSource source = runtime;
+            IContinuousHeightmapRenderSource source = runtime;
 
             Assert.That(source.ChunkColumns, Is.EqualTo(3));
             Assert.That(source.ChunkRows, Is.EqualTo(2));
 
-            Assert.That(source.TryGetChunk(2, 1, out VisualHeightmapRenderChunk tail), Is.True);
+            Assert.That(source.TryGetChunk(2, 1, out ContinuousHeightmapRenderChunk tail), Is.True);
             Assert.That(tail.SampleColumns, Is.EqualTo(24));
             Assert.That(tail.SampleRows, Is.EqualTo(18));
             Assert.That(tail.SampleStepXCm, Is.EqualTo(100f).Within(0.001f));
@@ -224,7 +224,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TerrainHeightSyncSystem_PrefersVisualHeightmap_AndGroundRaycastUsesSameTruth()
+        public void TerrainHeightSyncSystem_PrefersContinuousHeightmap_AndGroundRaycastUsesSameTruth()
         {
             using var world = World.Create();
             world.Create(
@@ -238,7 +238,7 @@ namespace Ludots.Tests.Presentation
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(400, 800),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(0, 400) },
-                new VisualHeightmapSampleState(),
+                new ContinuousHeightmapSampleState(),
                 new VisualTransform
                 {
                     Position = new Vector3(1f, 0f, 5f),
@@ -250,7 +250,7 @@ namespace Ludots.Tests.Presentation
             var projector = new CountingGroundProjector();
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.VisualHeightmap.Name] = heightmap,
+                [CoreServiceKeys.ContinuousHeightmap.Name] = heightmap,
                 [CoreServiceKeys.VisualGroundProjector.Name] = projector,
             };
 
@@ -268,7 +268,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ChunkedVisualHeightmapRuntime_MatchesScalarAndBatchAcrossSharedSeam()
+        public void ChunkedContinuousHeightmapRuntime_MatchesScalarAndBatchAcrossSharedSeam()
         {
             var runtime = CreateChunkedRuntime(includeRightChunk: true);
 
@@ -344,7 +344,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ChunkedVisualHeightmapRuntime_MissingChunksFailScalarQueries_AndBatchMarksMisses()
+        public void ChunkedContinuousHeightmapRuntime_MissingChunksFailScalarQueries_AndBatchMarksMisses()
         {
             var runtime = CreateChunkedRuntime(includeRightChunk: false);
 
@@ -404,10 +404,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(hitLayer[1], Is.EqualTo(-1));
         }
 
-        private static VisualHeightmapRuntime CreateRuntime()
+        private static ContinuousHeightmapRuntime CreateRuntime()
         {
-            return new VisualHeightmapRuntime(
-                VisualHeightmapAsset.CreateSingleLayer(
+            return new ContinuousHeightmapRuntime(
+                ContinuousHeightmapAsset.CreateSingleLayer(
                     new WorldAabbCm(0, 0, 1000, 1000),
                     sampleColumns: 2,
                     sampleRows: 2,
@@ -418,17 +418,17 @@ namespace Ludots.Tests.Presentation
                     }));
         }
 
-        private static ChunkedVisualHeightmapRuntime CreateChunkedRuntime(bool includeRightChunk)
+        private static ChunkedContinuousHeightmapRuntime CreateChunkedRuntime(bool includeRightChunk)
         {
-            var descriptor = ChunkedVisualHeightmapDescriptor.CreateSingleLayer(
+            var descriptor = ChunkedContinuousHeightmapDescriptor.CreateSingleLayer(
                 new WorldAabbCm(0, 0, 200, 100),
                 chunkColumns: 2,
                 chunkRows: 1,
                 samplesPerChunkColumn: 3,
                 samplesPerChunkRow: 2);
-            var store = new ChunkedVisualHeightmapStore(descriptor);
+            var store = new ChunkedContinuousHeightmapStore(descriptor);
 
-            store.SetChunk(new ChunkedVisualHeightmapChunk(
+            store.SetChunk(new ChunkedContinuousHeightmapChunk(
                 chunkX: 0,
                 chunkY: 0,
                 new short[]
@@ -439,7 +439,7 @@ namespace Ludots.Tests.Presentation
 
             if (includeRightChunk)
             {
-                store.SetChunk(new ChunkedVisualHeightmapChunk(
+                store.SetChunk(new ChunkedContinuousHeightmapChunk(
                     chunkX: 1,
                     chunkY: 0,
                     new short[]
@@ -449,7 +449,7 @@ namespace Ludots.Tests.Presentation
                     }));
             }
 
-            return new ChunkedVisualHeightmapRuntime(descriptor, store);
+            return new ChunkedContinuousHeightmapRuntime(descriptor, store);
         }
 
         private sealed class CountingGroundProjector : IVisualGroundProjector

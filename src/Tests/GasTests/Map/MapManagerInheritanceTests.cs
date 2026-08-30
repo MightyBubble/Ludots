@@ -122,7 +122,7 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenChildOmitsVisualHeightmapAsset_InheritsParentDeclaration()
+        public void LoadMap_WhenChildOmitsContinuousHeightmapAsset_InheritsParentDeclaration()
         {
             var tempRoot = CreateTempDir();
             try
@@ -130,7 +130,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "parent", """
                 {
                   "id": "parent",
-                  "visualHeightmapAsset": "terrain/parent.vhtm"
+                  "continuousHeightmapAsset": "terrain/parent.height"
                 }
                 """);
 
@@ -145,7 +145,7 @@ namespace GasTests
                 var cfg = manager.LoadMap("child");
 
                 Assert.That(cfg, Is.Not.Null);
-                Assert.That(cfg!.VisualHeightmapAsset, Is.EqualTo("terrain/parent.vhtm"));
+                Assert.That(cfg!.ContinuousHeightmapAsset, Is.EqualTo("terrain/parent.height"));
             }
             finally
             {
@@ -154,7 +154,7 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenBoardDeclaresVisualHeightmapAsset_UsesBoardScopedContract()
+        public void LoadMap_WhenBoardDeclaresContinuousHeightmapAsset_UsesBoardScopedContract()
         {
             var tempRoot = CreateTempDir();
             try
@@ -165,7 +165,7 @@ namespace GasTests
                   "boards": [
                     {
                       "name": "default",
-                      "visualHeightmapAsset": "terrain/board.vhtm"
+                      "continuousHeightmapAsset": "terrain/board.height"
                     }
                   ]
                 }
@@ -176,7 +176,7 @@ namespace GasTests
 
                 Assert.That(cfg, Is.Not.Null);
                 Assert.That(cfg!.Boards.Count, Is.EqualTo(1));
-                Assert.That(cfg.Boards[0].VisualHeightmapAsset, Is.EqualTo("terrain/board.vhtm"));
+                Assert.That(cfg.Boards[0].ContinuousHeightmapAsset, Is.EqualTo("terrain/board.height"));
             }
             finally
             {

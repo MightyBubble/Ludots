@@ -6,7 +6,7 @@ namespace Ludots.Platform.Abstractions
     /// Map-owned presentation profile for visual heightmap rendering.
     /// Height samples remain the gameplay truth; this profile controls how adapters display them.
     /// </summary>
-    public sealed class VisualHeightmapRenderProfile
+    public sealed class ContinuousHeightmapRenderProfile
     {
         public const float DefaultSeaLevelCm = 0f;
         public const float DefaultDisplayHeightScale = 1f;
@@ -50,14 +50,14 @@ namespace Ludots.Platform.Abstractions
         /// <summary>Max vertices for the continental overview mesh (Raylib ushort index limit).</summary>
         public int OverviewVertexLimit { get; set; } = DefaultOverviewVertexLimit;
 
-        public static VisualHeightmapRenderProfile CreateDefault()
+        public static ContinuousHeightmapRenderProfile CreateDefault()
         {
-            return new VisualHeightmapRenderProfile();
+            return new ContinuousHeightmapRenderProfile();
         }
 
-        public VisualHeightmapRenderProfile Clone()
+        public ContinuousHeightmapRenderProfile Clone()
         {
-            return new VisualHeightmapRenderProfile
+            return new ContinuousHeightmapRenderProfile
             {
                 WaterEnabled = WaterEnabled,
                 SeaLevelCm = SeaLevelCm,
@@ -70,7 +70,7 @@ namespace Ludots.Platform.Abstractions
             };
         }
 
-        public VisualHeightmapRenderProfile NormalizeAndValidate()
+        public ContinuousHeightmapRenderProfile NormalizeAndValidate()
         {
             RequireFinite(SeaLevelCm, nameof(SeaLevelCm));
             RequireRange(

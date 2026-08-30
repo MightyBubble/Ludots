@@ -1,7 +1,7 @@
 {
   "Id": "capability_standard_static_presenter_30k_mesh_ism_benchmark",
   "Tags": ["showcase", "presenter", "benchmark", "mesh", "ism"],
-  "VisualHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_showcase_flat.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_showcase_flat.vhtm",
   "Metadata": {
     "capabilityStandardStaticPresenter30k": {
       "meshBenchmarkTotal": 30000,
