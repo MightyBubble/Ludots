@@ -1960,6 +1960,24 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
                 outputType = GraphValueType.Int.ToString(),
                 lowersTo = GraphNodeOp.Call.ToString(),
             });
+            authoringSugars.Add(new
+            {
+                op = GraphAuthoringSugar.BtLeaf,
+                controlOutputPorts = Array.Empty<string>(),
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Int.ToString(),
+                lowersTo = "compile-time-splice",
+                functionGraphPortal = true,
+            });
+            authoringSugars.Add(new
+            {
+                op = GraphAuthoringSugar.FsmAction,
+                controlOutputPorts = Array.Empty<string>(),
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Int.ToString(),
+                lowersTo = "compile-time-splice",
+                functionGraphPortal = true,
+            });
         }
         if (graphKind == GraphKind.TriggerGraph)
         {

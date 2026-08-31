@@ -94,6 +94,8 @@ namespace Ludots.Tests.Architecture.GraphRuntime
                 GraphAuthoringSugar.BtSequence,
                 GraphAuthoringSugar.BtSelector,
                 GraphAuthoringSugar.BtDecorator,
+                GraphAuthoringSugar.BtLeaf,
+                GraphAuthoringSugar.FsmAction,
                 GraphAuthoringSugar.Wait,
                 GraphAuthoringSugar.While,
                 GraphAuthoringSugar.Until,

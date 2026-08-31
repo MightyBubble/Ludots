@@ -107,6 +107,7 @@ type GraphNodeConfig = {
   textKey?: string | null;
   presentationSurface?: string | null;
   decoratorKind?: string | null;
+  functionName?: string | null;
   pinRegister?: number;
 };
 
@@ -142,6 +143,7 @@ type GraphSugarDescriptor = {
   outputType: string;
   lowersTo: string;
   childArms?: boolean;
+  functionGraphPortal?: boolean;
 };
 
 type EnumTypeView = {
@@ -327,6 +329,7 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     textKey: n.textKey ?? undefined,
     presentationSurface: n.presentationSurface ?? undefined,
     decoratorKind: n.decoratorKind ?? undefined,
+    functionName: n.functionName ?? undefined,
     pinRegister: n.pinRegister,
   });
 }
@@ -1110,6 +1113,23 @@ export const GasGraphEditorPage: React.FC = () => {
       }),
     );
   };
+
+  const openFunctionGraphPortal = React.useCallback((node: Node<GasNodeData>) => {
+    const portal = sugars[node.data.op]?.functionGraphPortal
+      || node.data.op === 'BtLeaf'
+      || node.data.op === 'FsmAction'
+      || node.data.op === 'InlineGraph'
+      || node.data.op === 'InvokeScript'
+      || node.data.op === 'InvokeGraph';
+    if (!portal) return;
+    const target = (node.data.functionName ?? '').trim();
+    if (!target) {
+      setStatus(`${node.data.op} needs a function graph id before you can open it.`);
+      return;
+    }
+    setGraphId(target);
+    setStatus(`Opened function graph ${target}.`);
+  }, [sugars]);
 
   const onNodesChange = React.useCallback((changes: NodeChange<Node<GasNodeData>>[]) => {
     setNodes((prev) => applyNodeChanges(changes, prev));
@@ -2008,6 +2028,7 @@ export const GasGraphEditorPage: React.FC = () => {
                   event.preventDefault();
                   openPaletteAt(event.clientX, event.clientY);
                 }}
+                onNodeDoubleClick={(_, node) => openFunctionGraphPortal(node)}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
