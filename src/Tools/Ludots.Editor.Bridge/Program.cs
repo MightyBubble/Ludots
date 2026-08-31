@@ -1930,6 +1930,37 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
             lowersTo = nameof(GraphNodeOp.ConcatText),
             braceAutoPins = true,
         });
+        if (graphKind == GraphKind.Script)
+        {
+            // BT composition sugar is Script-only (GraphBehaviorTreeHost). Child arms are
+            // dynamic child:{n} ports — same authoring pattern as SwitchInt case arms.
+            authoringSugars.Add(new
+            {
+                op = GraphAuthoringSugar.BtSequence,
+                controlOutputPorts = Array.Empty<string>(),
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Int.ToString(),
+                lowersTo = GraphNodeOp.Call.ToString(),
+                childArms = true,
+            });
+            authoringSugars.Add(new
+            {
+                op = GraphAuthoringSugar.BtSelector,
+                controlOutputPorts = Array.Empty<string>(),
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Int.ToString(),
+                lowersTo = GraphNodeOp.Call.ToString(),
+                childArms = true,
+            });
+            authoringSugars.Add(new
+            {
+                op = GraphAuthoringSugar.BtDecorator,
+                controlOutputPorts = new[] { GraphControlFlowPorts.ChildPrefix + "0" },
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Int.ToString(),
+                lowersTo = GraphNodeOp.Call.ToString(),
+            });
+        }
         if (graphKind == GraphKind.TriggerGraph)
         {
             authoringSugars.Add(new
