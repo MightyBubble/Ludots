@@ -1,0 +1,14 @@
+flowchart TD
+    A[Release launcher: nav_bake_island_showcase_raylib] --> B{Bridge health ok and pumpCount advances}
+    B -->|no| X[Fail acceptance: process is not live]
+    B -->|yes| C[Load nav_bake_island]
+    C --> D[64 authored KayKit Mass Navigation agents visible]
+    D --> E[Project target onto NavMesh tile]
+    E -->|miss| Y[Fail visibly: target is not walkable]
+    E -->|hit| F[Canonical massNavigationMove order intake]
+    F -->|rejected| Z[Fail visibly: order admission/terminal result]
+    F -->|accepted| G[MovePlan -> route sink -> flow solver]
+    G --> H[HUD: moving/routes and Animator Walking_A]
+    H --> I[World and minimap positions advance]
+    I --> J[Arrival clears movement and Animator returns to Idle]
+    J --> K[Batch repeat: 32 Azure orders accepted and arrive]

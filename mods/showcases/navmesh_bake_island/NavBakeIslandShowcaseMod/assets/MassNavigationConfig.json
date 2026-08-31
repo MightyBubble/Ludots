@@ -1,0 +1,111 @@
+{
+  "mapId": "nav_bake_island",
+  "world": {
+    "solverWindowWidthCm": 90000,
+    "solverWindowHeightCm": 90000,
+    "streamingChunkSizeCm": 6400,
+    "commandFocusHoldTicks": 90,
+    "workAreaPaddingCm": 12000,
+    "workAreaMaxWidthCm": 90000,
+    "workAreaMaxHeightCm": 90000,
+    "activeHotZoneId": "island_crossing",
+    "hotZones": [
+      {
+        "id": "island_crossing",
+        "label": "Island Crossing",
+        "centerXCm": 0,
+        "centerYCm": 0,
+        "widthCm": 90000,
+        "heightCm": 90000
+      }
+    ]
+  },
+  "solver": {
+    "fieldWidthCm": 90000,
+    "fieldHeightCm": 90000,
+    "flowCellSizeCm": 100,
+    "maxObstacleCount": 64,
+    "parallelWorkerCount": 4,
+    "separationHashCellSizeCm": 100,
+    "separationHashMinSearchRadiusCells": 2,
+    "hardResolveHashCellSizeCm": 50,
+    "hardResolveHashMinSearchRadiusCells": 1,
+    "playAreaMinXCm": 50,
+    "playAreaMaxXCm": 89950,
+    "playAreaMinYCm": 50,
+    "playAreaMaxYCm": 89950
+  },
+  "presentation": {
+    "requiredMeshAssetIds": [
+      "mass_navigation.agent.soldier",
+      "mass_navigation.command.marker",
+      "mass_navigation.blocker.rock",
+      "mass_navigation.hotspot.obelisk"
+    ],
+    "blockerPresenterId": "mass_navigation_blocker",
+    "hotspotPresenterId": "mass_navigation_hotspot_marker",
+    "blockerTemplateId": "mass_navigation_blocker",
+    "hotspotTemplateId": "mass_navigation_hotspot_marker",
+    "teams": [
+      {
+        "teamId": 1,
+        "styleId": "blue",
+        "lightTemplateId": "mass_navigation_agent_azure_light",
+        "heavyTemplateId": "mass_navigation_agent_azure_heavy",
+        "lightPresenterId": "mass_navigation_agent_azure_light",
+        "heavyPresenterId": "mass_navigation_agent_azure_heavy"
+      },
+      {
+        "teamId": 2,
+        "styleId": "red",
+        "lightTemplateId": "mass_navigation_agent_crimson_light",
+        "heavyTemplateId": "mass_navigation_agent_crimson_heavy",
+        "lightPresenterId": "mass_navigation_agent_crimson_light",
+        "heavyPresenterId": "mass_navigation_agent_crimson_heavy"
+      }
+    ]
+  },
+  "scenario": {
+    "agentsPerTeam": 32,
+    "teams": [
+      { "id": 1, "name": "Azure Shore Guard" },
+      { "id": 2, "name": "Crimson Ridge Scouts" }
+    ],
+    "spawnLayout": {
+      "kind": "OrbitOpposedTargets",
+      "orbitRadiusCm": 5000,
+      "randomSeed": 1402
+    }
+  },
+  "scenarioRuntime": {
+    "autoSpawnConfiguredScenario": true,
+    "runtimeCapacity": {
+      "navigationGroupCapacity": 64,
+      "groupMembershipAgentCapacity": 256,
+      "groupMemberCapacity": 128,
+      "movePlanExecutionGroupCapacity": 64,
+      "movePlanExecutionMemberCapacity": 128,
+      "routeStateCapacity": 128,
+      "routeMaxExpandedPerRequest": 4096,
+      "routeWaypointCapacityPerAgent": 128,
+      "loadedChunkCapacity": 512,
+      "relationshipDomainCapacity": 4,
+      "displacedAgentCapacity": 64
+    }
+  },
+  "agentProfiles": {
+    "defaultProfileId": "light",
+    "profiles": [
+      { "id": "light", "heavy": false, "visualScale": 0.22, "speedCmPerSecond": 800, "everyNth": 0, "nthOffset": 0 },
+      { "id": "heavy", "heavy": true, "visualScale": 0.34, "speedCmPerSecond": 650, "everyNth": 5, "nthOffset": 0 }
+    ]
+  },
+  "teamRelationships": {
+    "defaultRelationship": "Friendly",
+    "relationships": []
+  },
+  "streaming": {
+    "retainSeconds": 8,
+    "radiusCm": 50000
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "TileId": {
+    "ChunkX": 5,
+    "ChunkY": 6,
+    "Layer": 0
+  },
+  "TileVersion": 1,
+  "Stage": 9,
+  "ErrorCode": 0,
+  "Message": "Recast detail empty; published LogicTerrain strategy mesh.",
+  "WalkableTriangleCount": 75,
+  "VertexCount": 74,
+  "TriangleCount": 75,
+  "PortalCount": 2,
+  "DebugLog": null
+}

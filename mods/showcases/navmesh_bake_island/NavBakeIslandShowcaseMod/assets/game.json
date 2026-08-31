@@ -1,0 +1,59 @@
+{
+  "startupMapId": "nav_bake_island",
+  "windowTitle": "Ludots - NavMesh Island Production Path",
+  "targetFps": 0,
+  "worldWidthInMacroTiles": 5,
+  "worldHeightInMacroTiles": 5,
+  "gasRuntimeCapacity": {
+    "orderQueueCapacity": 4096,
+    "orderAdmissionResultCapacity": 8192,
+    "orderAdmissionRejectionCapacity": 4096,
+    "orderTerminalResultCapacity": 4096
+  },
+  "commandSource": {
+    "targetFilter": {
+      "relationFilter": "Friendly"
+    },
+    "movePathPreviewOrderTypeKeys": ["massNavigationMove"]
+  },
+  "presentation": {
+    "presenterInstanceCapacity": 4096,
+    "gasPresentationEventCapacity": 8192,
+    "presentationEventStreamCapacity": 8192,
+    "presentationOwnerChangeCapacity": 4096,
+    "presenterCommandCapacity": 8192,
+    "primitiveDrawBufferCapacity": 8192,
+    "visualSnapshotBufferCapacity": 8192,
+    "visualProxyBufferCapacity": 8192,
+    "presentationRequestCapacity": 8192,
+    "groundOverlayCapacity": 8192,
+    "splineRibbonCapacity": 1024,
+    "worldHudCapacity": 8192,
+    "screenHudCapacity": 1024,
+    "skinnedVisualBatchCapacity": 4096,
+    "minimapMarkerCapacity": 4096,
+    "runtimeEntitySpawnQueueCapacity": 4096,
+    "runtimeEntitySpawnReceiptQueueCapacity": 4096,
+    "cameraCulling": {
+      "highLodDistanceCm": 5000.0,
+      "mediumLodDistanceCm": 16000.0,
+      "lowLodDistanceCm": 32000.0
+    },
+    "minimap": {
+      "initialZoomNormalized": 0.18,
+      "wheelZoomNormalizedStep": 0.08,
+      "buttonZoomNormalizedStep": 0.18,
+      "zoomSliderEnabled": true,
+      "modeToggleEnabled": true,
+      "rotateToggleEnabled": true,
+      "debugMarkerSampleCapacity": 128,
+      "minZoomExtentMode": "OneChunk",
+      "maxZoomExtentMode": "FullMap",
+      "minZoomExplicitHalfExtentCm": 750.0,
+      "maxZoomExplicitHalfExtentCm": 0.0
+    }
+  },
+  "startupLocalSeats": [
+    { "seatId": "seat.0", "playerId": 1 }
+  ]
+}

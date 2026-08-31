@@ -1,0 +1,61 @@
+{
+  "Id": "nav_bake_island",
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/tropical_island.height",
+    "WorldWidthCm": 128000,
+    "RenderProfile": {
+      "WaterEnabled": true,
+      "SeaLevelCm": 200,
+      "AbsoluteColorPeakSpanCm": 14000
+    }
+  },
+  "Tags": [
+    "showcase",
+    "navmesh",
+    "mass-navigation",
+    "Feature.NavMesh:On"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 5,
+      "HeightInMacroTiles": 5,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "LoadedChunkCapacity": 512,
+      "NavigationEnabled": true,
+      "TerrainHeightStepCm": 100,
+      "TerrainBlockedAtOrBelowHeightCm": 200,
+      "NavTileGrid": {
+        "widthChunks": 20,
+        "heightChunks": 20,
+        "chunkSizeCells": 64,
+        "cellSizeCm": 100,
+        "originXcm": -64000,
+        "originZcm": -64000
+      }
+    }
+  ],
+  "Entities": [
+    { "InstanceId": "player_team", "Template": "mass_navigation_player_team" },
+    { "InstanceId": "opposition_team", "Template": "mass_navigation_player_team" },
+    { "InstanceId": "local_player", "Template": "mass_navigation_local_player" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "player_team" },
+    { "TeamId": 2, "RepresentativeInstanceId": "opposition_team" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "local_player" }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "NavBakeIsland.Camera.Overview",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 45,
+    "Pitch": 48,
+    "DistanceCm": 26000,
+    "FovYDeg": 55
+  }
+}

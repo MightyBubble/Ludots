@@ -1,0 +1,32 @@
+[
+  {
+    "id": "NavBakeIsland.Camera.Overview",
+    "displayName": "NavBake Island Overview",
+    "priority": 0,
+    "rigKind": "Orbit",
+    "distanceCm": 26000,
+    "pitch": 48,
+    "fovYDeg": 55,
+    "yaw": 45,
+    "targetHeightMode": "ContinuousHeightmap",
+    "targetHeightLayerIndex": 0,
+    "targetHeightOffsetCm": 0,
+    "minDistanceCm": 6000,
+    "maxDistanceCm": 80000,
+    "minPitchDeg": 20,
+    "maxPitchDeg": 80,
+    "panMode": "Keyboard",
+    "edgePanMarginPx": 10,
+    "edgePanSpeedCmPerSec": 14000,
+    "panCmPerSecond": 14000,
+    "enableGrabDrag": true,
+    "rotateMode": "Both",
+    "rotateDegPerPixel": 0.28,
+    "rotateRequiresHold": true,
+    "rotateDegPerSecond": 90,
+    "enableZoom": true,
+    "zoomCmPerWheel": 2500,
+    "followMode": "None",
+    "allowUserInput": true
+  }
+]

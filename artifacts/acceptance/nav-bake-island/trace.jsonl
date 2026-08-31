@@ -1,0 +1,12 @@
+{"event_id":"nav1402-start","tick":152,"map":"nav_bake_island","mods":["LudotsCoreMod","CoreInputMod","CameraProfilesMod","MassNavigationMod","NavBakeIslandShowcaseMod","AgentBridgeMod"],"result":"started"}
+{"event_id":"nav1402-health-1","pump_count":75,"result":"ok"}
+{"event_id":"nav1402-health-2","pump_count":77,"result":"ok_pump_advanced"}
+{"event_id":"nav1402-population","tick":152,"agent_count":64,"hotspot_marker_count":1,"teams":["Azure","Crimson"],"result":"authored_population_present"}
+{"event_id":"nav1402-project","world_cm":{"x":3500,"y":2000},"tile_id":"10,10,0","tile_version":1,"hit":true}
+{"event_id":"nav1402-route","start_cm":{"x":-4800,"y":100},"goal_cm":{"x":3500,"y":2000},"status":"Ok","waypoint_count":2,"travel_cost_cm":8514.693}
+{"event_id":"nav1402-single-order","entity_id":12,"order_type":"massNavigationMove","target_cm":{"x":3500,"y":2000},"accepted":true,"result":"Queued"}
+{"event_id":"nav1402-single-moving","entity_id":12,"before_cm":{"x":-4889,"y":141},"after_cm":{"x":3253,"y":0},"hud":{"moving":1,"routes":1,"walking":1},"result":"moved"}
+{"event_id":"nav1402-single-arrived","entity_id":12,"position_cm":{"x":3356,"y":-32},"hud":{"moving":0,"routes":1,"walking":0,"idle":64},"result":"arrived_idle"}
+{"event_id":"nav1402-batch-orders","team":"Azure","entity_count":32,"accepted_count":32,"target_cm":{"x":3500,"y":2000},"result":"accepted"}
+{"event_id":"nav1402-batch-progress","team":"Azure","entity_count":32,"agents_past_x_cm":-4000,"result":"all_moving"}
+{"event_id":"nav1402-batch-arrived","team":"Azure","entity_count":32,"agents_past_x_cm":3000,"result":"all_arrived"}

@@ -1,0 +1,15 @@
+{
+  "name": "NavBakeIslandShowcaseMod",
+  "version": "1.0.0",
+  "description": "Configuration-driven island showcase: real Mass Navigation, NavMesh pathing, KayKit skeletal animation, and terrain grounding.",
+  "main": "bin/net9.0/NavBakeIslandShowcaseMod.dll",
+  "priority": -2000,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "MassNavigationMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "navigation", "navmesh", "mass-navigation", "kaykit", "animator", "data-driven"]
+}
