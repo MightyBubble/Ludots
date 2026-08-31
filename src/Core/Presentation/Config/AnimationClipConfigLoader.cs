@@ -58,6 +58,7 @@ namespace Ludots.Core.Presentation.Config
                 string backendId = locatorNode["backendId"]?.GetValue<string>() ?? string.Empty;
                 string assetRef = locatorNode["assetRef"]?.GetValue<string>() ?? string.Empty;
                 string variant = locatorNode["variant"]?.GetValue<string>() ?? string.Empty;
+                _ = ClipAssetLocatorSelector.Parse(assetRef);
                 locators[i] = new AnimationClipLocatorDefinition(backendId, assetRef, variant);
             }
 

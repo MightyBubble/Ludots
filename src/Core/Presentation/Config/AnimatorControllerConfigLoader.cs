@@ -49,6 +49,7 @@ namespace Ludots.Core.Presentation.Config
 
                 states[i] = new AnimatorStateDefinition
                 {
+                    Name = stateNode["name"]?.GetValue<string>() ?? string.Empty,
                     PackedStateIndex = RequireInt(stateNode["packedStateIndex"], $"Animator controller '{key}' state[{i}].packedStateIndex"),
                     DurationSeconds = RequirePositiveFloat(stateNode["durationSeconds"], $"Animator controller '{key}' state[{i}].durationSeconds"),
                     PlaybackSpeed = RequirePositiveFloat(stateNode["playbackSpeed"], $"Animator controller '{key}' state[{i}].playbackSpeed"),

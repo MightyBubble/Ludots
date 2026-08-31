@@ -14,6 +14,7 @@ namespace Ludots.Raylib.Render
         private readonly RaylibGpuSkinnedModelCache _modelCache;
         private readonly RaylibInstancedMaterialPipeline _materials;
         private readonly int _maxModelInstancesPerDraw;
+        private readonly IRenderAnimationClipResolver? _animationResolver;
 
         private Shader _skinningShader;
         private bool _skinningShaderReady;
@@ -38,7 +39,8 @@ namespace Ludots.Raylib.Render
         private float _frameShadowTexelWorld = 0.04f;
         private RaylibPoseTexturePalette? _posePalette;
         private readonly Dictionary<(int MeshAssetId, int ClipIndex, int FrameIndex), int> _poseRowByKey = new();
-        private readonly List<(int PoseRow, int MeshAssetId, int ClipIndex, int FrameIndex)> _dirtyPoseRows = new();
+        private readonly Dictionary<(int MeshAssetId, int ProfileId, int StateIndex), ResolvedAnimationClip> _resolvedClips = new();
+        private readonly List<DirtyPoseRow> _dirtyPoseRows = new();
         private int _locBonePaletteSampler = -1;
         private int _locInstanceTableSampler = -1;
         private int _locInstanceBase = -1;
@@ -47,11 +49,13 @@ namespace Ludots.Raylib.Render
         public RaylibGpuSkinnedBatchRenderer(
             RaylibGpuSkinnedModelCache modelCache,
             RaylibInstancedMaterialPipeline materials,
-            int maxModelInstancesPerDraw)
+            int maxModelInstancesPerDraw,
+            IRenderAnimationClipResolver? animationResolver = null)
         {
             _modelCache = modelCache ?? throw new ArgumentNullException(nameof(modelCache));
             _materials = materials ?? throw new ArgumentNullException(nameof(materials));
             _maxModelInstancesPerDraw = maxModelInstancesPerDraw;
+            _animationResolver = animationResolver;
         }
 
         public int LastInstances { get; private set; }
@@ -111,17 +115,47 @@ namespace Ludots.Raylib.Render
 
             RaylibGpuSkinnedModelCache.Entry entry = _modelCache.GetOrLoad(item.MeshAssetId, in descriptor);
             AnimatorPackedState animator = item.Animator;
-            RaylibSkinnedPlayback.ResolveFromAnimator(
-                in animator,
-                entry.Animations,
-                entry.AnimCount,
-                stateToClipMap: null,
-                out int clipIndex,
-                out int frameIndex);
+            int stateIndex = animator.GetPrimaryStateIndex();
+            var resolvedClipKey = (item.MeshAssetId, item.AnimationProfileId, stateIndex);
+            int clipIndex;
+            int frameIndex;
+            if (!_resolvedClips.TryGetValue(resolvedClipKey, out ResolvedAnimationClip resolvedClip))
+            {
+                RaylibSkinnedPlayback.ResolveFromAnimator(
+                    in animator,
+                    entry.Animations,
+                    entry.AnimCount,
+                    item.AnimationProfileId,
+                    _animationResolver,
+                    entry.AnimationNames,
+                    out ClipAssetLocatorSelector selector,
+                    out clipIndex,
+                    out frameIndex,
+                    out _);
+                if (item.AnimationProfileId > 0)
+                {
+                    RaylibSkinnedPlayback.ValidateSelectorSource(
+                        in selector,
+                        entry.SourcePath,
+                        _modelCache.RequireAssetPathResolver());
+                }
+
+                resolvedClip = new ResolvedAnimationClip(clipIndex);
+                _resolvedClips.Add(resolvedClipKey, resolvedClip);
+            }
+            else
+            {
+                clipIndex = resolvedClip.ClipIndex;
+                bool looping = (animator.GetFlags() & AnimatorPackedStateFlags.Looping) != 0;
+                frameIndex = RaylibSkinnedPlayback.ResolveFrameIndex(
+                    entry.Animations[clipIndex].frameCount,
+                    animator.GetNormalizedTime01(),
+                    looping);
+            }
 
             long start = Stopwatch.GetTimestamp();
 
-            // 姿势纹理蒙皮（#1395）：桶键只含 (mesh, material)——姿势与颜色按实例记录
+            // 桶键只含 (mesh, material)；姿势与颜色按实例记录。
             var key = new GpuSkinnedInstanceBatchKey(item.MeshAssetId, item.MaterialId);
             if (!_gpuSkinnedInstanceBatches.TryGetValue(key, out GpuSkinnedInstanceBatch? batch))
             {
@@ -149,7 +183,7 @@ namespace Ludots.Raylib.Render
                 _posePalette ??= new RaylibPoseTexturePalette();
                 poseRow = _poseRowByKey.Count;
                 _poseRowByKey[poseKey] = poseRow;
-                _dirtyPoseRows.Add((poseRow, item.MeshAssetId, clipIndex, frameIndex));
+                _dirtyPoseRows.Add(new DirtyPoseRow(poseRow, batch, clipIndex, frameIndex));
             }
 
             batch.Add(
@@ -191,7 +225,7 @@ namespace Ludots.Raylib.Render
         /// <summary>
         /// 把 dirty 姿势行的骨骼矩阵从 native 内存按 texel 合同写入调色板 staging 并上传；
         /// 同时把全部活跃实例的 (poseRow, tint) 写入实例表 staging 并上传，并在此确定每个
-        /// 批次的 GlobalInstanceBase（阴影与主 pass 共用同一寻址，#1395）。
+        /// 批次的 GlobalInstanceBase，阴影与主 pass 共用同一寻址。
         /// 每帧只构建一次：阴影 pass 先于主 pass，两处调用经 _poseTexturesBuiltForFrame 幂等。
         /// </summary>
         private unsafe void BuildAndUploadPoseTextures()
@@ -202,7 +236,7 @@ namespace Ludots.Raylib.Render
             }
 
             // 0. 容量前置（一次定型）：扩容会重建纹理、丢弃已上传行，因此必须发生在本帧
-            // 任何行写入/上传之前，禁止在逐行循环中途触发（#1395 codex 复审结论）。
+            // 必须在任何行写入/上传之前完成规划，禁止在逐行循环中途触发。
             int maxBoneSlots = 0;
             for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
             {
@@ -219,23 +253,23 @@ namespace Ludots.Raylib.Render
                 }
             }
 
-            _posePalette.EnsureBoneSlotCapacity(maxBoneSlots);
-            _posePalette.EnsurePoseRowCapacity(_poseRowByKey.Count);
+            _posePalette.EnsureCapacity(maxBoneSlots, _poseRowByKey.Count);
 
             // 1. 姿势调色板：对每个 dirty 行，调 UpdateModelAnimationBones 后立刻按 texel 合同复制。
             // 骨骼槽位 = mesh 局部 boneId + 前序 mesh 的 boneCount 累计（多 mesh 合同）。
             for (int i = 0; i < _dirtyPoseRows.Count; i++)
             {
-                (int poseRow, int meshAssetId, int clipIndex, int frameIndex) = _dirtyPoseRows[i];
-                var batch = _activeGpuSkinnedInstanceBatches.FirstOrDefault(b => b.Key.MeshAssetId == meshAssetId);
-                if (batch == null || batch.Animations == null)
+                DirtyPoseRow dirty = _dirtyPoseRows[i];
+                GpuSkinnedInstanceBatch batch = dirty.Batch;
+                if (batch.Animations == null)
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} meshAssetId={batch.Key.MeshAssetId} has no loaded animations while uploading a pose.");
                 }
 
                 Model model = batch.Model;
-                ModelAnimation anim = batch.Animations[clipIndex];
-                Rl.UpdateModelAnimationBones(model, anim, frameIndex);
+                ModelAnimation anim = batch.Animations[dirty.ClipIndex];
+                Rl.UpdateModelAnimationBones(model, anim, dirty.FrameIndex);
                 batch.BonesPrepared = true;
 
                 int boneBase = 0;
@@ -245,18 +279,18 @@ namespace Ludots.Raylib.Render
                     if (mesh.boneCount > 0 && mesh.boneMatrices == null)
                     {
                         throw new InvalidOperationException(
-                            $"{nameof(RaylibGpuSkinnedBatchRenderer)} meshAssetId={meshAssetId} mesh[{meshIndex}] boneCount={mesh.boneCount} but boneMatrices is null.");
+                            $"{nameof(RaylibGpuSkinnedBatchRenderer)} meshAssetId={batch.Key.MeshAssetId} mesh[{meshIndex}] boneCount={mesh.boneCount} but boneMatrices is null.");
                     }
 
                     for (int b = 0; b < mesh.boneCount && b < RaylibPoseTexturePalette.MaxBoneCount; b++)
                     {
-                        _posePalette.WriteBoneMatrix(poseRow, boneBase + b, mesh.boneMatrices[b]);
+                        _posePalette.WriteBoneMatrix(dirty.PoseRow, boneBase + b, mesh.boneMatrices[b]);
                     }
 
                     boneBase += mesh.boneCount;
                 }
 
-                _posePalette.FlushPaletteRow(poseRow);
+                _posePalette.FlushPaletteRow(dirty.PoseRow);
             }
 
             // 2. 实例表：每实例 (poseRow + RGBA tint) 写入 staging 并上传，同时锁定批次实例基址
@@ -366,7 +400,7 @@ namespace Ludots.Raylib.Render
                             material.shader = _skinningShader;
                             _materials.ApplyHostMaterialMaps(ref material, materialId, _skinningShader, in _skinningPbrLocs);
                             RaylibInstancedMaterialPipeline.BindFrameShadow(ref material, _frameShadow);
-                            // tint 经实例表按实例传入（#1395）
+                            // tint 经实例表按实例传入。
 
                             // 姿势纹理蒙皮：骨骼矩阵已在调色板纹理中，无需 uniform 上传
                             BindPoseTextures(ref material);
@@ -522,7 +556,7 @@ namespace Ludots.Raylib.Render
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = _locBonePaletteSampler;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = _locInstanceTableSampler;
 
-            // 姿势纹理蒙皮（#1395）：boneMatrices uniform 不再存在，调色板走纹理
+            // boneMatrices uniform 不再存在，调色板走纹理。
             if (_locBonePaletteSampler < 0) throw new InvalidOperationException("Skinning shader sampler 'uBonePalette' not found.");
             if (_locInstanceTableSampler < 0) throw new InvalidOperationException("Skinning shader sampler 'uInstanceTable' not found.");
             if (_locInstanceBase < 0) throw new InvalidOperationException("Skinning shader uniform 'uInstanceBase' not found.");
@@ -594,6 +628,14 @@ namespace Ludots.Raylib.Render
         private readonly record struct GpuSkinnedInstanceBatchKey(
             int MeshAssetId,
             int MaterialId);
+
+        private readonly record struct ResolvedAnimationClip(int ClipIndex);
+
+        private readonly record struct DirtyPoseRow(
+            int PoseRow,
+            GpuSkinnedInstanceBatch Batch,
+            int ClipIndex,
+            int FrameIndex);
 
         private sealed class GpuSkinnedInstanceBatch
         {

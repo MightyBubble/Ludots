@@ -28,6 +28,7 @@
       "additionalProperties": false,
       "required": ["packedStateIndex", "durationSeconds", "playbackSpeed", "loop"],
       "properties": {
+        "name": { "type": "string", "minLength": 1 },
         "packedStateIndex": { "type": "integer", "minimum": 0 },
         "durationSeconds": { "type": "number", "exclusiveMinimum": 0 },
         "playbackSpeed": { "type": "number", "exclusiveMinimum": 0 },

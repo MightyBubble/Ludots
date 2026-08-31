@@ -47,7 +47,7 @@ internal sealed class MassNavigationLargeWorldLocalOrderSourceSystem : ISystem<f
             return;
         }
 
-        Entity actor = _helper.GetControlledActor();
+        Entity actor = _helper.GetSolePossessedRep();
         if (_helper.TryBindSoleSeatActor(_mapping, actor))
         {
             _mapping.Update(dt);

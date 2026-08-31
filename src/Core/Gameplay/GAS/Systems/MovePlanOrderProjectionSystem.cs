@@ -67,18 +67,19 @@ public sealed class MovePlanOrderProjectionSystem : BaseSystem<World, float>
                     intent = default;
                     result = new MovePlanExecutionResult
                     {
-                        CommandGroupToken = order.OrderId,
+                        CommandGroupToken = ResolveCommandGroupToken(in order),
                         Kind = MovePlanExecutionResultKind.Failed,
                         FailureReason = MovePlanFailureReason.ExecutionUnavailable,
                     };
                     continue;
                 }
 
+                int commandGroupToken = ResolveCommandGroupToken(in order);
                 if (intent.Mode != MovePlanExecutionMode.CommandGroup ||
-                    intent.CommandGroupToken != order.OrderId)
+                    intent.CommandGroupToken != commandGroupToken)
                 {
                     intent = default;
-                    intent.CommandGroupToken = order.OrderId;
+                    intent.CommandGroupToken = commandGroupToken;
                 }
 
                 intent.TargetWorldCm = new System.Numerics.Vector2(
@@ -89,5 +90,18 @@ public sealed class MovePlanOrderProjectionSystem : BaseSystem<World, float>
                 result = default;
             }
         }
+
+    }
+
+    private static int ResolveCommandGroupToken(in Order order)
+        {
+            return IsUnsetCommandSource(order.CommandSource) && order.AdmissionBatchId > 0
+                ? order.AdmissionBatchId
+                : order.OrderId;
+        }
+
+    private static bool IsUnsetCommandSource(Entity commandSource)
+    {
+        return commandSource == default || commandSource == Entity.Null;
     }
 }

@@ -6,7 +6,8 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.Raylib.Render
 {
     /// <summary>
-    /// 姿势纹理蒙皮的 GPU 资源管理（#1395）：骨骼调色板（RGBA32F，宽=槽位容量*4 texel，高=姿势数）
+    /// 姿势纹理蒙皮的 GPU 资源管理：骨骼调色板（RGBA32F，固定宽 1024、高不超过 1024 texel）。
+    /// 每个 pose 的骨骼槽位沿 X 轴每行容纳 256 个，超过一行时继续占用相邻物理行。
     /// 与实例表（RGBA32F，宽 1024，每实例 2 texel）两张纹理的创建、脏行更新与销毁。
     /// 槽位容量按模型全部 mesh 的 boneCount 累计动态扩容（多 mesh 各持局部骨骼集，允许重叠）。
     /// 纹理创建经 LoadTextureFromImage（format=10 即 R32G32B32A32）；更新经 UpdateTextureRec 脏矩形。
@@ -15,12 +16,15 @@ namespace Ludots.Raylib.Render
     public sealed unsafe class RaylibPoseTexturePalette : IDisposable
     {
         public const int MaxBoneCount = RaylibGpuSkinnedModelCache.MaxBones; // 单 mesh 骨骼上限 128
-        public const int MaxBoneSlotCapacity = 512;                          // 全模型累计槽位硬上限
+        public const int BonePaletteTextureWidthTexels = 1024;
+        public const int BonePaletteTextureHeightTexels = 1024;
+        public const int TexelsPerBoneSlot = 4;
+        public const int BoneSlotsPerTextureRow = BonePaletteTextureWidthTexels / TexelsPerBoneSlot;
+        public const int MaxBoneSlotCapacity = BoneSlotsPerTextureRow * BonePaletteTextureHeightTexels;
         public const int InstanceTableWidth = 1024;
         public const int TexelsPerInstance = 2;
         public const int InstancesPerRow = InstanceTableWidth / TexelsPerInstance; // 512
         private const int PixelFormatR32G32B32A32 = 10;
-        private const int TexelsPerBoneSlot = 4;
 
         private Texture2D _bonePalette;
         private Texture2D _instanceTable;
@@ -28,50 +32,156 @@ namespace Ludots.Raylib.Render
         private float[] _instanceStaging;
         private int _boneSlotCapacity;
         private int _poseRowCapacity;
+        private int _rowsPerPose;
         private int _instanceCapacity;
         private bool _disposed;
 
         public Texture2D BonePalette => _bonePalette;
         public Texture2D InstanceTable => _instanceTable;
-        public int PaletteWidthTexels => _boneSlotCapacity * TexelsPerBoneSlot;
+        public int PaletteWidthTexels => BonePaletteTextureWidthTexels;
+        public int PaletteHeightTexels => GetPaletteHeightTexels(_poseRowCapacity, _rowsPerPose);
+        public int RowsPerPose => _rowsPerPose;
 
         public RaylibPoseTexturePalette(int initialPoseRows = 64, int initialInstances = 4096)
         {
             _boneSlotCapacity = MaxBoneCount * 2;
-            _poseRowCapacity = Math.Max(16, initialPoseRows);
+            _rowsPerPose = GetRowsPerPose(_boneSlotCapacity);
+            _poseRowCapacity = ResolveInitialPoseRowCapacity(initialPoseRows, _rowsPerPose);
             _instanceCapacity = Math.Max(1024, initialInstances);
-            _paletteStaging = new float[PaletteWidthTexels * _poseRowCapacity * 4]; // RGBA per texel
+            _paletteStaging = new float[PaletteWidthTexels * GetPaletteHeightTexels(_poseRowCapacity, _rowsPerPose) * 4]; // RGBA per texel
             _instanceStaging = new float[InstanceTableWidth * InstanceTableHeight(_instanceCapacity) * 4];
 
-            _bonePalette = CreateFloatTexture(PaletteWidthTexels, _poseRowCapacity);
+            _bonePalette = CreateFloatTexture(PaletteWidthTexels, GetPaletteHeightTexels(_poseRowCapacity, _rowsPerPose));
             _instanceTable = CreateFloatTexture(InstanceTableWidth, InstanceTableHeight(_instanceCapacity));
         }
 
-        /// <summary>扩容骨骼槽位（多 mesh 模型的累计 boneCount 超过当前容量时）。
-        /// 重建纹理会丢既有行内容——必须在帧内任何行上传之前一次性定容（与 EnsurePoseRowCapacity 同款约束）。</summary>
-        public void EnsureBoneSlotCapacity(int minSlots)
+        /// <summary>按本帧的骨骼槽位与逻辑 pose 数一次性规划二维调色板。</summary>
+        public void EnsureCapacity(int minSlots, int minPoseRows)
         {
-            if (minSlots <= _boneSlotCapacity)
+            (int boneSlotCapacity, int poseRowCapacity, int rowsPerPose) = ResolvePaletteCapacity(
+                _boneSlotCapacity,
+                _poseRowCapacity,
+                minSlots,
+                minPoseRows);
+            if (boneSlotCapacity == _boneSlotCapacity && poseRowCapacity == _poseRowCapacity)
             {
                 return;
             }
 
-            if (minSlots > MaxBoneSlotCapacity)
+            int newHeight = GetPaletteHeightTexels(poseRowCapacity, rowsPerPose);
+            Array.Resize(ref _paletteStaging, PaletteWidthTexels * newHeight * 4);
+            RaylibNativeResources.UnloadTexture(_bonePalette);
+            _bonePalette = CreateFloatTexture(PaletteWidthTexels, newHeight);
+            _boneSlotCapacity = boneSlotCapacity;
+            _poseRowCapacity = poseRowCapacity;
+            _rowsPerPose = rowsPerPose;
+        }
+
+        internal static (int BoneSlotCapacity, int PoseRowCapacity, int RowsPerPose) ResolvePaletteCapacity(
+            int currentBoneSlotCapacity,
+            int currentPoseRowCapacity,
+            int minSlots,
+            int minPoseRows)
+        {
+            if (minSlots <= 0)
             {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPoseTexturePalette)} requested bone slot capacity {minSlots} exceeds hard cap {MaxBoneSlotCapacity}.");
+                throw new ArgumentOutOfRangeException(nameof(minSlots), minSlots, "Bone slot capacity must be positive.");
             }
 
-            int newCapacity = Math.Max(minSlots, _boneSlotCapacity * 2);
-            Array.Resize(ref _paletteStaging, newCapacity * TexelsPerBoneSlot * _poseRowCapacity * 4);
-            RaylibNativeResources.UnloadTexture(_bonePalette);
-            _bonePalette = CreateFloatTexture(newCapacity * TexelsPerBoneSlot, _poseRowCapacity);
-            _boneSlotCapacity = newCapacity;
+            if (minPoseRows <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(minPoseRows), minPoseRows, "Pose row capacity must be positive.");
+            }
+
+            int requiredRowsPerPose = GetRowsPerPose(minSlots);
+            int maxPoseRows = BonePaletteTextureHeightTexels / requiredRowsPerPose;
+            if (minPoseRows > maxPoseRows)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPoseTexturePalette)} requires {minSlots} bone slots and {minPoseRows} pose rows, exceeding the {BonePaletteTextureWidthTexels}x{BonePaletteTextureHeightTexels} 2D palette capacity.");
+            }
+
+            int currentRowsPerPose = GetRowsPerPose(currentBoneSlotCapacity);
+            if (requiredRowsPerPose <= currentRowsPerPose && minPoseRows <= currentPoseRowCapacity)
+            {
+                return (currentBoneSlotCapacity, currentPoseRowCapacity, currentRowsPerPose);
+            }
+
+            int desiredPoseRows = minPoseRows > currentPoseRowCapacity
+                ? Math.Max(minPoseRows, checked(currentPoseRowCapacity * 2))
+                : currentPoseRowCapacity;
+            int poseRowCapacity = Math.Min(maxPoseRows, Math.Max(16, desiredPoseRows));
+            int boneSlotCapacity = requiredRowsPerPose * BoneSlotsPerTextureRow;
+            return (boneSlotCapacity, poseRowCapacity, requiredRowsPerPose);
+        }
+
+        internal static int GetRowsPerPose(int boneSlots)
+        {
+            if (boneSlots <= 0 || boneSlots > MaxBoneSlotCapacity)
+            {
+                throw new ArgumentOutOfRangeException(nameof(boneSlots), boneSlots, $"Bone slots must be in [1, {MaxBoneSlotCapacity}].");
+            }
+
+            return (boneSlots + BoneSlotsPerTextureRow - 1) / BoneSlotsPerTextureRow;
+        }
+
+        internal static int ResolveInitialPoseRowCapacity(int initialPoseRows, int rowsPerPose)
+        {
+            int requestedRows = Math.Max(16, initialPoseRows);
+            int maxRows = BonePaletteTextureHeightTexels / rowsPerPose;
+            if (requestedRows > maxRows)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(initialPoseRows),
+                    initialPoseRows,
+                    $"Initial pose rows {requestedRows} exceed the 2D palette capacity {maxRows} for {rowsPerPose} rows per pose.");
+            }
+
+            return requestedRows;
+        }
+
+        internal static int GetPaletteHeightTexels(int poseRows, int rowsPerPose)
+        {
+            if (poseRows < 0 || rowsPerPose <= 0)
+            {
+                throw new ArgumentOutOfRangeException();
+            }
+
+            int height = checked(poseRows * rowsPerPose);
+            if (height > BonePaletteTextureHeightTexels)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPoseTexturePalette)} requires palette height {height}, exceeding the 2D texture limit {BonePaletteTextureHeightTexels}.");
+            }
+
+            return height;
+        }
+
+        internal static int GetPoseTextureRow(int poseRow, int rowsPerPose)
+        {
+            if (poseRow < 0 || rowsPerPose <= 0)
+            {
+                throw new ArgumentOutOfRangeException();
+            }
+
+            return checked(poseRow * rowsPerPose);
+        }
+
+        internal static (int Row, int TexelX) GetBoneTexelAddress(int poseRow, int boneSlot, int rowsPerPose)
+        {
+            if (poseRow < 0 || boneSlot < 0 || rowsPerPose <= 0 || boneSlot >= rowsPerPose * BoneSlotsPerTextureRow)
+            {
+                throw new ArgumentOutOfRangeException();
+            }
+
+            int rowWithinPose = boneSlot / BoneSlotsPerTextureRow;
+            int slotWithinRow = boneSlot % BoneSlotsPerTextureRow;
+            return (checked(poseRow * rowsPerPose + rowWithinPose), slotWithinRow * TexelsPerBoneSlot);
         }
 
         /// <summary>
         /// 把一个骨骼矩阵（raylib native RaylibMatrix）写入调色板 staging 的指定槽位。
-        /// texel 布局必须与 raylib 自身的骨骼矩阵上传语义逐位一致（#1395 排障结论）：
+        /// texel 布局必须与 raylib 自身的骨骼矩阵上传语义逐位一致：
         /// rlSetUniformMatrices 走 glUniformMatrix4fv(transpose=true)，故 GLSL 的
         /// mat4 第 k 列 = RaylibMatrix 字段序的第 k 组 4 个分量，即
         /// texel0=(m0,m1,m2,m3), texel1=(m4,m5,m6,m7), texel2=(m8,m9,m10,m11), texel3=(m3..m15)。
@@ -79,7 +189,8 @@ namespace Ludots.Raylib.Render
         /// </summary>
         public void WriteBoneMatrix(int poseRow, int boneSlot, in RaylibMatrix matrix)
         {
-            int baseIdx = (poseRow * PaletteWidthTexels + boneSlot * 4) * 4;
+            (int physicalRow, int texelX) = GetBoneTexelAddress(poseRow, boneSlot, _rowsPerPose);
+            int baseIdx = (physicalRow * PaletteWidthTexels + texelX) * 4;
             _paletteStaging[baseIdx + 0] = matrix.m0;
             _paletteStaging[baseIdx + 1] = matrix.m1;
             _paletteStaging[baseIdx + 2] = matrix.m2;
@@ -100,36 +211,29 @@ namespace Ludots.Raylib.Render
 
         /// <summary>
         /// 写入实例表（每实例 2 texel）：texelA = (poseRow, tint.rgb)，texelB = (tint.a, 0, 0, 0)。
-        /// 不与相邻实例共享 texel——借用"下一 texel"会被下一个实例的 poseRow 覆盖（#1395 排障结论）。
+        /// 不与相邻实例共享 texel；借用下一 texel 会被下一个实例的 poseRow 覆盖。
         /// </summary>
         public void WriteInstance(int globalInstance, int poseRow, float r, float g, float b, float a)
         {
             int baseIdx = globalInstance * TexelsPerInstance * 4;
-            _instanceStaging[baseIdx + 0] = poseRow;
+            // The shader receives the physical first row of the pose. Keeping this
+            // conversion here preserves the batch renderer's logical pose-row API.
+            _instanceStaging[baseIdx + 0] = GetPoseTextureRow(poseRow, _rowsPerPose);
             _instanceStaging[baseIdx + 1] = r;
             _instanceStaging[baseIdx + 2] = g;
             _instanceStaging[baseIdx + 3] = b;
             _instanceStaging[baseIdx + 4] = a;
         }
 
-        /// <summary>姿势行容量前置保障。容量判定必须先于本帧任何调色板行上传：
-        /// 扩容会重建纹理，若发生在部分行已上传之后，已上传行内容即被丢弃（#1395 codex 复审结论）。</summary>
-        public void EnsurePoseRowCapacity(int minRows)
-        {
-            if (minRows > _poseRowCapacity)
-            {
-                ResizePalette(minRows);
-            }
-        }
-
-        /// <summary>把 staging 中的脏姿势行上传到 GPU（整行 UpdateTextureRec）。</summary>
+        /// <summary>把 staging 中一个 pose 的连续物理行上传到 GPU。</summary>
         public void FlushPaletteRow(int poseRow)
         {
-            fixed (float* src = &_paletteStaging[poseRow * PaletteWidthTexels * 4])
+            int physicalRow = GetPoseTextureRow(poseRow, _rowsPerPose);
+            fixed (float* src = &_paletteStaging[physicalRow * PaletteWidthTexels * 4])
             {
                 Rl.UpdateTextureRec(
                     _bonePalette,
-                    new Rectangle(0, poseRow, PaletteWidthTexels, 1),
+                    new Rectangle(0, physicalRow, PaletteWidthTexels, _rowsPerPose),
                     src);
             }
         }
@@ -189,15 +293,6 @@ namespace Ludots.Raylib.Render
 
             Rl.SetTextureFilter(texture, Rl.TextureFilter.TEXTURE_FILTER_POINT);
             return texture;
-        }
-
-        private void ResizePalette(int minRows)
-        {
-            int newCapacity = Math.Max(minRows, _poseRowCapacity * 2);
-            Array.Resize(ref _paletteStaging, PaletteWidthTexels * newCapacity * 4);
-            RaylibNativeResources.UnloadTexture(_bonePalette);
-            _bonePalette = CreateFloatTexture(PaletteWidthTexels, newCapacity);
-            _poseRowCapacity = newCapacity;
         }
 
         private void ResizeInstanceTable(int minHeight)

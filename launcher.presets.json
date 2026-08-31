@@ -123,6 +123,16 @@
       "buildMode": "auto"
     },
     {
+      "id": "nav_bake_island_showcase_raylib",
+      "name": "NavMesh Bake Island Production Path Raylib",
+      "selectors": [
+        "$nav_bake_island_showcase",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_static_presenter_30k_raylib",
       "name": "Capability Standard Static Presenter 30K Raylib",
       "selectors": [

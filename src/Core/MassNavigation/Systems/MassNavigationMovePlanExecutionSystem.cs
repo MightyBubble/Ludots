@@ -314,35 +314,7 @@ public sealed class MassNavigationMovePlanExecutionSystem : ISystem<float>, IMov
 
     private MassNavigationRouteExecutionSink? ResolveRouteSink(MassNavigationSimulationRuntime simulation)
     {
-        IPathService? pathService = _engine.GetService(CoreServiceKeys.PathService);
-        PathStore? pathStore = _engine.GetService(CoreServiceKeys.PathStore);
-        PathingConfig? pathingConfig = _engine.GetService(CoreServiceKeys.PathingConfig);
-        if (pathService == null && pathStore == null && pathingConfig == null)
-        {
-            _routeSink = null;
-            _engine.RemoveService(MassNavigationKeys.RouteExecutionSink);
-            return null;
-        }
-
-        if (pathService == null || pathStore == null || pathingConfig == null)
-        {
-            throw new InvalidOperationException(
-                "MassNavigation route execution requires PathService, PathStore, and PathingConfig to be registered together.");
-        }
-
-        if (_routeSink != null && _routeSink.IsBoundTo(pathService, pathStore, pathingConfig))
-        {
-            return _routeSink;
-        }
-
-        MassNavigationRuntimeCapacityConfig capacity = simulation.Config.ScenarioRuntime.RuntimeCapacity;
-        _routeSink = new MassNavigationRouteExecutionSink(
-            pathService,
-            pathStore,
-            pathingConfig,
-            capacity.RouteStateCapacity,
-            capacity.RouteWaypointCapacityPerAgent);
-        _engine.SetService(MassNavigationKeys.RouteExecutionSink, _routeSink);
+        _routeSink = MassNavigationRouteExecutionBootstrap.Ensure(_engine, simulation);
         return _routeSink;
     }
 

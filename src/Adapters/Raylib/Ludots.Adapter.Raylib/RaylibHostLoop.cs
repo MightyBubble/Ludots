@@ -34,7 +34,6 @@ using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.Vision;
-using Ludots.Platform.Abstractions;
 using Ludots.Presentation.Skia;
 using Ludots.UI;
 using Ludots.UI.Browser;
@@ -326,7 +325,17 @@ namespace Ludots.Adapter.Raylib
                 using var navMeshPresentationRenderer = new RaylibNavMeshPresentationRenderer(navMeshPresentationBuffer.TileCapacity);
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 RaylibPrimitiveRenderMode primitiveMode = ResolvePrimitiveRenderMode();
-                using var primitiveRenderer = new RaylibPrimitiveRenderer(primitiveMode, engine.VFS, materials, Ludots.Core.Presentation.Assets.AnimationChannelRegistry.Register);
+                AnimationProfileRegistry animationProfiles = engine.GetService(CoreServiceKeys.AnimationProfileRegistry)
+                    ?? throw new InvalidOperationException("Raylib host requires AnimationProfileRegistry.");
+                AnimationClipRegistry animationClips = engine.GetService(CoreServiceKeys.AnimationClipRegistry)
+                    ?? throw new InvalidOperationException("Raylib host requires AnimationClipRegistry.");
+                var animationResolver = new CoreRenderAnimationClipResolver(animationProfiles, animationClips);
+                using var primitiveRenderer = new RaylibPrimitiveRenderer(
+                    primitiveMode,
+                    engine.VFS,
+                    materials,
+                    Ludots.Core.Presentation.Assets.AnimationChannelRegistry.Register,
+                    animationResolver);
                 primitiveRenderer.BindReceiverMeshProjector(
                     new MapLaneReceiverMeshProjector(engine, continuousHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector));
                 primitiveRenderer.BindInstancedBatchLaneSource(setup.InstancedBatchLaneStore);
@@ -337,9 +346,11 @@ namespace Ludots.Adapter.Raylib
                             ?? throw new InvalidOperationException("Raylib host requires the Core PresentationSkinnedVisualBatchBuffer service."),
                         engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
                             ?? throw new InvalidOperationException("Raylib host requires the Core PresenterDefinitionRegistry service."),
-                        engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
-                            ?? throw new InvalidOperationException("Raylib host requires the Core PresentationMeshAssetRegistry service."),
-                        (meshAssetId, descriptor) => primitiveRenderer.GpuSkinnedModelCache.GetOrLoad(meshAssetId, in descriptor)));
+                         engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
+                             ?? throw new InvalidOperationException("Raylib host requires the Core PresentationMeshAssetRegistry service."),
+                         (meshAssetId, descriptor) => primitiveRenderer.GpuSkinnedModelCache.GetOrLoad(meshAssetId, in descriptor),
+                         animationResolver,
+                         engine.VFS));
                 using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS);
                 skyEnvironment.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
                     engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibSkyEnvironment.DefaultRelativePath));

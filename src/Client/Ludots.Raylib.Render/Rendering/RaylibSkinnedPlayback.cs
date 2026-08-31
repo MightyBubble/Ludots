@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using Raylib_cs;
 using Ludots.Platform.Abstractions;
@@ -131,6 +132,108 @@ namespace Ludots.Raylib.Render
             in AnimatorPackedState packed,
             ModelAnimation* animations,
             int animCount,
+            int animationProfileId,
+            IRenderAnimationClipResolver? animationResolver,
+            string[]? animationNames,
+            out int clipIndex,
+            out int frameIndex,
+            out float normalizedTime01)
+        {
+            ResolveFromAnimator(
+                in packed,
+                animations,
+                animCount,
+                animationProfileId,
+                animationResolver,
+                animationNames,
+                out _,
+                out clipIndex,
+                out frameIndex,
+                out normalizedTime01);
+        }
+
+        public static void ResolveFromAnimator(
+            in AnimatorPackedState packed,
+            ModelAnimation* animations,
+            int animCount,
+            int animationProfileId,
+            IRenderAnimationClipResolver? animationResolver,
+            string[]? animationNames,
+            out ClipAssetLocatorSelector selector,
+            out int clipIndex,
+            out int frameIndex,
+            out float normalizedTime01)
+        {
+            selector = default;
+            if (animationProfileId > 0)
+            {
+                if (animationResolver == null)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibSkinnedPlayback)} requires an animation resolver for profileId={animationProfileId}.");
+                }
+
+                if (!animationResolver.TryResolve(animationProfileId, packed.GetPrimaryStateIndex(), out selector))
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibSkinnedPlayback)} has no clip locator for profileId={animationProfileId}, stateIndex={packed.GetPrimaryStateIndex()}.");
+                }
+
+                clipIndex = ResolveSelectorIndex(selector, animations, animCount, animationNames);
+                ValidateClipIndex(clipIndex, animCount);
+                normalizedTime01 = packed.GetNormalizedTime01();
+                bool looping = (packed.GetFlags() & AnimatorPackedStateFlags.Looping) != 0;
+                frameIndex = ResolveFrameIndex(animations[clipIndex].frameCount, normalizedTime01, looping);
+                return;
+            }
+
+            ResolveFromAnimator(
+                in packed,
+                animations,
+                animCount,
+                stateToClipMap: null,
+                out clipIndex,
+                out frameIndex,
+                out normalizedTime01);
+        }
+
+        public static void ValidateSelectorSource(
+            in ClipAssetLocatorSelector selector,
+            string loadedSourcePath,
+            IRenderAssetPathResolver assetPaths)
+        {
+            if (string.IsNullOrWhiteSpace(loadedSourcePath))
+            {
+                throw new ArgumentException("Loaded source path is required.", nameof(loadedSourcePath));
+            }
+
+            if (assetPaths == null)
+            {
+                throw new ArgumentNullException(nameof(assetPaths));
+            }
+
+            if (!assetPaths.TryResolveFullPath(selector.AssetPath, out string expectedSourcePath))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibSkinnedPlayback)} could not resolve animation locator source '{selector.AssetPath}'.");
+            }
+
+            string expected = Path.GetFullPath(expectedSourcePath);
+            string actual = Path.GetFullPath(loadedSourcePath);
+            StringComparison comparison = OperatingSystem.IsWindows()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+            if (!string.Equals(expected, actual, comparison))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibSkinnedPlayback)} animation locator source '{expected}' does not match loaded model '{actual}'.");
+            }
+        }
+
+        public static void ResolveFromAnimator(
+            in AnimatorPackedState packed,
+            ModelAnimation* animations,
+            int animCount,
             IReadOnlyDictionary<int, int>? stateToClipMap,
             out int clipIndex,
             out int frameIndex,
@@ -165,6 +268,60 @@ namespace Ludots.Raylib.Render
             }
 
             return clipIndex;
+        }
+
+        public static void ResolveFromAnimator(
+            in AnimatorPackedState packed,
+            ModelAnimation* animations,
+            int animCount,
+            int animationProfileId,
+            IRenderAnimationClipResolver? animationResolver,
+            out int clipIndex,
+            out int frameIndex,
+            out float normalizedTime01)
+        {
+            ResolveFromAnimator(
+                in packed,
+                animations,
+                animCount,
+                animationProfileId,
+                animationResolver,
+                animationNames: null,
+                out clipIndex,
+                out frameIndex,
+                out normalizedTime01);
+        }
+
+        private static int ResolveSelectorIndex(
+            ClipAssetLocatorSelector selector,
+            ModelAnimation* animations,
+            int animCount,
+            string[]? animationNames)
+        {
+            if (!string.Equals(selector.Kind, ClipAssetLocatorSelector.AnimKind, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibSkinnedPlayback)} Raylib supports only '#anim:' clip selectors, got '#{selector.Kind}:{selector.Selector}'.");
+            }
+
+            if (selector.IsIndex)
+            {
+                return selector.Index;
+            }
+
+            for (int i = 0; i < animCount; i++)
+            {
+                string animationName = animationNames != null && i < animationNames.Length
+                    ? animationNames[i]
+                    : ReadAnimationName(animations[i]);
+                if (string.Equals(animationName, selector.Selector, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"{nameof(RaylibSkinnedPlayback)} could not find animation '{selector.Selector}' in the loaded model (animCount={animCount}).");
         }
 
         public static int ResolveFrameIndex(int frameCount, float normalizedTime01, bool looping)
@@ -228,7 +385,7 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        private static string ReadAnimationName(in ModelAnimation animation)
+        internal static string ReadAnimationName(in ModelAnimation animation)
         {
             fixed (byte* name = animation.name)
             {

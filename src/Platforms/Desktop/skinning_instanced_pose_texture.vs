@@ -1,6 +1,7 @@
 #version 330
 
-// 姿势纹理蒙皮（#1395）：骨骼矩阵经 RGBA32F 调色板纹理按 (poseRow, boneSlot) texelFetch，
+// 姿势纹理蒙皮：骨骼矩阵经固定宽度 RGBA32F 调色板纹理按
+// (poseTextureRow, boneSlot) 线性寻址；一个 pose 可连续占用多个物理行。
 // 姿势行与 RGBA tint 经实例表纹理按 gl_InstanceID 寻址——每 draw 覆盖全部姿势与颜色。
 // 调色板 texel 布局与 raylib 原生上传语义一致（glUniformMatrix4fv/GL_FALSE 列主序）：
 // 第 b 根骨骼占 4 texel，texel[k] = 该矩阵内存中第 k 组 4 个 float（即 mat4 第 k 列）。
@@ -31,13 +32,21 @@ out vec4 fragColor;
 out vec3 fragNormal;
 out vec3 fragPos;
 
-mat4 FetchBoneMatrix(int poseRow, int boneSlot)
+const int BONE_TEXELS_PER_SLOT = 4;
+
+vec4 FetchBoneTexel(int linearTexel, int paletteWidth)
 {
-    int baseX = boneSlot * 4;
-    vec4 c0 = texelFetch(uBonePalette, ivec2(baseX + 0, poseRow), 0);
-    vec4 c1 = texelFetch(uBonePalette, ivec2(baseX + 1, poseRow), 0);
-    vec4 c2 = texelFetch(uBonePalette, ivec2(baseX + 2, poseRow), 0);
-    vec4 c3 = texelFetch(uBonePalette, ivec2(baseX + 3, poseRow), 0);
+    return texelFetch(uBonePalette, ivec2(linearTexel % paletteWidth, linearTexel / paletteWidth), 0);
+}
+
+mat4 FetchBoneMatrix(int poseTextureRow, int boneSlot)
+{
+    int paletteWidth = textureSize(uBonePalette, 0).x;
+    int baseTexel = poseTextureRow * paletteWidth + boneSlot * BONE_TEXELS_PER_SLOT;
+    vec4 c0 = FetchBoneTexel(baseTexel + 0, paletteWidth);
+    vec4 c1 = FetchBoneTexel(baseTexel + 1, paletteWidth);
+    vec4 c2 = FetchBoneTexel(baseTexel + 2, paletteWidth);
+    vec4 c3 = FetchBoneTexel(baseTexel + 3, paletteWidth);
     return mat4(c0, c1, c2, c3);
 }
 
@@ -46,29 +55,29 @@ void main()
     int instanceTexel = (int(uInstanceBase) + gl_InstanceID) * 2;
     vec4 instance = texelFetch(uInstanceTable, ivec2(instanceTexel % 1024, instanceTexel / 1024), 0);
     vec4 alphaTexel = texelFetch(uInstanceTable, ivec2((instanceTexel + 1) % 1024, (instanceTexel + 1) / 1024), 0);
-    int poseRow = int(instance.x + 0.5);
+    int poseTextureRow = int(instance.x + 0.5);
     vec3 tint = vec3(instance.y, instance.z, instance.w);
     float alpha = alphaTexel.x;
 
     mat4 skin = mat4(0.0);
     if (vertexBoneWeights.x > 0.0)
     {
-        skin += FetchBoneMatrix(poseRow, int(vertexBoneIds.x) + int(uBoneBase)) * vertexBoneWeights.x;
+        skin += FetchBoneMatrix(poseTextureRow, int(vertexBoneIds.x) + int(uBoneBase)) * vertexBoneWeights.x;
     }
 
     if (vertexBoneWeights.y > 0.0)
     {
-        skin += FetchBoneMatrix(poseRow, int(vertexBoneIds.y) + int(uBoneBase)) * vertexBoneWeights.y;
+        skin += FetchBoneMatrix(poseTextureRow, int(vertexBoneIds.y) + int(uBoneBase)) * vertexBoneWeights.y;
     }
 
     if (vertexBoneWeights.z > 0.0)
     {
-        skin += FetchBoneMatrix(poseRow, int(vertexBoneIds.z) + int(uBoneBase)) * vertexBoneWeights.z;
+        skin += FetchBoneMatrix(poseTextureRow, int(vertexBoneIds.z) + int(uBoneBase)) * vertexBoneWeights.z;
     }
 
     if (vertexBoneWeights.w > 0.0)
     {
-        skin += FetchBoneMatrix(poseRow, int(vertexBoneIds.w) + int(uBoneBase)) * vertexBoneWeights.w;
+        skin += FetchBoneMatrix(poseTextureRow, int(vertexBoneIds.w) + int(uBoneBase)) * vertexBoneWeights.w;
     }
 
     vec4 skinnedPosition = skin * vec4(vertexPosition, 1.0);

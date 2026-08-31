@@ -219,7 +219,8 @@ namespace Ludots.Raylib.Render
             RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate,
             IRenderAssetPathResolver? vfs = null,
             IRenderMaterialAssets? materials = null,
-            System.Func<string, int>? channelRegistrar = null)
+            System.Func<string, int>? channelRegistrar = null,
+            IRenderAnimationClipResolver? animationResolver = null)
         {
             _mode = mode;
             _channelRegistrar = channelRegistrar ?? ThrowMissingChannelRegistrar;
@@ -258,7 +259,7 @@ namespace Ludots.Raylib.Render
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
             _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs, _modelStore);
             _materialPipeline = new RaylibInstancedMaterialPipeline(_materialLibrary);
-            _gpuSkinned = new RaylibGpuSkinnedBatchRenderer(_gpuSkinnedModelCache, _materialPipeline, _maxModelInstancesPerDraw);
+            _gpuSkinned = new RaylibGpuSkinnedBatchRenderer(_gpuSkinnedModelCache, _materialPipeline, _maxModelInstancesPerDraw, animationResolver);
             _vfxRenderer = new RaylibVfxRenderer(vfs, _textureStore);
             _decalRenderer = new RaylibDecalProjectorRenderer(materials, _materialLibrary);
         }

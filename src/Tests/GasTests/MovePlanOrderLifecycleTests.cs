@@ -79,6 +79,33 @@ public sealed class MovePlanOrderLifecycleTests
     }
 
     [Test]
+    public void SharedBatch_UsesOrderIdNamespaceForExecutionGroupToken()
+    {
+        using var world = World.Create();
+        Entity source = world.Create();
+        Entity firstActor = world.Create();
+        Entity secondActor = world.Create();
+        var queue = CreateOrderQueue(capacity: 64);
+
+        Order individual = CreateOrder(firstActor, source);
+        Assert.That(queue.TryEnqueue(in individual), Is.True);
+
+        Order[] shared =
+        {
+            CreateOrder(firstActor, Entity.Null),
+            CreateOrder(secondActor, Entity.Null),
+        };
+        Assert.That(queue.TryEnqueueSharedBatch(shared), Is.EqualTo(OrderSubmitResult.Queued));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shared[0].AdmissionBatchId, Is.EqualTo(shared[0].OrderId));
+            Assert.That(shared[1].AdmissionBatchId, Is.EqualTo(shared[0].OrderId));
+            Assert.That(shared[0].AdmissionBatchId, Is.Not.EqualTo(individual.OrderId));
+        });
+    }
+
+    [Test]
     public void ClusteredBatch_MissingOrderBufferActivatesNoMembers()
     {
         using var world = World.Create();
@@ -278,6 +305,41 @@ public sealed class MovePlanOrderLifecycleTests
             Assert.That(actual.TargetWorldCm, Is.EqualTo(individual.TargetWorldCm));
             Assert.That(actual.StopRadiusCm, Is.EqualTo(individual.StopRadiusCm));
             Assert.That(actual.HasTarget, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void SharedAdmissionBatch_UsesBatchTokenForProjectionAndLifecycle()
+    {
+        using var world = World.Create();
+        Entity firstActor = world.Create(
+            OrderBuffer.CreateEmpty(),
+            default(MovePlanExecutionIntent),
+            default(MovePlanExecutionResult));
+        Entity secondActor = world.Create(
+            OrderBuffer.CreateEmpty(),
+            default(MovePlanExecutionIntent),
+            default(MovePlanExecutionResult));
+
+        Order first = CreateOrder(firstActor, default);
+        first.OrderId = 101;
+        first.AdmissionBatchId = 7;
+        first.AdmissionBatchSize = 2;
+        first.AdmissionBatchIndex = 0;
+        Order second = CreateOrder(secondActor, default);
+        second.OrderId = 102;
+        second.AdmissionBatchId = 7;
+        second.AdmissionBatchSize = 2;
+        second.AdmissionBatchIndex = 1;
+        world.Get<OrderBuffer>(firstActor).SetActiveDirect(in first, priority: 100);
+        world.Get<OrderBuffer>(secondActor).SetActiveDirect(in second, priority: 100);
+
+        new MovePlanOrderProjectionSystem(world, MoveOrderTypeId).Update(0f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(world.Get<MovePlanExecutionIntent>(firstActor).CommandGroupToken, Is.EqualTo(7));
+            Assert.That(world.Get<MovePlanExecutionIntent>(secondActor).CommandGroupToken, Is.EqualTo(7));
         });
     }
 

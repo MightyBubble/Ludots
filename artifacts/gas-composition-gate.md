@@ -410,3 +410,58 @@ Behavior remains in the existing TriggerGraph node shape (`attribute` symbol plu
 ### 8. Next variant test
 
 The next variant should modify graph wiring or attribute symbol data, not add another mutation path or enum.
+
+## GAS Composition Gate — Self Review (#1402)
+
+- **Task / Issue**: #1402 NavBake Island Mass Navigation production showcase
+- **Date**: 2026-08-31
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+新变体主要交付物是（A）：用现有模板、效果、注册表、队列和展示配置组合出生产级 Mass Navigation showcase。
+
+结论：PASS
+
+一句话理由：本 showcase 只新增现有配置合同的实例和场景组合，不新增生命周期枚举、preset 开关、profile DSL 或平行物化管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|---|---:|---|
+| 生产配置的 Mass Navigation 单位生成 | 2 | 现有 MassNavigationMod 配置、EntityTemplateRegistry 与运行时生成队列 |
+| 实体组件物化 | 0 | 现有 EntityBuilder 与实体模板注册表 |
+| Body、HUD、小地图和 Animator presenter 创建 | 2 | 现有 Presenter 定义、spawn bootstrap 和 presentation pipeline |
+| 批量移动订单执行 | 2 | 现有 typed order、MovePlan、route sink 与 Flow solver |
+
+### 3. Reuse list
+
+- Handlers: 现有 `massNavigationMove` order 与 MovePlan/route 执行链。
+- Queues / Systems: 现有运行时实体生成队列、Order pipeline、Mass Navigation route execution、Flow solver 和 Presenter command pipeline。
+- Resolvers / Registries: EntityTemplateRegistry、Mass Navigation profile registry、Pathing agent registry、Presenter definition registry、Animation profile registry、Animation clip registry。
+- Existing presets / graphs: MassNavigationMod 单位模板、Presenter bootstrap、Animator controller、animation profile、animation clip 和既有生成效果。
+
+### 4. New Layer 0 ops (if any)
+
+N/A。没有新增生命周期或 GAS atomic op。
+
+### 5. Transaction boundary
+
+实体生成和 presenter 创建继续使用现有队列与 bootstrap 的事务边界；本 showcase 没有新增 rollback 边界。
+
+### 6. Config SSOT
+
+行为配置继续放在现有 MassNavigationMod catalog 和 showcase 的地图、NavMesh、pathing、scenario 配置中。
+
+是否新增 JSON schema：NO。新增文件只是现有配置合同的实例。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum。
+- [x] 未新建与 spawn 平行的物化管线。
+- [x] 未把 placement 校验塞进 lifecycle op。
+- [x] 未添加默认 fallback 或静默失败。
+
+### 8. Next variant test
+
+下一个 Mod 变体只修改已有 catalog 条目、effect 步骤或 graph 连线，不需要新增 Core enum。

@@ -44,6 +44,7 @@ public sealed class MassNavigationRuntime
         try
         {
             BindBoardWorld(engine);
+            MassNavigationRouteExecutionBootstrap.Ensure(engine, simulation);
             if (config.ScenarioRuntime.AutoSpawnConfiguredScenario)
             {
                 EnsureScenario(engine);
@@ -134,6 +135,9 @@ public sealed class MassNavigationRuntime
             SystemGroup.RuntimeEntityBinding);
         engine.RegisterSystem(
             new MassNavigationEnvironmentBindingSystem(engine),
+            SystemGroup.RuntimeEntityBinding);
+        engine.RegisterSystem(
+            new MassNavigationObserverVisibilitySystem(engine),
             SystemGroup.RuntimeEntityBinding);
         engine.InsertSystemBeforeRequired<MassNavigationSimulationStepSystem>(
             new MassNavigationPreSimulationStepSystem(engine),

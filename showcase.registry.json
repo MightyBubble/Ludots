@@ -7286,6 +7286,31 @@
       "docsPath": "gitbook/architecture/engine-capability-showcases.md"
     },
     {
+      "id": "nav_bake_island_showcase",
+      "path": "mods/showcases/navmesh_bake_island/NavBakeIslandShowcaseMod",
+      "projectPath": "NavBakeIslandShowcaseMod.csproj",
+      "title": "小岛 Mass Navigation 生产链",
+      "summary": "在真实连续高度图和离线 NavMesh 上，框选 64 名 KayKit 士兵下令移动；单位沿可通行区域行进，Presenter、Walking_A/Idle 动画与小地图同步更新。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "mass-navigation",
+        "navmesh",
+        "kaykit",
+        "animator",
+        "raylib",
+        "data-driven"
+      ],
+      "binding": "nav_bake_island_showcase",
+      "preset": "nav_bake_island_showcase_raylib",
+      "docsPath": "gitbook/architecture/nav-bake-island-showcase-design.md",
+      "readmePath": "mods/showcases/navmesh_bake_island/NavBakeIslandShowcaseMod/README.md",
+      "acceptanceTest": "NavBakeIslandShowcaseContractTests",
+      "artifactDir": "artifacts/acceptance/nav-bake-island",
+      "screenshot": "artifacts/acceptance/nav-bake-island/screen.png",
+      "status": "active"
+    },
+    {
       "id": "navmesh_debug_grid_showcase",
       "path": "mods/showcases/navmesh_debug_grid/NavMeshDebugGridLaunchMod",
       "title": "NavMesh 脏更新·Grid 地图",

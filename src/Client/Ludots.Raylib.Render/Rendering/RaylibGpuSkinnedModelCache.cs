@@ -20,14 +20,16 @@ namespace Ludots.Raylib.Render
             public readonly Model Model;
             public readonly ModelAnimation* Animations;
             public readonly int AnimCount;
+            public readonly string[] AnimationNames;
             public readonly string SourcePath;
             public readonly bool Loaded;
 
-            public Entry(Model model, ModelAnimation* animations, int animCount, string sourcePath, bool loaded)
+            public Entry(Model model, ModelAnimation* animations, int animCount, string sourcePath, bool loaded, string[]? animationNames = null)
             {
                 Model = model;
                 Animations = animations;
                 AnimCount = animCount;
+                AnimationNames = animationNames ?? Array.Empty<string>();
                 SourcePath = sourcePath;
                 Loaded = loaded;
             }
@@ -170,7 +172,13 @@ namespace Ludots.Raylib.Render
                     }
                 }
 
-                var entry = new Entry(model, animations, animCount, fullPath, loaded: true);
+                var animationNames = new string[animCount];
+                for (int i = 0; i < animCount; i++)
+                {
+                    animationNames[i] = RaylibSkinnedPlayback.ReadAnimationName(animations[i]);
+                }
+
+                var entry = new Entry(model, animations, animCount, fullPath, loaded: true, animationNames);
                 _entries[meshAssetId] = entry;
                 _leases[meshAssetId] = lease;
                 return entry;
@@ -178,6 +186,12 @@ namespace Ludots.Raylib.Render
 
             throw new InvalidOperationException(
                 $"{nameof(RaylibGpuSkinnedModelCache)} meshAssetId={meshAssetId} could not resolve any existing model URI for GpuSkinnedInstance. Attempts: [{string.Join("; ", loadFailures)}]");
+        }
+
+        public IRenderAssetPathResolver RequireAssetPathResolver()
+        {
+            return _vfs ?? throw new InvalidOperationException(
+                $"{nameof(RaylibGpuSkinnedModelCache)} requires an asset path resolver for animation source validation.");
         }
 
         public void UnloadAll(Action<Model>? beforeUnloadModel = null)

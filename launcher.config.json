@@ -146,6 +146,14 @@
       }
     },
     {
+      "name": "nav_bake_island_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh_bake_island/NavBakeIslandShowcaseMod",
+        "projectPath": "NavBakeIslandShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_static_presenter_30k",
       "target": {
         "type": "path",

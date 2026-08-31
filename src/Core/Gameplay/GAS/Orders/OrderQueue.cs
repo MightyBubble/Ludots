@@ -190,12 +190,15 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     $"OrderQueue shared batch size {orders.Length} exceeds {ushort.MaxValue}.");
             }
 
-            int admissionBatchId = NextAdmissionBatchId();
             ushort batchSize = (ushort)orders.Length;
             _admissionResults.EnsureWritableForNewOrders(OrderAdmissionStage.GlobalIntake, orders.Length);
             for (int i = 0; i < orders.Length; i++)
             {
                 EnsureOrderId(ref orders[i]);
+            }
+            int admissionBatchId = orders[0].OrderId;
+            for (int i = 0; i < orders.Length; i++)
+            {
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = batchSize;
                 orders[i].AdmissionBatchIndex = (ushort)i;

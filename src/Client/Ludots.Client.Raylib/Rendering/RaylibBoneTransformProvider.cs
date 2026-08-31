@@ -23,6 +23,8 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly PresenterDefinitionRegistry _definitions;
         private readonly IRenderMeshAssets _meshAssets;
         private readonly EntryResolver _resolveEntry;
+        private readonly IRenderAnimationClipResolver? _animationResolver;
+        private readonly IRenderAssetPathResolver? _assetPaths;
 
         /// <summary>
         /// 蒙皮模型条目解析（meshAssetId+descriptor → Model/Animations）。
@@ -35,12 +37,16 @@ namespace Ludots.Client.Raylib.Rendering
             SkinnedVisualBatchBuffer skinnedBatch,
             PresenterDefinitionRegistry definitions,
             IRenderMeshAssets meshAssets,
-            EntryResolver resolveEntry)
+            EntryResolver resolveEntry,
+            IRenderAnimationClipResolver? animationResolver = null,
+            IRenderAssetPathResolver? assetPaths = null)
         {
             _skinnedBatch = skinnedBatch ?? throw new ArgumentNullException(nameof(skinnedBatch));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _meshAssets = meshAssets ?? throw new ArgumentNullException(nameof(meshAssets));
             _resolveEntry = resolveEntry ?? throw new ArgumentNullException(nameof(resolveEntry));
+            _animationResolver = animationResolver;
+            _assetPaths = assetPaths;
         }
 
         public bool TryGetBoneWorldTransform(
@@ -69,9 +75,21 @@ namespace Ludots.Client.Raylib.Rendering
                 in animator,
                 entry.Animations,
                 entry.AnimCount,
-                stateToClipMap: null,
+                item.AnimationProfileId,
+                _animationResolver,
+                entry.AnimationNames,
+                out ClipAssetLocatorSelector selector,
                 out int clipIndex,
-                out int frameIndex);
+                out int frameIndex,
+                out _);
+            if (item.AnimationProfileId > 0)
+            {
+                RaylibSkinnedPlayback.ValidateSelectorSource(
+                    in selector,
+                    entry.SourcePath,
+                    _assetPaths ?? throw new InvalidOperationException(
+                        $"{nameof(RaylibBoneTransformProvider)} requires an asset path resolver for animation source validation."));
+            }
 
             ModelAnimation animation = entry.Animations[clipIndex];
             if ((uint)boneId >= (uint)animation.boneCount)

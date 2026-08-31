@@ -54,6 +54,7 @@ public sealed class MassNavigationAgentProfileSetConfig
         for (int i = 0; i < Profiles.Length; i++)
         {
             _agentProfiles.Require(Profiles[i].Id, $"MassNavigationConfig.agentProfiles.profiles[{i}]");
+            MassNavigationProfileRegistry.Register(Profiles[i].Id);
         }
     }
 

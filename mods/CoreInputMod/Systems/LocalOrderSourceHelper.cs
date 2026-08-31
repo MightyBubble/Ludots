@@ -342,6 +342,14 @@ namespace CoreInputMod.Systems
                 : default;
         }
 
+        public Entity GetSolePossessedRep()
+        {
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity rep) &&
+                   _world.IsAlive(rep)
+                ? rep
+                : default;
+        }
+
         private T RequireService<T>(string key) where T : class
         {
             if (!_globals.TryGetValue(key, out object? serviceObj) || serviceObj is not T service)
@@ -363,10 +371,18 @@ namespace CoreInputMod.Systems
         {
             owner = Entity.Null;
             if (!_context.TryResolveLocalCommandSourceOwner(out Entity subject) ||
-                !_world.IsAlive(subject) ||
-                !_world.TryGet<ActiveInteractionContext>(subject, out ActiveInteractionContext context) ||
-                !HasEntityValue(context.ContextEntity) ||
-                !_world.IsAlive(context.ContextEntity))
+                !_world.IsAlive(subject))
+            {
+                return false;
+            }
+
+            if (!_world.TryGet<ActiveInteractionContext>(subject, out ActiveInteractionContext context))
+            {
+                owner = subject;
+                return true;
+            }
+
+            if (!HasEntityValue(context.ContextEntity) || !_world.IsAlive(context.ContextEntity))
             {
                 return false;
             }

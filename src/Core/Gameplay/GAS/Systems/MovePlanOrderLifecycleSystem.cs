@@ -44,7 +44,7 @@ public sealed class MovePlanOrderLifecycleSystem : BaseSystem<World, float>
                 if (!buffer.HasActive ||
                     buffer.ActiveOrder.Order.OrderTypeId != _moveOrderTypeId ||
                     result.Kind == MovePlanExecutionResultKind.None ||
-                    result.CommandGroupToken != buffer.ActiveOrder.Order.OrderId)
+                    result.CommandGroupToken != ResolveCommandGroupToken(in buffer.ActiveOrder.Order))
                 {
                     continue;
                 }
@@ -62,5 +62,18 @@ public sealed class MovePlanOrderLifecycleSystem : BaseSystem<World, float>
                 results[index] = default;
             }
         }
+
+    }
+
+    private static int ResolveCommandGroupToken(in Order order)
+        {
+            return IsUnsetCommandSource(order.CommandSource) && order.AdmissionBatchId > 0
+                ? order.AdmissionBatchId
+                : order.OrderId;
+        }
+
+    private static bool IsUnsetCommandSource(Entity commandSource)
+    {
+        return commandSource == default || commandSource == Entity.Null;
     }
 }

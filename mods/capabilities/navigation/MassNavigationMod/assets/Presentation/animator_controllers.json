@@ -3,8 +3,8 @@
     "id": "mass_navigation.agent.locomotion",
     "defaultStateIndex": 0,
     "states": [
-      { "packedStateIndex": 41, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
-      { "packedStateIndex": 42, "durationSeconds": 0.6, "playbackSpeed": 1.0, "loop": true }
+      { "name": "Idle", "packedStateIndex": 41, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
+      { "name": "Walking_A", "packedStateIndex": 42, "durationSeconds": 0.6, "playbackSpeed": 1.0, "loop": true }
     ],
     "transitions": [
       {

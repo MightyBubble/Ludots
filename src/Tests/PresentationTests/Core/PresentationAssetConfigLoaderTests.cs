@@ -58,7 +58,7 @@ namespace Ludots.Tests.Presentation
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 new MeshAssetConfigLoader(pipeline, new MeshAssetRegistry()).Load(catalog))!;
             Assert.That(ex.Message, Does.Contain("duplicate id 'shared.model'"));
-            Assert.That(ex.Message, Does.Contain("Core:Configs/Presentation/mesh_assets.json"));
+            Assert.That(ex.Message, Does.Contain("Core:Presentation/mesh_assets.json"));
             Assert.That(ex.Message, Does.Contain("TestMod:assets/Presentation/mesh_assets.json"));
         }
 
@@ -145,6 +145,36 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain("distances must increase"));
         }
 
+        [Test]
+        public void AnimatorControllerConfigLoader_PreservesConfiguredStateNames()
+        {
+            WriteCoreConfig(
+                "Presentation/animator_controllers.json",
+                """
+                [
+                  {
+                    "id": "mass_navigation.agent",
+                    "defaultStateIndex": 0,
+                    "states": [
+                      { "name": "Idle", "packedStateIndex": 41, "durationSeconds": 1, "playbackSpeed": 1, "loop": true },
+                      { "name": "Walking_A", "packedStateIndex": 42, "durationSeconds": 1, "playbackSpeed": 1, "loop": true }
+                    ],
+                    "transitions": []
+                  }
+                ]
+                """);
+
+            var (_, pipeline, catalog) = BuildPipelineWithMods();
+            var controllers = new AnimatorControllerRegistry();
+
+            new AnimatorControllerConfigLoader(pipeline, controllers).Load(catalog);
+
+            int controllerId = controllers.GetId("mass_navigation.agent");
+            Assert.That(controllers.TryGet(controllerId, out AnimatorControllerDefinition controller), Is.True);
+            Assert.That(controller.States[0].Name, Is.EqualTo("Idle"));
+            Assert.That(controller.States[1].Name, Is.EqualTo("Walking_A"));
+        }
+
         private (ModLoader ModLoader, ConfigPipeline Pipeline, ConfigCatalog Catalog) BuildPipelineWithMods(params string[] modIds)
         {
             var vfs = new VirtualFileSystem();
@@ -166,13 +196,14 @@ namespace Ludots.Tests.Presentation
         {
             var catalog = new ConfigCatalog();
             catalog.Add(new ConfigCatalogEntry("Presentation/mesh_assets.json", ConfigMergePolicy.ArrayById, "id"));
+            catalog.Add(new ConfigCatalogEntry("Presentation/animator_controllers.json", ConfigMergePolicy.ArrayById, "id"));
             catalog.Add(new ConfigCatalogEntry(PresentationLodProfileConfigLoader.DefaultRelativePath, ConfigMergePolicy.ArrayById, "id"));
             return catalog;
         }
 
         private void WriteCoreConfig(string relativePath, string content)
         {
-            WriteFile(Path.Combine(_root, "Core", "Configs"), relativePath, content);
+            WriteFile(Path.Combine(_root, "Core"), relativePath, content);
         }
 
         private void WriteModAsset(string modId, string relativePath, string content)

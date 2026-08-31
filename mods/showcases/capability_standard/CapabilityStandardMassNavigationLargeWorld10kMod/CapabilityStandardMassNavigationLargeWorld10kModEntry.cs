@@ -11,8 +11,6 @@ namespace CapabilityStandardMassNavigationLargeWorld10kMod;
 
 public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
 {
-    private const string ObserverVisibilitySystemInstalledKey =
-        "CapabilityStandardMassNavigationLargeWorld10k.ObserverVisibilitySystemInstalled";
     private const string LocalOrderSourceSystemInstalledKey =
         "CapabilityStandardMassNavigationLargeWorld10k.LocalOrderSourceSystemInstalled";
     private IModContext? _context;
@@ -38,7 +36,6 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
             return Task.CompletedTask;
         }
 
-        EnsureObserverVisibilitySystem(engine);
         EnsureLocalOrderSourceSystem(engine, _context ?? throw new InvalidOperationException("CapabilityStandardMassNavigationLargeWorld10kMod requires IModContext."));
         bool mapFocused = CapabilityStandardMassNavigationLargeWorld10kMapFocus.IsStartupMapFocused(engine);
         engine.SetService(CoreServiceKeys.PresentationAudienceRevealHidden, mapFocused);
@@ -56,19 +53,6 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
         runtime.SetRotateWithCamera(false);
         runtime.UseRtsFullMapPreset();
         return Task.CompletedTask;
-    }
-
-    private static void EnsureObserverVisibilitySystem(GameEngine engine)
-    {
-        if (engine.GlobalContext.ContainsKey(ObserverVisibilitySystemInstalledKey))
-        {
-            return;
-        }
-
-        engine.RegisterSystem(
-            new MassNavigationObserverVisibilityBindingSystem(engine),
-            SystemGroup.RuntimeEntityBinding);
-        engine.GlobalContext[ObserverVisibilitySystemInstalledKey] = true;
     }
 
     private static void EnsureLocalOrderSourceSystem(GameEngine engine, IModContext context)

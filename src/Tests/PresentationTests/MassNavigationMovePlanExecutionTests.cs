@@ -27,6 +27,55 @@ namespace Ludots.Tests.Presentation;
 public sealed class MassNavigationMovePlanExecutionTests
 {
     [Test]
+    public void RouteExecutionBootstrap_RegistersSinkBeforeExecutionUpdate()
+    {
+        MassNavigationProfileRegistry.Reset();
+        using var engine = new GameEngine();
+        string repoRoot = FindRepoRoot();
+        engine.InitializeWithConfigPipeline(
+            new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
+            Path.Combine(repoRoot, "assets"));
+        MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
+        var simulation = new MassNavigationSimulationRuntime(config);
+        var pathStore = new PathStore(maxPaths: 4, maxPointsPerPath: 64);
+        var pathService = new RejectingPathService();
+        var pathingConfig = new PathingConfig
+        {
+            AgentTypes =
+            [
+                new PathingAgentTypeConfig
+                {
+                    Id = "light",
+                    ProfileId = "light",
+                },
+            ],
+        };
+        engine.SetService(CoreServiceKeys.PathStore, pathStore);
+        engine.SetService(CoreServiceKeys.PathService, (IPathService)pathService);
+        engine.SetService(CoreServiceKeys.PathingConfig, pathingConfig);
+
+        MassNavigationRouteExecutionSink sink = MassNavigationRouteExecutionBootstrap.Ensure(engine, simulation)!;
+        Assert.That(MassNavigationProfileRegistry.TryGetId("light", out int profileId), Is.True);
+        Entity agent = engine.World.Create(new MassNavigationAgent { ProfileId = profileId });
+        MassNavigationRouteSinkResult validation = sink.ValidateRouteTarget(
+            simulation,
+            engine.World,
+            agent,
+            agentIndex: 0,
+            destinationWorldCm: new Vector2(2_000f, 1_500f),
+            requestId: 1,
+            maxExpanded: 128,
+            maxPoints: 64);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sink, Is.SameAs(engine.GetService(MassNavigationKeys.RouteExecutionSink)));
+            Assert.That(MassNavigationRouteExecutionBootstrap.Ensure(engine, simulation), Is.SameAs(sink));
+            Assert.That(validation.Tracked, Is.True);
+        });
+    }
+
+    [Test]
     public void Execution_ConsumesTypedIntentWithoutOrderBuffer()
     {
         using var engine = new GameEngine();
