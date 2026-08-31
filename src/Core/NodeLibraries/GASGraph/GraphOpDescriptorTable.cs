@@ -85,6 +85,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return metadata.Kind == EffectOperationKind.Pure;
             }
 
+            // Query / Score / Validation: Pure metadata alone is not enough — side-effect ops were
+            // historically mislabeled Pure so Script policy could host them. Gate read-only kinds
+            // on AuthorableKinds so FrontDoor and Register share one fail-closed set (#1410).
+            if (kind is GraphKind.Query or GraphKind.Score or GraphKind.Validation)
+            {
+                return metadata.Kind == EffectOperationKind.Pure && descriptor.IsAuthorable(kind);
+            }
+
             if (metadata.Kind == EffectOperationKind.Pure)
             {
                 return true;

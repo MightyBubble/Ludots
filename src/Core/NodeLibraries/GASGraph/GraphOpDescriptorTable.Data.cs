@@ -142,17 +142,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.LoadConfigEffectId, LinearAll, GraphValueType.Int, imm: GraphOperandRole.SymbolImm, listenerOwner: true);
             Add(rows, GraphNodeOp.ResolveTableRow, LinearQueryScript, GraphValueType.Int, portA, queryOut: GraphValueType.Int, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.TableReadInt, LinearQueryScript, GraphValueType.Int, portA, queryOut: GraphValueType.Int, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.ShowPanel, LinearQueryScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.HidePanel, LinearQueryScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.CreatePanel, LinearQueryScript, GraphValueType.Void, portSource, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst);
-            Add(rows, GraphNodeOp.SpawnTemplate, LinearQueryScript, GraphValueType.Void, portSourceAB, queryPorts: portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.SetWorldPosition, LinearQueryScript, GraphValueType.Void, portSourceAB, queryPorts: portSourceAB, scriptPorts: portSourceAB);
-            Add(rows, GraphNodeOp.SetInteractionMode, LinearQueryScript, GraphValueType.Void, portSource, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.SetPanelAudience, LinearQueryScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst);
+            // World / presentation side effects: Effect gallery + Script/TriggerGraph hosts only.
+            // Must not sit on LinearQueryScript — that mask leaked them into Score/Validation
+            // authoring while metadata still said Pure (#1410).
+            Add(rows, GraphNodeOp.ShowPanel, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.HidePanel, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.CreatePanel, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst);
+            Add(rows, GraphNodeOp.SpawnTemplate, EffectAndScript, GraphValueType.Void, portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.SetWorldPosition, EffectAndScript, GraphValueType.Void, portSourceAB, scriptPorts: portSourceAB);
+            Add(rows, GraphNodeOp.SetInteractionMode, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.SetPanelAudience, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst);
             Add(rows, GraphNodeOp.ModifyAttributeSet, EffectAndTriggerGraph, GraphValueType.Void, portTargetValue, scriptPorts: portTargetValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.OfferActivity, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.OfferTask, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.DestroyPanel, LinearQueryScript, GraphValueType.Void, portSource, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.DestroyPanel, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadMapVarInt, ScriptTriggerQuery, GraphValueType.Int, portSource, queryOut: GraphValueType.Int, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadMapVarFloat, ScriptTriggerQuery, GraphValueType.Float, portSource, queryOut: GraphValueType.Float, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.WriteMapVarInt, ScriptAndTriggerGraph, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm);

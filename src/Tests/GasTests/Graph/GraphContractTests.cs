@@ -200,7 +200,7 @@ namespace Ludots.Tests.GAS.Graph
         {
             var program = new[]
             {
-                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 1, B = 0, Imm = 1 }
             };
@@ -280,6 +280,75 @@ namespace Ludots.Tests.GAS.Graph
 
             Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(error.Message, Does.Contain($"kind='{kind}'"));
+        }
+
+        [TestCase(GraphKind.Validation, GraphNodeOp.ShowPanel)]
+        [TestCase(GraphKind.Validation, GraphNodeOp.SpawnTemplate)]
+        [TestCase(GraphKind.Validation, GraphNodeOp.WriteMapVarInt)]
+        [TestCase(GraphKind.Validation, GraphNodeOp.StartDialogue)]
+        [TestCase(GraphKind.Score, GraphNodeOp.ShowPanel)]
+        [TestCase(GraphKind.Score, GraphNodeOp.SpawnTemplate)]
+        [TestCase(GraphKind.Score, GraphNodeOp.WriteMapVarInt)]
+        [TestCase(GraphKind.Score, GraphNodeOp.StartDialogue)]
+        [TestCase(GraphKind.Query, GraphNodeOp.ShowPanel)]
+        [TestCase(GraphKind.Query, GraphNodeOp.SpawnTemplate)]
+        [TestCase(GraphKind.Query, GraphNodeOp.WriteMapVarInt)]
+        [TestCase(GraphKind.Query, GraphNodeOp.StartDialogue)]
+        public void GraphKindOperationPolicy_ReadOnlyKindsRejectPureLabeledSideEffects(
+            GraphKind kind,
+            GraphNodeOp forbidden)
+        {
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)forbidden, A = 0, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    kind,
+                    program,
+                    GasGraphOpHandlerTable.Instance,
+                    graphId: 1410,
+                    entrypoint: nameof(GraphKindOperationPolicy_ReadOnlyKindsRejectPureLabeledSideEffects)))!;
+
+            Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
+            Assert.That(error.Message, Does.Contain($"kind='{kind}'"));
+            Assert.That(error.Message, Does.Contain($"operation='{forbidden}'"));
+        }
+
+        [Test]
+        public void GraphProgramRegistry_RejectsHandRegisteredQueryWithShowPanel()
+        {
+            var programs = new GraphProgramRegistry();
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ShowPanel, Imm = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                programs.Register(14101, program, GraphKind.Query))!;
+
+            Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
+            Assert.That(error.Message, Does.Contain("ShowPanel"));
+        }
+
+        [Test]
+        public void GraphKindOperationPolicy_ScriptStillAllowsShowPanel()
+        {
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ShowPanel, Imm = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+
+            Assert.DoesNotThrow(() => GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.Script,
+                program,
+                GasGraphOpHandlerTable.Instance,
+                graphId: 14102,
+                entrypoint: nameof(GraphKindOperationPolicy_ScriptStillAllowsShowPanel)));
         }
 
         [Test]
