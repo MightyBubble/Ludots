@@ -10,7 +10,7 @@
 
 结论: PASS
 
-一句话理由: 不新增 profile/enum/开关；把误标 Pure 的副作用 op 从只读 Kind 白名单挪走，并让 Register 与 FrontDoor 共用 AuthorableKinds 闸。
+一句话理由: 不新增 profile/enum/开关；副作用 op 退出只读白名单，并以 WorldSideEffect 标志在 Query/Score/Validation 策略失败关闭（不用 AuthorableKinds，避免误伤编译器下发的 Jump）。
 
 ### 2. Layer assignment
 

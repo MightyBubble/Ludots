@@ -145,21 +145,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // World / presentation side effects: Effect gallery + Script/TriggerGraph hosts only.
             // Must not sit on LinearQueryScript — that mask leaked them into Score/Validation
             // authoring while metadata still said Pure (#1410).
-            Add(rows, GraphNodeOp.ShowPanel, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.HidePanel, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.CreatePanel, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst);
-            Add(rows, GraphNodeOp.SpawnTemplate, EffectAndScript, GraphValueType.Void, portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.SetWorldPosition, EffectAndScript, GraphValueType.Void, portSourceAB, scriptPorts: portSourceAB);
-            Add(rows, GraphNodeOp.SetInteractionMode, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.SetPanelAudience, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst);
+            Add(rows, GraphNodeOp.ShowPanel, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.HidePanel, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.CreatePanel, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
+            Add(rows, GraphNodeOp.SpawnTemplate, EffectAndScript, GraphValueType.Void, portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.SetWorldPosition, EffectAndScript, GraphValueType.Void, portSourceAB, scriptPorts: portSourceAB, worldSideEffect: true);
+            Add(rows, GraphNodeOp.SetInteractionMode, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.SetPanelAudience, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.ModifyAttributeSet, EffectAndTriggerGraph, GraphValueType.Void, portTargetValue, scriptPorts: portTargetValue, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.OfferActivity, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.OfferTask, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.DestroyPanel, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.OfferActivity, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.OfferTask, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.DestroyPanel, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.ReadMapVarInt, ScriptTriggerQuery, GraphValueType.Int, portSource, queryOut: GraphValueType.Int, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadMapVarFloat, ScriptTriggerQuery, GraphValueType.Float, portSource, queryOut: GraphValueType.Float, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.WriteMapVarInt, ScriptAndTriggerGraph, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.WriteMapVarFloat, ScriptAndTriggerGraph, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.WriteMapVarInt, ScriptAndTriggerGraph, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.WriteMapVarFloat, ScriptAndTriggerGraph, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.TableReadFloat, LinearQueryScript, GraphValueType.Float, portA, queryOut: GraphValueType.Float, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadContextSource, LinearAll, GraphValueType.Entity);
             Add(rows, GraphNodeOp.LoadContextTarget, LinearAll, GraphValueType.Entity);
@@ -233,13 +233,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.LoadPlacedAnchor, TriggerGraphOnly, GraphValueType.Entity, imm: GraphOperandRole.SymbolImm);
             // InvokeGraph Imm is a compile-time graph id literal (not a symbol); Flags bit 0 marks
             // an authored entry label whose symbol index is packed as B | (C << 8).
-            Add(rows, GraphNodeOp.InvokeGraph, TriggerGraphOnly, GraphValueType.Int, scriptPorts: noPorts, scriptOut: GraphValueType.Int);
-            Add(rows, GraphNodeOp.StoreArgInt, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.StoreArgFloat, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.StoreArgEntity, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.InvokeGraph, TriggerGraphOnly, GraphValueType.Int, scriptPorts: noPorts, scriptOut: GraphValueType.Int, worldSideEffect: true);
+            Add(rows, GraphNodeOp.StoreArgInt, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.StoreArgFloat, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.StoreArgEntity, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             // DispatchMapEvent payload ports are dynamic (one per non-String schema parameter,
             // named after the parameter); the static table intentionally declares none.
-            Add(rows, GraphNodeOp.DispatchMapEvent, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.DispatchMapEvent, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.ControlDomainResolve, LinearAll, GraphValueType.Entity, portSource);
             Add(rows, GraphNodeOp.ControlDomainControls, LinearAll, GraphValueType.Bool, portAB);
             Add(rows, GraphNodeOp.KnowledgeHasProjection, LinearAll, GraphValueType.Bool, portAB);
@@ -256,9 +256,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.ConcatText, ScriptAndTriggerGraph, GraphValueType.Text, portAB, scriptPorts: portAB);
             Add(rows, GraphNodeOp.IntToText, ScriptAndTriggerGraph, GraphValueType.Text, portA, scriptPorts: portA);
             Add(rows, GraphNodeOp.FloatToText, ScriptAndTriggerGraph, GraphValueType.Text, portA, scriptPorts: portA);
-            Add(rows, GraphNodeOp.SinkPresentationText, ScriptAndTriggerGraph, GraphValueType.Void, portA, scriptPorts: portA, imm: GraphOperandRole.Immediate);
+            Add(rows, GraphNodeOp.SinkPresentationText, ScriptAndTriggerGraph, GraphValueType.Void, portA, scriptPorts: portA, imm: GraphOperandRole.Immediate, worldSideEffect: true);
             Add(rows, GraphNodeOp.LoadTextKey, ScriptAndTriggerGraph, GraphValueType.Text, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.StartDialogue, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.StartDialogue, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
 
             var table = new GraphOpDescriptor[GraphVmLimits.HandlerTableSize];
             for (int i = 0; i < rows.Count; i++)
@@ -304,7 +304,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphOperandRole imm = GraphOperandRole.None,
             bool scriptSliceOnly = false,
             bool derivedWrite = false,
-            bool listenerOwner = false)
+            bool listenerOwner = false,
+            bool worldSideEffect = false)
         {
             if (dst == GraphOperandRole.None &&
                 (linearOut != GraphValueType.Void || queryOut != GraphValueType.Void || scriptOut != GraphValueType.Void))
@@ -325,7 +326,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 imm,
                 scriptSliceOnly,
                 derivedWrite,
-                listenerOwner));
+                listenerOwner,
+                worldSideEffect));
         }
     }
 }
