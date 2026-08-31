@@ -45,10 +45,12 @@
 
 | profileId | 后端 | 锚点 | 复用 |
 |-----------|------|------|------|
-| `story.dialogue_overlay` | 屏幕 Skia（UIRoot Overlay segment） | 屏幕锚点（如 BottomCenter） | NarrativeFrontend `OverlayDialogue` + `ChoiceList` |
+| `story.dialogue_overlay` | 屏幕 Skia（UIRoot Overlay segment） | 屏幕锚点（如 BottomCenter） | NarrativeFrontend `OverlayDialogue`；选项走 PanelHost `panel.narrative.choices` |
 | `story.world_bubble` | 世界→屏幕投影后写入同一 Overlay | 说话者实体世界坐标 + 头顶偏移 | `IScreenProjector` 必填（缺则 fail-closed）+ Frontend `DialogueBubble` 动态 Absolute |
 | `story.immersive_subtitle` | 屏幕字幕轨（Sequencer 宿主，非独立 Subtitle 模块） | 屏幕锚点（如 BottomCenter） | Frontend `SubtitleBubble`；由 Sequencer `SubtitleTrack` 驱动 |
 | `story.standing_portrait` | 半屏全身立绘 + 旁侧台词 | 屏幕锚点（如 BottomLeft） | Frontend `StandingPortrait`；说话者 `standingImageId` 必填 |
+
+屏幕锚点的 `offsetX` / `offsetY` 采用锚点内缩语义：正值表示从锚点所在的视口边缘向安全区内缩。比如 `TopLeft` 的正偏移向右、向下，`BottomRight` 的正偏移向左、向上。居中轴上的偏移仍按屏幕坐标正方向移动。偏移必须参与布局，不能用绘制阶段的 transform 挪动 surface；这样布局边界、命中区域和最终绘制位置使用同一套几何。
 
 不把世界气泡假装成「左下角换皮面板」。WebUI Panel Kit 本阶段不承载故事对话（浏览器面板合同另线）；故事表现留在 Skia Overlay + 世界投影，避免第三真相。
 
@@ -194,6 +196,14 @@ DialogueRuntime / SequencerRuntime
 | NarrativeFrontend / Showcase chrome | 眉题、页脚、选项标题（TextToken）、九宫格框、`imageId→src` | 写几何/色——几何与色归 profile 单一写入者 |
 
 Showcase 只负责：世界投影坐标补给、HUD（任务/回顾/提示）、把前端 chrome 叠到字符串袋上。不再手写「对话表面 / 选项表面 / 字幕表面」三套硬编码路由。
+
+Chrome 分三层，不能互相代写：
+
+1. `layout_templates.json` 只定义控件结构、绑定和排列关系。
+2. `theme.css` 只定义颜色、字体、背景、边框和 nine-slice 切边；panel 与 choice 分别使用 `.story-frame` 和 `.story-choice-frame`。
+3. NarrativeFrontend theme resolver 根据当前 `panelTheme` 注入 `panel_frame.png`（主对话框九宫格框）。Showcase 不解析文件名，也不缓存主题路径。选项列表走 PanelHost，皮用主题 CSS（如 `.panel-narrative-choices`）。
+
+安全区、底部 lane 间距和 standing 组合尺寸由 NarrativeFrontend 的严格 layout metrics 配置提供。Composer 只消费配置；字段缺失、非正数或非有限值时启动失败，不保留代码默认值。
 
 ## 4. 场景
 

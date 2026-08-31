@@ -3,6 +3,7 @@
     "id": "author_kit.dialogue_overlay",
     "backend": "ScreenOverlay",
     "surfaceKind": "OverlayDialogue",
+    "layoutId": "layout.narrative.overlay-dialogue",
     "anchor": "BottomCenter",
     "width": 760,
     "offsetY": 28,
@@ -15,10 +16,6 @@
     "mutedHex": "#C6D3DE",
     "zIndex": 60,
     "imageSize": 112,
-    "backdropHex": "#00000099",
-    "choiceAnchor": "BottomRight",
-    "choiceWidth": 440,
-    "choiceOffsetY": 12,
-    "choiceZIndex": 61
+    "backdropHex": "#00000099"
   }
 ]

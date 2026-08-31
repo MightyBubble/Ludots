@@ -2726,10 +2726,235 @@
       "buildMode": "auto"
     },
     {
+      "id": "panel_effect_list_raylib",
+      "name": "Panel Effect List Raylib",
+      "selectors": [
+        "$panel_effect_list"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEffectTiming_raylib",
+      "name": "Graph Op LoadEffectTiming Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEffectTiming"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveEffects_raylib",
+      "name": "Graph Op QueryCollectActiveEffects Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectActiveEffects"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectAbilityHolders_raylib",
+      "name": "Graph Op QueryCollectAbilityHolders Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectAbilityHolders"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectAbilitySlots_raylib",
+      "name": "Graph Op QueryCollectAbilitySlots Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectAbilitySlots"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveTasks_raylib",
+      "name": "Graph Op QueryCollectActiveTasks Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectActiveTasks"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectEffectTemplates_raylib",
+      "name": "Graph Op QueryCollectEffectTemplates Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectEffectTemplates"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectInventoryItems_raylib",
+      "name": "Graph Op QueryCollectInventoryItems Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectInventoryItems"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectItemDefinitions_raylib",
+      "name": "Graph Op QueryCollectItemDefinitions Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectItemDefinitions"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectPresentTags_raylib",
+      "name": "Graph Op QueryCollectPresentTags Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectPresentTags"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectProgressionNodes_raylib",
+      "name": "Graph Op QueryCollectProgressionNodes Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectProgressionNodes"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveActivities_raylib",
+      "name": "Graph Op QueryCollectActiveActivities Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectActiveActivities"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_author_layout_kit_raylib",
+      "name": "Panel Author Layout Kit Raylib",
+      "selectors": [
+        "$panel_author_layout_kit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEffectStack_raylib",
+      "name": "Graph Op LoadEffectStack Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEffectStack"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_op_OfferActivity_raylib",
       "name": "Graph Op OfferActivity Raylib",
       "selectors": [
         "$capability_standard_graph_op_OfferActivity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_OfferTask_raylib",
+      "name": "Graph Op OfferTask Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_OfferTask"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_effect_templates_raylib",
+      "name": "Panel 效果图鉴 Raylib",
+      "selectors": [
+        "$panel_effect_templates"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_roster_nested_raylib",
+      "name": "Panel 编队档案 Raylib",
+      "selectors": [
+        "$panel_roster_nested"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_present_tags_raylib",
+      "name": "Panel 身上的印记 Raylib",
+      "selectors": [
+        "$panel_present_tags"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_inventory_aggregate_raylib",
+      "name": "Panel 背包堆叠 Raylib",
+      "selectors": [
+        "$panel_inventory_aggregate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_item_definitions_raylib",
+      "name": "Panel 物品图鉴 Raylib",
+      "selectors": [
+        "$panel_item_definitions"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_active_tasks_raylib",
+      "name": "Panel 进行中的差事 Raylib",
+      "selectors": [
+        "$panel_active_tasks"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_active_activities_raylib",
+      "name": "Panel 进行中的活动 Raylib",
+      "selectors": [
+        "$panel_active_activities"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_ability_holders_raylib",
+      "name": "Panel 谁会火球 Raylib",
+      "selectors": [
+        "$panel_ability_holders"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_progression_nodes_raylib",
+      "name": "Panel 修行进度 Raylib",
+      "selectors": [
+        "$panel_progression_nodes"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveDialogueChoices_raylib",
+      "name": "Graph Op QueryCollectActiveDialogueChoices Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectActiveDialogueChoices"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

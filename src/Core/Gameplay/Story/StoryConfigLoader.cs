@@ -18,6 +18,7 @@ namespace Ludots.Core.Gameplay.Story
             PropertyNameCaseInsensitive = true,
             Converters = { new JsonStringEnumConverter() }
         };
+        private readonly JsonSerializerOptions _profileJsonOptions = CreateProfileJsonOptions();
 
         public StoryConfigLoader(ConfigPipeline pipeline, StoryDefinitionRegistry registry)
         {
@@ -53,10 +54,17 @@ namespace Ludots.Core.Gameplay.Story
             ThrowOnDuplicateIds(report, ProfilesPath, "Story presentation profile");
             for (int i = 0; i < merged.Count; i++)
             {
-                var definition = JsonSerializer.Deserialize<StoryPresentationProfileDefinition>(merged[i].Node.ToJsonString(), _jsonOptions)
+                var definition = JsonSerializer.Deserialize<StoryPresentationProfileDefinition>(merged[i].Node.ToJsonString(), _profileJsonOptions)
                     ?? throw new InvalidOperationException($"Failed to deserialize story presentation profile at '{ProfilesPath}' index {i}.");
                 _registry.Register(definition);
             }
+        }
+
+        private static JsonSerializerOptions CreateProfileJsonOptions()
+        {
+            JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase();
+            options.Converters.Add(new JsonStringEnumConverter());
+            return options;
         }
 
         private void LoadSpeakers(ConfigCatalog? catalog, ConfigConflictReport? report)

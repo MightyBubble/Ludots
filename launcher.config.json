@@ -2053,11 +2053,202 @@
       }
     },
     {
+      "name": "panel_effect_list",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_effect_list/PanelEffectListShowcaseMod",
+        "projectPath": null
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEffectTiming",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEffectTimingEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEffectTimingEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectActiveEffects",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveEffectsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectActiveEffectsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectAbilityHolders",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectAbilityHoldersEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectAbilityHoldersEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectAbilitySlots",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectAbilitySlotsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectAbilitySlotsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectActiveTasks",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveTasksEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectActiveTasksEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectEffectTemplates",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectEffectTemplatesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectEffectTemplatesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectInventoryItems",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectInventoryItemsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectInventoryItemsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectItemDefinitions",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectItemDefinitionsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectItemDefinitionsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectPresentTags",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectPresentTagsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectPresentTagsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectProgressionNodes",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectProgressionNodesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectProgressionNodesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectActiveActivities",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveActivitiesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectActiveActivitiesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_author_layout_kit",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_author_layout_kit/PanelAuthorLayoutKitShowcaseMod",
+        "projectPath": null
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEffectStack",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEffectStackEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEffectStackEntryMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_OfferActivity",
       "target": {
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpOfferActivityEntryMod",
         "projectPath": "CapabilityStandardGraphOpOfferActivityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_OfferTask",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpOfferTaskEntryMod",
+        "projectPath": "CapabilityStandardGraphOpOfferTaskEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_effect_templates",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelEffectTemplatesEntryMod"
+      }
+    },
+    {
+      "name": "panel_roster_nested",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelRosterNestedEntryMod"
+      }
+    },
+    {
+      "name": "panel_present_tags",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelPresentTagsEntryMod"
+      }
+    },
+    {
+      "name": "panel_inventory_aggregate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelInventoryAggregateEntryMod"
+      }
+    },
+    {
+      "name": "panel_item_definitions",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelItemDefinitionsEntryMod"
+      }
+    },
+    {
+      "name": "panel_active_tasks",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelActiveTasksEntryMod"
+      }
+    },
+    {
+      "name": "panel_active_activities",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelActiveActivitiesEntryMod"
+      }
+    },
+    {
+      "name": "panel_ability_holders",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelAbilityHoldersEntryMod"
+      }
+    },
+    {
+      "name": "panel_progression_nodes",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelProgressionNodesEntryMod"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectActiveDialogueChoices",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveDialogueChoicesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectActiveDialogueChoicesEntryMod.csproj"
       }
     }
   ],

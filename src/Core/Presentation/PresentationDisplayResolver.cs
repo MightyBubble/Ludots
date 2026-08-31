@@ -7,7 +7,7 @@ using Ludots.Core.Presentation.Hud;
 namespace Ludots.Core.Presentation
 {
     /// <summary>
-    /// Shared display resolver for semantic text maps and 2D image assets (#128).
+    /// Shared display resolver for semantic text maps and 2D image assets.
     /// Text always exits through PresentationTextCatalog; images resolve via VFS.
     /// </summary>
     public sealed class PresentationDisplayResolver
@@ -86,6 +86,52 @@ namespace Ludots.Core.Presentation
 
             throw new InvalidOperationException(
                 $"Presentation text token '{textToken}' is not resolvable in the active locale.");
+        }
+
+        public bool TryFormatTokenRuns(
+            string textToken,
+            IReadOnlyList<PresentationTextArg>? args,
+            out IReadOnlyList<PresentationTextRun> runs)
+        {
+            runs = Array.Empty<PresentationTextRun>();
+            if (string.IsNullOrWhiteSpace(textToken))
+            {
+                return false;
+            }
+
+            int tokenId = _textCatalog.GetTokenId(textToken);
+            if (tokenId <= 0)
+            {
+                return false;
+            }
+
+            int localeId = _localeSelection.ActiveLocaleId > 0
+                ? _localeSelection.ActiveLocaleId
+                : _textCatalog.DefaultLocaleId;
+            var packet = PresentationTextPacket.FromToken(tokenId);
+            if (args != null)
+            {
+                for (int i = 0; i < args.Count; i++)
+                {
+                    packet.SetArg(i, args[i]);
+                }
+            }
+
+            return PresentationTextFormatter.TryFormatRuns(_textCatalog, localeId, in packet, out runs)
+                && runs.Count > 0;
+        }
+
+        public IReadOnlyList<PresentationTextRun> FormatTokenRunsOrThrow(
+            string textToken,
+            IReadOnlyList<PresentationTextArg>? args = null)
+        {
+            if (TryFormatTokenRuns(textToken, args, out IReadOnlyList<PresentationTextRun> runs))
+            {
+                return runs;
+            }
+
+            throw new InvalidOperationException(
+                $"Presentation text token '{textToken}' has no locale template runs for the active locale.");
         }
 
         public bool TryResolveImageSource(string imageId, out string source)

@@ -1,0 +1,615 @@
+[
+  {
+    "id": "panel.collection.effectTemplate.chip",
+    "subject": "EffectTemplate",
+    "graph": "Graph.CollectionBags.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-effect-template",
+          "bind": "displayName"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.abilitySlot.chip",
+    "subject": "AbilitySlot",
+    "graph": "Graph.CollectionBags.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-ability-slot",
+          "bind": "displayName"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.abilitySlot.withHolders",
+    "subject": "AbilitySlot",
+    "graph": "Graph.CollectionBags.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "inputs": [
+      {
+        "name": "holderSource",
+        "from": {
+          "space": "parent",
+          "output": "panel.collection.fireballHolders"
+        },
+        "type": "EntityCollection"
+      }
+    ],
+    "collections": [
+      {
+        "name": "holders",
+        "source": "input",
+        "input": "holderSource",
+        "template": "panel.collection.holder.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-ability-slot",
+          "bind": "displayName"
+        },
+        {
+          "type": "list",
+          "class": "collection-ability-holders",
+          "bind": "holders",
+          "viewportHeight": 72,
+          "itemExtent": 28
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.holder.chip",
+    "subject": "Entity",
+    "graph": "Graph.CollectionBags.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-holder",
+          "bind": "displayName"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.tag.chip",
+    "subject": "Tag",
+    "graph": "Graph.CollectionBags.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-present-tag",
+          "bind": "displayName"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.item.chip",
+    "subject": "ItemInstance",
+    "graph": "Graph.CollectionBags.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-item-instance",
+          "bind": "displayName"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.itemDefinition.chip",
+    "subject": "ItemDefinition",
+    "graph": "Graph.CollectionBags.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-item-definition",
+          "bind": "displayName"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.task.chip",
+    "subject": "Task",
+    "graph": "Graph.CollectionBags.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-task",
+          "bind": "displayName"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.activity.chip",
+    "subject": "Activity",
+    "graph": "Graph.CollectionBags.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-activity",
+          "bind": "displayName"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.progression.chip",
+    "subject": "ProgressionNode",
+    "graph": "Graph.CollectionBags.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-progression",
+          "bind": "displayName"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.roster.card",
+    "subject": "Entity",
+    "graph": "Graph.CollectionBags.RosterCard",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.roster.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "slots",
+        "source": "selfGraph",
+        "collectionKey": "panel.collection.nestedSlots",
+        "template": "panel.collection.abilitySlot.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-roster-name",
+          "bind": "displayName"
+        },
+        {
+          "type": "list",
+          "class": "collection-nested-slots",
+          "bind": "slots",
+          "viewportHeight": 96,
+          "itemExtent": 28
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.effects",
+    "graph": "Graph.CollectionBags.EffectTemplates",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.effects.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "templates",
+        "source": "selfGraph",
+        "collectionKey": "panel.collection.effectTemplates",
+        "template": "panel.collection.effectTemplate.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-panel-title",
+          "text": "效果图鉴"
+        },
+        {
+          "type": "list",
+          "class": "collection-effect-templates",
+          "bind": "templates",
+          "viewportHeight": 160,
+          "itemExtent": 36
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.roster",
+    "graph": "Graph.CollectionBags.Roster",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.roster.host.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "units",
+        "source": "selfGraph",
+        "collectionKey": "panel.collection.rosterUnits",
+        "template": "panel.collection.roster.card"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-panel-title",
+          "text": "编队档案"
+        },
+        {
+          "type": "list",
+          "class": "collection-roster-units",
+          "bind": "units",
+          "viewportHeight": 200,
+          "itemExtent": 88
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.tags",
+    "graph": "Graph.CollectionBags.PresentTags",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.tags.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "tags",
+        "source": "selfGraph",
+        "collectionKey": "panel.collection.presentTags",
+        "template": "panel.collection.tag.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-panel-title",
+          "text": "身上的印记"
+        },
+        {
+          "type": "list",
+          "class": "collection-present-tags",
+          "bind": "tags",
+          "viewportHeight": 220,
+          "itemExtent": 40
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.holders",
+    "graph": "Graph.CollectionBags.HoldersWall",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.holders.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "slots",
+        "source": "selfGraph",
+        "collectionKey": "panel.collection.holderSlots",
+        "template": "panel.collection.abilitySlot.withHolders"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-panel-title",
+          "text": "谁会火球"
+        },
+        {
+          "type": "list",
+          "class": "collection-holder-slots",
+          "bind": "slots",
+          "viewportHeight": 180,
+          "itemExtent": 64
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.inventory",
+    "graph": "Graph.CollectionBags.Inventory",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.inventory.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "items",
+        "source": "selfGraph",
+        "collectionKey": "panel.collection.inventoryItems",
+        "template": "panel.collection.item.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-panel-title",
+          "text": "背包堆叠"
+        },
+        {
+          "type": "list",
+          "class": "collection-inventory-items",
+          "bind": "items",
+          "present": "aggregate",
+          "aggregate": {
+            "count": {
+              "from": "totalCount",
+              "prefix": "×"
+            }
+          },
+          "viewportHeight": 80,
+          "itemExtent": 48
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.itemDefinitions",
+    "graph": "Graph.CollectionBags.ItemDefinitions",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.itemDefinitions.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "definitions",
+        "source": "selfGraph",
+        "collectionKey": "panel.collection.itemDefinitions",
+        "template": "panel.collection.itemDefinition.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-panel-title",
+          "text": "物品图鉴"
+        },
+        {
+          "type": "list",
+          "class": "collection-item-definitions",
+          "bind": "definitions",
+          "viewportHeight": 220,
+          "itemExtent": 40
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.tasks",
+    "graph": "Graph.CollectionBags.ActiveTasks",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.tasks.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "tasks",
+        "source": "selfGraph",
+        "collectionKey": "panel.collection.activeTasks",
+        "template": "panel.collection.task.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-panel-title",
+          "text": "进行中的差事"
+        },
+        {
+          "type": "list",
+          "class": "collection-active-tasks",
+          "bind": "tasks",
+          "viewportHeight": 220,
+          "itemExtent": 40
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.activities",
+    "graph": "Graph.CollectionBags.ActiveActivities",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.activities.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "activities",
+        "source": "selfGraph",
+        "collectionKey": "panel.collection.activeActivities",
+        "template": "panel.collection.activity.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-panel-title",
+          "text": "进行中的活动"
+        },
+        {
+          "type": "list",
+          "class": "collection-active-activities",
+          "bind": "activities",
+          "viewportHeight": 220,
+          "itemExtent": 40
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.collection.progression",
+    "graph": "Graph.CollectionBags.ProgressionNodes",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.collection.progression.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "progress",
+        "source": "selfGraph",
+        "collectionKey": "panel.collection.progressionNodes",
+        "template": "panel.collection.progression.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "collection-panel-title",
+          "text": "修行进度"
+        },
+        {
+          "type": "list",
+          "class": "collection-progression-nodes",
+          "bind": "progress",
+          "viewportHeight": 220,
+          "itemExtent": 40
+        }
+      ]
+    }
+  }
+]

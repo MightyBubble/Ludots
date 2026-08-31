@@ -51,6 +51,7 @@ namespace Ludots.Core.Gameplay.Story
             Array.Clear(_callStack, 0, _callStack.Length);
 
             MapId? mapScope = _engine.CurrentMapSession?.MapId;
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             GraphFrame frame = GraphFrame.Bind(
                 GraphKind.Query,
                 GraphEntityPreset.None,
@@ -65,6 +66,7 @@ namespace Ludots.Core.Gameplay.Story
                 _bools,
                 _entities,
                 _targets,
+                intIds,
                 _callStack,
                 mapScope: mapScope);
             GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true);

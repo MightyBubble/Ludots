@@ -1,0 +1,73 @@
+[
+  {
+    "id": "collection_bags_hero",
+    "onSpawnEffect": "Effect.CollectionBags.CompleteTraining",
+    "components": {
+      "Name": { "Value": "名册守望者" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "VisionEmitterCm": {
+        "scope": "collectionbags.local",
+        "layers": ["ground"],
+        "polarity": "Reveal",
+        "aperture": { "kind": "Disk", "rangeCm": 1200 },
+        "detectionStrength": 1
+      },
+      "AttributeBuffer": {
+        "base": { "Health": 100, "Attack": 12 }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": ["火球术", "闪现", "守护姿态"]
+      },
+      "GameplayTagContainer": {
+        "tags": ["勇气印记", "洞察印记", "守望印记"]
+      },
+      "ProgressionStateBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "collection_bags_apprentice",
+    "components": {
+      "Name": { "Value": "名册学徒" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 220, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "VisionEmitterCm": {
+        "scope": "collectionbags.local",
+        "layers": ["ground"],
+        "polarity": "Reveal",
+        "aperture": { "kind": "Disk", "rangeCm": 800 },
+        "detectionStrength": 1
+      },
+      "AttributeBuffer": {
+        "base": { "Health": 80, "Attack": 8 }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": ["火球术"]
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "collection_bags_potion",
+    "components": {
+      "Name": { "Value": "试炼药剂" },
+      "PlayerOwner": { "PlayerId": 1 },
+      "ItemInstanceCm": {
+        "definitionId": "Item.CollectionBags.Potion",
+        "stackCount": 1
+      }
+    }
+  }
+]

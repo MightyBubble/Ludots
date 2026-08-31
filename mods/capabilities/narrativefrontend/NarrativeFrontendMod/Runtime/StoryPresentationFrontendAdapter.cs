@@ -57,6 +57,12 @@ public static class StoryPresentationFrontendAdapter
     {
         NarrativeFrontendSurfaceKind kind = ParseKind(surface.SurfaceKind);
         NarrativeFrontendAnchor anchor = ParseAnchor(surface.Anchor);
+        if (string.IsNullOrWhiteSpace(surface.LayoutId))
+        {
+            throw new InvalidOperationException(
+                $"Story surface '{surface.SurfaceKey}' requires layoutId.");
+        }
+
         string portraitSrc = string.Empty;
         if (!string.IsNullOrWhiteSpace(surface.ImageId))
         {
@@ -79,7 +85,6 @@ public static class StoryPresentationFrontendAdapter
                 items.Add(new NarrativeFrontendSurfaceItem(
                     Label: choice.Text,
                     Caption: string.Empty,
-                    Active: i == 0,
                     Shortcut: choice.Shortcut));
             }
         }
@@ -109,7 +114,10 @@ public static class StoryPresentationFrontendAdapter
             ImageId: surface.ImageId,
             PortraitSrc: portraitSrc,
             PortraitSize: surface.ImageSize,
-            FrameImageSrc: frameImageSrc);
+            FrameImageSrc: frameImageSrc,
+            BodyRuns: surface.BodyRuns,
+            LayoutId: surface.LayoutId,
+            StyleClass: surface.StyleClass);
     }
 
     private static NarrativeFrontendSurfaceKind ParseKind(string surfaceKind)
@@ -120,7 +128,6 @@ public static class StoryPresentationFrontendAdapter
             Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.DialogueBubble => NarrativeFrontendSurfaceKind.DialogueBubble,
             Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.StandingPortrait => NarrativeFrontendSurfaceKind.StandingPortrait,
             Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.SubtitleBubble => NarrativeFrontendSurfaceKind.SubtitleBubble,
-            Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.ChoiceList => NarrativeFrontendSurfaceKind.ChoiceList,
             Ludots.Core.Gameplay.Story.StoryPresentationSurfaceKinds.TransmissionOverlay => NarrativeFrontendSurfaceKind.TransmissionOverlay,
             _ => throw new InvalidOperationException(
                 $"Unknown story surfaceKind '{surfaceKind}' for NarrativeFrontend."),

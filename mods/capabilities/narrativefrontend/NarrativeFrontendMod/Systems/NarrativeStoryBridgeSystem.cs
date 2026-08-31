@@ -14,6 +14,7 @@ namespace NarrativeFrontendMod.Systems
     /// Projects active DialogueView onto NarrativeFrontend when the current map opts in via tag
     /// <c>narrative.frontend.project</c>. Content mods start dialogue via TriggerGraph StartDialogue;
     /// flagship NarrativeShowcase keeps its own publisher and must not also carry this tag.
+    /// Active choices render on PanelHost (<see cref="NarrativeDialogueChoicePanels"/>), not ChoiceList.
     /// </summary>
     internal sealed class NarrativeStoryBridgeSystem : ISystem<float>
     {
@@ -39,6 +40,7 @@ namespace NarrativeFrontendMod.Systems
             if (!CurrentMapOptsIntoProjection())
             {
                 _service.Clear(OwnerId);
+                NarrativeDialogueChoicePanels.Hide(_engine);
                 return;
             }
 
@@ -51,6 +53,7 @@ namespace NarrativeFrontendMod.Systems
             if (!dialogue.TryGetActiveView(out DialogueView view))
             {
                 _service.Clear(OwnerId);
+                NarrativeDialogueChoicePanels.Hide(_engine);
                 return;
             }
 
@@ -79,6 +82,8 @@ namespace NarrativeFrontendMod.Systems
                 throw new InvalidOperationException(
                     $"Active dialogue '{view.DialogueId}' projected zero visible surfaces; check presentation profiles.");
             }
+
+            NarrativeDialogueChoicePanels.SyncVisibility(_engine, dialogue);
 
             string signature = BuildSignature(view, surfaces.Count);
             _service.Publish(new NarrativeFrontendPageState(

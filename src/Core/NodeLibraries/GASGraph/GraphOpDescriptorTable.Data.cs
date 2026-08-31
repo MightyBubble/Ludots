@@ -151,6 +151,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.SetPanelAudience, LinearQueryScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst);
             Add(rows, GraphNodeOp.ModifyAttributeSet, EffectAndTriggerGraph, GraphValueType.Void, portTargetValue, scriptPorts: portTargetValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.OfferActivity, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.OfferTask, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.DestroyPanel, LinearQueryScript, GraphValueType.Void, portSource, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadMapVarInt, ScriptTriggerQuery, GraphValueType.Int, portSource, queryOut: GraphValueType.Int, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadMapVarFloat, ScriptTriggerQuery, GraphValueType.Float, portSource, queryOut: GraphValueType.Float, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
@@ -181,6 +182,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.RelationshipAggAverageMetric, QueryOnly, queryOut: GraphValueType.Int, queryPorts: portListSource, flags: GraphOperandRole.RelationshipTypeFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QueryAllMapEntities, QueryOnly, queryOut: GraphValueType.TargetList);
             Add(rows, GraphNodeOp.QueryFromCollection, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portSource, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.QueryCollectActiveEffects, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portSource);
+            Add(rows, GraphNodeOp.QueryCollectEffectTemplates, QueryOnly, queryOut: GraphValueType.IntIdList);
+            Add(rows, GraphNodeOp.QueryCollectAbilitySlots, QueryOnly, queryOut: GraphValueType.IntIdList, queryPorts: portSource);
+            Add(rows, GraphNodeOp.QueryCollectInventoryItems, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portSource);
+            Add(rows, GraphNodeOp.QueryCollectItemDefinitions, QueryOnly, queryOut: GraphValueType.IntIdList);
+            Add(rows, GraphNodeOp.QueryCollectPresentTags, QueryOnly, queryOut: GraphValueType.IntIdList, queryPorts: portSource);
+            Add(rows, GraphNodeOp.QueryCollectActiveTasks, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portSource);
+            Add(rows, GraphNodeOp.QueryCollectActiveActivities, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portSource);
+            Add(rows, GraphNodeOp.QueryCollectProgressionNodes, QueryOnly, queryOut: GraphValueType.IntIdList, queryPorts: portSource);
+            Add(rows, GraphNodeOp.QueryCollectAbilityHolders, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.QueryCollectActiveDialogueChoices, QueryOnly, queryOut: GraphValueType.IntIdList);
+            Add(rows, GraphNodeOp.LoadEffectTiming, LinearAndScript | QueryOnly, GraphValueType.Float, scriptOut: GraphValueType.Float, queryOut: GraphValueType.Float);
+            Add(rows, GraphNodeOp.LoadEffectStack, LinearAndScript | QueryOnly, GraphValueType.Float, scriptOut: GraphValueType.Float, queryOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.QueryFilterTeam, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portListTeamId, flags: GraphOperandRole.TeamIdSourceFlags);
             Add(rows, GraphNodeOp.QueryFilterTemplate, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QueryFilterAttributeRange, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portListMinMax, imm: GraphOperandRole.SymbolImm);

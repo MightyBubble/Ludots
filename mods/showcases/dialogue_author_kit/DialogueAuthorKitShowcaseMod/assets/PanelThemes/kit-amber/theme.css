@@ -43,3 +43,25 @@
 .story-muted {
   color: rgb(180, 160, 130);
 }
+
+.panel-narrative-choices {
+  background-color: rgba(36, 22, 12, 236);
+  border: 2px solid rgb(246, 197, 107);
+  border-radius: 4px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  padding: 12px 14px;
+}
+
+.panel-narrative-choices .story-eyebrow {
+  margin-bottom: 8px;
+  color: rgb(246, 197, 107);
+}
+
+.panel-narrative-choices .narrative-choice-chip,
+.panel-narrative-choices .story-choice-item {
+  background-color: rgba(48, 28, 16, 220);
+  border: 1px solid rgba(232, 188, 110, 0.55);
+  border-radius: 4px;
+  padding: 10px 12px;
+  color: rgb(248, 250, 252);
+}

@@ -11,6 +11,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Entity = 4,
         TargetList = 5,
         Text = 6,
+        IntIdList = 7,
     }
 
     public enum GraphNodeOp : ushort
@@ -133,6 +134,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         RelationshipAggMaxEntityByMetric = 395,
         RelationshipAggMinEntityByMetric = 396,
         RelationshipHasLink = 397,          // B[Dst] = HasLink(E[A], E[B], type=Flags symbol)
+        QueryCollectActiveEffects = 398,    // TargetList = active effect instances on E[A]
+        LoadEffectTiming = 399,             // F[Dst] = RemainingTicks|TotalTicks on caster (Flags)
+        LoadEffectStack = 429,              // F[Dst] = EffectStack.Count on caster (missing → 1)
 
         // ── Entity lifecycle composition (400-401) ──
         BeginLifecycleTransaction = 400,
@@ -146,6 +150,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         SnapToNearestInCollection = 406,
         SnapToNearestGraphEdge = 407,
 
+        // ── Typed collection collectors (408-409, 419, 423-427) ──
+        QueryCollectEffectTemplates = 408,  // IntIdList = registered effect template ids
+        QueryCollectAbilitySlots = 409,     // IntIdList = resolved ability slot indices on E[A]
+        // 410-418 occupied
+        QueryCollectInventoryItems = 419,   // TargetList = owned item instance entities for E[A]
+        // 420-422 occupied
+        QueryCollectItemDefinitions = 423,  // IntIdList = registered item definition ids
+        QueryCollectPresentTags = 424,      // IntIdList = present tag ids on E[A]
+        QueryCollectActiveTasks = 425,      // TargetList = task instances scoped to E[A]
+        QueryCollectProgressionNodes = 426, // IntIdList = progression ids on E[A]
+        QueryCollectAbilityHolders = 427,   // TargetList = TargetList candidates holding Imm ability
+        QueryCollectActiveActivities = 428, // TargetList = activity instances scoped to E[A]
+
         // ── Event evaluation context (410-412, RFC-0065 PROV-4b) ──
         LoadViewer           = 410,  // E[Dst] = state.Viewer (fixed register 2)
         LoadEventPayloadInt  = 411,  // I[Dst] = presenter EventPayload int slot (Imm: 0=PayloadA, 1=PayloadB)
@@ -157,7 +174,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         LoadEntryPayloadInt    = 414, // I[Dst] = entry payload (Imm: payload key symbol id)
         LoadEntryPayloadFloat  = 415, // F[Dst] = entry payload (Imm: payload key symbol id)
 
-        // ── Placed-entity / region / anchor variable reads (#1108) ──
+        // ── Placed-entity / region / anchor variable reads ──
         // E[Dst] = entity registered under the placed InstanceId (Imm: instance id key id)
         // on the mounted map. Unregistered or destroyed instances write Entity.Null —
         // unlike LoadEntryPayload*, a miss is a readable value, not a throw. Compile-time
@@ -184,7 +201,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         InvokeScript = 434,    // run Script graph Imm to halt (callee must not Yield)
         MoveInt = 435,         // I[Dst] = I[A]
 
-        // ── Generic lookup-table reads (436-438, #881) ──
+        // ── Generic lookup-table reads (436-438) ──
         /// <summary>I[Dst] = ResolveTableRow(Imm=tableId, I[A]=key).</summary>
         ResolveTableRow = 436,
         /// <summary>I[Dst] = TableReadInt(Imm=fieldId, I[A]=rowHandle). TextToken columns return token id.</summary>
@@ -192,7 +209,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>F[Dst] = TableReadFloat(Imm=fieldId, I[A]=rowHandle).</summary>
         TableReadFloat = 438,
 
-        // ── Panel visibility control (#1014, contract five) ──
+        // ── Panel visibility control (contract five) ──
         /// <summary>Request the named panel type to become visible. Imm = panel type symbol.</summary>
         ShowPanel = 439,
         /// <summary>Request the named panel type to become hidden. Imm = panel type symbol.</summary>
@@ -224,7 +241,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>Pick an integer outcome from a named deterministic distribution. Imm = distribution symbol; I[A] = stream salt.</summary>
         WeightedPick = 449,
 
-        // ── TriggerGraph subgraph reuse + structured event dispatch (#1116/#1115) ──
+        // ── TriggerGraph subgraph reuse + structured event dispatch ──
         // InvokeGraph encoding: Imm = target graph id at run time; Dst = int register
         // receiving the child's HaltReturnInt. Authoring has two modes mirroring InvokeScript:
         // literal graphId (Flags 0) or a graph-key functionName resolved and patched to the id
@@ -246,7 +263,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>Assemble a ScriptContext from the InvokeArgs staging per the event schema (Imm: event name symbol id) and fire it map-scoped; Flags 0 = map domain, 1 = self domain.</summary>
         DispatchMapEvent = 454,
         /// <summary>
-        /// #1126 AwaitCallback: register a named callback handle (Imm: callbackType symbol id),
+        /// AwaitCallback: register a named callback handle (Imm: callbackType symbol id),
         /// park the slice (Yielded), and on Complete write confirmed into B[Dst] then resume
         /// in the Continuation phase (registration order).
         /// </summary>
@@ -294,8 +311,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Imm = attribute symbol patched at load time.
         /// </summary>
         ModifyAttributeSet = 465,
-        /// <summary>#1296 Offer the activity named by Symbols[Imm] to E[A] as scope host via ActivityRuntimeService.</summary>
+        /// <summary>Offer the activity named by Symbols[Imm] to E[A] as scope host via ActivityRuntimeService.</summary>
         OfferActivity = 466,
+        /// <summary>Offer the task named by Symbols[Imm] to E[A] as scope host via TaskRuntimeService.</summary>
+        OfferTask = 467,
+        /// <summary>IntIdList = currently available DialogueRuntime choice ids.</summary>
+        QueryCollectActiveDialogueChoices = 468,
 
     }
 

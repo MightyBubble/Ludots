@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -9,6 +10,7 @@ namespace Ludots.Core.Gameplay.Items
     public sealed class InventoryRuntimeService
     {
         private static readonly QueryDescription ItemQuery = new QueryDescription().WithAll<ItemInstanceCm, ItemLocationCm>();
+        private static readonly QueryDescription OwnedItemQuery = new QueryDescription().WithAll<ItemInstanceCm>();
         private static readonly QueryDescription ContainerQuery = new QueryDescription().WithAll<ItemContainerCm>();
         private static readonly QueryDescription MountedContainerQuery = new QueryDescription().WithAll<ItemMountedContainerCm, ItemContainerCm>();
 
@@ -843,6 +845,35 @@ namespace Ludots.Core.Gameplay.Items
                     output.Add(entity);
                 }
             });
+        }
+
+        public int CollectOwnedItemInstances(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            foreach (ref var chunk in _world.Query(in OwnedItemQuery))
+            {
+                ref Entity first = ref chunk.Entity(0);
+                foreach (int index in chunk)
+                {
+                    if (written >= buffer.Length)
+                    {
+                        return written;
+                    }
+
+                    Entity item = Unsafe.Add(ref first, index);
+                    if (_ownership.IsOwnedBy(owner, item))
+                    {
+                        buffer[written++] = item;
+                    }
+                }
+            }
+
+            return written;
         }
 
         private int CountStackUnitsInContainer(Entity container, int definitionId)

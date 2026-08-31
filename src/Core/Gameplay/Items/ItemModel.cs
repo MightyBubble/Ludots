@@ -409,5 +409,32 @@ namespace Ludots.Core.Gameplay.Items
             definition = null!;
             return false;
         }
+
+        public int CopyRegisteredIds(Span<int> destination)
+        {
+            int written = 0;
+            for (int id = 1; id < _definitions.Count && written < destination.Length; id++)
+            {
+                if (_definitions[id] != null)
+                {
+                    destination[written++] = id;
+                }
+            }
+
+            return written;
+        }
+
+        public string GetName(int id)
+        {
+            foreach (KeyValuePair<string, int> pair in _nameToId)
+            {
+                if (pair.Value == id)
+                {
+                    return pair.Key;
+                }
+            }
+
+            return string.Empty;
+        }
     }
 }

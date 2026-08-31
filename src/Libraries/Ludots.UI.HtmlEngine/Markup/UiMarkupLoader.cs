@@ -256,6 +256,10 @@ public sealed class UiMarkupLoader
 			break;
 		case "label":
 		case "span":
+		case "b":
+		case "strong":
+		case "em":
+		case "i":
 		case "p":
 		case "h1":
 		case "h2":

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Providers;
 
 namespace Ludots.Core.Gameplay.Tasks
@@ -185,15 +186,17 @@ namespace Ludots.Core.Gameplay.Tasks
                 : TaskInstanceState.Offered;
 
             int instanceId = _nextInstanceId++;
-            Entity entity = _world.Create(new TaskInstanceCm
-            {
-                DefinitionId = definitionId,
-                InstanceId = instanceId,
-                State = initial,
-                ScopeHost = scopeHost,
-                ObjectiveMask = 0,
-                Revision = 1,
-            });
+            Entity entity = _world.Create(
+                new TaskInstanceCm
+                {
+                    DefinitionId = definitionId,
+                    InstanceId = instanceId,
+                    State = initial,
+                    ScopeHost = scopeHost,
+                    ObjectiveMask = 0,
+                    Revision = 1,
+                },
+                new Name { Value = ResolveInstanceName(definition) });
             _index[key] = entity;
 
             if (initial == TaskInstanceState.Offered)
@@ -644,6 +647,17 @@ namespace Ludots.Core.Gameplay.Tasks
             }
 
             return ref _world.Get<TaskInstanceCm>(taskEntity);
+        }
+
+        private static string ResolveInstanceName(TaskDefinition definition)
+        {
+            if (string.IsNullOrWhiteSpace(definition.DisplayName))
+            {
+                throw new InvalidOperationException(
+                    $"Task definition '{definition.Id}' requires a non-empty display name.");
+            }
+
+            return definition.DisplayName;
         }
 
         private static int ScopeKey(Entity scopeHost) =>

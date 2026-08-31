@@ -20,7 +20,6 @@ namespace NarrativeShowcaseMod.Runtime
         public NarrativeShowcaseSurfaceConfig DialogueBubble { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig StandingPortrait { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig SubtitleBubble { get; set; } = new();
-        public NarrativeShowcaseSurfaceConfig ChoiceList { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig TransmissionOverlay { get; set; } = new();
         public NarrativeShowcaseSurfaceConfig Nameplate { get; set; } = new();
         public NarrativeShowcaseHintConfig Hints { get; set; } = new();
@@ -80,6 +79,8 @@ namespace NarrativeShowcaseMod.Runtime
 
     internal sealed class NarrativeShowcaseSurfaceConfig
     {
+        public string LayoutId { get; set; } = string.Empty;
+        public string StyleClass { get; set; } = string.Empty;
         public string Anchor { get; set; } = "TopLeft";
         public float Width { get; set; } = 360f;
         public float OffsetX { get; set; }
@@ -166,7 +167,10 @@ namespace NarrativeShowcaseMod.Runtime
         public bool ShowVariablesWhenNonZero { get; set; }
         public bool ShowObjectiveWithDialogue { get; set; }
         public bool ShowObjectiveWithSequence { get; set; }
+        public bool ShowPromptWithDialogue { get; set; }
+        public bool ShowPromptWithSequence { get; set; }
         public bool HideCastDuringStandingPortrait { get; set; } = true;
+        public bool HidePanelsDuringStandingPortrait { get; set; } = true;
     }
 
     internal sealed class NarrativeShowcaseChoiceSignalRoute

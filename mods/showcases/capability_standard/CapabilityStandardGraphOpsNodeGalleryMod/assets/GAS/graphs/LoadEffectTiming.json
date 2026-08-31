@@ -1,0 +1,16 @@
+[
+  {
+    "id": "showcase.graph_op.LoadEffectTiming",
+    "kind": "Effect",
+    "entry": "remaining",
+    "nodes": [
+      {
+        "id": "remaining",
+        "op": "LoadEffectTiming",
+        "attribute": "RemainingTicks"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  }
+]

@@ -6,7 +6,7 @@ using System.Text.Json.Nodes;
 namespace Ludots.Core.UI.PanelProjection
 {
     /// <summary>
-    /// Strict JSON loader for panel templates (#1010). Unknown fields, unknown source
+    /// Strict JSON loader for panel templates. Unknown fields, unknown source
     /// kinds, and cross-field violations fail at load time with the offending id named.
     /// Collection rows reference reusable item templates by id (resolved after catalog load).
     /// </summary>
@@ -14,20 +14,41 @@ namespace Ludots.Core.UI.PanelProjection
     {
         private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal)
         {
-            "id", "skin", "graph", "pins", "events", "intents", "collections", "layout", "subject",
-            "ownerKind", "audienceSeats"
+            "id", "skin", "graph", "pins", "events", "intents", "inputs", "collections", "layout", "subject",
+            "ownerKind", "audienceSeats", "width"
         };
         private static readonly HashSet<string> PinFields = new(StringComparer.Ordinal) { "name", "key", "mode", "default" };
+        private static readonly HashSet<string> InputFields = new(StringComparer.Ordinal)
+        {
+            "name", "from", "type"
+        };
+        private static readonly HashSet<string> InputFromFields = new(StringComparer.Ordinal)
+        {
+            "space", "output"
+        };
         private static readonly HashSet<string> CollectionFields = new(StringComparer.Ordinal)
         {
-            "name", "collectionKey", "template"
+            "name", "source", "collectionKey", "input", "template"
         };
-        private static readonly HashSet<string> ControlFields = new(StringComparer.Ordinal)
+        private static readonly HashSet<string> ClosedInputTypes = new(StringComparer.Ordinal)
         {
-            "type", "class", "text", "bind", "prefix", "current", "max", "showWhen",
-            "viewportHeight", "itemExtent", "virtualize", "overscan"
+            "EntityCollection",
+            "EffectInstanceCollection",
+            "EffectTemplateCollection",
+            "AbilitySlotCollection",
+            "AbilityDefinitionCollection",
+            "ItemInstanceCollection",
+            "ItemDefinitionCollection",
+            "TagIdCollection",
+            "TaskInstanceCollection",
+            "ActivityInstanceCollection",
+            "ProgressionNodeCollection",
+            "DialogueChoiceCollection",
+            "Bool",
+            "Int",
+            "Float",
+            "Entity"
         };
-
         public static PanelTemplate Load(string json)
         {
             if (string.IsNullOrWhiteSpace(json))
@@ -116,35 +137,40 @@ namespace Ludots.Core.UI.PanelProjection
                     $"panel template '{id}'");
             }
 
-            PanelOwnerKind ownerKind = PanelOwnerKind.Seat;
-            if (rootObject["ownerKind"] is not null)
-            {
-                ownerKind = PanelOwnerKinds.Parse(
-                    RequireString(rootObject, "ownerKind", $"panel template '{id}'"),
-                    $"panel template '{id}'");
-            }
-
-            PanelAudience audience = ParseAudience(id, rootObject);
-
             List<PanelTemplateEvent> events = ParseEvents(id, rootObject);
             List<PanelIntentMapEntry> intents = ParseIntents(id, rootObject, events);
-            List<PanelCollectionBinding> collections = ParseCollections(id, rootObject);
-            if (subject != PanelSubjectKind.None && collections.Count > 0)
-            {
-                throw new InvalidOperationException(
-                    $"Panel template '{id}' declares subject and cannot also declare collections.");
-            }
-
+            List<PanelInputBinding> inputs = ParseInputs(id, rootObject);
+            List<PanelCollectionBinding> collections = ParseCollections(id, rootObject, inputs);
             PanelLayout? layout = ParseLayout(id, rootObject, pins, collections, subject);
 
-            return new PanelTemplate(id, graph, pins, events, intents, skin, collections, layout, subject, ownerKind, audience);
+            PanelOwnerKind ownerKind = rootObject["ownerKind"] is null
+                ? PanelOwnerKind.Seat
+                : PanelOwnerKinds.Parse(
+                    RequireString(rootObject, "ownerKind", $"panel template '{id}'"),
+                    $"panel template '{id}'");
+            PanelAudience audience = ParseAudience(id, rootObject);
+            float width = 0f;
+            if (rootObject["width"] is not null)
+            {
+                width = RequirePositiveFloat(rootObject, "width", $"panel template '{id}'");
+            }
+
+            return new PanelTemplate(
+                id,
+                graph,
+                pins,
+                events,
+                intents,
+                skin,
+                collections,
+                layout,
+                subject,
+                ownerKind,
+                audience,
+                inputs,
+                width);
         }
 
-        /// <summary>
-        /// Audience axis declaration: the string <c>"all-seats"</c> or an array of seat id
-        /// strings. Anything else — numbers, objects, an empty array, absent-but-present
-        /// nulls — fails at load naming the template.
-        /// </summary>
         private static PanelAudience ParseAudience(string templateId, JsonObject rootObject)
         {
             JsonNode? node = rootObject["audienceSeats"];
@@ -173,7 +199,8 @@ namespace Ludots.Core.UI.PanelProjection
             var seatIds = new List<string>(array.Count);
             foreach (JsonNode? entry in array)
             {
-                if (entry is not JsonValue seatValue || !seatValue.TryGetValue<string>(out string? seatId) ||
+                if (entry is not JsonValue seatValue ||
+                    !seatValue.TryGetValue<string>(out string? seatId) ||
                     string.IsNullOrWhiteSpace(seatId))
                 {
                     throw new InvalidOperationException(
@@ -186,7 +213,60 @@ namespace Ludots.Core.UI.PanelProjection
             return PanelAudience.Seats(seatIds);
         }
 
-        private static List<PanelCollectionBinding> ParseCollections(string templateId, JsonObject rootObject)
+        private static List<PanelInputBinding> ParseInputs(string templateId, JsonObject rootObject)
+        {
+            var inputs = new List<PanelInputBinding>();
+            if (rootObject["inputs"] is null)
+            {
+                return inputs;
+            }
+
+            if (rootObject["inputs"] is not JsonArray inputsNode)
+            {
+                throw new InvalidOperationException($"Panel template '{templateId}' inputs must be an array.");
+            }
+
+            foreach (JsonNode? inputNode in inputsNode)
+            {
+                if (inputNode is not JsonObject inputObject)
+                {
+                    throw new InvalidOperationException($"Panel template '{templateId}' inputs entries must be objects.");
+                }
+
+                RejectUnknownFields(inputObject, InputFields, $"panel template '{templateId}' input");
+                string name = RequireString(inputObject, "name", $"panel template '{templateId}' input");
+                if (inputObject["from"] is not JsonObject fromObject)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' input '{name}' requires object 'from'.");
+                }
+
+                RejectUnknownFields(fromObject, InputFromFields, $"panel template '{templateId}' input '{name}' from");
+                string space = RequireString(fromObject, "space", $"panel template '{templateId}' input '{name}' from");
+                if (!string.Equals(space, "parent", StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' input '{name}' from.space must be 'parent', got '{space}'.");
+                }
+
+                string output = RequireString(fromObject, "output", $"panel template '{templateId}' input '{name}' from");
+                string type = RequireString(inputObject, "type", $"panel template '{templateId}' input '{name}'");
+                if (!ClosedInputTypes.Contains(type))
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' input '{name}' type '{type}' is unknown.");
+                }
+
+                inputs.Add(new PanelInputBinding(name, space, output, type));
+            }
+
+            return inputs;
+        }
+
+        private static List<PanelCollectionBinding> ParseCollections(
+            string templateId,
+            JsonObject rootObject,
+            IReadOnlyList<PanelInputBinding> inputs)
         {
             var collections = new List<PanelCollectionBinding>();
             if (rootObject["collections"] is null)
@@ -199,6 +279,12 @@ namespace Ludots.Core.UI.PanelProjection
                 throw new InvalidOperationException($"Panel template '{templateId}' collections must be an array.");
             }
 
+            var inputNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (PanelInputBinding input in inputs)
+            {
+                inputNames.Add(input.Name);
+            }
+
             foreach (JsonNode? collectionNode in collectionsNode)
             {
                 if (collectionNode is not JsonObject collectionObject)
@@ -208,12 +294,47 @@ namespace Ludots.Core.UI.PanelProjection
 
                 RejectUnknownFields(collectionObject, CollectionFields, $"panel template '{templateId}' collection");
                 string name = RequireString(collectionObject, "name", $"panel template '{templateId}' collection");
-                string collectionKey = RequireString(
-                    collectionObject, "collectionKey", $"panel template '{templateId}' collection '{name}'");
+                string sourceText = RequireString(
+                    collectionObject, "source", $"panel template '{templateId}' collection '{name}'");
+                PanelCollectionSourceKind source = PanelCollectionSources.Parse(
+                    sourceText, $"panel template '{templateId}' collection '{name}'");
                 string elementTemplateId = RequireString(
                     collectionObject, "template", $"panel template '{templateId}' collection '{name}'");
 
-                collections.Add(new PanelCollectionBinding(name, collectionKey, elementTemplateId));
+                string collectionKey;
+                string? inputName = null;
+                if (source == PanelCollectionSourceKind.SelfGraph)
+                {
+                    collectionKey = RequireString(
+                        collectionObject, "collectionKey", $"panel template '{templateId}' collection '{name}'");
+                    if (collectionObject["input"] is not null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' collection '{name}' source=selfGraph must not declare input.");
+                    }
+                }
+                else
+                {
+                    inputName = RequireString(
+                        collectionObject, "input", $"panel template '{templateId}' collection '{name}'");
+                    if (!inputNames.Contains(inputName))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' collection '{name}' input '{inputName}' is not declared in inputs.");
+                    }
+
+                    string? aliasKey = OptionalString(collectionObject, "collectionKey");
+                    collectionKey = string.IsNullOrWhiteSpace(aliasKey) ? inputName : aliasKey;
+                    if (!string.IsNullOrWhiteSpace(aliasKey) &&
+                        !string.Equals(aliasKey, inputName, StringComparison.Ordinal))
+                    {
+                        // Alias must match the input name until parent-output remapping is wired at catalog bind.
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' collection '{name}' collectionKey alias '{aliasKey}' must equal input '{inputName}'.");
+                    }
+                }
+
+                collections.Add(new PanelCollectionBinding(name, collectionKey, elementTemplateId, source, inputName));
             }
 
             return collections;
@@ -247,9 +368,10 @@ namespace Ludots.Core.UI.PanelProjection
                 pinNames.Add(pin.Name);
             }
 
-            if (subject == PanelSubjectKind.Entity)
+            if (PanelSubjectKinds.IsEntityBagSubject(subject) || PanelSubjectKinds.IsIntIdBagSubject(subject))
             {
                 pinNames.Add(PanelSubjectKinds.EntityDisplayName);
+                pinNames.Add(PanelSubjectKinds.ImageId);
             }
 
             var collectionNames = new HashSet<string>(StringComparer.Ordinal);
@@ -258,166 +380,15 @@ namespace Ludots.Core.UI.PanelProjection
                 collectionNames.Add(collection.Name);
             }
 
-            if (subject != PanelSubjectKind.None && collectionNames.Count > 0)
-            {
-                throw new InvalidOperationException(
-                    $"Panel template '{templateId}' element subject cannot declare list/grid collections in layout.");
-            }
-
+            PanelLayoutControlJsonContext context =
+                PanelLayoutControlJsonContext.ForPanelTemplate(templateId, pinNames, collectionNames);
             var controls = new List<PanelLayoutControl>(controlsNode.Count);
             foreach (JsonNode? controlNode in controlsNode)
             {
-                controls.Add(ParseControl(templateId, controlNode, pinNames, collectionNames, subject));
+                controls.Add(PanelLayoutControlJsonParser.Parse(controlNode, context));
             }
 
             return new PanelLayout(controls);
-        }
-
-        private static PanelLayoutControl ParseControl(
-            string templateId,
-            JsonNode? controlNode,
-            HashSet<string> pinNames,
-            HashSet<string> collectionNames,
-            PanelSubjectKind subject)
-        {
-            if (controlNode is not JsonObject controlObject)
-            {
-                throw new InvalidOperationException($"Panel template '{templateId}' layout controls must be objects.");
-            }
-
-            RejectUnknownFields(controlObject, ControlFields, $"panel template '{templateId}' layout control");
-            string typeText = RequireString(controlObject, "type", $"panel template '{templateId}' layout control");
-            PanelLayoutControlType type = typeText switch
-            {
-                "label" => PanelLayoutControlType.Label,
-                "progressBar" => PanelLayoutControlType.ProgressBar,
-                "badge" => PanelLayoutControlType.Badge,
-                "list" => subject == PanelSubjectKind.None
-                    ? PanelLayoutControlType.List
-                    : throw new InvalidOperationException(
-                        $"Panel template '{templateId}' element subject cannot declare arrangement control 'list'."),
-                _ => throw new InvalidOperationException(
-                    $"Panel template '{templateId}' layout control type '{typeText}' is unknown."),
-            };
-
-            string? className = OptionalString(controlObject, "class");
-            string? text = OptionalString(controlObject, "text");
-            string? bind = OptionalString(controlObject, "bind");
-            string? prefix = OptionalString(controlObject, "prefix");
-            string? current = OptionalString(controlObject, "current");
-            string? max = OptionalString(controlObject, "max");
-            bool? showWhen = null;
-            if (controlObject["showWhen"] is JsonValue showNode && showNode.TryGetValue<bool>(out bool showValue))
-            {
-                showWhen = showValue;
-            }
-
-            if (type == PanelLayoutControlType.List)
-            {
-                if (string.IsNullOrWhiteSpace(bind) || !collectionNames.Contains(bind))
-                {
-                    throw new InvalidOperationException(
-                        $"Panel template '{templateId}' list control requires bind to a declared collection name.");
-                }
-            }
-
-            float? viewportHeight = OptionalPositiveFloat(controlObject, "viewportHeight", templateId);
-            float? itemExtent = OptionalPositiveFloat(controlObject, "itemExtent", templateId);
-            bool virtualize = false;
-            if (controlObject["virtualize"] is JsonValue virtNode && virtNode.TryGetValue<bool>(out bool virtValue))
-            {
-                virtualize = virtValue;
-            }
-
-            int overscan = 2;
-            if (controlObject["overscan"] is JsonValue overscanNode)
-            {
-                if (!overscanNode.TryGetValue<int>(out overscan) || overscan < 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Panel template '{templateId}' list overscan must be a non-negative int.");
-                }
-            }
-
-            if (virtualize)
-            {
-                if (type != PanelLayoutControlType.List)
-                {
-                    throw new InvalidOperationException(
-                        $"Panel template '{templateId}' virtualize is only valid on list controls.");
-                }
-
-                if (!viewportHeight.HasValue)
-                {
-                    throw new InvalidOperationException(
-                        $"Panel template '{templateId}' list '{bind}' virtualize requires viewportHeight.");
-                }
-
-                if (!itemExtent.HasValue)
-                {
-                    itemExtent = 56f;
-                }
-            }
-            else if (itemExtent.HasValue && type != PanelLayoutControlType.List)
-            {
-                throw new InvalidOperationException(
-                    $"Panel template '{templateId}' itemExtent is only valid on list controls.");
-            }
-
-            ValidateControlBindings(templateId, type, bind, current, max, pinNames);
-
-            return new PanelLayoutControl(
-                type, className, text, bind, prefix, current, max, showWhen,
-                viewportHeight, itemExtent, virtualize, overscan);
-        }
-
-        private static float? OptionalPositiveFloat(JsonObject controlObject, string field, string templateId)
-        {
-            if (controlObject[field] is null)
-            {
-                return null;
-            }
-
-            if (controlObject[field] is not JsonValue valueNode ||
-                !valueNode.TryGetValue<double>(out double raw) ||
-                raw <= 0d)
-            {
-                throw new InvalidOperationException(
-                    $"Panel template '{templateId}' {field} must be a positive number.");
-            }
-
-            return (float)raw;
-        }
-
-        private static void ValidateControlBindings(
-            string templateId,
-            PanelLayoutControlType type,
-            string? bind,
-            string? current,
-            string? max,
-            HashSet<string> pinNames)
-        {
-            switch (type)
-            {
-                case PanelLayoutControlType.Label:
-                case PanelLayoutControlType.Badge:
-                    if (!string.IsNullOrWhiteSpace(bind) && !pinNames.Contains(bind))
-                    {
-                        throw new InvalidOperationException(
-                            $"Panel template '{templateId}' control bind '{bind}' is not a known pin.");
-                    }
-
-                    break;
-                case PanelLayoutControlType.ProgressBar:
-                    if (string.IsNullOrWhiteSpace(current) || string.IsNullOrWhiteSpace(max) ||
-                        !pinNames.Contains(current) || !pinNames.Contains(max))
-                    {
-                        throw new InvalidOperationException(
-                            $"Panel template '{templateId}' progressBar requires current/max bound to pins.");
-                    }
-
-                    break;
-            }
         }
 
         private static List<PanelTemplateEvent> ParseEvents(string templateId, JsonObject rootObject)
@@ -501,7 +472,6 @@ namespace Ludots.Core.UI.PanelProjection
                 string intent = RequireString(intentObject, "intent", $"panel template '{templateId}' intent for '{eventId}'");
                 string playerSource = RequireString(intentObject, "playerSource", $"panel template '{templateId}' intent '{intent}'");
                 string actorSource = RequireString(intentObject, "actorSource", $"panel template '{templateId}' intent '{intent}'");
-                PanelOwnerKinds.Parse(playerSource, $"Panel template '{templateId}' intent '{intent}'");
 
                 var args = new Dictionary<string, string>(StringComparer.Ordinal);
                 if (intentObject["args"] is JsonObject argsNode)
@@ -531,6 +501,32 @@ namespace Ludots.Core.UI.PanelProjection
             if (string.IsNullOrWhiteSpace(value))
             {
                 throw new InvalidOperationException($"{context} is missing required '{field}'.");
+            }
+
+            return value;
+        }
+
+        private static float RequirePositiveFloat(JsonObject obj, string field, string context)
+        {
+            JsonNode? node = obj[field];
+            if (node is null)
+            {
+                throw new InvalidOperationException($"{context} is missing required '{field}'.");
+            }
+
+            float value;
+            try
+            {
+                value = node.GetValue<float>();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"{context} field '{field}' must be a number.", ex);
+            }
+
+            if (value <= 0f || float.IsNaN(value) || float.IsInfinity(value))
+            {
+                throw new InvalidOperationException($"{context} field '{field}' must be a positive finite number.");
             }
 
             return value;

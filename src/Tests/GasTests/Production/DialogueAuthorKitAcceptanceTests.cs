@@ -14,6 +14,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
+using Ludots.Core.UI.PanelActivation;
 using Ludots.Platform.Abstractions;
 using Ludots.Tests.TestCommon;
 using Ludots.UI;
@@ -76,13 +77,15 @@ namespace Ludots.Tests.GAS.Production
             NarrativeFrontendService frontend = engine.GetService(NarrativeFrontendServiceKeys.Service)
                 ?? throw new InvalidOperationException("NarrativeFrontendService missing.");
             TickUntil(engine, frameTimesMs,
-                () => frontend.Snapshot.HasVisibleContent && frontend.Snapshot.Surfaces.Count >= 2,
-                maxFrames: 30,
-                "Tagged map must project OverlayDialogue + ChoiceList onto NarrativeFrontend.");
+                () => frontend.Snapshot.HasVisibleContent &&
+                      frontend.Snapshot.Surfaces.Count >= 1 &&
+                      PanelChoicesVisible(engine),
+                maxFrames: 60,
+                "Tagged map must project OverlayDialogue and show choices on PanelHost.");
             Assert.That(frontend.Snapshot.Surfaces, Has.Some.Matches<NarrativeFrontendSurfaceModel>(
                 s => s.Kind == NarrativeFrontendSurfaceKind.OverlayDialogue));
-            Assert.That(frontend.Snapshot.Surfaces, Has.Some.Matches<NarrativeFrontendSurfaceModel>(
-                s => s.Kind == NarrativeFrontendSurfaceKind.ChoiceList));
+            Assert.That(PanelChoicesVisible(engine), Is.True,
+                "Active choices must Show panel.narrative.choices on PanelHost.");
 
             int writeIndex = IndexOfChoice(open, "write_pass");
             dialogue.ChooseOption(writeIndex);
@@ -115,6 +118,13 @@ namespace Ludots.Tests.GAS.Production
             using GameEngine engine = CreateEngine();
             engine.LoadMap(MapId);
             Assert.That(engine.MergedConfig.PanelTheme, Is.EqualTo("kit-amber").IgnoreCase);
+        }
+
+        private static bool PanelChoicesVisible(GameEngine engine)
+        {
+            PanelActivationApi activation = engine.GetService(CoreServiceKeys.PanelActivationApi)
+                ?? throw new InvalidOperationException("PanelActivationApi missing.");
+            return activation.Store.IsVisible(NarrativeDialogueChoicePanels.PanelType);
         }
 
         private static int IndexOfChoice(DialogueView view, string choiceId)

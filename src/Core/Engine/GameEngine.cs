@@ -13,6 +13,7 @@ using Ludots.Core.Config;
 using Arch.Core;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.EntityQueries;
+using Ludots.Core.TypedCollections;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Gameplay;
@@ -827,6 +828,7 @@ namespace Ludots.Core.Engine
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             RegisterBuiltInEntityCollectionKeys(entityCollectionKeyRegistry);
             var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
+            var intIdCollectionStore = new IntIdCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
             var relationshipCatalog = new RelationshipCatalogPipelineLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var relationshipCatalogRuntime = RelationshipCatalogInstaller.Install(
                 relationshipCatalog,
@@ -891,7 +893,7 @@ namespace Ludots.Core.Engine
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry();
-            // Enums load before events (#1125): custom event params may annotate enumType
+            // Enums load before events: custom event params may annotate enumType
             // against this catalog, and graph compilation resolves enum-bound sugar through it.
             var enumCatalog = new Ludots.Core.Scripting.EnumCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.EnumCatalog, enumCatalog);
@@ -965,7 +967,8 @@ namespace Ludots.Core.Engine
                 graphOps,
                 builtinHandlers,
                 customEventCatalog.Schemas,
-                enumCatalog);
+                enumCatalog,
+                intIdCollectionStore);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes, builtinHandlers);
@@ -980,6 +983,7 @@ namespace Ludots.Core.Engine
             var itemShapes = new ItemShapeRegistry();
             var itemLayouts = new ItemLayoutRegistry();
             var itemDefinitions = new ItemDefinitionRegistry();
+            componentAuthoringContext.Set(ComponentAuthoringServiceKeys.ItemDefinitionRegistry, itemDefinitions);
             var exchangeOperations = new ExchangeOperationRegistry();
             var exchangeScopedOperations = new ExchangeScopedOperationStore();
             abilityDefinitions.SetConflictReport(ConflictReport);
@@ -1082,6 +1086,8 @@ namespace Ludots.Core.Engine
                 controlDomainQuery,
                 knowledgeProjectionResolver,
                 clock,
+                inventoryRuntime,
+                itemDefinitions,
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             gasGraphApi.BindTriggerManager(TriggerManager);
@@ -1097,18 +1103,22 @@ namespace Ludots.Core.Engine
                 graphOutputSchemas,
                 graphHandlers,
                 entityCollectionStore,
+                intIdCollectionStore,
                 graphOutputValueStore);
             var panelProjectionReader = new PanelProjectionReader(World, graphOutputValueStore);
             var panelGraphEvaluator = new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi);
+            var panelListProjector = new Ludots.Core.UI.PanelProjection.PanelListProjector(
+                World,
+                entityCollectionStore,
+                intIdCollectionStore,
+                itemDefinitions,
+                panelProjectionReader,
+                panelGraphEvaluator);
             var panelHost = new PanelHost(
                 panelTemplates,
                 panelProjectionReader,
                 panelGraphEvaluator,
-                new Ludots.Core.UI.PanelProjection.PanelListProjector(
-                    World,
-                    entityCollectionStore,
-                    panelProjectionReader,
-                    panelGraphEvaluator));
+                panelListProjector);
             gasGraphApi.BindPanelHost(panelHost);
             var panelActivationStore = new Ludots.Core.UI.PanelActivation.UiPanelActivationStore();
             var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);
@@ -1766,6 +1776,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.InputResponseBuffer, inputResponseBuffer);
             SetService(CoreServiceKeys.CommandSourceAcquisitionConfig, commandSourceConfig);
             SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
+            SetService(CoreServiceKeys.IntIdCollectionStore, intIdCollectionStore);
             SetService(CoreServiceKeys.EntityCollectionKeyRegistry, entityCollectionKeyRegistry);
             var clientLocalSeatRegistry = new Client.ClientLocalSeatRegistry();
             var logicViewRegistry = new Client.LogicViewRegistry();
@@ -1957,6 +1968,7 @@ namespace Ludots.Core.Engine
                 GetService(CoreServiceKeys.PresentationTextCatalog),
                 GetService(CoreServiceKeys.PresentationDisplayResolver));
             TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
+            _gasGraphRuntimeApi?.BindTaskRuntimeService(taskRuntime);
             SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
             SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
             SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
@@ -2008,6 +2020,11 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.DialogueRuntime, dialogueRuntime);
             SetService(CoreServiceKeys.SequencerRuntime, sequencerRuntime);
             _gasGraphRuntimeApi?.BindStartDialogue(dialogueId => dialogueRuntime.StartDialogue(dialogueId));
+            _gasGraphRuntimeApi?.BindCollectActiveDialogueChoices(dialogueRuntime.CollectActiveChoiceIds);
+            _gasGraphRuntimeApi?.BindResolveDialogueChoiceDisplayText(choiceIntId =>
+                dialogueRuntime.TryResolveChoiceDisplayText(choiceIntId, out string text) ? text : null);
+            panelListProjector.BindDialogueChoiceTextResolver(choiceIntId =>
+                dialogueRuntime.TryResolveChoiceDisplayText(choiceIntId, out string text) ? text : null);
             SetService(
                 CoreServiceKeys.StoryPresentationProjector,
                 new StoryPresentationProjector(storyDefinitions));
@@ -2227,7 +2244,7 @@ namespace Ludots.Core.Engine
                     inputTriggerActions),
                 SystemGroup.DeferredTriggerCollection);
 
-            // Phase 5.5: Continuation (#1126 AwaitCallback drain — registration order)
+            // Phase 5.5: Continuation (AwaitCallback drain — registration order)
             RegisterSystem(
                 new Ludots.Core.GraphRuntime.GraphCallbackContinuationSystem(
                     GetService(CoreServiceKeys.GraphCallbackService)
@@ -3032,7 +3049,7 @@ namespace Ludots.Core.Engine
         }
 
         /// <summary>
-        /// Registration exit for a loaded map's trigger batch (#1123 scope routing): the
+        /// Registration exit for a loaded map's trigger batch (scope routing): the
         /// session owns every instance, while dispatch registration splits by subscription
         /// scope — schema-declared Global entries go to the TriggerManager global table,
         /// everything else (legacy triggers, map-domain entries, resume companions,
@@ -3097,7 +3114,7 @@ namespace Ludots.Core.Engine
 
         private void SetMapEntitiesSuspended(MapId mapId, bool suspended)
         {
-            // Same suspension boundary drives global-scope subscriptions (#1123): a
+            // Same suspension boundary drives global-scope subscriptions: a
             // suspended map (lost focus, or still mid-load) detaches its global
             // subscriptions wholesale so FireGlobalEvent never dispatches into an
             // inactive map; resume reattaches them in priority order.
@@ -3373,7 +3390,7 @@ namespace Ludots.Core.Engine
                 // documented flat fallback: several existing showcases (mass_navigation,
                 // crowd_physics_arena, 250x250 macro tiles) are AUTHORED flat at this scale
                 // and load through this exact path on main; failing them here would break
-                // maps that never asked for projected terrain. Tier gating (#1347) will
+                // maps that never asked for projected terrain. Tier gating will
                 // replace this split with an explicit authored contract.
                 if (authoredBounds)
                 {

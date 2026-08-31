@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Registry;
+using Ludots.Core.TypedCollections;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -19,13 +20,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly GraphOutputSchemaRegistry? _outputSchemas;
         private readonly StringIntRegistry? _outputValueKeys;
         private readonly EntityCollectionStore? _entityCollections;
+        private readonly IntIdCollectionStore? _intIdCollections;
         private readonly GasGraphOpRegistry? _opRegistry;
         private readonly BuiltinHandlerRegistry? _builtinHandlers;
         private readonly Ludots.Core.Scripting.EventSchemaRegistry? _eventSchemas;
         private readonly Ludots.Core.Scripting.EnumCatalog? _enums;
         private readonly Dictionary<string, GraphOutputSchema> _pendingOutputSchemas = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, GraphInstructionSourceMap> _pendingSourceMaps = new(StringComparer.OrdinalIgnoreCase);
-        // #1124 hook weaving source: the authored documents in compile order, consumed by
+        // Hook weaving source: the authored documents in compile order, consumed by
         // the weave pass after registration (WeaveHooks) and cleared afterwards.
         private readonly List<KeyValuePair<string, GraphControlFlowDocument>> _pendingDocuments = new();
 
@@ -39,7 +41,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             GasGraphOpRegistry? opRegistry = null,
             BuiltinHandlerRegistry? builtinHandlers = null,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
-            Ludots.Core.Scripting.EnumCatalog? enums = null)
+            Ludots.Core.Scripting.EnumCatalog? enums = null,
+            IntIdCollectionStore? intIdCollections = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -47,6 +50,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _outputSchemas = outputSchemas;
             _outputValueKeys = outputValueKeys;
             _entityCollections = entityCollections;
+            _intIdCollections = intIdCollections;
             _opRegistry = opRegistry;
             _builtinHandlers = builtinHandlers;
             _eventSchemas = eventSchemas;
@@ -214,7 +218,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// #1124 Route A weave pass: runs once every graph is registered (and ids are
+        /// Route A weave pass: runs once every graph is registered (and ids are
         /// frozen), before any map mounts. Hook-bearing TriggerGraph entries are spliced
         /// into their targets and the merged programs land via ReplaceProgram, which
         /// re-validates op policy, invoke targets, and cycles with rollback on failure.
@@ -261,10 +265,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             for (int i = 0; i < source.Length; i++)
             {
                 GraphOutputBinding binding = source[i];
-                if (binding.Destination == GraphOutputDestinationKind.EntityCollection)
+                if (GraphOutputDestinationKinds.IsEntityBagDestination(binding.Destination))
                 {
                     resolved[i] = _entityCollections != null && !string.IsNullOrWhiteSpace(binding.CollectionKey)
                         ? binding.WithResolvedCollectionKeyId(_entityCollections.KeyRegistry.Register(binding.CollectionKey))
+                        : binding;
+                    continue;
+                }
+
+                if (GraphOutputDestinationKinds.IsIntIdBagDestination(binding.Destination))
+                {
+                    if (_intIdCollections == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Graph int-id collection output '{binding.Id}' requires an IntIdCollectionStore.");
+                    }
+
+                    resolved[i] = !string.IsNullOrWhiteSpace(binding.CollectionKey)
+                        ? binding.WithResolvedCollectionKeyId(_intIdCollections.KeyRegistry.Register(binding.CollectionKey))
                         : binding;
                     continue;
                 }

@@ -10,7 +10,6 @@ namespace Ludots.Core.Gameplay.Story
         public const string DialogueBubble = "DialogueBubble";
         public const string StandingPortrait = "StandingPortrait";
         public const string SubtitleBubble = "SubtitleBubble";
-        public const string ChoiceList = "ChoiceList";
         public const string TransmissionOverlay = "TransmissionOverlay";
     }
 }

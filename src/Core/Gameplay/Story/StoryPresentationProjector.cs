@@ -69,14 +69,14 @@ namespace Ludots.Core.Gameplay.Story
                 }
 
                 anchor = "TopLeft";
-                offsetX = worldScreenX.Value;
+                offsetX = worldScreenX.Value + profile.OffsetX;
                 if (profile.WorldScreenHeadOffsetPx <= 0f)
                 {
                     throw new InvalidOperationException(
                         $"Presentation profile '{view.PresentationProfile}' requires worldScreenHeadOffsetPx > 0 (WorldProjected).");
                 }
 
-                offsetY = worldScreenY.Value - profile.WorldScreenHeadOffsetPx;
+                offsetY = worldScreenY.Value - profile.WorldScreenHeadOffsetPx + profile.OffsetY;
             }
 
             if (profile.ImageSize <= 0f)
@@ -97,6 +97,8 @@ namespace Ludots.Core.Gameplay.Story
                 new StoryPresentationSurface(
                     SurfaceKey: $"dialogue.{view.DialogueId}.{surfaceKind}",
                     SurfaceKind: surfaceKind,
+                    LayoutId: profile.LayoutId,
+                    StyleClass: profile.StyleClass,
                     Anchor: anchor,
                     Title: string.IsNullOrWhiteSpace(view.ResolvedSpeakerName) ? view.SpeakerId : view.ResolvedSpeakerName,
                     Body: view.ResolvedText ?? string.Empty,
@@ -116,43 +118,9 @@ namespace Ludots.Core.Gameplay.Story
                     BackgroundHex: profile.BackgroundHex,
                     BorderHex: profile.BorderHex,
                     ForegroundHex: profile.ForegroundHex,
-                    MutedHex: profile.MutedHex)
+                    MutedHex: profile.MutedHex,
+                    BodyRuns: view.BodyRuns)
             };
-
-            if (view.Choices.Count > 0)
-            {
-                var choices = new List<StoryPresentationChoice>(view.Choices.Count);
-                for (int i = 0; i < view.Choices.Count; i++)
-                {
-                    DialogueChoiceView choice = view.Choices[i];
-                    choices.Add(new StoryPresentationChoice(
-                        choice.ChoiceId,
-                        choice.ResolvedText,
-                        (i + 1).ToString()));
-                }
-
-                if (string.IsNullOrWhiteSpace(profile.ChoiceAnchor) || profile.ChoiceWidth <= 0f)
-                {
-                    throw new InvalidOperationException(
-                        $"Presentation profile '{view.PresentationProfile}' requires choiceAnchor and choiceWidth when the node offers choices.");
-                }
-
-                // Choice list is a companion surface: geometry from the same profile (single writer).
-                surfaces.Add(new StoryPresentationSurface(
-                    SurfaceKey: $"dialogue.{view.DialogueId}.ChoiceList",
-                    SurfaceKind: StoryPresentationSurfaceKinds.ChoiceList,
-                    Anchor: profile.ChoiceAnchor,
-                    Title: string.Empty,
-                    Width: profile.ChoiceWidth,
-                    OffsetY: profile.ChoiceOffsetY,
-                    ZIndex: profile.ChoiceZIndex,
-                    Choices: choices,
-                    AccentHex: profile.AccentHex,
-                    BackgroundHex: profile.BackgroundHex,
-                    BorderHex: profile.BorderHex,
-                    ForegroundHex: profile.ForegroundHex,
-                    MutedHex: profile.MutedHex));
-            }
 
             _generation++;
             return new StoryPresentationFrame(
@@ -225,6 +193,8 @@ namespace Ludots.Core.Gameplay.Story
                     new StoryPresentationSurface(
                         SurfaceKey: $"sequence.{view.SequenceId}.{surfaceKind}",
                         SurfaceKind: surfaceKind,
+                        LayoutId: profile.LayoutId,
+                        StyleClass: profile.StyleClass,
                         Anchor: profile.Anchor.Trim(),
                         Title: title,
                         Body: body,
@@ -270,7 +240,6 @@ namespace Ludots.Core.Gameplay.Story
                 case StoryPresentationSurfaceKinds.DialogueBubble:
                 case StoryPresentationSurfaceKinds.StandingPortrait:
                 case StoryPresentationSurfaceKinds.SubtitleBubble:
-                case StoryPresentationSurfaceKinds.ChoiceList:
                 case StoryPresentationSurfaceKinds.TransmissionOverlay:
                     return;
                 default:

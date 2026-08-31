@@ -150,6 +150,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.Attribute, "attribute", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.LoadEffectTiming:
+                    RequireEffectTimingAttribute(node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEffectStack:
+                    break;
+
                 case GraphNodeOp.WriteSelfAttribute:
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.Attribute, "attribute", node, graphId, diagnostics);
@@ -509,6 +516,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.OfferActivity:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.ActivityId, "activityId", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.OfferTask:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.TaskId, "taskId", node, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.StartDialogue:
@@ -884,6 +896,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.LoadSelfAttribute:
                     instruction.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEffectTiming:
+                    instruction.Flags = ResolveEffectTimingFlags(node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEffectStack:
                     break;
 
                 case GraphNodeOp.WriteSelfAttribute:
@@ -1430,6 +1449,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.ActivityId, "activityId", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.OfferTask:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.TaskId, "taskId", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.StartDialogue:

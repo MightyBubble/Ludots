@@ -9,11 +9,14 @@ Center well is transparent so the frame overlays dialogue content.
 """
 from __future__ import annotations
 
+import math
+import random
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[2] / "mods/showcases/narrative/NarrativeShowcaseMod/assets/PanelThemes"
+SOURCE_ROOT = Path(__file__).resolve().parent / "sources"
 
 PANEL_W, PANEL_H, PANEL_SLICE = 256, 192, 48
 CHOICE_W, CHOICE_H, CHOICE_SLICE = 220, 96, 36
@@ -166,11 +169,62 @@ SPECS = {
     "story-acnh": dict(base=(72, 128, 72), edge=(232, 196, 96), accent=(120, 176, 88), style="leaf"),
 }
 
+def install_ember_v2() -> None:
+    source_path = SOURCE_ROOT / "story_ember_frame_v2.png"
+    if not source_path.is_file():
+        raise FileNotFoundError(f"Missing authored frame source: {source_path}")
+
+    out = ROOT / "story-ember" / "images"
+    source = Image.open(source_path).convert("RGBA")
+    scaled = source.resize((500, 310), Image.Resampling.LANCZOS)
+    frame = Image.new("RGBA", (512, 322), (0, 0, 0, 0))
+    frame.alpha_composite(scaled, (6, 6))
+    frame.save(out / "panel_frame.png")
+    ember = SPECS["story-ember"]
+    paint_choice(ember["base"], ember["edge"], ember["accent"]).save(out / "choice_frame.png")
+
+    random.seed(1389)
+    width, height = 640, 360
+    wash = Image.new("RGBA", (width, height))
+    pixels = wash.load()
+    for y in range(height):
+        for x in range(width):
+            nx = (x - width / 2) / (width / 2)
+            ny = (y - height / 2) / (height / 2)
+            radial = max(0.0, 1.0 - math.sqrt(nx * nx + ny * ny))
+            top = 1.0 - y / (height - 1)
+            grain = random.randint(-5, 5)
+            pixels[x, y] = (
+                max(0, int(15 + 17 * radial + 6 * top + grain)),
+                max(0, int(17 + 12 * radial + 4 * top + grain * 0.6)),
+                max(0, int(19 + 8 * radial + 3 * top + grain * 0.4)),
+                255,
+            )
+
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    draw.rounded_rectangle(
+        (10, 10, width - 11, height - 11),
+        radius=20,
+        outline=(120, 82, 45, 45),
+        width=2,
+    )
+    draw.rectangle((0, height - 90, width, height), fill=(70, 30, 10, 18))
+    wash = Image.alpha_composite(wash, overlay.filter(ImageFilter.GaussianBlur(2)))
+    wash.save(out / "panel_wash.png")
+
 
 def main() -> None:
     for theme, s in SPECS.items():
         out = ROOT / theme / "images"
         out.mkdir(parents=True, exist_ok=True)
+        if theme == "story-ember":
+            install_ember_v2()
+            print(
+                f"wrote story-ember panel=512x322 slice={PANEL_SLICE} "
+                f"choice={CHOICE_W}x{CHOICE_H} slice={CHOICE_SLICE}"
+            )
+            continue
         paint_panel(s["base"], s["edge"], s["accent"], s["style"]).save(out / "panel_frame.png")
         paint_choice(s["base"], s["edge"], s["accent"]).save(out / "choice_frame.png")
         print(f"wrote {theme} panel={PANEL_W}x{PANEL_H} slice={PANEL_SLICE} choice={CHOICE_W}x{CHOICE_H} slice={CHOICE_SLICE}")

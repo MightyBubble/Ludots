@@ -4,6 +4,7 @@ using Ludots.Core.Association;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Knowledge;
@@ -47,6 +48,8 @@ public sealed class GraphOpsNodeDriverContext
     public ISpatialCoordinateConverter? Coords { get; set; }
     public BuiltinHandlerRegistry? BuiltinHandlers { get; set; }
     public EffectTemplateRegistry? EffectTemplates { get; set; }
+    public ItemDefinitionRegistry? ItemDefinitions { get; set; }
+    public InventoryRuntimeService? InventoryRuntime { get; set; }
     public BuiltinHandlerExecutionContext? BuiltinRuntime { get; set; }
     public int ConfigEffectTemplateId { get; set; }
     public bool OwnsSimulationWorld { get; set; }
@@ -131,8 +134,10 @@ public sealed class GraphOpsNodeDriverContext
         Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
         Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
         Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+        Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
         Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
         var targetList = new GraphTargetList(targets);
+        var intIdList = new GraphIntIdList(intIds);
         entities[0] = Caster;
         entities[1] = Target;
         entities[2] = Viewer != Entity.Null ? Viewer : TargetContext;
@@ -170,6 +175,8 @@ public sealed class GraphOpsNodeDriverContext
             E = entities,
             Targets = targets,
             TargetList = targetList,
+            IntIds = intIds,
+            IntIdList = intIdList,
             CallStack = callStack,
             RandomSeed = (uint)(0xA5A5A5A5u ^ (uint)Wave),
             Status = GraphExecutionStatus.Running
@@ -202,7 +209,8 @@ public sealed class GraphOpsNodeDriverContext
             dest < bools.Length && bools[dest] != 0,
             dest < entities.Length ? entities[dest] : Entity.Null,
             state.ReturnInt,
-            state.TargetList.Count);
+            state.TargetList.Count,
+            state.IntIdList.Count);
     }
 }
 
@@ -212,4 +220,5 @@ public readonly record struct GraphOpsNodeExecuteResult(
     bool BoolValue,
     Entity EntityValue,
     int ReturnInt,
-    int TargetCount);
+    int TargetCount,
+    int IntIdCount = 0);

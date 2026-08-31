@@ -26,6 +26,8 @@ public sealed class UiElementBuilder
 
 	private string? _textContent;
 
+	private IReadOnlyList<UiStyledTextRun>? _textRuns;
+
 	public UiNodeKind Kind { get; }
 
 	public string? TagName { get; }
@@ -226,6 +228,18 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
+	public UiElementBuilder TextRuns(IReadOnlyList<UiStyledTextRun> runs)
+	{
+		ArgumentNullException.ThrowIfNull(runs, nameof(runs));
+		_textRuns = runs;
+		if (string.IsNullOrEmpty(_textContent))
+		{
+			_textContent = UiStyledTextRunNormalization.ConcatPlain(runs);
+		}
+
+		return this;
+	}
+
 	public UiElementBuilder Child(UiElementBuilder child)
 	{
 		_children.Add(child);
@@ -252,6 +266,15 @@ public sealed class UiElementBuilder
 		_style = _style with
 		{
 			Width = UiLength.Percent(percent)
+		};
+		return this;
+	}
+
+	public UiElementBuilder MinWidth(float pixels)
+	{
+		_style = _style with
+		{
+			MinWidth = UiLength.Px(pixels)
 		};
 		return this;
 	}
@@ -317,6 +340,15 @@ public sealed class UiElementBuilder
 		_style = _style with
 		{
 			Padding = UiThickness.Symmetric(horizontal, vertical)
+		};
+		return this;
+	}
+
+	public UiElementBuilder Padding(float left, float top, float right, float bottom)
+	{
+		_style = _style with
+		{
+			Padding = new UiThickness(left, top, right, bottom)
 		};
 		return this;
 	}
@@ -389,6 +421,20 @@ public sealed class UiElementBuilder
 		_style = _style with
 		{
 			FontSize = pixels
+		};
+		return this;
+	}
+
+	public UiElementBuilder LineHeight(float multiplier)
+	{
+		if (multiplier <= 0f)
+		{
+			throw new ArgumentOutOfRangeException(nameof(multiplier), "Line height must be positive.");
+		}
+
+		_style = _style with
+		{
+			LineHeight = multiplier
 		};
 		return this;
 	}
@@ -580,6 +626,28 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
+	public UiElementBuilder AbsoluteEdges(
+		float? left = null,
+		float? top = null,
+		float? right = null,
+		float? bottom = null)
+	{
+		if (!left.HasValue && !top.HasValue && !right.HasValue && !bottom.HasValue)
+		{
+			throw new ArgumentException("AbsoluteEdges requires at least one authored edge.");
+		}
+
+		_style = _style with
+		{
+			PositionType = UiPositionType.Absolute,
+			Left = left.HasValue ? UiLength.Px(left.Value) : UiLength.Auto,
+			Top = top.HasValue ? UiLength.Px(top.Value) : UiLength.Auto,
+			Right = right.HasValue ? UiLength.Px(right.Value) : UiLength.Auto,
+			Bottom = bottom.HasValue ? UiLength.Px(bottom.Value) : UiLength.Auto
+		};
+		return this;
+	}
+
 	public UiElementBuilder ZIndex(int value)
 	{
 		_style = _style with
@@ -764,7 +832,7 @@ public sealed class UiElementBuilder
 		{
 			Id = _elementId,
 			ClassName = string.Join(' ', _classNames)
-		}, _textContent, array, actionHandles, TagName, _elementId, _classNames, uiAttributeBag, _inlineStyle, _canvasContent);
+		}, _textContent, array, actionHandles, TagName, _elementId, _classNames, uiAttributeBag, _inlineStyle, _canvasContent, UiPseudoElement.None, _textRuns);
 	}
 
 	public static UiElementBuilder FromElement(UiElement element)

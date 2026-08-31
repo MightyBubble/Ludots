@@ -1,0 +1,112 @@
+[
+  {
+    "id": "Graph.EffectList.Effects.Seed",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "blessing", "op": "ApplyEffectTemplate", "effectTemplate": "祝福" },
+      { "id": "haste", "op": "ApplyEffectTemplate", "effectTemplate": "迅捷" },
+      { "id": "shield", "op": "ApplyEffectTemplate", "effectTemplate": "护盾" }
+    ],
+    "controlEdges": [
+      { "from": "target", "fromPort": "next", "to": "blessing" },
+      { "from": "blessing", "fromPort": "next", "to": "haste" },
+      { "from": "haste", "fromPort": "next", "to": "shield" }
+    ],
+    "valueEdges": [
+      { "from": "target", "fromPort": "value", "to": "blessing", "toPort": "target" },
+      { "from": "target", "fromPort": "value", "to": "haste", "toPort": "target" },
+      { "from": "target", "fromPort": "value", "to": "shield", "toPort": "target" }
+    ]
+  },
+  {
+    "id": "Graph.EffectList.Panel.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": true }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadExplicitTarget" },
+      { "id": "create", "op": "CreatePanel", "panelType": "panel.effect.list", "panelAnchor": "screen.topLeft" },
+      { "id": "show", "op": "ShowPanel", "panelType": "panel.effect.list" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "create" },
+      { "from": "create", "fromPort": "next", "to": "show" },
+      { "from": "show", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "create", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.Effect.List",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      { "id": "caster", "op": "LoadCaster" },
+      { "id": "effects", "op": "QueryCollectActiveEffects" },
+      { "id": "rowCount", "op": "AggCount" }
+    ],
+    "controlEdges": [
+      { "from": "caster", "fromPort": "next", "to": "effects" },
+      { "from": "effects", "fromPort": "next", "to": "rowCount" }
+    ],
+    "valueEdges": [
+      { "from": "caster", "fromPort": "value", "to": "effects", "toPort": "source" },
+      { "from": "effects", "fromPort": "list", "to": "rowCount", "toPort": "list" }
+    ],
+    "outputs": [
+      {
+        "id": "effects",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "panel.effect.active",
+        "role": "Display",
+        "title": "Active Effects",
+        "summary": "Alive effect instances on the panel scope unit."
+      },
+      {
+        "id": "rowCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "rowCount",
+        "key": "panel.effect.rowCount"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Effect.Chip",
+    "kind": "Query",
+    "entry": "remaining",
+    "nodes": [
+      { "id": "remaining", "op": "LoadEffectTiming", "attribute": "RemainingTicks" },
+      { "id": "total", "op": "LoadEffectTiming", "attribute": "TotalTicks" }
+    ],
+    "controlEdges": [
+      { "from": "remaining", "fromPort": "next", "to": "total" }
+    ],
+    "valueEdges": [],
+    "outputs": [
+      {
+        "id": "remaining",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "remaining",
+        "key": "effect.chip.remaining"
+      },
+      {
+        "id": "total",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "total",
+        "key": "effect.chip.total"
+      }
+    ]
+  }
+]

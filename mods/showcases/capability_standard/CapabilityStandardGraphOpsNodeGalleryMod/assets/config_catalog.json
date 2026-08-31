@@ -1,5 +1,10 @@
 [
   {
+    "Path": "Tasks/tasks.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
     "Path": "Activities/activities.json",
     "Policy": "ArrayById",
     "IdField": "id"
@@ -50,6 +55,11 @@
   },
   {
     "Path": "Story/presentation_profiles.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "GAS/abilities.json",
     "Policy": "ArrayById",
     "IdField": "id"
   }

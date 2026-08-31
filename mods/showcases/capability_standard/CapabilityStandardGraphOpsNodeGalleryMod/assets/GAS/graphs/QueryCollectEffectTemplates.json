@@ -1,0 +1,15 @@
+[
+  {
+    "id": "showcase.graph_op.QueryCollectEffectTemplates",
+    "kind": "Query",
+    "entry": "collect",
+    "nodes": [
+      {
+        "id": "collect",
+        "op": "QueryCollectEffectTemplates"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  }
+]

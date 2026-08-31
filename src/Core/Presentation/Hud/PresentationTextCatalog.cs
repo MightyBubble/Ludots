@@ -10,7 +10,8 @@ namespace Ludots.Core.Presentation.Hud
             new PresentationTextTokenDefinition[1],
             new StringIntRegistry(capacity: 1, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
             new PresentationTextLocaleTable[1],
-            defaultLocaleId: 0);
+            defaultLocaleId: 0,
+            stringPool: new PresentationTextStringPool());
 
         private readonly StringIntRegistry _tokenIds;
         private readonly PresentationTextTokenDefinition[] _tokens;
@@ -22,13 +23,15 @@ namespace Ludots.Core.Presentation.Hud
             PresentationTextTokenDefinition[] tokens,
             StringIntRegistry localeIds,
             PresentationTextLocaleTable[] locales,
-            int defaultLocaleId)
+            int defaultLocaleId,
+            PresentationTextStringPool? stringPool = null)
         {
             _tokenIds = tokenIds ?? throw new ArgumentNullException(nameof(tokenIds));
             _tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
             _localeIds = localeIds ?? throw new ArgumentNullException(nameof(localeIds));
             _locales = locales ?? throw new ArgumentNullException(nameof(locales));
             DefaultLocaleId = defaultLocaleId;
+            StringPool = stringPool ?? new PresentationTextStringPool();
         }
 
         public int TokenCount => _tokenIds.Count;
@@ -36,6 +39,8 @@ namespace Ludots.Core.Presentation.Hud
         public int LocaleCount => _localeIds.Count;
 
         public int DefaultLocaleId { get; }
+
+        public PresentationTextStringPool StringPool { get; }
 
         public int GetTokenId(string key) => _tokenIds.GetId(key);
 

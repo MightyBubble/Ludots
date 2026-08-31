@@ -61,6 +61,54 @@ namespace Ludots.Core.Gameplay.Story
             return text;
         }
 
+        public static IReadOnlyList<PresentationTextRun> FormatTokenRuns(
+            PresentationTextCatalog? catalog,
+            PresentationDisplayResolver? display,
+            string token,
+            IReadOnlyList<Ludots.Core.Presentation.Hud.PresentationTextArg>? args = null)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                throw new InvalidOperationException("Story text token is required.");
+            }
+
+            if (catalog == null)
+            {
+                throw new InvalidOperationException(
+                    $"Story text token '{token}' cannot be resolved: PresentationTextCatalog is unavailable.");
+            }
+
+            if (display != null)
+            {
+                return display.FormatTokenRunsOrThrow(token, args);
+            }
+
+            int tokenId = catalog.GetTokenId(token);
+            if (tokenId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Story text token '{token}' is not registered in PresentationTextCatalog.");
+            }
+
+            var packet = PresentationTextPacket.FromToken(tokenId);
+            if (args != null)
+            {
+                for (int i = 0; i < args.Count; i++)
+                {
+                    packet.SetArg(i, args[i]);
+                }
+            }
+
+            if (!PresentationTextFormatter.TryFormatRuns(catalog, catalog.DefaultLocaleId, in packet, out IReadOnlyList<PresentationTextRun> runs) ||
+                runs.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Story text token '{token}' has no locale template runs for default locale.");
+            }
+
+            return runs;
+        }
+
         /// <summary>
         /// Empty speakerId yields an empty name (speaker-less subtitle tracks are legal);
         /// a non-empty id must reference a registered speaker whose token resolves.

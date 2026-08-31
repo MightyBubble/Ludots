@@ -1,0 +1,28 @@
+[
+  {
+    "id": "buff_hero",
+    "onSpawnEffect": "Effect.Showcase.EffectList.Seed",
+    "components": {
+      "Name": { "Value": "试炼者" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "VisionEmitterCm": {
+        "scope": "effectlist.local",
+        "layers": ["ground"],
+        "polarity": "Reveal",
+        "aperture": { "kind": "Disk", "rangeCm": 1200 },
+        "detectionStrength": 1
+      },
+      "AttributeBuffer": {
+        "base": { "Health": 100, "Attack": 12 }
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  }
+]

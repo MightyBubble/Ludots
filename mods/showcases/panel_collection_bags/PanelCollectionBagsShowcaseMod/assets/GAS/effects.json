@@ -1,0 +1,44 @@
+[
+  {
+    "id": "祝福",
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Attack", "op": "Add", "value": 1.0 }
+    ],
+    "categories": ["Effect.Showcase.CollectionBags"]
+  },
+  {
+    "id": "迅捷",
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Attack", "op": "Add", "value": 2.0 }
+    ],
+    "categories": ["Effect.Showcase.CollectionBags"]
+  },
+  {
+    "id": "护盾",
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 1.0 }
+    ],
+    "categories": ["Effect.Showcase.CollectionBags"]
+  },
+  {
+    "id": "Effect.CollectionBags.CompleteTraining",
+    "presetType": "CompleteProgression",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "progression": {
+      "id": "名册修行",
+      "scope": "explicit",
+      "level": 1
+    },
+    "categories": ["Effect.Showcase.CollectionBags"]
+  }
+]

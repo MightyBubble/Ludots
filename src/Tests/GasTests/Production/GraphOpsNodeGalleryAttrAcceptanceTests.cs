@@ -239,6 +239,34 @@ public sealed class GraphOpsNodeGalleryAttrAcceptanceTests
     }
 
     [Test]
+    public void LoadEffectTiming_ReadsSeededRemainingTicks()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("LoadEffectTiming");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Title, Is.EqualTo("看效果还剩多久"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("还剩"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("55"));
+    }
+
+    [Test]
+    public void LoadEffectStack_ReadsSeededStackCount()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("LoadEffectStack");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Title, Is.EqualTo("看效果叠了几层"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("叠了"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("3"));
+    }
+
+    [Test]
     public void AttrFamilyOps_RenderPlayerCaptions()
     {
         string[] ops =

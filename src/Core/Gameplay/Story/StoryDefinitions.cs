@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Registry;
@@ -32,14 +33,27 @@ namespace Ludots.Core.Gameplay.Story
 
     public sealed class StoryPresentationProfileDefinition : IIdentifiable
     {
+        [JsonRequired]
         public string Id { get; set; } = string.Empty;
+
+        [JsonRequired]
         public StoryPresentationBackend Backend { get; set; } = StoryPresentationBackend.ScreenOverlay;
+
+        [JsonRequired]
         public string SurfaceKind { get; set; } = string.Empty;
+
+        [JsonRequired]
+        public string LayoutId { get; set; } = string.Empty;
+        public string StyleClass { get; set; } = string.Empty;
+
+        [JsonRequired]
         public string Anchor { get; set; } = string.Empty;
-        public float Width { get; set; } = 720f;
+
+        [JsonRequired]
+        public float Width { get; set; }
         public float OffsetX { get; set; }
         public float OffsetY { get; set; }
-        public float WorldHeadOffsetYCm { get; set; } = 120f;
+        public float WorldHeadOffsetYCm { get; set; }
         public float WorldScreenHeadOffsetPx { get; set; }
         public bool WaitForInput { get; set; }
         public bool DimBackdrop { get; set; }
@@ -49,12 +63,12 @@ namespace Ludots.Core.Gameplay.Story
         public string ForegroundHex { get; set; } = string.Empty;
         public string MutedHex { get; set; } = string.Empty;
         public string BackdropHex { get; set; } = string.Empty;
+
+        [JsonRequired]
         public float ImageSize { get; set; }
+
+        [JsonRequired]
         public int ZIndex { get; set; }
-        public string ChoiceAnchor { get; set; } = string.Empty;
-        public float ChoiceWidth { get; set; }
-        public float ChoiceOffsetY { get; set; }
-        public int ChoiceZIndex { get; set; }
     }
 
     public sealed class StoryDefinitionRegistry
@@ -101,6 +115,47 @@ namespace Ludots.Core.Gameplay.Story
             if (string.IsNullOrWhiteSpace(definition.SurfaceKind))
             {
                 throw new InvalidOperationException($"Story presentation profile '{definition.Id}' requires surfaceKind.");
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.LayoutId))
+            {
+                throw new InvalidOperationException($"Story presentation profile '{definition.Id}' requires layoutId.");
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.Anchor))
+            {
+                throw new InvalidOperationException($"Story presentation profile '{definition.Id}' requires anchor.");
+            }
+
+            if (definition.Width <= 0f)
+            {
+                throw new InvalidOperationException($"Story presentation profile '{definition.Id}' requires width > 0.");
+            }
+
+            if (definition.ImageSize <= 0f)
+            {
+                throw new InvalidOperationException($"Story presentation profile '{definition.Id}' requires imageSize > 0.");
+            }
+
+            if (definition.DimBackdrop && string.IsNullOrWhiteSpace(definition.BackdropHex))
+            {
+                throw new InvalidOperationException(
+                    $"Story presentation profile '{definition.Id}' requires backdropHex when dimBackdrop is set.");
+            }
+
+            if (definition.Backend == StoryPresentationBackend.WorldProjected)
+            {
+                if (definition.WorldHeadOffsetYCm <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"Story presentation profile '{definition.Id}' requires worldHeadOffsetYCm > 0 for WorldProjected.");
+                }
+
+                if (definition.WorldScreenHeadOffsetPx <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"Story presentation profile '{definition.Id}' requires worldScreenHeadOffsetPx > 0 for WorldProjected.");
+                }
             }
 
             _profiles[definition.Id] = definition;

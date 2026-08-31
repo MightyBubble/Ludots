@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
@@ -20,23 +21,97 @@ namespace Ludots.Core.Presentation.Hud
                 return false;
             }
 
-            text = Format(template, in packet);
+            text = Format(template, in packet, catalog.StringPool);
             return true;
         }
 
-        public static string Format(PresentationTextTemplate template, in PresentationTextPacket packet)
+        public static bool TryFormatRuns(
+            PresentationTextCatalog catalog,
+            int localeId,
+            in PresentationTextPacket packet,
+            out IReadOnlyList<PresentationTextRun> runs)
+        {
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog));
+
+            if (!packet.HasValue || !catalog.TryGetTemplate(localeId, packet.TokenId, out var template))
+            {
+                runs = Array.Empty<PresentationTextRun>();
+                return false;
+            }
+
+            runs = FormatRuns(template, in packet, catalog.StringPool);
+            return true;
+        }
+
+        public static string Format(
+            PresentationTextTemplate template,
+            in PresentationTextPacket packet,
+            PresentationTextStringPool? stringPool = null)
         {
             if (template == null) throw new ArgumentNullException(nameof(template));
 
             var builder = new StringBuilder(Math.Max(template.Source.Length, packet.ArgCount * 8));
-            AppendFormatted(builder, template, in packet);
+            AppendFormatted(builder, template, in packet, stringPool);
             return builder.ToString();
+        }
+
+        public static IReadOnlyList<PresentationTextRun> FormatRuns(
+            PresentationTextTemplate template,
+            in PresentationTextPacket packet,
+            PresentationTextStringPool? stringPool = null)
+        {
+            if (template == null) throw new ArgumentNullException(nameof(template));
+
+            if (!template.HasStyledParts)
+            {
+                string plain = Format(template, in packet, stringPool);
+                if (string.IsNullOrEmpty(plain))
+                {
+                    return Array.Empty<PresentationTextRun>();
+                }
+
+                return new[] { new PresentationTextRun(plain, PresentationTextStyleOverride.None) };
+            }
+
+            var runs = new List<PresentationTextRun>(template.GetParts().Length);
+            var scratch = new StringBuilder(32);
+            ReadOnlySpan<PresentationTextTemplatePart> parts = template.GetParts();
+            for (int i = 0; i < parts.Length; i++)
+            {
+                PresentationTextTemplatePart part = parts[i];
+                scratch.Clear();
+                if (part.Kind == PresentationTextTemplatePartKind.Literal ||
+                    part.Kind == PresentationTextTemplatePartKind.StyledLiteral)
+                {
+                    scratch.Append(part.Literal);
+                }
+                else if (part.Kind == PresentationTextTemplatePartKind.Argument)
+                {
+                    ThrowIfArgIndexOutOfRange(part.ArgIndex, packet.ArgCount);
+                    AppendArg(scratch, packet.GetArg(part.ArgIndex), stringPool);
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation text template part kind '{part.Kind}' is not supported.");
+                }
+
+                if (scratch.Length == 0)
+                {
+                    continue;
+                }
+
+                runs.Add(new PresentationTextRun(scratch.ToString(), part.Style));
+            }
+
+            return runs;
         }
 
         public static void AppendFormatted(
             StringBuilder builder,
             PresentationTextTemplate template,
-            in PresentationTextPacket packet)
+            in PresentationTextPacket packet,
+            PresentationTextStringPool? stringPool = null)
         {
             if (builder == null) throw new ArgumentNullException(nameof(builder));
             if (template == null) throw new ArgumentNullException(nameof(template));
@@ -45,23 +120,40 @@ namespace Ludots.Core.Presentation.Hud
             for (int i = 0; i < parts.Length; i++)
             {
                 PresentationTextTemplatePart part = parts[i];
-                if (part.Kind == PresentationTextTemplatePartKind.Literal)
+                if (part.Kind == PresentationTextTemplatePartKind.Literal ||
+                    part.Kind == PresentationTextTemplatePartKind.StyledLiteral)
                 {
                     builder.Append(part.Literal);
                     continue;
                 }
 
-                if ((uint)part.ArgIndex >= packet.ArgCount)
+                if (part.Kind != PresentationTextTemplatePartKind.Argument)
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Presentation text template part kind '{part.Kind}' is not supported.");
                 }
 
+                ThrowIfArgIndexOutOfRange(part.ArgIndex, packet.ArgCount);
                 PresentationTextArg arg = packet.GetArg(part.ArgIndex);
-                AppendArg(builder, in arg);
+                AppendArg(builder, in arg, stringPool);
             }
         }
 
-        private static void AppendArg(StringBuilder builder, in PresentationTextArg arg)
+        private static void ThrowIfArgIndexOutOfRange(int argIndex, byte argCount)
+        {
+            if ((uint)argIndex < argCount)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Presentation text template argument index {argIndex} is outside packet argument count {argCount}.");
+        }
+
+        private static void AppendArg(
+            StringBuilder builder,
+            in PresentationTextArg arg,
+            PresentationTextStringPool? stringPool)
         {
             switch (arg.Type)
             {
@@ -72,6 +164,20 @@ namespace Ludots.Core.Presentation.Hud
                 case PresentationTextArgType.Float32:
                     AppendFloat(builder, arg.AsFloat32(), arg.Format);
                     break;
+
+                case PresentationTextArgType.String:
+                    if (stringPool == null)
+                    {
+                        throw new InvalidOperationException(
+                            "Presentation text string arg requires the owning catalog string pool.");
+                    }
+
+                    builder.Append(stringPool.Get(in arg));
+                    break;
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Presentation text argument type '{arg.Type}' is not supported.");
             }
         }
 

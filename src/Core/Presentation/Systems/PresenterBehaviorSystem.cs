@@ -1273,6 +1273,7 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 SeedGraphInputRegisters(entity);
+                Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
                 GraphFrame frame = GraphFrame.Bind(
                     GraphKind.Score,
                     GraphEntityPreset.None,
@@ -1287,6 +1288,7 @@ namespace Ludots.Core.Presentation.Systems
                     _graphBoolRegs,
                     _graphEntityRegs,
                     _graphTargets,
+                    intIds,
                     _graphCallStack);
                 GraphExecutor.Execute(ref frame, program);
                 result = _graphFloatRegs[0];

@@ -4,182 +4,659 @@
     "kind": "Query",
     "entry": "read_lore",
     "nodes": [
-      { "id": "read_lore", "op": "ReadMapVarInt", "var": "lore" },
-      { "id": "halt", "op": "HaltReturnInt" }
+      {
+        "id": "read_lore",
+        "op": "ReadMapVarInt",
+        "var": "lore"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
     ],
     "controlEdges": [
-      { "from": "read_lore", "fromPort": "next", "to": "halt" }
+      {
+        "from": "read_lore",
+        "fromPort": "next",
+        "to": "halt"
+      }
     ],
     "valueEdges": [
-      { "from": "read_lore", "fromPort": "value", "to": "halt", "toPort": "value" }
+      {
+        "from": "read_lore",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
     ]
   },
   {
     "id": "Graph.Narrative.Action.AddLoreAndTrust",
     "kind": "TriggerGraph",
     "entries": [
-      { "label": "story_invoke", "event": "Story.ManualInvoke", "start": "scope", "once": true }
+      {
+        "label": "story_invoke",
+        "event": "Story.ManualInvoke",
+        "start": "scope",
+        "once": true
+      }
     ],
     "nodes": [
-      { "id": "scope", "op": "LoadCaster" },
-      { "id": "lore_rd", "op": "ReadMapVarInt", "var": "lore" },
-      { "id": "one_a", "op": "ConstInt", "intValue": 1 },
-      { "id": "lore_add", "op": "AddInt" },
-      { "id": "lore_wr", "op": "WriteMapVarInt", "var": "lore" },
-      { "id": "trust_rd", "op": "ReadMapVarInt", "var": "trust" },
-      { "id": "one_b", "op": "ConstInt", "intValue": 1 },
-      { "id": "trust_add", "op": "AddInt" },
-      { "id": "trust_wr", "op": "WriteMapVarInt", "var": "trust" },
-      { "id": "ok", "op": "ConstInt", "intValue": 1 },
-      { "id": "halt", "op": "HaltReturnInt" }
+      {
+        "id": "scope",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "lore_rd",
+        "op": "ReadMapVarInt",
+        "var": "lore"
+      },
+      {
+        "id": "one_a",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "lore_add",
+        "op": "AddInt"
+      },
+      {
+        "id": "lore_wr",
+        "op": "WriteMapVarInt",
+        "var": "lore"
+      },
+      {
+        "id": "trust_rd",
+        "op": "ReadMapVarInt",
+        "var": "trust"
+      },
+      {
+        "id": "one_b",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "trust_add",
+        "op": "AddInt"
+      },
+      {
+        "id": "trust_wr",
+        "op": "WriteMapVarInt",
+        "var": "trust"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
     ],
     "controlEdges": [
-      { "from": "scope", "fromPort": "next", "to": "lore_rd" },
-      { "from": "lore_rd", "fromPort": "next", "to": "one_a" },
-      { "from": "one_a", "fromPort": "next", "to": "lore_add" },
-      { "from": "lore_add", "fromPort": "next", "to": "lore_wr" },
-      { "from": "lore_wr", "fromPort": "next", "to": "trust_rd" },
-      { "from": "trust_rd", "fromPort": "next", "to": "one_b" },
-      { "from": "one_b", "fromPort": "next", "to": "trust_add" },
-      { "from": "trust_add", "fromPort": "next", "to": "trust_wr" },
-      { "from": "trust_wr", "fromPort": "next", "to": "ok" },
-      { "from": "ok", "fromPort": "next", "to": "halt" }
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "lore_rd"
+      },
+      {
+        "from": "lore_rd",
+        "fromPort": "next",
+        "to": "one_a"
+      },
+      {
+        "from": "one_a",
+        "fromPort": "next",
+        "to": "lore_add"
+      },
+      {
+        "from": "lore_add",
+        "fromPort": "next",
+        "to": "lore_wr"
+      },
+      {
+        "from": "lore_wr",
+        "fromPort": "next",
+        "to": "trust_rd"
+      },
+      {
+        "from": "trust_rd",
+        "fromPort": "next",
+        "to": "one_b"
+      },
+      {
+        "from": "one_b",
+        "fromPort": "next",
+        "to": "trust_add"
+      },
+      {
+        "from": "trust_add",
+        "fromPort": "next",
+        "to": "trust_wr"
+      },
+      {
+        "from": "trust_wr",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
     ],
     "valueEdges": [
-      { "from": "lore_rd", "fromPort": "value", "to": "lore_add", "toPort": "a" },
-      { "from": "one_a", "fromPort": "value", "to": "lore_add", "toPort": "b" },
-      { "from": "scope", "fromPort": "value", "to": "lore_wr", "toPort": "source" },
-      { "from": "lore_add", "fromPort": "value", "to": "lore_wr", "toPort": "value" },
-      { "from": "trust_rd", "fromPort": "value", "to": "trust_add", "toPort": "a" },
-      { "from": "one_b", "fromPort": "value", "to": "trust_add", "toPort": "b" },
-      { "from": "scope", "fromPort": "value", "to": "trust_wr", "toPort": "source" },
-      { "from": "trust_add", "fromPort": "value", "to": "trust_wr", "toPort": "value" },
-      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+      {
+        "from": "lore_rd",
+        "fromPort": "value",
+        "to": "lore_add",
+        "toPort": "a"
+      },
+      {
+        "from": "one_a",
+        "fromPort": "value",
+        "to": "lore_add",
+        "toPort": "b"
+      },
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "lore_wr",
+        "toPort": "source"
+      },
+      {
+        "from": "lore_add",
+        "fromPort": "value",
+        "to": "lore_wr",
+        "toPort": "value"
+      },
+      {
+        "from": "trust_rd",
+        "fromPort": "value",
+        "to": "trust_add",
+        "toPort": "a"
+      },
+      {
+        "from": "one_b",
+        "fromPort": "value",
+        "to": "trust_add",
+        "toPort": "b"
+      },
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "trust_wr",
+        "toPort": "source"
+      },
+      {
+        "from": "trust_add",
+        "fromPort": "value",
+        "to": "trust_wr",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
     ]
   },
   {
     "id": "Graph.Narrative.Action.AcceptBriefing",
     "kind": "TriggerGraph",
     "entries": [
-      { "label": "story_invoke", "event": "Story.ManualInvoke", "start": "scope", "once": true }
+      {
+        "label": "story_invoke",
+        "event": "Story.ManualInvoke",
+        "start": "scope",
+        "once": true
+      }
     ],
     "nodes": [
-      { "id": "scope", "op": "LoadCaster" },
-      { "id": "trust_rd", "op": "ReadMapVarInt", "var": "trust" },
-      { "id": "one", "op": "ConstInt", "intValue": 1 },
-      { "id": "trust_add", "op": "AddInt" },
-      { "id": "trust_wr", "op": "WriteMapVarInt", "var": "trust" },
-      { "id": "phase", "op": "ConstInt", "intValue": 1 },
-      { "id": "phase_wr", "op": "WriteMapVarInt", "var": "trial_phase" },
-      { "id": "ok", "op": "ConstInt", "intValue": 1 },
-      { "id": "halt", "op": "HaltReturnInt" }
+      {
+        "id": "scope",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "trust_rd",
+        "op": "ReadMapVarInt",
+        "var": "trust"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "trust_add",
+        "op": "AddInt"
+      },
+      {
+        "id": "trust_wr",
+        "op": "WriteMapVarInt",
+        "var": "trust"
+      },
+      {
+        "id": "phase",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "phase_wr",
+        "op": "WriteMapVarInt",
+        "var": "trial_phase"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
     ],
     "controlEdges": [
-      { "from": "scope", "fromPort": "next", "to": "trust_rd" },
-      { "from": "trust_rd", "fromPort": "next", "to": "one" },
-      { "from": "one", "fromPort": "next", "to": "trust_add" },
-      { "from": "trust_add", "fromPort": "next", "to": "trust_wr" },
-      { "from": "trust_wr", "fromPort": "next", "to": "phase" },
-      { "from": "phase", "fromPort": "next", "to": "phase_wr" },
-      { "from": "phase_wr", "fromPort": "next", "to": "ok" },
-      { "from": "ok", "fromPort": "next", "to": "halt" }
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "trust_rd"
+      },
+      {
+        "from": "trust_rd",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "trust_add"
+      },
+      {
+        "from": "trust_add",
+        "fromPort": "next",
+        "to": "trust_wr"
+      },
+      {
+        "from": "trust_wr",
+        "fromPort": "next",
+        "to": "phase"
+      },
+      {
+        "from": "phase",
+        "fromPort": "next",
+        "to": "phase_wr"
+      },
+      {
+        "from": "phase_wr",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
     ],
     "valueEdges": [
-      { "from": "trust_rd", "fromPort": "value", "to": "trust_add", "toPort": "a" },
-      { "from": "one", "fromPort": "value", "to": "trust_add", "toPort": "b" },
-      { "from": "scope", "fromPort": "value", "to": "trust_wr", "toPort": "source" },
-      { "from": "trust_add", "fromPort": "value", "to": "trust_wr", "toPort": "value" },
-      { "from": "scope", "fromPort": "value", "to": "phase_wr", "toPort": "source" },
-      { "from": "phase", "fromPort": "value", "to": "phase_wr", "toPort": "value" },
-      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+      {
+        "from": "trust_rd",
+        "fromPort": "value",
+        "to": "trust_add",
+        "toPort": "a"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "trust_add",
+        "toPort": "b"
+      },
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "trust_wr",
+        "toPort": "source"
+      },
+      {
+        "from": "trust_add",
+        "fromPort": "value",
+        "to": "trust_wr",
+        "toPort": "value"
+      },
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "phase_wr",
+        "toPort": "source"
+      },
+      {
+        "from": "phase",
+        "fromPort": "value",
+        "to": "phase_wr",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
     ]
   },
   {
     "id": "Graph.Narrative.Action.SetEndingDuty",
     "kind": "TriggerGraph",
     "entries": [
-      { "label": "story_invoke", "event": "Story.ManualInvoke", "start": "scope", "once": true }
+      {
+        "label": "story_invoke",
+        "event": "Story.ManualInvoke",
+        "start": "scope",
+        "once": true
+      }
     ],
     "nodes": [
-      { "id": "scope", "op": "LoadCaster" },
-      { "id": "ending", "op": "ConstInt", "intValue": 1 },
-      { "id": "ending_wr", "op": "WriteMapVarInt", "var": "ending" },
-      { "id": "trust_rd", "op": "ReadMapVarInt", "var": "trust" },
-      { "id": "one", "op": "ConstInt", "intValue": 1 },
-      { "id": "trust_add", "op": "AddInt" },
-      { "id": "trust_wr", "op": "WriteMapVarInt", "var": "trust" },
-      { "id": "ok", "op": "ConstInt", "intValue": 1 },
-      { "id": "halt", "op": "HaltReturnInt" }
+      {
+        "id": "scope",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ending",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "ending_wr",
+        "op": "WriteMapVarInt",
+        "var": "ending"
+      },
+      {
+        "id": "trust_rd",
+        "op": "ReadMapVarInt",
+        "var": "trust"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "trust_add",
+        "op": "AddInt"
+      },
+      {
+        "id": "trust_wr",
+        "op": "WriteMapVarInt",
+        "var": "trust"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
     ],
     "controlEdges": [
-      { "from": "scope", "fromPort": "next", "to": "ending" },
-      { "from": "ending", "fromPort": "next", "to": "ending_wr" },
-      { "from": "ending_wr", "fromPort": "next", "to": "trust_rd" },
-      { "from": "trust_rd", "fromPort": "next", "to": "one" },
-      { "from": "one", "fromPort": "next", "to": "trust_add" },
-      { "from": "trust_add", "fromPort": "next", "to": "trust_wr" },
-      { "from": "trust_wr", "fromPort": "next", "to": "ok" },
-      { "from": "ok", "fromPort": "next", "to": "halt" }
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "ending"
+      },
+      {
+        "from": "ending",
+        "fromPort": "next",
+        "to": "ending_wr"
+      },
+      {
+        "from": "ending_wr",
+        "fromPort": "next",
+        "to": "trust_rd"
+      },
+      {
+        "from": "trust_rd",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "trust_add"
+      },
+      {
+        "from": "trust_add",
+        "fromPort": "next",
+        "to": "trust_wr"
+      },
+      {
+        "from": "trust_wr",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
     ],
     "valueEdges": [
-      { "from": "scope", "fromPort": "value", "to": "ending_wr", "toPort": "source" },
-      { "from": "ending", "fromPort": "value", "to": "ending_wr", "toPort": "value" },
-      { "from": "trust_rd", "fromPort": "value", "to": "trust_add", "toPort": "a" },
-      { "from": "one", "fromPort": "value", "to": "trust_add", "toPort": "b" },
-      { "from": "scope", "fromPort": "value", "to": "trust_wr", "toPort": "source" },
-      { "from": "trust_add", "fromPort": "value", "to": "trust_wr", "toPort": "value" },
-      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "ending_wr",
+        "toPort": "source"
+      },
+      {
+        "from": "ending",
+        "fromPort": "value",
+        "to": "ending_wr",
+        "toPort": "value"
+      },
+      {
+        "from": "trust_rd",
+        "fromPort": "value",
+        "to": "trust_add",
+        "toPort": "a"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "trust_add",
+        "toPort": "b"
+      },
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "trust_wr",
+        "toPort": "source"
+      },
+      {
+        "from": "trust_add",
+        "fromPort": "value",
+        "to": "trust_wr",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
     ]
   },
   {
     "id": "Graph.Narrative.Action.SetEndingMercy",
     "kind": "TriggerGraph",
     "entries": [
-      { "label": "story_invoke", "event": "Story.ManualInvoke", "start": "scope", "once": true }
+      {
+        "label": "story_invoke",
+        "event": "Story.ManualInvoke",
+        "start": "scope",
+        "once": true
+      }
     ],
     "nodes": [
-      { "id": "scope", "op": "LoadCaster" },
-      { "id": "ending", "op": "ConstInt", "intValue": 2 },
-      { "id": "ending_wr", "op": "WriteMapVarInt", "var": "ending" },
-      { "id": "trust_rd", "op": "ReadMapVarInt", "var": "trust" },
-      { "id": "two", "op": "ConstInt", "intValue": 2 },
-      { "id": "trust_add", "op": "AddInt" },
-      { "id": "trust_wr", "op": "WriteMapVarInt", "var": "trust" },
-      { "id": "ok", "op": "ConstInt", "intValue": 1 },
-      { "id": "halt", "op": "HaltReturnInt" }
+      {
+        "id": "scope",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ending",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "ending_wr",
+        "op": "WriteMapVarInt",
+        "var": "ending"
+      },
+      {
+        "id": "trust_rd",
+        "op": "ReadMapVarInt",
+        "var": "trust"
+      },
+      {
+        "id": "two",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "trust_add",
+        "op": "AddInt"
+      },
+      {
+        "id": "trust_wr",
+        "op": "WriteMapVarInt",
+        "var": "trust"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
     ],
     "controlEdges": [
-      { "from": "scope", "fromPort": "next", "to": "ending" },
-      { "from": "ending", "fromPort": "next", "to": "ending_wr" },
-      { "from": "ending_wr", "fromPort": "next", "to": "trust_rd" },
-      { "from": "trust_rd", "fromPort": "next", "to": "two" },
-      { "from": "two", "fromPort": "next", "to": "trust_add" },
-      { "from": "trust_add", "fromPort": "next", "to": "trust_wr" },
-      { "from": "trust_wr", "fromPort": "next", "to": "ok" },
-      { "from": "ok", "fromPort": "next", "to": "halt" }
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "ending"
+      },
+      {
+        "from": "ending",
+        "fromPort": "next",
+        "to": "ending_wr"
+      },
+      {
+        "from": "ending_wr",
+        "fromPort": "next",
+        "to": "trust_rd"
+      },
+      {
+        "from": "trust_rd",
+        "fromPort": "next",
+        "to": "two"
+      },
+      {
+        "from": "two",
+        "fromPort": "next",
+        "to": "trust_add"
+      },
+      {
+        "from": "trust_add",
+        "fromPort": "next",
+        "to": "trust_wr"
+      },
+      {
+        "from": "trust_wr",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
     ],
     "valueEdges": [
-      { "from": "scope", "fromPort": "value", "to": "ending_wr", "toPort": "source" },
-      { "from": "ending", "fromPort": "value", "to": "ending_wr", "toPort": "value" },
-      { "from": "trust_rd", "fromPort": "value", "to": "trust_add", "toPort": "a" },
-      { "from": "two", "fromPort": "value", "to": "trust_add", "toPort": "b" },
-      { "from": "scope", "fromPort": "value", "to": "trust_wr", "toPort": "source" },
-      { "from": "trust_add", "fromPort": "value", "to": "trust_wr", "toPort": "value" },
-      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "ending_wr",
+        "toPort": "source"
+      },
+      {
+        "from": "ending",
+        "fromPort": "value",
+        "to": "ending_wr",
+        "toPort": "value"
+      },
+      {
+        "from": "trust_rd",
+        "fromPort": "value",
+        "to": "trust_add",
+        "toPort": "a"
+      },
+      {
+        "from": "two",
+        "fromPort": "value",
+        "to": "trust_add",
+        "toPort": "b"
+      },
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "trust_wr",
+        "toPort": "source"
+      },
+      {
+        "from": "trust_add",
+        "fromPort": "value",
+        "to": "trust_wr",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
     ]
   },
   {
     "id": "Graph.Narrative.Macro.AskDialogConfirm",
     "kind": "TriggerGraph",
     "entries": [
-      { "label": "macro", "event": "Story.ManualInvoke", "start": "ask", "once": true }
+      {
+        "label": "macro",
+        "event": "Story.ManualInvoke",
+        "start": "ask",
+        "once": true
+      }
     ],
     "nodes": [
-      { "id": "ask", "op": "AwaitCallback", "callbackType": "DialogConfirm" },
-      { "id": "halt", "op": "HaltReturnInt" }
+      {
+        "id": "ask",
+        "op": "AwaitCallback",
+        "callbackType": "DialogConfirm"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
     ],
     "controlEdges": [
-      { "from": "ask", "fromPort": "next", "to": "halt" }
+      {
+        "from": "ask",
+        "fromPort": "next",
+        "to": "halt"
+      }
     ],
     "valueEdges": []
   },
@@ -187,7 +664,12 @@
     "id": "Graph.Narrative.Wire.AwaitDialogConfirm",
     "kind": "TriggerGraph",
     "entries": [
-      { "label": "boot_await", "event": "MapHeartbeat", "start": "inline_ask", "once": true }
+      {
+        "label": "boot_await",
+        "event": "MapHeartbeat",
+        "start": "inline_ask",
+        "once": true
+      }
     ],
     "nodes": [
       {
@@ -196,48 +678,155 @@
         "functionName": "Graph.Narrative.Macro.AskDialogConfirm",
         "entryLabel": "macro"
       },
-      { "id": "scope", "op": "LoadCaster" },
-      { "id": "one", "op": "ConstInt", "intValue": 1 },
-      { "id": "ack_wr", "op": "WriteMapVarInt", "var": "dialog_await_ack" },
-      { "id": "ok", "op": "ConstInt", "intValue": 1 },
-      { "id": "halt", "op": "HaltReturnInt" }
+      {
+        "id": "scope",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "ack_wr",
+        "op": "WriteMapVarInt",
+        "var": "dialog_await_ack"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
     ],
     "controlEdges": [
-      { "from": "inline_ask", "fromPort": "then", "to": "scope" },
-      { "from": "scope", "fromPort": "next", "to": "one" },
-      { "from": "one", "fromPort": "next", "to": "ack_wr" },
-      { "from": "ack_wr", "fromPort": "next", "to": "ok" },
-      { "from": "ok", "fromPort": "next", "to": "halt" }
+      {
+        "from": "inline_ask",
+        "fromPort": "then",
+        "to": "scope"
+      },
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "ack_wr"
+      },
+      {
+        "from": "ack_wr",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
     ],
     "valueEdges": [
-      { "from": "scope", "fromPort": "value", "to": "ack_wr", "toPort": "source" },
-      { "from": "one", "fromPort": "value", "to": "ack_wr", "toPort": "value" },
-      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "ack_wr",
+        "toPort": "source"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "ack_wr",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
     ]
   },
   {
     "id": "Graph.Narrative.Action.SignalAck",
     "kind": "TriggerGraph",
     "entries": [
-      { "label": "story_invoke", "event": "Story.ManualInvoke", "start": "scope", "once": true }
+      {
+        "label": "story_invoke",
+        "event": "Story.ManualInvoke",
+        "start": "scope",
+        "once": true
+      }
     ],
     "nodes": [
-      { "id": "scope", "op": "LoadCaster" },
-      { "id": "one", "op": "ConstInt", "intValue": 1 },
-      { "id": "ack_wr", "op": "WriteMapVarInt", "var": "signal_ack" },
-      { "id": "ok", "op": "ConstInt", "intValue": 1 },
-      { "id": "halt", "op": "HaltReturnInt" }
+      {
+        "id": "scope",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "ack_wr",
+        "op": "WriteMapVarInt",
+        "var": "signal_ack"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
     ],
     "controlEdges": [
-      { "from": "scope", "fromPort": "next", "to": "one" },
-      { "from": "one", "fromPort": "next", "to": "ack_wr" },
-      { "from": "ack_wr", "fromPort": "next", "to": "ok" },
-      { "from": "ok", "fromPort": "next", "to": "halt" }
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "ack_wr"
+      },
+      {
+        "from": "ack_wr",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
     ],
     "valueEdges": [
-      { "from": "scope", "fromPort": "value", "to": "ack_wr", "toPort": "source" },
-      { "from": "one", "fromPort": "value", "to": "ack_wr", "toPort": "value" },
-      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "ack_wr",
+        "toPort": "source"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "ack_wr",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
     ]
   }
 ]

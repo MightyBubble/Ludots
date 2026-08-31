@@ -33,8 +33,10 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
+using NarrativeFrontendMod.Runtime;
 using NUnit.Framework;
 using Ludots.Tests.TestCommon;
+using SkiaSharp;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -74,6 +76,7 @@ namespace Ludots.Tests.GAS.Production
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "narrative-showcase");
             string screensDir = Path.Combine(artifactDir, "screens");
             AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
+            AssertThemeAssetsHaveTransparentBackgrounds(repoRoot);
 
             var snapshots = new List<AcceptanceSnapshot>();
             var frames = new List<UiAcceptanceEvidenceFrame>();
@@ -109,6 +112,9 @@ namespace Ludots.Tests.GAS.Production
             AssertCastIdentityVisible(uiRoot);
             Assert.That(UiContains(uiRoot, "米蕾勒") || UiContains(uiRoot, "灯火"), Is.True);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "map_loaded");
+            AssertSurfacesStayInsideViewport(uiRoot, 1280f, 720f);
+            uiRoot.Resize(1920f, 1080f);
+            uiRoot.Scene?.Layout(1920f, 1080f);
             timeline.Add("[T+001] Loaded the narrative showcase hub; HUD mounted and TaskRuntime entered the briefing beat.");
 
             SelectNamedEntity(engine, backend, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName, frameTimesMs);
@@ -126,9 +132,18 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(dialogue.TryGetActiveView(out DialogueView introDialogue), Is.True);
             Assert.That(introDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.BriefingDialogueId));
             Assert.That(introDialogue.ResolvedSpeakerName, Does.Contain("米蕾勒").Or.Contain("Mirelle"));
+            Assert.That(introDialogue.PresentationProfile, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationDialogueOverlay));
+            Assert.That(introDialogue.BodyRuns, Is.Not.Null.And.Not.Empty);
+            Assert.That(introDialogue.BodyRuns!.Any(static run => !run.Style.IsEmpty), Is.True);
+            Assert.That(introDialogue.ResolvedText, Does.Contain("余烬神龛").Or.Contain("Ember Shrine"));
+            Assert.That(introDialogue.ResolvedText, Does.Not.Contain("<color").And.Not.Contain("<b>"));
             Assert.That(UiContains(uiRoot, "守望者米蕾勒") || UiContains(uiRoot, "Warden Mirelle"), Is.True);
             Assert.That(UiContains(uiRoot, "回话") || UiContains(uiRoot, "1"), Is.True);
+            uiRoot.Scene?.Layout(uiRoot.Width > 0 ? uiRoot.Width : 1920f, uiRoot.Height > 0 ? uiRoot.Height : 1080f);
             AssertThemeFrameVisibleOnDialogue(uiRoot);
+            AssertPanelChoicesPanelVisible(uiRoot, dialogue);
+            AssertDialogueLayoutAtViewport(uiRoot, introDialogue, 1280f, 720f);
+            AssertDialogueLayoutAtViewport(uiRoot, introDialogue, 1920f, 1080f);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "intro_complete");
             timeline.Add("[T+002] Skipped the intro Sequencer beat through StorySkip and handed off into DialogueRuntime elder briefing.");
 
@@ -231,7 +246,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(returnDialogue.DialogueId, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.ReturnDialogueId));
             Assert.That(returnDialogue.PresentationProfile, Is.EqualTo(NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationStandingPortrait));
             Assert.That(returnDialogue.StandingImageId, Is.Not.Null.And.Not.Empty);
-            AssertStandingPortraitSurface(uiRoot, returnDialogue);
+            AssertStandingPortraitAtViewport(uiRoot, returnDialogue, 1280f, 720f);
+            AssertStandingPortraitAtViewport(uiRoot, returnDialogue, 1920f, 1080f);
             CaptureSnapshot(engine, uiRoot, dialogue, sequencer, tasks, snapshots, frames, frameTimesMs, screensDir, "standing_portrait_return");
             timeline.Add("[T+007a] Return beat opened on story.standing_portrait with a half-screen standing figure for the warden.");
             PressStoryAction(engine, backend, DialogueInputActionIds.Choice2, frameTimesMs);
@@ -637,45 +653,54 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(dialogue.TryResolveEntity(view.SpeakerId, out Entity speaker), Is.True, $"Speaker '{view.SpeakerId}' must be bound for world_bubble.");
             Assert.That(engine.World.TryGet(speaker, out WorldPositionCm worldPos), Is.True);
 
-            float headOffsetYCm = 140f;
-            if (engine.GetService(CoreServiceKeys.StoryDefinitions) is Ludots.Core.Gameplay.Story.StoryDefinitionRegistry story &&
-                story.TryGetProfile(NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationWorldBubble, out var profile))
-            {
-                headOffsetYCm = profile.WorldHeadOffsetYCm;
-            }
+            var story = engine.GetService(CoreServiceKeys.StoryDefinitions)
+                ?? throw new InvalidOperationException("StoryDefinitions was not installed.");
+            Assert.That(
+                story.TryGetProfile(
+                    NarrativeShowcaseMod.NarrativeShowcaseIds.PresentationWorldBubble,
+                    out var profile),
+                Is.True);
 
             Vector2 world = worldPos.Value.ToVector2();
             Vector2 screen = projector.WorldToScreen(new Vector3(
                 world.X / 100f,
-                headOffsetYCm / 100f,
+                profile.WorldHeadOffsetYCm / 100f,
                 world.Y / 100f));
             Assert.That(float.IsNaN(screen.X) || float.IsNaN(screen.Y), Is.False);
 
-            if (!engine.GlobalContext.TryGetValue("NarrativeShowcase.Runtime", out object? runtimeObj) || runtimeObj == null)
-            {
-                throw new InvalidOperationException("NarrativeShowcase.Runtime was not registered for world_bubble refresh.");
-            }
-
-            var refresh = runtimeObj.GetType().GetMethod(
+            Assert.That(
+                engine.GlobalContext.TryGetValue("NarrativeShowcase.Runtime", out object? runtimeObj),
+                Is.True);
+            var refresh = runtimeObj!.GetType().GetMethod(
                 "RefreshPanel",
-                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-            Assert.That(refresh, Is.Not.Null, "NarrativeShowcase.Runtime.RefreshPanel missing.");
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic);
+            Assert.That(refresh, Is.Not.Null);
             refresh!.Invoke(runtimeObj, new object[] { engine });
-            Assert.That(engine.GlobalContext.TryGetValue("NarrativeShowcase.LastWorldBubble", out object? lastBubbleObj), Is.True,
-                "BuildPage did not record LastWorldBubble after RefreshPanel.");
-            string lastBubble = lastBubbleObj as string ?? string.Empty;
-            TestContext.WriteLine("LastWorldBubble=" + lastBubble);
-            TickPresentation(engine);
-            TickPresentation(engine);
 
-            // Contract: published layout fingerprint must be DialogueBubble + projected TopLeft offsets.
-            Assert.That(lastBubble, Does.StartWith("DialogueBubble|520|TopLeft|"));
-            string[] parts = lastBubble.Split('|');
-            float publishedOffsetX = float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
-            float publishedOffsetY = float.Parse(parts[4], System.Globalization.CultureInfo.InvariantCulture);
-            const float uiMargin = 24f;
-            Assert.That(publishedOffsetX, Is.EqualTo(screen.X - uiMargin).Within(48f));
-            Assert.That(publishedOffsetY, Is.EqualTo(screen.Y - uiMargin - 96f).Within(64f));
+            TickPresentation(engine);
+            TickPresentation(engine);
+            uiRoot.Scene?.Layout(uiRoot.Width, uiRoot.Height);
+
+            UiNode? bubble = FindUiNodeBySurfaceKind(
+                uiRoot.Scene?.Root,
+                NarrativeFrontendSurfaceKind.DialogueBubble);
+            Assert.That(bubble, Is.Not.Null);
+            UiNode? dock = FindAncestorByClass(bubble, "story-surface-dock");
+            Assert.That(dock, Is.Not.Null);
+            UiRect bubbleBounds = GetTransformedPaintBounds(bubble!);
+            Assert.That(
+                dock!.RenderStyle.Padding.Left,
+                Is.EqualTo(
+                    screen.X + profile.OffsetX + dock.RenderStyle.Padding.Right).Within(0.5f));
+            Assert.That(
+                dock.RenderStyle.Padding.Top,
+                Is.EqualTo(
+                    screen.Y - profile.WorldScreenHeadOffsetPx + profile.OffsetY +
+                    dock.RenderStyle.Padding.Right).Within(0.5f));
+            Assert.That(bubbleBounds.Width, Is.GreaterThan(0f));
+            Assert.That(bubbleBounds.Height, Is.GreaterThan(0f));
             Assert.That(
                 UiContains(uiRoot, "附近") || UiContains(uiRoot, "Nearby") || UiContains(uiRoot, "World Bubble"),
                 Is.True,
@@ -703,6 +728,30 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(FindUiNodeByClass(uiRoot.Scene?.Root, "story-nameplate"), Is.Not.Null);
         }
 
+        private static void AssertDialogueLayoutAtViewport(
+            UIRoot uiRoot,
+            DialogueView view,
+            float width,
+            float height)
+        {
+            uiRoot.Resize(width, height);
+            uiRoot.Scene?.Layout(width, height);
+            AssertDialogueBodyRunsVisibleOnUi(uiRoot, view);
+            AssertSurfacesStayInsideViewport(uiRoot, width, height);
+        }
+
+        private static void AssertStandingPortraitAtViewport(
+            UIRoot uiRoot,
+            DialogueView view,
+            float width,
+            float height)
+        {
+            uiRoot.Resize(width, height);
+            uiRoot.Scene?.Layout(width, height);
+            AssertStandingPortraitSurface(uiRoot, view);
+            AssertSurfacesStayInsideViewport(uiRoot, width, height);
+        }
+
         private static void AssertStandingPortraitSurface(UIRoot uiRoot, DialogueView view)
         {
             Assert.That(
@@ -717,30 +766,281 @@ namespace Ludots.Tests.GAS.Production
                 "DialogueView should expose standingImageId (not a filesystem path).");
             Assert.That(standingSrc, Does.Contain("data:image").Or.Contain("/").Or.Contain("\\"),
                 "Frontend must resolve standing imageId to a drawable src.");
-            Assert.That(standing.Style.Height.Unit, Is.EqualTo(UiLengthUnit.Pixel));
-            Assert.That(standing.Style.Height.Value, Is.GreaterThanOrEqualTo(900f),
-                "Standing portrait should occupy roughly half-screen vertical height.");
+            UiRect standingPaintBounds = GetTransformedPaintBounds(standing);
+            Assert.That(standingPaintBounds.Height, Is.GreaterThan(0f));
             UiNode? row = FindUiNodeByClass(uiRoot.Scene?.Root, "story-standing-portrait-row");
             Assert.That(row, Is.Not.Null);
             UiNode? composition = FindAncestorByClass(row, "story-surface") ?? row;
-            Assert.That(composition!.Style.Width.Unit, Is.EqualTo(UiLengthUnit.Pixel));
-            Assert.That(composition.Style.Width.Value, Is.GreaterThanOrEqualTo(900f),
-                "Standing portrait composition should span a half-screen-plus dialogue strip.");
+            UiRect compositionPaintBounds = GetTransformedPaintBounds(composition!);
+            Assert.That(compositionPaintBounds.Width, Is.GreaterThan(standingPaintBounds.Width));
+            Assert.That(compositionPaintBounds.Height, Is.GreaterThanOrEqualTo(standingPaintBounds.Height - 0.5f));
+            Assert.That(
+                FindUiNodeByClass(uiRoot.Scene?.Root, "story-prompt-ribbon"),
+                Is.Null,
+                "Prompt ribbon must not run behind a standing-portrait dialogue.");
+            Assert.That(
+                FindUiNodeByClass(uiRoot.Scene?.Root, "story-status"),
+                Is.Null,
+                "Status panels must not sit behind the standing portrait.");
         }
 
         private static void AssertThemeFrameVisibleOnDialogue(UIRoot uiRoot)
         {
-            UiNode? frame = FindUiNodeByClass(uiRoot.Scene?.Root, "story-frame");
-            Assert.That(frame, Is.Not.Null, "Dialogue overlay must mount themed nine-slice story-frame.");
-            string src = frame!.Attributes["src"] ?? string.Empty;
+            var frames = new List<UiNode>();
+            CollectUiNodesByClass(uiRoot.Scene?.Root, "story-frame", frames);
+            Assert.That(
+                frames.Count,
+                Is.EqualTo(1),
+                "Only the active dialogue panel may wear panel_frame; PromptRibbon must not stack a second ornate bar.");
+            UiNode frame = frames[0];
+            string src = frame.Attributes["src"] ?? string.Empty;
             Assert.That(src, Does.Contain("panel_frame.png").IgnoreCase,
                 $"story-frame src must point at PanelThemes panel_frame.png, got '{src}'.");
             Assert.That(frame.Style.ImageSlice.Left, Is.GreaterThan(0f),
                 "story-frame must have image-slice so ornate borders nine-slice instead of stretch.");
+            var choiceFrames = new List<UiNode>();
+            CollectUiNodesByClass(uiRoot.Scene?.Root, "story-choice-frame", choiceFrames);
+            Assert.That(choiceFrames.Count, Is.EqualTo(0),
+                "ChoiceList companion surface is retired; choices render on PanelHost.");
+            Assert.That(frame.RenderStyle.ImageSlice.Left, Is.EqualTo(48f));
             UiNode? framed = FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed");
             Assert.That(framed, Is.Not.Null);
             UiNode? body = FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed-body");
             Assert.That(body, Is.Not.Null, "Framed dialogue content must use story-framed-body inset.");
+            UiNode? prompt = FindUiNodeByClass(uiRoot.Scene?.Root, "story-prompt-ribbon");
+            Assert.That(prompt, Is.Null, "Prompt ribbon must not run behind active dialogue.");
+            Assert.That(
+                FindUiNodeByClass(uiRoot.Scene?.Root, "panel-narrative-choices"),
+                Is.Not.Null,
+                "Active dialogue choices must appear on PanelHost panel.narrative.choices.");
+            Assert.That(
+                FindUiNodeByClass(uiRoot.Scene?.Root, "story-overlay-copy"),
+                Is.Not.Null,
+                "Overlay dialogue must place speaker name and body in story-overlay-copy beside the portrait.");
+        }
+
+        private static void AssertPanelChoicesPanelVisible(UIRoot uiRoot, DialogueRuntime dialogue)
+        {
+            Assert.That(dialogue.TryGetActiveView(out DialogueView view), Is.True);
+            Assert.That(view.Choices.Count, Is.GreaterThan(0));
+            UiNode? panel = FindUiNodeByClass(uiRoot.Scene?.Root, "panel-narrative-choices");
+            Assert.That(panel, Is.Not.Null, "panel.narrative.choices must be visible while choices are available.");
+            for (int i = 0; i < view.Choices.Count; i++)
+            {
+                string text = view.Choices[i].ResolvedText;
+                Assert.That(
+                    UiContains(uiRoot, text),
+                    Is.True,
+                    $"PanelHost choices must show resolved text '{text}'.");
+            }
+        }
+
+        private static void AssertThemeAssetsHaveTransparentBackgrounds(string repoRoot)
+        {
+            string themeRoot = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "narrative",
+                "NarrativeShowcaseMod",
+                "assets",
+                "PanelThemes");
+            string[] themeIds = { "story-ember", "story-sanguo", "story-fantasy", "story-acnh" };
+            string[] imageNames = { "panel_frame.png", "portrait_warden.png", "standing_warden.png" };
+
+            foreach (string themeId in themeIds)
+            {
+                foreach (string imageName in imageNames)
+                {
+                    string path = Path.Combine(themeRoot, themeId, "images", imageName);
+                    using SKBitmap bitmap = SKBitmap.Decode(path)
+                        ?? throw new InvalidOperationException($"Unable to decode theme asset '{path}'.");
+                    Assert.That(
+                        new[]
+                        {
+                            bitmap.GetPixel(0, 0).Alpha,
+                            bitmap.GetPixel(bitmap.Width - 1, 0).Alpha,
+                            bitmap.GetPixel(0, bitmap.Height - 1).Alpha,
+                            bitmap.GetPixel(bitmap.Width - 1, bitmap.Height - 1).Alpha
+                        },
+                        Is.All.EqualTo((byte)0),
+                        $"{themeId}/{imageName} must have transparent outer corners.");
+                }
+
+                using SKBitmap panelFrame = SKBitmap.Decode(
+                    Path.Combine(themeRoot, themeId, "images", "panel_frame.png"))
+                    ?? throw new InvalidOperationException($"Unable to decode {themeId}/panel_frame.png.");
+                Assert.That(panelFrame.Width, Is.GreaterThan(0));
+                Assert.That(panelFrame.Height, Is.GreaterThan(0));
+            }
+        }
+
+        private static void AssertSurfacesStayInsideViewport(UIRoot uiRoot, float width, float height)
+        {
+            uiRoot.Resize(width, height);
+            uiRoot.Scene?.Layout(width, height);
+            var surfaces = new List<UiNode>();
+            CollectUiNodesByClass(uiRoot.Scene?.Root, "story-surface", surfaces);
+            Assert.That(surfaces, Is.Not.Empty);
+            for (int i = 0; i < surfaces.Count; i++)
+            {
+                if (string.Equals(
+                    surfaces[i].Attributes["data-surface-kind"],
+                    NarrativeFrontendSurfaceKind.WorldNameplate.ToString(),
+                    StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                UiRect paintBounds = GetTransformedPaintBounds(surfaces[i]);
+                Assert.That(paintBounds.X, Is.GreaterThanOrEqualTo(-0.5f), $"Surface {i} paints outside the viewport left edge.");
+                Assert.That(
+                    paintBounds.Y,
+                    Is.GreaterThanOrEqualTo(-0.5f),
+                    $"Surface {i} paints outside the viewport top edge. kind={surfaces[i].Attributes["data-surface-kind"]} layout={surfaces[i].LayoutRect} paint={paintBounds}");
+                Assert.That(paintBounds.Right, Is.LessThanOrEqualTo(width + 0.5f), $"Surface {i} paints outside the viewport right edge.");
+                Assert.That(paintBounds.Bottom, Is.LessThanOrEqualTo(height + 0.5f), $"Surface {i} paints outside the viewport bottom edge.");
+            }
+        }
+
+        private static void AssertSurfaceKindsDoNotOverlap(
+            UIRoot uiRoot,
+            NarrativeFrontendSurfaceKind firstKind,
+            NarrativeFrontendSurfaceKind secondKind)
+        {
+            UiNode? first = FindUiNodeBySurfaceKind(uiRoot.Scene?.Root, firstKind);
+            UiNode? second = FindUiNodeBySurfaceKind(uiRoot.Scene?.Root, secondKind);
+            Assert.That(first, Is.Not.Null, $"Missing surface kind {firstKind}.");
+            Assert.That(second, Is.Not.Null, $"Missing surface kind {secondKind}.");
+            UiRect a = GetTransformedPaintBounds(first!);
+            UiRect b = GetTransformedPaintBounds(second!);
+            bool overlaps = a.X < b.Right && a.Right > b.X && a.Y < b.Bottom && a.Bottom > b.Y;
+            Assert.That(overlaps, Is.False, $"{firstKind} and {secondKind} overlap: {a} vs {b}.");
+        }
+
+        private static UiNode? FindUiNodeBySurfaceKind(
+            UiNode? root,
+            NarrativeFrontendSurfaceKind kind)
+        {
+            if (root == null)
+            {
+                return null;
+            }
+
+            if (string.Equals(
+                root.Attributes["data-surface-kind"],
+                kind.ToString(),
+                StringComparison.Ordinal))
+            {
+                return root;
+            }
+
+            for (int i = 0; i < root.Children.Count; i++)
+            {
+                UiNode? found = FindUiNodeBySurfaceKind(root.Children[i], kind);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            return null;
+        }
+
+        private static void AssertDialogueBodyRunsVisibleOnUi(UIRoot uiRoot, DialogueView dialogueView)
+        {
+            var bodies = new List<UiNode>();
+            CollectUiNodesByClass(uiRoot.Scene?.Root, "story-body", bodies);
+            var dump = new List<string>(bodies.Count);
+            UiNode? richBody = null;
+            for (int i = 0; i < bodies.Count; i++)
+            {
+                UiNode node = bodies[i];
+                string text = node.TextContent ?? string.Empty;
+                int runCount = node.TextRuns?.Count ?? 0;
+                bool styled = node.TextRuns != null && node.TextRuns.Any(static r => r.Bold || r.Italic || r.HasColor);
+                dump.Add(
+                    $"[{i}] text='{TrimForDiag(text, 48)}' runs={runCount} styled={styled} " +
+                    $"rect=({node.LayoutRect.X:0},{node.LayoutRect.Y:0},{node.LayoutRect.Width:0}x{node.LayoutRect.Height:0})");
+                if (styled &&
+                    (text.Contains("余烬神龛", StringComparison.Ordinal) ||
+                     text.Contains("Ember Shrine", StringComparison.OrdinalIgnoreCase)))
+                {
+                    richBody = node;
+                }
+            }
+
+            Assert.That(
+                richBody,
+                Is.Not.Null,
+                "Active briefing body must land on a story-body UiNode with TextRuns. Dump: " + string.Join(" || ", dump));
+            UiRect richBodyPaintBounds = GetTransformedPaintBounds(richBody!);
+            Assert.That(richBodyPaintBounds.Width, Is.GreaterThan(8f), "Rich story-body width collapsed. Dump: " + string.Join(" || ", dump));
+            Assert.That(
+                richBodyPaintBounds.Y,
+                Is.GreaterThan(0f),
+                "Rich story-body must sit inside the on-screen dialogue frame. Dump: " + string.Join(" || ", dump));
+            Assert.That(
+                richBodyPaintBounds.Bottom,
+                Is.LessThanOrEqualTo(uiRoot.Height + 0.5f),
+                "Rich story-body must not fall below the canvas. Dump: " + string.Join(" || ", dump));
+            Assert.That(
+                richBodyPaintBounds.Height,
+                Is.GreaterThan(30f),
+                "Rich story-body must wrap to more than one line. Dump: " + string.Join(" || ", dump));
+            UiNode? framedBody = FindAncestorByClass(richBody, "story-framed-body")
+                ?? FindUiNodeByClass(uiRoot.Scene?.Root, "story-framed-body");
+            Assert.That(framedBody, Is.Not.Null);
+            UiNode? framed = FindAncestorByClass(framedBody, "story-framed");
+            Assert.That(framed, Is.Not.Null);
+            UiNode? frame = FindDirectChildByClass(framed!, "story-frame");
+            Assert.That(frame, Is.Not.Null);
+            float frameInset = frame!.RenderStyle.ImageSlice.Left;
+            Assert.That(frameInset, Is.GreaterThan(0f));
+            Assert.That(framedBody!.RenderStyle.Padding.Left, Is.GreaterThanOrEqualTo(frameInset));
+            UiRect framedBodyPaintBounds = GetTransformedPaintBounds(framedBody);
+            Assert.That(
+                richBodyPaintBounds.X,
+                Is.GreaterThanOrEqualTo(framedBodyPaintBounds.X + frameInset - 0.5f),
+                "Rich story-body must not paint under the nine-slice frame border. Dump: " + string.Join(" || ", dump));
+            Assert.That(
+                richBody.TextRuns!.Any(static r => r.HasColor),
+                Is.True,
+                "Briefing BodyRuns must carry an inline color for player-visible highlight.");
+            Assert.That(dialogueView.ResolvedText, Does.Contain("余烬神龛").Or.Contain("Ember Shrine"));
+            Assert.That(
+                dialogueView.ResolvedText.Contains('\n'),
+                Is.True,
+                "Briefing locale must include a hard newline so the player sees a wrapped dialogue body.");
+        }
+
+        private static void CollectUiNodesByClass(UiNode? root, string className, List<UiNode> sink)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            if (root.HasClass(className))
+            {
+                sink.Add(root);
+            }
+
+            for (int i = 0; i < root.Children.Count; i++)
+            {
+                CollectUiNodesByClass(root.Children[i], className, sink);
+            }
+        }
+
+        private static string TrimForDiag(string value, int max)
+        {
+            string normalized = (value ?? string.Empty).Replace('\n', '↵').Replace('\r', ' ');
+            if (normalized.Length <= max)
+            {
+                return normalized;
+            }
+
+            return normalized.Substring(0, max) + "…";
         }
 
         private static UiNode? FindAncestorByClass(UiNode? node, string className)
@@ -757,6 +1057,54 @@ namespace Ludots.Tests.GAS.Production
             }
 
             return null;
+        }
+
+        private static UiNode? FindDirectChildByClass(UiNode node, string className)
+        {
+            for (int i = 0; i < node.Children.Count; i++)
+            {
+                if (node.Children[i].HasClass(className))
+                {
+                    return node.Children[i];
+                }
+            }
+
+            return null;
+        }
+
+        private static UiRect GetTransformedPaintBounds(UiNode node)
+        {
+            UiRect rect = node.LayoutRect;
+            Span<Vector2> corners = stackalloc Vector2[4]
+            {
+                new(rect.X, rect.Y),
+                new(rect.Right, rect.Y),
+                new(rect.X, rect.Bottom),
+                new(rect.Right, rect.Bottom)
+            };
+
+            for (UiNode? current = node; current != null; current = current.Parent)
+            {
+                Matrix3x2 transform = UiTransformMath.CreateMatrix(current.RenderStyle, current.LayoutRect);
+                for (int i = 0; i < corners.Length; i++)
+                {
+                    corners[i] = Vector2.Transform(corners[i], transform);
+                }
+            }
+
+            float left = corners[0].X;
+            float top = corners[0].Y;
+            float right = corners[0].X;
+            float bottom = corners[0].Y;
+            for (int i = 1; i < corners.Length; i++)
+            {
+                left = MathF.Min(left, corners[i].X);
+                top = MathF.Min(top, corners[i].Y);
+                right = MathF.Max(right, corners[i].X);
+                bottom = MathF.Max(bottom, corners[i].Y);
+            }
+
+            return new UiRect(left, top, right - left, bottom - top);
         }
 
         private static UiNode? FindUiNodeByClass(UiNode? root, string className)

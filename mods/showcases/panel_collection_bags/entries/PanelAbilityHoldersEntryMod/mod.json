@@ -1,0 +1,15 @@
+{
+  "name": "PanelAbilityHoldersEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for typed collection panel showcase: 谁会火球",
+  "priority": 0,
+  "dependencies": {
+    "PanelCollectionBagsShowcaseMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "panel",
+    "typed-collection",
+    "ability_holders"
+  ]
+}

@@ -16,6 +16,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Progression.Components;
 using Ludots.Core.Gameplay.Progression.Registry;
@@ -75,6 +76,7 @@ namespace Ludots.Core.Config
             Register("ProgressionScopeHost", SetProgressionScopeHost);
             Register("ProgressionScopeBinding", SetProgressionScopeBinding);
             Register("AbilityFormSetRef", SetAbilityFormSetRef);
+            Register("ItemInstanceCm", SetItemInstanceCm, null, Component<ItemInstanceCm>.ComponentType);
             Register<ForceInput2D>("ForceInput2D");
             Register<GameplayTagContainer>("GameplayTagContainer", SetGameplayTagContainer);
             Register<TagCountContainer>("TagCountContainer");
@@ -970,6 +972,43 @@ namespace Ludots.Core.Config
             }
         }
 
+        private static void SetItemInstanceCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("ItemInstanceCm requires an object payload.");
+            }
+
+            RejectNumericIdAuthoring(obj, "ItemInstanceCm", "DefinitionId", "definitionId");
+            ValidateProperties(obj, "ItemInstanceCm", "definitionId", "stackCount", "charges", "durability");
+
+            string definitionKey = RequireStringProperty(obj, "definitionId", "ItemInstanceCm");
+            ItemDefinitionRegistry definitions =
+                context.Require<ItemDefinitionRegistry>(ComponentAuthoringServiceKeys.ItemDefinitionRegistry);
+            int definitionId = definitions.GetId(definitionKey);
+            if (definitionId <= 0 || !definitions.TryGet(definitionId, out _))
+            {
+                throw new InvalidOperationException(
+                    $"ItemInstanceCm.definitionId references unknown item definition '{definitionKey}'. Declare it in Items/definitions.json.");
+            }
+
+            int stackCount = TryReadIntProperty(obj, out int authoredStackCount, "stackCount")
+                ? authoredStackCount
+                : 1;
+            if (stackCount <= 0)
+            {
+                throw new InvalidOperationException("ItemInstanceCm.stackCount must be positive.");
+            }
+
+            entity.Add(new ItemInstanceCm
+            {
+                DefinitionId = definitionId,
+                StackCount = stackCount,
+                Charges = ReadOptionalIntProperty(obj, "charges"),
+                Durability = ReadOptionalIntProperty(obj, "durability"),
+            });
+        }
+
         private static void SetEntityLayer(Entity entity, JsonNode data)
         {
             LayerMask layerMask = EntityLayerAuthoring.ReadLayerMask(data, "EntityLayer component");
@@ -1064,6 +1103,7 @@ namespace Ludots.Core.Config
             ValidateProperties(obj, "GameplayTagContainer", "tags");
 
             var container = new GameplayTagContainer();
+            var counts = new TagCountContainer();
             if (obj.TryGetPropertyValue("tags", out var tagsNode))
             {
                 if (tagsNode is not JsonArray tags)
@@ -1079,11 +1119,20 @@ namespace Ludots.Core.Config
                     }
 
                     string tagName = ReadStringNode(tag, "GameplayTagContainer.tags");
-                    container.AddTag(ResolveGameplayTagId(tagName, $"GameplayTagContainer.tags.{tagName}"));
+                    int tagId = ResolveGameplayTagId(tagName, $"GameplayTagContainer.tags.{tagName}");
+                    container.AddTag(tagId);
+                    if (!counts.AddCount(tagId))
+                    {
+                        throw new InvalidOperationException("GameplayTagContainer.tags exceeds TagCountContainer capacity.");
+                    }
                 }
             }
 
             entity.Add(container);
+            if (counts.Count > 0)
+            {
+                entity.Add(counts);
+            }
         }
 
         private static int ResolveGameplayTagId(string tagName, string context)

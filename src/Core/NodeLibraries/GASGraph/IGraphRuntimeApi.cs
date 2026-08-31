@@ -183,7 +183,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>
         /// True when Imm region id is present in the mounting map's Regions catalog
-        /// (#1108 LoadPlacedRegion). Regions never enter MapLoadEntityIndex.
+        /// (LoadPlacedRegion). Regions never enter MapLoadEntityIndex.
         /// </summary>
         bool TryHasPlacedRegion(int regionKeyId, MapId mapId)
         {
@@ -197,6 +197,65 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int CopyEntityCollection(Entity owner, int collectionKeyId, Span<Entity> buffer)
         {
             throw new InvalidOperationException("Graph entity collection runtime is not available.");
+        }
+
+        /// <summary>
+        /// Enumerate alive effect-instance entities from the owner's <c>ActiveEffectContainer</c>
+        /// into <paramref name="buffer"/>. Truncates at buffer capacity (same contract as map collect).
+        /// </summary>
+        int CollectActiveEffects(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph active-effect query runtime is not available.");
+        }
+
+        int CollectEffectTemplateIds(Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph effect-template query runtime is not available.");
+        }
+
+        int CollectAbilitySlots(Entity owner, Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph ability-slot query runtime is not available.");
+        }
+
+        int CollectInventoryItems(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph inventory-item query runtime is not available.");
+        }
+
+        int CollectItemDefinitionIds(Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph item-definition query runtime is not available.");
+        }
+
+        int CollectPresentTags(Entity owner, Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph present-tag query runtime is not available.");
+        }
+
+        int CollectActiveTasks(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph active-task query runtime is not available.");
+        }
+
+        int CollectActiveActivities(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph active-activity query runtime is not available.");
+        }
+
+        int CollectProgressionNodes(Entity owner, Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph progression-node query runtime is not available.");
+        }
+
+        int CollectActiveDialogueChoices(Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph dialogue-choice query runtime is not available.");
+        }
+
+        int CollectAbilityHolders(int abilityId, ReadOnlySpan<Entity> candidates, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph ability-holder query runtime is not available.");
         }
 
         int FilterTeam(Span<Entity> entities, int count, int teamId)
@@ -462,7 +521,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Fires a schema-checked Global-scope trigger event (#1123): delivery goes
+        /// Fires a schema-checked Global-scope trigger event: delivery goes
         /// through the TriggerManager global subscription table only. The origin map
         /// (empty when unmapped) rides MapTrigger.SourceMapId as transport metadata.
         /// Optional bridge — requires a bound TriggerManager.
@@ -485,7 +544,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// #1126: register an AwaitCallback waiter (Imm callback type) and park the slice.
+        /// Offers a task by definition id to the scope host through
+        /// TaskRuntimeService. Existing live instances are reused; unknown task ids
+        /// and invalid scope hosts fail closed. Optional bridge — requires a bound
+        /// TaskRuntimeService.
+        /// </summary>
+        void OfferTask(string taskId, Entity scopeHost)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// Registers an AwaitCallback waiter (Imm callback type) and parks the slice.
         /// Completions resume through GraphCallbackContinuationSystem in registration order.
         /// </summary>
         void BeginAwaitCallback(string callbackType, MapId mapId, Entity scope, int resultBoolRegister)
@@ -548,6 +618,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
+        int ResolveAbility(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references ability '{name}', but no ability resolver is available.");
+        }
         int ResolveRngDistribution(string name)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.RngDistributionUnavailable");

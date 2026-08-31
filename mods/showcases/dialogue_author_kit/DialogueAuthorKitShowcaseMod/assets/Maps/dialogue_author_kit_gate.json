@@ -8,6 +8,10 @@
     {
       "graph": "Graph.AuthorKit.Boot.StartGate",
       "scopeInstanceId": "author_kit_traveler_1"
+    },
+    {
+      "graph": "Graph.Narrative.Open.Choices",
+      "scopeInstanceId": "author_kit_traveler_1"
     }
   ],
   "DefaultCamera": {

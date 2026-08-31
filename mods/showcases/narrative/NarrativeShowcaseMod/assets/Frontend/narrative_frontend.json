@@ -3,6 +3,7 @@
   "playerLocale": "zh-CN",
   "backdropHex": "#05080FCC",
   "promptRibbon": {
+    "layoutId": "layout.narrative.prompt-ribbon",
     "anchor": "BottomCenter",
     "width": 980,
     "offsetY": 140,
@@ -11,6 +12,8 @@
     "accentHex": "#F6C56B"
   },
   "objectiveTracker": {
+    "layoutId": "layout.narrative.card",
+    "styleClass": "story-objective",
     "anchor": "TopLeft",
     "width": 390,
     "zIndex": 40,
@@ -20,6 +23,8 @@
     "accentHex": "#76D8FF"
   },
   "historyJournal": {
+    "layoutId": "layout.narrative.card",
+    "styleClass": "story-history",
     "anchor": "TopRight",
     "width": 420,
     "zIndex": 42,
@@ -29,6 +34,8 @@
     "accentHex": "#8BE9FD"
   },
   "variablesPanel": {
+    "layoutId": "layout.narrative.card",
+    "styleClass": "story-status",
     "anchor": "TopLeft",
     "width": 390,
     "offsetY": 214,
@@ -39,6 +46,7 @@
     "accentHex": "#A7F3D0"
   },
   "notificationStack": {
+    "layoutId": "layout.narrative.notification-stack",
     "anchor": "TopCenter",
     "width": 520,
     "offsetY": 12,
@@ -64,16 +72,12 @@
     "eyebrow": "story.ui.subtitlebubble_eyebrow",
     "footer": "story.ui.subtitlebubble_footer"
   },
-  "choiceList": {
-    "eyebrow": "story.ui.choicelist_eyebrow",
-    "title": "story.ui.choicelist_title",
-    "footer": "story.ui.choicelist_footer"
-  },
   "transmissionOverlay": {
     "eyebrow": "story.ui.transmissionoverlay_eyebrow",
     "footer": ""
   },
   "nameplate": {
+    "layoutId": "layout.narrative.nameplate",
     "anchor": "TopLeft",
     "width": 200,
     "zIndex": 36,
@@ -204,7 +208,10 @@
     "showVariablesWhenNonZero": true,
     "showObjectiveWithDialogue": false,
     "showObjectiveWithSequence": false,
-    "hideCastDuringStandingPortrait": true
+    "showPromptWithDialogue": false,
+    "showPromptWithSequence": true,
+    "hideCastDuringStandingPortrait": true,
+    "hidePanelsDuringStandingPortrait": true
   },
   "bootstrap": {
     "pureStoryLane": false,
