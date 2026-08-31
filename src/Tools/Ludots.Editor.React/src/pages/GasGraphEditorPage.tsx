@@ -787,8 +787,6 @@ export const GasGraphEditorPage: React.FC = () => {
       ? {
           name: rows[0].name,
           kind: rows[0].type,
-          elementType: 'int',
-          keyType: 'int',
           initial: String(rows[0].initial),
         }
       : emptyVariableDraft());
