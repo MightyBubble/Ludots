@@ -48,14 +48,21 @@ namespace Ludots.Tests.Gas.Graph
         public void ResetAgent_ClearsPhaseAndRegisters()
         {
             GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out _, out _);
-            using var host = new GraphFsmHost(programs, GraphIdRegistry.GetId("Graph.FSM.Sentry"), capacity: 1, "sentry.phase");
+            int graphId = GraphIdRegistry.GetId("Graph.FSM.Sentry");
+            using var host = new GraphFsmHost(programs, graphId, capacity: 1, "sentry.phase");
             int agent = host.AddAgent();
             host.ThinkWave(128, new StaticDistanceFeed(100));
             Assert.That(host.PhaseOf(agent), Is.EqualTo(1));
 
+            using var world = Arch.Core.World.Create();
+            Arch.Core.Entity poison = world.Create();
+            host.SetEntityRegister(agent, 0, poison);
+            Assert.That(host.EntityRegisterAt(agent, 0), Is.EqualTo(poison));
+
             host.ResetAgent(agent);
             Assert.That(host.PhaseOf(agent), Is.EqualTo(0));
             Assert.That(host.LastReturns[agent], Is.EqualTo(0));
+            Assert.That(host.EntityRegisterAt(agent, 0), Is.EqualTo(Arch.Core.Entity.Null));
         }
 
         [Test]

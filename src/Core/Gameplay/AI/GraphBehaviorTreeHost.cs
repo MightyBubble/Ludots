@@ -57,6 +57,28 @@ namespace Ludots.Core.Gameplay.AI
         /// <summary>Last HaltReturnInt per agent (BT status codes 0/1/2; intent codes stay inside leaf graphs).</summary>
         public int[] LastReturns => _lastReturns;
 
+        internal Entity EntityRegisterAt(int agent, int index)
+        {
+            ValidateAgent(agent);
+            if ((uint)index >= (uint)GraphVmLimits.MaxEntityRegisters)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            return _entityRegisters[agent * GraphVmLimits.MaxEntityRegisters + index];
+        }
+
+        internal void SetEntityRegister(int agent, int index, Entity value)
+        {
+            ValidateAgent(agent);
+            if ((uint)index >= (uint)GraphVmLimits.MaxEntityRegisters)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            _entityRegisters[agent * GraphVmLimits.MaxEntityRegisters + index] = value;
+        }
+
         public int AddAgent()
         {
             if (_count >= Capacity)
@@ -221,7 +243,8 @@ namespace Ludots.Core.Gameplay.AI
             Array.Clear(_intRegisters, agent * GraphVmLimits.MaxIntRegisters, GraphVmLimits.MaxIntRegisters);
             Array.Clear(_boolRegisters, agent * GraphVmLimits.MaxBoolRegisters, GraphVmLimits.MaxBoolRegisters);
             Array.Clear(_floatRegisters, agent * GraphVmLimits.MaxFloatRegisters, GraphVmLimits.MaxFloatRegisters);
-            Array.Clear(_targetRegisters, agent * GraphVmLimits.MaxTargets, GraphVmLimits.MaxTargets);
+            _entityRegisters.AsSpan(agent * GraphVmLimits.MaxEntityRegisters, GraphVmLimits.MaxEntityRegisters).Fill(Entity.Null);
+            _targetRegisters.AsSpan(agent * GraphVmLimits.MaxTargets, GraphVmLimits.MaxTargets).Fill(Entity.Null);
             Array.Clear(_callStacks, agent * GraphVmLimits.MaxCallStackDepth, GraphVmLimits.MaxCallStackDepth);
         }
 
