@@ -53,7 +53,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphOperandRole immRole,
             bool scriptSliceOnly,
             bool derivedAttributeWrite,
-            bool requiresListenerOwnerContext)
+            bool requiresListenerOwnerContext,
+            bool worldSideEffect = false)
         {
             Op = op;
             AuthorableKinds = authorableKinds;
@@ -68,6 +69,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ScriptSliceOnly = scriptSliceOnly;
             DerivedAttributeWrite = derivedAttributeWrite;
             RequiresListenerOwnerContext = requiresListenerOwnerContext;
+            WorldSideEffect = worldSideEffect;
         }
 
         public GraphNodeOp Op { get; }
@@ -84,6 +86,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public bool ScriptSliceOnly { get; }
         public bool DerivedAttributeWrite { get; }
         public bool RequiresListenerOwnerContext { get; }
+        /// <summary>
+        /// True when the op mutates world/UI/map state despite Pure effect metadata
+        /// (Script policy still needs Pure). Query/Score/Validation must reject these.
+        /// </summary>
+        public bool WorldSideEffect { get; }
 
         public bool IsAuthorable(GraphKind kind)
             => (AuthorableKinds & ToMask(kind)) != 0;

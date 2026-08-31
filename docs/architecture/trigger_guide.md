@@ -133,7 +133,7 @@ FireMapEvent(mapId, MapLoaded, ctx)
   └── 2. 触发 mapId 名下注册的 MapLoaded Trigger（按 Priority 升序）
 ```
 
-默认 `route: "local"` 只触发来源 Map 的 map/entity/ability 挂载；声明 `route: "global"` 的地图 TriggerGraph 会进入全局地图索引，并在同一 `FireMapEvent` 中收到事件。global 广播保留原始 `ContextKeys.MapId`、SourceEntity、TargetEntity 和 AbilityId；它不是第二事件总线。Mod 域图走 `FireEvent` 的全局索引，并用 `ModId` 做生命周期隔离。
+默认 `route: "local"`（可省略）只挂在来源地图的 map/entity/ability 表。跨地图不要写挂载 `route: "global"`——该字段已退役，加载失败关闭；正式路径是事件 schema 的 `Scope: Global` + `FireGlobalEvent`，点对点用 `FireCrossMapEvent`。Mod 域图走 `FireEvent` 的全局索引，并用 `ModId` 做生命周期隔离。
 
 ## 4 优先级排序
 

@@ -629,13 +629,9 @@
     {
       "op": "CreatePanel",
       "authorableKinds": [
-        "Derived",
         "Effect",
         "TriggerGraph",
-        "Query",
-        "Score",
-        "Script",
-        "Validation"
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_CreatePanel",
       "status": "covered",
@@ -651,13 +647,9 @@
     {
       "op": "DestroyPanel",
       "authorableKinds": [
-        "Derived",
         "Effect",
         "TriggerGraph",
-        "Query",
-        "Score",
-        "Script",
-        "Validation"
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_DestroyPanel",
       "status": "covered",
@@ -863,13 +855,9 @@
     {
       "op": "HidePanel",
       "authorableKinds": [
-        "Derived",
         "Effect",
         "TriggerGraph",
-        "Query",
-        "Score",
-        "Script",
-        "Validation"
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_HidePanel",
       "status": "covered",
@@ -2739,13 +2727,9 @@
     {
       "op": "SetInteractionMode",
       "authorableKinds": [
-        "Derived",
         "Effect",
         "TriggerGraph",
-        "Query",
-        "Score",
-        "Script",
-        "Validation"
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_SetInteractionMode",
       "status": "covered",
@@ -2761,13 +2745,9 @@
     {
       "op": "SetPanelAudience",
       "authorableKinds": [
-        "Derived",
         "Effect",
         "TriggerGraph",
-        "Query",
-        "Score",
-        "Script",
-        "Validation"
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_SetPanelAudience",
       "status": "covered",
@@ -2783,13 +2763,9 @@
     {
       "op": "SetWorldPosition",
       "authorableKinds": [
-        "Derived",
         "Effect",
         "TriggerGraph",
-        "Query",
-        "Score",
-        "Script",
-        "Validation"
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_SetWorldPosition",
       "status": "covered",
@@ -2805,13 +2781,9 @@
     {
       "op": "ShowPanel",
       "authorableKinds": [
-        "Derived",
         "Effect",
         "TriggerGraph",
-        "Query",
-        "Score",
-        "Script",
-        "Validation"
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_ShowPanel",
       "status": "covered",
@@ -2889,13 +2861,9 @@
     {
       "op": "SpawnTemplate",
       "authorableKinds": [
-        "Derived",
         "Effect",
         "TriggerGraph",
-        "Query",
-        "Score",
-        "Script",
-        "Validation"
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_SpawnTemplate",
       "status": "covered",
