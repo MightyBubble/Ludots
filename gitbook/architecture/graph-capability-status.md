@@ -82,7 +82,7 @@ Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 St
 ### 3.3 真正还在做的
 
 **编辑器里程碑（控制流与 live debug 已收口；正式文字合同已齐）。**
-节点联想只从运行时 descriptor 获取；Bridge 投影作者糖及其控制/值端口（含 `BranchBool`、`SwitchInt`、`SelectByEnum`、`FsmState`、`Wait`、`While`、`Until`、`Break`；TriggerGraph 另有 `InlineGraph`）。`Jump.target`、`Call.call/next` 等普通控制端口也来自 Bridge descriptor，React 不维护第二份 op 端口表。`Break` 编译时严格降低为带显式 `target` 边的 Jump；`Select` 仍明确是实体选择 `SelectEntity`，不是尚不存在的通用 Select。编辑器连线、删节点后的悬挂边清理、布局数据校验和 live trace source map 校验均走失败关闭。
+节点联想只从运行时 descriptor 获取；Bridge 投影作者糖及其控制/值端口（含 `BranchBool`、`SwitchInt`、`SelectByEnum`、`FsmState`、`Wait`、`While`、`Until`、`Break`；Script 另有 `BtSequence` / `BtSelector` / `BtDecorator` 与动态 `child:{n}`；TriggerGraph 另有 `InlineGraph`）。`Jump.target`、`Call.call/next` 等普通控制端口也来自 Bridge descriptor，React 不维护第二份 op 端口表。`Break` 编译时严格降低为带显式 `target` 边的 Jump；`Select` 仍明确是实体选择 `SelectEntity`，不是尚不存在的通用 Select。编辑器连线、删节点后的悬挂边清理、布局数据校验和 live trace source map 校验均走失败关闭。地图变量面板只暴露 Integer / Float，不再列出引擎还不认的 Array / Map。
 
 Live debug 记录实际执行节点归因、Yield/预算挂起、Halt、游标、引脚和黑板变化；嵌套 `InvokeScript` 继承固定容量 trace 并携带子图 id。当前不伪造 `NodeExit` 生命周期事件。黑板 buffer 缺失仍在运行时明确失败；实体能力在 authoring 阶段的声明和编译校验仍是下一条合同切片，不能把运行时隐式安装路径写成已完成。
 
@@ -109,9 +109,23 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 
 又开了一条线：行为树「真图化」（BT-1）与 HFSM「真图化」（FSM-1）。设计冻结本在 `artifacts/showcases/graph-fsm-bt-refactor-design.md`。
 
-**BT 侧已落地：** `BtSequence` / `BtSelector` / `BtDecorator` 三个 Script-only 作者糖把整棵树内联成单个 Script 程序（`Call`/`Return` + `CompareEqInt` + `JumpIfFalse`，零新 opcode，状态寄存器 0/1/2）；`GraphBehaviorTreeHost` 做 per-agent 帧与 think wave 驱动，Yield 叶跨波恢复，嵌套深度对齐 `MaxCallStackDepth`。真实性判据锁在 `GraphBehaviorTreeSugarTests` / `GraphBehaviorTreeHostTests`。旧 `BehaviorTreeWorld`（C# JSON 树解释器）保留为旧数据路径与无图压测，图路径不碰它的遍历。BT-B 已落地：arena 主树 `bt.patrolChaseAttack` 重写为糖图并由 `GraphBehaviorTreeHost` 逐波执行；10k crowd 段实测真图超预算，保留无图压测拓扑并在注册表 summary 显式标注。还开着的（**另开活，本轮别捆**）：Parallel（一期显式不支持）、子树复用/异步叶（BT-2）。
+**BT 侧已落地：** `BtSequence` / `BtSelector` / `BtDecorator` 三个 Script-only 作者糖把整棵树内联成单个 Script 程序（`Call`/`Return` + `CompareEqInt` + `JumpIfFalse`，零新 opcode，状态寄存器 0/1/2）；`GraphBehaviorTreeHost` 做 per-agent 帧与 think wave 驱动，Yield 叶跨波恢复，嵌套深度对齐 `MaxCallStackDepth`。真实性判据锁在 `GraphBehaviorTreeSugarTests` / `GraphBehaviorTreeHostTests`。Bridge / React 已投影三糖（`childArms`、Decorator 固定 `child:0` + `decoratorKind`），与 FSM 的编辑器面齐平。旧 `BehaviorTreeWorld`（C# JSON 树解释器）保留为旧数据路径与无图压测，图路径不碰它的遍历。BT-B 已落地：arena 主树 `bt.patrolChaseAttack` 重写为糖图并由 `GraphBehaviorTreeHost` 逐波执行；10k crowd 段实测真图超预算，保留无图压测拓扑并在注册表 summary 显式标注。还开着的（**另开活，本轮别捆**）：Parallel（一期显式不支持）、子树复用/异步叶（BT-2）。
 
 **FSM-1a 已收口：** `FsmState` 糖（ReadMapVarInt + SwitchInt 式臂链，零新 opcode）+ `GraphFsmHost`（每 agent 相位 map 变量、每波一次 halt 分派）。哨兵演武场 featured 走 `Graph.FSM.Sentry`；万人 crowd 诚实走无图 `HfsmWorld(hfsm.sentry)`（`LifecycleRuns==0`），注册表 summary/notes 与验收 `HfsmSentryArena_CrowdBand_NoGraphPressureBaseline_Labeled` 锁死。Bridge / React 投影 `FsmState`（enumType、stateVar、case 臂）。`HfsmWorld` **不删 Core**：退役的是静默双轨——旗舰真图声称必须走 `GraphFsmHost`；crowd/压测/旧 `hfsm.json` 绑定可留，但必须标注；整合演示显式 old-path（`GraphProgramHfsmHost`），不得顶 FSM-1。删除 Core `HfsmWorld` 的触发条件见冻结本 §3.3。
+
+### 3.3.1 图相关还开着的（勿当新发现重审）
+
+| 项 | 状态 | 怎么开工 |
+|----|------|----------|
+| `#1107` 执行线无下一步须显式 Halt 合同 | 开着 | 单独改合同，别捆编辑器 |
+| `#915` 每节点可写可测可看 | 总账开着 | 旁路已合，别当实现票重做 |
+| `#861` 作者只走一条边 | 总账开着 | 同上 |
+| 分层物理化 | 架子有、墙没有 | 对照 `docs/audits/s14_layering_physicalization_design.md`，另开活 |
+| `#1031` S4 时序全文 / S5 实体技能可玩 showcase | 域扩展剩余 | 看 #1031 进度快照 |
+| BT Parallel / BT-2（子树复用、异步叶） | 明确另线 | 冻结本；别捆 BT-1 |
+| `FormatTextKey` / ActiveLocale / 生产 Dialogue drain | TextKey 后续 | 见 graph-textkey.md |
+| 实体能力 authoring 声明与编译校验 | 编辑器下一切片 | 不得把运行时隐式安装写成已完成 |
+| `LoadEntryPayloadText`（事件 String 载荷进 Text 寄存器） | **合同缺口** | FormalText 已落地，但入口捕获表尚无 String 槽；编辑器对 String 针脚返回空 |
 
 分层合同条款同步修订在 [图怎么分层](graph-layering-flow-and-behavior.md)。
 

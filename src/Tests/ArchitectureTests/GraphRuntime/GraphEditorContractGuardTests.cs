@@ -91,12 +91,16 @@ namespace Ludots.Tests.Architecture.GraphRuntime
                 GraphAuthoringSugar.SwitchInt,
                 GraphAuthoringSugar.SelectByEnum,
                 GraphAuthoringSugar.FsmState,
+                GraphAuthoringSugar.BtSequence,
+                GraphAuthoringSugar.BtSelector,
+                GraphAuthoringSugar.BtDecorator,
                 GraphAuthoringSugar.Wait,
                 GraphAuthoringSugar.While,
                 GraphAuthoringSugar.Until,
                 GraphAuthoringSugar.Break,
                 "ControlOutputPorts",
                 "controlOutputPorts",
+                "childArms",
             };
 
             foreach (string token in required)

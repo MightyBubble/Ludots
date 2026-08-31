@@ -22,7 +22,6 @@ import '@xyflow/react/dist/style.css';
 import { GraphCatalogTree, type CatalogMod } from './gas-graph-editor/GraphCatalogTree';
 import {
   GraphVariablePanel,
-  collectionTypeError,
   decodeMapVarDrag,
   decodePlacedVarDrag,
   emptyVariableDraft,
@@ -107,6 +106,7 @@ type GraphNodeConfig = {
   text?: string | null;
   textKey?: string | null;
   presentationSurface?: string | null;
+  decoratorKind?: string | null;
   pinRegister?: number;
 };
 
@@ -141,6 +141,7 @@ type GraphSugarDescriptor = {
   valueInputPorts: string[];
   outputType: string;
   lowersTo: string;
+  childArms?: boolean;
 };
 
 type EnumTypeView = {
@@ -325,6 +326,7 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     text: n.text ?? undefined,
     textKey: n.textKey ?? undefined,
     presentationSurface: n.presentationSurface ?? undefined,
+    decoratorKind: n.decoratorKind ?? undefined,
     pinRegister: n.pinRegister,
   });
 }
@@ -419,12 +421,12 @@ function graphToFlow(
   layout: EditorLayout = {},
   schemaFor: (event: string) => EventSchemaView | null = () => null,
 ): { nodes: Node<GasNodeData>[]; edges: Edge<GasEdgeData>[] } {
-  const switchPorts = new Map<string, string[]>();
+  const dynamicControlPorts = new Map<string, string[]>();
   for (const edge of graph.controlEdges ?? []) {
-    if (!edge.fromPort.startsWith('case:')) continue;
-    const ports = switchPorts.get(edge.from) ?? [];
+    if (!edge.fromPort.startsWith('case:') && !edge.fromPort.startsWith('child:')) continue;
+    const ports = dynamicControlPorts.get(edge.from) ?? [];
     if (!ports.includes(edge.fromPort)) ports.push(edge.fromPort);
-    switchPorts.set(edge.from, ports);
+    dynamicControlPorts.set(edge.from, ports);
   }
   const nodes: Node<GasNodeData>[] = graph.nodes.map((n, index) => {
     const dispatchSugar = dispatchParamPorts(n.op, n.event, schemaFor);
@@ -442,7 +444,7 @@ function graphToFlow(
       sugar: dynamicSugar ?? sugars[n.op],
       controlOutputPorts: dynamicSugar
         ? dynamicSugar.controlOutputPorts
-        : [...resolveControlOutputPorts(n.op, descriptors[n.op], sugars[n.op]), ...(switchPorts.get(n.id) ?? [])],
+        : [...resolveControlOutputPorts(n.op, descriptors[n.op], sugars[n.op]), ...(dynamicControlPorts.get(n.id) ?? [])],
     },
   };
   });
@@ -705,6 +707,7 @@ export const GasGraphEditorPage: React.FC = () => {
   const [debugStatus, setDebugStatus] = React.useState('Bridge idle');
   const [switchCaseValue, setSwitchCaseValue] = React.useState('0');
   const [switchCaseTarget, setSwitchCaseTarget] = React.useState('');
+  const [btChildTarget, setBtChildTarget] = React.useState('');
   const [catalog, setCatalog] = React.useState<CatalogMod[]>([]);
   const [catalogStatus, setCatalogStatus] = React.useState('Loading catalog…');
   const [paletteMenu, setPaletteMenu] = React.useState<{ clientX: number; clientY: number; flowX: number; flowY: number } | null>(null);
@@ -1297,6 +1300,41 @@ export const GasGraphEditorPage: React.FC = () => {
     setStatus(`Added ${op} ${sourceHandle} -> ${switchCaseTarget}.`);
   }, [edges, enumCatalog, graph, nodes, selectedData?.enumType, selectedData?.op, selectedNodeId, switchCaseTarget, switchCaseValue]);
 
+  const addBtChildArm = React.useCallback(() => {
+    if (!selectedNodeId || !graph || !isControlFlowGraph(graph)) return;
+    const op = selectedData?.op;
+    if (!op || !sugars[op]?.childArms) return;
+    if (!btChildTarget || !nodes.some((node) => node.id === btChildTarget)) {
+      setStatus(`${op} child arm requires an existing target node.`);
+      return;
+    }
+    let nextIndex = 0;
+    for (const port of selectedData.controlOutputPorts ?? []) {
+      if (!port.startsWith('child:')) continue;
+      const parsed = Number.parseInt(port.slice('child:'.length), 10);
+      if (Number.isInteger(parsed) && parsed >= nextIndex) nextIndex = parsed + 1;
+    }
+    const sourceHandle = `child:${nextIndex}`;
+    if (edges.some((edge) => edge.source === selectedNodeId && edge.sourceHandle === sourceHandle)) {
+      setStatus(`${op} ${sourceHandle} already exists.`);
+      return;
+    }
+    setEdges((previous) => addEdge({
+      id: `control:${selectedNodeId}:${sourceHandle}:${btChildTarget}:control-in`,
+      source: selectedNodeId,
+      sourceHandle,
+      target: btChildTarget,
+      targetHandle: 'control-in',
+      markerEnd: { type: MarkerType.ArrowClosed },
+      label: sourceHandle,
+      data: { kind: 'control' },
+    }, previous));
+    setNodes((previous) => previous.map((node) => node.id !== selectedNodeId
+      ? node
+      : { ...node, data: { ...node.data, controlOutputPorts: [...new Set([...(node.data.controlOutputPorts ?? []), sourceHandle])] } }));
+    setStatus(`Added ${op} ${sourceHandle} -> ${btChildTarget}.`);
+  }, [btChildTarget, edges, graph, nodes, selectedData?.controlOutputPorts, selectedData?.op, selectedNodeId, sugars]);
+
   const availableNodes = React.useMemo(() => {
     const entries = [
       ...Object.values(descriptors).map((descriptor) => ({ op: descriptor.op, descriptor, sugar: undefined })),
@@ -1670,8 +1708,6 @@ export const GasGraphEditorPage: React.FC = () => {
       setVariableDraft({
         name: declared.name,
         kind: declared.type,
-        elementType: 'int',
-        keyType: 'int',
         initial: String(declared.initial),
       });
     }
@@ -1712,11 +1748,6 @@ export const GasGraphEditorPage: React.FC = () => {
   };
 
   const createMapVariable = async () => {
-    const blocked = collectionTypeError(variableDraft.kind);
-    if (blocked) {
-      setVariableStatus(blocked);
-      return;
-    }
     try {
       setVariableBusy(true);
       const name = variableDraft.name.trim();
@@ -1743,11 +1774,6 @@ export const GasGraphEditorPage: React.FC = () => {
   };
 
   const updateMapVariable = async () => {
-    const blocked = collectionTypeError(variableDraft.kind);
-    if (blocked) {
-      setVariableStatus(blocked);
-      return;
-    }
     if (!selectedVariable) {
       setVariableStatus('Select a variable to update.');
       return;
@@ -2011,6 +2037,7 @@ export const GasGraphEditorPage: React.FC = () => {
                   nodeColor={(node) => {
                     if (node.data.role === 'event-entry') return '#fb7185';
                     if (node.data.op === 'SwitchInt' || node.data.op === 'FsmState') return '#f59e0b';
+                    if (sugars[node.data.op as string]?.childArms || node.data.op === 'BtDecorator') return '#a78bfa';
                     return '#38bdf8';
                   }}
                 />
@@ -2298,6 +2325,26 @@ export const GasGraphEditorPage: React.FC = () => {
                           </label>
                         );
                       }
+                      if (field.key === 'decoratorKind') {
+                        const current = raw == null ? '' : String(raw);
+                        const known = ['inverter', 'forceSuccess', 'forceFailure'];
+                        const options = current && !known.includes(current) ? [...known, current] : known;
+                        return (
+                          <label key={field.key} className="block">
+                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <select
+                              value={current}
+                              onChange={(event) => updateSelectedField(field.key, event.target.value)}
+                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                            >
+                              <option value="">Select kind</option>
+                              {options.map((kind) => (
+                                <option key={kind} value={kind}>{kind}</option>
+                              ))}
+                            </select>
+                          </label>
+                        );
+                      }
                   return (
                     <label key={field.key} className="block">
                       <div className="mb-1 text-slate-500">{field.label}</div>
@@ -2391,6 +2438,34 @@ export const GasGraphEditorPage: React.FC = () => {
                       className="w-full rounded bg-sky-700 px-2 py-1 font-semibold text-sky-50 hover:bg-sky-600"
                     >
                       Add case edge
+                    </button>
+                  </div>
+                ) : null}
+                {selectedData.op && sugars[selectedData.op]?.childArms && graph && isControlFlowGraph(graph) ? (
+                  <div className="space-y-2 rounded border border-violet-900 bg-violet-950/30 p-2">
+                    <div className="text-violet-300">{selectedData.op} child arms</div>
+                    <div className="font-mono text-[10px] text-violet-200/80">
+                      {(selectedData.controlOutputPorts ?? []).filter((port) => port.startsWith('child:')).join(', ') || 'none yet'}
+                    </div>
+                    <label className="block">
+                      <div className="mb-1 text-slate-500">Target node</div>
+                      <select
+                        value={btChildTarget}
+                        onChange={(event) => setBtChildTarget(event.target.value)}
+                        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                      >
+                        <option value="">Select target</option>
+                        {nodes.filter((node) => node.id !== selectedNodeId).map((node) => (
+                          <option key={node.id} value={node.id}>{node.id}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addBtChildArm}
+                      className="w-full rounded bg-violet-700 px-2 py-1 font-semibold text-violet-50 hover:bg-violet-600"
+                    >
+                      Add child edge
                     </button>
                   </div>
                 ) : null}

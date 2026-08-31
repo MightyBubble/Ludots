@@ -10,7 +10,7 @@
 
 打开编辑器后，节点联想和控制输出端口只来自 Bridge 投影的运行时 descriptor / 作者糖，不在前端自造 op。游戏进程加载 `AgentBridgeMod` 后，编辑器右侧 Live Debug 能列出已挂载的 TriggerGraph 条目，开启固定容量 trace，并按 sequence 增量拉取变化。
 
-当前收口：控制流端口、作者糖（含 `FsmState` / `SelectByEnum` / `InlineGraph` / `FormatText` 等 Bridge 投影项）、删节点清悬挂边、source map 缺失失败关闭。正式文字合同已齐：`ConstText` / `ConcatText` / `IntToText` / `FloatToText` / `SinkPresentationText` 与 `FormatText` 花括号自动引脚进入 descriptor / 糖名册（见 [图正式文字](graph-formal-text.md)）。
+当前收口：控制流端口、作者糖（含 `FsmState` / `SelectByEnum` / `InlineGraph` / `FormatText`，以及 Script-only 的 `BtSequence` / `BtSelector` / `BtDecorator` 与动态 `child:{n}` 臂）、删节点清悬挂边、source map 缺失失败关闭。正式文字合同已齐：`ConstText` / `ConcatText` / `IntToText` / `FloatToText` / `SinkPresentationText` 与 `FormatText` 花括号自动引脚进入 descriptor / 糖名册（见 [图正式文字](graph-formal-text.md)）。地图变量面板只暴露 Integer / Float；不再列出引擎还不认的 Array / Map。
 
 Codegen 产品化合同见 [图 Codegen 产品化](graph-codegen-productization.md)：右侧 **Codegen** 面板可预览生成 C#、看资格红绿灯、一键对拍；Bridge 提供 `codegen/preview`、`codegen/parity`、`GET /api/graph/codegen/coverage`。Live Debug 后端徽章可显示当前执行后端标签（面板已预留 `backend` 展示位）。
 
@@ -42,7 +42,7 @@ cd src/Tools/Ludots.Editor.React && npm ci && npm run dev
 | modId | `MapTriggerNightRaidMod` |
 | graphId | `Graph.NightRaid.Flow` |
 
-Load 后画布显示控制边（蓝）与值边。左侧节点表里的作者糖只来自 Bridge `authoringSugars`（含 `BranchBool`、`SwitchInt`、`SelectByEnum`、`FsmState`、`Wait`、`While`、`Until`、`Break`；TriggerGraph 另有 `InlineGraph`）。普通节点的 `Jump.target`、`Call.call/next` 等端口来自 Bridge，不是前端硬编码。`FsmState` 必须绑 `enumType` + `stateVar`，case 臂用枚举成员名。
+Load 后画布显示控制边（蓝）与值边。左侧节点表里的作者糖只来自 Bridge `authoringSugars`（含 `BranchBool`、`SwitchInt`、`SelectByEnum`、`FsmState`、`Wait`、`While`、`Until`、`Break`；Script 另有 `BtSequence` / `BtSelector` / `BtDecorator`；TriggerGraph 另有 `InlineGraph`）。普通节点的 `Jump.target`、`Call.call/next` 等端口来自 Bridge，不是前端硬编码。`FsmState` 必须绑 `enumType` + `stateVar`，case 臂用枚举成员名。BT 组合糖用 `child:{n}` 臂（Decorator 固定 `child:0` + `decoratorKind`）。
 
 Validate 走 `GraphProgramAuthoringFrontDoor`；缺控制边 / 未知 op 失败关闭。Save 只在 Validate 通过后写 `assets/GAS/graphs.json`；布局写 `graph_editor.json`，不进运行时合同。
 
@@ -79,6 +79,8 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 2. 故意加未连线的 Until，Validate 点名缺 `body`/`next`/`condition`。
 3. 夜袭 + AgentBridge 运行中，Watch 后看到 heartbeat / MapLoaded 触发的节点高亮与 pin 变化。
 4. 在 Script 图里加入 `FsmState`，填写枚举与相位变量并挂 case 臂，保存后再打开字段仍在。
+5. 在 Script 图里加入 `BtSequence`，用 child 臂挂子节点；`BtDecorator` 选 `decoratorKind` 后连 `child:0`，保存后再打开仍在。
+6. 变量面板类型只见 Integer / Float，没有 Array / Map。
 
 ---
 

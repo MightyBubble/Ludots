@@ -26,6 +26,7 @@ export type AuthoredFieldKey =
   | 'teamId'
   | 'text'
   | 'textKey'
+  | 'decoratorKind'
   | 'presentationSurface';
 
 export type AuthoredFieldKind = 'string' | 'int' | 'float' | 'bool' | 'anchor' | 'payloadKey' | 'instanceId' | 'enumType' | 'textKey';
@@ -66,6 +67,11 @@ const textKey: AuthoredFieldSpec = {
   key: 'textKey',
   label: 'Text key (Presentation/text_tokens.json)',
   kind: 'textKey',
+};
+const decoratorKind: AuthoredFieldSpec = {
+  key: 'decoratorKind',
+  label: 'Decorator kind (inverter / forceSuccess / forceFailure)',
+  kind: 'string',
 };
 const presentationSurface: AuthoredFieldSpec = {
   key: 'presentationSurface',
@@ -119,6 +125,7 @@ const FIELDS: Record<string, AuthoredFieldSpec[]> = {
   SwitchInt: [enumType],
   SelectByEnum: [enumType],
   FsmState: [enumType, stateVar],
+  BtDecorator: [decoratorKind],
   StoreArgInt: [argKey],
   StoreArgFloat: [argKey],
   StoreArgEntity: [argKey],

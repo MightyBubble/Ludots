@@ -4,7 +4,7 @@ export const MAP_VAR_DRAG_MIME = 'text/plain';
 export const MAP_VAR_DRAG_PREFIX = 'ludots-map-var';
 export const PLACED_VAR_DRAG_PREFIX = 'ludots-placed-var';
 
-export type MapVariableKind = 'int' | 'float' | 'array' | 'map';
+export type MapVariableKind = 'int' | 'float';
 export type MapVariableScalarType = 'int' | 'float';
 
 export type GraphVariableRow = {
@@ -28,16 +28,12 @@ export type GraphPlacedInstance = {
 export type MapVariableDraft = {
   name: string;
   kind: MapVariableKind;
-  elementType: MapVariableScalarType;
-  keyType: MapVariableScalarType;
   initial: string;
 };
 
 export const emptyVariableDraft = (): MapVariableDraft => ({
   name: '',
   kind: 'int',
-  elementType: 'int',
-  keyType: 'int',
   initial: '0',
 });
 
@@ -67,13 +63,6 @@ export function decodePlacedVarDrag(raw: string): { instanceId: string; kind: Gr
   return { instanceId: parts[1], kind };
 }
 
-export function collectionTypeError(kind: MapVariableKind): string | null {
-  if (kind === 'array' || kind === 'map') {
-    return 'Map variables only store Integer or Float today. Array and Map stay in the type list so the choice is visible; collection variables wait for the #1108 follow-up slice.';
-  }
-  return null;
-}
-
 export function GraphVariablePanel({
   variables,
   placedInstances,
@@ -101,7 +90,6 @@ export function GraphVariablePanel({
   onUpdate: () => void;
   onDelete: () => void;
 }) {
-  const collectionError = collectionTypeError(draft.kind);
   const selected = selectedName != null && variables.some((variable) => variable.name === selectedName);
   const placedSorted = [...placedInstances].sort((a, b) => a.ordinal - b.ordinal);
 
@@ -208,60 +196,21 @@ export function GraphVariablePanel({
             >
               <option value="int">Integer</option>
               <option value="float">Float</option>
-              <option value="array">Array</option>
-              <option value="map">Map</option>
             </select>
           </label>
-          {draft.kind === 'int' || draft.kind === 'float' ? (
-            <label className="block">
-              <div className="mb-1 text-[10px] text-slate-500">Default</div>
-              <input
-                value={draft.initial}
-                disabled={busy || !mapId}
-                onChange={(event) => onDraftChange({ ...draft, initial: event.target.value })}
-                className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[11px] text-slate-100"
-              />
-            </label>
-          ) : draft.kind === 'array' ? (
-            <label className="block">
-              <div className="mb-1 text-[10px] text-slate-500">Element type</div>
-              <select
-                value={draft.elementType}
-                disabled={busy || !mapId}
-                onChange={(event) => onDraftChange({ ...draft, elementType: event.target.value as MapVariableScalarType })}
-                className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[11px] text-slate-100"
-              >
-                <option value="int">Integer</option>
-                <option value="float">Float</option>
-              </select>
-            </label>
-          ) : (
-            <label className="block">
-              <div className="mb-1 text-[10px] text-slate-500">Key / value</div>
-              <div className="grid grid-cols-2 gap-1">
-                <select
-                  value={draft.keyType}
-                  disabled={busy || !mapId}
-                  onChange={(event) => onDraftChange({ ...draft, keyType: event.target.value as MapVariableScalarType })}
-                  className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 font-mono text-[11px] text-slate-100"
-                >
-                  <option value="int">Int key</option>
-                  <option value="float">Float key</option>
-                </select>
-                <select
-                  value={draft.elementType}
-                  disabled={busy || !mapId}
-                  onChange={(event) => onDraftChange({ ...draft, elementType: event.target.value as MapVariableScalarType })}
-                  className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 font-mono text-[11px] text-slate-100"
-                >
-                  <option value="int">Int val</option>
-                  <option value="float">Float val</option>
-                </select>
-              </div>
-            </label>
-          )}
+          <label className="block">
+            <div className="mb-1 text-[10px] text-slate-500">Default</div>
+            <input
+              value={draft.initial}
+              disabled={busy || !mapId}
+              onChange={(event) => onDraftChange({ ...draft, initial: event.target.value })}
+              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[11px] text-slate-100"
+            />
+          </label>
         </div>
-        {collectionError ? <div className="text-[10px] text-amber-300">{collectionError}</div> : null}
+        <div className="text-[10px] text-slate-600">
+          Map variables store Integer or Float only. Collections are not authorable here.
+        </div>
         <div className="flex gap-1">
           <button
             type="button"
