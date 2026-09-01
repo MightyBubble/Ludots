@@ -1,0 +1,12 @@
+{
+  "name": "CaseESelectionMod",
+  "version": "1.0.0",
+  "description": "Case E (#1398 S3) 框选纯数据 showcase：模板 initialInteractionContext 出生挂 context、Profile triggers 门控、InputActionFired 触发衍生 context、事件 key 透传写 selected 集合、presenter 观察高亮，全链配置资产拼装。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "main": "bin/net9.0/CaseESelectionMod.dll",
+  "author": "Ludots Team",
+  "tags": ["showcase", "input", "interaction", "selection", "case-e"]
+}
