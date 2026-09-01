@@ -302,7 +302,7 @@ namespace CoreInputMod.Systems
 
         /// <summary>
         /// Player id → representative entity through the map-binding player lookup — the entity
-        /// that carries the player's CommandPref. The bound sole possessed actor may be a
+        /// that carries the player's InteractionPref. The bound sole possessed actor may be a
         /// controlled unit, so order routing preferences resolve through the player instead.
         /// </summary>
         private bool TryGetPlayerRepresentative(int playerId, out Entity rep)

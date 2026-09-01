@@ -18,14 +18,14 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// CommandPref entity component: the player-owned order routing preferences
+    /// InteractionPref entity component: the player-owned order routing preferences
     /// (player-level default intent + dispatch profile, per-ability-template overrides), the
     /// resolution chain reading the possessed representative instead of the active control
     /// scheme, the map-binding seed contract, and the world-save round trip.
     /// </summary>
     [TestFixture]
     [NonParallelizable]
-    public sealed class CommandPrefTests
+    public sealed class InteractionPrefTests
     {
         private const string IntentId = "intent.command.pref.test";
         private const string AltIntentId = "intent.command.pref.alt";
@@ -44,7 +44,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void Resolve_PlayerDefaultOnly_AppliesToEveryAbilityScope()
         {
-            CommandPref pref = NewPref(intent: 11, dispatch: 21);
+            InteractionPref pref = NewPref(intent: 11, dispatch: 21);
 
             Assert.That(pref.ResolveCommandIntent(0), Is.EqualTo(11), "whole-command scope reads the player default");
             Assert.That(pref.ResolveCommandIntent(501), Is.EqualTo(11), "an ability without an override inherits the player default");
@@ -55,7 +55,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void Resolve_AbilityOverride_ReplacesBothFields()
         {
-            CommandPref pref = NewPref(intent: 11, dispatch: 21);
+            InteractionPref pref = NewPref(intent: 11, dispatch: 21);
             pref.SetAbilityOverride(502, commandIntentId: 12, castDispatchProfileId: 22);
 
             Assert.That(pref.ResolveCommandIntent(502), Is.EqualTo(12));
@@ -67,7 +67,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void Resolve_PartialOverride_InheritsTheUnoverriddenField()
         {
-            CommandPref pref = NewPref(intent: 11, dispatch: 21);
+            InteractionPref pref = NewPref(intent: 11, dispatch: 21);
             pref.SetAbilityOverride(504, commandIntentId: 0, castDispatchProfileId: 22);
             pref.SetAbilityOverride(505, commandIntentId: 12, castDispatchProfileId: 0);
 
@@ -80,20 +80,20 @@ namespace Ludots.Tests.GAS
         [Test]
         public void Mutators_FailFastOnIllegalWrites()
         {
-            CommandPref pref = NewPref(intent: 11, dispatch: 21);
+            InteractionPref pref = NewPref(intent: 11, dispatch: 21);
 
             Assert.That(() => pref.SetPlayerDefault(0, 21), Throws.InvalidOperationException, "the player default is complete: no half defaults");
             Assert.That(() => pref.SetAbilityOverride(0, 12, 0), Throws.InvalidOperationException, "overrides need a positive ability template id");
             Assert.That(() => pref.SetAbilityOverride(506, 0, 0), Throws.InvalidOperationException, "an all-zero override is a silent no-op and is rejected");
 
-            for (int i = 1; i <= CommandPref.MaxAbilityOverrides; i++)
+            for (int i = 1; i <= InteractionPref.MaxAbilityOverrides; i++)
             {
                 pref.SetAbilityOverride(i, commandIntentId: 0, castDispatchProfileId: 30 + i);
             }
 
             Assert.That(
                 () => pref.SetAbilityOverride(999, 12, 22),
-                Throws.InvalidOperationException.With.Message.Contains(nameof(CommandPref.MaxAbilityOverrides)));
+                Throws.InvalidOperationException.With.Message.Contains(nameof(InteractionPref.MaxAbilityOverrides)));
 
             pref.SetAbilityOverride(1, commandIntentId: 99, castDispatchProfileId: 0);
             Assert.That(pref.ResolveCommandIntent(1), Is.EqualTo(99), "rewriting an existing override replaces it in place");
@@ -111,13 +111,13 @@ namespace Ludots.Tests.GAS
         public void SeedConfig_MissingOrBlankFields_FailFast()
         {
             Assert.That(
-                () => CommandPrefConfigLoader.Validate(new CommandPrefsConfig { Defaults = null }, "test"),
+                () => InteractionPrefConfigLoader.Validate(new InteractionPrefsConfig { Defaults = null }, "test"),
                 Throws.InvalidOperationException.With.Message.Contains("defaults"));
 
             Assert.That(
-                () => CommandPrefConfigLoader.Validate(new CommandPrefsConfig
+                () => InteractionPrefConfigLoader.Validate(new InteractionPrefsConfig
                 {
-                    Defaults = new CommandPrefDefaultsDefinition { CommandIntentId = " ", CastDispatchProfileId = DispatchId },
+                    Defaults = new InteractionPrefDefaultsDefinition { CommandIntentId = " ", CastDispatchProfileId = DispatchId },
                 }, "test"),
                 Throws.InvalidOperationException.With.Message.Contains("commandIntentId"));
         }
@@ -130,10 +130,10 @@ namespace Ludots.Tests.GAS
             intents.Intents.Install(CommandIntentProfileTests.Harness.Config(NewIntentDefinition(IntentId)));
             var dispatch = NewDispatchRegistry();
 
-            CommandPrefSeed seed = CommandPrefConfigLoader.ResolveSeed(
-                new CommandPrefsConfig
+            InteractionPrefSeed seed = InteractionPrefConfigLoader.ResolveSeed(
+                new InteractionPrefsConfig
                 {
-                    Defaults = new CommandPrefDefaultsDefinition { CommandIntentId = IntentId, CastDispatchProfileId = DispatchId },
+                    Defaults = new InteractionPrefDefaultsDefinition { CommandIntentId = IntentId, CastDispatchProfileId = DispatchId },
                 },
                 intents.Intents,
                 dispatch);
@@ -141,20 +141,20 @@ namespace Ludots.Tests.GAS
             Assert.That(seed.CastDispatchProfileId, Is.EqualTo(dispatch.ProfileIdRegistry.GetId(DispatchId)));
 
             Assert.That(
-                () => CommandPrefConfigLoader.ResolveSeed(
-                    new CommandPrefsConfig
+                () => InteractionPrefConfigLoader.ResolveSeed(
+                    new InteractionPrefsConfig
                     {
-                        Defaults = new CommandPrefDefaultsDefinition { CommandIntentId = "intent.command.not_installed", CastDispatchProfileId = DispatchId },
+                        Defaults = new InteractionPrefDefaultsDefinition { CommandIntentId = "intent.command.not_installed", CastDispatchProfileId = DispatchId },
                     },
                     intents.Intents,
                     dispatch),
                 Throws.InvalidOperationException.With.Message.Contains("intent.command.not_installed"));
 
             Assert.That(
-                () => CommandPrefConfigLoader.ResolveSeed(
-                    new CommandPrefsConfig
+                () => InteractionPrefConfigLoader.ResolveSeed(
+                    new InteractionPrefsConfig
                     {
-                        Defaults = new CommandPrefDefaultsDefinition { CommandIntentId = IntentId, CastDispatchProfileId = "dispatch.not_installed" },
+                        Defaults = new InteractionPrefDefaultsDefinition { CommandIntentId = IntentId, CastDispatchProfileId = "dispatch.not_installed" },
                     },
                     intents.Intents,
                     dispatch),
@@ -205,14 +205,14 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CommandIntentRouting_RepWithoutCommandPref_FailsFastOnDefaultFrame()
+        public void CommandIntentRouting_RepWithoutInteractionPref_FailsFastOnDefaultFrame()
         {
             using var world = World.Create();
             ChainHarness harness = ChainHarness.Create(world, plantPref: false);
 
             InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => harness.SubmitPointerCommand())!;
-            Assert.That(error.Message, Does.Contain("CommandPref"));
-            Assert.That(error.Message, Does.Contain("command_prefs.json"), "the error names the seed contract, not a fallback");
+            Assert.That(error.Message, Does.Contain("InteractionPref"));
+            Assert.That(error.Message, Does.Contain("interaction_prefs.json"), "the error names the seed contract, not a fallback");
             Assert.That(harness.Orders, Is.Empty);
         }
 
@@ -250,14 +250,14 @@ namespace Ludots.Tests.GAS
             Entity restoredEntity = Entity.Null;
             restored.Query(in QueryDescription.Null, entity =>
             {
-                if (restored.Has<CommandPref>(entity))
+                if (restored.Has<InteractionPref>(entity))
                 {
                     restoredEntity = entity;
                 }
             });
             Assert.That(restoredEntity, Is.Not.EqualTo(Entity.Null));
 
-            CommandPref pref = restored.Get<CommandPref>(restoredEntity);
+            InteractionPref pref = restored.Get<InteractionPref>(restoredEntity);
             Assert.That(pref.DefaultCommandIntentId, Is.EqualTo(4242), "the raw registry id must round-trip untouched");
             Assert.That(pref.DefaultCastDispatchProfileId, Is.EqualTo(8484));
             Assert.That(pref.ResolveCommandIntent(502), Is.EqualTo(4243), "the ability override survives byte-for-byte");
@@ -268,16 +268,16 @@ namespace Ludots.Tests.GAS
 
         // ── Harness ──
 
-        private static CommandPref NewPref(int intent, int dispatch)
+        private static InteractionPref NewPref(int intent, int dispatch)
         {
-            CommandPref pref = default;
+            InteractionPref pref = default;
             pref.SetPlayerDefault(intent, dispatch);
             return pref;
         }
 
-        private static CommandPref NewOverrides()
+        private static InteractionPref NewOverrides()
         {
-            CommandPref pref = default;
+            InteractionPref pref = default;
             pref.SetPlayerDefault(4242, 8484);
             pref.SetAbilityOverride(502, commandIntentId: 4243, castDispatchProfileId: 8485);
             pref.SetAbilityOverride(504, commandIntentId: 0, castDispatchProfileId: 8485);
@@ -334,7 +334,7 @@ namespace Ludots.Tests.GAS
             public InputOrderMappingSystem System = null!;
             public ControlSchemeRuntime? Schemes;
             public List<Order> Orders = null!;
-            public CommandPref Pref;
+            public InteractionPref Pref;
             public Entity Rep;
             private StringIntRegistry? _schemeIds;
 
@@ -410,7 +410,7 @@ namespace Ludots.Tests.GAS
 
                 if (plantPref)
                 {
-                    CommandPref pref = default;
+                    InteractionPref pref = default;
                     pref.SetPlayerDefault(
                         intents.Intents.ProfileIdRegistry.Register(IntentId),
                         harness.Dispatch.ProfileIdRegistry.GetId(DispatchId));

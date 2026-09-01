@@ -11,7 +11,7 @@ namespace Ludots.Core.Input.Interaction
     /// Schemes are pure device binding profiles declared in <c>Input/control_schemes.json</c> and
     /// compiled at install time: axis move <c>orderTypeKey</c> references resolve against
     /// <see cref="OrderTypeRegistry"/>. Order routing preferences are player data on the
-    /// representative (<see cref="CommandPref"/>) — switching pops the previous scheme's IMC
+    /// representative (<see cref="InteractionPref"/>) — switching pops the previous scheme's IMC
     /// contexts off the <see cref="PlayerInputHandler"/> and pushes the new ones; non-default
     /// frames on the stack are untouched. The handler is resolved through a provider per switch
     /// and may be null (headless engine / handler bound later by the adapter); in that case only
@@ -143,7 +143,7 @@ namespace Ludots.Core.Input.Interaction
         /// installed or the mod allowed-set refuses it (settings UI shows the refusal); switching
         /// to the already-active scheme is a no-op success. Tolerates a null input handler
         /// (headless). Switching never touches order routing preferences — those live on the
-        /// player representative (<see cref="CommandPref"/>), not on the scheme.
+        /// player representative (<see cref="InteractionPref"/>), not on the scheme.
         /// </summary>
         public bool TrySwitch(int schemeId)
         {

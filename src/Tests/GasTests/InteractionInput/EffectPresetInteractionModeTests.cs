@@ -60,7 +60,7 @@ namespace Ludots.Tests.GAS
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -100,7 +100,7 @@ namespace Ludots.Tests.GAS
             mapping.Update(0f);
 
             // LoL / SmartCast: press skill -> immediate order
-            mapping.SetInteractionMode(InteractionModeType.SmartCast);
+            mapping.SetInteractionMode(CastModeType.SmartCast);
             input.InjectButtonPress("SkillQ");
             input.Update(1f / 60f);
             mapping.Update(0f);
@@ -110,7 +110,7 @@ namespace Ludots.Tests.GAS
             mapping.Update(0f);
 
             // SC2 / AimCast: press skill -> enter aiming (no immediate order), then configured confirm action confirms
-            mapping.SetInteractionMode(InteractionModeType.AimCast);
+            mapping.SetInteractionMode(CastModeType.AimCast);
             input.InjectButtonPress("SkillQ");
             input.Update(1f / 60f);
             mapping.Update(0f);
@@ -125,7 +125,7 @@ namespace Ludots.Tests.GAS
             Assert.That(orders[2].Target, Is.EqualTo(target));
 
             // PressReleaseAimCast: press -> pending, release -> enter aiming, configured confirm action confirms
-            mapping.SetInteractionMode(InteractionModeType.PressReleaseAimCast);
+            mapping.SetInteractionMode(CastModeType.PressReleaseAimCast);
             input.InjectButtonPress("SkillQ");
             input.Update(1f / 60f);
             mapping.Update(0f);
@@ -151,7 +151,7 @@ namespace Ludots.Tests.GAS
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.AimCast,
+                InteractionMode = CastModeType.AimCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -194,7 +194,7 @@ namespace Ludots.Tests.GAS
                 }
 
                 overrideMapping = source.Clone();
-                overrideMapping.CastModeOverride = InteractionModeType.SmartCast;
+                overrideMapping.CastModeOverride = CastModeType.SmartCast;
                 return true;
             });
 
@@ -251,9 +251,9 @@ namespace Ludots.Tests.GAS
             Assert.That(ability.HasPresentation, Is.True);
             Assert.That(ability.Presentation, Is.Not.Null);
             Assert.That(ability.Presentation!.ResolveDisplayName("fallback"), Is.EqualTo("Mystic Shot"));
-            Assert.That(ability.Presentation.ResolveIconGlyph(nameof(InteractionModeType.SmartCast), "?"), Is.EqualTo("Q"));
-            Assert.That(ability.Presentation.ResolveIconGlyph(nameof(InteractionModeType.PressReleaseAimCast), "?"), Is.EqualTo("QA"));
-            Assert.That(ability.Presentation.ResolveHintText(nameof(InteractionModeType.PressReleaseAimCast), "fallback"), Is.EqualTo("Release then confirm"));
+            Assert.That(ability.Presentation.ResolveIconGlyph(nameof(CastModeType.SmartCast), "?"), Is.EqualTo("Q"));
+            Assert.That(ability.Presentation.ResolveIconGlyph(nameof(CastModeType.PressReleaseAimCast), "?"), Is.EqualTo("QA"));
+            Assert.That(ability.Presentation.ResolveHintText(nameof(CastModeType.PressReleaseAimCast), "fallback"), Is.EqualTo("Release then confirm"));
         }
 
         private static InputConfigRoot CreateInputConfig()

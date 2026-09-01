@@ -14,7 +14,7 @@ namespace Ludots.Core.Input.Interaction
     /// interaction state: the subject's <see cref="ActiveInteractionContext.CommandIntentProfileId"/>
     /// wins when positive (context explicit); zero on a mounted context means the context declares
     /// no intent and the pointer command does not route; with no context mounted (steady state)
-    /// the possessed representative's <see cref="CommandPref"/> player default applies. Never
+    /// the possessed representative's <see cref="InteractionPref"/> player default applies. Never
     /// bubbles to anything else (DEC-14, no fallback). The steady-state branch is the player's
     /// preference, never the active control scheme: switching schemes changes bindings only,
     /// never routing preferences.
@@ -28,7 +28,7 @@ namespace Ludots.Core.Input.Interaction
         /// callers that cannot present one fail fast upstream rather than passing a fabricated
         /// default.
         /// </summary>
-        public static int ResolveActiveCommandIntent(World world, Entity interactionSubject, in CommandPref playerPref)
+        public static int ResolveActiveCommandIntent(World world, Entity interactionSubject, in InteractionPref playerPref)
         {
             if (world == null)
             {

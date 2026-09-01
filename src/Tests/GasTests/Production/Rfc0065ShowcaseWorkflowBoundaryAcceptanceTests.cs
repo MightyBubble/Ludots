@@ -97,8 +97,8 @@ namespace Ludots.Tests.GAS.Production
                 Is.EqualTo(EntityCollectionKeys.CommandSource));
             Assert.That(engine.World.Has<ActiveInteractionContext>(localPlayer), Is.False,
                 "steady state is the absence of mounted interaction state on the local rep.");
-            Assert.That(engine.World.TryGet<CommandPref>(localPlayer, out CommandPref localPlayerPref), Is.True,
-                "map binding must seed the player CommandPref from Input/command_prefs.json.");
+            Assert.That(engine.World.TryGet<InteractionPref>(localPlayer, out InteractionPref localPlayerPref), Is.True,
+                "map binding must seed the player InteractionPref from Input/interaction_prefs.json.");
             var intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry)
                 ?? throw new InvalidOperationException("CommandIntentProfileRegistry service is missing.");
             Assert.That(
@@ -803,9 +803,9 @@ namespace Ludots.Tests.GAS.Production
                 return;
             }
 
-            CommandPref repPref = default;
+            InteractionPref repPref = default;
             bool hasPref = ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity repEntity) &&
-                engine.World.TryGet<CommandPref>(repEntity, out repPref);
+                engine.World.TryGet<InteractionPref>(repEntity, out repPref);
             builder.Append("pref=");
             builder.Append(hasPref ? "seeded" : "missing");
             if (!hasPref)

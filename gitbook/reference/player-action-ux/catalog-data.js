@@ -8843,7 +8843,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按鼠标位移增量更新视角或准星朝向"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + InteractionModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
       "todos": [
         "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
       ],
@@ -8905,7 +8905,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按右摇杆偏移量持续更新视角或准星朝向"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + InteractionModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
       "todos": [
         "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
       ],
@@ -8988,7 +8988,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把最近合法敌人记为软锁辅助目标"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + InteractionModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
       "todos": [
         "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
       ],
@@ -9108,7 +9108,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "硬锁目标切换到下一合法敌人"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + InteractionModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
       "todos": [
         "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
       ],
@@ -9239,7 +9239,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按准星重算落点合法性"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + InteractionModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
       "todos": [
         "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
       ],
@@ -9373,7 +9373,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "退出瞄准且不扣资源、不进冷却"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + InteractionModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
       "todos": [
         "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
       ],
@@ -10690,7 +10690,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
       "todos": [
-        "技能主链仍大量依赖旧 InteractionModeType，未完全切到 CastCommitProfile"
+        "技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-095",
@@ -10776,7 +10776,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
       "todos": [
-        "技能主链仍大量依赖旧 InteractionModeType，未完全切到 CastCommitProfile"
+        "技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-128",
@@ -10844,7 +10844,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
       "todos": [
-        "技能主链仍大量依赖旧 InteractionModeType，未完全切到 CastCommitProfile"
+        "技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-104",
@@ -10951,7 +10951,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
       "todos": [
-        "技能主链仍大量依赖旧 InteractionModeType，未完全切到 CastCommitProfile"
+        "技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-067",

@@ -788,10 +788,10 @@ namespace EntityCommandPanelMod.UI
         {
             return interactionModeKey switch
             {
-                nameof(InteractionModeType.SmartCast) => 0.96f,
-                nameof(InteractionModeType.SmartCastWithIndicator) => 0.72f,
-                nameof(InteractionModeType.PressReleaseAimCast) => 0.58f,
-                nameof(InteractionModeType.AimCast) => 0.51f,
+                nameof(CastModeType.SmartCast) => 0.96f,
+                nameof(CastModeType.SmartCastWithIndicator) => 0.72f,
+                nameof(CastModeType.PressReleaseAimCast) => 0.58f,
+                nameof(CastModeType.AimCast) => 0.51f,
                 _ => 0.42f
             };
         }
@@ -1708,11 +1708,11 @@ namespace EntityCommandPanelMod.UI
         {
             return interactionModeKey switch
             {
-                nameof(InteractionModeType.SmartCast) => "SC",
-                nameof(InteractionModeType.SmartCastWithIndicator) => "RC",
-                nameof(InteractionModeType.AimCast) => "RTS",
-                nameof(InteractionModeType.PressReleaseAimCast) => "PR",
-                nameof(InteractionModeType.ContextScored) => "CTX",
+                nameof(CastModeType.SmartCast) => "SC",
+                nameof(CastModeType.SmartCastWithIndicator) => "RC",
+                nameof(CastModeType.AimCast) => "RTS",
+                nameof(CastModeType.PressReleaseAimCast) => "PR",
+                nameof(CastModeType.ContextScored) => "CTX",
                 _ => "TF"
             };
         }
@@ -1735,7 +1735,7 @@ namespace EntityCommandPanelMod.UI
                 return mapping.InteractionMode.ToString();
             }
 
-            return nameof(InteractionModeType.TargetFirst);
+            return nameof(CastModeType.TargetFirst);
         }
 
         private string ResolveShowcaseThemeId()

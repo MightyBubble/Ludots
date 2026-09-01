@@ -301,7 +301,7 @@ namespace Ludots.Tests.GAS
             var input = new FrozenInputActionReader();
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()

@@ -1884,8 +1884,8 @@ namespace Ludots.Tests.GAS.Production
 
             return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
             {
-                InteractionModeType.SmartCastWithIndicator => IndicatorModeId,
-                InteractionModeType.PressReleaseAimCast => PressReleaseModeId,
+                CastModeType.SmartCastWithIndicator => IndicatorModeId,
+                CastModeType.PressReleaseAimCast => PressReleaseModeId,
                 _ => SmartCastModeId,
             };
         }

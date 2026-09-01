@@ -790,8 +790,8 @@ namespace InteractionShowcaseMod.UI
                 return "no-pref";
             }
 
-            Ludots.Core.Input.Interaction.CommandPref pref = default;
-            if (!engine.World.IsAlive(rep) || !engine.World.TryGet<Ludots.Core.Input.Interaction.CommandPref>(rep, out pref))
+            Ludots.Core.Input.Interaction.InteractionPref pref = default;
+            if (!engine.World.IsAlive(rep) || !engine.World.TryGet<Ludots.Core.Input.Interaction.InteractionPref>(rep, out pref))
             {
                 return "no-pref";
             }

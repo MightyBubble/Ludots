@@ -26,7 +26,7 @@
 |---|---|---|
 | 动作绑定页 | default_input 动作+上下文+绑定 | 动作/上下文增删；绑定设备路径录制 |
 | 过滤页 | filter_profiles；锚点/展开枚举、tag 总账 | 展开结果实时试算（本方受控实体数） |
-| 方案页 | control_schemes（纯键位）；上下文补全源 | 白名单编辑（下单偏好在 command_prefs.json，不属方案页） |
+| 方案页 | control_schemes（纯键位）；上下文补全源 | 白名单编辑（下单偏好在 interaction_prefs.json，不属方案页） |
 | 属性绑定页 | action_attribute_bindings；动作与属性注册表 | 全字段表单，缺字段即不可保存 |
 | 覆盖检查 | 上下文×动作交叉矩阵 | 空格高亮为缺口（含 O9 清单） |
 

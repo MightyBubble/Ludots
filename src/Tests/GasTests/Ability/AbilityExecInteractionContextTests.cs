@@ -352,7 +352,7 @@ namespace Ludots.Tests.GAS
                 mounted.CommandIntentProfileId,
                 Is.EqualTo(harness.IntentIds.GetId(ContextIntentName)));
 
-            CommandPref pref = NewPlayerDefaultPref(harness);
+            InteractionPref pref = NewPlayerDefaultPref(harness);
             Assert.That(
                 CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
                 Is.EqualTo(harness.IntentIds.GetId(ContextIntentName)),
@@ -380,7 +380,7 @@ namespace Ludots.Tests.GAS
 
             Assert.That(world.Has<ActiveInteractionContext>(rep), Is.False,
                 "the mounted context must be released with the exec when it ends.");
-            CommandPref pref = NewPlayerDefaultPref(harness);
+            InteractionPref pref = NewPlayerDefaultPref(harness);
             Assert.That(
                 CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
                 Is.EqualTo(pref.DefaultCommandIntentId),
@@ -465,9 +465,9 @@ namespace Ludots.Tests.GAS
                 "ending the topmost context must expose the still-active lower one, matching stack pop semantics.");
         }
 
-        private static CommandPref NewPlayerDefaultPref(Harness harness)
+        private static InteractionPref NewPlayerDefaultPref(Harness harness)
         {
-            CommandPref pref = default;
+            InteractionPref pref = default;
             pref.SetPlayerDefault(
                 harness.IntentIds.Register(PlayerDefaultIntentName),
                 castDispatchProfileId: 777);
