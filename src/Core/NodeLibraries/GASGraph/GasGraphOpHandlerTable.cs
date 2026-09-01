@@ -2029,7 +2029,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleScreenPointToGround(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            if (s.Api.TryScreenPointToGround(s.F[ins.A], s.F[ins.B], out IntVector2 groundCm))
+            string? seatId = ResolveSeatSymbol(ins.Imm, nameof(GraphNodeOp.ScreenPointToGround));
+            if (s.Api.TryScreenPointToGround(s.F[ins.A], s.F[ins.B], seatId, out IntVector2 groundCm))
             {
                 s.B[ins.Dst] = 1;
                 s.TargetPosCm = groundCm;
@@ -2042,16 +2043,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleScreenPointToEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            int seatKeyId = ins.Imm;
-            string? seatId = seatKeyId > 0
-                ? Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(seatKeyId)
-                : null;
-            if (seatKeyId > 0 && string.IsNullOrWhiteSpace(seatId))
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.AimSourceSeatKey: ScreenPointToEntity references unregistered seat key id {seatKeyId}.");
-            }
-
+            string? seatId = ResolveSeatSymbol(ins.Imm, nameof(GraphNodeOp.ScreenPointToEntity));
             s.E[ins.Dst] = s.Api.PickScreenPointEntity(
                 s.Targets,
                 s.TargetList.Count,
@@ -2064,10 +2056,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleScreenRegionToEntities(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
+            string? seatId = ResolveSeatSymbol(ins.Imm, nameof(GraphNodeOp.ScreenRegionToEntities));
             var rect = ScreenRect.FromPoints(
                 new System.Numerics.Vector2(s.F[ins.A], s.F[ins.B]),
                 new System.Numerics.Vector2(s.F[ins.C], s.F[ins.Flags]));
-            s.TargetList.SetCount(s.Api.FilterScreenRegionEntities(s.Targets, s.TargetList.Count, in rect));
+            s.TargetList.SetCount(s.Api.FilterScreenRegionEntities(s.Targets, s.TargetList.Count, in rect, seatId));
+        }
+
+        private static string? ResolveSeatSymbol(int seatKeyId, string operation)
+        {
+            string? seatId = seatKeyId > 0
+                ? Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(seatKeyId)
+                : null;
+            if (seatKeyId > 0 && string.IsNullOrWhiteSpace(seatId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.AimSourceSeatKey: {operation} references unregistered seat key id {seatKeyId}.");
+            }
+
+            return seatId;
         }
 
         private static void HandlePointToDirection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

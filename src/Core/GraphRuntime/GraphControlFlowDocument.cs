@@ -235,7 +235,7 @@ namespace Ludots.Core.GraphRuntime
         public string? Context { get; set; }
         /// <summary>Optional parent interaction context profile id symbol for ActivateContext; omit for a root-level derived context.</summary>
         public string? ParentContext { get; set; }
-        /// <summary>Seat id symbol for ScreenPointToEntity; the pointer/radius answer under that seat's present binding.</summary>
+        /// <summary>Seat id symbol for the aimsource family (ScreenPointToGround/ScreenPointToEntity/ScreenRegionToEntities); the answer is given under that seat's present binding.</summary>
         public string? Seat { get; set; }
         /// <summary>Pick radius in pixels for ScreenPointToEntity (authored literal).</summary>
         public float PickRadiusPx { get; set; }

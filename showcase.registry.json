@@ -8120,8 +8120,8 @@
       "id": "capability_standard_graph_op_LoadEntryPayloadFloat",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntryPayloadFloatEntryMod",
       "projectPath": "CapabilityStandardGraphOpLoadEntryPayloadFloatEntryMod.csproj",
-      "title": "落点读数，小数也不丢",
-      "summary": "号令一落，东西读数带着小数从事件载荷里飞进信件板。",
+      "title": "指针读数，小数也不丢",
+      "summary": "号令一落，指针像素读数带着小数从事件载荷里飞进信件板。",
       "tier": "T2",
       "category": "capability",
       "tags": [

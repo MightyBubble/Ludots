@@ -941,6 +941,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.B, GraphValueType.Float,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = InternOptional(symbolToIndex, symbols, node.Seat);
                     break;
 
                 case GraphNodeOp.ScreenPointToEntity:
@@ -970,6 +971,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Flags = ResolveValueInput(
                         node, GraphControlFlowPorts.Max, GraphValueType.Float,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = InternOptional(symbolToIndex, symbols, node.Seat);
                     break;
 
                 case GraphNodeOp.PointToDirection:

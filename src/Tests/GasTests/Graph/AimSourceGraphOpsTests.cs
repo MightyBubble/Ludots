@@ -195,7 +195,7 @@ namespace Ludots.Tests.GasTests.Graph
             using var world = World.Create();
             Entity rep = world.Create(WorldPositionCm.FromCm(0, 0));
             RunResult run = CompileAndRun(doc, world, featuredNodeId: "dir", caster: rep);
-            Assert.That(run.Api.TryScreenPointToGround(8300f, 4500f, out IntVector2 kernelCm), Is.True,
+            Assert.That(run.Api.TryScreenPointToGround(8300f, 4500f, null, out IntVector2 kernelCm), Is.True,
                 "kernel sanity: the stub ground chain resolves the screen point");
             Assert.That(kernelCm.X, Is.EqualTo(8300));
             Assert.That(kernelCm.Y, Is.EqualTo(4500));
@@ -313,9 +313,9 @@ namespace Ludots.Tests.GasTests.Graph
             using var world = World.Create();
             var api = new GasGraphRuntimeApi(world);
             Entity[] buffer = new Entity[1];
-            Assert.That(() => api.TryScreenPointToGround(0f, 0f, out _), Throws.InvalidOperationException);
+            Assert.That(() => api.TryScreenPointToGround(0f, 0f, null, out _), Throws.InvalidOperationException);
             Assert.That(() => api.PickScreenPointEntity(buffer, 1, Entity.Null, null, 0f, 0f, 10f), Throws.InvalidOperationException);
-            Assert.That(() => api.FilterScreenRegionEntities(buffer, 1, new ScreenRect(0f, 0f, 1f, 1f)), Throws.InvalidOperationException);
+            Assert.That(() => api.FilterScreenRegionEntities(buffer, 1, new ScreenRect(0f, 0f, 1f, 1f), null), Throws.InvalidOperationException);
         }
 
         private static GraphControlFlowNode ConstFloat(string id, float value) =>
@@ -455,6 +455,121 @@ namespace Ludots.Tests.GasTests.Graph
 
             Assert.Fail($"Featured node '{featuredNodeId}' not found in the compiled program.");
             return 0;
+        }
+
+        [Test]
+        public void SeatRoutedKernel_TwoBindings_EachSeatAnswersUnderItsOwnCamera()
+        {
+            // Split-screen routing at the aimsource kernel: two seats, two present
+            // bindings (left/right half of a 1600x900 host), each binding's LogicView
+            // camera aimed at its own world target. The same window point answered under
+            // different seats resolves different ground, and the region filter keeps only
+            // the entities that seat's camera actually sees — never a merged camera.
+            using var world = World.Create();
+            Entity ownerZero = world.Create();
+            Entity ownerOne = world.Create();
+
+            var cameraZero = new Ludots.Core.Gameplay.Camera.CameraManager();
+            var cameraOne = new Ludots.Core.Gameplay.Camera.CameraManager();
+            PoseTopDown(cameraZero, new Vector2(-5000f, 0f));
+            PoseTopDown(cameraOne, new Vector2(5000f, 0f));
+
+            var views = new Ludots.Core.Client.LogicViewRegistry();
+            views.EnsureDefaultView(ownerZero, "view.seat0", cameraZero);
+            views.EnsureDefaultView(ownerOne, "view.seat1", cameraOne);
+
+            var seats = new Ludots.Core.Client.ClientLocalSeatRegistry();
+            seats.Add(new Ludots.Core.Client.ClientLocalSeat("seat.0"));
+            seats.Add(new Ludots.Core.Client.ClientLocalSeat("seat.1"));
+            var halfSurface = new Vector2(800f, 900f);
+            seats.SetPresentBinding(
+                "seat.0",
+                Ludots.Core.Client.PresentBinding.HorizontalEqualSplit("view.seat0", 0, 2, halfSurface));
+            seats.SetPresentBinding(
+                "seat.1",
+                Ludots.Core.Client.PresentBinding.HorizontalEqualSplit("view.seat1", 1, 2, halfSurface));
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = seats,
+                [CoreServiceKeys.LogicViewRegistry.Name] = views,
+                [CoreServiceKeys.ViewController.Name] = new HostSurface(1600f, 900f),
+                [CoreServiceKeys.ContinuousHeightmap.Name] = FlatHeightmap(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(
+                    new WorldAabbCm(-100_000, -100_000, 200_000, 200_000), 100),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+            };
+            var kernel = new GraphAimSourceRuntime(world, globals);
+
+            // Each seat's own half-center window point: under its own name it lands on
+            // that seat's camera target — same binding-local answer, different cameras.
+            Assert.That(kernel.TryScreenPointToGround(400f, 450f, "seat.0", out IntVector2 groundZero), Is.True);
+            Assert.That(MathF.Abs(groundZero.X - (-5000)) + MathF.Abs(groundZero.Y - 0), Is.LessThan(100f),
+                $"seat.0 半屏中心的窗口点落在 seat.0 相机目标附近（实测 {groundZero.X},{groundZero.Y}）");
+            Assert.That(kernel.TryScreenPointToGround(1200f, 450f, "seat.1", out IntVector2 groundOne), Is.True);
+            Assert.That(MathF.Abs(groundOne.X - 5000) + MathF.Abs(groundOne.Y - 0), Is.LessThan(100f),
+                $"seat.1 半屏中心的窗口点落在 seat.1 相机目标附近（实测 {groundOne.X},{groundOne.Y}）");
+
+            // Negative control: the same window point under the other seat's camera
+            // answers from the other binding-local position — the seat parameter really
+            // switches cameras, there is no merged answer.
+            Assert.That(kernel.TryScreenPointToGround(400f, 450f, "seat.1", out IntVector2 crossGround), Is.True);
+            Assert.That(MathF.Abs(crossGround.X - 5000), Is.GreaterThan(1000f),
+                $"seat.0 半屏中心在 seat.1 相机下不得落在 seat.1 目标上（实测 {crossGround.X}）");
+
+            // Region filter: a window rect over one seat's half keeps only the entity that
+            // seat's camera sees, under that seat's name for its own half.
+            Entity nearZero = world.Create(WorldPositionCm.FromCm(-5000, 0));
+            Entity nearOne = world.Create(WorldPositionCm.FromCm(5000, 0));
+            var both = new[] { nearZero, nearOne };
+
+            var keptZero = new Entity[2];
+            both.CopyTo(keptZero, 0);
+            int countZero = kernel.FilterScreenRegionEntities(keptZero, 2, new ScreenRect(0f, 0f, 800f, 900f), "seat.0");
+            Assert.That(countZero, Is.EqualTo(1), "seat.0 半屏矩形只命中 seat.0 相机下的实体");
+            Assert.That(keptZero[0], Is.EqualTo(nearZero));
+
+            var keptOne = new Entity[2];
+            both.CopyTo(keptOne, 0);
+            int countOne = kernel.FilterScreenRegionEntities(keptOne, 2, new ScreenRect(800f, 0f, 1600f, 900f), "seat.1");
+            Assert.That(countOne, Is.EqualTo(1), "seat.1 半屏矩形只命中 seat.1 相机下的实体");
+            Assert.That(keptOne[0], Is.EqualTo(nearOne));
+
+            // A null seat keeps the installed sole/global providers untouched.
+            Assert.That(kernel.TryScreenPointToGround(400f, 450f, null, out IntVector2 globalGround), Is.True);
+            Assert.That(globalGround.X, Is.EqualTo(400), "空 seat 走全局 ScreenRayProvider（窗口像素 1:1 伪件）");
+        }
+
+        private static void PoseTopDown(Ludots.Core.Gameplay.Camera.CameraManager camera, Vector2 targetCm)
+        {
+            camera.State.TargetCm = targetCm;
+            camera.State.DistanceCm = 2000f;
+            camera.State.Pitch = 89f;
+            camera.State.Yaw = 0f;
+            camera.State.FovYDeg = 60f;
+        }
+
+        private static IContinuousHeightmap FlatHeightmap()
+        {
+            return new ContinuousHeightmapRuntime(
+                ContinuousHeightmapAsset.CreateSingleLayer(
+                    new WorldAabbCm(-100_000, -100_000, 200_000, 200_000),
+                    sampleColumns: 2,
+                    sampleRows: 2,
+                    new short[] { 0, 0, 0, 0 }));
+        }
+
+        private sealed class HostSurface : Ludots.Core.Presentation.Camera.IViewController
+        {
+            public HostSurface(float width, float height)
+            {
+                Resolution = new Vector2(width, height);
+            }
+
+            public Vector2 Resolution { get; }
+            public float Fov => 60f;
+            public float AspectRatio => Resolution.X / Resolution.Y;
         }
 
         private sealed class WorldMappedScreenRayProvider : IScreenRayProvider

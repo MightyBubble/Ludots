@@ -210,7 +210,7 @@ public sealed class AimSourceNodeDriver : IGraphOpsNodeDriver
         {
             case nameof(GraphNodeOp.ScreenPointToGround):
                 if (!_last.BoolValue ||
-                    !ctx.Api.TryScreenPointToGround(400f, 150f, out IntVector2 groundCm))
+                    !ctx.Api.TryScreenPointToGround(400f, 150f, null, out IntVector2 groundCm))
                 {
                     throw new InvalidOperationException(
                         $"Aimsource gallery '{ctx.Vignette.Op}' ground resolution failed; caption cannot quote a value.");
@@ -295,7 +295,7 @@ public sealed class AimSourceNodeDriver : IGraphOpsNodeDriver
 
     private static void DrawGroundMark(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
     {
-        if (!ctx.Api.TryScreenPointToGround(400f, 150f, out IntVector2 groundCm))
+        if (!ctx.Api.TryScreenPointToGround(400f, 150f, null, out IntVector2 groundCm))
         {
             return;
         }

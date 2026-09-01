@@ -1245,7 +1245,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryEntryPayloadAcceptanceTests.LoadEntryPayloadFloat_CaptionReportsCapturedGroundX",
+        "GraphOpsNodeGalleryEntryPayloadAcceptanceTests.LoadEntryPayloadFloat_CaptionReportsCapturedPointerScreenX",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "TriggerGraphAuthoringTests.DescriptorProjections_TriggerGraphMirrorsScriptIncludingYield"
