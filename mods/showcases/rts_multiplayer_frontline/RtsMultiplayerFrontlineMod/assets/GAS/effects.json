@@ -1,7 +1,7 @@
 [
   {
     "id": "Effect.Rts.Frontline.CreateInfantry",
-    "tags": ["Effect.Rts.Frontline.Train"],
+    "categories": ["Effect.Rts.Frontline.Train"],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -15,7 +15,7 @@
   },
   {
     "id": "Effect.Rts.Frontline.InfantryDamage",
-    "tags": ["Effect.Rts.Frontline.Damage"],
+    "categories": ["Effect.Rts.Frontline.Damage"],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
