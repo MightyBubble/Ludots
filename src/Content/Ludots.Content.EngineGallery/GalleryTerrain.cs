@@ -334,10 +334,97 @@ namespace Ludots.Content.EngineGallery
             return true;
         }
 
+        /// <summary>射线 vs 高度场：ray-march 符号越零 + 二分细化（与 Core RegularGrid 版同式，cm 合同）。</summary>
         public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = -1)
         {
             hit = default;
+            const float maxDistanceMeters = 4000f;
+            const int steps = 512;
+            const float hitToleranceCm = 4f;
+
+            Vector3 origin = ray.Origin;
+            Vector3 direction = ray.Direction;
+            float SampleDeltaCm(float t)
+            {
+                float xMeters = origin.X + (direction.X * t);
+                float yMeters = origin.Y + (direction.Y * t);
+                float zMeters = origin.Z + (direction.Z * t);
+                if (!TrySampleHeightCm(xMeters, zMeters, out float groundCm))
+                {
+                    return float.NaN;
+                }
+
+                return (yMeters * 100f) - groundCm;
+            }
+
+            float previousDelta = SampleDeltaCm(0f);
+            if (!float.IsFinite(previousDelta))
+            {
+                return false;
+            }
+
+            if (MathF.Abs(previousDelta) <= hitToleranceCm)
+            {
+                hit = BuildHit(ray, 0f);
+                return true;
+            }
+
+            float previousT = 0f;
+            for (int i = 1; i <= steps; i++)
+            {
+                float t = maxDistanceMeters * i / steps;
+                float delta = SampleDeltaCm(t);
+                if (!float.IsFinite(delta))
+                {
+                    continue;
+                }
+
+                bool crossed = (previousDelta >= 0f && delta <= 0f) || (previousDelta <= 0f && delta >= 0f);
+                if (!crossed)
+                {
+                    previousT = t;
+                    previousDelta = delta;
+                    continue;
+                }
+
+                float lo = previousT;
+                float hi = t;
+                for (int refine = 0; refine < 24; refine++)
+                {
+                    float mid = (lo + hi) * 0.5f;
+                    float midDelta = SampleDeltaCm(mid);
+                    if (!float.IsFinite(midDelta))
+                    {
+                        break;
+                    }
+
+                    if ((previousDelta >= 0f) == (midDelta >= 0f))
+                    {
+                        lo = mid;
+                        previousDelta = midDelta;
+                    }
+                    else
+                    {
+                        hi = mid;
+                    }
+                }
+
+                hit = BuildHit(ray, (lo + hi) * 0.5f);
+                return true;
+            }
+
             return false;
+        }
+
+        private static VisualGroundHit BuildHit(in ScreenRay ray, float tMeters)
+        {
+            return new VisualGroundHit(
+                worldXCm: (ray.Origin.X + (ray.Direction.X * tMeters)) * 100f,
+                worldYCm: (ray.Origin.Z + (ray.Direction.Z * tMeters)) * 100f,
+                heightCm: (ray.Origin.Y + (ray.Direction.Y * tMeters)) * 100f,
+                layerIndex: 0,
+                distanceMeters: tMeters,
+                normal: Vector3.UnitY);
         }
 
         public bool RaycastGroundBatch(

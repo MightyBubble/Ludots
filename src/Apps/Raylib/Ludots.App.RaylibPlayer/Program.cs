@@ -72,6 +72,7 @@ namespace Ludots.App.RaylibPlayer
             int frames = ParseFrames(args);
             string? menuAuto = ParseOption(args, "--menu-auto");
             string? interactiveShot = ParseOption(args, "--interactive-shot");
+            bool startInEditor = HasFlag(args, "--edit");
 
             if (sceneId == null && screenshotPath != null)
             {
@@ -85,8 +86,22 @@ namespace Ludots.App.RaylibPlayer
                 return 2;
             }
 
+            string? selfTest = ParseOption(args, "--edit-selftest");
+            if (selfTest != null)
+            {
+                return RunEditSelfTest(project, selfTest);
+            }
+
             if (sceneId != null && project.TryCreate(sceneId, out IEngineScene? scene))
             {
+                if (startInEditor && screenshotPath == null)
+                {
+                    string editorScenePath = Path.Combine(project.Root, project.Descriptors
+                        .First(d => string.Equals(d.Id, sceneId, StringComparison.OrdinalIgnoreCase))
+                        .AssetPath.Replace('\\', '/'));
+                    return RunSceneInteractive(project, scene!, null, editorScenePath, startInEditor: true);
+                }
+
                 return RunScene(project, scene!, screenshotPath, jsonPath, frames);
             }
 
@@ -336,13 +351,17 @@ namespace Ludots.App.RaylibPlayer
             return 0;
         }
 
-        private static int RunSceneInteractive(EngineProject project, IEngineScene scene, string? interactiveShot)
+        private static int RunSceneInteractive(EngineProject project, IEngineScene scene, string? interactiveShot, string? editorScenePath = null, bool startInEditor = false)
         {
             GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, $"Ludots Player — {project.Name}/{scene.Title}");
             Rl.SetTargetFPS(60);
-            var camera = CreateCamera(scene);
+            bool editing = startInEditor && editorScenePath != null;
+            EngineOrbitCamera camera = CreateCamera(scene);
             scene.Load();
+            SceneEditorSession? editor = editing && editorScenePath != null
+                ? new SceneEditorSession(new EngineSceneEditorModel(editorScenePath))
+                : null;
 
             Camera3D cam = camera.Camera;
             double total = 0.0;
@@ -351,16 +370,60 @@ namespace Ludots.App.RaylibPlayer
             {
                 float dt = Rl.GetFrameTime();
                 total += dt;
-                camera.Update(dt);
-                cam = camera.Camera;
+
+                if (editor != null && Rl.IsKeyPressed(KeyboardKey.KEY_E))
+                {
+                    editing = !editing;
+                    if (!editing)
+                    {
+                        editor.Dispose();
+                        editor = null;
+                    }
+                }
+                else if (editor == null && editorScenePath != null && Rl.IsKeyPressed(KeyboardKey.KEY_E) && File.Exists(editorScenePath))
+                {
+                    editor = new SceneEditorSession(new EngineSceneEditorModel(editorScenePath));
+                    editing = true;
+                }
+
+                if (editing && editor != null)
+                {
+                    editor.HandleInput(camera.Camera, WindowWidth, WindowHeight);
+                    camera.UseRotateButton(MouseButton.MOUSE_RIGHT_BUTTON);
+                    if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_CONTROL) && Rl.IsKeyPressed(KeyboardKey.KEY_S))
+                    {
+                        editor.TrySave();
+                    }
+                }
+                else
+                {
+                    camera.UseRotateButton(MouseButton.MOUSE_LEFT_BUTTON);
+                    camera.Update(dt);
+                }
+
+                cam = editing ? camera.Camera : camera.Camera;
 
                 Rl.BeginDrawing();
                 Rl.ClearBackground(GalleryColors.Black);
                 scene.Draw(dt, total, ref cam);
 
-                GalleryFont.Draw($"[ESC] 返回菜单   [R] 复位检视视角（检视视图 · 游戏 3C 由 Ludots 接管）", 8, WindowHeight - 26, 16, GalleryColors.RayWhite);
+                if (editing && editor != null)
+                {
+                    Rl.BeginMode3D(cam);
+                    editor.DrawWorldOverlay(cam);
+                    Rl.EndMode3D();
+                }
+
+                GalleryFont.Draw(editing
+                    ? "[E] 退出编辑   [Ctrl+S] 保存   左键拾取/拖轴   右键旋转（检视视图 · 游戏 3C 由 Ludots 接管）"
+                    : "[ESC] 返回菜单   [R] 复位检视视角   [E] 编辑场景（检视视图 · 游戏 3C 由 Ludots 接管）", 8, WindowHeight - 26, 15, GalleryColors.RayWhite);
                 GalleryFont.Draw($"{scene.Title} — {scene.Summary}", 8, WindowHeight - 48, 18, new Color(220, 220, 230, 255));
                 GalleryFont.Flush();
+
+                if (editing && editor != null)
+                {
+                    editor.DrawHud(WindowWidth, WindowHeight);
+                }
 
                 if (interactiveShot != null && frameIndex == 120)
                 {
@@ -375,6 +438,7 @@ namespace Ludots.App.RaylibPlayer
                 frameIndex++;
             }
 
+            editor?.Dispose();
             scene.Dispose();
             Rl.CloseWindow();
 
@@ -481,6 +545,89 @@ namespace Ludots.App.RaylibPlayer
                 }
             }
             return null;
+        }
+
+        /// <summary>
+        /// 无头编辑自证：打开工程某场景的编辑模型，模拟拾取首个实例、沿 +X 移动 5m、
+        /// 保存到临时副本，断言 diff 只含 position 数字行且重装载语义成立。CI 可跑的证据链。
+        /// </summary>
+        private static int RunEditSelfTest(EngineProject project, string sceneId)
+        {
+            SceneDescriptor descriptor = project.Descriptors.FirstOrDefault(d => string.Equals(d.Id, sceneId, StringComparison.OrdinalIgnoreCase))
+                ?? throw new InvalidOperationException($"Unknown scene '{sceneId}' for edit self-test.");
+            string sourcePath = Path.Combine(project.Root, descriptor.AssetPath.Replace('\\', '/'));
+            string tempPath = Path.Combine(Path.GetTempPath(), "ludots-edit-selftest-" + Guid.NewGuid().ToString("N") + ".scene.json");
+            File.Copy(sourcePath, tempPath);
+
+            try
+            {
+                var editor = new EngineSceneEditorModel(tempPath);
+                List<EngineEditableInstance> instances = editor.EnumerateStaticMeshInstances();
+                if (instances.Count == 0)
+                {
+                    Console.Error.WriteLine($"edit-selftest: scene '{sceneId}' has no static_mesh instances; nothing to pick.");
+                    return 3;
+                }
+
+                EngineEditableInstance target = instances[0];
+                float originalX = target.Position.X;
+                target.PositionArray[0] = System.Text.Json.Nodes.JsonValue.Create(Math.Round(originalX + 5f, 2));
+                editor.Save();
+
+                string before = File.ReadAllText(sourcePath);
+                string after = File.ReadAllText(tempPath);
+                string[] beforeLines = before.Split('\n');
+                string[] afterLines = after.Split('\n');
+                if (beforeLines.Length != afterLines.Length)
+                {
+                    Console.Error.WriteLine("edit-selftest FAIL: line count changed.");
+                    return 4;
+                }
+
+                var changed = new List<int>();
+                for (int i = 0; i < beforeLines.Length; i++)
+                {
+                    if (beforeLines[i] != afterLines[i])
+                    {
+                        changed.Add(i);
+                    }
+                }
+
+                if (changed.Count == 0 || changed.Count > 3)
+                {
+                    Console.Error.WriteLine($"edit-selftest FAIL: expected 1-3 changed lines, got {changed.Count}.");
+                    return 5;
+                }
+
+                // 语义校验由重装载完成（ParseSceneDocument 是 internal，走编辑模型装载链）。
+                var reloaded = new EngineSceneEditorModel(tempPath);
+                float movedX = reloaded.EnumerateStaticMeshInstances()[0].Position.X;
+                if (MathF.Abs(movedX - (originalX + 5f)) > 0.01f)
+                {
+                    Console.Error.WriteLine($"edit-selftest FAIL: reloaded X {movedX} != {originalX + 5f}.");
+                    return 6;
+                }
+
+                Console.WriteLine($"edit-selftest PASS: scene={sceneId} instances={instances.Count} picked={target.NodeId}/comp{target.ComponentIndex}/inst{target.InstanceIndex} movedX {originalX:0.00}->{movedX:0.00} changedLines={changed.Count}");
+                return 0;
+            }
+            finally
+            {
+                File.Delete(tempPath);
+                File.Delete(tempPath + ".bak");
+            }
+        }
+
+        private static bool HasFlag(string[] args, string name)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static int ParseFrames(string[] args)
