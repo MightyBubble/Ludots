@@ -11,17 +11,19 @@ using Ludots.Core.Client;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using Ludots.Tests;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production;
 
 /// <summary>
-/// Case E (#1398 S3) 框选全链 headless 验收，对照 tmp/case-e-config-report.html 的七步：
-/// 01 进图出生 / 02 模板 initialInteractionContext 挂 Instance / 03 Profile triggers 门控 /
-/// 04 InputActionFired 触发衍生 context / 05 presenter 观察 ContextActivated + 集合变化高亮 /
-/// 06 框结束修饰键语义透传事件 key 写 selected 集合。引擎零改动，全部行为来自
-/// CaseESelectionMod 的配置资产。
+/// Case E (#1398 D6) 框选全链 headless 验收（忠实形态），对照 tmp/case-e-config-report.html
+/// 的七步：01 进图出生 / 02 模板 initialInteractionContext 挂 Instance / 03 Profile triggers 门控 /
+/// 04 InputActionFired 触发衍生 context（框起角=press 屏幕像素 + 候选集世界侧刷新）/
+/// 05 presenter 观察 ContextActivated + 集合变化高亮 / 06 框结束对「可框选单位」候选集
+/// （case_e.selectable 集合 key）做屏幕矩形命中（ScreenRegionToEntities）+ 修饰键语义
+/// 透传事件 key 写 selected 集合。引擎零改动，全部行为来自 CaseESelectionMod 的配置资产。
 /// </summary>
 [NonParallelizable]
 [TestFixture]
@@ -35,10 +37,11 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     private const string MarinePresenter = "presenter.case_e.marine_root";
     private const string BoxingMarkerPresenter = "presenter.case_e.boxing_marker";
     private const string SelectedKey = "selected";
+    private const string SelectableKey = "case_e.selectable";
     private const int AttachmentSlotBit = 1 << 1; // semantic slot "attachment"
 
     [Test]
-    public void BoxSelectFullChain_SpawnContextTriggerPresenterCommitAndModifierSemantics()
+    public void BoxSelectFullChain_SpawnContextTriggerPresenterRectHitRosterAndModifierSemantics()
     {
         string repoRoot = FindRepoRoot();
         var backend = new TestInputBackend();
@@ -66,6 +69,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Entity marine2 = Resolve(engine, "case-e-marine-2");
         Entity marine3 = Resolve(engine, "case-e-marine-3");
         Entity marine4 = Resolve(engine, "case-e-marine-4");
+        Entity raider1 = Resolve(engine, "case-e-raider-1");
+        Entity raider2 = Resolve(engine, "case-e-raider-2");
 
         var presenterRuntime = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
             ?? throw new InvalidOperationException("PresenterEntityRuntime service is missing.");
@@ -78,7 +83,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             "框指示 presenter 在按下前不存在");
 
         // ── 04：按下（BoxSelectBegin raw 边沿）→ InputActionFired → 激活衍生「正在框选」context ──
-        PressAt(engine, backend, new Vector2(-1100f, -200f));
+        // 窗口像素 ↔ 世界 cm 1:1 伪件下，marines 1-4 屏幕位置 = (-900,0)/(-300,0)/(300,0)/(900,0)。
+        PressAt(engine, backend, new Vector2(-1200f, -100f));
         TickUntil(engine, 20, () =>
             engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances activated) &&
             activated.Count == 1);
@@ -88,19 +94,25 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             boxing[0].ContextId == boxingProfileId &&
             boxing[0].ParentContextId == battleProfileId,
             "按下即激活衍生 boxing context（父=战斗）");
-        Assert.That(engine.CurrentMapSession!.Variables!.ReadInt("case_e_press_x"), Is.EqualTo(-1100),
-            "框开始点：指针像素经 ScreenPointToGround 同一条射线落地面并写入地图变量");
-        Assert.That(engine.CurrentMapSession.Variables.ReadInt("case_e_press_y"), Is.EqualTo(-200));
+        Assert.That(engine.CurrentMapSession!.Variables!.ReadFloat("case_e_press_px"), Is.EqualTo(-1200f),
+            "框起角=press 指针窗口像素（D1 事实层）写入地图变量，非派生地面点");
+        Assert.That(engine.CurrentMapSession.Variables.ReadFloat("case_e_press_py"), Is.EqualTo(-100f));
+
+        // ── 04b：候选集入参——box_begin 世界侧取全体地图实体，敌我（teamId=1）+ 模板
+        //（case_e_marine）过滤后写入 case_e.selectable 集合（owner=rep）──
+        TickUntil(engine, 20, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        AssertCollection(engine, commander, SelectableKey, "候选集=可框选单位（敌我+模板过滤）",
+            marine1, marine2, marine3, marine4);
 
         // ── 05①b：presenter 观察者——ContextActivated 出现框指示 ──
         Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(1),
             "ContextActivated 事件驱动框指示 presenter 创建");
 
         // 拖拽中（>8px 行程）——门控系统在此 tick 挂上 boxing 的 triggers
-        backend.SetMousePosition(new Vector2(-600f, 0f));
+        backend.SetMousePosition(new Vector2(-300f, 100f));
         TickUntil(engine, 10, () => false);
 
-        // ── 06：抬起（Drag 判定完成）→ 命中集 + replace 语义 → 事件 key → selected 集合 ──
+        // ── 06：抬起（Drag 判定完成）→ 矩形 [press,release] 命中 + replace 语义 → selected ──
         ReleaseAt(engine, backend);
         TickUntil(engine, 30, () =>
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances settled) ||
@@ -108,42 +120,58 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Tick(engine, 4);
         AssertNoTriggerErrors(engine);
 
-        AssertSelected(engine, commander, "无修饰 → replace 语义", marine1, marine2);
+        AssertCollection(engine, commander, SelectedKey, "无修饰 → replace 语义", marine1, marine2);
         Assert.That(
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances cleared) ||
             cleared.Count == 0,
             "框结束 DeactivateContext 清空衍生 context 实例集");
         Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(0),
             "context scope 销毁自动清掉框指示 presenter（§8.3 结构性生命周期）");
-        AssertRingOn(engine, presenterRuntime, marineDefId, "命中单位高亮", marine1, marine2);
-        AssertRingOff(engine, presenterRuntime, marineDefId, "未命中单位不高亮", marine3, marine4);
+        AssertRingOn(engine, presenterRuntime, marineDefId, "负 X 象限单位命中高亮", marine1, marine2);
+        AssertRingOff(engine, presenterRuntime, marineDefId, "框外单位不高亮", marine3, marine4);
+        Assert.That(CollectionContains(engine, commander, SelectedKey, marine2),
+            "边界归属：单位屏幕包围盒与框边相交（ScreenRect.Intersects 含端）→ 归属框内");
 
-        // ── 06 加选：QueueModifier → add 语义 ──
+        // ── 06 加选：QueueModifier → add 语义（框到 marine2/3 并集）──
         DragBox(
             engine,
             backend,
             commander,
-            new Vector2(-1100f, -200f),
-            new Vector2(300f, 0f),
+            new Vector2(-350f, -100f),
+            new Vector2(400f, 100f),
             "QueueModifier");
-        AssertSelected(engine, commander, "QueueModifier → add 语义并集", marine1, marine2, marine3);
+        AssertCollection(engine, commander, SelectedKey, "QueueModifier → add 语义并集", marine1, marine2, marine3);
         AssertRingOn(engine, presenterRuntime, marineDefId, "加选后新命中单位高亮", marine1, marine2, marine3);
 
-        // ── 06 减选：ModifierSubtract → subtract 语义 ──
+        // ── 06 减选：ModifierSubtract → subtract 语义（框到 marine1 差集）──
         DragBox(
             engine,
             backend,
             commander,
-            new Vector2(-900f, -200f),
-            new Vector2(-300f, 0f),
+            new Vector2(-1000f, -100f),
+            new Vector2(-600f, 100f),
             "ModifierSubtract");
-        AssertSelected(engine, commander, "ModifierSubtract → subtract 语义差集", marine1, marine3);
-        AssertRingOn(engine, presenterRuntime, marineDefId, "减选后仅剩命中单位保持高亮", marine1, marine3);
-        AssertRingOff(engine, presenterRuntime, marineDefId, "被减去的单位取消高亮", marine2);
+        AssertCollection(engine, commander, SelectedKey, "ModifierSubtract → subtract 语义差集", marine2, marine3);
+        AssertRingOn(engine, presenterRuntime, marineDefId, "减选后仅剩命中单位保持高亮", marine2, marine3);
+        AssertRingOff(engine, presenterRuntime, marineDefId, "被减去的单位取消高亮", marine1);
 
-        // ── 04 零长框 = Tap 点选：Tap 判定完成 → tap_commit 以点位置命中 ──
+        // ── 06 敌我过滤：矩形盖住全图（含敌方 raiders 屏幕位置）→ 命中仍只有己方可框选单位 ──
+        DragBox(
+            engine,
+            backend,
+            commander,
+            new Vector2(-1500f, -400f),
+            new Vector2(1500f, 2200f));
+        AssertCollection(engine, commander, SelectedKey, "矩形盖住敌方单位仍被候选集过滤（敌我）",
+            marine1, marine2, marine3, marine4);
+        Assert.That(
+            !CollectionContains(engine, commander, SelectedKey, raider1) &&
+            !CollectionContains(engine, commander, SelectedKey, raider2),
+            "敌方单位在矩形内也永不入选（候选集=case_e.selectable，敌我在集合侧过滤）");
+
+        // ── 04 零长框 = Tap 点选：Tap 判定完成 → tap_commit 以点击点为零长矩形，与单位屏幕包围盒相交即命中 ──
         TapAt(engine, backend, commander, new Vector2(900f, 0f));
-        AssertSelected(engine, commander, "零长框走 Tap 点选并 replace", marine4);
+        AssertCollection(engine, commander, SelectedKey, "零长框走 Tap 点选（点矩形×单位屏幕包围盒）并 replace", marine4);
         Assert.That(
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances afterTap) ||
             afterTap.Count == 0,
@@ -164,9 +192,10 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         return session.EntityIndex.GetRequired(session.MapId.Value, instanceId, "CaseESelectionAcceptance");
     }
 
-    // The window-point ray provider fake maps window pixels to world cm 1:1, so the
-    // authored mouse position doubles as the ground point the graphs derive via
-    // ScreenPointToGround on the same LogicView-ray chain as production.
+    // The window-point ray/projector fakes map window pixels to world cm 1:1, so the
+    // authored mouse position doubles as both the ground point (ScreenPointToGround
+    // chain) and the projected unit position (ScreenRegionToEntities chain) — the same
+    // LogicView-ray chain production uses.
     private static void PressAt(GameEngine engine, TestInputBackend backend, Vector2 mouse)
     {
         backend.SetMousePosition(mouse);
@@ -179,7 +208,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     }
 
     /// <summary>
-    /// 完整一次框选：按下 → 拖拽行程 → 抬起（指针像素经射线落地面，无 ground 覆盖）。
+    /// 完整一次框选：按下 → 拖拽行程 → 抬起（框矩形 = press..release 指针窗口像素）。
     /// 修饰键动作注入是单帧脉冲，pacemaker 又会跨帧攒逻辑 tick，逐帧重注入保证
     /// InputActionFired 冻结快照读到的 IsDown 在整个释放窗口内成立。
     /// </summary>
@@ -256,12 +285,47 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             ?? throw new InvalidOperationException("PlayerInputHandler service is missing.");
     }
 
-    private static void AssertSelected(GameEngine engine, Entity owner, string message, params Entity[] expected)
+    private static int CollectionCount(GameEngine engine, Entity owner, string key)
     {
         var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
-        int keyId = store.KeyRegistry.GetId(SelectedKey);
-        Assert.That(keyId, Is.GreaterThan(0), "selected 集合 key 已注册");
+        int keyId = store.KeyRegistry.GetId(key);
+        return keyId > 0 && store.TryGet(owner, keyId, out EntityCollectionHandle handle) &&
+            store.TryGetView(handle, out EntityCollectionView view)
+            ? view.Count
+            : -1;
+    }
+
+    private static bool CollectionContains(GameEngine engine, Entity owner, string key, Entity entity)
+    {
+        var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
+        int keyId = store.KeyRegistry.GetId(key);
+        if (keyId <= 0 || !store.TryGet(owner, keyId, out EntityCollectionHandle handle) ||
+            !store.TryGetView(handle, out EntityCollectionView view))
+        {
+            return false;
+        }
+
+        var buffer = new Entity[view.Count];
+        int count = store.CopyEntities(handle, 0, buffer);
+        for (int i = 0; i < count; i++)
+        {
+            if (buffer[i] == entity)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void AssertCollection(GameEngine engine, Entity owner, string key, string message, params Entity[] expected)
+    {
+        var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
+        int keyId = store.KeyRegistry.GetId(key);
+        Assert.That(keyId, Is.GreaterThan(0), $"{message}：集合 key 已注册");
         Assert.That(store.TryGet(owner, keyId, out EntityCollectionHandle handle), Is.True, message);
         Assert.That(store.TryGetView(handle, out EntityCollectionView view), Is.True, message);
         Assert.That(view.Count, Is.EqualTo(expected.Length), $"{message}：成员数");
@@ -337,7 +401,10 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             (Ludots.Core.Presentation.Camera.IViewController)new HeadlessViewController(1600f, 900f));
         engine.SetService(
             CoreServiceKeys.ScreenRayProvider,
-            (Ludots.Platform.Abstractions.IScreenRayProvider)new WindowPointGroundRayProvider());
+            (IScreenRayProvider)new WindowPointGroundRayProvider());
+        engine.SetService(
+            CoreServiceKeys.ScreenProjector,
+            (IScreenProjector)new WindowPointScreenProjector());
         engine.Start();
         return engine;
     }
@@ -368,13 +435,22 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         throw new DirectoryNotFoundException("Failed to locate repository root from test output directory.");
     }
 
-    private sealed class WindowPointGroundRayProvider : Ludots.Platform.Abstractions.IScreenRayProvider
+    private sealed class WindowPointGroundRayProvider : IScreenRayProvider
     {
-        public Ludots.Platform.Abstractions.ScreenRay GetRay(System.Numerics.Vector2 screenPosition)
+        public ScreenRay GetRay(System.Numerics.Vector2 screenPosition)
         {
-            return new Ludots.Platform.Abstractions.ScreenRay(
+            return new ScreenRay(
                 new System.Numerics.Vector3(screenPosition.X / 100f, 10f, screenPosition.Y / 100f),
                 -System.Numerics.Vector3.UnitY);
+        }
+    }
+
+    /// <summary>World cm ↔ window px 1:1（与 WindowPointGroundRayProvider 同一约定），供 ScreenRegionToEntities 的投影链。</summary>
+    private sealed class WindowPointScreenProjector : IScreenProjector
+    {
+        public Vector2 WorldToScreen(Vector3 worldPosition)
+        {
+            return new Vector2(worldPosition.X * 100f, worldPosition.Z * 100f);
         }
     }
 

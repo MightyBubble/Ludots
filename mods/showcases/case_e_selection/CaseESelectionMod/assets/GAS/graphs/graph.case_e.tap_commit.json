@@ -30,14 +30,13 @@
         "payloadKey": "MapTrigger.PointerScreenY"
       },
       {
-        "id": "tap_to_ground",
-        "op": "ScreenPointToGround"
+        "id": "roster",
+        "op": "QueryFromCollection",
+        "collectionKey": "case_e.selectable"
       },
       {
-        "id": "hits",
-        "op": "QueryRadius",
-        "radiusCm": 150,
-        "queryCapacityPolicy": "RequireComplete"
+        "id": "pick_hits",
+        "op": "ScreenRegionToEntities"
       },
       {
         "id": "op_replace",
@@ -68,18 +67,21 @@
     "controlEdges": [
       { "from": "rep", "fromPort": "next", "to": "tap_px" },
       { "from": "tap_px", "fromPort": "next", "to": "tap_py" },
-      { "from": "tap_py", "fromPort": "next", "to": "tap_to_ground" },
-      { "from": "tap_to_ground", "fromPort": "next", "to": "hits" },
-      { "from": "hits", "fromPort": "next", "to": "op_replace" },
+      { "from": "tap_py", "fromPort": "next", "to": "roster" },
+      { "from": "roster", "fromPort": "next", "to": "pick_hits" },
+      { "from": "pick_hits", "fromPort": "next", "to": "op_replace" },
       { "from": "op_replace", "fromPort": "next", "to": "commit" },
       { "from": "commit", "fromPort": "next", "to": "deactivate_boxing" },
       { "from": "deactivate_boxing", "fromPort": "next", "to": "ok" },
       { "from": "ok", "fromPort": "next", "to": "halt" }
     ],
     "valueEdges": [
+      { "from": "rep", "fromPort": "value", "to": "roster", "toPort": "source" },
       { "from": "rep", "fromPort": "value", "to": "deactivate_boxing", "toPort": "source" },
-      { "from": "tap_px", "fromPort": "value", "to": "tap_to_ground", "toPort": "a" },
-      { "from": "tap_py", "fromPort": "value", "to": "tap_to_ground", "toPort": "b" },
+      { "from": "tap_px", "fromPort": "value", "to": "pick_hits", "toPort": "a" },
+      { "from": "tap_py", "fromPort": "value", "to": "pick_hits", "toPort": "b" },
+      { "from": "tap_px", "fromPort": "value", "to": "pick_hits", "toPort": "c" },
+      { "from": "tap_py", "fromPort": "value", "to": "pick_hits", "toPort": "max" },
       { "from": "op_replace", "fromPort": "value", "to": "commit", "toPort": "value" },
       { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
     ]
