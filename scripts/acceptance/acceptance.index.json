@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 49,
+    "runnable": 50,
     "testOnly": 0,
-    "total": 49
+    "total": 50
   },
   "runnable": [
     {
@@ -113,6 +113,14 @@
       "binding": "capability_standard_virtual_camera_showcase",
       "testFilter": "CapabilityStandardVirtualCameraShowcaseAcceptanceTests",
       "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "case_e_selection",
+      "preset": "case_e_selection_raylib",
+      "binding": "case_e_selection",
+      "testFilter": "CaseESelectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/case-e-selection",
       "hasScreenshotEvidence": false
     },
     {
