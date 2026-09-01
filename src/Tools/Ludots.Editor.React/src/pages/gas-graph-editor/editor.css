@@ -106,6 +106,12 @@
   padding: 1px 5px;
 }
 
+.gas-live-badge-hot {
+  background: rgba(34, 211, 238, 0.18);
+  border-color: rgba(34, 211, 238, 0.65);
+  color: #a5f3fc;
+}
+
 .gas-live-pin-strip {
   display: flex;
   flex-wrap: wrap;

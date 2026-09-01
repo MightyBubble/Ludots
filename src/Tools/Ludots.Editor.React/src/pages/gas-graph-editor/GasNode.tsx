@@ -159,8 +159,10 @@ function LivePinStrip({ pins }: { pins: { pinIndex: number; value: string }[] })
 }
 
 function liveHeaderBadge(data: GasNodeViewData): React.ReactNode {
-  if (!data.liveDebug?.current) return null;
-  return <span className="gas-live-badge">LIVE</span>;
+  if (!data.liveDebug) return null;
+  if (data.liveDebug.current) return <span className="gas-live-badge">LIVE</span>;
+  if (data.liveDebug.intensity > 0.66) return <span className="gas-live-badge gas-live-badge-hot">HOT</span>;
+  return null;
 }
 
 export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
