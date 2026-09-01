@@ -106,15 +106,18 @@ projects/<name>/
 
 节点 id 唯一；parent 必须已声明、不得成环；rotation 为单位四元数（xyzw）。
 
-组件是纯美术能力，kind 用短名经特性注册（对应实现类打 `[EngineSceneComponent(kind)]`），**关卡文件不出现 C# 类型名**。v1 组件面：
+组件是纯美术能力，kind 用短名经特性注册（对应实现类打 `[EngineSceneComponent(kind)]`），**关卡文件不出现 C# 类型名**。组件可声明 `config` 对象（必须是 JSON 对象，装载层拦截；实现 `IEngineSceneComponentConfigurable` 自行解析，配置落在不可配置组件上装载 fail-fast）。已落地组件面（`src/Content/Ludots.Content.EngineGallery/Components/`）：
 
-| kind | 字段 | 映射 |
-|---|---|---|
-| `static_mesh` | `asset`(mesh)、`material`?、`instances[]`（各含 position/rotation/scale，可选 color） | 每个 instance 摊成一个 `PrimitiveDrawItem`；同 MeshAssetId 自动进 ISM 合批车道 |
-| `animator` | `asset`(model)、`clip`、`loop`、`phase`、`speed` | 美术动画播放，产出 `SkinnedVisualBatchItem`；clip 来自 GLB 内嵌动画，v1 不另立 clip 文件格式 |
-| `terrain` | `asset`(.height/.grid)、`profile` | 高度图 / 网格地形渲染源 |
-| `environment` | sky / fog 配置 | 下发 `RaylibSkyEnvironment` / 雾参数 |
-| `decal` / `water` | 资产引用与参数 | 对应现有 renderer 配置面 |
+| kind | 资产 | config 字段 | 映射 | 形态 |
+|---|---|---|---|---|
+| `island_terrain` | — | chunksPerSide / samplesPerChunk / worldSizeMeters / seed / dayPhase | 程序化高度场 + 全帧天空/阴影 | 基座（清屏画环境，不触碰相机） |
+| `static_mesh` | 可选 material（.mat.json） | primitive（cube/sphere）、material（资产 id）、instances[]（position / yawDeg? / scale / color / 可选逐实例 material 覆盖） | 每个 instance 摊成一个 `PrimitiveDrawItem` 进 ISM 合批车道 | 覆盖（不清屏叠加） |
+| `animator` | model（GLB） | clip / speed / phaseOffset / position / scale / facingDeg / castShadows | GLB 内嵌 clip 播放，逐帧 lit 绘制 | 覆盖（不清屏叠加） |
+| 存量 21 能力组件 | 按各自清单 | — | 各渲染能力的单组件封装 | 单节点整帧 |
+
+覆盖组件的 lit 绘制必须自画一遍天空（不清屏叠加）：lit 材质的 IBL 环境由帧内天空通道喂给，缺了模型渲染成近黑；走 primitive/instanced 光照路径的组件不吃 IBL，无此要求。组合场景活样本见 [关卡容器的组合实拍](../reference/engine-gallery-wiki/composition.md)。
+
+格式预留（kind 已在装载层登记为合法词汇，组件实现随后续需求交付，不与已兑现 kind 混列）：`terrain`（.height/.grid 资产地形源）、`environment`（sky/fog 配置）、`decal` / `water`。
 
 ## 7. 材质格式（materials）
 

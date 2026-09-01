@@ -282,8 +282,9 @@ namespace Ludots.Tests.RaylibAdapter
         [Test]
         public void SceneComponentSources_HaveNoHardcodedAssetUris()
         {
-            foreach (string file in Directory.EnumerateFiles(
-                Path.Combine(RepoRoot, "src", "Content", "Ludots.Content.EngineGallery", "Scenes"), "*.cs"))
+            string contentRoot = Path.Combine(RepoRoot, "src", "Content", "Ludots.Content.EngineGallery");
+            foreach (string file in Directory.EnumerateFiles(Path.Combine(contentRoot, "Scenes"), "*.cs")
+                .Concat(Directory.EnumerateFiles(Path.Combine(contentRoot, "Components"), "*.cs")))
             {
                 foreach (string line in File.ReadAllLines(file))
                 {

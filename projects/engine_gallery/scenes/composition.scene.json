@@ -131,7 +131,8 @@
                   0.798,
                   0.83,
                   1.0
-                ]
+                ],
+                "yawDeg": 91.5
               },
               {
                 "position": [
@@ -149,7 +150,8 @@
                   0.797,
                   0.829,
                   1.0
-                ]
+                ],
+                "yawDeg": 146.7
               },
               {
                 "position": [
@@ -167,7 +169,8 @@
                   0.735,
                   0.764,
                   1.0
-                ]
+                ],
+                "yawDeg": 22.9
               },
               {
                 "position": [
@@ -185,7 +188,8 @@
                   0.724,
                   0.753,
                   1.0
-                ]
+                ],
+                "yawDeg": 63.7
               },
               {
                 "position": [
@@ -203,7 +207,8 @@
                   0.772,
                   0.803,
                   1.0
-                ]
+                ],
+                "yawDeg": 131.6
               },
               {
                 "position": [
@@ -222,7 +227,8 @@
                   0.95,
                   1.0
                 ],
-                "material": "composition.rock_mossy"
+                "material": "composition.rock_mossy",
+                "yawDeg": 325.9
               },
               {
                 "position": [
@@ -240,7 +246,8 @@
                   0.891,
                   0.926,
                   1.0
-                ]
+                ],
+                "yawDeg": 15.3
               },
               {
                 "position": [
@@ -258,7 +265,8 @@
                   0.85,
                   0.884,
                   1.0
-                ]
+                ],
+                "yawDeg": 66.9
               },
               {
                 "position": [
@@ -277,7 +285,8 @@
                   0.95,
                   1.0
                 ],
-                "material": "composition.rock_mossy"
+                "material": "composition.rock_mossy",
+                "yawDeg": 19.1
               },
               {
                 "position": [
@@ -295,7 +304,8 @@
                   0.879,
                   0.915,
                   1.0
-                ]
+                ],
+                "yawDeg": 104.7
               },
               {
                 "position": [
@@ -313,7 +323,8 @@
                   0.839,
                   0.873,
                   1.0
-                ]
+                ],
+                "yawDeg": 217.0
               },
               {
                 "position": [
@@ -332,7 +343,8 @@
                   0.95,
                   1.0
                 ],
-                "material": "composition.rock_mossy"
+                "material": "composition.rock_mossy",
+                "yawDeg": 144.4
               },
               {
                 "position": [
@@ -350,7 +362,8 @@
                   0.877,
                   0.912,
                   1.0
-                ]
+                ],
+                "yawDeg": 339.4
               },
               {
                 "position": [
@@ -368,7 +381,8 @@
                   0.859,
                   0.893,
                   1.0
-                ]
+                ],
+                "yawDeg": 156.3
               },
               {
                 "position": [
@@ -387,7 +401,8 @@
                   0.95,
                   1.0
                 ],
-                "material": "composition.rock_mossy"
+                "material": "composition.rock_mossy",
+                "yawDeg": 329.9
               },
               {
                 "position": [
@@ -405,7 +420,8 @@
                   0.726,
                   0.756,
                   1.0
-                ]
+                ],
+                "yawDeg": 162.1
               },
               {
                 "position": [
@@ -423,7 +439,8 @@
                   0.813,
                   0.846,
                   1.0
-                ]
+                ],
+                "yawDeg": 41.0
               },
               {
                 "position": [
@@ -442,7 +459,8 @@
                   0.95,
                   1.0
                 ],
-                "material": "composition.rock_mossy"
+                "material": "composition.rock_mossy",
+                "yawDeg": 55.5
               },
               {
                 "position": [
@@ -460,7 +478,8 @@
                   0.875,
                   0.91,
                   1.0
-                ]
+                ],
+                "yawDeg": 84.3
               },
               {
                 "position": [
@@ -478,7 +497,8 @@
                   0.848,
                   0.882,
                   1.0
-                ]
+                ],
+                "yawDeg": 307.8
               },
               {
                 "position": [
@@ -497,7 +517,8 @@
                   0.95,
                   1.0
                 ],
-                "material": "composition.rock_mossy"
+                "material": "composition.rock_mossy",
+                "yawDeg": 94.6
               },
               {
                 "position": [
@@ -515,7 +536,8 @@
                   0.843,
                   0.876,
                   1.0
-                ]
+                ],
+                "yawDeg": 211.9
               },
               {
                 "position": [
@@ -533,7 +555,8 @@
                   0.735,
                   0.764,
                   1.0
-                ]
+                ],
+                "yawDeg": 294.3
               },
               {
                 "position": [
@@ -551,7 +574,8 @@
                   0.769,
                   0.8,
                   1.0
-                ]
+                ],
+                "yawDeg": 202.1
               },
               {
                 "position": [
@@ -569,7 +593,8 @@
                   0.894,
                   0.929,
                   1.0
-                ]
+                ],
+                "yawDeg": 156.5
               },
               {
                 "position": [
@@ -587,7 +612,8 @@
                   0.787,
                   0.818,
                   1.0
-                ]
+                ],
+                "yawDeg": 79.1
               },
               {
                 "position": [
@@ -605,7 +631,8 @@
                   0.901,
                   0.937,
                   1.0
-                ]
+                ],
+                "yawDeg": 215.5
               },
               {
                 "position": [
@@ -623,7 +650,8 @@
                   0.82,
                   0.853,
                   1.0
-                ]
+                ],
+                "yawDeg": 70.0
               },
               {
                 "position": [
@@ -641,7 +669,8 @@
                   0.916,
                   0.952,
                   1.0
-                ]
+                ],
+                "yawDeg": 84.3
               },
               {
                 "position": [
@@ -659,7 +688,8 @@
                   0.758,
                   0.788,
                   1.0
-                ]
+                ],
+                "yawDeg": 284.9
               },
               {
                 "position": [
@@ -677,7 +707,8 @@
                   0.737,
                   0.767,
                   1.0
-                ]
+                ],
+                "yawDeg": 152.8
               },
               {
                 "position": [
@@ -695,7 +726,8 @@
                   0.788,
                   0.82,
                   1.0
-                ]
+                ],
+                "yawDeg": 38.7
               },
               {
                 "position": [
@@ -713,7 +745,8 @@
                   0.829,
                   0.862,
                   1.0
-                ]
+                ],
+                "yawDeg": 280.6
               },
               {
                 "position": [
@@ -731,7 +764,8 @@
                   0.814,
                   0.846,
                   1.0
-                ]
+                ],
+                "yawDeg": 92.5
               },
               {
                 "position": [
@@ -749,7 +783,8 @@
                   0.857,
                   0.891,
                   1.0
-                ]
+                ],
+                "yawDeg": 70.3
               },
               {
                 "position": [
@@ -767,7 +802,8 @@
                   0.827,
                   0.86,
                   1.0
-                ]
+                ],
+                "yawDeg": 123.8
               }
             ]
           }

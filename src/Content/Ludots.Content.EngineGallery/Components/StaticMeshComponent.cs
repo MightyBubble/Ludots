@@ -57,6 +57,7 @@ namespace Ludots.Content.EngineGallery.Components
             {
                 _instances.Add(new InstanceSpec(
                     ReadVector3(item, "position"),
+                    ReadYawRotation(item),
                     ReadScale(item),
                     ReadColor(item),
                     item.TryGetProperty("material", out JsonElement m) && m.ValueKind == JsonValueKind.String ? m.GetString()! : string.Empty));
@@ -103,7 +104,8 @@ namespace Ludots.Content.EngineGallery.Components
                     instance.Position,
                     instance.Scale,
                     instance.Color,
-                    materialKey.Length > 0 && _materialIdByAssetKey.TryGetValue(materialKey, out int materialId) ? materialId : 0));
+                    materialId: materialKey.Length > 0 && _materialIdByAssetKey.TryGetValue(materialKey, out int mid) ? mid : 0,
+                    rotation: instance.Rotation));
             }
 
             Rl.BeginMode3D(camera);
@@ -159,6 +161,17 @@ namespace Ludots.Content.EngineGallery.Components
             return ReadVector3(element, "scale");
         }
 
+        private static Quaternion ReadYawRotation(JsonElement element)
+        {
+            if (!element.TryGetProperty("yawDeg", out JsonElement value) || value.ValueKind != JsonValueKind.Number)
+            {
+                return Quaternion.Identity;
+            }
+
+            float radians = value.GetSingle() * (MathF.PI / 180f);
+            return Quaternion.CreateFromAxisAngle(Vector3.UnitY, radians);
+        }
+
         private static Vector4 ReadColor(JsonElement element)
         {
             if (!element.TryGetProperty("color", out JsonElement value) || value.ValueKind != JsonValueKind.Array || value.GetArrayLength() != 4)
@@ -169,6 +182,6 @@ namespace Ludots.Content.EngineGallery.Components
             return new Vector4(value[0].GetSingle(), value[1].GetSingle(), value[2].GetSingle(), value[3].GetSingle());
         }
 
-        private readonly record struct InstanceSpec(Vector3 Position, Vector3 Scale, Vector4 Color, string MaterialAssetKey);
+        private readonly record struct InstanceSpec(Vector3 Position, Quaternion Rotation, Vector3 Scale, Vector4 Color, string MaterialAssetKey);
     }
 }
