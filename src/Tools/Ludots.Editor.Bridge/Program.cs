@@ -3309,21 +3309,22 @@ static bool TryResolveAiTopologyPath(
     resolvedSource = string.IsNullOrWhiteSpace(source) ? "core" : source.Trim();
     error = null;
     string repoRoot = FindAssetsRoot();
+    string sourceKey = resolvedSource;
 
-    if (string.Equals(resolvedSource, "core", StringComparison.OrdinalIgnoreCase))
+    if (string.Equals(sourceKey, "core", StringComparison.OrdinalIgnoreCase))
     {
         path = Path.Combine(repoRoot, "assets", "AI", fileName);
         return true;
     }
 
     var mod = launcher.DiscoverMods().FirstOrDefault(m =>
-        string.Equals(m.Id, resolvedSource, StringComparison.OrdinalIgnoreCase));
+        string.Equals(m.Id, sourceKey, StringComparison.OrdinalIgnoreCase));
     if (mod == null)
     {
         error = Results.BadRequest(new
         {
             ok = false,
-            error = $"Unknown AI topology source '{resolvedSource}'. Use 'core' or a launcher mod id.",
+            error = $"Unknown AI topology source '{sourceKey}'. Use 'core' or a launcher mod id.",
         });
         return false;
     }
