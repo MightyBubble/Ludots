@@ -68,7 +68,7 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 1. 编辑器加载与游戏同一 `graphId`（如 `Graph.NightRaid.Flow`）。
 2. 右侧 Live Debug → 选择已挂载入口 → Watch。
 3. 工具动作：`list` → `configure { mode: nodeAndPins }` → `drain { since }`；drain 事件带 `nodeId` / `op` / `controlPort` / pin 值。
-4. 画布做 Flow Canvas 式可视化：当前节点青绿脉冲，近期路径青色拖尾，走过的控制边加粗并动画，节点脚上出现 pin 值芯片。右侧日志只是辅助轨迹，不再是唯一反馈。
+4. 画布做 Flow Canvas 式可视化：当前节点青绿脉冲，近期路径青色拖尾，走过的控制边加粗并动画，节点脚上出现 pin 值芯片。Watch 某一入口时只留下从该入口可达的短链，其它链隐藏，避免整图糊成一团。右侧日志只是辅助轨迹，不再是唯一反馈。
 5. 不声称完整 `NodeExit` 生命周期。嵌套 `InvokeScript` 记录带 `graphId`；source map 缺失时 AgentBridge 失败关闭，错误含 graph id 与 pc。
 
 ### 3.4 TriggerGraph 事件入口
@@ -118,11 +118,19 @@ Feature: 蓝图编辑器与 live debug 可教可验
     Given 夜袭 showcase 与 AgentBridge 正在跑
     And tools 目录含 ludots.graph.debug
     When 我在编辑器对 Graph.NightRaid.Flow 打开 Watch
-    Then 画布上当前节点亮起并带 LIVE 标记
+    Then 画布只留下该入口可达的短链，其它链不可见
+    And 画布上当前节点亮起并带 LIVE 标记
     And 最近走过的控制边加粗动画
     And 有 pin 变化时节点上出现数值芯片
     And 右侧事件流仍可见节点归因或挂起/停机记录
     And 缺 source map 时请求失败并点名 graph 与 pc
+
+  Scenario: 左键瞬移看得到落点
+    Given 夜袭 showcase 与 AgentBridge 正在跑
+    And 我 Watch 了 on_teleport
+    When 我在战场空白处点左键
+    Then 英雄跳到点击对应的地面落点
+    And 短链按 tp_px → tp_ground → tp_move 顺序亮起
 
   Scenario: TriggerGraph 事件入口选 Schema
     Given 编辑器已打开 MapTriggerNightRaidMod 的 TriggerGraph
