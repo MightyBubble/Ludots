@@ -66,10 +66,14 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 ### 3.3 Live Debug 操作
 
 1. 编辑器加载与游戏同一 `graphId`（如 `Graph.NightRaid.Flow`）。
-2. 右侧 Live Debug → Refresh / 选择 mounted entry → Watch。
-3. 工具动作：`list` → `configure { mode: nodeAndPins }` → `drain { since }`。
-4. 画布高亮最近执行节点；事件流显示 NodeEnter / Suspended / Halted / pin / blackboard 变化。不声称 `NodeExit` 完整生命周期。
-5. 嵌套 `InvokeScript` 的记录带 `graphId`；source map 缺失时 AgentBridge fail-closed，错误含 graph id 与 pc。
+2. 右侧 Live Debug → 选择已挂载入口 → Watch。
+3. 工具动作：`list` → `configure { mode: nodeAndPins }` → `drain { since }`；drain 事件带 `nodeId` / `op` / `controlPort` / pin 值。
+4. 画布做 Flow Canvas 式可视化：当前节点青绿脉冲，近期路径青色拖尾，走过的控制边加粗并动画，节点脚上出现 pin 值芯片。右侧日志只是辅助轨迹，不再是唯一反馈。
+5. 不声称完整 `NodeExit` 生命周期。嵌套 `InvokeScript` 记录带 `graphId`；source map 缺失时 AgentBridge 失败关闭，错误含 graph id 与 pc。
+
+### 3.4 TriggerGraph 事件入口
+
+事件名优先从 `/api/graph/event-schemas/{modId}` 下拉选择；选中后自动建议 `on_<Event>` 标签，并在检查器展示 Schema 载荷针。仍可手填未登记事件名，但会标明载荷针未类型化。
 
 ---
 
@@ -77,10 +81,11 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 
 1. 新人打开 `/gas-graphs`，加载夜袭 Flow 图，看见控制端口与 Bridge 投影的作者糖，Validate 通过。
 2. 故意加未连线的 Until，Validate 点名缺 `body`/`next`/`condition`。
-3. 夜袭 + AgentBridge 运行中，Watch 后看到 heartbeat / MapLoaded 触发的节点高亮与 pin 变化。
-4. 在 Script 图里加入 `FsmState`，填写枚举与相位变量并挂 case 臂，保存后再打开字段仍在。
-5. 在 Script 图里加入 `BtSequence`，用 child 臂挂子节点；`BtDecorator` 选 `decoratorKind` 后连 `child:0`，保存后再打开仍在。
-6. 变量面板类型只见 Integer / Float，没有 Array / Map。
+3. 夜袭 + AgentBridge 运行中，Watch 后看到节点/连线亮起与 pin 芯片，而不只是右侧日志滚动。
+4. TriggerGraph 事件入口从 Schema 下拉选事件，检查器列出载荷针。
+5. 在 Script 图里加入 `FsmState`，填写枚举与相位变量并挂 case 臂，保存后再打开字段仍在。
+6. 在 Script 图里加入 `BtSequence`，用 child 臂挂子节点；`BtDecorator` 选 `decoratorKind` 后连 `child:0`，保存后再打开仍在。
+7. 变量面板类型只见 Integer / Float，没有 Array / Map。
 
 ---
 
@@ -113,6 +118,15 @@ Feature: 蓝图编辑器与 live debug 可教可验
     Given 夜袭 showcase 与 AgentBridge 正在跑
     And tools 目录含 ludots.graph.debug
     When 我在编辑器对 Graph.NightRaid.Flow 打开 Watch
-    Then 事件流出现节点归因或挂起/停机记录
+    Then 画布上当前节点亮起并带 LIVE 标记
+    And 最近走过的控制边加粗动画
+    And 有 pin 变化时节点上出现数值芯片
+    And 右侧事件流仍可见节点归因或挂起/停机记录
     And 缺 source map 时请求失败并点名 graph 与 pc
+
+  Scenario: TriggerGraph 事件入口选 Schema
+    Given 编辑器已打开 MapTriggerNightRaidMod 的 TriggerGraph
+    When 我选中一张 Event 卡并打开检查器
+    Then 我能从事件 Schema 下拉里选登记过的事件
+    And 载荷针列表与 Schema 参数一致
 ```
