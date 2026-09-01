@@ -46,10 +46,12 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 
 ## 标准化合同
 
-1. **场景代码**：`Scenes/<Id>Scene.cs` 实现 `IEngineScene { Id, Title, Summary, Load, Draw, Dispose }`；自含可读、数据程序化生成；`SceneCatalog` 显式注册；画廊菜单自动枚举。
-2. **验收 CLI**：`--scene <id> --screenshot <path> --frames N --json <stats>`；截图 + 帧统计（avg/p95/max）为每场景标准证据。
-3. **注册表**：每场景一条 `engine_raylib_<id>` 条目（category=engine、tier 与四件套按验收状态补齐）。
-4. **资产**：画廊 assets 自持最小 fixture（模型 GLB、粒子 JSON、程序化数据），不引用 mods/、不依赖宿主。
+1. **关卡容器**：`assets/engine_gallery/<id>.scene.json` 是独立的引擎层场景资产，声明根节点、节点层级和组件挂载；关卡文件不保存 C# 场景类型名。
+2. **能力组件**：`Scenes/<Capability>Scene.cs` 实现 `IEngineSceneComponent`，并通过 `EngineSceneComponentAttribute` 注册为可挂载能力；组件不拥有场景目录。
+3. **运行时目录**：`assets/engine_gallery/catalog.json` 只登记 `id` 与 `asset`，`SceneCatalog` 装载场景容器并组合组件；画廊菜单自动枚举。
+4. **验收 CLI**：`--scene <id> --screenshot <path> --frames N --json <stats>`；截图 + 帧统计（avg/p95/max）为每场景标准证据。
+5. **注册表**：每场景一条 `engine_raylib_<id>` 条目（category=engine、tier 与四件套按验收状态补齐）。
+6. **资产**：画廊 assets 自持最小 fixture（模型 GLB、粒子 JSON、程序化数据），不引用 mods/、不依赖宿主。
 
 ## 架构支撑
 

@@ -84,7 +84,7 @@ shader 装载约定唯一真源在 `src/Platforms/Desktop/`（经 csproj 传递�
 2. 唯一帧执行者 `RaylibFrameRenderer`（#1323 起）：先 `BuildPassPlan` 声明本帧 pass 再逐项执行，声明顺序=执行顺序。顺序为 Clear → 水面反射/折射（如启用）→ `ShadowDepth`（`RaylibDirectionalShadowMap.BeginFrame` → 地形/高度图/基准场景/即时/蒙皮/车道灌深度 → `EndFrame`，由 `RenderDebugState.DrawShadows` 门控；阴影盒以相机目标为中心、`LUDOTS_RAYLIB_SHADOW_SCENE_RADIUS`（默认 48m）为场景半径，盒外接收面判定无阴影）→ 后处理 RT → 世界 3D 序列 → 后处理合成 → UI 层。后处理 RT 在水面 pass 之后开启——水面 `EndTextureMode` 会切回默认帧缓冲，先开后处理再画水面会丢 RT 绑定（旧版水面帧直接熄掉调色的根因，已修）。
 3. 各渲染器消费合同缓冲出画；`RaylibPostProcessRenderer`（或 Skia 合成）收尾。`RaylibHostLoop` 只构建一帧输入记录并调用一次 `RenderFrame`，`EndDrawing`/诊断 HUD/截图取证留在宿主。
 
-画廊路径是同构缩小版：场景类手工填 `GalleryPrimitiveSnapshot`（合同缓冲的画廊等价物）直接喂渲染器，验证渲染器对宿主零知识。
+画廊路径是同构缩小版：`.scene.json` 关卡容器声明节点与能力组件，组件把 `GalleryPrimitiveSnapshot`（合同缓冲的画廊等价物）直接喂渲染器，验证渲染器对宿主零知识。
 
 ## 资产加载错误策略合同（#1326 定稿）
 

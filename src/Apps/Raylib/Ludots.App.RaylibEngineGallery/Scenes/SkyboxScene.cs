@@ -6,16 +6,13 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>天空盒：RaylibSkyboxRenderer 渐变天空，太阳方位随时间绕行。</summary>
-    public sealed class SkyboxScene : IEngineScene
+    [EngineSceneComponent("skybox")]
+    public sealed class SkyboxScene : IEngineSceneComponent
     {
         private readonly GalleryLitProps _litProps = new();
         private RaylibSkyboxRenderer _skybox = new();
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
-
-        public string Id => "skybox";
-        public string Title => "天空盒";
-        public string Summary => "RaylibSkyboxRenderer 程序化渐变天空 + 太阳方位驱动";
 
         public void Load()
         {

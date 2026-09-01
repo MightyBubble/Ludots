@@ -191,8 +191,6 @@ namespace Ludots.Core.Navigation.Terrain
     public sealed class FlatGridLogicTerrainField : LogicTerrainField
     {
         private readonly LogicTerrainCell _cell;
-        private readonly int _originXcm;
-        private readonly int _originZcm;
 
         public FlatGridLogicTerrainField(
             int widthCells,
@@ -206,14 +204,18 @@ namespace Ludots.Core.Navigation.Terrain
         {
             if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
             CellSizeCm = cellSizeCm;
-            _originXcm = originXcm;
-            _originZcm = originZcm;
+            OriginXcm = originXcm;
+            OriginZcm = originZcm;
             _cell = cell.Cost > 0f ? cell : new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None);
         }
 
         public override LogicTerrainTopology Topology => LogicTerrainTopology.Grid;
 
         public int CellSizeCm { get; }
+
+        public int OriginXcm { get; }
+
+        public int OriginZcm { get; }
 
         public override int HorizontalStepCm => CellSizeCm;
 
@@ -229,9 +231,9 @@ namespace Ludots.Core.Navigation.Terrain
         public override void GetWorldPositionMeters(int col, int row, out float xMeters, out float zMeters)
         {
             xMeters = SpatialScaleDefaults.CentimetersToMeters(
-                checked(_originXcm + (col * CellSizeCm)));
+                checked(OriginXcm + (col * CellSizeCm)));
             zMeters = SpatialScaleDefaults.CentimetersToMeters(
-                checked(_originZcm + (row * CellSizeCm)));
+                checked(OriginZcm + (row * CellSizeCm)));
         }
     }
 
@@ -303,11 +305,15 @@ namespace Ludots.Core.Navigation.Terrain
             int heightCells,
             int cellSizeCm = SpatialScaleDefaults.CellCm,
             int chunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
-            LogicTerrainCell defaultCell = default)
+            LogicTerrainCell defaultCell = default,
+            int originXcm = 0,
+            int originZcm = 0)
             : base(widthCells, heightCells, chunkSizeCells)
         {
             if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
             CellSizeCm = cellSizeCm;
+            OriginXcm = originXcm;
+            OriginZcm = originZcm;
             _defaultCell = defaultCell.Cost > 0f ? defaultCell : new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None);
         }
 
@@ -320,6 +326,10 @@ namespace Ludots.Core.Navigation.Terrain
         public override int HorizontalStepCm => CellSizeCm;
 
         public override int VerticalStepCm => CellSizeCm;
+
+        public int OriginXcm { get; }
+
+        public int OriginZcm { get; }
 
         public override int ChunkWidthCm => checked(CellSizeCm * ChunkSizeCells);
 
@@ -369,8 +379,8 @@ namespace Ludots.Core.Navigation.Terrain
 
         public override void GetWorldPositionMeters(int col, int row, out float xMeters, out float zMeters)
         {
-            xMeters = col * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
-            zMeters = row * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
+            xMeters = SpatialScaleDefaults.CentimetersToMeters(checked(OriginXcm + (col * CellSizeCm)));
+            zMeters = SpatialScaleDefaults.CentimetersToMeters(checked(OriginZcm + (row * CellSizeCm)));
         }
 
         private LogicTerrainCell[] GetOrCreateChunk(int chunkX, int chunkY)

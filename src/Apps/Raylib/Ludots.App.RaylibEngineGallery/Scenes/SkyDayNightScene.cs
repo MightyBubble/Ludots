@@ -8,7 +8,8 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>昼夜天空：RaylibSkyEnvironment 手工 MergedConfigEntry 渐变 + 全天相位驱动，日光/环境随相位联动。</summary>
-    public sealed class SkyDayNightScene : IEngineScene
+    [EngineSceneComponent("sky_daynight")]
+    public sealed class SkyDayNightScene : IEngineSceneComponent
     {
         private const float CycleSeconds = 48f;
 
@@ -19,10 +20,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibPrimitiveRenderer _primitives = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
-
-        public string Id => "sky_daynight";
-        public string Title => "昼夜天空";
-        public string Summary => "RaylibSkyEnvironment 渐变烘焙 + 全天相位驱动";
 
         public void Load()
         {

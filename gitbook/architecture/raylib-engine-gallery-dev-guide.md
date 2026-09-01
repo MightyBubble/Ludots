@@ -6,8 +6,8 @@
 
 以现有场景 `vegetation_cutout` 为走查样本（新场景照抄六处换名）：
 
-1. **场景类**：`src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/VegetationCutoutScene.cs` 实现 `IEngineScene { Id, Title, Summary, Load, Draw, Dispose }`；自含可读、数据程序化生成，不引用 mods/、不依赖宿主（零 Core 是画廊的分层合同）。
-2. **目录注册**：`SceneCatalog.cs` 的 `Entries` 数组显注册一行（id/标题/摘要/factory）——画廊菜单自动枚举。
+1. **场景资产**：`src/Apps/Raylib/Ludots.App.RaylibEngineGallery/assets/engine_gallery/<id>.scene.json` 是 Unity Scene / Unreal Level 对等的关卡容器，声明 `schemaVersion`、`id`、`title`、`summary`、`rootNode` 和 `nodes[].components[]`；它不保存 C# 场景类型名。
+2. **运行时目录**：`src/Apps/Raylib/Ludots.App.RaylibEngineGallery/assets/engine_gallery/catalog.json` 的 `scenes` 数组只登记 `id` 与 `asset`。`SceneCatalog` 只装载关卡资产；组件能力通过 `EngineSceneComponentAttribute` 注册，画廊菜单自动枚举。
 3. **preset**：`launcher.presets.json` 加 `engine_raylib_<id>` 条目（`--scene <id> --frames 120 --screenshot … --json …`，selectors `["$engine_gallery"]`）。
 4. **注册表**：`showcase.registry.json` 加条目：`category: "engine"`、`binding: "engine_gallery"`、`preset`、`acceptanceTest: "RaylibEngineGalleryTests"`、`artifactDir`、`screenshot`、`docsPath` 指回本文档族；随后跑 `python scripts/build-acceptance-index.py` 同步 `scripts/acceptance/acceptance.index.json`（CI 用 `--check` 校验同步，忘跑即红）。
 5. **验收证据**：本地跑一次 preset 落截图 + stats（命令见下）；CI 的 `ci-acceptance.yml` 会按索引逐条 `--record` 重跑并门禁。

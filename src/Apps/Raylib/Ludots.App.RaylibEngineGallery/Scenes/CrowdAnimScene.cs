@@ -18,7 +18,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// 7 色 ×16 相位 = 112 逻辑桶，mannequin 6 网格 → 672 次 DrawMeshInstanced，
     /// 桶数每 +1 就多 6 次 uniform 上传/draw 与一次骨骼姿态计算，是本车道主要帧耗来源。
     /// </summary>
-    public sealed unsafe class CrowdAnimScene : IEngineScene
+    [EngineSceneComponent("crowd_anim")]
+    public sealed unsafe class CrowdAnimScene : IEngineSceneComponent
     {
         private const int TargetInstances = 4096;
         private const int RingCount = 14;
@@ -44,10 +45,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private int _walkClipFrameCount;
         private int _phaseBucketCount;
         private bool _disposed;
-
-        public string Id => "crowd_anim";
-        public string Title => "大量动画实例合批";
-        public string Summary => "4k mannequin 环形行军——GpuSkinnedInstance 真 GPU 蒙皮合批";
 
         public void Load()
         {

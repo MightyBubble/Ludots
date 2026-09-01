@@ -7,17 +7,14 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>调试绘制：DebugDrawCommandBuffer 手工填充网格/圆/框 + 由相机推得的视锥线，RaylibDebugDrawRenderer 消费。</summary>
-    public sealed class DebugDrawScene : IEngineScene
+    [EngineSceneComponent("debug_draw")]
+    public sealed class DebugDrawScene : IEngineSceneComponent
     {
         private readonly DebugDrawCommandBuffer _commands = new();
         private readonly RaylibDebugDrawRenderer _renderer = new() { CircleSegments = 40, PlaneY = 0.02f };
         private readonly GalleryLitProps _litProps = new();
         private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibDirectionalShadowMap _shadowMap = null!;
-
-        public string Id => "debug_draw";
-        public string Title => "调试绘制";
-        public string Summary => "RaylibDebugDrawRenderer + DebugDrawCommandBuffer";
 
         public void Load()
         {

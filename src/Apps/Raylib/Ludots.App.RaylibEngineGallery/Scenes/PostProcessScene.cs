@@ -6,7 +6,8 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>后处理调色：RaylibPostProcessRenderer 世界帧 RT，曝光/对比/饱和/暗角随时间正弦调制。</summary>
-    public sealed class PostProcessScene : IEngineScene
+    [EngineSceneComponent("postprocess")]
+    public sealed class PostProcessScene : IEngineSceneComponent
     {
         private readonly GalleryLitProps _litProps = new();
         private readonly RaylibSkyboxRenderer _skybox = new();
@@ -14,10 +15,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibPostProcessConfig _baseConfig = RaylibPostProcessConfig.CreateDefault();
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
-
-        public string Id => "postprocess";
-        public string Title => "后处理调色";
-        public string Summary => "RaylibPostProcessRenderer 曝光/对比/饱和/暗角调制";
 
         public void Load()
         {

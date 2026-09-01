@@ -10,7 +10,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// 材质绑定：RaylibMaterialLibrary 同网格多材质（不透明棋盘 / 裁切条纹 / 半透明光斑）；
     /// 实例行演示材质实例链（同父异贴图/异参数）与 shaderKey=emissive 自定义着色行为。
     /// </summary>
-    public sealed unsafe class MaterialBindingScene : IEngineScene
+    [EngineSceneComponent("material_binding")]
+    public sealed unsafe class MaterialBindingScene : IEngineSceneComponent
     {
         private const int CheckerMaterialId = 621;
         private const int StripeMaterialId = 622;
@@ -37,10 +38,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private Mesh _cube;
         private bool _disposed;
-
-        public string Id => "material_binding";
-        public string Title => "材质绑定";
-        public string Summary => "材质库多材质/混合模式 + 实例链覆盖 + shaderKey 自定义着色";
 
         public MaterialBindingScene()
         {

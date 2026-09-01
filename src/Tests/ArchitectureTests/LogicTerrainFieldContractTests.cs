@@ -235,6 +235,47 @@ namespace Ludots.Tests.Architecture
             }
         }
 
+        [Test]
+        public void GridTerrainBinaryRoundTrip_PreservesOriginAndExportsHeightmap()
+        {
+            var terrain = new MutableGridLogicTerrainField(64, 64, cellSizeCm: 100, chunkSizeCells: 64, originXcm: 1200, originZcm: -800);
+            terrain.SetCell(0, 0, new LogicTerrainCell(5, 0, LogicTerrainSurfaceFlags.Blocked, areaId: 7));
+            terrain.SetCell(1, 1, new LogicTerrainCell(9, 0, LogicTerrainSurfaceFlags.Ramp));
+
+            string gridPath = Path.Combine(Path.GetTempPath(), "ludots-grid-terrain-" + Guid.NewGuid().ToString("N") + ".grid");
+            try
+            {
+                ReactGridTerrainBinary.Write(gridPath, terrain);
+
+                LogicTerrainField roundTrip = ReactGridTerrainBinary.Read(gridPath, cellSizeCm: 100);
+                Assert.That(roundTrip.Topology, Is.EqualTo(LogicTerrainTopology.Grid));
+                Assert.That(roundTrip, Is.TypeOf<SparseGridLogicTerrainField>());
+                Assert.That(((SparseGridLogicTerrainField)roundTrip).OriginXcm, Is.EqualTo(1200));
+                Assert.That(((SparseGridLogicTerrainField)roundTrip).OriginZcm, Is.EqualTo(-800));
+                Assert.That(roundTrip.GetCell(0, 0).HeightLevel, Is.EqualTo(5));
+                Assert.That(roundTrip.GetCell(0, 0).IsBlocked, Is.True);
+                Assert.That(roundTrip.GetCell(0, 0).AreaId, Is.EqualTo(7));
+                Assert.That(roundTrip.GetCell(1, 1).HeightLevel, Is.EqualTo(9));
+
+                ContinuousHeightmapAsset asset = LogicTerrainHeightmapExport.ProjectToAsset(roundTrip, heightStepCm: 25);
+                Assert.That(asset.Bounds.X, Is.EqualTo(1200));
+                Assert.That(asset.Bounds.Y, Is.EqualTo(-800));
+                Assert.That(asset.Bounds.Width, Is.EqualTo(6400));
+                Assert.That(asset.Bounds.Height, Is.EqualTo(6400));
+
+                var heightmap = new ContinuousHeightmapRuntime(asset);
+                Assert.That(heightmap.TrySampleHeightCm(1200f, -800f, out float heightCm), Is.True);
+                Assert.That(heightCm, Is.EqualTo(125f).Within(0.001f));
+            }
+            finally
+            {
+                if (File.Exists(gridPath))
+                {
+                    File.Delete(gridPath);
+                }
+            }
+        }
+
         private static VertexMap CreateFlatVertexMap()
         {
             var map = new VertexMap();

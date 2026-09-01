@@ -297,6 +297,32 @@ namespace Ludots.Tests.Gas
         }
 
         [Test]
+        public void LoadMap_WhenNavigationEnabledGridBoardHasNoDataFile_ThrowsExplicitly()
+        {
+            WriteMap("outer_map", """
+            {
+              "id": "outer_map",
+              "boards": [
+                {
+                  "name": "default",
+                  "spatialType": "Grid",
+                  "widthInMacroTiles": 1,
+                  "heightInMacroTiles": 1,
+                  "gridCellSizeCm": 100,
+                  "chunkSizeCells": 64,
+                  "loadedChunkCapacity": 16,
+                  "navigationEnabled": true
+                }
+              ]
+            }
+            """);
+
+            using var engine = CreateEngine();
+            var ex = Assert.Throws<InvalidOperationException>(() => engine.LoadMap("outer_map"));
+            Assert.That(ex!.Message, Does.Contain("requires an explicit DataFile"));
+        }
+
+        [Test]
         public void PushAndPopMap_WhenOuterMapHasNoContinuousHeightmap_ClearsFocusedTruthOnRestore()
         {
             WriteHeightmap("inner.height", 125);

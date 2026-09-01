@@ -70,7 +70,7 @@ namespace Ludots.App.RaylibEngineGallery
             Rl.InitWindow(WindowWidth, WindowHeight, $"Ludots Engine Gallery — {scene.Id}");
             Rl.SetTargetFPS(60);
 
-            var camera = new EngineOrbitCamera();
+            var camera = CreateCamera(scene!);
             scene.Load();
 
             Camera3D cam = camera.Camera;
@@ -192,7 +192,7 @@ namespace Ludots.App.RaylibEngineGallery
             GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, $"Ludots Engine Gallery — {scene.Title}");
             Rl.SetTargetFPS(60);
-            var camera = new EngineOrbitCamera();
+            var camera = CreateCamera(scene);
             scene.Load();
 
             Camera3D cam = camera.Camera;
@@ -240,7 +240,7 @@ namespace Ludots.App.RaylibEngineGallery
             return 0;
         }
 
-        private static void DrawMenu(List<SceneDescriptor> scenes, int selected)
+        private static void DrawMenu(IReadOnlyList<SceneDescriptor> scenes, int selected)
         {
             GalleryFont.Draw($"Ludots Engine Gallery — raylib 引擎渲染能力 {scenes.Count} 项", 24, 20, 28, GalleryColors.RayWhite);
             GalleryFont.Draw("数字/字母选择场景，Enter 启动，ESC 退出；场景内 ESC 返回菜单，R 复位相机", 24, 56, 18, new Color(160, 160, 175, 255));
@@ -262,6 +262,17 @@ namespace Ludots.App.RaylibEngineGallery
             if (index < 9) return (KeyboardKey)(KeyboardKey.KEY_ONE + index);
             if (index == 9) return KeyboardKey.KEY_ZERO;
             return (KeyboardKey)(KeyboardKey.KEY_A + index - 10);
+        }
+
+        private static EngineOrbitCamera CreateCamera(IEngineScene scene)
+        {
+            EngineSceneCameraDefaults defaults = scene.CameraDefaults;
+            return new EngineOrbitCamera(
+                defaults.Distance,
+                defaults.PitchDegrees,
+                defaults.YawDegrees,
+                defaults.Target,
+                defaults.FovyDegrees);
         }
 
         private static void WriteStats(string path, string sceneId, int frames, List<double> frameMs, double wallMs)

@@ -10,7 +10,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// 投影贴花：RaylibContinuousHeightmapRenderer 作为接收面网格投影器，decal_project shader
     /// 把程序化贴花沿世界 Y 投到起伏地表；三枚贴花随时间在地表巡游。
     /// </summary>
-    public sealed class DecalProjectionScene : IEngineScene
+    [EngineSceneComponent("decal_projection")]
+    public sealed class DecalProjectionScene : IEngineSceneComponent
     {
         private const int RingMaterialId = 601;
         private const int ArrowMaterialId = 602;
@@ -32,10 +33,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibFrameLighting _lighting = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
-
-        public string Id => "decal_projection";
-        public string Title => "投影贴花";
-        public string Summary => "decal_project shader 地表移动投影贴花";
 
         public void Load()
         {

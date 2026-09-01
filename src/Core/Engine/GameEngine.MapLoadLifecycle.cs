@@ -22,7 +22,6 @@ namespace Ludots.Core.Engine
         private readonly Dictionary<MapId, PendingMapLoadState> _pendingMapLoads = new();
         private readonly Dictionary<MapId, PendingMapResumeState> _pendingMapResumes = new();
         private readonly Dictionary<MapId, MapLoadStatus> _mapLoadStatuses = new();
-        private VertexMapContinuousHeightmap? _vertexMapContinuousHeightmap;
 
         private sealed class PendingMapLoadState
         {
@@ -174,20 +173,7 @@ namespace Ludots.Core.Engine
 
         private IContinuousHeightmap? ResolveSessionContinuousHeightmap(MapSession session)
         {
-            if (session.ContinuousHeightmap != null)
-            {
-                return session.ContinuousHeightmap;
-            }
-
-            // .height 是唯一权威视觉高度源；仅当会话未声明 .height 且引擎已持有 VertexMap 时用逻辑格点补高度服务。
-            // 适配器按需读取当前 VertexMap，地图热切换不会绑定到上一张图。
-            if (VertexMap != null)
-            {
-                _vertexMapContinuousHeightmap ??= new VertexMapContinuousHeightmap(() => VertexMap);
-                return _vertexMapContinuousHeightmap;
-            }
-
-            return null;
+            return session.ContinuousHeightmap;
         }
 
         private MapLoadStatus GetMapLoadStatus(MapId mapId)

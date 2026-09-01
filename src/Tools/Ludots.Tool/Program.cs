@@ -214,6 +214,9 @@ namespace Ludots.Tool
             var bakeRecastReactNavCommand = new Command("bake-recast-react", "Bake NavTiles from React editor map_data.bin using Recast");
             var mapIdOption = new Option<string>("--mapId", "Target mapId (used for output paths)") { IsRequired = true };
             var navModIdOption = new Option<string?>("--modId", () => null, "Optional mod id when mapId is authored by a mod");
+            var terrainInOption = new Option<string>("--in", "Input terrain data path") { IsRequired = true };
+            var terrainOutOption = new Option<string?>("--out", () => null, "Output terrain data path");
+            var terrainHeightStepOption = new Option<int?>("--heightStepCm", () => null, "Override logic height step in cm");
             bakeRecastReactNavCommand.AddOption(mapIdOption);
             bakeRecastReactNavCommand.AddOption(navModIdOption);
             bakeRecastReactNavCommand.AddOption(reactInOption);
@@ -249,6 +252,40 @@ namespace Ludots.Tool
                 ctx.ExitCode = BakeNavFromReactRecast(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion, largeBake, estimateHash);
             });
             navCommand.AddCommand(bakeRecastReactNavCommand);
+
+            var syncGridCommand = new Command("sync-grid", "Project a ContinuousHeightmap .height to explicit grid logic terrain .grid");
+            syncGridCommand.AddOption(mapIdOption);
+            syncGridCommand.AddOption(navModIdOption);
+            syncGridCommand.AddOption(terrainInOption);
+            syncGridCommand.AddOption(terrainOutOption);
+            syncGridCommand.AddOption(terrainHeightStepOption);
+            syncGridCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
+                var modId = ctx.ParseResult.GetValueForOption(navModIdOption);
+                var inputPath = ctx.ParseResult.GetValueForOption(terrainInOption);
+                var outputPath = ctx.ParseResult.GetValueForOption(terrainOutOption);
+                var heightStepCm = ctx.ParseResult.GetValueForOption(terrainHeightStepOption);
+                ctx.ExitCode = SyncGridTerrain(mapId, modId, inputPath, outputPath, heightStepCm);
+            });
+            mapCommand.AddCommand(syncGridCommand);
+
+            var syncHeightmapCommand = new Command("sync-heightmap", "Export explicit grid logic terrain .grid to a ContinuousHeightmap .height");
+            syncHeightmapCommand.AddOption(mapIdOption);
+            syncHeightmapCommand.AddOption(navModIdOption);
+            syncHeightmapCommand.AddOption(terrainInOption);
+            syncHeightmapCommand.AddOption(terrainOutOption);
+            syncHeightmapCommand.AddOption(terrainHeightStepOption);
+            syncHeightmapCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
+                var modId = ctx.ParseResult.GetValueForOption(navModIdOption);
+                var inputPath = ctx.ParseResult.GetValueForOption(terrainInOption);
+                var outputPath = ctx.ParseResult.GetValueForOption(terrainOutOption);
+                var heightStepCm = ctx.ParseResult.GetValueForOption(terrainHeightStepOption);
+                ctx.ExitCode = SyncHeightmapTerrain(mapId, modId, inputPath, outputPath, heightStepCm);
+            });
+            mapCommand.AddCommand(syncHeightmapCommand);
 
             var bakeHeightmapNavCommand = new Command("bake-heightmap", "Bake NavTiles from a ContinuousHeightmap .height via logic-terrain projection");
             var heightmapInOption = new Option<string>("--in", "Input ContinuousHeightmap .height path") { IsRequired = true };
@@ -726,6 +763,141 @@ namespace {modId}
                     targets.Add((cx, cy));
 
             return BakeTiles(map, targets, cfg, tilesDir, artifactsDir, writeArtifact, parallel, maxDegree, tileVersion, logPrefix: "BakeNav", outDirRoot: root);
+        }
+
+        static int SyncGridTerrain(
+            string mapId,
+            string? modId,
+            string inputHeightmapPath,
+            string? outputPath,
+            int? heightStepCmOverride)
+        {
+            try
+            {
+                if (!File.Exists(inputHeightmapPath))
+                {
+                    Console.WriteLine($"Input not found: {inputHeightmapPath}");
+                    return 2;
+                }
+
+                string repoRoot = FindAssetsRoot();
+                MapConfig mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+                BoardConfig boardConfig = ToolMapConfigResolver.ResolvePrimaryNavigationBoard(mapConfig)
+                    ?? throw new InvalidOperationException($"Map '{mapId}' has no navigation-enabled board.");
+
+                int cellSizeCm = boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm;
+                int heightStepCm = heightStepCmOverride ?? (boardConfig.TerrainHeightStepCm > 0 ? boardConfig.TerrainHeightStepCm : SpatialScaleDefaults.CellCm);
+                int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+                int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+
+                ContinuousHeightmapAsset asset;
+                using (var stream = File.OpenRead(inputHeightmapPath))
+                {
+                    asset = ContinuousHeightmapBinary.Read(stream);
+                }
+
+                asset = MapContinuousHeightmapLoader.ApplyWorldWidthOverride(asset, mapConfig.ContinuousHeightmap);
+                var heightmap = new ContinuousHeightmapRuntime(asset);
+                int widthCm = checked(widthCells * cellSizeCm);
+                int heightCm = checked(heightCells * cellSizeCm);
+                if (asset.Bounds.Width != widthCm || asset.Bounds.Height != heightCm)
+                {
+                    throw new InvalidOperationException(
+                        $"ContinuousHeightmap '{inputHeightmapPath}' bounds {asset.Bounds.Width}x{asset.Bounds.Height}cm do not match board extent {widthCm}x{heightCm}cm.");
+                }
+
+                if (!heightmap.TrySampleHeightCm(asset.Bounds.Left, asset.Bounds.Top, out _) ||
+                    !heightmap.TrySampleHeightCm(checked(asset.Bounds.Left + widthCm), asset.Bounds.Top, out _) ||
+                    !heightmap.TrySampleHeightCm(asset.Bounds.Left, checked(asset.Bounds.Top + heightCm), out _) ||
+                    !heightmap.TrySampleHeightCm(checked(asset.Bounds.Left + widthCm), checked(asset.Bounds.Top + heightCm), out _))
+                {
+                    throw new InvalidOperationException(
+                        $"ContinuousHeightmap '{inputHeightmapPath}' does not cover the board extent {widthCm}x{heightCm}cm required for projection.");
+                }
+
+                MutableGridLogicTerrainField terrain = ContinuousHeightmapLogicTerrainProjection.ProjectToGrid(
+                    heightmap,
+                    widthCells,
+                    heightCells,
+                    cellSizeCm,
+                    new LogicTerrainProjectionOptions(
+                        heightStepCm,
+                        blockedAtOrBelowHeightCm: boardConfig.TerrainBlockedAtOrBelowHeightCm,
+                        originXcm: asset.Bounds.Left,
+                        originZcm: asset.Bounds.Top));
+
+                string resolvedOutputPath = ResolveTerrainOutputPath(
+                    inputHeightmapPath,
+                    outputPath,
+                    ".grid");
+                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(resolvedOutputPath)) ?? ".");
+                ReactGridTerrainBinary.Write(resolvedOutputPath, terrain);
+                Console.WriteLine($"Wrote: {Path.GetFullPath(resolvedOutputPath)}");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
+        }
+
+        static int SyncHeightmapTerrain(
+            string mapId,
+            string? modId,
+            string inputGridPath,
+            string? outputPath,
+            int? heightStepCmOverride)
+        {
+            try
+            {
+                if (!File.Exists(inputGridPath))
+                {
+                    Console.WriteLine($"Input not found: {inputGridPath}");
+                    return 2;
+                }
+
+                string repoRoot = FindAssetsRoot();
+                MapConfig mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+                BoardConfig boardConfig = ToolMapConfigResolver.ResolvePrimaryNavigationBoard(mapConfig)
+                    ?? throw new InvalidOperationException($"Map '{mapId}' has no navigation-enabled board.");
+
+                int cellSizeCm = boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm;
+                int heightStepCm = heightStepCmOverride ?? (boardConfig.TerrainHeightStepCm > 0 ? boardConfig.TerrainHeightStepCm : SpatialScaleDefaults.CellCm);
+
+                LogicTerrainField terrain = ReactGridTerrainBinary.Read(inputGridPath, cellSizeCm);
+                ContinuousHeightmapAsset asset = LogicTerrainHeightmapExport.ProjectToAsset(terrain, heightStepCm);
+
+                string resolvedOutputPath = ResolveTerrainOutputPath(
+                    inputGridPath,
+                    outputPath,
+                    ".height");
+                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(resolvedOutputPath)) ?? ".");
+                using (var stream = File.Create(resolvedOutputPath))
+                {
+                    ContinuousHeightmapBinary.Write(stream, asset);
+                }
+
+                Console.WriteLine($"Wrote: {Path.GetFullPath(resolvedOutputPath)}");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
+        }
+
+        static string ResolveTerrainOutputPath(string inputPath, string? outputPath, string outputExtension)
+        {
+            if (!string.IsNullOrWhiteSpace(outputPath))
+            {
+                return outputPath;
+            }
+
+            string directory = Path.GetDirectoryName(Path.GetFullPath(inputPath)) ?? Directory.GetCurrentDirectory();
+            string fileName = Path.GetFileNameWithoutExtension(inputPath);
+            return Path.Combine(directory, fileName + outputExtension);
         }
 
         static int BakeNavFromReact(string inputReactBinPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool writeArtifact, bool parallel, int maxDegree, int tileVersion)

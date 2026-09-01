@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 2,
+  "id": "gpu_skinning",
+  "title": "引擎能力·GPU 骨骼蒙皮",
+  "summary": "GLB 骨骼动画多实例——零 Core 依赖独立场景",
+  "world": { "units": "meters", "upAxis": "Y", "bounds": { "min": [-256, -32, -256], "max": [256, 128, 256] } },
+  "camera": { "mode": "orbit", "target": [0, 0, 0], "distance": 40, "pitchDegrees": 25, "yawDegrees": 45, "fovyDegrees": 45 },
+  "assets": [{ "id": "gpu_skinning.mannequin", "type": "model", "source": "assets/Models/mannequin_large_walk.glb" }],
+  "rootNode": "root",
+  "nodes": [
+    { "id": "root", "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] }, "components": [{ "type": "gpu_skinning" }] }
+  ]
+}

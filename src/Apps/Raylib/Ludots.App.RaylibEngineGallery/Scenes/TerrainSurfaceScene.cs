@@ -6,7 +6,8 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>地表着色：RaylibTerrainRenderer 消费画廊程序化 chunk 源，高地分带顶点色 + 湖面水体网格。</summary>
-    public sealed class TerrainSurfaceScene : IEngineScene
+    [EngineSceneComponent("terrain_surface")]
+    public sealed class TerrainSurfaceScene : IEngineSceneComponent
     {
         private readonly GalleryChunkTerrainSource _terrain = new(
             chunksPerSide: 32,
@@ -22,10 +23,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibFrameLighting _lighting = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
-
-        public string Id => "terrain_surface";
-        public string Title => "地表着色";
-        public string Summary => "RaylibTerrainRenderer chunk 网格 + 分带顶点色";
 
         public void Load()
         {

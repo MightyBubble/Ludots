@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 2,
+  "id": "terrain_surface",
+  "title": "引擎能力·地表着色",
+  "summary": "hex chunk 网格与顶点色——零 Core 依赖独立场景",
+  "world": { "units": "meters", "upAxis": "Y", "bounds": { "min": [-256, -32, -256], "max": [256, 128, 256] } },
+  "camera": { "mode": "orbit", "target": [0, 0, 0], "distance": 40, "pitchDegrees": 25, "yawDegrees": 45, "fovyDegrees": 45 },
+  "assets": [{ "id": "terrain_surface.surface", "type": "terrain", "source": "procedural://terrain_surface" }],
+  "rootNode": "root",
+  "nodes": [
+    { "id": "root", "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] }, "components": [{ "type": "terrain_surface" }] }
+  ]
+}

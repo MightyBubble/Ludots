@@ -7,7 +7,8 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>GPU 实例化合批：IRaylibBenchmarkRenderer 驱动 30k 纯数据 RaylibBenchmarkInstance 网格阵。</summary>
-    public sealed class InstancingScene : IEngineScene
+    [EngineSceneComponent("instancing")]
+    public sealed class InstancingScene : IEngineSceneComponent
     {
         private const int TargetInstances = 30_000;
         private const int CubeAssetId = 101;
@@ -23,10 +24,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private Mesh _groundMesh;
         private bool _sceneInstalled;
         private bool _disposed;
-
-        public string Id => "instancing";
-        public string Title => "GPU 实例化合批";
-        public string Summary => "IRaylibBenchmarkRenderer 30k 纯数据实例阵";
 
         public void Load()
         {

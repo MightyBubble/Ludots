@@ -11,7 +11,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// RaylibSkinnedPlayback 逐实例解算 clip/帧相位并上传骨骼姿态后绘制——演示逐实例非合批蒙皮路径；
     /// 大规模合批蒙皮（UpdateModelAnimationBones 每 bucket 一次 + DrawMeshInstanced）见 crowd_anim 场景。
     /// </summary>
-    public sealed unsafe class GpuSkinningScene : IEngineScene
+    [EngineSceneComponent("gpu_skinning")]
+    public sealed unsafe class GpuSkinningScene : IEngineSceneComponent
     {
         private const int MeshAssetId = 201;
         private const int InstanceCount = 12;
@@ -48,10 +49,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 return _playback.ResolveFrameIndex();
             }
         }
-
-        public string Id => "gpu_skinning";
-        public string Title => "GPU 骨骼蒙皮";
-        public string Summary => "RaylibGpuSkinnedModelCache + RaylibSkinnedPlayback 多相位实例";
 
         public void Load()
         {

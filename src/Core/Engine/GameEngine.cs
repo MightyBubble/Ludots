@@ -3237,16 +3237,12 @@ namespace Ludots.Core.Engine
                         if (spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase))
                         {
                             var gridTerrain = LoadGridTerrainFromFile(dataFile, boardConfig);
-                            if (gridTerrain != null)
-                            {
-                                terrainBoard.LogicTerrain = gridTerrain;
-                                LogicTerrain = gridTerrain;
-                                SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
-                                Diagnostics.Log.Info(
-                                    in LogChannels.Engine,
-                                    $"Loaded grid LogicTerrainField {gridTerrain.WidthChunks}x{gridTerrain.HeightChunks} for board '{board.Name}'");
-                            }
-
+                            terrainBoard.LogicTerrain = gridTerrain;
+                            LogicTerrain = gridTerrain;
+                            SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
+                            Diagnostics.Log.Info(
+                                in LogChannels.Engine,
+                                $"Loaded grid LogicTerrainField {gridTerrain.WidthChunks}x{gridTerrain.HeightChunks} for board '{board.Name}'");
                             continue;
                         }
 
@@ -3267,36 +3263,11 @@ namespace Ludots.Core.Engine
 
                     if (board is GridBoard gridBoard && boardConfig != null)
                     {
-                        int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
-                        int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
-                        LogicTerrainField? projected = TryProjectContinuousHeightmapToGrid(
-                            session,
-                            widthCells,
-                            heightCells,
-                            boardConfig.GridCellSizeCm,
-                            board.Name,
-                            boardConfig,
-                            out int projectedOriginXcm,
-                            out int projectedOriginZcm);
-                        gridBoard.LogicTerrain = projected ?? new FlatGridLogicTerrainField(
-                            widthCells,
-                            heightCells,
-                            boardConfig.GridCellSizeCm,
-                            boardConfig.ChunkSizeCells,
-                            default,
-                            projectedOriginXcm,
-                            projectedOriginZcm);
-                        if (LogicTerrain == null)
+                        if (boardConfig.NavigationEnabled)
                         {
-                            LogicTerrain = gridBoard.LogicTerrain;
-                            SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
+                            throw new InvalidOperationException(
+                                $"Grid board '{board.Name}' on map '{mapConfig.Id}' requires an explicit DataFile. Manual heightmap projection is disabled; bake and commit the board logic terrain first.");
                         }
-
-                        Diagnostics.Log.Info(
-                            in LogChannels.Engine,
-                            projected != null
-                                ? $"Projected ContinuousHeightmap to grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'"
-                                : $"Created flat grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'");
                     }
                 }
             }
@@ -3315,115 +3286,12 @@ namespace Ludots.Core.Engine
             return null;
         }
 
-        private LogicTerrainField? TryProjectContinuousHeightmapToGrid(
-            MapSession session,
-            int widthCells,
-            int heightCells,
-            int cellSizeCm,
-            string boardName,
-            BoardConfig boardConfig,
-            out int originXcm,
-            out int originZcm)
-        {
-            Ludots.Platform.Abstractions.IContinuousHeightmap? heightmap = session.ContinuousHeightmap;
-            if (heightmap == null)
-            {
-                originXcm = 0;
-                originZcm = 0;
-                return null;
-            }
-
-            int widthCm = checked(widthCells * cellSizeCm);
-            int heightCm = checked(heightCells * cellSizeCm);
-
-            // The origin-aware bounds contract (exact extent match + authored WorldWidthCm
-            // remap + TerrainBlockedAtOrBelow) is opt-in via the map's ContinuousHeightmap
-            // binding. Boards declared through the legacy ContinuousHeightmapAsset field keep
-            // the origin-0 positive-quadrant behavior they were authored against — their
-            // flat fallback must stay origin-0 or origin-naive consumers miss by the
-            // board's half extent (the 64km massnav relief is the canonical case).
-            // WorldWidthCm alone is not authorization: the asset must also come from the
-            // map-level ContinuousHeightmap binding (Asset declared). A width without a binding
-            // asset would run the bounds contract against an unremapped legacy asset and
-            // land between the two contracts.
-            bool authoredBounds =
-                !string.IsNullOrWhiteSpace(session.MapConfig?.ContinuousHeightmap?.Asset) &&
-                session.MapConfig!.ContinuousHeightmap!.WorldWidthCm > 0;
-            originXcm = 0;
-            originZcm = 0;
-            if (authoredBounds && heightmap is IContinuousHeightmapRenderSource renderSource)
-            {
-                WorldAabbCm bounds = renderSource.Bounds;
-                if (bounds.Width != widthCm || bounds.Height != heightCm)
-                {
-                    throw new InvalidOperationException(
-                        $"ContinuousHeightmap bounds {bounds.Width}x{bounds.Height}cm do not match board '{boardName}' extent {widthCm}x{heightCm}cm.");
-                }
-
-                originXcm = bounds.Left;
-                originZcm = bounds.Top;
-            }
-
-            bool covers = authoredBounds
-                ? heightmap.TrySampleHeightCm(originXcm, originZcm, out _) &&
-                  heightmap.TrySampleHeightCm(checked(originXcm + widthCm), originZcm, out _) &&
-                  heightmap.TrySampleHeightCm(originXcm, checked(originZcm + heightCm), out _) &&
-                  heightmap.TrySampleHeightCm(checked(originXcm + widthCm), checked(originZcm + heightCm), out _)
-                : heightmap.TrySampleHeightCm(0f, 0f, out _) &&
-                  heightmap.TrySampleHeightCm(widthCm, 0f, out _) &&
-                  heightmap.TrySampleHeightCm(0f, heightCm, out _) &&
-                  heightmap.TrySampleHeightCm(widthCm, heightCm, out _);
-            if (!covers)
-            {
-                Diagnostics.Log.Info(
-                    in LogChannels.Engine,
-                    $"ContinuousHeightmap does not cover board '{boardName}' extent {widthCm}x{heightCm}cm; keeping flat grid terrain.");
-                return null;
-            }
-
-            // Origin-offset boards (e.g. a 64km center-symmetric heightmap) can demand
-            // billions of logic cells; a flat dense array cannot back that scale, so the
-            // projection degrades to flat grid terrain instead of overflowing.
-            const long MaxProjectedLogicCells = 100_000_000;
-            if ((long)widthCells * heightCells > MaxProjectedLogicCells)
-            {
-                // Authorized maps (WorldWidthCm binding) must not silently flatten — that is
-                // a load-time contract failure and gets a hard error. Legacy maps keep the
-                // documented flat fallback: several existing showcases (mass_navigation,
-                // crowd_physics_arena, 250x250 macro tiles) are AUTHORED flat at this scale
-                // and load through this exact path on main; failing them here would break
-                // maps that never asked for projected terrain. Tier gating will
-                // replace this split with an explicit authored contract.
-                if (authoredBounds)
-                {
-                    throw new InvalidOperationException(
-                        $"Board '{boardName}' VisualHeightmap projection needs {(long)widthCells * heightCells:N0} logic cells (budget {MaxProjectedLogicCells:N0}); refusing to silently flatten an authorized heightmap board. Coarsen GridCellSizeCm or shrink the board extent.");
-                }
-
-                Diagnostics.Log.Info(
-                    in LogChannels.Engine,
-                    $"ContinuousHeightmap projection for board '{boardName}' needs {(long)widthCells * heightCells:N0} logic cells (budget {MaxProjectedLogicCells:N0}); keeping flat grid terrain.");
-                return null;
-            }
-
-            int heightStepCm = boardConfig.TerrainHeightStepCm > 0
-                ? boardConfig.TerrainHeightStepCm
-                : SpatialScaleDefaults.CellCm;
-            return Ludots.Core.Navigation.Terrain.ContinuousHeightmapLogicTerrainProjection.ProjectToGrid(
-                heightmap,
-                widthCells,
-                heightCells,
-                cellSizeCm,
-                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(
-                    heightStepCm,
-                    blockedAtOrBelowHeightCm: authoredBounds ? boardConfig.TerrainBlockedAtOrBelowHeightCm : null,
-                    originXcm: originXcm,
-                    originZcm: originZcm));
-        }
-
         private LogicTerrainField LoadGridTerrainFromFile(string dataFile, BoardConfig boardConfig)
         {
-            if (string.IsNullOrWhiteSpace(dataFile)) return null;
+            if (string.IsNullOrWhiteSpace(dataFile))
+            {
+                throw new InvalidOperationException("Grid terrain data file is required.");
+            }
 
             if (dataFile.StartsWith("/") || dataFile.StartsWith("\\")) dataFile = dataFile.Substring(1);
 
@@ -3462,7 +3330,10 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            if (stream == null) return null;
+            if (stream == null)
+            {
+                throw new FileNotFoundException($"Grid terrain data file not found: {dataFile}", dataFile);
+            }
 
             int cellSizeCm = boardConfig?.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm;
             try
@@ -3471,8 +3342,7 @@ namespace Ludots.Core.Engine
             }
             catch (Exception ex)
             {
-                Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to load grid terrain '{dataFile}': {ex.Message}");
-                return null;
+                throw new InvalidOperationException($"Failed to load grid terrain '{dataFile}': {ex.Message}", ex);
             }
             finally
             {
