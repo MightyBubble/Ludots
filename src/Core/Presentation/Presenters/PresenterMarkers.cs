@@ -14,6 +14,7 @@ namespace Ludots.Core.Presentation.Presenters
     public struct PerfHasOwnerFacingBinding {}
     public struct PerfHasGraphParamBinding {}
     public struct PerfHasMinimapMarker {}
+    public struct PerfHasScreenRect {}
     public struct PerfHasExtensionBehavior {}
     public struct PerfTransformSyncTick {}
     public struct PerfOwnerPayloadTransformSync {}

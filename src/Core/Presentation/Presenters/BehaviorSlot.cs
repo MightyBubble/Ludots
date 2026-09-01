@@ -26,6 +26,7 @@ namespace Ludots.Core.Presentation.Presenters
         public GroundingConfig Grounding;
         public MinimapMarkerConfig MinimapMarker;
         public WorldTextConfig WorldText;
+        public ScreenRectConfig ScreenRect;
         public BehaviorStyleConfig Style;
         public BehaviorMotionConfig Motion;
         public SurfaceAuthoringBlock? SurfaceSource;
@@ -72,6 +73,7 @@ namespace Ludots.Core.Presentation.Presenters
         SurfaceSource = 12,
         InstancedBatch = 13,
         TrailMesh = 14,
+        ScreenRect = 15,
         Extension = 255,
     }
 
@@ -487,5 +489,37 @@ namespace Ludots.Core.Presentation.Presenters
         public int OrientationParamKey;
         public float OrientationOffsetRad;
         public float OrientationLengthPx;
+    }
+
+    /// <summary>
+    /// Screen-space rectangle anchor: renders the rectangle spanned by two opposite corners
+    /// read from the presenter param blackboard (float lane). The presenter only renders —
+    /// the rect data itself is consumer-driven (e.g. a drag marquee fed from press/current
+    /// pointer facts), so the geometry follows whatever the data side writes each frame.
+    /// </summary>
+    public struct ScreenRectConfig
+    {
+        public ScreenRectConfig()
+        {
+            FillColor = Vector4.One;
+            BorderColor = Vector4.One;
+            Corner0XParamKey = PresenterParamKeyRegistry.UnsetParamKey;
+            Corner0YParamKey = PresenterParamKeyRegistry.UnsetParamKey;
+            Corner1XParamKey = PresenterParamKeyRegistry.UnsetParamKey;
+            Corner1YParamKey = PresenterParamKeyRegistry.UnsetParamKey;
+            FillColorParamKey = PresenterParamKeyRegistry.UnsetParamKey;
+            BorderColorParamKey = PresenterParamKeyRegistry.UnsetParamKey;
+            VisibilityParamKey = PresenterParamKeyRegistry.UnsetParamKey;
+        }
+
+        public Vector4 FillColor;
+        public Vector4 BorderColor;
+        public int Corner0XParamKey;
+        public int Corner0YParamKey;
+        public int Corner1XParamKey;
+        public int Corner1YParamKey;
+        public int FillColorParamKey;
+        public int BorderColorParamKey;
+        public int VisibilityParamKey;
     }
 }

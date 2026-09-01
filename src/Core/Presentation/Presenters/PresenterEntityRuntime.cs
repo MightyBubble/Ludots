@@ -1430,6 +1430,7 @@ namespace Ludots.Core.Presentation.Presenters
             bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
             bool hasGraphParamBinding = definition.HasGraphParamBindingWork;
             bool hasMinimapMarker = false;
+            bool hasScreenRect = false;
             bool hasExtensionBehavior = false;
             bool hasTrailMesh = false;
 
@@ -1460,6 +1461,7 @@ namespace Ludots.Core.Presentation.Presenters
 
                         break;
                     case BehaviorKind.MinimapMarker: hasMinimapMarker = true; break;
+                    case BehaviorKind.ScreenRect: hasScreenRect = true; break;
                     case BehaviorKind.Extension:
                         hasExtensionBehavior |=
                             (slot.KindId != 0 ? slot.KindId : (byte)slot.Kind) >= PresenterBehaviorKindRegistry.FirstModBehaviorKindId &&
@@ -1516,6 +1518,7 @@ namespace Ludots.Core.Presentation.Presenters
             SyncTickBehaviorMarker<PerfHasOwnerFacingBinding>(entity, hasOwnerFacingBinding);
             SyncTickBehaviorMarker<PerfHasGraphParamBinding>(entity, hasGraphParamBinding);
             SyncTickBehaviorMarker<PerfHasMinimapMarker>(entity, hasMinimapMarker);
+            SyncTickBehaviorMarker<PerfHasScreenRect>(entity, hasScreenRect);
             SyncTickBehaviorMarker<PerfHasExtensionBehavior>(entity, hasExtensionBehavior);
             SyncTickBehaviorMarker<PerfHasTrailMesh>(entity, hasTrailMesh);
             SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
@@ -1694,6 +1697,11 @@ namespace Ludots.Core.Presentation.Presenters
             if (_world.Has<PerfHasMinimapMarker>(entity))
             {
                 RemoveMarker<PerfHasMinimapMarker>(entity);
+            }
+
+            if (_world.Has<PerfHasScreenRect>(entity))
+            {
+                RemoveMarker<PerfHasScreenRect>(entity);
             }
 
             if (_world.Has<PerfHasExtensionBehavior>(entity))
@@ -2726,6 +2734,7 @@ namespace Ludots.Core.Presentation.Presenters
                 bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
                 bool hasGraphParamBinding = definition.HasGraphParamBindingWork;
                 bool hasMinimapMarker = false;
+                bool hasScreenRect = false;
                 bool hasExtensionBehavior = false;
                 bool hasTrailMesh = false;
                 for (int i = 0; i < behaviors.Length; i++)
@@ -2754,6 +2763,7 @@ namespace Ludots.Core.Presentation.Presenters
                                                  DefinitionHasAttachmentTransformConsumers(definition);
                             break;
                         case BehaviorKind.MinimapMarker: hasMinimapMarker = true; break;
+                        case BehaviorKind.ScreenRect: hasScreenRect = true; break;
                         case BehaviorKind.Extension:
                             hasExtensionBehavior |=
                                 (slot.KindId != 0 ? slot.KindId : (byte)slot.Kind) >= PresenterBehaviorKindRegistry.FirstModBehaviorKindId &&
@@ -2775,6 +2785,7 @@ namespace Ludots.Core.Presentation.Presenters
                 if (hasOwnerFacingBinding) signature += Component<PerfHasOwnerFacingBinding>.Signature;
                 if (hasGraphParamBinding) signature += Component<PerfHasGraphParamBinding>.Signature;
                 if (hasMinimapMarker) signature += Component<PerfHasMinimapMarker>.Signature;
+                if (hasScreenRect) signature += Component<PerfHasScreenRect>.Signature;
                 if (hasExtensionBehavior) signature += Component<PerfHasExtensionBehavior>.Signature;
                 if (hasTrailMesh) signature += Component<PerfHasTrailMesh>.Signature;
                 if ((definition.HasSurfaceAuthoring || definition.HasAssetBindingBehavior) &&

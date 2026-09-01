@@ -10,10 +10,13 @@
         "CaseE.TapSelect",
         "QueueModifier",
         "PrecisionModifier",
-        "ModifierSubtract"
+        "ModifierSubtract",
+        "CaseE.Pointer"
       ],
       "triggers": [
-        { "trigger": "graph.case_e.box_begin" }
+        {
+          "trigger": "graph.case_e.box_begin"
+        }
       ]
     },
     {
@@ -22,11 +25,16 @@
       "activeEntityViewKey": "case_e.boxing.view",
       "bindings": [
         "CaseE.BoxSelect",
-        "CaseE.TapSelect"
+        "CaseE.TapSelect",
+        "CaseE.Pointer"
       ],
       "triggers": [
-        { "trigger": "graph.case_e.box_commit" },
-        { "trigger": "graph.case_e.tap_commit" }
+        {
+          "trigger": "graph.case_e.box_commit"
+        },
+        {
+          "trigger": "graph.case_e.tap_commit"
+        }
       ]
     }
   ]
