@@ -360,7 +360,7 @@ namespace Ludots.Core.Input.Orders
         /// Change global interaction mode at runtime.
         /// The change takes effect immediately and will cancel current aiming state.
         /// </summary>
-        public void SetInteractionMode(InteractionModeType mode)
+        public void SetInteractionMode(CastModeType mode)
         {
             if (_config.InteractionMode == mode) return;
             if (_isAiming) ExitAimingState();
@@ -369,7 +369,7 @@ namespace Ludots.Core.Input.Orders
         }
 
         /// <summary>The current global interaction mode.</summary>
-        public InteractionModeType InteractionMode => _config.InteractionMode;
+        public CastModeType InteractionMode => _config.InteractionMode;
 
         /// <summary>Whether the system is currently in aiming state (AimCast).</summary>
         public bool IsAiming => _isAiming;
@@ -661,7 +661,7 @@ namespace Ludots.Core.Input.Orders
                 if (effectiveMapping.IsSkillMapping)
                 {
                     var effectiveMode = effectiveMapping.CastModeOverride ?? mode;
-                    if (effectiveMode != InteractionModeType.TargetFirst)
+                    if (effectiveMode != CastModeType.TargetFirst)
                     {
                         HandleSkillMappingWithMode(actionId, effectiveMapping, effectiveMode, resolvedActor);
                         continue;
@@ -742,7 +742,7 @@ namespace Ludots.Core.Input.Orders
         private void HandleSkillMappingWithMode(
             string actionId,
             InputOrderMapping mapping,
-            InteractionModeType mode,
+            CastModeType mode,
             Entity resolvedActor)
         {
             Entity activationActor = _hasExplicitActivationContext
@@ -764,26 +764,26 @@ namespace Ludots.Core.Input.Orders
 
             switch (mode)
             {
-                case InteractionModeType.SmartCast:
+                case CastModeType.SmartCast:
                     HandleSmartCast(mapping, activationActor);
                     break;
 
-                case InteractionModeType.AimCast:
+                case CastModeType.AimCast:
                     EnterAimingState(actionId, mapping, in activationContext);
                     break;
 
-                case InteractionModeType.SmartCastWithIndicator:
+                case CastModeType.SmartCastWithIndicator:
                     // Press -> enter aiming and publish aim preview.
                     // Release is handled in the aiming state.
                     EnterAimingState(actionId, mapping, in activationContext);
                     _smartCastWithIndicatorActive = true;
                     break;
 
-                case InteractionModeType.PressReleaseAimCast:
+                case CastModeType.PressReleaseAimCast:
                     QueuePressReleaseAim(actionId, mapping, in activationContext);
                     break;
 
-                case InteractionModeType.ContextScored:
+                case CastModeType.ContextScored:
                     HandleContextScored(mapping);
                     break;
 
@@ -1024,7 +1024,7 @@ namespace Ludots.Core.Input.Orders
 
                 ExitAimingState();
                 var effectiveMode = effectiveMapping.CastModeOverride ?? _config.InteractionMode;
-                if (effectiveMode != InteractionModeType.TargetFirst)
+                if (effectiveMode != CastModeType.TargetFirst)
                 {
                     HandleSkillMappingWithMode(actionId, effectiveMapping, effectiveMode, resolvedActor);
                     return;
@@ -2654,13 +2654,13 @@ namespace Ludots.Core.Input.Orders
             }
 
             var effectiveMode = effectiveMapping.CastModeOverride ?? _config.InteractionMode;
-            if (effectiveMode == InteractionModeType.SmartCastWithIndicator ||
-                effectiveMode == InteractionModeType.PressReleaseAimCast)
+            if (effectiveMode == CastModeType.SmartCastWithIndicator ||
+                effectiveMode == CastModeType.PressReleaseAimCast)
             {
-                effectiveMode = InteractionModeType.AimCast;
+                effectiveMode = CastModeType.AimCast;
             }
 
-            if (effectiveMode == InteractionModeType.TargetFirst)
+            if (effectiveMode == CastModeType.TargetFirst)
             {
                 return false;
             }
@@ -2670,7 +2670,7 @@ namespace Ludots.Core.Input.Orders
                 return true;
             }
 
-            return effectiveMode == InteractionModeType.AimCast;
+            return effectiveMode == CastModeType.AimCast;
         }
 
         public IEnumerable<string> GetMappedActionIds()
@@ -2772,13 +2772,13 @@ namespace Ludots.Core.Input.Orders
             {
                 var effectiveMode = effectiveMapping.CastModeOverride ?? _config.InteractionMode;
                 if (preferUiAiming &&
-                    (effectiveMode == InteractionModeType.SmartCastWithIndicator ||
-                     effectiveMode == InteractionModeType.PressReleaseAimCast))
+                    (effectiveMode == CastModeType.SmartCastWithIndicator ||
+                     effectiveMode == CastModeType.PressReleaseAimCast))
                 {
-                    effectiveMode = InteractionModeType.AimCast;
+                    effectiveMode = CastModeType.AimCast;
                 }
 
-                if (effectiveMode != InteractionModeType.TargetFirst)
+                if (effectiveMode != CastModeType.TargetFirst)
                 {
                     HandleSkillMappingWithMode(actionId, effectiveMapping, effectiveMode, resolvedActor);
                     if (LastActivationResult.State == InputOrderActivationState.Rejected)

@@ -60,8 +60,8 @@ This addendum supersedes the older static-frame wording in this handoff.
 | 尾巴 | 原因 | 建议 |
 |---|---|---|
 | **CTRL-3：删除 embodied PlayerOwner/Team（breaking）** | 消费者面极大（GAS targeting/TeamColorResolver/PresentPhaseResolver/SelectionEligibility.CanAcquire/lifecycle snapshot/#499 publisher/MassNav 等），需 DomainStanceQuery 全面替换热路径后才能删。**被替代清单另含 `TeamManager`（静态 (TeamA,TeamB)→TeamRelationship enum 矩阵 + `TeamRelationshipSnapshot` 持久化）**：桥接已建立——`ParticipantBindingResolver` 在写 TeamManager 的同一循环把 map attitude 双写为 teamRep→teamRep / playerRep→teamRep stance 边（stance catalog 配置时 fail-fast 校验，未配置时跳过），SSOT 迁移到 relationship 边完成后 TeamManager 退役 | 独立 PR；先迁消费者（每个一个子单），最后删组件 + ArchitectureTests 禁令 |
-| **ORD 工作流 + PR #535 vs #577 仲裁** | 两个外部 PR 25 文件重叠、closes 同批子单，需人工 triage | 人工决策 canonical 后，迁移剩余 skill/cast fan-out 与 InteractionModeType 调用面；`Command` ground path 已通过 `CommandIntentArbiter` → `RouteGroup` → `SelectDispatchTargets` → `OrderQueue` 接入 |
-| **CastCommit/Intent/Dispatch 与 InputOrderMappingSystem 的接线** | `Command` ground slice 已接入 RFC-0065 intent/dispatch；skill/cast 主链仍保留旧 `InteractionModeType` 表达，退役 InteractionModeType 是 ORD/CTX-7 收尾 | 剩余接线顺序：frameActions 拦截 → CommandIntentArbiter → RouteGroup → Dispatch → OrderQueue（约定已在 XML doc） |
+| **ORD 工作流 + PR #535 vs #577 仲裁** | 两个外部 PR 25 文件重叠、closes 同批子单，需人工 triage | 人工决策 canonical 后，迁移剩余 skill/cast fan-out 与 CastModeType 调用面；`Command` ground path 已通过 `CommandIntentArbiter` → `RouteGroup` → `SelectDispatchTargets` → `OrderQueue` 接入 |
+| **CastCommit/Intent/Dispatch 与 InputOrderMappingSystem 的接线** | `Command` ground slice 已接入 RFC-0065 intent/dispatch；skill/cast 主链仍保留旧 `CastModeType` 表达，退役 CastModeType 是 ORD/CTX-7 收尾 | 剩余接线顺序：frameActions 拦截 → CommandIntentArbiter → RouteGroup → Dispatch → OrderQueue（约定已在 XML doc） |
 | **PROV-4c：VisibilityCondition graph Emit 接线** | PresenterEmitSystem 该路径现状 throw；触碰 emit 热路径，未在本轮改 | 小单独做，加 per-viewer 可见性测试 |
 | **PROV-3/5/6：marker catalog JSON、referee knowledge grant showcase、team palette** | 表现层数据 + 需要可视验收 | 与 GUI showcase 一起做 |
 | **INT-8：KnowledgeProjection tag/stance 事实投影（伪装）** | 新基建，M11 伪装 UAT 标 deferred | 独立 RFC 子单 |
@@ -110,7 +110,7 @@ Showcase 通用注意：单位外观用 cube/sphere + Static/InstancedStaticMesh
 | 单 | 内容 | 验收 |
 |---|---|---|
 | C1 | **CTRL-3 消费者迁移**（独立 PR，逐个子单）：`TargetResolverFanOutHelper`（Team 敌我）、`SelectionEligibility.CanAcquire`、`TeamColorResolver`、`PresentPhaseResolver`/`PresentAudienceContext`、CoreInputMod `NearestEnemyInRange` resolver、MassNavigation 命令权限、`DynamicParticipantVisibilityPublisher`(#499)、lifecycle snapshot、ParticipantView projection → 全部迁 `ControlDomainQuery`/`DomainStanceQuery`；最后删 embodied `PlayerOwner`/`Team` + `TeamManager` 退役 + ArchitectureTests 禁令 | 每子单：迁移后原测试全绿 + 零组件读取（rg 断言）；终单：组件删除 + 禁令测试 |
-| C2 | **输入主链路接线**：`Command` ground path 已接入 `CommandIntentArbiter` → `CommandIntentProfileRegistry.RouteGroup` → `CastDispatchProfileRegistry.SelectDispatchTargets` → OrderQueue；剩余工作是迁移 skill/cast pointer/fan-out、frameActions 拦截与 `InteractionModeType` 退役（六值→CastCommitProfile 映射表见 CTX-7b）。**前置：人工仲裁 PR #535 vs #577** | InputOrderContract/InteractionSelection 等既有测试迁移后全绿；M9 断言 InteractionModeType 删除 |
+| C2 | **输入主链路接线**：`Command` ground path 已接入 `CommandIntentArbiter` → `CommandIntentProfileRegistry.RouteGroup` → `CastDispatchProfileRegistry.SelectDispatchTargets` → OrderQueue；剩余工作是迁移 skill/cast pointer/fan-out、frameActions 拦截与 `CastModeType` 退役（六值→CastCommitProfile 映射表见 CTX-7b）。**前置：人工仲裁 PR #535 vs #577** | InputOrderContract/InteractionSelection 等既有测试迁移后全绿；M9 断言 CastModeType 删除 |
 | C3 | PROV-4c（`VisibilityCondition` graph Emit 接线，现状 throw）+ PROV-3/5/6（marker catalog JSON、referee knowledge grant、team palette + 相位） | per-viewer 可见性测试 + SHOW-3 可视验收（M5/P8） |
 | C4 | INT-8（KnowledgeProjection tag/stance 事实投影，伪装 UAT 解 deferred）、M10 回放 acceptance（GUARD-2）、gitbook DOC-1 回写（RFC accept 后） | 对应 UAT/文档 |
 

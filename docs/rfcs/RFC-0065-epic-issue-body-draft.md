@@ -40,7 +40,7 @@
 4. 控制平面只走 `ControlDomainQuery`；阵营/敌我判定只走 `DomainStanceQuery`（关系图 SSOT + 热路径缓存；stance key 是 catalog 数据，Core 无 "hostile" 字面语义）。
 5. 代理控制只增删 `controls` 边；collection namespace per playerRep，禁止 cross-player merge 与 PlayerId 全局表。
 6. Context frame 带 ownerToken，按 token 移除；push/pop 联动 IMC（inputContextId）。
-7. InputCast / Filter / Commit / Presentation 四轴正交；`InteractionModeType` 全部退役为 CastCommitProfile 数据。
+7. InputCast / Filter / Commit / Presentation 四轴正交；`CastModeType` 全部退役为 CastCommitProfile 数据。
 7a. **零施法状态机**：Input 层不得持有任何施法 FSM / `_isAiming` 类字段 / states-transitions schema；client 侧唯一交互状态 = InteractionContextStack 上的 frame，sim 侧唯一施法进度 = exec 实体上的 tag + attribute（DEC-13）。
 7b. **Presenter 的 casting 表现只消费通用事件**：order 生命周期、ability exec / effect 生命周期、attribute / tag 变化、collection 成员与 revision、entity 生命周期——零 aim/cast 专用事件种类；`AbilityAimBegun/Updated/Ended/SlotAdvanced` 退役（DEC-13）。
 7c. **Pointer 命令语义全部数据**：Core intent/route 路径零 "attack"/"garrison"/"move" 字面量；语义路由零裸 slot index（ability 一律 catalog tag / contextGroup 定位）；同 profile priority 冲突加载期 fail-fast（DEC-14）。
@@ -208,7 +208,7 @@ Feature: M7 施法提交零状态机（frame + tag 承载全部"状态"）
   Scenario Outline: 同一 ability 换 commit profile 只改数据
     Given ability "charge_cannon" 绑定 <commitProfile>
     When 玩家执行 <inputs>
-    Then 产生 <orders>，全程无 InteractionModeType 分支、无任何 FSM 结构参与
+    Then 产生 <orders>，全程无 CastModeType 分支、无任何 FSM 结构参与
 
     Examples:
       | commitProfile              | inputs                  | orders                                   |
@@ -289,7 +289,7 @@ Feature: M9 护栏（ArchitectureTests 即验收）
       | intent 谓词求值路径全系统唯一；L8 target 事实零 sim 真值直读（必经 KnowledgeProjection） |
       | 语义路由零裸 bySlotIndex；生产路径零轴输入直写 WorldPositionCm（WASD 必经 OrderQueue） |
       | Presenter 规则零 viewerRole 业务角色枚举（viewer 语义全部拓扑谓词现算） |
-      | InteractionModeType 已删除或仅存于迁移 shim 白名单 |
+      | CastModeType 已删除或仅存于迁移 shim 白名单 |
 ```
 
 ```gherkin
@@ -499,7 +499,7 @@ Feature: P9 控制方案与改键偏好
 
 **Phase 2 — Context Stack（继承 CTX-1..10）**
 - [ ] CTX-1b frame 增加 ownerToken + inputContextId；按 token 移除；lifecycle 回收钩子
-- [ ] CTX-7b CastCommitProfile + interaction op registry + loader（DEC-13：无 FSM schema）；InteractionModeType 退役映射表
+- [ ] CTX-7b CastCommitProfile + interaction op registry + loader（DEC-13：无 FSM schema）；CastModeType 退役映射表
 - [ ] CTX-7c 退役 AbilityAimBegun/Updated/Ended/SlotAdvanced 事件种类与 AbilityAimPresentationRuntime / AbilityAimSessionState；indicator 迁 presenter 通用事件（tag / collection / attribute）
 - [ ] CTX-8b ClientCastPreference scope 链 schema + mod lock 语义
 

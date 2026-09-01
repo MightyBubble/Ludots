@@ -622,7 +622,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -688,7 +688,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -741,7 +741,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -1310,7 +1310,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         ModifierBehavior = ModifierSubmitBehavior.AlwaysQueued,
                         IsSkillMapping = false,
                         HeldPolicy = HeldPolicy.EveryFrame,
-                        CastModeOverride = InteractionModeType.AimCast,
+                        CastModeOverride = CastModeType.AimCast,
                         AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
                         AutoTargetRangeCm = 640,
                         ActorOrderRouting = new ActorOrderRoutingSettings
@@ -1365,7 +1365,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(remapped.TargetType, Is.EqualTo(OrderTargetType.Position));
                 Assert.That(remapped.ModifierBehavior, Is.EqualTo(ModifierSubmitBehavior.AlwaysQueued));
                 Assert.That(remapped.HeldPolicy, Is.EqualTo(HeldPolicy.EveryFrame));
-                Assert.That(remapped.CastModeOverride, Is.EqualTo(InteractionModeType.AimCast));
+                Assert.That(remapped.CastModeOverride, Is.EqualTo(CastModeType.AimCast));
                 Assert.That(remapped.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
                 Assert.That(remapped.AutoTargetRangeCm, Is.EqualTo(640));
                 Assert.That(remapped.ActorOrderRouting, Is.Not.Null);
@@ -2376,7 +2376,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -2606,7 +2606,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.AimCast,
+                InteractionMode = CastModeType.AimCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -2660,7 +2660,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.AimCast,
+                InteractionMode = CastModeType.AimCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -2974,7 +2974,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.AimCast,
+                InteractionMode = CastModeType.AimCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -3024,7 +3024,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -3071,7 +3071,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -3133,7 +3133,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()

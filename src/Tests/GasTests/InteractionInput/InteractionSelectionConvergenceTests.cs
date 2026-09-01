@@ -243,7 +243,7 @@ namespace Ludots.Tests.GAS
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -314,7 +314,7 @@ namespace Ludots.Tests.GAS
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
@@ -391,7 +391,7 @@ namespace Ludots.Tests.GAS
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -457,7 +457,7 @@ namespace Ludots.Tests.GAS
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -580,7 +580,7 @@ namespace Ludots.Tests.GAS
 
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -1227,7 +1227,7 @@ namespace Ludots.Tests.GAS
             var selectionSystem = CreateCommandSourceAcquisitionSystem(world, globals, local);
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.AimCast,
+                InteractionMode = CastModeType.AimCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()

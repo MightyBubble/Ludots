@@ -23,7 +23,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 1. 「Selection」是单一全局语义 hub（`SelectionRuntime`），无法表达 context 化集合（默认框选 vs 超级武器指定单位）。
 2. 「归属」写成 unit 身上的 `PlayerOwner` / `Team` 组件，掉线接管、控制权转移、裁判观战都要造平行系统。
 3. Collection 与 PlayerId 数据 bag 混谈，重连无法归还框选状态。
-4. `InteractionModeType` 把 geometry / commit / presentation / targeting 捆成一个 enum，SmartCast 陷阱无法正交扩展。
+4. `CastModeType` 把 geometry / commit / presentation / targeting 捆成一个 enum，SmartCast 陷阱无法正交扩展。
 5. 技能面板顺序 == slot index == input action（`argsTemplate.i0`），面板反向调用输入层；多选聚合规则写死在代码里。
 6. 复选施法 fan-out 无策略层：只有「全员各来一份」，无法表达逐个施法 / 就近 N 个 / 血多先放。
 7. 多段施法（蓄力、两段确认、模式切换大招）行为散落在 `InputOrderMappingSystem` 的巨型 switch 里。
@@ -75,7 +75,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 | Cast Family（alias/catalog） | 「施法方式/语义同类」的跨模板聚合键（炮车蓄力炮 ≈ 强化陆战队蓄力炮） | 拟新增 ability catalog 字段 |
 | AggregationProfile | 多选时面板聚合规则（byFamily / byTemplate / byAbilityId / flat） | 拟新增 |
 | PanelRouter | input intent（Q/W/E…）→ 当前聚合视图第 N 格 → 逐 entity `(entity, slotIndex)` 绑定集 | 拟新增 |
-| CastCommitProfile | 施法提交绑定：激活时执行的 op 序列（立即提交 / push targeting frame）+ frame 内 action→op 映射；**无 states/transitions**，取代 `InteractionModeType` 捆绑 | 拟新增 |
+| CastCommitProfile | 施法提交绑定：激活时执行的 op 序列（立即提交 / push targeting frame）+ frame 内 action→op 映射；**无 states/transitions**，取代 `CastModeType` 捆绑 | 拟新增 |
 | CommandIntentProfile | pointer intent 的 per-actor 路由规则表：actor 谓词 × target 谓词 → route（orderType + slot selector / contextGroup 评分委托）；显式全序胜出 + 显式群体策略 | 拟新增（吸收并退役 `actorOrderRouting`，复用 `ContextScoredOrderResolver` 评分） |
 | ControlScheme | 命名的控制方案 = IMC context 组合 + 默认 preference（sc2 右键指挥 / 红警左键 / 暗黑 WASD），玩家可热切换 | 拟新增 catalog |
 | ClientCastPreference | 玩家施法偏好，scope 链 global → template → formset → slot | 拟新增 |
@@ -96,7 +96,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 6. **代理控制只增删 `controls` 边**：不迁移 collection、不改 `owns`、不写 unit 组件。
 7. **Collection namespace per playerRep entity**：禁止 cross-player merge，禁止 PlayerId 全局表。
 8. **Context Stack 只路由 key，不存实体列表**；frame 按 ownerToken 移除，不依赖裸 LIFO。
-9. **InputCast 与 Filter、Commit、Presentation 正交**：禁止再往 `InteractionModeType` 加值；新施法手感 = 新 CastCommitProfile 数据。
+9. **InputCast 与 Filter、Commit、Presentation 正交**：禁止再往 `CastModeType` 加值；新施法手感 = 新 CastCommitProfile 数据。
 9a. **零施法状态机**：Input 层不得持有任何施法 FSM / `_isAiming` 类字段 / states-transitions schema；client 侧唯一交互状态 = InteractionContextStack 上的 frame，sim 侧唯一施法进度 = exec 实体上的 tag + attribute（DEC-13）。
 9b. **Presenter 的 casting 表现只消费通用事件**：order 生命周期、ability exec / effect 生命周期、attribute / tag 变化、collection 成员与 revision、entity 生命周期——零 aim/cast 专用事件种类；`AbilityAimBegun/Updated/Ended/SlotAdvanced` 事件退役（DEC-13）。
 10. **Presenter 只读**：collection revision + provenance + catalog；不写 collection、不改 association。
@@ -378,7 +378,7 @@ profile 只声明两件事：激活 slot 时执行什么 op 序列；若 push �
 - **蓄力量不在 client**：begin/commit 两条 order 之间由 exec 在 sim 内按 tick 累计（DEC-13 #3），payload 里没有 `chargeSeconds`。
 - **多段技能不在这里表达**：二段/追加输入属于 sim（exec 等待 + tag + CTX-6 lifecycle push frame），profile 只管"这一次激活如何变成 order"。
 - 指示器、蓄力条等表现全部是 presenter 监听 frame collection / exec tag / attribute 的通用事件（DEC-13 #4），profile 里没有任何 show/hide 表现指令。
-- `InteractionModeType` 六个值退役为等价 profile 数据组合。
+- `CastModeType` 六个值退役为等价 profile 数据组合。
 
 ### 5.6 ClientCastPreference（scope 链）
 
@@ -741,7 +741,7 @@ Feature: M7 施法提交零状态机（frame + tag 承载全部"状态"）
   Scenario Outline: 同一 ability 换 commit profile 只改数据
     Given ability "charge_cannon" 绑定 <commitProfile>
     When 玩家执行 <inputs>
-    Then 产生 <orders>，全程无 InteractionModeType 分支、无任何 FSM 结构参与
+    Then 产生 <orders>，全程无 CastModeType 分支、无任何 FSM 结构参与
 
     Examples:
       | commitProfile              | inputs                  | orders                                   |
@@ -826,7 +826,7 @@ Feature: M9 护栏（ArchitectureTests 即验收）
       | L8 target 事实求值零 sim 真值直读（必经 viewer KnowledgeProjection） |
       | 语义路由零裸 bySlotIndex（ability 定位一律 catalog tag / contextGroup） |
       | 生产路径零轴输入直写 WorldPositionCm（WASD 移动必经 OrderQueue） |
-      | InteractionModeType 类型已删除或仅存于迁移 shim 白名单 |
+      | CastModeType 类型已删除或仅存于迁移 shim 白名单 |
 ```
 
 ```gherkin
@@ -1068,7 +1068,7 @@ CTX-1..CTX-10 按原文；修订：
 | ID | 修订 |
 |----|------|
 | CTX-1b | frame 增加 `ownerToken` + `inputContextId`；按 token 移除；lifecycle 回收钩子（DEC-6/7） |
-| CTX-7b | 明确产物 = CastCommitProfile + interaction op registry + loader（§5.5，DEC-13：无 FSM schema），`InteractionModeType` 退役映射表 |
+| CTX-7b | 明确产物 = CastCommitProfile + interaction op registry + loader（§5.5，DEC-13：无 FSM schema），`CastModeType` 退役映射表 |
 | CTX-7c | 退役 `AbilityAimBegun/Updated/Ended/SlotAdvanced` 事件种类与 `AbilityAimPresentationRuntime` / `AbilityAimSessionState`；indicator 迁 presenter 通用事件（tag / collection / attribute，DEC-13 #4） |
 | CTX-8b | ClientCastPreference scope 链 schema（§5.6）+ mod lock 语义 |
 

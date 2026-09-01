@@ -25,7 +25,7 @@ CATEGORY_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         ["默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"],
     ),
     "aim": (
-        "瞄准：InputOrderMappingSystem + InteractionModeType（AimCast 等）；"
+        "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；"
         "瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
         ["RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"],
     ),
@@ -39,7 +39,7 @@ CATEGORY_DEFAULTS: dict[str, tuple[str, list[str]]] = {
     ),
     "instant-skill": (
         "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
-        ["技能主链仍大量依赖旧 InteractionModeType，未完全切到 CastCommitProfile"],
+        ["技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"],
     ),
     "unit-skill": (
         "点单位技：HoveredEntity / 点选目标 → castAbility；智能施法走 SmartCast 模式。",

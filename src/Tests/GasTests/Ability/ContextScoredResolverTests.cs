@@ -104,7 +104,7 @@ namespace Ludots.Tests.GAS
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.ContextScored,
+                InteractionMode = CastModeType.ContextScored,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()

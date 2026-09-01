@@ -146,7 +146,7 @@
 - 双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导
 - 完美闪避窗口若要用引擎级 Prompt，需接 GasInputResponse，产品层未铺全
 - 宝宝 AI 自动技见 Utility Autocast，与玩家开关不是一条链
-- 技能主链仍大量依赖旧 InteractionModeType，未完全切到 CastCommitProfile
+- 技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile
 - 按住连发与通道打断的统一手感表仍分散在各 ability
 - 控制组存取仅 InteractionShowcase，未进 Core 正式 API
 - 提升为 Core：编队存取与跨会话策略

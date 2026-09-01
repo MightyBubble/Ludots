@@ -1225,7 +1225,7 @@ namespace Ludots.Tests.ThreeC
 
             var orderConfig = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()

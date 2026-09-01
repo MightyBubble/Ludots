@@ -49,7 +49,7 @@ InputOrderMapping:
 | 组件 | 状态 |
 |------|------|
 | InputOrderMapping.Entity | ✅ 已有 |
-| InteractionModeType (4种) | ✅ 已有 |
+| CastModeType (4种) | ✅ 已有 |
 | EffectClip duration | ✅ 已有 |
 | GrantedTags | ✅ 已有 |
 | Periodic effect | ✅ 已有 |
