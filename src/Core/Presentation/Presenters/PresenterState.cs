@@ -8,6 +8,7 @@ namespace Ludots.Core.Presentation.Presenters
     {
         public int DefId;
         public int StableId;
+        public int OwnerStableId;
         public int ScopeId;
         public Entity OwnerEntity;
         public PresentationAnchorKind AnchorKind;

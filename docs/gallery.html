@@ -82,7 +82,7 @@
 <footer class="site-footer">
   <div class="inner">
     <span>Ludots Showcase 画廊 · 数据源 showcase.registry.json</span>
-    <span>启动方式：<code>scripts/run-mod-launcher.cmd cli launch &lt;binding&gt; --adapter raylib</code></span>
+    <span>启动方式：优先使用注册的 <code>preset</code>，否则使用 <code>binding</code></span>
   </div>
 </footer>
 
@@ -107,11 +107,11 @@
 
   /* ---------- 启动命令 ---------- */
   function launchCmd(sc) {
-    if (sc.binding) {
-      return "scripts/run-mod-launcher.cmd cli launch " + sc.binding + " --adapter raylib";
-    }
     if (sc.preset) {
       return "scripts/run-mod-launcher.cmd cli launch preset:" + sc.preset;
+    }
+    if (sc.binding) {
+      return "scripts/run-mod-launcher.cmd cli launch " + sc.binding + " --adapter raylib";
     }
     return null;
   }

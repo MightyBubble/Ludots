@@ -144,6 +144,11 @@ namespace Ludots.Core.Input.Interaction
                     CommandIntentRouteDefinition route = rule.Route
                         ?? throw new InvalidOperationException($"{rulePath}.route must be an object.");
                     RequireTrimmedNonEmpty(route.OrderTypeKey, $"{rulePath}.route.orderTypeKey");
+                    if (!route.TargetShape.HasValue || !Enum.IsDefined(route.TargetShape.Value))
+                    {
+                        throw new InvalidOperationException(
+                            $"{rulePath}.route.targetShape must explicitly declare a supported command target shape.");
+                    }
 
                     ValidatePredicateStrings(rule.Actor?.AllTags, $"{rulePath}.actor.allTags");
                     ValidatePredicateStrings(rule.Actor?.AnyTags, $"{rulePath}.actor.anyTags");
