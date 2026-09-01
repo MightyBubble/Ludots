@@ -1685,18 +1685,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
                     _commandPort.LastSubmittedBatchSequence == 0)
                 {
                     InputOrderActivationResult activation = _inputOrderMapping?.LastActivationResult ?? default;
-                    string stackInfo = "stack=n/a";
-                    try
-                    {
-                        var stack = (InteractionContextStack)_engine.GlobalContext[CoreServiceKeys.InteractionContextStack.Name];
-                        stackInfo = stack.TryPeek(out InteractionContextFrame frame)
-                            ? $"stackPeek entity={frame.ContextEntity} alive={(frame.ContextEntity != Entity.Null && _world.IsAlive(frame.ContextEntity))} collectionKey={frame.ActiveCollectionKeyId}"
-                            : "stackEmpty";
-                    }
-                    catch (Exception ex)
-                    {
-                        stackInfo = "stackErr:" + ex.GetType().Name;
-                    }
+                    // InteractionContextStack 已随 #1306 路线④退役(投影吸收);命令失败诊断不再有栈可读。
+                    string stackInfo = "stack=retired(#1306)";
                     throw new InvalidOperationException(
                         $"Input action '{_pendingCommandAction}' did not produce exactly one submitted network command batch; " +
                         $"revision={_commandPort.SubmissionRevision}, result={_commandPort.LastSubmitResult}, " +
