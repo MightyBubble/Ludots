@@ -15,6 +15,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private const GraphKindMask QueryOnly = GraphKindMask.Query;
 
+        // Named per-op TriggerGraph authoring carve-outs over the Query-class set (never a
+        // class-wide mask widening): the aimsource kernel ops and the collection-query
+        // seed/filter family are the read-side vocabulary input-event TriggerGraphs need.
+        // The runtime triple is kind=TriggerGraph (this mask bit) && op listed by name on a
+        // QueryAndTriggerGraph row && Pure effect metadata; every other Query-class op stays
+        // Query-only.
+        private const GraphKindMask QueryAndTriggerGraph = GraphKindMask.Query | GraphKindMask.TriggerGraph;
+
         // TriggerGraph mirrors the Script authorable set, including Yield (host resumption is the host's contract).
         private const GraphKindMask ScriptAndTriggerGraph = GraphKindMask.Script | GraphKindMask.TriggerGraph;
         private const GraphKindMask TriggerGraphOnly = GraphKindMask.TriggerGraph;
@@ -84,6 +92,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphControlFlowPorts.List, GraphControlFlowPorts.A, GraphControlFlowPorts.B,
                 GraphControlFlowPorts.C, GraphControlFlowPorts.Max
             };
+            string[] portRectCorners =
+            {
+                GraphControlFlowPorts.A, GraphControlFlowPorts.B, GraphControlFlowPorts.C, GraphControlFlowPorts.Max
+            };
+            string[] portTeamId = { GraphControlFlowPorts.TeamId };
+            string[] portMinMax = { GraphControlFlowPorts.Min, GraphControlFlowPorts.Max };
 
             var rows = new List<GraphOpDescriptor>(160);
             Add(rows, GraphNodeOp.ConstBool, LinearAll, GraphValueType.Bool);
@@ -191,8 +205,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.RelationshipAggSumMetric, QueryOnly, queryOut: GraphValueType.Int, queryPorts: portListSource, flags: GraphOperandRole.RelationshipTypeFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.RelationshipAggMaxMetric, QueryOnly, queryOut: GraphValueType.Int, queryPorts: portListSource, flags: GraphOperandRole.RelationshipTypeFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.RelationshipAggAverageMetric, QueryOnly, queryOut: GraphValueType.Int, queryPorts: portListSource, flags: GraphOperandRole.RelationshipTypeFlags, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.QueryAllMapEntities, QueryOnly, queryOut: GraphValueType.TargetList);
-            Add(rows, GraphNodeOp.QueryFromCollection, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portSource, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.QueryAllMapEntities, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList);
+            Add(rows, GraphNodeOp.QueryFromCollection, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QueryCollectActiveEffects, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portSource);
             Add(rows, GraphNodeOp.QueryCollectEffectTemplates, QueryOnly, queryOut: GraphValueType.IntIdList);
             Add(rows, GraphNodeOp.QueryCollectAbilitySlots, QueryOnly, queryOut: GraphValueType.IntIdList, queryPorts: portSource);
@@ -205,18 +219,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.QueryCollectAbilityHolders, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QueryCollectActiveDialogueChoices, QueryOnly, queryOut: GraphValueType.IntIdList);
             // ── Aimsource pure helpers: read-only screen/pointer/stick math for aim graphs ──
-            Add(rows, GraphNodeOp.ScreenPointToGround, QueryOnly, GraphValueType.Bool, queryOut: GraphValueType.Bool, queryPorts: portAB);
-            Add(rows, GraphNodeOp.ScreenPointToEntity, QueryOnly, GraphValueType.Entity, queryOut: GraphValueType.Entity, queryPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.ScreenRegionToEntities, QueryOnly, GraphValueType.Void, queryPorts: portRect, queryOut: GraphValueType.TargetList, flags: GraphOperandRole.SrcRegisterFlags);
-            Add(rows, GraphNodeOp.PointToDirection, QueryOnly, GraphValueType.Float, queryOut: GraphValueType.Float, queryPorts: portSource, flags: GraphOperandRole.BoolScratchFlags);
-            Add(rows, GraphNodeOp.StickToDirection, QueryOnly, GraphValueType.Float, queryOut: GraphValueType.Float, queryPorts: portAB, flags: GraphOperandRole.BoolScratchFlags);
+            Add(rows, GraphNodeOp.ScreenPointToGround, QueryAndTriggerGraph, GraphValueType.Bool, queryOut: GraphValueType.Bool, queryPorts: portAB, scriptPorts: portAB);
+            Add(rows, GraphNodeOp.ScreenPointToEntity, QueryAndTriggerGraph, GraphValueType.Entity, queryOut: GraphValueType.Entity, queryPorts: portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.ScreenRegionToEntities, QueryAndTriggerGraph, GraphValueType.Void, queryPorts: portRect, scriptPorts: portRectCorners, queryOut: GraphValueType.TargetList, flags: GraphOperandRole.SrcRegisterFlags);
+            Add(rows, GraphNodeOp.PointToDirection, QueryAndTriggerGraph, GraphValueType.Float, queryOut: GraphValueType.Float, queryPorts: portSource, scriptPorts: portSource, flags: GraphOperandRole.BoolScratchFlags);
+            Add(rows, GraphNodeOp.StickToDirection, QueryAndTriggerGraph, GraphValueType.Float, queryOut: GraphValueType.Float, queryPorts: portAB, scriptPorts: portAB, flags: GraphOperandRole.BoolScratchFlags);
             Add(rows, GraphNodeOp.LoadEffectTiming, LinearAndScript | QueryOnly, GraphValueType.Float, scriptOut: GraphValueType.Float, queryOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.LoadEffectStack, LinearAndScript | QueryOnly, GraphValueType.Float, scriptOut: GraphValueType.Float, queryOut: GraphValueType.Float);
-            Add(rows, GraphNodeOp.QueryFilterTeam, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portListTeamId, flags: GraphOperandRole.TeamIdSourceFlags);
-            Add(rows, GraphNodeOp.QueryFilterTemplate, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.QueryFilterAttributeRange, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portListMinMax, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.QueryFilterTagAny, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.QueryFilterTagNone, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.QueryFilterTeam, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portListTeamId, scriptPorts: portTeamId, flags: GraphOperandRole.TeamIdSourceFlags);
+            Add(rows, GraphNodeOp.QueryFilterTemplate, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.QueryFilterAttributeRange, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portListMinMax, scriptPorts: portMinMax, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.QueryFilterTagAny, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.QueryFilterTagNone, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QuerySortByAttribute, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portList, flags: GraphOperandRole.SortDescendingFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.AggSumAttribute, QueryOnly, queryOut: GraphValueType.Float, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.AggAverageAttribute, QueryOnly, queryOut: GraphValueType.Float, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
