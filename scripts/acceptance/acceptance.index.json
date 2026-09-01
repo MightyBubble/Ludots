@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 48,
+    "runnable": 50,
     "testOnly": 0,
-    "total": 48
+    "total": 50
   },
   "runnable": [
     {
@@ -116,6 +116,14 @@
       "hasScreenshotEvidence": false
     },
     {
+      "id": "case_e_selection",
+      "preset": "case_e_selection_raylib",
+      "binding": "case_e_selection",
+      "testFilter": "CaseESelectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/case-e-selection",
+      "hasScreenshotEvidence": false
+    },
+    {
       "id": "control_plane_projection",
       "preset": "control_plane_projection_raylib",
       "binding": "control_plane_projection_showcase",
@@ -129,6 +137,14 @@
       "binding": "engine_gallery",
       "testFilter": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_atmosphere_fog",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_composition",
+      "preset": "engine_raylib_composition",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_composition",
       "hasScreenshotEvidence": true
     },
     {

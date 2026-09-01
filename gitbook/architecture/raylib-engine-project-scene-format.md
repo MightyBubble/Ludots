@@ -1,13 +1,13 @@
 # Raylib 引擎工程分层与关卡容器格式
 
-> 状态：规范定稿，未实现。规范本文档为格式与分层的单一事实源；实现按本文档"落地次序"分步交付。
+> 状态：已交付——播放器 / 工程内容 / 工程数据三分（Ludots.App.RaylibPlayer + Ludots.Content.EngineGallery + projects/engine_gallery），22 个场景（21 能力场景 + 1 多节点组合场景）全部经关卡容器装载。
 > 谱系：#1321（Raylib 引擎工程化收敛）的后续工作。与 #1350（Nav 烘焙源架构 / LogicTerrain 退役）、#1402（navmesh 烘焙 showcase）的关系见"边界"一节。
 
 ## 1. 解决什么问题
 
 Ludots 的定位是"配一个 Unity 工程"：raylib 侧是一个自持的引擎工程，像 Unity 工程一样管理场景、网格、材质、动画、相机与环境；Ludots 世界（Core / mod / ECS）不干涉引擎工程内部资产怎么放，需要渲染时才通过 binding 把世界实体接到引擎资产上。
 
-现状是这条分层的下半段已经成型（渲染库零 Core、资产租约、每帧合同缓冲都在 main），缺上半段：引擎工程没有自己的关卡文档——场景仍由 C# 类硬编码（画廊的 `SceneCatalog.cs` 注册表）。本规范补上这一层：关卡容器格式、材质资产格式、以及两侧的分界线。
+这条分层的下半段早已成型（渲染库零 Core、资产租约、每帧合同缓冲都在 main）；本规范定义上半段——关卡容器格式、材质资产格式、两侧的分界线，以及工程 / 播放器 / 打包三者的分离。
 
 目标用户：
 
@@ -18,8 +18,10 @@ Ludots 的定位是"配一个 Unity 工程"：raylib 侧是一个自持的引擎
 
 ```
 引擎工程层（自持，零 Core）
-    项目根：scenes / materials / models / textures / camera / environment
-    物理载体：src/Client/Ludots.Raylib.Render + 自持 app（画廊泛化为 level player）
+    工程数据：projects/<name>/（scenes / materials / models / textures / project.json）
+    内容程序集：src/Content/Ludots.Content.EngineGallery（组件实现 + 内容支撑）
+    引擎场景容器：src/Client/Ludots.Raylib.SceneKit（合同 + EngineProject 装载器 + 注册表）
+    播放器：src/Apps/Raylib/Ludots.App.RaylibPlayer（--project 打开任意工程）
     独立可打开、可播放、可截图
         ▲ 单向依赖
 binding 层
@@ -47,7 +49,7 @@ Ludots 世界（Core / mod / ECS）
 | 接口 | 位置 | 承担 |
 |---|---|---|
 | `RaylibAssetStore<T>` | `src/Client/Ludots.Raylib.Render/Rendering/RaylibAssetStore.cs` | URI 去重、Lease 租约、两阶段异步（worker CPU 相 + 渲染线程帧泵）、负缓存重试、fail-loud |
-| `IRenderAssetPathResolver` / `GalleryAssetPaths` | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/GalleryAssets.cs` | 项目 URI → 物理路径，拒绝路径逃逸 |
+| `IRenderAssetPathResolver` / `GalleryAssetPaths` | `src/Content/Ludots.Content.EngineGallery/GalleryAssets.cs` | 项目 URI → 物理路径，拒绝路径逃逸 |
 | `IRenderMeshAssets` / `GalleryMeshAssets` | 同上 | 网格描述符注册（Primitive 图元 / Model GLB），MeshAssetId 分配 |
 | `IRenderMaterialAssets` / `GalleryMaterialAssets` | 同上 | 材质注册、实例链解析 |
 | `IPrimitiveDrawSnapshot` / `GalleryPrimitiveSnapshot` | 同上 | 每帧图元缓冲，stableId 驱动 static mesh 增量同步 |
@@ -65,15 +67,16 @@ Ludots 世界（Core / mod / ECS）
 一个引擎工程是一个目录，充当项目根；根内 URI 一律根相对、正斜杠：
 
 ```
-<engine-project>/
-  project.json          项目清单：name、schemaVersion、场景目录入口
+projects/<name>/
+  project.json          项目清单：schemaVersion、name、scenes（目录入口）、contentAssembly（内容程序集名）
+  catalog.json          场景注册表（id + asset），播放器菜单与验收 CLI 从它枚举
   scenes/               关卡容器，一景一文件
   materials/            材质资产
-  models/               GLB 网格与动画
+  Models/               GLB 网格与动画
   textures/             贴图
 ```
 
-第一个引擎工程实例就是画廊的项目根：`src/Apps/Raylib/Ludots.App.RaylibEngineGallery/assets/engine_gallery/`。`catalog.json` 保留为项目内场景注册表（id + asset），画廊菜单与验收 CLI 从它枚举。
+工程住在仓库 `projects/` 下，第一个实例是画廊：`projects/engine_gallery/`（其 `contentAssembly` 为 `Ludots.Content.EngineGallery`，播放器宿主必须引用该程序集——对应 Unity 工程自带脚本程序集的位置；真插件式按需加载是明确的非目标，见第 11 节）。
 
 ## 6. 关卡容器格式（scenes）
 
@@ -91,7 +94,7 @@ Ludots 世界（Core / mod / ECS）
 | `assets[]` | list | 装载真源，见下 |
 | `rootNode` / `nodes[]` | string / list | 节点层级，见下 |
 
-`assets[]` 每项：`id`（场景内唯一）、`kind`（mesh / model / material / texture / terrain）、`source`（项目根相对 URI）。装载器按 kind 注册进 `GalleryMeshAssets` / `GalleryMaterialAssets` 并经 `RaylibAssetStore` 装载。清单里出现未被任何节点引用的资产、或节点引用清单外的 id，装载 fail-fast。
+`assets[]` 每项：`id`（场景内唯一）、`kind`（mesh / model / material / texture / terrain）、`source`（项目根相对 URI，禁止绝对路径与 `../` 逃逸）。装载器把 source 解析成工程根下的物理路径，连同 kind 注入消费组件；组件拿注入值向渲染器注册描述符（`GalleryMeshAssets` 等）并交给渲染器既有的缓存装载——装载器不代注册、不经手 GPU 资源。纯程序化场景的清单可以为空——空清单声明"本场景不消费任何工程文件"，同样是事实。清单里出现未被任何节点引用的资产、或节点引用清单外的 id，装载 fail-fast；声明 assets 的组件必须实现 `IEngineSceneComponentAssets`，组件代码里不出现资产 URI 字面量（v1 已兑现的 kind 是 model；其余 kind 是格式预留，语义随组合场景交付收口）。
 
 节点与组件：
 
@@ -103,15 +106,18 @@ Ludots 世界（Core / mod / ECS）
 
 节点 id 唯一；parent 必须已声明、不得成环；rotation 为单位四元数（xyzw）。
 
-组件是纯美术能力，kind 用短名经特性注册（对应实现类打 `[EngineSceneComponent(kind)]`），**关卡文件不出现 C# 类型名**。v1 组件面：
+组件是纯美术能力，kind 用短名经特性注册（对应实现类打 `[EngineSceneComponent(kind)]`），**关卡文件不出现 C# 类型名**。组件可声明 `config` 对象（必须是 JSON 对象，装载层拦截；实现 `IEngineSceneComponentConfigurable` 自行解析，配置落在不可配置组件上装载 fail-fast）。已落地组件面（`src/Content/Ludots.Content.EngineGallery/Components/`）：
 
-| kind | 字段 | 映射 |
-|---|---|---|
-| `static_mesh` | `asset`(mesh)、`material`?、`instances[]`（各含 position/rotation/scale，可选 color） | 每个 instance 摊成一个 `PrimitiveDrawItem`；同 MeshAssetId 自动进 ISM 合批车道 |
-| `animator` | `asset`(model)、`clip`、`loop`、`phase`、`speed` | 美术动画播放，产出 `SkinnedVisualBatchItem`；clip 来自 GLB 内嵌动画，v1 不另立 clip 文件格式 |
-| `terrain` | `asset`(.height/.grid)、`profile` | 高度图 / 网格地形渲染源 |
-| `environment` | sky / fog 配置 | 下发 `RaylibSkyEnvironment` / 雾参数 |
-| `decal` / `water` | 资产引用与参数 | 对应现有 renderer 配置面 |
+| kind | 资产 | config 字段 | 映射 | 形态 |
+|---|---|---|---|---|
+| `island_terrain` | — | chunksPerSide / samplesPerChunk / worldSizeMeters / seed / dayPhase | 程序化高度场 + 全帧天空/阴影 | 基座（清屏画环境，不触碰相机） |
+| `static_mesh` | 可选 material（.mat.json） | primitive（cube/sphere）、material（资产 id）、instances[]（position / yawDeg? / scale / color / 可选逐实例 material 覆盖） | 每个 instance 摊成一个 `PrimitiveDrawItem` 进 ISM 合批车道 | 覆盖（不清屏叠加） |
+| `animator` | model（GLB） | clip / speed / phaseOffset / position / scale / facingDeg / castShadows | GLB 内嵌 clip 播放，逐帧 lit 绘制 | 覆盖（不清屏叠加） |
+| 存量 21 能力组件 | 按各自清单 | — | 各渲染能力的单组件封装 | 单节点整帧 |
+
+覆盖组件的 lit 绘制必须自画一遍天空（不清屏叠加）：lit 材质的 IBL 环境由帧内天空通道喂给，缺了模型渲染成近黑；走 primitive/instanced 光照路径的组件不吃 IBL，无此要求。组合场景活样本见 [关卡容器的组合实拍](../reference/engine-gallery-wiki/composition.md)。
+
+格式预留（kind 已在装载层登记为合法词汇，组件实现随后续需求交付，不与已兑现 kind 混列）：`terrain`（.height/.grid 资产地形源）、`environment`（sky/fog 配置）、`decal` / `water`。
 
 ## 7. 材质格式（materials）
 
@@ -142,27 +148,43 @@ Ludots 世界（Core / mod / ECS）
 ## 9. 装载管线
 
 ```
-关卡 / 材质文档
-    │ 装载映射器（本规范唯一新增代码）
-    ├─ assets[] ──注册──► GalleryMeshAssets / GalleryMaterialAssets
-    │                        └─ GLB / 贴图 ──► RaylibAssetStore（租约 / 异步 / 帧泵）
-    ├─ nodes[].components ──映射──► PrimitiveDrawItem / SkinnedVisualBatchItem ──► 快照
-    └─ camera / environment ──► 轨道相机默认值 / RaylibFrameLighting / RaylibSkyEnvironment
-渲染器零改动，照常消费快照
+project.json → catalog.json → scenes/*.scene.json
+    │ EngineProject（src/Client/Ludots.Raylib.SceneKit，装载器）
+    ├─ assets[] ──解析工程根物理路径──► IEngineSceneComponentAssets 注入组件
+    │                                        └─ 组件用注入值注册描述符，渲染器缓存负责装载
+    ├─ nodes[].components ──kind→内容程序集类型──► CompositeEngineScene（Load/Draw/Dispose 编排）
+    └─ camera ──► EngineOrbitCamera 初始位姿（R 键复位目标）
+渲染器零改动，照常消费快照；播放器只负责窗口 / 菜单 / 验收 CLI
 ```
 
-## 10. 验收
+## 10. 工程、播放器与打包的分离
 
-- 三个合同测试，对应三条铁律：装载真源（含"组件零硬编码 URI"静态扫描）、host_assets 唯一通道、每帧数据通道唯一性。
-- 一个组合验收场景：地形 + 同 mesh 多实例阵 + animator 角色 + 材质实例链 + 相机，走现有画廊验收链（preset + 截图 + 帧统计）。
-- 存量迁移：画廊 21 个能力场景逐个搬进容器（机械迁移，一景一文件）；`SceneCatalog.cs` 改为装载 catalog.json；`scripts/record-engine-galleries.py` 同步改读 catalog.json。
+三者互不包含，对应 Unity 的 Project / Editor·Player / Build：
 
-## 11. 边界与落地次序
+| 概念 | 是什么 | 仓库位置 | 生命周期 |
+|---|---|---|---|
+| 工程 | 纯数据目录（场景/材质/模型/清单） | `projects/<name>/` | 随仓库版本化，改内容=改数据 |
+| 播放器 | 引擎可执行（窗口/相机/菜单/验收 CLI）+ 内容程序集 | `src/Apps/Raylib/Ludots.App.RaylibPlayer` + `src/Content/Ludots.Content.EngineGallery` | 随代码构建，一个播放器打开任意工程 |
+| 打包产物 | 播放器发布输出 + 工程目录副本 | `dotnet publish` 输出 + 工程拷贝 | 一次性分发物，不回流仓库 |
+
+规则：
+
+1. 播放器与工程互相不知道对方的存在位置——播放器只认 `--project <路径>`，工程只认相对 URI；构建输出目录不再是工程数据的隐式存放点（csproj 不再把工程资产拷进 bin）。
+2. 开发态运行：仓库根 `--project projects/engine_gallery`；打包态：发布输出旁放工程副本，`--project` 指它。两者的工程内容同一份来源，不产生第二事实源。
+3. 内容程序集（组件实现）属于工程的"脚本"部分，由播放器引用并在 `project.json` 的 `contentAssembly` 声明；按需动态加载程序集（真插件化）是明确的非目标，出现第二个需要自定义代码的工程再议。
+
+## 11. 验收
+
+- 合同测试，对应铁律 1/2：装载真源（manifest 双向引用、fail-fast 全套、"组件零硬编码 URI"静态扫描）、世界侧生产代码不得反向直引工程目录。铁律 3（每帧数据通道）由既有 adapter 快照合同测试覆盖。
+- ✅ 组合验收场景 `composition`：岛屿地形基座 + 36 实例静态网格（材质 parent 链）+ 双 guard 美术动画，走画廊验收链（preset + 截图 + 帧统计），多节点/多组件/逐实例材质均由关卡 JSON 声明。
+- 存量迁移：画廊 21 个能力场景已全部搬进关卡容器（`projects/engine_gallery/scenes/`）；装载器为 `EngineProject`（`src/Client/Ludots.Raylib.SceneKit`）；`scripts/record-engine-galleries.py` 读 catalog.json。
+
+## 12. 边界与落地次序
 
 非目标：Core 地形 / nav 烘焙链归 #1350 执行序；navmesh 烘焙 showcase 归 #1402。PR #1420 关闭处置：其 Core 改动退回 #1350 子票序列；scene.json 骨架、严格校验、相机默认值数据化可回收为本规范实现的草稿。
 
 落地次序：
 
-1. 装载映射器 + 关卡 / 材质文档格式 + 三个合同测试；
-2. 存量 21 场景迁移 + `SceneCatalog.cs` / 录像脚本切换 catalog.json；
-3. 组合验收场景 + preset + 门户登记。
+1. ✅ 装载器 + 关卡文档格式 + 合同测试（EngineProject，播放器/内容/数据三分）；
+2. ✅ 存量 21 场景迁移 + 录像脚本切换 catalog.json + 验收 preset 全量带 `--project`；
+3. ✅ 组合验收场景 `composition` + preset + 门户登记 + Wiki 页——多节点组件面（island_terrain 基座 / static_mesh 36 实例 + 材质 parent 链 / animator 双 guard 错相）随步交付；第二个独立工程目录留待 #1402 美术资产落地时启用（`EngineProject.Open` 已多工程就绪）。

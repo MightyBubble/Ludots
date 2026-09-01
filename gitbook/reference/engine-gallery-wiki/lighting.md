@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `lighting` |
 | preset | `engine_raylib_lighting` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/LightingScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/LightingScene.cs` |
 | 承接渲染器 | `RaylibLitModel` + `RaylibSkyIbl` + `RaylibDirectionalShadowMap`（`src/Client/Ludots.Raylib.Render`） |
 | 注册表条目 | `engine_raylib_lighting`（`showcase.registry.json`，tier T1） |
 

@@ -1600,7 +1600,7 @@
       "name": "engine_gallery",
       "target": {
         "type": "project",
-        "value": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Ludots.App.RaylibEngineGallery.csproj"
+        "value": "src/Apps/Raylib/Ludots.App.RaylibPlayer/Ludots.App.RaylibPlayer.csproj"
       }
     },
     {

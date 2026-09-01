@@ -41,6 +41,31 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void EngineProjectLayers_DoNotReference_LudotsCore()
+        {
+            var repoRoot = FindRepoRoot();
+            var engineCsprojs = new[]
+            {
+                Path.Combine(repoRoot, "src", "Client", "Ludots.Raylib.SceneKit", "Ludots.Raylib.SceneKit.csproj"),
+                Path.Combine(repoRoot, "src", "Content", "Ludots.Content.EngineGallery", "Ludots.Content.EngineGallery.csproj"),
+                Path.Combine(repoRoot, "src", "Apps", "Raylib", "Ludots.App.RaylibPlayer", "Ludots.App.RaylibPlayer.csproj"),
+            };
+
+            foreach (string csproj in engineCsprojs)
+            {
+                Assert.That(File.Exists(csproj), Is.True, $"Missing: {csproj}");
+                var doc = XDocument.Load(csproj);
+                var offenders = doc.Descendants()
+                    .Where(e => e.Name.LocalName == "ProjectReference")
+                    .Select(e => e.Attribute("Include")?.Value)
+                    .OfType<string>()
+                    .Where(v => v.Contains("Ludots.Core", StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+                Assert.That(offenders, Is.Empty, $"{csproj} breaks the zero-Core engine project contract. Offenders: {string.Join(", ", offenders)}");
+            }
+        }
+
+        [Test]
         public void Mods_DoNotReference_SkiaSharp_UnlessWhitelisted()
         {
             var repoRoot = FindRepoRoot();

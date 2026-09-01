@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "scenes": [
+    {
+      "id": "skybox",
+      "asset": "scenes/skybox.scene.json"
+    },
+    {
+      "id": "sky_daynight",
+      "asset": "scenes/sky_daynight.scene.json"
+    },
+    {
+      "id": "water",
+      "asset": "scenes/water.scene.json"
+    },
+    {
+      "id": "terrain_surface",
+      "asset": "scenes/terrain_surface.scene.json"
+    },
+    {
+      "id": "terrain_heightmap",
+      "asset": "scenes/terrain_heightmap.scene.json"
+    },
+    {
+      "id": "atmosphere_fog",
+      "asset": "scenes/atmosphere_fog.scene.json"
+    },
+    {
+      "id": "frame_lighting",
+      "asset": "scenes/frame_lighting.scene.json"
+    },
+    {
+      "id": "postprocess",
+      "asset": "scenes/postprocess.scene.json"
+    },
+    {
+      "id": "gpu_skinning",
+      "asset": "scenes/gpu_skinning.scene.json"
+    },
+    {
+      "id": "instancing",
+      "asset": "scenes/instancing.scene.json"
+    },
+    {
+      "id": "particles",
+      "asset": "scenes/particles.scene.json"
+    },
+    {
+      "id": "decal_projection",
+      "asset": "scenes/decal_projection.scene.json"
+    },
+    {
+      "id": "vegetation_cutout",
+      "asset": "scenes/vegetation_cutout.scene.json"
+    },
+    {
+      "id": "material_binding",
+      "asset": "scenes/material_binding.scene.json"
+    },
+    {
+      "id": "ribbon_overlay",
+      "asset": "scenes/ribbon_overlay.scene.json"
+    },
+    {
+      "id": "skia_overlay",
+      "asset": "scenes/skia_overlay.scene.json"
+    },
+    {
+      "id": "debug_draw",
+      "asset": "scenes/debug_draw.scene.json"
+    },
+    {
+      "id": "primitives",
+      "asset": "scenes/primitives.scene.json"
+    },
+    {
+      "id": "lighting",
+      "asset": "scenes/lighting.scene.json"
+    },
+    {
+      "id": "crowd_anim",
+      "asset": "scenes/crowd_anim.scene.json"
+    },
+    {
+      "id": "slash_trail",
+      "asset": "scenes/slash_trail.scene.json"
+    },
+    {
+      "id": "composition",
+      "asset": "scenes/composition.scene.json"
+    }
+  ]
+}

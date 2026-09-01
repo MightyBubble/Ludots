@@ -31,6 +31,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\Platforms\Desktop\mat_emissive.vs"><Link>mat_emissive.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\mat_emissive.fs"><Link>mat_emissive.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\skinning_instanced.fs"><Link>skinning_instanced.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\skinning_instanced_pose_texture.vs"><Link>skinning_instanced_pose_texture.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\shadow_depth_skinning_pose_texture.vs"><Link>shadow_depth_skinning_pose_texture.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>

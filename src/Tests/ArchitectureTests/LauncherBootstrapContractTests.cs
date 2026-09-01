@@ -1277,12 +1277,12 @@ namespace Ludots.Tests.Architecture
                 Assert.That(plan.ExecutableArgs, Is.Empty);
                 Assert.That(plan.ExecutableProjectPath, Is.EqualTo(Path.Combine(
                     repoRoot,
-                    "src", "Apps", "Raylib", "Ludots.App.RaylibEngineGallery",
-                    "Ludots.App.RaylibEngineGallery.csproj")));
+                    "src", "Apps", "Raylib", "Ludots.App.RaylibPlayer",
+                    "Ludots.App.RaylibPlayer.csproj")));
                 Assert.That(plan.AppAssemblyPath, Is.EqualTo(Path.Combine(
                     repoRoot,
-                    "src", "Apps", "Raylib", "Ludots.App.RaylibEngineGallery",
-                    "bin", "Release", "net9.0", "Ludots.App.RaylibEngineGallery.dll")));
+                    "src", "Apps", "Raylib", "Ludots.App.RaylibPlayer",
+                    "bin", "Release", "net9.0", "Ludots.App.RaylibPlayer.dll")));
             }
             finally
             {
@@ -1319,7 +1319,7 @@ namespace Ludots.Tests.Architecture
                       "name": "executable_fixture",
                       "target": {
                         "type": "project",
-                        "value": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Ludots.App.RaylibEngineGallery.csproj",
+                        "value": "src/Apps/Raylib/Ludots.App.RaylibPlayer/Ludots.App.RaylibPlayer.csproj",
                         "args": ["--scene", "terrain"]
                       }
                     }

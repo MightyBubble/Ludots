@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `crowd_anim` |
 | preset | `engine_raylib_crowd_anim` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/CrowdAnimScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/CrowdAnimScene.cs` |
 | 承接渲染器 | `RaylibPrimitiveRenderer` 的 `GpuSkinnedInstance` 车道（`skinning_instanced` 着色器） |
 | 注册表条目 | `engine_raylib_crowd_anim`（`showcase.registry.json`，tier T1） |
 

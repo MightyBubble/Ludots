@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `instancing` |
 | preset | `engine_raylib_instancing` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/InstancingScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/InstancingScene.cs` |
 | 承接渲染器 | `RaylibPrimitiveRenderer`（`instancing` 着色器）经 `IRaylibBenchmarkRenderer` 直驱 |
 | 注册表条目 | `engine_raylib_instancing`（`showcase.registry.json`，tier T1） |
 

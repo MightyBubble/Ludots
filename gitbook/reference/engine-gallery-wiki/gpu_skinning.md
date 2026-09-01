@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `gpu_skinning` |
 | preset | `engine_raylib_gpu_skinning` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/GpuSkinningScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/GpuSkinningScene.cs` |
 | 承接渲染器 | `RaylibGpuSkinnedModelCache` + `RaylibSkinnedPlayback`（骨骼装载 fail-loud） |
 | 注册表条目 | `engine_raylib_gpu_skinning`（`showcase.registry.json`，tier T1） |
 

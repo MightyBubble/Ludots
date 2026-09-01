@@ -6,7 +6,7 @@ This section collects current runbooks and reference pages.
 
 - [Launcher CLI Runbook](cli-runbook.md)
 - [图节点词典（Graph 节点画廊 Wiki）](graph-node-op-wiki/README.md)：每个可执行图节点一页「玩家短剧 + 作者写法」双视角，由 `scripts/generate-graph-op-node-wiki.py` 生成，勿手改正文。
-- [引擎画廊 Wiki（Raylib 引擎能力场景）](engine-gallery-wiki/README.md)：每个引擎渲染场景一页「页内可播验收录像 + 作者写法」，场景清单 SSOT 为 `SceneCatalog.cs` 与 `showcase.registry.json`。
+- [引擎画廊 Wiki（Raylib 引擎能力场景）](engine-gallery-wiki/README.md)：每个引擎渲染场景一页「页内可播验收录像 + 作者写法」，运行时目录容器为 `projects/engine_gallery/catalog.json`，门户登记走 `showcase.registry.json`。
 - [MassNavigation User Book](mass-navigation-user-book.md)
 - [MassNavigation Formal Chain](mass-navigation-formal-chain.md)
 - [Agent Profile](agent-profile.md)
