@@ -159,6 +159,149 @@
       "buildMode": "auto"
     },
     {
+      "id": "rts_multiplayer_frontline_raylib",
+      "name": "RTS Frontline Standalone Practice",
+      "selectors": [
+        "$rts_multiplayer_frontline"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "rts_multiplayer_frontline_networked_raylib",
+      "name": "RTS Frontline Two Player Match",
+      "selectors": [
+        "$rts_multiplayer_frontline_networked"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "processGroup": {
+        "topology": "localAuthoritative",
+        "artifactDirectory": "artifacts/launcher/process-groups/rts-multiplayer-frontline",
+        "host": "127.0.0.1",
+        "port": 27777,
+        "connectionKey": "rts-frontline-local",
+        "clientCount": 2,
+        "readiness": {
+          "timeoutMilliseconds": 45000,
+          "pollIntervalMilliseconds": 100
+        },
+        "applications": [
+          {
+            "id": "dedicated-server",
+            "hostKind": "dedicatedServer",
+            "projectPath": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/Ludots.App.DedicatedServer.csproj",
+            "assemblyPath": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/bin/Release/net8.0/Ludots.App.DedicatedServer.dll"
+          },
+          {
+            "id": "raylib-client",
+            "hostKind": "raylib",
+            "projectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
+            "assemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0/Ludots.App.Raylib.dll"
+          }
+        ],
+        "processes": [
+          {
+            "id": "authoritative-server",
+            "applicationId": "dedicated-server",
+            "processRole": "authoritativeServer",
+            "clientInstanceId": 0,
+            "credentialPath": "",
+            "faultProfile": "normal",
+            "faultSeed": 70901,
+            "readiness": {
+              "artifactFileName": "launcher.readiness.json",
+              "minimumReplicatedMirrorCount": 0,
+              "minimumRenderableMirrorCount": 0
+            }
+          },
+          {
+            "id": "client-one",
+            "applicationId": "raylib-client",
+            "processRole": "replicatedClient",
+            "clientInstanceId": 1,
+            "credentialPath": "credentials/client-one.session",
+            "faultProfile": "normal",
+            "faultSeed": 70902,
+            "readiness": {
+              "artifactFileName": "launcher.readiness.json",
+              "minimumReplicatedMirrorCount": 8,
+              "minimumRenderableMirrorCount": 7
+            }
+          },
+          {
+            "id": "client-two",
+            "applicationId": "raylib-client",
+            "processRole": "replicatedClient",
+            "clientInstanceId": 2,
+            "credentialPath": "credentials/client-two.session",
+            "faultProfile": "normal",
+            "faultSeed": 70903,
+            "readiness": {
+              "artifactFileName": "launcher.readiness.json",
+              "minimumReplicatedMirrorCount": 8,
+              "minimumRenderableMirrorCount": 7
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "rts_multiplayer_frontline_client_join_raylib",
+      "name": "RTS Frontline Join Existing Server (Debug)",
+      "selectors": [
+        "$rts_multiplayer_frontline_networked"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "processGroup": {
+        "topology": "externalJoin",
+        "artifactDirectory": "artifacts/launcher/process-groups/rts-multiplayer-frontline-client-join",
+        "host": "127.0.0.1",
+        "port": 27777,
+        "connectionKey": "rts-frontline-local",
+        "clientCount": 1,
+        "readiness": {
+          "timeoutMilliseconds": 45000,
+          "pollIntervalMilliseconds": 100
+        },
+        "applications": [
+          {
+            "id": "raylib-client",
+            "hostKind": "raylib",
+            "projectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
+            "assemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0/Ludots.App.Raylib.dll"
+          }
+        ],
+        "processes": [
+          {
+            "id": "debug-client",
+            "applicationId": "raylib-client",
+            "processRole": "replicatedClient",
+            "clientInstanceId": 9001,
+            "credentialPath": "credentials/debug-client.session",
+            "faultProfile": "normal",
+            "faultSeed": 70990,
+            "readiness": {
+              "artifactFileName": "launcher.readiness.json",
+              "minimumReplicatedMirrorCount": 1,
+              "minimumRenderableMirrorCount": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "rts_multiplayer_frontline_three_process_uat_raylib",
+      "name": "RTS Frontline Three Process UAT",
+      "selectors": [
+        "$rts_multiplayer_frontline_networked",
+        "$rts_multiplayer_frontline_three_process_uat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_participant_views_raylib",
       "name": "Capability Standard Participant Views Raylib",
       "selectors": [
