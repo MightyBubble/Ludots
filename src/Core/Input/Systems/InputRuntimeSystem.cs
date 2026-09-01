@@ -15,15 +15,18 @@ namespace Ludots.Core.Input.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly AuthoritativeInputAccumulator? _authoritativeInput;
         private readonly AuthoritativePointerButtonAccumulator? _pointerButtons;
- 
+        private readonly IReadOnlyList<string>? _pointerLifecycleActionIds;
+
         public InputRuntimeSystem(
             Dictionary<string, object> globals,
             AuthoritativeInputAccumulator? authoritativeInput = null,
-            AuthoritativePointerButtonAccumulator? pointerButtons = null)
+            AuthoritativePointerButtonAccumulator? pointerButtons = null,
+            IReadOnlyList<string>? pointerLifecycleActionIds = null)
         {
             _globals = globals;
             _authoritativeInput = authoritativeInput;
             _pointerButtons = pointerButtons;
+            _pointerLifecycleActionIds = pointerLifecycleActionIds;
         }
  
         public void Initialize()
@@ -100,6 +103,15 @@ namespace Ludots.Core.Input.Systems
             CapturePointerButton(input, bindings.ConfirmActionId, pointer);
             CapturePointerButton(input, bindings.CommandActionId, pointer);
             CapturePointerButton(input, bindings.CancelActionId, pointer);
+            if (_pointerLifecycleActionIds == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _pointerLifecycleActionIds.Count; i++)
+            {
+                CapturePointerButton(input, _pointerLifecycleActionIds[i], pointer);
+            }
         }
 
         private void PreserveConfiguredActionValues(PlayerInputHandler input)

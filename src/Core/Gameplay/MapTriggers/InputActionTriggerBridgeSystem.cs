@@ -13,11 +13,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
     /// Bridges authored input actions (Input/trigger_actions.json) into map-scoped
-    /// InputActionFired trigger events: press edge -> payload { action, rep =
-    /// player representative, ground point, held semantic-modifier bitmask, active
-    /// interaction context id }. Actions with pickRadiusCm additionally resolve the
-    /// nearest pickable entity around the ground point into the payload and only fire
-    /// when a pick exists — TriggerGraphs stay pure data, no mod code.
+    /// InputActionFired trigger events: an action edge -> payload { action, rep =
+    /// player representative, pointer window-pixel position at that edge, ground
+    /// point, held semantic-modifier bitmask, active interaction context id }. The
+    /// pointer position is the per-action lifecycle fact from the authoritative
+    /// pointer-button snapshot (press edge -> press point, release edge -> release
+    /// point; window pixels so per-binding routing stays possible). Actions with
+    /// pickRadiusCm additionally resolve the nearest pickable entity around the
+    /// ground point into the payload and only fire when a pick exists —
+    /// TriggerGraphs stay pure data, no mod code.
     /// </summary>
     public sealed class InputActionTriggerBridgeSystem : Arch.System.ISystem<float>
     {
@@ -26,6 +30,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly TriggerManager _triggerManager;
         private readonly Func<ScriptContext> _createContext;
         private readonly Func<IInputActionReader?> _reader;
+        private readonly Func<AuthoritativePointerButtonSnapshot?> _pointerButtons;
         private readonly IReadOnlyList<InputTriggerAction> _actions;
         private readonly InteractionContextProfileRegistry _contextProfiles;
         private readonly QueryDescription _pickQuery;
@@ -36,6 +41,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             TriggerManager triggerManager,
             Func<ScriptContext> createContext,
             Func<IInputActionReader?> reader,
+            Func<AuthoritativePointerButtonSnapshot?> pointerButtons,
             IReadOnlyList<InputTriggerAction> actions,
             InteractionContextProfileRegistry contextProfiles)
         {
@@ -44,6 +50,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
             _createContext = createContext ?? throw new ArgumentNullException(nameof(createContext));
             _reader = reader ?? throw new ArgumentNullException(nameof(reader));
+            _pointerButtons = pointerButtons ?? throw new ArgumentNullException(nameof(pointerButtons));
             _actions = actions ?? Array.Empty<InputTriggerAction>();
             _contextProfiles = contextProfiles ?? throw new ArgumentNullException(nameof(contextProfiles));
             _pickQuery = new QueryDescription().WithAll<WorldPositionCm, AttributeBuffer>();
@@ -87,6 +94,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
+                if (!TryResolveEventPointer(action.Id, out System.Numerics.Vector2 pointer))
+                {
+                    // pointerScreenX/Y are required payload facts; firing without the
+                    // pointer position would break the input-event contract.
+                    continue;
+                }
+
                 Entity picked = action.PickRadiusCm > 0
                     ? PickNearest(ground, action.PickRadiusCm, playerRep)
                     : Entity.Null;
@@ -101,6 +115,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 context.Set(CoreServiceKeys.MapSession, session);
                 context.Set(MapTriggerEventPayloadKeys.Rep, playerRep);
                 context.Set(MapTriggerEventPayloadKeys.Action, action.Id);
+                context.Set(MapTriggerEventPayloadKeys.PointerScreenX, pointer.X);
+                context.Set(MapTriggerEventPayloadKeys.PointerScreenY, pointer.Y);
                 context.Set(MapTriggerEventPayloadKeys.GroundPointXCm, (float)ground.X);
                 context.Set(MapTriggerEventPayloadKeys.GroundPointYCm, (float)ground.Y);
                 context.Set(MapTriggerEventPayloadKeys.Modifiers, ReadHeldModifiers(input));
@@ -112,6 +128,32 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
                 _triggerManager.FireMapEvent(session.MapId, GameEvents.InputActionFired, context);
             }
+        }
+
+        /// <summary>
+        /// The pointer window-pixel position for the fired press edge: the exact press
+        /// point when the per-action lifecycle fact exists, otherwise the action's last
+        /// pointer position from the same authoritative snapshot. Interaction pulses
+        /// (Tap/Drag) report their completion as a press edge, so their PressPointer is
+        /// the completion frame's pointer — the release point — by construction.
+        /// </summary>
+        private bool TryResolveEventPointer(string actionId, out System.Numerics.Vector2 pointer)
+        {
+            AuthoritativePointerButtonSnapshot? buttons = _pointerButtons();
+            if (buttons == null || !buttons.TryGetState(actionId, out PointerButtonState state))
+            {
+                pointer = default;
+                return false;
+            }
+
+            if (state.HasPressPointer)
+            {
+                pointer = state.PressPointer;
+                return true;
+            }
+
+            pointer = state.Pointer;
+            return true;
         }
 
         private static int ReadHeldModifiers(IInputActionReader input)

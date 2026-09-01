@@ -1535,7 +1535,15 @@ namespace Ludots.Core.Engine
             var inputConfigRoot = new InputConfigPipelineLoader(ConfigPipeline).Load();
             var inputActionAttributeBindings = new InputActionAttributeBindingRegistry();
             new InputActionAttributeBindingLoader(ConfigPipeline, inputActionAttributeBindings).Load(ConfigCatalog, ConfigConflictReport);
-            _inputRuntimeSystem = new InputRuntimeSystem(GlobalContext, authoritativeInputAccumulator, authoritativePointerButtonsAccumulator);
+            // Populated when the trigger-action catalog loads below; the per-frame pointer
+            // lifecycle capture reads it lazily, so actions bridged into InputActionFired
+            // get exact per-edge pointer facts.
+            var bridgedPointerActionIds = new List<string>();
+            _inputRuntimeSystem = new InputRuntimeSystem(
+                GlobalContext,
+                authoritativeInputAccumulator,
+                authoritativePointerButtonsAccumulator,
+                bridgedPointerActionIds);
             _inputRuntimeSystem.Initialize();
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
             var clockSystem = new GasClockSystem(clock, clockStepPolicy, CreateContext, TriggerManager.FireEvent);
@@ -2295,6 +2303,11 @@ namespace Ludots.Core.Engine
             _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
             RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
             var inputTriggerActions = new Ludots.Core.Gameplay.MapTriggers.InputTriggerActionCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            for (int i = 0; i < inputTriggerActions.Count; i++)
+            {
+                bridgedPointerActionIds.Add(inputTriggerActions[i].Id);
+            }
+
             RegisterSystem(
                 new Ludots.Core.Gameplay.MapTriggers.InputActionTriggerBridgeSystem(
                     World,
@@ -2302,6 +2315,7 @@ namespace Ludots.Core.Engine
                     TriggerManager,
                     CreateContext,
                     () => GetService(CoreServiceKeys.AuthoritativeInput),
+                    () => GetService(CoreServiceKeys.AuthoritativePointerButtons),
                     inputTriggerActions,
                     interactionContextProfileRegistry),
                 SystemGroup.DeferredTriggerCollection);

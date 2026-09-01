@@ -112,6 +112,8 @@ namespace Ludots.Core.Scripting
             {
                 new("rep", EventParamType.Entity, MapTriggerEventPayloadKeys.Rep),
                 new("action", EventParamType.String, MapTriggerEventPayloadKeys.Action),
+                new("pointerScreenX", EventParamType.Float, MapTriggerEventPayloadKeys.PointerScreenX),
+                new("pointerScreenY", EventParamType.Float, MapTriggerEventPayloadKeys.PointerScreenY),
                 new("groundPointXCm", EventParamType.Float, MapTriggerEventPayloadKeys.GroundPointXCm),
                 new("groundPointYCm", EventParamType.Float, MapTriggerEventPayloadKeys.GroundPointYCm),
                 new("modifiers", EventParamType.Int, MapTriggerEventPayloadKeys.Modifiers),
