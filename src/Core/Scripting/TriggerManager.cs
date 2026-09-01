@@ -178,6 +178,16 @@ namespace Ludots.Core.Scripting
         }
 
         /// <summary>
+        /// True when the map already owns an initial trigger registration (runtime append
+        /// callers like the context trigger gate need this probe to pick between
+        /// <see cref="RegisterMapTriggers"/> and <see cref="AddMapTriggers"/>).
+        /// </summary>
+        public bool OwnsMapTriggers(MapId mapId)
+        {
+            return _mapTriggers.ContainsKey(mapId);
+        }
+
+        /// <summary>
         /// Append triggers to a map's registered list (runtime entity mounts). The map
         /// must already own its initial registration via <see cref="RegisterMapTriggers"/>.
         /// </summary>
