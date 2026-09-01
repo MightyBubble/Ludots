@@ -264,8 +264,8 @@ type ValidateResponse = {
 
 const DEFAULT_MOD_ID = 'UiPlayerAggregateGraphMvpShowcaseMod';
 const DEFAULT_FUNC_GRAPH_ID = 'ui.panel.player.resource.aggregate';
-const DEFAULT_BT_GRAPH_ID = 'Graph.BT.Tree.EditorSample';
-const DEFAULT_FSM_GRAPH_ID = 'Graph.FSM.EditorSample';
+const DEFAULT_BT_GRAPH_ID = 'Graph.BT.Leaf.SeeEnemy';
+const DEFAULT_FSM_GRAPH_ID = 'Graph.HFSM.Combat.OnTick';
 
 function defaultGraphIdForDialect(dialect: GraphEditorDialect): string {
   if (dialect === 'bt') return DEFAULT_BT_GRAPH_ID;
