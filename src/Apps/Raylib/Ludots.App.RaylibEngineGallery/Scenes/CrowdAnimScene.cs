@@ -18,7 +18,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// 7 色 ×16 相位 = 112 逻辑桶，mannequin 6 网格 → 672 次 DrawMeshInstanced，
     /// 桶数每 +1 就多 6 次 uniform 上传/draw 与一次骨骼姿态计算，是本车道主要帧耗来源。
     /// </summary>
-    public sealed unsafe class CrowdAnimScene : IEngineScene
+    [EngineSceneComponent("crowd_anim")]
+    public sealed unsafe class CrowdAnimScene : IEngineSceneComponent, IEngineSceneComponentAssets
     {
         private const int TargetInstances = 4096;
         private const int RingCount = 14;
@@ -31,6 +32,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private const float GoldenRatioFract = 0.61803398875f;
         private const string WalkClipNeedle = "Walking";
         private const string WalkClipReject = "retarget";
+        private const string MannequinAssetKey = "crowd_anim.mannequin";
 
         private readonly GalleryMeshAssets _meshes = new();
         private readonly GalleryPrimitiveSnapshot _snapshot = new();
@@ -40,20 +42,28 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibPrimitiveRenderer _primitives = null!;
         private RaylibFrameLighting _lighting = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
+        private EngineSceneAsset _mannequin = null!;
         private int _walkClipIndex = -1;
         private int _walkClipFrameCount;
         private int _phaseBucketCount;
         private bool _disposed;
 
-        public string Id => "crowd_anim";
-        public string Title => "大量动画实例合批";
-        public string Summary => "4k mannequin 环形行军——GpuSkinnedInstance 真 GPU 蒙皮合批";
+        public void SetAssets(IReadOnlyDictionary<string, EngineSceneAsset> assets)
+        {
+            if (!assets.TryGetValue(MannequinAssetKey, out EngineSceneAsset? mannequin) ||
+                string.IsNullOrWhiteSpace(mannequin.Source))
+            {
+                throw new InvalidDataException($"crowd_anim requires manifest asset '{MannequinAssetKey}'.");
+            }
+
+            _mannequin = mannequin;
+        }
 
         public void Load()
         {
             _meshes.Register(
                 "gallery.crowd.mannequin",
-                MeshAssetDescriptor.Model(MannequinAssetId, "Models/mannequin_large_walk.glb"));
+                MeshAssetDescriptor.Model(MannequinAssetId, _mannequin.Source));
             _meshes.Register(
                 "gallery.crowd.ground",
                 MeshAssetDescriptor.Primitive(GroundAssetId, PrimitiveMeshKind.Cube));
@@ -67,13 +77,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
             // 只探测 clip 元数据（名字/帧数）供相位分桶；绘制模型由渲染器内置
             // RaylibGpuSkinnedModelCache 独立装载，避免场景侧重复驻留 GPU 网格。
-            if (!GalleryAssetPaths.Instance.TryResolveFullPath("Models/mannequin_large_walk.glb", out string modelPath) ||
-                !File.Exists(modelPath))
-            {
-                throw new InvalidOperationException("crowd_anim cannot resolve Models/mannequin_large_walk.glb for clip probing.");
-            }
-
-            (_walkClipIndex, _walkClipFrameCount) = ProbeWalkClip(modelPath);
+            (_walkClipIndex, _walkClipFrameCount) = ProbeWalkClip(_mannequin.ResolvedPath!);
             _phaseBucketCount = Math.Min(DesiredPhaseBuckets, _walkClipFrameCount);
 
             var random = new Random(20260818);

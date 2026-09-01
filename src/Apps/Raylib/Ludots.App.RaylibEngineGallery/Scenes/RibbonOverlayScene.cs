@@ -10,18 +10,14 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// 样条带覆盖层：GroundOverlayBuffer + SplineRibbonBuffer 手工填充，
     /// 绘制统一走 Ludots.Raylib.Render 的 RaylibWorldOverlayRenderer（与宿主同一实现）。
     /// </summary>
-    public sealed class RibbonOverlayScene : IEngineScene
+    [EngineSceneComponent("ribbon_overlay")]
+    public sealed class RibbonOverlayScene : IEngineSceneComponent
     {
         private readonly GroundOverlayBuffer _overlays = new(capacity: 64);
         private readonly SplineRibbonBuffer _ribbons = new(capacity: 16);
         private readonly GalleryLitProps _litProps = new();
         private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibDirectionalShadowMap _shadowMap = null!;
-
-        public string Id => "ribbon_overlay";
-        public string Title => "样条带覆盖层";
-        public string Summary => "GroundOverlayBuffer + SplineRibbonBuffer 世界覆盖层";
-
         public void Load()
         {
             _litProps.Load();

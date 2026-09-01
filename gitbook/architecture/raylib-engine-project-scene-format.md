@@ -91,7 +91,7 @@ Ludots 世界（Core / mod / ECS）
 | `assets[]` | list | 装载真源，见下 |
 | `rootNode` / `nodes[]` | string / list | 节点层级，见下 |
 
-`assets[]` 每项：`id`（场景内唯一）、`kind`（mesh / model / material / texture / terrain）、`source`（项目根相对 URI）。装载器按 kind 注册进 `GalleryMeshAssets` / `GalleryMaterialAssets` 并经 `RaylibAssetStore` 装载。清单里出现未被任何节点引用的资产、或节点引用清单外的 id，装载 fail-fast。
+`assets[]` 每项：`id`（场景内唯一）、`kind`（mesh / model / material / texture / terrain）、`source`（项目根相对 URI）。装载器按 kind 注册进 `GalleryMeshAssets` / `GalleryMaterialAssets` 并经 `RaylibAssetStore` 装载。纯程序化场景的清单可以为空——空清单声明"本场景不消费任何工程文件"，同样是事实。清单里出现未被任何节点引用的资产、或节点引用清单外的 id，装载 fail-fast；消费清单资产的组件实现 `IEngineSceneComponentAssets` 接收解析结果，组件代码里不出现资产 URI 字面量。
 
 节点与组件：
 

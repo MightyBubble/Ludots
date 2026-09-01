@@ -10,7 +10,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// Quarks 粒子：手工构造三组 ParticleVfxAssetData（加色火花 / 逐帧贴图烟雾 / 拉伸火星拖尾），
     /// 经 RaylibPrimitiveRenderer 的 VFX 通道驱动 ParticleSystemRuntime。
     /// </summary>
-    public sealed class ParticlesScene : IEngineScene
+    [EngineSceneComponent("particles")]
+    public sealed class ParticlesScene : IEngineSceneComponent
     {
         private const int SparkAssetId = 301;
         private const int SmokeAssetId = 302;
@@ -24,11 +25,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibFrameLighting _lighting = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
-
-        public string Id => "particles";
-        public string Title => "Quarks 粒子";
-        public string Summary => "ParticleVfxAssetData 火花/烟雾/拉伸火星三组效果";
-
         public void Load()
         {
             const int frame = 64;

@@ -11,11 +11,13 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// RaylibSkinnedPlayback 逐实例解算 clip/帧相位并上传骨骼姿态后绘制——演示逐实例非合批蒙皮路径；
     /// 大规模合批蒙皮（UpdateModelAnimationBones 每 bucket 一次 + DrawMeshInstanced）见 crowd_anim 场景。
     /// </summary>
-    public sealed unsafe class GpuSkinningScene : IEngineScene
+    [EngineSceneComponent("gpu_skinning")]
+    public sealed unsafe class GpuSkinningScene : IEngineSceneComponent, IEngineSceneComponentAssets
     {
         private const int MeshAssetId = 201;
         private const int InstanceCount = 12;
         private const float RingRadius = 9.5f;
+        private const string MannequinAssetKey = "gpu_skinning.mannequin";
 
         private readonly GalleryMeshAssets _meshes = new();
         private readonly GallerySkinnedPlayback[] _playbacks = new GallerySkinnedPlayback[InstanceCount];
@@ -27,7 +29,19 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private Mesh _groundMesh;
         private RaylibGpuSkinnedModelCache.Entry _entry;
+        private EngineSceneAsset _mannequin = null!;
         private bool _disposed;
+
+        public void SetAssets(IReadOnlyDictionary<string, EngineSceneAsset> assets)
+        {
+            if (!assets.TryGetValue(MannequinAssetKey, out EngineSceneAsset? mannequin) ||
+                string.IsNullOrWhiteSpace(mannequin.Source))
+            {
+                throw new InvalidDataException($"gpu_skinning requires manifest asset '{MannequinAssetKey}'.");
+            }
+
+            _mannequin = mannequin;
+        }
 
         private sealed class GallerySkinnedPlayback
         {
@@ -48,19 +62,14 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 return _playback.ResolveFrameIndex();
             }
         }
-
-        public string Id => "gpu_skinning";
-        public string Title => "GPU 骨骼蒙皮";
-        public string Summary => "RaylibGpuSkinnedModelCache + RaylibSkinnedPlayback 多相位实例";
-
         public void Load()
         {
             _meshes.Register(
                 "gallery.mannequin",
-                MeshAssetDescriptor.Model(MeshAssetId, "Models/mannequin_large_walk.glb"));
+                MeshAssetDescriptor.Model(MeshAssetId, _mannequin.Source));
 
             _modelCache = new RaylibGpuSkinnedModelCache(GalleryAssetPaths.Instance);
-            MeshAssetDescriptor descriptor = MeshAssetDescriptor.Model(MeshAssetId, "Models/mannequin_large_walk.glb");
+            MeshAssetDescriptor descriptor = MeshAssetDescriptor.Model(MeshAssetId, _mannequin.Source);
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.35f);
             _lit = new RaylibLitModel();
             _shadowMap = new RaylibDirectionalShadowMap();

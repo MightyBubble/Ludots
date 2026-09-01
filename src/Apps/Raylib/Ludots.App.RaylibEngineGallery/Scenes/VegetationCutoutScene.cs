@@ -7,7 +7,8 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>植被透贴：程序化草丛/树 billboard 纹理经 vegetation_cutout shader 透贴渲染，双面 + alpha 裁切。</summary>
-    public sealed class VegetationCutoutScene : IEngineScene
+    [EngineSceneComponent("vegetation_cutout")]
+    public sealed class VegetationCutoutScene : IEngineSceneComponent
     {
         private const int GrassAssetId = 401;
         private const int TreeAssetId = 402;
@@ -25,11 +26,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibFrameLighting _lighting = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
-
-        public string Id => "vegetation_cutout";
-        public string Title => "植被透贴";
-        public string Summary => "vegetation_cutout shader 程序化草丛 billboard";
-
         public void Load()
         {
             _litProps.Load();

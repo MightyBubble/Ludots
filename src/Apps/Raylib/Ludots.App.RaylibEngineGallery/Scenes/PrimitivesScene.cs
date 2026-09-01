@@ -10,7 +10,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// 图元群体渲染：RaylibPrimitiveRenderer 直接模式消费纯数据 PrimitiveDrawItem——
     /// 彩色图元阵随时间波动，坦克/人形原型走 AnimatorPackedState 驱动的 locomotion/aim 通道动效。
     /// </summary>
-    public sealed class PrimitivesScene : IEngineScene
+    [EngineSceneComponent("primitives")]
+    public sealed class PrimitivesScene : IEngineSceneComponent
     {
         private readonly GalleryMeshAssets _meshes = new();
         private readonly GalleryPrimitiveSnapshot _snapshot = new();
@@ -20,11 +21,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibFrameLighting _lighting = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
-
-        public string Id => "primitives";
-        public string Title => "图元群体渲染";
-        public string Summary => "RaylibPrimitiveRenderer 纯数据图元阵 + 原型动效";
-
         public void Load()
         {
             _meshes.Register("gallery.cube", MeshAssetDescriptor.Primitive(101, PrimitiveMeshKind.Cube));

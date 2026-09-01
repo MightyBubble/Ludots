@@ -7,7 +7,8 @@ using SkiaSharp;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>Skia 2D 覆盖层：3D 场景上叠 RaylibSkiaRenderer 合成 HUD，面板绘制走 SkiaRasterLayer 分层。</summary>
-    public sealed class SkiaOverlayScene : IEngineScene
+    [EngineSceneComponent("skia_overlay")]
+    public sealed class SkiaOverlayScene : IEngineSceneComponent
     {
         private readonly Queue<float> _frameMs = new();
         private readonly float[] _cubePhases = new float[8];
@@ -19,11 +20,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private SkiaRasterLayer _panelLayer = new();
         private SKTypeface? _typeface;
         private bool _disposed;
-
-        public string Id => "skia_overlay";
-        public string Title => "Skia 2D 覆盖层";
-        public string Summary => "RaylibSkiaRenderer + SkiaRasterLayer HUD 合成";
-
         public void Load()
         {
             _litProps.Load();

@@ -10,7 +10,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// 反射水面：RaylibWaterPass 反射/折射双 RenderTexture 通道 + 程序化 DUDV 扭曲，
     /// 海床网格在反射/折射两 pass 中各渲染一次，主 pass 由 water.fs 采样两张 RT。
     /// </summary>
-    public sealed class WaterScene : IEngineScene
+    [EngineSceneComponent("water")]
+    public sealed class WaterScene : IEngineSceneComponent
     {
         private const float WaterPlaneY = 0f;
 
@@ -30,11 +31,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibFrameLighting _lighting = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
-
-        public string Id => "water";
-        public string Title => "反射水面";
-        public string Summary => "RaylibWaterPass 反射/折射双通道 + DUDV 扭曲";
-
         public void Load()
         {
             GalleryTextureFactory.WritePng("water_dudv.png", 256, 256, (x, y) =>

@@ -7,7 +7,8 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>距离雾与环境色：RaylibRenderEnvironmentRenderer 组帧，一列沿视线远去的方碑展示雾衰减。</summary>
-    public sealed class AtmosphereFogScene : IEngineScene
+    [EngineSceneComponent("atmosphere_fog")]
+    public sealed class AtmosphereFogScene : IEngineSceneComponent
     {
         private readonly GalleryMeshAssets _meshes = new();
         private readonly GalleryPrimitiveSnapshot _snapshot = new();
@@ -26,11 +27,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibPrimitiveRenderer _primitives = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
-
-        public string Id => "atmosphere_fog";
-        public string Title => "距离雾与环境";
-        public string Summary => "RaylibRenderEnvironmentRenderer 雾 + 环境色调";
-
         public void Load()
         {
             _meshes.Register("gallery.cube", MeshAssetDescriptor.Primitive(101, PrimitiveMeshKind.Cube));

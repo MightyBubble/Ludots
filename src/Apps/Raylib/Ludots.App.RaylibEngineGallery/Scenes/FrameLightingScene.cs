@@ -7,7 +7,8 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>帧光照：RaylibFrameLighting 从默认 JSON 装载，日光方向/强度与环境色随相位摆动，物体即时反馈。</summary>
-    public sealed class FrameLightingScene : IEngineScene
+    [EngineSceneComponent("frame_lighting")]
+    public sealed class FrameLightingScene : IEngineSceneComponent
     {
         private readonly GalleryMeshAssets _meshes = new();
         private readonly GalleryPrimitiveSnapshot _snapshot = new();
@@ -17,11 +18,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
-
-        public string Id => "frame_lighting";
-        public string Title => "帧光照";
-        public string Summary => "RaylibFrameLighting 日光/环境全天摆动";
-
         public void Load()
         {
             _meshes.Register("gallery.cube", MeshAssetDescriptor.Primitive(101, PrimitiveMeshKind.Cube));

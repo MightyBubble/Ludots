@@ -15,7 +15,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// RaylibTrailMeshRenderer（与宿主同一实现）。场景时间用固定 1/60 步进而非真实
     /// 帧间隔：headless 截图帧（第 120 帧）必须稳定落在挥砍末段，保证验收可复现。
     /// </summary>
-    public sealed class SlashTrailScene : IEngineScene
+    [EngineSceneComponent("slash_trail")]
+    public sealed class SlashTrailScene : IEngineSceneComponent
     {
         private const int TrailStableId = 1;
         private const float SwingPeriodSeconds = 1.6f;
@@ -39,11 +40,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private float _time;
-
-        public string Id => "slash_trail";
-        public string Title => "刀光轨迹";
-        public string Summary => "TrailMeshBuffer 武器弧形 mesh 拖尾 + 顶点色渐隐";
-
         public void Load()
         {
             _litProps.Load();
@@ -115,7 +111,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _history.AgeTo(_time, TrailLifetimeSeconds);
             if (!_trails.Upsert(TrailStableId, _history.Samples, in HeadColor, in TailColor))
             {
-                throw new InvalidOperationException($"TrailMeshBuffer overflowed in gallery scene '{Id}'.");
+                throw new InvalidOperationException("TrailMeshBuffer overflowed in gallery scene slash_trail.");
             }
         }
 

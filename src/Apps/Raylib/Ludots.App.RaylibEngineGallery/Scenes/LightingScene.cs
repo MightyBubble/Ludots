@@ -11,7 +11,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// 天空太阳圆盘、GGX 主光、阴影投射共用同一 SunDirectionToward——看到的光斑即灯光即阴影源。
     /// 相位弧线限定在相机侧方的白昼区间（0.58–0.68），保证首帧即可看清落地阴影。
     /// </summary>
-    public sealed class LightingScene : IEngineScene
+    [EngineSceneComponent("lighting")]
+    public sealed class LightingScene : IEngineSceneComponent
     {
         private const int RoughnessSteps = 7;
         private const int MetallicLanes = 3;
@@ -27,11 +28,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private Mesh _podium;
         private Mesh _shadowMesh;
         private bool _disposed;
-
-        public string Id => "lighting";
-        public string Title => "光照全效";
-        public string Summary => "GGX 粗糙度×金属度梯度 + 环绕太阳 + split-sum 天空 IBL + 深度阴影";
-
         public void Load()
         {
             _litProps.Load();

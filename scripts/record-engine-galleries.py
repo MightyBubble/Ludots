@@ -132,14 +132,16 @@ def main() -> int:
 
     repo = Path(args.repo).resolve()
     sys.path.insert(0, str(repo / "scripts"))
-    # 场景清单单一事实源：SceneCatalog 注册表。
-    catalog = repo / "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/SceneCatalog.cs"
-    text = catalog.read_text(encoding="utf-8")
-    import re
+    # 场景清单单一事实源：引擎工程运行时目录 catalog.json。
+    import json
 
-    scenes = args.scene or re.findall(r'new\("([a-z0-9_]+)",', text)
+    catalog_path = repo / "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/assets/engine_gallery/catalog.json"
+    scenes = args.scene or [
+        entry["id"]
+        for entry in json.loads(catalog_path.read_text(encoding="utf-8"))["scenes"]
+    ]
     if not scenes:
-        print("No scenes found in SceneCatalog.", file=sys.stderr)
+        print(f"No scenes found in {catalog_path}.", file=sys.stderr)
         return 1
 
     exe = repo / GALLERY_EXE

@@ -6,7 +6,8 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>视觉高度图：RaylibContinuousHeightmapRenderer 消费程序化岛屿高度场，绝对海拔色带 + 水下陆架。</summary>
-    public sealed class TerrainHeightmapScene : IEngineScene
+    [EngineSceneComponent("terrain_heightmap")]
+    public sealed class TerrainHeightmapScene : IEngineSceneComponent
     {
         private readonly GalleryIslandHeightmap _heightmap = new(
             chunksPerSide: 16,
@@ -19,11 +20,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibFrameLighting _lighting = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
-
-        public string Id => "terrain_heightmap";
-        public string Title => "视觉高度图";
-        public string Summary => "RaylibContinuousHeightmapRenderer 程序化岛屿高度场";
-
         public void Load()
         {
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.46f);
