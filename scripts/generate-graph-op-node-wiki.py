@@ -35,6 +35,7 @@ DRIVER_LABELS = {
     "script": "脚本控制流",
     "spatial": "空间圈人",
     "query": "名单筛选与汇总",
+    "aimsource": "瞄准源",
     "rel": "关系与好感",
     "blackboard": "黑板与配置",
     "event": "事件与吸附",
@@ -60,6 +61,7 @@ HANDBOOK_BY_DRIVER = {
     "placedRegion": ("map-02-triggers.md", "地图触发器 · map-02"),
     "activity": ("map-02-triggers.md", "地图触发器 · map-02"),
     "sandbox": ("gr-02-document.md", "图文档写法 · gr-02"),
+    "aimsource": ("gr-op-06-spatial.md", "空间圈人 · gr-op-06"),
 }
 
 ALL_KINDS = [
@@ -144,6 +146,7 @@ ROLE_LABELS = {
     "GraphOperandRole.RelationshipTypeFlags": "flags 填关系类型",
     "GraphOperandRole.ReasonIdDst": "dst 填原因 id",
     "GraphOperandRole.DispatchPresetDst": "dst 填派发预设目的位",
+    "GraphOperandRole.SrcRegisterFlags": "flags 填第四操作数寄存器编号",
 }
 
 PORT_GLOSSARY = {

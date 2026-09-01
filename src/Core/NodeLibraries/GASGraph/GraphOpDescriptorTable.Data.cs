@@ -79,6 +79,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphControlFlowPorts.Target, GraphControlFlowPorts.A, GraphControlFlowPorts.B
             };
             string[] portA = { GraphControlFlowPorts.A };
+            string[] portRect =
+            {
+                GraphControlFlowPorts.List, GraphControlFlowPorts.A, GraphControlFlowPorts.B,
+                GraphControlFlowPorts.C, GraphControlFlowPorts.Max
+            };
 
             var rows = new List<GraphOpDescriptor>(160);
             Add(rows, GraphNodeOp.ConstBool, LinearAll, GraphValueType.Bool);
@@ -196,6 +201,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.QueryCollectProgressionNodes, QueryOnly, queryOut: GraphValueType.IntIdList, queryPorts: portSource);
             Add(rows, GraphNodeOp.QueryCollectAbilityHolders, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QueryCollectActiveDialogueChoices, QueryOnly, queryOut: GraphValueType.IntIdList);
+            // ── Aimsource pure helpers: read-only screen/pointer/stick math for aim graphs ──
+            Add(rows, GraphNodeOp.ScreenPointToGround, QueryOnly, GraphValueType.Bool, queryOut: GraphValueType.Bool, queryPorts: portAB);
+            Add(rows, GraphNodeOp.ScreenPointToEntity, QueryOnly, GraphValueType.Entity, queryOut: GraphValueType.Entity, queryPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.ScreenRegionToEntities, QueryOnly, GraphValueType.Void, queryPorts: portRect, queryOut: GraphValueType.TargetList, flags: GraphOperandRole.SrcRegisterFlags);
+            Add(rows, GraphNodeOp.PointToDirection, QueryOnly, GraphValueType.Float, queryOut: GraphValueType.Float, queryPorts: portSource, flags: GraphOperandRole.BoolScratchFlags);
+            Add(rows, GraphNodeOp.StickToDirection, QueryOnly, GraphValueType.Float, queryOut: GraphValueType.Float, queryPorts: portAB, flags: GraphOperandRole.BoolScratchFlags);
             Add(rows, GraphNodeOp.LoadEffectTiming, LinearAndScript | QueryOnly, GraphValueType.Float, scriptOut: GraphValueType.Float, queryOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.LoadEffectStack, LinearAndScript | QueryOnly, GraphValueType.Float, scriptOut: GraphValueType.Float, queryOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.QueryFilterTeam, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portListTeamId, flags: GraphOperandRole.TeamIdSourceFlags);

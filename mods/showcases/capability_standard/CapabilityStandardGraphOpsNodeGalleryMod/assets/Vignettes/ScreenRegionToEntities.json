@@ -1,0 +1,13 @@
+{
+  "op": "ScreenRegionToEntities",
+  "driver": "aimsource",
+  "title": "框一圈点名",
+  "beat": "虚线框罩住西边一段，框里的人被点名线逐个牵住。",
+  "detailTemplate": "框里圈住{count}人，框外的退成灰影。",
+  "assertDetailContains": [
+    "圈住"
+  ],
+  "featuredNodeId": "region",
+  "graphKind": "Query",
+  "field": "aim"
+}

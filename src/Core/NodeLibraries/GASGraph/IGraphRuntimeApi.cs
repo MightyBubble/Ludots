@@ -607,6 +607,38 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             projection = default;
             return false;
         }
+
+        // ── Aimsource pure helpers (input/command chain aim graphs) ──
+
+        /// <summary>
+        /// Resolves a screen point against the authoritative ground (camera ray +
+        /// heightmap, bounded by the world size). False means the ray left the world.
+        /// </summary>
+        bool TryScreenPointToGround(float screenX, float screenY, out IntVector2 groundCm)
+        {
+            groundCm = default;
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+        }
+
+        /// <summary>
+        /// Knowledge-gated pick of the best candidate under the screen point; candidates
+        /// are the explicit TargetList working set (no world scan). An empty seatId means
+        /// the sole present binding; a named seat answers under that seat's binding-local
+        /// screen space.
+        /// </summary>
+        Entity PickScreenPointEntity(ReadOnlySpan<Entity> candidates, int count, Entity owner, string? seatId, float screenX, float screenY, float radiusPixels)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+        }
+
+        /// <summary>
+        /// In-place filter of an entity span down to the members whose projected bounds
+        /// intersect the screen rect; preserves candidate order (deterministic result).
+        /// </summary>
+        int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+        }
     }
 
     /// <summary>

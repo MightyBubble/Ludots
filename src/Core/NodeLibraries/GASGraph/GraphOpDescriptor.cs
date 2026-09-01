@@ -35,7 +35,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         TeamIdSourceFlags = 14,
         RelationshipTypeFlags = 15,
         ReasonIdDst = 16,
-        DispatchPresetDst = 17
+        DispatchPresetDst = 17,
+        SrcRegisterFlags = 18
     }
 
     public readonly struct GraphOpDescriptor

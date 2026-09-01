@@ -3476,6 +3476,86 @@
         "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
       ],
       "codegenStatus": "covered"
+    },
+    {
+      "op": "ScreenPointToGround",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_ScreenPointToGround",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAimSourceAcceptanceTests.ScreenPointToGround_QuotesResolvedGroundPoint"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ScreenPointToEntity",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_ScreenPointToEntity",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAimSourceAcceptanceTests.ScreenPointToEntity_NamesThePickedCandidate"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ScreenRegionToEntities",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_ScreenRegionToEntities",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAimSourceAcceptanceTests.ScreenRegionToEntities_CountsTheRectHits"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "PointToDirection",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_PointToDirection",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAimSourceAcceptanceTests.PointToDirection_QuotesTheAimAngle"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "StickToDirection",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_StickToDirection",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAimSourceAcceptanceTests.StickToDirection_QuotesTheStickAngle"
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }

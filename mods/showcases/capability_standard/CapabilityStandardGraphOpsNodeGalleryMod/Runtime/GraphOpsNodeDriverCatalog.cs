@@ -25,6 +25,7 @@ public static class GraphOpsNodeDriverCatalog
             "blackboard" => new Drivers.BlackboardNodeDriver(),
             "rel" => new Drivers.RelNodeDriver(),
             "query" => new Drivers.QueryNodeDriver(),
+            "aimsource" => new Drivers.AimSourceNodeDriver(),
             _ => throw new InvalidOperationException($"Unknown GraphOps node driver '{driver}'.")
         };
     }

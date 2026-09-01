@@ -132,6 +132,16 @@
 - [点名放置的木桩，名册一翻就到](LoadPlacedEntity.md) — 记录官翻出名册一点名，放置的木桩大王立刻在岗应答；倒下后名册读出空位。
 - [点名预放置锚点，名册一翻就到](LoadPlacedAnchor.md) — 记录官翻出名册点到锚点，营地锚立刻在岗应答；倒下后名册读出空位。
 
+## 瞄准源
+
+> 作者语义与全量字段见手册分册 [空间圈人 · gr-op-06](../mod-editor-prd/config/gr-op-06-spatial.md)。
+
+- [光标点到谁](ScreenPointToEntity.md) — 光标压在人群一侧，点名线牵住被点到的那人。
+- [把光标钉到地上](ScreenPointToGround.md) — 光标点下的地方，落点圈在地图上亮起。
+- [摇杆掰方向](StickToDirection.md) — 摇杆斜掰，箭头随之指向东北。
+- [朝落点转向](PointToDirection.md) — 指挥转身，炮口指向地图东北的落点。
+- [框一圈点名](ScreenRegionToEntities.md) — 虚线框罩住西边一段，框里的人被点名线逐个牵住。
+
 ## 空间圈人
 
 > 作者语义与全量字段见手册分册 [空间圈人 · gr-op-06](../mod-editor-prd/config/gr-op-06-spatial.md)。

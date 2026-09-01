@@ -1091,6 +1091,7 @@ namespace Ludots.Core.Engine
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             gasGraphApi.BindTriggerManager(TriggerManager);
+            gasGraphApi.BindAimSource(new Ludots.Core.Input.AimSource.GraphAimSourceRuntime(World, GlobalContext));
             var graphCallbackService = new Ludots.Core.GraphRuntime.GraphCallbackService();
             SetService(CoreServiceKeys.GraphCallbackService, graphCallbackService);
             gasGraphApi.BindGraphCallbackService(graphCallbackService);

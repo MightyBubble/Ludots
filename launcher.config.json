@@ -2250,6 +2250,46 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveDialogueChoicesEntryMod",
         "projectPath": "CapabilityStandardGraphOpQueryCollectActiveDialogueChoicesEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_PointToDirection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpPointToDirectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpPointToDirectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ScreenPointToEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpScreenPointToEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpScreenPointToEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ScreenPointToGround",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpScreenPointToGroundEntryMod",
+        "projectPath": "CapabilityStandardGraphOpScreenPointToGroundEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ScreenRegionToEntities",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpScreenRegionToEntitiesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpScreenRegionToEntitiesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StickToDirection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStickToDirectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStickToDirectionEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

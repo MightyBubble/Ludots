@@ -2958,6 +2958,51 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_PointToDirection_raylib",
+      "name": "Graph Op PointToDirection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_PointToDirection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ScreenPointToEntity_raylib",
+      "name": "Graph Op ScreenPointToEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ScreenPointToEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ScreenPointToGround_raylib",
+      "name": "Graph Op ScreenPointToGround Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ScreenPointToGround"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ScreenRegionToEntities_raylib",
+      "name": "Graph Op ScreenRegionToEntities Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ScreenRegionToEntities"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StickToDirection_raylib",
+      "name": "Graph Op StickToDirection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StickToDirection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
