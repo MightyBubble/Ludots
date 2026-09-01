@@ -102,7 +102,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 for (int i = 0; i < nodes.Count; i++)
                 {
                     string op = (nodes[i].Op ?? string.Empty).Trim();
-                    if (op == GraphAuthoringSugar.BtLeaf || op == GraphAuthoringSugar.FsmAction)
+                    if (GraphAuthoringSugar.IsBtLeafPortal(op) || GraphAuthoringSugar.IsFsmActionPortal(op))
                     {
                         throw new InvalidOperationException(
                             $"BehaviorGraphLeafWeaver: graph '{pair.Key}' still contains {op} node '{nodes[i].Id}' " +
@@ -121,11 +121,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 GraphControlFlowNode node = nodes[i];
                 string op = (node.Op ?? string.Empty).Trim();
                 LeafKind kind;
-                if (op == GraphAuthoringSugar.BtLeaf)
+                if (GraphAuthoringSugar.IsBtLeafPortal(op))
                 {
                     kind = LeafKind.BtLeaf;
                 }
-                else if (op == GraphAuthoringSugar.FsmAction)
+                else if (GraphAuthoringSugar.IsFsmActionPortal(op))
                 {
                     kind = LeafKind.FsmAction;
                 }

@@ -33,6 +33,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         public const string BtLeaf = "BtLeaf";
         /// <summary>
+        /// BT Action leaf portal (same weave path as BtLeaf). functionName → Script Func Graph.
+        /// </summary>
+        public const string BtAction = "BtAction";
+        /// <summary>
+        /// BT Condition leaf portal (same weave path as BtLeaf). functionName → Script Func Graph.
+        /// </summary>
+        public const string BtCondition = "BtCondition";
+        /// <summary>
         /// FSM state dispatch container: reads the map variable named by stateVar, then
         /// SwitchInt-style case:{memberName} arms per enum member (enumType required).
         /// Lowers to ReadMapVarInt + ConstInt/CompareEqInt/JumpIfFalse/Jump; the running
@@ -92,7 +100,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         public static bool IsBtLeafPortal(string? opName)
-            => string.Equals(opName, BtLeaf, StringComparison.Ordinal);
+            => string.Equals(opName, BtLeaf, StringComparison.Ordinal)
+               || string.Equals(opName, BtAction, StringComparison.Ordinal)
+               || string.Equals(opName, BtCondition, StringComparison.Ordinal);
 
         /// <summary>
         /// FSM dispatch sugar (FSM-1a). Script/TriggerGraph only: reads stateVar, then SwitchInt-style
@@ -115,7 +125,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             => $"{BranchBool}, {SwitchInt}, {SelectByEnum}, {Wait}, {While}, {Until}, {Break}, {FsmState}, {FsmAction}";
 
         public static string DescribeBtSugar()
-            => $"{BtSequence}, {BtSelector}, {BtDecorator}, {BtLeaf}";
+            => $"{BtSequence}, {BtSelector}, {BtDecorator}, {BtLeaf}, {BtAction}, {BtCondition}";
 
         public static string DescribeFsmSugar()
             => $"{FsmState}, {FsmAction}";

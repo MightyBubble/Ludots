@@ -9,7 +9,9 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<EditorLayout />} />
-        <Route path="/gas-graphs" element={<GasGraphEditorPage />} />
+        <Route path="/gas-graphs" element={<GasGraphEditorPage dialect="func" />} />
+        <Route path="/bt-editor" element={<GasGraphEditorPage dialect="bt" />} />
+        <Route path="/fsm-editor" element={<GasGraphEditorPage dialect="fsm" />} />
         <Route path="/ui-panel-authoring" element={<UiPanelAuthoringPage />} />
         <Route path="/story-authoring" element={<StoryAuthoringPage />} />
       </Routes>
