@@ -17,6 +17,7 @@ namespace Ludots.Raylib.SceneKit
         private float _defaultDistance = 40f;
         private float _defaultFovy = 45f;
         private Vector3 _defaultTarget = Vector3.Zero;
+        private MouseButton _rotateButton = MouseButton.MOUSE_LEFT_BUTTON;
         private float _yawDeg;
         private float _pitchDeg;
         private float _distance = 40f;
@@ -33,8 +34,10 @@ namespace Ludots.Raylib.SceneKit
             float pitchDeg = 25f,
             float yawDeg = 45f,
             Vector3 target = default,
-            float fovy = 45f)
+            float fovy = 45f,
+            MouseButton rotateButton = MouseButton.MOUSE_LEFT_BUTTON)
         {
+            _rotateButton = rotateButton;
             _defaultDistance = distance;
             _defaultPitchDeg = pitchDeg;
             _defaultYawDeg = yawDeg;
@@ -53,12 +56,18 @@ namespace Ludots.Raylib.SceneKit
             ResetToDefaults();
         }
 
+        /// <summary>编辑态切换旋转键：Edit 用右键（左键留给拾取/gizmo），检视用左键。</summary>
+        public void UseRotateButton(MouseButton button)
+        {
+            _rotateButton = button;
+        }
+
         public void Update(float deltaSeconds)
         {
             const float panSpeed = 18f;
             const float zoomFactor = 1.1f;
 
-            if (Rl.IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON))
+            if (Rl.IsMouseButtonDown(_rotateButton))
             {
                 Vector2 mouse = Rl.GetMousePosition();
                 Vector2 delta = mouse - _lastMouse;
