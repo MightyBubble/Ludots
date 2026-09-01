@@ -81,7 +81,7 @@ public sealed class GraphOpsNodeGalleryEntryPayloadAcceptanceTests
 
         var driver = (EntryPayloadNodeDriver)runtime.Driver;
         Assert.That(driver.LastResult.FloatValue, Is.EqualTo(360.5f).Within(0.001f),
-            "the captured MapTrigger.GroundXCm must keep its fraction through the named read");
+            "the captured MapTrigger.GroundPointXCm must keep its fraction through the named read");
         Assert.That(runtime.Metrics.ThinkWaves, Is.EqualTo(1));
         Assert.That(runtime.Metrics.Detail, Does.Contain("360.5"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("事件载荷"));

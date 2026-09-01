@@ -318,6 +318,39 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>IntIdList = currently available DialogueRuntime choice ids.</summary>
         QueryCollectActiveDialogueChoices = 468,
 
+        // ── Aimsource pure helpers (input/command chain; stateless utility kernels the
+        // aim graphs compose — screen point to ground, pointer pick, region filter,
+        // world/stick to direction). All Query-kind read-only. ──
+        /// <summary>
+        /// B[Dst] = screen point (F[A]=x px, F[B]=y px) resolved against the authoritative
+        /// ground; on success TargetPosCm := the ground point (read via LoadTargetPosX/Y).
+        /// </summary>
+        ScreenPointToGround = 469,
+        /// <summary>
+        /// E[Dst] = knowledge-gated pick under the screen point among the current TargetList
+        /// candidates (explicit candidate set, no world scan). E[A] = inspecting owner rep;
+        /// F[B]/F[C] = pointer x/y px; ImmF = pick radius px; Imm = seat key symbol whose
+        /// binding-local screen space the pointer answers under.
+        /// </summary>
+        ScreenPointToEntity = 470,
+        /// <summary>
+        /// TargetList := TargetList candidates whose projected bounds intersect the screen
+        /// rect (F[A]=minX, F[B]=minY, F[C]=maxX, F[Flags]=maxY px); candidate order is
+        /// preserved, so the result order stays deterministic.
+        /// </summary>
+        ScreenRegionToEntities = 471,
+        /// <summary>
+        /// F[Dst] = direction angle in degrees (0 = +X) from the rep E[A]'s world position to
+        /// the frame's TargetPosCm; B[Flags] = 0 and F[Dst] = 0 when either position is absent.
+        /// </summary>
+        PointToDirection = 472,
+        /// <summary>
+        /// F[Dst] = direction angle in degrees (0 = +X) of the stick vector (F[A]=x, F[B]=y,
+        /// numeric processors already applied upstream); B[Flags] = 1 when the vector clears
+        /// the deadzone, 0 with F[Dst] = 0 otherwise.
+        /// </summary>
+        StickToDirection = 473,
+
     }
 
     public static class GraphNodeOpParser

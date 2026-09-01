@@ -22,7 +22,7 @@
 真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/LoadEntryPayloadFloat.json`）：
 
 ```json
-{"id": "readGroundX", "op": "LoadEntryPayloadFloat", "payloadKey": "MapTrigger.GroundXCm"}
+{"id": "readGroundX", "op": "LoadEntryPayloadFloat", "payloadKey": "MapTrigger.GroundPointXCm"}
 ```
 
 ## 这场是怎么搭出来的

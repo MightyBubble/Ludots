@@ -1,0 +1,26 @@
+[
+  {
+    "id": "showcase.graph_op.ScreenRegionToEntities",
+    "kind": "Query",
+    "entry": "minX",
+    "nodes": [
+      { "id": "minX", "op": "ConstFloat", "floatValue": -600 },
+      { "id": "minY", "op": "ConstFloat", "floatValue": 60 },
+      { "id": "maxX", "op": "ConstFloat", "floatValue": -200 },
+      { "id": "maxY", "op": "ConstFloat", "floatValue": 180 },
+      { "id": "region", "op": "ScreenRegionToEntities" }
+    ],
+    "controlEdges": [
+      { "from": "minX", "fromPort": "next", "to": "minY" },
+      { "from": "minY", "fromPort": "next", "to": "maxX" },
+      { "from": "maxX", "fromPort": "next", "to": "maxY" },
+      { "from": "maxY", "fromPort": "next", "to": "region" }
+    ],
+    "valueEdges": [
+      { "from": "minX", "fromPort": "value", "to": "region", "toPort": "a" },
+      { "from": "minY", "fromPort": "value", "to": "region", "toPort": "b" },
+      { "from": "maxX", "fromPort": "value", "to": "region", "toPort": "c" },
+      { "from": "maxY", "fromPort": "value", "to": "region", "toPort": "max" }
+    ]
+  }
+]

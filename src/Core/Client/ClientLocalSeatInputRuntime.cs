@@ -171,7 +171,7 @@ namespace Ludots.Core.Client
         /// channel accumulator. Mirrors the global InputRuntimeSystem pump (UI capture blocks
         /// channel handlers the same way); the sole-seat global chain is not touched here.
         /// </summary>
-        public void UpdateVisualFrame()
+        public void UpdateVisualFrame(float deltaTime)
         {
             if (_orderedChannels.Count == 0)
             {
@@ -186,7 +186,7 @@ namespace Ludots.Core.Client
             {
                 ClientLocalSeatInputChannel channel = _orderedChannels[i];
                 channel.Handler.InputBlocked = uiCaptured;
-                channel.Handler.Update();
+                channel.Handler.Update(deltaTime);
                 channel.Accumulator.CaptureVisualFrame(channel.Handler);
             }
         }

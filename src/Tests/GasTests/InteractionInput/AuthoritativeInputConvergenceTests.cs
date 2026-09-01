@@ -52,17 +52,17 @@ namespace Ludots.Tests.GAS
             var accumulator = new AuthoritativeInputAccumulator();
             var snapshot = new FrozenInputActionReader();
 
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
             accumulator.BuildTickSnapshot(snapshot);
             Assert.That(snapshot.PressedThisFrame("Attack"), Is.False);
             Assert.That(snapshot.IsDown("Attack"), Is.False);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             accumulator.BuildTickSnapshot(snapshot);
@@ -74,7 +74,7 @@ namespace Ludots.Tests.GAS
             Assert.That(snapshot.IsDown("Attack"), Is.True);
 
             backend.Buttons["<Keyboard>/a"] = false;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             accumulator.BuildTickSnapshot(snapshot);
@@ -233,11 +233,11 @@ namespace Ludots.Tests.GAS
             system.SetSolePossessedActor(world.Create(), 1);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             backend.Buttons["<Keyboard>/a"] = false;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             accumulator.BuildTickSnapshot(snapshot);

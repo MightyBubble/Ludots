@@ -131,6 +131,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Action<string>? _startDialogue;
         private Func<Span<int>, int>? _collectActiveDialogueChoices;
         private Func<int, string?>? _resolveDialogueChoiceDisplayText;
+        private IGraphAimSourceRuntime? _aimSource;
         private LoadedGraphRuntime? _loadedGraphRuntime;
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
         private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
@@ -505,6 +506,31 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             _collectActiveDialogueChoices = collectActiveDialogueChoices
                 ?? throw new ArgumentNullException(nameof(collectActiveDialogueChoices));
+        }
+
+        public void BindAimSource(IGraphAimSourceRuntime aimSource)
+        {
+            _aimSource = aimSource ?? throw new ArgumentNullException(nameof(aimSource));
+        }
+
+        private IGraphAimSourceRuntime RequireAimSource()
+        {
+            return _aimSource ?? throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+        }
+
+        public bool TryScreenPointToGround(float screenX, float screenY, out IntVector2 groundCm)
+        {
+            return RequireAimSource().TryScreenPointToGround(screenX, screenY, out groundCm);
+        }
+
+        public Entity PickScreenPointEntity(ReadOnlySpan<Entity> candidates, int count, Entity owner, string? seatId, float screenX, float screenY, float radiusPixels)
+        {
+            return RequireAimSource().PickScreenPointEntity(candidates, count, owner, seatId, screenX, screenY, radiusPixels);
+        }
+
+        public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect)
+        {
+            return RequireAimSource().FilterScreenRegionEntities(entities, count, in rect);
         }
 
         public void BindResolveDialogueChoiceDisplayText(Func<int, string?> resolveDialogueChoiceDisplayText)

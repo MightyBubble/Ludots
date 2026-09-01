@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
@@ -11,10 +13,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
     /// Bridges authored input actions (Input/trigger_actions.json) into map-scoped
-    /// InputActionFired trigger events: press edge -> payload { action, source =
-    /// player representative, ground point }. Actions with pickRadiusCm additionally
-    /// resolve the nearest pickable entity around the ground point into the payload
-    /// and only fire when a pick exists — TriggerGraphs stay pure data, no mod code.
+    /// InputActionFired trigger events: press edge -> payload { action, rep =
+    /// player representative, ground point, held semantic-modifier bitmask, active
+    /// interaction context id }. Actions with pickRadiusCm additionally resolve the
+    /// nearest pickable entity around the ground point into the payload and only fire
+    /// when a pick exists — TriggerGraphs stay pure data, no mod code.
     /// </summary>
     public sealed class InputActionTriggerBridgeSystem : Arch.System.ISystem<float>
     {
@@ -24,6 +27,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Func<ScriptContext> _createContext;
         private readonly Func<IInputActionReader?> _reader;
         private readonly IReadOnlyList<InputTriggerAction> _actions;
+        private readonly InteractionContextProfileRegistry _contextProfiles;
         private readonly QueryDescription _pickQuery;
 
         public InputActionTriggerBridgeSystem(
@@ -32,7 +36,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             TriggerManager triggerManager,
             Func<ScriptContext> createContext,
             Func<IInputActionReader?> reader,
-            IReadOnlyList<InputTriggerAction> actions)
+            IReadOnlyList<InputTriggerAction> actions,
+            InteractionContextProfileRegistry contextProfiles)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _currentSession = currentSession ?? throw new ArgumentNullException(nameof(currentSession));
@@ -40,6 +45,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _createContext = createContext ?? throw new ArgumentNullException(nameof(createContext));
             _reader = reader ?? throw new ArgumentNullException(nameof(reader));
             _actions = actions ?? Array.Empty<InputTriggerAction>();
+            _contextProfiles = contextProfiles ?? throw new ArgumentNullException(nameof(contextProfiles));
             _pickQuery = new QueryDescription().WithAll<WorldPositionCm, AttributeBuffer>();
         }
 
@@ -93,10 +99,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 ScriptContext context = _createContext();
                 context.Set(CoreServiceKeys.MapId, session.MapId);
                 context.Set(CoreServiceKeys.MapSession, session);
-                context.Set(MapTriggerEventPayloadKeys.SourceEntity, playerRep);
-                context.Set(MapTriggerEventPayloadKeys.InputAction, action.Id);
-                context.Set(MapTriggerEventPayloadKeys.GroundXCm, (float)ground.X);
-                context.Set(MapTriggerEventPayloadKeys.GroundYCm, (float)ground.Y);
+                context.Set(MapTriggerEventPayloadKeys.Rep, playerRep);
+                context.Set(MapTriggerEventPayloadKeys.Action, action.Id);
+                context.Set(MapTriggerEventPayloadKeys.GroundPointXCm, (float)ground.X);
+                context.Set(MapTriggerEventPayloadKeys.GroundPointYCm, (float)ground.Y);
+                context.Set(MapTriggerEventPayloadKeys.Modifiers, ReadHeldModifiers(input));
+                context.Set(MapTriggerEventPayloadKeys.ContextId, ResolveActiveContextId(playerRep));
                 if (picked != Entity.Null && picked != default)
                 {
                     context.Set(MapTriggerEventPayloadKeys.TargetEntity, picked);
@@ -104,6 +112,34 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
                 _triggerManager.FireMapEvent(session.MapId, GameEvents.InputActionFired, context);
             }
+        }
+
+        private static int ReadHeldModifiers(IInputActionReader input)
+        {
+            int modifiers = InputActionFiredModifiers.None;
+            if (input.IsDown(CommandSourceModifierActionIds.Additive))
+            {
+                modifiers |= InputActionFiredModifiers.Queue;
+            }
+
+            if (input.IsDown(CommandSourceModifierActionIds.Toggle))
+            {
+                modifiers |= InputActionFiredModifiers.Precision;
+            }
+
+            return modifiers;
+        }
+
+        private int ResolveActiveContextId(Entity playerRep)
+        {
+            if (_world.TryGet<ActiveInteractionContext>(playerRep, out ActiveInteractionContext active))
+            {
+                return active.ContextId;
+            }
+
+            // Absence of a mounted context is the steady state: the reserved default
+            // profile anchors it; when no profile catalog is installed the honest id is 0.
+            return _contextProfiles.ProfileIdRegistry.GetId(InteractionContextIds.Default);
         }
 
         private Entity ResolvePlayerRepresentative(MapSession session)

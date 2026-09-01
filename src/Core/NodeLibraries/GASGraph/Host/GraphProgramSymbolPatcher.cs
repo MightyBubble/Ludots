@@ -132,6 +132,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.QueryFromCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.ScreenPointToEntity:
+                        if (ins.Imm >= 0)
+                        {
+                            ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        }
+                        break;
                     case GraphNodeOp.SnapToNearestInCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
                         break;

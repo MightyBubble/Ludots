@@ -231,6 +231,10 @@ namespace Ludots.Core.GraphRuntime
         public string? ArgKey { get; set; }
         /// <summary>Interaction mode id symbol for SetInteractionMode; resolved against the installed interaction mode map at run time.</summary>
         public string? Mode { get; set; }
+        /// <summary>Seat id symbol for ScreenPointToEntity; the pointer/radius answer under that seat's present binding.</summary>
+        public string? Seat { get; set; }
+        /// <summary>Pick radius in pixels for ScreenPointToEntity (authored literal).</summary>
+        public float PickRadiusPx { get; set; }
         public string? QueryCapacityPolicy { get; set; }
         public string? DroppedOutput { get; set; }
         public string? ValidOutput { get; set; }
@@ -337,6 +341,7 @@ namespace Ludots.Core.GraphRuntime
         public const string Max = "max";
         public const string A = "a";
         public const string B = "b";
+        public const string C = "c";
         public const string Condition = "condition";
         /// <summary>Int selector input for SwitchInt compile-time sugar.</summary>
         public const string Selector = "selector";

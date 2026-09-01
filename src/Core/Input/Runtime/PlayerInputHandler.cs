@@ -9,6 +9,15 @@ namespace Ludots.Core.Input.Runtime
 {
     public class PlayerInputHandler : IInputActionReader
     {
+        // Interaction judging thresholds (visual-frame cadence). Tap slop and the drag
+        // threshold split "same position" from "moved" presses; hold/multi-tap defaults
+        // apply unless the binding's Interactions parameters override them.
+        public const float TapMaxTravelPixels = 6f;
+        public const float DragThresholdPixels = 8f;
+        public const float HoldDefaultDurationSeconds = 0.5f;
+        public const int MultiTapDefaultTapCount = 2;
+        public const float MultiTapDefaultWindowSeconds = 0.5f;
+
         private readonly IInputBackend _backend;
         private readonly List<CompiledContext> _activeContexts = new();
         private readonly Dictionary<string, CompiledContext> _contextsById = new(StringComparer.Ordinal);
@@ -148,7 +157,7 @@ namespace Ludots.Core.Input.Runtime
         /// <summary>Whether a synthetic injection is currently held for this action (true after press, false after release).</summary>
         public bool IsInjectionActive(string actionId) => _injections.ContainsKey(actionId);
 
-        public void Update()
+        public void Update(float deltaTime)
         {
             UpdateRevision++;
             RefreshPointerState();
@@ -159,6 +168,8 @@ namespace Ludots.Core.Input.Runtime
                 {
                     _actionStates[i].ClearSuppressed();
                 }
+
+                ResetInteractionStates();
                 return;
             }
 
@@ -183,6 +194,13 @@ namespace Ludots.Core.Input.Runtime
                     }
 
                     Vector3 value = ResolveBindingValue(in binding);
+                    if (binding.Interactions.Length > 0)
+                    {
+                        value = EvaluateBindingInteractions(bindings[bindingIndex], value, deltaTime, _mousePosition)
+                            ? Vector3.One
+                            : Vector3.Zero;
+                    }
+
                     _tempValues[binding.ActionIndex] += value;
                 }
             }
@@ -200,6 +218,185 @@ namespace Ludots.Core.Input.Runtime
             {
                 _actionStates[i].Update(_tempValues[i]);
             }
+        }
+
+        private static void ResetInteractionStates(CompiledContext context)
+        {
+            var bindings = context.Bindings;
+            for (int bindingIndex = 0; bindingIndex < bindings.Length; bindingIndex++)
+            {
+                ResetInteractionStates(bindings[bindingIndex]);
+            }
+        }
+
+        private static void ResetInteractionStates(CompiledBinding binding)
+        {
+            ResetInteractionStates(binding.Interactions);
+            var parts = binding.CompositeParts;
+            for (int partIndex = 0; partIndex < parts.Length; partIndex++)
+            {
+                ResetInteractionStates(parts[partIndex]);
+            }
+        }
+
+        private static void ResetInteractionStates(CompiledInteraction[] interactions)
+        {
+            for (int i = 0; i < interactions.Length; i++)
+            {
+                interactions[i].Reset();
+            }
+        }
+
+        private void ResetInteractionStates()
+        {
+            for (int contextIndex = 0; contextIndex < _activeContexts.Count; contextIndex++)
+            {
+                ResetInteractionStates(_activeContexts[contextIndex]);
+            }
+        }
+
+        /// <summary>
+        /// Steps every configured interaction of one binding against the raw press state
+        /// and this frame's pointer; true on exactly the frame one of the time-sequence
+        /// judges completes. The gated contribution is a one-frame pulse, so the action's
+        /// edge detectors report the completion as a press edge that folds into the tick
+        /// snapshot like any other action edge.
+        /// </summary>
+        private static bool EvaluateBindingInteractions(
+            CompiledBinding binding,
+            Vector3 rawValue,
+            float deltaTime,
+            Vector2 pointer)
+        {
+            bool pressed = rawValue.LengthSquared() > 0.25f;
+            bool completed = false;
+            var interactions = binding.Interactions;
+            for (int i = 0; i < interactions.Length; i++)
+            {
+                if (StepInteraction(interactions[i], pressed, pointer, deltaTime))
+                {
+                    completed = true;
+                }
+            }
+
+            return completed;
+        }
+
+        private static bool StepInteraction(CompiledInteraction interaction, bool pressed, Vector2 pointer, float deltaTime)
+        {
+            switch (interaction.Kind)
+            {
+                case InteractionKind.Tap:
+                    if (pressed)
+                    {
+                        if (!interaction.Held)
+                        {
+                            interaction.Held = true;
+                            interaction.PressPosition = pointer;
+                        }
+
+                        return false;
+                    }
+
+                    if (interaction.Held)
+                    {
+                        interaction.Held = false;
+                        return PointerTravelPixels(pointer, interaction.PressPosition) <= TapMaxTravelPixels;
+                    }
+
+                    return false;
+
+                case InteractionKind.Drag:
+                    if (pressed)
+                    {
+                        if (!interaction.Held)
+                        {
+                            interaction.Held = true;
+                            interaction.PressPosition = pointer;
+                        }
+
+                        return false;
+                    }
+
+                    if (interaction.Held)
+                    {
+                        interaction.Held = false;
+                        return PointerTravelPixels(pointer, interaction.PressPosition) >= DragThresholdPixels;
+                    }
+
+                    return false;
+
+                case InteractionKind.Hold:
+                    if (!pressed)
+                    {
+                        interaction.Held = false;
+                        interaction.HeldSeconds = 0f;
+                        interaction.HoldFired = false;
+                        return false;
+                    }
+
+                    if (!interaction.Held)
+                    {
+                        interaction.Held = true;
+                        interaction.PressPosition = pointer;
+                        interaction.HeldSeconds = 0f;
+                        interaction.HoldFired = false;
+                    }
+
+                    interaction.HeldSeconds += deltaTime;
+                    if (!interaction.HoldFired && interaction.HeldSeconds >= interaction.DurationSeconds)
+                    {
+                        interaction.HoldFired = true;
+                        return true;
+                    }
+
+                    return false;
+
+                case InteractionKind.MultiTap:
+                    interaction.SecondsSinceTap += deltaTime;
+                    if (pressed)
+                    {
+                        if (!interaction.Held)
+                        {
+                            interaction.Held = true;
+                            interaction.PressPosition = pointer;
+                        }
+
+                        return false;
+                    }
+
+                    if (interaction.Held)
+                    {
+                        interaction.Held = false;
+                        if (PointerTravelPixels(pointer, interaction.PressPosition) > TapMaxTravelPixels)
+                        {
+                            interaction.TapsCompleted = 0;
+                            return false;
+                        }
+
+                        interaction.TapsCompleted = interaction.SecondsSinceTap > interaction.TapWindowSeconds
+                            ? 1
+                            : interaction.TapsCompleted + 1;
+                        interaction.SecondsSinceTap = 0f;
+                        if (interaction.TapsCompleted >= interaction.TapCount)
+                        {
+                            interaction.TapsCompleted = 0;
+                            return true;
+                        }
+                    }
+
+                    return false;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static float PointerTravelPixels(Vector2 current, Vector2 press)
+        {
+            float dx = current.X - press.X;
+            float dy = current.Y - press.Y;
+            return MathF.Sqrt((dx * dx) + (dy * dy));
         }
 
         private CompiledContext CompileContext(InputContextDef context)
@@ -252,6 +449,7 @@ namespace Ludots.Core.Input.Runtime
                         BindingSourceKind.CompositeButtonChord,
                     _ => BindingSourceKind.Unsupported
                 };
+                compiled.Interactions = CompileInteractions(binding.Interactions, binding.Path, compiled.SourceKind);
                 compiled.ContributionKey = BuildContributionKey(compiled);
                 return compiled;
             }
@@ -277,6 +475,7 @@ namespace Ludots.Core.Input.Runtime
                 compiled.SourceKind = BindingSourceKind.Unsupported;
             }
 
+            compiled.Interactions = CompileInteractions(binding.Interactions, binding.Path, compiled.SourceKind);
             compiled.ContributionKey = BuildContributionKey(compiled);
             return compiled;
         }
@@ -308,6 +507,8 @@ namespace Ludots.Core.Input.Runtime
                     .Append(',');
             }
 
+            AppendInteractions(sb, binding.Interactions);
+
             var parts = binding.CompositeParts;
             if (parts.Length == 0)
             {
@@ -326,6 +527,22 @@ namespace Ludots.Core.Input.Runtime
             }
 
             sb.Append(']');
+        }
+
+        private static void AppendInteractions(StringBuilder sb, CompiledInteraction[] interactions)
+        {
+            for (int i = 0; i < interactions.Length; i++)
+            {
+                sb.Append('#')
+                    .Append((byte)interactions[i].Kind)
+                    .Append(':')
+                    .Append(interactions[i].DurationSeconds.ToString("R", CultureInfo.InvariantCulture))
+                    .Append(':')
+                    .Append(interactions[i].TapCount)
+                    .Append(':')
+                    .Append(interactions[i].TapWindowSeconds.ToString("R", CultureInfo.InvariantCulture))
+                    .Append(',');
+            }
         }
 
         private static int CountTopLevelBindings(InputConfigRoot config)
@@ -361,6 +578,77 @@ namespace Ludots.Core.Input.Runtime
             }
 
             return compiled;
+        }
+
+        /// <summary>
+        /// Compiles a binding's Interactions: time-sequence judges (Tap/Hold/Drag/MultiTap)
+        /// that turn the raw button press into a completion pulse. Only button-like sources
+        /// carry them — a time sequence over an axis or pointer stream has no press edge to
+        /// judge, so those fail closed at compile instead of silently passing through.
+        /// </summary>
+        private static CompiledInteraction[] CompileInteractions(List<InputModifierDef> interactionDefs, string? path, BindingSourceKind sourceKind)
+        {
+            if (interactionDefs == null || interactionDefs.Count == 0)
+            {
+                return Array.Empty<CompiledInteraction>();
+            }
+
+            if (sourceKind != BindingSourceKind.Button && sourceKind != BindingSourceKind.CompositeButtonChord)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_INTERACTION_UNSUPPORTED_SOURCE: binding '{path}' declares Interactions on a non-button source ({sourceKind}); time-sequence judging needs a press edge.");
+            }
+
+            var compiled = new CompiledInteraction[interactionDefs.Count];
+            for (int i = 0; i < interactionDefs.Count; i++)
+            {
+                InputModifierDef def = interactionDefs[i];
+                switch (def.Type)
+                {
+                    case "Tap":
+                        compiled[i] = new CompiledInteraction(InteractionKind.Tap, 0f, 0, 0f);
+                        break;
+                    case "Drag":
+                        compiled[i] = new CompiledInteraction(InteractionKind.Drag, 0f, 0, 0f);
+                        break;
+                    case "Hold":
+                        compiled[i] = new CompiledInteraction(
+                            InteractionKind.Hold,
+                            OptionalParameter(def.Parameters, "DurationSeconds", HoldDefaultDurationSeconds),
+                            0,
+                            0f);
+                        break;
+                    case "MultiTap":
+                        compiled[i] = new CompiledInteraction(
+                            InteractionKind.MultiTap,
+                            0f,
+                            (int)OptionalParameter(def.Parameters, "TapCount", MultiTapDefaultTapCount),
+                            OptionalParameter(def.Parameters, "TapWindowSeconds", MultiTapDefaultWindowSeconds));
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"LUDOTS_INPUT_INTERACTION_UNKNOWN: binding '{path}' declares unknown interaction '{def.Type}'; supported: Tap, Hold, Drag, MultiTap.");
+                }
+            }
+
+            return compiled;
+        }
+
+        private static float OptionalParameter(IReadOnlyList<InputParameterDef> parameters, string name, float fallback)
+        {
+            if (parameters != null)
+            {
+                for (int i = 0; i < parameters.Count; i++)
+                {
+                    var parameter = parameters[i];
+                    if (parameter != null && string.Equals(parameter.Name, name, StringComparison.Ordinal))
+                    {
+                        return parameter.Value;
+                    }
+                }
+            }
+
+            return fallback;
         }
 
         private static float RequireParameter(IReadOnlyList<InputParameterDef> parameters, string name, string processorType)
@@ -544,6 +832,58 @@ namespace Ludots.Core.Input.Runtime
             public string ContributionKey { get; set; } = string.Empty;
             public CompiledBinding[] CompositeParts { get; set; } = Array.Empty<CompiledBinding>();
             public CompiledProcessor[] Processors { get; init; } = Array.Empty<CompiledProcessor>();
+            public CompiledInteraction[] Interactions { get; set; } = Array.Empty<CompiledInteraction>();
+        }
+
+        private enum InteractionKind : byte
+        {
+            Tap = 1,
+            Hold = 2,
+            Drag = 3,
+            MultiTap = 4,
+        }
+
+        /// <summary>
+        /// One compiled time-sequence judge plus its live press-tracking state. State lives
+        /// on the compiled binding instance for the handler's lifetime; the machine is
+        /// stepped once per visual frame with the frame's pointer position and duration.
+        /// </summary>
+        private sealed class CompiledInteraction
+        {
+            public readonly InteractionKind Kind;
+
+            // Hold parameters
+            public readonly float DurationSeconds;
+
+            // MultiTap parameters
+            public readonly int TapCount;
+            public readonly float TapWindowSeconds;
+
+            // Live press tracking
+            public bool Held;
+            public Vector2 PressPosition;
+            public float HeldSeconds;
+            public bool HoldFired;
+            public float SecondsSinceTap;
+            public int TapsCompleted;
+
+            public CompiledInteraction(InteractionKind kind, float durationSeconds, int tapCount, float tapWindowSeconds)
+            {
+                Kind = kind;
+                DurationSeconds = durationSeconds;
+                TapCount = tapCount;
+                TapWindowSeconds = tapWindowSeconds;
+            }
+
+            public void Reset()
+            {
+                Held = false;
+                PressPosition = default;
+                HeldSeconds = 0f;
+                HoldFired = false;
+                SecondsSinceTap = 0f;
+                TapsCompleted = 0;
+            }
         }
 
         private readonly record struct CompiledProcessor(ProcessorKind Kind, float Scalar, byte AxisMask = 0);

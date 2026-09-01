@@ -1678,10 +1678,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             List<GraphDiagnostic> diagnostics)
         {
             if (!string.IsNullOrWhiteSpace(node.ValidOutput) &&
-                op.NodeOp != GraphNodeOp.SnapToNearestInCollection)
+                op.NodeOp != GraphNodeOp.SnapToNearestInCollection &&
+                op.NodeOp != GraphNodeOp.PointToDirection &&
+                op.NodeOp != GraphNodeOp.StickToDirection)
             {
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
-                    $"Node '{node.Id}' validOutput is only valid on SnapToNearestInCollection.",
+                    $"Node '{node.Id}' validOutput is only valid on SnapToNearestInCollection, PointToDirection, StickToDirection.",
                     node.Id));
             }
 
@@ -1823,7 +1825,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (!string.IsNullOrWhiteSpace(node.ValidOutput) &&
                 string.Equals(port, node.ValidOutput, StringComparison.Ordinal))
             {
-                return op.NodeOp == GraphNodeOp.SnapToNearestInCollection;
+                return op.NodeOp == GraphNodeOp.SnapToNearestInCollection ||
+                    op.NodeOp == GraphNodeOp.PointToDirection ||
+                    op.NodeOp == GraphNodeOp.StickToDirection;
             }
 
             if (!string.IsNullOrWhiteSpace(node.DroppedOutput) &&
@@ -2469,6 +2473,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 if (ops[i].NodeOp == GraphNodeOp.SnapToNearestInCollection &&
+                    !string.IsNullOrWhiteSpace(nodes[i].ValidOutput))
+                {
+                    boolScratches[i] = registers.AllocScratch(GraphValueType.Bool, graphId, nodes[i].Id, diagnostics);
+                    continue;
+                }
+
+                if ((ops[i].NodeOp == GraphNodeOp.PointToDirection ||
+                     ops[i].NodeOp == GraphNodeOp.StickToDirection) &&
                     !string.IsNullOrWhiteSpace(nodes[i].ValidOutput))
                 {
                     boolScratches[i] = registers.AllocScratch(GraphValueType.Bool, graphId, nodes[i].Id, diagnostics);

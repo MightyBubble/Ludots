@@ -614,7 +614,7 @@ namespace Ludots.Tests.GAS
 
             var handler = new PlayerInputHandler(backend, config);
             handler.PushContext("Gameplay");
-            handler.Update();
+            handler.Update(1f / 60f);
             return (backend, handler);
         }
 
@@ -650,13 +650,13 @@ namespace Ludots.Tests.GAS
         private static void PressButton(PlayerInputHandler handler, TestInputBackend backend, string path)
         {
             backend.Buttons[path] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
         }
 
         private static void ReleaseButton(PlayerInputHandler handler, TestInputBackend backend, string path)
         {
             backend.Buttons[path] = false;
-            handler.Update();
+            handler.Update(1f / 60f);
         }
 
         private sealed class TestInputBackend : IInputBackend
