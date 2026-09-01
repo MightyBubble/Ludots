@@ -21,10 +21,38 @@ namespace Ludots.App.RaylibPlayer
         public static int Main(string[] args)
         {
             string? projectPath = ParseOption(args, "--project");
+            bool headlessArgs = ParseOption(args, "--scene") != null || ParseOption(args, "--screenshot") != null;
             if (projectPath == null)
             {
-                Console.Error.WriteLine("--project <path> is required (e.g. --project projects/engine_gallery).");
-                return 2;
+                // 双击运行的默认路径：自动发现身边工程——唯一工程直进，多工程弹拾取器；
+                // 带自动化参数时必须确定性，多候选即报错点名 --project。
+                List<(string Name, string Path)> found = DiscoverProjects();
+                if (found.Count == 0)
+                {
+                    Console.Error.WriteLine(
+                        "No engine project found near the executable. Pass --project <path> (a directory with project.json).");
+                    return 2;
+                }
+
+                if (found.Count == 1)
+                {
+                    projectPath = found[0].Path;
+                    Console.WriteLine($"Auto-selected engine project '{found[0].Name}' at {projectPath}");
+                }
+                else if (headlessArgs)
+                {
+                    Console.Error.WriteLine(
+                        $"Multiple engine projects found; --project is required for unattended runs. Candidates: {string.Join(", ", found.Select(f => f.Path))}");
+                    return 2;
+                }
+                else
+                {
+                    projectPath = PickProjectInteractive(found);
+                    if (projectPath == null)
+                    {
+                        return 0;
+                    }
+                }
             }
 
             EngineProject project;
@@ -69,6 +97,103 @@ namespace Ludots.App.RaylibPlayer
             }
 
             return RunMenu(project, menuAuto, interactiveShot);
+        }
+
+        /// <summary>发现身边的工程：当前目录/输出目录自身与其下 projects/ 各层里的 project.json。</summary>
+        private static List<(string Name, string Path)> DiscoverProjects()
+        {
+            var roots = new List<string> { Directory.GetCurrentDirectory(), AppContext.BaseDirectory };
+            string? parent = Directory.GetParent(AppContext.BaseDirectory)?.FullName;
+            if (parent != null)
+            {
+                roots.Add(parent);
+            }
+
+            var byPath = new Dictionary<string, (string, string)>(StringComparer.OrdinalIgnoreCase);
+            foreach (string root in roots)
+            {
+                TryAddProject(byPath, root);
+                string nested = Path.Combine(root, "projects");
+                if (Directory.Exists(nested))
+                {
+                    foreach (string dir in Directory.GetDirectories(nested))
+                    {
+                        TryAddProject(byPath, dir);
+                    }
+                }
+            }
+
+            return byPath.Values.OrderBy(v => v.Item1, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        private static void TryAddProject(Dictionary<string, (string, string)> byPath, string directory)
+        {
+            string marker = Path.Combine(directory, "project.json");
+            if (!File.Exists(marker))
+            {
+                return;
+            }
+
+            string name = directory;
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(marker));
+                if (doc.RootElement.TryGetProperty("name", out JsonElement nameElement) &&
+                    nameElement.ValueKind == JsonValueKind.String)
+                {
+                    name = nameElement.GetString()!;
+                }
+            }
+            catch (JsonException)
+            {
+            }
+
+            byPath[Path.GetFullPath(directory)] = (name, Path.GetFullPath(directory));
+        }
+
+        private static string? PickProjectInteractive(List<(string Name, string Path)> candidates)
+        {
+            GalleryFont.Reset();
+            Rl.InitWindow(WindowWidth, WindowHeight, "Ludots Player — 选择工程");
+            Rl.SetTargetFPS(60);
+            int selected = 0;
+
+            while (!Rl.WindowShouldClose())
+            {
+                for (int i = 0; i < Math.Min(candidates.Count, 36); i++)
+                {
+                    if (Rl.IsKeyPressed(HotkeyFor(i)))
+                    {
+                        selected = i;
+                    }
+                }
+                if (Rl.IsKeyPressed(KeyboardKey.KEY_ENTER) || Rl.IsKeyPressed(KeyboardKey.KEY_SPACE))
+                {
+                    string chosen = candidates[selected].Path;
+                    Rl.CloseWindow();
+                    return chosen;
+                }
+
+                Rl.BeginDrawing();
+                Rl.ClearBackground(new Color(18, 18, 24, 255));
+                GalleryFont.Draw($"Ludots Player — 附近发现 {candidates.Count} 个工程", 24, 26, 26, GalleryColors.RayWhite);
+                GalleryFont.Draw("数字/字母选择工程，Enter 打开，ESC 退出；也可用 --project <路径> 直达", 24, 60, 17, new Color(160, 160, 175, 255));
+                int y = 100;
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    bool isActive = i == selected;
+                    Color color = isActive ? new Color(120, 220, 160, 255) : new Color(200, 200, 210, 255);
+                    string prefix = i < 10 ? ((i + 1) % 10).ToString() : char.ToString((char)('A' + i - 10));
+                    GalleryFont.Draw(isActive ? "> " : "  ", 24, y, 20, color);
+                    GalleryFont.Draw($"[{prefix}] {candidates[i].Name}  —  {candidates[i].Path}", 52, y, 19, color);
+                    y += 30;
+                }
+                GalleryFont.Flush();
+                Rl.EndDrawing();
+            }
+
+            Rl.CloseWindow();
+            return null;
         }
 
         private static int RunScene(EngineProject project, IEngineScene scene, string? screenshotPath, string? jsonPath, int frames)
@@ -233,7 +358,7 @@ namespace Ludots.App.RaylibPlayer
                 Rl.ClearBackground(GalleryColors.Black);
                 scene.Draw(dt, total, ref cam);
 
-                GalleryFont.Draw($"[ESC] menu   [R] reset camera", 8, WindowHeight - 26, 18, GalleryColors.RayWhite);
+                GalleryFont.Draw($"[ESC] 返回菜单   [R] 复位检视视角（检视视图 · 游戏 3C 由 Ludots 接管）", 8, WindowHeight - 26, 16, GalleryColors.RayWhite);
                 GalleryFont.Draw($"{scene.Title} — {scene.Summary}", 8, WindowHeight - 48, 18, new Color(220, 220, 230, 255));
                 GalleryFont.Flush();
 
@@ -265,7 +390,7 @@ namespace Ludots.App.RaylibPlayer
         private static void DrawMenu(IReadOnlyList<SceneDescriptor> scenes, int selected)
         {
             GalleryFont.Draw($"Ludots Player — 引擎渲染能力 {scenes.Count} 项", 24, 20, 28, GalleryColors.RayWhite);
-            GalleryFont.Draw("数字/字母选择场景，Enter 启动，ESC 退出；场景内 ESC 返回菜单，R 复位相机", 24, 56, 18, new Color(160, 160, 175, 255));
+            GalleryFont.Draw("数字/字母选择场景，Enter 启动，ESC 退出；场景内 ESC 返回菜单，R 复位检视视角", 24, 56, 18, new Color(160, 160, 175, 255));
 
             int y = 96;
             for (int i = 0; i < scenes.Count; i++)
