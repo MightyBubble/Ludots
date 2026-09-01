@@ -10,7 +10,7 @@
 
 结论: PASS
 
-一句话理由: 作者面拆成三套编辑器（Func Graph / BT / FSM）；叶子仍是已有织入门户，新增 BtAction/BtCondition 糖名走同一织入路径。本刀不新增 GraphKind（BehaviorTree/Fsm Kind 下一刀）。
+一句话理由: 作者面拆成三套编辑器（Func Graph / BT / FSM）；叶子仍是已有织入门户，新增 BtAction/BtCondition 糖名走同一织入路径。BT/FSM 是编辑器方言 + Host，不是 GraphKind。
 
 ### 2. Layer assignment
 
@@ -43,7 +43,7 @@ graphs.json + functionName；样例图在 UiPlayerAggregateGraphMvpShowcaseMod�
 
 - [x] 未新增 profile enum
 - [x] 未平行物化管线
-- [x] 未新增 GraphKind（刻意延后）
+- [x] 未新增 GraphKind（BT/FSM 不是 Kind，永不升）
 
 ### 8. Next variant test
 

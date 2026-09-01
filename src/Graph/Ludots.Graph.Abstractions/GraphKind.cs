@@ -5,9 +5,9 @@ namespace Ludots.Core.GraphRuntime
     /// <summary>
     /// Authored graph execution contract. Parsed from authored graph kind and enforced
     /// at compile/load and at execution entrypoints that require a specific kind.
-    /// L1 flow dialects today: Effect, Query, Score, Validation, Derived, Script, TriggerGraph.
-    /// L2 behavior schedulers (BehaviorTree / Fsm) are not GraphKind
-    /// values yet — they own separate topology IR and invoke L1 graphs at leaves.
+    /// L1 flow dialects: Effect, Query, Score, Validation, Derived, Script, TriggerGraph.
+    /// Behavior Tree / FSM are not GraphKind values: they are authoring editors + hosts
+    /// that weave outer topology into Script and invoke Func Graphs at leaves.
     /// </summary>
     public enum GraphKind : byte
     {

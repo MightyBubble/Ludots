@@ -66,10 +66,11 @@ export function isFunctionGraphPortalOp(op: string): boolean {
 }
 
 /**
- * Catalog heuristics until GraphKind.BehaviorTree / Fsm land.
+ * Catalog heuristics for editor dialects.
  * Leaves / state bodies live as Func Graphs (Graph.Func.* or Graph.BT.Leaf.*) — Func editor only.
  * BT shells: Graph.BT.Tree.* / Graph.BT.Root.*
  * FSM shells: Graph.FSM.<Name> (single segment after FSM — not Graph.FSM.X.Body).
+ * BT/FSM are editor dialects + hosts, not GraphKind values.
  */
 export function catalogGraphMatchesDialect(graphId: string, kind: string, dialect: GraphEditorDialect): boolean {
   const id = graphId;

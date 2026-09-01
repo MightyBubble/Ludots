@@ -43,7 +43,7 @@
 - 残留 portal 编译失败关闭。
 - React：`GasGraphEditorPage` 的 `dialect`（`bt` / `fsm` / `func`）过滤调色板与目录；门户带 `functionGraphPortal`。
 - 样例（默认 Mod）：`Graph.BT.Tree.EditorSample`、`Graph.FSM.EditorSample`，叶子在 `Graph.Func.*`。
-- **下一刀（未做）**：`GraphKind.BehaviorTree` / `GraphKind.Fsm` 一等 Kind；旗舰树整树改为只含组合 + 门户。
+- **下一刀（未做）**：旗舰树整树改为只含组合 + 门户（仍是 Script，不新开 GraphKind）。
 
 ## 4. 场景
 
@@ -55,7 +55,7 @@
 ## 5. 边界
 
 - 不新开 opcode；不新开平行 VM。
-- 本刀不新增 GraphKind（composition gate）；Kind 升格另开活。
+- **BT / FSM 不是 GraphKind**：外层与叶子都是 `Script`；方言只活在编辑器 + Host + 织入糖上。
 - 门户禁止出边；只用 `functionName`，不用 `graphId`。
 - Graph Editor 调色板隐藏 BT/FSM 组合糖；错方言打开会按图 id 启发式跳到对应编辑器。
 - 旗舰 `Graph.BT.Tree.PatrolChaseAttack` 仍可暂时内联叶子；迁门户另提交。
