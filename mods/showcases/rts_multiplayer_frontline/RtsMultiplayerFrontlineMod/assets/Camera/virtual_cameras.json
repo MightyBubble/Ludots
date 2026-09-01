@@ -12,7 +12,7 @@
     "maxDistanceCm": 10000,
     "minPitchDeg": 48,
     "maxPitchDeg": 64,
-    "targetHeightMode": "VisualHeightmap",
+    "targetHeightMode": "ContinuousHeightmap",
     "panMode": "Keyboard",
     "panCmPerSecond": 8000,
     "enableGrabDrag": true,
