@@ -1,9 +1,46 @@
 using System;
+using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Input.Interaction
 {
+    /// <summary>
+    /// Reference catalogs the profile install chain resolves <c>bindings[]</c> and
+    /// <c>triggers[]</c> against (#1398 S2b): the graph program registry for trigger mounts
+    /// and the input action id space for semantic action bindings. A profile declaring either
+    /// field fails fast at install when its catalog is absent.
+    /// </summary>
+    public sealed class InteractionContextProfileReferenceCatalog
+    {
+        public InteractionContextProfileReferenceCatalog(
+            GraphProgramRegistry programs,
+            IEnumerable<string> inputActionIds)
+        {
+            Programs = programs ?? throw new ArgumentNullException(nameof(programs));
+            if (inputActionIds == null)
+            {
+                throw new ArgumentNullException(nameof(inputActionIds));
+            }
+
+            var actionIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string actionId in inputActionIds)
+            {
+                if (!string.IsNullOrWhiteSpace(actionId))
+                {
+                    actionIds.Add(actionId);
+                }
+            }
+
+            InputActionIds = actionIds;
+        }
+
+        public GraphProgramRegistry Programs { get; }
+
+        public IReadOnlyCollection<string> InputActionIds { get; }
+    }
+
     /// <summary>
     /// InteractionContextProfile registry (RFC-0065 CTX-6, §5.3). Profiles are declared in
     /// <c>Input/interaction_context_profiles.json</c> and installed as immutable rows with
@@ -41,13 +78,17 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>
         /// Install every profile in the config, resolving id fields against the given spaces;
-        /// fails fast on duplicates, unknown filter or command intent names.
+        /// fails fast on duplicates, unknown filter or command intent names. Profiles declaring
+        /// <c>bindings[]</c> or <c>triggers[]</c> additionally require
+        /// <paramref name="referenceCatalog"/> and resolve against it (unknown semantic action
+        /// ids and trigger graph/event names fail fast).
         /// </summary>
         public void Install(
             InteractionContextProfilesConfig config,
             StringIntRegistry collectionKeyRegistry,
             StringIntRegistry filterProfileIdRegistry,
-            StringIntRegistry commandIntentProfileIdRegistry)
+            StringIntRegistry commandIntentProfileIdRegistry,
+            InteractionContextProfileReferenceCatalog? referenceCatalog = null)
         {
             if (config == null)
             {
@@ -76,7 +117,8 @@ namespace Ludots.Core.Input.Interaction
                     config.Profiles[i],
                     collectionKeyRegistry,
                     filterProfileIdRegistry,
-                    commandIntentProfileIdRegistry);
+                    commandIntentProfileIdRegistry,
+                    referenceCatalog);
             }
         }
 
@@ -162,7 +204,8 @@ namespace Ludots.Core.Input.Interaction
             InteractionContextProfileDefinition definition,
             StringIntRegistry collectionKeyRegistry,
             StringIntRegistry filterProfileIdRegistry,
-            StringIntRegistry commandIntentProfileIdRegistry)
+            StringIntRegistry commandIntentProfileIdRegistry,
+            InteractionContextProfileReferenceCatalog? referenceCatalog)
         {
             int profileId = _profileIds.Register(definition.Id);
             if (profileId < _profiles.Length && _profiles[profileId] != null)
@@ -203,6 +246,59 @@ namespace Ludots.Core.Input.Interaction
             _filterProfileIds[profileId] = filterProfileId;
             _commandIntentProfileIds[profileId] = commandIntentProfileId;
             _inputContextIdsByProfile[profileId] = _inputContextIdsFor(profileId);
+            ValidateBindings(definition, referenceCatalog);
+            ValidateTriggers(definition, referenceCatalog);
+        }
+
+        private static void ValidateBindings(
+            InteractionContextProfileDefinition definition,
+            InteractionContextProfileReferenceCatalog? referenceCatalog)
+        {
+            if (definition.Bindings is not { Count: > 0 })
+            {
+                return;
+            }
+
+            if (referenceCatalog == null)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction context profile '{definition.Id}' declares bindings but no reference catalog was provided at install; semantic action bindings require the input action id space.");
+            }
+
+            for (int i = 0; i < definition.Bindings.Count; i++)
+            {
+                string actionId = definition.Bindings[i];
+                if (!referenceCatalog.InputActionIds.Contains(actionId))
+                {
+                    throw new InvalidOperationException(
+                        $"Interaction context profile '{definition.Id}' bindings[{i}] references unknown semantic action '{actionId}'.");
+                }
+            }
+        }
+
+        private static void ValidateTriggers(
+            InteractionContextProfileDefinition definition,
+            InteractionContextProfileReferenceCatalog? referenceCatalog)
+        {
+            if (definition.Triggers is not { Count: > 0 })
+            {
+                return;
+            }
+
+            if (referenceCatalog == null)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction context profile '{definition.Id}' declares triggers but no reference catalog was provided at install; trigger mounts require the graph program registry.");
+            }
+
+            string ownerLabel = $"Interaction context profile '{definition.Id}'";
+            for (int i = 0; i < definition.Triggers.Count; i++)
+            {
+                Gameplay.MapTriggers.TriggerGraphMounting.ValidateContextTriggerMount(
+                    referenceCatalog.Programs,
+                    definition.Triggers[i],
+                    ownerLabel);
+            }
         }
 
         private static int ResolveDeclaredId(

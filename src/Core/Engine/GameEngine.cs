@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
+using System.Linq;
 using Ludots.Core.Association;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
@@ -1597,7 +1598,10 @@ namespace Ludots.Core.Engine
                 new InteractionContextProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
                 entityCollectionKeyRegistry,
                 filterProfileIdRegistry,
-                commandIntentProfileIds);
+                commandIntentProfileIds,
+                new InteractionContextProfileReferenceCatalog(
+                    graphProgramRegistry,
+                    inputConfigRoot.Actions.Select(action => action.Id)));
             var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
                 World,
                 interactionContextProfileRegistry,
