@@ -1,5 +1,8 @@
 [
   {
+    "id": "gameplay.case_e.roster_refreshed"
+  },
+  {
     "id": "gameplay.case_e.selection_committed"
   }
 ]

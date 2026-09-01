@@ -55,6 +55,8 @@
           "Health": 60
         }
       },
+      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 120, "localCenterZCm": 0 },
+      "SpatialBox3D": { "halfSizeXCm": 90, "halfSizeYCm": 120, "halfSizeZCm": 90 },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},

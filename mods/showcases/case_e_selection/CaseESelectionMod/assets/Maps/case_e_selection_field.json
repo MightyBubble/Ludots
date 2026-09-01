@@ -9,13 +9,13 @@
   "ContinuousHeightmapAsset": "assets/terrain/case_e_selection_flat.height",
   "Variables": [
     {
-      "name": "case_e_press_x",
-      "type": "int",
+      "name": "case_e_press_px",
+      "type": "float",
       "initial": 0
     },
     {
-      "name": "case_e_press_y",
-      "type": "int",
+      "name": "case_e_press_py",
+      "type": "float",
       "initial": 0
     }
   ],
