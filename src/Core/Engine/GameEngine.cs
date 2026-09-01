@@ -2239,7 +2239,7 @@ namespace Ludots.Core.Engine
             // declaration (single source of truth, hot-switch aware).
             RegisterSystem(
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
-                SystemGroup.InputCollection);
+                SystemGroup.LocalInput);
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
             RegisterSystem(new StoryRuntimeSystem(this, dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);

@@ -67,7 +67,10 @@ namespace CoreInputMod.Triggers
             {
                 foreach (var cb in commandSourceAcquiredCallbacks) cb(worldCm, entity);
             };
-            engine.InsertSystemBeforeRequired<AxisMoveOrderSystem>(commandSourceAcquisition, SystemGroup.InputCollection);
+            // Replicated clients execute only the LocalInput group; acquisition must run there,
+            // before AxisMoveOrderSystem consumes pointer edges (same relative order as the
+            // single-process InputCollection contract).
+            engine.InsertSystemBeforeRequired<AxisMoveOrderSystem>(commandSourceAcquisition, SystemGroup.LocalInput);
 
             engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
             engine.RegisterSystem(new AbilityExecAimSyncSystem(engine.World, new InputInteractionContextAccessor(engine.World, engine.GlobalContext)), SystemGroup.InputCollection);
@@ -85,12 +88,12 @@ namespace CoreInputMod.Triggers
                 engine.World,
                 engine.GlobalContext,
                 (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner)));
-            engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
+            engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.LocalInput);
 
             var vmManager = new ViewModeManager(engine.World, engine.GlobalContext);
             engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
             RegisterLoadedModViewModes(engine);
-            engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
+            engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.LocalInput);
 
             _ctx.Log("[CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered");
             return Task.CompletedTask;
