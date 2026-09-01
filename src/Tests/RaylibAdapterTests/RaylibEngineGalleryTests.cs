@@ -2,7 +2,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using Ludots.App.RaylibEngineGallery;
+using Ludots.Content.EngineGallery;
+using Ludots.Raylib.SceneKit;
 using NUnit.Framework;
 
 namespace Ludots.Tests.RaylibAdapter
@@ -10,38 +11,41 @@ namespace Ludots.Tests.RaylibAdapter
     [Category("raylib-field")]
     public sealed class RaylibEngineGalleryTests
     {
-        private static readonly string EngineProjectRoot = Path.Combine(
-            FindRepoRoot(),
-            "src",
-            "Apps",
-            "Raylib",
-            "Ludots.App.RaylibEngineGallery");
+        private static string RepoRoot => FindRepoRoot();
+
+        private static string EngineProjectRoot => Path.Combine(RepoRoot, "projects", "engine_gallery");
+
+        private static EngineProject OpenEngineProject()
+        {
+            return EngineProject.Open(EngineProjectRoot);
+        }
 
         [Test]
         public void CatalogAsset_MatchesPortalRegistry_ExactlyOnce()
         {
-            string catalogPath = Path.Combine(EngineProjectRoot, "assets", "engine_gallery", "catalog.json");
+            string catalogPath = Path.Combine(EngineProjectRoot, "catalog.json");
 
             GalleryRow[] manifestRows = ReadManifestRows(catalogPath);
-            GalleryRow[] registryRows = ReadRegistryRows(Path.Combine(FindRepoRoot(), "showcase.registry.json"));
+            GalleryRow[] registryRows = ReadRegistryRows(Path.Combine(RepoRoot, "showcase.registry.json"));
 
             Assert.That(manifestRows.Select(row => row.Id), Is.EqualTo(registryRows.Select(row => row.Id)));
             Assert.That(manifestRows.Select(row => row.Title), Is.EqualTo(registryRows.Select(row => row.Title)));
             Assert.That(manifestRows.Select(row => row.Summary), Is.EqualTo(registryRows.Select(row => row.Summary)));
             Assert.That(manifestRows.Select(row => row.Id).Distinct().Count(), Is.EqualTo(manifestRows.Length));
-            Assert.That(SceneCatalog.Ids, Is.EqualTo(manifestRows.Select(row => row.Id)));
+            EngineProject project = OpenEngineProjectForIds();
+            Assert.That(project.Ids, Is.EqualTo(manifestRows.Select(row => row.Id)));
         }
 
         [Test]
         public void SceneAssets_AreContainers_NotRuntimeTypePointers()
         {
-            string catalogPath = Path.Combine(EngineProjectRoot, "assets", "engine_gallery", "catalog.json");
+            string catalogPath = Path.Combine(EngineProjectRoot, "catalog.json");
             using JsonDocument catalog = JsonDocument.Parse(File.ReadAllText(catalogPath));
             foreach (JsonElement entry in catalog.RootElement.GetProperty("scenes").EnumerateArray())
             {
                 Assert.That(entry.TryGetProperty("sceneType", out _), Is.False);
                 string asset = entry.GetProperty("asset").GetString() ?? string.Empty;
-                string assetPath = Path.Combine(Path.GetDirectoryName(catalogPath)!, asset);
+                string assetPath = Path.Combine(EngineProjectRoot, asset);
                 using JsonDocument scene = JsonDocument.Parse(File.ReadAllText(assetPath));
                 JsonElement root = scene.RootElement;
                 Assert.That(root.TryGetProperty("sceneType", out _), Is.False);
@@ -65,29 +69,27 @@ namespace Ludots.Tests.RaylibAdapter
         [Test]
         public void CatalogDescriptors_AreReadable()
         {
-            IReadOnlyList<SceneDescriptor> descriptors = SceneCatalog.Descriptors;
-            Assert.That(descriptors.Count, Is.EqualTo(21));
+            EngineProject project = OpenEngineProjectForIds();
+            GalleryRow[] registryRows = ReadRegistryRows(Path.Combine(RepoRoot, "showcase.registry.json"));
 
-            foreach (SceneDescriptor descriptor in descriptors)
+            Assert.That(project.Descriptors.Count, Is.EqualTo(registryRows.Length));
+            foreach (SceneDescriptor descriptor in project.Descriptors)
             {
                 Assert.That(descriptor.Id, Is.Not.Null.And.Not.Empty);
                 Assert.That(descriptor.Title, Is.Not.Null.And.Not.Empty);
                 Assert.That(descriptor.Summary, Is.Not.Null.And.Not.Empty);
                 Assert.That(descriptor.AssetPath, Does.EndWith(".scene.json"));
-                Assert.That(File.Exists(Path.Combine(
-                    EngineProjectRoot,
-                    "assets",
-                    "engine_gallery",
-                    descriptor.AssetPath)), Is.True, descriptor.AssetPath);
+                Assert.That(File.Exists(Path.Combine(EngineProjectRoot, descriptor.AssetPath)), Is.True, descriptor.AssetPath);
             }
         }
 
         [Test]
-        public void SceneCatalog_FactoryConstructsEveryScene()
+        public void EngineProject_FactoryConstructsEveryScene()
         {
-            foreach (string id in SceneCatalog.Ids)
+            EngineProject project = OpenEngineProjectForIds();
+            foreach (string id in project.Ids)
             {
-                IEngineScene scene = SceneCatalog.Create(id);
+                IEngineScene scene = project.Create(id);
                 Assert.That(scene, Is.Not.Null, id);
                 Assert.That(scene.Id, Is.EqualTo(id));
                 Assert.That(scene.CameraDefaults.Distance, Is.GreaterThan(0f), id);
@@ -99,7 +101,7 @@ namespace Ludots.Tests.RaylibAdapter
         [Test]
         public void SceneManifest_IsLoadingTruth_InBothDirections()
         {
-            string catalogPath = Path.Combine(EngineProjectRoot, "assets", "engine_gallery", "catalog.json");
+            string catalogPath = Path.Combine(EngineProjectRoot, "catalog.json");
             foreach ((string SceneId, JsonElement Document) row in ReadSceneDocuments(catalogPath))
             {
                 JsonElement manifest = row.Document.GetProperty("assets");
@@ -150,7 +152,8 @@ namespace Ludots.Tests.RaylibAdapter
         [Test]
         public void SceneComponentSources_HaveNoHardcodedAssetUris()
         {
-            foreach (string file in Directory.EnumerateFiles(Path.Combine(EngineProjectRoot, "Scenes"), "*.cs"))
+            foreach (string file in Directory.EnumerateFiles(
+                Path.Combine(RepoRoot, "src", "Content", "Ludots.Content.EngineGallery", "Scenes"), "*.cs"))
             {
                 foreach (string line in File.ReadAllLines(file))
                 {
@@ -164,8 +167,7 @@ namespace Ludots.Tests.RaylibAdapter
         [Test]
         public void WorldSide_ProductionCode_DoesNotReachIntoEngineProject()
         {
-            string repoRoot = FindRepoRoot();
-            foreach (string directory in new[] { Path.Combine(repoRoot, "src", "Core"), Path.Combine(repoRoot, "src", "Adapters") })
+            foreach (string directory in new[] { Path.Combine(RepoRoot, "src", "Core"), Path.Combine(RepoRoot, "src", "Adapters") })
             {
                 foreach (string file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories))
                 {
@@ -178,33 +180,36 @@ namespace Ludots.Tests.RaylibAdapter
         [Test]
         public void SceneDocument_UnknownComponentKind_FailsLoud()
         {
+            EngineProject project = OpenEngineProjectForIds();
             EngineSceneDocument document = ParseMinimalScene(kind: "no_such_component");
             Assert.That(
-                () => SceneCatalog.ComposeScene(document, "minimal.scene.json"),
+                () => project.ComposeScene(document, "minimal.scene.json"),
                 Throws.TypeOf<InvalidDataException>().With.Message.Contains("unknown component kind 'no_such_component'"));
         }
 
         [Test]
         public void SceneDocument_ComponentWithoutConsumptionContract_FailsLoud()
         {
+            EngineProject project = OpenEngineProjectForIds();
             EngineSceneDocument document = ParseMinimalScene(kind: "skybox", assets: ["skybox.mannequin"], manifest:
             [
                 new EngineSceneAssetDocument { Id = "skybox.mannequin", Kind = "model", Source = "Models/mannequin_large_walk.glb" },
             ]);
             Assert.That(
-                () => SceneCatalog.ComposeScene(document, "minimal.scene.json"),
+                () => project.ComposeScene(document, "minimal.scene.json"),
                 Throws.TypeOf<InvalidDataException>().With.Message.Contains("declares assets but does not consume"));
         }
 
         [Test]
         public void SceneDocument_MissingAssetFile_FailsLoud()
         {
+            EngineProject project = OpenEngineProjectForIds();
             EngineSceneDocument document = ParseMinimalScene(kind: "crowd_anim", assets: ["crowd_anim.mannequin"], manifest:
             [
                 new EngineSceneAssetDocument { Id = "crowd_anim.mannequin", Kind = "model", Source = "Models/__missing.glb" },
             ]);
             Assert.That(
-                () => SceneCatalog.ComposeScene(document, "minimal.scene.json"),
+                () => project.ComposeScene(document, "minimal.scene.json"),
                 Throws.TypeOf<FileNotFoundException>());
         }
 
@@ -232,7 +237,7 @@ namespace Ludots.Tests.RaylibAdapter
         {
             string json = MinimalSceneJson().Replace("\"schemaVersion\": 1", "\"schemaVersion\": 99");
             Assert.That(
-                () => SceneCatalog.ParseSceneDocument(json, "minimal.scene.json"),
+                () => EngineProject.ParseSceneDocument(json, "minimal.scene.json"),
                 Throws.TypeOf<InvalidDataException>().With.Message.Contains("unsupported schema version"));
         }
 
@@ -241,17 +246,17 @@ namespace Ludots.Tests.RaylibAdapter
         {
             string json = MinimalSceneJson().Replace("\"fovyDegrees\": 45", "\"fovyDegrees\": 0");
             Assert.That(
-                () => SceneCatalog.ParseSceneDocument(json, "minimal.scene.json"),
+                () => EngineProject.ParseSceneDocument(json, "minimal.scene.json"),
                 Throws.TypeOf<InvalidDataException>().With.Message.Contains("invalid camera values"));
         }
 
         [Test]
         public void SceneDocument_ParentCycle_FailsLoud()
         {
-            string json = MinimalSceneJson().Replace("\"rootNode\": \"root\"", "\"rootNode\": \"root\"")
+            string json = MinimalSceneJson()
                 .Replace("\"nodes\": [", "\"nodes\": [\n    { \"id\": \"a\", \"parent\": \"b\", \"transform\": { \"position\": [0,0,0], \"rotation\": [0,0,0,1], \"scale\": [1,1,1] }, \"components\": [] },\n    { \"id\": \"b\", \"parent\": \"a\", \"transform\": { \"position\": [0,0,0], \"rotation\": [0,0,0,1], \"scale\": [1,1,1] }, \"components\": [] },");
             Assert.That(
-                () => SceneCatalog.ParseSceneDocument(json, "minimal.scene.json"),
+                () => EngineProject.ParseSceneDocument(json, "minimal.scene.json"),
                 Throws.TypeOf<InvalidDataException>().With.Message.Contains("parent cycle"));
         }
 
@@ -262,7 +267,7 @@ namespace Ludots.Tests.RaylibAdapter
                 .Replace("\"nodes\": [", "\"nodes\": [\n    { \"id\": \"child\", \"parent\": \"root\", \"transform\": { \"position\": [0,0,0], \"rotation\": [0,0,0,1], \"scale\": [1,1,1] }, \"components\": [] },")
                 .Replace("\"rootNode\": \"root\"", "\"rootNode\": \"child\"");
             Assert.That(
-                () => SceneCatalog.ParseSceneDocument(json, "minimal.scene.json"),
+                () => EngineProject.ParseSceneDocument(json, "minimal.scene.json"),
                 Throws.TypeOf<InvalidDataException>().With.Message.Contains("cannot declare a parent"));
         }
 
@@ -275,12 +280,18 @@ namespace Ludots.Tests.RaylibAdapter
                 Throws.TypeOf<InvalidDataException>().With.Message.Contains("without escaping"));
         }
 
+        private static EngineProject OpenEngineProjectForIds()
+        {
+            // EngineProject 没有 IDisposable 语义时 using 会失效；这里返回实例由调用方按需持有。
+            return OpenEngineProject();
+        }
+
         private static EngineSceneDocument ParseMinimalScene(
             string kind = "skybox",
             string[]? assets = null,
             List<EngineSceneAssetDocument>? manifest = null)
         {
-            return SceneCatalog.ParseSceneDocument(MinimalSceneJson(kind, assets, manifest), "minimal.scene.json");
+            return EngineProject.ParseSceneDocument(MinimalSceneJson(kind, assets, manifest), "minimal.scene.json");
         }
 
         private static string MinimalSceneJson(
@@ -313,7 +324,7 @@ namespace Ludots.Tests.RaylibAdapter
 
         private static Type? FindComponentType(string kind)
         {
-            return typeof(SceneCatalog).Assembly.GetTypes()
+            return typeof(Ludots.Content.EngineGallery.Scenes.SkyboxScene).Assembly.GetTypes()
                 .FirstOrDefault(t => t.GetCustomAttributes(typeof(EngineSceneComponentAttribute), false)
                     .OfType<EngineSceneComponentAttribute>()
                     .Any(a => a.Kind == kind));
@@ -325,7 +336,7 @@ namespace Ludots.Tests.RaylibAdapter
             foreach (JsonElement entry in catalog.RootElement.GetProperty("scenes").EnumerateArray())
             {
                 string asset = entry.GetProperty("asset").GetString() ?? string.Empty;
-                string assetPath = Path.Combine(Path.GetDirectoryName(catalogPath)!, asset);
+                string assetPath = Path.Combine(EngineProjectRoot, asset);
                 yield return (entry.GetProperty("id").GetString() ?? string.Empty, JsonDocument.Parse(File.ReadAllText(assetPath)).RootElement.Clone());
             }
         }
@@ -337,7 +348,7 @@ namespace Ludots.Tests.RaylibAdapter
             foreach (JsonElement entry in manifest.RootElement.GetProperty("scenes").EnumerateArray())
             {
                 string asset = entry.GetProperty("asset").GetString() ?? string.Empty;
-                string assetPath = Path.Combine(Path.GetDirectoryName(path)!, asset);
+                string assetPath = Path.Combine(EngineProjectRoot, asset);
                 using JsonDocument scene = JsonDocument.Parse(File.ReadAllText(assetPath));
                 JsonElement root = scene.RootElement;
                 rows.Add(new GalleryRow(

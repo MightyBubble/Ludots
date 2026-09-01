@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `postprocess` |
 | preset | `engine_raylib_postprocess` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/PostProcessScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/PostProcessScene.cs` |
 | 承接渲染器 | `RaylibPostProcessRenderer`（`postprocess` 着色器） |
 | 注册表条目 | `engine_raylib_postprocess`（`showcase.registry.json`，tier T1） |
 

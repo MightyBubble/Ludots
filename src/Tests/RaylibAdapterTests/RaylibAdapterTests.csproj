@@ -23,7 +23,8 @@
     <ProjectReference Include="..\..\..\mods\fixtures\instanced_batch\InstancedBatchDemoMod\InstancedBatchDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
-    <ProjectReference Include="..\..\Apps\Raylib\Ludots.App.RaylibEngineGallery\Ludots.App.RaylibEngineGallery.csproj" />
+    <ProjectReference Include="..\..\Client\Ludots.Raylib.SceneKit\Ludots.Raylib.SceneKit.csproj" />
+    <ProjectReference Include="..\..\Content\Ludots.Content.EngineGallery\Ludots.Content.EngineGallery.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Browser\Ludots.UI.Browser.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI\Ludots.UI.csproj" />
   </ItemGroup>

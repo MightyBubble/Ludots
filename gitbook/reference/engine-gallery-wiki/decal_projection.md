@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `decal_projection` |
 | preset | `engine_raylib_decal_projection` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/DecalProjectionScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/DecalProjectionScene.cs` |
 | 承接渲染器 | `decal_project` 着色器 + `IRaylibReceiverMeshProjector`（接收面投影器） |
 | 注册表条目 | `engine_raylib_decal_projection`（`showcase.registry.json`，tier T1） |
 

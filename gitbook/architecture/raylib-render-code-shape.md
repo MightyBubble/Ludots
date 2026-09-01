@@ -8,7 +8,7 @@
 Ludots.Raylib.Render ──依赖──▶ Ludots.Platform.Abstractions ◀──实现── Core（registry/buffer/VFS）
         ▲                              ▲
         │纯消费合同                     │同一合同
-Ludots.App.RaylibEngineGallery   Ludots.Adapter.Raylib（宿主：把 Core 服务接线进渲染器）
+Ludots.App.RaylibPlayer          Ludots.Adapter.Raylib（宿主：把 Core 服务接线进渲染器）
                                         ▲
                                  Ludots.Client.Raylib（客户端壳：输入/诊断/表现目录合并/地形 chunk 源）
 ```
@@ -19,7 +19,7 @@ Ludots.App.RaylibEngineGallery   Ludots.Adapter.Raylib（宿主：把 Core 服�
 | `Ludots.Platform.Abstractions` | `src/Platform/Ludots.Platform.Abstractions` | 零依赖（纯合同） | 渲染器输入合同：绘制条目、资产 DTO、动画打包状态、缓冲、服务接口 |
 | `Ludots.Adapter.Raylib` | `src/Adapters/Raylib/Ludots.Adapter.Raylib` | Core + Render | 宿主适配器：装配 Core 服务实现合同接口，驱动渲染器消费 Core 表现请求 |
 | `Ludots.Client.Raylib` | `src/Client/Ludots.Client.Raylib` | Core + Render | 客户端壳：输入、诊断、`PresentationCatalogMerge`、`VertexMapTerrainChunkMeshSource` 等桥接实现 |
-| `Ludots.App.RaylibEngineGallery` | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery` | Render + Abstractions，**零 Core** | 引擎画廊：一能力一场景，程序化自含资产 |
+| `Ludots.App.RaylibPlayer` + `Ludots.Content.EngineGallery` | `src/Apps/Raylib/Ludots.App.RaylibPlayer`、`src/Content/Ludots.Content.EngineGallery` | Render + Abstractions，**零 Core** | 引擎播放器与画廊工程内容：一能力一场景，程序化自含资产 |
 | `Raylib-cs` | `src/Libraries/Raylib-cs` | — | vendored 绑定 |
 
 方向铁律：渲染器永不 import Core；Core 只通过 Abstractions 里的合同被消费。画廊用纯数据直接实现同一合同驱动渲染器——这是「渲染器不认识宿主」的结构性证明。

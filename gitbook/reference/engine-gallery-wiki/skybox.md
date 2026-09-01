@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `skybox` |
 | preset | `engine_raylib_skybox` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/SkyboxScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/SkyboxScene.cs` |
 | 承接渲染器 | `RaylibSkyboxRenderer`（`skybox` 着色器） |
 | 注册表条目 | `engine_raylib_skybox`（`showcase.registry.json`，tier T1） |
 

@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `particles` |
 | preset | `engine_raylib_particles` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/ParticlesScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/ParticlesScene.cs` |
 | 承接渲染器 | `RaylibPrimitiveRenderer` VFX 通道 + `ParticleSystemRuntime` |
 | 注册表条目 | `engine_raylib_particles`（`showcase.registry.json`，tier T1） |
 

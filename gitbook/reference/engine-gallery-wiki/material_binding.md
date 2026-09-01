@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `material_binding` |
 | preset | `engine_raylib_material_binding` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/MaterialBindingScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/MaterialBindingScene.cs` |
 | 承接渲染器 | `RaylibMaterialLibrary`（`src/Client/Ludots.Raylib.Render` 的材质装订库） |
 | 注册表条目 | `engine_raylib_material_binding`（`showcase.registry.json`，tier T1） |
 

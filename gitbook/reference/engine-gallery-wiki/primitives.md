@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `primitives` |
 | preset | `engine_raylib_primitives` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/PrimitivesScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/PrimitivesScene.cs` |
 | 承接渲染器 | `RaylibPrimitiveRenderer`（`PrimitiveDrawItem` 族直接消费） |
 | 注册表条目 | `engine_raylib_primitives`（`showcase.registry.json`，tier T1） |
 

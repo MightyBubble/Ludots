@@ -6,7 +6,7 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 
 | 层 | 载体 | 依赖边界 | 覆盖内容 |
 |---|---|---|---|
-| **engine 引擎能力** | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery`（独立可执行画廊，`--scene <id>` 一能力一场景） | 仅 `Ludots.Raylib.Render` + `Ludots.Platform.Abstractions` + Raylib-cs/SkiaSharp，**零 Ludots.Core** | 下表 21 项引擎渲染能力 |
+| **engine 引擎能力** | `src/Apps/Raylib/Ludots.App.RaylibPlayer`（独立可执行画廊，`--scene <id>` 一能力一场景） | 仅 `Ludots.Raylib.Render` + `Ludots.Platform.Abstractions` + Raylib-cs/SkiaSharp，**零 Ludots.Core** | 下表 21 项引擎渲染能力 |
 | **platform-benchmark 平台基准** | `raylib_client_parity` / `raylib_ism_benchmark`（宿主内纯数据驱动 mod） | Ludots.Core + `IRaylibBenchmarkRenderer` 直驱，绕过 Presenter/实体管线 | 宿主装配下的平台渲染开销（ISM 吞吐、蒙皮人群基线） |
 | **presentation 系统展示** | `raylib_visual_atmosphere` / `vfx_forge_raylib` / `presenter_blacksmith` 全家等 | 完整 Presentation 请求链路（Presenter → 请求通道 → Raylib 消费） | 表现系统合同、资产驱动、HUD/Presenter 行为 |
 
@@ -46,9 +46,9 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 
 ## 标准化合同
 
-1. **关卡容器**：每场景一个 `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/assets/engine_gallery/` 下的 `<id>.scene.json`，声明节点、组件挂载与资产清单（装载真源）；关卡文件不保存 C# 类型名。字段规范见[引擎工程分层与关卡容器格式](raylib-engine-project-scene-format.md)。
+1. **关卡容器**：每场景一个 `projects/engine_gallery/` 下的 `<id>.scene.json`，声明节点、组件挂载与资产清单（装载真源）；关卡文件不保存 C# 类型名。字段规范见[引擎工程分层与关卡容器格式](raylib-engine-project-scene-format.md)。
 2. **能力组件**：`Scenes/<Capability>Scene.cs` 实现 `IEngineSceneComponent` 并经 `EngineSceneComponentAttribute` 注册；消费工程文件的组件走 `IEngineSceneComponentAssets` 清单注入，代码零资产路径字面量；自含可读、数据程序化生成。
-3. **运行时目录**：`src/Apps/Raylib/Ludots.App.RaylibEngineGallery/assets/engine_gallery/catalog.json` 只登记 `id` 与 `asset`，`SceneCatalog` 装载关卡容器并组合组件；画廊菜单自动枚举（title/summary 与门户注册表逐字一致，合同测试比对）。
+3. **运行时目录**：`projects/engine_gallery/catalog.json` 只登记 `id` 与 `asset`，`EngineProject` 装载关卡容器并组合组件；播放器菜单自动枚举（title/summary 与门户注册表逐字一致，合同测试比对）。
 4. **验收 CLI**：`--scene <id> --screenshot <path> --frames N --json <stats>`；截图 + 帧统计（avg/p95/max）为每场景标准证据。
 5. **注册表**：每场景一条 `engine_raylib_<id>` 条目（category=engine、tier 与四件套按验收状态补齐）。
 6. **资产**：画廊 assets 自持最小 fixture（模型 GLB、粒子 JSON、程序化数据），不引用 mods/、不依赖宿主。
@@ -63,9 +63,9 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 ## 启动
 
 ```bash
-dotnet run --project src/Apps/Raylib/Ludots.App.RaylibEngineGallery                       # 菜单浏览
-dotnet run --project src/Apps/Raylib/Ludots.App.RaylibEngineGallery -- --scene sky_daynight
-dotnet run --project src/Apps/Raylib/Ludots.App.RaylibEngineGallery -- --scene instancing --frames 300 \
+dotnet run --project src/Apps/Raylib/Ludots.App.RaylibPlayer -- --project projects/engine_gallery   # 菜单浏览
+dotnet run --project src/Apps/Raylib/Ludots.App.RaylibPlayer -- --project projects/engine_gallery --scene sky_daynight
+dotnet run --project src/Apps/Raylib/Ludots.App.RaylibPlayer -- --project projects/engine_gallery --scene instancing --frames 300 \
   --screenshot artifacts/acceptance/engine_raylib_instancing/screen.png \
   --json artifacts/acceptance/engine_raylib_instancing/stats.json
 ```

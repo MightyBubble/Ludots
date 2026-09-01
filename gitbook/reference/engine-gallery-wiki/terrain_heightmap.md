@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `terrain_heightmap` |
 | preset | `engine_raylib_terrain_heightmap` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/TerrainHeightmapScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/TerrainHeightmapScene.cs` |
 | 承接渲染器 | `RaylibContinuousHeightmapRenderer`（`IContinuousHeightmapRenderSource` 合同） |
 | 注册表条目 | `engine_raylib_terrain_heightmap`（`showcase.registry.json`，tier T1） |
 

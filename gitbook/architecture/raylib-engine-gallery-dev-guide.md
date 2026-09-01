@@ -2,13 +2,13 @@
 
 三个最常见的开发环：给画廊加一个场景、给渲染栈加一个着色器、给 mod 加一种材质。每环列全量登记点——漏一处不是"少个文档"，是 CI/构建期直接拦下。装配体边界与渲染器清单见[渲染装配代码形状](raylib-render-code-shape.md)；配置文件字段见[渲染配置结构](../reference/raylib-render-config-structure.md)。
 
-## 环一：加一个画廊场景（七处登记）
+## 环一：加一个画廊场景（八处登记）
 
 以现有场景 `vegetation_cutout` 为走查样本（新场景照抄换名）：
 
-1. **场景资产**：`src/Apps/Raylib/Ludots.App.RaylibEngineGallery/assets/engine_gallery/` 下新增 `<id>.scene.json` 关卡容器，声明 `schemaVersion`、`id`、`title`、`summary`、`world`、`camera`、`assets[]`（装载真源，可空=纯程序化场景）、`rootNode` 与 `nodes[].components[]`；它不保存 C# 类型名。字段规范见[引擎工程分层与关卡容器格式](raylib-engine-project-scene-format.md)。
-2. **能力组件**：`src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/<Id>Scene.cs` 实现 `IEngineSceneComponent { Load, Draw, Dispose }` 并打 `[EngineSceneComponent("<id>")]` 特性注册；消费工程文件（GLB 等）的组件另实现 `IEngineSceneComponentAssets`，资产 URI 由关卡清单注入，代码里禁止资产路径字面量；自含可读、数据程序化生成，不引用 mods/、不依赖宿主（零 Core 是画廊的分层合同）。
-3. **运行时目录**：`src/Apps/Raylib/Ludots.App.RaylibEngineGallery/assets/engine_gallery/catalog.json` 的 `scenes` 数组加一行 `id` + `asset`；`SceneCatalog` 装载关卡容器并组合组件，画廊菜单自动枚举（title/summary 必须与 `showcase.registry.json` 逐字一致，合同测试比对）。
+1. **场景资产**：`projects/engine_gallery/` 下新增 `<id>.scene.json` 关卡容器，声明 `schemaVersion`、`id`、`title`、`summary`、`world`、`camera`、`assets[]`（装载真源，可空=纯程序化场景）、`rootNode` 与 `nodes[].components[]`；它不保存 C# 类型名。字段规范见[引擎工程分层与关卡容器格式](raylib-engine-project-scene-format.md)。
+2. **能力组件**：`src/Content/Ludots.Content.EngineGallery/Scenes/<Id>Scene.cs` 实现 `IEngineSceneComponent { Load, Draw, Dispose }` 并打 `[EngineSceneComponent("<id>")]` 特性注册；消费工程文件（GLB 等）的组件另实现 `IEngineSceneComponentAssets`，资产 URI 由关卡清单注入，代码里禁止资产路径字面量；自含可读、数据程序化生成，不引用 mods/、不依赖宿主（零 Core 是画廊的分层合同）。
+3. **运行时目录**：`projects/engine_gallery/catalog.json` 的 `scenes` 数组加一行 `id` + `asset`；`EngineProject`（`src/Client/Ludots.Raylib.SceneKit`）装载关卡容器并按内容程序集组合组件，播放器菜单自动枚举（title/summary 必须与 `showcase.registry.json` 逐字一致，合同测试比对）。
 4. **preset**：`launcher.presets.json` 加 `engine_raylib_<id>` 条目（`--scene <id> --frames 120 --screenshot … --json …`，selectors `["$engine_gallery"]`）。
 5. **注册表**：`showcase.registry.json` 加条目：`category: "engine"`、`binding: "engine_gallery"`、`preset`、`acceptanceTest: "RaylibEngineGalleryTests"`、`artifactDir`、`screenshot`、`docsPath` 指回本文档族；随后跑 `python scripts/build-acceptance-index.py` 同步 `scripts/acceptance/acceptance.index.json`（CI 用 `--check` 校验同步，忘跑即红）。
 6. **验收证据**：本地跑一次 preset 落截图 + stats（命令见下）；CI 的 `ci-acceptance.yml` 会按索引逐条 `--record` 重跑并门禁。
@@ -24,7 +24,7 @@ scripts/run-mod-launcher.cmd cli launch preset:engine_raylib_vegetation_cutout -
 或直接驱动 CLI：
 
 ```text
-dotnet run --project src/Apps/Raylib/Ludots.App.RaylibEngineGallery -- --scene vegetation_cutout --frames 120 --screenshot artifacts/acceptance/engine_raylib_vegetation_cutout/screen.png --json artifacts/acceptance/engine_raylib_vegetation_cutout/stats.json
+dotnet run --project src/Apps/Raylib/Ludots.App.RaylibPlayer -- --project projects/engine_gallery --scene vegetation_cutout --frames 120 --screenshot artifacts/acceptance/engine_raylib_vegetation_cutout/screen.png --json artifacts/acceptance/engine_raylib_vegetation_cutout/stats.json
 ```
 
 ## 环二：加一个着色器（五处登记 + 三条铁律）

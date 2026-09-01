@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `sky_daynight` |
 | preset | `engine_raylib_sky_daynight` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/SkyDayNightScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/SkyDayNightScene.cs` |
 | 承接渲染器 | `RaylibSkyEnvironment`（渐变烘焙）+ `sky_daynight` 着色器 |
 | 注册表条目 | `engine_raylib_sky_daynight`（`showcase.registry.json`，tier T1） |
 

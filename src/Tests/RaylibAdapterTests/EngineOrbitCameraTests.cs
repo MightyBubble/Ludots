@@ -1,5 +1,5 @@
 using System.Numerics;
-using Ludots.App.RaylibEngineGallery;
+using Ludots.Raylib.SceneKit;
 using NUnit.Framework;
 
 namespace Ludots.Tests.RaylibAdapter

@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `debug_draw` |
 | preset | `engine_raylib_debug_draw` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/DebugDrawScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/DebugDrawScene.cs` |
 | 承接渲染器 | `RaylibDebugDrawRenderer` + `DebugDrawCommandBuffer`（命令缓冲） |
 | 注册表条目 | `engine_raylib_debug_draw`（`showcase.registry.json`，tier T1） |
 

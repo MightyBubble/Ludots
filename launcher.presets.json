@@ -1826,7 +1826,11 @@
         "$engine_gallery"
       ],
       "adapterId": "raylib",
-      "buildMode": "auto"
+      "buildMode": "auto",
+      "args": [
+        "--project",
+        "projects/engine_gallery"
+      ]
     },
     {
       "id": "engine_raylib_skybox",
@@ -1836,6 +1840,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "skybox",
         "--frames",
@@ -1854,6 +1860,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "sky_daynight",
         "--frames",
@@ -1872,6 +1880,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "water",
         "--frames",
@@ -1890,6 +1900,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "terrain_surface",
         "--frames",
@@ -1908,6 +1920,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "terrain_heightmap",
         "--frames",
@@ -1926,6 +1940,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "atmosphere_fog",
         "--frames",
@@ -1944,6 +1960,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "frame_lighting",
         "--frames",
@@ -1962,6 +1980,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "postprocess",
         "--frames",
@@ -1980,6 +2000,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "gpu_skinning",
         "--frames",
@@ -1998,6 +2020,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "instancing",
         "--frames",
@@ -2016,6 +2040,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "particles",
         "--frames",
@@ -2034,6 +2060,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "decal_projection",
         "--frames",
@@ -2052,6 +2080,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "vegetation_cutout",
         "--frames",
@@ -2070,6 +2100,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "material_binding",
         "--frames",
@@ -2088,6 +2120,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "ribbon_overlay",
         "--frames",
@@ -2106,6 +2140,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "skia_overlay",
         "--frames",
@@ -2124,6 +2160,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "debug_draw",
         "--frames",
@@ -2142,6 +2180,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "primitives",
         "--frames",
@@ -2208,6 +2248,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "lighting",
         "--frames",
@@ -2226,6 +2268,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "crowd_anim",
         "--frames",
@@ -2244,6 +2288,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "slash_trail",
         "--frames",
