@@ -129,7 +129,7 @@ namespace Ludots.Tests.Presentation
             var session = new GameSession();
             var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
 
-            _projection = new GameplayPresentationProjectionSystem(_world, _eventBus, _presEvents, session, _gasEvents, _ownerChanges);
+            _projection = new GameplayPresentationProjectionSystem(_world, _eventBus, _presEvents, session, _gasEvents, _ownerChanges, enabled: true);
             _entityLifecycle = new PresentationEntityLifecycleSystem(
                 _world,
                 _presEvents,

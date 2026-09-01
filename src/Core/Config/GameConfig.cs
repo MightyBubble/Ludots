@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
+using Ludots.Core.Networking.Configuration;
 
 namespace Ludots.Core.Config
 {
@@ -96,6 +97,8 @@ namespace Ludots.Core.Config
         public LogConfig Logging { get; set; } = new LogConfig();
 
         public BrowserRuntimeConfig BrowserRuntime { get; set; } = new BrowserRuntimeConfig();
+
+        public NetworkRuntimeConfig? Networking { get; set; }
 
         /// <summary>
         /// Skin id for engine-side panel presentation (e.g. "default", "markup", "compose",

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "Effect.Rts.Frontline.CreateInfantry",
+    "tags": ["Effect.Rts.Frontline.Train"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_frontline_infantry",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 220,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.Frontline.InfantryDamage",
+    "tags": ["Effect.Rts.Frontline.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -20
+      }
+    ]
+  }
+]
