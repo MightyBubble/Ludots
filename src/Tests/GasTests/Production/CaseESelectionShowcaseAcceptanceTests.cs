@@ -9,6 +9,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Client;
 using Ludots.Core.Map;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -112,6 +113,20 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         backend.SetMousePosition(new Vector2(-300f, 100f));
         TickUntil(engine, 10, () => false);
 
+        // ── 05②（D8）：screen-space rect presenter 跟随拖拽矩形（数据驱动）──
+        ScreenOverlayBuffer screenOverlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) as ScreenOverlayBuffer
+            ?? throw new InvalidOperationException("ScreenOverlayBuffer service is missing.");
+        Assert.That(
+            HasScreenRect(screenOverlay, x: -1200, y: -100, width: 900, height: 200),
+            "矩形框 = press 角 → 当前指针角的屏幕矩形（CaseE.Pointer 属性 → ScreenRect presenter 参数）");
+        backend.SetMousePosition(new Vector2(0f, 200f));
+        Tick(engine, 2);
+        Assert.That(
+            HasScreenRect(screenOverlay, x: -1200, y: -100, width: 1200, height: 300),
+            "指针继续移动，矩形框随之扩大（跟随当前拖拽数据）");
+        backend.SetMousePosition(new Vector2(-300f, 100f));
+        Tick(engine, 2);
+
         // ── 06：抬起（Drag 判定完成）→ 矩形 [press,release] 命中 + replace 语义 → selected ──
         ReleaseAt(engine, backend);
         TickUntil(engine, 30, () =>
@@ -127,6 +142,10 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             "框结束 DeactivateContext 清空衍生 context 实例集");
         Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(0),
             "context scope 销毁自动清掉框指示 presenter（§8.3 结构性生命周期）");
+        int overlayCountAfterScopeDeath = screenOverlay.Count;
+        Tick(engine, 6);
+        Assert.That(screenOverlay.Count, Is.EqualTo(overlayCountAfterScopeDeath),
+            "框结束随 scope 消失：presenter 销毁后 ScreenRect 不再产出新矩形");
         AssertRingOn(engine, presenterRuntime, marineDefId, "负 X 象限单位命中高亮", marine1, marine2);
         AssertRingOff(engine, presenterRuntime, marineDefId, "框外单位不高亮", marine3, marine4);
         Assert.That(CollectionContains(engine, commander, SelectedKey, marine2),
@@ -178,6 +197,23 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             "点选同样停用 boxing context");
         AssertRingOn(engine, presenterRuntime, marineDefId, "点选命中单位高亮", marine4);
         AssertRingOff(engine, presenterRuntime, marineDefId, "点选替换后其余单位取消高亮", marine1, marine2, marine3);
+    }
+
+    private static bool HasScreenRect(ScreenOverlayBuffer overlay, int x, int y, int width, int height)
+    {
+        ReadOnlySpan<Ludots.Core.Presentation.Hud.ScreenOverlayItem> span = overlay.GetSpan();
+        for (int i = 0; i < span.Length; i++)
+        {
+            ref readonly var item = ref span[i];
+            if (item.Kind == ScreenOverlayItemKind.Rect &&
+                item.X == x && item.Y == y &&
+                item.Width == width && item.Height == height)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void AssertNoTriggerErrors(GameEngine engine)

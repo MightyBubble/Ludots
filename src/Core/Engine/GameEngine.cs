@@ -1969,7 +1969,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationDisplayResolver, presentationDisplayResolver);
             var screenHudBuffer = new ScreenHudBatchBuffer(presentationConfig.ScreenHudCapacity);
             SetService(CoreServiceKeys.PresentationScreenHudBuffer, screenHudBuffer);
-            SetService(CoreServiceKeys.ScreenOverlayBuffer, new ScreenOverlayBuffer());
+            var screenOverlayBuffer = new ScreenOverlayBuffer();
+            SetService(CoreServiceKeys.ScreenOverlayBuffer, screenOverlayBuffer);
             SetService(CoreServiceKeys.MinimapRuntime, minimapRuntime);
             SetService(CoreServiceKeys.MinimapMarkerBuffer, minimapMarkerBuffer);
             SetService(CoreServiceKeys.MinimapScreenMarkerBuffer, minimapScreenMarkerBuffer);
@@ -2409,6 +2410,7 @@ namespace Ludots.Core.Engine
             // PresenterBehaviorSystem drives blackboard-bound behavior before animator and emit read it.
             RegisterPresentationSystem(presenterBehaviorSystem);
             RegisterPresentationSystem(animatorRuntimeSystem);
+            RegisterPresentationSystem(new PresenterScreenRectSystem(World, presenterDefinitions, screenOverlayBuffer));
             RegisterPresentationSystem(new PresenterMinimapMarkerSystem(World, presenterDefinitions, minimapMarkerBuffer, presentationTimingDiagnostics));
             // PresenterEmitSystem is the Wave 4 asset-binding emitter.
             RegisterPresentationSystem(presenterEmitSystem);

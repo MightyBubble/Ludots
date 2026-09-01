@@ -31,7 +31,7 @@ namespace Ludots.Tests.Presentation
         public void BehaviorKindContract_ArchitectureExposesCoreKinds()
         {
             BehaviorKind[] values = (BehaviorKind[])Enum.GetValues(typeof(BehaviorKind));
-            Assert.That(values.Length, Is.EqualTo(16), "BehaviorKind SSOT is the architecture enum.");
+            Assert.That(values.Length, Is.EqualTo(17), "BehaviorKind SSOT is the architecture enum.");
             Assert.That(values, Does.Contain(BehaviorKind.None));
             Assert.That(values, Does.Contain(BehaviorKind.AssetBinding));
             Assert.That(values, Does.Contain(BehaviorKind.AttributeBinding));
@@ -47,6 +47,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(values, Does.Contain(BehaviorKind.SurfaceSource));
             Assert.That(values, Does.Contain(BehaviorKind.InstancedBatch));
             Assert.That(values, Does.Contain(BehaviorKind.TrailMesh));
+            Assert.That(values, Does.Contain(BehaviorKind.ScreenRect));
             Assert.That(values, Does.Contain(BehaviorKind.Extension));
         }
 
@@ -68,6 +69,7 @@ namespace Ludots.Tests.Presentation
             Assert.That((byte)BehaviorKind.SurfaceSource, Is.EqualTo(12));
             Assert.That((byte)BehaviorKind.InstancedBatch, Is.EqualTo(13));
             Assert.That((byte)BehaviorKind.TrailMesh, Is.EqualTo(14));
+            Assert.That((byte)BehaviorKind.ScreenRect, Is.EqualTo(15));
             Assert.That((byte)BehaviorKind.Extension, Is.EqualTo(255));
         }
 

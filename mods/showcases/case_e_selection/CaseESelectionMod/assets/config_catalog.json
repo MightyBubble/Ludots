@@ -10,6 +10,15 @@
     "IdField": "id"
   },
   {
+    "Path": "Input/action_attribute_bindings.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "GAS/attribute_constraints.json",
+    "Policy": "DeepObject"
+  },
+  {
     "Path": "Input/collection_event_writers.json",
     "Policy": "ArrayById",
     "IdField": "id"

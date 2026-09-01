@@ -137,20 +137,56 @@
     ],
     "behaviors": [
       {
-        "slot": "body",
-        "kind": "AssetBinding",
+        "slot": "attribute",
+        "kind": "AttributeBinding",
         "activeByDefault": true,
-        "assetBinding": {
-          "assetKind": "Mesh",
-          "assetId": "case_e.boxing_marker_slab",
-          "materialId": "default_surface",
-          "renderPath": "StaticMesh",
-          "mobility": "Static",
-          "localOffset": [0, 6.0, 0],
-          "localScale": [5.0, 0.3, 5.0]
-        },
-        "style": {
-          "color": [0.3, 0.6, 1.0, 1]
+        "attributeBinding": {
+          "attributeId": "CaseE.PressPx",
+          "targetParamKey": "case_e.rect.pressX",
+          "mode": "Attribute"
+        }
+      },
+      {
+        "slot": "attributeCurrent",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "CaseE.PressPy",
+          "targetParamKey": "case_e.rect.pressY",
+          "mode": "Attribute"
+        }
+      },
+      {
+        "slot": "attributeBase",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "CaseE.PointerX",
+          "targetParamKey": "case_e.rect.pointerX",
+          "mode": "Attribute"
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "CaseE.PointerY",
+          "targetParamKey": "case_e.rect.pointerY",
+          "mode": "Attribute"
+        }
+      },
+      {
+        "slot": "screenRect",
+        "kind": "ScreenRect",
+        "activeByDefault": true,
+        "screenRect": {
+          "corner0XParamKey": "case_e.rect.pressX",
+          "corner0YParamKey": "case_e.rect.pressY",
+          "corner1XParamKey": "case_e.rect.pointerX",
+          "corner1YParamKey": "case_e.rect.pointerY",
+          "fill": [0.3, 0.6, 1.0, 0.2],
+          "border": [0.3, 0.6, 1.0, 1.0]
         }
       }
     ]
