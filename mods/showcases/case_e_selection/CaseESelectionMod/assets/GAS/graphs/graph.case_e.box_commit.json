@@ -25,6 +25,20 @@
         "payloadKey": "MapTrigger.Rep"
       },
       {
+        "id": "release_px",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenX"
+      },
+      {
+        "id": "release_py",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenY"
+      },
+      {
+        "id": "release_to_ground",
+        "op": "ScreenPointToGround"
+      },
+      {
         "id": "hits",
         "op": "QueryRadius",
         "radiusCm": 500,
@@ -84,7 +98,10 @@
     ],
     "controlEdges": [
       { "from": "read_modifiers", "fromPort": "next", "to": "rep" },
-      { "from": "rep", "fromPort": "next", "to": "hits" },
+      { "from": "rep", "fromPort": "next", "to": "release_px" },
+      { "from": "release_px", "fromPort": "next", "to": "release_py" },
+      { "from": "release_py", "fromPort": "next", "to": "release_to_ground" },
+      { "from": "release_to_ground", "fromPort": "next", "to": "hits" },
       { "from": "hits", "fromPort": "next", "to": "modifier_switch" },
       { "from": "modifier_switch", "fromPort": "case:1", "to": "op_add" },
       { "from": "modifier_switch", "fromPort": "case:3", "to": "op_add" },
@@ -104,6 +121,8 @@
     ],
     "valueEdges": [
       { "from": "read_modifiers", "fromPort": "value", "to": "modifier_switch", "toPort": "selector" },
+      { "from": "release_px", "fromPort": "value", "to": "release_to_ground", "toPort": "a" },
+      { "from": "release_py", "fromPort": "value", "to": "release_to_ground", "toPort": "b" },
       { "from": "op_replace", "fromPort": "value", "to": "commit_replace", "toPort": "value" },
       { "from": "op_add", "fromPort": "value", "to": "commit_add", "toPort": "value" },
       { "from": "op_subtract", "fromPort": "value", "to": "commit_subtract", "toPort": "value" },

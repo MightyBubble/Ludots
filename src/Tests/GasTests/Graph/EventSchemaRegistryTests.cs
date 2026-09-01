@@ -66,6 +66,12 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(registry.TryGet(GameEvents.InputActionFired.Value, out EventSchema input), Is.True);
             EventParamSchema target = input.Params.Single(p => p.Name == "targetEntity");
             Assert.That(target.Optional, Is.True, "InputActionFired only carries targetEntity when an entity was picked.");
+            EventParamSchema pointerX = input.Params.Single(p => p.Name == "pointerScreenX");
+            EventParamSchema pointerY = input.Params.Single(p => p.Name == "pointerScreenY");
+            Assert.That(pointerX.Optional, Is.False, "pointerScreenX is a required fact of every InputActionFired.");
+            Assert.That(pointerY.Optional, Is.False, "pointerScreenY is a required fact of every InputActionFired.");
+            Assert.That(pointerX.Type, Is.EqualTo(EventParamType.Float));
+            Assert.That(pointerY.Type, Is.EqualTo(EventParamType.Float));
         }
 
         [Test]

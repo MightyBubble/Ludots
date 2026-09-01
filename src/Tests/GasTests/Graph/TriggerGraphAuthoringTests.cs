@@ -699,6 +699,22 @@ namespace Ludots.Tests.Gas.Graph
                 GraphNodeOp.LoadPlacedEntity,
                 GraphNodeOp.LoadPlacedRegion,
                 GraphNodeOp.LoadPlacedAnchor,
+                // Named carve-outs: the aimsource kernel family and the collection-query
+                // seed/filter family join the TriggerGraph authoring face per op (the
+                // input-event graphs' read-side vocabulary); they stay Query-authorable,
+                // so listing them here only exempts them from the Script mirror.
+                GraphNodeOp.ScreenPointToGround,
+                GraphNodeOp.ScreenPointToEntity,
+                GraphNodeOp.ScreenRegionToEntities,
+                GraphNodeOp.PointToDirection,
+                GraphNodeOp.StickToDirection,
+                GraphNodeOp.QueryAllMapEntities,
+                GraphNodeOp.QueryFromCollection,
+                GraphNodeOp.QueryFilterTeam,
+                GraphNodeOp.QueryFilterTemplate,
+                GraphNodeOp.QueryFilterAttributeRange,
+                GraphNodeOp.QueryFilterTagAny,
+                GraphNodeOp.QueryFilterTagNone,
             };
             foreach (GraphNodeOp op in GraphOpDescriptorTable.EnumerateAuthorable(GraphKind.TriggerGraph))
             {
@@ -714,6 +730,23 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(
                 GraphOpDescriptorTable.ProjectCoverageAuthorableKinds(GraphNodeOp.Yield),
                 Is.EqualTo(new[] { "TriggerGraph", "Script" }));
+
+            // The named query-class carve-outs are authorable for TriggerGraph…
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.ScreenPointToGround), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.ScreenPointToEntity), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.ScreenRegionToEntities), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.PointToDirection), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.StickToDirection), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.QueryAllMapEntities), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.QueryFromCollection), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.QueryFilterTeam), Is.True);
+            // …and every un-named Query-class op stays out of the TriggerGraph face.
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.QueryCollectActiveEffects), Is.False,
+                "QueryCollect* 不在具名清单，TriggerGraph 作者面仍拒");
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.QueryCollectInventoryItems), Is.False);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.QuerySortByAttribute), Is.False);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.RelationshipQueryOutgoing), Is.False);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.AggMaxAttribute), Is.False);
         }
 
         [Test]
@@ -726,6 +759,84 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(
                 () => GraphKindParser.ParseRequired("NotAKind", "tests.parse"),
                 Throws.Exception.With.Message.Contains("TriggerGraph"));
+        }
+
+        [Test]
+        public void NamedQueryCarveOuts_CompileInTriggerGraph_PureMetadataPassesKindPolicy()
+        {
+            // The input-event read-side chain: pointer pixels -> ground point, then the
+            // shared-target-list seed/filter chain. All named carve-outs compile through the
+            // linear (Script-mirror) emit path and validate under the kind policy.
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "TriggerGraph",
+                  "entries": [
+                    { "label": "on_input", "event": "InputActionFired", "start": "px" }
+                  ],
+                  "nodes": [
+                    { "id": "px", "op": "LoadEntryPayloadFloat", "payloadKey": "MapTrigger.PointerScreenX" },
+                    { "id": "py", "op": "LoadEntryPayloadFloat", "payloadKey": "MapTrigger.PointerScreenY" },
+                    { "id": "toGround", "op": "ScreenPointToGround" },
+                    { "id": "seed", "op": "QueryAllMapEntities" },
+                    { "id": "filterTeam", "op": "QueryFilterTeam", "teamId": 2 },
+                    { "id": "halt", "op": "HaltReturnInt" }
+                  ],
+                  "controlEdges": [
+                    { "from": "px", "fromPort": "next", "to": "py" },
+                    { "from": "py", "fromPort": "next", "to": "toGround" },
+                    { "from": "toGround", "fromPort": "next", "to": "seed" },
+                    { "from": "seed", "fromPort": "next", "to": "filterTeam" },
+                    { "from": "filterTeam", "fromPort": "next", "to": "halt" }
+                  ],
+                  "valueEdges": [
+                    { "from": "px", "fromPort": "value", "to": "toGround", "toPort": "a" },
+                    { "from": "py", "fromPort": "value", "to": "toGround", "toPort": "b" }
+                  ]
+                }
+                """,
+                "tests.maptrigger.querycarveout");
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+
+            var registry = new GraphProgramRegistry();
+            Assert.That(
+                () => registry.Register(
+                    GraphIdRegistry.Register("tests.maptrigger.querycarveout"),
+                    compiled.Program,
+                    GraphKind.TriggerGraph,
+                    compiled.SourceMap,
+                    null,
+                    compiled.Package!.Value.TriggerGraphEntries),
+                Throws.Nothing,
+                "named carve-outs are Pure metadata and pass the TriggerGraph kind policy");
+        }
+
+        [Test]
+        public void UnnamedQueryOps_RejectedInTriggerGraphAuthoring()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "TriggerGraph",
+                  "entries": [
+                    { "label": "on_map_loaded", "event": "MapLoaded", "start": "bad" }
+                  ],
+                  "nodes": [
+                    { "id": "bad", "op": "QueryCollectActiveEffects" },
+                    { "id": "halt", "op": "HaltReturnInt" }
+                  ],
+                  "controlEdges": [
+                    { "from": "bad", "fromPort": "next", "to": "halt" }
+                  ],
+                  "valueEdges": []
+                }
+                """,
+                "tests.maptrigger.unnamedquery");
+            Assert.That(compiled.Succeeded, Is.False, "QueryCollect* 不在具名清单，作者面拒绝");
+            Assert.That(
+                compiled.Diagnostics.Any(d => d.Code == GraphDiagnosticCodes.UnknownNodeOp),
+                Is.True,
+                GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
         }
 
         private static GraphControlFlowCompileResult CompileSmallTriggerGraph()

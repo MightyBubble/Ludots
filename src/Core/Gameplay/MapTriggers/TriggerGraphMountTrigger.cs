@@ -487,7 +487,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     dependencies.Engine.World,
                     _runCaster,
                     _scope,
-                    ResolveTargetPosCm(context),
+                    default,
                     program,
                     dependencies.GraphApi,
                     dependencies.Programs,
@@ -685,19 +685,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             engine.TryGetService(CoreServiceKeys.EventSchemaRegistry, out EventSchemaRegistry? eventSchemas);
 
             return new TriggerGraphTriggerDependencies(engine, programs, graphApi, eventSchemas);
-        }
-
-        private static Ludots.Platform.Abstractions.IntVector2 ResolveTargetPosCm(ScriptContext context)
-        {
-            if (context.Contains(MapTriggerEventPayloadKeys.GroundPointXCm) &&
-                context.Contains(MapTriggerEventPayloadKeys.GroundPointYCm))
-            {
-                return new Ludots.Platform.Abstractions.IntVector2(
-                    (int)context.Get<float>(MapTriggerEventPayloadKeys.GroundPointXCm),
-                    (int)context.Get<float>(MapTriggerEventPayloadKeys.GroundPointYCm));
-            }
-
-            return default;
         }
 
         private Entity ResolveRunCaster(ScriptContext context)

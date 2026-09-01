@@ -648,8 +648,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>
         /// Resolves a screen point against the authoritative ground (camera ray +
         /// heightmap, bounded by the world size). False means the ray left the world.
+        /// A null seatId answers under the sole present binding; a named seat answers
+        /// under that seat's binding-local screen space.
         /// </summary>
-        bool TryScreenPointToGround(float screenX, float screenY, out IntVector2 groundCm)
+        bool TryScreenPointToGround(float screenX, float screenY, string? seatId, out IntVector2 groundCm)
         {
             groundCm = default;
             throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
@@ -669,8 +671,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>
         /// In-place filter of an entity span down to the members whose projected bounds
         /// intersect the screen rect; preserves candidate order (deterministic result).
+        /// A null seatId answers under the sole present binding; a named seat answers
+        /// under that seat's binding-local screen space.
         /// </summary>
-        int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect)
+        int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
         }

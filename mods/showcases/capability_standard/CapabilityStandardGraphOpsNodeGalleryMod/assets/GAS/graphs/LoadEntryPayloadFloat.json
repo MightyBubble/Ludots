@@ -6,14 +6,14 @@
       {
         "label": "on_input_action",
         "event": "InputActionFired",
-        "start": "readGroundX"
+        "start": "readPointerX"
       }
     ],
     "nodes": [
       {
-        "id": "readGroundX",
+        "id": "readPointerX",
         "op": "LoadEntryPayloadFloat",
-        "payloadKey": "MapTrigger.GroundPointXCm"
+        "payloadKey": "MapTrigger.PointerScreenX"
       },
       {
         "id": "done",
@@ -22,7 +22,7 @@
     ],
     "controlEdges": [
       {
-        "from": "readGroundX",
+        "from": "readPointerX",
         "fromPort": "next",
         "to": "done"
       }

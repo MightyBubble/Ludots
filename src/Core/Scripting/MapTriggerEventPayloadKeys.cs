@@ -26,13 +26,17 @@ namespace Ludots.Core.Scripting
         public const string Moment = "MapTrigger.Moment";                  // string
         public const string ModId = "ModId";                               // string
         // InputActionFired contract (input/command chain): the acting
-        // representative entity, the semantic action id, the resolved ground point
-        // components, the held semantic-modifier bitmask (InputActionFiredModifiers),
-        // and the active interaction context profile id (0 = none installed).
+        // representative entity, the semantic action id, the pointer's window-pixel
+        // position at the fired edge (press edge -> press point, release edge ->
+        // release point; window pixels so per-binding routing stays possible), the
+        // held semantic-modifier bitmask (InputActionFiredModifiers), and the active
+        // interaction context profile id (0 = none installed). Input events carry
+        // pointer facts only — ground projection is a graph-side derivation through
+        // ScreenPointToGround on the same LogicView ray.
         public const string Rep = "MapTrigger.Rep";                              // Entity
         public const string Action = "MapTrigger.Action";                        // string
-        public const string GroundPointXCm = "MapTrigger.GroundPointXCm";        // float
-        public const string GroundPointYCm = "MapTrigger.GroundPointYCm";        // float
+        public const string PointerScreenX = "MapTrigger.PointerScreenX";        // float (window px)
+        public const string PointerScreenY = "MapTrigger.PointerScreenY";        // float (window px)
         public const string Modifiers = "MapTrigger.Modifiers";                  // int (bitmask)
         public const string ContextId = "MapTrigger.ContextId";                  // int (registry id)
         public const string SourceMapId = "MapTrigger.SourceMapId";              // MapId (cross-map/global dispatch transport metadata)

@@ -23,8 +23,8 @@ public sealed class EntryPayloadNodeDriver : IGraphOpsNodeDriver
     private const int AliveCount = 3;
     private const int AliveDelta = -1;
     private const int SourceTeamId = 2;
-    private const float GroundPointXCm = 360.5f;
-    private const float GroundPointYCm = 200f;
+    private const float PointerScreenX = 360.5f;
+    private const float PointerScreenY = 200f;
     private const string StagedInputAction = "GraphOps.Probe";
     private const int StagedModifiers = InputActionFiredModifiers.Queue;
     private const int StagedContextId = 0;
@@ -161,8 +161,8 @@ public sealed class EntryPayloadNodeDriver : IGraphOpsNodeDriver
             case "InputActionFired":
                 firing.Set(MapTriggerEventPayloadKeys.Rep, ctx.Caster);
                 firing.Set(MapTriggerEventPayloadKeys.Action, StagedInputAction);
-                firing.Set(MapTriggerEventPayloadKeys.GroundPointXCm, GroundPointXCm);
-                firing.Set(MapTriggerEventPayloadKeys.GroundPointYCm, GroundPointYCm);
+                firing.Set(MapTriggerEventPayloadKeys.PointerScreenX, PointerScreenX);
+                firing.Set(MapTriggerEventPayloadKeys.PointerScreenY, PointerScreenY);
                 firing.Set(MapTriggerEventPayloadKeys.Modifiers, StagedModifiers);
                 firing.Set(MapTriggerEventPayloadKeys.ContextId, StagedContextId);
                 break;

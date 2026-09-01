@@ -1,13 +1,13 @@
 {
   "op": "LoadEntryPayloadFloat",
   "driver": "entryPayload",
-  "title": "落点读数，小数也不丢",
-  "beat": "号令一落，东西读数带着小数从事件载荷里飞进信件板。",
-  "detailTemplate": "落点东西读数 {x} 米，读数直接来自事件载荷。",
+  "title": "指针读数，小数也不丢",
+  "beat": "号令一落，指针像素读数带着小数从事件载荷里飞进信件板。",
+  "detailTemplate": "指针像素读数 {x}，读数直接来自事件载荷。",
   "assertDetailContains": [
     "事件载荷"
   ],
-  "featuredNodeId": "readGroundX",
+  "featuredNodeId": "readPointerX",
   "graphKind": "TriggerGraph",
   "actors": [
     {

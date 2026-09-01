@@ -539,9 +539,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return _aimSource ?? throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
         }
 
-        public bool TryScreenPointToGround(float screenX, float screenY, out IntVector2 groundCm)
+        public bool TryScreenPointToGround(float screenX, float screenY, string? seatId, out IntVector2 groundCm)
         {
-            return RequireAimSource().TryScreenPointToGround(screenX, screenY, out groundCm);
+            return RequireAimSource().TryScreenPointToGround(screenX, screenY, seatId, out groundCm);
         }
 
         public Entity PickScreenPointEntity(ReadOnlySpan<Entity> candidates, int count, Entity owner, string? seatId, float screenX, float screenY, float radiusPixels)
@@ -549,9 +549,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return RequireAimSource().PickScreenPointEntity(candidates, count, owner, seatId, screenX, screenY, radiusPixels);
         }
 
-        public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect)
+        public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
         {
-            return RequireAimSource().FilterScreenRegionEntities(entities, count, in rect);
+            return RequireAimSource().FilterScreenRegionEntities(entities, count, in rect, seatId);
         }
 
         public void BindResolveDialogueChoiceDisplayText(Func<int, string?> resolveDialogueChoiceDisplayText)
