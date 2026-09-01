@@ -1915,6 +1915,45 @@ app.MapDelete("/api/bindings/{name}", (string name) =>
 app.MapGet("/api/gas/graph-catalog", () =>
 {
     var catalog = new List<object>();
+
+    string coreGraphsPath = Path.Combine(FindAssetsRoot(), "assets", "GAS", "graphs.json");
+    if (File.Exists(coreGraphsPath))
+    {
+        if (!TryReadGraphsArray(coreGraphsPath, out var coreArr, out _))
+        {
+            catalog.Add(new
+            {
+                id = "core",
+                name = "Core",
+                path = coreGraphsPath,
+                error = $"graphs.json unreadable: {coreGraphsPath}",
+                graphs = Array.Empty<object>(),
+            });
+        }
+        else if (!TryCollectCatalogGraphs(coreArr, coreGraphsPath, out var coreGraphs, out var coreCollectError))
+        {
+            catalog.Add(new
+            {
+                id = "core",
+                name = "Core",
+                path = coreGraphsPath,
+                error = coreCollectError,
+                graphs = coreGraphs,
+            });
+        }
+        else
+        {
+            catalog.Add(new
+            {
+                id = "core",
+                name = "Core",
+                path = coreGraphsPath,
+                error = (string?)null,
+                graphs = coreGraphs,
+            });
+        }
+    }
+
     foreach (var mod in launcher.DiscoverMods().OrderBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase))
     {
         var graphsPath = Path.Combine(mod.RootPath, "assets", "GAS", "graphs.json");
@@ -3189,6 +3228,18 @@ static bool TryResolveModGraphsPath(LauncherService launcher, string modId, out 
         return false;
     }
 
+    if (string.Equals(modId, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        graphsPath = Path.Combine(FindAssetsRoot(), "assets", "GAS", "graphs.json");
+        if (!File.Exists(graphsPath))
+        {
+            error = Results.NotFound(new { ok = false, error = $"Core graphs.json not found at '{graphsPath}'." });
+            return false;
+        }
+
+        return true;
+    }
+
     var mods = launcher.DiscoverMods();
     var mod = mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
     if (mod == null)
@@ -3215,6 +3266,12 @@ static bool TryResolveModRoot(LauncherService launcher, string modId, out string
     {
         error = Results.BadRequest(new { ok = false, error = "Missing modId." });
         return false;
+    }
+
+    if (string.Equals(modId, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        modRoot = FindAssetsRoot();
+        return true;
     }
 
     var mod = launcher.DiscoverMods().FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
