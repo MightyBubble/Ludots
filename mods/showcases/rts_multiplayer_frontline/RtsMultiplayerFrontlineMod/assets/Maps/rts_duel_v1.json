@@ -1,6 +1,6 @@
 {
   "Id": "rts_duel_v1",
-  "VisualHeightmapAsset": "assets/terrain/rts_duel_v1_flat.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/rts_duel_v1_flat.vhtm",
   "TerrainPresentation": {
     "Source": "BoardTerrain",
     "BoardName": "default"

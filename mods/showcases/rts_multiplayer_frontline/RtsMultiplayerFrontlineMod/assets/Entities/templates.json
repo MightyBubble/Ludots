@@ -101,7 +101,7 @@
         "halfSizeYCm": 60,
         "halfSizeZCm": 60
       },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "CullState": {
         "IsVisible": true,
         "LOD": 0,
@@ -210,7 +210,7 @@
         "halfSizeYCm": 50,
         "halfSizeZCm": 50
       },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "CullState": {
         "IsVisible": true,
         "LOD": 0,
@@ -315,7 +315,7 @@
         "halfSizeYCm": 52,
         "halfSizeZCm": 48
       },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "CullState": {
         "IsVisible": true,
         "LOD": 0,
@@ -417,7 +417,7 @@
         "halfSizeYCm": 70,
         "halfSizeZCm": 60
       },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "CullState": {
         "IsVisible": true,
         "LOD": 0,
