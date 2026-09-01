@@ -1688,23 +1688,17 @@ namespace Ludots.Adapter.Raylib
             string targetTemporaryPath = Path.Combine(directory, temporaryFileName);
             try
             {
-                Rl.TakeScreenshot(temporaryFileName);
-                if (!File.Exists(workingTemporaryPath) || new FileInfo(workingTemporaryPath).Length == 0)
+                // Framebuffer-direct capture: TakeScreenshot composes at the monitor's physical
+                // size on Windows display scaling, which mismatches the logical framebuffer the
+                // acceptance evidence validates against (see RaylibFramebufferCapture).
+                byte[] png = Ludots.Raylib.Render.RaylibFramebufferCapture.EncodeFramebufferPng();
+                if (png.Length == 0)
                 {
                     throw new IOException(
-                        $"Raylib did not write a non-empty screenshot temporary file '{workingTemporaryPath}'.");
+                        "Framebuffer capture did not produce a non-empty screenshot buffer.");
                 }
 
-                if (!string.Equals(workingTemporaryPath, targetTemporaryPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    File.Copy(workingTemporaryPath, targetTemporaryPath, overwrite: true);
-                    if (!File.Exists(targetTemporaryPath) || new FileInfo(targetTemporaryPath).Length == 0)
-                    {
-                        throw new IOException(
-                            $"Screenshot staging did not produce a non-empty temporary file '{targetTemporaryPath}'.");
-                    }
-                }
-
+                File.WriteAllBytes(targetTemporaryPath, png);
                 File.Move(targetTemporaryPath, fullTargetPath, overwrite: true);
             }
             finally
