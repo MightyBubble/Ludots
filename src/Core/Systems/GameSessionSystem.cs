@@ -4,8 +4,7 @@ using Ludots.Core.Gameplay;
 namespace Ludots.Core.Systems
 {
     /// <summary>
-    /// Wraps GameSession.FixedUpdate into an ECS System.
-    /// Ensures input gathering and tick increment happen in sync with the simulation loop.
+    /// Gathers player inputs for the authoritative tick already opened by the fixed-step boundary.
     /// </summary>
     public class GameSessionSystem : ISystem<float>
     {
@@ -23,7 +22,7 @@ namespace Ludots.Core.Systems
 
         public void Update(in float dt)
         {
-            _session.FixedUpdate();
+            _session.CollectFixedUpdateInputs();
         }
 
         public void BeforeUpdate(in float dt) { }

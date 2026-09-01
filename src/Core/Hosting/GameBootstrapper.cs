@@ -9,7 +9,12 @@ using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Hosting
 {
-    public readonly record struct GameBootstrapResult(GameEngine Engine, GameConfig Config, string AssetsRoot);
+    public readonly record struct GameBootstrapResult(
+        GameEngine Engine,
+        GameConfig Config,
+        string AssetsRoot,
+        string? PlanFingerprint,
+        NetworkHostBootstrapConfig? NetworkHost);
 
     /// <summary>
     /// App-level launcher bootstrap.
@@ -27,6 +32,7 @@ namespace Ludots.Core.Hosting
         public int? PlanSchemaVersion { get; set; }
         public string? PlanGeneratedAtUtc { get; set; }
         public BrowserRuntimeConfig? BrowserRuntime { get; set; }
+        public NetworkHostBootstrapConfig? NetworkHost { get; set; }
     }
 
     public static class GameBootstrapper
@@ -41,6 +47,16 @@ namespace Ludots.Core.Hosting
         public static GameBootstrapResult InitializeFromBaseDirectory(string baseDirectory)
         {
             return InitializeFromBaseDirectory(baseDirectory, "launcher.runtime.json");
+        }
+
+        public static string ResolveBootstrapPath(string baseDirectory, string bootstrapFile)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(baseDirectory);
+            ArgumentException.ThrowIfNullOrWhiteSpace(bootstrapFile);
+            string resolvedBaseDirectory = Path.GetFullPath(baseDirectory);
+            return Path.IsPathRooted(bootstrapFile)
+                ? Path.GetFullPath(bootstrapFile)
+                : Path.GetFullPath(Path.Combine(resolvedBaseDirectory, bootstrapFile));
         }
 
         /// <summary>
@@ -59,9 +75,7 @@ namespace Ludots.Core.Hosting
             var assetsRoot = FindAssetsRootStrict(baseDir);
 
             // Step 1: Read the launcher bootstrap and resolve the launcher graph.
-            string gameJsonPath = Path.IsPathRooted(gameConfigFile)
-                ? Path.GetFullPath(gameConfigFile)
-                : Path.Combine(baseDir, gameConfigFile);
+            string gameJsonPath = ResolveBootstrapPath(baseDir, gameConfigFile);
             if (!File.Exists(gameJsonPath))
                 throw new FileNotFoundException($"Missing launcher bootstrap next to executable: {gameJsonPath}");
 
@@ -90,8 +104,36 @@ namespace Ludots.Core.Hosting
             // Get the merged config from engine
             var mergedConfig = engine.MergedConfig;
             ApplyHostBrowserRuntimeConfig(engine, mergedConfig, resolvedPlan.BrowserRuntime);
+            ValidateNetworkBootstrapPair(mergedConfig, bootstrapConfig.NetworkHost);
 
-            return new GameBootstrapResult(engine, mergedConfig, assetsRoot);
+            return new GameBootstrapResult(
+                engine,
+                mergedConfig,
+                assetsRoot,
+                resolvedPlan.ModLoadPlan.PlanFingerprint,
+                bootstrapConfig.NetworkHost);
+        }
+
+        private static void ValidateNetworkBootstrapPair(
+            GameConfig mergedConfig,
+            NetworkHostBootstrapConfig? networkHost)
+        {
+            bool networkingConfigured = mergedConfig.Networking != null;
+            if (networkingConfigured != (networkHost != null))
+            {
+                throw new InvalidOperationException(
+                    networkingConfigured
+                        ? "Merged game configuration enables networking, but launcher bootstrap NetworkHost is missing."
+                        : "Launcher bootstrap declares NetworkHost, but merged game configuration has no networking profile.");
+            }
+
+            if (networkHost == null)
+            {
+                return;
+            }
+
+            mergedConfig.Networking!.Validate();
+            networkHost.Validate();
         }
 
         private static string ResolveRequiredGraphPath(string baseDir, string bootstrapPath, AppBootstrapConfig bootstrapConfig)

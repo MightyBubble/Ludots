@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Arch.Core;
@@ -17,19 +17,53 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             int currentStep,
             int stepRateHz)
         {
+            return Preview(
+                world,
+                entity,
+                in order,
+                registry,
+                orderRuleRegistry,
+                currentStep,
+                stepRateHz,
+                out _);
+        }
+
+        public static OrderSubmitResult Preview(
+            World world,
+            Entity entity,
+            in Order order,
+            OrderTypeRegistry registry,
+            OrderRuleRegistry? orderRuleRegistry,
+            int currentStep,
+            int stepRateHz,
+            out OrderBuffer preview)
+        {
             if (stepRateHz <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(stepRateHz), stepRateHz, "stepRateHz must be positive.");
             }
 
+            OrderEntityReferenceContract.Validate(in order, "OrderSubmitter.Preview");
+
             if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
             {
+                preview = default;
                 return OrderSubmitResult.RejectedInvalidActor;
             }
 
-            OrderBuffer preview = world.Get<OrderBuffer>(entity);
+            preview = world.Get<OrderBuffer>(entity);
             OrderTypeConfig config = registry.Get(order.OrderTypeId);
-            if (order.SubmitMode == OrderSubmitMode.Queued)
+            OrderSubmitResult admission = orderRuleRegistry?.ValidateAdmission(
+                world,
+                entity,
+                in order,
+                in preview) ?? OrderSubmitResult.Activated;
+            if (admission != OrderSubmitResult.Activated)
+            {
+                return admission;
+            }
+
+            if (IsQueuedMode(order.SubmitMode))
             {
                 return HandleQueuedMode(ref preview, in order, in config, currentStep, stepRateHz);
             }
@@ -78,6 +112,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 throw new ArgumentOutOfRangeException(nameof(stepRateHz), stepRateHz, "stepRateHz must be positive.");
             }
 
+            OrderEntityReferenceContract.Validate(in order, "OrderSubmitter.Submit");
+
             if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
             {
                 return OrderSubmitResult.RejectedInvalidActor;
@@ -85,8 +121,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             var config = registry.Get(order.OrderTypeId);
             ref var buffer = ref world.Get<OrderBuffer>(entity);
+            OrderSubmitResult admission = orderRuleRegistry?.ValidateAdmission(
+                world,
+                entity,
+                in order,
+                in buffer) ?? OrderSubmitResult.Activated;
+            if (admission != OrderSubmitResult.Activated)
+            {
+                return admission;
+            }
 
-            return order.SubmitMode == OrderSubmitMode.Queued
+            return IsQueuedMode(order.SubmitMode)
                 ? HandleQueuedMode(ref buffer, in order, in config, currentStep, stepRateHz)
                 : HandleImmediateMode(world, entity, ref buffer, in order, in config, registry, orderRuleRegistry, currentStep, stepRateHz);
         }
@@ -108,7 +153,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return OrderSubmitResult.RejectedQueueFull;
             }
 
-            int expireStep = CalculateExpireStep(config, currentStep, stepRateHz);
+            int expireStep = order.SubmitMode == OrderSubmitMode.PersistentQueued
+                ? -1
+                : CalculateExpireStep(config, currentStep, stepRateHz);
             return buffer.Enqueue(order, config.Priority, expireStep, currentStep)
                 ? OrderSubmitResult.Queued
                 : OrderSubmitResult.RejectedQueueFull;
@@ -301,7 +348,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             OrderBuffer buffer = world.Get<OrderBuffer>(entity);
             OrderTypeConfig config = registry.Get(order.OrderTypeId);
-            if (order.SubmitMode == OrderSubmitMode.Queued)
+            if (IsQueuedMode(order.SubmitMode))
             {
                 return 0;
             }
@@ -519,7 +566,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     prepared.Entity.Remove(activeConfig.EntityBlackboardKey);
                 }
 
-                if (order.Target != default)
+                if (order.Target != default && order.Target != Entity.Null)
                 {
                     if (!prepared.Entity.HasKey(config.EntityBlackboardKey) &&
                         prepared.Entity.Count >= BlackboardEntityBuffer.MAX_ENTRIES)
@@ -620,6 +667,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             ref readonly var rules = ref orderRuleRegistry.Get(newOrder.OrderTypeId);
             return rules.Interrupts(activeOrderTypeId);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsQueuedMode(OrderSubmitMode mode) =>
+            mode is OrderSubmitMode.Queued or OrderSubmitMode.PersistentQueued;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int CalculateExpireStep(in OrderTypeConfig config, int currentStep, int stepRateHz)
@@ -801,7 +852,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             FinalizeCurrent(world, entity, registry, OrderTerminalState.Cancelled);
         }
 
-        public static void CancelAll(World world, Entity entity, OrderTypeRegistry registry)
+        public static void CancelAll(
+            World world,
+            Entity entity,
+            OrderTypeRegistry registry)
         {
             if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
             {

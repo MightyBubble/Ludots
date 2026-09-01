@@ -1525,7 +1525,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
             _effectRequests.Publish(new EffectRequest
             {
-                RootId = 0,
+                RootId = request.RootId,
                 Source = useSpawnedAsSource ? spawned : request.Source,
                 Target = spawned,
                 TargetContext = useSpawnedAsSource ? spawned : request.TargetContext,

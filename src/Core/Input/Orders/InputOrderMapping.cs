@@ -214,7 +214,13 @@ namespace Ludots.Core.Input.Orders
         /// <summary>
         /// Always use Queued mode regardless of modifiers.
         /// </summary>
-        AlwaysQueued = 3
+        AlwaysQueued = 3,
+
+        /// <summary>
+        /// Use PersistentQueued mode when the queue modifier is held, Immediate otherwise.
+        /// Intended for explicit player-authored command queues that must outlive input buffering windows.
+        /// </summary>
+        PersistentQueueOnModifier = 4
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -224,11 +230,31 @@ namespace Ludots.Core.Input.Orders
         Grid = 1
     }
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum GroupMoveTargetAssignmentMode
+    {
+        Unspecified = 0,
+        ActorOrder = 1,
+
+        /// <summary>
+        /// Assigns target slots by preserving actor order along the command direction and lateral axis.
+        /// This is not a general in-transit collision avoidance guarantee.
+        /// </summary>
+        PreserveRelative = 2
+    }
+
     public sealed class GroupMoveTargetLayoutSettings
     {
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public GroupMoveTargetLayoutMode Mode { get; set; } = GroupMoveTargetLayoutMode.None;
 
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public GroupMoveTargetAssignmentMode Assignment { get; set; } = GroupMoveTargetAssignmentMode.Unspecified;
+
+        /// <summary>
+        /// Minimum requested world-centimeter separation between adjacent layout slots.
+        /// The planner may place slots slightly farther apart to survive integer movement quantization.
+        /// </summary>
         public int SpacingCm { get; set; } = 120;
 
         /// <summary>
