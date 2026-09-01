@@ -9,9 +9,8 @@ namespace Ludots.Core.Input.Runtime
 {
     public class PlayerInputHandler : IInputActionReader
     {
-        // Interaction judging thresholds (visual-frame cadence). Tap slop and the drag
-        // threshold split "same position" from "moved" presses; hold/multi-tap defaults
-        // apply unless the binding's Interactions parameters override them.
+        // Interaction judging thresholds (visual-frame cadence). These are the fallback
+        // defaults when a binding's Interactions parameters omit the named override.
         public const float TapMaxTravelPixels = 6f;
         public const float DragThresholdPixels = 8f;
         public const float HoldDefaultDurationSeconds = 0.5f;
@@ -305,7 +304,7 @@ namespace Ludots.Core.Input.Runtime
                     if (interaction.Held)
                     {
                         interaction.Held = false;
-                        return PointerTravelPixels(pointer, interaction.PressPosition) <= TapMaxTravelPixels;
+                        return PointerTravelPixels(pointer, interaction.PressPosition) <= interaction.MaxTravelPixels;
                     }
 
                     return false;
@@ -325,7 +324,8 @@ namespace Ludots.Core.Input.Runtime
                     if (interaction.Held)
                     {
                         interaction.Held = false;
-                        return PointerTravelPixels(pointer, interaction.PressPosition) >= DragThresholdPixels;
+                        float travel = PointerTravelPixels(pointer, interaction.PressPosition);
+                        return travel >= interaction.ThresholdPixels || travel > interaction.MaxTravelPixels;
                     }
 
                     return false;
@@ -412,12 +412,65 @@ namespace Ludots.Core.Input.Runtime
                 compiledBindings[i] = CompileBinding(bindings[i]);
             }
 
+            ValidateInteractionTravelPartition(compiledBindings, context.Id);
+
             return new CompiledContext
             {
                 Id = context.Id,
                 Priority = context.Priority,
                 Bindings = compiledBindings,
             };
+        }
+
+        /// <summary>
+        /// Tap judges partition the release-travel axis from below (complete at travel ≤
+        /// MaxTravelPixels) and Drag judges from above (complete at travel ≥ ThresholdPixels
+        /// or, via the gap-fold arm, travel > MaxTravelPixels). Bindings of one context judge
+        /// the same gesture stream, so a Tap slop reaching into a Drag completion set would
+        /// fire two actions for one release — fail closed at compile instead.
+        /// </summary>
+        private static void ValidateInteractionTravelPartition(CompiledBinding[] bindings, string contextId)
+        {
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                CompiledInteraction[] dragInteractions = bindings[i].Interactions;
+                for (int d = 0; d < dragInteractions.Length; d++)
+                {
+                    if (dragInteractions[d].Kind != InteractionKind.Drag)
+                    {
+                        continue;
+                    }
+
+                    float threshold = dragInteractions[d].ThresholdPixels;
+                    float dragSlop = dragInteractions[d].MaxTravelPixels;
+                    for (int j = 0; j < bindings.Length; j++)
+                    {
+                        if (!string.Equals(bindings[j].Path, bindings[i].Path, StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
+                        CompiledInteraction[] tapInteractions = bindings[j].Interactions;
+                        for (int t = 0; t < tapInteractions.Length; t++)
+                        {
+                            if (tapInteractions[t].Kind != InteractionKind.Tap)
+                            {
+                                continue;
+                            }
+
+                            float tapSlop = tapInteractions[t].MaxTravelPixels;
+                            bool overlaps = threshold <= dragSlop
+                                ? tapSlop >= threshold
+                                : tapSlop > dragSlop;
+                            if (overlaps)
+                            {
+                                throw new InvalidOperationException(
+                                    $"LUDOTS_INPUT_INTERACTION_TRAVEL_OVERLAP: context '{contextId}' path '{bindings[i].Path}' declares Tap (MaxTravelPixels={tapSlop}) and Drag (ThresholdPixels={threshold}, MaxTravelPixels={dragSlop}) whose travel windows overlap; one release would complete both. Keep the Tap slop strictly below the Drag completion floor.");
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private CompiledBinding CompileBinding(InputBindingDef binding)
@@ -545,6 +598,10 @@ namespace Ludots.Core.Input.Runtime
                     .Append(interactions[i].TapCount)
                     .Append(':')
                     .Append(interactions[i].TapWindowSeconds.ToString("R", CultureInfo.InvariantCulture))
+                    .Append(':')
+                    .Append(interactions[i].MaxTravelPixels.ToString("R", CultureInfo.InvariantCulture))
+                    .Append(':')
+                    .Append(interactions[i].ThresholdPixels.ToString("R", CultureInfo.InvariantCulture))
                     .Append(',');
             }
         }
@@ -589,6 +646,11 @@ namespace Ludots.Core.Input.Runtime
         /// that turn the raw button press into a completion pulse. Only button-like sources
         /// carry them — a time sequence over an axis or pointer stream has no press/release
         /// to judge, so those fail closed at compile instead of silently passing through.
+        /// Parameter surface: Hold reads DurationSeconds; MultiTap reads TapCount and
+        /// TapWindowSeconds; Tap reads MaxTravelPixels (release-travel slop, default
+        /// <see cref="TapMaxTravelPixels"/>); Drag reads ThresholdPixels (deliberate-drag
+        /// floor, default <see cref="DragThresholdPixels"/>) and MaxTravelPixels (gap-fold
+        /// slop, defaulting to the threshold so the fold arm is inert until authored).
         /// </summary>
         private static CompiledInteraction[] CompileInteractions(List<InputModifierDef> interactionDefs, string? path, BindingSourceKind sourceKind)
         {
@@ -610,16 +672,43 @@ namespace Ludots.Core.Input.Runtime
                 switch (def.Type)
                 {
                     case "Tap":
-                        compiled[i] = new CompiledInteraction(InteractionKind.Tap, 0f, 0, 0f);
+                        compiled[i] = new CompiledInteraction(
+                            InteractionKind.Tap,
+                            0f,
+                            0,
+                            0f,
+                            RequireFiniteParameter(
+                                OptionalParameter(def.Parameters, "MaxTravelPixels", TapMaxTravelPixels),
+                                path,
+                                def.Type,
+                                "MaxTravelPixels"),
+                            0f);
                         break;
                     case "Drag":
-                        compiled[i] = new CompiledInteraction(InteractionKind.Drag, 0f, 0, 0f);
+                        float thresholdPixels = RequireFiniteParameter(
+                            OptionalParameter(def.Parameters, "ThresholdPixels", DragThresholdPixels),
+                            path,
+                            def.Type,
+                            "ThresholdPixels");
+                        compiled[i] = new CompiledInteraction(
+                            InteractionKind.Drag,
+                            0f,
+                            0,
+                            0f,
+                            RequireFiniteParameter(
+                                OptionalParameter(def.Parameters, "MaxTravelPixels", thresholdPixels),
+                                path,
+                                def.Type,
+                                "MaxTravelPixels"),
+                            thresholdPixels);
                         break;
                     case "Hold":
                         compiled[i] = new CompiledInteraction(
                             InteractionKind.Hold,
                             OptionalParameter(def.Parameters, "DurationSeconds", HoldDefaultDurationSeconds),
                             0,
+                            0f,
+                            0f,
                             0f);
                         break;
                     case "MultiTap":
@@ -627,7 +716,9 @@ namespace Ludots.Core.Input.Runtime
                             InteractionKind.MultiTap,
                             0f,
                             (int)OptionalParameter(def.Parameters, "TapCount", MultiTapDefaultTapCount),
-                            OptionalParameter(def.Parameters, "TapWindowSeconds", MultiTapDefaultWindowSeconds));
+                            OptionalParameter(def.Parameters, "TapWindowSeconds", MultiTapDefaultWindowSeconds),
+                            0f,
+                            0f);
                         break;
                     default:
                         throw new InvalidOperationException(
@@ -653,6 +744,17 @@ namespace Ludots.Core.Input.Runtime
             }
 
             return fallback;
+        }
+
+        private static float RequireFiniteParameter(float value, string? path, string interactionType, string parameterName)
+        {
+            if (!float.IsFinite(value) || value < 0f)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_INTERACTION_INVALID_PARAMETER: binding '{path}' interaction '{interactionType}' parameter '{parameterName}' must be a finite non-negative pixel count (got {value}).");
+            }
+
+            return value;
         }
 
         private static float RequireParameter(IReadOnlyList<InputParameterDef> parameters, string name, string processorType)
@@ -863,6 +965,18 @@ namespace Ludots.Core.Input.Runtime
             public readonly int TapCount;
             public readonly float TapWindowSeconds;
 
+            // Tap / Drag travel parameters (pixels):
+            // Tap completes on release within MaxTravelPixels (the "same position" slop).
+            // Drag completes on release at or beyond ThresholdPixels (deliberate drag), or —
+            // the gap-fold arm — beyond MaxTravelPixels. Defaulting MaxTravelPixels to the
+            // threshold keeps the fold inert, so an unconfigured Drag behaves exactly as the
+            // threshold alone; authoring MaxTravelPixels (typically equal to the tap slop of
+            // the sibling Tap binding on the same path) pins the (slop, threshold) travel
+            // interval to the Drag judge, closing the legacy (6, 8) dead zone where neither
+            // judge completed and gesture consumers hung.
+            public readonly float MaxTravelPixels;
+            public readonly float ThresholdPixels;
+
             // Live press tracking
             public bool Held;
             public Vector2 PressPosition;
@@ -871,12 +985,20 @@ namespace Ludots.Core.Input.Runtime
             public float SecondsSinceTap;
             public int TapsCompleted;
 
-            public CompiledInteraction(InteractionKind kind, float durationSeconds, int tapCount, float tapWindowSeconds)
+            public CompiledInteraction(
+                InteractionKind kind,
+                float durationSeconds,
+                int tapCount,
+                float tapWindowSeconds,
+                float maxTravelPixels,
+                float thresholdPixels)
             {
                 Kind = kind;
                 DurationSeconds = durationSeconds;
                 TapCount = tapCount;
                 TapWindowSeconds = tapWindowSeconds;
+                MaxTravelPixels = maxTravelPixels;
+                ThresholdPixels = thresholdPixels;
             }
 
             public void Reset()
