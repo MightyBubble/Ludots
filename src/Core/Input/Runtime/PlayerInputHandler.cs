@@ -164,12 +164,15 @@ namespace Ludots.Core.Input.Runtime
 
             if (InputBlocked)
             {
+                // Suppressed frames read as up without erasing gesture history: wiping the
+                // edge memory here fabricates a fresh press when the block lifts while the
+                // button is still held, and re-anchoring interaction judges mid-gesture
+                // re-measures travel from the re-anchor so long drags misjudge as taps.
                 for (int i = 0; i < _actionStates.Length; i++)
                 {
-                    _actionStates[i].ClearSuppressed();
+                    _actionStates[i].SuppressThisFrame();
                 }
 
-                ResetInteractionStates();
                 return;
             }
 
