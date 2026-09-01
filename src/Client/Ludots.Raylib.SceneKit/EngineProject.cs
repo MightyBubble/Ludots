@@ -197,6 +197,17 @@ namespace Ludots.Raylib.SceneKit
                 foreach (EngineSceneComponentDocument component in node.Components)
                 {
                     IEngineSceneComponent instance = Components.Create(component.Type, sourceName);
+                    if (component.Config.HasValue)
+                    {
+                        if (instance is not IEngineSceneComponentConfigurable configurable)
+                        {
+                            throw new InvalidDataException(
+                                $"Engine scene '{sourceName}' component '{component.Type}' declares config but does not consume component config.");
+                        }
+
+                        configurable.Configure(component.Config.Value);
+                    }
+
                     if (component.Assets.Count > 0)
                     {
                         if (instance is not IEngineSceneComponentAssets consumer)
@@ -580,6 +591,9 @@ namespace Ludots.Raylib.SceneKit
 
         [JsonPropertyName("assets")]
         public List<string> Assets { get; set; } = [];
+
+        [JsonPropertyName("config")]
+        public JsonElement? Config { get; set; }
     }
 
     internal sealed class EngineSceneWorldDocument

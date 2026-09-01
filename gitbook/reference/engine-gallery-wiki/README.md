@@ -37,6 +37,7 @@
 - [火花、烟雾、火星拖尾](particles.md) — Quarks 粒子三组效果。
 - [地面上的圈与飘带](ribbon_overlay.md) — 环形/扇形地面覆盖 + 样条带。
 - [挥砍的刀光弧线](slash_trail.md) — TrailMeshBuffer 武器弧形 mesh 拖尾 + 顶点色渐隐。
+- [关卡容器的组合实拍](composition.md) — 岛屿 + 36 实例静态网格材质链 + 双 guard 动画，纯 JSON 多节点组合。
 - [3D 画面上贴一块 2D 仪表盘](skia_overlay.md) — Skia GPU 2D 覆盖层合成。
 
 ## 调试

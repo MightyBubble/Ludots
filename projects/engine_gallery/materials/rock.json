@@ -1,0 +1,16 @@
+{
+  "id": "rock",
+  "domain": "Surface",
+  "flags": [
+    "Opaque"
+  ],
+  "roughness": 0.88,
+  "metalness": 0.04,
+  "params": {
+    "floats": {},
+    "colors": {}
+  },
+  "textures": {
+    "albedo": "textures/rock_albedo.png"
+  }
+}

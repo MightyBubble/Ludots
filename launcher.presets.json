@@ -3004,6 +3004,26 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "engine_raylib_composition",
+      "name": "引擎画廊·composition",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--project",
+        "projects/engine_gallery",
+        "--scene",
+        "composition",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_composition/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_composition/stats.json"
+      ]
     }
   ]
 }

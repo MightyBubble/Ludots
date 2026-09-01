@@ -3,87 +3,91 @@
   "scenes": [
     {
       "id": "skybox",
-      "asset": "skybox.scene.json"
+      "asset": "scenes/skybox.scene.json"
     },
     {
       "id": "sky_daynight",
-      "asset": "sky_daynight.scene.json"
+      "asset": "scenes/sky_daynight.scene.json"
     },
     {
       "id": "water",
-      "asset": "water.scene.json"
+      "asset": "scenes/water.scene.json"
     },
     {
       "id": "terrain_surface",
-      "asset": "terrain_surface.scene.json"
+      "asset": "scenes/terrain_surface.scene.json"
     },
     {
       "id": "terrain_heightmap",
-      "asset": "terrain_heightmap.scene.json"
+      "asset": "scenes/terrain_heightmap.scene.json"
     },
     {
       "id": "atmosphere_fog",
-      "asset": "atmosphere_fog.scene.json"
+      "asset": "scenes/atmosphere_fog.scene.json"
     },
     {
       "id": "frame_lighting",
-      "asset": "frame_lighting.scene.json"
+      "asset": "scenes/frame_lighting.scene.json"
     },
     {
       "id": "postprocess",
-      "asset": "postprocess.scene.json"
+      "asset": "scenes/postprocess.scene.json"
     },
     {
       "id": "gpu_skinning",
-      "asset": "gpu_skinning.scene.json"
+      "asset": "scenes/gpu_skinning.scene.json"
     },
     {
       "id": "instancing",
-      "asset": "instancing.scene.json"
+      "asset": "scenes/instancing.scene.json"
     },
     {
       "id": "particles",
-      "asset": "particles.scene.json"
+      "asset": "scenes/particles.scene.json"
     },
     {
       "id": "decal_projection",
-      "asset": "decal_projection.scene.json"
+      "asset": "scenes/decal_projection.scene.json"
     },
     {
       "id": "vegetation_cutout",
-      "asset": "vegetation_cutout.scene.json"
+      "asset": "scenes/vegetation_cutout.scene.json"
     },
     {
       "id": "material_binding",
-      "asset": "material_binding.scene.json"
+      "asset": "scenes/material_binding.scene.json"
     },
     {
       "id": "ribbon_overlay",
-      "asset": "ribbon_overlay.scene.json"
+      "asset": "scenes/ribbon_overlay.scene.json"
     },
     {
       "id": "skia_overlay",
-      "asset": "skia_overlay.scene.json"
+      "asset": "scenes/skia_overlay.scene.json"
     },
     {
       "id": "debug_draw",
-      "asset": "debug_draw.scene.json"
+      "asset": "scenes/debug_draw.scene.json"
     },
     {
       "id": "primitives",
-      "asset": "primitives.scene.json"
+      "asset": "scenes/primitives.scene.json"
     },
     {
       "id": "lighting",
-      "asset": "lighting.scene.json"
+      "asset": "scenes/lighting.scene.json"
     },
     {
       "id": "crowd_anim",
-      "asset": "crowd_anim.scene.json"
+      "asset": "scenes/crowd_anim.scene.json"
     },
     {
       "id": "slash_trail",
-      "asset": "slash_trail.scene.json"
+      "asset": "scenes/slash_trail.scene.json"
+    },
+    {
+      "id": "composition",
+      "asset": "scenes/composition.scene.json"
     }
   ]
 }

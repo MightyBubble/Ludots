@@ -1,0 +1,11 @@
+{
+  "id": "rock_mossy",
+  "domain": "Surface",
+  "parent": "rock",
+  "roughness": 0.32,
+  "params": {
+    "floats": {},
+    "colors": {}
+  },
+  "metalness": 0.1
+}

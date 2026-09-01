@@ -150,6 +150,56 @@ namespace Ludots.Tests.RaylibAdapter
         }
 
         [Test]
+        public void ComposedScene_UsesMultiNodeMultiComponentFace()
+        {
+            string scenePath = Path.Combine(EngineProjectRoot, "scenes", "composition.scene.json");
+            using JsonDocument scene = JsonDocument.Parse(File.ReadAllText(scenePath));
+            JsonElement root = scene.RootElement;
+
+            Assert.That(root.GetProperty("nodes").GetArrayLength(), Is.GreaterThanOrEqualTo(4), "多节点组合");
+            JsonElement[] components = root.GetProperty("nodes").EnumerateArray()
+                .SelectMany(node => node.GetProperty("components").EnumerateArray())
+                .ToArray();
+            string[] kinds = components.Select(c => c.GetProperty("type").GetString() ?? string.Empty).ToArray();
+            Assert.That(kinds.Distinct().Count(), Is.GreaterThanOrEqualTo(3), "至少三种组件能力");
+            Assert.That(kinds, Does.Contain("static_mesh"), "多实例静态网格");
+            Assert.That(kinds, Does.Contain("animator"), "美术动画");
+            Assert.That(kinds, Does.Contain("island_terrain"), "地形基座");
+
+            JsonElement staticMesh = components.First(c => (c.GetProperty("type").GetString() ?? "") == "static_mesh");
+            int instanceCount = staticMesh.GetProperty("config").GetProperty("instances").GetArrayLength();
+            Assert.That(instanceCount, Is.GreaterThanOrEqualTo(30), "同 mesh 多实例");
+            var materials = root.GetProperty("assets").EnumerateArray()
+                .Where(a => (a.GetProperty("kind").GetString() ?? "") == "material")
+                .Select(a => a.GetProperty("source").GetString() ?? "")
+                .ToList();
+            Assert.That(materials.Count, Is.GreaterThanOrEqualTo(2), "材质链声明（父+子）");
+        }
+
+        [Test]
+        public void SceneDocument_ConfigOnNonConfigurableComponent_FailsLoud()
+        {
+            EngineProject project = OpenEngineProjectForIds();
+            EngineSceneDocument document = ParseMinimalScene(kind: "skybox", config: "{ \"spin\": 1 }");
+            Assert.That(
+                () => project.ComposeScene(document, "minimal.scene.json"),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("declares config but does not consume"));
+        }
+
+        [Test]
+        public void SceneDocument_ConfigReachesConfigurableComponent()
+        {
+            EngineProject project = OpenEngineProjectForIds();
+            EngineSceneDocument document = ParseMinimalScene(kind: "static_mesh", config:
+                """
+                { "primitive": "cube", "instances": [ { "position": [0, 1, 0] } ] }
+                """);
+            IEngineScene scene = project.ComposeScene(document, "minimal.scene.json");
+            Assert.That(scene, Is.Not.Null);
+            scene.Dispose();
+        }
+
+        [Test]
         public void SceneComponentSources_HaveNoHardcodedAssetUris()
         {
             foreach (string file in Directory.EnumerateFiles(
@@ -289,21 +339,24 @@ namespace Ludots.Tests.RaylibAdapter
         private static EngineSceneDocument ParseMinimalScene(
             string kind = "skybox",
             string[]? assets = null,
-            List<EngineSceneAssetDocument>? manifest = null)
+            List<EngineSceneAssetDocument>? manifest = null,
+            string? config = null)
         {
-            return EngineProject.ParseSceneDocument(MinimalSceneJson(kind, assets, manifest), "minimal.scene.json");
+            return EngineProject.ParseSceneDocument(MinimalSceneJson(kind, assets, manifest, config), "minimal.scene.json");
         }
 
         private static string MinimalSceneJson(
             string kind = "skybox",
             string[]? assets = null,
-            List<EngineSceneAssetDocument>? manifest = null)
+            List<EngineSceneAssetDocument>? manifest = null,
+            string? config = null)
         {
             manifest ??= [];
             assets ??= [];
             var manifestJson = string.Join(",\n", manifest.Select(a =>
                 $"{{ \"id\": \"{a.Id}\", \"kind\": \"{a.Kind}\", \"source\": \"{a.Source}\" }}"));
             var refsJson = assets.Length > 0 ? $", \"assets\": [{string.Join(", ", assets.Select(a => $"\"{a}\""))}]" : "";
+            var configJson = config == null ? "" : $", \"config\": {config}";
             return $$"""
             {
               "schemaVersion": 1,
@@ -316,7 +369,7 @@ namespace Ludots.Tests.RaylibAdapter
               "rootNode": "root",
               "nodes": [
                 { "id": "root", "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
-                  "components": [ { "type": "{{kind}}"{{refsJson}} } ] }
+                  "components": [ { "type": "{{kind}}"{{refsJson}}{{configJson}} } ] }
               ]
             }
             """;

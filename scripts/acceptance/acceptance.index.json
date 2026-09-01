@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 48,
+    "runnable": 49,
     "testOnly": 0,
-    "total": 48
+    "total": 49
   },
   "runnable": [
     {
@@ -129,6 +129,14 @@
       "binding": "engine_gallery",
       "testFilter": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_atmosphere_fog",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_composition",
+      "preset": "engine_raylib_composition",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_composition",
       "hasScreenshotEvidence": true
     },
     {

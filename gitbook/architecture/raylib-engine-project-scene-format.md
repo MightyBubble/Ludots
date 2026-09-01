@@ -1,6 +1,6 @@
 # Raylib 引擎工程分层与关卡容器格式
 
-> 状态：v1 已实现——播放器 / 工程内容 / 工程数据三分（Ludots.App.RaylibPlayer + Ludots.Content.EngineGallery + projects/engine_gallery），画廊 21 场景已全部迁入关卡容器。组合验收场景（多节点美术关）为下一步交付。
+> 状态：已交付——播放器 / 工程内容 / 工程数据三分（Ludots.App.RaylibPlayer + Ludots.Content.EngineGallery + projects/engine_gallery），22 个场景（21 能力场景 + 1 多节点组合场景）全部经关卡容器装载。
 > 谱系：#1321（Raylib 引擎工程化收敛）的后续工作。与 #1350（Nav 烘焙源架构 / LogicTerrain 退役）、#1402（navmesh 烘焙 showcase）的关系见"边界"一节。
 
 ## 1. 解决什么问题
@@ -173,7 +173,7 @@ project.json → catalog.json → scenes/*.scene.json
 ## 11. 验收
 
 - 合同测试，对应铁律 1/2：装载真源（manifest 双向引用、fail-fast 全套、"组件零硬编码 URI"静态扫描）、世界侧生产代码不得反向直引工程目录。铁律 3（每帧数据通道）由既有 adapter 快照合同测试覆盖。
-- 一个组合验收场景：地形 + 同 mesh 多实例阵 + animator 角色 + 材质实例链 + 相机，走现有画廊验收链（preset + 截图 + 帧统计）——**待交付**。
+- ✅ 组合验收场景 `composition`：岛屿地形基座 + 36 实例静态网格（材质 parent 链）+ 双 guard 美术动画，走画廊验收链（preset + 截图 + 帧统计），多节点/多组件/逐实例材质均由关卡 JSON 声明。
 - 存量迁移：画廊 21 个能力场景已全部搬进关卡容器（`projects/engine_gallery/scenes/`）；装载器为 `EngineProject`（`src/Client/Ludots.Raylib.SceneKit`）；`scripts/record-engine-galleries.py` 读 catalog.json。
 
 ## 12. 边界与落地次序
@@ -184,4 +184,4 @@ project.json → catalog.json → scenes/*.scene.json
 
 1. ✅ 装载器 + 关卡文档格式 + 合同测试（EngineProject，播放器/内容/数据三分）；
 2. ✅ 存量 21 场景迁移 + 录像脚本切换 catalog.json + 验收 preset 全量带 `--project`；
-3. ⬜ 组合验收场景（第二个工程 `projects/` 目录）+ preset + 门户登记——多节点组件面（static_mesh 多实例 / animator / 材质链）随本步交付。
+3. ✅ 组合验收场景 `composition` + preset + 门户登记 + Wiki 页——多节点组件面（island_terrain 基座 / static_mesh 36 实例 + 材质 parent 链 / animator 双 guard 错相）随步交付；第二个独立工程目录留待 #1402 美术资产落地时启用（`EngineProject.Open` 已多工程就绪）。

@@ -9463,6 +9463,27 @@
       "video": "artifacts/evidence/capability_standard_graph_op_QueryCollectActiveDialogueChoices/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "engine_raylib_composition",
+      "path": "projects/engine_gallery",
+      "projectPath": "project.json",
+      "title": "引擎能力·组合场景",
+      "summary": "多节点关卡容器实拍：岛屿地形 + 36 实例静态网格（材质实例链）+ 双 guard 美术动画——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_composition",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_composition",
+      "screenshot": "artifacts/acceptance/engine_raylib_composition/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
     }
   ],
   "pathExemptions": [

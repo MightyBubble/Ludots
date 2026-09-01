@@ -39,6 +39,7 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 | 19 | lighting | 光照全效（GGX 梯度/split-sum 天空 IBL/深度阴影） | RaylibLitModel + RaylibSkyIbl + RaylibDirectionalShadowMap |
 | 20 | crowd_anim | 大量动画实例合批 | skinning_instanced 真骨骼 GPU 蒙皮 × 4k 实例 |
 | 21 | slash_trail | 刀光轨迹（TrailMeshBuffer 弧形拖尾） | RaylibTrailMeshRenderer + TrailMeshGeometry |
+| 22 | composition | 关卡容器组合实拍 | 多节点容器：地形基座 + 36 实例静态网格材质链 + 双 guard 动画 |
 
 画廊实拍选粹（既有 20 场景截图见 Wiki 各场景页与 `artifacts/acceptance/engine_gallery_all/`；新增 `slash_trail` 的视觉证据待真实运行采样后补齐，见 [slash_trail Wiki 页](../reference/engine-gallery-wiki/slash_trail.md)）：
 

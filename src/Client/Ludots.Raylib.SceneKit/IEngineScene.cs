@@ -40,6 +40,15 @@ namespace Ludots.Raylib.SceneKit
         void SetAssets(IReadOnlyDictionary<string, EngineSceneAsset> assets);
     }
 
+    /// <summary>
+    /// 消费关卡文档组件配置的组件合同：装载器把组件 JSON 对象原样交给组件自行解析；
+    /// 配置出现在不可配置的组件上时装载 fail-fast。
+    /// </summary>
+    public interface IEngineSceneComponentConfigurable
+    {
+        void Configure(System.Text.Json.JsonElement config);
+    }
+
     /// <summary>关卡资产清单项；Kind 决定解析方式，ResolvedPath 为解析出的物理路径。</summary>
     public sealed record EngineSceneAsset(string Id, string Kind, string Source, string? ResolvedPath);
 
