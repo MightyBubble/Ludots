@@ -9722,8 +9722,10 @@
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_DispatchCollectionEvent",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_DispatchCollectionEvent/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_DispatchCollectionEvent/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Registry entry backfilled: mod/binding/preset landed without it (main debt surfaced during #1425 merge)."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [
