@@ -3,9 +3,7 @@
     "id": "CaseE.BoxSelectBegin"
   },
   {
-    "id": "CaseE.BoxSelect"
-  },
-  {
-    "id": "CaseE.TapSelect"
+    "id": "CaseE.BoxSelectEnd",
+    "edge": "release"
   }
 ]

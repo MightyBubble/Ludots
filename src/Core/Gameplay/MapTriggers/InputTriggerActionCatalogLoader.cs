@@ -46,6 +46,17 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     action.PickRadiusCm = radiusCm;
                 }
 
+                if (node["edge"] is JsonValue edge && edge.TryGetValue<string>(out string? edgeValue))
+                {
+                    action.Edge = edgeValue.Trim();
+                }
+
+                if (action.Edge is not ("press" or "release"))
+                {
+                    throw new InvalidOperationException(
+                        $"{ConfigPath} entry '{action.Id}' declares unsupported edge '{action.Edge}' (press/release).");
+                }
+
                 actions.Add(action);
             }
 
