@@ -25,10 +25,27 @@ namespace Ludots.Core.Scripting
         public const string EffectId = "MapTrigger.EffectId";              // int
         public const string Moment = "MapTrigger.Moment";                  // string
         public const string ModId = "ModId";                               // string
-        public const string InputAction = "MapTrigger.InputAction";              // string
-        public const string GroundXCm = "MapTrigger.GroundXCm";                  // float
-        public const string GroundYCm = "MapTrigger.GroundYCm";                  // float
+        // InputActionFired contract (input/command chain): the acting
+        // representative entity, the semantic action id, the pointer's window-pixel
+        // position at the fired edge (press edge -> press point, release edge ->
+        // release point; window pixels so per-binding routing stays possible), the
+        // held semantic-modifier bitmask (InputActionFiredModifiers), and the active
+        // interaction context profile id (0 = none installed). Input events carry
+        // pointer facts only — ground projection is a graph-side derivation through
+        // ScreenPointToGround on the same LogicView ray.
+        public const string Rep = "MapTrigger.Rep";                              // Entity
+        public const string Action = "MapTrigger.Action";                        // string
+        public const string PointerScreenX = "MapTrigger.PointerScreenX";        // float (window px)
+        public const string PointerScreenY = "MapTrigger.PointerScreenY";        // float (window px)
+        public const string Modifiers = "MapTrigger.Modifiers";                  // int (bitmask)
+        public const string ContextId = "MapTrigger.ContextId";                  // int (registry id)
         public const string SourceMapId = "MapTrigger.SourceMapId";              // MapId (cross-map/global dispatch transport metadata)
+        // Collection pass-through contract (#1398 S2b gap 9, Case E 06): DispatchCollectionEvent
+        // fires a schema-less map event carrying the final entity set plus the set semantics;
+        // EventKeyedCollectionWriter receives by event key and writes EntityCollectionStore.
+        public const string CollectionEntitySet = "MapTrigger.CollectionEntitySet"; // Entity[] (final hit set)
+        public const string CollectionOp = "MapTrigger.CollectionOp";              // int (0=replace,1=add,2=subtract)
+        public const string CollectionKey = "MapTrigger.CollectionKey";            // int (EntityCollectionStore key id)
         public const string FieldLayer = "MapTrigger.FieldLayer";                // string (field layer key)
 
         /// <summary>

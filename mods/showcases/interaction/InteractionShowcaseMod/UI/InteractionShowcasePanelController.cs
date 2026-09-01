@@ -790,8 +790,8 @@ namespace InteractionShowcaseMod.UI
                 return "no-pref";
             }
 
-            Ludots.Core.Input.Interaction.CommandPref pref = default;
-            if (!engine.World.IsAlive(rep) || !engine.World.TryGet<Ludots.Core.Input.Interaction.CommandPref>(rep, out pref))
+            Ludots.Core.Input.Interaction.InteractionPref pref = default;
+            if (!engine.World.IsAlive(rep) || !engine.World.TryGet<Ludots.Core.Input.Interaction.InteractionPref>(rep, out pref))
             {
                 return "no-pref";
             }
@@ -996,7 +996,7 @@ namespace InteractionShowcaseMod.UI
 
             owner = localPlayer;
             collectionKeyId = steadyStateKeyId;
-            if (engine.World.TryGet<ActiveInteractionContext>(localPlayer, out ActiveInteractionContext context))
+            if (engine.World.TryGet<InteractionContextInstance>(localPlayer, out InteractionContextInstance context))
             {
                 collectionKeyId = context.ActiveCollectionKeyId;
                 if (context.ContextEntity != Entity.Null && engine.World.IsAlive(context.ContextEntity))

@@ -43,7 +43,7 @@ EffectTemplate:
 | 组件 | 状态 |
 |------|------|
 | InputOrderMapping.Entity | ✅ 已有 |
-| InteractionModeType (4种) | ✅ 已有 |
+| CastModeType (4种) | ✅ 已有 |
 | FilterProfileRegistry / target filter profiles | ✅ 已有 |
 | EffectTemplate.Heal | ✅ 已有 |
 | TargetFilter.Friendly | ✅ 已有 |

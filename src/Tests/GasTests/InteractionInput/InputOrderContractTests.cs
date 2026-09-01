@@ -64,11 +64,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetSolePossessedActor(world.Create(), 1);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             backend.Buttons["<Keyboard>/a"] = false;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             accumulator.BuildTickSnapshot(snapshot);
@@ -599,15 +599,15 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetSolePossessedActor(world.Create(), 1);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             system.Update(0.10f);
 
             backend.Buttons["<Keyboard>/a"] = false;
-            handler.Update();
+            handler.Update(1f / 60f);
             system.Update(0.05f);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             system.Update(0.10f);
 
             Assert.That(orders.Count, Is.EqualTo(1));
@@ -622,7 +622,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -688,7 +688,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -741,7 +741,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -1310,7 +1310,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         ModifierBehavior = ModifierSubmitBehavior.AlwaysQueued,
                         IsSkillMapping = false,
                         HeldPolicy = HeldPolicy.EveryFrame,
-                        CastModeOverride = InteractionModeType.AimCast,
+                        CastModeOverride = CastModeType.AimCast,
                         AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
                         AutoTargetRangeCm = 640,
                         ActorOrderRouting = new ActorOrderRoutingSettings
@@ -1365,7 +1365,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(remapped.TargetType, Is.EqualTo(OrderTargetType.Position));
                 Assert.That(remapped.ModifierBehavior, Is.EqualTo(ModifierSubmitBehavior.AlwaysQueued));
                 Assert.That(remapped.HeldPolicy, Is.EqualTo(HeldPolicy.EveryFrame));
-                Assert.That(remapped.CastModeOverride, Is.EqualTo(InteractionModeType.AimCast));
+                Assert.That(remapped.CastModeOverride, Is.EqualTo(CastModeType.AimCast));
                 Assert.That(remapped.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
                 Assert.That(remapped.AutoTargetRangeCm, Is.EqualTo(640));
                 Assert.That(remapped.ActorOrderRouting, Is.Not.Null);
@@ -1477,7 +1477,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var contextProfiles = NewSteadyStateProfiles(collectionKeys);
-            world.Add(localPlayer, new ActiveInteractionContext
+            world.Add(localPlayer, new InteractionContextInstance
             {
                 ContextEntity = actor,
                 CommandIntentProfileId = 0,
@@ -1607,7 +1607,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.capacity", "dispatch.all_together");
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.capacity", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(
                 collectionKeys,
@@ -1737,7 +1737,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.programmatic", "dispatch.all_together");
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.programmatic", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -1866,7 +1866,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_batch", "dispatch.all_together");
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_batch", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -1985,7 +1985,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.routed_only", "dispatch.nearest_one");
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.routed_only", "dispatch.nearest_one");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2095,7 +2095,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_authorization", "dispatch.atomic_authorization");
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_authorization", "dispatch.atomic_authorization");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2196,7 +2196,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.test", "dispatch.all_together");
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.test", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2239,10 +2239,10 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         /// <summary>
-        /// Plant the player-level CommandPref on the possessed representative, mirroring the
-        /// production map-binding seed (game-instance defaults from Input/command_prefs.json).
+        /// Plant the player-level InteractionPref on the possessed representative, mirroring the
+        /// production map-binding seed (game-instance defaults from Input/interaction_prefs.json).
         /// </summary>
-        private static void PlantPlayerCommandPref(
+        private static void PlantPlayerInteractionPref(
             World world,
             Entity rep,
             CommandIntentProfileRegistry intents,
@@ -2250,7 +2250,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             string intentId,
             string dispatchProfileId)
         {
-            CommandPref pref = default;
+            InteractionPref pref = default;
             pref.SetPlayerDefault(
                 intents.ProfileIdRegistry.Register(intentId),
                 dispatch.ProfileIdRegistry.GetId(dispatchProfileId));
@@ -2376,7 +2376,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -2606,7 +2606,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.AimCast,
+                InteractionMode = CastModeType.AimCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -2660,7 +2660,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.AimCast,
+                InteractionMode = CastModeType.AimCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -2974,7 +2974,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.AimCast,
+                InteractionMode = CastModeType.AimCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -3024,7 +3024,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -3071,7 +3071,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -3133,7 +3133,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()

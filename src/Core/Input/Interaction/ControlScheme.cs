@@ -18,7 +18,7 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// One control scheme (DEC-15): a named combination of IMC input contexts — a pure device
     /// binding profile. Order routing preferences are player data on the representative
-    /// (<see cref="CommandPref"/>), never scheme data. Scheme ids like <c>scheme.sc2_classic</c>
+    /// (<see cref="InteractionPref"/>), never scheme data. Scheme ids like <c>scheme.sc2_classic</c>
     /// are mod data, never Core concepts.
     /// </summary>
     public sealed class ControlSchemeDefinition

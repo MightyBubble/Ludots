@@ -1,0 +1,23 @@
+[
+  {
+    "id": "showcase.graph_op.ScreenPointToEntity",
+    "kind": "Query",
+    "entry": "load",
+    "nodes": [
+      { "id": "load", "op": "LoadCaster" },
+      { "id": "sx", "op": "ConstFloat", "floatValue": -540 },
+      { "id": "sy", "op": "ConstFloat", "floatValue": 120 },
+      { "id": "pick", "op": "ScreenPointToEntity", "pickRadiusPx": 24 }
+    ],
+    "controlEdges": [
+      { "from": "load", "fromPort": "next", "to": "sx" },
+      { "from": "sx", "fromPort": "next", "to": "sy" },
+      { "from": "sy", "fromPort": "next", "to": "pick" }
+    ],
+    "valueEdges": [
+      { "from": "load", "fromPort": "value", "to": "pick", "toPort": "source" },
+      { "from": "sx", "fromPort": "value", "to": "pick", "toPort": "a" },
+      { "from": "sy", "fromPort": "value", "to": "pick", "toPort": "b" }
+    ]
+  }
+]

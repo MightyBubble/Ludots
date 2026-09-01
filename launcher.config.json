@@ -18,6 +18,14 @@
       }
     },
     {
+      "name": "case_e_selection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/case_e_selection/CaseESelectionMod",
+        "projectPath": "CaseESelectionMod.csproj"
+      }
+    },
+    {
       "name": "save_panel",
       "target": {
         "type": "path",
@@ -2249,6 +2257,70 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveDialogueChoicesEntryMod",
         "projectPath": "CapabilityStandardGraphOpQueryCollectActiveDialogueChoicesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_PointToDirection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpPointToDirectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpPointToDirectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ScreenPointToEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpScreenPointToEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpScreenPointToEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ScreenPointToGround",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpScreenPointToGroundEntryMod",
+        "projectPath": "CapabilityStandardGraphOpScreenPointToGroundEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ScreenRegionToEntities",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpScreenRegionToEntitiesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpScreenRegionToEntitiesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StickToDirection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStickToDirectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStickToDirectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ActivateContext",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpActivateContextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpActivateContextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DeactivateContext",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDeactivateContextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDeactivateContextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DispatchCollectionEvent",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDispatchCollectionEventEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDispatchCollectionEventEntryMod.csproj"
       }
     }
   ],

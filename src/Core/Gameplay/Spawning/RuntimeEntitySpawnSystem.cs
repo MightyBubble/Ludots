@@ -65,6 +65,7 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly RelationshipRuntime? _relationships;
         private readonly int _memberOfTypeId;
         private readonly EntityTriggerGraphMounts? _entityTriggerGraphMounts;
+        private readonly Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? _initialInteractionContexts;
 
         private readonly struct SpawnRelationshipPlan
         {
@@ -106,7 +107,8 @@ namespace Ludots.Core.Gameplay.Spawning
             TeamEntityLookup? teamLookup = null,
             RelationshipRuntime? relationships = null,
             int memberOfTypeId = -1,
-            EntityTriggerGraphMounts? entityTriggerGraphMounts = null)
+            EntityTriggerGraphMounts? entityTriggerGraphMounts = null,
+            Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? initialInteractionContexts = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
@@ -137,6 +139,7 @@ namespace Ludots.Core.Gameplay.Spawning
             _relationships = relationships;
             _memberOfTypeId = memberOfTypeId;
             _entityTriggerGraphMounts = entityTriggerGraphMounts;
+            _initialInteractionContexts = initialInteractionContexts;
         }
 
         public override void Update(in float dt)
@@ -183,6 +186,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     PublishSpawnReceipt(in singleRequest, spawnedSingle);
                     PublishOnSpawnEffect(in singleRequest, spawnedSingle);
                     MountTemplateTriggerGraphs(spawnedSingle, peek.TemplateId, template);
+                    MountTemplateInitialInteractionContext(spawnedSingle, peek.TemplateId, template);
                     continue;
                 }
 
@@ -206,6 +210,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     TryGetTemplate(request.TemplateId, out EntityTemplate spawnedTemplate))
                 {
                     MountTemplateTriggerGraphs(spawned, request.TemplateId, spawnedTemplate);
+                    MountTemplateInitialInteractionContext(spawned, request.TemplateId, spawnedTemplate);
                 }
             }
         }
@@ -218,6 +223,24 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             _entityTriggerGraphMounts.MountRuntimeSpawned(spawned, templateId, template.TriggerGraphs);
+        }
+
+        private void MountTemplateInitialInteractionContext(Entity spawned, string templateId, EntityTemplate template)
+        {
+            if (string.IsNullOrWhiteSpace(template.InitialInteractionContext))
+            {
+                return;
+            }
+
+            Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? profiles = _initialInteractionContexts
+                ?? throw new InvalidOperationException(
+                    $"Entity template '{templateId}' declares initialInteractionContext '{template.InitialInteractionContext}' but the spawn system has no interaction context profile registry.");
+            Ludots.Core.Input.Interaction.TemplateInteractionContextMounting.MountInitialContext(
+                World,
+                profiles,
+                spawned,
+                templateId,
+                template.InitialInteractionContext);
         }
 
         private Entity SpawnUnitType(in RuntimeEntitySpawnRequest request, in SpawnRelationshipPlan relationshipPlan)
@@ -620,6 +643,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasReceiptWork ||
                 onSpawnEffectTemplateId > 0 ||
                 template.TriggerGraphs is { Count: > 0 } ||
+                !string.IsNullOrWhiteSpace(template.InitialInteractionContext) ||
                 !allHaveMapEntity;
             if (requiresPostSpawnLoop)
             {
@@ -664,6 +688,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     }
 
                     MountTemplateTriggerGraphs(entity, templateId, template);
+                    MountTemplateInitialInteractionContext(entity, templateId, template);
                 }
 
                 postSpawnMs = ElapsedMs(postSpawnStart);

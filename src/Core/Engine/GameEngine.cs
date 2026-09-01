@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
+using System.Linq;
 using Ludots.Core.Association;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
@@ -129,8 +130,8 @@ namespace Ludots.Core.Engine
         private ICooperativeSimulation _cooperativeSimulation;
         private bool _simulationBudgetFused;
 
-        /// <summary>Game-instance CommandPref seed resolved at boot; map binding plants it on player representatives.</summary>
-        private Ludots.Core.Input.Interaction.CommandPrefSeed _commandPrefSeed;
+        /// <summary>Game-instance InteractionPref seed resolved at boot; map binding plants it on player representatives.</summary>
+        private Ludots.Core.Input.Interaction.InteractionPrefSeed _interactionPrefSeed;
 
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
@@ -149,6 +150,8 @@ namespace Ludots.Core.Engine
 
         /// <summary>Entity-domain TriggerGraph mount pipeline; owns spawn/destroy-tick dispatch and dead-mount sweeps.</summary>
         public Gameplay.MapTriggers.EntityTriggerGraphMounts EntityTriggerGraphMounts { get; private set; }
+
+        private Gameplay.MapTriggers.InteractionContextTriggerGateSystem? _interactionContextTriggerGate;
         public SystemFactoryRegistry SystemFactoryRegistry { get; private set; }
         public TriggerDecoratorRegistry TriggerDecoratorRegistry { get; private set; }
         internal ModExtensionHub ModExtensions { get; private set; }
@@ -1091,6 +1094,7 @@ namespace Ludots.Core.Engine
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             gasGraphApi.BindTriggerManager(TriggerManager);
+            gasGraphApi.BindAimSource(new Ludots.Core.Input.AimSource.GraphAimSourceRuntime(World, GlobalContext));
             var graphCallbackService = new Ludots.Core.GraphRuntime.GraphCallbackService();
             SetService(CoreServiceKeys.GraphCallbackService, graphCallbackService);
             gasGraphApi.BindGraphCallbackService(graphCallbackService);
@@ -1398,6 +1402,20 @@ namespace Ludots.Core.Engine
                 skinnedVisualBatchBuffer,
                 presentationTimingDiagnostics,
                 presentationTargetGeneration);
+            // Interaction context profile id space registers before presenter definition
+            // loading so presenter rules resolve ContextActivated/Deactivated keys (#1398
+            // S2b). The full install (row fill + bindings/triggers reference validation)
+            // runs later in the input kernel where its graph/action catalogs exist; Register
+            // is idempotent and both passes agree on ids by construction (Default first,
+            // then config order).
+            var interactionContextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            interactionContextProfileIds.Register(InteractionContextIds.Default);
+            var interactionContextProfilesConfig = new InteractionContextProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            for (int i = 0; i < interactionContextProfilesConfig.Profiles.Count; i++)
+            {
+                interactionContextProfileIds.Register(interactionContextProfilesConfig.Profiles[i].Id);
+            }
+
             new PresenterDefinitionConfigLoader(
                 ConfigPipeline,
                 presenterDefinitions,
@@ -1424,6 +1442,7 @@ namespace Ludots.Core.Engine
                 },
                 instancedBatchAssets.GetId,
                 entityCollectionKeyRegistry.Register,
+                interactionContextProfileIds.GetId,
                 presenterCommandKinds,
                 presenterBehaviorKinds,
                 resolveGraphProgramKind: graphId =>
@@ -1516,7 +1535,15 @@ namespace Ludots.Core.Engine
             var inputConfigRoot = new InputConfigPipelineLoader(ConfigPipeline).Load();
             var inputActionAttributeBindings = new InputActionAttributeBindingRegistry();
             new InputActionAttributeBindingLoader(ConfigPipeline, inputActionAttributeBindings).Load(ConfigCatalog, ConfigConflictReport);
-            _inputRuntimeSystem = new InputRuntimeSystem(GlobalContext, authoritativeInputAccumulator, authoritativePointerButtonsAccumulator);
+            // Populated when the trigger-action catalog loads below; the per-frame pointer
+            // lifecycle capture reads it lazily, so actions bridged into InputActionFired
+            // get exact per-edge pointer facts.
+            var bridgedPointerActionIds = new List<string>();
+            _inputRuntimeSystem = new InputRuntimeSystem(
+                GlobalContext,
+                authoritativeInputAccumulator,
+                authoritativePointerButtonsAccumulator,
+                bridgedPointerActionIds);
             _inputRuntimeSystem.Initialize();
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
             var clockSystem = new GasClockSystem(clock, clockStepPolicy, CreateContext, TriggerManager.FireEvent);
@@ -1574,7 +1601,6 @@ namespace Ludots.Core.Engine
             // references fail fast at startup. The engine-reserved steady-state profile (never
             // mounted; absence of the mounted component is the steady state) installs first — an
             // asset declaring the reserved id fails fast below.
-            var interactionContextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var interactionContextProfileRegistry = new InteractionContextProfileRegistry(interactionContextProfileIds);
             interactionContextProfileRegistry.Install(
                 new InteractionContextProfilesConfig
@@ -1593,10 +1619,34 @@ namespace Ludots.Core.Engine
                 filterProfileIdRegistry,
                 commandIntentProfileIds);
             interactionContextProfileRegistry.Install(
-                new InteractionContextProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
+                interactionContextProfilesConfig,
                 entityCollectionKeyRegistry,
                 filterProfileIdRegistry,
-                commandIntentProfileIds);
+                commandIntentProfileIds,
+                new InteractionContextProfileReferenceCatalog(
+                    graphProgramRegistry,
+                    inputConfigRoot.Actions.Select(action => action.Id)));
+            var interactionContextInstances = new InteractionContextInstanceRuntime(
+                World,
+                interactionContextProfileRegistry,
+                presentationEventStream,
+                presenterCommandBuffer,
+                GameSession);
+            SetService(CoreServiceKeys.InteractionContextInstances, interactionContextInstances);
+            gasGraphApi.BindContextInstances(interactionContextInstances);
+            MapLoader.SetInitialInteractionContexts(interactionContextProfileRegistry);
+            TemplateInteractionContextMounting.ValidateTemplates(MapLoader.TemplateRegistry.GetAll(), interactionContextProfileRegistry);
+            var eventKeyedCollectionWriter = new EventKeyedCollectionWriter(entityCollectionStore);
+            foreach (string eventKey in new EventKeyedCollectionWriterConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport))
+            {
+                eventKeyedCollectionWriter.Register(eventKey);
+                TriggerManager.RegisterEventHandler(
+                    new EventKey(eventKey),
+                    context => eventKeyedCollectionWriter.HandleEvent(new EventKey(eventKey), context));
+            }
+
+            SetService(CoreServiceKeys.EventKeyedCollectionWriter, eventKeyedCollectionWriter);
+            gasGraphApi.BindCustomEvents(customEventCatalog.Names);
             var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
                 World,
                 interactionContextProfileRegistry,
@@ -1625,7 +1675,7 @@ namespace Ludots.Core.Engine
             castDispatchProfileRegistry.Install(new CastDispatchProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
             // Control scheme catalog + hot-switch runtime (RFC-0065 INT-5, DEC-15). Schemes are pure
-            // device binding profiles; order routing preferences are player data (CommandPref below).
+            // device binding profiles; order routing preferences are player data (InteractionPref below).
             // The player input handler is adapter-bound after engine init, so it is resolved per
             // switch (null tolerated).
             var controlSchemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1637,12 +1687,12 @@ namespace Ludots.Core.Engine
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
-            // Game-instance CommandPref seed: the player-level default intent +
+            // Game-instance InteractionPref seed: the player-level default intent +
             // dispatch pair map binding plants on every bound player representative lacking the
             // component. Seed ids are the kernel registries' own id spaces — the spaces the
             // arbiter and mounted contexts resolve in.
-            _commandPrefSeed = CommandPrefConfigLoader.ResolveSeed(
-                new CommandPrefConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
+            _interactionPrefSeed = InteractionPrefConfigLoader.ResolveSeed(
+                new InteractionPrefConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
                 commandIntentProfileRegistry,
                 castDispatchProfileRegistry);
 
@@ -2057,6 +2107,24 @@ namespace Ludots.Core.Engine
                         ? channel.Handler
                         : GetService(CoreServiceKeys.InputHandler)),
                 SystemGroup.InputCollection);
+            // #1398 S2b: context trigger gate — the world-side active context set diff
+            // mounts/unmounts profile-declared triggers[] graphs on the context subject;
+            // simulation-side twin of the local IMC projection above (observers and all
+            // context writers included, not only local seats).
+            // #1398 S2b: context trigger gate — the world-side active context set diff
+            // mounts/unmounts profile-declared triggers[] graphs on the context subject;
+            // simulation-side twin of the local IMC projection above (observers and all
+            // context writers included, not only local seats).
+            var interactionContextTriggerGate = new Gameplay.MapTriggers.InteractionContextTriggerGateSystem(
+                World,
+                TriggerManager,
+                interactionContextProfileRegistry,
+                graphProgramRegistry,
+                customEventCatalog.Names,
+                customEventCatalog.Schemas,
+                () => MapSessions);
+            _interactionContextTriggerGate = interactionContextTriggerGate;
+            RegisterSystem(interactionContextTriggerGate, SystemGroup.InputCollection);
             // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,
             // DEC-15); enablement and parameters come from the active control scheme's axisMove
             // declaration (single source of truth, hot-switch aware).
@@ -2174,7 +2242,8 @@ namespace Ludots.Core.Engine
                 teamLookup: teamEntityLookup,
                 relationships: relationshipRuntime,
                 memberOfTypeId: memberOfRelationshipTypeId,
-                entityTriggerGraphMounts: EntityTriggerGraphMounts),
+                entityTriggerGraphMounts: EntityTriggerGraphMounts,
+                initialInteractionContexts: interactionContextProfileRegistry),
                 SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntityLifecycleSystem(
@@ -2234,6 +2303,11 @@ namespace Ludots.Core.Engine
             _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
             RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
             var inputTriggerActions = new Ludots.Core.Gameplay.MapTriggers.InputTriggerActionCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            for (int i = 0; i < inputTriggerActions.Count; i++)
+            {
+                bridgedPointerActionIds.Add(inputTriggerActions[i].Id);
+            }
+
             RegisterSystem(
                 new Ludots.Core.Gameplay.MapTriggers.InputActionTriggerBridgeSystem(
                     World,
@@ -2241,7 +2315,9 @@ namespace Ludots.Core.Engine
                     TriggerManager,
                     CreateContext,
                     () => GetService(CoreServiceKeys.AuthoritativeInput),
-                    inputTriggerActions),
+                    () => GetService(CoreServiceKeys.AuthoritativePointerButtons),
+                    inputTriggerActions,
+                    interactionContextProfileRegistry),
                 SystemGroup.DeferredTriggerCollection);
 
             // Phase 5.5: Continuation (AwaitCallback drain — registration order)
@@ -2681,6 +2757,7 @@ namespace Ludots.Core.Engine
             bool wasFocused = focused != null && focused.MapId == mid;
 
             EntityTriggerGraphMounts?.DropMap(mid);
+            _interactionContextTriggerGate?.DropMap(mid);
             MapSessions.UnloadSession(mid, World);
             _mapLoadStatuses.Remove(mid);
 
@@ -2851,6 +2928,7 @@ namespace Ludots.Core.Engine
             if (innerSession != null)
             {
                 EntityTriggerGraphMounts?.DropMap(poppedId);
+                _interactionContextTriggerGate?.DropMap(poppedId);
                 MapSessions.UnloadSession(poppedId, World);
                 _mapLoadStatuses.Remove(poppedId);
             }

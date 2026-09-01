@@ -184,11 +184,11 @@ namespace ModdingTest
 
                 backend.MousePos = new Vector2(100, 100);
                 backend.MiddleDown = true;
-                inputHandler.Update();
+                inputHandler.Update(1f / 60f);
                 engine.Tick(0.016f);
 
                 backend.MousePos = new Vector2(140, 100);
-                inputHandler.Update();
+                inputHandler.Update(1f / 60f);
                 engine.Tick(0.016f);
 
                 var yaw = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.Yaw;

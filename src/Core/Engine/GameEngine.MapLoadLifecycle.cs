@@ -500,7 +500,7 @@ namespace Ludots.Core.Engine
             session.LocalSeats = participants.LocalSeats;
             session.TeamRelationships = participants.TeamRelationships;
 
-            SeedPlayerCommandPrefs(participants.Players);
+            SeedPlayerInteractionPrefs(participants.Players);
 
             if (CurrentMapSession == session)
             {
@@ -509,22 +509,22 @@ namespace Ludots.Core.Engine
         }
 
         /// <summary>
-        /// Plant the game-instance CommandPref seed on every bound player representative that
+        /// Plant the game-instance InteractionPref seed on every bound player representative that
         /// carries no component yet (player data survives map switches and world saves; seeding
         /// never overwrites an existing preference). Readers of the component fail fast on a
         /// missing seed, so this is the only writer at map binding time.
         /// </summary>
-        private void SeedPlayerCommandPrefs(PlayerEntityLookup players)
+        private void SeedPlayerInteractionPrefs(PlayerEntityLookup players)
         {
             foreach (KeyValuePair<int, Entity> entry in players.Entries)
             {
                 Entity rep = entry.Value;
-                if (rep == Entity.Null || !World.IsAlive(rep) || World.Has<Input.Interaction.CommandPref>(rep))
+                if (rep == Entity.Null || !World.IsAlive(rep) || World.Has<Input.Interaction.InteractionPref>(rep))
                 {
                     continue;
                 }
 
-                World.Add(rep, Input.Interaction.CommandPref.FromSeed(_commandPrefSeed));
+                World.Add(rep, Input.Interaction.InteractionPref.FromSeed(_interactionPrefSeed));
             }
         }
 

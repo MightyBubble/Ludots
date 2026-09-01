@@ -15,15 +15,18 @@ namespace Ludots.Core.Input.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly AuthoritativeInputAccumulator? _authoritativeInput;
         private readonly AuthoritativePointerButtonAccumulator? _pointerButtons;
- 
+        private readonly IReadOnlyList<string>? _pointerLifecycleActionIds;
+
         public InputRuntimeSystem(
             Dictionary<string, object> globals,
             AuthoritativeInputAccumulator? authoritativeInput = null,
-            AuthoritativePointerButtonAccumulator? pointerButtons = null)
+            AuthoritativePointerButtonAccumulator? pointerButtons = null,
+            IReadOnlyList<string>? pointerLifecycleActionIds = null)
         {
             _globals = globals;
             _authoritativeInput = authoritativeInput;
             _pointerButtons = pointerButtons;
+            _pointerLifecycleActionIds = pointerLifecycleActionIds;
         }
  
         public void Initialize()
@@ -46,7 +49,7 @@ namespace Ludots.Core.Input.Systems
             bool uiCaptured = _globals.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var capturedObj) && capturedObj is bool b && b;
             bool uiWheelCaptured = _globals.TryGetValue(CoreServiceKeys.UiWheelCaptured.Name, out var wheelCapturedObj) && wheelCapturedObj is bool wb && wb;
             input.InputBlocked = uiCaptured;
-            input.Update();
+            input.Update(dt);
             if (uiWheelCaptured)
             {
                 SuppressCameraZoom(input);
@@ -68,7 +71,7 @@ namespace Ludots.Core.Input.Systems
             if (_globals.TryGetValue(CoreServiceKeys.ClientLocalSeatInputRuntime.Name, out var seatInputObj) &&
                 seatInputObj is ClientLocalSeatInputRuntime seatInput)
             {
-                seatInput.UpdateVisualFrame();
+                seatInput.UpdateVisualFrame(dt);
             }
         }
 
@@ -100,6 +103,15 @@ namespace Ludots.Core.Input.Systems
             CapturePointerButton(input, bindings.ConfirmActionId, pointer);
             CapturePointerButton(input, bindings.CommandActionId, pointer);
             CapturePointerButton(input, bindings.CancelActionId, pointer);
+            if (_pointerLifecycleActionIds == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _pointerLifecycleActionIds.Count; i++)
+            {
+                CapturePointerButton(input, _pointerLifecycleActionIds[i], pointer);
+            }
         }
 
         private void PreserveConfiguredActionValues(PlayerInputHandler input)

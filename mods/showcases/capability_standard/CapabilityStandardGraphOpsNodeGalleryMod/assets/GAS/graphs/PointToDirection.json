@@ -1,0 +1,17 @@
+[
+  {
+    "id": "showcase.graph_op.PointToDirection",
+    "kind": "Query",
+    "entry": "load",
+    "nodes": [
+      { "id": "load", "op": "LoadCaster" },
+      { "id": "dir", "op": "PointToDirection", "validOutput": "hasDir" }
+    ],
+    "controlEdges": [
+      { "from": "load", "fromPort": "next", "to": "dir" }
+    ],
+    "valueEdges": [
+      { "from": "load", "fromPort": "value", "to": "dir", "toPort": "source" }
+    ]
+  }
+]

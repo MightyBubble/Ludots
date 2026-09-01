@@ -447,7 +447,7 @@
     "Policy": "DeepObject"
   },
   {
-    "Path": "Input/command_prefs.json",
+    "Path": "Input/interaction_prefs.json",
     "Policy": "DeepObject"
   },
   {

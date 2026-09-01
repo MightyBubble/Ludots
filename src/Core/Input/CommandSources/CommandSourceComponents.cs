@@ -92,5 +92,6 @@ namespace Ludots.Core.Input.CommandSources
     {
         public const string Additive = "QueueModifier";
         public const string Toggle = "PrecisionModifier";
+        public const string Subtract = "ModifierSubtract";
     }
 }

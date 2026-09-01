@@ -30,6 +30,11 @@ namespace Ludots.Core.Scripting
             MapTriggerEventPayloadKeys.EffectId,
             MapTriggerEventPayloadKeys.Moment,
             MapTriggerEventPayloadKeys.SourceMapId,
+            // Collection pass-through family (#1398 S2b): authored per-game event keys, so
+            // per-name schemas are not enumerable at build time either.
+            MapTriggerEventPayloadKeys.CollectionEntitySet,
+            MapTriggerEventPayloadKeys.CollectionOp,
+            MapTriggerEventPayloadKeys.CollectionKey,
         };
 
         /// <summary>
@@ -41,6 +46,9 @@ namespace Ludots.Core.Scripting
         {
             MapTriggerEventPayloadKeys.SourceMapId,
             MapTriggerEventPayloadKeys.SourceEntity,
+            MapTriggerEventPayloadKeys.CollectionEntitySet,
+            MapTriggerEventPayloadKeys.CollectionOp,
+            MapTriggerEventPayloadKeys.CollectionKey,
         };
 
         internal static bool IsTransportMetadataPayloadKey(string payloadKey)
@@ -102,10 +110,12 @@ namespace Ludots.Core.Scripting
             }),
             new(GameEvents.InputActionFired.Value, EventScope.Map, new EventParamSchema[]
             {
-                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
-                new("inputAction", EventParamType.String, MapTriggerEventPayloadKeys.InputAction),
-                new("groundXCm", EventParamType.Float, MapTriggerEventPayloadKeys.GroundXCm),
-                new("groundYCm", EventParamType.Float, MapTriggerEventPayloadKeys.GroundYCm),
+                new("rep", EventParamType.Entity, MapTriggerEventPayloadKeys.Rep),
+                new("action", EventParamType.String, MapTriggerEventPayloadKeys.Action),
+                new("pointerScreenX", EventParamType.Float, MapTriggerEventPayloadKeys.PointerScreenX),
+                new("pointerScreenY", EventParamType.Float, MapTriggerEventPayloadKeys.PointerScreenY),
+                new("modifiers", EventParamType.Int, MapTriggerEventPayloadKeys.Modifiers),
+                new("contextId", EventParamType.Int, MapTriggerEventPayloadKeys.ContextId),
                 new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity, Optional: true),
             }),
             new(GameEvents.MapVariableChanged.Value, EventScope.Map, new EventParamSchema[]

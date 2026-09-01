@@ -1,0 +1,55 @@
+# 框一圈点名
+
+虚线框罩住西边一段，框里的人被点名线逐个牵住。
+
+<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ScreenRegionToEntities/poster.png" src="artifacts/evidence/capability_standard_graph_op_ScreenRegionToEntities/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_ScreenRegionToEntities/play.mp4。
+</video>
+
+## 作者写法
+
+第一次来的 mod 作者看这里：这颗节点在 `assets/GAS/graphs.json`（或 `GAS/graphs/` 分片）里怎么写。签名取自引擎描述表，用例摘自画廊作者图，两处都是单一事实源。
+
+| 项 | 值 |
+|----|----|
+| 可用图种 | 仅 Query |
+| 返回 | 无（副作用节点） |
+| 输入端口（值边 toPort） | `list`（目标名单）、`a`（第一操作数）、`b`（第二操作数）、`c`（第三操作数）、`max`（上限） |
+| 特殊写法 | flags 填第四操作数寄存器编号 |
+
+手册分册（全量字段与语义）：[空间圈人 · gr-op-06](../mod-editor-prd/config/gr-op-06-spatial.md)
+
+真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/ScreenRegionToEntities.json`）：
+
+```json
+{"id": "region", "op": "ScreenRegionToEntities"}
+```
+
+接线（值边把上一步的结果送进本节点端口）：
+
+```json
+{"from": "minX", "fromPort": "value", "to": "region", "toPort": "a"}
+{"from": "minY", "fromPort": "value", "to": "region", "toPort": "b"}
+{"from": "maxX", "fromPort": "value", "to": "region", "toPort": "c"}
+{"from": "maxY", "fromPort": "value", "to": "region", "toPort": "max"}
+```
+
+## 这场是怎么搭出来的
+
+上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/ScreenRegionToEntities.json`，共 5 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
+
+ConstFloat → ConstFloat → ConstFloat → ConstFloat → **ScreenRegionToEntities**（本篇）
+
+图跑完，字幕报出结果：
+
+> 框里圈住{count}人，框外的退成灰影。
+
+## 边界与更多用法
+
+- 图种边界：可用于 Query；Effect / Score / Validation / Derived / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 同类用法：见手册分册的场景节。
+## 怎么进
+
+```text
+scripts/run-mod-launcher.cmd cli launch $capability_standard_graph_op_ScreenRegionToEntities --adapter raylib
+```

@@ -49,7 +49,7 @@ EffectTemplate:
 | 组件 | 状态 |
 |------|------|
 | InputOrderMapping.Entity | ✅ 已有 |
-| InteractionModeType (4种) | ✅ 已有 |
+| CastModeType (4种) | ✅ 已有 |
 | GetRelationship() | ✅ 已有 |
 | Phase Graph 条件分支 | ✅ 已有 |
 | ApplyEffectTemplate Graph op | ✅ 已有 |

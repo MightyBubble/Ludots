@@ -98,6 +98,97 @@ namespace Ludots.Core.Gameplay.MapTriggers
             return triggers;
         }
 
+        /// <summary>
+        /// Install-time fail-fast for one profile-declared context trigger mount (#1398 S2b):
+        /// the graph must be registered with TriggerGraph kind, declare at least one dispatch
+        /// entry, and — when the mount narrows by event name — carry a dispatch entry on that
+        /// exact event. Called from <c>InteractionContextProfileRegistry</c> install so unknown
+        /// graph ids and event names fail at load, not at first activation.
+        /// </summary>
+        public static void ValidateContextTriggerMount(
+            GraphProgramRegistry programs,
+            Ludots.Core.Input.Interaction.InteractionContextTriggerMount mount,
+            string ownerLabel)
+        {
+            if (programs == null) throw new ArgumentNullException(nameof(programs));
+            if (mount == null) throw new ArgumentNullException(nameof(mount));
+
+            GraphProgramRegistration registration = RequireGraphRegistration(
+                programs, mount.Trigger, "triggers", ownerLabel);
+            IReadOnlyList<TriggerGraphEntry> entries = registration.TriggerGraphEntries ?? Array.Empty<TriggerGraphEntry>();
+            bool hasDispatchEntry = false;
+            bool matchesEvent = false;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (entries[i].IsHookFragment)
+                {
+                    continue;
+                }
+
+                hasDispatchEntry = true;
+                if (!string.IsNullOrWhiteSpace(mount.Event) &&
+                    string.Equals(entries[i].EventName, mount.Event, StringComparison.Ordinal))
+                {
+                    matchesEvent = true;
+                }
+            }
+
+            if (!hasDispatchEntry)
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} triggers graph '{mount.Trigger}' declares no dispatch entries; context mounts need at least one non-hook entry.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(mount.Event) && !matchesEvent)
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} triggers graph '{mount.Trigger}' has no dispatch entry on event '{mount.Event}'.");
+            }
+        }
+
+        /// <summary>
+        /// Builds one context-gated entity-domain mount (#1398 S2b): the mounted profile's
+        /// trigger reference materialized on the context subject while the context is active.
+        /// Same mount chain as entity mounts (placed-instance validation, event vocabulary,
+        /// tag resolution, subscription-scope routing); the mount's optional event narrows the
+        /// graph's dispatch entries and its optional filters block replaces the entries' own
+        /// filters for this mount (reference-time override, not a merge). Caller owns
+        /// registration and lifecycle (InteractionContextTriggerGateSystem).
+        /// </summary>
+        public static List<Trigger> BuildContextMountTriggers(
+            GraphProgramRegistry programs,
+            Entity scope,
+            Ludots.Core.Input.Interaction.InteractionContextTriggerMount mount,
+            string ownerLabel,
+            CustomEventNameRegistry customEvents,
+            Ludots.Core.Systems.MapLoadEntityIndex? entityIndex = null,
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
+            System.Collections.Generic.IReadOnlySet<string>? regionIds = null)
+        {
+            if (customEvents == null) throw new ArgumentNullException(nameof(customEvents));
+
+            GraphProgramRegistration registration = RequireGraphRegistration(
+                programs, mount.Trigger, "triggers", ownerLabel);
+            var triggers = new List<Trigger>();
+            AppendEntryTriggers(
+                triggers,
+                registration,
+                mount.Trigger,
+                scope,
+                TriggerGraphMountDomain.Entity,
+                TriggerGraphMountRoute.Local,
+                0,
+                "triggers",
+                ownerLabel,
+                customEvents,
+                entityIndex: entityIndex,
+                eventSchemas: eventSchemas,
+                regionIds: regionIds,
+                entryEventFilter: string.IsNullOrWhiteSpace(mount.Event) ? null : mount.Event,
+                contextMount: mount);
+            return triggers;
+        }
+
         private static void AppendMapMountTriggers(
             List<Trigger> triggers,
             MapSession session,
@@ -321,7 +412,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
             string? modIdFilter = null,
             Ludots.Core.Systems.MapLoadEntityIndex? entityIndex = null,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
-            System.Collections.Generic.IReadOnlySet<string>? regionIds = null)
+            System.Collections.Generic.IReadOnlySet<string>? regionIds = null,
+            string? entryEventFilter = null,
+            Ludots.Core.Input.Interaction.InteractionContextTriggerMount? contextMount = null)
         {
             IReadOnlyList<TriggerGraphEntry> entries = registration.TriggerGraphEntries;
             if (entries == null || entries.Count == 0)
@@ -371,21 +464,35 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             GraphInstruction[] program = registration.Program;
+            bool eventFilterMatched = false;
 
             for (int e = 0; e < entries.Count; e++)
             {
                 TriggerGraphEntry entry = entries[e];
-                if ((uint)entry.StartPc >= (uint)program.Length)
-                {
-                    throw new InvalidOperationException(
-                        $"{ownerLabel} {fieldName} graph '{graph}' entry '{entry.Label}' has start pc {entry.StartPc} outside the program (length {program.Length}).");
-                }
-
                 if (entry.IsHookFragment)
                 {
                     // #1124: the body was woven into its target graph's anchor at compile
                     // time; the fragment itself never dispatches on its authored event.
                     continue;
+                }
+
+                if (entryEventFilter != null &&
+                    !string.Equals(entry.EventName, entryEventFilter, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                eventFilterMatched = true;
+
+                if (contextMount?.Filters != null)
+                {
+                    entry = WithContextMountFilters(entry, contextMount.Filters, graph, ownerLabel);
+                }
+
+                if ((uint)entry.StartPc >= (uint)program.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"{ownerLabel} {fieldName} graph '{graph}' entry '{entry.Label}' has start pc {entry.StartPc} outside the program (length {program.Length}).");
                 }
 
                 if (entry.Filters.InstanceId != null &&
@@ -446,6 +553,92 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     triggers.Add(new TriggerGraphResumeTrigger(mountTrigger));
                 }
             }
+
+            if (entryEventFilter != null && !eventFilterMatched)
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} {fieldName} graph '{graph}' has no dispatch entry on event '{entryEventFilter}'.");
+            }
+        }
+
+        /// <summary>
+        /// Context mounts may override the selected entries' authored filters with the mount's
+        /// own filters block (#1398 S2b) — a reference-time replacement, not a merge. Parsing
+        /// mirrors the entry filter compiler rules: trimmed non-empty strings, direction as
+        /// cross_above/cross_below, threshold and direction declared together.
+        /// </summary>
+        private static TriggerGraphEntry WithContextMountFilters(
+            TriggerGraphEntry entry,
+            TriggerGraphEntryFiltersConfig filters,
+            string graph,
+            string ownerLabel)
+        {
+            string? region = RequireTrimmedFilterField(filters.Region, "region", graph, ownerLabel);
+            string? tag = RequireTrimmedFilterField(filters.Tag, "tag", graph, ownerLabel);
+            string? action = RequireTrimmedFilterField(filters.Action, "action", graph, ownerLabel);
+            string? instanceId = RequireTrimmedFilterField(filters.InstanceId, "instanceId", graph, ownerLabel);
+            string? varName = RequireTrimmedFilterField(filters.VarName, "varName", graph, ownerLabel);
+
+            TriggerGraphEntryFilterDirection? direction = null;
+            if (filters.Direction != null)
+            {
+                string directionText = filters.Direction.Trim();
+                if (string.Equals(directionText, "cross_above", StringComparison.Ordinal))
+                {
+                    direction = TriggerGraphEntryFilterDirection.CrossAbove;
+                }
+                else if (string.Equals(directionText, "cross_below", StringComparison.Ordinal))
+                {
+                    direction = TriggerGraphEntryFilterDirection.CrossBelow;
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"{ownerLabel} triggers graph '{graph}' filters field 'direction' must be 'cross_above' or 'cross_below' (got '{directionText}').");
+                }
+            }
+
+            if (filters.Threshold.HasValue != direction.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} triggers graph '{graph}' filters fields 'threshold' and 'direction' must be declared together.");
+            }
+
+            return new TriggerGraphEntry(
+                entry.Label,
+                entry.EventName,
+                entry.StartPc,
+                entry.Once,
+                new TriggerGraphEntryFilters(
+                    region,
+                    tag,
+                    filters.Team,
+                    filters.Threshold,
+                    direction,
+                    action,
+                    instanceId,
+                    tagId: null,
+                    varName: varName),
+                entry.Refire,
+                entry.Priority,
+                entry.IsHookFragment);
+        }
+
+        private static string? RequireTrimmedFilterField(string? value, string field, string graph, string ownerLabel)
+        {
+            if (value == null)
+            {
+                return null;
+            }
+
+            string trimmed = value.Trim();
+            if (trimmed.Length == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} triggers graph '{graph}' filters field '{field}' requires a non-empty string.");
+            }
+
+            return trimmed;
         }
 
         /// <summary>

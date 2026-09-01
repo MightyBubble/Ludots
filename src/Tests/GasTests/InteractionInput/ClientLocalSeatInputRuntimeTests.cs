@@ -140,7 +140,7 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.Runtime.TryGetChannel("seat.1", out ClientLocalSeatInputChannel channelOne), Is.True);
 
             channelZero.Handler.InjectAction("Move", new Vector3(1f, 0f, 0f));
-            harness.Runtime.UpdateVisualFrame();
+            harness.Runtime.UpdateVisualFrame(1f / 60f);
             harness.Runtime.FreezeSnapshots(discardLiveInput: false);
 
             Assert.That(channelZero.Reader.ReadAction<Vector2>("Move"), Is.EqualTo(new Vector2(1f, 0f)));

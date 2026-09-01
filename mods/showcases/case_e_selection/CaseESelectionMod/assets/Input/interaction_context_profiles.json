@@ -1,0 +1,33 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.case_e.battle",
+      "activeCollectionKey": "case_e.battle",
+      "activeEntityViewKey": "case_e.battle.view",
+      "bindings": [
+        "CaseE.BoxSelectBegin",
+        "CaseE.BoxSelect",
+        "CaseE.TapSelect",
+        "QueueModifier",
+        "PrecisionModifier",
+        "ModifierSubtract"
+      ],
+      "triggers": [
+        { "trigger": "graph.case_e.box_begin" }
+      ]
+    },
+    {
+      "id": "interaction.context.case_e.boxing",
+      "activeCollectionKey": "case_e.boxing",
+      "activeEntityViewKey": "case_e.boxing.view",
+      "bindings": [
+        "CaseE.BoxSelect",
+        "CaseE.TapSelect"
+      ],
+      "triggers": [
+        { "trigger": "graph.case_e.box_commit" },
+        { "trigger": "graph.case_e.tap_commit" }
+      ]
+    }
+  ]
+}

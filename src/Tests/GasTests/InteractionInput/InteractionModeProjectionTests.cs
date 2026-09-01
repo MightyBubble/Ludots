@@ -137,7 +137,7 @@ namespace Ludots.Tests.GAS
 
             Assert.That(harness.System.LastCommands, Is.Empty, "the sparse default projects no mode contexts");
             harness.Backend.Buttons["<Keyboard>/q"] = true;
-            harness.Handler.Update();
+            harness.Handler.Update(1f / 60f);
             Assert.That(harness.Handler.IsDown("CmdA"), Is.False);
         }
 
@@ -157,7 +157,7 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.System.LastCommands[1], Is.EqualTo(new InputContextProjectionCommand(SeatId, ContextB, InputContextProjectionOp.Push)));
 
             harness.Backend.Buttons["<Keyboard>/q"] = true;
-            harness.Handler.Update();
+            harness.Handler.Update(1f / 60f);
             Assert.That(harness.Handler.IsDown("CmdA"), Is.True, "targeting contexts must be active on the handler stack");
 
             harness.System.Update(0.016f);
@@ -184,7 +184,7 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.System.LastCommands[1].ContextId, Is.EqualTo(ContextA));
 
             harness.Backend.Buttons["<Keyboard>/q"] = true;
-            harness.Handler.Update();
+            harness.Handler.Update(1f / 60f);
             Assert.That(harness.Handler.IsDown("CmdA"), Is.False, "mode contexts must be fully popped");
         }
 
@@ -238,7 +238,7 @@ namespace Ludots.Tests.GAS
                 Is.EqualTo(new InputContextProjectionCommand(SeatId, ContextA, InputContextProjectionOp.Push)));
 
             harness.Backend.Buttons["<Keyboard>/q"] = true;
-            harness.Handler.Update();
+            harness.Handler.Update(1f / 60f);
             Assert.That(harness.Handler.IsDown("CmdA"), Is.True, "the frame's input context must be active on the seat handler");
 
             harness.System.Update(0.016f);
@@ -259,7 +259,7 @@ namespace Ludots.Tests.GAS
             harness.System.Update(0.016f);
             Assert.That(harness.System.LastCommands.Count, Is.EqualTo(1));
 
-            world.Remove<ActiveInteractionContext>(rep);
+            world.Remove<InteractionContextInstance>(rep);
             harness.System.Update(0.016f);
 
             Assert.That(harness.System.LastCommands.Count, Is.EqualTo(1));
@@ -268,7 +268,7 @@ namespace Ludots.Tests.GAS
                 Is.EqualTo(new InputContextProjectionCommand(SeatId, ContextA, InputContextProjectionOp.Pop)));
 
             harness.Backend.Buttons["<Keyboard>/q"] = true;
-            harness.Handler.Update();
+            harness.Handler.Update(1f / 60f);
             Assert.That(harness.Handler.IsDown("CmdA"), Is.False, "the frame's input context must be released after reclamation");
         }
 
@@ -505,10 +505,10 @@ namespace Ludots.Tests.GAS
 
             public void MountContext(Entity subject, string inputContextId)
             {
-                _world.Add(subject, new ActiveInteractionContext
+                _world.Add(subject, new InteractionContextInstance
                 {
                     InputContextId = ContextProfiles.InputContextIdRegistry.Register(inputContextId),
-                    Source = ActiveInteractionContextSource.ExecLifecycle,
+                    Source = InteractionContextInstanceSource.ExecLifecycle,
                 });
             }
 

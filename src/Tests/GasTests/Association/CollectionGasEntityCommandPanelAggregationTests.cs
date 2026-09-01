@@ -178,7 +178,7 @@ namespace Ludots.Tests.GAS
             var fixture = SelectionFixture.Create(engine);
 
             var submitted = new List<Order>();
-            InputOrderMappingSystem mapping = CreateMappingSystem(submitted, InteractionModeType.SmartCast);
+            InputOrderMappingSystem mapping = CreateMappingSystem(submitted, CastModeType.SmartCast);
             mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
@@ -246,7 +246,7 @@ namespace Ludots.Tests.GAS
             var fixture = SelectionFixture.Create(engine);
 
             var submitted = new List<Order>();
-            InputOrderMappingSystem mapping = CreateMappingSystem(submitted, InteractionModeType.AimCast);
+            InputOrderMappingSystem mapping = CreateMappingSystem(submitted, CastModeType.AimCast);
             mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
@@ -522,7 +522,7 @@ namespace Ludots.Tests.GAS
 
         private static InputOrderMappingSystem CreateMappingSystem(
             List<Order> submitted,
-            InteractionModeType interactionMode = InteractionModeType.TargetFirst)
+            CastModeType interactionMode = CastModeType.TargetFirst)
         {
             var mapping = new InputOrderMappingSystem(new FrozenInputActionReader(), new InputOrderMappingConfig
             {

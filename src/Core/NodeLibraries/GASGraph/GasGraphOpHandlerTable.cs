@@ -10,6 +10,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
@@ -335,7 +336,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.FloatToText or
                 GraphNodeOp.SinkPresentationText or
                 GraphNodeOp.LoadTextKey or
-                GraphNodeOp.StartDialogue
+                GraphNodeOp.StartDialogue or
+                GraphNodeOp.ScreenPointToGround or
+                GraphNodeOp.ScreenPointToEntity or
+                GraphNodeOp.ScreenRegionToEntities or
+                GraphNodeOp.PointToDirection or
+                GraphNodeOp.StickToDirection or
+                GraphNodeOp.ActivateContext or
+                GraphNodeOp.DeactivateContext or
+                GraphNodeOp.DispatchCollectionEvent
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -809,6 +818,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.QueryCollectProgressionNodes, HandleQueryCollectProgressionNodes, "QueryCollectProgressionNodes graph opcode.");
             Register(GraphNodeOp.QueryCollectAbilityHolders, HandleQueryCollectAbilityHolders, "QueryCollectAbilityHolders graph opcode.");
             Register(GraphNodeOp.QueryCollectActiveDialogueChoices, HandleQueryCollectActiveDialogueChoices, "QueryCollectActiveDialogueChoices graph opcode.");
+            Register(GraphNodeOp.ScreenPointToGround, HandleScreenPointToGround, "ScreenPointToGround graph opcode.");
+            Register(GraphNodeOp.ScreenPointToEntity, HandleScreenPointToEntity, "ScreenPointToEntity graph opcode.");
+            Register(GraphNodeOp.ScreenRegionToEntities, HandleScreenRegionToEntities, "ScreenRegionToEntities graph opcode.");
+            Register(GraphNodeOp.PointToDirection, HandlePointToDirection, "PointToDirection graph opcode.");
+            Register(GraphNodeOp.StickToDirection, HandleStickToDirection, "StickToDirection graph opcode.");
             Register(GraphNodeOp.LoadEffectTiming, HandleLoadEffectTiming, "LoadEffectTiming graph opcode.");
             Register(GraphNodeOp.LoadEffectStack, HandleLoadEffectStack, "LoadEffectStack graph opcode.");
             Register(GraphNodeOp.QueryFilterTeam, HandleQueryFilterTeam, "QueryFilterTeam graph opcode.");
@@ -892,7 +906,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.CreatePanel, HandleCreatePanel, "CreatePanel graph opcode.");
         Register(GraphNodeOp.SpawnTemplate, HandleSpawnTemplate, "SpawnTemplate graph opcode.");
         Register(GraphNodeOp.SetWorldPosition, HandleSetWorldPosition, "SetWorldPosition graph opcode.");
-        Register(GraphNodeOp.SetInteractionMode, HandleSetInteractionMode, "SetInteractionMode graph opcode.");
+            Register(GraphNodeOp.SetInteractionMode, HandleSetInteractionMode, "SetInteractionMode graph opcode.");
+            Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
+            Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
+            Register(GraphNodeOp.DispatchCollectionEvent, HandleDispatchCollectionEvent, "DispatchCollectionEvent graph opcode.");
         Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
@@ -1480,6 +1497,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.Api.SetInteractionMode(target, ins.Imm);
         }
 
+        private static void HandleActivateContext(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.ActivateContext(
+                target,
+                ContextOpEncoding.UnpackContext(ins.Imm),
+                ContextOpEncoding.UnpackParent(ins.Imm));
+        }
+
+        private static void HandleDeactivateContext(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.DeactivateContext(target, ContextOpEncoding.UnpackContext(ins.Imm));
+        }
+
+        private static void HandleDispatchCollectionEvent(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            MapId mapId = s.MapScope ?? ResolveMapOfEntity(ref s, s.Caster);
+            s.Api.DispatchCollectionEvent(
+                ins.Imm,
+                s.I[ins.B],
+                s.Caster,
+                mapId,
+                s.Targets,
+                s.TargetList.Count);
+        }
+
         private static void HandleSetPanelAudience(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.SetPanelAudience(
@@ -1981,6 +2025,111 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleQueryCollectActiveEffects(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.TargetList.SetCount(s.Api.CollectActiveEffects(s.E[ins.A], s.Targets));
+        }
+
+        private static void HandleScreenPointToGround(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string? seatId = ResolveSeatSymbol(ins.Imm, nameof(GraphNodeOp.ScreenPointToGround));
+            if (s.Api.TryScreenPointToGround(s.F[ins.A], s.F[ins.B], seatId, out IntVector2 groundCm))
+            {
+                s.B[ins.Dst] = 1;
+                s.TargetPosCm = groundCm;
+            }
+            else
+            {
+                s.B[ins.Dst] = 0;
+            }
+        }
+
+        private static void HandleScreenPointToEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string? seatId = ResolveSeatSymbol(ins.Imm, nameof(GraphNodeOp.ScreenPointToEntity));
+            s.E[ins.Dst] = s.Api.PickScreenPointEntity(
+                s.Targets,
+                s.TargetList.Count,
+                s.E[ins.A],
+                seatId,
+                s.F[ins.B],
+                s.F[ins.C],
+                ins.ImmF);
+        }
+
+        private static void HandleScreenRegionToEntities(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string? seatId = ResolveSeatSymbol(ins.Imm, nameof(GraphNodeOp.ScreenRegionToEntities));
+            var rect = ScreenRect.FromPoints(
+                new System.Numerics.Vector2(s.F[ins.A], s.F[ins.B]),
+                new System.Numerics.Vector2(s.F[ins.C], s.F[ins.Flags]));
+            s.TargetList.SetCount(s.Api.FilterScreenRegionEntities(s.Targets, s.TargetList.Count, in rect, seatId));
+        }
+
+        private static string? ResolveSeatSymbol(int seatKeyId, string operation)
+        {
+            string? seatId = seatKeyId > 0
+                ? Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(seatKeyId)
+                : null;
+            if (seatKeyId > 0 && string.IsNullOrWhiteSpace(seatId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.AimSourceSeatKey: {operation} references unregistered seat key id {seatKeyId}.");
+            }
+
+            return seatId;
+        }
+
+        private static void HandlePointToDirection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (ins.Flags != byte.MaxValue)
+            {
+                s.B[ins.Flags] = 0;
+            }
+
+            s.F[ins.Dst] = 0f;
+            Entity rep = s.E[ins.A];
+            if (s.World == null ||
+                !s.World.IsAlive(rep) ||
+                !s.World.TryGet<WorldPositionCm>(rep, out WorldPositionCm position))
+            {
+                return;
+            }
+
+            float dx = s.TargetPosCm.X - position.Value.X.ToFloat();
+            float dy = s.TargetPosCm.Y - position.Value.Y.ToFloat();
+            if (dx == 0f && dy == 0f)
+            {
+                return;
+            }
+
+            if (ins.Flags != byte.MaxValue)
+            {
+                s.B[ins.Flags] = 1;
+            }
+
+            s.F[ins.Dst] = MathF.Atan2(dy, dx) * (180f / MathF.PI);
+        }
+
+        private static void HandleStickToDirection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            const float DeadzoneSquared = 1e-6f;
+            if (ins.Flags != byte.MaxValue)
+            {
+                s.B[ins.Flags] = 0;
+            }
+
+            s.F[ins.Dst] = 0f;
+            float x = s.F[ins.A];
+            float y = s.F[ins.B];
+            if ((x * x) + (y * y) < DeadzoneSquared)
+            {
+                return;
+            }
+
+            if (ins.Flags != byte.MaxValue)
+            {
+                s.B[ins.Flags] = 1;
+            }
+
+            s.F[ins.Dst] = MathF.Atan2(y, x) * (180f / MathF.PI);
         }
 
         private static void HandleQueryCollectEffectTemplates(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

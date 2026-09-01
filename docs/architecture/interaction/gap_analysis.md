@@ -11,7 +11,7 @@
 
 | 项目 | 当前结论 | 证据 |
 |------|----------|------|
-| `ContextScored Acquisition 不存在` | 已关闭。`ContextScored` 已进入 `InteractionModeType` 与 `InputOrderMappingSystem` | `src/Core/Input/Orders/InputOrderMapping.cs`、`src/Core/Input/Orders/InputOrderMappingSystem.cs` |
+| `ContextScored Acquisition 不存在` | 已关闭。`ContextScored` 已进入 `CastModeType` 与 `InputOrderMappingSystem` | `src/Core/Input/Orders/InputOrderMapping.cs`、`src/Core/Input/Orders/InputOrderMappingSystem.cs` |
 | `ContextGroup -> ability dispatch` | 已关闭。真实运行时为 registry + loader + resolver 链路 | `src/Core/Gameplay/GAS/ContextGroupRegistry.cs`、`src/Core/Gameplay/GAS/Config/ContextGroupConfigLoader.cs`、`src/Core/Input/Orders/ContextScoredOrderResolver.cs` |
 | `AbilityActivationRequireTags 不存在` | 已关闭。当前仓库使用 `AbilityActivationBlockTags.RequiredAll` / `BlockedAny` | `src/Core/Gameplay/GAS/Components/AbilityActivationBlockTags.cs`、`src/Core/Gameplay/GAS/Systems/AbilitySystem.cs`、`src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs` |
 | `Form-based ability routing 不存在` | 已关闭。当前分支已有 form-set registry + loader + routing system，并通过分层 effective slot 解析接入输入/执行/indicator/context 路径 | `src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs`、`src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs`、`src/Core/Gameplay/GAS/Systems/AbilityFormRoutingSystem.cs`、`src/Core/Gameplay/GAS/Components/AbilityStateBuffer.cs` |
@@ -30,7 +30,7 @@
 - `ContextGroupRegistry` 保存 `groupId -> ContextGroupDefinition` 与 `rootAbilityId -> groupId`
 - `ContextGroupConfigLoader` 从 `GAS/context_groups.json` 编译候选
 - `ContextScoredOrderResolver` 解析 concrete slot + concrete target
-- `InputOrderMappingSystem` 在 `InteractionModeType.ContextScored` 分支提交最终 order
+- `InputOrderMappingSystem` 在 `CastModeType.ContextScored` 分支提交最终 order
 
 这让 ContextScored 保持在输入解析层闭环，而不把评分路由硬编码进 `AbilityDefinition`。
 

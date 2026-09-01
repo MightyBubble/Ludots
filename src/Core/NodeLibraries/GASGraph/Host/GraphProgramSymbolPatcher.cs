@@ -121,6 +121,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.DestroyPanel:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.ActivateContext:
+                        ins.Imm = ContextOpEncoding.Pack(
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
+                            ins.Dst == byte.MaxValue
+                                ? 0
+                                : ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
+                        ins.Dst = 0;
+                        break;
+                    case GraphNodeOp.DeactivateContext:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.DispatchCollectionEvent:
+                        // The event key resolves in the config key space; the collection key
+                        // resolves in the EntityCollectionStore key space (the writer reads it
+                        // back through the store registry), mirroring QueryFromCollection.
+                        ins.Imm = CollectionEventOpEncoding.Pack(
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
+                            ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Dst)));
+                        ins.Dst = 0;
+                        break;
                     case GraphNodeOp.SetPanelAudience:
                         ins.Imm = UI.PanelHosting.PanelOpEncoding.PackAudience(
                             ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
@@ -131,6 +151,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         break;
                     case GraphNodeOp.QueryFromCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.ScreenPointToEntity:
+                        if (ins.Imm >= 0)
+                        {
+                            ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        }
                         break;
                     case GraphNodeOp.SnapToNearestInCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));

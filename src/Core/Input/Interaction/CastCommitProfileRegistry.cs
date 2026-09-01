@@ -153,16 +153,16 @@ namespace Ludots.Core.Input.Interaction
             if (!_contextProfiles.TryCreateActiveContext(
                     args.ContextProfileId,
                     ctx.ContextEntity,
-                    ActiveInteractionContextSource.CastCommitOp,
-                    out ActiveInteractionContext context))
+                    InteractionContextInstanceSource.CastCommitOp,
+                    out InteractionContextInstance context))
             {
                 throw new InvalidOperationException(
                     $"Interaction op '{InteractionOpKinds.PushFrame}' references interaction context profile id {args.ContextProfileId} which is not installed.");
             }
 
-            if (ctx.World.Has<ActiveInteractionContext>(ctx.Subject))
+            if (ctx.World.Has<InteractionContextInstance>(ctx.Subject))
             {
-                ctx.World.Get<ActiveInteractionContext>(ctx.Subject) = context;
+                ctx.World.Get<InteractionContextInstance>(ctx.Subject) = context;
                 return;
             }
 
@@ -171,7 +171,7 @@ namespace Ludots.Core.Input.Interaction
 
         private static void ExecutePopFrame(in InteractionOpContext ctx, in InteractionOpArgs args)
         {
-            if (!ctx.World.TryGet<ActiveInteractionContext>(ctx.Subject, out ActiveInteractionContext mounted))
+            if (!ctx.World.TryGet<InteractionContextInstance>(ctx.Subject, out InteractionContextInstance mounted))
             {
                 throw new InvalidOperationException(
                     $"Interaction op '{InteractionOpKinds.PopFrame}' executed on a subject with no active interaction context.");
@@ -179,13 +179,13 @@ namespace Ludots.Core.Input.Interaction
 
             // Only the op's own mounts are poppable — popping an exec-carried context or the
             // steady state is a configuration error and fails fast here.
-            if (mounted.Source != ActiveInteractionContextSource.CastCommitOp)
+            if (mounted.Source != InteractionContextInstanceSource.CastCommitOp)
             {
                 throw new InvalidOperationException(
                     $"Interaction op '{InteractionOpKinds.PopFrame}' cannot remove the active interaction context on entity {ctx.Subject}; it was mounted by {mounted.Source}.");
             }
 
-            ctx.World.Remove<ActiveInteractionContext>(ctx.Subject);
+            ctx.World.Remove<InteractionContextInstance>(ctx.Subject);
         }
 
         private static void ExecuteSubmitOrder(in InteractionOpContext ctx, in InteractionOpArgs args)

@@ -104,7 +104,7 @@ namespace Ludots.Tests.GAS
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.ContextScored,
+                InteractionMode = CastModeType.ContextScored,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -132,7 +132,7 @@ namespace Ludots.Tests.GAS
             mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             input.InjectButtonPress("Attack");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
 
             Assert.That(orders.Count, Is.EqualTo(1));

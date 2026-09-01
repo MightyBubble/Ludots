@@ -276,7 +276,7 @@ namespace EntityCommandPanelMod.Runtime
             bool hasActorTags = _engine.World.TryGet(target, out GameplayTagContainer actorTags);
             AbilityDefinitionRegistry? abilityDefinitions = _engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
             InputOrderMappingSystem? inputMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-            InteractionModeType interactionMode = inputMapping?.InteractionMode ?? InteractionModeType.TargetFirst;
+            CastModeType interactionMode = inputMapping?.InteractionMode ?? CastModeType.TargetFirst;
 
             if (!TryResolveGroup(target, groupIndex, out var kind, out int routeIndex, out AbilityFormSetDefinition formSet, out _))
             {
@@ -602,7 +602,7 @@ namespace EntityCommandPanelMod.Runtime
             return _progressionRequirements;
         }
 
-        private static string ResolveAbilityInteractionModeKey(InteractionModeType interactionMode, in AbilityDefinition abilityDefinition)
+        private static string ResolveAbilityInteractionModeKey(CastModeType interactionMode, in AbilityDefinition abilityDefinition)
         {
             if (abilityDefinition.HasInputBindingOverride &&
                 abilityDefinition.InputBindingOverride.HasCastModeOverride)
@@ -1362,26 +1362,26 @@ namespace EntityCommandPanelMod.Runtime
         {
             return interactionModeKey switch
             {
-                nameof(InteractionModeType.TargetFirst) => "Target First",
-                nameof(InteractionModeType.SmartCast) => "Smart Cast",
-                nameof(InteractionModeType.AimCast) => "Aim Then Confirm",
-                nameof(InteractionModeType.SmartCastWithIndicator) => "Release To Cast",
-                nameof(InteractionModeType.PressReleaseAimCast) => "Release Then Confirm",
-                nameof(InteractionModeType.ContextScored) => "Context Scored",
+                nameof(CastModeType.TargetFirst) => "Target First",
+                nameof(CastModeType.SmartCast) => "Smart Cast",
+                nameof(CastModeType.AimCast) => "Aim Then Confirm",
+                nameof(CastModeType.SmartCastWithIndicator) => "Release To Cast",
+                nameof(CastModeType.PressReleaseAimCast) => "Release Then Confirm",
+                nameof(CastModeType.ContextScored) => "Context Scored",
                 _ => string.Empty
             };
         }
 
-        private static string ResolveInteractionModeKey(InteractionModeType mode)
+        private static string ResolveInteractionModeKey(CastModeType mode)
         {
             return mode switch
             {
-                InteractionModeType.TargetFirst => nameof(InteractionModeType.TargetFirst),
-                InteractionModeType.SmartCast => nameof(InteractionModeType.SmartCast),
-                InteractionModeType.AimCast => nameof(InteractionModeType.AimCast),
-                InteractionModeType.SmartCastWithIndicator => nameof(InteractionModeType.SmartCastWithIndicator),
-                InteractionModeType.PressReleaseAimCast => nameof(InteractionModeType.PressReleaseAimCast),
-                InteractionModeType.ContextScored => nameof(InteractionModeType.ContextScored),
+                CastModeType.TargetFirst => nameof(CastModeType.TargetFirst),
+                CastModeType.SmartCast => nameof(CastModeType.SmartCast),
+                CastModeType.AimCast => nameof(CastModeType.AimCast),
+                CastModeType.SmartCastWithIndicator => nameof(CastModeType.SmartCastWithIndicator),
+                CastModeType.PressReleaseAimCast => nameof(CastModeType.PressReleaseAimCast),
+                CastModeType.ContextScored => nameof(CastModeType.ContextScored),
                 _ => mode.ToString()
             };
         }

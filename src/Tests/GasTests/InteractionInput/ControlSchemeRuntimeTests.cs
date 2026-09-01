@@ -51,7 +51,7 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
 
             harness.Backend.Buttons["<Keyboard>/q"] = true;
-            harness.Handler.Update();
+            harness.Handler.Update(1f / 60f);
             Assert.That(harness.Handler.IsDown("CmdA"), Is.True, "the initial scheme's IMC context must be active after install.");
 
             uint revisionBefore = harness.Runtime.Revision;
@@ -59,7 +59,7 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.Runtime.Revision, Is.GreaterThan(revisionBefore));
 
             harness.Backend.Buttons["<Keyboard>/e"] = true;
-            harness.Handler.Update();
+            harness.Handler.Update(1f / 60f);
             Assert.That(harness.Handler.IsDown("CmdA"), Is.False, "scheme A's IMC context must be popped on switch.");
             Assert.That(harness.Handler.IsDown("CmdB"), Is.True, "scheme B's IMC context must be pushed on switch.");
         }
@@ -109,7 +109,7 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.False);
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
             harness.Backend.Buttons["<Keyboard>/q"] = true;
-            harness.Handler.Update();
+            harness.Handler.Update(1f / 60f);
             Assert.That(harness.Handler.IsDown("CmdA"), Is.True);
 
             Assert.That(harness.Runtime.TrySwitch(schemeId: 0), Is.False, "id 0 is never installed.");
@@ -309,13 +309,13 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
             Entity rep = world.Create();
-            world.Add(rep, new ActiveInteractionContext
+            world.Add(rep, new InteractionContextInstance
             {
                 ContextEntity = world.Create(),
                 CommandIntentProfileId = harness.IntentIds.Register(AltIntent),
             });
 
-            CommandPref pref = NewPref(harness, DefaultIntent);
+            InteractionPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
                 CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
                 Is.EqualTo(harness.IntentIds.GetId(AltIntent)),
@@ -329,13 +329,13 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world, withHandler: false);
             Entity rep = world.Create();
 
-            CommandPref pref = NewPref(harness, DefaultIntent);
+            InteractionPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
                 CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
                 Is.EqualTo(harness.IntentIds.GetId(DefaultIntent)),
                 "steady state (no mounted interaction context) consumes the possessed rep's player default intent (DEC-14).");
 
-            CommandPref other = NewPref(harness, AltIntent);
+            InteractionPref other = NewPref(harness, AltIntent);
             Assert.That(
                 CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in other),
                 Is.EqualTo(harness.IntentIds.GetId(AltIntent)),
@@ -348,13 +348,13 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
             Entity rep = world.Create();
-            world.Add(rep, new ActiveInteractionContext
+            world.Add(rep, new InteractionContextInstance
             {
                 ContextEntity = world.Create(),
                 CommandIntentProfileId = 0,
             });
 
-            CommandPref pref = NewPref(harness, DefaultIntent);
+            InteractionPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
                 CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
                 Is.EqualTo(0),
@@ -375,19 +375,19 @@ namespace Ludots.Tests.GAS
             ControlSchemeDefinition defaultScheme = config!.Schemes.Single(scheme => scheme.Id == "scheme.default");
             Assert.That(defaultScheme.AxisMove, Is.Null, "default shipped scheme keeps axis movement disabled by topology.");
 
-            string prefsPath = Path.Combine(FindRepoRoot(), "assets", "Input", "command_prefs.json");
+            string prefsPath = Path.Combine(FindRepoRoot(), "assets", "Input", "interaction_prefs.json");
             Assert.That(File.Exists(prefsPath), Is.True, $"Missing {prefsPath}");
-            var prefs = JsonSerializer.Deserialize<CommandPrefsConfig>(
+            var prefs = JsonSerializer.Deserialize<InteractionPrefsConfig>(
                 File.ReadAllText(prefsPath),
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            CommandPrefConfigLoader.Validate(prefs!, "assets");
+            InteractionPrefConfigLoader.Validate(prefs!, "assets");
             Assert.That(prefs!.Defaults.CastDispatchProfileId, Is.EqualTo("dispatch.all_together"));
 
             string catalogPath = Path.Combine(FindRepoRoot(), "assets", "config_catalog.json");
             string catalog = File.ReadAllText(catalogPath);
             Assert.That(catalog, Does.Not.Contain("Input/axis_move.json"));
-            Assert.That(catalog, Does.Contain("Input/command_prefs.json"),
-                "the command preference seed config is a catalog-declared required config.");
+            Assert.That(catalog, Does.Contain("Input/interaction_prefs.json"),
+                "the interaction preference seed config is a catalog-declared required config.");
         }
 
         [Test]
@@ -405,7 +405,7 @@ namespace Ludots.Tests.GAS
                 () => ControlSchemeConfigLoader.RejectLegacySchemeDefaults(legacy, "Input/control_schemes.json"));
             Assert.That(error!.Message, Does.Contain("scheme.test.a"));
             Assert.That(error.Message, Does.Contain("'defaults'"));
-            Assert.That(error.Message, Does.Contain("command_prefs.json"));
+            Assert.That(error.Message, Does.Contain("interaction_prefs.json"));
 
             var current = System.Text.Json.Nodes.JsonNode.Parse("""
                 {
@@ -433,14 +433,14 @@ namespace Ludots.Tests.GAS
             throw new DirectoryNotFoundException("Could not locate repo root containing src/Core/Ludots.Core.csproj");
         }
 
-        private static CommandPref NewPref(Harness harness, string intentName)
+        private static InteractionPref NewPref(Harness harness, string intentName)
         {
             return NewPref(harness.IntentIds.Register(intentName));
         }
 
-        private static CommandPref NewPref(int intentId)
+        private static InteractionPref NewPref(int intentId)
         {
-            CommandPref pref = default;
+            InteractionPref pref = default;
             pref.SetPlayerDefault(intentId, castDispatchProfileId: 777);
             return pref;
         }

@@ -1,6 +1,6 @@
-# 落点读数，小数也不丢
+# 指针读数，小数也不丢
 
-号令一落，东西读数带着小数从事件载荷里飞进信件板。
+号令一落，指针像素读数带着小数从事件载荷里飞进信件板。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_LoadEntryPayloadFloat/play.mp4。
@@ -22,7 +22,7 @@
 真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/LoadEntryPayloadFloat.json`）：
 
 ```json
-{"id": "readGroundX", "op": "LoadEntryPayloadFloat", "payloadKey": "MapTrigger.GroundXCm"}
+{"id": "readPointerX", "op": "LoadEntryPayloadFloat", "payloadKey": "MapTrigger.PointerScreenX"}
 ```
 
 ## 这场是怎么搭出来的
@@ -33,7 +33,7 @@
 
 图跑完，字幕报出结果：
 
-> 落点东西读数 {x} 米，读数直接来自事件载荷。
+> 指针像素读数 {x}，读数直接来自事件载荷。
 
 ## 边界与更多用法
 

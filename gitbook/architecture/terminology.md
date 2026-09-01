@@ -15,7 +15,7 @@
 
 Machine 不建 C# 类型：跨宿主真实需求出现前，「一台机器」就是它在 AgentBridge discovery 目录里的那个条目，不是代码对象。
 
-ControlScheme 归设备层，但玩家的下单偏好不归它（#1306 路线③定案）：CommandPref 是挂在玩家 representative 上的稀疏实体组件——玩家级默认 command intent / cast dispatch profile + per-ability-template 覆盖，进图绑定期由 `Input/command_prefs.json` 种子补种，随世界存档 round-trip；读取方（下单路由）fail-fast。scheme 只管键位，换 scheme 不动偏好。
+ControlScheme 归设备层，但玩家的下单偏好不归它（#1306 路线③定案）：InteractionPref 是挂在玩家 representative 上的稀疏实体组件——玩家级默认 command intent / cast dispatch profile + per-ability-template 覆盖，进图绑定期由 `Input/interaction_prefs.json` 种子补种，随世界存档 round-trip；读取方（下单路由）fail-fast。scheme 只管键位，换 scheme 不动偏好。
 
 ## 2. 「client」一词的两个合法义
 

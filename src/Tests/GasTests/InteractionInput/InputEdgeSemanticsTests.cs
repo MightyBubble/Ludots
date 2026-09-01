@@ -77,9 +77,9 @@ namespace Ludots.Tests.GAS
             ClientLocalSeatInputChannel channelOne = harness.Channel("seat.1");
 
             channelZero.Handler.InjectButtonPress("CmdA");
-            harness.Runtime.UpdateVisualFrame();
-            harness.Runtime.UpdateVisualFrame();
-            harness.Runtime.UpdateVisualFrame();
+            harness.Runtime.UpdateVisualFrame(1f / 60f);
+            harness.Runtime.UpdateVisualFrame(1f / 60f);
+            harness.Runtime.UpdateVisualFrame(1f / 60f);
 
             Assert.That(channelZero.Handler.PressedThisFrame("CmdA"), Is.False,
                 "the channel handler's frame edge has expired before the freeze");

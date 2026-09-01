@@ -44,7 +44,7 @@
 ```
 
 **关键点**：
-- `InteractionModeType.SmartCast` 已实现，无需新增基建
+- `CastModeType.SmartCast` 已实现，无需新增基建
 - 鼠标位置在按键瞬间采样，直接填入 `Order.Args.Spatial`
 - 可通过 `castModeOverride` 为单个技能覆盖全局设置
 
@@ -92,7 +92,7 @@ Effect 模板示例：
 | 组件 | 路径 | 状态 |
 |------|------|------|
 | InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
-| InteractionModeType.SmartCast | `src/Core/Input/InteractionModeType.cs` | ✅ 已有 |
+| CastModeType.SmartCast | `src/Core/Input/CastModeType.cs` | ✅ 已有 |
 | InputOrderMappingSystem | `src/Core/Input/Orders/InputOrderMappingSystem.cs` | ✅ 已有 |
 | EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有 |
 
@@ -102,7 +102,7 @@ Effect 模板示例：
 
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
-| 无 | - | 现有基建可完整表达。`InteractionModeType.SmartCast` 已实现，支持全局设置和 per-ability 覆盖。 |
+| 无 | - | 现有基建可完整表达。`CastModeType.SmartCast` 已实现，支持全局设置和 per-ability 覆盖。 |
 
 ---
 

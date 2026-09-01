@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Ludots.Core.Input.Orders
 {
     /// <summary>
-    /// Interaction mode determines HOW InputActions become Orders.
+    /// Cast mode determines HOW InputActions become Orders.
     /// This is a game-level / player-preference setting, NOT per-ability.
     ///
     /// TargetFirst (WoW): player selects target first, then presses ability key ->order submitted immediately.
@@ -13,7 +13,7 @@ namespace Ludots.Core.Input.Orders
     /// AimCast (DotA/WC3): player presses ability key ->enters aiming phase ->confirm action submits, cancel action exits.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum InteractionModeType
+    public enum CastModeType
     {
         /// <summary>WoW style: select target, press key ->instant cast.</summary>
         TargetFirst = 0,
@@ -390,7 +390,7 @@ namespace Ludots.Core.Input.Orders
         /// Only meaningful when <see cref="IsSkillMapping"/> is true.
         /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public InteractionModeType? CastModeOverride { get; set; }
+        public CastModeType? CastModeOverride { get; set; }
         
         /// <summary>
         /// Automatic target acquisition policy for SmartCast.
@@ -476,7 +476,7 @@ namespace Ludots.Core.Input.Orders
         /// Non-skill mappings (e.g. moveTo, stop) are unaffected by this setting.
         /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public InteractionModeType InteractionMode { get; set; } = InteractionModeType.TargetFirst;
+        public CastModeType InteractionMode { get; set; } = CastModeType.TargetFirst;
 
         /// <summary>
         /// List of mappings.

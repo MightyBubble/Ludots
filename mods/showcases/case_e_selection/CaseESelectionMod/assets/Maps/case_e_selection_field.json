@@ -1,0 +1,125 @@
+{
+  "Id": "case_e_selection_field",
+  "Tags": [
+    "showcase",
+    "input",
+    "interaction",
+    "case-e"
+  ],
+  "ContinuousHeightmapAsset": "assets/terrain/case_e_selection_flat.height",
+  "Variables": [
+    {
+      "name": "case_e_press_px",
+      "type": "float",
+      "initial": 0
+    },
+    {
+      "name": "case_e_press_py",
+      "type": "float",
+      "initial": 0
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 300,
+    "Yaw": 0,
+    "Pitch": 52,
+    "DistanceCm": 3400,
+    "FovYDeg": 45
+  },
+  "Entities": [
+    {
+      "InstanceId": "case-e-commander",
+      "Template": "case_e_commander"
+    },
+    {
+      "InstanceId": "case-e-marine-1",
+      "Template": "case_e_marine",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": -900,
+            "Y": 0
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "case-e-marine-2",
+      "Template": "case_e_marine",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": -300,
+            "Y": 0
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "case-e-marine-3",
+      "Template": "case_e_marine",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 300,
+            "Y": 0
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "case-e-marine-4",
+      "Template": "case_e_marine",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 900,
+            "Y": 0
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "case-e-raider-1",
+      "Template": "case_e_raider",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": -600,
+            "Y": 1800
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "case-e-raider-2",
+      "Template": "case_e_raider",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 600,
+            "Y": 1800
+          }
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "case-e-commander"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "case-e-raider-1"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "case-e-commander"
+    }
+  ]
+}

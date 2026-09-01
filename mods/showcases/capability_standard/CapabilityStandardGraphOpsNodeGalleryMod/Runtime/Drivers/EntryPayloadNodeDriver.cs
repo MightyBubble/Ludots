@@ -23,9 +23,11 @@ public sealed class EntryPayloadNodeDriver : IGraphOpsNodeDriver
     private const int AliveCount = 3;
     private const int AliveDelta = -1;
     private const int SourceTeamId = 2;
-    private const float GroundXCm = 360.5f;
-    private const float GroundYCm = 200f;
+    private const float PointerScreenX = 360.5f;
+    private const float PointerScreenY = 200f;
     private const string StagedInputAction = "GraphOps.Probe";
+    private const int StagedModifiers = InputActionFiredModifiers.Queue;
+    private const int StagedContextId = 0;
     private const float SourceMarkRadiusCm = 90f;
 
     private static readonly DebugDrawColor SourceMark = DebugDrawColor.Cyan;
@@ -157,10 +159,12 @@ public sealed class EntryPayloadNodeDriver : IGraphOpsNodeDriver
                 firing.Set(MapTriggerEventPayloadKeys.Delta, AliveDelta);
                 break;
             case "InputActionFired":
-                firing.Set(MapTriggerEventPayloadKeys.SourceEntity, ctx.Caster);
-                firing.Set(MapTriggerEventPayloadKeys.InputAction, StagedInputAction);
-                firing.Set(MapTriggerEventPayloadKeys.GroundXCm, GroundXCm);
-                firing.Set(MapTriggerEventPayloadKeys.GroundYCm, GroundYCm);
+                firing.Set(MapTriggerEventPayloadKeys.Rep, ctx.Caster);
+                firing.Set(MapTriggerEventPayloadKeys.Action, StagedInputAction);
+                firing.Set(MapTriggerEventPayloadKeys.PointerScreenX, PointerScreenX);
+                firing.Set(MapTriggerEventPayloadKeys.PointerScreenY, PointerScreenY);
+                firing.Set(MapTriggerEventPayloadKeys.Modifiers, StagedModifiers);
+                firing.Set(MapTriggerEventPayloadKeys.ContextId, StagedContextId);
                 break;
             default:
                 throw new InvalidOperationException(

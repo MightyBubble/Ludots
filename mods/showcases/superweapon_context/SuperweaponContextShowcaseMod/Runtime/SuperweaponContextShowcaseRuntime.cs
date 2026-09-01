@@ -419,7 +419,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
                 ?? throw new InvalidOperationException("Superweapon context showcase requires InteractionContextProfileRegistry.");
             if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep) ||
                 !engine.World.IsAlive(rep) ||
-                !engine.World.TryGet<ActiveInteractionContext>(rep, out ActiveInteractionContext context))
+                !engine.World.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance context))
             {
                 return false;
             }

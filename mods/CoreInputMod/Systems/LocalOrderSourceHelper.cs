@@ -302,7 +302,7 @@ namespace CoreInputMod.Systems
 
         /// <summary>
         /// Player id → representative entity through the map-binding player lookup — the entity
-        /// that carries the player's CommandPref. The bound sole possessed actor may be a
+        /// that carries the player's InteractionPref. The bound sole possessed actor may be a
         /// controlled unit, so order routing preferences resolve through the player instead.
         /// </summary>
         private bool TryGetPlayerRepresentative(int playerId, out Entity rep)
@@ -355,7 +355,7 @@ namespace CoreInputMod.Systems
 
         /// <summary>
         /// The active interaction context's carrier entity, read from the sole possessed rep's
-        /// mounted <see cref="ActiveInteractionContext"/>; false in steady state (the mapping
+        /// mounted <see cref="InteractionContextInstance"/>; false in steady state (the mapping
         /// system then falls back to the sole possessed rep) and while a dead carrier is still
         /// mounted in the pre-reclaim window (no silent fallback).
         /// </summary>
@@ -364,7 +364,7 @@ namespace CoreInputMod.Systems
             owner = Entity.Null;
             if (!_context.TryResolveLocalCommandSourceOwner(out Entity subject) ||
                 !_world.IsAlive(subject) ||
-                !_world.TryGet<ActiveInteractionContext>(subject, out ActiveInteractionContext context) ||
+                !_world.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance context) ||
                 !HasEntityValue(context.ContextEntity) ||
                 !_world.IsAlive(context.ContextEntity))
             {

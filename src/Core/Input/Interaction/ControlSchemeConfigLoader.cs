@@ -9,7 +9,7 @@ namespace Ludots.Core.Input.Interaction
     /// Loader for <c>Input/control_schemes.json</c> (RFC-0065 INT-5, Section 5.11). Follows the
     /// <c>CastCommitProfileConfigLoader</c> mounting pattern: catalog-declared DeepObject merge
     /// through the shared <see cref="ConfigPipeline"/>. Schemes are pure device binding profiles:
-    /// order routing preferences live on the player representative (<see cref="CommandPref"/>) and
+    /// order routing preferences live on the player representative (<see cref="InteractionPref"/>) and
     /// a legacy <c>defaults</c> node fails fast by name instead of being silently dropped. Axis
     /// move order type references resolve at <see cref="ControlSchemeRuntime.Install"/> (fail fast
     /// on unknown order type keys).
@@ -52,7 +52,7 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>
         /// The scheme <c>defaults</c> node is removed: command intent and cast dispatch defaults are
-        /// player data (<see cref="CommandPref"/>, seeded from <c>Input/command_prefs.json</c>).
+        /// player data (<see cref="InteractionPref"/>, seeded from <c>Input/interaction_prefs.json</c>).
         /// A config still declaring it fails fast by scheme id with the migration target named —
         /// deserialization would otherwise silently ignore the node.
         /// </summary>
@@ -82,7 +82,7 @@ namespace Ludots.Core.Input.Interaction
                         string schemeId = scheme["id"] is { } idNode ? idNode.GetValue<string>() : $"schemes[{i}]";
                         throw new InvalidOperationException(
                             $"{source} scheme '{schemeId}' still declares a 'defaults' node: command intent and cast dispatch " +
-                            "defaults moved to the player CommandPref (Input/command_prefs.json seeds the player default; " +
+                            "defaults moved to the player InteractionPref (Input/interaction_prefs.json seeds the player default; " +
                             "remove the scheme defaults node).");
                     }
                 }

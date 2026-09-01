@@ -45,7 +45,7 @@ AbilityExecSpec:
 | 组件 | 状态 |
 |------|------|
 | InputOrderMapping.Entity | ✅ 已有 |
-| InteractionModeType (4种) | ✅ 已有 |
+| CastModeType (4种) | ✅ 已有 |
 | LoadContextTarget Graph op | ✅ 已有 |
 | Position 读写 Graph ops | ✅ 已有 |
 | Phase Graph System | ✅ 已有 |

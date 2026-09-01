@@ -12,7 +12,7 @@ namespace Ludots.Core.Input.Interaction
     /// context (DEC-13 post-order targeting sessions). The exec instance component
     /// (<see cref="AbilityExecInstance"/>) is the single sim-side lifecycle carrier: while an
     /// exec of an ability declaring <c>interactionContextProfile</c> runs, the profile is
-    /// mounted as an <see cref="ActiveInteractionContext"/> on the carrier's control-domain
+    /// mounted as an <see cref="InteractionContextInstance"/> on the carrier's control-domain
     /// representative; when the exec ends for any reason — finish, interrupt, fail, order
     /// cancel, or caster death — the mount is reclaimed in the next update. Reconciliation is
     /// polling over component existence (no new event kinds, deterministic across every exec
@@ -21,14 +21,14 @@ namespace Ludots.Core.Input.Interaction
     /// readers fail closed instead of silently falling back to the steady state. Steady state
     /// is allocation free.
     /// <para>
-    /// This system manages only <see cref="ActiveInteractionContextSource.ExecLifecycle"/>
+    /// This system manages only <see cref="InteractionContextInstanceSource.ExecLifecycle"/>
     /// mounts; cast commit <c>pushFrame</c> op mounts live and die with their own ops.
     /// </para>
     /// </summary>
     public sealed class AbilityExecInteractionContextSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription _execQuery = new QueryDescription().WithAll<AbilityExecInstance>();
-        private static readonly QueryDescription _activeContextQuery = new QueryDescription().WithAll<ActiveInteractionContext>();
+        private static readonly QueryDescription _activeContextQuery = new QueryDescription().WithAll<InteractionContextInstance>();
 
         private readonly InteractionContextProfileRegistry _contextProfiles;
         private readonly AbilityDefinitionRegistry _abilityDefinitions;
@@ -41,7 +41,7 @@ namespace Ludots.Core.Input.Interaction
         private Entity[] _scratch = new Entity[64];
         private Entity[] _mountedScratch = new Entity[8];
         private Entity[] _desiredReps = new Entity[8];
-        private ActiveInteractionContext[] _desiredStates = new ActiveInteractionContext[8];
+        private InteractionContextInstance[] _desiredStates = new InteractionContextInstance[8];
         private bool[] _desiredMounted = new bool[8];
         private int _desiredCount;
 
@@ -164,8 +164,8 @@ namespace Ludots.Core.Input.Interaction
                 if (!_contextProfiles.TryCreateActiveContext(
                         _trackedProfileIds[i],
                         carrier,
-                        ActiveInteractionContextSource.ExecLifecycle,
-                        out ActiveInteractionContext state))
+                        InteractionContextInstanceSource.ExecLifecycle,
+                        out InteractionContextInstance state))
                 {
                     throw new InvalidOperationException(
                         $"Ability exec carrier {carrier} declares interaction context profile id {_trackedProfileIds[i]} which is not installed.");
@@ -209,7 +209,7 @@ namespace Ludots.Core.Input.Interaction
 
                 if (TryFindDesired(holder, out int desiredIndex))
                 {
-                    ref ActiveInteractionContext mounted = ref World.Get<ActiveInteractionContext>(holder);
+                    ref InteractionContextInstance mounted = ref World.Get<InteractionContextInstance>(holder);
                     if (!Equals(mounted, _desiredStates[desiredIndex]))
                     {
                         mounted = _desiredStates[desiredIndex];
@@ -219,12 +219,15 @@ namespace Ludots.Core.Input.Interaction
                     continue;
                 }
 
-                if (World.Get<ActiveInteractionContext>(holder).Source == ActiveInteractionContextSource.CastCommitOp)
+                // Foreign lifecycles own their mounts: cast commit ops pop their own frames
+                // and template-spawn mounts (#1398 S2b) live until the entity dies — this
+                // reconciliation reclaims only its own exec-carried contexts.
+                if (World.Get<InteractionContextInstance>(holder).Source != InteractionContextInstanceSource.ExecLifecycle)
                 {
                     continue;
                 }
 
-                World.Remove<ActiveInteractionContext>(holder);
+                World.Remove<InteractionContextInstance>(holder);
             }
         }
 
@@ -241,7 +244,7 @@ namespace Ludots.Core.Input.Interaction
             }
         }
 
-        private static bool Equals(in ActiveInteractionContext left, in ActiveInteractionContext right)
+        private static bool Equals(in InteractionContextInstance left, in InteractionContextInstance right)
         {
             return left.ContextId == right.ContextId &&
                 left.ContextEntity == right.ContextEntity &&

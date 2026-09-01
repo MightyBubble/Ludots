@@ -30,7 +30,7 @@ namespace Ludots.Core.Input.Systems
     /// <see cref="PlayerInputHandler"/> IMC stack. Demand sources: the seat's possessed
     /// representative's <see cref="InteractionMode"/> component (sparse default: a rep without
     /// the component projects no mode contexts) and the representative's mounted
-    /// <see cref="ActiveInteractionContext"/> — the entity-side interaction state is the sole
+    /// <see cref="InteractionContextInstance"/> — the entity-side interaction state is the sole
     /// translator input; this projection is the only thing that turns it into IMC contexts, and
     /// nothing here mutates entity state. Pure derivation — mode writes come from graph ops;
     /// contexts demanded by other players' subjects project nowhere on this client. Seats
@@ -132,7 +132,7 @@ namespace Ludots.Core.Input.Systems
         /// </summary>
         private void AppendActiveContextDemand(Entity possessedRep)
         {
-            if (!_world.TryGet<ActiveInteractionContext>(possessedRep, out ActiveInteractionContext context) ||
+            if (!_world.TryGet<InteractionContextInstance>(possessedRep, out InteractionContextInstance context) ||
                 context.InputContextId <= _contextProfiles.InputContextIdRegistry.InvalidId)
             {
                 return;

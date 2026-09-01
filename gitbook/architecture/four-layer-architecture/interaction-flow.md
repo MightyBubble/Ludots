@@ -19,10 +19,10 @@
     │       （灵敏度/按压时长在 Device→Action 层消亡）
     │
     ▼
-CommandIntentProfile + Arbiter + CommandPref
+CommandIntentProfile + Arbiter + InteractionPref
     │       依当前状态选择意图
     │       （蜘蛛侠同键不同技；按/抬/蓄/超时 = 不同意图）
-    │       玩家下单偏好挂 representative 的 CommandPref（换 scheme 不动偏好）
+    │       玩家下单偏好挂 representative 的 InteractionPref（换 scheme 不动偏好）
     ▼
 ControlPlaneView
     │       从唯一 Representative 出发

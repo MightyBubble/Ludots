@@ -231,6 +231,14 @@ namespace Ludots.Core.GraphRuntime
         public string? ArgKey { get; set; }
         /// <summary>Interaction mode id symbol for SetInteractionMode; resolved against the installed interaction mode map at run time.</summary>
         public string? Mode { get; set; }
+        /// <summary>Interaction context profile id symbol for ActivateContext/DeactivateContext; resolved against the installed context profiles at run time.</summary>
+        public string? Context { get; set; }
+        /// <summary>Optional parent interaction context profile id symbol for ActivateContext; omit for a root-level derived context.</summary>
+        public string? ParentContext { get; set; }
+        /// <summary>Seat id symbol for the aimsource family (ScreenPointToGround/ScreenPointToEntity/ScreenRegionToEntities); the answer is given under that seat's present binding.</summary>
+        public string? Seat { get; set; }
+        /// <summary>Pick radius in pixels for ScreenPointToEntity (authored literal).</summary>
+        public float PickRadiusPx { get; set; }
         public string? QueryCapacityPolicy { get; set; }
         public string? DroppedOutput { get; set; }
         public string? ValidOutput { get; set; }
@@ -337,6 +345,7 @@ namespace Ludots.Core.GraphRuntime
         public const string Max = "max";
         public const string A = "a";
         public const string B = "b";
+        public const string C = "c";
         public const string Condition = "condition";
         /// <summary>Int selector input for SwitchInt compile-time sugar.</summary>
         public const string Selector = "selector";

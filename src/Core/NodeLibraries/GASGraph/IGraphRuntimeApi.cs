@@ -110,6 +110,41 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.InteractionModeMapUnavailable");
         }
 
+        /// <summary>
+        /// Activates an interaction context instance (#1398 S2b) on the subject: context and
+        /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). Idempotent-failure
+        /// on an already-active context; fail-closed on dead subjects, unknown key ids, and
+        /// declared parents that are not active. Default rejects — the engine binds a context
+        /// instance runtime to serve it.
+        /// </summary>
+        void ActivateContext(Entity subject, int contextKeyId, int parentContextKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// Deactivates an interaction context instance (and its descendants) on the subject;
+        /// the instance's presenter scope is destroyed through the presenter command pipeline.
+        /// Fail-closed when the context is not mounted as an instance.
+        /// </summary>
+        void DeactivateContext(Entity subject, int contextKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// Fires the collection pass-through event (#1398 S2b gap 9): the authored event key
+        /// dispatches map-scoped carrying the final entity set plus the set semantics
+        /// (opKind 0=replace, 1=add, 2=subtract) and the target collection key id — all under
+        /// the reserved MapTrigger.Collection* payload keys. The event key must be a declared
+        /// custom event; downstream EventKeyedCollectionWriter instances receive by key.
+        /// Default rejects — the engine binds the trigger bridge to serve it.
+        /// </summary>
+        void DispatchCollectionEvent(int packedKeyIds, int opKind, Entity source, MapId mapId, Span<Entity> entities, int count)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CollectionEventBridgeUnavailable");
+        }
+
         /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
         void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
 
@@ -606,6 +641,42 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             projection = default;
             return false;
+        }
+
+        // ── Aimsource pure helpers (input/command chain aim graphs) ──
+
+        /// <summary>
+        /// Resolves a screen point against the authoritative ground (camera ray +
+        /// heightmap, bounded by the world size). False means the ray left the world.
+        /// A null seatId answers under the sole present binding; a named seat answers
+        /// under that seat's binding-local screen space.
+        /// </summary>
+        bool TryScreenPointToGround(float screenX, float screenY, string? seatId, out IntVector2 groundCm)
+        {
+            groundCm = default;
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+        }
+
+        /// <summary>
+        /// Knowledge-gated pick of the best candidate under the screen point; candidates
+        /// are the explicit TargetList working set (no world scan). An empty seatId means
+        /// the sole present binding; a named seat answers under that seat's binding-local
+        /// screen space.
+        /// </summary>
+        Entity PickScreenPointEntity(ReadOnlySpan<Entity> candidates, int count, Entity owner, string? seatId, float screenX, float screenY, float radiusPixels)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+        }
+
+        /// <summary>
+        /// In-place filter of an entity span down to the members whose projected bounds
+        /// intersect the screen rect; preserves candidate order (deterministic result).
+        /// A null seatId answers under the sole present binding; a named seat answers
+        /// under that seat's binding-local screen space.
+        /// </summary>
+        int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
         }
     }
 

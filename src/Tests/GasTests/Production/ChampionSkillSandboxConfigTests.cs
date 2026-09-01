@@ -315,7 +315,7 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("Toolbar provider missing.");
             var mapping = WaitForActiveInputOrderMapping(engine);
             Assert.That(toolbar.IsVisible, Is.True);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(InteractionModeType.SmartCast));
+            Assert.That(mapping.InteractionMode, Is.EqualTo(CastModeType.SmartCast));
 
             var buttons = new EntityCommandPanelToolbarButtonView[5];
             int buttonCount = toolbar.CopyButtons(buttons);
@@ -348,7 +348,7 @@ namespace Ludots.Tests.GAS.Production
 
             toolbar.Activate("ChampionSkillSandbox.Mode.Indicator");
             Tick(engine, 1);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(InteractionModeType.SmartCastWithIndicator));
+            Assert.That(mapping.InteractionMode, Is.EqualTo(CastModeType.SmartCastWithIndicator));
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[1].Active, Is.True);
 
@@ -359,7 +359,7 @@ namespace Ludots.Tests.GAS.Production
 
             toolbar.Activate("ChampionSkillSandbox.Mode.PressReleaseAim");
             Tick(engine, 1);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(InteractionModeType.PressReleaseAimCast));
+            Assert.That(mapping.InteractionMode, Is.EqualTo(CastModeType.PressReleaseAimCast));
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[2].Active, Is.True);
 
