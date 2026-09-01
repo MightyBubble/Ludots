@@ -162,7 +162,16 @@ function liveHeaderBadge(data: GasNodeViewData): React.ReactNode {
   if (!data.liveDebug) return null;
   if (data.liveDebug.current) return <span className="gas-live-badge">LIVE</span>;
   if (data.liveDebug.intensity > 0.66) return <span className="gas-live-badge gas-live-badge-hot">HOT</span>;
+  if (data.liveDebug.intensity > 0) return <span className="gas-live-badge gas-live-badge-trail">RUN</span>;
   return null;
+}
+
+function liveCardClass(data: GasNodeViewData, selected: boolean, baseSelected: string, baseIdle: string): string {
+  const live = data.liveDebug;
+  if (live?.current) return `border-emerald-300 shadow-[0_0_22px_rgba(74,222,128,.65)]`;
+  if (live && live.intensity > 0.66) return `border-cyan-300 shadow-[0_0_16px_rgba(34,211,238,.55)]`;
+  if (live && live.intensity > 0) return `border-sky-400 shadow-[0_0_12px_rgba(56,189,248,.4)]`;
+  return selected ? baseSelected : baseIdle;
 }
 
 export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
@@ -175,9 +184,12 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
     const params = data.schema?.parameters.filter((param) => param.type !== 'String') ?? [];
     return (
       <div
-        className={`min-w-[220px] overflow-hidden rounded-md border shadow-lg ${
-          selected ? 'border-rose-200' : 'border-rose-800'
-        }`}
+        className={`min-w-[220px] overflow-hidden rounded-md border shadow-lg ${liveCardClass(
+          data,
+          selected,
+          'border-rose-200',
+          'border-rose-800',
+        )}`}
       >
         <div className="bg-rose-700 px-3 py-1.5">
           <div className="flex items-center justify-between gap-2">
@@ -245,9 +257,12 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
   if (isPureValueOp(data.op)) {
     return (
       <div
-        className={`min-w-[140px] overflow-hidden rounded-md border shadow-lg ${
-          selected ? 'border-violet-300' : 'border-violet-800'
-        }`}
+        className={`min-w-[140px] overflow-hidden rounded-md border shadow-lg ${liveCardClass(
+          data,
+          selected,
+          'border-violet-300',
+          'border-violet-800',
+        )}`}
       >
         <div className="bg-violet-800 px-3 py-1.5">
           <div className="flex items-center justify-between gap-2">
@@ -274,9 +289,12 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
 
   return (
     <div
-      className={`min-w-[210px] overflow-hidden rounded-md border shadow-lg ${
-        selected ? 'border-sky-300' : 'border-slate-600'
-      }`}
+      className={`min-w-[210px] overflow-hidden rounded-md border shadow-lg ${liveCardClass(
+        data,
+        selected,
+        'border-sky-300',
+        'border-slate-600',
+      )}`}
     >
       <div className="bg-slate-700 px-3 py-1.5">
         <div className="flex items-center justify-between gap-2">

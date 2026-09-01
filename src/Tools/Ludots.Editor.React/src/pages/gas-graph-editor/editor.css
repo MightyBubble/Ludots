@@ -112,6 +112,12 @@
   color: #a5f3fc;
 }
 
+.gas-live-badge-trail {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #bae6fd;
+}
+
 .gas-live-pin-strip {
   display: flex;
   flex-wrap: wrap;
