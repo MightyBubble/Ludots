@@ -1,7 +1,7 @@
 [
   {
     "id": "Ability.Rts.Frontline.TrainInfantry",
-    "tags": ["Ability.Rts.Frontline.Train"],
+    "categories": ["Ability.Rts.Frontline.Train"],
     "exec": {
       "clockId": "FixedFrame",
       "items": [
