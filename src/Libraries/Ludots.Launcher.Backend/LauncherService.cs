@@ -422,19 +422,13 @@ public sealed class LauncherService
         IEnumerable<string> selectors,
         string? adapterId = null,
         LauncherBuildMode buildMode = LauncherBuildMode.Auto,
-        string? browserProviderOverride = null)    {
+        bool buildApp = true)
+    {
         var resolvedSelectors = selectors
             .Where(selector => !string.IsNullOrWhiteSpace(selector))
             .ToList();
         var config = LoadConfig();
-        var resolveResult = ResolvePlan(
-            resolvedSelectors,
-            adapterId,
-            buildMode,
-            config,
-            BuildCatalog(config),
-            LoadPresets(),
-            browserProviderOverride);
+        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
         if (resolveResult.Plan.IsExecutableTarget)
         {
             return new LauncherPrepareResult(
@@ -451,10 +445,8 @@ public sealed class LauncherService
             return new LauncherPrepareResult(false, failedModBuild.Output, string.Empty, resolveResult.Plan);
         }
 
-        var appBuild = ShouldSkipAppBuild(resolveResult.Plan)
-            ? new LauncherBuildResult(resolveResult.Plan.AdapterId, true, 0, "App build skipped by request; using prebuilt assembly.")
-            : await BuildAppAsync(resolveResult.Plan.AdapterId);
-        if (!appBuild.Ok)        {
+        if (buildApp)
+        {
             var appBuild = await BuildAppAsync(resolveResult.Plan.AdapterId);
             if (!appBuild.Ok)
             {
@@ -463,21 +455,6 @@ public sealed class LauncherService
         }
 
         var bootstrapPath = WriteRuntimeBootstrap(resolveResult.Plan);
-<<<<<<< HEAD:src/Tools/Ludots.Launcher.Backend/LauncherService.cs
-        ReplacePreviousActiveProcess(resolveResult.Plan);
-        Process process;
-        try
-        {
-            process = Process.Start(CreateAppStartInfo(
-                resolveResult.Plan.AppAssemblyPath,
-                resolveResult.Plan.AppOutputDirectory,
-                $"\"{bootstrapPath}\""));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return new LauncherLaunchResult(false, ex.Message, -1, string.Empty, bootstrapPath, resolveResult.Plan);
-        }
-=======
         return new LauncherPrepareResult(true, string.Empty, bootstrapPath, resolveResult.Plan);
     }
 
@@ -514,8 +491,8 @@ public sealed class LauncherService
             WorkingDirectory = plan.AppOutputDirectory,
             UseShellExecute = false
         };
->>>>>>> 918b9dfe80 (feat(launcher): in-app launcher shell 首切片——启动器嵌入 App.Raylib 进程生命周期（epic #1055 IALS-2/3/4/6 首刀）):src/Libraries/Ludots.Launcher.Backend/LauncherService.cs
 
+        var process = Process.Start(startInfo);
         if (process == null)
         {
             return new LauncherLaunchResult(false, "Failed to start platform process.", -1, string.Empty, prepared.BootstrapPath, plan);

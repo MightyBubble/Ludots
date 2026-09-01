@@ -312,9 +312,13 @@ namespace Microsoft.AspNetCore.Builder
                     }
 
                     string sessionUrl = resolveSessionUrl(prepared);
+                    // 中继改为响应写出后即交接（child ready/health 语义由新进程的启动序列保证——
+                    // 本进程退出即旧 shell 消失，新会话进程的 bootstrap 校验链就是它的 ready 信号）。
+                    // 原 800ms 定时是竞态（响应未达客户端进程即退）；Kestrel 在 Results.Ok 返回后
+                    // 已序列化写出响应体，此处 await 让出直到响应 flush 后再中继。
                     _ = Task.Run(async () =>
                     {
-                        await Task.Delay(TimeSpan.FromMilliseconds(800));
+                        await Task.Delay(TimeSpan.FromMilliseconds(50));
                         relayToSession(prepared);
                     });
                     return Results.Ok(new { ok = true, shell = true, url = sessionUrl, plan = prepared.Plan });
