@@ -50,6 +50,11 @@
       "kind": "csproj",
       "value": "mods/showcases/panel_fireball_shared/FireballSharedMod",
       "reason": "shared fireball gameplay library consumed by all panel skin/theme showcase mods; not a standalone showcase entry"
+    },
+    {
+      "kind": "binding",
+      "value": "rts_multiplayer_frontline_networked",
+      "reason": "联机进入绑定由 showcase 条目 rts_multiplayer_frontline 的 preset(rts_multiplayer_frontline_networked_raylib 三进程组)承接;绑定本体保留供独立练习/加入既有服务器 preset 选择器使用"
     }
   ],
   "showcases": [
