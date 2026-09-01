@@ -2290,6 +2290,30 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStickToDirectionEntryMod",
         "projectPath": "CapabilityStandardGraphOpStickToDirectionEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_ActivateContext",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpActivateContextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpActivateContextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DeactivateContext",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDeactivateContextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDeactivateContextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DispatchCollectionEvent",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDispatchCollectionEventEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDispatchCollectionEventEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

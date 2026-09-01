@@ -30,6 +30,11 @@ namespace Ludots.Core.Scripting
             MapTriggerEventPayloadKeys.EffectId,
             MapTriggerEventPayloadKeys.Moment,
             MapTriggerEventPayloadKeys.SourceMapId,
+            // Collection pass-through family (#1398 S2b): authored per-game event keys, so
+            // per-name schemas are not enumerable at build time either.
+            MapTriggerEventPayloadKeys.CollectionEntitySet,
+            MapTriggerEventPayloadKeys.CollectionOp,
+            MapTriggerEventPayloadKeys.CollectionKey,
         };
 
         /// <summary>
@@ -41,6 +46,9 @@ namespace Ludots.Core.Scripting
         {
             MapTriggerEventPayloadKeys.SourceMapId,
             MapTriggerEventPayloadKeys.SourceEntity,
+            MapTriggerEventPayloadKeys.CollectionEntitySet,
+            MapTriggerEventPayloadKeys.CollectionOp,
+            MapTriggerEventPayloadKeys.CollectionKey,
         };
 
         internal static bool IsTransportMetadataPayloadKey(string payloadKey)

@@ -1,0 +1,35 @@
+{
+  "op": "DispatchCollectionEvent",
+  "driver": "collectionEvent",
+  "title": "终选集按事件 key 落账",
+  "beat": "图里点好的终选集，一声事件按 key 递出去，账房照单写进集合。",
+  "detailTemplate": "事件按 key 送达，账房写进 {count} 名成员。",
+  "assertDetailContains": [
+    "账房",
+    "写进"
+  ],
+  "featuredNodeId": "commit",
+  "graphKind": "TriggerGraph",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "司号员",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}
