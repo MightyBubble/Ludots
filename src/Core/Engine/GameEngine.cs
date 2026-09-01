@@ -1626,6 +1626,19 @@ namespace Ludots.Core.Engine
                 GameSession);
             SetService(CoreServiceKeys.InteractionContextInstances, interactionContextInstances);
             gasGraphApi.BindContextInstances(interactionContextInstances);
+            MapLoader.SetInitialInteractionContexts(interactionContextProfileRegistry);
+            TemplateInteractionContextMounting.ValidateTemplates(MapLoader.TemplateRegistry.GetAll(), interactionContextProfileRegistry);
+            var eventKeyedCollectionWriter = new EventKeyedCollectionWriter(entityCollectionStore);
+            foreach (string eventKey in new EventKeyedCollectionWriterConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport))
+            {
+                eventKeyedCollectionWriter.Register(eventKey);
+                TriggerManager.RegisterEventHandler(
+                    new EventKey(eventKey),
+                    context => eventKeyedCollectionWriter.HandleEvent(new EventKey(eventKey), context));
+            }
+
+            SetService(CoreServiceKeys.EventKeyedCollectionWriter, eventKeyedCollectionWriter);
+            gasGraphApi.BindCustomEvents(customEventCatalog.Names);
             var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
                 World,
                 interactionContextProfileRegistry,
@@ -2221,7 +2234,8 @@ namespace Ludots.Core.Engine
                 teamLookup: teamEntityLookup,
                 relationships: relationshipRuntime,
                 memberOfTypeId: memberOfRelationshipTypeId,
-                entityTriggerGraphMounts: EntityTriggerGraphMounts),
+                entityTriggerGraphMounts: EntityTriggerGraphMounts,
+                initialInteractionContexts: interactionContextProfileRegistry),
                 SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntityLifecycleSystem(

@@ -302,6 +302,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.DispatchCollectionEvent:
+                    RequireNonEmpty(node.Event, "event", node, graphId, diagnostics);
+                    RequireNonEmpty(node.CollectionKey, "collectionKey", node, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.SetPanelAudience:
                     RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
                     break;
@@ -1153,6 +1159,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                             valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
                         : byte.MaxValue;
+                    break;
+
+                case GraphNodeOp.DispatchCollectionEvent:
+                    instruction.Imm = RequireSymbol(node.Event, "event", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = EncodeByteSymbol(node.CollectionKey, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.SetPanelAudience:

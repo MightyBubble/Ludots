@@ -111,11 +111,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Activates a derived interaction context (#1398 S2b) on the subject: context and
+        /// Activates an interaction context instance (#1398 S2b) on the subject: context and
         /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). Idempotent-failure
         /// on an already-active context; fail-closed on dead subjects, unknown key ids, and
-        /// declared parents that are not active. Default rejects — the engine binds a derived
-        /// context runtime to serve it.
+        /// declared parents that are not active. Default rejects — the engine binds a context
+        /// instance runtime to serve it.
         /// </summary>
         void ActivateContext(Entity subject, int contextKeyId, int parentContextKeyId)
         {
@@ -123,13 +123,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Deactivates a derived interaction context (and its descendants) on the subject;
+        /// Deactivates an interaction context instance (and its descendants) on the subject;
         /// the instance's presenter scope is destroyed through the presenter command pipeline.
-        /// Fail-closed when the context is not mounted as a derived instance.
+        /// Fail-closed when the context is not mounted as an instance.
         /// </summary>
         void DeactivateContext(Entity subject, int contextKeyId)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// Fires the collection pass-through event (#1398 S2b gap 9): the authored event key
+        /// dispatches map-scoped carrying the final entity set plus the set semantics
+        /// (opKind 0=replace, 1=add, 2=subtract) and the target collection key id — all under
+        /// the reserved MapTrigger.Collection* payload keys. The event key must be a declared
+        /// custom event; downstream EventKeyedCollectionWriter instances receive by key.
+        /// Default rejects — the engine binds the trigger bridge to serve it.
+        /// </summary>
+        void DispatchCollectionEvent(int packedKeyIds, int opKind, Entity source, MapId mapId, Span<Entity> entities, int count)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CollectionEventBridgeUnavailable");
         }
 
         /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>

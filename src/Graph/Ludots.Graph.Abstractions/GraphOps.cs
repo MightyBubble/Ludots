@@ -364,12 +364,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         ActivateContext = 474,
         /// <summary>
-        /// Deactivate a derived interaction context (and its descendants transitively) on
+        /// Deactivate an interaction context instance (and its descendants transitively) on
         /// E[A] (A=0xFF → caster). Imm = context profile symbol. Fails fast when the context
-        /// is not mounted as a derived instance; the instance's presenter scope is destroyed
+        /// is not mounted as an instance; the instance's presenter scope is destroyed
         /// wholesale through the presenter command pipeline.
         /// </summary>
         DeactivateContext = 475,
+        /// <summary>
+        /// Pass-through collection commit (#1398 S2b gap 9, Case E 06 A-side): fire the
+        /// authored event key as a schema-less map event carrying the current TargetList
+        /// plus the set semantics — I[B] = op (0=replace, 1=add, 2=subtract, computed
+        /// in-graph from modifier actions). Imm = event key symbol; Dst = collection key
+        /// symbol; both packed into Imm at patch time. Downstream: EventKeyedCollectionWriter.
+        /// </summary>
+        DispatchCollectionEvent = 476,
 
     }
 
