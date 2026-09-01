@@ -426,15 +426,22 @@ namespace CoreInputMod.Systems
         {
             owner = Entity.Null;
             if (!_context.TryResolveLocalCommandSourceOwner(out Entity subject) ||
-                !_world.IsAlive(subject) ||
-                !_world.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance context) ||
-                context.ContextEntity == Entity.Null ||
-                !_world.IsAlive(context.ContextEntity))
+                !_world.IsAlive(subject))
             {
                 return false;
             }
 
-            owner = context.ContextEntity;
+            if (_world.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance context) &&
+                context.ContextEntity != Entity.Null &&
+                _world.IsAlive(context.ContextEntity))
+            {
+                owner = context.ContextEntity;
+                return true;
+            }
+
+            // Replicated clients never mount InteractionContextInstance; the sole possessed
+            // seat rep is the command-source owner there (no silent fallback for hosts).
+            owner = subject;
             return true;
         }
 
