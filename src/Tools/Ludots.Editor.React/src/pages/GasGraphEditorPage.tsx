@@ -47,9 +47,12 @@ import {
 import {
   applyLiveDebugToEdges,
   applyLiveDebugToNodes,
+  applyWatchFocusToEdges,
+  applyWatchFocusToNodes,
   computeLiveEdgeIds,
   computeLiveNodeHeat,
   computeLivePinValues,
+  computeWatchedEntryFocus,
   type LiveDebugEvent,
 } from './gas-graph-editor/liveVisualDebug';
 import './gas-graph-editor/editor.css';
@@ -1675,10 +1678,33 @@ export const GasGraphEditorPage: React.FC = () => {
     return { heat, pins, hotEdges };
   }, [debugEnabled, debugEvents, edges]);
 
+  const watchFocus = React.useMemo(() => {
+    if (!debugEnabled || !debugEntryLabel) {
+      return { nodeIds: new Set<string>(), edgeIds: new Set<string>() };
+    }
+    return computeWatchedEntryFocus(nodes, edges, debugEntryLabel, eventEntryNodeId);
+  }, [debugEnabled, debugEntryLabel, edges, nodes]);
+
+  React.useEffect(() => {
+    if (!debugEnabled || watchFocus.nodeIds.size === 0) return;
+    const focusIds = [...watchFocus.nodeIds];
+    const timer = window.setTimeout(() => {
+      reactFlowRef.current?.fitView({
+        nodes: focusIds.map((id) => ({ id })),
+        padding: 0.28,
+        duration: 280,
+        minZoom: 0.35,
+        maxZoom: 1.35,
+      });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [debugEnabled, debugEntryLabel, watchFocus.nodeIds.size]);
+
   const displayNodes = React.useMemo(() => {
     let next = nodes as Node<GasNodeData & Record<string, unknown>>[];
     if (debugEnabled) {
       next = applyLiveDebugToNodes(next, activeDebugNodes.heat, activeDebugNodes.pins);
+      next = applyWatchFocusToNodes(next, watchFocus.nodeIds);
     }
     if (selectedVariable == null) return next as Node<GasNodeData>[];
     return next.map((node) => {
@@ -1693,13 +1719,14 @@ export const GasGraphEditorPage: React.FC = () => {
         },
       } as Node<GasNodeData>;
     });
-  }, [activeDebugNodes, debugEnabled, nodes, selectedVariable]);
+  }, [activeDebugNodes, debugEnabled, nodes, selectedVariable, watchFocus.nodeIds]);
 
   const displayEdges = React.useMemo(() => {
-    const base = toDisplayEdges(nodes, edges);
+    let base = toDisplayEdges(nodes, edges);
     if (!debugEnabled) return base;
-    return applyLiveDebugToEdges(base, activeDebugNodes.hotEdges);
-  }, [activeDebugNodes.hotEdges, debugEnabled, edges, nodes]);
+    base = applyLiveDebugToEdges(base, activeDebugNodes.hotEdges) as Edge<GasEdgeData>[];
+    return applyWatchFocusToEdges(base, watchFocus.edgeIds, activeDebugNodes.hotEdges) as Edge<GasEdgeData>[];
+  }, [activeDebugNodes.hotEdges, debugEnabled, edges, nodes, watchFocus.edgeIds]);
 
   const mapVariables = React.useMemo<GraphVariableRow[]>(() => {
     const rows = new Map<string, GraphVariableRow>();
@@ -2605,8 +2632,9 @@ export const GasGraphEditorPage: React.FC = () => {
             <div className="text-[10px] text-slate-400">{debugStatus}</div>
             {debugEnabled ? (
               <div className="rounded border border-cyan-900/60 bg-cyan-950/40 px-2 py-1.5 text-[10px] leading-4 text-cyan-100/90">
-                Canvas lights up like Flow Canvas: current node pulses green, recent path glows cyan,
-                taken control edges animate, pin chips show live values. The log below is only a trail.
+                Framing entry <span className="font-mono text-cyan-50">{debugEntryLabel || '—'}</span>
+                {' '}({watchFocus.nodeIds.size} nodes). Other chains are dimmed.
+                Play the game action that fires this entry — the framed path lights up.
               </div>
             ) : null}
             <div className="max-h-28 overflow-auto rounded border border-slate-800 bg-slate-950 p-2 font-mono text-[10px]">

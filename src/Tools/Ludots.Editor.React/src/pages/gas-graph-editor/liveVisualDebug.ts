@@ -208,3 +208,108 @@ export function applyLiveDebugToEdges(
     };
   });
 }
+
+/**
+ * Walk control edges from a watched event entry (and its start node) so the
+ * canvas can dim everything else and frame only the story being watched.
+ */
+export function computeWatchedEntryFocus(
+  nodes: Node[],
+  edges: Edge[],
+  entryLabel: string,
+  eventNodeIdForLabel: (label: string) => string,
+): { nodeIds: Set<string>; edgeIds: Set<string> } {
+  const label = entryLabel.trim();
+  const nodeIds = new Set<string>();
+  const edgeIds = new Set<string>();
+  if (!label) return { nodeIds, edgeIds };
+
+  const eventId = eventNodeIdForLabel(label);
+  const eventNode = nodes.find((node) => node.id === eventId);
+  if (eventNode) nodeIds.add(eventNode.id);
+
+  const startFromEntry = (eventNode?.data as { entry?: { start?: string } } | undefined)?.entry?.start?.trim();
+  const queue: string[] = [];
+  if (startFromEntry) queue.push(startFromEntry);
+  // Also accept Then edges leaving the event card.
+  for (const edge of edges) {
+    if (edge.source !== eventId) continue;
+    if (edge.data?.kind && edge.data.kind !== 'control') continue;
+    edgeIds.add(edge.id);
+    if (edge.target) queue.push(edge.target);
+  }
+
+  const control = edges.filter((edge) => edge.data?.kind === 'control' || edge.data?.kind == null);
+  const outgoing = new Map<string, Edge[]>();
+  for (const edge of control) {
+    const list = outgoing.get(edge.source) ?? [];
+    list.push(edge);
+    outgoing.set(edge.source, list);
+  }
+
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    if (nodeIds.has(id)) continue;
+    nodeIds.add(id);
+    for (const edge of outgoing.get(id) ?? []) {
+      edgeIds.add(edge.id);
+      if (edge.target && !nodeIds.has(edge.target)) queue.push(edge.target);
+    }
+  }
+
+  return { nodeIds, edgeIds };
+}
+
+export function applyWatchFocusToNodes<T extends Record<string, unknown>>(
+  nodes: Node<T>[],
+  focusNodeIds: Set<string>,
+): Node<T>[] {
+  if (focusNodeIds.size === 0) return nodes;
+  return nodes.map((node) => {
+    if (focusNodeIds.has(node.id)) {
+      return {
+        ...node,
+        className: [node.className, 'gas-watch-focus'].filter(Boolean).join(' '),
+      };
+    }
+    return {
+      ...node,
+      className: [node.className, 'gas-watch-dim'].filter(Boolean).join(' '),
+      style: {
+        ...node.style,
+        opacity: 0.16,
+        filter: 'grayscale(0.7)',
+      },
+    };
+  });
+}
+
+export function applyWatchFocusToEdges(
+  edges: Edge[],
+  focusEdgeIds: Set<string>,
+  hotEdgeIds: Set<string>,
+): Edge[] {
+  if (focusEdgeIds.size === 0) return edges;
+  return edges.map((edge) => {
+    if (hotEdgeIds.has(edge.id)) return edge;
+    if (focusEdgeIds.has(edge.id)) {
+      return {
+        ...edge,
+        style: {
+          ...edge.style,
+          stroke: '#67e8f9',
+          strokeWidth: 2,
+          opacity: 1,
+        },
+      };
+    }
+    return {
+      ...edge,
+      animated: false,
+      style: {
+        ...edge.style,
+        opacity: 0.08,
+      },
+    };
+  });
+}

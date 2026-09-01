@@ -83,8 +83,12 @@
   animation: gas-live-pulse 1.1s ease-in-out infinite;
 }
 
-.gas-graph-flow .react-flow__node.gas-live-hot {
-  z-index: 6 !important;
+.gas-graph-flow .react-flow__node.gas-watch-dim {
+  pointer-events: none;
+}
+
+.gas-graph-flow .react-flow__node.gas-watch-focus {
+  z-index: 5 !important;
 }
 
 .gas-graph-flow .react-flow__edge.gas-live-edge path {
