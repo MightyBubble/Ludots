@@ -127,6 +127,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 modifiers |= InputActionFiredModifiers.Precision;
             }
 
+            if (input.IsDown(CommandSourceModifierActionIds.Subtract))
+            {
+                modifiers |= InputActionFiredModifiers.Subtract;
+            }
+
             return modifiers;
         }
 
