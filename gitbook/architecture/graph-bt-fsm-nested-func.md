@@ -12,7 +12,12 @@
 
 叶子上的 Action、Condition、状态体，各自是一张 **Func Graph**。在 Graph Editor 里改逻辑；在 BT / FSM 编辑器里双击门户节点，跳进对应函数图。
 
-运行时仍是一台 VM：装载前 `BehaviorGraphLeafWeaver` 把门户织进宿主 Script，再交给 `GraphBehaviorTreeHost` / `GraphFsmHost`。
+运行时分层（合同见 [图分层](graph-layering-flow-and-behavior.md)）：
+
+- **L2**：行为树 / 状态机 —— 只管粗拓扑，由 `GraphBehaviorTreeHost` / `GraphFsmHost` 按 think wave 驱动。
+- **L1**：叶子上的 **Func Graph**（今天落地为 `Script`）—— Action / Condition / 状态体的真正逻辑。
+
+装载时把 L1 叶子织进 L2 外层，再降到 L0 指令；**外层身份仍是 L2，不是 Script**。当前仓库里外层暂存成「带 BT/FSM 糖的 Script 文档」，是实现塌缩，不是合同身份。
 
 本页是作者合同 SSOT。进度只认 [图能力唯一入口](graph-capability-status.md)。
 
@@ -43,7 +48,7 @@
 - 残留 portal 编译失败关闭。
 - React：`GasGraphEditorPage` 的 `dialect`（`bt` / `fsm` / `func`）过滤调色板与目录；门户带 `functionGraphPortal`。
 - 样例（默认 Mod）：`Graph.BT.Tree.EditorSample`、`Graph.FSM.EditorSample`，叶子在 `Graph.Func.*`。
-- **下一刀（未做）**：旗舰树整树改为只含组合 + 门户（仍是 Script，不新开 GraphKind）。
+- **下一刀（未做）**：外层从「Script 上挂糖」拆回真正的 L2 拓扑文档（BT 与 FSM 各一套 IR / 装载 / 校验）；旗舰树迁纯门户。不新开 `GraphKind.BehaviorTree`/`Fsm`——L2 不是 L1 Kind。
 
 ## 4. 场景
 
@@ -54,11 +59,13 @@
 
 ## 5. 边界
 
-- 不新开 opcode；不新开平行 VM。
-- **BT / FSM 不是 GraphKind**：外层与叶子都是 `Script`；方言只活在编辑器 + Host + 织入糖上。
+- 不新开 opcode；不新开平行 VM（L0 共用）。
+- **BT ≠ FSM ≠ Func Graph**：作者面、拓扑语义、宿主分派各走各的；共享的只是 L0 指令机。
+- **BT / FSM 不是 GraphKind**：它们是 L2 行为调度；Func Graph 才是 L1（今日为 Script）。
 - 门户禁止出边；只用 `functionName`，不用 `graphId`。
 - Graph Editor 调色板隐藏 BT/FSM 组合糖；错方言打开会按图 id 启发式跳到对应编辑器。
 - 旗舰 `Graph.BT.Tree.PatrolChaseAttack` 仍可暂时内联叶子；迁门户另提交。
+- **已知债务**：外层仍以 Script 文档 + 作者糖落地——编辑器已拆开，装载/校验合同尚未拆成独立 L2 IR。
 
 ## 6. UAT
 
