@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Client;
@@ -52,9 +53,19 @@ namespace RtsDemoMod.Triggers
                 }
             });
 
-            RtsPresentationBootstrapper.EnsureReadableActors(engine, world);
-            EnsureLocalCommandSourceOwner(engine, world);
+            bool isAuthoritativeServer =
+                engine.GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer;
+            if (!isAuthoritativeServer)
+            {
+                RtsPresentationBootstrapper.EnsureReadableActors(engine, world);
+            }
+
             RequirePlayerOwnership(world);
+            if (isAuthoritativeServer)
+            {
+                return Task.CompletedTask;
+            }
+
             RtsShowcaseCommandSourceHelper.EnsureCommandSourceBinding(engine);
             return Task.CompletedTask;
         }
@@ -71,16 +82,6 @@ namespace RtsDemoMod.Triggers
                         $"RTS showcase entity {entity} has Team {team.Id} but no matching PlayerOwner. Author ownership in the entity template or map data.");
                 }
             });
-        }
-
-        private static void EnsureLocalCommandSourceOwner(GameEngine engine, World world)
-        {
-            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            if (!world.IsAlive(owner))
-            {
-                throw new InvalidOperationException(
-                    "RTS showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
-            }
         }
 
         private static bool HasTag(List<string> tags, string t)

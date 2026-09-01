@@ -15,7 +15,12 @@ namespace RtsDemoMod.Runtime
     {
         public static void EnsureCommandSourceBinding(GameEngine engine)
         {
-            _ = RequireLocalCommandSourceOwner(engine);
+            if (TryResolveLocalCommandSourceOwner(engine, out Entity owner) &&
+                !engine.World.IsAlive(owner))
+            {
+                throw new InvalidOperationException(
+                    "RTS showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
+            }
         }
 
         public static bool TrySetCommandSourceAndFocus(GameEngine engine, Entity target, bool snapCamera)
@@ -26,7 +31,10 @@ namespace RtsDemoMod.Runtime
                 return false;
             }
 
-            Entity owner = RequireLocalCommandSourceOwner(engine);
+            if (!TryResolveLocalCommandSourceOwner(engine, out Entity owner))
+            {
+                return false;
+            }
 
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
@@ -46,7 +54,12 @@ namespace RtsDemoMod.Runtime
 
         public static bool TryGetCommandSourcePrimary(GameEngine engine, out Entity primary)
         {
-            Entity owner = RequireLocalCommandSourceOwner(engine);
+            primary = Entity.Null;
+            if (!TryResolveLocalCommandSourceOwner(engine, out Entity owner))
+            {
+                return false;
+            }
+
             return Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.TryGetPrimary(
                 engine.World,
                 engine.GlobalContext,
@@ -57,7 +70,11 @@ namespace RtsDemoMod.Runtime
 
         public static int GetCommandSourceCount(GameEngine engine)
         {
-            Entity owner = RequireLocalCommandSourceOwner(engine);
+            if (!TryResolveLocalCommandSourceOwner(engine, out Entity owner))
+            {
+                return 0;
+            }
+
             return Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.GetCount(
                 engine.GlobalContext,
                 owner,
@@ -79,6 +96,7 @@ namespace RtsDemoMod.Runtime
             }
 
             CameraConfig? cam = mapConfig.DefaultCamera;
+            RtsCommandSourceUiMapConfig uiConfig = RtsCommandSourceUiMapConfig.Resolve(mapConfig);
             string virtualCameraId = string.IsNullOrWhiteSpace(cam?.VirtualCameraId)
                 ? "Default"
                 : cam.VirtualCameraId;
@@ -91,37 +109,53 @@ namespace RtsDemoMod.Runtime
                 ResetRuntimeState = snapCamera
             };
 
+            Vector2 focusTarget = worldPosition.Value.ToVector2();
+            if (uiConfig.CameraFocusTowardDefaultTargetCm > 0f)
+            {
+                if (cam?.TargetXCm is not float defaultTargetXCm ||
+                    cam.TargetYCm is not float defaultTargetYCm)
+                {
+                    throw new InvalidOperationException(
+                        $"RTS map '{mapConfig.Id}' requires a complete DefaultCamera target when '{RtsCommandSourceUiMapConfig.MetadataKey}.cameraFocusTowardDefaultTargetCm' is positive.");
+                }
+
+                Vector2 direction = new Vector2(defaultTargetXCm, defaultTargetYCm) - focusTarget;
+                if (direction.LengthSquared() <= float.Epsilon)
+                {
+                    throw new InvalidOperationException(
+                        $"RTS map '{mapConfig.Id}' cannot offset camera focus toward its default target because the command source already occupies that target.");
+                }
+
+                focusTarget += Vector2.Normalize(direction) * uiConfig.CameraFocusTowardDefaultTargetCm;
+            }
+
             engine.GlobalContext[CoreServiceKeys.CameraPoseRequest.Name] = new CameraPoseRequest
             {
                 VirtualCameraId = virtualCameraId,
-                TargetCm = worldPosition.Value.ToVector2(),
+                TargetCm = focusTarget,
                 Yaw = cam?.Yaw,
                 Pitch = cam?.Pitch,
-                DistanceCm = ResolveFocusDistance(cam?.DistanceCm),
-                FovYDeg = cam?.FovYDeg
+                DistanceCm = uiConfig.CameraFocusDistanceCm ?? cam?.DistanceCm,
+                FovYDeg = uiConfig.CameraFocusFovYDeg ?? cam?.FovYDeg
             };
         }
 
-        private static float? ResolveFocusDistance(float? distanceCm)
+        private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
         {
-            if (!distanceCm.HasValue || distanceCm.Value <= 0f)
+            owner = Entity.Null;
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out owner))
             {
-                return distanceCm;
+                owner = Entity.Null;
+                return false;
             }
 
-            return MathF.Max(7000f, distanceCm.Value * 0.72f);
-        }
-
-        private static Entity RequireLocalCommandSourceOwner(GameEngine engine)
-        {
-            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (!engine.World.IsAlive(owner))
             {
                 throw new InvalidOperationException(
                     "RTS showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
-            return owner;
+            return true;
         }
     }
 }

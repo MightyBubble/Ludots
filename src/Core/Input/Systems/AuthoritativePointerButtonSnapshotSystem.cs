@@ -5,7 +5,7 @@ using Ludots.Core.Input.Runtime;
 namespace Ludots.Core.Input.Systems
 {
     /// <summary>
-    /// Freezes pointer-button gesture state at the start of each fixed-step input phase.
+    /// Freezes pointer-button gesture state at the start of the local-input phase.
     /// </summary>
     public sealed class AuthoritativePointerButtonSnapshotSystem : ISystem<float>
     {

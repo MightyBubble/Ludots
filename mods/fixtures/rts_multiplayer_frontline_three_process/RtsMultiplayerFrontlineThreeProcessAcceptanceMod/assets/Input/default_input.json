@@ -1,0 +1,15 @@
+{
+  "actions": [
+    { "id": "QueueModifier", "name": "Acceptance_AdditiveSelection", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Frontline.Acceptance",
+      "name": "Frontline Acceptance",
+      "priority": 90,
+      "bindings": [
+        { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" }
+      ]
+    }
+  ]
+}

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 
 namespace Ludots.Core.Input.Interaction
@@ -21,7 +22,8 @@ namespace Ludots.Core.Input.Interaction
         {
             PropertyNameCaseInsensitive = true,
             ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
+            AllowTrailingCommas = true,
+            Converters = { new JsonStringEnumConverter() }
         };
 
         public CommandIntentProfileConfigLoader(ConfigPipeline pipeline)
@@ -144,6 +146,11 @@ namespace Ludots.Core.Input.Interaction
                     CommandIntentRouteDefinition route = rule.Route
                         ?? throw new InvalidOperationException($"{rulePath}.route must be an object.");
                     RequireTrimmedNonEmpty(route.OrderTypeKey, $"{rulePath}.route.orderTypeKey");
+                    if (!route.TargetShape.HasValue || !Enum.IsDefined(route.TargetShape.Value))
+                    {
+                        throw new InvalidOperationException(
+                            $"{rulePath}.route.targetShape must explicitly declare a supported command target shape.");
+                    }
 
                     ValidatePredicateStrings(rule.Actor?.AllTags, $"{rulePath}.actor.allTags");
                     ValidatePredicateStrings(rule.Actor?.AnyTags, $"{rulePath}.actor.anyTags");

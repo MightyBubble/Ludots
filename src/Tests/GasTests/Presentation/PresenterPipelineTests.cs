@@ -934,7 +934,7 @@ namespace Ludots.Tests.Presentation
             var eventBus = new GameplayEventBus();
             var session = new GameSession();
             var ownerChanges = new PresentationOwnerChangeBuffer(8);
-            _projection = new GameplayPresentationProjectionSystem(_world, eventBus, _stream, session, _gasEvents, ownerChanges);
+            _projection = new GameplayPresentationProjectionSystem(_world, eventBus, _stream, session, _gasEvents, ownerChanges, enabled: true);
         }
 
         [TearDown]

@@ -875,6 +875,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _builtinHandlers,
                     _templates,
                     builtinRuntime,
+                    Entity.Null,
                     effectTemplateId,
                     new EffectContext { RootId = rootId, Source = caster, Target = target, TargetContext = targetContext },
                     in builtinParams);

@@ -617,10 +617,14 @@ export const useLauncherStore = create<LauncherState>((set, get) => {
     },
 
     launch: async () => {
-      const { selectedPlatformId, activeMods } = get();
+      const { selectedPlatformId, activeMods, selectedPresetId, presetDirty } = get();
       set({ launching: true });
       try {
-        const result = await launchGame(selectedPlatformId, topoSort(activeMods, get().mods));
+        const result = await launchGame(
+          selectedPlatformId,
+          topoSort(activeMods, get().mods),
+          !presetDirty && selectedPresetId ? selectedPresetId : undefined,
+        );
         if (!result.ok) {
           set({
             buildState: "error",

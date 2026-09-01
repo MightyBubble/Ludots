@@ -1,0 +1,32 @@
+{
+  "profiles": [
+    {
+      "id": "intent.command.default",
+      "groupPolicy": { "kind": "independent" },
+      "rules": [
+        {
+          "priority": 100,
+          "actor": { "allTags": ["Unit.Rts.Frontline.Harvester"] },
+          "target": { "hasEntity": true, "allTags": ["Resource.Rts.Frontline.CrystalNode"] },
+          "route": { "orderTypeKey": "frontlineGather", "targetShape": "Entity" }
+        },
+        {
+          "priority": 90,
+          "actor": { "allTags": ["Unit.Rts.Frontline.Infantry"] },
+          "target": { "hasEntity": true, "stance": ["Hostile"] },
+          "route": { "orderTypeKey": "attackTarget", "targetShape": "WorldPositionAndEntity" }
+        },
+        {
+          "priority": 20,
+          "target": { "hasEntity": true },
+          "route": { "orderTypeKey": "moveTo", "targetShape": "WorldPositionCm" }
+        },
+        {
+          "priority": 10,
+          "target": { "hasEntity": false },
+          "route": { "orderTypeKey": "moveTo", "targetShape": "WorldPositionCm" }
+        }
+      ]
+    }
+  ]
+}

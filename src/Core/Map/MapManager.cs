@@ -212,6 +212,11 @@ namespace Ludots.Core.Map
                 }
             }
 
+            if (source.TerrainPresentation != null)
+            {
+                target.TerrainPresentation = source.TerrainPresentation.Clone();
+            }
+
             if (source.ContinuousHeightmap != null)
             {
                 target.ContinuousHeightmap = source.ContinuousHeightmap.Clone();

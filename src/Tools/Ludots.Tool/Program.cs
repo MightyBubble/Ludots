@@ -114,6 +114,37 @@ namespace Ludots.Tool
             });
             mapCommand.AddCommand(genVtxmCommand);
 
+            var bakeContinuousHeightmapCommand = new Command("bake-continuous-heightmap", "Bake a visual .height from a VertexMap .hex");
+            var continuousHeightmapInputOption = new Option<string>("--in", "Input .hex file path") { IsRequired = true };
+            var continuousHeightmapOutputOption = new Option<string>("--out", "Output .height file path") { IsRequired = true };
+            var visualHeightStepOption = new Option<int>("--heightStepCm", () => 200, "Visual centimeters per VertexMap height level");
+            var visualHexEdgeOption = new Option<int>("--hexEdgeLengthCm", () => SpatialScaleDefaults.DefaultHexEdgeLengthCm, "Hex edge length in centimeters");
+            var visualOverwriteOption = new Option<bool>("--overwrite", () => false, "Overwrite an existing output file");
+            bakeContinuousHeightmapCommand.AddOption(continuousHeightmapInputOption);
+            bakeContinuousHeightmapCommand.AddOption(continuousHeightmapOutputOption);
+            bakeContinuousHeightmapCommand.AddOption(visualHeightStepOption);
+            bakeContinuousHeightmapCommand.AddOption(visualHexEdgeOption);
+            bakeContinuousHeightmapCommand.AddOption(visualOverwriteOption);
+            bakeContinuousHeightmapCommand.SetHandler((InvocationContext ctx) =>
+            {
+                string inputPath = ctx.ParseResult.GetValueForOption(continuousHeightmapInputOption)!;
+                string outputPath = ctx.ParseResult.GetValueForOption(continuousHeightmapOutputOption)!;
+                int heightStepCm = ctx.ParseResult.GetValueForOption(visualHeightStepOption);
+                int hexEdgeLengthCm = ctx.ParseResult.GetValueForOption(visualHexEdgeOption);
+                bool overwrite = ctx.ParseResult.GetValueForOption(visualOverwriteOption);
+                ContinuousHeightmapAsset asset = VertexMapContinuousHeightmapBaker.BakeFile(
+                    inputPath,
+                    outputPath,
+                    heightStepCm,
+                    hexEdgeLengthCm,
+                    overwrite);
+                Console.WriteLine(
+                    $"Wrote visual heightmap: {Path.GetFullPath(outputPath)} " +
+                    $"({asset.SampleColumns}x{asset.SampleRows}, bounds={asset.Bounds})");
+                ctx.ExitCode = 0;
+            });
+            mapCommand.AddCommand(bakeContinuousHeightmapCommand);
+
             var genReactBinCommand = new Command("gen-reactbin", "Generate a React editor map_data.bin test file");
             var reactOutOption = new Option<string>("--out", "Output .bin file path") { IsRequired = true };
             var reactWidthOption = new Option<int>("--widthChunks", () => 16, "Map width in chunks");

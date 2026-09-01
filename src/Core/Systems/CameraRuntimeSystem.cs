@@ -52,9 +52,15 @@ namespace Ludots.Core.Systems
 
             for (int i = 0; i < _cameraScratch.Count; i++)
             {
-                ApplyVirtualCameraRequest(_cameraScratch[i]);
-                ApplyCameraPoseRequest(_cameraScratch[i]);
-                _cameraScratch[i].Update(dt);
+                CameraManager camera = _cameraScratch[i];
+                if (camera.VirtualCameraBrain == null)
+                {
+                    camera.SetVirtualCameraRegistry(_virtualCameraRegistry);
+                }
+
+                ApplyVirtualCameraRequest(camera);
+                ApplyCameraPoseRequest(camera);
+                camera.Update(dt);
             }
 
             _globals.Remove(CoreServiceKeys.CameraPoseRequest.Name);

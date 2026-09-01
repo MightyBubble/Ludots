@@ -6,6 +6,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 
 namespace GasTests
@@ -146,6 +147,39 @@ namespace GasTests
 
                 Assert.That(cfg, Is.Not.Null);
                 Assert.That(cfg!.ContinuousHeightmapAsset, Is.EqualTo("terrain/parent.height"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenMapDeclaresTerrainPresentation_PreservesBinding()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "terrain_map", """
+                {
+                  "id": "terrain_map",
+                  "terrainPresentation": {
+                    "source": "BoardTerrain",
+                    "boardName": "default"
+                  }
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("terrain_map");
+
+                Assert.That(cfg, Is.Not.Null);
+                Assert.That(cfg!.TerrainPresentation, Is.Not.Null);
+                Assert.Multiple(() =>
+                {
+                    Assert.That(cfg.TerrainPresentation!.Source, Is.EqualTo(TerrainPresentationSource.BoardTerrain));
+                    Assert.That(cfg.TerrainPresentation.BoardName, Is.EqualTo("default"));
+                });
             }
             finally
             {
