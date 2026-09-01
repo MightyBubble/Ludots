@@ -1013,7 +1013,13 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       setSelectedEdgeId(null);
       setSelectedVariable(null);
       setStatus(`Loaded ${loaded.id} (${loaded.kind})`);
-      await loadMapVariables(loaded.id);
+      try {
+        await loadMapVariables(loaded.id);
+      } catch (mapVarErr) {
+        setDeclaredVariables([]);
+        setVariableMapId(null);
+        setVariableStatus(mapVarErr instanceof Error ? mapVarErr.message : String(mapVarErr));
+      }
     } catch (err) {
       setGraph(null);
       setNodes([]);

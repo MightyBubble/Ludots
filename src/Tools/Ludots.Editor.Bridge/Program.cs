@@ -376,6 +376,11 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}", async (string modId, string mapId, 
 
 app.MapGet("/api/mods/{modId}/gas/graphs/{graphId}/map-variables", (string modId, string graphId) =>
 {
+    if (string.Equals(modId, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.Ok(new { ok = true, graphId, maps = Array.Empty<object>() });
+    }
+
     string repoRoot = FindAssetsRoot();
     try
     {
