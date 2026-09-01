@@ -24,13 +24,9 @@ dist/                  ← 播放器二进制（dotnet publish 的输出）
 
 ## 在目标机器上跑
 
-命令行跑法与开发机相同，`--project` 给相对路径即可（播放器会从当前目录解析）：
+**直接双击 `Ludots.App.RaylibPlayer.exe`**：它发现身边唯一的 `projects/engine_gallery` 就自动进入场景菜单——目标用户零输入。机器上有多个工程时双击会弹选择列表。
 
-```text
-Ludots.App.RaylibPlayer.exe --project projects/engine_gallery
-```
-
-想双击就跑，放一个 `play.cmd` 在 dist/ 里：
+需要固定进某一关（比如展会自动循环），放一个 `play.cmd` 在 dist/ 里：
 
 ```text
 @echo off

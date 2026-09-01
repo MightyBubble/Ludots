@@ -1,6 +1,8 @@
 # 纯 Raylib 引擎用户手册
 
-这一套手册讲 Ludots 里的"纯 raylib 引擎"：一个不依赖任何游戏框架、能打开"工程"文件的迷你引擎播放器，像用 Unity Player 打开一个 Unity 工程那样用它。给三类人读：想摆场景的人、想跑验收的人、想把成品发给别人的人。
+这一套手册讲 Ludots 里的"纯 raylib 引擎"：一个不依赖任何游戏框架、能打开"工程"文件的迷你引擎播放器，像用 Unity Player 打开一个 Unity 工程那样用它。
+
+**先认门：这套文档分两个视角。** 你现在在读的是**产品用户手册**——用引擎摆场景、跑验收、打包发布的人看这里，通篇不需要写代码。如果你是要**开发引擎本身**（写组件、改装载器、动渲染器），你的入口在开发者侧：[引擎工程分层与关卡容器格式](../../architecture/raylib-engine-project-scene-format.md)（架构合同）与[引擎画廊开发指南](../../architecture/raylib-engine-gallery-dev-guide.md)（登记环），能力实拍见[引擎画廊 Wiki](../engine-gallery-wiki/README.md)。
 
 ## 上手
 

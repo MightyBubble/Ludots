@@ -5,7 +5,9 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.Raylib.SceneKit
 {
     /// <summary>
-    /// 画廊内置轨道相机：左键拖拽旋转、滚轮缩放、WASD/方向键平移、R 复位。
+    /// 引擎检视视图的轨道相机（调试工具）：左键拖拽旋转、滚轮缩放、WASD/方向键平移、R 复位。
+    /// 只服务引擎侧的场景检视与取证，不参与游戏运行——游戏运行时的相机、角色控制与
+    /// 输入路由由 Ludots 世界侧接管（Core 虚拟相机 + 指令系统 + 宿主输入路由）。
     /// 初始位姿来自关卡容器的 camera 声明，R 键复位到最近一次设定的默认值。
     /// </summary>
     public sealed class EngineOrbitCamera

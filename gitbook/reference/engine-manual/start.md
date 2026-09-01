@@ -2,37 +2,26 @@
 
 纯 raylib 引擎是一个迷你引擎加一个播放器：引擎负责画（地形、网格、动画、材质、光影），播放器负责打开工程、跑场景、出截图。你在仓库里就能跑，不需要装 Unity 或别的什么。
 
-## 先跑起来
+## 先跑起来：双击就行
 
-从仓库根目录执行（三条按需选一）：
+播放器是个可执行文件（`src/Apps/Raylib/Ludots.App.RaylibPlayer`，发布后在 dist 目录里叫 `Ludots.App.RaylibPlayer.exe`）。**不带任何参数直接运行**：
 
-```text
-dotnet run --project src/Apps/Raylib/Ludots.App.RaylibPlayer -- --project projects/engine_gallery
-```
+- 附近只有一个工程 → 自动打开，进场景菜单；
+- 附近有多个工程 → 弹一个选择列表，数字键选工程、回车进入。
 
-打开一个菜单窗口，数字键选场景、回车进入——这是浏览整个画廊工程的方式。
+在仓库里开发时等价的命令是 `dotnet run --project src/Apps/Raylib/Ludots.App.RaylibPlayer`——同样不用带参数。作者日常用它看场景，**全程可以不碰命令行**；命令行参数是留给自动化（验收、录像、CI）的，见[播放器与命令行](player.md)。
 
-```text
-dotnet run --project src/Apps/Raylib/Ludots.App.RaylibPlayer -- --project projects/engine_gallery --scene composition
-```
+## 检视视图（调试操作）
 
-直接进"组合场景"那一关：一座岛、一圈石头、两个巡逻的兵。
-
-```text
-dotnet run --project src/Apps/Raylib/Ludots.App.RaylibPlayer -- --project projects/engine_gallery --scene composition --frames 120 --screenshot shot.png --json stats.json
-```
-
-无窗口跑 120 帧存一张截图加一份帧统计——这是验收和取证据的标准跑法。
-
-`--project` 永远要给：播放器只认工程目录，不认识散落的文件。
-
-## 进了场景怎么操作
+场景里的这套鼠标键盘是**引擎检视视图**——调试工具，供你检查场景摆得对不对：
 
 - 按住鼠标左键拖：转视角；
 - 滚轮：拉近拉远；
 - W A S D 或方向键：平移镜头；
-- R：一键回到这一关开头的默认视角；
+- R：回到这一关开头的默认视角；
 - ESC：退回菜单。
+
+说清楚边界：检视操作只存在于纯引擎播放器里。**接上 Ludots 世界跑游戏时，相机、角色控制、输入全部由 Ludots 侧接管**（虚拟相机 + 指令系统那套 3C 基建），引擎检视视图不参与游戏运行——所以别把 WASD 当成"这个引擎的游戏操作"来记，它只是开发期的观察窗口。
 
 ## 心法
 
