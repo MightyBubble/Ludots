@@ -69,8 +69,8 @@ namespace Ludots.Tests.GAS
             harness.Commit.ExecuteActivation(harness.ProfileId(AimConfirmProfileId), in ctx);
 
             Assert.That(harness.Submits.CallCount, Is.EqualTo(0), "no order until the frame action fires.");
-            Assert.That(harness.SubjectContext(out ActiveInteractionContext mounted), Is.True);
-            Assert.That(mounted.Source, Is.EqualTo(ActiveInteractionContextSource.CastCommitOp));
+            Assert.That(harness.SubjectContext(out InteractionContextInstance mounted), Is.True);
+            Assert.That(mounted.Source, Is.EqualTo(InteractionContextInstanceSource.CastCommitOp));
             Assert.That(mounted.ContextEntity, Is.EqualTo(harness.Subject));
             Assert.That(
                 mounted.ActiveCollectionKeyId,
@@ -327,7 +327,7 @@ namespace Ludots.Tests.GAS
             {
                 CallCount++;
                 LastPayloadCount = payload.Count;
-                LastSubjectHadContextAtSubmit = ctx.World.Has<ActiveInteractionContext>(ctx.Subject);
+                LastSubjectHadContextAtSubmit = ctx.World.Has<InteractionContextInstance>(ctx.Subject);
                 if (payload.Count > 0)
                 {
                     LastKeyId = payload[0].KeyId;
@@ -390,9 +390,9 @@ namespace Ludots.Tests.GAS
 
             public int ProfileId(string name) => ProfileIds.GetId(name);
 
-            public bool SubjectHasActiveContext() => _world.Has<ActiveInteractionContext>(Subject);
+            public bool SubjectHasActiveContext() => _world.Has<InteractionContextInstance>(Subject);
 
-            public bool SubjectContext(out ActiveInteractionContext context) =>
+            public bool SubjectContext(out InteractionContextInstance context) =>
                 _world.TryGet(Subject, out context);
 
             public InteractionOpContext CreateContext()

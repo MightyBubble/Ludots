@@ -259,7 +259,7 @@ namespace Ludots.Tests.GAS
             harness.System.Update(0.016f);
             Assert.That(harness.System.LastCommands.Count, Is.EqualTo(1));
 
-            world.Remove<ActiveInteractionContext>(rep);
+            world.Remove<InteractionContextInstance>(rep);
             harness.System.Update(0.016f);
 
             Assert.That(harness.System.LastCommands.Count, Is.EqualTo(1));
@@ -505,10 +505,10 @@ namespace Ludots.Tests.GAS
 
             public void MountContext(Entity subject, string inputContextId)
             {
-                _world.Add(subject, new ActiveInteractionContext
+                _world.Add(subject, new InteractionContextInstance
                 {
                     InputContextId = ContextProfiles.InputContextIdRegistry.Register(inputContextId),
-                    Source = ActiveInteractionContextSource.ExecLifecycle,
+                    Source = InteractionContextInstanceSource.ExecLifecycle,
                 });
             }
 

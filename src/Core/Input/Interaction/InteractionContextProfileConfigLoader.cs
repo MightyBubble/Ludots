@@ -77,6 +77,49 @@ namespace Ludots.Core.Input.Interaction
                 RequireTrimmedWhenPresent(profile.FilterProfileId, $"{path}.filterProfileId");
                 RequireTrimmedWhenPresent(profile.InputContextId, $"{path}.inputContextId");
                 RequireTrimmedWhenPresent(profile.CommandIntentId, $"{path}.commandIntentId");
+                ValidateBindings(profile.Bindings, path);
+                ValidateTriggers(profile.Triggers, path);
+            }
+        }
+
+        private static void ValidateBindings(List<string>? bindings, string path)
+        {
+            if (bindings == null)
+            {
+                return;
+            }
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                string binding = bindings[i]
+                    ?? throw new InvalidOperationException($"{path}.bindings[{i}] must be a string.");
+                RequireTrimmedNonEmpty(binding, $"{path}.bindings[{i}]");
+                if (!seen.Add(binding))
+                {
+                    throw new InvalidOperationException($"{path}.bindings[{i}] duplicates semantic action '{binding}'.");
+                }
+            }
+        }
+
+        private static void ValidateTriggers(List<InteractionContextTriggerMount>? triggers, string path)
+        {
+            if (triggers == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                InteractionContextTriggerMount mount = triggers[i]
+                    ?? throw new InvalidOperationException($"{path}.triggers[{i}] must be an object.");
+                string mountPath = $"{path}.triggers[{i}]";
+                RequireTrimmedNonEmpty(mount.Trigger, $"{mountPath}.trigger");
+                RequireTrimmedWhenPresent(mount.Event, $"{mountPath}.event");
+                if (mount.Filters?.InstanceId != null)
+                {
+                    RequireTrimmedWhenPresent(mount.Filters.InstanceId, $"{mountPath}.filters.instanceId");
+                }
             }
         }
 

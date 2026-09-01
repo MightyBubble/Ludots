@@ -172,6 +172,8 @@
 - [刻死的一刀](ConstFloat.md) — 台上没有表盘，只有一块刻好长度的铭牌；每一刀都和铭牌一样长。
 - [命运袋里掏一件](WeightedPick.md) — 掌心探进命运袋，掏出第几件全看权重，木桩照数挨一下。
 - [图内切瞄准](SetInteractionMode.md) — 不用碰键位表，一枚目标在图里被切进了瞄准模式。
+- [图内收走瞄准 context](DeactivateContext.md) — 前一脚挂起的瞄准 context，后一脚原地收走，作用域整组清干净。
+- [图内激活瞄准 context](ActivateContext.md) — 不用碰键位表，一枚指令把木桩切进瞄准 context，实例集里立起一条。
 - [图内造兵](SpawnTemplate.md) — 不用预置实体，阈值一到援军从图里长了出来。
 - [对折零轴取长度](AbsFloat.md) — 负 8 的修正段沿零轴对折，折过来的长度是多少就打多少。
 - [按编号翻名册点将](ResolveTableRow.md) — 报出 2 号，名册翻到那一行，册上的扣血照着木桩落下。
@@ -231,6 +233,12 @@
 - [算出一个整数就收工](HaltReturnInt.md) — 数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。
 - [续一杯，歇一口气](Yield.md) — 每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
 - [进图开一场对话](StartDialogue.md) — 图节点点名对话 id；跑完，会话已开，字幕报「对话已开」。
+
+## 集合透传
+
+> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
+
+- [终选集按事件 key 落账](DispatchCollectionEvent.md) — 图里点好的终选集，一声事件按 key 递出去，账房照单写进集合。
 
 ## 黑板与配置
 

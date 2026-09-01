@@ -209,7 +209,7 @@ namespace SuperweaponContextShowcaseMod.UI
             if (contextProfiles == null ||
                 !ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep) ||
                 !engine.World.IsAlive(rep) ||
-                !engine.World.TryGet<Ludots.Core.Input.Interaction.ActiveInteractionContext>(rep, out var context))
+                !engine.World.TryGet<Ludots.Core.Input.Interaction.InteractionContextInstance>(rep, out var context))
             {
                 return false;
             }

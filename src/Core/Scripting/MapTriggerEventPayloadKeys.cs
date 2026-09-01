@@ -36,6 +36,12 @@ namespace Ludots.Core.Scripting
         public const string Modifiers = "MapTrigger.Modifiers";                  // int (bitmask)
         public const string ContextId = "MapTrigger.ContextId";                  // int (registry id)
         public const string SourceMapId = "MapTrigger.SourceMapId";              // MapId (cross-map/global dispatch transport metadata)
+        // Collection pass-through contract (#1398 S2b gap 9, Case E 06): DispatchCollectionEvent
+        // fires a schema-less map event carrying the final entity set plus the set semantics;
+        // EventKeyedCollectionWriter receives by event key and writes EntityCollectionStore.
+        public const string CollectionEntitySet = "MapTrigger.CollectionEntitySet"; // Entity[] (final hit set)
+        public const string CollectionOp = "MapTrigger.CollectionOp";              // int (0=replace,1=add,2=subtract)
+        public const string CollectionKey = "MapTrigger.CollectionKey";            // int (EntityCollectionStore key id)
         public const string FieldLayer = "MapTrigger.FieldLayer";                // string (field layer key)
 
         /// <summary>

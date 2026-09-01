@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Ludots.Core.GraphRuntime;
 
 namespace Ludots.Core.Input.Interaction
 {
@@ -7,7 +8,7 @@ namespace Ludots.Core.Input.Interaction
     {
         /// <summary>
         /// Data-declared steady-state profile: never mounted (absence of
-        /// <see cref="ActiveInteractionContext"/> is the steady state), but its collection key
+        /// <see cref="InteractionContextInstance"/> is the steady state), but its collection key
         /// and filter profile anchor steady-state cast commits and command routing.
         /// </summary>
         public const string Default = "interaction.context.default";
@@ -22,7 +23,7 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// One interaction context profile (RFC-0065 §5.3). Abilities reference profiles via
     /// <c>abilities.json interactionContextProfile</c>; a mounted context copies these fields
-    /// into an <see cref="ActiveInteractionContext"/>. Strings live only in JSON — Core never
+    /// into an <see cref="InteractionContextInstance"/>. Strings live only in JSON — Core never
     /// interprets ids beyond registry resolution.
     /// </summary>
     public sealed class InteractionContextProfileDefinition
@@ -43,5 +44,39 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>Optional pointer command intent profile active while the context is mounted (DEC-14).</summary>
         public string CommandIntentId { get; set; }
+
+        /// <summary>
+        /// Semantic action ids (input config action space) that hold while this context is
+        /// active. Validated against the installed input action catalog at registry install —
+        /// an unknown action id fails fast. Data-declared contract only in this slice: routing
+        /// consumers land with the slot work (RFC #1398 S6).
+        /// </summary>
+        public List<string>? Bindings { get; set; }
+
+        /// <summary>
+        /// TriggerGraph mounts the context gates while it is active (#1398 S2b): each entry
+        /// activates one graph's dispatch entries on the context subject while the context is
+        /// mounted and deactivates them on unmount. Graph id and entry event name resolve at
+        /// registry install (fail fast on unknown ids); mount-time event vocabulary checks ride
+        /// the existing TriggerGraph mount chain.
+        /// </summary>
+        public List<InteractionContextTriggerMount>? Triggers { get; set; }
+    }
+
+    /// <summary>
+    /// One context-gated TriggerGraph reference on an
+    /// <see cref="InteractionContextProfileDefinition"/>. <c>Trigger</c> names a registered
+    /// TriggerGraph; <c>Event</c> optionally narrows the mount to the graph's entries listening
+    /// on that event name (all dispatch entries mount when empty); <c>Filters</c> optionally
+    /// replaces the selected entries' authored filters for this mount — a reference-time
+    /// override, not a merge.
+    /// </summary>
+    public sealed class InteractionContextTriggerMount
+    {
+        public string Trigger { get; set; } = string.Empty;
+
+        public string? Event { get; set; }
+
+        public TriggerGraphEntryFiltersConfig? Filters { get; set; }
     }
 }

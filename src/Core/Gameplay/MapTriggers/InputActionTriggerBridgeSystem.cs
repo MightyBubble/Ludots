@@ -137,7 +137,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         private int ResolveActiveContextId(Entity playerRep)
         {
-            if (_world.TryGet<ActiveInteractionContext>(playerRep, out ActiveInteractionContext active))
+            if (_world.TryGet<InteractionContextInstance>(playerRep, out InteractionContextInstance active))
             {
                 return active.ContextId;
             }

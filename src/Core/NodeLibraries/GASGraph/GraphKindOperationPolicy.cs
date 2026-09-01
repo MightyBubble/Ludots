@@ -133,13 +133,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireRegisterIndex(graphId, i, nameof(GraphInstruction.Dst), instruction.Dst, entrypoint);
                 }
 
-                // CreatePanel/DestroyPanel/ReadMapVar*/SetInteractionMode 的 A 是可选 scope 操作数：byte.MaxValue 表示"缺省"（CreatePanel/ReadMapVar*/SetInteractionMode→caster，DestroyPanel→任意 scope），不是寄存器引用。
+                // CreatePanel/DestroyPanel/ReadMapVar*/SetInteractionMode/ActivateContext/DeactivateContext 的 A 是可选 scope 操作数：byte.MaxValue 表示"缺省"（CreatePanel/ReadMapVar*/SetInteractionMode/ActivateContext/DeactivateContext→caster，DestroyPanel→任意 scope），不是寄存器引用。
                 bool aIsOptionalAbsent = instruction.A == byte.MaxValue &&
                     op is GraphNodeOp.CreatePanel
                         or GraphNodeOp.DestroyPanel
                         or GraphNodeOp.ReadMapVarInt
                         or GraphNodeOp.ReadMapVarFloat
-                        or GraphNodeOp.SetInteractionMode;
+                        or GraphNodeOp.SetInteractionMode
+                        or GraphNodeOp.ActivateContext
+                        or GraphNodeOp.DeactivateContext;
                 // WriteMapVar* 的 B 是可选 scope 操作数：byte.MaxValue 表示"缺省"（→caster）。
                 // CreatePanel 的 B 是可选皮肤符号索引：byte.MaxValue 表示"未指定皮"（走模板/全局默认链）。
                 bool bIsOptionalAbsent = instruction.B == byte.MaxValue &&

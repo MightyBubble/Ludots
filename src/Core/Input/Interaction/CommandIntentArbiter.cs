@@ -11,7 +11,7 @@ namespace Ludots.Core.Input.Interaction
     /// Calling convention: the caller first offers the action to the active context's
     /// <c>frameActions</c> via <see cref="CastCommitProfileRegistry.TryExecuteFrameAction"/>; only
     /// when that returns false does the arbiter run. Resolution chain reads the entity-mounted
-    /// interaction state: the subject's <see cref="ActiveInteractionContext.CommandIntentProfileId"/>
+    /// interaction state: the subject's <see cref="InteractionContextInstance.CommandIntentProfileId"/>
     /// wins when positive (context explicit); zero on a mounted context means the context declares
     /// no intent and the pointer command does not route; with no context mounted (steady state)
     /// the possessed representative's <see cref="InteractionPref"/> player default applies. Never
@@ -35,7 +35,7 @@ namespace Ludots.Core.Input.Interaction
                 throw new ArgumentNullException(nameof(world));
             }
 
-            if (world.TryGet<ActiveInteractionContext>(interactionSubject, out ActiveInteractionContext context))
+            if (world.TryGet<InteractionContextInstance>(interactionSubject, out InteractionContextInstance context))
             {
                 return context.CommandIntentProfileId;
             }

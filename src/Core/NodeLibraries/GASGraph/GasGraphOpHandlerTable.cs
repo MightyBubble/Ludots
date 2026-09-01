@@ -341,7 +341,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ScreenPointToEntity or
                 GraphNodeOp.ScreenRegionToEntities or
                 GraphNodeOp.PointToDirection or
-                GraphNodeOp.StickToDirection
+                GraphNodeOp.StickToDirection or
+                GraphNodeOp.ActivateContext or
+                GraphNodeOp.DeactivateContext or
+                GraphNodeOp.DispatchCollectionEvent
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -903,7 +906,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.CreatePanel, HandleCreatePanel, "CreatePanel graph opcode.");
         Register(GraphNodeOp.SpawnTemplate, HandleSpawnTemplate, "SpawnTemplate graph opcode.");
         Register(GraphNodeOp.SetWorldPosition, HandleSetWorldPosition, "SetWorldPosition graph opcode.");
-        Register(GraphNodeOp.SetInteractionMode, HandleSetInteractionMode, "SetInteractionMode graph opcode.");
+            Register(GraphNodeOp.SetInteractionMode, HandleSetInteractionMode, "SetInteractionMode graph opcode.");
+            Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
+            Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
+            Register(GraphNodeOp.DispatchCollectionEvent, HandleDispatchCollectionEvent, "DispatchCollectionEvent graph opcode.");
         Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
@@ -1489,6 +1495,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
             s.Api.SetInteractionMode(target, ins.Imm);
+        }
+
+        private static void HandleActivateContext(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.ActivateContext(
+                target,
+                ContextOpEncoding.UnpackContext(ins.Imm),
+                ContextOpEncoding.UnpackParent(ins.Imm));
+        }
+
+        private static void HandleDeactivateContext(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.DeactivateContext(target, ContextOpEncoding.UnpackContext(ins.Imm));
+        }
+
+        private static void HandleDispatchCollectionEvent(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            MapId mapId = s.MapScope ?? ResolveMapOfEntity(ref s, s.Caster);
+            s.Api.DispatchCollectionEvent(
+                ins.Imm,
+                s.I[ins.B],
+                s.Caster,
+                mapId,
+                s.Targets,
+                s.TargetList.Count);
         }
 
         private static void HandleSetPanelAudience(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

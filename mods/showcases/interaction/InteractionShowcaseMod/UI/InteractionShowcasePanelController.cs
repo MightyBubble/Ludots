@@ -996,7 +996,7 @@ namespace InteractionShowcaseMod.UI
 
             owner = localPlayer;
             collectionKeyId = steadyStateKeyId;
-            if (engine.World.TryGet<ActiveInteractionContext>(localPlayer, out ActiveInteractionContext context))
+            if (engine.World.TryGet<InteractionContextInstance>(localPlayer, out InteractionContextInstance context))
             {
                 collectionKeyId = context.ActiveCollectionKeyId;
                 if (context.ContextEntity != Entity.Null && engine.World.IsAlive(context.ContextEntity))

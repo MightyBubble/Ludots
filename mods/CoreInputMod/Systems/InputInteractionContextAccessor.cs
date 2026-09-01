@@ -257,7 +257,7 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            if (_world.TryGet<ActiveInteractionContext>(subject, out ActiveInteractionContext context))
+            if (_world.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance context))
             {
                 if (!HasEntityValue(context.ContextEntity) || !_world.IsAlive(context.ContextEntity))
                 {

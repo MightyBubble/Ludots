@@ -309,7 +309,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
             Entity rep = world.Create();
-            world.Add(rep, new ActiveInteractionContext
+            world.Add(rep, new InteractionContextInstance
             {
                 ContextEntity = world.Create(),
                 CommandIntentProfileId = harness.IntentIds.Register(AltIntent),
@@ -348,7 +348,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             Harness harness = Harness.Create(world, withHandler: false);
             Entity rep = world.Create();
-            world.Add(rep, new ActiveInteractionContext
+            world.Add(rep, new InteractionContextInstance
             {
                 ContextEntity = world.Create(),
                 CommandIntentProfileId = 0,

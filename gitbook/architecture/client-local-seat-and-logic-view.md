@@ -170,7 +170,7 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 
 - Seat ≠ 「玩家属于 client」
 - `GameConfig.startupLocalSeats` 不是运行时座位真相；进图后以 `ClientLocalSeatRegistry` 为准
-- 不把交互上下文的载体实体（`ActiveInteractionContext.ContextEntity`）当成座位表
+- 不把交互上下文的载体实体（`InteractionContextInstance.ContextEntity`）当成座位表
 - 本页不定义 Cast→Query→WriteCollection 业务图（见交互/蓝图合同）
 - 分屏布局是 PresentBinding.rect 配置，不另起视觉子系统
 - 画面剔除挂 PresentBinding，不挂裸 LogicView；LogicView 只提供镜头权威

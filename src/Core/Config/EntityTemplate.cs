@@ -25,6 +25,15 @@ namespace Ludots.Core.Config
         public List<string>? TriggerGraphs { get; set; }
 
         /// <summary>
+        /// Interaction context profile id mounted as the entity's base
+        /// <c>InteractionContextInstance</c> at spawn (#1398 S2b, Case E 01/02). Trimmed
+        /// non-empty when present; the profile id resolves against the installed context
+        /// profiles (engine init fails fast on unknown ids, spawn fails closed on drift).
+        /// </summary>
+        [JsonPropertyName("initialInteractionContext")]
+        public string? InitialInteractionContext { get; set; }
+
+        /// <summary>
         /// 预置组合子实体（以本模板实体为父、按 localPose 相对落位）。
         /// 形状对齐 presenter 层 PresenterDefinition.Children 先例；spawn 走
         /// RuntimeEntitySpawnQueue 既有管线（map 装载走 EntityBuilder 同一物化路径）。

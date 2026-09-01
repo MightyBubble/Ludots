@@ -143,6 +143,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Gameplay.Activities.ActivityRuntimeService? _activityRuntime;
         private Gameplay.Tasks.TaskRuntimeService? _taskRuntime;
         private Ludots.Core.Input.Interaction.InteractionModeMap? _interactionModeMap;
+        private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
+        private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -320,6 +322,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindInteractionModeMap(Ludots.Core.Input.Interaction.InteractionModeMap modeMap)
         {
             _interactionModeMap = modeMap ?? throw new ArgumentNullException(nameof(modeMap));
+        }
+
+        /// <summary>
+        /// Binds the derived interaction context kernel so graph programs can activate and
+        /// deactivate derived contexts via <see cref="ActivateContext"/> /
+        /// <see cref="DeactivateContext"/>; unbound kernels fail closed per call.
+        /// </summary>
+        public void BindContextInstances(Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime contextInstances)
+        {
+            _contextInstances = contextInstances ?? throw new ArgumentNullException(nameof(contextInstances));
+        }
+
+        /// <summary>
+        /// Binds the custom event name registry so collection pass-through dispatches can
+        /// fail closed on undeclared event keys (<see cref="DispatchCollectionEvent"/>).
+        /// </summary>
+        public void BindCustomEvents(Gameplay.MapTriggers.CustomEventNameRegistry customEvents)
+        {
+            _customEvents = customEvents ?? throw new ArgumentNullException(nameof(customEvents));
         }
 
         public GasGraphRuntimeApi(
@@ -873,6 +894,81 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             {
                 _world.Add(target, component);
             }
+        }
+
+        /// <summary>
+        /// Activates a derived interaction context on the subject (#1398 S2b). The kernel owns
+        /// parent validation, scope creation, and the ContextActivated presentation event;
+        /// fail-closed on every mis-declared input by name.
+        /// </summary>
+        public void ActivateContext(Entity subject, int contextKeyId, int parentContextKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(ActivateContext));
+            var contextInstances = _contextInstances
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            contextInstances.Activate(subject, contextKeyId, parentContextKeyId);
+        }
+
+        /// <summary>
+        /// Deactivates a derived interaction context (and its descendants) on the subject; the
+        /// instance's presenter scope is destroyed through the presenter command pipeline and a
+        /// ContextDeactivated presentation event is published.
+        /// </summary>
+        public void DeactivateContext(Entity subject, int contextKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(DeactivateContext));
+            var contextInstances = _contextInstances
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            contextInstances.Deactivate(subject, contextKeyId);
+        }
+
+        /// <summary>
+        /// Fires the collection pass-through event (#1398 S2b gap 9): schema-less map dispatch
+        /// so the Entity[] payload rides the reserved MapTrigger.Collection* keys; the event
+        /// key must be a declared custom event (fail closed) and a map scope is required.
+        /// </summary>
+        public void DispatchCollectionEvent(int packedKeyIds, int opKind, Entity source, MapId mapId, Span<Entity> entities, int count)
+        {
+            RejectDerivedAttributeSideEffect(nameof(DispatchCollectionEvent));
+            var triggerManager = _triggerManager
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+            var customEvents = _customEvents
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CollectionEventBridgeUnavailable");
+
+            if (opKind is < 0 or > 2)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.CollectionEventOpInvalid: op kind {opKind} is not one of replace(0)/add(1)/subtract(2).");
+            }
+
+            if (string.IsNullOrEmpty(mapId.Value))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.CollectionEventNoMapScope: DispatchCollectionEvent requires a map scope.");
+            }
+
+            string eventName = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(CollectionEventOpEncoding.UnpackEventKey(packedKeyIds))
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.CollectionEventKeyUnknown: event key id {CollectionEventOpEncoding.UnpackEventKey(packedKeyIds)} resolves to no config key.");
+            if (!customEvents.IsDeclaredCustom(eventName))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.CollectionEventKeyUnknown: '{eventName}' is not a declared custom event; declare it in {Gameplay.MapTriggers.CustomEventNameRegistry.ConfigPath}.");
+            }
+
+            var context = new ScriptContext();
+            context.Set(ContextKeys.MapId, mapId);
+            if (source != Entity.Null && source != default)
+            {
+                context.Set(MapTriggerEventPayloadKeys.SourceEntity, source);
+            }
+
+            var entitySet = new Entity[count];
+            entities.Slice(0, count).CopyTo(entitySet);
+            context.Set(MapTriggerEventPayloadKeys.CollectionEntitySet, entitySet);
+            context.Set(MapTriggerEventPayloadKeys.CollectionOp, opKind);
+            context.Set(MapTriggerEventPayloadKeys.CollectionKey, CollectionEventOpEncoding.UnpackCollectionKey(packedKeyIds));
+            triggerManager.FireMapEvent(mapId, new EventKey(eventName), context);
         }
 
         /// <summary>

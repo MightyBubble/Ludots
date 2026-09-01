@@ -17,7 +17,7 @@
 | 加载器 | src/Core/Input/Interaction/CommandIntentProfileConfigLoader.cs:31 |
 | 编组策略注册与未知 kind 报错 | src/Core/Input/Interaction/CommandIntentProfileRegistry.cs:68-93,359-362 |
 | 意图解析链（读实体交互状态） | src/Core/Input/Interaction/CommandIntentArbiter.cs:23-45 |
-| 实体交互状态组件与对账写入 | src/Core/Input/Interaction/ActiveInteractionContext.cs · src/Core/Input/Interaction/AbilityExecInteractionContextSystem.cs |
+| 实体交互状态组件与对账写入 | src/Core/Input/Interaction/InteractionContextInstance.cs · src/Core/Input/Interaction/AbilityExecInteractionContextSystem.cs |
 | 安装点（含知识门） | src/Core/Engine/GameEngine.cs:1557-1568 |
 | 消费调用 | src/Core/Input/Orders/InputOrderMappingSystem.cs（经 Arbiter 解析交互状态） |
 | 根资产 | assets/Input/command_intent_profiles.json |

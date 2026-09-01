@@ -221,7 +221,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             ChainHarness harness = ChainHarness.Create(world, plantPref: false);
-            world.Add(harness.Rep, new ActiveInteractionContext
+            world.Add(harness.Rep, new InteractionContextInstance
             {
                 ContextEntity = world.Create(),
                 CommandIntentProfileId = 0,

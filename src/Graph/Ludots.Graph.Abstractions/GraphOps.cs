@@ -351,6 +351,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         StickToDirection = 473,
 
+        // ── Derived interaction context ops (#1398 S2b, constitution §8.2/§8.3). The
+        // entity-mounted context set is world state; these ops are its only derived-context
+        // writers. Scope lifecycle (presenter Create/DestroyScope) rides the presenter
+        // command pipeline; activation/deactivation publish ContextActivated/Deactivated
+        // presentation events keyed by the context profile id. ──
+        /// <summary>
+        /// Activate a derived interaction context on E[A] (A=0xFF → caster). Imm = context
+        /// profile symbol; Dst = optional parent context profile symbol (0xFF → no parent
+        /// constraint). Idempotent-failure: an already-active context or an inactive declared
+        /// parent fails fast by name.
+        /// </summary>
+        ActivateContext = 474,
+        /// <summary>
+        /// Deactivate an interaction context instance (and its descendants transitively) on
+        /// E[A] (A=0xFF → caster). Imm = context profile symbol. Fails fast when the context
+        /// is not mounted as an instance; the instance's presenter scope is destroyed
+        /// wholesale through the presenter command pipeline.
+        /// </summary>
+        DeactivateContext = 475,
+        /// <summary>
+        /// Pass-through collection commit (#1398 S2b gap 9, Case E 06 A-side): fire the
+        /// authored event key as a schema-less map event carrying the current TargetList
+        /// plus the set semantics — I[B] = op (0=replace, 1=add, 2=subtract, computed
+        /// in-graph from modifier actions). Imm = event key symbol; Dst = collection key
+        /// symbol; both packed into Imm at patch time. Downstream: EventKeyedCollectionWriter.
+        /// </summary>
+        DispatchCollectionEvent = 476,
+
     }
 
     public static class GraphNodeOpParser

@@ -1691,7 +1691,7 @@ namespace Ludots.Core.Input.Orders
             }
 
             Entity actingRep = RequireActingPlayerRepresentative();
-            bool hasActiveContext = _commandIntentWorld.TryGet<ActiveInteractionContext>(actingRep, out ActiveInteractionContext activeContext);
+            bool hasActiveContext = _commandIntentWorld.TryGet<InteractionContextInstance>(actingRep, out InteractionContextInstance activeContext);
             int activeCollectionKeyId = hasActiveContext ? activeContext.ActiveCollectionKeyId : _steadyStateCollectionKeyId;
 
             int actorCount;
@@ -1918,7 +1918,7 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         private static long ResolveCastDispatchGroupKey(
             bool hasActiveContext,
-            in ActiveInteractionContext activeContext)
+            in InteractionContextInstance activeContext)
         {
             if (!hasActiveContext || activeContext.ContextEntity == default)
             {
@@ -1939,7 +1939,7 @@ namespace Ludots.Core.Input.Orders
         private int ResolveActiveCommandIntentForCommand()
         {
             Entity rep = RequireActingPlayerRepresentative();
-            if (_commandIntentWorld!.TryGet<ActiveInteractionContext>(rep, out ActiveInteractionContext context) &&
+            if (_commandIntentWorld!.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance context) &&
                 context.CommandIntentProfileId == 0)
             {
                 return 0;
@@ -1951,7 +1951,7 @@ namespace Ludots.Core.Input.Orders
 
         /// <summary>
         /// The acting player's representative through the map-binding player lookup — the entity
-        /// carrying the interaction state (<see cref="ActiveInteractionContext"/>) and
+        /// carrying the interaction state (<see cref="InteractionContextInstance"/>) and
         /// <see cref="InteractionPref"/>. An unresolvable representative is a wiring error: map
         /// binding publishes player representatives alongside the InteractionPref seed.
         /// </summary>

@@ -3003,6 +3003,33 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ActivateContext_raylib",
+      "name": "Graph Op ActivateContext Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ActivateContext"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DeactivateContext_raylib",
+      "name": "Graph Op DeactivateContext Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DeactivateContext"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DispatchCollectionEvent_raylib",
+      "name": "Graph Op DispatchCollectionEvent Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DispatchCollectionEvent"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

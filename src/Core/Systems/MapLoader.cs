@@ -31,6 +31,7 @@ namespace Ludots.Core.Systems
         private readonly WorldMap _worldMap;
         private EffectRequestQueue _effectRequests;
         private EntityTriggerGraphMounts? _entityTriggerGraphMounts;
+        private Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? _initialInteractionContexts;
         private TemplateEntityBatchSpawner _templateBatchSpawner;
         private PresentationStableIdAllocator _stableIds;
         private PresenterEntityRuntime _presenterRuntime;
@@ -71,6 +72,16 @@ namespace Ludots.Core.Systems
             _entityTriggerGraphMounts = entityTriggerGraphMounts ?? throw new ArgumentNullException(nameof(entityTriggerGraphMounts));
         }
 
+        /// <summary>
+        /// Binds the installed interaction context profiles so map-load spawns mount their
+        /// template's initialInteractionContext (#1398 S2b); unbound registries fail the
+        /// first template declaring one.
+        /// </summary>
+        public void SetInitialInteractionContexts(Ludots.Core.Input.Interaction.InteractionContextProfileRegistry profiles)
+        {
+            _initialInteractionContexts = profiles ?? throw new ArgumentNullException(nameof(profiles));
+        }
+
         public void SetComponentAuthoringContext(ComponentAuthoringContext authoringContext)
         {
             _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
@@ -107,6 +118,7 @@ namespace Ludots.Core.Systems
             foreach (var template in TemplateRegistry.GetAll())
             {
                 ValidateTemplateTriggerGraphs(template);
+                ValidateTemplateInitialInteractionContext(template);
                 templateIds.Add(template.Id);
             }
             ValidateTemplateChildrenGraph(templateIds);
@@ -208,6 +220,21 @@ namespace Ludots.Core.Systems
                     throw new InvalidOperationException(
                         $"Entity template '{template.Id}' TriggerGraphs[{i}] repeats graph id '{name}'; each graph may be mounted only once per entity.");
                 }
+            }
+        }
+
+        private static void ValidateTemplateInitialInteractionContext(EntityTemplate template)
+        {
+            string? profileName = template.InitialInteractionContext;
+            if (profileName == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(profileName) || !string.Equals(profileName, profileName.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Entity template '{template.Id}' initialInteractionContext must be a trimmed non-empty context profile id.");
             }
         }
 
@@ -344,6 +371,7 @@ namespace Ludots.Core.Systems
                 {
                     entityIndex.Register(mapConfig.Id, pendingBatchEntityData[i].InstanceId, created[i]);
                     PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
+                    MountInitialInteractionContext(created[i], activeBatchTemplateId, activeBatchTemplate);
                     BufferEntityTriggerGraphs(created[i], activeBatchTemplateId, activeBatchTemplate);
                 }
 
@@ -435,6 +463,7 @@ namespace Ludots.Core.Systems
                 _world.Add(entity, mapEntityTag);
                 entityIndex.Register(mapConfig.Id, entityData.InstanceId, entity);
                 PublishTemplateOnSpawnEffect(entity, entityData.Template);
+                MountInitialInteractionContext(entity, entityData.Template, templates[entityData.Template]);
                 BufferEntityTriggerGraphs(entity, entityData.Template, templates[entityData.Template]);
                 SpawnTemplateChildrenAtMapLoad(
                     builder,
@@ -456,6 +485,24 @@ namespace Ludots.Core.Systems
             }
 
             _entityTriggerGraphMounts.BufferMapLoadSpawn(entity, templateId, template.TriggerGraphs);
+        }
+
+        private void MountInitialInteractionContext(Entity entity, string templateId, EntityTemplate template)
+        {
+            if (string.IsNullOrWhiteSpace(template.InitialInteractionContext))
+            {
+                return;
+            }
+
+            Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? profiles = _initialInteractionContexts
+                ?? throw new InvalidOperationException(
+                    $"Entity template '{templateId}' declares initialInteractionContext '{template.InitialInteractionContext}' but no interaction context profile registry is bound to the map loader.");
+            Ludots.Core.Input.Interaction.TemplateInteractionContextMounting.MountInitialContext(
+                _world,
+                profiles,
+                entity,
+                templateId,
+                template.InitialInteractionContext);
         }
 
         /// <summary>
