@@ -191,13 +191,13 @@
             "id": "dedicated-server",
             "hostKind": "dedicatedServer",
             "projectPath": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/Ludots.App.DedicatedServer.csproj",
-            "assemblyPath": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/bin/Release/net8.0/Ludots.App.DedicatedServer.dll"
+            "assemblyPath": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/bin/Release/net9.0/Ludots.App.DedicatedServer.dll"
           },
           {
             "id": "raylib-client",
             "hostKind": "raylib",
             "projectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
-            "assemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0/Ludots.App.Raylib.dll"
+            "assemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/Ludots.App.Raylib.dll"
           }
         ],
         "processes": [
@@ -270,7 +270,7 @@
             "id": "raylib-client",
             "hostKind": "raylib",
             "projectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
-            "assemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0/Ludots.App.Raylib.dll"
+            "assemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/Ludots.App.Raylib.dll"
           }
         ],
         "processes": [

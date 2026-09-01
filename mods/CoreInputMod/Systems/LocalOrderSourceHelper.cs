@@ -431,10 +431,16 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            if (_world.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance context) &&
-                context.ContextEntity != Entity.Null &&
-                _world.IsAlive(context.ContextEntity))
+            if (_world.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance context))
             {
+                if (context.ContextEntity == Entity.Null || !_world.IsAlive(context.ContextEntity))
+                {
+                    // Mounted-but-invalidated context is the pre-reclaim window; fail closed
+                    // instead of routing through the steady-state rep's collections.
+                    owner = Entity.Null;
+                    return false;
+                }
+
                 owner = context.ContextEntity;
                 return true;
             }
