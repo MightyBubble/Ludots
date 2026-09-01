@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 8,
   "preset": "rts_multiplayer_frontline_three_process_uat_raylib",
   "adapterId": "raylib",
@@ -304,5 +304,5 @@
   "acceptancePlan": "mods/fixtures/rts_multiplayer_frontline_three_process/RtsMultiplayerFrontlineThreeProcessAcceptanceMod/assets/RtsMultiplayerFrontlineThreeProcessAcceptancePlan.json",
   "launcherCliProject": "src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj",
   "dedicatedServerProject": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/Ludots.App.DedicatedServer.csproj",
-  "dedicatedServerAssembly": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/bin/Release/net8.0/Ludots.App.DedicatedServer.dll"
+  "dedicatedServerAssembly": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/bin/Release/net9.0/Ludots.App.DedicatedServer.dll"
 }

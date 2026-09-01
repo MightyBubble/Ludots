@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$ProfilePath = (Join-Path $PSScriptRoot "rts-multiplayer-frontline-three-process.profile.json"),
     [string]$ArtifactDirectory = "",
     [string]$HostAddress = "",
@@ -2934,7 +2934,7 @@ try {
     $acceptancePlanPath = Resolve-RepoPath -Path ([string]$profile.acceptancePlan)
     $expectedAcceptancePlan = Get-Content -LiteralPath $acceptancePlanPath -Raw | ConvertFrom-Json
     $manifest.inputs.acceptancePlan = Get-FileEvidence -Path $acceptancePlanPath
-    $launcherAssembly = Join-Path (Split-Path -Parent $launcherProject) "bin\Release\net8.0\Ludots.Launcher.Cli.dll"
+    $launcherAssembly = Join-Path (Split-Path -Parent $launcherProject) "bin\Release\net9.0\Ludots.Launcher.Cli.dll"
     $selector = "preset:$($profile.preset)"
 
     Invoke-CheckedProcess -Name "build-launcher-cli" -FilePath $dotnet `

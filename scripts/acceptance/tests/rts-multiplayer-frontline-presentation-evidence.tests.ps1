@@ -1,4 +1,4 @@
-Set-StrictMode -Version Latest
+﻿Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 # Feature: Player screenshots show same-frame battlefield entities backed by gameplay evidence.
@@ -450,7 +450,7 @@ try {
     }
     $dotnetPath = Get-DotnetCommand
     $launcherProject = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\Ludots.Launcher.Cli.csproj"
-    $launcherAssemblyPath = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\bin\Release\net8.0\Ludots.Launcher.Cli.dll"
+    $launcherAssemblyPath = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\bin\Release\net9.0\Ludots.Launcher.Cli.dll"
     [void](Invoke-NativeTextCommand -Name "build-framebuffer-evidence-cli" -FilePath $dotnetPath `
         -Arguments @("build", $launcherProject, "-c", "Release", "-m:1", "-nologo", "-clp:ErrorsOnly") `
         -WorkingDirectory $repoRoot)
