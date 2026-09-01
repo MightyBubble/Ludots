@@ -995,8 +995,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
-                if (string.Equals(node.Op, GraphAuthoringSugar.BtLeaf, StringComparison.Ordinal)
-                    || string.Equals(node.Op, GraphAuthoringSugar.FsmAction, StringComparison.Ordinal))
+                if (GraphAuthoringSugar.IsBtLeafPortal(node.Op)
+                    || GraphAuthoringSugar.IsFsmActionPortal(node.Op))
                 {
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
                         $"{node.Op} is compile-time sugar that must be expanded by " +

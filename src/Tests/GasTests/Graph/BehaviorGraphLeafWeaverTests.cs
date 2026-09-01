@@ -45,6 +45,54 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void BtAction_And_BtCondition_UseSameWeavePathAsBtLeaf()
+        {
+            var docs = new Dictionary<string, GraphControlFlowDocument>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Graph.Func.See"] = BuildSenseLeaf(),
+                ["Graph.Func.Atk"] = BuildSenseLeaf(),
+                ["Graph.BT.Tree.Sample"] = new GraphControlFlowDocument
+                {
+                    Id = "Graph.BT.Tree.Sample",
+                    Kind = "Script",
+                    Entry = "root",
+                    Nodes =
+                    {
+                        new GraphControlFlowNode { Id = "root", Op = GraphAuthoringSugar.BtSequence },
+                        new GraphControlFlowNode
+                        {
+                            Id = "see",
+                            Op = GraphAuthoringSugar.BtCondition,
+                            FunctionName = "Graph.Func.See",
+                        },
+                        new GraphControlFlowNode
+                        {
+                            Id = "atk",
+                            Op = GraphAuthoringSugar.BtAction,
+                            FunctionName = "Graph.Func.Atk",
+                        },
+                    },
+                    ControlEdges =
+                    {
+                        new GraphControlFlowEdge("root", "child:0", "see"),
+                        new GraphControlFlowEdge("root", "child:1", "atk"),
+                    },
+                },
+            };
+
+            BehaviorGraphLeafWeaver.ExpandDocuments(docs);
+
+            GraphControlFlowDocument host = docs["Graph.BT.Tree.Sample"];
+            Assert.That(host.Nodes.Any(n => GraphAuthoringSugar.IsBtLeafPortal(n.Op)), Is.False);
+            Assert.That(host.Nodes.Any(n => n.Op == nameof(GraphNodeOp.HaltReturnInt)), Is.False);
+
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(host);
+            Assert.That(compiled.Diagnostics.Count(d => d.Severity == GraphDiagnosticSeverity.Error), Is.EqualTo(0),
+                string.Join(" | ", compiled.Diagnostics.Select(d => d.Message)));
+            Assert.That(compiled.Package, Is.Not.Null);
+        }
+
+        [Test]
         public void BtLeaf_UnknownFunctionGraph_FailsClosed()
         {
             var docs = new Dictionary<string, GraphControlFlowDocument>(StringComparer.OrdinalIgnoreCase)

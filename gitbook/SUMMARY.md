@@ -51,7 +51,7 @@
     - [Presenter Command Extension](architecture/mod-extensible-runtime-showcases/presenter-command-extension.md)
   - [GAS 分层架构](architecture/gas-layered-architecture.md)
   - [图分层：Flow / Script 与行为调度](architecture/graph-layering-flow-and-behavior.md)
-  - [BT / FSM 外层与双击进函数图](architecture/graph-bt-fsm-nested-func.md)
+  - [BT / FSM 独立编辑器与函数图叶子](architecture/graph-bt-fsm-nested-func.md)
   - [图能力唯一入口](architecture/graph-capability-status.md)
   - [Graph 编辑器与 Live Debug 上手](architecture/graph-editor-and-live-debug.md)
   - [图 Codegen 产品化](architecture/graph-codegen-productization.md)

@@ -26,6 +26,18 @@ export const EditorLayout: React.FC = () => {
             >
                 Graph Editor →
             </Link>
+            <Link
+                to="/bt-editor"
+                className="absolute bottom-16 right-96 z-50 rounded-md border border-violet-500/40 bg-black/80 px-3 py-2 font-mono text-xs text-violet-300 hover:bg-violet-500/10"
+            >
+                BT Editor →
+            </Link>
+            <Link
+                to="/fsm-editor"
+                className="absolute bottom-28 right-96 z-50 rounded-md border border-fuchsia-500/40 bg-black/80 px-3 py-2 font-mono text-xs text-fuchsia-300 hover:bg-fuchsia-500/10"
+            >
+                FSM Editor →
+            </Link>
         </div>
     );
 };

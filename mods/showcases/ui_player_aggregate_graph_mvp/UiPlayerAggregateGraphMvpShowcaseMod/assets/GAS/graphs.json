@@ -37,5 +37,78 @@
         "key": "ui.panel.player.crystal.total"
       }
     ]
+  },
+  {
+    "id": "Graph.Func.BtSeeEnemy",
+    "kind": "Script",
+    "entry": "yes",
+    "nodes": [
+      { "id": "yes", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "yes", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "yes", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.Func.BtAttack",
+    "kind": "Script",
+    "entry": "code",
+    "nodes": [
+      { "id": "code", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "code", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "code", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.Func.FsmIdleBody",
+    "kind": "Script",
+    "entry": "code",
+    "nodes": [
+      { "id": "code", "op": "ConstInt", "intValue": 7 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "code", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "code", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.BT.Tree.EditorSample",
+    "kind": "Script",
+    "entry": "root",
+    "nodes": [
+      { "id": "root", "op": "BtSequence" },
+      { "id": "see", "op": "BtCondition", "functionName": "Graph.Func.BtSeeEnemy" },
+      { "id": "atk", "op": "BtAction", "functionName": "Graph.Func.BtAttack" }
+    ],
+    "controlEdges": [
+      { "from": "root", "fromPort": "child:0", "to": "see" },
+      { "from": "root", "fromPort": "child:1", "to": "atk" }
+    ],
+    "valueEdges": []
+  },
+  {
+    "id": "Graph.FSM.EditorSample",
+    "kind": "Script",
+    "entry": "go",
+    "nodes": [
+      { "id": "go", "op": "ConstInt", "intValue": 0 },
+      { "id": "idle", "op": "FsmAction", "functionName": "Graph.Func.FsmIdleBody" }
+    ],
+    "controlEdges": [
+      { "from": "go", "fromPort": "next", "to": "idle" }
+    ],
+    "valueEdges": []
   }
 ]

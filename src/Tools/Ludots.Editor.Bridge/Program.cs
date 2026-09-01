@@ -1971,6 +1971,24 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
             });
             authoringSugars.Add(new
             {
+                op = GraphAuthoringSugar.BtAction,
+                controlOutputPorts = Array.Empty<string>(),
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Int.ToString(),
+                lowersTo = "compile-time-splice",
+                functionGraphPortal = true,
+            });
+            authoringSugars.Add(new
+            {
+                op = GraphAuthoringSugar.BtCondition,
+                controlOutputPorts = Array.Empty<string>(),
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Int.ToString(),
+                lowersTo = "compile-time-splice",
+                functionGraphPortal = true,
+            });
+            authoringSugars.Add(new
+            {
                 op = GraphAuthoringSugar.FsmAction,
                 controlOutputPorts = Array.Empty<string>(),
                 valueInputPorts = Array.Empty<string>(),
@@ -2547,7 +2565,7 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string mod
         return Results.BadRequest(new { ok = false, error = $"Failed to read graph JSON: {ex.Message}" });
     }
 
-    if (!TryCompileGasGraph(graphObj, graphId, out var package, out var diagnostics, out var compileError))
+    if (!TryCompileGasGraph(graphObj, graphId, graphsPath, out var package, out var diagnostics, out var compileError))
         return Results.BadRequest(new { ok = false, error = compileError });
     bool hasErrors = false;
     for (int i = 0; i < diagnostics.Count; i++)
@@ -2629,7 +2647,7 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/codegen/preview", async (str
         return Results.BadRequest(new { ok = false, error = $"Failed to read graph JSON: {ex.Message}" });
     }
 
-    if (!TryCompileGasGraph(graphObj, graphId, out var package, out var diagnostics, out var compileError))
+    if (!TryCompileGasGraph(graphObj, graphId, graphsPath, out var package, out var diagnostics, out var compileError))
         return Results.BadRequest(new { ok = false, error = compileError });
 
     bool hasErrors = diagnostics.Any(d => d.Severity == GraphDiagnosticSeverity.Error);
@@ -2733,7 +2751,7 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/codegen/parity", async (stri
         graphObj = fileGraphObj;
     }
 
-    if (!TryCompileGasGraph(graphObj, graphId, out var package, out var diagnostics, out var compileError))
+    if (!TryCompileGasGraph(graphObj, graphId, graphsPath, out var package, out var diagnostics, out var compileError))
         return Results.BadRequest(new { ok = false, error = compileError });
 
     if (!package.HasValue || diagnostics.Any(d => d.Severity == GraphDiagnosticSeverity.Error))
@@ -2832,6 +2850,7 @@ static bool TryNormalizeGasGraphBody(JsonObject bodyObj, string graphId, out str
 bool TryCompileGasGraph(
     JsonObject graphObj,
     string graphId,
+    string graphsPath,
     out GraphProgramPackage? package,
     out List<GraphDiagnostic> diagnostics,
     out string error)
@@ -2841,12 +2860,37 @@ bool TryCompileGasGraph(
     error = string.Empty;
     try
     {
+        var options = StrictJsonOptions.CreateCamelCase(includeFields: true);
         var enumCatalog = BuildLauncherEnumCatalog(new Dictionary<string, string>(StringComparer.Ordinal));
+        var eventSchemas = BuildLauncherEventSchemas(new List<string>(), new Dictionary<string, string>(StringComparer.Ordinal), enumCatalog);
+
+        if (GraphAuthoringNeedsCompileTimeWeave(graphObj))
+        {
+            if (!TryLoadSiblingDocumentsForWeave(graphsPath, graphId, graphObj, options, out var documents, out var weaveLoadError))
+            {
+                error = weaveLoadError ?? $"Failed to load sibling graphs for weave at '{graphsPath}'.";
+                return false;
+            }
+
+            TriggerGraphInlineWeaver.ExpandDocuments(documents);
+            BehaviorGraphLeafWeaver.ExpandDocuments(documents);
+            if (!documents.TryGetValue(graphId, out GraphControlFlowDocument? woven) || woven == null)
+            {
+                error = $"Weave produced no host document for '{graphId}'.";
+                return false;
+            }
+
+            GraphControlFlowCompileResult wovenResult = GraphControlFlowCompiler.Compile(woven, eventSchemas, enumCatalog);
+            package = wovenResult.Package;
+            diagnostics = wovenResult.Diagnostics;
+            return true;
+        }
+
         var result = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(
             graphObj,
             graphId,
-            StrictJsonOptions.CreateCamelCase(includeFields: true),
-            BuildLauncherEventSchemas(new List<string>(), new Dictionary<string, string>(StringComparer.Ordinal), enumCatalog),
+            options,
+            eventSchemas,
             enumCatalog);
         package = result.Package;
         diagnostics = result.Diagnostics;
@@ -2862,6 +2906,121 @@ bool TryCompileGasGraph(
         error = $"Failed to deserialize gas graph: {ex.Message}";
         return false;
     }
+}
+
+static bool GraphAuthoringNeedsCompileTimeWeave(JsonObject graphObj)
+{
+    if (graphObj["nodes"] is not JsonArray nodes)
+    {
+        return false;
+    }
+
+    for (int i = 0; i < nodes.Count; i++)
+    {
+        if (nodes[i] is not JsonObject node)
+        {
+            continue;
+        }
+
+        string? op = node["op"]?.GetValue<string>();
+        if (GraphAuthoringSugar.IsBtLeafPortal(op)
+            || GraphAuthoringSugar.IsFsmActionPortal(op)
+            || string.Equals(op, GraphAuthoringSugar.InlineGraph, StringComparison.Ordinal))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool TryLoadSiblingDocumentsForWeave(
+    string graphsPath,
+    string hostGraphId,
+    JsonObject hostGraphObj,
+    JsonSerializerOptions options,
+    out Dictionary<string, GraphControlFlowDocument> documents,
+    out string? error)
+{
+    documents = new Dictionary<string, GraphControlFlowDocument>(StringComparer.OrdinalIgnoreCase);
+    error = null;
+
+    if (!TryReadGraphsArray(graphsPath, out var arr, out _))
+    {
+        error = $"Failed to read sibling graphs for weave at '{graphsPath}'.";
+        return false;
+    }
+
+    for (int i = 0; i < arr.Count; i++)
+    {
+        if (arr[i] is not JsonObject obj)
+        {
+            continue;
+        }
+
+        string? id = obj["id"]?.GetValue<string>();
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            continue;
+        }
+
+        JsonObject source = string.Equals(id, hostGraphId, StringComparison.OrdinalIgnoreCase)
+            ? hostGraphObj
+            : obj;
+
+        GraphControlFlowDocument? doc;
+        try
+        {
+            doc = source.Deserialize<GraphControlFlowDocument>(options);
+        }
+        catch (JsonException ex)
+        {
+            error = $"Failed to deserialize sibling graph '{id}' for weave: {ex.Message}";
+            return false;
+        }
+
+        if (doc == null)
+        {
+            error = $"Failed to deserialize sibling graph '{id}' for weave.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(doc.Id))
+        {
+            doc.Id = id;
+        }
+
+        documents[id] = doc;
+    }
+
+    if (!documents.ContainsKey(hostGraphId))
+    {
+        GraphControlFlowDocument? hostDoc;
+        try
+        {
+            hostDoc = hostGraphObj.Deserialize<GraphControlFlowDocument>(options);
+        }
+        catch (JsonException ex)
+        {
+            error = $"Failed to deserialize host graph '{hostGraphId}' for weave: {ex.Message}";
+            return false;
+        }
+
+        if (hostDoc == null)
+        {
+            error = $"Failed to deserialize host graph '{hostGraphId}' for weave.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(hostDoc.Id))
+        {
+            hostDoc.Id = hostGraphId;
+        }
+
+        documents[hostGraphId] = hostDoc;
+    }
+
+    return true;
 }
 
 app.Run("http://localhost:5299");

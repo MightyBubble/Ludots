@@ -133,6 +133,8 @@ const FIELDS: Record<string, AuthoredFieldSpec[]> = {
   FsmState: [enumType, stateVar],
   BtDecorator: [decoratorKind],
   BtLeaf: [functionName],
+  BtAction: [functionName],
+  BtCondition: [functionName],
   FsmAction: [functionName],
   StoreArgInt: [argKey],
   StoreArgFloat: [argKey],
