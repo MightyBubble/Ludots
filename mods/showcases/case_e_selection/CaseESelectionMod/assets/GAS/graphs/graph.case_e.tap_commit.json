@@ -20,6 +20,20 @@
         "payloadKey": "MapTrigger.Rep"
       },
       {
+        "id": "tap_px",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenX"
+      },
+      {
+        "id": "tap_py",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenY"
+      },
+      {
+        "id": "tap_to_ground",
+        "op": "ScreenPointToGround"
+      },
+      {
         "id": "hits",
         "op": "QueryRadius",
         "radiusCm": 150,
@@ -52,7 +66,10 @@
       }
     ],
     "controlEdges": [
-      { "from": "rep", "fromPort": "next", "to": "hits" },
+      { "from": "rep", "fromPort": "next", "to": "tap_px" },
+      { "from": "tap_px", "fromPort": "next", "to": "tap_py" },
+      { "from": "tap_py", "fromPort": "next", "to": "tap_to_ground" },
+      { "from": "tap_to_ground", "fromPort": "next", "to": "hits" },
       { "from": "hits", "fromPort": "next", "to": "op_replace" },
       { "from": "op_replace", "fromPort": "next", "to": "commit" },
       { "from": "commit", "fromPort": "next", "to": "deactivate_boxing" },
@@ -61,6 +78,8 @@
     ],
     "valueEdges": [
       { "from": "rep", "fromPort": "value", "to": "deactivate_boxing", "toPort": "source" },
+      { "from": "tap_px", "fromPort": "value", "to": "tap_to_ground", "toPort": "a" },
+      { "from": "tap_py", "fromPort": "value", "to": "tap_to_ground", "toPort": "b" },
       { "from": "op_replace", "fromPort": "value", "to": "commit", "toPort": "value" },
       { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
     ]

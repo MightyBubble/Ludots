@@ -10,13 +10,13 @@
   "Variables": [
     {
       "name": "case_e_press_x",
-      "type": "float",
-      "initial": 0.0
+      "type": "int",
+      "initial": 0
     },
     {
       "name": "case_e_press_y",
-      "type": "float",
-      "initial": 0.0
+      "type": "int",
+      "initial": 0
     }
   ],
   "DefaultCamera": {

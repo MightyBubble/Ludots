@@ -78,7 +78,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             "框指示 presenter 在按下前不存在");
 
         // ── 04：按下（BoxSelectBegin raw 边沿）→ InputActionFired → 激活衍生「正在框选」context ──
-        PressAt(engine, backend, new Vector2(200f, 200f), new Vector2(-1100f, -200f));
+        PressAt(engine, backend, new Vector2(-1100f, -200f));
         TickUntil(engine, 20, () =>
             engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances activated) &&
             activated.Count == 1);
@@ -88,20 +88,20 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             boxing[0].ContextId == boxingProfileId &&
             boxing[0].ParentContextId == battleProfileId,
             "按下即激活衍生 boxing context（父=战斗）");
-        Assert.That(engine.CurrentMapSession!.Variables!.ReadFloat("case_e_press_x"), Is.EqualTo(-1100f).Within(0.001f),
-            "框开始 ground point 经事件载荷透传并写入地图变量");
-        Assert.That(engine.CurrentMapSession.Variables.ReadFloat("case_e_press_y"), Is.EqualTo(-200f).Within(0.001f));
+        Assert.That(engine.CurrentMapSession!.Variables!.ReadInt("case_e_press_x"), Is.EqualTo(-1100),
+            "框开始点：指针像素经 ScreenPointToGround 同一条射线落地面并写入地图变量");
+        Assert.That(engine.CurrentMapSession.Variables.ReadInt("case_e_press_y"), Is.EqualTo(-200));
 
         // ── 05①b：presenter 观察者——ContextActivated 出现框指示 ──
         Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(1),
             "ContextActivated 事件驱动框指示 presenter 创建");
 
         // 拖拽中（>8px 行程）——门控系统在此 tick 挂上 boxing 的 triggers
-        backend.SetMousePosition(new Vector2(760f, 520f));
+        backend.SetMousePosition(new Vector2(-600f, 0f));
         TickUntil(engine, 10, () => false);
 
         // ── 06：抬起（Drag 判定完成）→ 命中集 + replace 语义 → 事件 key → selected 集合 ──
-        ReleaseAt(engine, backend, new Vector2(-600f, 0f));
+        ReleaseAt(engine, backend);
         TickUntil(engine, 30, () =>
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances settled) ||
             settled.Count == 0);
@@ -123,7 +123,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             engine,
             backend,
             commander,
-            new Vector2(400f, 260f),
             new Vector2(-1100f, -200f),
             new Vector2(300f, 0f),
             "QueueModifier");
@@ -135,7 +134,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             engine,
             backend,
             commander,
-            new Vector2(300f, 300f),
             new Vector2(-900f, -200f),
             new Vector2(-300f, 0f),
             "ModifierSubtract");
@@ -144,7 +142,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         AssertRingOff(engine, presenterRuntime, marineDefId, "被减去的单位取消高亮", marine2);
 
         // ── 04 零长框 = Tap 点选：Tap 判定完成 → tap_commit 以点位置命中 ──
-        TapAt(engine, backend, commander, new Vector2(900f, 300f), new Vector2(900f, 0f));
+        TapAt(engine, backend, commander, new Vector2(900f, 0f));
         AssertSelected(engine, commander, "零长框走 Tap 点选并 replace", marine4);
         Assert.That(
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances afterTap) ||
@@ -166,21 +164,22 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         return session.EntityIndex.GetRequired(session.MapId.Value, instanceId, "CaseESelectionAcceptance");
     }
 
-    private static void PressAt(GameEngine engine, TestInputBackend backend, Vector2 mouse, Vector2 groundCm)
+    // The window-point ray provider fake maps window pixels to world cm 1:1, so the
+    // authored mouse position doubles as the ground point the graphs derive via
+    // ScreenPointToGround on the same LogicView-ray chain as production.
+    private static void PressAt(GameEngine engine, TestInputBackend backend, Vector2 mouse)
     {
         backend.SetMousePosition(mouse);
-        SetGroundOverride(engine, groundCm);
         backend.SetButton("<Mouse>/leftButton", true);
     }
 
-    private static void ReleaseAt(GameEngine engine, TestInputBackend backend, Vector2 groundCm)
+    private static void ReleaseAt(GameEngine engine, TestInputBackend backend)
     {
-        SetGroundOverride(engine, groundCm);
         backend.SetButton("<Mouse>/leftButton", false);
     }
 
     /// <summary>
-    /// 完整一次框选：按下（含 ground 覆盖）→ 拖拽行程 → 抬起（含 ground 覆盖）。
+    /// 完整一次框选：按下 → 拖拽行程 → 抬起（指针像素经射线落地面，无 ground 覆盖）。
     /// 修饰键动作注入是单帧脉冲，pacemaker 又会跨帧攒逻辑 tick，逐帧重注入保证
     /// InputActionFired 冻结快照读到的 IsDown 在整个释放窗口内成立。
     /// </summary>
@@ -188,26 +187,25 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         GameEngine engine,
         TestInputBackend backend,
         Entity commander,
+        Vector2 pressMouse,
         Vector2 releaseMouse,
-        Vector2 pressGround,
-        Vector2 releaseGround,
         string? heldModifierAction = null)
     {
-        PressAt(engine, backend, new Vector2(200f, 200f), pressGround);
+        PressAt(engine, backend, pressMouse);
         TickUntil(engine, 20, BoxingActive(engine, commander));
         backend.SetMousePosition(releaseMouse);
         TickUntil(engine, 10, () => false);
 
-        ReleaseAt(engine, backend, releaseGround);
+        ReleaseAt(engine, backend);
         TickUntilWithInjection(engine, 30, heldModifierAction, BoxingCleared(engine, commander));
         Tick(engine, 4);
     }
 
-    private static void TapAt(GameEngine engine, TestInputBackend backend, Entity commander, Vector2 mouse, Vector2 groundCm)
+    private static void TapAt(GameEngine engine, TestInputBackend backend, Entity commander, Vector2 mouse)
     {
-        PressAt(engine, backend, mouse, groundCm);
+        PressAt(engine, backend, mouse);
         TickUntil(engine, 20, BoxingActive(engine, commander));
-        ReleaseAt(engine, backend, groundCm);
+        ReleaseAt(engine, backend);
         TickUntil(engine, 30, BoxingCleared(engine, commander));
         Tick(engine, 4);
     }
@@ -256,19 +254,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     {
         return engine.GetService(CoreServiceKeys.InputHandler) as PlayerInputHandler
             ?? throw new InvalidOperationException("PlayerInputHandler service is missing.");
-    }
-
-    private static void SetGroundOverride(GameEngine engine, Vector2 worldCm)
-    {
-        if (engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride) is not AuthoritativeGroundPointerOverride groundOverride)
-        {
-            throw new InvalidOperationException("AuthoritativeGroundPointerOverride service is missing.");
-        }
-
-        InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
-            engine.GlobalContext,
-            nameof(CaseESelectionShowcaseAcceptanceTests));
-        groundOverride.Set(bindings.CommandActionId, worldCm);
     }
 
     private static void AssertSelected(GameEngine engine, Entity owner, string message, params Entity[] expected)
@@ -350,6 +335,9 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         engine.SetService(
             CoreServiceKeys.ViewController,
             (Ludots.Core.Presentation.Camera.IViewController)new HeadlessViewController(1600f, 900f));
+        engine.SetService(
+            CoreServiceKeys.ScreenRayProvider,
+            (Ludots.Platform.Abstractions.IScreenRayProvider)new WindowPointGroundRayProvider());
         engine.Start();
         return engine;
     }
@@ -378,6 +366,16 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         }
 
         throw new DirectoryNotFoundException("Failed to locate repository root from test output directory.");
+    }
+
+    private sealed class WindowPointGroundRayProvider : Ludots.Platform.Abstractions.IScreenRayProvider
+    {
+        public Ludots.Platform.Abstractions.ScreenRay GetRay(System.Numerics.Vector2 screenPosition)
+        {
+            return new Ludots.Platform.Abstractions.ScreenRay(
+                new System.Numerics.Vector3(screenPosition.X / 100f, 10f, screenPosition.Y / 100f),
+                -System.Numerics.Vector3.UnitY);
+        }
     }
 
     private sealed class HeadlessViewController : Ludots.Core.Presentation.Camera.IViewController

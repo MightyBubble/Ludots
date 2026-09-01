@@ -14,13 +14,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// <summary>
     /// Bridges authored input actions (Input/trigger_actions.json) into map-scoped
     /// InputActionFired trigger events: an action edge -> payload { action, rep =
-    /// player representative, pointer window-pixel position at that edge, ground
-    /// point, held semantic-modifier bitmask, active interaction context id }. The
-    /// pointer position is the per-action lifecycle fact from the authoritative
+    /// player representative, pointer window-pixel position at that edge, held
+    /// semantic-modifier bitmask, active interaction context id }. The pointer
+    /// position is the per-action lifecycle fact from the authoritative
     /// pointer-button snapshot (press edge -> press point, release edge -> release
-    /// point; window pixels so per-binding routing stays possible). Actions with
+    /// point; window pixels so per-binding routing stays possible). Input events are
+    /// pure pointer facts — ground projection is the consuming graph's derivation
+    /// through ScreenPointToGround on the same LogicView ray. Actions with
     /// pickRadiusCm additionally resolve the nearest pickable entity around the
-    /// ground point into the payload and only fire when a pick exists —
+    /// authoritative ground point into the payload and only fire when a pick exists —
     /// TriggerGraphs stay pure data, no mod code.
     /// </summary>
     public sealed class InputActionTriggerBridgeSystem : Arch.System.ISystem<float>
@@ -89,11 +91,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
-                if (!AuthoritativeGroundPointerHelper.TryRead(input, out Ludots.Platform.Abstractions.WorldCmInt2 ground))
-                {
-                    continue;
-                }
-
                 if (!TryResolveEventPointer(action.Id, out System.Numerics.Vector2 pointer))
                 {
                     // pointerScreenX/Y are required payload facts; firing without the
@@ -101,13 +98,23 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
-                Entity picked = action.PickRadiusCm > 0
-                    ? PickNearest(ground, action.PickRadiusCm, playerRep)
-                    : Entity.Null;
-                if (action.PickRadiusCm > 0 && (picked == Entity.Null || picked == default))
+                // Pick actions derive their ground center internally (same authoritative
+                // pointer ground chain) and fire only on a resolved pick; plain actions
+                // carry pointer facts only — ground projection is the graph's job.
+                Entity picked = Entity.Null;
+                if (action.PickRadiusCm > 0)
                 {
-                    // Pick actions fire only on a resolved pick; miss-clicks stay silent.
-                    continue;
+                    if (!AuthoritativeGroundPointerHelper.TryRead(input, out Ludots.Platform.Abstractions.WorldCmInt2 ground))
+                    {
+                        continue;
+                    }
+
+                    picked = PickNearest(ground, action.PickRadiusCm, playerRep);
+                    if (picked == Entity.Null || picked == default)
+                    {
+                        // Miss-clicks stay silent.
+                        continue;
+                    }
                 }
 
                 ScriptContext context = _createContext();
@@ -117,8 +124,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 context.Set(MapTriggerEventPayloadKeys.Action, action.Id);
                 context.Set(MapTriggerEventPayloadKeys.PointerScreenX, pointer.X);
                 context.Set(MapTriggerEventPayloadKeys.PointerScreenY, pointer.Y);
-                context.Set(MapTriggerEventPayloadKeys.GroundPointXCm, (float)ground.X);
-                context.Set(MapTriggerEventPayloadKeys.GroundPointYCm, (float)ground.Y);
                 context.Set(MapTriggerEventPayloadKeys.Modifiers, ReadHeldModifiers(input));
                 context.Set(MapTriggerEventPayloadKeys.ContextId, ResolveActiveContextId(playerRep));
                 if (picked != Entity.Null && picked != default)

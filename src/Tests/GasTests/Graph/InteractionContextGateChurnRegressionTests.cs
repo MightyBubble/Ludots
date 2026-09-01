@@ -62,8 +62,7 @@ public sealed class InteractionContextGateChurnRegressionTests
         Entity commander = ResolveCommander(engine);
 
         // One press; the button stays held for the whole window (long drag).
-        backend.SetMousePosition(new Vector2(200f, 200f));
-        SetGroundOverride(engine, new Vector2(-1100f, -200f));
+        backend.SetMousePosition(new Vector2(-1100f, -200f));
         backend.SetButton("<Mouse>/leftButton", true);
         TickUntil(engine, 40, BoxingActive(engine, commander));
         Assert.That(BoxingActive(engine, commander)(), Is.True, "按下后衍生 boxing context 激活");
@@ -76,21 +75,12 @@ public sealed class InteractionContextGateChurnRegressionTests
 
         var handler = engine.GetService(CoreServiceKeys.InputHandler) as PlayerInputHandler
             ?? throw new InvalidOperationException("PlayerInputHandler service is missing.");
-        var groundOverride = engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride)
-            as AuthoritativeGroundPointerOverride
-            ?? throw new InvalidOperationException("AuthoritativeGroundPointerOverride service is missing.");
-        InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
-            engine.GlobalContext,
-            nameof(InteractionContextGateChurnRegressionTests));
         int spuriousPressEdges = 0;
         bool prevBlocked = false;
         for (int frame = 0; frame < 900; frame++)
         {
             float dt = frame % 97 == 0 ? 0.25f : (frame % 3 == 0 ? 1f / 30f : 1f / 60f);
             backend.SetMousePosition(new Vector2(200f + (frame % 40) * 12f, 200f + (frame % 17) * 7f));
-            // Re-arm the ground override each frame so the bridge's ground read stays
-            // resolvable like the real machine's always-present ray provider.
-            groundOverride.Set(bindings.CommandActionId, new Vector2(-600f, 0f));
             bool uiCaptured = frame % 61 < 3;
             engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured);
             engine.Tick(dt);
@@ -114,8 +104,7 @@ public sealed class InteractionContextGateChurnRegressionTests
 
         // Release with a long travel: the drag gesture must complete as a drag (commit runs,
         // boxing deactivates exactly once) — not misjudge as a tap from a re-anchored judge.
-        backend.SetMousePosition(new Vector2(900f, 500f));
-        groundOverride.Set(bindings.CommandActionId, new Vector2(-600f, 0f));
+        backend.SetMousePosition(new Vector2(-600f, 0f));
         backend.SetButton("<Mouse>/leftButton", false);
         TickUntil(engine, 40, BoxingCleared(engine, commander));
         Assert.That(BoxingCleared(engine, commander)(), Is.True, "抬起后 Drag 判定完成并停用 boxing");
@@ -143,19 +132,6 @@ public sealed class InteractionContextGateChurnRegressionTests
         return session.EntityIndex.GetRequired(session.MapId.Value, "case-e-commander", "GateChurnRegression");
     }
 
-    private static void SetGroundOverride(GameEngine engine, Vector2 worldCm)
-    {
-        if (engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride) is not AuthoritativeGroundPointerOverride groundOverride)
-        {
-            throw new InvalidOperationException("AuthoritativeGroundPointerOverride service is missing.");
-        }
-
-        InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
-            engine.GlobalContext,
-            nameof(InteractionContextGateChurnRegressionTests));
-        groundOverride.Set(bindings.CommandActionId, worldCm);
-    }
-
     private static GameEngine CreateEngine(string repoRoot, TestInputBackend backend)
     {
         var engine = new GameEngine();
@@ -175,6 +151,9 @@ public sealed class InteractionContextGateChurnRegressionTests
         engine.SetService(
             CoreServiceKeys.ViewController,
             (Ludots.Core.Presentation.Camera.IViewController)new HeadlessViewController(1600f, 900f));
+        engine.SetService(
+            CoreServiceKeys.ScreenRayProvider,
+            (Ludots.Platform.Abstractions.IScreenRayProvider)new WindowPointGroundRayProvider());
         engine.Start();
         return engine;
     }
@@ -203,6 +182,16 @@ public sealed class InteractionContextGateChurnRegressionTests
         }
 
         throw new DirectoryNotFoundException("Failed to locate repository root from test output directory.");
+    }
+
+    private sealed class WindowPointGroundRayProvider : Ludots.Platform.Abstractions.IScreenRayProvider
+    {
+        public Ludots.Platform.Abstractions.ScreenRay GetRay(System.Numerics.Vector2 screenPosition)
+        {
+            return new Ludots.Platform.Abstractions.ScreenRay(
+                new System.Numerics.Vector3(screenPosition.X / 100f, 10f, screenPosition.Y / 100f),
+                -System.Numerics.Vector3.UnitY);
+        }
     }
 
     private sealed class HeadlessViewController : Ludots.Core.Presentation.Camera.IViewController
