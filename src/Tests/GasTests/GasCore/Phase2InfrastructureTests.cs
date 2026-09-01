@@ -229,6 +229,22 @@ namespace GasTests
             Assert.That(called, Is.EqualTo(1));
         }
 
+        [Test]
+        public void RegisterEventHandler_SynchronousFailure_IsRecordedAndPropagated()
+        {
+            var tm = new TriggerManager();
+            tm.RegisterEventHandler(GameEvents.GameStart, _ =>
+                throw new InvalidOperationException("startup failed"));
+
+            Assert.That(
+                async () => await tm.FireEventAsync(GameEvents.GameStart, new ScriptContext()),
+                Throws.InvalidOperationException.With.Message.EqualTo("startup failed"));
+
+            Assert.That(tm.Errors, Has.Count.EqualTo(1));
+            Assert.That(tm.Errors[0].EventKey, Is.EqualTo(GameEvents.GameStart));
+            Assert.That(tm.Errors[0].Exception.Message, Is.EqualTo("startup failed"));
+        }
+
         // ────────────────────────────────────────────────────────
         // SystemFactoryRegistry
         // ────────────────────────────────────────────────────────

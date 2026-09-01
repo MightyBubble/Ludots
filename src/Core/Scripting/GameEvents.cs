@@ -11,6 +11,12 @@ namespace Ludots.Core.Scripting
         public static readonly EventKey GameStart = new EventKey("GameStart");
 
         /// <summary>
+        /// Fired for networked processes after GameStart schema registration and runtime activation complete.
+        /// Network-dependent systems can resolve all role-specific ports during this event.
+        /// </summary>
+        public static readonly EventKey NetworkRuntimeReady = new EventKey("NetworkRuntimeReady");
+
+        /// <summary>
         /// Fired when a map has finished loading and dependencies are resolved.
         /// If a host-side async world switch participates in completion, this fires only after the host world
         /// and required host-bound entities are ready.

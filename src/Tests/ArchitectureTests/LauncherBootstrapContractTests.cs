@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using NUnit.Framework;
 using Ludots.Core.Hosting;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Launcher.Backend;
 
 namespace Ludots.Tests.Architecture
@@ -10,6 +12,725 @@ namespace Ludots.Tests.Architecture
     [TestFixture]
     public class LauncherBootstrapContractTests
     {
+        [Test]
+        public void Launcher_ResolvesFormalRtsShowcase_AsStrictThreeProcessGroup()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-rts-process-group-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var launcher = CreateLauncher(repoRoot, tempDirectory);
+                LauncherResolvedProcessGroup group = launcher.ResolveProcessGroup(
+                    new[] { "preset:rts_multiplayer_frontline_networked_raylib" },
+                    LauncherBuildMode.Never);
+
+                Assert.That(group.Topology, Is.EqualTo(LauncherProcessGroupTopologies.LocalAuthoritative));
+                Assert.That(group.Processes.Select(process => process.Id), Is.EqualTo(new[]
+                {
+                    "authoritative-server",
+                    "client-one",
+                    "client-two"
+                }));
+                Assert.That(group.Processes[0].Application.HostKind, Is.EqualTo(LauncherProcessHostKinds.DedicatedServer));
+                Assert.That(group.Processes.Skip(1).All(process =>
+                    process.Application.HostKind == LauncherProcessHostKinds.Raylib), Is.True);
+                Assert.That(group.Processes.Select(process => process.NetworkHost.ProcessRole), Is.EqualTo(new[]
+                {
+                    "authoritativeServer",
+                    "replicatedClient",
+                    "replicatedClient"
+                }));
+                Assert.That(group.Processes.Skip(1).Select(process => process.NetworkHost.ClientInstanceId),
+                    Is.EqualTo(new[] { 1, 2 }));
+                Assert.That(group.ClientCount, Is.EqualTo(2));
+                Assert.That(group.ReadinessTimeoutMilliseconds, Is.EqualTo(45000));
+                Assert.That(group.Processes.Skip(1).All(process =>
+                    process.MinimumReplicatedMirrorCount == 8 &&
+                    process.MinimumRenderableMirrorCount == 7), Is.True);
+                Assert.That(group.Processes.Select(process => process.NetworkHost.FaultSeed), Is.Unique);
+                Assert.That(group.Processes.All(process => process.NetworkHost.Port == 27777), Is.True);
+                Assert.That(group.Processes.Skip(1).All(process => process.NetworkHost.Host == "127.0.0.1"), Is.True);
+                Assert.That(group.Processes.All(process => process.NetworkHost.ConnectionKey == "rts-frontline-local"), Is.True);
+                Assert.That(group.LaunchPlan.OrderedModIds, Does.Contain("RtsMultiplayerFrontlineNetworkedMod"));
+
+                using JsonDocument registry = JsonDocument.Parse(
+                    File.ReadAllText(Path.Combine(repoRoot, "showcase.registry.json")));
+                JsonElement showcase = registry.RootElement.GetProperty("showcases")
+                    .EnumerateArray()
+                    .Single(entry => entry.GetProperty("id").GetString() == "rts_multiplayer_frontline");
+                Assert.That(showcase.GetProperty("binding").ValueKind, Is.EqualTo(JsonValueKind.Null));
+                Assert.That(showcase.GetProperty("preset").GetString(),
+                    Is.EqualTo("rts_multiplayer_frontline_networked_raylib"));
+
+                string gallery = File.ReadAllText(Path.Combine(repoRoot, "docs", "gallery.html"));
+                int launchFunction = gallery.IndexOf("function launchCmd(sc)", StringComparison.Ordinal);
+                Assert.That(launchFunction, Is.GreaterThanOrEqualTo(0));
+                int presetBranch = gallery.IndexOf("if (sc.preset)", launchFunction, StringComparison.Ordinal);
+                int bindingBranch = gallery.IndexOf("if (sc.binding)", launchFunction, StringComparison.Ordinal);
+                Assert.That(presetBranch, Is.GreaterThan(launchFunction));
+                Assert.That(bindingBranch, Is.GreaterThan(presetBranch),
+                    "The generated gallery command must prefer a process-group preset over a single binding.");
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void NetworkRoleArtifactGenerator_WritesOneStrictBootstrapPerResolvedRole()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-rts-role-artifacts-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var launcher = CreateLauncher(repoRoot, tempDirectory);
+                LauncherResolvedProcessGroup resolved = launcher.ResolveProcessGroup(
+                    new[] { "preset:rts_multiplayer_frontline_networked_raylib" },
+                    LauncherBuildMode.Never);
+                var generator = new LauncherNetworkRoleArtifactGenerator();
+                LauncherProcessGroupArtifacts artifacts = generator.Generate(
+                    resolved with { ArtifactDirectory = Path.Combine(tempDirectory, "roles") });
+
+                Assert.That(artifacts.Processes, Has.Count.EqualTo(3));
+                Assert.That(artifacts.Processes.Select(process => process.BootstrapPath), Is.Unique);
+                Assert.That(JsonSerializer.Serialize(artifacts), Does.Not.Contain("rts-frontline-local"),
+                    "CLI-facing artifact metadata must not print the connection key.");
+                foreach (LauncherNetworkRoleArtifact process in artifacts.Processes)
+                {
+                    Assert.That(File.Exists(process.GraphPath), Is.True);
+                    Assert.That(File.Exists(process.BootstrapPath), Is.True);
+                    using JsonDocument bootstrap = JsonDocument.Parse(File.ReadAllText(process.BootstrapPath));
+                    JsonElement networkHost = bootstrap.RootElement.GetProperty("NetworkHost");
+                    Assert.That(networkHost.GetProperty("ProcessRole").GetString(), Is.EqualTo(process.ProcessRole));
+                    Assert.That(networkHost.GetProperty("Port").GetInt32(), Is.EqualTo(27777));
+                    Assert.That(networkHost.GetProperty("FaultSeed").GetInt32(), Is.Positive);
+                    Assert.That(networkHost.GetProperty("ReadinessArtifactPath").GetString(),
+                        Is.EqualTo(Path.GetFileName(process.ReadinessArtifactPath)));
+                    Assert.That(bootstrap.RootElement.TryGetProperty("ReadinessArtifactPath", out _), Is.False);
+                    Assert.That(bootstrap.RootElement.GetProperty("PlanFingerprint").GetString(),
+                        Is.EqualTo(resolved.LaunchPlan.PlanFingerprint));
+                }
+
+                generator.DeleteSensitiveBootstrapArtifacts(artifacts);
+                Assert.That(artifacts.Processes.All(process => !File.Exists(process.BootstrapPath)), Is.True);
+                Assert.That(artifacts.Processes.All(process => File.Exists(process.GraphPath)), Is.True);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void ProcessGroupResolver_RejectsDuplicateClientIdentityBeforeWritingArtifacts()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-rts-duplicate-client-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var launcher = CreateLauncher(repoRoot, tempDirectory);
+                LauncherResolvedProcessGroup valid = launcher.ResolveProcessGroup(
+                    new[] { "preset:rts_multiplayer_frontline_networked_raylib" },
+                    LauncherBuildMode.Never);
+                LauncherResolvedProcessApplication server = valid.Applications.Single(application =>
+                    application.HostKind == LauncherProcessHostKinds.DedicatedServer);
+                LauncherResolvedProcessApplication client = valid.Applications.Single(application =>
+                    application.HostKind == LauncherProcessHostKinds.Raylib);
+                string invalidArtifactDirectory = Path.Combine(tempDirectory, "invalid-group");
+                var invalid = new LauncherProcessGroupDefinition
+                {
+                    Topology = LauncherProcessGroupTopologies.LocalAuthoritative,
+                    ArtifactDirectory = Path.GetRelativePath(repoRoot, invalidArtifactDirectory),
+                    Host = "127.0.0.1",
+                    Port = 27777,
+                    ConnectionKey = "test-key",
+                    ClientCount = 2,
+                    Readiness = new LauncherProcessGroupReadinessDefinition
+                    {
+                        TimeoutMilliseconds = 1000,
+                        PollIntervalMilliseconds = 10
+                    },
+                    Applications = new()
+                    {
+                        new LauncherProcessApplicationDefinition
+                        {
+                            Id = "server",
+                            HostKind = LauncherProcessHostKinds.DedicatedServer,
+                            ProjectPath = server.ProjectPath,
+                            AssemblyPath = server.AssemblyPath
+                        },
+                        new LauncherProcessApplicationDefinition
+                        {
+                            Id = "client",
+                            HostKind = LauncherProcessHostKinds.Raylib,
+                            ProjectPath = client.ProjectPath,
+                            AssemblyPath = client.AssemblyPath
+                        }
+                    },
+                    Processes = new()
+                    {
+                        new LauncherNetworkProcessDefinition
+                        {
+                            Id = "server",
+                            ApplicationId = "server",
+                            ProcessRole = "authoritativeServer",
+                            FaultProfile = "normal",
+                            FaultSeed = 1,
+                            Readiness = Readiness("server.ready.json", 0, 0)
+                        },
+                        new LauncherNetworkProcessDefinition
+                        {
+                            Id = "client-a",
+                            ApplicationId = "client",
+                            ProcessRole = "replicatedClient",
+                            ClientInstanceId = 7,
+                            CredentialPath = "credentials/a.session",
+                            FaultProfile = "normal",
+                            FaultSeed = 2,
+                            Readiness = Readiness("client-a.ready.json", 1, 1)
+                        },
+                        new LauncherNetworkProcessDefinition
+                        {
+                            Id = "client-b",
+                            ApplicationId = "client",
+                            ProcessRole = "replicatedClient",
+                            ClientInstanceId = 7,
+                            CredentialPath = "credentials/b.session",
+                            FaultProfile = "normal",
+                            FaultSeed = 3,
+                            Readiness = Readiness("client-b.ready.json", 1, 1)
+                        }
+                    }
+                };
+
+                var exception = Assert.Throws<InvalidOperationException>(() =>
+                    LauncherNetworkProcessGroupResolver.Resolve(
+                        repoRoot,
+                        "invalid",
+                        invalid,
+                        valid.LaunchPlan));
+                Assert.That(exception!.Message, Does.Contain("duplicate clientInstanceId 7"));
+                Assert.That(Directory.Exists(invalidArtifactDirectory), Is.False);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void LauncherPresetLoader_RejectsUnknownProcessGroupFields()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-rts-unknown-field-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+            string presetsPath = Path.Combine(tempDirectory, "launcher.presets.json");
+
+            try
+            {
+                File.WriteAllText(
+                    presetsPath,
+                    """
+                    {
+                      "schemaVersion": 1,
+                      "presets": [
+                        {
+                          "id": "invalid",
+                          "name": "Invalid",
+                          "selectors": ["mod:LudotsCoreMod"],
+                          "processGroup": {
+                            "topology": "localAuthoritative",
+                            "artifactDirectory": "artifacts/tests/invalid",
+                            "host": "127.0.0.1",
+                            "port": 27777,
+                            "connectionKey": "test",
+                            "clientCount": 2,
+                            "readiness": {
+                              "timeoutMilliseconds": 1000,
+                              "pollIntervalMilliseconds": 10
+                            },
+                            "applications": [],
+                            "processes": [],
+                            "silentFallback": true
+                          }
+                        }
+                      ]
+                    }
+                    """);
+                var config = new LauncherConfigService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    presetsPath,
+                    Path.Combine(tempDirectory, "preferences.json"),
+                    Path.Combine(tempDirectory, "overlay.json"));
+
+                var exception = Assert.Throws<InvalidOperationException>(() => config.LoadPresets());
+                Assert.That(exception!.Message, Does.Contain("silentFallback"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void NetworkRoleArtifactGenerator_RejectsEscapingRoleDirectoryBeforeDeletion()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-rts-role-path-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var launcher = CreateLauncher(repoRoot, tempDirectory);
+                LauncherResolvedProcessGroup valid = launcher.ResolveProcessGroup(
+                    new[] { "preset:rts_multiplayer_frontline_networked_raylib" },
+                    LauncherBuildMode.Never);
+                LauncherResolvedNetworkProcess escaping = valid.Processes[0] with { Id = "../outside" };
+                LauncherResolvedProcessGroup invalid = valid with
+                {
+                    ArtifactDirectory = Path.Combine(tempDirectory, "roles"),
+                    Processes = new[] { escaping }.Concat(valid.Processes.Skip(1)).ToArray()
+                };
+
+                var exception = Assert.Throws<InvalidOperationException>(() =>
+                    new LauncherNetworkRoleArtifactGenerator().Generate(invalid));
+                Assert.That(exception!.Message, Does.Contain("cannot be used as a role artifact directory"));
+                Assert.That(Directory.Exists(Path.Combine(tempDirectory, "outside")), Is.False);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Given_LocalAuthoritativeMatchHasStaleCredentials_When_PreparingLaunch_Then_AllClientCredentialsAreDeleted()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-local-credentials-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                LauncherResolvedProcessGroup resolved = CreateLauncher(repoRoot, tempDirectory).ResolveProcessGroup(
+                    new[] { "preset:rts_multiplayer_frontline_networked_raylib" },
+                    LauncherBuildMode.Never);
+                string artifactDirectory = Path.Combine(tempDirectory, "roles");
+                LauncherResolvedNetworkProcess[] processes = resolved.Processes
+                    .Select(process => process.NetworkHost.ResolveRole() == NetworkProcessRole.ReplicatedClient
+                        ? process with
+                        {
+                            CredentialPath = Path.Combine(artifactDirectory, "credentials", $"{process.Id}.session")
+                        }
+                        : process)
+                    .ToArray();
+                LauncherResolvedProcessGroup localMatch = resolved with
+                {
+                    ArtifactDirectory = artifactDirectory,
+                    Processes = processes
+                };
+                string[] credentials = processes
+                    .Where(process => process.NetworkHost.ResolveRole() == NetworkProcessRole.ReplicatedClient)
+                    .Select(process => process.CredentialPath)
+                    .ToArray();
+                Directory.CreateDirectory(Path.Combine(artifactDirectory, "credentials"));
+                foreach (string credential in credentials)
+                {
+                    File.WriteAllBytes(credential, new byte[] { 1, 2, 3 });
+                }
+
+                new LauncherNetworkRoleArtifactGenerator().PrepareCredentialsForLaunch(localMatch);
+
+                Assert.That(credentials.All(credential => !File.Exists(credential)), Is.True);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Given_ExternalJoinHasReconnectCredential_When_PreparingLaunch_Then_CredentialIsPreserved()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-external-credential-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                LauncherResolvedProcessGroup resolved = CreateLauncher(repoRoot, tempDirectory).ResolveProcessGroup(
+                    new[] { "preset:rts_multiplayer_frontline_client_join_raylib" },
+                    LauncherBuildMode.Never);
+                string artifactDirectory = Path.Combine(tempDirectory, "roles");
+                string credentialPath = Path.Combine(artifactDirectory, "credentials", "debug-client.session");
+                Directory.CreateDirectory(Path.GetDirectoryName(credentialPath)!);
+                byte[] reconnectCredential = { 7, 0, 9 };
+                File.WriteAllBytes(credentialPath, reconnectCredential);
+                LauncherResolvedProcessGroup externalJoin = resolved with
+                {
+                    ArtifactDirectory = artifactDirectory,
+                    Processes = new[] { resolved.Processes.Single() with { CredentialPath = credentialPath } }
+                };
+
+                new LauncherNetworkRoleArtifactGenerator().PrepareCredentialsForLaunch(externalJoin);
+
+                Assert.That(File.ReadAllBytes(credentialPath), Is.EqualTo(reconnectCredential));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Given_LocalAuthoritativeCredentialCannotBeDeleted_When_PreparingLaunch_Then_LaunchIsRejected()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-credential-delete-failure-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                LauncherResolvedProcessGroup resolved = CreateLauncher(repoRoot, tempDirectory).ResolveProcessGroup(
+                    new[] { "preset:rts_multiplayer_frontline_networked_raylib" },
+                    LauncherBuildMode.Never);
+                string artifactDirectory = Path.Combine(tempDirectory, "roles");
+                string invalidCredentialPath = Path.Combine(artifactDirectory, "credentials", "client-one.session");
+                Directory.CreateDirectory(invalidCredentialPath);
+                LauncherResolvedNetworkProcess[] processes = resolved.Processes
+                    .Select(process => process.NetworkHost.ResolveRole() != NetworkProcessRole.ReplicatedClient
+                        ? process
+                        : process with
+                        {
+                            CredentialPath = process.Id == "client-one"
+                                ? invalidCredentialPath
+                                : Path.Combine(artifactDirectory, "credentials", $"{process.Id}.session")
+                        })
+                    .ToArray();
+                LauncherResolvedProcessGroup localMatch = resolved with
+                {
+                    ArtifactDirectory = artifactDirectory,
+                    Processes = processes
+                };
+
+                var exception = Assert.Throws<InvalidOperationException>(() =>
+                    new LauncherNetworkRoleArtifactGenerator().PrepareCredentialsForLaunch(localMatch));
+
+                Assert.That(exception!.Message, Does.Contain("client-one"));
+                Assert.That(exception.Message, Does.Contain("launch was aborted"));
+                Assert.That(Directory.Exists(invalidCredentialPath), Is.True);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Given_LocalAuthoritativeCredentialEscapesArtifactDirectory_When_PreparingLaunch_Then_PathIsRejectedBeforeDeletion()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-credential-owned-path-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                LauncherResolvedProcessGroup resolved = CreateLauncher(repoRoot, tempDirectory).ResolveProcessGroup(
+                    new[] { "preset:rts_multiplayer_frontline_networked_raylib" },
+                    LauncherBuildMode.Never);
+                string artifactDirectory = Path.Combine(tempDirectory, "roles");
+                string outsideCredentialPath = Path.Combine(tempDirectory, "outside.session");
+                File.WriteAllBytes(outsideCredentialPath, new byte[] { 7, 0, 9 });
+                LauncherResolvedNetworkProcess[] processes = resolved.Processes
+                    .Select(process => process.Id == "client-one"
+                        ? process with { CredentialPath = outsideCredentialPath }
+                        : process)
+                    .ToArray();
+                LauncherResolvedProcessGroup localMatch = resolved with
+                {
+                    ArtifactDirectory = artifactDirectory,
+                    Processes = processes
+                };
+
+                var exception = Assert.Throws<InvalidOperationException>(() =>
+                    new LauncherNetworkRoleArtifactGenerator().PrepareCredentialsForLaunch(localMatch));
+
+                Assert.That(exception!.Message, Does.Contain("must stay within"));
+                Assert.That(File.Exists(outsideCredentialPath), Is.True);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void ActiveLaunchRecordPath_UsesRepositoryScopedCollisionResistantKey()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-active-key-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                LauncherService launcher = CreateLauncher(repoRoot, tempDirectory);
+                string first = launcher.GetActiveProcessRecordPath("ray-lib");
+                string second = launcher.GetActiveProcessRecordPath("raylib");
+                string sameAdapterDifferentRepository = new LauncherService(
+                        tempDirectory,
+                        Path.Combine(repoRoot, "launcher.config.json"),
+                        Path.Combine(repoRoot, "launcher.presets.json"),
+                        Path.Combine(tempDirectory, "other-preferences.json"),
+                        Path.Combine(tempDirectory, "other-overlay.json"))
+                    .GetActiveProcessRecordPath("raylib");
+
+                Assert.That(first, Is.Not.EqualTo(second));
+                Assert.That(second, Is.Not.EqualTo(sameAdapterDifferentRepository));
+                Assert.That(Path.GetFileName(second), Does.Match("^launch-[0-9a-f]{64}\\.json$"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void ProcessGroupReadiness_RequiresServerSeatsAndRenderableClientMirrors()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-readiness-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                LauncherResolvedProcessGroup resolved = CreateLauncher(repoRoot, tempDirectory).ResolveProcessGroup(
+                    new[] { "preset:rts_multiplayer_frontline_networked_raylib" },
+                    LauncherBuildMode.Never);
+                LauncherProcessGroupArtifacts artifacts = new LauncherNetworkRoleArtifactGenerator().Generate(
+                    resolved with { ArtifactDirectory = Path.Combine(tempDirectory, "roles") });
+                LauncherNetworkRoleArtifact server = artifacts.Processes[0];
+                LauncherNetworkRoleArtifact client = artifacts.Processes[1] with
+                {
+                    CredentialPath = Path.Combine(tempDirectory, "client.session")
+                };
+                File.WriteAllBytes(client.CredentialPath, new byte[] { 1 });
+
+                var serverStarting = new LauncherNetworkProcessReadinessArtifact
+                {
+                    SchemaVersion = 1,
+                    ProcessRole = "authoritativeServer",
+                    RuntimeReady = true,
+                    SessionEpoch = 71,
+                    UpdatedAtUtc = DateTime.UtcNow,
+                    ConnectedSeatCount = 1
+                };
+                Assert.That(LauncherNetworkProcessReadinessEvaluator.IsServerRuntimeReady(server, serverStarting), Is.True);
+                Assert.That(LauncherNetworkProcessReadinessEvaluator.IsGroupReady(server, serverStarting, 2), Is.False);
+                serverStarting.ConnectedSeatCount = 2;
+                Assert.That(LauncherNetworkProcessReadinessEvaluator.IsGroupReady(server, serverStarting, 2), Is.True);
+
+                var clientStarting = new LauncherNetworkProcessReadinessArtifact
+                {
+                    SchemaVersion = 1,
+                    ProcessRole = "replicatedClient",
+                    RuntimeReady = true,
+                    SessionEstablished = true,
+                    SessionEpoch = 71,
+                    UpdatedAtUtc = DateTime.UtcNow,
+                    ReplicatedMirrorCount = 8,
+                    RenderableMirrorCount = 0
+                };
+                Assert.That(LauncherNetworkProcessReadinessEvaluator.IsGroupReady(client, clientStarting, 2), Is.False);
+                clientStarting.RenderableMirrorCount = 7;
+                Assert.That(LauncherNetworkProcessReadinessEvaluator.IsGroupReady(client, clientStarting, 2), Is.True);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void ProcessGroupReadinessReader_ConsumesTheCoreProducerContract_AndRejectsStaleArtifacts()
+        {
+            string tempDirectory = Path.Combine(
+                Path.GetTempPath(),
+                $"ludots-launcher-readiness-contract-{Guid.NewGuid():N}");
+            string artifactPath = Path.Combine(tempDirectory, "client.readiness.json");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                DateTime publishedAfterUtc = DateTime.UtcNow.AddSeconds(-1);
+                using (var producer = new AtomicJsonNetworkReadinessArtifact(artifactPath))
+                {
+                    var snapshot = new NetworkReadinessSnapshot(
+                        NetworkProcessRole.ReplicatedClient,
+                        runtimeReady: true,
+                        sessionEstablished: true,
+                        sessionEpoch: 709,
+                        replicatedMirrorCount: 8,
+                        renderableMirrorCount: 7,
+                        connectedSeatCount: 2);
+                    producer.Publish(in snapshot);
+
+                    var reader = new LauncherNetworkProcessReadinessReader();
+                    Assert.That(
+                        reader.TryRead(artifactPath, publishedAfterUtc, out LauncherNetworkProcessReadinessArtifact artifact),
+                        Is.True);
+                    Assert.Multiple(() =>
+                    {
+                        Assert.That(artifact.SchemaVersion, Is.EqualTo(NetworkReadinessSnapshot.CurrentSchemaVersion));
+                        Assert.That(artifact.ProcessRole, Is.EqualTo("replicatedClient"));
+                        Assert.That(artifact.RuntimeReady, Is.True);
+                        Assert.That(artifact.SessionEstablished, Is.True);
+                        Assert.That(artifact.SessionEpoch, Is.EqualTo(709));
+                        Assert.That(artifact.ConnectedSeatCount, Is.EqualTo(2));
+                        Assert.That(artifact.ReplicatedMirrorCount, Is.EqualTo(8));
+                        Assert.That(artifact.RenderableMirrorCount, Is.EqualTo(7));
+                        Assert.That(artifact.UpdatedAtUtc.Kind, Is.EqualTo(DateTimeKind.Utc));
+                    });
+                    Assert.That(
+                        reader.TryRead(artifactPath, DateTime.UtcNow.AddMinutes(1), out _),
+                        Is.False);
+                }
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public async Task Given_CoreWriterAtomicallyReplacesReadiness_When_LauncherPollsConcurrently_Then_NoFileLockBlocksPublication()
+        {
+            string tempDirectory = Path.Combine(
+                Path.GetTempPath(),
+                $"ludots-launcher-readiness-concurrency-{Guid.NewGuid():N}");
+            string artifactPath = Path.Combine(tempDirectory, "client.readiness.json");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                using var producer = new AtomicJsonNetworkReadinessArtifact(artifactPath);
+                var reader = new LauncherNetworkProcessReadinessReader();
+                for (int i = 1; i <= 25; i++)
+                {
+                    NetworkReadinessSnapshot sequentialSnapshot = CreateReadinessSnapshot((ulong)i);
+                    producer.Publish(in sequentialSnapshot);
+                }
+                Assert.That(
+                    reader.TryRead(artifactPath, out LauncherNetworkProcessReadinessArtifact sequentialArtifact),
+                    Is.True);
+                Assert.That(sequentialArtifact.SessionEpoch, Is.EqualTo(25));
+
+                using var start = new ManualResetEventSlim(initialState: false);
+                int publishCount = 0;
+                int readCount = 0;
+                Task writer = Task.Run(() =>
+                {
+                    start.Wait();
+                    for (int i = 26; i <= 125; i++)
+                    {
+                        NetworkReadinessSnapshot snapshot = CreateReadinessSnapshot((ulong)i);
+                        producer.Publish(in snapshot);
+                        Interlocked.Increment(ref publishCount);
+                    }
+                });
+                Task polling = Task.Run(() =>
+                {
+                    start.Wait();
+                    while (!writer.IsCompleted || Volatile.Read(ref readCount) == 0)
+                    {
+                        if (!reader.TryRead(artifactPath, out LauncherNetworkProcessReadinessArtifact artifact))
+                        {
+                            continue;
+                        }
+
+                        Assert.That(artifact.SchemaVersion, Is.EqualTo(NetworkReadinessSnapshot.CurrentSchemaVersion));
+                        Assert.That(artifact.ProcessRole, Is.EqualTo("replicatedClient"));
+                        Assert.That(artifact.SessionEstablished, Is.True);
+                        Assert.That(artifact.ReplicatedMirrorCount, Is.EqualTo(8));
+                        Assert.That(artifact.RenderableMirrorCount, Is.EqualTo(7));
+                        Interlocked.Increment(ref readCount);
+                    }
+                });
+
+                start.Set();
+                await Task.WhenAll(writer, polling);
+
+                Assert.That(publishCount, Is.EqualTo(100));
+                Assert.That(readCount, Is.Positive);
+                Assert.That(
+                    reader.TryRead(artifactPath, out LauncherNetworkProcessReadinessArtifact finalArtifact),
+                    Is.True);
+                Assert.That(finalArtifact.SessionEpoch, Is.EqualTo(125));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+
+            static NetworkReadinessSnapshot CreateReadinessSnapshot(ulong sessionEpoch)
+            {
+                return new NetworkReadinessSnapshot(
+                    NetworkProcessRole.ReplicatedClient,
+                    runtimeReady: true,
+                    sessionEstablished: true,
+                    sessionEpoch,
+                    replicatedMirrorCount: 8,
+                    renderableMirrorCount: 7,
+                    connectedSeatCount: 2);
+            }
+        }
+
         [Test]
         public async Task RunProcessAsync_ReturnsWithoutHanging_WhenDescendantKeepsRedirectedOutputOpen()
         {
@@ -28,7 +749,7 @@ namespace Ludots.Tests.Architecture
                 File.WriteAllText(
                     scriptPath,
                     "@echo off\r\n" +
-                    "start \"\" /b powershell.exe -NoProfile -NonInteractive -Command \"Start-Sleep -Milliseconds 1500\"\r\n" +
+                    "start \"\" /b /d \"%SystemRoot%\" powershell.exe -NoProfile -NonInteractive -Command \"Start-Sleep -Milliseconds 1500\"\r\n" +
                     "echo parent-done\r\n" +
                     "exit /b 0\r\n");
 
@@ -1542,6 +2263,33 @@ namespace Ludots.Tests.Architecture
             {
                 File.Delete(path);
             }
+        }
+
+        private static LauncherService CreateLauncher(string repoRoot, string tempDirectory)
+        {
+            string preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+            string userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+            File.WriteAllText(preferencesPath, "{}");
+            File.WriteAllText(userConfigPath, "{}");
+            return new LauncherService(
+                repoRoot,
+                Path.Combine(repoRoot, "launcher.config.json"),
+                Path.Combine(repoRoot, "launcher.presets.json"),
+                preferencesPath,
+                userConfigPath);
+        }
+
+        private static LauncherNetworkProcessReadinessDefinition Readiness(
+            string artifactFileName,
+            int minimumReplicatedMirrorCount,
+            int minimumRenderableMirrorCount)
+        {
+            return new LauncherNetworkProcessReadinessDefinition
+            {
+                ArtifactFileName = artifactFileName,
+                MinimumReplicatedMirrorCount = minimumReplicatedMirrorCount,
+                MinimumRenderableMirrorCount = minimumRenderableMirrorCount
+            };
         }
 
         private static string FindRepoRoot()

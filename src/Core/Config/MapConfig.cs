@@ -19,6 +19,12 @@ namespace Ludots.Core.Config
         public Dictionary<string, string> Dependencies { get; set; } = new Dictionary<string, string>();
         public string ContinuousHeightmapAsset { get; set; }
 
+        /// <summary>
+        /// Optional explicit terrain surface presented by hosts. The visual heightmap
+        /// remains available as the shared height truth regardless of this choice.
+        /// </summary>
+        public TerrainPresentationBindingConfig TerrainPresentation { get; set; }
+
         /// <summary>Path to the cooked structure collision asset for building surfaces, blockers, portals, and grounding.</summary>
         public string StructureCollisionAsset { get; set; } = string.Empty;
 
