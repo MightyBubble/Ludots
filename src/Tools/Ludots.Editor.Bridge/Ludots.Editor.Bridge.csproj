@@ -10,7 +10,7 @@
     <ProjectReference Include="..\..\Graph\Ludots.Graph.Codegen\Ludots.Graph.Codegen.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Movement.Physics2DBridge\Ludots.Movement.Physics2DBridge.csproj" />
-    <ProjectReference Include="..\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
     <ProjectReference Include="..\Ludots.Tool\Ludots.Tool.csproj" />
     <ProjectReference Include="..\..\Libraries\DotRecast\src\DotRecast.Detour\DotRecast.Detour.csproj" />
   </ItemGroup>

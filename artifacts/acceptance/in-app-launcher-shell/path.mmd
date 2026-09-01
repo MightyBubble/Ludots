@@ -1,0 +1,12 @@
+flowchart TD
+    A[双击 exe 无参] -->|ResolveBootstrapConfigPath=null| B[ShellMode: LauncherShellHost]
+    B -->|Esc| Z[进程退出]
+    B -->|Enter preset| C[PrepareLaunchAsync<br/>resolve+build+写 bootstrap/graph]
+    C -->|构建失败| B2[Shell 显示失败首行]
+    C -->|executable target| B3[Shell 报错: 需外部进程]
+    C -->|ok| D[CloseWindow → RaylibGameHost.Run<br/>同进程引擎引导]
+    D --> E[GameMode 主循环]
+    E -->|关窗/自动退出| F[中继重启: spawn 自身无参]
+    F --> B
+    G[外部 spawn: cli/bridge 传 args0] -->|GameMode 合同不变| E
+    C2[LauncherBootstrapContractTests 23 项] -.回归锁.-> C

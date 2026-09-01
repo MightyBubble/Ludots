@@ -132,6 +132,7 @@ export interface LaunchResult {
   url?: string;
   error?: string;
   plan?: LauncherLaunchPlan;
+  shell?: boolean;
 }
 
 export interface AppBuildResult {

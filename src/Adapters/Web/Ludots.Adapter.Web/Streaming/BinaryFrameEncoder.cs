@@ -126,7 +126,7 @@ namespace Ludots.Adapter.Web.Streaming
                         continue;
                     }
 
-                    WritePrimitive(item.MeshAssetId, item.Position, item.Scale, item.Color);
+                    WritePrimitive(item.MeshAssetId, item.Position, item.Scale, item.Color, item.Rotation);
                 }
             }
 
@@ -141,7 +141,7 @@ namespace Ludots.Adapter.Web.Streaming
                         continue;
                     }
 
-                    WritePrimitive(item.MeshAssetId, item.Position, item.Scale, item.Color);
+                    WritePrimitive(item.MeshAssetId, item.Position, item.Scale, item.Color, item.Rotation);
                 }
             }
         }
@@ -166,12 +166,13 @@ namespace Ludots.Adapter.Web.Streaming
             return count;
         }
 
-        private void WritePrimitive(int meshAssetId, Vector3 position, Vector3 scale, Vector4 color)
+        private void WritePrimitive(int meshAssetId, Vector3 position, Vector3 scale, Vector4 color, Quaternion rotation)
         {
             WriteInt32(meshAssetId);
             WriteFloat(position.X); WriteFloat(position.Y); WriteFloat(position.Z);
             WriteFloat(scale.X); WriteFloat(scale.Y); WriteFloat(scale.Z);
             WriteFloat(color.X); WriteFloat(color.Y); WriteFloat(color.Z); WriteFloat(color.W);
+            WriteFloat(rotation.X); WriteFloat(rotation.Y); WriteFloat(rotation.Z); WriteFloat(rotation.W);
         }
 
         private void WriteGroundOverlays(GroundOverlayBuffer? buf)

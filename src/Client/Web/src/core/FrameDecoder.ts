@@ -29,6 +29,7 @@ export interface PrimitiveItem {
   posX: number; posY: number; posZ: number;
   scaleX: number; scaleY: number; scaleZ: number;
   r: number; g: number; b: number; a: number;
+  rotX: number; rotY: number; rotZ: number; rotW: number;
 }
 
 export interface DebugLine {
@@ -240,8 +241,9 @@ export class FrameDecoder {
         posX: v.getFloat32(p + 4, true), posY: v.getFloat32(p + 8, true), posZ: v.getFloat32(p + 12, true),
         scaleX: v.getFloat32(p + 16, true), scaleY: v.getFloat32(p + 20, true), scaleZ: v.getFloat32(p + 24, true),
         r: v.getFloat32(p + 28, true), g: v.getFloat32(p + 32, true), b: v.getFloat32(p + 36, true), a: v.getFloat32(p + 40, true),
+        rotX: v.getFloat32(p + 44, true), rotY: v.getFloat32(p + 48, true), rotZ: v.getFloat32(p + 52, true), rotW: v.getFloat32(p + 56, true),
       });
-      p += 44;
+      p += 60;
     }
     return p;
   }
@@ -252,7 +254,7 @@ export class FrameDecoder {
 
     if (frame.primitives.length > totalCount) frame.primitives.length = totalCount;
     while (frame.primitives.length < totalCount) {
-      frame.primitives.push({ meshAssetId: 1, posX: 0, posY: 0, posZ: 0, scaleX: 1, scaleY: 1, scaleZ: 1, r: 1, g: 1, b: 1, a: 1 });
+      frame.primitives.push({ meshAssetId: 1, posX: 0, posY: 0, posZ: 0, scaleX: 1, scaleY: 1, scaleZ: 1, r: 1, g: 1, b: 1, a: 1, rotX: 0, rotY: 0, rotZ: 0, rotW: 1 });
     }
 
     for (let i = 0; i < changedCount; i++) {
@@ -262,8 +264,9 @@ export class FrameDecoder {
         posX: v.getFloat32(p + 4, true), posY: v.getFloat32(p + 8, true), posZ: v.getFloat32(p + 12, true),
         scaleX: v.getFloat32(p + 16, true), scaleY: v.getFloat32(p + 20, true), scaleZ: v.getFloat32(p + 24, true),
         r: v.getFloat32(p + 28, true), g: v.getFloat32(p + 32, true), b: v.getFloat32(p + 36, true), a: v.getFloat32(p + 40, true),
+        rotX: v.getFloat32(p + 44, true), rotY: v.getFloat32(p + 48, true), rotZ: v.getFloat32(p + 52, true), rotW: v.getFloat32(p + 56, true),
       };
-      p += 44;
+      p += 60;
     }
     return p;
   }

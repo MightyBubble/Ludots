@@ -30,6 +30,23 @@ export type BuildState = "idle" | "building" | "done" | "error";
 export type DetailTab = "info" | "readme" | "changelog" | "graph";
 export type MainView = "mods" | "showcase";
 
+// Shell 会话中继交接：旧进程退出、新游戏会话接管端口/窗口前的等待。
+async function waitForGameSession(timeoutMs = 60_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch("/health");
+      const payload = (await response.json()) as { mode?: string };
+      if (payload.mode !== "shell") {
+        return;
+      }
+    } catch {
+      // 旧进程退出与新进程监听之间的间隙属预期，继续轮询。
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+}
+
 interface LauncherState {
   mods: ModInfo[];
   platforms: PlatformProfile[];
@@ -626,6 +643,12 @@ export const useLauncherStore = create<LauncherState>((set, get) => {
             buildState: "error",
             buildLog: result.error ?? "Launch failed.",
           });
+          return;
+        }
+
+        if (result.shell) {
+          await waitForGameSession();
+          window.location.href = result.url || "/";
           return;
         }
 

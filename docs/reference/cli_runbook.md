@@ -9,7 +9,7 @@ Product entrypoints:
 
 Both entrypoints reuse the same backend:
 
-- `src/Tools/Ludots.Launcher.Backend/LauncherService.cs`
+- `src/Libraries/Ludots.Launcher.Backend/LauncherService.cs`
 - `src/Tools/Ludots.Editor.Bridge/Program.cs`
 - `src/Tools/Ludots.Launcher.Cli/Program.cs`
 

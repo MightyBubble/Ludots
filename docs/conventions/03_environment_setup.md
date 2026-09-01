@@ -67,7 +67,7 @@ dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj
 
 ## 4. Service Entrypoints
 
-Ludots now treats web launcher and CLI as the product entry surface. They share `src/Tools/Ludots.Launcher.Backend`.
+Ludots now treats web launcher and CLI as the product entry surface. They share `src/Libraries/Ludots.Launcher.Backend`.
 
 ### 4.1 Product Web Launcher
 

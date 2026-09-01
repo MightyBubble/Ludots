@@ -300,8 +300,19 @@ internal static class CefProcessRuntime
 			ResourcesDirPath = runtimeRoot,
 			RootCachePath = cacheRoot,
 			CachePath = cachePath,
-			LogFile = Path.Combine(cacheRoot, "cef.log")
+			LogFile = Path.Combine(cacheRoot, "cef.log"),
+			LogSeverity = global::CefSharp.LogSeverity.Verbose
 		};
+
+		// CEF 表面承载 UI 面板（启动器/面板/流程图）而非游戏视口：软件合成即可，
+		// 并规避离屏合成下 GPU 驱动栈不稳定连坐宿主进程（实测 LiveKernelEvent + gpu adapter 探测失败）。
+		settings.CefCommandLineArgs.Add("disable-gpu");
+		settings.CefCommandLineArgs.Add("disable-gpu-compositing");
+
+		// 嵌入式浏览器禁绝回连 Google 与组件自更新：新档案下的组件安装流程会触发
+		// 浏览器重启请求，CefSharp 无宿主接线时退化为 exit() 直接带走宿主进程（实测 exit 127）。
+		settings.CefCommandLineArgs.Add("disable-component-update");
+		settings.CefCommandLineArgs.Add("disable-background-networking");
 
 		settings.RegisterScheme(new CefCustomScheme
 		{

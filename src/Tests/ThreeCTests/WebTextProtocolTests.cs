@@ -64,6 +64,41 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void BinaryFrameEncoder_WritesRotationQuaternion_InPrimitiveWireItem()
+        {
+            var primitives = new PrimitiveDrawBuffer(capacity: 1);
+            Assert.That(primitives.TryAdd(new PrimitiveDrawItem
+            {
+                MeshAssetId = 11,
+                Position = Vector3.Zero,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                Rotation = new Quaternion(0f, 0.38268343f, 0f, 0.92387953f),
+                RenderPath = VisualRenderPath.StaticMesh,
+            }), Is.True);
+
+            var encoder = new BinaryFrameEncoder();
+            var camera = new CameraRenderState3D(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, 60f);
+            encoder.Encode(1, 2, 3, in camera, primitives, null, null, null, null, null, null, null, null);
+
+            ReadOnlySpan<byte> buffer = encoder.GetResult();
+            var (payloadOffset, itemCount, byteLength) = FindSection(buffer, FrameProtocol.SectionPrimitives);
+            Assert.That(itemCount, Is.EqualTo(1));
+            Assert.That(byteLength, Is.EqualTo(WirePrimitiveDrawItem.SizeInBytes));
+
+            static float ReadFloat(ReadOnlySpan<byte> buf, int offset) =>
+                BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(buf.Slice(offset, 4)));
+            float rotX = ReadFloat(buffer, payloadOffset + 44);
+            float rotY = ReadFloat(buffer, payloadOffset + 48);
+            float rotZ = ReadFloat(buffer, payloadOffset + 52);
+            float rotW = ReadFloat(buffer, payloadOffset + 56);
+            Assert.That(rotX, Is.EqualTo(0f).Within(1e-6f));
+            Assert.That(rotY, Is.EqualTo(0.38268343f).Within(1e-6f));
+            Assert.That(rotZ, Is.EqualTo(0f).Within(1e-6f));
+            Assert.That(rotW, Is.EqualTo(0.92387953f).Within(1e-6f));
+        }
+
+        [Test]
         public void BinaryFrameEncoder_FastPathSkinnedVisuals_ExcludeHiddenAndCulledSnapshots()
         {
             var skinned = new SkinnedVisualBatchBuffer(capacity: 3);

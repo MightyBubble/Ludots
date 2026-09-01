@@ -31,7 +31,7 @@ Required graph payload:
 - diagnostics and conflict decisions used for the plan
 
 The graph DTO is Core-owned. `src/Core/Hosting/LauncherGraphDocument.cs` defines the
-runtime-readable launcher graph contract, `src/Tools/Ludots.Launcher.Backend/LauncherService.cs`
+runtime-readable launcher graph contract, `src/Libraries/Ludots.Launcher.Backend/LauncherService.cs`
 writes that exact contract, and `src/Core/Hosting/GameBootstrapper.cs` reads it with strict
 camel-case JSON options. Launcher metadata such as adapter/build/runtime artifacts and diagnostics is
 known tooling metadata, not an arbitrary extension bag; unknown graph fields must still fail parsing.
@@ -39,8 +39,8 @@ known tooling metadata, not an arbitrary extension bag; unknown graph fields mus
 Evidence paths for current launcher planning model:
 
 - `src/Core/Hosting/LauncherGraphDocument.cs`
-- `src/Tools/Ludots.Launcher.Backend/LauncherModels.cs`
-- `src/Tools/Ludots.Launcher.Backend/LauncherService.cs`
+- `src/Libraries/Ludots.Launcher.Backend/LauncherModels.cs`
+- `src/Libraries/Ludots.Launcher.Backend/LauncherService.cs`
 - `src/Core/Hosting/GameBootstrapper.cs`
 - `src/Tests/ArchitectureTests/LauncherBootstrapContractTests.cs`
 - `docs/architecture/startup_entrypoints.md`
@@ -91,7 +91,7 @@ Preferences never change mod resolution truth.
 
 Evidence path:
 
-- `src/Tools/Ludots.Launcher.Backend/LauncherConfigService.cs`
+- `src/Libraries/Ludots.Launcher.Backend/LauncherConfigService.cs`
 
 ### 3.3 Runtime Bootstrap (generated artifact)
 

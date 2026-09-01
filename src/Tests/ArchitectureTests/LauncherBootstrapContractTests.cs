@@ -1544,6 +1544,158 @@ namespace Ludots.Tests.Architecture
             }
         }
 
+        [Test]
+        public void LauncherShellLifecycle_DispatchesMode_ByFirstArgument()
+        {
+            Assert.That(
+                LauncherShellLifecycle.ResolveBootstrapConfigPath(new[] { "launcher.runtime.json" }),
+                Is.EqualTo("launcher.runtime.json"));
+            Assert.That(LauncherShellLifecycle.ResolveBootstrapConfigPath(Array.Empty<string>()), Is.Null);
+            Assert.That(LauncherShellLifecycle.ResolveBootstrapConfigPath(new[] { " " }), Is.Null);
+            Assert.That(
+                LauncherShellLifecycle.ResolveBootstrapConfigPath(new[] { "a.json", "extra" }),
+                Is.EqualTo("a.json"));
+        }
+
+        [Test]
+        public void LauncherShellLifecycle_RelayRestart_SpawnsCurrentProcessWithoutLauncherArguments()
+        {
+            var startInfo = LauncherShellLifecycle.BuildRelayRestartStartInfo();
+            Assert.That(startInfo.UseShellExecute, Is.False);
+            Assert.That(startInfo.WorkingDirectory, Is.EqualTo(AppContext.BaseDirectory));
+
+            var fileName = Path.GetFileName(startInfo.FileName);
+            if (fileName.StartsWith("dotnet", StringComparison.OrdinalIgnoreCase))
+            {
+                Assert.That(startInfo.Arguments, Does.EndWith(".dll\""));
+            }
+            else
+            {
+                Assert.That(startInfo.Arguments, Is.Empty);
+            }
+        }
+
+        [Test]
+        public async Task PrepareLaunchAsync_WritesBootstrapAndGraph_ConsumableByGameBootstrapper()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"shell-prepare-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var bootstrapPath = Path.Combine(
+                repoRoot,
+                "src",
+                "Apps",
+                "Raylib",
+                "Ludots.App.Raylib",
+                "bin",
+                "Release",
+                "net8.0",
+                "launcher.runtime.json");
+            var originalGraph = CaptureFile(graphPath);
+            var originalBootstrap = CaptureFile(bootstrapPath);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var prepared = await launcher.PrepareLaunchAsync(
+                    new[] { "mod:LudotsCoreMod" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never);
+
+                Assert.That(prepared.Ok, Is.True, prepared.Error);
+                Assert.That(prepared.BootstrapPath, Is.EqualTo(bootstrapPath));
+                Assert.That(File.Exists(graphPath), Is.True);
+                Assert.That(File.Exists(bootstrapPath), Is.True);
+
+                var result = GameBootstrapper.InitializeFromBaseDirectory(
+                    prepared.Plan!.AppOutputDirectory,
+                    prepared.BootstrapPath);
+                try
+                {
+                    Assert.That(result.Engine.ModLoader.LoadedModIds, Is.EqualTo(prepared.Plan.OrderedModIds));
+                    Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
+                }
+                finally
+                {
+                    result.Engine.Dispose();
+                }
+            }
+            finally
+            {
+                RestoreFile(graphPath, originalGraph);
+                RestoreFile(bootstrapPath, originalBootstrap);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void ShellPreset_ResolvesToLauncherShellUxModWithCefRuntime()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"shell-preset-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+            var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+            var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+            File.WriteAllText(preferencesPath, "{}");
+            File.WriteAllText(userConfigPath, "{}");
+
+            try
+            {
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var plan = launcher.Resolve(
+                    new[] { LauncherShellSelectors.RaylibShellPreset },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+
+                Assert.That(plan.OrderedModIds, Does.Contain("LudotsCoreMod"));
+                Assert.That(plan.OrderedModIds, Does.Contain("LauncherShellUxMod"));
+                Assert.That(plan.BrowserRuntime, Is.Not.Null);
+                Assert.That(plan.BrowserRuntime!.Enabled, Is.True);
+                Assert.That(plan.BrowserRuntime.Provider, Is.EqualTo("cef"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void LauncherShellLifecycle_SessionStartInfo_CarriesBootstrapPath()
+        {
+            const string bootstrapPath = @"C:\somewhere\launcher.runtime.json";
+            var startInfo = LauncherShellLifecycle.BuildSessionStartInfo(bootstrapPath);
+            Assert.That(startInfo.Arguments, Does.Contain($"\"{bootstrapPath}\""));
+            Assert.That(startInfo.UseShellExecute, Is.False);
+
+            var shellInfo = LauncherShellLifecycle.BuildSessionStartInfo(null);
+            Assert.That(shellInfo.Arguments, Does.Not.Contain("launcher.runtime.json"));
+        }
+
         private static string FindRepoRoot()
         {
             var current = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);

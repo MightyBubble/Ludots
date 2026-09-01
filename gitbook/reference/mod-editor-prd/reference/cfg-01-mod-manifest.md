@@ -19,7 +19,7 @@
 | 规范化序列化 | src/Core/Modding/ModManifestJson.cs:172-178 |
 | mod 发现（字母序 DFS、mod.json 即停、跳过 bin/obj） | src/Core/Modding/ModDiscovery.cs:68-108 |
 | 目录扫描与依赖解析入口 | src/Core/Modding/ModLoader.cs:93-123、218 起 |
-| 产品路径顺序烘焙（依赖闭包 DFS、依赖按键名字母序） | src/Tools/Ludots.Launcher.Backend/LauncherService.cs:729-777 |
+| 产品路径顺序烘焙（依赖闭包 DFS、依赖按键名字母序） | src/Libraries/Ludots.Launcher.Backend/LauncherService.cs:729-777 |
 | 本地回退拓扑排序（priority 降序、发现序升序；仅显式 modPaths 且无计划时） | src/Core/Modding/DependencyResolver.cs:82-136；调用侧 src/Core/Engine/GameEngine.cs:459-461 |
 | 版本范围语法（`^ ~ >= <= > < =`、`*`） | src/Core/Modding/DependencyResolver.cs:196-262 |
 | launch graph 顺序直用（跳过本地发现与解析） | src/Core/Modding/ModLoader.cs:127-214 |

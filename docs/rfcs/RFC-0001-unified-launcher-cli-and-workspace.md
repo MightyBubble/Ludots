@@ -22,16 +22,16 @@ RFC编号: RFC-0001
 已存在的正面基础：
 
 * `scripts/run-mod-launcher.ps1` 在 `cli` 分支下已经转发到 `src/Tools/Ludots.Launcher.Cli/Program.cs`
-* `src/Tools/Ludots.Editor.Bridge/Program.cs` 与 `src/Tools/Ludots.Launcher.Cli/Program.cs` 已经共用 `src/Tools/Ludots.Launcher.Backend/LauncherService.cs`
-* `src/Tools/Ludots.Launcher.Backend/LauncherService.cs` 已经具备平台选择、依赖闭包、`game.json` 写入和启动能力
+* `src/Tools/Ludots.Editor.Bridge/Program.cs` 与 `src/Tools/Ludots.Launcher.Cli/Program.cs` 已经共用 `src/Libraries/Ludots.Launcher.Backend/LauncherService.cs`
+* `src/Libraries/Ludots.Launcher.Backend/LauncherService.cs` 已经具备平台选择、依赖闭包、`game.json` 写入和启动能力
 * `src/Core/Modding/ModDiscovery.cs` 已经有可复用的递归扫描实现
 
 当前的关键缺口：
 
-1. `src/Tools/Ludots.Launcher.Backend/LauncherService.cs` 只扫描 workspace source 的一级子目录，不会递归发现 `mods/fixtures/camera/CameraAcceptanceMod` 这类嵌套 Mod。
-2. `src/Tools/Ludots.Launcher.Backend/LauncherConfigService.cs` 默认读取用户 roaming 配置，当前 repo 没有显式的 workspace SSOT，导致 CLI 与 Web 容易被外部历史工作区污染。
+1. `src/Libraries/Ludots.Launcher.Backend/LauncherService.cs` 只扫描 workspace source 的一级子目录，不会递归发现 `mods/fixtures/camera/CameraAcceptanceMod` 这类嵌套 Mod。
+2. `src/Libraries/Ludots.Launcher.Backend/LauncherConfigService.cs` 默认读取用户 roaming 配置，当前 repo 没有显式的 workspace SSOT，导致 CLI 与 Web 容易被外部历史工作区污染。
 3. 当前 backend 只有“扫描目录”语义，没有“显式别名到路径”的绑定语义，无法稳定支持“全局变量名启动”。
-4. `src/Tools/Ludots.Launcher.Backend/LauncherService.cs` 中的构建工程解析与 graph compile 逻辑默认把 Mod 视为 `mods/<ModId>`，与任意路径和嵌套路径需求不匹配。
+4. `src/Libraries/Ludots.Launcher.Backend/LauncherService.cs` 中的构建工程解析与 graph compile 逻辑默认把 Mod 视为 `mods/<ModId>`，与任意路径和嵌套路径需求不匹配。
 5. 当前配置模型把 workspace、preset、最后选择状态和运行时 bootstrap 语义混在 launcher 配置里，无法稳定区分团队共享规则与用户偏好。
 6. `docs/reference/cli_runbook.md` 仍然把已准备废弃的 WPF `ModLauncher` 体验写成 CLI 主线，和当前 `run-mod-launcher` 实际转发到的新 CLI 不一致。
 7. 玩家与开发者路径仍不统一：源码 Mod、预编译 Mod、资源 Mod 没有被收束为同一套“准备并启动”的产品语义。
@@ -160,7 +160,7 @@ Web Launcher 继续通过 `src/Tools/Ludots.Editor.Bridge/Program.cs` 暴露 API
 
 ### 5.1 Backend 仍然是唯一业务真相
 
-保留 `src/Tools/Ludots.Launcher.Backend/` 作为唯一 launcher backend，实现继续由 Bridge 与 CLI 共同调用。
+保留 `src/Libraries/Ludots.Launcher.Backend/` 作为唯一 launcher backend，实现继续由 Bridge 与 CLI 共同调用。
 
 建议把当前 `LauncherService` 拆成以下协作组件：
 
@@ -466,7 +466,7 @@ React 前端不直接拼构建细节，所有业务动作都经由这些 backend
 
 ### 7.1 Phase 1: 收束 backend
 
-1. 在 `src/Tools/Ludots.Launcher.Backend/` 内引入递归 catalog 服务。
+1. 在 `src/Libraries/Ludots.Launcher.Backend/` 内引入递归 catalog 服务。
 2. 引入 repo-local `launcher.config.json` 与 `launcher.presets.json`。
 3. 引入 user-local config overlay 与 `preferences.json`。
 4. 把 `$alias` 与 `path:` selector 解析收口到 backend。
@@ -524,6 +524,6 @@ React 前端不直接拼构建细节，所有业务动作都经由这些 backend
 * Mod 运行时唯一真相：见 [../architecture/mod_runtime_single_source_of_truth.md](../architecture/mod_runtime_single_source_of_truth.md)
 * CLI 运行与 Launcher 手册：见 [../reference/cli_runbook.md](../reference/cli_runbook.md)
 * `run-mod-launcher` 当前入口：见 `scripts/run-mod-launcher.ps1`
-* 当前 launcher backend：见 `src/Tools/Ludots.Launcher.Backend/LauncherService.cs`
+* 当前 launcher backend：见 `src/Libraries/Ludots.Launcher.Backend/LauncherService.cs`
 * 当前 Bridge 入口：见 `src/Tools/Ludots.Editor.Bridge/Program.cs`
 * 当前递归 Mod 发现实现：见 `src/Core/Modding/ModDiscovery.cs`

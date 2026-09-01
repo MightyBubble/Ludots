@@ -31,8 +31,8 @@
 | 机制 | 位置 |
 |---|---|
 | 产品路径：按启动计划有序清单加载（LoadResolvedPlan）；本地回退仅在显式 modPaths 且无计划时启用 | src/Core/Engine/GameEngine.cs:451-461 |
-| 顺序烘焙：依赖闭包 DFS 后序遍历，依赖按键名字母序访问、根按选择顺序；缺依赖/循环/同名歧义抛错 | src/Tools/Ludots.Launcher.Backend/LauncherService.cs:729-777 |
-| priority 的全部现实作用：目录索引展示排序 | src/Tools/Ludots.Launcher.Backend/LauncherService.cs:1303 附近 |
+| 顺序烘焙：依赖闭包 DFS 后序遍历，依赖按键名字母序访问、根按选择顺序；缺依赖/循环/同名歧义抛错 | src/Libraries/Ludots.Launcher.Backend/LauncherService.cs:729-777 |
+| priority 的全部现实作用：目录索引展示排序 | src/Libraries/Ludots.Launcher.Backend/LauncherService.cs:1303 附近 |
 | 本地回退排序：拓扑排序 + priority 降序 + 发现序升序 | src/Core/Modding/DependencyResolver.cs:82-136 |
 | 依赖版本范围语法：`^ ~ >= <= > < =` 与 `*` | src/Core/Modding/DependencyResolver.cs:196-262 |
 | mod 发现：字母序深度优先，遇含 mod.json 的目录不再下钻，跳过 bin/obj | src/Core/Modding/ModDiscovery.cs:68-108 |

@@ -118,6 +118,7 @@ namespace Ludots.Adapter.Web.Streaming
                     WriteFloat(item.Position.X); WriteFloat(item.Position.Y); WriteFloat(item.Position.Z);
                     WriteFloat(item.Scale.X); WriteFloat(item.Scale.Y); WriteFloat(item.Scale.Z);
                     WriteFloat(item.Color.X); WriteFloat(item.Color.Y); WriteFloat(item.Color.Z); WriteFloat(item.Color.W);
+                    WriteFloat(item.Rotation.X); WriteFloat(item.Rotation.Y); WriteFloat(item.Rotation.Z); WriteFloat(item.Rotation.W);
                     changedCount++;
                 }
             }

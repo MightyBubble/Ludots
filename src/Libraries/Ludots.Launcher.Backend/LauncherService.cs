@@ -30,6 +30,8 @@ public sealed class LauncherService
     private readonly string _repoRoot;
     private readonly LauncherConfigService _configService;
 
+    public string RepoRoot => _repoRoot;
+
     public LauncherService(
         string repoRoot,
         string? configPath = null,
@@ -412,66 +414,92 @@ public sealed class LauncherService
         return WriteRuntimeBootstrap(plan);
     }
 
-    public async Task<LauncherLaunchResult> LaunchAsync(
+    /// <param name="buildApp">
+    /// false = 跳过平台 app 构建（进程内 shell 会话必须如此：运行中的进程锁着自己的 bin，
+    /// 自建必然 MSB3027 死锁，且新程序集也要经会话中继才生效）。
+    /// </param>
+    public async Task<LauncherPrepareResult> PrepareLaunchAsync(
         IEnumerable<string> selectors,
         string? adapterId = null,
         LauncherBuildMode buildMode = LauncherBuildMode.Auto,
-        string? browserProviderOverride = null)
+        bool buildApp = true)
     {
         var resolvedSelectors = selectors
             .Where(selector => !string.IsNullOrWhiteSpace(selector))
             .ToList();
         var config = LoadConfig();
-        var resolveResult = ResolvePlan(
-            resolvedSelectors,
-            adapterId,
-            buildMode,
-            config,
-            BuildCatalog(config),
-            LoadPresets(),
-            browserProviderOverride);
+        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
         if (resolveResult.Plan.IsExecutableTarget)
         {
-            return await LaunchExecutableTargetAsync(resolveResult.Plan, config);
+            return new LauncherPrepareResult(
+                false,
+                "Executable targets run in an external process; the in-app shell only prepares mod plans.",
+                string.Empty,
+                null);
         }
 
         var buildResults = await BuildPlanRuntimeAsync(resolveResult.Plan, config, CancellationToken.None);
         var failedModBuild = buildResults.FirstOrDefault(result => !result.Ok);
         if (failedModBuild != null)
         {
-            return new LauncherLaunchResult(false, failedModBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
+            return new LauncherPrepareResult(false, failedModBuild.Output, string.Empty, resolveResult.Plan);
         }
 
-        var appBuild = ShouldSkipAppBuild(resolveResult.Plan)
-            ? new LauncherBuildResult(resolveResult.Plan.AdapterId, true, 0, "App build skipped by request; using prebuilt assembly.")
-            : await BuildAppAsync(resolveResult.Plan.AdapterId);
-        if (!appBuild.Ok)
+        if (buildApp)
         {
-            return new LauncherLaunchResult(false, appBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
+            var appBuild = await BuildAppAsync(resolveResult.Plan.AdapterId);
+            if (!appBuild.Ok)
+            {
+                return new LauncherPrepareResult(false, appBuild.Output, string.Empty, resolveResult.Plan);
+            }
         }
 
         var bootstrapPath = WriteRuntimeBootstrap(resolveResult.Plan);
-        ReplacePreviousActiveProcess(resolveResult.Plan);
-        Process process;
-        try
+        return new LauncherPrepareResult(true, string.Empty, bootstrapPath, resolveResult.Plan);
+    }
+
+    public async Task<LauncherLaunchResult> LaunchAsync(
+        IEnumerable<string> selectors,
+        string? adapterId = null,
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+    {
+        var config = LoadConfig();
+        var resolveResult = ResolvePlan(
+            selectors.Where(selector => !string.IsNullOrWhiteSpace(selector)).ToList(),
+            adapterId,
+            buildMode,
+            config,
+            BuildCatalog(config),
+            LoadPresets());
+        if (resolveResult.Plan.IsExecutableTarget)
         {
-            process = Process.Start(CreateAppStartInfo(
-                resolveResult.Plan.AppAssemblyPath,
-                resolveResult.Plan.AppOutputDirectory,
-                $"\"{bootstrapPath}\""));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return new LauncherLaunchResult(false, ex.Message, -1, string.Empty, bootstrapPath, resolveResult.Plan);
+            return await LaunchExecutableTargetAsync(resolveResult.Plan, config);
         }
 
+        var prepared = await PrepareLaunchAsync(selectors, adapterId, buildMode);
+        if (!prepared.Ok || prepared.Plan is null)
+        {
+            return new LauncherLaunchResult(false, prepared.Error, -1, string.Empty, string.Empty, resolveResult.Plan);
+        }
+
+        var plan = prepared.Plan;
+        ReplacePreviousActiveProcess(plan);
+        var startInfo = new ProcessStartInfo(
+            ResolveDotnetCommand(),
+            $"exec --roll-forward Major \"{plan.AppAssemblyPath}\" \"{prepared.BootstrapPath}\"")
+        {
+            WorkingDirectory = plan.AppOutputDirectory,
+            UseShellExecute = false
+        };
+
+        var process = Process.Start(startInfo);
         if (process == null)
         {
-            return new LauncherLaunchResult(false, "Failed to start platform process.", -1, string.Empty, bootstrapPath, resolveResult.Plan);
+            return new LauncherLaunchResult(false, "Failed to start platform process.", -1, string.Empty, prepared.BootstrapPath, plan);
         }
 
-        PersistActiveProcess(resolveResult.Plan, bootstrapPath, process);
-        return new LauncherLaunchResult(true, string.Empty, process.Id, resolveResult.Plan.LaunchUrl, bootstrapPath, resolveResult.Plan);
+        PersistActiveProcess(plan, prepared.BootstrapPath, process);
+        return new LauncherLaunchResult(true, string.Empty, process.Id, plan.LaunchUrl, prepared.BootstrapPath, plan);
     }
 
     private async Task<LauncherLaunchResult> LaunchExecutableTargetAsync(LauncherLaunchPlan plan, LauncherConfig config)

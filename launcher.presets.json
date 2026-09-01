@@ -3096,7 +3096,6 @@
         "artifacts/acceptance/engine_raylib_composition/screen.png",
         "--json",
         "artifacts/acceptance/engine_raylib_composition/stats.json"
-      ]
-    }
+      ]    }
   ]
 }
