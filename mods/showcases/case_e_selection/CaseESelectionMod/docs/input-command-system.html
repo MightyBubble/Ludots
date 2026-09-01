@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>输入与指令系统</title>
+<style>
+:root{--bg:#0f1117;--panel:#1b2030;--panel2:#202739;--border:#2b3247;--text:#dfe3ec;--dim:#97a3b8;--faint:#6f7a90;--accent:#5aa5ff;--accent2:#37d0b0;--warn:#f0b45a;--ok:#46c98b;--mono:"SF Mono",ui-monospace,"Cascadia Code",Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75;font-size:15px;padding-bottom:80px}
+.wrap{max-width:960px;margin:0 auto;padding:40px 32px}
+h1{font-size:28px;font-weight:700;border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:8px}
+h1+p{color:var(--dim);font-size:15px;line-height:1.7;margin-bottom:28px}
+h2{font-size:20px;font-weight:700;margin:36px 0 12px;padding-top:20px;border-top:1px solid var(--border);color:var(--accent)}
+h3{font-size:16px;font-weight:600;margin:24px 0 10px}
+h4{font-size:14px;font-weight:600;margin:18px 0 8px;color:var(--accent2)}
+p{color:var(--dim);margin:10px 0;line-height:1.75}
+p strong{color:var(--text)}
+ul,ol{color:var(--dim);margin:10px 0 10px 24px;line-height:1.75}
+li{margin:5px 0}
+code{font-family:var(--mono);font-size:.9em;background:var(--panel2);padding:1px 6px;border-radius:4px;color:var(--accent)}
+pre{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:14px 0;overflow-x:auto}
+pre code{background:transparent;padding:0;color:var(--text);font-size:12.5px;line-height:1.6}
+blockquote{border-left:3px solid var(--accent);background:var(--panel2);border-radius:0 9px 9px 0;padding:12px 16px;margin:14px 0;color:var(--dim)}
+blockquote strong{color:var(--text)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin:14px 0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.6}
+th{color:var(--faint);font-weight:600;font-size:12px;letter-spacing:.04em}
+td{color:var(--dim)}
+td strong{color:var(--text)}
+tr:hover td{background:rgba(90,165,255,.03)}
+hr{border:none;border-top:1px solid var(--border);margin:30px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1 id="_1">输入与指令系统</h1>
+<blockquote>
+<p>面向第一次接触的新读者。读完你会理解：一次按键、一次触控、一个 bot 的决策，怎么一步步变成游戏里实际发生的事。</p>
+</blockquote>
+<hr>
+<h2 id="0">0. 这套系统解决什么问题</h2>
+<p>同一个按键在不同情况下做不同的事：</p>
+<ul>
+<li>FPS 里 <code>w</code> 是前进，RTS 里鼠标框选是选中，MOBA 里 <code>q</code> 是放技能。</li>
+<li>同一个「左键」，在 FPS 是射击，在 RTS 是框选，在 MOBA 是让英雄走过去。</li>
+<li>同一个技能，键鼠操作和触屏操作「怎么瞄准目标」完全不同。</li>
+</ul>
+<p>这些差异不是「键位不同」，而是「<strong>这个输入此刻被理解成什么、最终做成了什么</strong>」不同。本系统把这件事分清楚：从一次输入到游戏效果，中间经过哪些层，每层各管什么。</p>
+<hr>
+<h2 id="1">1. 先立住两个底层</h2>
+<p>在讲任何概念之前，先定两件<strong>已经确定、不用再讨论</strong>的事：</p>
+<h3 id="11-app-machine-seat-entityrep">1.1 现成的基建：App / Machine / Seat / EntityRep</h3>
+<p>这套系统长在一个已经分层的骨架里，我们<strong>直接用它，不重新设计</strong>：</p>
+<ul>
+<li><strong>Machine</strong>：一台实机/虚拟机。</li>
+<li><strong>App</strong>：一个进程宿主（UE / Raylib）。</li>
+<li><strong>Seat</strong>：某台机器上，一个 App 进程接的玩家席位。</li>
+<li><strong>EntityRep（representative entity）</strong>：一切 player / team / 单位都物化为实体。<strong>一个玩家 = 一个实体</strong>。别的 manager 只是它的投影，数据本尊都落在这个实体上。</li>
+</ul>
+<p><strong>这一层是现成的</strong>，本系统不发明它。它只是「玩家是谁、坐在哪个席位、在哪个世界实体上」的底座。</p>
+<h3 id="12-graph">1.2 唯一要设计的执行载体：graph</h3>
+<p><strong>graph 是一个函数</strong>——一段游戏作者写的可调用逻辑。它是<strong>唯一的执行载体</strong>：所有「行为」（筛选、算方向、切上下文、组意图、交互形态）都是 graph 执行的。</p>
+<blockquote>
+<p>⚠️ 这点很重要：<strong>本系统没有 graph 之外的固定执行器</strong>（没有"某个 system 替 graph 做决定"）。一切行为都归于 graph。其他概念（上下文、偏好、操作对象）都是<strong>喂给 graph 的声明 / 数据</strong>，不是自己会动的东西。</p>
+</blockquote>
+<hr>
+<h2 id="2-inputcontextaudience-view">2. 三个概念：input、context、audience view</h2>
+<p>这套系统里最容易被搞混的是三样东西。先立住：<strong>它们是三个独立的东西。</strong></p>
+<h3 id="21-input">2.1 input — 是谁的输入</h3>
+<p>「这部分输入来自哪个玩家/哪个席位」。玩家1 的按键、玩家2 的摇杆、bot 的决策——各是各的 input。</p>
+<h3 id="22-context">2.2 context — 交互状态（挂实体）</h3>
+<p>「这个玩家此刻在什么交互状态」（战斗 / 施法瞄准 / 菜单 / 选宝物）。<strong>它挂在实体上（模拟侧），观战能读</strong>，决定此刻哪些语义动作成立。</p>
+<blockquote>
+<p>⚠️ 区分两层：<strong>InteractionContext（交互状态，挂实体）</strong>是"玩家在干嘛"——这是世界实体状态，观战能读。而"此刻这个键 = 什么意思"的<strong>键 → 语义表</strong>是<strong>本机投影</strong>（把交互状态 + scheme 翻译成本机按键语义），不进实体、不进存档。两者别混（详见 §3.3.1 与 §8）。</p>
+</blockquote>
+<h3 id="23-audience-view">2.3 audience view — 以谁为视角</h3>
+<p>「现在以哪个玩家为观众」。观战切到玩家2，就是 audience 切成玩家2。这决定你看到谁的画面、谁的 UI 对你可见。</p>
+<h3 id="24">2.4 三者关系</h3>
+<p><strong>概念上三个独立</strong>。观战切到玩家2，input / context / audience view 可以一起切成玩家2——但它们是三个独立的东西，只是切换时常常联动。</p>
+<blockquote>
+<p>一个例子立刻分清楚：玩家2 在剧情对话里选三个宝物。
+- <strong>对话剧情</strong>（Model）：对话进行到哪、有哪些宝物 —— 和下面都无关。
+- <strong>对话 UI</strong>（View）：把宝物选项画出来 —— 和下面都无关。
+- <strong>interaction context</strong>：此刻哪些键 = 选宝物（用键鼠还是手柄，对应的是完全不同的键和语义）—— 它只管「键的语义」，不碰剧情、不碰 UI。
+三者分离（MVC）：对话可以是对面玩家2 在操作，但"选宝物"的语义不变；UI 可以是花里胡哨的轮盘 / hover，最终都落到同一个语义。</p>
+</blockquote>
+<hr>
+<h2 id="3-controlscheme-bindingoverride">3. ControlScheme 与 BindingOverride：设备映射怎么定</h2>
+<p>这是「键 ↔ 语义」那层的关键，单独讲清楚。</p>
+<h3 id="31-controlscheme">3.1 ControlScheme = 设备交互范式</h3>
+<p><strong>ControlScheme（控制方案）是一套「设备交互范式」</strong>：定义「用什么设备、移动/视角/瞄准这些基本交互怎么实现、提供基础绑定」。<strong>它不只是键位——不同 scheme 的移动方式可能完全不同</strong>（WASD 离散键 / 左摇杆连续轴 / 点地面，见 §3.3）。</p>
+<p>例如两种真正不同的方案：</p>
+<ul>
+<li>方案 A：<strong>键鼠</strong>（WASD 离散键移动 + 鼠标视角）。</li>
+<li>方案 B：<strong>手柄</strong>（左摇杆连续轴移动 + 右摇杆视角）。</li>
+</ul>
+<p><strong>判据：scheme 变的是"交互范式"（用什么设备、移动/视角怎么实现），不是某一条绑定的键位。</strong> 单条语义换键（比如把 1 技能从左键改成空格）不是新 scheme，是 BindingOverride（见 §3.2）。</p>
+<h3 id="32-bindingoverride">3.2 BindingOverride = 覆盖某个绑定，不改方案</h3>
+<p>玩家想自己改键——比如把 1 技能从左键改成空格——这<strong>不是新建 scheme</strong>，而是<strong>在某一个 scheme 下，覆盖某一个绑定</strong>。BindingOverride（玩家偏好）挂在玩家身上，只覆盖单个 binding，不改方案本体。</p>
+<blockquote>
+<p>这里"绑定"指"一个物理键 / 设备 → 一个语义动作"的对应关系。方案（scheme）里有一张绑定表，玩家改键就是改其中某一条，不是重做整张表。</p>
+</blockquote>
+<h3 id="33-controlscheme-interactioncontext-bindingoverride-interactionpref">3.3 分层结构：基础（ControlScheme + InteractionContext）+ 覆盖（BindingOverride）+ 偏好（InteractionPref）</h3>
+<p>最终生效的「键 → 语义」表，是<strong>分层的</strong>——不是四个并列的东西：</p>
+<pre><code>[基础] ControlScheme ⊕ InteractionContext → 基础&quot;键→语义&quot;表 / 基础交互方式
+   ↑ 覆盖：BindingOverride（必然基于某个 ControlScheme，覆盖它的单个绑定）
+   ↑ 偏好：InteractionPref（必然基于某个 InteractionContext，偏好它的交互怎么完成）
+</code></pre>
+<p><strong>两个"必然基于"（结构性）</strong>：
+- <strong>BindingOverride 必然基于一个 ControlScheme</strong>——它是"改某个键"，前提是已经有一张 scheme 的基础绑定表（"左键=BoxSelect"）。没有 scheme 就没有可覆盖的绑定，<strong>它引用它覆盖的那个 scheme</strong>。
+- <strong>InteractionPref 必然基于一个 InteractionContext</strong>——它是"这个交互怎么完成"，前提是当前在某个 context（战斗/瞄准）。没有 context 就没有"这个交互"，<strong>它引用它作用的那个 context</strong>。</p>
+<p>用 LOL PC 版举例，一次把四个概念全展示出来：</p>
+<p><strong>① ControlScheme（设备交互范式，基础）——不只键位，是整套交互范式</strong>
+- 方案 A：WASD 移动 + 左键放 1 技能。
+- 方案 B：右键移动 + Q 放 1 技能。
+- <strong>注意：不同 scheme 的移动方式可能完全不同</strong>——键鼠是 WASD 离散键移动，手柄是左摇杆连续轴移动，触屏是虚拟摇杆/点地面移动。<strong>"移动"的实现方式（离散键/连续轴/点地面）是结构性的，不是改键</strong>。所以 scheme 是一套<strong>设备交互范式</strong>（用什么设备、基本交互怎么实现、提供基础绑定），不只键位。</p>
+<p><strong>② InteractionContext（交互状态，基础，挂实体）——此刻在什么交互状态</strong>
+- 战斗 / 施法瞄准 / 菜单 / 选宝物——挂实体（模拟侧），观战能读。
+- 它决定此刻哪些语义动作成立（能否框选/施法）。</p>
+<p><strong>③ BindingOverride（覆盖层，必然基于某个 ControlScheme）——改单个键</strong>
+- 玩家把 1 技能从左键改成空格——这是 <strong>BindingOverride</strong>：覆盖它基于的那个 scheme 下的某一个 binding。
+- <strong>它只改单键，不动 scheme 的交互范式</strong>（移动还是 WASD，不会因为改键变成摇杆）。</p>
+<p><strong>④ InteractionPref（偏好层，必然基于某个 InteractionContext）——这个交互怎么完成</strong>
+- 1 技能<strong>智能施法</strong>（悬停目标直接放）还是<strong>不智能</strong>（进瞄准态）。
+- 智能施法<strong>带不带指示器</strong>（按下出指示器、移动瞄准、松开放；还是直接放）——都可配置。
+- <strong>它挂在 ability 语义 slot 上，不是挂在具体技能上</strong>：语义 slot 是"attack"、"skill1"这种语义键（映射到具体技能）。同一个语义 slot（如 attack），不管落到陆战队还是坦克，都走这个 slot 的偏好。
+- <strong>支持两层覆盖 + 一个优先级规则</strong>：
+  - <strong>per player</strong>：玩家级默认（这个玩家全局喜欢智能施法）。
+  - <strong>per ability template</strong>：某个具体技能模板覆盖（这个技能必须二次确认）。
+  - <strong>优先级</strong>（总序闭合，把"实例"拆成两个明确角色）：<code>实例(带锁) &gt; per ability template &gt; per player &gt; 实例(默认)</code>。实例默认垫底，但实例带锁定标记时压过一切。</p>
+<p><strong>每个概念管什么</strong>：ControlScheme 管"用什么设备、移动怎么实现"（基础），InteractionContext 管"此刻什么状态"（基础），BindingOverride 管"改单个键"（覆盖 scheme），InteractionPref 管"这个交互（挂语义 slot）怎么完成"（偏好 context）。<strong>LOL 例子：A/B 是 scheme 差异、改键是 BindingOverride（覆盖 scheme）、瞄准态是 InteractionContext 差异、智能/带不带指示器是 InteractionPref 差异（偏好 context，per player 默认 + per ability template 覆盖）。</strong></p>
+<h3 id="331-vs-interactioncontextdefinition-interactioncontextinstance">3.3.1 预设 vs 运行时：InteractionContextDefinition 与 InteractionContextInstance</h3>
+<p><strong>InteractionContext 要分"预设（定义）"和"运行时（实例）"两层</strong>，否则解释不了热插拔 scheme 时数据为什么持久。</p>
+<ul>
+<li><strong>InteractionContextDefinition（预设/配置，永久）</strong>：声明"这个 context 有哪些绑定、启用哪些 trigger"。存在配置里，不随 runtime 变。</li>
+<li><strong>InteractionContextInstance（运行时/实例，可变）</strong>：记录"此刻实体处于哪个 context"（战斗/瞄准/菜单）。存在实体上，随交互变。</li>
+</ul>
+<p><strong>两者关系</strong>：实例引用定义——runtime 状态说"我在战斗"→ 读"战斗"的定义（配置）→ 结合当前 scheme → 解析出实际绑定。</p>
+<p><strong>热插拔 scheme（突然插手柄）时数据持久的依据</strong>：插手柄只换 <strong>ControlScheme</strong>（设备映射），<strong>InteractionContextDefinition（配置）和 InteractionContextInstance（状态）都不动</strong>——还是"战斗"状态、还是"战斗"的定义，只是 scheme 换了，重新解析出摇杆绑定。<strong>如果预设和运行时混在一起（把配置当状态），插手柄就会改掉/重置 context，数据就不持久了。所以预设（Definition）和运行时（Instance）必须分离。</strong></p>
+<h3 id="34">3.4 热切换</h3>
+<p>像键鼠游戏<strong>突然插上手柄</strong>：scheme 从键鼠切到手柄，<strong>同一场景对应的"键 → 语义"表就跟着变</strong>（鼠标点击 → ABX 按键）。但<strong>交互状态（选宝物这个场景）不变</strong>——你还是在那选宝物，只是换了一种操作方式，视图（panel）也随 scheme 换。<strong>这正是 §3.3.1 的 Definition / Instance 分离</strong>：热插拔只换 scheme（设备交互范式），context 的定义和实例都不动，数据才持久。</p>
+<h3 id="35">3.5 三个概念怎么分工（含一个易漏的点）</h3>
+<p>到这儿，scheme、InteractionPref、context 三件事的关系值得立清楚，因为 <strong>InteractionPref 会和 context 纠缠</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>决定什么</th>
+<th>放哪</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>scheme</strong></td>
+<td>设备交互范式：用什么设备、移动怎么实现、基础绑定</td>
+<td>方案侧（设备）</td>
+</tr>
+<tr>
+<td><strong>InteractionPref</strong></td>
+<td>挂在 ability 语义 slot 上：触发后怎么完成（智能施法/二次确认/蓄力）</td>
+<td>语义 slot 上，per player + per ability template 覆盖（随存档）</td>
+</tr>
+<tr>
+<td><strong>context</strong></td>
+<td>此刻哪些语义成立</td>
+<td>交互状态（实体）⊕ scheme</td>
+</tr>
+</tbody>
+</table>
+<p><strong>重点：InteractionPref 不只是"怎么完成"——它会决定进哪个 context。</strong> 举个例子：</p>
+<ul>
+<li>同一个 Q 键触发 1 技能（scheme 决定）。</li>
+<li><strong>智能施法</strong>（InteractionPref = 智能）：不用进瞄准 context，直接放。</li>
+<li><strong>不智能施法</strong>（InteractionPref = 不智能）：<strong>进入瞄准 context</strong>（叠加，不替换移动），瞄一下再放。</li>
+</ul>
+<p><strong>所以 InteractionPref 在 scheme 和 context 之间是个"楔子"</strong>：它自己不是 scheme、不是 context，但<strong>它能牵出 context</strong>（选"不智能"→ 进瞄准 context）。这个概念之前是缺口，这里明确它——<strong>InteractionPref 独立（不并入 scheme），且它会决定要不要进某个 context。</strong></p>
+<hr>
+<h2 id="4">4. 核心链路：从一次输入到一次「语义动作」</h2>
+<p>这是全篇最重要的一条线。<strong>一次输入，无论是玩家按键，还是 bot 决策，最终都收敛到一个「语义动作」。</strong></p>
+<pre><code>设备物理输入（键 / 摇杆 / 触控 / bot 决策）
+      │
+      ▼
+① 语义动作 Action  ← 所有形态在这里收敛
+</code></pre>
+<p><strong>语义动作（Action）</strong>：一个「可被理解的事」。<code>选宝物</code>、<code>移动</code>、<code>放技能</code>、<code>框选</code>。它<strong>不绑定任何键</strong>——它是这个词本身。</p>
+<p><strong>为什么所有输入都收敛到它</strong>：
+- 玩家按键 → 按 scheme 解释成某个语义动作。
+- 玩家点触屏面板按钮 → 引擎把「点面板」映射成对应语义动作。
+- <strong>bot 模拟玩家</strong> → 直接注入「选宝物」这个语义动作，不需要真的模拟按键。</p>
+<p><strong>所以：设备物理输入是玩家才有、可以跳过的；<code>语义动作</code> 是玩家和 bot 的共同入口。</strong></p>
+<blockquote>
+<p>花里胡哨的交互形态（轮盘 / hover / 画圈）<strong>不影响</strong>这件事——它们只是表现层的花活，最终都「给出一个语义动作」就结束了。</p>
+</blockquote>
+<p><strong>但注意：「共同入口」不等于「所有设备同一套动作」。</strong> 是否为同一套动作，取决于<strong>语义动作本身相不相同</strong>，而不是设备是什么：</p>
+<ul>
+<li>WASD 和摇杆 —— 语义动作<strong>相同</strong>（都是「移动到一个方向」）。你按 WASD 还是推摇杆，语义都是 <code>moveIn(direction)</code>，<strong>一套动作</strong>。</li>
+<li>右键点屏幕移动 —— 这是「移动到某个<strong>世界点</strong>」，语义动作<strong>不同</strong>，是 <code>moveTo(point)</code>，<strong>另一套动作</strong>。</li>
+<li>选宝物（键鼠指点 vs 手柄按键）—— 一个是 <code>pointAt(pos)</code>、一个是 <code>pressKey(A)</code>，<strong>不同套</strong>。</li>
+</ul>
+<p>所以「是否一套 action」，判据是<strong>语义动作相不相同</strong>，不是设备。上面的例子要分清两层：<strong>「移动」这个动作，WASD 和摇杆语义相同</strong>（都是"往一个方向位移"）；<strong>「选宝物」这个交互，键鼠和手柄语义不同</strong>（键鼠是"点位置"、手柄是"按键"）——这两个<strong>是不同的事</strong>，不是"有时设备相同语义、有时不同"。</p>
+<h3 id="41-action-processor">4.1 action 定义层的 processor：处理"单击 / 长按 / 框选"</h3>
+<p><strong>同一个物理左键，怎么区分"单击（点选）"和"按下→拖动→抬起（框选）"？</strong> 这是 <strong>action 定义层的 processor</strong>（时间序列处理器）的职责，<strong>不属于 context 的职责</strong>——照 Unity Input System 的 <strong>Interactions</strong> / UE Enhanced Input 的 <strong>Triggers</strong> 结构：</p>
+<ul>
+<li><strong>Interactions / Triggers（时间序列）</strong>：决定"怎么算触发"——<code>Tap</code>（单击，按下同位置抬起）、<code>Hold</code>（长按）、<code>Drag</code>（拖动，按下→移动→抬起）、<code>MultiTap</code>（连按）。</li>
+<li><strong>Processors / Modifiers（数值）</strong>：处理输入值——<code>Deadzone</code>、<code>Normalize</code>、<code>Scale</code>、<code>Invert</code>。</li>
+</ul>
+<p><strong>同一个物理左键，配不同的 Interaction，就是不同的 action：</strong></p>
+<pre><code class="language-jsonc">// 同一个 &lt;Mouse&gt;/leftButton，配不同 Interaction → 不同 action
+{ &quot;actionId&quot;: &quot;TapSelect&quot;,    &quot;path&quot;: &quot;&lt;Mouse&gt;/leftButton&quot;, &quot;interaction&quot;: &quot;Tap&quot; }         // 单击 → 点选
+{ &quot;actionId&quot;: &quot;BoxSelect&quot;,    &quot;path&quot;: &quot;&lt;Mouse&gt;/leftButton&quot;, &quot;interaction&quot;: &quot;Drag&quot; }       // 拖动 → 框选
+</code></pre>
+<p><strong>注意：<code>Drag</code> 隐含"按下"——拖动必然要先按住，所以不写 <code>Hold+Drag</code></strong>（那只是一种 Interaction：<code>Drag</code>）。同理 <code>Tap</code> 隐含"按下后同位置抬起"。</p>
+<p><strong>所以"单击 vs 框选"在 action 定义层就分开了</strong>——单击是 <code>TapSelect</code>（点选），按住拖动是 <code>BoxSelect</code>（框选）。这是<strong>两个不同的 action</strong>，各自有语义，<strong>不是 context 去判断"这次是单击还是拖拽"</strong>。零长度框（同帧按下+抬起）也由 Interaction 的阈值/判定处理（<code>Tap</code> 就是"没拖动"的框选 → 点选）。</p>
+<p><strong>这属于 action 定义层的配置</strong>（绑定 + Interaction/Processor），和 scheme（物理→action 映射）、context（哪些 action 启用）分层明确：<strong>action 定义层管"怎么从物理输入识别出这个 action"，不掺 context。</strong></p>
+<hr>
+<h2 id="5-context">5. 语义动作之后：它停在 context，还是走向意图</h2>
+<blockquote>
+<p>先定义两个词，后面会一直用到：
+- <strong>意图（intent）</strong>：玩家想干的那件事，带语义 + 目标 + 参数。例如「命令选中的单位移动到那里」。
+- <strong>指令（order）</strong>：意图落地成具体动作。例如「移动到那里」落到步兵是走过去、落到坦克是先转向再开炮。</p>
+<p>意图回答"想干什么"，指令回答"具体怎么做"。<strong>意图不携带具体技能</strong>——那个到指令才解析。</p>
+</blockquote>
+<p><strong>语义动作产生后，有两个去向</strong>：</p>
+<pre><code>语义动作（选宝物 / 放技能 / 移动 / 框选）
+      │
+      ├─ 去向A：一切非下令消费 —— 不出意图、不下指令
+      │    ├─ 例：剧情对话选选项、菜单选项、UI 交互（喂给 UI/剧情逻辑）
+      │    └─ 例：框选写选中集合（写世界状态：往&quot;选中集合&quot;这个实体表里写入选中的单位，但不设令）
+      │    ————— 到这里就结束。A 支的核心是&quot;语义动作有了，但不往意图/指令走&quot;。
+      │
+      └─ 去向B：继续走到「施法 / 下令」管线
+           ————— 只有「往世界下令 / 放技能」时才走这条。
+</code></pre>
+<p><strong>关键</strong>：A 支<strong>不是"对话/UI"这么窄</strong>，而是<strong>「一切非下令消费」</strong>——包括对话、菜单、UI 交互（喂给界面/剧情），也包括<strong>框选写选中集合</strong>（改世界状态但不生成意图、不下指令）。B 支才是「往世界下令 / 放技能」。</p>
+<p><strong>所以 command intent / ability order 不是"每次输入都必经"的通用环节，它们只属于「往世界下令 / 放技能」那一支。</strong></p>
+<hr>
+<h2 id="6-command-intent-ability-order">6. 施法 / 下令支线：command intent 和 ability order</h2>
+<p>当语义动作要往世界下令时，往下走：</p>
+<h3 id="61-command-intent">6.1 command intent（施法意图）</h3>
+<p><strong>它是什么</strong>：玩家想干的那件事，带语义 + 目标 + 参数。例如「命令选中的单位移动到那里」。</p>
+<p><strong>它有几个组成部分</strong>：
+- <strong>语义</strong>：做什么（移动 / 放技能 / 攻击）。
+- <strong>目标</strong>：作用在谁 / 哪个位置。
+- <strong>偏好（InteractionPref）</strong>：怎么完成——智能施法（直接放）、二次确认、蓄力。</p>
+<blockquote>
+<p><strong>InteractionPref 有个容易漏的点</strong>：它不只是"怎么完成"，<strong>还会决定要不要进某个 context</strong>。智能施法不用进瞄准 context 直接放；不智能施法则<strong>进入瞄准 context</strong>（叠加，不替换移动），瞄一下再放。所以 InteractionPref 会牵出 context——这是它和 scheme/context 的关系（见 §3.5）。</p>
+</blockquote>
+<p><strong>它和具体能力的关系</strong>：<strong>意图不携带具体技能</strong>。同一个「攻击」意图，落到陆战队员是普攻、落到坦克是坦克炮——<strong>具体是什么，是下一步才解析的。</strong></p>
+<h3 id="62-ability-order">6.2 ability order（指令）</h3>
+<p><strong>它是什么</strong>：意图落地的具体动作。对每个目标实体，按它的技能槽 / 装备 / 状态，解析成具体指令。</p>
+<p><strong>为什么分两步</strong>：同一个意图落到一群实体上，可能有好几种分配方式。例如「框选一群单位同时放技能」，可以一个个放、可以挑最近的放、可以一群同时放。<strong>差别全在"领域规则怎么解释这次意图"。</strong></p>
+<h3 id="63-helper-aimsource">6.3 瞄准怎么算：无状态 helper 节点（aimsource）</h3>
+<p>「怎么瞄准」这件事，<strong>抽象不出一个通用结构</strong>——不管双摇杆、WASD 左键、还是右键移动 + q 技能瞄准，都要从「rep entity 的位置 + 这个 context 下的 action payload（动作携带的参数数据）」算出来，而<strong>每种方式算出来的东西不一样</strong>：</p>
+<ul>
+<li>双摇杆 → 方向向量</li>
+<li>WASD 左键 → 地面点，再转方向</li>
+<li>右键移动 + q 技能 → 另一套方向</li>
+</ul>
+<p><strong>所以 aimsource 不是意图里的一个字段，也不是一个有状态的系统——它是一组无状态的 utility helper 节点（纯函数）</strong>，被 graph 调用。graph 在做瞄准相关的花哨逻辑时，调用这些 helper 节点，算出方向 / 点 / 目标。</p>
+<pre><code>graph（花哨交互，从 rep entity 拿输入）
+  ├─ 调用：aimsource helper 节点（无状态纯函数）
+  │    ├─ ScreenPointToGround（屏幕点 → 地面点）
+  │    ├─ StickToDirection   （摇杆 → 方向向量）
+  │    └─ PointToDirection   （地面点 + 主体位置 → 方向）
+  └─ 产出：语义动作 / 意图（携带算好的结果）
+</code></pre>
+<p><strong>统一的不是"怎么算"，而是"算完归一成什么"。</strong> 而「归一成什么」是<strong>按动词族各自枚举</strong>的，不是所有意图都归成同一种形状：</p>
+<ul>
+<li><strong>移动族</strong>：可能是 <code>moveDirection(矢量方向)</code>，也可能是 <code>moveToPoint(世界点)</code>——看这个游戏怎么定义移动。</li>
+<li><strong>攻击族</strong>：可能是 <code>attackTarget(目标实体)</code>，也可能是 <code>attackAtPoint(位置)</code>，也可能是 <code>attackDirection(dir vec)</code>——看这个技能要什么。</li>
+</ul>
+<p><strong>所以不是"统一只有两种结果"，而是"每个动词族，把不同输入方式收敛到该族的少数几个统一结果"。</strong> 上面列的那两组只是示例，具体每个动词族有多少种、哪些种，由游戏自己定义。算的过程不统一（各自 helper 节点），算完归一到本族的统一结果。</p>
+<hr>
+<h2 id="7-graph">7. graph：一切行为都在这里</h2>
+<p><strong>graph 是函数</strong>，是<strong>唯一执行载体</strong>。所有行为都写进 graph。它从唯一入口拿数据，最后统一提交。</p>
+<h3 id="71-rep-entity">7.1 唯一上下文入口：rep entity</h3>
+<p><strong>graph 要访问任何"关于这个玩家"的上下文，都必须从「这个玩家的 rep entity」出发。</strong> 它不直接抓全局、不绕过 rep entity 抓别的实体。</p>
+<p>这样 bot 和玩家<strong>完全对齐</strong>——两者都有自己的 rep entity，graph 都从它拿上下文。</p>
+<h3 id="72-graph">7.2 graph 能承载什么（举例，不是分类）</h3>
+<p>graph 能承载各种行为——<strong>权威分类见 §7.4 的六类</strong>。这里举几类常见用途（不是另一份分类）：</p>
+<ul>
+<li><strong>context 获取</strong>：算「这次操作作用在哪些实体上」（操作对象），从 rep entity 出发。</li>
+<li><strong>交互形态</strong>：轮盘 / hover / 画圈等花哨交互，也可 graph 化——graph 需要什么输入自己拿（从 rep entity），但要遵守"唯一入口 rep entity"。</li>
+<li><strong>意图组装</strong>：把操作对象 + 状态 + 瞄准源组织成意图。</li>
+<li><strong>切换 context</strong>：改写 player entity 上的 context 状态。</li>
+</ul>
+<h3 id="73-graph">7.3 graph 不做什么</h3>
+<ul>
+<li>不自己实现底层几何原语（点 → 方向那种是独立原语，graph 调用它）。</li>
+<li>不自己实现底层设备识别数学（套索曲线、点在多边形这种几何判定是独立原语，graph 调用它）。</li>
+</ul>
+<h3 id="74-graph-graph">7.4 graph 在每层的分工：六类 graph</h3>
+<p>把整条链拆开，每一段各配一类 graph。这样「哪一层要配 graph」就清楚了。</p>
+<pre><code>设备物理
+  │
+  ▼
+[1. 设备 → 动作 graph]      ← 把设备物理译成语义动作（读 ControlScheme 这张映射表做编排）
+  │
+  ▼
+语义动作
+  │
+  ▼
+[2. 监听 trigger graph]     ← 带监听（trigger graph 指&quot;监听某事件、事件来了才跑&quot;的 graph），语义动作发生了就触发
+  │
+  ▼
+[3. 动作 → 意图 graph]      ← 语义动作 → 意图（施法/下令场景）
+  │
+  ▼
+意图
+  │
+  ▼
+[4. 意图 → order graph]     ← 逐目标解析成具体指令
+  │
+  ▼
+指令
+</code></pre>
+<p>另两类不在主链上、起支撑作用：</p>
+<pre><code>[5. context 获取 graph]     ← 定时/触发算「操作对象」，从 rep entity 拿
+[6. 切换 context graph]     ← 改写 player entity 上的 context 状态
+</code></pre>
+<blockquote>
+<p>第 1 类 graph <strong>读 ControlScheme（设备映射表，见 §3）做编排</strong>，不是替代它——scheme 是声明数据，graph 读它来决定"这个物理事件 = 哪个语义动作"。</p>
+</blockquote>
+<h4 id="graph">两个例子：两种输入在哪个 graph 处分歧</h4>
+<p>下面看两个典型的输入差异——它们<strong>分别在两个不同的 graph</strong> 处产生分歧，不是同一个 graph 同时处理：</p>
+<p><strong>① WASD 左键 vs 双摇杆 → 是「设备 → 动作」graph 的区别。</strong>
+这两个在<strong>第 1 类</strong>不同。WASD 是离散键、双摇杆是连续轴，<strong>把设备物理译成"语义动作"的方式不同</strong>（一个逐键、一个积分）。所以"设备→动作"这个 graph，WASD 版本和双摇杆版本内容不同。<strong>这也是 ControlScheme 的不同方案</strong>（WASD 一套、双摇杆另一套）。</p>
+<p><strong>② WASD 左键 vs 右键 Q 技能 → 是「动作 → 意图」graph 的区别。</strong>
+这两个在<strong>第 3 类</strong>不同。WASD 左键是「移动/射击」→ 一个意图；右键 Q 技能是「Q 技能瞄准」→ 另一个意图。所以"动作→意图"这个 graph，两者的规则不同。</p>
+<p><strong>关键</strong>：这两个差异<strong>不同层、不同 graph</strong>。所以「同样是鼠标左键」，在"设备→动作"是"离散按键"、在"动作→意图"是"移动/射击"——分别由两个不同的 graph 处理。</p>
+<h4 id="graph_1">六类 graph 一览</h4>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>graph</th>
+<th>管什么</th>
+<th>用哪个例子说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>设备 → 动作</td>
+<td>设备物理 → 语义动作（读 ControlScheme）</td>
+<td>WASD 左键 vs 双摇杆 的分歧在这</td>
+</tr>
+<tr>
+<td>2</td>
+<td>监听 trigger</td>
+<td>语义动作发生了→触发</td>
+<td>任何交互的入口监听</td>
+</tr>
+<tr>
+<td>3</td>
+<td>动作 → 意图</td>
+<td>语义动作 → 意图</td>
+<td>WASD 左键 vs 右键 Q 技能 的分歧在这</td>
+</tr>
+<tr>
+<td>4</td>
+<td>意图 → order</td>
+<td>意图 → 具体指令</td>
+<td>施法/下令支线</td>
+</tr>
+<tr>
+<td>5</td>
+<td>context 获取</td>
+<td>算「操作对象」</td>
+<td>支撑，定时/触发</td>
+</tr>
+<tr>
+<td>6</td>
+<td>切换 context</td>
+<td>改写 player 的 context 状态</td>
+<td>支撑，触发生成</td>
+</tr>
+</tbody>
+</table>
+<h3 id="75-graph-trigger-graph-vs-func-graph">7.5 graph 两种形态：trigger graph vs func graph（照蓝图）</h3>
+<p>graph 基建有<strong>两种结构形态</strong>，照蓝图的约定：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>trigger graph（Event Graph）</strong></th>
+<th><strong>func graph（Pure Function）</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>入口</td>
+<td><strong>事件节点</strong>（InputActionFired、context 激活/结束）</td>
+<td><strong>无事件</strong>——它是被调用的</td>
+</tr>
+<tr>
+<td>执行引脚（exec）</td>
+<td><strong>有</strong>（白色：决定执行顺序）</td>
+<td><strong>无</strong>（纯函数没有执行引脚）</td>
+</tr>
+<tr>
+<td>数据引脚（data）</td>
+<td>有（彩色：传参数）</td>
+<td>有（输入 → 输出）</td>
+</tr>
+<tr>
+<td>副作用</td>
+<td>可以有（切 context、发事件）</td>
+<td><strong>无</strong>（纯计算）</td>
+</tr>
+<tr>
+<td>典型用途</td>
+<td>响应事件、编排流程（切 context、提交请求）</td>
+<td>纯计算（过滤命中、集合运算）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键：exec 流（执行流）和 data 流（参数流）是分开的两套</strong>——照蓝图：
+- <strong>exec 引脚（白）</strong>：决定"执行顺序"——从一个节点执行完沿 exec 引脚到下一个。这是<strong>执行流（谁调用谁）</strong>。
+- <strong>data 引脚（彩）</strong>：节点之间的<strong>数据输入输出</strong>。这是<strong>参数流（传了什么数据）</strong>。
+- <strong>两者不混</strong>：一个节点既有 exec 入/出（白），也有 data 入/出（彩）。<strong>画图时 exec 用白线、data 用彩线，分开画</strong>。</p>
+<p><strong>trigger graph 有 exec（事件驱动 + 执行顺序 + 可有副作用）；func graph 无 exec（只有 data，纯函数）</strong>。一个 trigger graph 图体内可以调用 func graph（算命中、算集合语义），func graph 是纯计算，不打断执行流。</p>
+<h3 id="76">7.6 集合变化发事件：跨功能基建</h3>
+<p>"某个集合成员变了，我要响应"是<strong>跨功能需求</strong>（框选的选中集变化、编队变化、组员变化都用），所以它是<strong>基建</strong>，不是某个玩法专属。</p>
+<p><strong>定义</strong>：集合的成员 = <strong>presenter 的宿主 entity（host entity）</strong>。"集合变化" = 某个 host entity <strong>加入 / 离开</strong>某个集合。</p>
+<p><strong>事件 schema</strong>：</p>
+<pre><code>CollectionMembershipChanged {
+  collectionKey: string,    // 哪个集合（如 &quot;selected&quot;）
+  changedEntity: entity,    // 变化的 host entity（presenter 宿主）——通知&quot;这个实体上的 presenter&quot;
+  changeKind: added|removed // 加入 / 离开
+}
+</code></pre>
+<p><strong>作者体验（简单）</strong>：在任意 presenter rule 里订阅任意集合 key 变化，其余（扫描、编译、通知）都是基建自动做：</p>
+<pre><code>presenter rule:
+  subscribe: { collection: &quot;selected&quot; }   // 订阅 selected 集合
+  onChanged:                              // 收到 CollectionMembershipChanged
+    added   → 高亮（驱动本 presenter）
+    removed → 取消高亮
+</code></pre>
+<p><strong>初始化编译</strong>：启动时扫描所有 presenter rule 的订阅声明 → 编译成「集合 key → 订阅它的 rule 列表」索引。运行时某个 host entity 加入/离开集合 → 基建查索引 → 通知订阅该集合的 rule → 驱动该 host entity 上的 presenter。</p>
+<hr>
+<h2 id="8-interaction-context-rep-entity-graph">8. interaction context 的切换：挂在 rep entity，由 graph 执行</h2>
+<p><strong>interaction context 的状态，挂在 player entity（rep entity）身上。</strong> 它是世界上「这个玩家当前处于什么交互状态」的客观事实，<strong>谁都能读</strong>。</p>
+<blockquote>
+<p>这里要分清两件事：
+- <strong>交互状态 / 交互上下文（挂实体）</strong>：「这个玩家在干嘛」（选宝物 / 战斗 / 菜单）——模拟侧实体状态，观战能读。
+- <strong>"键 → 语义"表（本机投影）</strong>：「qwe 此刻 = 选宝物」——这是<strong>本机</strong>把交互状态 + scheme 翻译成键位语义的产物，<strong>不进实体、不进存档</strong>。它是本机投影，不是世界实体状态。</p>
+<p>观战要读的是前者（交互状态挂实体）；后者（键语义表）是本机投影。<strong>把键语义表当成世界实体状态，会跟"本机 I/O 不进世界实体状态"这条边界打架</strong>（本机的东西：设备、键位、控制方案——不该作为世界实体状态被存档/被网络复制）——所以"键 → 语义"表是本机投影，不挂实体。</p>
+</blockquote>
+<p><strong>切换 context = 改写实体身上的这个字段</strong>（交互状态），由 graph 执行。</p>
+<p><strong>为什么必须挂在实体上（第一性原理）</strong>：看观战。你从玩家1切到玩家2，玩家2正在打开一个菜单——<strong>你要能拿到玩家2的交互状态。</strong> 这意味着玩家2这些状态<strong>必须挂在玩家2的实体上</strong>，而不是挂在本机 / seat 上。否则你切过去读不到他。<strong>能被人读的、可切换视角的，必须是世界实体状态。</strong></p>
+<h3 id="81-context">8.1 context 获取：主动 / 触发两种</h3>
+<p>「这次操作对象从哪来」，分两种：
+- <strong>主动获取</strong>：不等输入，定时更新。例：视锥扫敌人、最近目标、光环内友军。
+- <strong>触发获取</strong>：输入来了再取。例：点选、框选。</p>
+<p><strong>获取的计算由 graph 执行</strong>（从 rep entity 拿数据、筛选、排序）。</p>
+<h3 id="82-context-context">8.2 context 是图状结构：可衍生子 context</h3>
+<p><strong>context 不是一张扁平的表，而是图</strong>——一个 context 可以衍生出子 context，子 context 用完再回到父 context。</p>
+<p>最典型的例子是<strong>施法瞄准</strong>：</p>
+<pre><code>[战斗 context]
+   │  按 Q 施法（激活&quot;瞄准&quot;）
+   ▼
+[瞄准 context]（从&quot;战斗&quot;衍生出来的子 context）
+   │  瞄准结束 / 取消（停用&quot;瞄准&quot;）
+   ▼
+[战斗 context]（回到父 context）
+</code></pre>
+<p><strong>这个"衍生 / 返回"由宏观的 trigger 控制</strong>——一个 trigger graph 监听"进入施法"事件 → 激活"瞄准"子 context；监听"施法完成 / 取消" → 停用"瞄准"。</p>
+<p><strong>所以 context 图 = context 节点 + 激活/停用的边，边由 trigger graph 驱动。</strong> 一个 context 下可以有多个子 context <strong>并存</strong>（比如瞄准中还能移动——"移动"和"瞄准"两个 context 同时活）。它们是<strong>并存的集合</strong>，不是单一路径的栈。</p>
+<h3 id="83-context-presenter-scope">8.3 context 生命周期：学 presenter 的 scope 模型</h3>
+<p><strong>每个 context 不只是"我是谁"，还带状态</strong>——指示器、中间参数、画到一半的圈。这些状态<strong>跟着 context 的生命周期走</strong>。</p>
+<p><strong>context 的生命周期直接学 presenter 的 scope 模型</strong>（代码里已有一套）：presenter 创建时绑定 <code>scopeId</code>，销毁按 scope 整组清（含递归子）。<strong>context 就是一个 scope 容器</strong>：</p>
+<ul>
+<li><strong>进入 / 激活 context</strong>：建一个 scope（scopeId = 这个 context）。context 内创建的 presenter 都挂这个 scope（<code>Create(defId, owner, scopeId)</code>）。</li>
+<li><strong>离开 / 停用 context</strong>：<code>DestroyScope(scopeId)</code> 整组清——这个 context 下创建的所有 presenter（含递归子）一起销毁。</li>
+</ul>
+<p><strong>关键：不需要作者手工 push/pop、不需要记得"退出时清理"。</strong> context 是 scope 容器——<strong>激活建 scope，停用自动清 scope</strong>。这是结构性生命周期，不是纪律。例子：</p>
+<pre><code>进入&quot;瞄准&quot;context → 建 scope（scopeId=瞄准）→ 创建画圈 presenter（挂这个 scope）
+  │
+  ├─ 施法完成 → 停用&quot;瞄准&quot; → DestroyScope(瞄准scope) → 圈消失（自动）
+  └─ 取消施法 → 停用&quot;瞄准&quot; → DestroyScope(瞄准scope) → 圈消失（自动）
+</code></pre>
+<p><strong>为什么必须这样</strong>：如果不按 scope 清，画到一半的圈会一直留在画面上（视觉残留）、中间参数会污染下一次操作。<strong>scope 容器保证"离开即清理"，不需要作者记得。</strong></p>
+<p><strong>祖先关系</strong>：子 context 的 scope 挂在父 context 下（scope 嵌套）。<strong>停用父 context → 自动清父 scope（含所有子 scope）</strong>——父退自动清子，不需要作者逐层 pop。</p>
+<h4 id="presenter-scope-interaction-context">指示器这类视觉状态用 presenter 基建，生命周期 scope 绑定实体 interaction context</h4>
+<p>「画到一半的圈」这类<strong>视觉状态，不是 graph 自己画的，是用 presenter 基建</strong>（呈现系统）创建的。presenter 的生命周期 scope <strong>绑定到实体的 interaction context 上</strong>：</p>
+<ul>
+<li><strong>创建</strong>：进入 context 时，创建一个 presenter 实例，绑定 <code>owner = 该实体的 rep entity</code> + <code>scopeId = 这个 interaction context 的 scope</code> + 锚定方式（实体锚定 / 世界位置锚定）。</li>
+<li><strong>销毁</strong>：停用 context 时，<strong>按 scope 销毁</strong>——<code>DestroyScope(scopeId)</code> 把这个 context 下创建的所有 presenter 一起清掉（指示器跟着 context 清理）。</li>
+</ul>
+<pre><code class="language-jsonc">// presenter 的生命周期 scope 绑定实体的 interaction context
+presenter &quot;indicator.aim_circle&quot;:
+  lifecycle: { persistence: &quot;Scoped&quot; }        // scoped 生命周期
+  anchor: { kind: &quot;entity&quot;, owner: &quot;rep&quot; }    // 绑定到实体（rep），scopeId = interaction context 的 scope
+  // 进入瞄准 context → 创建（owner=rep, scopeId=瞄准context）
+  // 停用瞄准 context → DestroyScope(瞄准context的scopeId) → 指示器消失（自动）
+</code></pre>
+<p><strong>所以"清理画到一半的圈" = 按 scope 销毁 presenter</strong>——不是 graph 手动调"关指示器"，而是<strong>销毁这个 context scope 下创建的 presenter</strong>。这由 presenter 基建的生命周期 scope 机制提供（<code>Create(defId, owner, scopeId)</code> / <code>DestroyScope(scopeId)</code>），graph 触发进入/停用 context，presenter 跟随 scope 生命周期。</p>
+<hr>
+<h2 id="9-scheme-context-graph">9. 监听与切换：怎么配「切 scheme / 切 context」的 graph</h2>
+<p>前面讲的是「一次输入怎么变成意图」。这一节讲另一类 graph——<strong>监听事件、触发切换</strong>的 graph：它不处理输入，只响应某个事件，然后切 scheme 或切 context。</p>
+<h3 id="91-graph">9.1 切换类 graph 是什么</h3>
+<p>这类 graph 的结构是固定的：<strong>监听一个事件 → 执行一个切换</strong>。</p>
+<pre><code>[切换类 graph]
+  监听：某个事件（设备事件 / 游戏事件）
+  → 切：换成某个 scheme / context
+  → 数据：从 rep entity 拿（唯一入口）
+</code></pre>
+<p>它<strong>不产生语义动作、不组意图</strong>——它只是"看到某件事发生了，把 scheme 或 context 换一下"。</p>
+<h3 id="92">9.2 两类切换（各举一例）</h3>
+<p><strong>① 监听设备事件 → 切 scheme（换设备映射）</strong></p>
+<p>像键鼠游戏<strong>突然插上手柄</strong>（设备热插拔）：</p>
+<pre><code>[graph: 切画面设备]
+  监听：gamepad_connected（手柄接入，设备事件）
+  → 切：scheme 从&quot;scheme.pc_wasd&quot; 换成 &quot;scheme.pad_twin&quot;
+  → 视图（panel）也随之换成手柄版
+</code></pre>
+<p>这里切换的是 <strong>scheme</strong>（设备映射表）。它让"同一场景"从键鼠操作变成手柄操作。</p>
+<p><strong>② 监听游戏事件 → 切 context（换交互状态）</strong></p>
+<p>像游戏逻辑触发"进入战斗" / "打开菜单" / "进入施法瞄准"：</p>
+<pre><code>[graph: 进入施法瞄准]
+  监听：ability_aim_enter（游戏事件：玩家进入施法瞄准）
+  → 切：context 状态 从&quot;战斗&quot; 换成&quot;施法瞄准&quot;（改写 rep entity 上的交互状态）
+  → 之后&quot;施法瞄准&quot;场景下的键语义，由交互状态 ⊕ scheme 组合出来
+</code></pre>
+<p>这里切换的是 <strong>context（交互状态）</strong>——改写实体上的"玩家在干嘛"。它决定后续走哪套语义绑定。</p>
+<h3 id="93-trigger-graph-entry">9.3 配置它们：trigger graph 的 entry（挂事件 + 图体内做切换）</h3>
+<p>切换类 graph <strong>本质也是 trigger graph</strong>——它挂在某个事件上，事件来了才跑。所以配置用 trigger graph 的标准形态（<code>Event</code> 字段挂事件，切换动作写在图体内）：</p>
+<pre><code>trigger_graph &quot;graph.switch_scheme_on_gamepad&quot;:
+  entry {
+    event: &quot;GamepadConnected&quot;        // 监听哪个事件（设备事件 / 游戏事件）——字段是 Event
+  }
+  // 图体：事件来了，执行切换
+  body:
+    switch_scheme(&quot;scheme.pad_twin&quot;)   // 切 scheme（设备交互范式）
+    // 或 switch_context(...)          // 切 interaction context（交互状态）
+    // 数据入口：从 rep entity 拿（唯一入口，见 §7.1）
+</code></pre>
+<p>字段含义：
+- <strong><code>event</code></strong>：挂载监听的事件。分两种来源——<strong>设备事件</strong>（插拔手柄、切设备）、<strong>游戏事件</strong>（进入战斗、打开菜单、进入施法瞄准）。这是 trigger graph entry 的监听字段。
+- <strong>图体内的切换动作</strong>：<code>switch_scheme(...)</code>（换设备交互范式）或 <code>switch_context(...)</code>（改交互状态）。切换动作写在图体里，不是配置字段。
+- <strong>数据入口</strong>：始终是 <code>rep entity</code>（唯一入口，见 §7.1）。</p>
+<h3 id="94-scheme-vs-context">9.4 一个容易混淆的点：切 scheme vs 切 context</h3>
+<ul>
+<li><strong>切 scheme</strong>：换"设备映射表"（用哪套设备）。它<strong>不改变</strong>你"在干嘛"（交互状态不变），只是换操作方式。例：插手柄，选宝物从"鼠标点"变"按 A/B/X"。</li>
+<li><strong>切 context</strong>：改"交互状态"（你在干嘛）。它改变后面走哪套语义。例：从"战斗"进"施法瞄准"。</li>
+</ul>
+<p><strong>两者都可能被"切"触发，但切的是不同的东西</strong>。设备事件（插手柄）通常切 scheme；游戏事件（进战斗/开菜单）通常切 context。</p>
+<blockquote>
+<p>补充：实际游戏里，一次切换可能<strong>同时切两者</strong>（比如从"野外探索"切进"战斗"——既换个交互状态 context，也可能换了设备映射 scheme）。它们是两个基础元素（§3.3 的基础组合），切割哪个看触发的是什么事，<strong>可以一起切，也可以只切一个</strong>。</p>
+</blockquote>
+<hr>
+<h2 id="10">10. 完整链路（用剧情对话选宝物走一遍）</h2>
+<pre><code>玩家2（或 bot）在剧情对话里，遇到三选一选宝物
+  │
+  ├─ input：这个输入属于玩家2
+  ├─ 交互状态：此时在&quot;选宝物&quot;（挂实体，模拟侧）
+  ├─ scheme：键鼠 or 手柄（决定&quot;选宝物&quot;绑定哪些键）
+  ├─ context（正交）：交互状态 ⊕ scheme → 最终&quot;键 → 语义&quot;表
+  ├─ audience view：以玩家2为观众（若是观战视角，能看到他正在选宝物的界面）
+  │
+  ▼
+语义动作：选宝物X / 按 A 选宝物1 / 点第2个宝物
+  │
+  ├─ 去向A（非下令消费）：喂给对话逻辑 → 结束。不出 command intent，不出 ability order。
+  │
+  └─ 去向B（施法/下令，本例不走）：再往下。
+</code></pre>
+<p><strong>这个例子的关键</strong>：
+- 「选宝物」这个交互状态，配 scheme（键鼠/手柄），得到<strong>完全不同的最终 context</strong>——键鼠是"指点"（payload 坐标），手柄是"按键"（payload 键值）。<strong>这是正交，不是换键。</strong>
+- 语义动作之后，只走到「非下令消费」就喂给对话逻辑，<strong>不生成 command intent、不生成 ability order</strong>。
+- 如果宝物选项是轮盘 / hover 等花哨交互，也不影响——它 graph 化、从 rep entity 拿输入、最终同样给出「选宝物X」这一个语义动作。</p>
+<hr>
+<h2 id="11">11. 必记</h2>
+<ol>
+<li><strong>三个独立的东西</strong>：input（谁的）、context（键此刻什么语义）、audience view（以谁为视角）。三者无关，可一起切。</li>
+<li><strong>ControlScheme = 设备映射表</strong>（WASD+左键放1技能 vs 右键+Q放1技能，是不同方案）；<strong>BindingOverride = 覆盖单个绑定</strong>，不改方案。</li>
+<li><strong>scheme 与 context 正交</strong>：最终「键 → 语义」表 = 交互状态（实体）⊕ scheme（设备映射）。<strong>正交不是"换键"，而是"action 和 payload 都不同"</strong>（键鼠指点 vs 手柄按键）。</li>
+<li><strong>语义动作是 player / bot 的共同入口</strong>：设备物理可被跳过。但「是否一套动作」看语义动作相不相同，不看设备——WASD/摇杆是"移动到方向"（一套），右键点屏是"移动到点"、键鼠选宝物是"指点"、手柄选宝物是"按键"（都不同套）。</li>
+<li><strong>bot 注入哪一层，取决于要模拟什么</strong>：模拟"怎么操作"→ 注入语义动作；模拟"下了什么令"→ 注入意图；模拟"怎么按键"→ 注入设备输入。<strong>没有固定层</strong>——玩家从设备往上走，bot 从任意层切入。</li>
+<li><strong>command intent / ability order 只属于「施法 / 下令」支线（B 支）</strong>：A 支是「一切非下令消费」——对话、菜单、UI 交互，<strong>以及框选写选中集合（改世界状态但不设令）</strong>，都不生成意图、不下指令。</li>
+<li><strong>graph 是唯一执行载体</strong>：一切行为归 graph；graph 从 rep entity（唯一入口）拿数据；提交格式统一。</li>
+<li><strong>aimsource 是无状态 helper 节点</strong>：瞄准怎么算抽象不出通用结构，各自是纯函数节点，被 graph 调用；<strong>统一的是"每个动词族自己的少数结果"</strong>，不是所有意图归成一种形状。</li>
+<li><strong>交互状态挂 rep entity</strong>（模拟侧，观战能读）；<strong>"键 → 语义"表是本机投影</strong>（交互状态 ⊕ scheme 组合，不进实体、不进存档）。</li>
+<li><strong>第 1 类 graph 不替代 ControlScheme</strong>，而是读它做编排——scheme 保留为设备映射表，成为喂给 graph 的声明数据。</li>
+</ol>
+</div>
+</body>
+</html>

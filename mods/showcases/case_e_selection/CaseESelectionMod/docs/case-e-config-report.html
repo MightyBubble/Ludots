@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case E：事件透传参数与配置结构</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#1b2030; --panel2:#202739; --border:#2b3247;
+    --text:#dfe3ec; --dim:#97a3b8; --faint:#6f7a90;
+    --accent:#5aa5ff; --accent2:#37d0b0; --warn:#f0b45a; --ok:#46c98b; --bad:#ff7a76;
+    --mono:"SF Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7;font-size:15px;padding-bottom:90px}
+  .wrap{max-width:1100px;margin:0 auto;padding:36px 28px}
+
+  .hero{padding:36px 0 22px;border-bottom:1px solid var(--border);margin-bottom:26px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent2);margin-bottom:9px}
+  .hero h1{font-size:27px;font-weight:700;margin-bottom:10px}
+  .hero p{color:var(--dim);max-width:820px}
+
+  h2{font-size:19px;font-weight:700;margin:38px 0 12px;display:flex;align-items:center;gap:10px}
+  h2 .no{font-family:var(--mono);color:var(--accent);font-size:13px;background:rgba(90,165,255,.12);padding:2px 9px;border-radius:6px;border:1px solid rgba(90,165,255,.28)}
+  h3{font-size:15px;font-weight:600;margin:20px 0 8px}
+
+  .step{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin:16px 0}
+  .step h3{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+  .tag{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:5px;border:1px solid}
+  .tag.cfg{color:var(--warn);border-color:rgba(240,180,90,.4);background:rgba(240,180,90,.08)}
+  .tag.code{color:var(--accent2);border-color:rgba(55,208,176,.4);background:rgba(55,208,176,.08)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+  .box{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .box h4{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--accent)}
+  .box h4.code{color:var(--accent2)}
+  .kv{font-size:12.5px;color:var(--dim);line-height:1.8}
+  .kv .k{font-family:var(--mono);color:var(--accent);background:rgba(90,165,255,.08);padding:1px 6px;border-radius:4px;margin-right:6px;font-size:12px}
+  .kv .v{color:var(--text)}
+  .kv .dim{color:var(--faint)}
+
+  /* 表单模拟 */
+  .form{background:var(--panel2);border:1px dashed var(--border);border-radius:10px;padding:16px 18px;margin-top:14px}
+  .form .ft{font-size:12px;font-family:var(--mono);color:var(--faint);margin-bottom:10px;letter-spacing:.05em}
+  .field{display:grid;grid-template-columns:200px 1fr;gap:8px 14px;align-items:baseline;padding:7px 0;border-bottom:1px solid rgba(43,50,71,.5);font-size:13px}
+  .field:last-child{border-bottom:none}
+  .field .fname{font-family:var(--mono);font-size:12.5px;color:var(--accent)}
+  .field .ftype{font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:6px}
+  .field .fdesc{color:var(--dim);font-size:12.5px}
+  @media(max-width:700px){.field{grid-template-columns:1fr}}
+
+  /* 事件参数流 */
+  .flowbox{background:linear-gradient(180deg,rgba(90,165,255,.05),transparent);border:1px solid rgba(90,165,255,.22);border-radius:10px;padding:14px 16px;margin-top:12px}
+  .flowbox .ft{font-size:12px;font-family:var(--mono);color:var(--accent);margin-bottom:8px;letter-spacing:.05em}
+  .payload{display:flex;flex-wrap:wrap;gap:8px}
+  .pl{font-family:var(--mono);font-size:11.5px;color:var(--dim);background:var(--bg);border:1px solid var(--border);padding:4px 9px;border-radius:6px}
+  .pl b{color:var(--accent);font-weight:600}
+
+  .arrow{color:var(--faint);text-align:center;font-family:var(--mono);font-size:13px;padding:8px 0}
+
+  footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--border);color:var(--faint);font-size:12px;font-family:var(--mono)}
+
+  /* ---- SVG graph 流图 ---- */
+  .gflow{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:12px;overflow-x:auto}
+  .gflow .gt{font-size:11.5px;font-family:var(--mono);color:var(--faint);margin-bottom:8px;letter-spacing:.04em}
+  .gnode{fill:var(--panel2);stroke:var(--accent);stroke-width:1.2;rx:6}
+  .gnode text{fill:#dfe3ec;font-size:12px;font-family:var(--mono)}
+  .gnode .lbl{fill:#97a3b8;font-size:10.5px}
+  .gpin-in{fill:#37d0b0;stroke:#37d0b0;stroke-width:1.5}
+  .gpin-out{fill:#5aa5ff;stroke:#5aa5ff;stroke-width:1.5}
+  .gpin-lbl{fill:#97a3b8;font-size:10px;font-family:var(--mono)}
+  /* exec 引脚（白色）：执行流 */
+  .gexec{fill:#ffffff;stroke:#ffffff;stroke-width:1.5}
+  .gexec-lbl{fill:#c8d2e0;font-size:10px;font-family:var(--mono)}
+  /* exec 线（白色粗线）：执行流 */
+  .eexec{stroke:#ffffff;stroke-width:2;fill:none;marker-end:url(#earrow)}
+  /* data 线（彩色）：参数流 */
+  .edata{stroke:#5aa5ff;stroke-width:1.4;fill:none;marker-end:url(#darrow)}
+  .edge{stroke:#97a3b8;stroke-width:1.3;fill:none;marker-end:url(#arrow)}
+  .edge-strong{stroke:#5aa5ff;stroke-width:1.6;fill:none;marker-end:url(#arrow)}
+  /* 图类型标签 */
+  .gkind{font-size:10px;font-family:var(--mono);fill:#5aa5ff}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="kicker">Case E · 宪法落地</div>
+    <h1>框选全链路：每步事件透传参数 + 配置结构</h1>
+    <p>把「从游戏开始到框选写集合」的每一步拆开：<b>事件</b>（这一步发生了什么）、<b>透传参数</b>（事件携带了哪些数据）、<b>配置结构</b>（涉及哪些配置、字段是什么）、<b>配置还是代码</b>。表单用模拟的配置卡片展示每个字段。</p>
+  </div>
+
+  <!-- ============ 概览 ============ -->
+  <h2><span class="no">00</span>全链路概览</h2>
+  <div class="box">
+    <div class="kv">
+      <span class="k">进图</span><span class="v">→ 实体出生（代码）</span>
+      <span class="k">挂默认 context</span><span class="v">→ 模板配 initialInteractionContext（配置）</span>
+      <span class="k">Definition 启用 trigger</span><span class="v">→ 绑定 + 启用的 trigger graph（配置）</span>
+      <span class="k">动作桥接</span><span class="v">→ 按下 → InputActionFired 事件（代码）</span>
+      <span class="k">trigger 触发</span><span class="v">→ 框开始 → 画框 → 框结束 → 写集合（配置图体 + 代码基建）</span>
+    </div>
+  </div>
+
+  <!-- ============ 第一步 ============ -->
+  <h2><span class="no">01</span>进图：实体出生</h2>
+  <div class="step">
+    <h3>事件：实体出生 <span class="tag code">代码</span></h3>
+    <div class="flowbox">
+      <div class="ft">事件透传参数</div>
+      <div class="payload">
+        <span class="pl"><b>entity</b> 出生的 rep entity</span>
+        <span class="pl"><b>templateId</b> 哪个模板</span>
+      </div>
+    </div>
+    <div class="form">
+      <div class="ft">配置结构：rep entity 模板（authoring 形状）</div>
+      <div class="field"><span class="fname">templateId<span class="ftype">string</span></span><span class="fdesc">实体模板 id（如 player_rep）</span></div>
+      <div class="field"><span class="fname">components<span class="ftype">object</span></span><span class="fdesc">实体的组件（世界位置、团队等）</span></div>
+      <div class="field"><span class="fname">initialInteractionContext<span class="ftype">string · Definition id</span></span><span class="fdesc"><b>出生时挂哪个默认 context</b>——引用 InteractionContextDefinition 的 id</span></div>
+    </div>
+  </div>
+
+  <!-- ============ 第二步 ============ -->
+  <h2><span class="no">02</span>出生挂默认 context</h2>
+  <div class="step">
+    <h3>动作：挂 InteractionContextInstance <span class="tag cfg">配置</span> + <span class="tag code">代码</span></h3>
+    <div class="grid2">
+      <div class="box">
+        <h4>事件透传</h4>
+        <div class="kv">
+          <span class="k">instance</span><span class="v">挂到实体上的 InteractionContextInstance</span><br>
+          <span class="k">ref</span><span class="v">引用 Definition id（interaction.context.battle）</span><br>
+          <span class="k">owner</span><span class="v">rep entity</span>
+        </div>
+      </div>
+      <div class="box">
+        <h4 class="code">谁做</h4>
+        <div class="kv">实体出生代码读模板的 <span class="k">initialInteractionContext</span> → 挂一个 Instance（引用该 Definition）。<span class="dim">机制是代码，挂哪个是配置。</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 第三步 ============ -->
+  <h2><span class="no">03</span>Definition 启用 trigger</h2>
+  <div class="step">
+    <h3>动作：context 激活其 trigger graph <span class="tag cfg">配置</span></h3>
+    <div class="form">
+      <div class="ft">配置结构：InteractionContextDefinition</div>
+      <div class="field"><span class="fname">id<span class="ftype">string</span></span><span class="fdesc">context 定义 id（如 interaction.context.battle）</span></div>
+      <div class="field"><span class="fname">bindings<span class="ftype">array</span></span><span class="fdesc">这个 context 下哪些语义动作成立（BoxSelect、ShiftMod、CtrlMod）</span></div>
+      <div class="field"><span class="fname">triggers<span class="ftype">array · graph id</span></span><span class="fdesc"><b>启用哪些 trigger graph</b>（graph.box_select、graph.paint_zone）——框选能活的关键</span></div>
+    </div>
+  </div>
+
+  <!-- ============ 第四步 ============ -->
+  <h2><span class="no">04</span>trigger graph 触发（框开始）</h2>
+  <div class="step">
+    <h3>框开始：左键按下 → 触发 graph.box_select <span class="tag cfg">配置</span> + <span class="tag code">代码</span></h3>
+    <div class="grid2">
+      <div class="box">
+        <h4>这是怎么触发的</h4>
+        <div class="kv" style="font-size:12.5px">
+          graph.box_select 的 entry <b>挂载在 InputActionFired 事件上</b>（entry 的 event 字段）。左键按下 → "框开始"这个 InputActionFired 事件来了 → <b>graph.box_select 被触发</b>。
+        </div>
+      </div>
+      <div class="box">
+        <h4>配置结构：trigger graph entry</h4>
+        <div class="form" style="margin-top:0;border:none;background:transparent;padding:0">
+          <div class="field"><span class="fname">event<span class="ftype">string</span></span><span class="fdesc">挂载监听的事件（InputActionFired）</span></div>
+          <div class="field"><span class="fname">filters<span class="ftype">object · 可选</span></span><span class="fdesc">过滤条件（只响应 BoxSelect 这个 action）</span></div>
+        </div>
+      </div>
+      <div class="box">
+        <h4 class="code">事件透传（进入图体的 payload）</h4>
+        <div class="payload" style="margin-top:4px">
+          <span class="pl"><b>action</b></span>
+          <span class="pl"><b>source</b></span>
+          <span class="pl"><b>contextId</b> 当前 Instance</span>
+          <span class="pl"><b>rep</b> 唯一入口</span>
+        </div>
+      </div>
+    </div>
+    <div class="flowbox">
+      <div class="ft">图体第一步</div>
+      <div class="kv">
+        <span class="k">提交画框请求</span><span class="v">graph 提交"我要画框"（声明框开始点）——画框本身是 presenter/system 每帧渲染，graph 只提交请求</span>
+      </div>
+    </div>
+    <div class="gflow">
+      <div class="gt">graph 流图 · 框开始：左键按下 → 触发切到"框选 context"的 op 节点</div>
+<svg width="820" height="260" viewBox="0 0 820 260" xmlns="http://www.w3.org/2000/svg" style="fill:#dfe3ec">
+          <defs>
+            <marker id="earrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#ffffff"/></marker>
+            <marker id="darrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5aa5ff"/></marker>
+          </defs>
+          <text class="gkind" x="15" y="18">trigger graph（Event Graph 形态：有事件入口 + exec 执行流 + data 参数流）</text>
+
+          <!-- 事件入口：InputActionFired -->
+          <rect class="gnode" x="15" y="90" width="170" height="80" rx="6"/>
+          <text x="25" y="112">事件: 左键按下</text>
+          <text class="lbl" x="25" y="126">InputActionFired</text>
+          <text class="lbl" x="25" y="140">action=BoxSelect</text>
+          <text class="lbl" x="25" y="154">source=玩家 rep</text>
+          <!-- exec 输出 -->
+          <circle class="gexec" cx="185" cy="105" r="5"/><text class="gexec-lbl" x="191" y="98">exec</text>
+          <!-- data 输出：事件参数 -->
+          <circle class="gpin-out" cx="185" cy="150" r="4"/><text class="gpin-lbl" x="191" y="143">事件参数(data)</text>
+
+          <!-- op 节点：切 context（副作用） -->
+          <rect class="gnode" x="370" y="55" width="200" height="160" rx="6"/>
+          <text x="382" y="80">op: 切 context</text>
+          <text class="lbl" x="382" y="95">改实体上的 Instance</text>
+          <text class="lbl" x="382" y="109">→ 激活"正在框选"(衍生)</text>
+          <text class="lbl" x="382" y="123">副作用：改实体状态，</text>
+          <text class="lbl" x="382" y="137">不产出数据节点</text>
+          <!-- exec 输入 -->
+          <circle class="gexec" cx="370" cy="75" r="5"/><text class="gexec-lbl" x="340" y="72">exec in</text>
+          <!-- data 输入：目标 Definition -->
+          <circle class="gpin-in" cx="370" cy="190" r="4"/><text class="gpin-lbl" x="340" y="187">目标Def(in)</text>
+
+          <!-- 目标 Definition 数据源 -->
+          <rect class="gnode" x="660" y="170" width="145" height="70" rx="6"/>
+          <text x="672" y="193">目标 Definition</text>
+          <text class="lbl" x="672" y="207">interaction.context.boxing</text>
+          <circle class="gpin-out" cx="660" cy="205" r="4"/><text class="gpin-lbl" x="620" y="202">out</text>
+
+          <!-- exec 流（白线）：事件 exec → op exec -->
+          <path class="eexec" d="M185,105 C270,105 270,75 370,75"/>
+          <!-- data 流（蓝线）：事件参数 → op -->
+          <path class="edata" d="M185,150 C270,150 270,150 370,150"/>
+          <!-- data 流（蓝线）：目标 Definition → op（从右侧下方接入，不穿节点） -->
+          <path class="edata" d="M660,205 C600,205 480,195 370,190"/>
+        </svg>    </div>
+  </div>
+
+  <!-- ============ 第五步：框拖拽中（每帧/持续） ============ -->
+  <h2><span class="no">05</span>框拖拽中：每帧高亮命中对象（持续过程）</h2>
+  <div class="step">
+    <h3>这不是事件——是"正在框选"context 下的持续过程 <span class="tag cfg">配置</span> + <span class="tag code">代码</span></h3>
+
+    <div class="box" style="margin-bottom:12px">
+      <h4>① 进入拖拽中 = 激活一个衍生的 context（不是去监听 action 动作）</h4>
+      <div class="kv" style="font-size:12.5px">
+        按下框开始 → <b>激活一个衍生的 context："正在框选"</b>（从"战斗"衍生出来，见主文档 §8.2 的 context 图状结构）。<br>
+        <b>拖拽中的一切（框 presenter、命中、高亮）都挂在"正在框选"这个 context 上</b>——context 活它们活、context 结束它们停。这样不需要去监听 action 动作（框开始/结束），而是跟着 context 走。
+      </div>
+    </div>
+
+    <div class="box" style="margin-bottom:12px">
+      <h4>①b 框的 presenter 从哪来——观察者模式，自己 rule 监听 context 变化</h4>
+      <div class="kv" style="font-size:12.5px">
+        <b>presenter 不是被 context 创建的</b>——它是<b>观察者</b>：自己配置 <b>rules[]</b>，每个 rule 监听一个事件（kind + key）→ 执行一个命令。<br>
+        框 presenter 的 rule 监听"正在框选"context 的<b>激活/结束</b>：激活 → 框出现；结束 → 框自动销毁。<br>
+        <span class="dim">生命周期自动跟随 context，不需要"清理 graph"——presenter 的 rule 监听 context 结束就销毁。</span>
+      </div>
+      <div class="form" style="margin-top:10px">
+        <div class="ft">配置结构：presenter rules[]（观察者，真实形态）</div>
+        <div class="field"><span class="fname">rules[].event.kind<span class="ftype">string</span></span><span class="fdesc">监听什么事件（context 激活 / context 结束）</span></div>
+        <div class="field"><span class="fname">rules[].event.key<span class="ftype">string</span></span><span class="fdesc">哪个 context（"正在框选"）</span></div>
+        <div class="field"><span class="fname">rules[].command<span class="ftype">object</span></span><span class="fdesc">命令：激活 → 创建/显示框；结束 → 销毁框</span></div>
+      </div>
+    </div>
+
+    <div class="box" style="margin-bottom:12px">
+      <h4>② 命中的人从哪来——纯函数 query graph，入参是候选 EntityCollection 的 key</h4>
+      <div class="kv" style="font-size:12.5px">
+        <b>配置一个纯函数 query graph</b>（入参→出参，无副作用，是纯计算）。<br>
+        <b>入参 = 一个指定的 key</b>：框之前就存在的 entity collection（如"可框选单位"集合）。<b>框选不会框敌人/中立</b>——入参就是候选集合，预先配好 key。<br>
+        入参进 graph 后<b>再过滤</b>（排除敌人/中立、只留可框选的）→ 得到命中集合。<br>
+        <b>拖拽中每帧调用它</b>：矩形每帧变 → 命中集每帧算（当前矩形 → 当前命中）。<br>
+        <b>它是子图，可复用</b>：拖拽中每帧用（算当前命中）、框结束也用（最终结果）。
+      </div>
+      <div class="form" style="margin-top:10px">
+        <div class="ft">配置结构：query graph（纯函数）</div>
+        <div class="field"><span class="fname">input<span class="ftype">collection key</span></span><span class="fdesc">候选集合（框之前就有的，如"可框选单位"）</span></div>
+        <div class="field"><span class="fname">filter<span class="ftype">graph</span></span><span class="fdesc">过滤：排除敌人/中立，只留可框选的</span></div>
+        <div class="field"><span class="fname">output<span class="ftype">entity set</span></span><span class="fdesc">命中集合</span></div>
+      </div>
+      <div class="gflow">
+        <div class="gt">graph 流图 · 命中 query graph（纯函数，每帧调用，带引脚）</div>
+<svg width="720" height="230" viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg" style="fill:#dfe3ec">
+          <defs>
+            <marker id="darrow2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5aa5ff"/></marker>
+          </defs>
+          <text class="gkind" x="15" y="18">func graph（Pure Function 形态：无事件入口、无 exec，只有 data 参数流；纯计算无副作用）</text>
+
+          <!-- 输入 1：候选集合 -->
+          <rect class="gnode" x="15" y="120" width="160" height="75" rx="6"/>
+          <text x="25" y="142">候选集合</text>
+          <text class="lbl" x="25" y="156">collection key</text>
+          <text class="lbl" x="25" y="170">(框之前就有)</text>
+          <circle class="gpin-out" cx="175" cy="155" r="4"/><text class="gpin-lbl" x="181" y="148">out</text>
+
+          <!-- 输入 2：当前矩形 -->
+          <rect class="gnode" x="15" y="25" width="160" height="70" rx="6"/>
+          <text x="25" y="47">当前矩形</text>
+          <text class="lbl" x="25" y="61">每帧变化</text>
+          <circle class="gpin-out" cx="175" cy="60" r="4"/><text class="gpin-lbl" x="181" y="53">out</text>
+
+          <!-- 过滤（纯函数） -->
+          <rect class="gnode" x="300" y="50" width="160" height="130" rx="6"/>
+          <text x="312" y="75">过滤</text>
+          <text class="lbl" x="312" y="90">排除敌人/中立</text>
+          <text class="lbl" x="312" y="104">只留可框选的</text>
+          <circle class="gpin-in" cx="300" cy="70" r="4"/><text class="gpin-lbl" x="240" y="67">矩形 in</text>
+          <circle class="gpin-in" cx="300" cy="160" r="4"/><text class="gpin-lbl" x="240" y="157">候选 in</text>
+          <circle class="gpin-out" cx="460" cy="115" r="4"/><text class="gpin-lbl" x="466" y="108">out</text>
+
+          <!-- 输出：命中集合 -->
+          <rect class="gnode" x="560" y="65" width="145" height="100" rx="6"/>
+          <text x="572" y="90">命中集合</text>
+          <text class="lbl" x="572" y="105">entity set</text>
+          <text class="lbl" x="572" y="119">(每帧算当前命中)</text>
+          <circle class="gpin-in" cx="560" cy="115" r="4"/><text class="gpin-lbl" x="565" y="108">in</text>
+          <circle class="gpin-out" cx="705" cy="115" r="4"/><text class="gpin-lbl" x="711" y="108">out</text>
+
+          <!-- data 流（蓝线，参数流） -->
+          <path class="edata" d="M175,60 C230,60 230,70 300,70"/>
+          <path class="edata" d="M175,155 C230,155 230,160 300,160"/>
+          <path class="edata" d="M460,115 C505,115 505,115 560,115"/>
+        </svg>      </div>
+    </div>
+
+    <div class="box">
+      <h4>③ 高亮凭什么处理——presenter 行为，graph 只在集合变化时发事件</h4>
+      <div class="kv" style="font-size:12.5px">
+        <b>高亮是一种 presenter 行为</b>——是"具体的 entity 拿到事件 → 传给自己的 presenter"。<br>
+        <b>graph 不直接操作每个对象的 presenter</b>。graph 只负责：<b>给命中实体发事件</b>——<b>不是每帧发，是集合变化时发</b>（命中集变了才发"你被选中了 / 你出选中了"）。<br>
+        实体收到事件 → <b>自己的 presenter</b> 处理高亮（实体自己的 presenter scope）。
+      </div>
+      <div class="flowbox" style="margin-top:10px">
+        <div class="ft">拖拽中每帧 vs 集合变化（关键区别）</div>
+        <div class="payload">
+          <span class="pl"><b>每帧</b> 调 query graph → 算当前命中集</span>
+          <span class="pl"><b>集合变化时</b> 发"成员变化"事件</span>
+          <span class="pl"><b>实体 presenter</b> 处理高亮</span>
+        </div>
+      </div>
+
+      <div class="box" style="margin-top:12px">
+        <h4>③b 「集合变化发事件」怎么实现——跨功能基建 + 事件 schema</h4>
+        <div class="kv" style="font-size:12.5px">
+          <b>定义：集合的成员 = presenter 的宿主 entity（host entity）。</b>"集合变化" = 某个 host entity <b>加入 / 离开</b>某个集合。<br>
+          机制：<b>初始化时扫描编译所有 presenter rule 的订阅声明 → 编译成「集合 key → 订阅它的 rule 列表」索引</b>。运行时某个 host entity 加入/离开集合 → 基建查索引 → 通知订阅该集合的 rule。<br>
+          <b>作者体验：在任意 presenter rule 里订阅任意集合 key 变化</b>，其余（扫描、编译、通知）都是基建自动做。
+        </div>
+        <div class="form" style="margin-top:10px">
+          <div class="ft">事件 schema：CollectionMembershipChanged（集合成员变化）</div>
+          <div class="field"><span class="fname">collectionKey<span class="ftype">string</span></span><span class="fdesc">哪个集合（如 "selected"）</span></div>
+          <div class="field"><span class="fname">changedEntity<span class="ftype">entity</span></span><span class="fdesc"><b>变化的 host entity（presenter 宿主）</b>——通知"这个实体上的 presenter"</span></div>
+          <div class="field"><span class="fname">changeKind<span class="ftype">enum</span></span><span class="fdesc">加入（added）/ 离开（removed）</span></div>
+        </div>
+        <div class="form" style="margin-top:10px">
+          <div class="ft">presenter rule 订阅（作者体验：一行声明）</div>
+          <div class="field"><span class="fname">subscribe<span class="ftype">collection key</span></span><span class="fdesc">订阅哪个集合（如 "selected"）</span></div>
+          <div class="field"><span class="fname">onChanged<span class="ftype">rule 响应</span></span><span class="fdesc">收到 CollectionMembershipChanged：added → 高亮；removed → 取消高亮</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 第六步：框结束 ============ -->
+  <h2><span class="no">06</span>框结束：透传"命中集合 + 集合语义" → 下游写入</h2>
+  <div class="step">
+    <h3>事件：框结束（抬起）→ 先停用"正在框选"context（DestroyScope），再透传 <span class="tag cfg">配置图体</span></h3>
+
+    <div class="box" style="margin-bottom:12px">
+      <h4>框结束第一件事：停用"正在框选"context（scope 容器自动清）</h4>
+      <div class="kv" style="font-size:12.5px">
+        按下框开始时 <b>激活了"正在框选"衍生 context（建 scope）</b>（见 04/05）。<b>抬起框结束时，停用"正在框选"（DestroyScope 自动清 scope 内所有 presenter）</b>——回到父 context（战斗）。<br>
+        <b>不需要手工 pop</b>：context 是 scope 容器，激活建 scope、停用自动清（学 presenter 的 Create/DestroyScope）。不这样的话，"正在框选"一直挂着，框 presenter / 高亮也不会销毁（它们跟随 context）。<br>
+        <span class="dim">这也呼应 context 生命周期（主文档 §8.3）：离开/取消 → 清理。框结束就是"离开"，所以框、高亮随之清理（presenter 的 rule 监听 context 结束自动销毁）。</span>
+      </div>
+    </div>
+
+    <div class="box" style="margin-bottom:12px">
+      <h4>框结束做什么——把"命中集合 + 集合语义"作为参数 + 事件 key 透传，下游再写入</h4>
+      <div class="kv" style="font-size:12.5px">
+        <b>不是 graph 图体里直接写集合（硬副作用）</b>。框结束 → graph 算出命中集合（复用 05② 的 query graph 子图）→<br>
+        <b>把「命中集合 + 集合语义」作为参数 + 事件 key 透传出去</b> → 下游（写集合的 handler）接收 → 写入。<br><br>
+        <b>为什么这样设计——可复用</b>：如果用户切换 scheme，不用框选、用画圈——<br>
+        <b>命中层换</b>（框=矩形 query → 画圈=圆形 query），但<b>"透传集合 + 事件 → 下游写入"这层完全共享</b>，不做重复配置。
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="box">
+        <h4>透传出去的参数 + 事件 key</h4>
+        <div class="payload" style="margin-top:4px">
+          <span class="pl"><b>entitySet</b> 最终命中集合</span>
+          <span class="pl"><b>op</b> replace / add / subtract</span>
+          <span class="pl"><b>collectionKey</b> "selected"</span>
+          <span class="pl"><b>eventKey</b> 事件 key（下游按它接收）</span>
+        </div>
+        <div class="kv" style="margin-top:8px;font-size:12px;color:var(--faint)">下游 handler 按事件 key 接收 → 写 EntityCollectionStore。</div>
+                <div class="gflow">
+          <div class="gt">图 A · 上游 graph（graph.box_select 图体）：命中集合 + 集合语义 → 透传事件 key 发出</div>
+          <svg width="760" height="270" viewBox="0 0 760 270" xmlns="http://www.w3.org/2000/svg" style="fill:#dfe3ec">
+            <defs>
+              <marker id="earrowA" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#ffffff"/></marker>
+              <marker id="darrowA" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5aa5ff"/></marker>
+            </defs>
+            <text class="gkind" x="15" y="18">trigger graph 图体（graph.box_select 的框结束段）：exec 执行流 + data 参数流</text>
+            <!-- 事件入口：框结束 -->
+            <rect class="gnode" x="15" y="80" width="160" height="70" rx="6"/>
+            <text x="25" y="105">事件: 框结束</text>
+            <text class="lbl" x="25" y="120">抬起</text>
+            <circle class="gexec" cx="175" cy="95" r="5"/><text class="gexec-lbl" x="181" y="88">exec</text>
+            <!-- op: 停用 context -->
+            <rect class="gnode" x="15" y="10" width="160" height="50" rx="6"/>
+            <text x="25" y="32">op: 停用 context</text>
+            <text class="lbl" x="25" y="46">DestroyScope("正在框选")</text>
+            <circle class="gexec" cx="175" cy="35" r="5"/><text class="gexec-lbl" x="181" y="28">exec</text>
+            <!-- 命中集合（复用 func graph 输出，data） -->
+            <rect class="gnode" x="15" y="165" width="160" height="60" rx="6"/>
+            <text x="25" y="187">命中集合</text>
+            <text class="lbl" x="25" y="201">(复用 05② func graph)</text>
+            <circle class="gpin-out" cx="175" cy="195" r="4"/><text class="gpin-lbl" x="181" y="188">out</text>
+            <!-- 集合语义（shift/ctrl 语义动作，data）—— 放右侧独立，避免和 gkind 重叠 -->
+            <rect class="gnode" x="560" y="195" width="185" height="70" rx="6"/>
+            <text x="572" y="218">集合语义</text>
+            <text class="lbl" x="572" y="232">ModifierAdd → add</text>
+            <text class="lbl" x="572" y="246">ModifierSubtract → subtract</text>
+            <circle class="gpin-out" cx="560" cy="230" r="4"/><text class="gpin-lbl" x="510" y="227">out</text>
+            <!-- op: 透传事件 -->
+            <rect class="gnode" x="340" y="70" width="190" height="110" rx="6"/>
+            <text x="352" y="95">op: 透传事件</text>
+            <text class="lbl" x="352" y="110">entitySet + op</text>
+            <text class="lbl" x="352" y="124">+ collectionKey</text>
+            <text class="lbl" x="352" y="138">+ eventKey</text>
+            <circle class="gexec" cx="340" cy="85" r="5"/>
+            <circle class="gpin-in" cx="340" cy="150" r="4"/><text class="gpin-lbl" x="280" y="147">命中集 in</text>
+            <circle class="gpin-in" cx="340" cy="115" r="4"/><text class="gpin-lbl" x="280" y="112">语义 in</text>
+            <circle class="gexec" cx="530" cy="85" r="5"/><text class="gexec-lbl" x="536" y="78">exec out</text>
+            <!-- 事件发出（exec 出口） -->
+            <rect class="gnode" x="610" y="65" width="135" height="80" rx="6"/>
+            <text x="622" y="90">事件发出</text>
+            <text class="lbl" x="622" y="105">按 eventKey</text>
+            <circle class="gexec" cx="610" cy="85" r="5"/>
+            <circle class="gpin-in" cx="610" cy="120" r="4"/><text class="gpin-lbl" x="614" y="113">in</text>
+            <!-- exec 流（白） -->
+            <path class="eexec" d="M175,95 C200,95 200,35 175,35"/>
+            <path class="eexec" d="M175,35 C260,35 260,85 340,85"/>
+            <path class="eexec" d="M530,85 C570,85 570,85 610,85"/>
+            <!-- data 流（蓝）：命中集合 → 透传 -->
+            <path class="edata" d="M175,195 C260,195 260,150 340,150"/>
+            <!-- data 流（蓝）：集合语义 → 透传 -->
+            <path class="edata" d="M560,230 C500,230 450,170 340,115"/>
+            <!-- data 流（蓝）：透传 → 事件发出 -->
+            <path class="edata" d="M530,120 C570,120 570,120 610,120"/>
+          </svg>
+
+          <div class="gt" style="margin-top:16px">图 B · 下游 handler（另一个，不是 graph.box_select）：按 eventKey 接收事件 → 写集合</div>
+          <svg width="380" height="150" viewBox="0 0 380 150" xmlns="http://www.w3.org/2000/svg" style="fill:#dfe3ec">
+            <defs>
+              <marker id="darrowB" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5aa5ff"/></marker>
+            </defs>
+            <text class="gkind" x="15" y="16">下游 handler（不是 graph——另一个东西，按 eventKey 接收）</text>
+            <rect class="gnode" x="15" y="35" width="140" height="85" rx="6"/>
+            <text x="25" y="60">接收事件</text>
+            <text class="lbl" x="25" y="74">按 eventKey</text>
+            <text class="lbl" x="25" y="88">entitySet+op</text>
+            <circle class="gpin-out" cx="155" cy="75" r="4"/><text class="gpin-lbl" x="161" y="68">out</text>
+            <rect class="gnode" x="225" y="35" width="140" height="85" rx="6"/>
+            <text x="235" y="60">写集合</text>
+            <text class="lbl" x="235" y="74">EntityCollectionStore</text>
+            <circle class="gpin-in" cx="225" cy="75" r="4"/><text class="gpin-lbl" x="231" y="68">in</text>
+            <path class="edata" d="M155,75 C190,75 190,75 225,75"/>
+          </svg>
+
+          <div class="kv" style="margin-top:10px;font-size:12px;color:var(--faint)">两段是<b>不同的东西</b>：A 是 graph 图体（算命中、透传事件）；B 是下游 handler（按 eventKey 接收、写集合）。中间靠事件 key 连接，不是同一张图。</div>
+        </div>
+        </div>
+      </div>
+      <div class="box">
+        <h4 class="code">op 从哪来——shift/ctrl 是语义动作，不是裸输入</h4>
+        <div class="kv" style="font-size:12.5px">
+          graph 读的是<b>语义动作</b>（不是"左 shift 键按下"这个裸输入）：<br>
+          <span class="k">ModifierAdd</span>（加选语义）→ op = add（∪）<br>
+          <span class="k">ModifierSubtract</span>（差集语义）→ op = subtract（−）<br>
+          <span class="k">无修饰</span> → op = replace（=）<br>
+          <span class="dim">scheme 里绑定：左 shift → ModifierAdd、左 ctrl → ModifierSubtract。graph 读语义动作，不是读裸按键。</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 汇总表 ============ -->
+  <h2><span class="no">07</span>汇总：每步事件、透传参数、配置结构、配置/代码</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px">
+    <thead><tr style="text-align:left;color:var(--faint)"><th style="padding:9px 11px;border-bottom:1px solid var(--border)">步骤</th><th style="padding:9px 11px;border-bottom:1px solid var(--border)">事件 / 动作</th><th style="padding:9px 11px;border-bottom:1px solid var(--border)">透传参数</th><th style="padding:9px 11px;border-bottom:1px solid var(--border)">配置结构</th><th style="padding:9px 11px;border-bottom:1px solid var(--border)">配置/代码</th></tr></thead>
+    <tbody style="color:var(--dim)">
+      <tr><td style="padding:8px 11px;border-bottom:1px solid var(--border)">01 进图</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">实体出生</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">entity, templateId</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">templates.json</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">代码</td></tr>
+      <tr><td style="padding:8px 11px;border-bottom:1px solid var(--border)">02 挂默认</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">挂 Instance</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">instance, ref(Definition), owner</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">模板 initialInteractionContext</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">配置+代码</td></tr>
+      <tr><td style="padding:8px 11px;border-bottom:1px solid var(--border)">03 启用 trigger</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">Definition 激活</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">—（配置激活，不透传）</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">InteractionContextDefinition</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">配置</td></tr>
+      
+      <tr><td style="padding:8px 11px;border-bottom:1px solid var(--border)">04 触发/画框</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">graph 触发</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">action, source, groundPoint, contextId, rep</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">graph entry{event, filters}</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">配置+代码</td></tr>
+      <tr><td style="padding:8px 11px;border-bottom:1px solid var(--border)">05 拖拽中</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">持续过程</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">命中集（每帧算）</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">query graph + presenter rule</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">配置+代码</td></tr>
+      <tr><td style="padding:8px 11px;border-bottom:1px solid var(--border)">06 写集合</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">框结束→写</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">rectangle, entitySet, modifier, op, collectionKey</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">graph 图体 + 修饰键绑定</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">配置图体</td></tr>
+    </tbody>
+  </table>
+
+  <footer>Case E · 事件透传参数与配置结构 · 宪法落地</footer>
+</div>
+</body>
+</html>
