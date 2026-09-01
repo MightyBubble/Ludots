@@ -197,7 +197,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
         setError(`ActionLib 里找不到 ${actionName}，或没有 graph 字段`);
         return;
       }
-      navigate(`/gas-graphs?graph=${encodeURIComponent(entry.graph)}`);
+      navigate(`/gas-graphs?mod=core&graph=${encodeURIComponent(entry.graph)}`);
     },
     [actions, navigate],
   );
