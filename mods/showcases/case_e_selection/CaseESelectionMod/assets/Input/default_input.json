@@ -1,8 +1,15 @@
 {
   "actions": [
-    { "id": "CaseE.BoxSelectBegin", "name": "CaseE_BoxSelectBegin", "type": "Button" },
-    { "id": "CaseE.BoxSelect", "name": "CaseE_BoxSelect", "type": "Button" },
-    { "id": "CaseE.TapSelect", "name": "CaseE_TapSelect", "type": "Button" }
+    {
+      "id": "CaseE.BoxSelectBegin",
+      "name": "CaseE_BoxSelectBegin",
+      "type": "Button"
+    },
+    {
+      "id": "CaseE.BoxSelectEnd",
+      "name": "CaseE_BoxSelectEnd",
+      "type": "Button"
+    }
   ],
   "contexts": [
     {
@@ -15,18 +22,8 @@
           "path": "<Mouse>/leftButton"
         },
         {
-          "actionId": "CaseE.BoxSelect",
-          "path": "<Mouse>/leftButton",
-          "interactions": [
-            { "type": "Drag" }
-          ]
-        },
-        {
-          "actionId": "CaseE.TapSelect",
-          "path": "<Mouse>/leftButton",
-          "interactions": [
-            { "type": "Tap" }
-          ]
+          "actionId": "CaseE.BoxSelectEnd",
+          "path": "<Mouse>/leftButton"
         },
         {
           "actionId": "QueueModifier",

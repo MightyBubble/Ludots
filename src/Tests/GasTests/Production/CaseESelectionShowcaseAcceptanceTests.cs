@@ -169,9 +169,9 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             !CollectionContains(engine, commander, SelectedKey, raider2),
             "敌方单位在矩形内也永不入选（候选集=case_e.selectable，敌我在集合侧过滤）");
 
-        // ── 04 零长框 = Tap 点选：Tap 判定完成 → tap_commit 以点击点为零长矩形，与单位屏幕包围盒相交即命中 ──
+        // ── 04 零位移 = 点选：BoxSelectEnd 裸边沿，零位移矩形与单位屏幕包围盒相交即命中（无判定器） ──
         TapAt(engine, backend, commander, new Vector2(900f, 0f));
-        AssertCollection(engine, commander, SelectedKey, "零长框走 Tap 点选（点矩形×单位屏幕包围盒）并 replace", marine4);
+        AssertCollection(engine, commander, SelectedKey, "零位移走点选（零位移矩形×单位屏幕包围盒）并 replace", marine4);
         Assert.That(
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances afterTap) ||
             afterTap.Count == 0,

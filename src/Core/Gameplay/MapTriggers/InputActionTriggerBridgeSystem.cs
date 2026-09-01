@@ -86,12 +86,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
             for (int i = 0; i < _actions.Count; i++)
             {
                 InputTriggerAction action = _actions[i];
-                if (string.IsNullOrWhiteSpace(action.Id) || !input.PressedThisFrame(action.Id))
+                if (string.IsNullOrWhiteSpace(action.Id) || !FiredThisTick(input, action))
                 {
                     continue;
                 }
 
-                if (!TryResolveEventPointer(action.Id, out System.Numerics.Vector2 pointer))
+                if (!TryResolveEventPointer(action.Id, action.Edge, out System.Numerics.Vector2 pointer))
                 {
                     // pointerScreenX/Y are required payload facts; firing without the
                     // pointer position would break the input-event contract.
@@ -142,7 +142,14 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// (Tap/Drag) report their completion as a press edge, so their PressPointer is
         /// the completion frame's pointer — the release point — by construction.
         /// </summary>
-        private bool TryResolveEventPointer(string actionId, out System.Numerics.Vector2 pointer)
+        private static bool FiredThisTick(IInputActionReader input, InputTriggerAction action)
+        {
+            return string.Equals(action.Edge, "release", StringComparison.OrdinalIgnoreCase)
+                ? input.ReleasedThisFrame(action.Id)
+                : input.PressedThisFrame(action.Id);
+        }
+
+        private bool TryResolveEventPointer(string actionId, string edge, out System.Numerics.Vector2 pointer)
         {
             AuthoritativePointerButtonSnapshot? buttons = _pointerButtons();
             if (buttons == null || !buttons.TryGetState(actionId, out PointerButtonState state))
@@ -151,7 +158,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return false;
             }
 
-            if (state.HasPressPointer)
+            if (string.Equals(edge, "release", StringComparison.OrdinalIgnoreCase))
+            {
+                if (state.HasReleasePointer)
+                {
+                    pointer = state.ReleasePointer;
+                    return true;
+                }
+            }
+            else if (state.HasPressPointer)
             {
                 pointer = state.PressPointer;
                 return true;
@@ -240,5 +255,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
     {
         public string Id { get; set; } = string.Empty;
         public int PickRadiusCm { get; set; }
+
+        /// <summary>Which edge bridges this action: "press" (default) or "release".</summary>
+        public string Edge { get; set; } = "press";
     }
 }
