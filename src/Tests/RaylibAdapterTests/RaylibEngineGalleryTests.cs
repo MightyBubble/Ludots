@@ -200,6 +200,86 @@ namespace Ludots.Tests.RaylibAdapter
         }
 
         [Test]
+        public void MaterialReader_ParentCycle_FailsLoud()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "ludots-mat-cycle-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                File.WriteAllText(Path.Combine(dir, "a.json"), """{ "id": "a", "domain": "Surface", "parent": "b" }""");
+                File.WriteAllText(Path.Combine(dir, "b.json"), """{ "id": "b", "domain": "Surface", "parent": "a" }""");
+                var materials = new GalleryMaterialAssets();
+                Assert.That(
+                    () => MaterialAssetReader.Register(materials, Path.Combine(dir, "a.json"), 7300),
+                    Throws.TypeOf<InvalidDataException>().With.Message.Contains("cycle"));
+            }
+            finally
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+
+        [Test]
+        public void MaterialReader_IdCollision_FailsLoud()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "ludots-mat-collide-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                File.WriteAllText(Path.Combine(dir, "one.json"), """{ "id": "one", "domain": "Surface" }""");
+                File.WriteAllText(Path.Combine(dir, "two.json"), """{ "id": "two", "domain": "Surface" }""");
+                var materials = new GalleryMaterialAssets();
+                MaterialAssetReader.Register(materials, Path.Combine(dir, "one.json"), 7400);
+                Assert.That(
+                    () => MaterialAssetReader.Register(materials, Path.Combine(dir, "two.json"), 7400),
+                    Throws.TypeOf<InvalidDataException>().With.Message.Contains("already held by"));
+            }
+            finally
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+
+        [Test]
+        public void MaterialReader_ParentReuse_DoesNotDoubleRegister()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "ludots-mat-reuse-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                File.WriteAllText(Path.Combine(dir, "base.json"), """{ "id": "base", "domain": "Surface", "roughness": 0.9 }""");
+                File.WriteAllText(Path.Combine(dir, "kid1.json"), """{ "id": "kid1", "domain": "Surface", "parent": "base", "roughness": 0.5 }""");
+                File.WriteAllText(Path.Combine(dir, "kid2.json"), """{ "id": "kid2", "domain": "Surface", "parent": "base", "metalness": 0.2 }""");
+                var materials = new GalleryMaterialAssets();
+                MaterialAssetReader.Register(materials, Path.Combine(dir, "kid1.json"), 7500);
+                int kid2 = MaterialAssetReader.Register(materials, Path.Combine(dir, "kid2.json"), 7502);
+                Assert.That(kid2, Is.EqualTo(7502), "第二个子材质按请求 id 注册");
+                Assert.That(materials.GetId("project.base"), Is.EqualTo(7499), "父材质只注册一次，id 不被重复消费");
+            }
+            finally
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+
+        [Test]
+        public void SceneDocument_NonObjectConfig_FailsLoud()
+        {
+            Assert.That(
+                () => ParseMinimalScene(kind: "static_mesh", config: "5"),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("config must be a JSON object"));
+        }
+
+        [Test]
+        public void SceneDocument_PitchAtPole_FailsLoud()
+        {
+            string json = MinimalSceneJson().Replace("\"pitchDegrees\": 25", "\"pitchDegrees\": 90");
+            Assert.That(
+                () => EngineProject.ParseSceneDocument(json, "minimal.scene.json"),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("invalid camera values"));
+        }
+
+        [Test]
         public void SceneComponentSources_HaveNoHardcodedAssetUris()
         {
             foreach (string file in Directory.EnumerateFiles(

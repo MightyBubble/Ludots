@@ -21,6 +21,26 @@ namespace Ludots.Content.EngineGallery
 
         public static int Register(GalleryMaterialAssets materials, string materialJsonPath, int materialAssetId)
         {
+            return RegisterChain(materials, materialJsonPath, materialAssetId, []);
+        }
+
+        /// <summary>
+        /// 沿 parent 链迭代注册（根优先）：同路径环 fail-fast；父已注册则复用其 id，
+        /// 不重复消费 id 段；分配到的 id 若已被其他材质占用即冲突 fail-fast。
+        /// </summary>
+        private static int RegisterChain(
+            GalleryMaterialAssets materials,
+            string materialJsonPath,
+            int materialAssetId,
+            HashSet<string> visitedPaths)
+        {
+            string canonicalPath = Path.GetFullPath(materialJsonPath);
+            if (!visitedPaths.Add(canonicalPath))
+            {
+                throw new InvalidDataException(
+                    $"Material parent chain contains a cycle at '{materialJsonPath}'.");
+            }
+
             MaterialRow? row;
             try
             {
@@ -42,6 +62,24 @@ namespace Ludots.Content.EngineGallery
             }
 
             string key = $"project.{row.Id}";
+            int existingId = materials.GetId(key);
+            if (existingId != 0)
+            {
+                if (existingId != materialAssetId && !IsSameKeyAtId(materials, existingId, key))
+                {
+                    throw new InvalidDataException(
+                        $"Material asset '{row.Id}' is already registered under id {existingId}; requested id {materialAssetId} conflicts.");
+                }
+
+                return existingId;
+            }
+
+            if (materials.TryGet(materialAssetId, out MaterialAssetDescriptor taken) && materials.GetName(materialAssetId) != key)
+            {
+                throw new InvalidDataException(
+                    $"Material asset '{row.Id}' would take id {materialAssetId} which is already held by '{materials.GetName(materialAssetId)}'.");
+            }
+
             if (!string.IsNullOrWhiteSpace(row.Parent) && materials.GetId($"project.{row.Parent}") == 0)
             {
                 string parentPath = Path.Combine(Path.GetDirectoryName(materialJsonPath)!, $"{row.Parent}.json");
@@ -51,7 +89,13 @@ namespace Ludots.Content.EngineGallery
                         $"Material asset '{row.Id}' declares parent '{row.Parent}' which has no sibling material file.", parentPath);
                 }
 
-                Register(materials, parentPath, materialAssetId - 1);
+                if (materialAssetId <= 1)
+                {
+                    throw new InvalidDataException(
+                        $"Material asset '{row.Id}' has no id budget left for its parent chain under id {materialAssetId}.");
+                }
+
+                RegisterChain(materials, parentPath, materialAssetId - 1, visitedPaths);
             }
 
             var floats = new Dictionary<string, float>(StringComparer.Ordinal);
@@ -106,6 +150,11 @@ namespace Ludots.Content.EngineGallery
                 floatParams: floats,
                 colorParams: colors), textureUris);
             return materialAssetId;
+        }
+
+        private static bool IsSameKeyAtId(GalleryMaterialAssets materials, int id, string key)
+        {
+            return string.Equals(materials.GetName(id), key, StringComparison.Ordinal);
         }
 
         private static MaterialAssetFlags ParseFlags(List<string>? flags, string sourcePath)

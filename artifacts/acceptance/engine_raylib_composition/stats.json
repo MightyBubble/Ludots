@@ -1,8 +1,8 @@
 {
   "scene": "composition",
   "frames": 120,
-  "avgFrameMs": 8.258,
-  "p95FrameMs": 2.705,
-  "maxFrameMs": 759.597,
-  "wallMs": 2826
+  "avgFrameMs": 9.762,
+  "p95FrameMs": 3.469,
+  "maxFrameMs": 910.288,
+  "wallMs": 3186.7
 }

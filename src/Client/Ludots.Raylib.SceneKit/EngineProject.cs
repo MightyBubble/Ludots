@@ -56,7 +56,6 @@ namespace Ludots.Raylib.SceneKit
         public static EngineProject Open(string projectRootPath)
         {
             string root = ResolveProjectRoot(projectRootPath);
-            EngineProjectEnvironment.CurrentRoot = root;
 
             EngineProjectDocument project = DeserializeFile<EngineProjectDocument>(Path.Combine(root, "project.json"));
             if (project.SchemaVersion != CurrentSchemaVersion)
@@ -81,7 +80,8 @@ namespace Ludots.Raylib.SceneKit
                     exception);
             }
 
-            string catalogPath = Path.Combine(root, project.Scenes.Replace('\\', '/'));
+            string catalogRelative = NormalizeProjectRelative(project.Scenes, root, "project.json scenes");
+            string catalogPath = Path.Combine(root, catalogRelative);
             SceneCatalogManifest manifest = DeserializeFile<SceneCatalogManifest>(catalogPath);
             if (manifest.SchemaVersion != CurrentSchemaVersion)
             {
@@ -106,7 +106,8 @@ namespace Ludots.Raylib.SceneKit
                     throw new InvalidDataException($"Engine project catalog '{catalogPath}' contains duplicate scene id '{id}'.");
                 }
 
-                string sceneAssetPath = Path.GetFullPath(Path.Combine(root, asset.Replace('\\', '/')));
+                string sceneRelative = NormalizeProjectRelative(asset, catalogPath, $"scene '{id}' asset");
+                string sceneAssetPath = Path.GetFullPath(Path.Combine(root, sceneRelative));
                 if (!File.Exists(sceneAssetPath))
                 {
                     throw new FileNotFoundException($"Engine project scene asset '{asset}' was not found.", sceneAssetPath);
@@ -124,7 +125,9 @@ namespace Ludots.Raylib.SceneKit
                 entries.Add(id, new SceneEntry(document, sceneAssetPath));
             }
 
-            return new EngineProject(root, project.Name, ids.ToArray(), descriptors.ToArray(), entries, contentAssembly);
+            EngineProject opened = new EngineProject(root, project.Name, ids.ToArray(), descriptors.ToArray(), entries, contentAssembly);
+            EngineProjectEnvironment.CurrentRoot = root;
+            return opened;
         }
 
         public bool TryCreate(string id, out IEngineScene? scene)
@@ -310,7 +313,7 @@ namespace Ludots.Raylib.SceneKit
             }
 
             ValidateVector3(camera.Target, sourceName, "camera.target");
-            if (camera.Distance <= 0f || camera.PitchDegrees is < 0f or > 90f ||
+            if (camera.Distance <= 0f || camera.PitchDegrees is < 0f or >= 90f ||
                 camera.FovyDegrees is <= 0f or >= 180f)
             {
                 throw new InvalidDataException($"Engine scene '{sourceName}' declares invalid camera values.");
@@ -421,6 +424,12 @@ namespace Ludots.Raylib.SceneKit
                 foreach (EngineSceneComponentDocument component in node.Components)
                 {
                     RequireText(component.Type, sourceName, $"node '{node.Id}' component type");
+                    if (component.Config is { ValueKind: not JsonValueKind.Object })
+                    {
+                        throw new InvalidDataException(
+                            $"Engine scene '{sourceName}' component '{component.Type}' config must be a JSON object.");
+                    }
+
                     foreach (string reference in component.Assets)
                     {
                         if (!declaredAssets.Contains(reference))
@@ -477,6 +486,18 @@ namespace Ludots.Raylib.SceneKit
             string json = File.ReadAllText(path);
             T? value = JsonSerializer.Deserialize<T>(json, JsonOptions);
             return value ?? throw new InvalidDataException($"Engine project asset '{path}' is empty.");
+        }
+
+        private static string NormalizeProjectRelative(string relativePath, string sourcePath, string fieldLabel)
+        {
+            string normalized = relativePath.Replace('\\', '/');
+            if (Path.IsPathRooted(normalized) || normalized.Contains("../", StringComparison.Ordinal))
+            {
+                throw new InvalidDataException(
+                    $"Engine project '{sourcePath}' field {fieldLabel} ('{relativePath}') must stay inside the project root.");
+            }
+
+            return normalized;
         }
 
         private static string RequireText(string? value, string sourceName, string fieldLabel)
@@ -713,8 +734,20 @@ namespace Ludots.Raylib.SceneKit
 
         private static IReadOnlyDictionary<string, Type> BuildComponents(Assembly assembly)
         {
+Type[] types;
+            try
+            {
+                types = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException exception)
+            {
+                string reasons = string.Join("; ", exception.LoaderExceptions.Select(e => e?.Message ?? "unknown").Take(3));
+                throw new InvalidDataException(
+                    $"Engine content assembly '{assembly.FullName}' failed to load component types: {reasons}", exception);
+            }
+
             var result = new Dictionary<string, Type>(StringComparer.Ordinal);
-            foreach (Type type in assembly.GetTypes())
+            foreach (Type type in types)
             {
                 EngineSceneComponentAttribute? attribute = type.GetCustomAttribute<EngineSceneComponentAttribute>();
                 if (attribute == null || !typeof(IEngineSceneComponent).IsAssignableFrom(type) || type.IsAbstract)
