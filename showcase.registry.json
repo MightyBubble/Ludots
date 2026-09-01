@@ -435,7 +435,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod",
       "projectPath": "CapabilityStandardBehaviorTreeArenaMod.csproj",
       "title": "行为树演武场",
-      "summary": "独立 BT 演示：旗舰走真图宿主；万人段是无图压测基线（不含 HFSM/关卡/技能）。",
+      "summary": "独立 BT 演示：前排走 BehaviorTreeWorld（bt.patrolChaseAttack）+ ActionLib 叶子；万人段是无图压测基线（不含 HFSM/关卡/技能）。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -450,7 +450,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_behavior_tree_arena",
       "screenshot": null,
       "status": "active",
-      "notes": "Featured = GraphBehaviorTreeHost；crowd = BehaviorTreeWorld 无图压测（ScriptSlices==0）。Headless think-wave acceptance first; visual captures follow."
+      "notes": "Featured = BehaviorTreeWorld（AI/behavior_trees.json · bt.patrolChaseAttack）+ ActionLib 叶子；crowd = 无图压测（ScriptSlices==0）。Headless think-wave acceptance first; visual captures follow."
     },
     {
       "id": "capability_standard_config_shards_showcase",
@@ -529,7 +529,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod",
       "projectPath": "CapabilityStandardGraphBehaviorIntegrationMod.csproj",
       "title": "图行为整合演示",
-      "summary": "单独的整合演示：BT+HFSM+Level 合波（old-path：BehaviorTreeWorld + HfsmWorld/GraphProgramHfsmHost，不是四个单秀的大杂烩合并）。",
+      "summary": "单独的整合演示：BT+HFSM+Level 合波（BehaviorTreeWorld + HfsmWorld/GraphProgramHfsmHost，L2 拓扑 + 叶子 Script）。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -544,7 +544,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_graph_behavior_integration",
       "screenshot": null,
       "status": "active",
-      "notes": "Metrics Detail 含 old-path；不得顶 GraphFsmHost/GraphBehaviorTreeHost 旗舰语义。Headless think-wave acceptance first; visual captures follow."
+      "notes": "整合演示走 BehaviorTreeWorld + HfsmWorld/GraphProgramHfsmHost（L2 拓扑 + 叶子 Script）。Headless think-wave acceptance first; visual captures follow."
     },
     {
       "id": "capability_standard_graph_op_AbsFloat",
@@ -3786,7 +3786,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod",
       "projectPath": "CapabilityStandardHfsmSentryArenaMod.csproj",
       "title": "HFSM 岗哨演武场",
-      "summary": "独立分层状态机演示：旗舰走 GraphFsmHost；万人段是无图 HfsmWorld 压测基线（不含 BT/关卡/技能）。",
+      "summary": "独立分层状态机演示：前排走 HfsmWorld（hfsm.sentry.scripted）+ 叶子 Script；万人段是无图 HfsmWorld 压测基线（不含 BT/关卡/技能）。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3801,7 +3801,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_hfsm_sentry_arena",
       "screenshot": null,
       "status": "active",
-      "notes": "Featured = GraphFsmHost；crowd = HfsmWorld 无图（LifecycleRuns==0）。Headless think-wave acceptance first; visual captures follow."
+      "notes": "Featured = HfsmWorld + GraphProgramHfsmHost；crowd = HfsmWorld 无图（LifecycleRuns==0）。Headless think-wave acceptance first; visual captures follow."
     },
     {
       "id": "capability_standard_live_skill_workbench",
