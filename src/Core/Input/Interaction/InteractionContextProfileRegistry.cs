@@ -150,8 +150,8 @@ namespace Ludots.Core.Input.Interaction
         public bool TryCreateActiveContext(
             int profileId,
             Entity contextEntity,
-            ActiveInteractionContextSource source,
-            out ActiveInteractionContext context)
+            InteractionContextInstanceSource source,
+            out InteractionContextInstance context)
         {
             if (!IsInstalled(profileId))
             {
@@ -159,7 +159,7 @@ namespace Ludots.Core.Input.Interaction
                 return false;
             }
 
-            context = new ActiveInteractionContext
+            context = new InteractionContextInstance
             {
                 ContextId = profileId,
                 ContextEntity = contextEntity,

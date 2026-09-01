@@ -143,6 +143,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Gameplay.Activities.ActivityRuntimeService? _activityRuntime;
         private Gameplay.Tasks.TaskRuntimeService? _taskRuntime;
         private Ludots.Core.Input.Interaction.InteractionModeMap? _interactionModeMap;
+        private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -320,6 +321,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindInteractionModeMap(Ludots.Core.Input.Interaction.InteractionModeMap modeMap)
         {
             _interactionModeMap = modeMap ?? throw new ArgumentNullException(nameof(modeMap));
+        }
+
+        /// <summary>
+        /// Binds the derived interaction context kernel so graph programs can activate and
+        /// deactivate derived contexts via <see cref="ActivateContext"/> /
+        /// <see cref="DeactivateContext"/>; unbound kernels fail closed per call.
+        /// </summary>
+        public void BindContextInstances(Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime contextInstances)
+        {
+            _contextInstances = contextInstances ?? throw new ArgumentNullException(nameof(contextInstances));
         }
 
         public GasGraphRuntimeApi(
@@ -873,6 +884,32 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             {
                 _world.Add(target, component);
             }
+        }
+
+        /// <summary>
+        /// Activates a derived interaction context on the subject (#1398 S2b). The kernel owns
+        /// parent validation, scope creation, and the ContextActivated presentation event;
+        /// fail-closed on every mis-declared input by name.
+        /// </summary>
+        public void ActivateContext(Entity subject, int contextKeyId, int parentContextKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(ActivateContext));
+            var contextInstances = _contextInstances
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            contextInstances.Activate(subject, contextKeyId, parentContextKeyId);
+        }
+
+        /// <summary>
+        /// Deactivates a derived interaction context (and its descendants) on the subject; the
+        /// instance's presenter scope is destroyed through the presenter command pipeline and a
+        /// ContextDeactivated presentation event is published.
+        /// </summary>
+        public void DeactivateContext(Entity subject, int contextKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(DeactivateContext));
+            var contextInstances = _contextInstances
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            contextInstances.Deactivate(subject, contextKeyId);
         }
 
         /// <summary>

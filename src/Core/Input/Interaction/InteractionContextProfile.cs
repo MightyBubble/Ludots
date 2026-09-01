@@ -8,7 +8,7 @@ namespace Ludots.Core.Input.Interaction
     {
         /// <summary>
         /// Data-declared steady-state profile: never mounted (absence of
-        /// <see cref="ActiveInteractionContext"/> is the steady state), but its collection key
+        /// <see cref="InteractionContextInstance"/> is the steady state), but its collection key
         /// and filter profile anchor steady-state cast commits and command routing.
         /// </summary>
         public const string Default = "interaction.context.default";
@@ -23,7 +23,7 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// One interaction context profile (RFC-0065 §5.3). Abilities reference profiles via
     /// <c>abilities.json interactionContextProfile</c>; a mounted context copies these fields
-    /// into an <see cref="ActiveInteractionContext"/>. Strings live only in JSON — Core never
+    /// into an <see cref="InteractionContextInstance"/>. Strings live only in JSON — Core never
     /// interprets ids beyond registry resolution.
     /// </summary>
     public sealed class InteractionContextProfileDefinition

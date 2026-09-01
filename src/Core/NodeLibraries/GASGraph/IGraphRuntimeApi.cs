@@ -110,6 +110,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.InteractionModeMapUnavailable");
         }
 
+        /// <summary>
+        /// Activates a derived interaction context (#1398 S2b) on the subject: context and
+        /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). Idempotent-failure
+        /// on an already-active context; fail-closed on dead subjects, unknown key ids, and
+        /// declared parents that are not active. Default rejects — the engine binds a derived
+        /// context runtime to serve it.
+        /// </summary>
+        void ActivateContext(Entity subject, int contextKeyId, int parentContextKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// Deactivates a derived interaction context (and its descendants) on the subject;
+        /// the instance's presenter scope is destroyed through the presenter command pipeline.
+        /// Fail-closed when the context is not mounted as a derived instance.
+        /// </summary>
+        void DeactivateContext(Entity subject, int contextKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+        }
+
         /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
         void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
 

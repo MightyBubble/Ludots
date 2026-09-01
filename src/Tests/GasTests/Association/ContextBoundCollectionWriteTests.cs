@@ -299,17 +299,17 @@ namespace Ludots.Tests.GAS
 
             public void MountContext(Entity anchorRep, string collectionKey, int filterProfileId)
             {
-                World.Add(anchorRep, new ActiveInteractionContext
+                World.Add(anchorRep, new InteractionContextInstance
                 {
                     ActiveCollectionKeyId = Store.KeyRegistry.Register(collectionKey),
                     FilterProfileId = filterProfileId,
-                    Source = ActiveInteractionContextSource.ExecLifecycle,
+                    Source = InteractionContextInstanceSource.ExecLifecycle,
                 });
             }
 
             public void UnmountContext(Entity anchorRep)
             {
-                World.Remove<ActiveInteractionContext>(anchorRep);
+                World.Remove<InteractionContextInstance>(anchorRep);
             }
         }
     }

@@ -75,11 +75,11 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Has<AbilityExecInstance>(actor), Is.True, "Exec must be gate-waiting.");
 
             harness.ContextSystem.Update(0f);
-            Assert.That(world.TryGet<ActiveInteractionContext>(p1Rep, out ActiveInteractionContext mounted), Is.True,
+            Assert.That(world.TryGet<InteractionContextInstance>(p1Rep, out InteractionContextInstance mounted), Is.True,
                 "Exec start must mount the ability's context on the carrier's domain rep.");
             Assert.That(mounted.ActiveCollectionKeyId, Is.EqualTo(harness.AbilityTargetsKeyId), "The mounted context must expose the ability collection key.");
             Assert.That(mounted.ContextEntity, Is.EqualTo(actor), "Context ownership is the exec carrier entity.");
-            Assert.That(mounted.Source, Is.EqualTo(ActiveInteractionContextSource.ExecLifecycle));
+            Assert.That(mounted.Source, Is.EqualTo(InteractionContextInstanceSource.ExecLifecycle));
 
             // M2: casts during the ability context land in the ability key; command.source is untouched.
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m05, m06 }, EntityCollectionSourceKind.UiAcquisition);
@@ -93,7 +93,7 @@ namespace Ludots.Tests.GAS
 
             // Repeated updates while the exec waits must not duplicate the mount.
             harness.ContextSystem.Update(0f);
-            Assert.That(world.CountEntities(new QueryDescription().WithAll<ActiveInteractionContext>()), Is.EqualTo(1));
+            Assert.That(world.CountEntities(new QueryDescription().WithAll<InteractionContextInstance>()), Is.EqualTo(1));
 
             // Complete the exec: the event gate resolves on one tick, End fires on the next.
             harness.EventBus.Publish(new GameplayEvent { TagId = WaitEventTagId, Source = actor });
@@ -103,7 +103,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Has<AbilityExecInstance>(actor), Is.False, "Exec must be torn down after End.");
 
             harness.ContextSystem.Update(0f);
-            Assert.That(world.Has<ActiveInteractionContext>(p1Rep), Is.False, "The context must be reclaimed when the exec ends.");
+            Assert.That(world.Has<InteractionContextInstance>(p1Rep), Is.False, "The context must be reclaimed when the exec ends.");
 
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m02 }, EntityCollectionSourceKind.UiAcquisition);
             Assert.That(harness.Store.TryGet(p1Rep, harness.CommandSourceKeyId, out commandHandle), Is.True);
@@ -122,7 +122,7 @@ namespace Ludots.Tests.GAS
 
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
-            Assert.That(world.Has<ActiveInteractionContext>(rep), Is.True);
+            Assert.That(world.Has<InteractionContextInstance>(rep), Is.True);
 
             // GAS arbitration interrupts the exec (DEC-13: input layer has no say); the tag is mod data.
             ref var tags = ref world.Get<GameplayTagContainer>(actor);
@@ -136,7 +136,7 @@ namespace Ludots.Tests.GAS
             Assert.That(terminal.FailureReason, Is.EqualTo(OrderFailureReason.Interrupted));
 
             harness.ContextSystem.Update(0f);
-            Assert.That(world.Has<ActiveInteractionContext>(rep), Is.False, "Interrupted exec must reclaim its mounted context.");
+            Assert.That(world.Has<InteractionContextInstance>(rep), Is.False, "Interrupted exec must reclaim its mounted context.");
         }
 
         [Test]
@@ -322,11 +322,11 @@ namespace Ludots.Tests.GAS
 
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
-            Assert.That(world.Has<ActiveInteractionContext>(rep), Is.True);
+            Assert.That(world.Has<InteractionContextInstance>(rep), Is.True);
 
             world.Destroy(actor);
             harness.ContextSystem.Update(0f);
-            Assert.That(world.Has<ActiveInteractionContext>(rep), Is.False, "Caster death must reclaim the mounted context.");
+            Assert.That(world.Has<InteractionContextInstance>(rep), Is.False, "Caster death must reclaim the mounted context.");
         }
 
         [Test]
@@ -341,7 +341,7 @@ namespace Ludots.Tests.GAS
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
 
-            Assert.That(world.TryGet<ActiveInteractionContext>(rep, out ActiveInteractionContext mounted), Is.True,
+            Assert.That(world.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance mounted), Is.True,
                 "the active context must be mounted on its carrier's control-domain rep.");
             Assert.That(mounted.ContextEntity, Is.EqualTo(actor));
             Assert.That(
@@ -370,7 +370,7 @@ namespace Ludots.Tests.GAS
 
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
-            Assert.That(world.Has<ActiveInteractionContext>(rep), Is.True);
+            Assert.That(world.Has<InteractionContextInstance>(rep), Is.True);
 
             harness.EventBus.Publish(new GameplayEvent { TagId = WaitEventTagId, Source = actor });
             harness.EventBus.Update();
@@ -378,7 +378,7 @@ namespace Ludots.Tests.GAS
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
 
-            Assert.That(world.Has<ActiveInteractionContext>(rep), Is.False,
+            Assert.That(world.Has<InteractionContextInstance>(rep), Is.False,
                 "the mounted context must be released with the exec when it ends.");
             InteractionPref pref = NewPlayerDefaultPref(harness);
             Assert.That(
@@ -401,13 +401,13 @@ namespace Ludots.Tests.GAS
 
             world.Destroy(actor);
             Assert.That(
-                world.TryGet<ActiveInteractionContext>(rep, out ActiveInteractionContext frozen) &&
+                world.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance frozen) &&
                 frozen.ContextEntity == actor,
                 Is.True,
                 "the pre-reclaim window keeps the dead carrier mounted so owner resolution fails closed instead of silently falling back.");
 
             harness.ContextSystem.Update(0f);
-            Assert.That(world.Has<ActiveInteractionContext>(rep), Is.False,
+            Assert.That(world.Has<InteractionContextInstance>(rep), Is.False,
                 "reclaim must release the mounted context with the exec.");
         }
 
@@ -422,7 +422,7 @@ namespace Ludots.Tests.GAS
             harness.ContextSystem.Update(0f);
 
             Assert.That(
-                world.CountEntities(new QueryDescription().WithAll<ActiveInteractionContext>()),
+                world.CountEntities(new QueryDescription().WithAll<InteractionContextInstance>()),
                 Is.Zero,
                 "an exec whose carrier resolves to no control domain mounts onto no interaction subject.");
         }
@@ -439,7 +439,7 @@ namespace Ludots.Tests.GAS
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
             Assert.That(
-                world.TryGet<ActiveInteractionContext>(rep, out ActiveInteractionContext mounted) &&
+                world.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance mounted) &&
                 mounted.ContextEntity == first,
                 Is.True);
 
@@ -448,7 +448,7 @@ namespace Ludots.Tests.GAS
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
             Assert.That(
-                world.TryGet<ActiveInteractionContext>(rep, out mounted) && mounted.ContextEntity == second,
+                world.TryGet<InteractionContextInstance>(rep, out mounted) && mounted.ContextEntity == second,
                 Is.True,
                 "the latest-activated carrier must arbitrate for the domain (LIFO).");
 
@@ -460,7 +460,7 @@ namespace Ludots.Tests.GAS
             harness.ContextSystem.Update(0f);
 
             Assert.That(
-                world.TryGet<ActiveInteractionContext>(rep, out mounted) && mounted.ContextEntity == first,
+                world.TryGet<InteractionContextInstance>(rep, out mounted) && mounted.ContextEntity == first,
                 Is.True,
                 "ending the topmost context must expose the still-active lower one, matching stack pop semantics.");
         }
@@ -486,7 +486,7 @@ namespace Ludots.Tests.GAS
 
             harness.ContextSystem.Update(0f);
             harness.ContextSystem.Update(0f);
-            Assert.That(world.CountEntities(new QueryDescription().WithAll<ActiveInteractionContext>()), Is.Zero,
+            Assert.That(world.CountEntities(new QueryDescription().WithAll<InteractionContextInstance>()), Is.Zero,
                 "No mounted context for profile-less abilities.");
         }
 
@@ -511,7 +511,7 @@ namespace Ludots.Tests.GAS
             harness.Ownership.EnsureOwnership(rep, actor);
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
-            Assert.That(world.Has<ActiveInteractionContext>(rep), Is.True);
+            Assert.That(world.Has<InteractionContextInstance>(rep), Is.True);
 
             long allocated = MeasureContextUpdateAllocations(harness);
             allocated = Math.Min(allocated, MeasureContextUpdateAllocations(harness));

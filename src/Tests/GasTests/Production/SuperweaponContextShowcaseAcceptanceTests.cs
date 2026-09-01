@@ -92,7 +92,7 @@ namespace Ludots.Tests.GAS.Production
             var filters = engine.GetService(CoreServiceKeys.FilterProfileRegistry)
                 ?? throw new InvalidOperationException("FilterProfileRegistry service is missing.");
             Assert.That(
-                engine.World.TryGet<ActiveInteractionContext>(state.SolePossessedRep, out ActiveInteractionContext mountedContext),
+                engine.World.TryGet<InteractionContextInstance>(state.SolePossessedRep, out InteractionContextInstance mountedContext),
                 Is.True,
                 "the ability-owned context must be mounted on the sole possessed rep as entity interaction state.");
             Assert.That(
@@ -100,7 +100,7 @@ namespace Ludots.Tests.GAS.Production
                 Is.EqualTo(SuperweaponContextShowcaseIds.ContextProfileId));
             Assert.That(
                 mountedContext.Source,
-                Is.EqualTo(ActiveInteractionContextSource.ExecLifecycle));
+                Is.EqualTo(InteractionContextInstanceSource.ExecLifecycle));
             Assert.That(mountedContext.ContextEntity, Is.EqualTo(state.Commander));
             Assert.That(
                 store.KeyRegistry.GetName(mountedContext.ActiveCollectionKeyId),
@@ -153,7 +153,7 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(engine.World.Has<AbilityExecInstance>(state.Commander), Is.False);
             Assert.That(
-                engine.World.Has<ActiveInteractionContext>(state.SolePossessedRep),
+                engine.World.Has<InteractionContextInstance>(state.SolePossessedRep),
                 Is.False,
                 "confirming the ability must release the entity-mounted context back to the steady-state anchor.");
 

@@ -70,7 +70,7 @@ namespace Ludots.Core.Input.Interaction
 
             int filterProfileId = _steadyStateFilterProfileId;
             int collectionKeyId = _steadyStateCollectionKeyId;
-            if (_world.TryGet<ActiveInteractionContext>(localAnchorRep, out ActiveInteractionContext context))
+            if (_world.TryGet<InteractionContextInstance>(localAnchorRep, out InteractionContextInstance context))
             {
                 filterProfileId = context.FilterProfileId;
                 collectionKeyId = context.ActiveCollectionKeyId;

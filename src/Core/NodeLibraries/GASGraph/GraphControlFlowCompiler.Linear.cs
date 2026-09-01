@@ -292,6 +292,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.ActivateContext:
+                case GraphNodeOp.DeactivateContext:
+                    RequireNonEmpty(node.Context, "context", node, graphId, diagnostics);
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    break;
+
                 case GraphNodeOp.SetPanelAudience:
                     RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
                     break;
@@ -1119,6 +1129,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.SetInteractionMode:
                     instruction.Imm = RequireSymbol(node.Mode, "mode", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
+                    break;
+
+                case GraphNodeOp.ActivateContext:
+                    instruction.Imm = RequireSymbol(node.Context, "context", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = EncodeByteSymbol(node.ParentContext, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
+                    break;
+
+                case GraphNodeOp.DeactivateContext:
+                    instruction.Imm = RequireSymbol(node.Context, "context", node, symbolToIndex, symbols, graphId, diagnostics);
                     instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
                         ? ResolveValueInput(
                             node, GraphControlFlowPorts.Source, GraphValueType.Entity,

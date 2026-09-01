@@ -34,6 +34,7 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<string, int> _resolveAnimationProfileId;
         private readonly Func<AssetKind, string, int> _resolveBehaviorAssetId;
         private readonly Func<string, int> _resolveEntityCollectionKeyId;
+        private readonly Func<string, int> _resolveInteractionContextProfileId;
         private readonly Func<string, int> _resolveInstancedBatchAssetId;
         private readonly Func<int, GraphKind>? _resolveGraphProgramKind;
         private readonly PresenterCommandKindRegistry? _commandKinds;
@@ -53,6 +54,7 @@ namespace Ludots.Core.Presentation.Config
             Func<AssetKind, string, int> resolveBehaviorAssetId = null,
             Func<string, int> resolveInstancedBatchAssetId = null,
             Func<string, int> resolveEntityCollectionKeyId = null,
+            Func<string, int> resolveInteractionContextProfileId = null,
             PresenterCommandKindRegistry? commandKinds = null,
             PresenterBehaviorKindRegistry? behaviorKinds = null,
             Func<int, GraphKind>? resolveGraphProgramKind = null)
@@ -69,6 +71,7 @@ namespace Ludots.Core.Presentation.Config
             _resolveAnimationProfileId = resolveAnimationProfileId ?? (_ => 0);
             _resolveBehaviorAssetId = resolveBehaviorAssetId ?? ((_, __) => 0);
             _resolveEntityCollectionKeyId = resolveEntityCollectionKeyId ?? (_ => 0);
+            _resolveInteractionContextProfileId = resolveInteractionContextProfileId ?? (_ => 0);
             _resolveInstancedBatchAssetId = resolveInstancedBatchAssetId ?? (_ => 0);
             _resolveGraphProgramKind = resolveGraphProgramKind;
             _commandKinds = commandKinds;
@@ -1495,6 +1498,8 @@ namespace Ludots.Core.Presentation.Config
                 PresentationEventKind.CastFailed => ResolveRequired(AbilityIdRegistry.GetId(key), kind, "ability", key),
                 PresentationEventKind.EntityCollectionMemberAdded => ResolveRequired(_resolveEntityCollectionKeyId(key), kind, "entity collection", key),
                 PresentationEventKind.EntityCollectionMemberRemoved => ResolveRequired(_resolveEntityCollectionKeyId(key), kind, "entity collection", key),
+                PresentationEventKind.ContextActivated => ResolveRequired(_resolveInteractionContextProfileId(key), kind, "interaction context profile", key),
+                PresentationEventKind.ContextDeactivated => ResolveRequired(_resolveInteractionContextProfileId(key), kind, "interaction context profile", key),
                 PresentationEventKind.AbilityAimBegun => PresentationEventKeyRegistry.Register(key),
                 PresentationEventKind.AbilityAimSlotAdvanced => PresentationEventKeyRegistry.Register(key),
                 PresentationEventKind.AbilityAimUpdated => PresentationEventKeyRegistry.Register(key),

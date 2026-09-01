@@ -351,6 +351,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         StickToDirection = 473,
 
+        // ── Derived interaction context ops (#1398 S2b, constitution §8.2/§8.3). The
+        // entity-mounted context set is world state; these ops are its only derived-context
+        // writers. Scope lifecycle (presenter Create/DestroyScope) rides the presenter
+        // command pipeline; activation/deactivation publish ContextActivated/Deactivated
+        // presentation events keyed by the context profile id. ──
+        /// <summary>
+        /// Activate a derived interaction context on E[A] (A=0xFF → caster). Imm = context
+        /// profile symbol; Dst = optional parent context profile symbol (0xFF → no parent
+        /// constraint). Idempotent-failure: an already-active context or an inactive declared
+        /// parent fails fast by name.
+        /// </summary>
+        ActivateContext = 474,
+        /// <summary>
+        /// Deactivate a derived interaction context (and its descendants transitively) on
+        /// E[A] (A=0xFF → caster). Imm = context profile symbol. Fails fast when the context
+        /// is not mounted as a derived instance; the instance's presenter scope is destroyed
+        /// wholesale through the presenter command pipeline.
+        /// </summary>
+        DeactivateContext = 475,
+
     }
 
     public static class GraphNodeOpParser

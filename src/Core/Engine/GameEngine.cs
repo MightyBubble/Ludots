@@ -1400,6 +1400,20 @@ namespace Ludots.Core.Engine
                 skinnedVisualBatchBuffer,
                 presentationTimingDiagnostics,
                 presentationTargetGeneration);
+            // Interaction context profile id space registers before presenter definition
+            // loading so presenter rules resolve ContextActivated/Deactivated keys (#1398
+            // S2b). The full install (row fill + bindings/triggers reference validation)
+            // runs later in the input kernel where its graph/action catalogs exist; Register
+            // is idempotent and both passes agree on ids by construction (Default first,
+            // then config order).
+            var interactionContextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            interactionContextProfileIds.Register(InteractionContextIds.Default);
+            var interactionContextProfilesConfig = new InteractionContextProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            for (int i = 0; i < interactionContextProfilesConfig.Profiles.Count; i++)
+            {
+                interactionContextProfileIds.Register(interactionContextProfilesConfig.Profiles[i].Id);
+            }
+
             new PresenterDefinitionConfigLoader(
                 ConfigPipeline,
                 presenterDefinitions,
@@ -1426,6 +1440,7 @@ namespace Ludots.Core.Engine
                 },
                 instancedBatchAssets.GetId,
                 entityCollectionKeyRegistry.Register,
+                interactionContextProfileIds.GetId,
                 presenterCommandKinds,
                 presenterBehaviorKinds,
                 resolveGraphProgramKind: graphId =>
@@ -1576,7 +1591,6 @@ namespace Ludots.Core.Engine
             // references fail fast at startup. The engine-reserved steady-state profile (never
             // mounted; absence of the mounted component is the steady state) installs first — an
             // asset declaring the reserved id fails fast below.
-            var interactionContextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var interactionContextProfileRegistry = new InteractionContextProfileRegistry(interactionContextProfileIds);
             interactionContextProfileRegistry.Install(
                 new InteractionContextProfilesConfig
@@ -1595,13 +1609,21 @@ namespace Ludots.Core.Engine
                 filterProfileIdRegistry,
                 commandIntentProfileIds);
             interactionContextProfileRegistry.Install(
-                new InteractionContextProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
+                interactionContextProfilesConfig,
                 entityCollectionKeyRegistry,
                 filterProfileIdRegistry,
                 commandIntentProfileIds,
                 new InteractionContextProfileReferenceCatalog(
                     graphProgramRegistry,
                     inputConfigRoot.Actions.Select(action => action.Id)));
+            var interactionContextInstances = new InteractionContextInstanceRuntime(
+                World,
+                interactionContextProfileRegistry,
+                presentationEventStream,
+                presenterCommandBuffer,
+                GameSession);
+            SetService(CoreServiceKeys.InteractionContextInstances, interactionContextInstances);
+            gasGraphApi.BindContextInstances(interactionContextInstances);
             var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
                 World,
                 interactionContextProfileRegistry,
@@ -2062,6 +2084,10 @@ namespace Ludots.Core.Engine
                         ? channel.Handler
                         : GetService(CoreServiceKeys.InputHandler)),
                 SystemGroup.InputCollection);
+            // #1398 S2b: context trigger gate — the world-side active context set diff
+            // mounts/unmounts profile-declared triggers[] graphs on the context subject;
+            // simulation-side twin of the local IMC projection above (observers and all
+            // context writers included, not only local seats).
             // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,
             // DEC-15); enablement and parameters come from the active control scheme's axisMove
             // declaration (single source of truth, hot-switch aware).

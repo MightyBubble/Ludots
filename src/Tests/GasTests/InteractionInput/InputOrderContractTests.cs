@@ -1477,7 +1477,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var contextProfiles = NewSteadyStateProfiles(collectionKeys);
-            world.Add(localPlayer, new ActiveInteractionContext
+            world.Add(localPlayer, new InteractionContextInstance
             {
                 ContextEntity = actor,
                 CommandIntentProfileId = 0,

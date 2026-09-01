@@ -121,6 +121,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.DestroyPanel:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.ActivateContext:
+                        ins.Imm = ContextOpEncoding.Pack(
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
+                            ins.Dst == byte.MaxValue
+                                ? 0
+                                : ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
+                        ins.Dst = 0;
+                        break;
+                    case GraphNodeOp.DeactivateContext:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
                     case GraphNodeOp.SetPanelAudience:
                         ins.Imm = UI.PanelHosting.PanelOpEncoding.PackAudience(
                             ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
