@@ -2195,8 +2195,11 @@ namespace Ludots.Core.Engine
 
             // Phase 1: InputCollection
             RegisterSystem(sessionSystem, SystemGroup.InputCollection); // Session handles input gathering
-            RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator, clientLocalSeatInputRuntime), SystemGroup.InputCollection);
-            RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
+            // Replicated clients execute only the LocalInput group; the frozen input snapshot
+            // must refresh there per visual frame. Full simulation runs LocalInput first, so the
+            // snapshot still freezes before every InputCollection consumer.
+            RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator, clientLocalSeatInputRuntime), SystemGroup.LocalInput);
+            RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.LocalInput);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
             // Local IMC projection: mode components on possessed reps and the mounted
             // active interaction context diff into per-seat (seatId, contextId, op) commands;
