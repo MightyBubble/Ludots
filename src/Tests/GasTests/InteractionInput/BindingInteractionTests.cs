@@ -50,6 +50,117 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GapTravel_WithoutAuthoredSlop_KeepsLegacyDeadZone()
+        {
+            var (backend, handler) = Build(TapBinding("TapSelect"), DragBinding("BoxSelect"));
+
+            PressAndRelease(backend, handler, from: new Vector2(100f, 100f), to: new Vector2(107f, 100f), holdFrames: 2);
+
+            Assert.That(handler.PressedThisFrame("TapSelect"), Is.False,
+                "default Tap slop stays 6: travel 7 exceeds it (defaults unchanged without parameters)");
+            Assert.That(handler.PressedThisFrame("BoxSelect"), Is.False,
+                "default Drag threshold stays 8 with an inert fold arm: travel 7 completes nothing");
+        }
+
+        [Test]
+        public void GapTravel_WithDragSlopFoldedToTapSlop_CompletesDragNotTap()
+        {
+            var (backend, handler) = Build(
+                TapBinding("TapSelect"),
+                DragBinding("BoxSelect", ("ThresholdPixels", 8f), ("MaxTravelPixels", 6f)));
+
+            PressAndRelease(backend, handler, from: new Vector2(100f, 100f), to: new Vector2(107f, 100f), holdFrames: 2);
+
+            Assert.That(handler.PressedThisFrame("TapSelect"), Is.False,
+                "travel 7 is beyond the 6px tap slop: not a tap");
+            Assert.That(handler.PressedThisFrame("BoxSelect"), Is.True,
+                "the authored fold arm claims the (slop, threshold) interval for Drag: no gesture hangs");
+        }
+
+        [Test]
+        public void Tap_AuthoredMaxTravelPixels_WidensTheSlop()
+        {
+            var (backend, handler) = Build(TapBinding("TapSelect", ("MaxTravelPixels", 20f)));
+
+            PressAndRelease(backend, handler, from: new Vector2(100f, 100f), to: new Vector2(115f, 100f), holdFrames: 2);
+
+            Assert.That(handler.PressedThisFrame("TapSelect"), Is.True,
+                "a data-side MaxTravelPixels=20 counts travel 15 as the same position");
+        }
+
+        [Test]
+        public void Drag_AuthoredThresholdPixels_RaisesTheDeliberateFloor()
+        {
+            var (backend, handler) = Build(DragBinding("BoxSelect", ("ThresholdPixels", 100f)));
+
+            PressAndRelease(backend, handler, from: new Vector2(100f, 100f), to: new Vector2(150f, 100f), holdFrames: 2);
+            Assert.That(handler.PressedThisFrame("BoxSelect"), Is.False,
+                "without an authored slop the fold arm defaults to the threshold: travel 50 completes nothing");
+
+            PressAndRelease(backend, handler, from: new Vector2(100f, 100f), to: new Vector2(220f, 100f), holdFrames: 2);
+            Assert.That(handler.PressedThisFrame("BoxSelect"), Is.True,
+                "travel 120 clears the authored 100px threshold");
+        }
+
+        [Test]
+        public void Drag_AuthoredSlopFold_CompletesBelowTheDeliberateThreshold()
+        {
+            var (backend, handler) = Build(DragBinding("BoxSelect", ("ThresholdPixels", 100f), ("MaxTravelPixels", 6f)));
+
+            PressAndRelease(backend, handler, from: new Vector2(100f, 100f), to: new Vector2(150f, 100f), holdFrames: 2);
+            Assert.That(handler.PressedThisFrame("BoxSelect"), Is.True,
+                "the authored fold arm completes a beyond-slop release even under the deliberate threshold");
+        }
+
+        [Test]
+        public void TapSlopOverlappingDragCompletion_FailsClosedAtCompile()
+        {
+            TestInputBackend backend = new TestInputBackend();
+            var config = new InputConfigRoot
+            {
+                Actions = { new InputActionDef { Id = "TapSelect" }, new InputActionDef { Id = "BoxSelect" } },
+                Contexts =
+                {
+                    new InputContextDef
+                    {
+                        Id = "Gameplay",
+                        Bindings =
+                        {
+                            TapBinding("TapSelect", ("MaxTravelPixels", 20f)),
+                            DragBinding("BoxSelect"),
+                        },
+                    },
+                },
+            };
+
+            Assert.That(
+                () => new PlayerInputHandler(backend, config),
+                Throws.InvalidOperationException.With.Message.Contains("LUDOTS_INPUT_INTERACTION_TRAVEL_OVERLAP"));
+        }
+
+        [Test]
+        public void NegativeTravelParameter_FailsClosedAtCompile()
+        {
+            TestInputBackend backend = new TestInputBackend();
+            var config = new InputConfigRoot
+            {
+                Actions = { new InputActionDef { Id = "TapSelect" } },
+                Contexts =
+                {
+                    new InputContextDef
+                    {
+                        Id = "Gameplay",
+                        Bindings = { TapBinding("TapSelect", ("MaxTravelPixels", -1f)) },
+                    },
+                },
+            };
+
+            Assert.That(
+                () => new PlayerInputHandler(backend, config),
+                Throws.InvalidOperationException.With.Message.Contains("LUDOTS_INPUT_INTERACTION_INVALID_PARAMETER"));
+        }
+
+        [Test]
         public void ZeroTravelPress_CompletesTapNotDrag()
         {
             var (backend, handler) = Build(TapBinding("TapSelect"), DragBinding("BoxSelect"));
@@ -271,19 +382,52 @@ namespace Ludots.Tests.GAS
                 Throws.InvalidOperationException.With.Message.Contains("LUDOTS_INPUT_INTERACTION_UNSUPPORTED_SOURCE"));
         }
 
-        private static InputBindingDef TapBinding(string actionId) => new()
+        private static InputBindingDef TapBinding(string actionId, params (string Name, float Value)[] parameters) => new()
         {
             ActionId = actionId,
             Path = "<Mouse>/leftButton",
-            Interactions = { new InputModifierDef { Type = "Tap" } },
+            Interactions = { new InputModifierDef { Type = "Tap", Parameters = ToParameters(parameters) } },
         };
 
-        private static InputBindingDef DragBinding(string actionId) => new()
+        private static InputBindingDef DragBinding(string actionId, params (string Name, float Value)[] parameters) => new()
         {
             ActionId = actionId,
             Path = "<Mouse>/leftButton",
-            Interactions = { new InputModifierDef { Type = "Drag" } },
+            Interactions = { new InputModifierDef { Type = "Drag", Parameters = ToParameters(parameters) } },
         };
+
+        private static List<InputParameterDef> ToParameters((string Name, float Value)[] parameters)
+        {
+            var list = new List<InputParameterDef>(parameters.Length);
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                list.Add(new InputParameterDef { Name = parameters[i].Name, Value = parameters[i].Value });
+            }
+
+            return list;
+        }
+
+        /// <summary>Press at <paramref name="from"/>, move to <paramref name="to"/>, release; asserts nothing.</summary>
+        private static void PressAndRelease(
+            TestInputBackend backend,
+            PlayerInputHandler handler,
+            Vector2 from,
+            Vector2 to,
+            int holdFrames)
+        {
+            backend.MousePosition = from;
+            backend.Buttons["<Mouse>/leftButton"] = true;
+            handler.Update(FrameSeconds);
+            for (int i = 1; i < holdFrames; i++)
+            {
+                handler.Update(FrameSeconds);
+            }
+
+            backend.MousePosition = to;
+            handler.Update(FrameSeconds);
+            backend.Buttons["<Mouse>/leftButton"] = false;
+            handler.Update(FrameSeconds);
+        }
 
         private static void PressAndRelease(TestInputBackend backend, PlayerInputHandler handler, Vector2 at, int holdFrames)
         {

@@ -18,7 +18,13 @@
           "actionId": "CaseE.BoxSelect",
           "path": "<Mouse>/leftButton",
           "interactions": [
-            { "type": "Drag" }
+            {
+              "type": "Drag",
+              "parameters": [
+                { "name": "ThresholdPixels", "value": 8 },
+                { "name": "MaxTravelPixels", "value": 6 }
+              ]
+            }
           ]
         },
         {
