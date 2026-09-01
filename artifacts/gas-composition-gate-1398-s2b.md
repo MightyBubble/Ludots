@@ -28,8 +28,8 @@ RFC #1398 v3 §2 引擎缺口 1/2/3/4/9 的 S2b 切片：
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| ActivateContext / DeactivateContext | 0 | GraphNodeOp 枚举 + handler + GasGraphRuntimeApi 内核（DerivedInteractionContextRuntime） |
-| 衍生 context 实体状态 | 0 | 新稀疏组件 `ActiveDerivedInteractionContexts`（纯数据，op 写入） |
+| ActivateContext / DeactivateContext | 0 | GraphNodeOp 枚举 + handler + GasGraphRuntimeApi 内核（InteractionContextInstanceRuntime） |
+| context 实例状态 | 0 | 组件改名 `InteractionContextInstance` + 并存集合 `InteractionContextInstances`（纯数据，op 写入；宪法命名令落地） |
 | context 激活/结束事件 | 0 | PresentationEventKind 两枚举值 + 发布接线 |
 | triggers[] 挂/卸 | 1 | 新 diff 系统（InteractionContextTriggerGateSystem），复用 TriggerGraphMounting/TriggerManager |
 | 出生挂 Instance | 1 | RuntimeEntitySpawnSystem / MapLoader spawn 钩子（复用 AbilityExecInteractionContextSystem 同款 TryCreateActiveContext） |

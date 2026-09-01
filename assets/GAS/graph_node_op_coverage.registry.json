@@ -3596,7 +3596,8 @@
     {
       "op": "DispatchCollectionEvent",
       "authorableKinds": [
-        "TriggerGraph"
+        "TriggerGraph",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_DispatchCollectionEvent",
       "status": "covered",
