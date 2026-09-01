@@ -153,7 +153,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         {
             _intent[i] = (byte)tree.LastScriptReturns[i];
             if (_intent[i] == 2) _flash[i] = 10;
-            if (tree.StatusOf(i) == BehaviorTreeStatus.Running) yieldingAgents++;
+            if (tree.Statuses[i] == BehaviorTreeStatus.Running) yieldingAgents++;
         }
 
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
@@ -161,8 +161,8 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         Metrics.ThinkWaves++;
         Metrics.Detail =
             yieldingAgents > 0
-                ? $"BT L2 tree leaf yielding across think waves ({yieldingAgents} agents) steps={stats.Steps} last={Metrics.LastThinkMs:F3}ms"
-                : $"BT L2 tree steps={stats.Steps} last={Metrics.LastThinkMs:F3}ms";
+                ? $"BT L2 tree leaf yielding across think waves ({yieldingAgents} agents) steps={stats.ScriptSteps} last={Metrics.LastThinkMs:F3}ms"
+                : $"BT L2 tree steps={stats.ScriptSteps} last={Metrics.LastThinkMs:F3}ms";
     }
 
     /// <summary>Glue feed: distance (cm) into I[0] for Condition leaf Scripts only.</summary>
