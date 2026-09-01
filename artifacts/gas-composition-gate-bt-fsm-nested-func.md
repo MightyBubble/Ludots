@@ -47,7 +47,7 @@ N/A
 - [x] 未新建与 spawn 平行的物化管线
 - [x] 未把 placement 校验塞进 lifecycle op
 - [x] 未添加「说不清的」默认 fallback
-- [x] 未新增 GraphKind（BehaviorTree/Fsm Kind 另刀，见设计文）
+- [x] 未新增 GraphKind（BT/FSM 不是 Kind）
 
 ### 8. Next variant test
 
