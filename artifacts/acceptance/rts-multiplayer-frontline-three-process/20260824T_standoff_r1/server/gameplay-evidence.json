@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 10,
+  "status": "passed",
+  "role": "authoritativeServer",
+  "failure": null,
+  "startedAtUtc": "2026-08-24T12:43:16.4878403Z",
+  "completedAtUtc": "2026-08-24T12:44:37.1372658Z",
+  "planFingerprint": "a85c40b5f9368bb16069af6231e60161b987b89c77bee7e474f6a7659d064507",
+  "contentFingerprint": "b7dbffe3cd58da1a9fc2e8b005d6b06ad503366580f515cd907954584a47a440",
+  "sessionEpoch": 12411252158179956499,
+  "playerId": 0,
+  "seatSlot": -1,
+  "sideIndex": -1,
+  "faultCount": 0,
+  "seats": [
+    {
+      "seatSlot": 0,
+      "playerId": 1,
+      "connectionState": "Connected",
+      "readyState": "Ready"
+    },
+    {
+      "seatSlot": 1,
+      "playerId": 2,
+      "connectionState": "Connected",
+      "readyState": "Ready"
+    }
+  ],
+  "steps": [
+    {
+      "name": "AuthoritativeMatch",
+      "status": "passed",
+      "startedInputRevision": 0,
+      "completedInputRevision": 0,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 2172,
+      "startedAtUtc": "2026-08-24T12:43:16.4894420Z",
+      "completedAtUtc": "2026-08-24T12:44:37.1369997Z",
+      "detail": "The authoritative world reached the configured winning core destruction with both seats connected."
+    }
+  ],
+  "commands": [],
+  "gameplay": {
+    "initialCrystals": -1,
+    "harvestedCrystals": -1,
+    "postTrainingCrystals": -1,
+    "initialInfantryCount": -1,
+    "trainedInfantryCount": -1,
+    "firstTrainedInfantrySpawnCommittedTickBySide": [
+      1367,
+      1367
+    ],
+    "secondTrainedInfantrySpawnCommittedTickBySide": [
+      1608,
+      1608
+    ],
+    "firstTrainedInfantryObservedCommittedTick": -1,
+    "firstTrainedInfantryObservedCount": -1,
+    "secondTrainedInfantryObservedCommittedTick": -1,
+    "secondTrainedInfantryObservedCount": -1,
+    "harvesterHandle": "",
+    "harvesterStartPosition": null,
+    "harvesterEndPosition": null,
+    "selectedInfantryHandles": [],
+    "moveStartPositions": [],
+    "moveEndPositions": [],
+    "meetingBarrierCommittedTick": -1,
+    "meetingPoint": null,
+    "siegePoint": null,
+    "initialVisibleEnemyInfantryCount": -1,
+    "initialVisibleEnemyCoreCount": -1,
+    "enemyInfantryEnteredVision": false,
+    "enemyCoreEnteredVision": false,
+    "attackTargetHandle": "",
+    "attackTargetPositionBefore": null,
+    "attackTargetHealthBefore": -1,
+    "attackTargetHealthAfter": -1,
+    "defeatedCoreLastPosition": null,
+    "completedCameraTarget": null,
+    "completedLosingCoreCount": -1,
+    "completedWinnerInfantryNearDefeatedCoreCount": -1,
+    "completedWinnerInfantryNearDefeatedCorePositions": [],
+    "completedPresentationFrameId": -1,
+    "observedCoreHealthBySide": [
+      1000,
+      0
+    ],
+    "observedInfantryCountBySide": [
+      3,
+      4
+    ],
+    "matchPhase": "Completed",
+    "outcome": "SideOneVictory",
+    "outcomeSource": "authoritative-frontline-runtime-snapshot",
+    "winningSideIndex": 0,
+    "committedTick": 2172,
+    "committedTickSource": "authoritative-frontline-runtime-snapshot"
+  },
+  "networkFaultInjection": {
+    "role": "authoritativeServer",
+    "configuration": {
+      "transportIdentity": "LiteNetLib/2.1.4",
+      "profileId": "normal",
+      "seed": 70901,
+      "roundTripLatencyMilliseconds": 0,
+      "jitterMilliseconds": 0,
+      "packetLossPermille": 0,
+      "stateReorderPermille": 0,
+      "isEnabled": false
+    },
+    "delayedInboundPacketCount": 0,
+    "droppedInboundPacketCount": 0,
+    "reorderedInboundStateDatagramCount": 0
+  },
+  "runtime": {
+    "capturedAtUtc": "2026-08-24T12:44:37.1372536Z",
+    "stage": "AuthoritativeMatch",
+    "substep": 0,
+    "pendingCommandAction": "",
+    "pendingCommandSequence": 0,
+    "selectedActors": [],
+    "hasBattlePoints": false,
+    "meetingPoint": null,
+    "siegePoint": null,
+    "defeatedCorePoint": null,
+    "visibleEnemyCoreCount": -1,
+    "committedTick": 2172,
+    "matchPhase": "Completed",
+    "outcome": "SideOneVictory",
+    "advancingPresentation": null
+  }
+}

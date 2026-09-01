@@ -71,6 +71,7 @@ namespace Ludots.Platform.Abstractions
         public Quaternion Rotation;
         public Vector3 Scale;
         public Vector4 Color;
+        public int OwnerStableId;
         public int StableId;
         public int MaterialId;
         public int TemplateId;
@@ -91,6 +92,7 @@ namespace Ludots.Platform.Abstractions
                    Rotation.Equals(other.Rotation) &&
                    Scale.Equals(other.Scale) &&
                    Color.Equals(other.Color) &&
+                   OwnerStableId == other.OwnerStableId &&
                    StableId == other.StableId &&
                    MaterialId == other.MaterialId &&
                    TemplateId == other.TemplateId &&
@@ -118,6 +120,7 @@ namespace Ludots.Platform.Abstractions
             hash.Add(Rotation);
             hash.Add(Scale);
             hash.Add(Color);
+            hash.Add(OwnerStableId);
             hash.Add(StableId);
             hash.Add(MaterialId);
             hash.Add(TemplateId);

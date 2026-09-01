@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "packet_id": "rts-multiplayer-frontline-three-process-audit-handoff-ready",
+  "hook": "handoff.ready",
+  "status": "ready",
+  "producer": {
+    "skill": "ludots-cloud-handoff",
+    "agent": "Kimi"
+  },
+  "subject": {
+    "kind": "audit",
+    "key": "rts-multiplayer-frontline-three-process-audit",
+    "title": "三进程 RTS 多人前线验收收尾链独立审计（issue-709，final8 全绿）",
+    "branch": "codex/issue-709-rts-multiplayer",
+    "head": "ecaaa8e31a23e60f11650437c4438a2fa7db8694"
+  },
+  "created_at_utc": "2026-08-24T09:50:00Z",
+  "consumes_packets": [],
+  "execution": {
+    "stage": "audit_handoff_ready",
+    "attempt": 1,
+    "max_attempts": 1,
+    "last_progress_at_utc": "2026-08-24T09:50:00Z",
+    "observed_progress": "final8 acceptance passed (4 milestones x 2 clients + framebuffer pixel evidence); PresentationTests 33F/722P vs baseline 35F/720P; GasTests 57F/2924P vs merge-base 74F/2712P, zero new failures, 2 pre-existing regressions flagged for triage."
+  },
+  "artifacts": [
+    {
+      "role": "handoff_packet",
+      "path": "artifacts/handoffs/rts-multiplayer-frontline-three-process-audit/handoff.md",
+      "media_type": "text/markdown",
+      "description": "审计需求正本：范围 A-E、精确路径、重跑指令、next actions。"
+    },
+    {
+      "role": "acceptance_evidence",
+      "path": "artifacts/acceptance/rts-multiplayer-frontline-three-process/20260824T_kimi_final8/run-manifest.json",
+      "media_type": "application/json",
+      "description": "final8 全绿运行清单（status=passed）。"
+    },
+    {
+      "role": "battle_report",
+      "path": "artifacts/acceptance/rts-multiplayer-frontline-three-process/battle-report.md",
+      "media_type": "text/markdown"
+    },
+    {
+      "role": "trace",
+      "path": "artifacts/acceptance/rts-multiplayer-frontline-three-process/trace.jsonl",
+      "media_type": "application/jsonl"
+    },
+    {
+      "role": "test_path",
+      "path": "artifacts/acceptance/rts-multiplayer-frontline-three-process/path.mmd",
+      "media_type": "text/plain"
+    },
+    {
+      "role": "runtime_fix_commit",
+      "path": "src/Core/Presentation/Systems/PresenterEntityTransformSyncSystem.cs",
+      "media_type": "text/x-csharp",
+      "description": "842dae1577 唯一 src/ 改动：InheritParent 子级变换完整传播。"
+    }
+  ],
+  "next_actions": [
+    "审计方裁决 842dae1577 运行时修复正确性（handoff.md A 节五问）",
+    "审计方重跑验收确认可复现全绿（handoff.md E.2）",
+    "审计方对规则放松逐项判定（B 节）与 GasTests 两回归归属确认（D 节）"
+  ],
+  "blockers": [
+    "分支推送 / wip 提交链整理 / issue #1074 #1075 关单：待仓库 owner 决策，非审计方职责"
+  ]
+}

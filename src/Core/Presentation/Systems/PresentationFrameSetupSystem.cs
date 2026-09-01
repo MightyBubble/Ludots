@@ -26,6 +26,7 @@ namespace Ludots.Core.Presentation.Systems
     {
         private readonly World _world;
         private readonly RealtimePacemaker? _pacemaker;
+        private readonly Func<IPresentationInterpolationSource?>? _externalInterpolationSource;
         private Entity _stateEntity;
         private bool _initialized;
         
@@ -37,10 +38,14 @@ namespace Ludots.Core.Presentation.Systems
         /// </summary>
         public bool InterpolationEnabled { get; set; } = true;
         
-        public PresentationFrameSetupSystem(World world, IPacemaker pacemaker)
+        public PresentationFrameSetupSystem(
+            World world,
+            IPacemaker pacemaker,
+            Func<IPresentationInterpolationSource?>? externalInterpolationSource = null)
         {
             _world = world;
             _pacemaker = pacemaker as RealtimePacemaker;
+            _externalInterpolationSource = externalInterpolationSource;
         }
         
         public void Initialize()
@@ -61,9 +66,15 @@ namespace Ludots.Core.Presentation.Systems
             
             // Calculate interpolation alpha
             float alpha = 1f;
-            if (InterpolationEnabled && _pacemaker != null)
+            if (InterpolationEnabled)
             {
-                alpha = _pacemaker.InterpolationAlpha;
+                IPresentationInterpolationSource? external = _externalInterpolationSource?.Invoke();
+                alpha = external?.InterpolationAlpha ?? _pacemaker?.InterpolationAlpha ?? 1f;
+                if (!float.IsFinite(alpha) || alpha < 0f || alpha > 1f)
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation interpolation source returned invalid alpha {alpha}.");
+                }
             }
             
             // Update the singleton state

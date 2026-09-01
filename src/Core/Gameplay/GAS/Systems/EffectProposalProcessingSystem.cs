@@ -1876,12 +1876,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _instantFanOutCommands.Clear();
         }
 
+
         public override void Dispose()
         {
             _instantPhaseTransaction.Dispose();
             base.Dispose();
         }
-
         private EffectConfigParams BuildMergedConfig(in EffectTemplateData tpl, in EffectProposal proposal)
         {
             if (proposal.HasCallerParams)

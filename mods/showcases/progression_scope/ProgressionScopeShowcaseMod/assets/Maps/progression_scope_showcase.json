@@ -31,5 +31,8 @@
   ],
   "Teams": [
     { "TeamId": 1, "RepresentativeInstanceId": "progression-scope-city-host" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "progression-scope-city-host" }
   ]
 }

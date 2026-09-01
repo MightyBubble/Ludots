@@ -68,6 +68,7 @@ Resolver 由 `CoreInputMod.LocalOrderSourceHelper` 注入；mapping 声明了 `a
 {
   "groupMoveTargetLayout": {
     "mode": "Grid",
+    "assignment": "PreserveRelative",
     "spacingCm": 140,
     "orderTypeKeys": [ "moveTo" ]
   }
@@ -75,7 +76,12 @@ Resolver 由 `CoreInputMod.LocalOrderSourceHelper` 注入；mapping 声明了 `a
 ```
 
 - `mode: Grid` 时 `orderTypeKeys` 必填且非空；Core 不得硬编码具体 order type key
-- 混合 actor 路由提交时，仅对命中 `orderTypeKeys` 的子集应用 formation
+- `mode: Grid` 时 `assignment` 必须显式选择 `ActorOrder` 或 `PreserveRelative`，不提供默认回退
+- `ActorOrder` 按批次中的 actor 顺序分配槽位，供明确依赖既有顺序的 Mod 使用
+- `PreserveRelative` 以目标点相对群体中心的移动方向为前轴，先保持前后顺序，再保持左右顺序；相同投影按原始序号稳定决胜
+- 混合 actor 路由提交时，仅对实际 order type 命中 `orderTypeKeys` 且携带单点世界坐标的子集应用布局
+- command source 展开为多个成员时，按 source 分配槽位，同一 source 的所有成员共享目标
+- `PreserveRelative` 缺 actor 世界坐标或目标点与群体中心重合时，整批返回验证失败；不得回退到 `ActorOrder` 或提交部分订单
 
 ## 4 Order：`instantComplete` + `persistentStoredTarget`
 

@@ -1,0 +1,27 @@
+{
+    "schemaVersion":  1,
+    "acceptanceScope":  "three-process-session-establishment",
+    "status":  "failed",
+    "startedAtUtc":  "2026-07-24T13:06:37.0258518Z",
+    "completedAtUtc":  "2026-07-24T13:09:48.2012347Z",
+    "profilePath":  "C:\\001_AI\\LudotsProd_issue709\\scripts\\acceptance\\rts-multiplayer-frontline-three-process.profile.json",
+    "artifactDirectory":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260724T130636959Z",
+    "host":  "127.0.0.1",
+    "port":  27777,
+    "planFingerprint":  null,
+    "orderedModIds":  [
+
+                      ],
+    "sourceLaunchGraph":  null,
+    "roleArtifacts":  [
+
+                      ],
+    "processes":  [
+
+                  ],
+    "clientCredentials":  [
+
+                          ],
+    "failure":  "Process \u0027build-networked-mod-plan\u0027 failed with exit code 1. See C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260724T130636959Z\\logs\\build-mods.stderr.log.",
+    "cleanup":  "attempted"
+}

@@ -59,7 +59,6 @@ public partial class World
         {
             throw new ArgumentNullException(nameof(handler));
         }
-
         lock (_entityDestroyedHandlersWriteLock)
         {
             EntityDestroyedHandler[] current = Volatile.Read(ref _entityDestroyedHandlers);

@@ -1,0 +1,767 @@
+{
+  "schemaVersion": 7,
+  "status": "passed",
+  "role": "replicatedClient",
+  "failure": null,
+  "startedAtUtc": "2026-07-26T10:26:19.8249020Z",
+  "completedAtUtc": "2026-07-26T10:28:26.4062604Z",
+  "planFingerprint": "052c4fd97d01835f9f322c361fa7c6b852d8be14eec7ffbe999850dd27920315",
+  "contentFingerprint": "a504136592013758f69e55b45bd7a19ecccc5b8ae70ea69626bf69058cbeed85",
+  "sessionEpoch": 3168834140939607319,
+  "playerId": 1,
+  "seatSlot": 0,
+  "sideIndex": 0,
+  "faultCount": 0,
+  "seats": [
+    {
+      "seatSlot": 0,
+      "playerId": 1,
+      "connectionState": "Connected",
+      "readyState": "Unready"
+    },
+    {
+      "seatSlot": 1,
+      "playerId": 2,
+      "connectionState": "Connected",
+      "readyState": "Unready"
+    }
+  ],
+  "steps": [
+    {
+      "name": "Connecting",
+      "status": "passed",
+      "startedInputRevision": 0,
+      "completedInputRevision": 25,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-26T10:26:19.8284270Z",
+      "completedAtUtc": "2026-07-26T10:26:24.5517035Z",
+      "detail": "Full snapshot, local player binding, and a clickable opening crystal field are ready."
+    },
+    {
+      "name": "Ready",
+      "status": "passed",
+      "startedInputRevision": 25,
+      "completedInputRevision": 109,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 2,
+      "startedAtUtc": "2026-07-26T10:26:24.5540346Z",
+      "completedAtUtc": "2026-07-26T10:26:28.0513366Z",
+      "detail": "Both commanders readied through input and the match reached InProgress."
+    },
+    {
+      "name": "Gathering",
+      "status": "passed",
+      "startedInputRevision": 109,
+      "completedInputRevision": 27815,
+      "startedCommittedTick": 2,
+      "completedCommittedTick": 1889,
+      "startedAtUtc": "2026-07-26T10:26:28.0513965Z",
+      "completedAtUtc": "2026-07-26T10:27:30.9373708Z",
+      "detail": "A selected harvester completed the configured cargo runs and returned the required crystals to the core."
+    },
+    {
+      "name": "Training",
+      "status": "passed",
+      "startedInputRevision": 27815,
+      "completedInputRevision": 28264,
+      "startedCommittedTick": 1889,
+      "completedCommittedTick": 2375,
+      "startedAtUtc": "2026-07-26T10:27:30.9374009Z",
+      "completedAtUtc": "2026-07-26T10:27:47.1840199Z",
+      "detail": "The selected core completed one immediate and one queued training order with exact replicated costs and units."
+    },
+    {
+      "name": "Advancing",
+      "status": "passed",
+      "startedInputRevision": 28264,
+      "completedInputRevision": 31627,
+      "startedCommittedTick": 2375,
+      "completedCommittedTick": 2672,
+      "startedAtUtc": "2026-07-26T10:27:47.1840595Z",
+      "completedAtUtc": "2026-07-26T10:27:57.3016844Z",
+      "detail": "Selected infantry moved to a meeting point derived from the two public crystal fields."
+    },
+    {
+      "name": "Engaging",
+      "status": "passed",
+      "startedInputRevision": 31627,
+      "completedInputRevision": 35769,
+      "startedCommittedTick": 2672,
+      "completedCommittedTick": 3053,
+      "startedAtUtc": "2026-07-26T10:27:57.3018538Z",
+      "completedAtUtc": "2026-07-26T10:28:09.7494834Z",
+      "detail": "The northern commander revealed the enemy core, attacked it, and reduced its health."
+    },
+    {
+      "name": "WaitingForOutcome",
+      "status": "passed",
+      "startedInputRevision": 35769,
+      "completedInputRevision": 42865,
+      "startedCommittedTick": 3053,
+      "completedCommittedTick": 3549,
+      "startedAtUtc": "2026-07-26T10:28:09.7495184Z",
+      "completedAtUtc": "2026-07-26T10:28:26.4053894Z",
+      "detail": "Both clients framed the defeated core position after its mirror disappeared, with winning infantry still present."
+    }
+  ],
+  "commands": [
+    {
+      "action": "Gather",
+      "clientBatchSequence": 1,
+      "actorCount": 1,
+      "admissionStage": "EntityIntake",
+      "admissionResult": "Activated",
+      "actorHandles": [
+        "2:1"
+      ],
+      "admissionHistory": [
+        {
+          "stage": "NetworkIntake",
+          "result": "NetworkScheduled",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 123,
+          "observedCommittedTick": 8,
+          "authoritativeCommittedTick": 313
+        },
+        {
+          "stage": "GlobalIntake",
+          "result": "Queued",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 123,
+          "observedCommittedTick": 8,
+          "authoritativeCommittedTick": 313
+        },
+        {
+          "stage": "EntityIntake",
+          "result": "Activated",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 128,
+          "observedCommittedTick": 8,
+          "authoritativeCommittedTick": 314
+        }
+      ],
+      "actorAdmissions": [
+        {
+          "batchIndex": 0,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        }
+      ]
+    },
+    {
+      "action": "Gather",
+      "clientBatchSequence": 2,
+      "actorCount": 1,
+      "admissionStage": "EntityIntake",
+      "admissionResult": "Activated",
+      "actorHandles": [
+        "2:1"
+      ],
+      "admissionHistory": [
+        {
+          "stage": "NetworkIntake",
+          "result": "NetworkScheduled",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 5935,
+          "observedCommittedTick": 413,
+          "authoritativeCommittedTick": 718
+        },
+        {
+          "stage": "GlobalIntake",
+          "result": "Queued",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 5943,
+          "observedCommittedTick": 413,
+          "authoritativeCommittedTick": 718
+        },
+        {
+          "stage": "EntityIntake",
+          "result": "Activated",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 5943,
+          "observedCommittedTick": 413,
+          "authoritativeCommittedTick": 719
+        }
+      ],
+      "actorAdmissions": [
+        {
+          "batchIndex": 0,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        }
+      ]
+    },
+    {
+      "action": "Gather",
+      "clientBatchSequence": 3,
+      "actorCount": 1,
+      "admissionStage": "EntityIntake",
+      "admissionResult": "Activated",
+      "actorHandles": [
+        "2:1"
+      ],
+      "admissionHistory": [
+        {
+          "stage": "NetworkIntake",
+          "result": "NetworkScheduled",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 14702,
+          "observedCommittedTick": 905,
+          "authoritativeCommittedTick": 1210
+        },
+        {
+          "stage": "GlobalIntake",
+          "result": "Queued",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 14702,
+          "observedCommittedTick": 905,
+          "authoritativeCommittedTick": 1210
+        },
+        {
+          "stage": "EntityIntake",
+          "result": "Activated",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 14709,
+          "observedCommittedTick": 905,
+          "authoritativeCommittedTick": 1211
+        }
+      ],
+      "actorAdmissions": [
+        {
+          "batchIndex": 0,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        }
+      ]
+    },
+    {
+      "action": "Gather",
+      "clientBatchSequence": 4,
+      "actorCount": 1,
+      "admissionStage": "EntityIntake",
+      "admissionResult": "Activated",
+      "actorHandles": [
+        "2:1"
+      ],
+      "admissionHistory": [
+        {
+          "stage": "NetworkIntake",
+          "result": "NetworkScheduled",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 22417,
+          "observedCommittedTick": 1397,
+          "authoritativeCommittedTick": 1702
+        },
+        {
+          "stage": "GlobalIntake",
+          "result": "Queued",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 22417,
+          "observedCommittedTick": 1397,
+          "authoritativeCommittedTick": 1702
+        },
+        {
+          "stage": "EntityIntake",
+          "result": "Activated",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 22426,
+          "observedCommittedTick": 1397,
+          "authoritativeCommittedTick": 1703
+        }
+      ],
+      "actorAdmissions": [
+        {
+          "batchIndex": 0,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        }
+      ]
+    },
+    {
+      "action": "TrainInfantry",
+      "clientBatchSequence": 5,
+      "actorCount": 1,
+      "admissionStage": "EntityIntake",
+      "admissionResult": "Activated",
+      "actorHandles": [
+        "0:1"
+      ],
+      "admissionHistory": [
+        {
+          "stage": "NetworkIntake",
+          "result": "NetworkScheduled",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 27820,
+          "observedCommittedTick": 1889,
+          "authoritativeCommittedTick": 2195
+        },
+        {
+          "stage": "GlobalIntake",
+          "result": "Queued",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 27821,
+          "observedCommittedTick": 1889,
+          "authoritativeCommittedTick": 2195
+        },
+        {
+          "stage": "EntityIntake",
+          "result": "Activated",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 27822,
+          "observedCommittedTick": 1892,
+          "authoritativeCommittedTick": 2196
+        }
+      ],
+      "actorAdmissions": [
+        {
+          "batchIndex": 0,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        }
+      ]
+    },
+    {
+      "action": "QueueTrainInfantry",
+      "clientBatchSequence": 6,
+      "actorCount": 1,
+      "admissionStage": "EntityIntake",
+      "admissionResult": "Activated",
+      "actorHandles": [
+        "0:1"
+      ],
+      "admissionHistory": [
+        {
+          "stage": "NetworkIntake",
+          "result": "NetworkScheduled",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 27824,
+          "observedCommittedTick": 1895,
+          "authoritativeCommittedTick": 2200
+        },
+        {
+          "stage": "GlobalIntake",
+          "result": "Queued",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 27826,
+          "observedCommittedTick": 1898,
+          "authoritativeCommittedTick": 2200
+        },
+        {
+          "stage": "EntityIntake",
+          "result": "Queued",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 27826,
+          "observedCommittedTick": 1898,
+          "authoritativeCommittedTick": 2201
+        },
+        {
+          "stage": "EntityIntake",
+          "result": "Activated",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 28045,
+          "observedCommittedTick": 2132,
+          "authoritativeCommittedTick": 2437
+        }
+      ],
+      "actorAdmissions": [
+        {
+          "batchIndex": 0,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        }
+      ]
+    },
+    {
+      "action": "MoveToMeeting",
+      "clientBatchSequence": 7,
+      "actorCount": 4,
+      "admissionStage": "EntityIntake",
+      "admissionResult": "Activated",
+      "actorHandles": [
+        "6:1",
+        "7:1",
+        "14:1",
+        "16:1"
+      ],
+      "admissionHistory": [
+        {
+          "stage": "NetworkIntake",
+          "result": "NetworkScheduled",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 28278,
+          "observedCommittedTick": 2384,
+          "authoritativeCommittedTick": 2689
+        },
+        {
+          "stage": "GlobalIntake",
+          "result": "Queued",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 28278,
+          "observedCommittedTick": 2384,
+          "authoritativeCommittedTick": 2689
+        },
+        {
+          "stage": "EntityIntake",
+          "result": "Activated",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 28298,
+          "observedCommittedTick": 2384,
+          "authoritativeCommittedTick": 2690
+        }
+      ],
+      "actorAdmissions": [
+        {
+          "batchIndex": 0,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        },
+        {
+          "batchIndex": 1,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        },
+        {
+          "batchIndex": 2,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        },
+        {
+          "batchIndex": 3,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        }
+      ]
+    },
+    {
+      "action": "MoveToSiege",
+      "clientBatchSequence": 8,
+      "actorCount": 3,
+      "admissionStage": "EntityIntake",
+      "admissionResult": "Activated",
+      "actorHandles": [
+        "7:1",
+        "14:1",
+        "16:1"
+      ],
+      "admissionHistory": [
+        {
+          "stage": "NetworkIntake",
+          "result": "NetworkScheduled",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 32291,
+          "observedCommittedTick": 2738,
+          "authoritativeCommittedTick": 3044
+        },
+        {
+          "stage": "GlobalIntake",
+          "result": "Queued",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 32298,
+          "observedCommittedTick": 2741,
+          "authoritativeCommittedTick": 3044
+        },
+        {
+          "stage": "EntityIntake",
+          "result": "Activated",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 32298,
+          "observedCommittedTick": 2741,
+          "authoritativeCommittedTick": 3045
+        }
+      ],
+      "actorAdmissions": [
+        {
+          "batchIndex": 0,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        },
+        {
+          "batchIndex": 1,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        },
+        {
+          "batchIndex": 2,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        }
+      ]
+    },
+    {
+      "action": "AttackEnemyCore",
+      "clientBatchSequence": 9,
+      "actorCount": 3,
+      "admissionStage": "EntityIntake",
+      "admissionResult": "Activated",
+      "actorHandles": [
+        "7:1",
+        "14:1",
+        "16:1"
+      ],
+      "admissionHistory": [
+        {
+          "stage": "NetworkIntake",
+          "result": "NetworkScheduled",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 34410,
+          "observedCommittedTick": 2939,
+          "authoritativeCommittedTick": 3244
+        },
+        {
+          "stage": "GlobalIntake",
+          "result": "Queued",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 34410,
+          "observedCommittedTick": 2939,
+          "authoritativeCommittedTick": 3244
+        },
+        {
+          "stage": "EntityIntake",
+          "result": "Activated",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 34419,
+          "observedCommittedTick": 2939,
+          "authoritativeCommittedTick": 3245
+        }
+      ],
+      "actorAdmissions": [
+        {
+          "batchIndex": 0,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        },
+        {
+          "batchIndex": 1,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        },
+        {
+          "batchIndex": 2,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        }
+      ]
+    }
+  ],
+  "gameplay": {
+    "initialCrystals": 40,
+    "harvestedCrystals": 120,
+    "postTrainingCrystals": 0,
+    "initialInfantryCount": 2,
+    "trainedInfantryCount": 4,
+    "firstTrainedInfantrySpawnCommittedTickBySide": [
+      -1,
+      -1
+    ],
+    "secondTrainedInfantrySpawnCommittedTickBySide": [
+      -1,
+      -1
+    ],
+    "firstTrainedInfantryObservedCommittedTick": 2436,
+    "firstTrainedInfantryObservedCount": 3,
+    "secondTrainedInfantryObservedCommittedTick": 2679,
+    "secondTrainedInfantryObservedCount": 4,
+    "harvesterHandle": "2:1",
+    "harvesterStartPosition": {
+      "handle": "2:1",
+      "presentationStableId": 18,
+      "xCm": 8200,
+      "yCm": 14600
+    },
+    "harvesterEndPosition": {
+      "handle": "2:1",
+      "presentationStableId": 18,
+      "xCm": 6200,
+      "yCm": 15000
+    },
+    "selectedInfantryHandles": [
+      "7:1",
+      "14:1",
+      "16:1"
+    ],
+    "moveStartPositions": [
+      {
+        "handle": "6:1",
+        "presentationStableId": 20,
+        "xCm": 9300,
+        "yCm": 14600
+      },
+      {
+        "handle": "7:1",
+        "presentationStableId": 21,
+        "xCm": 9300,
+        "yCm": 15400
+      },
+      {
+        "handle": "14:1",
+        "presentationStableId": 59,
+        "xCm": 6851,
+        "yCm": 14917
+      },
+      {
+        "handle": "16:1",
+        "presentationStableId": 64,
+        "xCm": 6997,
+        "yCm": 15151
+      }
+    ],
+    "moveEndPositions": [
+      {
+        "handle": "6:1",
+        "presentationStableId": 20,
+        "xCm": 14700,
+        "yCm": 15000
+      },
+      {
+        "handle": "7:1",
+        "presentationStableId": 21,
+        "xCm": 14700,
+        "yCm": 15000
+      },
+      {
+        "handle": "14:1",
+        "presentationStableId": 59,
+        "xCm": 14504,
+        "yCm": 14998
+      },
+      {
+        "handle": "16:1",
+        "presentationStableId": 64,
+        "xCm": 14649,
+        "yCm": 15001
+      }
+    ],
+    "meetingPoint": {
+      "xCm": 14700,
+      "yCm": 15000
+    },
+    "siegePoint": {
+      "xCm": 20300,
+      "yCm": 15000
+    },
+    "initialVisibleEnemyInfantryCount": 0,
+    "initialVisibleEnemyCoreCount": 0,
+    "enemyInfantryEnteredVision": true,
+    "enemyCoreEnteredVision": true,
+    "attackTargetHandle": "1:1",
+    "attackTargetPositionBefore": {
+      "handle": "1:1",
+      "presentationStableId": 97,
+      "xCm": 23000,
+      "yCm": 15000
+    },
+    "attackTargetHealthBefore": 1000,
+    "attackTargetHealthAfter": 940,
+    "defeatedCoreLastPosition": {
+      "handle": "1:1",
+      "presentationStableId": 97,
+      "xCm": 23000,
+      "yCm": 15000
+    },
+    "completedCameraTarget": {
+      "xCm": 23000,
+      "yCm": 15000
+    },
+    "completedLosingCoreCount": 0,
+    "completedWinnerInfantryNearDefeatedCoreCount": 3,
+    "completedWinnerInfantryNearDefeatedCorePositions": [
+      {
+        "handle": "16:1",
+        "presentationStableId": 64,
+        "xCm": 23000,
+        "yCm": 15000
+      },
+      {
+        "handle": "14:1",
+        "presentationStableId": 59,
+        "xCm": 23000,
+        "yCm": 15000
+      },
+      {
+        "handle": "7:1",
+        "presentationStableId": 21,
+        "xCm": 23000,
+        "yCm": 15000
+      }
+    ],
+    "completedPresentationFrameId": 42864,
+    "observedCoreHealthBySide": [
+      1000,
+      40
+    ],
+    "observedInfantryCountBySide": [
+      3,
+      3
+    ],
+    "matchPhase": "Completed",
+    "outcome": "SideOneVictory",
+    "outcomeSource": "replicated-match-state",
+    "winningSideIndex": 0,
+    "committedTick": 3549,
+    "committedTickSource": "replicated-match-state"
+  },
+  "networkFaultInjection": {
+    "role": "replicatedClient",
+    "configuration": {
+      "transportIdentity": "LiteNetLib/2.1.4",
+      "profileId": "normal",
+      "seed": 70902,
+      "roundTripLatencyMilliseconds": 0,
+      "jitterMilliseconds": 0,
+      "packetLossPermille": 0,
+      "stateReorderPermille": 0,
+      "isEnabled": false
+    },
+    "delayedInboundPacketCount": 0,
+    "droppedInboundPacketCount": 0,
+    "reorderedInboundStateDatagramCount": 0
+  },
+  "runtime": {
+    "capturedAtUtc": "2026-07-26T10:28:26.4062343Z",
+    "stage": "WaitingForOutcome",
+    "substep": 2,
+    "pendingCommandAction": "",
+    "pendingCommandSequence": 0,
+    "selectedActors": [
+      {
+        "handle": "7:1",
+        "isAlive": true,
+        "hasReplicationIdentity": true,
+        "xCm": 23000,
+        "yCm": 15000
+      },
+      {
+        "handle": "14:1",
+        "isAlive": true,
+        "hasReplicationIdentity": true,
+        "xCm": 23000,
+        "yCm": 15000
+      },
+      {
+        "handle": "16:1",
+        "isAlive": true,
+        "hasReplicationIdentity": true,
+        "xCm": 23000,
+        "yCm": 15000
+      }
+    ],
+    "hasBattlePoints": true,
+    "meetingPoint": {
+      "xCm": 14700,
+      "yCm": 15000
+    },
+    "siegePoint": {
+      "xCm": 20300,
+      "yCm": 15000
+    },
+    "defeatedCorePoint": {
+      "xCm": 23000,
+      "yCm": 15000
+    },
+    "visibleEnemyCoreCount": 0,
+    "committedTick": 3549,
+    "matchPhase": "Completed",
+    "outcome": "SideOneVictory"
+  }
+}

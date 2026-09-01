@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Client;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Systems
@@ -149,7 +150,7 @@ namespace Ludots.Core.Input.Systems
             {
                 throw new InvalidOperationException(
                     $"AxisMoveOrderSystem has an active axis move declaration but the '{CoreServiceKeys.AuthoritativeInput.Name}' " +
-                    "service is missing; register the authoritative input snapshot before the InputCollection group ticks.");
+                    "service is missing; register the authoritative input snapshot before the LocalInput group ticks.");
             }
 
             Vector2 axis = input.ReadAction<Vector2>(_binding.ActionId);
@@ -192,10 +193,31 @@ namespace Ludots.Core.Input.Systems
             order.Args.Spatial.Mode = OrderCollectionMode.Single;
             order.Args.Spatial.WorldCm = new Vector3(target.X, target.Y, 0f);
 
-            if (_orderQueue.TryEnqueue(in order))
+            bool submitted;
+            if (IsReplicatedClient())
+            {
+                if (!_globals.TryGetValue(CoreServiceKeys.ReplicatedClientCommandPort.Name, out object? portValue) ||
+                    portValue is not IReplicatedClientCommandPort port)
+                {
+                    throw new InvalidOperationException(
+                        "Replicated-client axis movement requires the platform-neutral client command port.");
+                }
+
+                submitted = port.Submit(in order) == ReplicatedClientCommandSubmitResult.Submitted;
+            }
+            else
+            {
+                submitted = _orderQueue.TryEnqueue(in order);
+            }
+
+            if (submitted)
             {
                 _throttleTicksRemaining = _binding.ThrottleTicks - 1;
             }
         }
+
+        private bool IsReplicatedClient() =>
+            _globals.TryGetValue(CoreServiceKeys.NetworkProcessRole.Name, out object? roleValue) &&
+            roleValue is NetworkProcessRole.ReplicatedClient;
     }
 }

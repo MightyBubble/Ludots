@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
+using Ludots.UI.Skia;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production
@@ -300,6 +301,8 @@ namespace Ludots.Tests.GAS.Production
             var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.UiCaptured, false);
+            engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
+            engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
         }
 
         private sealed class NullInputBackend : IInputBackend

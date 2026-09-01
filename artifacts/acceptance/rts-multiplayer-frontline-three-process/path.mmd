@@ -1,0 +1,15 @@
+flowchart TD
+    Start([三进程启动<br/>server + client-a + client-b]) --> Conn{Connecting<br/>快照+玩家绑定}
+    Conn -->|passed| Ready{Ready<br/>开图相机就绪}
+    Conn -->|失败守卫| Fail1([失败: 闸门超时])
+    Ready --> Gathering{Gathering<br/>采矿 40→120}
+    Gathering -->|passed| Training{Training<br/>双方各训 2 步兵}
+    Gathering -->|失败守卫| Fail2([失败: 命令准入 owner 校验])
+    Training --> Advancing{Advancing<br/>编队推进汇合屏障}
+    Advancing -->|passed| Engaging{Engaging<br/>围攻败方核心}
+    Advancing -->|守卫: 编队间距 140cm| Fail3([失败: distinctEntityLayout])
+    Engaging -->|passed| Waiting{WaitingForOutcome<br/>等待权威结局}
+    Engaging -->|守卫: 屏幕重叠率 ≤0.5| Fail4([失败: 屏幕重叠])
+    Waiting --> Outcome{Outcome<br/>败方核心=0血}
+    Outcome -->|completedLosingCoreCount=0| Passed([PASSED<br/>四里程碑全绿])
+    Outcome -->|守卫: 败方核心须消失 anchor 范围| Fail5([失败: forbidden role 残留])

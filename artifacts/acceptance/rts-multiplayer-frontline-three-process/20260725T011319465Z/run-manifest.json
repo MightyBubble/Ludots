@@ -1,0 +1,65 @@
+{
+    "schemaVersion":  3,
+    "acceptanceScope":  "three-process-player-input-to-authoritative-frontline-outcome",
+    "status":  "failed",
+    "startedAtUtc":  "2026-07-25T01:13:19.5061453Z",
+    "completedAtUtc":  "2026-07-25T01:13:59.4423766Z",
+    "artifactDirectory":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260725T011319465Z",
+    "repository":  {
+                       "commit":  "bbe31577c3d5bee498d675f5cd74b3094b13b34f",
+                       "dirty":  true
+                   },
+    "inputs":  {
+                   "profile":  {
+                                   "path":  "C:\\001_AI\\LudotsProd_issue709\\scripts\\acceptance\\rts-multiplayer-frontline-three-process.profile.json",
+                                   "length":  1126,
+                                   "sha256":  "6f3305b94d5e1438996b2ef7fd0410c3c882ee79951679517e51a65f1a83901d"
+                               },
+                   "acceptancePlan":  {
+                                          "path":  "C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\assets\\RtsMultiplayerFrontlineThreeProcessAcceptancePlan.json",
+                                          "length":  1196,
+                                          "sha256":  "b37c7ca3d180113b9aa48666d5c0ab074f362af12ddc01de468953427ed8108e"
+                                      },
+                   "sourceLaunchGraph":  null,
+                   "roleArtifacts":  [
+
+                                     ],
+                   "assemblies":  [
+
+                                  ]
+               },
+    "effectiveParameters":  {
+                                "host":  "127.0.0.1",
+                                "port":  28781,
+                                "connectionKeySha256":  "b163604905cfe06ecc5e89b10c7deceeca5108b22885ab1934b5d4ed685a6900",
+                                "credentialTimeoutSeconds":  60,
+                                "runSeconds":  240,
+                                "monitorIntervalMilliseconds":  250,
+                                "faultProfile":  "normal",
+                                "faultSeeds":  {
+                                                   "server":  70901,
+                                                   "clientOne":  70902,
+                                                   "clientTwo":  70903
+                                               }
+                            },
+    "planFingerprint":  null,
+    "orderedModIds":  [
+
+                      ],
+    "processes":  [
+
+                  ],
+    "clientCredentials":  [
+
+                          ],
+    "gameplayEvidence":  [
+
+                         ],
+    "credentialValidation":  "LUDCRD01/64-byte/SHA256/non-empty/distinct",
+    "runtimeErrorEvidence":  {
+                                 "stderrPolicy":  "must-be-empty",
+                                 "structuredFaultPort":  "gameplay-evidence.faultCount"
+                             },
+    "failure":  "Process \u0027build-launcher-cli\u0027 failed with exit code 1. See C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260725T011319465Z\\logs\\build-launcher.stdout.log and C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260725T011319465Z\\logs\\build-launcher.stderr.log.",
+    "cleanup":  "attempted"
+}

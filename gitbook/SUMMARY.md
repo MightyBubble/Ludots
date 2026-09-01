@@ -78,6 +78,8 @@
   - [双 Seat 面板 Showcase 设计](architecture/dual-seat-panels-showcase-design.md)
   - [能力标准 Showcase](architecture/capability-standard-showcases.md)
   - [UAT 可玩 Showcase 矩阵](architecture/uat-playable-showcase-matrix.md)
+  - [《双人前线》RTS 联机 Showcase 设计与验收](architecture/rts-multiplayer-showcase.md)
+  - [《双人前线》三进程会话验收](architecture/rts-multiplayer-three-process-acceptance.md)
   - [Map-Owned Participant Contract](architecture/map-owned-participant-contract.md)
   - [ClientLocalSeat · Possession · LogicView · PresentBinding](architecture/client-local-seat-and-logic-view.md)
   - [Transport Network SSOT](architecture/transport-network-ssot.md)

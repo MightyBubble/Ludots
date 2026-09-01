@@ -2141,5 +2141,705 @@ namespace Ludots.Tests.Presentation
                 return presenterStableId == _expectedStableId && boneId == _expectedBoneId;
             }
         }
+
+        [Test]
+        public void EntityAnchoredOwnerPayload_OneToManyToOneRootsKeepTransformSyncMarkersConsistent()
+        {
+            static PresenterDefinition CreateMovableMeshDefinition(int assetId) => new()
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = assetId,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+            };
+
+            using var world = World.Create();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            Entity owner = world.Create(
+                WorldPositionCm.FromCm(1000, 2000),
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new PresentationStableId { Value = 7302 },
+                new PresentationOwnerHasPresenterPayload());
+
+            int bodyADefId = definitions.Register(
+                "behavior.ownerpayload.multiroot.body.a",
+                CreateMovableMeshDefinition(assetId: 1));
+            int bodyBDefId = definitions.Register(
+                "behavior.ownerpayload.multiroot.body.b",
+                CreateMovableMeshDefinition(assetId: 2));
+            int rootADefId = definitions.Register("behavior.ownerpayload.multiroot.root.a", new PresenterDefinition
+            {
+                Behaviors = CreateMovableMeshDefinition(assetId: 3).Behaviors,
+                Children = [new ChildPresenterRef { DefinitionId = bodyADefId, ScopeTag = 11 }],
+            });
+            int rootBDefId = definitions.Register("behavior.ownerpayload.multiroot.root.b", new PresenterDefinition
+            {
+                Behaviors = CreateMovableMeshDefinition(assetId: 4).Behaviors,
+                Children = [new ChildPresenterRef { DefinitionId = bodyBDefId, ScopeTag = 12 }],
+            });
+            instances.BindDefinitions(definitions);
+
+            int nextStableId = 9300;
+            Entity rootA = instances.CreateHierarchy(
+                definitions,
+                rootADefId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9201,
+                Entity.Null,
+                definitions.Get(rootADefId),
+                allocateStableId: () => nextStableId++);
+            Entity bodyA = world.Get<PresenterChildren>(rootA).Get(0);
+            PresentationOwnerHasPresenterPayload singlePayload =
+                world.Get<PresentationOwnerHasPresenterPayload>(owner);
+            Assert.Multiple(() =>
+            {
+                Assert.That(singlePayload.Count, Is.EqualTo(2));
+                Assert.That(singlePayload.RootCount, Is.EqualTo(1));
+                Assert.That(singlePayload.SingleRootPresenter, Is.EqualTo(rootA));
+                Assert.That(singlePayload.SingleRootTransformSync, Is.EqualTo(1));
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(rootA), Is.True);
+            });
+
+            Entity rootB = instances.CreateHierarchy(
+                definitions,
+                rootBDefId,
+                owner,
+                scopeId: 2,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9202,
+                Entity.Null,
+                definitions.Get(rootBDefId),
+                allocateStableId: () => nextStableId++);
+            Entity bodyB = world.Get<PresenterChildren>(rootB).Get(0);
+            PresentationOwnerHasPresenterPayload multiplePayload =
+                world.Get<PresentationOwnerHasPresenterPayload>(owner);
+            Assert.Multiple(() =>
+            {
+                Assert.That(multiplePayload.Count, Is.EqualTo(4));
+                Assert.That(multiplePayload.RootCount, Is.EqualTo(2));
+                Assert.That(multiplePayload.SingleRootPresenter, Is.EqualTo(Entity.Null));
+                Assert.That(multiplePayload.SingleRootTransformSync, Is.EqualTo(0));
+                Assert.That(world.Has<PerfTransformSyncTick>(rootA), Is.True);
+                Assert.That(world.Has<PerfTransformSyncTick>(rootB), Is.True);
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(rootA), Is.False);
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(rootB), Is.False);
+            });
+
+            Assert.That(
+                instances.SetBehaviorActive(rootA, definitions.Get(rootADefId), slotIndex: 0, active: false),
+                Is.True);
+            Assert.That(world.Has<PerfOwnerPayloadTransformSync>(rootA), Is.False);
+
+            using var sync = new PresenterEntityTransformSyncSystem(world, instances, definitions);
+            using var emit = new PresenterEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>());
+            ref VisualTransform ownerTransform = ref world.Get<VisualTransform>(owner);
+            Vector3 multipleRootPosition = new(30f, 0f, 40f);
+            ownerTransform.Position = multipleRootPosition;
+            world.Get<WorldPositionCm>(owner).Value = WorldPositionCm.FromCm(3000, 4000).Value;
+            sync.Update(0.016f);
+            emit.Update(0.016f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<PresenterWorldPosition>(rootA).Value, Is.EqualTo(multipleRootPosition));
+                Assert.That(world.Get<PresenterWorldPosition>(rootB).Value, Is.EqualTo(multipleRootPosition));
+                Assert.That(world.Get<PresenterWorldPosition>(bodyA).Value, Is.EqualTo(multipleRootPosition));
+                Assert.That(world.Get<PresenterWorldPosition>(bodyB).Value, Is.EqualTo(multipleRootPosition));
+                Assert.That(
+                    TryFindVisualProxyRequest(requests, owner, bodyADefId, out PresentationVisualProxy bodyAProxy),
+                    Is.True);
+                Assert.That(bodyAProxy.Position, Is.EqualTo(multipleRootPosition));
+                Assert.That(
+                    TryFindVisualProxyRequest(requests, owner, bodyBDefId, out PresentationVisualProxy bodyBProxy),
+                    Is.True);
+                Assert.That(bodyBProxy.Position, Is.EqualTo(multipleRootPosition));
+            });
+
+            requests.Clear();
+            instances.Destroy(rootB);
+            PresentationOwnerHasPresenterPayload restoredPayload =
+                world.Get<PresentationOwnerHasPresenterPayload>(owner);
+            Assert.Multiple(() =>
+            {
+                Assert.That(restoredPayload.Count, Is.EqualTo(2));
+                Assert.That(restoredPayload.RootCount, Is.EqualTo(1));
+                Assert.That(restoredPayload.SingleRootPresenter, Is.EqualTo(rootA));
+                Assert.That(restoredPayload.SingleRootTransformSync, Is.EqualTo(1));
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(rootA), Is.True);
+            });
+
+            Vector3 restoredSingleRootPosition = new(50f, 0f, 60f);
+            ownerTransform.Position = restoredSingleRootPosition;
+            world.Get<WorldPositionCm>(owner).Value = WorldPositionCm.FromCm(5000, 6000).Value;
+            sync.Update(0.016f);
+            emit.Update(0.016f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<PresenterWorldPosition>(rootA).Value, Is.EqualTo(restoredSingleRootPosition));
+                Assert.That(world.Get<PresenterWorldPosition>(bodyA).Value, Is.EqualTo(restoredSingleRootPosition));
+                Assert.That(
+                    TryFindVisualProxyRequest(requests, owner, bodyADefId, out PresentationVisualProxy bodyAProxy),
+                    Is.True);
+                Assert.That(bodyAProxy.Position, Is.EqualTo(restoredSingleRootPosition));
+            });
+        }
+
+        [Test]
+        public void EntityAnchoredOwnerPayload_BehaviorEligibilityKeepsPayloadAndFastPathMarkerConsistent()
+        {
+            using var world = World.Create();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            Entity owner = world.Create(
+                WorldPositionCm.FromCm(1000, 2000),
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new PresentationStableId { Value = 7303 },
+                new PresentationOwnerHasPresenterPayload());
+            int rootDefId = definitions.Register("behavior.ownerpayload.eligibility.root", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Sound,
+                        ActiveByDefault = false,
+                        Sound = new SoundConfig
+                        {
+                            SoundAssetId = 99,
+                            Loop = true,
+                            Volume = 1f,
+                        },
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+            Entity root = instances.CreateHierarchy(
+                definitions,
+                rootDefId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9401,
+                Entity.Null,
+                definitions.Get(rootDefId));
+
+            PresentationOwnerHasPresenterPayload initialPayload =
+                world.Get<PresentationOwnerHasPresenterPayload>(owner);
+            Assert.Multiple(() =>
+            {
+                Assert.That(initialPayload.SingleRootTransformSync, Is.EqualTo(1));
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(root), Is.True);
+            });
+
+            Assert.That(
+                instances.SetBehaviorActive(root, definitions.Get(rootDefId), slotIndex: 1, active: true),
+                Is.True);
+            PresentationOwnerHasPresenterPayload soundActivePayload =
+                world.Get<PresentationOwnerHasPresenterPayload>(owner);
+            Assert.Multiple(() =>
+            {
+                Assert.That(soundActivePayload.SingleRootTransformSync, Is.EqualTo(0));
+                Assert.That(world.Has<PerfTransformSyncTick>(root), Is.True);
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(root), Is.False);
+            });
+
+            Assert.That(
+                instances.SetBehaviorActive(root, definitions.Get(rootDefId), slotIndex: 1, active: false),
+                Is.True);
+            PresentationOwnerHasPresenterPayload restoredPayload =
+                world.Get<PresentationOwnerHasPresenterPayload>(owner);
+            Assert.Multiple(() =>
+            {
+                Assert.That(restoredPayload.SingleRootTransformSync, Is.EqualTo(1));
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(root), Is.True);
+            });
+        }
+
+        [Test]
+        public void InheritParent_OwnerPayloadDescendantsFollowMovedRootAndRetainStableIdentity()
+        {
+            using var world = World.Create();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            Entity owner = world.Create(
+                WorldPositionCm.FromCm(1000, 2000),
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new FacingDirection { AngleRad = 0.25f },
+                new PresentationStableId { Value = 7301 },
+                new PresentationOwnerHasPresenterPayload());
+
+            int markerDefId = definitions.Register("behavior.inherit_parent.ownerpayload.marker", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalRotation = Quaternion.Identity,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+            });
+            int bodyDefId = definitions.Register("behavior.inherit_parent.ownerpayload.body", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 2,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalRotation = Quaternion.Identity,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+                Children = [new ChildPresenterRef { DefinitionId = markerDefId, ScopeTag = 2 }],
+            });
+            int rootDefId = definitions.Register("behavior.inherit_parent.ownerpayload.root", new PresenterDefinition
+            {
+                Children = [new ChildPresenterRef { DefinitionId = bodyDefId, ScopeTag = 1 }],
+            });
+            instances.BindDefinitions(definitions);
+            int nextStableId = 9102;
+
+            Span<Entity> created = stackalloc Entity[1];
+            int count = instances.CreateEntityAnchoredRootBatch(
+                definitions,
+                rootDefId,
+                new Entity[] { owner },
+                new[] { 1 },
+                new[] { 9101 },
+                new[] { world.Get<VisualTransform>(owner) },
+                new[] { world.Get<CullState>(owner) },
+                definitions.Get(rootDefId),
+                created,
+                allocateStableId: () => nextStableId++);
+
+            Assert.That(count, Is.EqualTo(1));
+            Entity root = created[0];
+            Entity body = world.Get<PresenterChildren>(root).Get(0);
+            Entity marker = world.Get<PresenterChildren>(body).Get(0);
+            int bodyStableId = world.Get<PresenterState>(body).StableId;
+            int markerStableId = world.Get<PresenterState>(marker).StableId;
+            using var behavior = new PresenterBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
+                new SoundRequestBuffer());
+            using var sync = new PresenterEntityTransformSyncSystem(world, instances, definitions);
+            using var emit = new PresenterEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>());
+
+            behavior.Update(0.016f);
+            emit.Update(0.016f);
+            Assert.That(TryFindVisualProxyRequest(requests, owner, bodyDefId, out PresentationVisualProxy initialBodyProxy), Is.True);
+            Assert.That(TryFindVisualProxyRequest(requests, owner, markerDefId, out PresentationVisualProxy initialMarkerProxy), Is.True);
+            int bodyVisualStableId = initialBodyProxy.StableId;
+            int markerVisualStableId = initialMarkerProxy.StableId;
+            Assert.That(bodyVisualStableId, Is.GreaterThan(0));
+            Assert.That(markerVisualStableId, Is.GreaterThan(0));
+            Assert.That(markerVisualStableId, Is.Not.EqualTo(bodyVisualStableId));
+            requests.Clear();
+            Quaternion expectedRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.5f);
+            Vector3 expectedScale = new Vector3(2f, 3f, 4f);
+            ref VisualTransform movedOwnerTransform = ref world.Get<VisualTransform>(owner);
+            movedOwnerTransform.Position = new Vector3(30f, 5f, 40f);
+            movedOwnerTransform.Rotation = expectedRotation;
+            movedOwnerTransform.Scale = expectedScale;
+            world.Get<FacingDirection>(owner).AngleRad = 1.25f;
+            world.Get<WorldPositionCm>(owner).Value = WorldPositionCm.FromCm(3000, 4000).Value;
+            sync.Update(0.016f);
+            emit.Update(0.016f);
+
+            Assert.That(world.Get<PresenterTransformSource>(body).Value, Is.EqualTo(TransformSource.InheritParent));
+            Assert.That(world.Get<PresenterTransformSource>(marker).Value, Is.EqualTo(TransformSource.InheritParent));
+            Assert.That(world.Get<PresenterWorldPosition>(body).Value, Is.EqualTo(movedOwnerTransform.Position));
+            Assert.That(world.Get<PresenterWorldRotation>(body).Value, Is.EqualTo(expectedRotation));
+            Assert.That(world.Get<PresenterWorldScale>(body).Value, Is.EqualTo(expectedScale));
+            Assert.That(world.Get<PresenterWorldFacing>(body).HasValue, Is.EqualTo(1));
+            Assert.That(world.Get<PresenterWorldFacing>(body).AngleRad, Is.EqualTo(1.25f));
+            Assert.That(world.Get<PresenterWorldPosition>(marker).Value, Is.EqualTo(movedOwnerTransform.Position));
+            Assert.That(world.Get<PresenterWorldRotation>(marker).Value, Is.EqualTo(expectedRotation));
+            Assert.That(world.Get<PresenterWorldScale>(marker).Value, Is.EqualTo(expectedScale));
+            Assert.That(world.Get<PresenterWorldFacing>(marker).HasValue, Is.EqualTo(1));
+            Assert.That(world.Get<PresenterWorldFacing>(marker).AngleRad, Is.EqualTo(1.25f));
+            Assert.That(world.Get<PresenterState>(body).StableId, Is.EqualTo(bodyStableId));
+            Assert.That(world.Get<PresenterState>(marker).StableId, Is.EqualTo(markerStableId));
+            Assert.That(world.Get<PresenterState>(body).OwnerStableId, Is.EqualTo(7301));
+            Assert.That(world.Get<PresenterState>(marker).OwnerStableId, Is.EqualTo(7301));
+            Assert.That(TryFindVisualProxyRequest(requests, owner, bodyDefId, out PresentationVisualProxy bodyProxy), Is.True);
+            Assert.That(TryFindVisualProxyRequest(requests, owner, markerDefId, out PresentationVisualProxy markerProxy), Is.True);
+            Assert.That(bodyProxy.Position, Is.EqualTo(movedOwnerTransform.Position));
+            Assert.That(bodyProxy.Rotation, Is.EqualTo(expectedRotation));
+            Assert.That(bodyProxy.Scale, Is.EqualTo(expectedScale));
+            Assert.That(bodyProxy.StableId, Is.EqualTo(bodyVisualStableId));
+            Assert.That(bodyProxy.OwnerStableId, Is.EqualTo(7301));
+            Assert.That(markerProxy.Position, Is.EqualTo(movedOwnerTransform.Position));
+            Assert.That(markerProxy.Rotation, Is.EqualTo(expectedRotation));
+            Assert.That(markerProxy.Scale, Is.EqualTo(expectedScale));
+            Assert.That(markerProxy.StableId, Is.EqualTo(markerVisualStableId));
+            Assert.That(markerProxy.OwnerStableId, Is.EqualTo(7301));
+        }
+
+        [Test]
+        public void ParentDrivenTransformPropagation_IsZeroAllocationAfterWarmup()
+        {
+            using var world = World.Create();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            int childDefId = definitions.Register("behavior.inherit_parent.zero_alloc.child", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalRotation = Quaternion.Identity,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+            });
+            int rootDefId = definitions.Register(
+                "behavior.inherit_parent.zero_alloc.root",
+                new PresenterDefinition());
+            instances.BindDefinitions(definitions);
+            Entity owner = world.Create();
+            Entity root = instances.Create(
+                rootDefId,
+                owner,
+                1,
+                PresentationAnchorKind.WorldPosition,
+                Vector3.Zero,
+                9201,
+                Entity.Null,
+                definitions.Get(rootDefId));
+            _ = instances.Create(
+                childDefId,
+                owner,
+                2,
+                PresentationAnchorKind.WorldPosition,
+                Vector3.Zero,
+                9202,
+                root,
+                definitions.Get(childDefId));
+
+            for (int i = 0; i < 64; i++)
+            {
+                world.Get<PresenterWorldPosition>(root).Value = new Vector3(i, 0f, i);
+                instances.PropagateParentDrivenTransforms(root);
+            }
+
+            long allocated = MeasureParentDrivenTransformPropagationAllocations(world, instances, root);
+
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ParentDrivenTransformPropagation_DoesNotOverwriteIndependentTransformSources()
+        {
+            using var world = World.Create();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            int definitionId = definitions.Register(
+                "behavior.parent_propagation.independent_source",
+                new PresenterDefinition());
+            instances.BindDefinitions(definitions);
+            Entity owner = world.Create();
+            Entity root = instances.Create(
+                definitionId,
+                owner,
+                1,
+                PresentationAnchorKind.WorldPosition,
+                Vector3.Zero,
+                9301,
+                Entity.Null,
+                definitions.Get(definitionId));
+            TransformSource[] independentSources =
+            [
+                TransformSource.BoneAttached,
+                TransformSource.SplineDriven,
+                TransformSource.WorldFixed,
+            ];
+            Entity[] children = new Entity[independentSources.Length];
+            PresenterTransformSnapshot[] expected = new PresenterTransformSnapshot[independentSources.Length];
+            Vector2[] expectedPlanePositions = new Vector2[independentSources.Length];
+
+            for (int i = 0; i < independentSources.Length; i++)
+            {
+                Entity child = instances.Create(
+                    definitionId,
+                    owner,
+                    i + 2,
+                    PresentationAnchorKind.WorldPosition,
+                    Vector3.Zero,
+                    9302 + i,
+                    root,
+                    definitions.Get(definitionId));
+                Vector3 position = new Vector3(10f + i, 20f + i, 30f + i);
+                Quaternion rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.2f + i);
+                Vector3 scale = new Vector3(1f + i, 2f + i, 3f + i);
+                PresenterWorldFacing facing = new PresenterWorldFacing
+                {
+                    AngleRad = 0.4f + i,
+                    HasValue = 1,
+                };
+                Vector2 planePosition = new Vector2(1000f + i, 2000f + i);
+                world.Get<PresenterTransformSource>(child).Value = independentSources[i];
+                world.Get<PresenterWorldPosition>(child).Value = position;
+                world.Get<PresenterWorldPlanePosition>(child).ValueCm = planePosition;
+                world.Get<PresenterWorldRotation>(child).Value = rotation;
+                world.Get<PresenterWorldFacing>(child) = facing;
+                world.Get<PresenterWorldScale>(child).Value = scale;
+                children[i] = child;
+                expected[i] = new PresenterTransformSnapshot
+                {
+                    WorldPosition = position,
+                    WorldRotation = rotation,
+                    WorldScale = scale,
+                    WorldFacing = facing,
+                    TransformSource = independentSources[i],
+                };
+                expectedPlanePositions[i] = planePosition;
+            }
+
+            world.Get<PresenterWorldPosition>(root).Value = new Vector3(100f, 200f, 300f);
+            world.Get<PresenterWorldRotation>(root).Value = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 2.5f);
+            world.Get<PresenterWorldFacing>(root) = new PresenterWorldFacing { AngleRad = 2f, HasValue = 1 };
+            world.Get<PresenterWorldScale>(root).Value = new Vector3(4f, 5f, 6f);
+            instances.PropagateParentDrivenTransforms(root);
+
+            for (int i = 0; i < children.Length; i++)
+            {
+                Entity child = children[i];
+                Assert.That(world.Get<PresenterTransformSource>(child).Value, Is.EqualTo(expected[i].TransformSource));
+                Assert.That(world.Get<PresenterWorldPosition>(child).Value, Is.EqualTo(expected[i].WorldPosition));
+                Assert.That(world.Get<PresenterWorldPlanePosition>(child).ValueCm, Is.EqualTo(expectedPlanePositions[i]));
+                Assert.That(world.Get<PresenterWorldRotation>(child).Value, Is.EqualTo(expected[i].WorldRotation));
+                Assert.That(world.Get<PresenterWorldFacing>(child).HasValue, Is.EqualTo(expected[i].WorldFacing.HasValue));
+                Assert.That(world.Get<PresenterWorldFacing>(child).AngleRad, Is.EqualTo(expected[i].WorldFacing.AngleRad));
+                Assert.That(world.Get<PresenterWorldScale>(child).Value, Is.EqualTo(expected[i].WorldScale));
+            }
+        }
+
+        [Test]
+        public void Attachment_TargetParent_ChildFollowsEntityAnchoredParentTransformSyncAndFreezesWhenDisabled()
+        {
+            using var world = World.Create();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            Entity owner = world.Create(new VisualTransform
+            {
+                Position = new Vector3(10f, 0f, 20f),
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One,
+            });
+
+            int parentDefId = definitions.Register("behavior.attachment.transformsync.parent", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+            });
+            int markerDefId = definitions.Register("behavior.attachment.transformsync.marker", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 2,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Attachment,
+                        ActiveByDefault = true,
+                        Attachment = new AttachmentConfig
+                        {
+                            Target = AttachmentTarget.Parent,
+                            Offset = new Vector3(0f, 0.5f, 0f),
+                            RotationOffset = Quaternion.Identity,
+                            InheritScale = false,
+                        },
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+
+            Entity parent = instances.CreateHierarchy(
+                definitions,
+                parentDefId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9101,
+                Entity.Null,
+                definitions.Get(parentDefId));
+            Entity marker = instances.CreateHierarchy(
+                definitions,
+                markerDefId,
+                owner,
+                scopeId: 2,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9102,
+                parent,
+                definitions.Get(markerDefId));
+
+            Assert.That(world.Has<PerfTransformSyncTick>(parent), Is.True);
+            Assert.That(world.Has<PerfOwnerPayloadTransformSync>(parent), Is.False);
+            world.Get<VisualTransform>(owner).Position = new Vector3(30f, 0f, 40f);
+
+            using var sync = new PresenterEntityTransformSyncSystem(world, instances, definitions);
+            sync.Update(0.016f);
+
+            Assert.That(world.Get<PresenterWorldPosition>(parent).Value, Is.EqualTo(new Vector3(30f, 0f, 40f)));
+            Assert.That(world.Get<PresenterWorldPosition>(marker).Value, Is.EqualTo(new Vector3(30f, 0.5f, 40f)));
+            Assert.That(world.Get<PresenterTransformSource>(marker).Value, Is.EqualTo(TransformSource.AttachedToParent));
+
+            Assert.That(instances.SetBehaviorActive(marker, definitions.Get(markerDefId), slotIndex: 1, active: false), Is.True);
+            world.Get<VisualTransform>(owner).Position = new Vector3(50f, 0f, 60f);
+            Assert.DoesNotThrow(() => sync.Update(0.016f));
+            Assert.That(world.Get<PresenterWorldPosition>(parent).Value, Is.EqualTo(new Vector3(50f, 0f, 60f)));
+            Assert.That(world.Get<PresenterWorldPosition>(marker).Value, Is.EqualTo(new Vector3(30f, 0.5f, 40f)));
+            Assert.That(world.Get<PresenterTransformSource>(marker).Value, Is.EqualTo(TransformSource.AttachedToParent));
+        }
+
+        private static long MeasureParentDrivenTransformPropagationAllocations(
+            World world,
+            PresenterEntityRuntime instances,
+            Entity root)
+        {
+            _ = GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 10_000; i++)
+            {
+                world.Get<PresenterWorldPosition>(root).Value = new Vector3(i, 0f, i);
+                instances.PropagateParentDrivenTransforms(root);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
     }
 }

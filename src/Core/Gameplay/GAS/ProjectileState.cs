@@ -20,6 +20,7 @@ namespace Ludots.Core.Gameplay.GAS
         public RelationshipFilter CollisionRelationFilter;
         public byte CollisionExcludeSource;
         public int MaxHitCount;
+        public int RootId;
         public Entity Source;
         public Entity Target;
         public Fix64Vec2 LaunchOriginCm;

@@ -357,6 +357,7 @@ namespace Ludots.Tests.GAS
             request.PromptTagId = 9001;
             request.Actor = actor;
             request.Target = actor;
+            request.TargetContext = Entity.Null;
             ui.ApplyRequest(request);
 
             var globals = new Dictionary<string, object>
@@ -418,6 +419,7 @@ namespace Ludots.Tests.GAS
             request.PromptTagId = 9001;
             request.Actor = actor;
             request.Target = actor;
+            request.TargetContext = Entity.Null;
             ui.ApplyRequest(request);
             var globals = new Dictionary<string, object>
             {
@@ -443,7 +445,7 @@ namespace Ludots.Tests.GAS
             };
             var admissionResults = new OrderAdmissionResultBuffer(4, 4);
             var chainOrders = new OrderQueue(capacity: 1, admissionResults);
-            var seed = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass };
+            var seed = new Order { Actor = actor, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass };
             That(chainOrders.TryEnqueue(in seed), Is.True);
             var system = new ResponseChainHumanOrderSourceSystem(globals, ui, chainOrders);
 
@@ -468,10 +470,11 @@ namespace Ludots.Tests.GAS
             request.PlayerId = 2;
             request.Actor = actor;
             request.Target = actor;
+            request.TargetContext = Entity.Null;
             ui.ApplyRequest(request);
             var admissionResults = new OrderAdmissionResultBuffer(4, 4);
             var chainOrders = new OrderQueue(capacity: 1, admissionResults);
-            var seed = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass };
+            var seed = new Order { Actor = actor, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass };
             That(chainOrders.TryEnqueue(in seed), Is.True);
             var system = new ResponseChainAiOrderSourceSystem(
                 ui,

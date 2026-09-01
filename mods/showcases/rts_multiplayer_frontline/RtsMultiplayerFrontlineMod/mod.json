@@ -1,0 +1,16 @@
+{
+  "name": "RtsMultiplayerFrontlineMod",
+  "version": "1.0.0",
+  "description": "A symmetric two-player RTS match: harvest crystals, train infantry, and destroy the opposing command core.",
+  "main": "bin/net9.0/RtsMultiplayerFrontlineMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0",
+    "RtsDemoMod": "^1.0.0",
+    "RtsShowcaseMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["rts", "multiplayer", "showcase"]
+}

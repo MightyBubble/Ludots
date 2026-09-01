@@ -18,6 +18,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationEventStream _stream;
         private readonly PresentationOwnerChangeBuffer _ownerChanges;
         private readonly GameSession _session;
+        private bool _enabled;
 
         private readonly QueryDescription _tagChangedQuery = new QueryDescription()
             .WithAll<GameplayTagEffectiveChangedBits, GameplayTagEffectiveCache>();
@@ -30,17 +31,29 @@ namespace Ludots.Core.Presentation.Systems
             PresentationEventStream stream,
             GameSession session,
             GasPresentationEventBuffer gasEvents,
-            PresentationOwnerChangeBuffer ownerChanges) : base(world)
+            PresentationOwnerChangeBuffer ownerChanges,
+            bool enabled) : base(world)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
             _gasEvents = gasEvents ?? throw new ArgumentNullException(nameof(gasEvents));
             _stream = stream ?? throw new ArgumentNullException(nameof(stream));
             _ownerChanges = ownerChanges ?? throw new ArgumentNullException(nameof(ownerChanges));
             _session = session ?? throw new ArgumentNullException(nameof(session));
+            _enabled = enabled;
+        }
+
+        internal void SetEnabled(bool enabled)
+        {
+            _enabled = enabled;
         }
 
         public override void Update(in float dt)
         {
+            if (!_enabled)
+            {
+                return;
+            }
+
             int tick = _session.CurrentTick;
 
             // Project gameplay events into the presentation event stream for presenter rules.

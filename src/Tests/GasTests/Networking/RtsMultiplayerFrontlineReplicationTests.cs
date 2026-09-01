@@ -1,0 +1,2515 @@
+﻿using RtsDemoMod.Runtime;
+using System.Numerics;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Arch.Core;
+using Ludots.Core.Association;
+using Ludots.Core.Client;
+using Ludots.Core.Components;
+using Ludots.Core.Config;
+using Ludots.Core.Engine;
+using Ludots.Core.Engine.Pacemaker;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Presentation;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Runtime;
+using Ludots.Core.Knowledge;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Networking.Commands;
+using Ludots.Core.Networking.Configuration;
+using Ludots.Core.Networking.Replication;
+using Ludots.Core.Networking.Runtime;
+using Ludots.Core.Networking.Session;
+using Ludots.Core.ParticipantVisibility;
+using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
+using Ludots.Core.Systems;
+using Ludots.Core.Vision;
+using Ludots.Platform.Abstractions;
+using Ludots.UI;
+using Ludots.UI.Skia;
+using NUnit.Framework;
+using RtsDemoMod.Systems;
+using RtsMultiplayerFrontlineMod.Runtime;
+using RtsMultiplayerFrontlineMod.Systems;
+
+namespace Ludots.Tests.GAS.Networking;
+
+[NonParallelizable]
+[TestFixture]
+public sealed class RtsMultiplayerFrontlineReplicationTests
+{
+    private const string MapId = "rts_duel_v1";
+    private const string RuntimeKey = "rts.multiplayer.frontline.runtime";
+
+    private static readonly string[] FrontlineMods =
+    {
+        "LudotsCoreMod",
+        "CoreInputMod",
+        "EntityCommandPanelMod",
+        "RtsDemoMod",
+        "RtsShowcaseMod",
+        "RtsMultiplayerFrontlineMod",
+    };
+
+    private static readonly string[] FrontlineNetworkedMods = FrontlineMods
+        .Append("RtsMultiplayerFrontlineNetworkedMod")
+        .ToArray();
+
+    private static readonly JsonSerializerOptions TemplateJsonOptions = new()
+    {
+        IncludeFields = true,
+        PropertyNameCaseInsensitive = false,
+    };
+
+    private static readonly string[] ForbiddenSpatialUnitTemplateComponents =
+    {
+        "PresentationStaticTransform",
+        "SpatialPartitionExcluded",
+        "PresentationDestroyPending",
+        "SuspendedTag",
+        "SpatialCellRef",
+    };
+
+    [Test]
+    public async Task AuthoritativeServer_InstallsCommandRuntimeWithoutUiServices()
+    {
+        string repoRoot = FindRepoRoot();
+        using var engine = new GameEngine();
+        engine.InitializeWithConfigPipeline(
+            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" }),
+            Path.Combine(repoRoot, "assets"));
+        engine.SetService(CoreServiceKeys.NetworkProcessRole, NetworkProcessRole.AuthoritativeServer);
+
+        await engine.TriggerManager.FireEventAsync(GameEvents.GameStart, engine.CreateContext());
+
+        Assert.That(engine.TriggerManager.Errors, Is.Empty);
+        Assert.That(engine.GetService(CoreServiceKeys.EntityCommandPanelService), Is.Not.Null);
+        Assert.That(engine.GetService(CoreServiceKeys.UiTextMeasurer), Is.Null);
+    }
+
+    [TestCaseSource(nameof(ForbiddenSpatialUnitTemplateComponents))]
+    public void ClientTemplateFactory_RejectsSpatialUnitTemplateExclusionDrift(string forbiddenComponent)
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        EntityTemplate[] templates = CloneTemplates(engine.MapLoader.TemplateRegistry.GetAll());
+        EntityTemplate core = templates.Single(template => template.Id == "rts_frontline_core");
+        core.Components.Add(forbiddenComponent, new System.Text.Json.Nodes.JsonObject());
+
+        Assert.That(
+            () => new FrontlineClientTemplateFactory(
+                engine.World,
+                templates,
+                specs,
+                config.Replication.MatchStateSchemaId,
+                engine.MapLoader.EntityTemplateKeys,
+                RequireAuthoringContext(engine),
+                RequireStableIds(engine)),
+            Throws.InvalidOperationException.With.Message.Contains(forbiddenComponent));
+    }
+
+    [TestCase("rts_frontline_core")]
+    [TestCase("rts_frontline_harvester")]
+    [TestCase("rts_frontline_infantry")]
+    [TestCase("rts_frontline_crystal_node")]
+    public void FrontlineInteractableTemplates_DeclareBox3DPlayerClickBounds(string templateId)
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        EntityTemplate template = engine.MapLoader.TemplateRegistry.GetAll()
+            .Single(candidate => candidate.Id == templateId);
+
+        Assert.That(template.Components.TryGetValue("SpatialBounds", out JsonNode? boundsNode), Is.True);
+        Assert.That(boundsNode, Is.TypeOf<JsonObject>());
+        Assert.That(boundsNode!["kind"]?.GetValue<string>(), Is.EqualTo("Box3D"));
+        Assert.That(template.Components.TryGetValue("SpatialBox3D", out JsonNode? boxNode), Is.True);
+        Assert.That(boxNode, Is.TypeOf<JsonObject>());
+        Assert.Multiple(() =>
+        {
+            Assert.That(boxNode!["halfSizeXCm"]?.GetValue<int>(), Is.GreaterThan(0));
+            Assert.That(boxNode["halfSizeYCm"]?.GetValue<int>(), Is.GreaterThan(0));
+            Assert.That(boxNode["halfSizeZCm"]?.GetValue<int>(), Is.GreaterThan(0));
+        });
+    }
+
+    [TestCase("SpatialBounds")]
+    [TestCase("SpatialBox3D")]
+    public void ClientTemplateFactory_RejectsMissingPlayerClickBounds(string requiredComponent)
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        EntityTemplate[] templates = CloneTemplates(engine.MapLoader.TemplateRegistry.GetAll());
+        EntityTemplate core = templates.Single(template => template.Id == "rts_frontline_core");
+        Assert.That(core.Components.Remove(requiredComponent), Is.True);
+
+        Assert.That(
+            () => new FrontlineClientTemplateFactory(
+                engine.World,
+                templates,
+                specs,
+                config.Replication.MatchStateSchemaId,
+                engine.MapLoader.EntityTemplateKeys,
+                RequireAuthoringContext(engine),
+                RequireStableIds(engine)),
+            Throws.InvalidOperationException.With.Message.Contains(requiredComponent));
+    }
+
+    [Test]
+    public void ClientTemplateFactory_RejectsNonBoxPlayerClickBounds()
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        EntityTemplate[] templates = CloneTemplates(engine.MapLoader.TemplateRegistry.GetAll());
+        EntityTemplate core = templates.Single(template => template.Id == "rts_frontline_core");
+        var bounds = (JsonObject)core.Components["SpatialBounds"]!;
+        bounds["kind"] = "Point";
+
+        Assert.That(
+            () => new FrontlineClientTemplateFactory(
+                engine.World,
+                templates,
+                specs,
+                config.Replication.MatchStateSchemaId,
+                engine.MapLoader.EntityTemplateKeys,
+                RequireAuthoringContext(engine),
+                RequireStableIds(engine)),
+            Throws.InvalidOperationException.With.Message.Contains("Box3D"));
+    }
+
+    [TestCase("WorldPositionCm")]
+    [TestCase("SpatialCellRef")]
+    public void ClientTemplateFactory_RejectsSpatialMatchStateTemplateDrift(string forbiddenComponent)
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        EntityTemplate[] templates = CloneTemplates(engine.MapLoader.TemplateRegistry.GetAll());
+        EntityTemplate matchState = templates.Single(template => template.Id == "rts_frontline_match_state");
+        matchState.Components.Add(forbiddenComponent, new System.Text.Json.Nodes.JsonObject());
+
+        Assert.That(
+            () => new FrontlineClientTemplateFactory(
+                engine.World,
+                templates,
+                specs,
+                config.Replication.MatchStateSchemaId,
+                engine.MapLoader.EntityTemplateKeys,
+                RequireAuthoringContext(engine),
+                RequireStableIds(engine)),
+            Throws.InvalidOperationException.With.Message.Contains(forbiddenComponent));
+    }
+
+    [Test]
+    [Description(
+        "Feature: Dedicated multiplayer host stays presentation-free\n" +
+        "  Given the authoritative server has loaded the Frontline battlefield without a local viewport\n" +
+        "  When the first authoritative simulation frame advances\n" +
+        "  Then the server keeps running without activating or sampling a player camera")]
+    public void AuthoritativeServer_TicksFrontlineMapWithoutLocalCameraServices()
+    {
+        using GameEngine engine = CreateStartedEngine(
+            NetworkProcessRole.AuthoritativeServer,
+            new TestServerRuntimePort(),
+            installPresentationServices: false);
+
+        Assert.DoesNotThrow(engine.LoadStartupMap);
+        Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False);
+        Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.CameraPoseRequest.Name), Is.False);
+        Assert.DoesNotThrow(() =>
+        {
+            for (int frame = 0; frame < 120; frame++)
+            {
+                engine.Tick(1f / 60f);
+            }
+        });
+        Assert.Multiple(() =>
+        {
+            Assert.That(engine.TriggerManager.Errors, Is.Empty);
+            Assert.That(engine.CurrentMapSession?.MapId.Value, Is.EqualTo(MapId));
+            Assert.That(engine.GetService(CoreServiceKeys.ViewController), Is.Null);
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity _), Is.False);
+            Assert.That(ClientLocalSeatAccess.RequireRegistry(engine).Count, Is.Zero);
+            Assert.That(ClientLocalSeatAccess.RequireLogicViews(engine).Count, Is.Zero);
+            Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False);
+            Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.CameraPoseRequest.Name), Is.False);
+            Assert.That(ClientLocalSeatAccess.RequireRegistry(engine).PresentBindingCount, Is.Zero);
+        });
+    }
+
+    [Test]
+    [Description(
+        "Feature: Dedicated multiplayer host closes presentation transients every logic step\n" +
+        "  Given the authoritative server has no local presentation consumer and its presentation stream is full\n" +
+        "  When gameplay publishes ability, world, tag, and attribute presentation facts\n" +
+        "  Then the next authoritative logic step completes and clears every presentation-only transient")]
+    public void GivenAuthoritativeServerWithoutPresentationConsumer_WhenLogicStepCompletes_ThenPresentationTransientsAreCleared()
+    {
+        using GameEngine engine = CreateStartedEngine(
+            NetworkProcessRole.AuthoritativeServer,
+            new TestServerRuntimePort(),
+            installPresentationServices: false);
+        engine.LoadStartupMap();
+
+        PresentationEventStream stream = engine.GetService(CoreServiceKeys.PresentationEventStream)
+            ?? throw new InvalidOperationException("PresentationEventStream service is missing.");
+        PresentationOwnerChangeBuffer ownerChanges = engine.GetService(CoreServiceKeys.PresentationOwnerChangeBuffer)
+            ?? throw new InvalidOperationException("PresentationOwnerChangeBuffer service is missing.");
+        GasPresentationEventBuffer gasEvents = engine.GetService(CoreServiceKeys.GasPresentationEventBuffer)
+            ?? throw new InvalidOperationException("GasPresentationEventBuffer service is missing.");
+        GlobalPresentationEventBuffer globalEvents = engine.GetService(CoreServiceKeys.GlobalPresentationEventBuffer)
+            ?? throw new InvalidOperationException("GlobalPresentationEventBuffer service is missing.");
+
+        for (int i = 0; i < stream.Capacity; i++)
+        {
+            Assert.That(stream.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.EntitySpawned,
+                KeyId = i,
+            }), Is.True);
+        }
+
+        var tagCache = new GameplayTagEffectiveCache();
+        tagCache.Set(7, true);
+        var tagChanges = new GameplayTagEffectiveChangedBits();
+        tagChanges.Mark(7);
+        var attributes = new AttributeBuffer();
+        attributes.SetBase(0, 25f);
+        var attributeChanges = new GameplayAttributeChangedBits();
+        attributeChanges.Mark(0);
+        Entity owner = engine.World.Create(tagCache, tagChanges, attributes, attributeChanges);
+
+        gasEvents.Publish(new GasPresentationEvent
+        {
+            Kind = GasPresentationEventKind.CastStarted,
+            Actor = owner,
+            AbilityId = 11,
+        });
+        globalEvents.AddWeather(3, 0.75f);
+        Assert.That(ownerChanges.TryAdd(new PresentationOwnerChange(
+            owner,
+            PresentationOwnerChangeKind.Tag,
+            7,
+            stateValue: 1)), Is.True);
+
+        Assert.DoesNotThrow(() =>
+        {
+            for (int frame = 0; frame < 4; frame++)
+            {
+                engine.Tick(1f / 30f);
+            }
+        });
+        Assert.Multiple(() =>
+        {
+            Assert.That(stream.Count, Is.Zero);
+            Assert.That(ownerChanges.Count, Is.Zero);
+            Assert.That(gasEvents.Count, Is.Zero);
+            Assert.That(globalEvents.Count, Is.Zero);
+            Assert.That(engine.World.Has<GameplayTagEffectiveChangedBits>(owner), Is.False);
+            Assert.That(engine.World.Has<GameplayAttributeChangedBits>(owner), Is.False);
+        });
+    }
+
+    [TestCase(0)]
+    [TestCase(1)]
+    [Description(
+        "Feature: Each network commander opens on their own army\n" +
+        "  Given a replicated client has received its command core, harvester, infantry, and nearest crystal field\n" +
+        "  When the first Frontline presentation frame runs for that command seat\n" +
+        "  Then the authored tactical focus is preserved and all owned roles plus the crystal field are visible at 1280x720")]
+    public void GivenReplicatedClientSeat_WhenOpeningFrameRuns_ThenOwnedArmyIsFocusedAndVisible(int sideIndex)
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        engine.LoadStartupMap();
+        Assert.That(engine.TriggerManager.Errors, Is.Empty);
+
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        FrontlineSideConfig side = config.Sides[sideIndex];
+        Assert.That(
+            engine.CurrentMapSession!.PlayerEntityLookup.TryGet(side.PlayerId, out Entity localPlayer),
+            Is.True);
+        BindSoleLocalSeat(engine, side.PlayerId, localPlayer);
+
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        var templates = new FrontlineClientTemplateFactory(
+            engine.World,
+            engine.MapLoader.TemplateRegistry.GetAll(),
+            specs,
+            config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
+            RequireStableIds(engine));
+        int healthId = RequireAttribute(config.HealthAttribute);
+        int crystalId = RequireAttribute(config.CrystalAttribute);
+        OwnershipResolver ownership = RequireOwnership(engine);
+        PlayerEntityLookup players = RequirePlayers(engine);
+        FrontlineReplicationApplier[] appliers =
+        {
+            new FrontlineCoreReplicationApplier(in specs[(int)FrontlineReplicationKind.Core], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineHarvesterReplicationApplier(in specs[(int)FrontlineReplicationKind.Harvester], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineInfantryReplicationApplier(in specs[(int)FrontlineReplicationKind.Infantry], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineCrystalNodeReplicationApplier(in specs[(int)FrontlineReplicationKind.CrystalNode], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+        };
+        string[] templateIds =
+        {
+            "rts_frontline_core",
+            "rts_frontline_harvester",
+            "rts_frontline_infantry",
+            "rts_frontline_crystal_node",
+        };
+        WorldCmInt2 authoredCorePosition = ReadAuthoredOwnedPosition(
+            engine.CurrentMapSession.MapConfig,
+            templateIds[(int)FrontlineReplicationKind.Core],
+            side.PlayerId);
+        Entity[] mirrors = new Entity[appliers.Length];
+        for (int roleIndex = 0; roleIndex < appliers.Length; roleIndex++)
+        {
+            FrontlineReplicationSpec spec = specs[roleIndex];
+            WorldCmInt2 position = spec.SchemaId == config.Replication.CrystalNodeSchemaId
+                ? ReadAuthoredNearestPosition(engine.CurrentMapSession.MapConfig, templateIds[roleIndex], authoredCorePosition)
+                : ReadAuthoredOwnedPosition(engine.CurrentMapSession.MapConfig, templateIds[roleIndex], side.PlayerId);
+            var values = new ReplicationStateVector(
+                FrontlineReplicationPayload.PackInts(position.X, position.Y),
+                FrontlineReplicationPayload.PackFloats(
+                    spec.HasHealth ? 100f : 0f,
+                    spec.HasCrystals ? 40f : 0f),
+                spec.HasOwner
+                    ? FrontlineReplicationPayload.PackInts(side.TeamId, side.PlayerId)
+                    : 0L,
+                spec.SupportedValidBits);
+            var identity = new ReplicationMirrorIdentity(
+                new NetworkEntityHandle(40 + (sideIndex * appliers.Length) + roleIndex, 1));
+            var state = new ReplicationMirrorState(spec.SchemaId, revision: 1, in values);
+            mirrors[roleIndex] = appliers[roleIndex].Create(engine.World, in identity, in state);
+        }
+        Entity crystalMirror = mirrors[(int)FrontlineReplicationKind.CrystalNode];
+        KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+            ?? throw new InvalidOperationException("KnowledgeProjectionStore is unavailable.");
+        knowledge.Upsert(localPlayer, crystalMirror, new KnowledgeDisclosureRecord(
+            KnowledgePresence.LiveVisible,
+            KnowledgePositionAccess.Live,
+            KnowledgeIdMask256.Empty,
+            KnowledgeIdMask256.Empty,
+            KnowledgeIdMask256.Empty,
+            crystalMirror,
+            observedTick: 0,
+            expiryTick: 0,
+            confidencePermille: 1000,
+            revision: 1));
+
+        RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(engine, mirrors[(int)FrontlineReplicationKind.Core], snapCamera: false);
+        CameraPoseRequest commandSourceFocus = engine.GetService(CoreServiceKeys.CameraPoseRequest)
+            ?? throw new InvalidOperationException("RTS command-source focus did not publish a camera pose.");
+        Vector2 authoredFocusTarget = commandSourceFocus.TargetCm
+            ?? throw new InvalidOperationException("RTS command-source focus did not publish a target.");
+
+        var culling = new CameraCullingDebugState { VisibilityRevision = 7 };
+        engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling);
+        var presentation = new FrontlinePresentationSystem(engine, runtime);
+        presentation.Update(1f / 60f);
+
+        CameraPoseRequest request = engine.GetService(CoreServiceKeys.CameraPoseRequest)
+            ?? throw new InvalidOperationException("Frontline opening frame did not request a camera focus.");
+        FrontlineOpeningViewSnapshot capturedOpeningView = runtime.OpeningView;
+        WorldCmInt2 corePosition = engine.World.Get<WorldPositionCm>(mirrors[0]).ToWorldCmInt2();
+        Assert.Multiple(() =>
+        {
+            Assert.That(request.TargetCm, Is.EqualTo(authoredFocusTarget));
+            Assert.That(request.TargetCm, Is.Not.EqualTo(new Vector2(corePosition.X, corePosition.Y)));
+            Assert.That(request.DistanceCm, Is.EqualTo(5200f).Within(0.01f));
+            Assert.That(request.FovYDeg, Is.EqualTo(46f).Within(0.01f));
+            Assert.That(capturedOpeningView.HasFocusTarget, Is.True);
+            Assert.That(capturedOpeningView.FocusTargetCm, Is.EqualTo(authoredFocusTarget));
+            Assert.That(capturedOpeningView.IsReady, Is.False);
+        });
+
+        CameraConfig defaultCamera = engine.CurrentMapSession.MapConfig.DefaultCamera
+            ?? throw new InvalidOperationException("Frontline map has no default camera.");
+        if (defaultCamera.TargetXCm is not float defaultTargetXCm ||
+            defaultCamera.TargetYCm is not float defaultTargetYCm)
+        {
+            throw new InvalidOperationException("Frontline map has no complete default camera target.");
+        }
+        Vector2 defaultTargetCm = new(defaultTargetXCm, defaultTargetYCm);
+        ClientLocalSeatAccess.RequireSolePresentCamera(engine).State.TargetCm = defaultTargetCm;
+        culling.CameraTargetCm = defaultTargetCm;
+        culling.VisibleEntityCount = 1;
+        culling.VisibilityRevision = capturedOpeningView.CapturedVisibilityRevision + 1;
+        engine.World.Get<CullState>(mirrors[0]).IsVisible = true;
+        if (engine.World.Has<PresentationOwnerHasPresenterPayload>(mirrors[0]))
+        {
+            engine.World.Get<PresentationOwnerHasPresenterPayload>(mirrors[0]).Count = 1;
+        }
+        else
+        {
+            engine.World.Add(mirrors[0], new PresentationOwnerHasPresenterPayload { Count = 1 });
+        }
+
+        presentation.Update(1f / 60f);
+        Assert.That(runtime.OpeningView.IsReady, Is.False,
+            "The default map-center camera must not satisfy opening-view readiness.");
+
+        ClientLocalSeatAccess.RequireSolePresentCamera(engine).ApplyPose(request);
+        engine.GlobalContext.Remove(CoreServiceKeys.CameraPoseRequest.Name);
+        ClientLocalSeatAccess.RequireSolePresentCamera(engine).Update(0f);
+        culling.CameraTargetCm = authoredFocusTarget;
+        culling.VisibilityRevision = capturedOpeningView.CapturedVisibilityRevision;
+        presentation.Update(1f / 60f);
+        Assert.Multiple(() =>
+        {
+            Assert.That(runtime.OpeningView.IsReady, Is.True,
+                "Camera and culling both sit on the focus target; readiness must not wait for a visibility-revision delta that a born-visible static scene never produces.");
+            Assert.That(runtime.OpeningView.ReadyVisibilityRevision, Is.EqualTo(culling.VisibilityRevision));
+        });
+
+        var viewport = new StubViewController(1280f, 720f);
+        var projector = new CoreScreenProjector(ClientLocalSeatAccess.RequireSolePresentCamera(engine), viewport);
+        engine.SetService(CoreServiceKeys.ScreenProjector, projector);
+        for (int roleIndex = 0; roleIndex < mirrors.Length; roleIndex++)
+        {
+            Assert.That(
+                SpatialBoundsUtility.TryProjectScreenBounds(
+                    engine.World,
+                    mirrors[roleIndex],
+                    projector,
+                    out ScreenRect bounds),
+                Is.True,
+                $"Side {sideIndex} {templateIds[roleIndex]} did not project into the 1280x720 opening view.");
+            Assert.That(bounds.MaxX, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(bounds.MinX, Is.LessThanOrEqualTo(viewport.Resolution.X));
+            Assert.That(bounds.MaxY, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(bounds.MinY, Is.LessThanOrEqualTo(viewport.Resolution.Y));
+        }
+        Assert.That(
+            ResolveMirrorAtProjectedCenter(
+                engine,
+                localPlayer,
+                crystalMirror),
+            Is.EqualTo(crystalMirror));
+    }
+
+    [Test]
+    [Description(
+        "Feature: Dedicated server removes a destroyed command core\n" +
+        "  Given both commanders are fighting on the authoritative Frontline battlefield\n" +
+        "  When the southern command core reaches zero health\n" +
+        "  Then the server publishes the northern victory and removes the southern core without a presentation loop")]
+    public void GivenAuthoritativeBattle_WhenSouthernCoreFalls_ThenDedicatedServerRemovesIt()
+    {
+        using GameEngine engine = CreateStartedEngine(
+            NetworkProcessRole.AuthoritativeServer,
+            new TestServerRuntimePort(),
+            installPresentationServices: false);
+        engine.LoadStartupMap();
+
+        FrontlineRuntime runtime = GetRuntime(engine);
+        var room = new NetworkRoomSnapshotHeader(
+            new SessionEpoch(17),
+            revision: 1,
+            committedTick: 0,
+            countdownRemainingTicks: 0,
+            seatCount: 2,
+            connectedSeatCount: 2,
+            readySeatCount: 2,
+            NetworkRoomPhase.Started);
+        NetworkRoomSeatSnapshot[] seats =
+        {
+            new(0, NetworkRoomSeatConnectionState.Connected, NetworkRoomReadyState.Ready, 1, new PlayerId(1)),
+            new(1, NetworkRoomSeatConnectionState.Connected, NetworkRoomReadyState.Ready, 1, new PlayerId(2)),
+        };
+        runtime.ApplyNetworkRoomSnapshot(in room, seats);
+        NetworkGameplayCommandGate gameplayGate = engine.GetService(CoreServiceKeys.NetworkGameplayCommandGate)
+            ?? throw new InvalidOperationException("Authoritative Frontline test requires the gameplay command gate.");
+        gameplayGate.StartMatch();
+
+        for (int i = 0; i < 4; i++)
+        {
+            engine.Tick(1f / 30f);
+        }
+
+        Entity southernCore = Entity.Null;
+        var coreQuery = new QueryDescription().WithAll<FrontlineCore, FrontlineParticipant, AttributeBuffer>();
+        foreach (ref Chunk chunk in engine.World.Query(in coreQuery))
+        {
+            ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
+            foreach (int index in chunk)
+            {
+                if (participants[index].SideIndex == 1)
+                {
+                    southernCore = chunk.Entity(index);
+                }
+            }
+        }
+        Assert.That(southernCore, Is.Not.EqualTo(Entity.Null));
+        Assert.That(
+            engine.World.Has<PresentationStableId>(southernCore),
+            Is.False,
+            "A dedicated server must not depend on presentation bootstrap to complete gameplay entity teardown.");
+        NetworkEntityTable networkEntities = engine.GetService(CoreServiceKeys.NetworkEntityTable)
+            ?? throw new InvalidOperationException("Authoritative Frontline test requires the network entity table.");
+        Assert.That(networkEntities.TryResolve(southernCore, out _), Is.True);
+
+        int healthId = RequireAttribute(runtime.Config.HealthAttribute);
+        TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("TagOps service is missing.");
+        AttributeMutationOps.SetCurrent(engine.World, southernCore, healthId, 0f, tagOps);
+
+        for (int i = 0; i < 8 && engine.World.IsAlive(southernCore); i++)
+        {
+            engine.Tick(1f / 30f);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(runtime.Snapshot.Outcome, Is.EqualTo(FrontlineMatchOutcome.SideOneVictory));
+            Assert.That(engine.World.IsAlive(southernCore), Is.False);
+            Assert.That(networkEntities.TryResolve(southernCore, out _), Is.False);
+        });
+    }
+
+    [Test]
+    [Description(
+        "Feature: Each replicated commander owns a local battlefield camera\n" +
+        "  Given a replicated client has loaded the Frontline battlefield and its viewport\n" +
+        "  When local input requests the Frontline command camera\n" +
+        "  Then the client applies that camera before presenting the next frame")]
+    public void ReplicatedClient_ConsumesLocalCameraRequestBeforePresentation()
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        engine.LoadStartupMap();
+        Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity _), Is.True,
+            "the merged cold-start recipe seats the replicated client at map load; the handshake rebinds it.");
+        Assert.That(ClientLocalSeatAccess.RequireRegistry(engine).Count, Is.EqualTo(1));
+        engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
+        {
+            Id = "Rts.Frontline",
+            BlendDurationSeconds = 0f,
+            ReplaceActiveStack = true,
+            ResetRuntimeState = true,
+        });
+
+        Assert.DoesNotThrow(() => engine.Tick(1f / 60f));
+        Assert.Multiple(() =>
+        {
+            Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False);
+            Assert.That(ClientLocalSeatAccess.ResolveAuthorityCamera(engine).VirtualCameraBrain?.ActiveCameraId, Is.EqualTo("Rts.Frontline"));
+        });
+    }
+
+    [Test]
+    public void Projector_UsesKnowledgeMaskWithoutLeakingHealthOrCrystals()
+    {
+        using World world = World.Create();
+        const int healthId = 7;
+        const int crystalId = 9;
+        var attributes = new AttributeBuffer();
+        attributes.SetCurrent(healthId, 875f);
+        attributes.SetCurrent(crystalId, 65f);
+        Entity core = world.Create(
+            new ReplicationSchemaRef(701),
+            WorldPositionCm.FromCm(1200, 3400),
+            attributes,
+            new Team { Id = 1 },
+            new PlayerOwner { PlayerId = 1 },
+            new FrontlineParticipant { SideIndex = 0 },
+            new FrontlineCore());
+        var spec = new FrontlineReplicationSpec(
+            FrontlineReplicationKind.Core,
+            SchemaId: 701,
+            HasHealth: true,
+            HasCrystals: true,
+            HasOwner: true);
+        var projector = new FrontlineCoreReplicationProjector(in spec, healthId, crystalId);
+
+        KnowledgeIdMask256 healthOnly = KnowledgeIdMask256.Empty.WithId(healthId);
+        var disclosure = new KnowledgeDisclosureRecord(
+            KnowledgePresence.LiveVisible,
+            KnowledgePositionAccess.Live,
+            healthOnly,
+            KnowledgeIdMask256.Empty,
+            KnowledgeIdMask256.Empty,
+            core,
+            observedTick: 10,
+            expiryTick: 0,
+            confidencePermille: 1000,
+            revision: 2);
+
+        Assert.That(projector.TryProject(world, core, in disclosure, out ReplicationProjectedState projected), Is.True);
+        Assert.That(
+            FrontlineReplicationPayload.Has(projected.Values.Value3, FrontlineReplicationPayload.HealthValid),
+            Is.True);
+        Assert.That(
+            FrontlineReplicationPayload.Has(projected.Values.Value3, FrontlineReplicationPayload.CrystalsValid),
+            Is.False);
+        Assert.That(FrontlineReplicationPayload.UnpackLowFloat(projected.Values.Value1), Is.EqualTo(875f));
+        Assert.That(FrontlineReplicationPayload.UnpackHighInt(projected.Values.Value1), Is.Zero,
+            "An undisclosed crystal value must be zero on the wire, not merely marked invalid.");
+
+        var noAttributes = new KnowledgeDisclosureRecord(
+            KnowledgePresence.LiveVisible,
+            KnowledgePositionAccess.Live,
+            KnowledgeIdMask256.Empty,
+            KnowledgeIdMask256.Empty,
+            KnowledgeIdMask256.Empty,
+            core,
+            observedTick: 11,
+            expiryTick: 0,
+            confidencePermille: 1000,
+            revision: 3);
+        Assert.That(projector.TryProject(world, core, in noAttributes, out projected), Is.True);
+        Assert.That(projected.Values.Value1, Is.Zero,
+            "Health and crystals must both be absent when Knowledge discloses neither attribute.");
+
+        var hidden = new KnowledgeDisclosureRecord(
+            KnowledgePresence.HiddenWithSource,
+            KnowledgePositionAccess.None,
+            KnowledgeIdMask256.Empty,
+            KnowledgeIdMask256.Empty,
+            KnowledgeIdMask256.Empty,
+            core,
+            observedTick: 12,
+            expiryTick: 0,
+            confidencePermille: 1000,
+            revision: 4);
+        Assert.That(projector.TryProject(world, core, in hidden, out _), Is.False,
+            "A hidden enemy must not emit position or attribute replication state.");
+    }
+
+    [Test]
+    public void GameStart_ConfiguresFogKnowledgeToDiscloseVisibleEnemyHealthOnly()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        FrontlineConfig config = GetRuntime(engine).Config;
+        int healthId = RequireAttribute(config.HealthAttribute);
+        int crystalId = RequireAttribute(config.CrystalAttribute);
+        FogKnowledgeProjector projector = engine.GetService(CoreServiceKeys.FogKnowledgeProjector)
+            ?? throw new InvalidOperationException("FogKnowledgeProjector is unavailable.");
+
+        Assert.That(projector.IsProjectionPolicyConfigured, Is.True);
+        Assert.That(projector.ProjectionPolicy.Disclosure.AttributeMask.ContainsId(healthId), Is.True);
+        Assert.That(projector.ProjectionPolicy.Disclosure.AttributeMask.ContainsId(crystalId), Is.False);
+    }
+
+    [Test]
+    public void ClientApplier_CreatesFormalSouthernMirrorAndAuthorsSouthernVisionScope()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        int healthId = RequireAttribute(config.HealthAttribute);
+        int crystalId = RequireAttribute(config.CrystalAttribute);
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        var templates = new FrontlineClientTemplateFactory(
+            engine.World,
+            engine.MapLoader.TemplateRegistry.GetAll(),
+            specs,
+            config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
+            RequireStableIds(engine));
+        FrontlineReplicationSpec coreSpec = specs[(int)FrontlineReplicationKind.Core];
+        var applier = new FrontlineCoreReplicationApplier(
+            in coreSpec,
+            templates,
+            config.Sides,
+            ResolveSideScopeIds(engine, config),
+            healthId,
+            crystalId,
+            runtime.TagBinder,
+            RequireOwnership(engine),
+            RequirePlayers(engine));
+        var values = new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts(23000, 15000),
+            FrontlineReplicationPayload.PackFloats(800f, 55f),
+            FrontlineReplicationPayload.PackInts(config.Sides[1].TeamId, config.Sides[1].PlayerId),
+            coreSpec.SupportedValidBits);
+        var identity = new ReplicationMirrorIdentity(new NetworkEntityHandle(3, 1));
+        var state = new ReplicationMirrorState(coreSpec.SchemaId, revision: 7, in values);
+
+        Entity mirror = applier.Create(engine.World, in identity, in state);
+
+        Assert.That(engine.World.Has<FrontlineCore>(mirror), Is.True);
+        Assert.That(engine.World.Has<ReplicationSchemaRef>(mirror), Is.True);
+        Assert.That(engine.World.Has<ReplicationMirrorIdentity>(mirror), Is.True);
+        Assert.That(
+            engine.World.Get<EntityTemplateKeyRef>(mirror).TemplateKeyId,
+            Is.EqualTo(engine.MapLoader.EntityTemplateKeys.GetId("rts_frontline_core")));
+        Assert.That(engine.World.Get<Team>(mirror).Id, Is.EqualTo(config.Sides[1].TeamId));
+        Assert.That(engine.World.Get<PlayerOwner>(mirror).PlayerId, Is.EqualTo(config.Sides[1].PlayerId));
+        Assert.That(engine.World.Get<FrontlineParticipant>(mirror).SideIndex, Is.EqualTo(1));
+        Assert.That(engine.World.Get<VisionEmitterCm>(mirror).ScopeKeyId, Is.EqualTo(RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, config.Sides[1].VisionScopeKey)));
+        Assert.That(engine.World.Get<AttributeBuffer>(mirror).GetCurrent(healthId), Is.EqualTo(800f));
+        Assert.That(engine.World.Get<AttributeBuffer>(mirror).GetCurrent(crystalId), Is.EqualTo(55f));
+        Assert.That(engine.World.Has<AbilityStateBuffer>(mirror), Is.True);
+        ref AbilityStateBuffer abilities = ref engine.World.Get<AbilityStateBuffer>(mirror);
+        Assert.That(abilities.Count, Is.EqualTo(1));
+        Assert.That(
+            abilities.Get(0).AbilityId,
+            Is.EqualTo(AbilityIdRegistry.GetId("Ability.Rts.Frontline.TrainInfantry")));
+        Assert.That(engine.World.Get<FrontlineTagBindingState>(mirror).IsBound, Is.EqualTo(1));
+        Assert.That(engine.World.Get<PreviousWorldPositionCm>(mirror).Value,
+            Is.EqualTo(engine.World.Get<WorldPositionCm>(mirror).Value));
+        VisualTransform visual = engine.World.Get<VisualTransform>(mirror);
+        Assert.That(visual.Position, Is.EqualTo(new Vector3(230f, 0f, 150f)));
+        Assert.That(visual.Rotation, Is.EqualTo(Quaternion.Identity));
+        Assert.That(visual.Scale, Is.EqualTo(RequireTemplateVisualScale(engine, "rts_frontline_core")));
+
+        int stableId = engine.World.Get<PresentationStableId>(mirror).Value;
+        var updatedValues = new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts(24000, 15500),
+            FrontlineReplicationPayload.PackFloats(760f, 60f),
+            values.Value2,
+            coreSpec.SupportedValidBits);
+        var update = new ReplicatedEntityState(identity.Handle, coreSpec.SchemaId, revision: 8, in updatedValues);
+        applier.Apply(engine.World, mirror, in update);
+
+        Assert.That(engine.World.Get<PreviousWorldPositionCm>(mirror).Value,
+            Is.EqualTo(WorldPositionCm.FromCm(23000, 15000).Value));
+        Assert.That(engine.World.Get<WorldPositionCm>(mirror).Value,
+            Is.EqualTo(WorldPositionCm.FromCm(24000, 15500).Value));
+        Assert.That(engine.World.Get<VisualTransform>(mirror).Position, Is.EqualTo(new Vector3(240f, 0f, 155f)));
+        Assert.That(engine.World.Get<PresentationStableId>(mirror).Value, Is.EqualTo(stableId));
+        Assert.That(engine.World.Get<AbilityStateBuffer>(mirror).Get(0).AbilityId,
+            Is.EqualTo(AbilityIdRegistry.GetId("Ability.Rts.Frontline.TrainInfantry")));
+        Assert.That(engine.World.Get<FrontlineTagBindingState>(mirror).IsBound, Is.EqualTo(1));
+
+        applier.Conceal(engine.World, mirror);
+        Assert.That(engine.World.Get<CullState>(mirror).IsVisible, Is.False);
+        Assert.That(engine.World.Get<CommandSourceSelectableState>(mirror).Enabled, Is.False);
+
+        applier.Apply(engine.World, mirror, in update);
+        Assert.That(engine.World.Get<CullState>(mirror).IsVisible, Is.True);
+        Assert.That(engine.World.Get<CommandSourceSelectableState>(mirror).Enabled, Is.True);
+        Assert.That(engine.World.Get<AbilityStateBuffer>(mirror).Get(0).AbilityId,
+            Is.EqualTo(AbilityIdRegistry.GetId("Ability.Rts.Frontline.TrainInfantry")));
+    }
+
+    [Test]
+    [Description(
+        "Feature: A replicated client can see and select battlefield mirrors\n" +
+        "  Given the client network pump receives a visible Frontline harvester\n" +
+        "  When one complete client frame creates it and a later frame moves it\n" +
+        "  Then the harvester remains in the formal spatial index, visible, and selectable\n" +
+        "  When a later snapshot conceals the harvester\n" +
+        "  Then the spatial index no longer contains the destroyed mirror")]
+    public void GivenReplicatedClientPump_WhenMirrorIsCreatedMovedAndReleased_ThenSpatialVisibilityLifecycleStaysConsistent()
+    {
+        var runtimePort = new TestClientRuntimePort
+        {
+            ConnectionState = ReplicatedClientConnectionState.Connected,
+            HasEstablishedSession = true,
+        };
+        using GameEngine engine = CreateStartedReplicatedClientEngine(runtimePort);
+        engine.LoadStartupMap();
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        FrontlineReplicationSpec spec = FrontlineReplication.CreateSpecs(config.Replication)
+            [(int)FrontlineReplicationKind.Harvester];
+        Assert.That(
+            engine.CurrentMapSession!.PlayerEntityLookup.TryGet(config.Sides[0].PlayerId, out Entity viewer),
+            Is.True);
+        BindSoleLocalSeat(engine, config.Sides[0].PlayerId, viewer);
+        IViewController view = engine.GetService(CoreServiceKeys.ViewController)
+            ?? throw new InvalidOperationException("Frontline replication test requires a view controller.");
+        engine.SetService(
+            CoreServiceKeys.ScreenProjector,
+            (IScreenProjector)new CoreScreenProjector(ClientLocalSeatAccess.RequireSolePresentCamera(engine), view));
+        engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(new CameraCullingSystem(
+            engine.World,
+            ClientLocalSeatAccess.RequireSolePresentCamera(engine),
+            engine.SpatialQueries,
+            view,
+            cullingConfig: engine.MergedConfig!.Presentation.CameraCulling));
+        engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
+        {
+            Id = "Rts.Frontline",
+            BlendDurationSeconds = 0f,
+            ReplaceActiveStack = true,
+            ResetRuntimeState = true,
+        });
+        engine.Tick(1f / 60f);
+
+        NetworkRuntimeConfig network = engine.MergedConfig!.Networking;
+        ClientReplicationSchemaApplierRegistry appliers = engine.GetService(CoreServiceKeys.ClientReplicationSchemaAppliers)
+            ?? throw new InvalidOperationException("Frontline replication test requires client schema appliers.");
+        appliers.Freeze();
+        KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+            ?? throw new InvalidOperationException("Frontline replication test requires knowledge projection.");
+        var bridge = new ClientWorldReplicationBridge(
+            engine.World,
+            network.NetworkEntityCapacity,
+            sessionEpoch: 17,
+            appliers,
+            engine.GetService(CoreServiceKeys.SpatialPartitionMembership)
+                ?? throw new InvalidOperationException("Frontline replication test requires spatial membership."),
+            knowledge,
+            viewer);
+        runtimePort.Bridge = bridge;
+
+        var channel = new AuthoritativeReplicationChannel(
+            network.NetworkEntityCapacity,
+            network.BaselineCapacity,
+            new ReplicationDisclosureChangeLog(network.DisclosureChangeLogCapacity));
+        var packet = new ReplicationPacketBuffer(network.ReplicationPacketEntityCapacity);
+        var handle = new NetworkEntityHandle(25, 1);
+        var values = new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts(15000, 15000),
+            FrontlineReplicationPayload.PackFloats(120f, 0f),
+            FrontlineReplicationPayload.PackInts(config.Sides[0].TeamId, config.Sides[0].PlayerId),
+            spec.SupportedValidBits);
+        var states = new[] { new ReplicatedEntityState(handle, spec.SchemaId, revision: 1, in values) };
+        var visible = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.LiveVisible) };
+        Assert.That(channel.BuildFull(17, 1, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+        runtimePort.AfterPacketApplied = () =>
+        {
+            Assert.That(bridge.TryResolve(handle, out Entity appliedMirror), Is.True);
+            engine.World.Get<CullState>(appliedMirror).IsVisible = false;
+        };
+        runtimePort.PendingPacket = packet;
+        engine.Tick(1f / 60f);
+        runtimePort.AfterPacketApplied = null;
+        Assert.That(runtimePort.LastBridgeResult, Is.EqualTo(ReplicationBridgeResult.Success));
+        Assert.That(bridge.TryResolve(handle, out Entity mirror), Is.True);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(engine.World.Has<SpatialCellRef>(mirror), Is.True);
+            Assert.That(engine.World.Has<SpatialPartitionExcluded>(mirror), Is.False);
+            Assert.That(engine.World.Get<CullState>(mirror).IsVisible, Is.True);
+            Assert.That(SpatialQueryContains(engine, mirror, new WorldCmInt2(15000, 15000)), Is.True);
+            Assert.That(ResolveMirrorAtProjectedCenter(engine, viewer, mirror), Is.EqualTo(mirror));
+        });
+
+        values = new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts(16500, 15000),
+            FrontlineReplicationPayload.PackFloats(120f, 0f),
+            FrontlineReplicationPayload.PackInts(config.Sides[0].TeamId, config.Sides[0].PlayerId),
+            spec.SupportedValidBits);
+        states[0] = new ReplicatedEntityState(handle, spec.SchemaId, revision: 2, in values);
+        Assert.That(channel.BuildDelta(17, 2, 2, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+        runtimePort.PendingPacket = packet;
+        engine.Tick(1f / 60f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(engine.World.Get<WorldPositionCm>(mirror).Value,
+                Is.EqualTo(WorldPositionCm.FromCm(16500, 15000).Value));
+            Assert.That(SpatialQueryContains(engine, mirror, new WorldCmInt2(15000, 15000)), Is.False);
+            Assert.That(SpatialQueryContains(engine, mirror, new WorldCmInt2(16500, 15000)), Is.True);
+            Assert.That(engine.World.Get<CullState>(mirror).IsVisible, Is.True);
+            Assert.That(ResolveMirrorAtProjectedCenter(engine, viewer, mirror), Is.EqualTo(mirror));
+        });
+
+        values = new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts(engine.WorldSizeSpec.Bounds.Right + 1, 15000),
+            FrontlineReplicationPayload.PackFloats(120f, 0f),
+            FrontlineReplicationPayload.PackInts(config.Sides[0].TeamId, config.Sides[0].PlayerId),
+            spec.SupportedValidBits);
+        states[0] = new ReplicatedEntityState(handle, spec.SchemaId, revision: 3, in values);
+        Assert.That(channel.BuildDelta(17, 3, 3, 2, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+        Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.SpatialApplyRejected));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(engine.World.Get<WorldPositionCm>(mirror).Value,
+                Is.EqualTo(WorldPositionCm.FromCm(16500, 15000).Value));
+            Assert.That(engine.World.Get<ReplicationMirrorState>(mirror).Revision, Is.EqualTo(2));
+            Assert.That(SpatialQueryContains(engine, mirror, new WorldCmInt2(16500, 15000)), Is.True);
+            Assert.That(bridge.LastSnapshotId, Is.EqualTo(2));
+            Assert.That(knowledge.TryGet(viewer, mirror, currentTick: 3, out KnowledgeDisclosureRecord disclosure), Is.True);
+            Assert.That(disclosure.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
+        });
+
+        values = new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts(17000, 15000),
+            FrontlineReplicationPayload.PackFloats(120f, 0f),
+            FrontlineReplicationPayload.PackInts(config.Sides[0].TeamId, config.Sides[0].PlayerId),
+            spec.SupportedValidBits);
+        states[0] = new ReplicatedEntityState(handle, spec.SchemaId, revision: 4, in values);
+        Assert.That(channel.BuildDelta(17, 4, 4, 2, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+        Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+        Assert.That(SpatialQueryContains(engine, mirror, new WorldCmInt2(17000, 15000)), Is.True);
+
+        var remembered = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.Known) };
+        Assert.That(channel.BuildDelta(17, 5, 5, 4, states, remembered, packet), Is.EqualTo(ReplicationBuildResult.Success));
+        runtimePort.PendingPacket = packet;
+        engine.Tick(1f / 60f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(bridge.TryResolve(handle, out _), Is.False);
+            Assert.That(engine.World.IsAlive(mirror), Is.False);
+            Assert.That(SpatialQueryContains(engine, mirror, new WorldCmInt2(17000, 15000)), Is.False);
+        });
+    }
+
+    [Test]
+    [Description(
+        "Feature: Replicated battlefield units remain visible\n" +
+        "  Given a client receives command core, harvester, infantry, and crystal mirrors\n" +
+        "  When the client presents the next battlefield frame\n" +
+        "  Then every mirror keeps its formal template identity, stands on the terrain, and owns its role-specific shape")]
+    public void GivenFourReplicatedRoles_WhenClientPresentsFrame_ThenEachMirrorIsGroundedAndReadable()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        var templates = new FrontlineClientTemplateFactory(
+            engine.World,
+            engine.MapLoader.TemplateRegistry.GetAll(),
+            specs,
+            config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
+            RequireStableIds(engine));
+        int healthId = RequireAttribute(config.HealthAttribute);
+        int crystalId = RequireAttribute(config.CrystalAttribute);
+        OwnershipResolver ownership = RequireOwnership(engine);
+        PlayerEntityLookup players = RequirePlayers(engine);
+        FrontlineReplicationApplier[] appliers =
+        {
+            new FrontlineCoreReplicationApplier(in specs[0], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineHarvesterReplicationApplier(in specs[1], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineInfantryReplicationApplier(in specs[2], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineCrystalNodeReplicationApplier(in specs[3], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+        };
+        string[] templateIds =
+        {
+            "rts_frontline_core",
+            "rts_frontline_harvester",
+            "rts_frontline_infantry",
+            "rts_frontline_crystal_node",
+        };
+        string[] performerIds =
+        {
+            "rts.frontline.visual.core",
+            "rts.frontline.visual.harvester",
+            "rts.frontline.visual.infantry",
+            "rts.frontline.visual.crystal",
+        };
+        Entity[] mirrors = new Entity[appliers.Length];
+        for (int i = 0; i < appliers.Length; i++)
+        {
+            FrontlineReplicationSpec spec = specs[i];
+            var values = new ReplicationStateVector(
+                FrontlineReplicationPayload.PackInts(9000 + (i * 1200), 15000),
+                FrontlineReplicationPayload.PackFloats(spec.HasHealth ? 100f : 0f, spec.HasCrystals ? 40f : 0f),
+                spec.HasOwner
+                    ? FrontlineReplicationPayload.PackInts(config.Sides[0].TeamId, config.Sides[0].PlayerId)
+                    : 0L,
+                spec.SupportedValidBits);
+            var identity = new ReplicationMirrorIdentity(new NetworkEntityHandle(20 + i, 1));
+            var state = new ReplicationMirrorState(spec.SchemaId, revision: 1, in values);
+            mirrors[i] = appliers[i].Create(engine.World, in identity, in state);
+        }
+
+        engine.Tick(1f / 60f);
+        engine.Tick(1f / 60f);
+
+        PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+            ?? throw new InvalidOperationException("PresenterDefinitionRegistry is unavailable.");
+        PresenterEntityRuntime performers = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+            ?? throw new InvalidOperationException("PresenterEntityRuntime is unavailable.");
+        for (int i = 0; i < mirrors.Length; i++)
+        {
+            Entity mirror = mirrors[i];
+            int definitionId = definitions.GetId(performerIds[i]);
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    engine.World.Get<EntityTemplateKeyRef>(mirror).TemplateKeyId,
+                    Is.EqualTo(engine.MapLoader.EntityTemplateKeys.GetId(templateIds[i])));
+                Assert.That(engine.World.Get<ContinuousHeightmapSampleState>(mirror).Sampled, Is.EqualTo(1));
+                Assert.That(engine.World.Get<VisualTransform>(mirror).Position.Y, Is.GreaterThan(0.1f));
+                Assert.That(performers.GetActiveByOwnerDefinition(definitionId, mirror), Has.Count.EqualTo(1));
+            });
+        }
+    }
+
+    [Test]
+    public void ClientHarvesterApplier_BindsRoleTagExactlyOnceAcrossRepeatedSnapshots()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        FrontlineReplicationSpec spec = specs[(int)FrontlineReplicationKind.Harvester];
+        var templates = new FrontlineClientTemplateFactory(
+            engine.World,
+            engine.MapLoader.TemplateRegistry.GetAll(),
+            specs,
+            config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
+            RequireStableIds(engine));
+        var applier = new FrontlineHarvesterReplicationApplier(
+            in spec,
+            templates,
+            config.Sides,
+            ResolveSideScopeIds(engine, config),
+            RequireAttribute(config.HealthAttribute),
+            RequireAttribute(config.CrystalAttribute),
+            runtime.TagBinder,
+            RequireOwnership(engine),
+            RequirePlayers(engine));
+        var values = new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts(7000, 9000),
+            FrontlineReplicationPayload.PackFloats(120f, 0f),
+            FrontlineReplicationPayload.PackInts(config.Sides[0].TeamId, config.Sides[0].PlayerId),
+            spec.SupportedValidBits);
+        var handle = new NetworkEntityHandle(4, 1);
+        var identity = new ReplicationMirrorIdentity(handle);
+        var state = new ReplicationMirrorState(spec.SchemaId, revision: 1, in values);
+
+        Entity mirror = applier.Create(engine.World, in identity, in state);
+        int tagId = TagRegistry.GetId(config.HarvesterTag);
+        Assert.That(tagId, Is.GreaterThan(0));
+        Assert.That(engine.World.Get<GameplayTagContainer>(mirror).HasTag(tagId), Is.True);
+        Assert.That(engine.World.Get<TagCountContainer>(mirror).GetCount(tagId), Is.EqualTo(1));
+
+        var update = new ReplicatedEntityState(handle, spec.SchemaId, revision: 2, in values);
+        applier.Apply(engine.World, mirror, in update);
+
+        Assert.That(engine.World.Get<GameplayTagContainer>(mirror).HasTag(tagId), Is.True);
+        Assert.That(engine.World.Get<TagCountContainer>(mirror).GetCount(tagId), Is.EqualTo(1));
+        Assert.That(engine.World.Get<FrontlineTagBindingState>(mirror).IsBound, Is.EqualTo(1));
+    }
+
+    [Test]
+    [Description(
+        "Feature: A replicated harvester keeps the player's command intent\n" +
+        "  Given the local player's harvester and a visible crystal node arrived in a battlefield snapshot\n" +
+        "  When the player commands that harvester on the crystal node\n" +
+        "  Then the client issues a gather command against that entity instead of a ground move")]
+    public void GivenOwnedHarvesterAndVisibleCrystalMirrors_WhenRoutingCommand_ThenClientIssuesEntityGather()
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        engine.LoadMap(MapId);
+        Assert.That(engine.TriggerManager.Errors, Is.Empty);
+
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        var templates = new FrontlineClientTemplateFactory(
+            engine.World,
+            engine.MapLoader.TemplateRegistry.GetAll(),
+            specs,
+            config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
+            RequireStableIds(engine));
+        int healthId = RequireAttribute(config.HealthAttribute);
+        int crystalId = RequireAttribute(config.CrystalAttribute);
+        var harvesterApplier = new FrontlineHarvesterReplicationApplier(
+            in specs[(int)FrontlineReplicationKind.Harvester],
+            templates,
+            config.Sides,
+            ResolveSideScopeIds(engine, config),
+            healthId,
+            crystalId,
+            runtime.TagBinder,
+            RequireOwnership(engine),
+            RequirePlayers(engine));
+        var crystalApplier = new FrontlineCrystalNodeReplicationApplier(
+            in specs[(int)FrontlineReplicationKind.CrystalNode],
+            templates,
+            config.Sides,
+            ResolveSideScopeIds(engine, config),
+            healthId,
+            crystalId,
+            runtime.TagBinder,
+            RequireOwnership(engine),
+            RequirePlayers(engine));
+
+        FrontlineSideConfig localSide = config.Sides[0];
+        var harvesterValues = new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts(7000, 9000),
+            FrontlineReplicationPayload.PackFloats(120f, 0f),
+            FrontlineReplicationPayload.PackInts(localSide.TeamId, localSide.PlayerId),
+            specs[(int)FrontlineReplicationKind.Harvester].SupportedValidBits);
+        var harvesterIdentity = new ReplicationMirrorIdentity(new NetworkEntityHandle(4, 1));
+        var harvesterState = new ReplicationMirrorState(
+            specs[(int)FrontlineReplicationKind.Harvester].SchemaId,
+            revision: 1,
+            in harvesterValues);
+        Entity harvester = harvesterApplier.Create(engine.World, in harvesterIdentity, in harvesterState);
+
+        var crystalValues = new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts(11000, 9000),
+            0,
+            0,
+            specs[(int)FrontlineReplicationKind.CrystalNode].SupportedValidBits);
+        var crystalIdentity = new ReplicationMirrorIdentity(new NetworkEntityHandle(7, 1));
+        var crystalState = new ReplicationMirrorState(
+            specs[(int)FrontlineReplicationKind.CrystalNode].SchemaId,
+            revision: 1,
+            in crystalValues);
+        Entity crystal = crystalApplier.Create(engine.World, in crystalIdentity, in crystalState);
+
+        Entity localPlayer = engine.CurrentMapSession!.PlayerEntityLookup.Get(localSide.PlayerId);
+        ControlDomainQuery controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery)
+            ?? throw new InvalidOperationException("ControlDomainQuery is unavailable.");
+        Assert.That(controlDomains.TryResolveControlDomain(harvester, out Entity domain), Is.True);
+        Assert.That(domain, Is.EqualTo(localPlayer));
+
+        KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+            ?? throw new InvalidOperationException("KnowledgeProjectionStore is unavailable.");
+        knowledge.Upsert(localPlayer, crystal, new KnowledgeDisclosureRecord(
+            KnowledgePresence.LiveVisible,
+            KnowledgePositionAccess.Live,
+            KnowledgeIdMask256.Empty,
+            KnowledgeIdMask256.Empty,
+            KnowledgeIdMask256.Empty,
+            crystal,
+            observedTick: 0,
+            expiryTick: 0,
+            confidencePermille: 1000,
+            revision: 1));
+
+        CommandIntentProfileRegistry intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry)
+            ?? throw new InvalidOperationException("CommandIntentProfileRegistry is unavailable.");
+        int profileId = intents.ProfileIdRegistry.GetId("intent.command.default");
+        Span<Entity> actors = stackalloc Entity[1] { harvester };
+        Span<CommandIntentRoute> routes = stackalloc CommandIntentRoute[1];
+        var facts = new CommandIntentTargetFacts(crystal, HasEntity: true);
+
+        Assert.That(intents.RouteGroup(profileId, actors, localPlayer, in facts, routes), Is.EqualTo(1));
+        OrderTypeRegistry orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+            ?? throw new InvalidOperationException("OrderTypeRegistry is unavailable.");
+        Assert.That(routes[0].OrderTypeId, Is.EqualTo(orderTypes.GetId("frontlineGather")));
+        Assert.That(routes[0].TargetShape, Is.EqualTo(CommandIntentTargetShape.Entity));
+    }
+
+    [Test]
+    public void NetworkEntityBinding_DoesNotAllocateReleaseOrDestroyExternalSchemaEntities()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        var focusedMapId = engine.CurrentMapSession!.MapId;
+        int externalSchemaId = FindExternalSchemaId(config.Replication);
+        Entity external = engine.World.Create(
+            new ReplicationSchemaRef(externalSchemaId),
+            new MapEntity { MapId = focusedMapId });
+        Entity pendingExternal = engine.World.Create(
+            new ReplicationSchemaRef(externalSchemaId),
+            new MapEntity { MapId = focusedMapId },
+            new PresentationDestroyPending());
+        QueryDescription replicated = new QueryDescription().WithAll<ReplicationSchemaRef>();
+        var table = new NetworkEntityTable(engine.World.CountEntities(in replicated));
+        using var system = CreateBindingSystem(engine, table, config);
+
+        system.Update(0f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(table.TryResolve(external, out _), Is.False);
+            Assert.That(table.TryResolve(pendingExternal, out _), Is.False);
+            Assert.That(engine.World.IsAlive(external), Is.True);
+            Assert.That(engine.World.IsAlive(pendingExternal), Is.True);
+        });
+    }
+
+    [Test]
+    public void NetworkEntityBinding_DoesNotAllocateOtherMapFrontlineEntities()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        Entity otherMapFrontline = engine.World.Create(
+            new ReplicationSchemaRef(config.Replication.CoreSchemaId),
+            new FrontlineCore(),
+            new MapEntity { MapId = new Ludots.Core.Map.MapId("frontline-binding-other-map") });
+        QueryDescription replicated = new QueryDescription().WithAll<ReplicationSchemaRef>();
+        var table = new NetworkEntityTable(engine.World.CountEntities(in replicated));
+        using var system = CreateBindingSystem(engine, table, config);
+
+        system.Update(0f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(table.TryResolve(otherMapFrontline, out _), Is.False);
+            Assert.That(engine.World.IsAlive(otherMapFrontline), Is.True);
+        });
+    }
+
+    [Test]
+    public void NetworkEntityBinding_AllocatesThenReleasesPendingEntityAtCleanupBoundary()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        QueryDescription replicated = new QueryDescription().WithAll<ReplicationSchemaRef>();
+        int replicatedCount = engine.World.CountEntities(in replicated);
+        Entity retained = engine.CurrentMapSession!.EntityIndex.GetRequired(MapId, "north_core", "test core");
+        Entity removed = engine.CurrentMapSession.EntityIndex.GetRequired(MapId, "south_core", "test core");
+        var table = new NetworkEntityTable(replicatedCount);
+        using var system = CreateBindingSystem(engine, table, config);
+
+        system.Update(0f);
+        Assert.That(table.Count, Is.EqualTo(replicatedCount));
+        Assert.That(table.TryResolve(retained, out _), Is.True);
+        Assert.That(table.TryResolve(removed, out NetworkEntityHandle removedHandle), Is.True);
+
+        engine.World.Add(removed, new PresentationDestroyPending());
+        system.Update(0f);
+
+        Assert.That(engine.World.IsAlive(removed), Is.False);
+        Assert.That(table.Count, Is.EqualTo(replicatedCount - 1));
+        Assert.That(table.TryResolve(removedHandle, out _), Is.False);
+        Assert.That(table.TryResolve(retained, out _), Is.True);
+    }
+
+    [Test]
+    public void NetworkEntityBinding_ThrowsWhenCapacityCannotRepresentTheAuthoritativeWorld()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        QueryDescription replicated = new QueryDescription().WithAll<ReplicationSchemaRef>();
+        int replicatedCount = engine.World.CountEntities(in replicated);
+        var table = new NetworkEntityTable(replicatedCount - 1);
+        using var system = CreateBindingSystem(engine, table, config);
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+        Assert.That(exception.Message, Does.Contain($"capacity {replicatedCount - 1}"));
+    }
+
+    [Test]
+    public void ReplicatedClientMapLoaded_RemovesOnlyAuthoredGameplayAndKeepsAllRepresentativesAlive()
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+
+        engine.LoadMap(MapId);
+
+        Assert.That(engine.TriggerManager.Errors, Is.Empty);
+        QueryDescription authoredGameplay = new QueryDescription()
+            .WithAll<ReplicationSchemaRef>()
+            .WithNone<ReplicationMirrorIdentity>();
+        Assert.That(engine.World.CountEntities(in authoredGameplay), Is.Zero);
+
+        FrontlineConfig config = GetRuntime(engine).Config;
+        FrontlineReplicatedClientMapBoundary.ValidateRepresentatives(
+            engine.World,
+            engine.CurrentMapSession!,
+            config.Sides);
+        Assert.That(engine.CurrentMapSession!.PlayerEntityLookup.Count, Is.EqualTo(2));
+        Assert.That(engine.CurrentMapSession.TeamEntityLookup.Count, Is.EqualTo(2));
+
+        for (int i = 0; i < config.Sides.Length; i++)
+        {
+            Assert.That(
+                engine.CurrentMapSession.PlayerEntityLookup.TryGet(config.Sides[i].PlayerId, out Entity player),
+                Is.True);
+            Assert.That(engine.World.IsAlive(player), Is.True);
+            Assert.That(engine.World.Has<ReplicationSchemaRef>(player), Is.False);
+            Assert.That(
+                engine.CurrentMapSession.TeamEntityLookup.TryGet(config.Sides[i].TeamId, out Entity team),
+                Is.True);
+            Assert.That(engine.World.IsAlive(team), Is.True);
+            Assert.That(engine.World.Has<ReplicationSchemaRef>(team), Is.False);
+        }
+    }
+
+    [Test]
+    public void ReplicatedClientMapLoaded_PreservesExternalSchemaAndOtherMapFrontlineEntities()
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        var focusedMapId = engine.CurrentMapSession!.MapId;
+        var otherMapId = new Ludots.Core.Map.MapId("frontline-boundary-other-map");
+        int externalSchemaId = FindExternalSchemaId(config.Replication);
+        Entity focusedFrontline = engine.World.Create(
+            new ReplicationSchemaRef(config.Replication.CoreSchemaId),
+            new FrontlineCore(),
+            new MapEntity { MapId = focusedMapId });
+        Entity focusedExternal = engine.World.Create(
+            new ReplicationSchemaRef(externalSchemaId),
+            new MapEntity { MapId = focusedMapId });
+        Entity otherMapFrontline = engine.World.Create(
+            new ReplicationSchemaRef(config.Replication.InfantrySchemaId),
+            new FrontlineInfantry(),
+            new MapEntity { MapId = otherMapId });
+
+        int removed = FrontlineReplicatedClientMapBoundary.RemoveAuthoredGameplayEntities(engine, config);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(removed, Is.EqualTo(1));
+            Assert.That(engine.World.IsAlive(focusedFrontline), Is.False);
+            Assert.That(engine.World.IsAlive(focusedExternal), Is.True);
+            Assert.That(engine.World.IsAlive(otherMapFrontline), Is.True);
+        });
+    }
+
+    [Test]
+    public void ReplicatedClientMapLoaded_RejectsFocusedFrontlineSchemaRoleMismatch()
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        Entity mismatched = engine.World.Create(
+            new ReplicationSchemaRef(config.Replication.CoreSchemaId),
+            new FrontlineInfantry(),
+            new MapEntity { MapId = engine.CurrentMapSession!.MapId });
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => FrontlineReplicatedClientMapBoundary.RemoveAuthoredGameplayEntities(engine, config))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception.Message, Does.Contain("does not match exactly one configured replication role"));
+            Assert.That(engine.World.IsAlive(mismatched), Is.True);
+        });
+    }
+
+    [Test]
+    public void VisionScopeAuthoring_DoesNotProcessOtherMapParticipant()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        int originalScopeKeyId = RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, config.Sides[1].VisionScopeKey);
+        Entity otherMapParticipant = engine.World.Create(
+            new ReplicationSchemaRef(config.Replication.CoreSchemaId),
+            new FrontlineCore(),
+            new FrontlineParticipant { SideIndex = 0 },
+            new Team { Id = config.Sides[1].TeamId },
+            new PlayerOwner { PlayerId = config.Sides[1].PlayerId },
+            new VisionEmitterCm { ScopeKeyId = originalScopeKeyId },
+            new MapEntity { MapId = new Ludots.Core.Map.MapId("frontline-vision-other-map") });
+        using var system = CreateVisionScopeSystem(engine, config);
+
+        Assert.DoesNotThrow(() => system.Update(0f));
+        Assert.That(
+            engine.World.Get<VisionEmitterCm>(otherMapParticipant).ScopeKeyId,
+            Is.EqualTo(originalScopeKeyId));
+    }
+
+    [Test]
+    public void VisionScopeAuthoring_DoesNotProcessExternalSchemaOrReplicatedMirror()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        int originalScopeKeyId = RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, config.Sides[1].VisionScopeKey);
+        Entity external = engine.World.Create(
+            new ReplicationSchemaRef(FindExternalSchemaId(config.Replication)),
+            new FrontlineParticipant { SideIndex = 0 },
+            new Team { Id = config.Sides[1].TeamId },
+            new PlayerOwner { PlayerId = config.Sides[1].PlayerId },
+            new VisionEmitterCm { ScopeKeyId = originalScopeKeyId },
+            new MapEntity { MapId = engine.CurrentMapSession!.MapId });
+        Entity mirror = engine.World.Create(
+            new ReplicationSchemaRef(config.Replication.CoreSchemaId),
+            new FrontlineCore(),
+            new FrontlineParticipant { SideIndex = 0 },
+            new Team { Id = config.Sides[1].TeamId },
+            new PlayerOwner { PlayerId = config.Sides[1].PlayerId },
+            new VisionEmitterCm { ScopeKeyId = originalScopeKeyId },
+            new ReplicationMirrorIdentity(new NetworkEntityHandle(31, 1)));
+        using var system = CreateVisionScopeSystem(engine, config);
+
+        Assert.DoesNotThrow(() => system.Update(0f));
+        Assert.Multiple(() =>
+        {
+            Assert.That(engine.World.Get<VisionEmitterCm>(external).ScopeKeyId, Is.EqualTo(originalScopeKeyId));
+            Assert.That(engine.World.Get<VisionEmitterCm>(mirror).ScopeKeyId, Is.EqualTo(originalScopeKeyId));
+        });
+    }
+
+    [Test]
+    public void VisionScopeAuthoring_RejectsFocusedFrontlineEntityWithoutMapOwnership()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        FrontlineSideConfig side = config.Sides[0];
+        Entity missingMapOwnership = engine.World.Create(
+            new ReplicationSchemaRef(config.Replication.CoreSchemaId),
+            new FrontlineCore(),
+            new FrontlineParticipant { SideIndex = 0 },
+            new Team { Id = side.TeamId },
+            new PlayerOwner { PlayerId = side.PlayerId },
+            new VisionEmitterCm());
+        using var system = CreateVisionScopeSystem(engine, config);
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception.Message, Does.Contain("requires explicit MapEntity ownership"));
+            Assert.That(engine.World.IsAlive(missingMapOwnership), Is.True);
+        });
+    }
+
+    [Test]
+    public void VisionScopeAuthoring_RejectsMismatchedSideInsteadOfSilentlyUsingAnotherScope()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        FrontlineSideConfig northernSide = config.Sides[0];
+        FrontlineSideConfig southernSide = config.Sides[1];
+        Entity southern = engine.World.Create(
+            new ReplicationSchemaRef(config.Replication.InfantrySchemaId),
+            new FrontlineInfantry(),
+            new FrontlineParticipant { SideIndex = 1 },
+            new Team { Id = southernSide.TeamId },
+            new PlayerOwner { PlayerId = southernSide.PlayerId },
+            new VisionEmitterCm { ScopeKeyId = RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, northernSide.VisionScopeKey) },
+            new MapEntity { MapId = engine.CurrentMapSession!.MapId });
+        using var system = CreateVisionScopeSystem(engine, config);
+
+        system.Update(0f);
+        Assert.That(
+            engine.World.Get<VisionEmitterCm>(southern).ScopeKeyId,
+            Is.EqualTo(RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, southernSide.VisionScopeKey)));
+
+        var wrongOwner = new PlayerOwner { PlayerId = northernSide.PlayerId };
+        engine.World.Set(southern, in wrongOwner);
+        Assert.Throws<InvalidOperationException>(() => system.Update(0f));
+    }
+
+    [Test]
+    public void AuthoritativeVision_WhenOpposingInfantryMeet_DisclosesEachEnemyToTheFormalPlayerViewer()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        Assert.That(engine.TriggerManager.Errors, Is.Empty);
+        FrontlineConfig config = GetRuntime(engine).Config;
+
+        Entity north = Entity.Null;
+        Entity south = Entity.Null;
+        QueryDescription infantryQuery = new QueryDescription()
+            .WithAll<FrontlineInfantry, FrontlineParticipant, WorldPositionCm, VisionEmitterCm, FogOccupantCm>();
+        engine.World.Query(in infantryQuery, (Entity entity, ref FrontlineParticipant participant) =>
+        {
+            if (participant.SideIndex == 0 && north == Entity.Null)
+            {
+                north = entity;
+            }
+            else if (participant.SideIndex == 1 && south == Entity.Null)
+            {
+                south = entity;
+            }
+        });
+        Assert.That(north, Is.Not.EqualTo(Entity.Null));
+        Assert.That(south, Is.Not.EqualTo(Entity.Null));
+
+        WorldPositionCm meeting = WorldPositionCm.FromCm(15_000, 15_000);
+        engine.World.Set(north, in meeting);
+        engine.World.Set(south, in meeting);
+        for (int i = 0; i < 3; i++)
+        {
+            engine.Tick(1f / config.SimulationTickRateHz);
+        }
+
+        FogLayerRegistry layers = engine.GetService(CoreServiceKeys.VisionFogLayerRegistry)
+            ?? throw new InvalidOperationException("FogLayerRegistry is unavailable.");
+        FogFieldStore fields = engine.GetService(CoreServiceKeys.VisionFogFieldStore)
+            ?? throw new InvalidOperationException("FogFieldStore is unavailable.");
+        FogLayerId groundLayer = layers.GetId("ground");
+        KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+            ?? throw new InvalidOperationException("KnowledgeProjectionStore is unavailable.");
+        for (int sideIndex = 0; sideIndex < config.Sides.Length; sideIndex++)
+        {
+            Entity ownInfantry = sideIndex == 0 ? north : south;
+            VisionEmitterCm emitter = engine.World.Get<VisionEmitterCm>(ownInfantry);
+            Assert.That(emitter.ScopeKeyId, Is.EqualTo(RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, config.Sides[sideIndex].VisionScopeKey)));
+            Assert.That(emitter.LayerMask, Is.EqualTo(layers.ToMask(groundLayer)));
+            Assert.That(emitter.Aperture.RangeCm, Is.EqualTo(1_000));
+            Assert.That(fields.TryGet(emitter.ScopeKeyId, groundLayer, out FogField field), Is.True);
+            Assert.That(
+                field.GetVisibility(field.WorldToCell(meeting.ToWorldCmInt2())),
+                Is.EqualTo(CellVisibility.Visible),
+                $"Player side {sideIndex} vision field did not reveal the shared infantry position.");
+
+            Entity viewer = engine.CurrentMapSession!.PlayerEntityLookup.Get(config.Sides[sideIndex].PlayerId);
+            Entity enemy = sideIndex == 0 ? south : north;
+            Assert.That(
+                knowledge.TryGet(viewer, enemy, engine.GameSession.CurrentTick, out KnowledgeDisclosureRecord record),
+                Is.True,
+                $"Player side {sideIndex} did not receive knowledge for an enemy infantry at the same position.");
+            Assert.That(record.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
+            Assert.That(record.Position, Is.EqualTo(KnowledgePositionAccess.Live));
+        }
+    }
+
+    [Test]
+    public void MatchStatePayload_AcceptsDisconnectExtensionBoundaryAndRejectsTheNextTick()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        FrontlineConfig config = GetRuntime(engine).Config;
+        int maxCommittedTick = checked(config.MatchDurationTicks + config.DisconnectGraceTicks);
+        var boundary = new FrontlineMatchSnapshot(
+            maxCommittedTick,
+            FrontlineMatchPhase.InProgress,
+            CountdownRemainingTicks: 0,
+            FrontlineMatchOutcome.InProgress,
+            WinningSideIndex: -1,
+            SideOneReady: false,
+            SideTwoReady: true,
+            SideOneConnected: false,
+            SideTwoConnected: true);
+        ReplicationStateVector values = FrontlineMatchStatePayload.Encode(in boundary);
+
+        Assert.That(
+            FrontlineMatchStatePayload.TryDecode(
+                in values,
+                config.ReadyCountdownTicks,
+                maxCommittedTick,
+                out FrontlineMatchStateProjection projection),
+            Is.True);
+        Assert.That(projection.CommittedTick, Is.EqualTo(maxCommittedTick));
+
+        var beyondBoundary = boundary with { CommittedTick = checked(maxCommittedTick + 1) };
+        values = FrontlineMatchStatePayload.Encode(in beyondBoundary);
+        Assert.That(
+            FrontlineMatchStatePayload.TryDecode(
+                in values,
+                config.ReadyCountdownTicks,
+                maxCommittedTick,
+                out _),
+            Is.False);
+    }
+
+    [Test]
+    public void AuthoritativeVisibility_DisclosesPublicStateAndResourcesWithoutBypassingFogForEnemies()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        Assert.That(engine.TriggerManager.Errors, Is.Empty);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        DynamicParticipantVisibilityPublisher publisher = FrontlineAuthoritativeVisibility.Install(engine, config);
+        KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+            ?? throw new InvalidOperationException("KnowledgeProjectionStore is unavailable.");
+        int healthId = RequireAttribute(config.HealthAttribute);
+        int crystalId = RequireAttribute(config.CrystalAttribute);
+        Entity[] viewers = config.Sides
+            .Select(side => engine.CurrentMapSession!.PlayerEntityLookup.Get(side.PlayerId))
+            .ToArray();
+
+        publisher.Publish(currentTick: 2);
+        QueryDescription publicQuery = new QueryDescription()
+            .WithAll<ReplicationSchemaRef>()
+            .WithAny<FrontlineCrystalNode, FrontlineMatchStateEntity>();
+        int publicCount = 0;
+        engine.World.Query(in publicQuery, entity =>
+        {
+            publicCount++;
+            for (int i = 0; i < viewers.Length; i++)
+            {
+                Assert.That(knowledge.TryGet(viewers[i], entity, 2, out KnowledgeDisclosureRecord record), Is.True);
+                Assert.That(record.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
+                Assert.That(record.AttributeMask.IsEmpty, Is.True);
+            }
+        });
+        Assert.That(publicCount, Is.GreaterThanOrEqualTo(3));
+
+        QueryDescription ownedQuery = new QueryDescription()
+            .WithAll<ReplicationSchemaRef, PlayerOwner>();
+        engine.World.Query(in ownedQuery, (Entity entity, ref PlayerOwner owner) =>
+        {
+            int ownerPlayerId = owner.PlayerId;
+            int ownerSide = Array.FindIndex(config.Sides, side => side.PlayerId == ownerPlayerId);
+            Assert.That(ownerSide, Is.GreaterThanOrEqualTo(0));
+            Assert.That(knowledge.TryGet(viewers[ownerSide], entity, 2, out KnowledgeDisclosureRecord ownRecord), Is.True);
+            Assert.That(ownRecord.AttributeMask.ContainsId(healthId), Is.True);
+            Assert.That(ownRecord.AttributeMask.ContainsId(crystalId), Is.True);
+
+            int enemySide = ownerSide == 0 ? 1 : 0;
+            if (knowledge.TryGet(viewers[enemySide], entity, 2, out KnowledgeDisclosureRecord enemyRecord))
+            {
+                Assert.That(enemyRecord.AttributeMask.ContainsId(healthId), Is.False);
+                Assert.That(enemyRecord.AttributeMask.ContainsId(crystalId), Is.False);
+            }
+        });
+    }
+
+    [Test]
+    public void ReplicatedClientPresentation_UsesMatchMirrorForSnapshotAndVictoryHud()
+    {
+        var status = new TestClientRuntimePort();
+        using GameEngine engine = CreateStartedReplicatedClientEngine(status);
+        engine.LoadMap(MapId);
+        Assert.That(engine.TriggerManager.Errors, Is.Empty);
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        InstallClientFeedbackServices(
+            engine,
+            config,
+            status,
+            new TestClientCommandPort(),
+            CreateObserver(config));
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        var templates = new FrontlineClientTemplateFactory(
+            engine.World,
+            engine.MapLoader.TemplateRegistry.GetAll(),
+            specs,
+            config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
+            RequireStableIds(engine));
+        var applier = new FrontlineMatchStateReplicationApplier(
+            config.Replication.MatchStateSchemaId,
+            config.ReadyCountdownTicks,
+            config.MatchDurationTicks,
+            config.DisconnectGraceTicks,
+            templates);
+        var authoritative = new FrontlineMatchSnapshot(
+            CommittedTick: 345,
+            FrontlineMatchPhase.Completed,
+            CountdownRemainingTicks: 0,
+            FrontlineMatchOutcome.SideTwoVictory,
+            WinningSideIndex: 1,
+            SideOneReady: true,
+            SideTwoReady: true,
+            SideOneConnected: true,
+            SideTwoConnected: true);
+        ReplicationStateVector values = FrontlineMatchStatePayload.Encode(in authoritative);
+        var identity = new ReplicationMirrorIdentity(new NetworkEntityHandle(9, 1));
+        var state = new ReplicationMirrorState(config.Replication.MatchStateSchemaId, revision: 3, in values);
+        applier.Create(engine.World, in identity, in state);
+
+        var presentation = new FrontlinePresentationSystem(engine, runtime);
+        FrontlineMatchSnapshot snapshot = presentation.ResolvePresentationSnapshot();
+        Assert.That(snapshot, Is.EqualTo(authoritative));
+
+        ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+            ?? throw new InvalidOperationException("ScreenOverlayBuffer is unavailable.");
+        overlay.Clear();
+        presentation.Update(0f);
+        Assert.That(ReadOverlayStrings(overlay), Does.Contain(config.Hud.SideTwoVictoryText));
+    }
+
+    [Test]
+    [Description(
+        "Feature: Player command feedback follows the authoritative result\n" +
+        "  Given a player has issued one command from a replicated client\n" +
+        "  When the command moves through sending, server acceptance, queueing, waiting, execution, or rejection\n" +
+        "  Then the HUD shows the current player-facing stage and never calls a queued command started")]
+    public void GivenReplicatedCommand_WhenAdmissionChanges_ThenHudShowsTheAuthoritativeStage()
+    {
+        var status = new TestClientRuntimePort
+        {
+            ConnectionState = ReplicatedClientConnectionState.Connected,
+            HasEstablishedSession = true,
+            RoundTripTimeMilliseconds = 24,
+        };
+        using GameEngine engine = CreateStartedReplicatedClientEngine(status);
+        engine.LoadMap(MapId);
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        var commands = new TestClientCommandPort
+        {
+            SubmissionRevision = 1,
+            LastSubmittedBatchSequence = 42,
+            LastSubmitResult = ReplicatedClientCommandSubmitResult.Submitted,
+        };
+        NetworkRuntimeStateObserver observer = CreateObserver(config);
+        InstallClientFeedbackServices(engine, config, status, commands, observer);
+        AddMatchMirror(engine, runtime, RunningSnapshot(sideTwoConnected: true));
+
+        var presentation = new FrontlinePresentationSystem(engine, runtime);
+        ScreenOverlayBuffer overlay = RequireOverlay(engine);
+        AssertHudContains(presentation, overlay, config.Hud.CommandSendingText);
+
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.NetworkIntake, NetworkCommandAdmissionCode.NetworkScheduled);
+        AssertHudContains(presentation, overlay, config.Hud.CommandSendingText);
+
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.GlobalIntake, NetworkCommandAdmissionCode.Queued);
+        AssertHudContains(presentation, overlay, config.Hud.CommandAcceptedText);
+
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.Queued);
+        AssertHudContains(presentation, overlay, config.Hud.CommandQueuedText);
+        Assert.That(ReadOverlayStrings(overlay), Does.Not.Contain(config.Hud.CommandStartedText));
+
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.Pending);
+        AssertHudContains(presentation, overlay, config.Hud.CommandPendingText);
+        Assert.That(ReadOverlayStrings(overlay), Does.Not.Contain(config.Hud.CommandStartedText));
+
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.Activated);
+        AssertHudContains(presentation, overlay, config.Hud.CommandStartedText);
+
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.Terminal, NetworkCommandAdmissionCode.TerminalCompleted);
+        AssertHudContains(presentation, overlay, config.Hud.CommandCompletedText);
+
+        commands.SubmissionRevision++;
+        commands.LastSubmittedBatchSequence++;
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.NetworkIntake, NetworkCommandAdmissionCode.NetworkActorNotControlled);
+        AssertHudContains(
+            presentation,
+            overlay,
+            config.Hud.ResolveAdmissionRejection(NetworkCommandAdmissionCode.NetworkActorNotControlled));
+    }
+
+    [Test]
+    [Description(
+        "Feature: Players understand the live connection state\n" +
+        "  Given a replicated Frontline match is visible\n" +
+        "  When the client connects, reconnects, observes an offline opponent, loses the service, or receives a measured RTT\n" +
+        "  Then the HUD shows the matching player-facing state and the remaining seat time")]
+    public void GivenRunningMatch_WhenConnectionChanges_ThenHudShowsObservedPlayerState()
+    {
+        var status = new TestClientRuntimePort
+        {
+            ConnectionState = ReplicatedClientConnectionState.Handshaking,
+            HasEstablishedSession = false,
+        };
+        using GameEngine engine = CreateStartedReplicatedClientEngine(status);
+        engine.LoadMap(MapId);
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        var commands = new TestClientCommandPort();
+        NetworkRuntimeStateObserver observer = CreateObserver(config);
+        InstallClientFeedbackServices(engine, config, status, commands, observer);
+        AddMatchMirror(engine, runtime, RunningSnapshot(sideTwoConnected: false));
+
+        var presentation = new FrontlinePresentationSystem(engine, runtime);
+        ScreenOverlayBuffer overlay = RequireOverlay(engine);
+        AssertHudContains(presentation, overlay, config.Hud.ConnectingText);
+
+        status.HasEstablishedSession = true;
+        status.ReconnectWindowRemainingSeconds = 12.1f;
+        AssertHudContains(presentation, overlay, $"{config.Hud.ReconnectingText} 13s");
+
+        status.ConnectionState = ReplicatedClientConnectionState.Connected;
+        status.RoundTripTimeMilliseconds = config.Hud.DelayedRoundTripThresholdMilliseconds - 1;
+        AssertHudContains(presentation, overlay, config.Hud.SmoothConnectionText);
+        AssertHudContains(presentation, overlay, config.Hud.OpponentOfflineText);
+
+        status.RoundTripTimeMilliseconds = config.Hud.DelayedRoundTripThresholdMilliseconds;
+        AssertHudContains(presentation, overlay, config.Hud.DelayedConnectionText);
+
+        status.IsFaulted = true;
+        AssertHudContains(presentation, overlay, config.Hud.ServiceInterruptedText);
+    }
+
+    [Test]
+    [Description(
+        "Feature: A player sees a stable transition into battle\n" +
+        "  Given the room start message arrives before the first battlefield snapshot\n" +
+        "  When the client draws the HUD during that normal network gap\n" +
+        "  Then the player sees that the battlefield is synchronizing and the client does not fail")]
+    public void GivenStartedRoomBeforeFirstBattlefieldSnapshot_WhenHudUpdates_ThenPlayerSeesSynchronization()
+    {
+        var status = new TestClientRuntimePort
+        {
+            ConnectionState = ReplicatedClientConnectionState.Connected,
+            HasEstablishedSession = true,
+            IsAwaitingFullSnapshot = true,
+        };
+        using GameEngine engine = CreateStartedReplicatedClientEngine(status);
+        engine.LoadMap(MapId);
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        NetworkRuntimeStateObserver observer = CreateObserver(config);
+        InstallClientFeedbackServices(engine, config, status, new TestClientCommandPort(), observer);
+        var room = new NetworkRoomSnapshotHeader(
+            new SessionEpoch(7),
+            revision: 1,
+            committedTick: 300,
+            countdownRemainingTicks: 0,
+            seatCount: 2,
+            connectedSeatCount: 2,
+            readySeatCount: 2,
+            NetworkRoomPhase.Started);
+        NetworkRoomSeatSnapshot[] seats =
+        {
+            new(0, NetworkRoomSeatConnectionState.Connected, NetworkRoomReadyState.Ready, 1, new PlayerId(1)),
+            new(1, NetworkRoomSeatConnectionState.Connected, NetworkRoomReadyState.Ready, 1, new PlayerId(2)),
+        };
+        observer.OnClientRoomSnapshot(in room, seats);
+
+        var presentation = new FrontlinePresentationSystem(engine, runtime);
+        ScreenOverlayBuffer overlay = RequireOverlay(engine);
+        AssertHudContains(presentation, overlay, config.Hud.SynchronizingBattlefieldText);
+
+        status.IsAwaitingFullSnapshot = false;
+        AddMatchMirror(engine, runtime, RunningSnapshot(sideTwoConnected: true));
+        AssertHudContains(presentation, overlay, config.Hud.BattleStartedText);
+        Assert.That(ReadOverlayStrings(overlay), Does.Not.Contain(config.Hud.SynchronizingBattlefieldText));
+    }
+
+    [Test]
+    [Description(
+        "Feature: Retained HUD text refreshes when its visible wording changes\n" +
+        "  Given the room status line uses a stable retained overlay identity\n" +
+        "  When the visible wording moves from battlefield synchronizing to battle started\n" +
+        "  Then that stable identity keeps its id and advances DirtySerial\n" +
+        "  And later command and connection wording changes also advance DirtySerial")]
+    public void GivenRetainedDynamicHudText_WhenVisiblePayloadChanges_ThenDirtySerialAdvances()
+    {
+        var status = new TestClientRuntimePort
+        {
+            ConnectionState = ReplicatedClientConnectionState.Connected,
+            HasEstablishedSession = true,
+            IsAwaitingFullSnapshot = true,
+            RoundTripTimeMilliseconds = 12,
+        };
+        using GameEngine engine = CreateStartedReplicatedClientEngine(status);
+        engine.LoadMap(MapId);
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        var commands = new TestClientCommandPort();
+        NetworkRuntimeStateObserver observer = CreateObserver(config);
+        InstallClientFeedbackServices(engine, config, status, commands, observer);
+        var room = new NetworkRoomSnapshotHeader(
+            new SessionEpoch(7),
+            revision: 1,
+            committedTick: 300,
+            countdownRemainingTicks: 0,
+            seatCount: 2,
+            connectedSeatCount: 2,
+            readySeatCount: 2,
+            NetworkRoomPhase.Started);
+        NetworkRoomSeatSnapshot[] seats =
+        {
+            new(0, NetworkRoomSeatConnectionState.Connected, NetworkRoomReadyState.Ready, 1, new PlayerId(1)),
+            new(1, NetworkRoomSeatConnectionState.Connected, NetworkRoomReadyState.Ready, 1, new PlayerId(2)),
+        };
+        observer.OnClientRoomSnapshot(in room, seats);
+
+        var presentation = new FrontlinePresentationSystem(engine, runtime);
+        ScreenOverlayBuffer overlay = RequireOverlay(engine);
+
+        overlay.Clear();
+        presentation.Update(0f);
+        ScreenOverlayItem syncRoom = RequireOverlayTextItem(overlay, stableId: 71402);
+        Assert.That(overlay.GetString(syncRoom.StringId), Is.EqualTo(config.Hud.SynchronizingBattlefieldText));
+        Assert.That(syncRoom.DirtySerial, Is.GreaterThan(0));
+
+        overlay.Clear();
+        presentation.Update(0f);
+        ScreenOverlayItem syncRoomAgain = RequireOverlayTextItem(overlay, stableId: 71402);
+        Assert.That(syncRoomAgain.DirtySerial, Is.EqualTo(syncRoom.DirtySerial));
+
+        status.IsAwaitingFullSnapshot = false;
+        AddMatchMirror(engine, runtime, RunningSnapshot(sideTwoConnected: true));
+        overlay.Clear();
+        presentation.Update(0f);
+        ScreenOverlayItem battleRoom = RequireOverlayTextItem(overlay, stableId: 71402);
+        Assert.That(overlay.GetString(battleRoom.StringId), Is.EqualTo(config.Hud.BattleStartedText));
+        Assert.That(battleRoom.DirtySerial, Is.GreaterThan(0));
+        Assert.That(battleRoom.DirtySerial, Is.Not.EqualTo(syncRoom.DirtySerial));
+
+        ScreenOverlayItem smoothConnection = RequireOverlayTextItem(overlay, stableId: 71415);
+        Assert.That(overlay.GetString(smoothConnection.StringId), Is.EqualTo(config.Hud.SmoothConnectionText));
+        Assert.That(smoothConnection.DirtySerial, Is.EqualTo(battleRoom.DirtySerial));
+
+        status.RoundTripTimeMilliseconds = config.Hud.DelayedRoundTripThresholdMilliseconds;
+        overlay.Clear();
+        presentation.Update(0f);
+        ScreenOverlayItem delayedConnection = RequireOverlayTextItem(overlay, stableId: 71415);
+        Assert.That(overlay.GetString(delayedConnection.StringId), Is.EqualTo(config.Hud.DelayedConnectionText));
+        Assert.That(delayedConnection.DirtySerial, Is.GreaterThan(0));
+        Assert.That(delayedConnection.DirtySerial, Is.Not.EqualTo(smoothConnection.DirtySerial));
+
+        commands.SubmissionRevision = 1;
+        commands.LastSubmittedBatchSequence = 42;
+        commands.LastSubmitResult = ReplicatedClientCommandSubmitResult.Submitted;
+        overlay.Clear();
+        presentation.Update(0f);
+        ScreenOverlayItem sendingCommand = RequireOverlayTextItem(overlay, stableId: 71414);
+        Assert.That(overlay.GetString(sendingCommand.StringId), Is.EqualTo(config.Hud.CommandSendingText));
+        Assert.That(sendingCommand.DirtySerial, Is.GreaterThan(0));
+        Assert.That(sendingCommand.DirtySerial, Is.Not.EqualTo(delayedConnection.DirtySerial));
+
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.GlobalIntake, NetworkCommandAdmissionCode.Queued);
+        overlay.Clear();
+        presentation.Update(0f);
+        ScreenOverlayItem acceptedCommand = RequireOverlayTextItem(overlay, stableId: 71414);
+        Assert.That(overlay.GetString(acceptedCommand.StringId), Is.EqualTo(config.Hud.CommandAcceptedText));
+        Assert.That(acceptedCommand.DirtySerial, Is.GreaterThan(0));
+        Assert.That(acceptedCommand.DirtySerial, Is.Not.EqualTo(sendingCommand.DirtySerial));
+    }
+
+    [Test]
+    [Description(
+        "Feature: A joining player receives immediate connection feedback\n" +
+        "  Given the client has not received its first room snapshot\n" +
+        "  When the HUD first appears\n" +
+        "  Then the player sees that the battle service is connecting")]
+    public void GivenNoRoomOrBattlefieldSnapshot_WhenHudUpdates_ThenPlayerSeesConnectingState()
+    {
+        var status = new TestClientRuntimePort
+        {
+            ConnectionState = ReplicatedClientConnectionState.Handshaking,
+            HasEstablishedSession = false,
+        };
+        using GameEngine engine = CreateStartedReplicatedClientEngine(status);
+        engine.LoadMap(MapId);
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        InstallClientFeedbackServices(
+            engine,
+            config,
+            status,
+            new TestClientCommandPort(),
+            CreateObserver(config));
+
+        var presentation = new FrontlinePresentationSystem(engine, runtime);
+        AssertHudContains(presentation, RequireOverlay(engine), config.Hud.ConnectingText);
+    }
+
+    [Test]
+    public void ReplicatedClientPresentation_RejectsMissingAndDuplicateMatchMirrors()
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        var presentation = new FrontlinePresentationSystem(engine, runtime);
+
+        Assert.That(
+            Assert.Throws<InvalidOperationException>(() => presentation.ResolvePresentationSnapshot())!.Message,
+            Does.Contain("found 0"));
+
+        var projection = new FrontlineMatchStateProjection { WinningSideIndex = -1 };
+        engine.World.Create(
+            new FrontlineMatchStateEntity(),
+            projection,
+            new ReplicationSchemaRef(config.Replication.MatchStateSchemaId),
+            new ReplicationMirrorIdentity(new NetworkEntityHandle(1, 1)));
+        engine.World.Create(
+            new FrontlineMatchStateEntity(),
+            projection,
+            new ReplicationSchemaRef(config.Replication.MatchStateSchemaId),
+            new ReplicationMirrorIdentity(new NetworkEntityHandle(2, 1)));
+
+        Assert.That(
+            Assert.Throws<InvalidOperationException>(() => presentation.ResolvePresentationSnapshot())!.Message,
+            Does.Contain("found 2"));
+    }
+
+    private static string[] ReadOverlayStrings(ScreenOverlayBuffer overlay)
+    {
+        return overlay.GetSpan()
+            .ToArray()
+            .Where(item => item.Kind == ScreenOverlayItemKind.Text)
+            .Select(item => overlay.GetString(item.StringId) ?? string.Empty)
+            .ToArray();
+    }
+
+    private static ScreenOverlayItem RequireOverlayTextItem(ScreenOverlayBuffer overlay, int stableId)
+    {
+        foreach (ScreenOverlayItem item in overlay.GetSpan())
+        {
+            if (item.Kind == ScreenOverlayItemKind.Text && item.StableId == stableId)
+            {
+                return item;
+            }
+        }
+
+        throw new InvalidOperationException($"Expected retained overlay text with stable id {stableId}.");
+    }
+
+    private static WorldCmInt2 ReadAuthoredOwnedPosition(
+        MapConfig map,
+        string templateId,
+        int playerId)
+    {
+        for (int i = 0; i < map.Entities.Count; i++)
+        {
+            EntitySpawnData spawn = map.Entities[i];
+            if (!string.Equals(spawn.Template, templateId, StringComparison.Ordinal) ||
+                spawn.Overrides == null ||
+                !spawn.Overrides.TryGetValue(nameof(PlayerOwner), out JsonNode? ownerNode) ||
+                ownerNode?[nameof(PlayerOwner.PlayerId)]?.GetValue<int>() != playerId ||
+                !spawn.Overrides.TryGetValue(nameof(WorldPositionCm), out JsonNode? positionNode))
+            {
+                continue;
+            }
+
+            return ReadAuthoredSpawnPosition(spawn, $"{templateId} for player {playerId}");
+        }
+
+        throw new InvalidOperationException(
+            $"Map '{map.Id}' has no authored {templateId} for player {playerId}.");
+    }
+
+    private static WorldCmInt2 ReadAuthoredNearestPosition(
+        MapConfig map,
+        string templateId,
+        WorldCmInt2 origin)
+    {
+        WorldCmInt2 nearest = default;
+        long nearestDistanceSquared = long.MaxValue;
+        bool found = false;
+        for (int i = 0; i < map.Entities.Count; i++)
+        {
+            EntitySpawnData spawn = map.Entities[i];
+            if (!string.Equals(spawn.Template, templateId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            WorldCmInt2 position = ReadAuthoredSpawnPosition(spawn, templateId);
+            long dx = (long)position.X - origin.X;
+            long dy = (long)position.Y - origin.Y;
+            long distanceSquared = (dx * dx) + (dy * dy);
+            if (distanceSquared >= nearestDistanceSquared)
+            {
+                continue;
+            }
+
+            nearest = position;
+            nearestDistanceSquared = distanceSquared;
+            found = true;
+        }
+
+        return found
+            ? nearest
+            : throw new InvalidOperationException($"Map '{map.Id}' has no authored {templateId}.");
+    }
+
+    private static WorldCmInt2 ReadAuthoredSpawnPosition(EntitySpawnData spawn, string description)
+    {
+        if (spawn.Overrides == null ||
+            !spawn.Overrides.TryGetValue(nameof(WorldPositionCm), out JsonNode? positionNode))
+        {
+            throw new InvalidOperationException($"Authored {description} has no WorldPositionCm.");
+        }
+
+        JsonNode value = positionNode?[nameof(WorldPositionCm.Value)]
+            ?? throw new InvalidOperationException($"Authored {description} has no WorldPositionCm.Value.");
+        return new WorldCmInt2(
+            value[nameof(IntVector2.X)]?.GetValue<int>()
+                ?? throw new InvalidOperationException($"Authored {description} has no X coordinate."),
+            value[nameof(IntVector2.Y)]?.GetValue<int>()
+                ?? throw new InvalidOperationException($"Authored {description} has no Y coordinate."));
+    }
+
+    private static void InstallClientFeedbackServices(
+        GameEngine engine,
+        FrontlineConfig config,
+        TestClientRuntimePort runtimePort,
+        TestClientCommandPort commandPort,
+        NetworkRuntimeStateObserver observer)
+    {
+        engine.SetService(CoreServiceKeys.NetworkRuntimePort, runtimePort);
+        engine.SetService(CoreServiceKeys.ReplicatedClientCommandPort, commandPort);
+        engine.SetService(CoreServiceKeys.NetworkRuntimeStateObserver, observer);
+        if (!engine.CurrentMapSession!.PlayerEntityLookup.TryGet(config.Sides[0].PlayerId, out Entity sideRep))
+        {
+            throw new InvalidOperationException(
+                $"Frontline client feedback requires player {config.Sides[0].PlayerId} to exist in the loaded map session.");
+        }
+
+        BindSoleLocalSeat(engine, config.Sides[0].PlayerId, sideRep);
+    }
+
+    private static void BindSoleLocalSeat(GameEngine engine, int playerId, Entity possessedRep)
+    {
+        ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(engine);
+        seats.ReplaceAll(new[]
+        {
+            new ClientLocalSeat("seat.0")
+            {
+                PossessedPlayerId = playerId,
+                PossessedRep = possessedRep,
+            },
+        });
+        LogicViewRegistry views = ClientLocalSeatAccess.RequireLogicViews(engine);
+        string viewId = views.EnsureDefaultView(possessedRep);
+        seats.SetPresentBinding("seat.0", PresentBinding.FullScreen(viewId, new Vector2(1280f, 720f)));
+        engine.CurrentMapSession!.LocalSeats = new[]
+        {
+            new ResolvedLocalSeatPossession("seat.0", playerId, possessedRep, ControlSchemeId: null),
+        };
+    }
+
+    private static void AddMatchMirror(
+        GameEngine engine,
+        FrontlineRuntime runtime,
+        in FrontlineMatchSnapshot snapshot)
+    {
+        FrontlineConfig config = runtime.Config;
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        var templates = new FrontlineClientTemplateFactory(
+            engine.World,
+            engine.MapLoader.TemplateRegistry.GetAll(),
+            specs,
+            config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
+            RequireStableIds(engine));
+        var applier = new FrontlineMatchStateReplicationApplier(
+            config.Replication.MatchStateSchemaId,
+            config.ReadyCountdownTicks,
+            config.MatchDurationTicks,
+            config.DisconnectGraceTicks,
+            templates);
+        ReplicationStateVector values = FrontlineMatchStatePayload.Encode(in snapshot);
+        var identity = new ReplicationMirrorIdentity(new NetworkEntityHandle(9, 1));
+        var state = new ReplicationMirrorState(config.Replication.MatchStateSchemaId, revision: 1, in values);
+        applier.Create(engine.World, in identity, in state);
+    }
+
+    private static FrontlineMatchSnapshot RunningSnapshot(bool sideTwoConnected) => new(
+        CommittedTick: 300,
+        FrontlineMatchPhase.InProgress,
+        CountdownRemainingTicks: 0,
+        FrontlineMatchOutcome.InProgress,
+        WinningSideIndex: -1,
+        SideOneReady: true,
+        SideTwoReady: sideTwoConnected,
+        SideOneConnected: true,
+        SideTwoConnected: sideTwoConnected);
+
+    private static NetworkRuntimeStateObserver CreateObserver(FrontlineConfig config) =>
+        new(
+            config.Sides.Length,
+            clientAdmissionHistoryCapacity: 8,
+            maxActorsPerCommandBatch: 8);
+
+    private static PresentationStableIdAllocator RequireStableIds(GameEngine engine) =>
+        engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
+        ?? throw new InvalidOperationException("PresentationStableIdAllocator is unavailable.");
+
+    private static ComponentAuthoringContext RequireAuthoringContext(GameEngine engine) =>
+        engine.MapLoader.RequireComponentAuthoringContext();
+
+    private static FrontlineNetworkEntityBindingSystem CreateBindingSystem(
+        GameEngine engine,
+        NetworkEntityTable table,
+        FrontlineConfig config)
+        => new(engine, table, config);
+
+    private static int[] ResolveSideScopeIds(GameEngine engine, FrontlineConfig config)
+    {
+        var ids = new int[config.Sides.Length];
+        for (int i = 0; i < config.Sides.Length; i++)
+        {
+            ids[i] = RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, config.Sides[i].VisionScopeKey);
+        }
+
+        return ids;
+    }
+
+    private static FrontlineVisionScopeAuthoringSystem CreateVisionScopeSystem(
+        GameEngine engine,
+        FrontlineConfig config)
+        => new(engine, config);
+
+    private static int FindExternalSchemaId(FrontlineReplicationConfig config)
+    {
+        int candidate = 1;
+        while (candidate == config.CoreSchemaId ||
+               candidate == config.HarvesterSchemaId ||
+               candidate == config.InfantrySchemaId ||
+               candidate == config.CrystalNodeSchemaId ||
+               candidate == config.MatchStateSchemaId)
+        {
+            candidate++;
+        }
+
+        return candidate;
+    }
+
+    private static EntityTemplate[] CloneTemplates(IEnumerable<EntityTemplate> templates) =>
+        templates.Select(template => new EntityTemplate
+        {
+            Id = template.Id,
+            OnSpawnEffect = template.OnSpawnEffect,
+            Components = template.Components.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value.DeepClone(),
+                StringComparer.Ordinal),
+        }).ToArray();
+
+    private static OwnershipResolver RequireOwnership(GameEngine engine) =>
+        engine.GetService(CoreServiceKeys.OwnershipResolver)
+        ?? throw new InvalidOperationException("OwnershipResolver is unavailable.");
+
+    private static PlayerEntityLookup RequirePlayers(GameEngine engine) =>
+        engine.GetService(CoreServiceKeys.PlayerEntityLookup)
+        ?? throw new InvalidOperationException("PlayerEntityLookup is unavailable.");
+
+    private static void PublishAdmission(
+        NetworkRuntimeStateObserver observer,
+        ulong clientBatchSequence,
+        NetworkCommandAdmissionStage stage,
+        NetworkCommandAdmissionCode code)
+    {
+        var seat = new NetworkCommandSeat(slot: 0, generation: 1, playerId: 1);
+        var outcome = new NetworkCommandAdmissionOutcome(
+            in seat,
+            clientBatchSequence,
+            targetTick: 301,
+            actorCount: 1,
+            orderId: 7,
+            admissionBatchId: 11,
+            admissionBatchIndex: 0,
+            stage,
+            code,
+            isReplay: false,
+            committedTick: 300);
+        observer.OnClientAdmission(in outcome);
+    }
+
+    private static ScreenOverlayBuffer RequireOverlay(GameEngine engine) =>
+        engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+        ?? throw new InvalidOperationException("ScreenOverlayBuffer is unavailable.");
+
+    private static void AssertHudContains(
+        FrontlinePresentationSystem presentation,
+        ScreenOverlayBuffer overlay,
+        string expected)
+    {
+        overlay.Clear();
+        presentation.Update(0f);
+        Assert.That(ReadOverlayStrings(overlay), Does.Contain(expected));
+    }
+
+    private static bool SpatialQueryContains(GameEngine engine, Entity expected, WorldCmInt2 center)
+    {
+        Span<Entity> candidates = stackalloc Entity[32];
+        WorldAabbCm bounds = WorldAabbCm.FromCenterRadius(center, radiusCm: 200);
+        SpatialQueryResult result = engine.SpatialQueries.QueryAabb(in bounds, candidates);
+        Assert.That(result.Overflowed, Is.False);
+        for (int i = 0; i < result.Count; i++)
+        {
+            if (candidates[i] == expected)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static Entity ResolveMirrorAtProjectedCenter(GameEngine engine, Entity viewer, Entity mirror)
+    {
+        IScreenProjector projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+            ?? throw new InvalidOperationException("Frontline replication test requires a screen projector.");
+        if (!SpatialBoundsUtility.TryProjectScreenBounds(engine.World, mirror, projector, out ScreenRect bounds))
+        {
+            throw new InvalidOperationException("Frontline mirror did not project into the active camera.");
+        }
+
+        Vector2 pointer = new(
+            (bounds.MinX + bounds.MaxX) * 0.5f,
+            (bounds.MinY + bounds.MaxY) * 0.5f);
+        return CommandSourcePointerHitResolver.FindNearestInspectableEntity(
+            engine.World,
+            engine.GlobalContext,
+            viewer,
+            pointer,
+            radiusPixels: 1f);
+    }
+
+    private static GameEngine CreateStartedReplicatedClientEngine(TestClientRuntimePort? runtimePort = null)
+    {
+        GameEngine engine = CreateStartedEngine(
+            NetworkProcessRole.ReplicatedClient,
+            runtimePort ?? new TestClientRuntimePort(),
+            installPresentationServices: true);
+        engine.SetService(CoreServiceKeys.ReplicatedClientCommandPort, new TestClientCommandPort());
+        return engine;
+    }
+
+    private static GameEngine CreateStartedEngine(
+        NetworkProcessRole role = NetworkProcessRole.Standalone,
+        INetworkRuntimePort? runtimePort = null,
+        bool installPresentationServices = true)
+    {
+        string repoRoot = FindRepoRoot();
+        var engine = new GameEngine();
+        engine.InitializeWithConfigPipeline(
+            RepoModPaths.ResolveExplicit(
+                repoRoot,
+                role == NetworkProcessRole.Standalone ? FrontlineMods : FrontlineNetworkedMods),
+            Path.Combine(repoRoot, "assets"));
+        if (installPresentationServices)
+        {
+            var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
+            engine.SetService(CoreServiceKeys.InputHandler, new PlayerInputHandler(new NullInputBackend(), inputConfig));
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
+            var uiRoot = new UIRoot(new SkiaUiRenderer());
+            uiRoot.Resize(1920f, 1080f);
+            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+            engine.SetService(CoreServiceKeys.ViewController, new StubViewController(1920f, 1080f));
+            engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
+            engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
+        }
+
+        if (role != NetworkProcessRole.Standalone)
+        {
+            NetworkRuntimeConfig network = engine.MergedConfig?.Networking
+                ?? throw new InvalidOperationException("Network test engine is missing its network profile.");
+            engine.SetService(
+                CoreServiceKeys.ReplicationSchemaProjectors,
+                new ReplicationSchemaProjectorRegistry(network.ReplicationSchemaCapacity));
+            engine.SetService(
+                CoreServiceKeys.ClientReplicationSchemaAppliers,
+                new ClientReplicationSchemaApplierRegistry(network.ReplicationSchemaCapacity));
+            engine.SetService(
+                CoreServiceKeys.NetworkRuntimeStateObserver,
+                new NetworkRuntimeStateObserver(
+                    network.PlayerCapacity,
+                    network.CommandSequenceHistoryCapacity,
+                    network.MaxActorsPerCommandBatch));
+            engine.ConfigureNetworkRuntime(
+                role,
+                runtimePort ?? throw new ArgumentNullException(nameof(runtimePort)));
+        }
+
+        engine.Start();
+        return engine;
+    }
+
+    private static Vector3 RequireTemplateVisualScale(GameEngine engine, string templateId)
+    {
+        EntityTemplate template = engine.MapLoader.TemplateRegistry.Get(templateId)
+            ?? throw new InvalidOperationException($"Entity template '{templateId}' is unavailable.");
+        if (!template.Components.TryGetValue(nameof(VisualTransform), out var component))
+        {
+            throw new InvalidOperationException(
+                $"Entity template '{templateId}' has no {nameof(VisualTransform)} component.");
+        }
+
+        return component.Deserialize<VisualTransform>(TemplateJsonOptions).Scale;
+    }
+
+    private sealed class StubViewController : IViewController
+    {
+        public StubViewController(float width, float height)
+        {
+            Resolution = new Vector2(width, height);
+        }
+
+        public Vector2 Resolution { get; }
+        public float Fov => 60f;
+        public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
+    }
+
+    private static FrontlineRuntime GetRuntime(GameEngine engine)
+    {
+        return engine.GlobalContext.TryGetValue(RuntimeKey, out object? value) && value is FrontlineRuntime runtime
+            ? runtime
+            : throw new InvalidOperationException("RTS Frontline runtime is unavailable.");
+    }
+
+    private static int RequireAttribute(string name)
+    {
+        int id = AttributeRegistry.GetId(name);
+        return id != AttributeRegistry.InvalidId
+            ? id
+            : throw new InvalidOperationException($"Attribute '{name}' is unavailable.");
+    }
+
+    private static string FindRepoRoot()
+    {
+        string? directory = TestContext.CurrentContext.TestDirectory;
+        while (!string.IsNullOrWhiteSpace(directory))
+        {
+            if (File.Exists(Path.Combine(directory, "src", "Core", "Ludots.Core.csproj")))
+            {
+                return directory;
+            }
+            directory = Path.GetDirectoryName(directory);
+        }
+        throw new InvalidOperationException("Could not locate repository root.");
+    }
+
+    private sealed class NullInputBackend : IInputBackend
+    {
+        public float GetAxis(string devicePath) => 0f;
+        public bool GetButton(string devicePath) => false;
+        public Vector2 GetMousePosition() => Vector2.Zero;
+        public float GetMouseWheel() => 0f;
+        public void EnableIME(bool enable) { }
+        public void SetIMECandidatePosition(int x, int y) { }
+        public string GetCharBuffer() => string.Empty;
+    }
+
+    private sealed class TestClientRuntimePort :
+        INetworkRuntimePort,
+        IReplicatedClientRuntimeStatus,
+        IPresentationInterpolationSource
+    {
+        public NetworkProcessRole Role => NetworkProcessRole.ReplicatedClient;
+        public ReplicatedClientConnectionState ConnectionState { get; set; } = ReplicatedClientConnectionState.Disconnected;
+        public bool HasEstablishedSession { get; set; }
+        public bool IsAwaitingFullSnapshot { get; set; }
+        public bool IsFaulted { get; set; }
+        public uint LastCommittedTick { get; set; }
+        public float ReconnectWindowRemainingSeconds { get; set; } = 30f;
+        public int RoundTripTimeMilliseconds { get; set; }
+        public float InterpolationAlpha => 0f;
+        public ClientWorldReplicationBridge? Bridge { get; set; }
+        public ReplicationPacketBuffer? PendingPacket { get; set; }
+        public Action? AfterPacketApplied { get; set; }
+        public ReplicationBridgeResult LastBridgeResult { get; private set; } = ReplicationBridgeResult.InvalidInput;
+
+        public void Activate() { }
+        public void PumpTransport() { }
+        public void BeforeAuthoritativeTick(uint executingTick) { }
+        public void AfterAuthoritativeCommit(uint committedTick) { }
+        public void PumpReplicatedClient(float frameDeltaTime)
+        {
+            if (PendingPacket == null)
+            {
+                return;
+            }
+
+            ClientWorldReplicationBridge bridge = Bridge
+                ?? throw new InvalidOperationException("A pending replication packet requires a client world bridge.");
+            LastBridgeResult = bridge.Apply(PendingPacket);
+            PendingPacket = null;
+            AfterPacketApplied?.Invoke();
+        }
+        public void Dispose() { }
+    }
+
+    private sealed class TestServerRuntimePort : INetworkRuntimePort
+    {
+        public NetworkProcessRole Role => NetworkProcessRole.AuthoritativeServer;
+        public void Activate() { }
+        public void PumpTransport() { }
+        public void BeforeAuthoritativeTick(uint executingTick) { }
+        public void AfterAuthoritativeCommit(uint committedTick) { }
+        public void PumpReplicatedClient(float frameDeltaTime) { }
+        public void Dispose() { }
+    }
+
+    private sealed class TestClientCommandPort : IReplicatedClientCommandPort
+    {
+        public ulong SubmissionRevision { get; set; }
+        public ulong LastSubmittedBatchSequence { get; set; }
+        public ReplicatedClientCommandSubmitResult LastSubmitResult { get; set; }
+
+        public ReplicatedClientCommandSubmitResult Submit(in Order order) => LastSubmitResult;
+        public ReplicatedClientCommandSubmitResult Submit(ReadOnlySpan<Order> orders) => LastSubmitResult;
+    }
+}

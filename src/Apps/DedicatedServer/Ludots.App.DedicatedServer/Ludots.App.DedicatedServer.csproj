@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Adapters\Networking\Ludots.Adapter.LiteNetLib\Ludots.Adapter.LiteNetLib.csproj" />
+    <ProjectReference Include="..\..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\Libraries\Ludots.UI\Ludots.UI.csproj" />
+  </ItemGroup>
+</Project>

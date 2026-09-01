@@ -416,6 +416,7 @@ namespace Ludots.Core.Presentation.Systems
                         definition.Behaviors,
                         chunk))
                 {
+                    PropagateBootstrapParentTransforms(chunk);
                     return true;
                 }
 
@@ -442,7 +443,23 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
+            PropagateBootstrapParentTransforms(chunk);
             return true;
+        }
+
+        private void PropagateBootstrapParentTransforms(Chunk chunk)
+        {
+            ref Entity entityFirst = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                if (World.Has<PresenterChildren>(entity) &&
+                    World.Get<PresenterChildren>(entity).Count != 0)
+                {
+                    _runtime.MarkTransformDrivenEmitDirty(entity);
+                    _runtime.PropagateParentDrivenTransforms(entity);
+                }
+            }
         }
 
         private int ProcessOwnerChanges()
@@ -850,6 +867,7 @@ namespace Ludots.Core.Presentation.Systems
             PresenterInstanceBehaviors instanceBehaviors = hasInstanceBehaviors
                 ? World.Get<PresenterInstanceBehaviors>(entity)
                 : default;
+            PresenterTransformSnapshot previousTransform = CaptureWorldTransform(entity);
             ResolveDefaultTransformSource(entity, ref state);
             if (!tickDrivenOnly)
             {
@@ -1076,6 +1094,7 @@ namespace Ludots.Core.Presentation.Systems
                         tickDt);
                 }
             }
+            PropagateTransformChange(entity, in previousTransform);
         }
 
         private void ProcessExtensionBehaviors(
@@ -2083,6 +2102,7 @@ namespace Ludots.Core.Presentation.Systems
             BehaviorSlot[] behaviors,
             Chunk chunk)
         {
+            ref Entity entityFirst = ref chunk.Entity(0);
             for (int behaviorIndex = 0; behaviorIndex < tickBehaviorIndices.Length; behaviorIndex++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[tickBehaviorIndices[behaviorIndex]];
@@ -2099,7 +2119,15 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     }
 
+                    if (positions[index].Value.Y == slot.Grounding.Offset)
+                    {
+                        continue;
+                    }
+
                     positions[index].Value.Y = slot.Grounding.Offset;
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    _runtime.MarkTransformDrivenEmitDirty(entity);
+                    _runtime.PropagateParentDrivenTransforms(entity);
                 }
             }
         }
@@ -2223,6 +2251,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
+            ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int behaviorIndex in tickBehaviorIndices)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
@@ -2281,8 +2310,17 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < count; i++)
                 {
                     int index = _groundingIndices[i];
+                    bool changed =
+                        positions[index].Value != _groundingPositions[i] ||
+                        rotations[index].Value != _groundingRotations[i];
                     positions[index].Value = _groundingPositions[i];
                     rotations[index].Value = _groundingRotations[i];
+                    if (changed)
+                    {
+                        Entity entity = Unsafe.Add(ref entityFirst, index);
+                        _runtime.MarkTransformDrivenEmitDirty(entity);
+                        _runtime.PropagateParentDrivenTransforms(entity);
+                    }
                 }
             }
         }
@@ -2385,8 +2423,17 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < count; i++)
                 {
                     int index = _groundingIndices[i];
+                    bool changed =
+                        positions[index].Value != _groundingPositions[i] ||
+                        rotations[index].Value != _groundingRotations[i];
                     positions[index].Value = _groundingPositions[i];
                     rotations[index].Value = _groundingRotations[i];
+                    if (changed)
+                    {
+                        Entity entity = Unsafe.Add(ref entityFirst, index);
+                        _runtime.MarkTransformDrivenEmitDirty(entity);
+                        _runtime.PropagateParentDrivenTransforms(entity);
+                    }
                 }
             }
 
@@ -2524,7 +2571,9 @@ namespace Ludots.Core.Presentation.Systems
                 rotations[index].Value = resolvedRotation;
                 facings[index] = resolvedFacing;
                 scales[index].Value = resolvedScale;
-                _runtime.MarkTransformDrivenEmitDirty(Unsafe.Add(ref entityFirst, index));
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                _runtime.MarkTransformDrivenEmitDirty(entity);
+                _runtime.PropagateParentDrivenTransforms(entity);
             }
         }
 
@@ -2904,6 +2953,44 @@ namespace Ludots.Core.Presentation.Systems
             return World.Has<PresenterInstanceTransformOverride>(entity)
                 ? World.Get<PresenterInstanceTransformOverride>(entity)
                 : PresenterInstanceTransformOverride.Identity;
+        }
+
+        private PresenterTransformSnapshot CaptureWorldTransform(Entity entity)
+        {
+            return new PresenterTransformSnapshot
+            {
+                WorldPosition = World.Has<PresenterWorldPosition>(entity)
+                    ? World.Get<PresenterWorldPosition>(entity).Value
+                    : Vector3.Zero,
+                WorldRotation = World.Has<PresenterWorldRotation>(entity)
+                    ? World.Get<PresenterWorldRotation>(entity).Value
+                    : Quaternion.Identity,
+                WorldScale = World.Has<PresenterWorldScale>(entity)
+                    ? World.Get<PresenterWorldScale>(entity).Value
+                    : Vector3.One,
+                WorldFacing = World.Has<PresenterWorldFacing>(entity)
+                    ? World.Get<PresenterWorldFacing>(entity)
+                    : default,
+                TransformSource = World.Has<PresenterTransformSource>(entity)
+                    ? World.Get<PresenterTransformSource>(entity).Value
+                    : TransformSource.WorldFixed,
+            };
+        }
+
+        private void PropagateTransformChange(Entity entity, in PresenterTransformSnapshot previous)
+        {
+            PresenterTransformSnapshot current = CaptureWorldTransform(entity);
+            if (current.WorldPosition == previous.WorldPosition &&
+                current.WorldRotation == previous.WorldRotation &&
+                current.WorldScale == previous.WorldScale &&
+                current.WorldFacing.AngleRad == previous.WorldFacing.AngleRad &&
+                current.WorldFacing.HasValue == previous.WorldFacing.HasValue)
+            {
+                return;
+            }
+
+            _runtime.MarkTransformDrivenEmitDirty(entity);
+            _runtime.PropagateParentDrivenTransforms(entity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

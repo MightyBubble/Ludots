@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Networking.Simulation;
 
 namespace Ludots.Core.Gameplay
 {
@@ -15,10 +16,25 @@ namespace Ludots.Core.Gameplay
     {
         private readonly List<Player> _players = new List<Player>();
         private readonly Dictionary<int, PlayerInputFrame> _inputCache = new Dictionary<int, PlayerInputFrame>();
+        private readonly AuthoritativeSimulationTickState _simulationTicks;
+
+        public GameSession()
+            : this(new AuthoritativeSimulationTickState())
+        {
+        }
+
+        public GameSession(AuthoritativeSimulationTickState simulationTicks)
+        {
+            _simulationTicks = simulationTicks ?? throw new ArgumentNullException(nameof(simulationTicks));
+        }
 
         public Dictionary<string, object> Globals { get; } = new Dictionary<string, object>();
 
-        public int CurrentTick { get; private set; } = 0;
+        public int CurrentTick => _simulationTicks.IsExecuting
+            ? _simulationTicks.ExecutingTick
+            : _simulationTicks.CommittedTick;
+
+        public AuthoritativeSimulationTickState SimulationTicks => _simulationTicks;
 
         public void AddPlayer(Player player)
         {
@@ -32,19 +48,53 @@ namespace Ludots.Core.Gameplay
 
         public void FixedUpdate()
         {
-            // Gather inputs for the current tick
+            BeginSimulationTick();
+            CollectFixedUpdateInputs();
+            CommitFixedUpdate();
+        }
+
+        public void BeginFixedUpdate()
+        {
+            BeginSimulationTick();
+            CollectFixedUpdateInputs();
+        }
+
+        public void BeginSimulationTick()
+        {
+            int tick = _simulationTicks.CommittedTick + 1;
+            _simulationTicks.Begin(tick);
+        }
+
+        public void CollectFixedUpdateInputs()
+        {
+            if (!_simulationTicks.IsExecuting)
+            {
+                throw new InvalidOperationException(
+                    "Cannot collect fixed-step inputs outside an executing authoritative simulation tick.");
+            }
+
+            int tick = _simulationTicks.ExecutingTick;
             _inputCache.Clear();
             foreach (var player in _players)
             {
-                var input = player.Source.GetInput(CurrentTick);
+                var input = player.Source.GetInput(tick);
                 _inputCache[player.Id] = input;
             }
+        }
 
-            CurrentTick++;
+        public void CommitFixedUpdate()
+        {
+            _simulationTicks.Commit(_simulationTicks.ExecutingTick);
         }
 
         public GameSessionSnapshot CaptureSnapshot()
         {
+            if (_simulationTicks.IsExecuting)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot capture GameSession while authoritative simulation tick {_simulationTicks.ExecutingTick} is executing.");
+            }
+
             var players = new PlayerSnapshot[_players.Count];
             for (int i = 0; i < _players.Count; i++)
             {
@@ -62,7 +112,7 @@ namespace Ludots.Core.Gameplay
             }
 
             return new GameSessionSnapshot(
-                CurrentTick,
+                _simulationTicks.CommittedTick,
                 players,
                 globals);
         }
@@ -99,8 +149,8 @@ namespace Ludots.Core.Gameplay
                 Globals[pair.Key] = CopySerializableGlobal(pair.Key, pair.Value);
             }
 
-            CurrentTick = snapshot.CurrentTick;
-        }
+            _simulationTicks.RestoreCommittedTick(snapshot.CurrentTick);
+    }
 
         public void Update(float dt)
         {

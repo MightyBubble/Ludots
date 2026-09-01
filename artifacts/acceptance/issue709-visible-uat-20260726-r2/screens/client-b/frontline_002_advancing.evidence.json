@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 2,
+  "milestone": "advancing",
+  "milestoneOrder": 4,
+  "milestoneRevision": 6,
+  "hostFrame": 112881,
+  "cameraTargetXCm": 14700,
+  "cameraTargetYCm": 15000,
+  "viewportWidthPx": 1280,
+  "viewportHeightPx": 720,
+  "instances": [
+    {
+      "ownerStableId": 23,
+      "visualStableId": 11953003,
+      "templateId": 54,
+      "template": "rts.frontline.crystal.center",
+      "worldXCm": 11200,
+      "worldYCm": 15000,
+      "screenLeftPx": 32.51358,
+      "screenTopPx": 326.36795,
+      "screenRightPx": 79.39083,
+      "screenBottomPx": 365.84427,
+      "shortEdgePx": 39.47632,
+      "areaPx2": 1850.5413
+    },
+    {
+      "ownerStableId": 22,
+      "visualStableId": 10806531,
+      "templateId": 55,
+      "template": "rts.frontline.crystal.left",
+      "worldXCm": 18562,
+      "worldYCm": 15066,
+      "screenLeftPx": 1279.3374,
+      "screenTopPx": 341.17728,
+      "screenRightPx": 1280,
+      "screenBottomPx": 361.69397,
+      "shortEdgePx": 0.66259766,
+      "areaPx2": 13.594313
+    },
+    {
+      "ownerStableId": 23,
+      "visualStableId": 12332599,
+      "templateId": 55,
+      "template": "rts.frontline.crystal.left",
+      "worldXCm": 10962,
+      "worldYCm": 15066,
+      "screenLeftPx": 15.323372,
+      "screenTopPx": 361.15094,
+      "screenRightPx": 40.53524,
+      "screenBottomPx": 380.7536,
+      "shortEdgePx": 19.602661,
+      "areaPx2": 494.2197
+    },
+    {
+      "ownerStableId": 23,
+      "visualStableId": 12716039,
+      "templateId": 56,
+      "template": "rts.frontline.crystal.right",
+      "worldXCm": 11425,
+      "worldYCm": 14929,
+      "screenLeftPx": 105.63782,
+      "screenTopPx": 348.5981,
+      "screenRightPx": 123.64609,
+      "screenBottomPx": 363.85135,
+      "shortEdgePx": 15.253235,
+      "areaPx2": 274.6844
+    }
+  ]
+}

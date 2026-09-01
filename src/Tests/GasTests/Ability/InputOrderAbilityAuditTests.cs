@@ -259,9 +259,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueue_InvalidOrderTypeId_PublishesTypedRejection()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(4, 4);
             var queue = new OrderQueue(64, results);
-            var order = new Order { OrderTypeId = 0 };
+            var order = new Order { Actor = actor, OrderTypeId = 0 };
 
             bool accepted = queue.TryEnqueue(in order);
 
@@ -291,10 +293,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueue_WhenAdmissionCapacityIsExhausted_DoesNotEnqueueAnUnobservableOrder()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(1, 1);
             var queue = new OrderQueue(64, results);
-            var first = new Order { OrderTypeId = 2 };
-            var second = new Order { OrderTypeId = 2 };
+            var first = new Order { Actor = actor, OrderTypeId = 2 };
+            var second = new Order { Actor = actor, OrderTypeId = 2 };
 
             That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
             That(queue.SubmitAssigned(ref second), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
@@ -317,11 +321,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueue_WhenMultipleOrdersExceedAdmissionCapacity_PublishesEveryRejectedOrderId()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(1, 2);
             var queue = new OrderQueue(64, results);
-            var first = new Order { OrderTypeId = 2 };
-            var second = new Order { OrderTypeId = 2 };
-            var third = new Order { OrderTypeId = 2 };
+            var first = new Order { Actor = actor, OrderTypeId = 2 };
+            var second = new Order { Actor = actor, OrderTypeId = 2 };
+            var third = new Order { Actor = actor, OrderTypeId = 2 };
 
             That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
             That(queue.SubmitAssigned(ref second), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
@@ -348,12 +354,14 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueue_WhenRejectionCapacityIsExhausted_TerminatesAdmissionBeforeAssigningFurtherIds()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(1, 1);
             var queue = new OrderQueue(64, results);
-            var first = new Order { OrderTypeId = 2 };
-            var second = new Order { OrderTypeId = 2 };
-            var terminalTrigger = new Order { OrderTypeId = 2 };
-            var afterFault = new Order { OrderTypeId = 2 };
+            var first = new Order { Actor = actor, OrderTypeId = 2 };
+            var second = new Order { Actor = actor, OrderTypeId = 2 };
+            var terminalTrigger = new Order { Actor = actor, OrderTypeId = 2 };
+            var afterFault = new Order { Actor = actor, OrderTypeId = 2 };
 
             That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
             That(queue.SubmitAssigned(ref second), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
@@ -371,7 +379,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(results.TryGet(second.OrderId, OrderAdmissionStage.GlobalIntake, out var rejection), Is.True);
             That(rejection.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
 
-            var explicitOrder = new Order { OrderId = 99, OrderTypeId = 2 };
+            var explicitOrder = new Order { OrderId = 99, Actor = actor, OrderTypeId = 2 };
             InvalidOperationException explicitError = Throws<InvalidOperationException>(() =>
                 queue.SubmitAssigned(ref explicitOrder))!;
             That(explicitError.Message, Is.EqualTo(terminalError.Message));
@@ -380,7 +388,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             results.BeginLogicStep();
             results.EndEntityIntake();
             results.EndLogicStep();
-            var nextGenerationOrder = new Order { OrderTypeId = 2 };
+            var nextGenerationOrder = new Order { Actor = actor, OrderTypeId = 2 };
             InvalidOperationException nextGenerationError = Throws<InvalidOperationException>(() =>
                 queue.SubmitAssigned(ref nextGenerationOrder))!;
             That(nextGenerationError.Message, Is.EqualTo(terminalError.Message));
@@ -524,11 +532,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueues_SharingAdmissionResults_AssignGloballyUniqueOrderIds()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(4, 4);
             var gameplayOrders = new OrderQueue(64, results);
             var responseOrders = new OrderQueue(64, results);
-            var gameplayOrder = new Order { OrderTypeId = 2 };
-            var responseOrder = new Order { OrderTypeId = 3 };
+            var gameplayOrder = new Order { Actor = actor, OrderTypeId = 2 };
+            var responseOrder = new Order { Actor = actor, OrderTypeId = 3 };
 
             That(gameplayOrders.SubmitAssigned(ref gameplayOrder), Is.EqualTo(OrderSubmitResult.Queued));
             That(responseOrders.SubmitAssigned(ref responseOrder), Is.EqualTo(OrderSubmitResult.Queued));
@@ -1373,9 +1383,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueue_BatchAdmission_IsAtomicWhenCapacityIsInsufficient()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(16, 16);
             var queue = new OrderQueue(capacity: 4, results);
-            var seed = new Order { OrderTypeId = 1 };
+            var seed = new Order { Actor = actor, OrderTypeId = 1 };
             for (int i = 0; i < 3; i++)
             {
                 Assert.That(queue.TryEnqueue(in seed), Is.True);
@@ -1383,8 +1395,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var batch = new[]
             {
-                new Order { OrderTypeId = 1 },
-                new Order { OrderTypeId = 1 },
+                new Order { Actor = actor, OrderTypeId = 1 },
+                new Order { Actor = actor, OrderTypeId = 1 },
             };
 
             Assert.That(queue.TryEnqueueBatch(batch), Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
@@ -1400,14 +1412,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void OrderQueue_BatchAdmission_PublishesEveryAssignedIdWhenAdmissionCapacityIsInsufficient()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var results = new OrderAdmissionResultBuffer(2, 2);
             var queue = new OrderQueue(capacity: 1, results);
-            var seed = new Order { OrderTypeId = 1 };
+            var seed = new Order { Actor = actor, OrderTypeId = 1 };
             Assert.That(queue.TryEnqueue(in seed), Is.True);
             var batch = new[]
             {
-                new Order { OrderTypeId = 1 },
-                new Order { OrderTypeId = 1 },
+                new Order { Actor = actor, OrderTypeId = 1 },
+                new Order { Actor = actor, OrderTypeId = 1 },
             };
 
             Assert.That(queue.TryEnqueueBatch(batch), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
@@ -1458,7 +1472,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity secondActor = world.Create();
             var results = new OrderAdmissionResultBuffer(8, 8);
             var queue = new OrderQueue(capacity: 1, results);
-            var seed = new Order { OrderTypeId = 1 };
+            var seed = new Order { Actor = firstActor, OrderTypeId = 1 };
             Assert.That(queue.TryEnqueue(in seed), Is.True);
             var batch = new[]
             {
@@ -1486,7 +1500,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity secondActor = world.Create();
             var results = new OrderAdmissionResultBuffer(2, 2);
             var queue = new OrderQueue(capacity: 1, results);
-            var seed = new Order { OrderTypeId = 1 };
+            var seed = new Order { Actor = firstActor, OrderTypeId = 1 };
             Assert.That(queue.TryEnqueue(in seed), Is.True);
             var batch = new[]
             {
@@ -1517,7 +1531,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity secondSource = world.Create();
             var results = new OrderAdmissionResultBuffer(2, 2);
             var queue = new OrderQueue(capacity: 1, results);
-            var seed = new Order { OrderTypeId = 1 };
+            var seed = new Order { Actor = firstActor, OrderTypeId = 1 };
             Assert.That(queue.TryEnqueue(in seed), Is.True);
             var batch = new[]
             {

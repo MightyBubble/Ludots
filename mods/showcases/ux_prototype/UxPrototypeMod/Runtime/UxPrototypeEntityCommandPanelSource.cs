@@ -110,6 +110,6 @@ internal sealed class UxPrototypeEntityCommandPanelSource : IEntityCommandPanelS
             return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedValidation);
         }
 
-        return InputOrderActivationResult.Submitted(target, orderId: 0);
+        return InputOrderActivationResult.Submitted(target, orderId: 0, Entity.Null);
     }
 }

@@ -332,6 +332,40 @@ namespace Ludots.Core.Presentation.Presenters
                 ? value / MathF.Sqrt(lengthSquared)
                 : axis;
         }
+
+        private static bool IsBehaviorActive(uint mask, int slotIndex)
+        {
+            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
+        }
+
+        internal static AssetBindingConfig ResolvePrimaryAssetBinding(
+            PresenterDefinition definition,
+            uint activeBehaviorMask)
+        {
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            int primaryAssetBehaviorIndex = definition.PrimaryAssetBehaviorIndex;
+            if ((uint)primaryAssetBehaviorIndex < (uint)behaviors.Length)
+            {
+                ref readonly BehaviorSlot primarySlot = ref behaviors[primaryAssetBehaviorIndex];
+                if (primarySlot.Kind == BehaviorKind.AssetBinding &&
+                    IsBehaviorActive(activeBehaviorMask, primarySlot.SlotIndex))
+                {
+                    return primarySlot.AssetBinding;
+                }
+            }
+
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.Kind == BehaviorKind.AssetBinding &&
+                    IsBehaviorActive(activeBehaviorMask, slot.SlotIndex))
+                {
+                    return slot.AssetBinding;
+                }
+            }
+
+            return new AssetBindingConfig { LocalScale = Vector3.One };
+        }
     }
 
     public struct PresenterResolvedTransform

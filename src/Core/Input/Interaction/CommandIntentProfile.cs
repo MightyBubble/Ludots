@@ -4,6 +4,14 @@ using Arch.Core;
 
 namespace Ludots.Core.Input.Interaction
 {
+    public enum CommandIntentTargetShape : byte
+    {
+        None = 0,
+        WorldPositionCm = 1,
+        Entity = 2,
+        WorldPositionAndEntity = 3,
+    }
+
     /// <summary>Built-in group policy kinds (RFC-0065 DEC-14). Registry keys, not a closed enum.</summary>
     public static class CommandIntentGroupPolicyKinds
     {
@@ -41,10 +49,20 @@ namespace Ludots.Core.Input.Interaction
     /// the order type id, and the slot selector as (kind, param id). Slot landing (resolving the
     /// param to a concrete ability slot) is downstream dispatch work, not evaluation work.
     /// </summary>
-    public readonly record struct CommandIntentRoute(int RuleIndex, int OrderTypeId, int RouteKind, int RouteParamId)
+    public readonly record struct CommandIntentRoute(
+        int RuleIndex,
+        int OrderTypeId,
+        int RouteKind,
+        int RouteParamId,
+        CommandIntentTargetShape TargetShape)
     {
         /// <summary>Sentinel for "no rule matched" in group results.</summary>
-        public static readonly CommandIntentRoute None = new(-1, 0, CommandIntentRouteKinds.None, 0);
+        public static readonly CommandIntentRoute None = new(
+            -1,
+            0,
+            CommandIntentRouteKinds.None,
+            0,
+            CommandIntentTargetShape.None);
 
         /// <summary>True when a rule won for this actor.</summary>
         public bool HasRoute => RuleIndex >= 0;
@@ -129,5 +147,6 @@ namespace Ludots.Core.Input.Interaction
     {
         public string OrderTypeKey { get; set; } = string.Empty;
         public string Slot { get; set; }
+        public CommandIntentTargetShape? TargetShape { get; set; }
     }
 }

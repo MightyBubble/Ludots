@@ -100,7 +100,7 @@ namespace Ludots.Tests.Presentation
 
             var session = new GameSession();
             var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
-            _projection = new GameplayPresentationProjectionSystem(_world, _eventBus, _presEvents, session, _gasEvents, _ownerChanges);
+            _projection = new GameplayPresentationProjectionSystem(_world, _eventBus, _presEvents, session, _gasEvents, _ownerChanges, enabled: true);
             _ruleSystem = new PresenterRuleSystem(_world, _presEvents, _commands, _defs, _instances, _programs, graphApi, _globals);
             _timers = new PresenterTimerTable(16384);
             _timerSystem = new PresenterTimerSystem(_world, _timers, _presEvents);
