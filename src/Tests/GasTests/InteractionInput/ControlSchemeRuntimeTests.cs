@@ -51,7 +51,7 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
 
             harness.Backend.Buttons["<Keyboard>/q"] = true;
-            harness.Handler.Update();
+            harness.Handler.Update(1f / 60f);
             Assert.That(harness.Handler.IsDown("CmdA"), Is.True, "the initial scheme's IMC context must be active after install.");
 
             uint revisionBefore = harness.Runtime.Revision;
@@ -59,7 +59,7 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.Runtime.Revision, Is.GreaterThan(revisionBefore));
 
             harness.Backend.Buttons["<Keyboard>/e"] = true;
-            harness.Handler.Update();
+            harness.Handler.Update(1f / 60f);
             Assert.That(harness.Handler.IsDown("CmdA"), Is.False, "scheme A's IMC context must be popped on switch.");
             Assert.That(harness.Handler.IsDown("CmdB"), Is.True, "scheme B's IMC context must be pushed on switch.");
         }
@@ -109,7 +109,7 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.False);
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
             harness.Backend.Buttons["<Keyboard>/q"] = true;
-            harness.Handler.Update();
+            harness.Handler.Update(1f / 60f);
             Assert.That(harness.Handler.IsDown("CmdA"), Is.True);
 
             Assert.That(harness.Runtime.TrySwitch(schemeId: 0), Is.False, "id 0 is never installed.");

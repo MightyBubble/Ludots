@@ -171,7 +171,7 @@ public sealed class SelectionKnowledgeProjectionTests
         var system = new TabTargetCycleSystem(world, globals, searchRadiusCm: 3000);
 
         input.InjectButtonPress(TabTargetCycleSystem.TabTargetActionId);
-        input.Update();
+        input.Update(1f / 60f);
         system.Update(0f);
 
         Assert.That(globals.TryGetValue(CoreServiceKeys.TabTargetEntity.Name, out object? targetObj), Is.True);
@@ -337,13 +337,13 @@ public sealed class SelectionKnowledgeProjectionTests
         SetActionSnapshot(globals, "Select", pointer, pressedThisFrame: true, isDown: true);
         SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)pointer.X, (int)pointer.Y));
         input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
-        input.Update();
+        input.Update(1f / 60f);
         system.Update(0f);
 
         SetActionSnapshot(globals, "Select", pointer, pressedThisFrame: false, isDown: false, releasedThisFrame: true);
         SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)pointer.X, (int)pointer.Y));
         input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
-        input.Update();
+        input.Update(1f / 60f);
         system.Update(0f);
     }
 
@@ -371,17 +371,17 @@ public sealed class SelectionKnowledgeProjectionTests
     {
         SetActionSnapshot(globals, "Select", from, pressedThisFrame: true, isDown: true);
         input.InjectAction("PointerPos", new Vector3(from.X, from.Y, 0f));
-        input.Update();
+        input.Update(1f / 60f);
         system.Update(0f);
 
         SetActionSnapshot(globals, "Select", to, pressedThisFrame: false, isDown: true);
         input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
-        input.Update();
+        input.Update(1f / 60f);
         system.Update(0f);
 
         SetActionSnapshot(globals, "Select", to, pressedThisFrame: false, isDown: false, releasedThisFrame: true);
         input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
-        input.Update();
+        input.Update(1f / 60f);
         system.Update(0f);
     }
 

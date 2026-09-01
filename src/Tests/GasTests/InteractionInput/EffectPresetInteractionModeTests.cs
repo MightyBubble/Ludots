@@ -92,33 +92,33 @@ namespace Ludots.Tests.GAS
 
             // WoW / TargetFirst: press skill -> immediate order
             input.InjectButtonPress("SkillQ");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
             Assert.That(orders.Count, Is.EqualTo(1));
             Assert.That(orders[0].Target, Is.EqualTo(target));
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
 
             // LoL / SmartCast: press skill -> immediate order
             mapping.SetInteractionMode(InteractionModeType.SmartCast);
             input.InjectButtonPress("SkillQ");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
             Assert.That(orders.Count, Is.EqualTo(2));
             Assert.That(orders[1].Target, Is.EqualTo(target));
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
 
             // SC2 / AimCast: press skill -> enter aiming (no immediate order), then configured confirm action confirms
             mapping.SetInteractionMode(InteractionModeType.AimCast);
             input.InjectButtonPress("SkillQ");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
             Assert.That(mapping.IsAiming, Is.True);
             Assert.That(orders.Count, Is.EqualTo(2));
 
             input.InjectButtonPress(bindings.ConfirmActionId);
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
             Assert.That(mapping.IsAiming, Is.False);
             Assert.That(orders.Count, Is.EqualTo(3));
@@ -127,18 +127,18 @@ namespace Ludots.Tests.GAS
             // PressReleaseAimCast: press -> pending, release -> enter aiming, configured confirm action confirms
             mapping.SetInteractionMode(InteractionModeType.PressReleaseAimCast);
             input.InjectButtonPress("SkillQ");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
             Assert.That(mapping.IsAiming, Is.False);
             Assert.That(orders.Count, Is.EqualTo(3));
 
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
             Assert.That(mapping.IsAiming, Is.True);
             Assert.That(orders.Count, Is.EqualTo(3));
 
             input.InjectButtonPress(bindings.ConfirmActionId);
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
             Assert.That(mapping.IsAiming, Is.False);
             Assert.That(orders.Count, Is.EqualTo(4));
@@ -202,13 +202,13 @@ namespace Ludots.Tests.GAS
             mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             input.InjectButtonPress("SkillQ");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
             Assert.That(mapping.IsAiming, Is.True);
             Assert.That(mapping.AimingActionId, Is.EqualTo("SkillQ"));
 
             input.InjectButtonPress("SkillW");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
 
             Assert.That(mapping.IsAiming, Is.False,

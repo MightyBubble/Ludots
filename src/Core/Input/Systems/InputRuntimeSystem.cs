@@ -46,7 +46,7 @@ namespace Ludots.Core.Input.Systems
             bool uiCaptured = _globals.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var capturedObj) && capturedObj is bool b && b;
             bool uiWheelCaptured = _globals.TryGetValue(CoreServiceKeys.UiWheelCaptured.Name, out var wheelCapturedObj) && wheelCapturedObj is bool wb && wb;
             input.InputBlocked = uiCaptured;
-            input.Update();
+            input.Update(dt);
             if (uiWheelCaptured)
             {
                 SuppressCameraZoom(input);
@@ -68,7 +68,7 @@ namespace Ludots.Core.Input.Systems
             if (_globals.TryGetValue(CoreServiceKeys.ClientLocalSeatInputRuntime.Name, out var seatInputObj) &&
                 seatInputObj is ClientLocalSeatInputRuntime seatInput)
             {
-                seatInput.UpdateVisualFrame();
+                seatInput.UpdateVisualFrame(dt);
             }
         }
 

@@ -132,7 +132,7 @@ namespace Ludots.Tests.GAS
             mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             input.InjectButtonPress("Attack");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
 
             Assert.That(orders.Count, Is.EqualTo(1));

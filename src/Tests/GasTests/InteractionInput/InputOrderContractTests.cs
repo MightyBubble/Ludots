@@ -64,11 +64,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetSolePossessedActor(world.Create(), 1);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             backend.Buttons["<Keyboard>/a"] = false;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             accumulator.BuildTickSnapshot(snapshot);
@@ -599,15 +599,15 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetSolePossessedActor(world.Create(), 1);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             system.Update(0.10f);
 
             backend.Buttons["<Keyboard>/a"] = false;
-            handler.Update();
+            handler.Update(1f / 60f);
             system.Update(0.05f);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             system.Update(0.10f);
 
             Assert.That(orders.Count, Is.EqualTo(1));

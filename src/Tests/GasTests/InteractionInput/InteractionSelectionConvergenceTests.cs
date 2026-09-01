@@ -65,7 +65,7 @@ namespace Ludots.Tests.GAS
             requests.TryEnqueue(new InputRequest { RequestId = 9, RequestTagId = 501, Target = requestTarget });
 
             SetConfirmSnapshot(globals, new Vector2(0f, 0f), pressedThisFrame: true, isDown: true);
-            input.Update();
+            input.Update(1f / 60f);
             system.Update(0f);
 
             That(responses.TryConsume(9, out var response), Is.True);
@@ -298,7 +298,7 @@ namespace Ludots.Tests.GAS
             });
 
             input.InjectButtonPress("Command");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
 
             That(orders.Count, Is.EqualTo(2));
@@ -375,7 +375,7 @@ namespace Ludots.Tests.GAS
             });
 
             input.InjectButtonPress("Command");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
 
             That(orders.Count, Is.EqualTo(2));
@@ -441,7 +441,7 @@ namespace Ludots.Tests.GAS
             });
 
             input.InjectButtonPress("Stop");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
 
             That(orders.Count, Is.EqualTo(2));
@@ -496,7 +496,7 @@ namespace Ludots.Tests.GAS
             });
 
             input.InjectButtonPress("Stop");
-            input.Update();
+            input.Update(1f / 60f);
 
             var ex = Throws<InvalidOperationException>(() => mapping.Update(0f));
 
@@ -631,7 +631,7 @@ namespace Ludots.Tests.GAS
             });
 
             input.InjectButtonPress("Stop");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
 
             That(orders.Count, Is.EqualTo(2));
@@ -798,7 +798,7 @@ namespace Ludots.Tests.GAS
             var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             input.InjectAction("PointerPos", new Vector3(1600f, 1200f, 0f));
-            input.Update();
+            input.Update(1f / 60f);
             system.Update(0f);
 
             That(EntityCollectionContextRuntime.TryGetPrimary(world, globals, local, EntityCollectionKeys.HoveredEntity, out Entity actual), Is.True);
@@ -1088,12 +1088,12 @@ namespace Ludots.Tests.GAS
 
             SetConfirmSnapshot(globals, new Vector2(1700f, 1200f), pressedThisFrame: true, isDown: true);
             input.InjectAction("PointerPos", new Vector3(1700f, 1200f, 0f));
-            input.Update();
+            input.Update(1f / 60f);
             system.Update(0f);
 
             SetConfirmSnapshot(globals, new Vector2(1700f, 1200f), pressedThisFrame: false, isDown: false, releasedThisFrame: true);
             input.InjectAction("PointerPos", new Vector3(1700f, 1200f, 0f));
-            input.Update();
+            input.Update(1f / 60f);
             system.Update(0f);
 
             AssertCommandSource(globals, local, entity);
@@ -1131,7 +1131,7 @@ namespace Ludots.Tests.GAS
             SetConfirmSnapshot(globals, new Vector2(1700f, 1200f), pressedThisFrame: true, isDown: false, releasedThisFrame: true);
             SetAuthoritativeGroundPoint(input, new WorldCmInt2(1700, 1200));
             input.InjectAction("PointerPos", new Vector3(1700f, 1200f, 0f));
-            input.Update();
+            input.Update(1f / 60f);
             system.Update(0f);
 
             AssertCommandSource(globals, local, entity);
@@ -1266,7 +1266,7 @@ namespace Ludots.Tests.GAS
             globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = mapping;
 
             input.InjectButtonPress("SkillQ");
-            input.Update();
+            input.Update(1f / 60f);
             selectionSystem.Update(0f);
             mapping.Update(0f);
             That(mapping.IsAiming, Is.True);
@@ -1275,14 +1275,14 @@ namespace Ludots.Tests.GAS
             SetAuthoritativeGroundPoint(input, new WorldCmInt2(2600, 1600));
             input.InjectAction("PointerPos", new Vector3(2600f, 1600f, 0f));
             input.InjectButtonPress(InteractionActionBindings.DefaultConfirmActionId);
-            input.Update();
+            input.Update(1f / 60f);
             selectionSystem.Update(0f);
             mapping.Update(0f);
 
             SetConfirmSnapshot(globals, new Vector2(2600f, 1600f), pressedThisFrame: false, isDown: false, releasedThisFrame: true);
             SetAuthoritativeGroundPoint(input, new WorldCmInt2(2600, 1600));
             input.InjectAction("PointerPos", new Vector3(2600f, 1600f, 0f));
-            input.Update();
+            input.Update(1f / 60f);
             selectionSystem.Update(0f);
             mapping.Update(0f);
 
@@ -1320,7 +1320,7 @@ namespace Ludots.Tests.GAS
             var system = new TabTargetCycleSystem(world, globals, searchRadiusCm: 3000);
 
             input.InjectButtonPress(TabTargetCycleSystem.TabTargetActionId);
-            input.Update();
+            input.Update(1f / 60f);
             system.Update(0f);
 
             That(globals.TryGetValue(CoreServiceKeys.TabTargetEntity.Name, out var targetObj), Is.True);
@@ -1357,13 +1357,13 @@ namespace Ludots.Tests.GAS
             SetConfirmSnapshot(globals, pointer, pressedThisFrame: true, isDown: true, releasedThisFrame: false);
             SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)pointer.X, (int)pointer.Y));
             input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
-            input.Update();
+            input.Update(1f / 60f);
             system.Update(0f);
 
             SetConfirmSnapshot(globals, pointer, pressedThisFrame: false, isDown: false, releasedThisFrame: true);
             SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)pointer.X, (int)pointer.Y));
             input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
-            input.Update();
+            input.Update(1f / 60f);
             system.Update(0f);
         }
 
@@ -1387,19 +1387,19 @@ namespace Ludots.Tests.GAS
             SetConfirmSnapshot(globals, from, pressedThisFrame: true, isDown: true, releasedThisFrame: false);
             SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)from.X, (int)from.Y));
             input.InjectAction("PointerPos", new Vector3(from.X, from.Y, 0f));
-            input.Update();
+            input.Update(1f / 60f);
             system.Update(0f);
 
             SetConfirmSnapshot(globals, to, pressedThisFrame: false, isDown: true, releasedThisFrame: false);
             SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)to.X, (int)to.Y));
             input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
-            input.Update();
+            input.Update(1f / 60f);
             system.Update(0f);
 
             SetConfirmSnapshot(globals, to, pressedThisFrame: false, isDown: false, releasedThisFrame: true);
             SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)to.X, (int)to.Y));
             input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
-            input.Update();
+            input.Update(1f / 60f);
             system.Update(0f);
         }
 
