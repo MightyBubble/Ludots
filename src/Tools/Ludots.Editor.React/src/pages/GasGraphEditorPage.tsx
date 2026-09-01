@@ -1691,12 +1691,12 @@ export const GasGraphEditorPage: React.FC = () => {
     const timer = window.setTimeout(() => {
       reactFlowRef.current?.fitView({
         nodes: focusIds.map((id) => ({ id })),
-        padding: 0.28,
+        padding: 0.2,
         duration: 280,
-        minZoom: 0.35,
-        maxZoom: 1.35,
+        minZoom: 0.55,
+        maxZoom: 1.85,
       });
-    }, 80);
+    }, 120);
     return () => window.clearTimeout(timer);
   }, [debugEnabled, debugEntryLabel, watchFocus.nodeIds.size]);
 
