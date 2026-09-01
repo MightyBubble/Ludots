@@ -1,4 +1,4 @@
-ï»¿using Ludots.Platform.Abstractions;
+﻿using Ludots.Platform.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.IO;
