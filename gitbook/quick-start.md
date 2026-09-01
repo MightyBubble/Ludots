@@ -1,6 +1,6 @@
 # 快速开始
 
-本页给出当前 Ludots 的最短启动路径。完整命令契约以 [环境与构建](contributing/environment-setup.md) 和 [Launcher CLI Runbook](reference/cli-runbook.md) 为准。
+本页给出当前 Ludots 的最短启动路径。门户「上手」页做作者/玩家分流：<https://mightybubble.github.io/Ludots/getting-started.html>。完整命令契约以 [环境与构建](contributing/environment-setup.md) 和 [Launcher CLI Runbook](reference/cli-runbook.md) 为准。
 
 ## 1 环境要求
 

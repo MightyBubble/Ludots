@@ -27,6 +27,7 @@
 
   var NAV_ITEMS = [
     { href: "index.html", label: "门户", page: "home" },
+    { href: "getting-started.html", label: "上手", page: "gettingstarted" },
     { href: "index.html#docs", label: "文档", page: "home", hash: "#docs" },
     { href: "raylib-engine.html", label: "Raylib 引擎画廊", page: "raylibengine" },
     { href: "graph-op-wiki.html", label: "Graph 节点画廊", page: "graphop" },

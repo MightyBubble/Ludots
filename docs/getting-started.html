@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>上手 — Ludots</title>
+<meta name="description" content="Ludots 上手：作者弱网一键跑起来，玩家零安装包开玩。正式契约见快速开始与零环境文档。">
+<link rel="stylesheet" href="site-assets/site.css">
+<style>
+  .hero {
+    padding: 56px 0 8px;
+    max-width: 820px;
+  }
+  .hero .kicker {
+    font-size: 12.5px; font-weight: 600; letter-spacing: 3px;
+    color: var(--steel); text-transform: uppercase;
+  }
+  .hero h1 {
+    font-size: 40px; line-height: 1.2; margin: 14px 0 16px;
+    font-weight: 700; letter-spacing: -0.4px;
+  }
+  .hero p.lead {
+    font-size: 17px; color: var(--muted); margin: 0 0 8px; max-width: 680px;
+  }
+  .path-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 8px;
+  }
+  .path-panel {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px 26px;
+  }
+  .path-panel h2 { margin: 0 0 8px; font-size: 22px; }
+  .path-panel .who { color: var(--muted); font-size: 14.5px; margin: 0 0 18px; }
+  .path-panel ol { margin: 0 0 18px; padding-left: 20px; }
+  .path-panel li { margin: 8px 0; font-size: 14.5px; }
+  .path-panel .cmdline { margin: 10px 0 0; }
+  .links {
+    display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 14px;
+  }
+  .links a { font-size: 14px; font-weight: 600; color: var(--accent); }
+  .note-strip {
+    margin-top: 28px; padding: 18px 22px;
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--muted); font-size: 14px;
+  }
+  .note-strip strong { color: var(--fg); }
+  @media (max-width: 860px) {
+    .path-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 30px; }
+  }
+</style>
+</head>
+<body data-page="gettingstarted">
+<header id="topbar"></header>
+
+<main class="page">
+  <section class="hero">
+    <div class="kicker">GETTING STARTED</div>
+    <h1>上手</h1>
+    <p class="lead">
+      先选一条路：你要改引擎、写 Mod，还是只想把可玩包发给别人。
+      命令写在下面；完整合同仍以正式文档为准。
+    </p>
+  </section>
+
+  <section class="section" style="padding-top: 12px;">
+    <div class="path-grid">
+      <article class="path-panel">
+        <h2>作者：弱网也能跑</h2>
+        <p class="who">本机要装 .NET 9 SDK。包还原走仓库自带离线源，规范路径不必访问 nuget.org。</p>
+        <ol>
+          <li>安装 <strong>.NET 9 SDK</strong>（唯一硬前置）。</li>
+          <li>克隆仓库后执行一键脚本：离线还原 + 构建 + 启动示例。</li>
+          <li>换成官方验收场景时，把示例改成 binding 名即可。</li>
+        </ol>
+        <div class="cmdline"><span class="cmd">./scripts/dev-up.sh</span><button class="copy-btn" type="button">复制</button></div>
+        <div class="cmdline"><span class="cmd">.\scripts\dev-up.ps1</span><button class="copy-btn" type="button">复制</button></div>
+        <div class="cmdline"><span class="cmd">./scripts/dev-up.sh resolve camera_acceptance --adapter raylib</span><button class="copy-btn" type="button">复制</button></div>
+        <div class="links">
+          <a href="index.html#docs/quick-start.md">快速开始 →</a>
+          <a href="index.html#docs/reference/zero-env-setup.md">零环境契约 →</a>
+          <a href="index.html#docs/contributing/environment-setup.md">环境与构建 →</a>
+        </div>
+      </article>
+
+      <article class="path-panel">
+        <h2>玩家：零安装开玩</h2>
+        <p class="who">玩家机不需要 .NET SDK。作者先打出自包含包，对方解压后点 Play 即可。</p>
+        <ol>
+          <li>在开发机用发行脚本打出带 RID 的玩家包。</li>
+          <li>包内已含自包含 App、启动器与预编译 Mod。</li>
+          <li>Windows 用 <code>Play.cmd</code>；Linux / macOS 用 <code>Play.sh</code>。</li>
+        </ol>
+        <div class="cmdline"><span class="cmd">.\scripts\publish-player-build.ps1 -Mods ExampleMod -RuntimeIdentifier win-x64</span><button class="copy-btn" type="button">复制</button></div>
+        <div class="cmdline"><span class="cmd">./scripts/publish-player-build.sh --mods ExampleMod --rid linux-x64</span><button class="copy-btn" type="button">复制</button></div>
+        <div class="links">
+          <a href="index.html#docs/reference/player-build.md">玩家发行链 →</a>
+          <a href="gallery.html">Showcase 画廊 →</a>
+        </div>
+      </article>
+    </div>
+
+    <div class="note-strip">
+      <strong>别绕路：</strong>正式入口是 launcher / <code>dev-up</code>；直接跑
+      <code>src/Apps/...</code> 只适合适配器级调试。GUI 启动器与 Web 适配器才需要 Node.js；
+      Raylib CLI 主路径不需要。Cef / Ultralight 特例首次构建会访问 nuget.org，之后走缓存。
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Ludots 上手 · 写作源 gitbook/quick-start.md · zero-env-setup.md · player-build.md</span>
+  </div>
+</footer>
+
+<script src="site-assets/site.js"></script>
+</body>
+</html>

@@ -148,7 +148,7 @@
       与 SystemGroup 挂靠扩展。本门户是文档、Showcase、测试验收与架构图的唯一入口。
     </p>
     <div class="hero-actions">
-      <a class="btn btn-primary" href="#quickstart">三步快速开始</a>
+      <a class="btn btn-primary" href="getting-started.html">上手</a>
       <a class="btn btn-ghost" href="#docs">浏览文档</a>
       <a class="btn btn-ghost" href="https://github.com/mightybubble/ludots" target="_blank" rel="noopener">GitHub 仓库 ↗</a>
     </div>
@@ -159,15 +159,16 @@
     <div class="section-head">
       <div class="kicker">QUICK START</div>
       <h2>新人三步快速开始</h2>
-      <p>从零到在屏幕上跑起一个官方验收 Showcase，只需要三步。完整命令契约见
+      <p>从零到屏幕上跑起来，优先走「上手」页的作者/玩家两条路。完整命令契约见
+        <a href="getting-started.html">上手</a>、
         <a href="#docs/quick-start.md">快速开始</a> 与
         <a href="#docs/reference/cli-runbook.md">Launcher CLI Runbook</a>。</p>
     </div>
     <div class="grid cols-3 steps">
       <div class="card step-card">
         <div class="num">1</div>
-        <h3>安装 .NET SDK</h3>
-        <p>需要 .NET 8.0、9.0 与 10.0 preview SDK（缺少任一必需 SDK 会导致 restore 或 launcher 构建失败），另需 Node.js + npm。</p>
+        <h3>安装 .NET 9 SDK</h3>
+        <p>全仓 target <code>net9.0</code>，只需要 .NET 9 SDK。规范路径用仓库离线 NuGet，弱网也能还原。</p>
         <div class="cmdline"><span class="cmd">dotnet --list-sdks</span><button class="copy-btn">复制</button></div>
       </div>
       <div class="card step-card">
@@ -178,9 +179,9 @@
       </div>
       <div class="card step-card">
         <div class="num">3</div>
-        <h3>启动一个 Showcase</h3>
-        <p>用统一 launcher 在 Raylib 适配器上启动相机验收场景——一次点击、一次生成、一次提示，全链路确定性回放。</p>
-        <div class="cmdline"><span class="cmd">scripts/run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib</span><button class="copy-btn">复制</button></div>
+        <h3>一键跑起来</h3>
+        <p>弱网一键：离线还原 + 构建 + 启动。要验收场景时把 binding 换成 <code>camera_acceptance</code>。</p>
+        <div class="cmdline"><span class="cmd">./scripts/dev-up.sh</span><button class="copy-btn">复制</button></div>
       </div>
     </div>
   </section>
@@ -190,46 +191,50 @@
     <div class="section-head">
       <div class="kicker">PORTAL</div>
       <h2>从这里进入</h2>
-      <p>门户的五个主区域：正式文档、Showcase 画廊、测试与验收证据、架构图库、面板矩阵。</p>
+      <p>门户主区域：上手、正式文档、Showcase 画廊、测试与验收证据、架构图库、面板矩阵。</p>
     </div>
-    <div class="grid cols-5">
+    <div class="grid cols-4">
+      <a class="card nav-card" href="getting-started.html">
+        <div class="icon" style="background: var(--accent-light); color: var(--accent);">01</div>
+        <h3>上手</h3>
+        <p>作者弱网一键、玩家零安装包：先跑起来，再进文档与画廊。</p>
+        <span class="go">开始上手 →</span>
+      </a>
       <a class="card nav-card" href="#docs">
-        <div class="icon" style="background: var(--accent-light); color: var(--accent);">📖</div>
+        <div class="icon" style="background: var(--accent-light); color: var(--accent);">02</div>
         <h3>文档</h3>
         <p>gitbook/ 写作源驱动的正式文档：快速开始、贡献规范、架构 SSOT 与参考手册。</p>
         <span class="go">在下方阅读 ↓</span>
       </a>
       <a class="card nav-card" href="gallery.html">
-        <div class="icon" style="background: var(--green-light); color: var(--green);">🎮</div>
+        <div class="icon" style="background: var(--green-light); color: var(--green);">03</div>
         <h3>Showcase 画廊</h3>
         <p>可玩演示与能力验收场景的画廊：按分层与类别筛选，一键复制启动命令。</p>
         <span class="go">进入画廊 →</span>
       </a>
-      <a class="card nav-card" href="gitbook/architecture/four-layer-architecture/README.md">
-        <span class="icon">🏗️</span>
-        <div>
-          <h3>四层架构 Wiki</h3>
-          <p>Machine · App · Seat · Device 分层模型、全链路输入旅程、术语禁则——底层架构一站读懂。</p>
-        </div>
-        <span class="go">打开 Wiki →</span>
-      </a>
       <a class="card nav-card" href="tests.html">
-        <div class="icon" style="background: var(--steel-light); color: var(--steel);">✅</div>
+        <div class="icon" style="background: var(--steel-light); color: var(--steel);">04</div>
         <h3>测试与验收</h3>
         <p>L0–L5 测试分层、门禁矩阵与 showcase 验收六件套证据的完整档案。</p>
         <span class="go">查看证据 →</span>
       </a>
       <a class="card nav-card" href="diagrams.html">
-        <div class="icon" style="background: var(--amber-light); color: var(--amber);">📐</div>
+        <div class="icon" style="background: var(--amber-light); color: var(--amber);">05</div>
         <h3>架构图库</h3>
         <p>覆盖全部子系统的架构图、流程图与依赖图，支持全屏查看。</p>
         <span class="go">打开图库 →</span>
       </a>
       <a class="card nav-card" href="panels.html">
-        <div class="icon" style="background: var(--accent-light); color: var(--accent);">🧩</div>
+        <div class="icon" style="background: var(--accent-light); color: var(--accent);">06</div>
         <h3>面板矩阵</h3>
         <p>35 类面板设计一站式：高保真 web 预期（三主题切换）、文档直达、showcase 预留位。</p>
         <span class="go">查看矩阵 →</span>
+      </a>
+      <a class="card nav-card" href="index.html#docs/architecture/four-layer-architecture/README.md">
+        <div class="icon" style="background: var(--blue-light); color: var(--blue);">07</div>
+        <h3>四层架构 Wiki</h3>
+        <p>Machine · App · Seat · Device 分层模型、全链路输入旅程、术语禁则。</p>
+        <span class="go">打开 Wiki →</span>
       </a>
     </div>
   </section>
