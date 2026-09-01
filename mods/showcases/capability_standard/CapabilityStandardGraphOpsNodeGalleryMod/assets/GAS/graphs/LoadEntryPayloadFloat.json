@@ -13,7 +13,7 @@
       {
         "id": "readGroundX",
         "op": "LoadEntryPayloadFloat",
-        "payloadKey": "MapTrigger.GroundXCm"
+        "payloadKey": "MapTrigger.GroundPointXCm"
       },
       {
         "id": "done",

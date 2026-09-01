@@ -689,12 +689,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         private static Ludots.Platform.Abstractions.IntVector2 ResolveTargetPosCm(ScriptContext context)
         {
-            if (context.Contains(MapTriggerEventPayloadKeys.GroundXCm) &&
-                context.Contains(MapTriggerEventPayloadKeys.GroundYCm))
+            if (context.Contains(MapTriggerEventPayloadKeys.GroundPointXCm) &&
+                context.Contains(MapTriggerEventPayloadKeys.GroundPointYCm))
             {
                 return new Ludots.Platform.Abstractions.IntVector2(
-                    (int)context.Get<float>(MapTriggerEventPayloadKeys.GroundXCm),
-                    (int)context.Get<float>(MapTriggerEventPayloadKeys.GroundYCm));
+                    (int)context.Get<float>(MapTriggerEventPayloadKeys.GroundPointXCm),
+                    (int)context.Get<float>(MapTriggerEventPayloadKeys.GroundPointYCm));
             }
 
             return default;

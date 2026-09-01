@@ -2241,7 +2241,8 @@ namespace Ludots.Core.Engine
                     TriggerManager,
                     CreateContext,
                     () => GetService(CoreServiceKeys.AuthoritativeInput),
-                    inputTriggerActions),
+                    inputTriggerActions,
+                    interactionContextProfileRegistry),
                 SystemGroup.DeferredTriggerCollection);
 
             // Phase 5.5: Continuation (AwaitCallback drain — registration order)
