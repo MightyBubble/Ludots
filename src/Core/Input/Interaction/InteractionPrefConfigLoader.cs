@@ -6,13 +6,13 @@ using Ludots.Core.Registry;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Loader for <c>Input/command_prefs.json</c>: the game-instance seed of the player-level
+    /// Loader for <c>Input/interaction_prefs.json</c>: the game-instance seed of the player-level
     /// default command intent + cast dispatch profile that map binding plants on every bound
-    /// player representative lacking a <see cref="CommandPref"/>. Catalog-declared DeepObject
+    /// player representative lacking a <see cref="InteractionPref"/>. Catalog-declared DeepObject
     /// merge through the shared <see cref="ConfigPipeline"/>; id resolution against the
     /// installed profile registries is fail fast.
     /// </summary>
-    public sealed class CommandPrefConfigLoader
+    public sealed class InteractionPrefConfigLoader
     {
         private readonly ConfigPipeline _pipeline;
 
@@ -23,16 +23,16 @@ namespace Ludots.Core.Input.Interaction
             AllowTrailingCommas = true,
         };
 
-        public CommandPrefConfigLoader(ConfigPipeline pipeline)
+        public InteractionPrefConfigLoader(ConfigPipeline pipeline)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         }
 
-        /// <summary>Load and validate the merged command preference seed config.</summary>
-        public CommandPrefsConfig Load(
+        /// <summary>Load and validate the merged interaction preference seed config.</summary>
+        public InteractionPrefsConfig Load(
             ConfigCatalog catalog = null,
             ConfigConflictReport report = null,
-            string relativePath = "Input/command_prefs.json")
+            string relativePath = "Input/interaction_prefs.json")
         {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
             var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
@@ -41,14 +41,14 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
-            var config = mergedObject.Deserialize<CommandPrefsConfig>(JsonOptions)
+            var config = mergedObject.Deserialize<InteractionPrefsConfig>(JsonOptions)
                 ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
             Validate(config, relativePath);
             return config;
         }
 
         /// <summary>Structural fail-fast validation; id resolution happens in <see cref="ResolveSeed"/>.</summary>
-        public static void Validate(CommandPrefsConfig config, string source)
+        public static void Validate(InteractionPrefsConfig config, string source)
         {
             if (config == null)
             {
@@ -69,11 +69,11 @@ namespace Ludots.Core.Input.Interaction
         /// must be installed; the seed ids are the registries' own id spaces (the spaces the
         /// arbiter, mounted contexts, and dispatch resolution resolve in).
         /// </summary>
-        public static CommandPrefSeed ResolveSeed(
-            CommandPrefsConfig config,
+        public static InteractionPrefSeed ResolveSeed(
+            InteractionPrefsConfig config,
             CommandIntentProfileRegistry commandIntents,
             CastDispatchProfileRegistry castDispatchProfiles,
-            string source = "Input/command_prefs.json")
+            string source = "Input/interaction_prefs.json")
         {
             if (config == null)
             {
@@ -96,7 +96,7 @@ namespace Ludots.Core.Input.Interaction
                     $"{source} defaults.castDispatchProfileId references cast dispatch profile '{dispatchName}' which is not installed.");
             }
 
-            return new CommandPrefSeed(intentRegistryId, dispatchRegistryId);
+            return new InteractionPrefSeed(intentRegistryId, dispatchRegistryId);
         }
 
         private static void RequireTrimmedNonEmpty(string value, string path)

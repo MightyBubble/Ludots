@@ -3,16 +3,16 @@ using System;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Resolved game-instance seed of <c>Input/command_prefs.json</c>: the player-level default
+    /// Resolved game-instance seed of <c>Input/interaction_prefs.json</c>: the player-level default
     /// command intent + cast dispatch profile map binding plants on every bound player
-    /// representative that carries no <see cref="CommandPref"/> yet. Intent ids live in the
+    /// representative that carries no <see cref="InteractionPref"/> yet. Intent ids live in the
     /// <see cref="CommandIntentProfileRegistry.ProfileIdRegistry"/> id space; dispatch ids in
     /// <see cref="CastDispatchProfileRegistry.ProfileIdRegistry"/>.
     /// </summary>
-    public readonly record struct CommandPrefSeed(int CommandIntentId, int CastDispatchProfileId);
+    public readonly record struct InteractionPrefSeed(int CommandIntentId, int CastDispatchProfileId);
 
     /// <summary>
-    /// Player command preferences, simulation-side: the player-level default command intent and
+    /// Player interaction preferences, simulation-side: the player-level default command intent and
     /// cast dispatch profile pointer commands route through, plus per-ability-template overrides
     /// where either field may be overridden alone. Sparse-optional on the player representative —
     /// map binding seeds the game-instance default when absent and readers fail fast on a missing
@@ -21,7 +21,7 @@ namespace Ludots.Core.Input.Interaction
     /// template ids are <c>AbilityDefinitionRegistry</c> ids. Both id pairs ride world saves
     /// through the auto-discovered unmanaged formatter as raw registry ids.
     /// </summary>
-    public struct CommandPref
+    public struct InteractionPref
     {
         /// <summary>Fixed per-ability-template override capacity; exceeding it fails fast.</summary>
         public const int MaxAbilityOverrides = 8;
@@ -35,9 +35,9 @@ namespace Ludots.Core.Input.Interaction
         public unsafe fixed int OverrideCastDispatchProfileIds[MaxAbilityOverrides];
 
         /// <summary>Seed from the resolved game-instance defaults; both ids must be installed ids.</summary>
-        public static CommandPref FromSeed(in CommandPrefSeed seed)
+        public static InteractionPref FromSeed(in InteractionPrefSeed seed)
         {
-            var pref = default(CommandPref);
+            var pref = default(InteractionPref);
             pref.SetPlayerDefault(seed.CommandIntentId, seed.CastDispatchProfileId);
             return pref;
         }
@@ -51,7 +51,7 @@ namespace Ludots.Core.Input.Interaction
             if (commandIntentId <= 0 || castDispatchProfileId <= 0)
             {
                 throw new InvalidOperationException(
-                    $"CommandPref player default requires positive command intent and cast dispatch profile ids (got {commandIntentId}, {castDispatchProfileId}).");
+                    $"InteractionPref player default requires positive command intent and cast dispatch profile ids (got {commandIntentId}, {castDispatchProfileId}).");
             }
 
             DefaultCommandIntentId = commandIntentId;
@@ -67,13 +67,13 @@ namespace Ludots.Core.Input.Interaction
         {
             if (abilityTemplateId <= 0)
             {
-                throw new InvalidOperationException("CommandPref ability overrides require a positive ability template id.");
+                throw new InvalidOperationException("InteractionPref ability overrides require a positive ability template id.");
             }
 
             if (commandIntentId <= 0 && castDispatchProfileId <= 0)
             {
                 throw new InvalidOperationException(
-                    $"CommandPref override for ability template {abilityTemplateId} must override at least one field; use {nameof(ClearAbilityOverride)} to remove it.");
+                    $"InteractionPref override for ability template {abilityTemplateId} must override at least one field; use {nameof(ClearAbilityOverride)} to remove it.");
             }
 
             unsafe
@@ -91,7 +91,7 @@ namespace Ludots.Core.Input.Interaction
                 if (OverrideCount >= MaxAbilityOverrides)
                 {
                     throw new InvalidOperationException(
-                        $"CommandPref already holds {MaxAbilityOverrides} ability overrides; raise {nameof(MaxAbilityOverrides)} or clear stale entries.");
+                        $"InteractionPref already holds {MaxAbilityOverrides} ability overrides; raise {nameof(MaxAbilityOverrides)} or clear stale entries.");
                 }
 
                 OverrideAbilityIds[OverrideCount] = abilityTemplateId;
@@ -180,10 +180,10 @@ namespace Ludots.Core.Input.Interaction
         }
     }
 
-    /// <summary>Merged root of <c>Input/command_prefs.json</c> (game-instance player-default seed).</summary>
-    public sealed class CommandPrefsConfig
+    /// <summary>Merged root of <c>Input/interaction_prefs.json</c> (game-instance player-default seed).</summary>
+    public sealed class InteractionPrefsConfig
     {
-        public CommandPrefDefaultsDefinition Defaults { get; set; }
+        public InteractionPrefDefaultsDefinition Defaults { get; set; }
     }
 
     /// <summary>
@@ -191,7 +191,7 @@ namespace Ludots.Core.Input.Interaction
     /// the command intent profile pointer commands route through on the default frame and the
     /// cast dispatch profile routed groups fan out through.
     /// </summary>
-    public sealed class CommandPrefDefaultsDefinition
+    public sealed class InteractionPrefDefaultsDefinition
     {
         public string CommandIntentId { get; set; } = string.Empty;
 

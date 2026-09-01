@@ -6,7 +6,7 @@
 
 - 档案形状：`profiles[].id` / `groupPolicy.kind`（内置 independent，mod 代码可注册新 kind，未知 kind 注册报错）/ `rules[].priority` + `actor{hasAbilityWithCategory, allTags, anyTags}` + `target{allTags, anyTags, stance, hasEntity 三态}` + `route{orderTypeKey | slot("byAbilityCategory:<category>" | "contextGroup:<id>")}`。
 - 安装：引擎装配期注册并校验路由引用，随装 KnowledgeCommandTargetGate（目标条件走知识投影）。
-- 消费：InputOrderMappingSystem 每帧经 `CommandIntentArbiter.ResolveActiveCommandIntent` 解析意图 id（实体挂载交互状态显式 > 玩家默认 CommandPref > 0 不路由），再逐演员过规则。
+- 消费：InputOrderMappingSystem 每帧经 `CommandIntentArbiter.ResolveActiveCommandIntent` 解析意图 id（实体挂载交互状态显式 > 玩家默认 InteractionPref > 0 不路由），再逐演员过规则。
 - 根资产 `assets/Input/command_intent_profiles.json`：`intent.command.default` 两规则（hasEntity true/false 均 → moveTo）。
 
 ## 2. 代码锚点

@@ -29,8 +29,8 @@
 - EntityAbilitySet：一个实体的技能组，代表它具备施法这些ability的能力
 - EntityAbilitySlot：一个实体的技能“字典”，因为技能template有很多不同的id，一个语义化的key映射到具体id是很重要的，例如sc2里，陆战队有陆战队的普攻、坦克有坦克的，当你框选他们的时候，右键下单攻击，走的都是attack这个语义；在LOL中，QWER看似是快捷键，实际上代表了技能123和大招，这里容易有个陷阱就是认为abilitySlot和快捷键是一回事，实际上在ludots不是；在LOL手游里，这个就很明显，你只会看到技能1、技能2、技能3的button和大招的button
 - EntityCollectionStore：代表一个玩家目前的一套字典化（但soa）的实体集合表，可以自己声明key和value，例如我的编队1、我的当前“选中”
-- CommandPref：一些玩家的偏好数据配置，例如施法模式（按下还是抬起，是否需要二次确认，等等，例如LOL的智能施法就是一种），这种数据可能是Per Ability Template的，可能是Per Player、Per Game Instance的，总之不会内建在具体的ability配置里面，如果有，也是通过meta数据的形式保存
-- InteractionContext：玩家需要“下令”施法时候的数据状态，一般就是CommandPref、当前InputContext、EntityCollection中的几个特定集合、当前Representative Entity或指定集合entity的attribute或状态、下达的Input Action和特定的设备参数路由转化，组成了一次指令下单的所有必要数据；例如蜘蛛侠、蝙蝠侠里，你按Action1，可能根据周围的环境、敌人威胁，一个button路由到不同技能；例如皇室战争，你的第一个牌下去可能是不同的施法方式和技能，这个就是abilitySlot；所以intent和最终施法的ability order是两回事，中间可能经过了多重规则的映射、跳转、参数透传
+- InteractionPref：一些玩家的偏好数据配置，例如施法模式（按下还是抬起，是否需要二次确认，等等，例如LOL的智能施法就是一种），这种数据可能是Per Ability Template的，可能是Per Player、Per Game Instance的，总之不会内建在具体的ability配置里面，如果有，也是通过meta数据的形式保存
+- InteractionContext：玩家需要“下令”施法时候的数据状态，一般就是InteractionPref、当前InputContext、EntityCollection中的几个特定集合、当前Representative Entity或指定集合entity的attribute或状态、下达的Input Action和特定的设备参数路由转化，组成了一次指令下单的所有必要数据；例如蜘蛛侠、蝙蝠侠里，你按Action1，可能根据周围的环境、敌人威胁，一个button路由到不同技能；例如皇室战争，你的第一个牌下去可能是不同的施法方式和技能，这个就是abilitySlot；所以intent和最终施法的ability order是两回事，中间可能经过了多重规则的映射、跳转、参数透传
 - CommandIntent：一次施法意图，由CommandContext最终抛出
 - OrderFanout：施法意图最终扇出的实际ability指令，例如你框了一大群人，或者在新战神里由老父亲命令阿特柔斯行动，这些都是同一个command input扇出的额外指令
 - AggregationPanel：就像刚才说的，施法意图和施法快捷键、施法语义，是三回事情，例如新版LOL潘森，你1技能是一个长矛，如果你短按，就是瞬间伤害，长按会进入蓄力，长按抬起是投掷投射物，长按超时就是取消施法，这实际上是四个order，四种意图，一个panel的显示和快捷键。这里还有很多细节。
@@ -55,7 +55,7 @@
     - 中间步骤的操作可能扇出更多意图
     - 中间步骤的操作可能可以回退
   - 我最终提交意图的操作
-- 用户是可以切换输入设备和输入偏好的：control scheme 是设备布局档案（纯键位，可运行时切换），输入偏好（施法模式等）归玩家实体上的 CommandPref，两者已分家（#1336）
+- 用户是可以切换输入设备和输入偏好的：control scheme 是设备布局档案（纯键位，可运行时切换），输入偏好（施法模式等）归玩家实体上的 InteractionPref，两者已分家（#1336）
 - 不同游戏的中间数据哲学可能大相径庭，但是总体结构上就是这些
 
 ## 当前理解与代码现状差异
@@ -90,4 +90,4 @@
 
 如果后面继续写“指令系统”，我建议先把这些概念分层成“现状术语”和“目标术语”两套，不然很容易在设计里默认某些能力已经存在统一入口，但代码实际还没有。
 
-> 2026-08-29 刷新：Device 一等抽象已落地（升入第 1 类）；Input Context Stack 已退役，“图式”承载定为 trigger graph；手势输入原语立项（#1398，框选降级为其 trigger graph 消费者）；CommandPref 已实体化为玩家组件（#1336）；多座位分屏（#1058）真机验收通过。抑制类旗子（UiCaptured / IsAiming 等）裁定退役归一为 Input Context 机制（待实施）。
+> 2026-08-29 刷新：Device 一等抽象已落地（升入第 1 类）；Input Context Stack 已退役，“图式”承载定为 trigger graph；手势输入原语立项（#1398，框选降级为其 trigger graph 消费者）；InteractionPref 已实体化为玩家组件（#1336）；多座位分屏（#1058）真机验收通过。抑制类旗子（UiCaptured / IsAiming 等）裁定退役归一为 Input Context 机制（待实施）。

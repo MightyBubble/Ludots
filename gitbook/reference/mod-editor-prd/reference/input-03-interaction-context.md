@@ -7,7 +7,7 @@
 - 档案形状：`profiles[].id` / `activeCollectionKey` / `activeEntityViewKey` / `filterProfileId`（可选，空=直通）/ `inputContextId`（可选）/ `commandIntentId`（可选）。
 - 生命周期：声明了 `interactionContextProfile` 的能力在 exec 期间由 `AbilityExecInteractionContextSystem` 把档案挂载为实体状态——`ActiveInteractionContext` 稀疏组件落在 exec 载体的控制域 representative 上（每域最新激活的 exec 胜出，LIFO）；exec 因完成、打断、换单或死亡结束后的下一次系统更新即回收。交互上下文栈已删除，帧机制全部实体化。
 - 能力侧声明：abilities 的 exec 段写 `interactionContextProfile`（非空串校验在能力加载期）；档案名不存在在执行开始时抛错（非启动期）。档案的全部 id 字段（集合键 / 过滤档案 / 命令意图）在档案安装期解析，未知引用启动期失败。
-- 命令意图联动：仲裁器读实体挂载交互状态（DEC-14）：挂载上下文的显式意图优先，其次玩家默认（CommandPref），挂载且零意图不路由不冒泡；无挂载（steady state）用玩家默认。
+- 命令意图联动：仲裁器读实体挂载交互状态（DEC-14）：挂载上下文的显式意图优先，其次玩家默认（InteractionPref），挂载且零意图不路由不冒泡；无挂载（steady state）用玩家默认。
 - 输入上下文联动：`InputContextProjectionSystem` 每 tick 把 possessed representative 挂载上下文的 `inputContextId` 需求并入对应座位的 (seatId, contextId, op) diff 命令流；上下文回收后下一 tick 弹出。这是唯一的帧→IMC 翻译点，代码不得绕过。
 - 集合路由：`ContextBoundCollectionWriter` 读挂载上下文的过滤档案与集合键；steady state 读数据声明的保留默认档案（`interaction.context.default`，引擎安装，永不挂载，缺席的挂载组件即 steady state）路由到 `collection.command.source`。命令意图路由的 steady state 集合锚与 cast dispatch cycle 的 group key 同样从实体侧派生（挂载上下文 → 载体实体；steady state → 保留 0）。
 - 根资产 `assets/Input/interaction_context_profiles.json` 现为空表（`profiles: []`）；保留默认档案由 GameEngine 程序化安装（mod 的 DeepObject 合并会整体替换 profiles 数组，保留档案不能走根资产）。

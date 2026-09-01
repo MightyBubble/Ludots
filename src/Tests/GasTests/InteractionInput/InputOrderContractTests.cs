@@ -1607,7 +1607,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.capacity", "dispatch.all_together");
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.capacity", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(
                 collectionKeys,
@@ -1737,7 +1737,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.programmatic", "dispatch.all_together");
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.programmatic", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -1866,7 +1866,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_batch", "dispatch.all_together");
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_batch", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -1985,7 +1985,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.routed_only", "dispatch.nearest_one");
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.routed_only", "dispatch.nearest_one");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2095,7 +2095,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_authorization", "dispatch.atomic_authorization");
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_authorization", "dispatch.atomic_authorization");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2196,7 +2196,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            PlantPlayerCommandPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.test", "dispatch.all_together");
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.test", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2239,10 +2239,10 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         /// <summary>
-        /// Plant the player-level CommandPref on the possessed representative, mirroring the
-        /// production map-binding seed (game-instance defaults from Input/command_prefs.json).
+        /// Plant the player-level InteractionPref on the possessed representative, mirroring the
+        /// production map-binding seed (game-instance defaults from Input/interaction_prefs.json).
         /// </summary>
-        private static void PlantPlayerCommandPref(
+        private static void PlantPlayerInteractionPref(
             World world,
             Entity rep,
             CommandIntentProfileRegistry intents,
@@ -2250,7 +2250,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             string intentId,
             string dispatchProfileId)
         {
-            CommandPref pref = default;
+            InteractionPref pref = default;
             pref.SetPlayerDefault(
                 intents.ProfileIdRegistry.Register(intentId),
                 dispatch.ProfileIdRegistry.GetId(dispatchProfileId));

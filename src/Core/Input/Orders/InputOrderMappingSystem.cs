@@ -33,7 +33,7 @@ namespace Ludots.Core.Input.Orders
 
     /// <summary>
     /// Delegate for resolving a player's representative entity — the entity that carries the
-    /// player's <see cref="Interaction.CommandPref"/>. The bound sole possessed actor may be a
+    /// player's <see cref="Interaction.InteractionPref"/>. The bound sole possessed actor may be a
     /// controlled unit, so order routing preferences must be read through the player id instead.
     /// </summary>
     public delegate bool PlayerRepresentativeProvider(int playerId, out Entity rep);
@@ -283,7 +283,7 @@ namespace Ludots.Core.Input.Orders
 
         // Pointer command intent routing. Production wiring injects these services; non-command
         // mappings continue through the direct order path. Order routing preferences come from
-        // the possessed representative's CommandPref — never from the active control scheme.
+        // the possessed representative's InteractionPref — never from the active control scheme.
         private World? _commandIntentWorld;
         private InteractionContextProfileRegistry? _contextProfiles;
         private CommandIntentProfileRegistry? _commandIntentProfiles;
@@ -1742,11 +1742,11 @@ namespace Ludots.Core.Input.Orders
 
             Span<Entity> routedActors = _commandIntentRoutedActorsScratch.AsSpan(0, routedCount);
             Span<CommandIntentRoute> routedRoutes = _commandIntentRoutedRoutesScratch.AsSpan(0, routedCount);
-            int dispatchProfileId = RequireActingPlayerCommandPref().ResolveCastDispatchProfile(abilityTemplateId: 0);
+            int dispatchProfileId = RequireActingPlayerInteractionPref().ResolveCastDispatchProfile(abilityTemplateId: 0);
             if (dispatchProfileId == 0)
             {
                 throw new InvalidOperationException(
-                    "Command intent routing requires the possessed representative's CommandPref to declare a default cast dispatch profile.");
+                    "Command intent routing requires the possessed representative's InteractionPref to declare a default cast dispatch profile.");
             }
 
             int dispatchCount = _castDispatchProfiles.SelectDispatchTargets(
@@ -1930,9 +1930,9 @@ namespace Ludots.Core.Input.Orders
 
         /// <summary>
         /// Intent resolution with lazy preference read: an active context's explicit intent
-        /// resolves without a CommandPref; only when the steady state actually needs the player
+        /// resolves without a InteractionPref; only when the steady state actually needs the player
         /// default does the possessed representative's component become required (fail fast — see
-        /// <see cref="RequireActingPlayerCommandPref"/>). The chain itself is the arbiter's:
+        /// <see cref="RequireActingPlayerInteractionPref"/>). The chain itself is the arbiter's:
         /// active context explicit > player default > 0 (no bubbling). An active context that
         /// declares no intent rejects without touching the preference at all.
         /// </summary>
@@ -1945,15 +1945,15 @@ namespace Ludots.Core.Input.Orders
                 return 0;
             }
 
-            CommandPref playerPref = RequireActingPlayerCommandPref();
+            InteractionPref playerPref = RequireActingPlayerInteractionPref();
             return CommandIntentArbiter.ResolveActiveCommandIntent(_commandIntentWorld, rep, in playerPref);
         }
 
         /// <summary>
         /// The acting player's representative through the map-binding player lookup — the entity
         /// carrying the interaction state (<see cref="ActiveInteractionContext"/>) and
-        /// <see cref="CommandPref"/>. An unresolvable representative is a wiring error: map
-        /// binding publishes player representatives alongside the CommandPref seed.
+        /// <see cref="InteractionPref"/>. An unresolvable representative is a wiring error: map
+        /// binding publishes player representatives alongside the InteractionPref seed.
         /// </summary>
         private Entity RequireActingPlayerRepresentative()
         {
@@ -1971,27 +1971,27 @@ namespace Ludots.Core.Input.Orders
             {
                 throw new InvalidOperationException(
                     $"Command intent routing requires a living representative for the acting player {playerId}; " +
-                    "map binding publishes player representatives alongside the CommandPref seed.");
+                    "map binding publishes player representatives alongside the InteractionPref seed.");
             }
 
             return rep;
         }
 
         /// <summary>
-        /// The acting player's representative CommandPref. Map binding seeds the game-instance
+        /// The acting player's representative InteractionPref. Map binding seeds the game-instance
         /// player default onto every bound player representative, so a missing component is a
         /// wiring error, not a fallback case. The bound sole possessed actor may be a controlled
         /// unit — the preference is always read through the acting player id.
         /// </summary>
-        private CommandPref RequireActingPlayerCommandPref()
+        private InteractionPref RequireActingPlayerInteractionPref()
         {
             Entity rep = RequireActingPlayerRepresentative();
 
-            if (!_commandIntentWorld.TryGet<CommandPref>(rep, out CommandPref pref))
+            if (!_commandIntentWorld.TryGet<InteractionPref>(rep, out InteractionPref pref))
             {
                 throw new InvalidOperationException(
-                    $"Command intent routing requires a CommandPref on player {CurrentActivationPlayerId}'s representative '{rep}'; " +
-                    "map binding seeds the player default from Input/command_prefs.json and a missing component is a wiring error.");
+                    $"Command intent routing requires a InteractionPref on player {CurrentActivationPlayerId}'s representative '{rep}'; " +
+                    "map binding seeds the player default from Input/interaction_prefs.json and a missing component is a wiring error.");
             }
 
             return pref;

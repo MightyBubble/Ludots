@@ -22,9 +22,9 @@ namespace Ludots.Core.Input.Interaction
     /// control-domain representative) only while an interaction context is active in that
     /// entity's control domain, absent otherwise. Absence is the steady state — the entity-side
     /// anchor of the retired reserved default frame, where the player's
-    /// <see cref="CommandPref"/> default applies, command sources resolve to the subject itself,
+    /// <see cref="InteractionPref"/> default applies, command sources resolve to the subject itself,
     /// and cast commits route through the data-declared default profile's collection key.
-    /// Sparse like <see cref="InteractionMode"/> and <see cref="CommandPref"/>: the vast
+    /// Sparse like <see cref="InteractionMode"/> and <see cref="InteractionPref"/>: the vast
     /// majority of entities never carry it, and holders are discoverable by archetype query.
     /// <para>
     /// All int fields are registry ids resolved once at

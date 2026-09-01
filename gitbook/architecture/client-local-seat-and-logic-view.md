@@ -96,7 +96,7 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 **控制方案激活链（P2.5 收口）**：
 
 - 唯一 seat 声明的 `controlSchemeId` 是本次进图的激活真相：`PublishLocalSeats` 末尾通过全局 `ControlSchemeRuntime.TrySwitchRuntimeOnly` 激活，优先于偏好存储的旧选择。该激活是**运行时行为，不改写偏好存储**（`ClientCastPreferenceStore`）——进图真相是临时的，用户全局偏好不被地图声明覆盖，之后进无声明的地图仍按用户原偏好激活；偏好存储的显式写入只属于真正的用户切换路径（`TrySwitch`）
-- scheme 激活只换键位（IMC context 组合 + axisMove 拓扑），不携带任何下单偏好；换 scheme 不改变路由行为。玩家的下单偏好（默认 command intent / cast dispatch profile + per-ability 覆盖）挂在 representative 的 `CommandPref` 组件上（#1306 路线③），进图绑定期由 `Input/command_prefs.json` 种子补种（已带组件的 representative 不覆盖，玩家数据随存档保留），下单路由读取时 fail-fast——这是模拟侧玩家数据，不属本机 I/O 禁则④管辖，但组件里同样不得混入 seatId / controlSchemeId / 设备标识
+- scheme 激活只换键位（IMC context 组合 + axisMove 拓扑），不携带任何下单偏好；换 scheme 不改变路由行为。玩家的下单偏好（默认 command intent / cast dispatch profile + per-ability 覆盖）挂在 representative 的 `InteractionPref` 组件上（#1306 路线③），进图绑定期由 `Input/interaction_prefs.json` 种子补种（已带组件的 representative 不覆盖，玩家数据随存档保留），下单路由读取时 fail-fast——这是模拟侧玩家数据，不属本机 I/O 禁则④管辖，但组件里同样不得混入 seatId / controlSchemeId / 设备标识
 - seat 未声明 `controlSchemeId`：维持既有激活链（偏好存储 → 首个 allowed），`TrySwitch` 热切换照常写偏好存储
 - 声明了但 scheme 未安装、或被 mod allowed-set 拒绝：map load **fail-fast**，不静默回退到初始 scheme
 - 多 seat 表的 per-seat scheme 激活见下方「Per-seat 输入路由」；全局 `ControlSchemeRuntime` 的激活状态不被多 seat 表触碰

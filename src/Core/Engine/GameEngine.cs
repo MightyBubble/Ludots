@@ -129,8 +129,8 @@ namespace Ludots.Core.Engine
         private ICooperativeSimulation _cooperativeSimulation;
         private bool _simulationBudgetFused;
 
-        /// <summary>Game-instance CommandPref seed resolved at boot; map binding plants it on player representatives.</summary>
-        private Ludots.Core.Input.Interaction.CommandPrefSeed _commandPrefSeed;
+        /// <summary>Game-instance InteractionPref seed resolved at boot; map binding plants it on player representatives.</summary>
+        private Ludots.Core.Input.Interaction.InteractionPrefSeed _interactionPrefSeed;
 
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
@@ -1626,7 +1626,7 @@ namespace Ludots.Core.Engine
             castDispatchProfileRegistry.Install(new CastDispatchProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
             // Control scheme catalog + hot-switch runtime (RFC-0065 INT-5, DEC-15). Schemes are pure
-            // device binding profiles; order routing preferences are player data (CommandPref below).
+            // device binding profiles; order routing preferences are player data (InteractionPref below).
             // The player input handler is adapter-bound after engine init, so it is resolved per
             // switch (null tolerated).
             var controlSchemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1638,12 +1638,12 @@ namespace Ludots.Core.Engine
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
-            // Game-instance CommandPref seed: the player-level default intent +
+            // Game-instance InteractionPref seed: the player-level default intent +
             // dispatch pair map binding plants on every bound player representative lacking the
             // component. Seed ids are the kernel registries' own id spaces — the spaces the
             // arbiter and mounted contexts resolve in.
-            _commandPrefSeed = CommandPrefConfigLoader.ResolveSeed(
-                new CommandPrefConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
+            _interactionPrefSeed = InteractionPrefConfigLoader.ResolveSeed(
+                new InteractionPrefConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
                 commandIntentProfileRegistry,
                 castDispatchProfileRegistry);
 

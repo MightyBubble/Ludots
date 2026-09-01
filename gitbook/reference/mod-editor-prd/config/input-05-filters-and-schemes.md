@@ -12,7 +12,7 @@
   "allowedSchemes": [] }
 ```
 
-玩家下单偏好种子（`assets/Input/command_prefs.json`；进图绑定期种到 representative 的 CommandPref 组件）：
+玩家下单偏好种子（`assets/Input/interaction_prefs.json`；进图绑定期种到 representative 的 InteractionPref 组件）：
 
 ```json
 { "defaults": { "commandIntentId": "intent.command.default",
@@ -43,13 +43,13 @@
 | `contexts[]{id,name,priority,bindings}` | 输入上下文分组；priority 定同抢裁决；bindings 为动作→设备路径（含组合键与处理器） |
 | `filter_profiles.json` `associationQuery` + 筛选 | 锚点 `localPlayerRep` + 展开 `controls`（受控实体）或 `none`；`exclude/include.anyTags` 展开后先排除再包含 |
 | `control_schemes.json` `schemes[].inputContexts[]` | 方案激活的上下文集 |
-| `command_prefs.json` `defaults{commandIntentId, castDispatchProfileId}` | 玩家下单偏好种子：默认意图（input-01）与派发（input-02），种到 representative 的 CommandPref（scheme 不再携带 defaults，旧字段加载期报错） |
+| `interaction_prefs.json` `defaults{commandIntentId, castDispatchProfileId}` | 玩家下单偏好种子：默认意图（input-01）与派发（input-02），种到 representative 的 InteractionPref（scheme 不再携带 defaults，旧字段加载期报错） |
 | `axisMove{actionId, orderTypeKey, throttleTicks, stepDistanceCm}` | 轴动作按节流与步长转移动订单；根级 `allowedSchemes` 为方案白名单（空 = 全允许） |
 | `action_attribute_bindings.json` 各字段 | 全部显式必填：动作值经 valueKind/通道/缩写给 target 属性，UI 抢占与快照保持行为随三开关 |
 
 ## 3. 文件结构
 
-`assets/Input/` 下五文件：`default_input.json`、`filter_profiles.json`、`control_schemes.json`、`command_prefs.json`、`action_attribute_bindings.json`（引擎根资产持默认，mod 深合并补充）。
+`assets/Input/` 下五文件：`default_input.json`、`filter_profiles.json`、`control_schemes.json`、`interaction_prefs.json`、`action_attribute_bindings.json`（引擎根资产持默认，mod 深合并补充）。
 
 ## 4. 运行时加载效果
 
@@ -59,7 +59,7 @@
 
 | 异常情形 | 系统响应 |
 |---|---|
-| 引用未注册动作/属性/意图/派发、属性绑定缺任一字段、scheme 仍带已移除的 `defaults` 节 | 启动失败（绑定全显式；defaults 报错指明迁移到 `command_prefs.json`） |
+| 引用未注册动作/属性/意图/派发、属性绑定缺任一字段、scheme 仍带已移除的 `defaults` 节 | 启动失败（绑定全显式；defaults 报错指明迁移到 `interaction_prefs.json`） |
 | 切换白名单外方案 | 拒绝切换 |
 | 默认玩法上下文缺关键绑定 | 现状静默（治理中，O9） |
 
