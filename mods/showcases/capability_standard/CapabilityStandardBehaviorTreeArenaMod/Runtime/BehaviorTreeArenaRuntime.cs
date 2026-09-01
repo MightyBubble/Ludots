@@ -10,19 +10,14 @@ using Ludots.Core.GraphRuntime;
 namespace CapabilityStandardBehaviorTreeArenaMod.Runtime;
 
 /// <summary>
-/// Real-graph BT arena: the featured patrol/chase/attack tree is one compiled Script program
-/// (Graph.BT.Tree.PatrolChaseAttack, BtSequence/BtSelector sugar) driven per agent by
-/// GraphBehaviorTreeHost. Glue feeds the distance measurement into the ambient I[0]
-/// sensor slot; thresholds, branch structure, and the intent code (pinned I[3]) live in
-/// the graph. IntegrateMotion is a pure executor over the intent register.
-/// The 10k crowd band is an explicitly labeled no-graph pressure baseline: a C#
-/// BehaviorTreeWorld topology with zero Script participation (measured 2026-08-24:
-/// a 10k real-graph crowd costs 9.5-15.8ms per think wave on this box and breaks the
-/// 25ms CI envelope combined with the featured tree; the C# band stays under it).
+/// BT arena: featured band runs L2 topology from AI/behavior_trees.json
+/// (bt.patrolChaseAttack) via BehaviorTreeWorld; leaves are ActionLib Script graphs.
+/// Glue feeds distance into I[0] for seeEnemy / inAttackRange leaf graphs.
+/// The 10k crowd band stays an explicitly labeled no-graph pressure baseline
+/// (bt.arenaCrowd, AlwaysSuccess, ScriptSlices==0).
 /// </summary>
 public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 {
-    private const int IntentPin = 3;
     private const int NoTargetDistanceCm = 100_000;
     private const int TreeThinkBudgetSteps = 128;
     private const int CrowdThinkBudgetSteps = 8;
@@ -31,10 +26,12 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     private GraphProgramRegistry? _programs;
     private GraphActionCatalog? _actions;
     private GraphBehaviorCatalog? _behavior;
-    private GraphBehaviorTreeHost? _host;
+    private BehaviorTreeWorld? _tree;
     private BehaviorTreeWorld? _crowd;
     private float _accum;
     private float _time;
+    private int _seeId;
+    private int _rangeId;
 
     private float[] _gx = Array.Empty<float>();
     private float[] _gy = Array.Empty<float>();
@@ -45,7 +42,6 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     private float[] _ex = Array.Empty<float>();
     private float[] _ey = Array.Empty<float>();
     private bool[] _eAlive = Array.Empty<bool>();
-    private int _treeGraphId;
 
     public static readonly Vector2[] PatrolPath =
     {
@@ -62,7 +58,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     public float[] EnemyY => _ey;
     public bool[] EnemyAlive => _eAlive;
     public int EnemyCount => _ex.Length;
-    public GraphBehaviorTreeHost? TreeHost => _host;
+    public BehaviorTreeWorld? TreeWorld => _tree;
     public BehaviorTreeWorld? CrowdWorld => _crowd;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_behavior_tree_arena" };
 
@@ -75,15 +71,16 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
     public void EnsureWorld()
     {
-        if (_host != null) return;
+        if (_tree != null) return;
         if (_programs == null || _actions == null || _behavior == null)
         {
             throw new InvalidOperationException("Bind(Registry, ActionCatalog, BehaviorCatalog) required.");
         }
 
-        _treeGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.tree.patrolChaseAttack", GraphActionHost.BehaviorTree);
+        _seeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
+        _rangeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
         int n = _config.FeaturedAgentCount;
-        _host = new GraphBehaviorTreeHost(_programs, _treeGraphId, n);
+        _tree = new BehaviorTreeWorld(_behavior.RequireTree("bt.patrolChaseAttack"), n);
         _gx = new float[n];
         _gy = new float[n];
         _wp = new int[n];
@@ -93,7 +90,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
         for (int i = 0; i < n; i++)
         {
-            _host.AddAgent();
+            _tree.AddAgent();
             float t = i / (float)n;
             int seg = (int)(t * PatrolPath.Length) % PatrolPath.Length;
             Vector2 a = PatrolPath[seg];
@@ -117,7 +114,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         }
 
         Metrics.AgentCount = n;
-        Metrics.Detail = "BT Script tree from ActionLib";
+        Metrics.Detail = "BT L2 tree bt.patrolChaseAttack + ActionLib leaf Scripts";
     }
 
     public void Tick(float dt)
@@ -140,10 +137,10 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
     private void ThinkWave()
     {
-        var host = _host!;
-        host.RestartFinishedAgents();
+        var tree = _tree!;
+        tree.RestartFinishedThinking();
         var sw = Stopwatch.StartNew();
-        GraphBehaviorTreeThinkStats stats = host.ThinkWave(TreeThinkBudgetSteps, sensors: this);
+        BehaviorTreeThinkStats stats = tree.TickAll(_programs, TreeThinkBudgetSteps, this);
         if (_crowd != null)
         {
             _crowd.RestartFinishedThinking();
@@ -152,11 +149,11 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
         sw.Stop();
         int yieldingAgents = 0;
-        for (int i = 0; i < host.Count; i++)
+        for (int i = 0; i < tree.Count; i++)
         {
-            _intent[i] = (byte)host.ReadInt(i, IntentPin);
+            _intent[i] = (byte)tree.LastScriptReturns[i];
             if (_intent[i] == 2) _flash[i] = 10;
-            if (host.StatusOf(i) == BehaviorTreeStatus.Running) yieldingAgents++;
+            if (tree.StatusOf(i) == BehaviorTreeStatus.Running) yieldingAgents++;
         }
 
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
@@ -164,14 +161,14 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         Metrics.ThinkWaves++;
         Metrics.Detail =
             yieldingAgents > 0
-                ? $"BT Script graph tree patrol leaf yielding across think waves ({yieldingAgents} agents) steps={stats.Steps} last={Metrics.LastThinkMs:F3}ms"
-                : $"BT Script graph tree steps={stats.Steps} last={Metrics.LastThinkMs:F3}ms";
+                ? $"BT L2 tree leaf yielding across think waves ({yieldingAgents} agents) steps={stats.Steps} last={Metrics.LastThinkMs:F3}ms"
+                : $"BT L2 tree steps={stats.Steps} last={Metrics.LastThinkMs:F3}ms";
     }
 
-    /// <summary>Glue feed: the raw distance measurement (cm, ceiling) into the ambient I[0] slot; the graph owns the thresholds.</summary>
+    /// <summary>Glue feed: distance (cm) into I[0] for Condition leaf Scripts only.</summary>
     public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)
     {
-        if (graphId != _treeGraphId) return;
+        if (graphId != _seeId && graphId != _rangeId) return;
         ints[0] = DistanceToTargetCm(agentIndex);
     }
 
@@ -210,7 +207,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         return best;
     }
 
-    /// <summary>Pure executor: consumes the graph's intent register; no chase/attack decision logic lives here.</summary>
+    /// <summary>Pure executor: consumes leaf Script intent returns; no chase/attack decisions here.</summary>
     private void IntegrateMotion(float dt)
     {
         for (int i = 0; i < _gx.Length; i++)

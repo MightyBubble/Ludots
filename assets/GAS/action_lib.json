@@ -30,12 +30,6 @@
     "host": "BehaviorTree"
   },
   {
-    "name": "bt.tree.patrolChaseAttack",
-    "graph": "Graph.BT.Tree.PatrolChaseAttack",
-    "kind": "Script",
-    "host": "BehaviorTree"
-  },
-  {
     "name": "hfsm.cond.alwaysTrue",
     "graph": "Graph.HFSM.Cond.AlwaysTrue",
     "kind": "Script",
