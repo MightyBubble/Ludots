@@ -18,6 +18,14 @@
       }
     },
     {
+      "name": "case_e_selection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/case_e_selection/CaseESelectionMod",
+        "projectPath": "CaseESelectionMod.csproj"
+      }
+    },
+    {
       "name": "save_panel",
       "target": {
         "type": "path",

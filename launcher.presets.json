@@ -3030,6 +3030,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "case_e_selection_raylib",
+      "name": "Case E Selection Raylib",
+      "selectors": [
+        "$case_e_selection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
