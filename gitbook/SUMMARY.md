@@ -104,6 +104,7 @@
   - [渲染装配代码形状](architecture/raylib-render-code-shape.md)
   - [Raylib 引擎画廊开发指南](architecture/raylib-engine-gallery-dev-guide.md)
   - [Raylib Render 产品化合同](architecture/raylib-render-productization.md)
+  - [Raylib 引擎工程分层与关卡容器格式](architecture/raylib-engine-project-scene-format.md)
   - [MassNavigation 数值域与确定性边界](architecture/mass-navigation-numeric-domain.md)
   - [Prefab Grounding 与 Visual Height](architecture/prefab-grounding-and-visual-height.md)
   - [Structure Collision Surfaces](architecture/structure-collision-surfaces.md)
