@@ -6,93 +6,87 @@
 
 | 编辑器 | 路由 | 只干什么 |
 |--------|------|----------|
-| **Behavior Tree Editor** | `/bt-editor` | 只画树：Sequence / Selector / Decorator，以及 Action / Condition 叶子门户 |
-| **FSM Editor** | `/fsm-editor` | 只画状态：FsmState 臂，以及 FsmAction 门户 |
-| **Graph Editor** | `/gas-graphs` | 改 Func / Event / Effect / Query 等函数图；**不**再放 BT/FSM 组合糖 |
+| **Behavior Tree Editor** | `/bt-editor` | 改 `AI/behavior_trees.json`：Sequence / Selector，以及 Action / Condition 叶子（挂 ActionLib） |
+| **FSM Editor** | `/fsm-editor` | 改 `AI/hfsm.json`：Compound / Leaf 状态与转移；生命周期 / 条件挂 ActionLib |
+| **Graph Editor** | `/gas-graphs` | 改 Func / Event / Effect / Query 等函数图；**不**再当 BT/FSM 外壳编辑器 |
 
-叶子上的 Action、Condition、状态体，各自是一张 **Func Graph**。在 Graph Editor 里改逻辑；在 BT / FSM 编辑器里双击门户节点，跳进对应函数图。
+叶子上的 Action、Condition、状态体，各自是一张 **Func Graph**（今日落地为 `Script`，经 `action_lib.json` 绑定）。在 Graph Editor 里改逻辑；在 BT / FSM 拓扑编辑器里双击叶子，跳进对应函数图。
 
 运行时分层（合同见 [图分层](graph-layering-flow-and-behavior.md)）：
 
-- **L2**：行为树 / 状态机 —— 只管粗拓扑，由 `GraphBehaviorTreeHost` / `GraphFsmHost` 按 think wave 驱动。
+- **L2**：行为树 / 状态机 —— 粗拓扑 SSOT 在 `AI/behavior_trees.json` / `AI/hfsm.json`，由 `BehaviorTreeWorld` / `HfsmWorld`（+ `GraphProgramHfsmHost`）驱动。
 - **L1**：叶子上的 **Func Graph**（今天落地为 `Script`）—— Action / Condition / 状态体的真正逻辑。
+- **L0**：共享指令机。
 
-装载时把 L1 叶子织进 L2 外层，再降到 L0 指令；**外层身份仍是 L2，不是 Script**。当前仓库里外层暂存成「带 BT/FSM 糖的 Script 文档」，是实现塌缩，不是合同身份。
+**禁止**把整棵树 / 整台状态机写成一张 Script 糖文档当作者 SSOT；也**禁止**新增 `GraphKind.BehaviorTree` / `Fsm`。`GraphBehaviorTreeHost` / `GraphFsmHost` 与 `BtSequence` / `FsmState` 等糖只作编译降级回归，不是演武场 / 编辑器正门。
 
 本页是作者合同 SSOT。进度只认 [图能力唯一入口](graph-capability-status.md)。
 
 ## 2. 结构
 
 ```text
-/bt-editor          外层 BT 拓扑
-  BtAction / BtCondition.functionName ──织入──► Script Func Graph
-  双击门户 ──navigate──► /gas-graphs?mod=&graph=<functionName>
+/bt-editor          AI/behavior_trees.json
+  Action / Condition.action ──ActionLib──► Script Func Graph
+  双击叶子 ──navigate──► /gas-graphs?graph=<action_lib.graph>
 
-/fsm-editor         外层 FSM 拓扑
-  FsmAction.functionName ──织入──► Script Func Graph（保留 Halt）
-  双击门户 ──navigate──► /gas-graphs?mod=&graph=<functionName>
+/fsm-editor         AI/hfsm.json
+  onEnter / onTick / onExit / condition ──ActionLib──► Script
+  双击叶子 ──navigate──► /gas-graphs?graph=<action_lib.graph>
 
-/gas-graphs         Func / Event / Effect / Query …
+/gas-graphs         Func / Event / Effect / Query …（叶子与其它函数图）
 ```
 
 ## 3. 详情
 
-| 糖 | 出现在 | functionName | 织入后 |
-|----|--------|--------------|--------|
-| `BtSequence` / `BtSelector` / `BtDecorator` | BT Editor | — | 树控制流 |
-| `BtAction` / `BtCondition` / `BtLeaf` | BT Editor | 叶子 Script id | 剥掉 `HaltReturnInt` / `Return`，由 BT 状态尾声回报 0/1/2 |
-| `FsmState` | FSM Editor | — | 相位臂 |
-| `FsmAction` | FSM Editor | 状态体 Script id | **保留** `HaltReturnInt` |
+| 层 | 资产 | 宿主 |
+|----|------|------|
+| L2 BT | `assets/AI/behavior_trees.json` | `BehaviorTreeWorld` |
+| L2 FSM | `assets/AI/hfsm.json` | `HfsmWorld` + `GraphProgramHfsmHost` |
+| L1 叶子 | `GAS/action_lib.json` + `GAS/graphs.json` Script | 叶子程序 |
+| Bridge | `GET/PUT /api/ai/behavior-trees`、`/api/ai/hfsm`；`GET /api/ai/action-lib`；`GET /api/ai/topology-catalog` | 拓扑 CRUD |
 
-- 装载：`BehaviorGraphLeafWeaver.ExpandDocuments`（在 `TriggerGraphInlineWeaver` 之后）。
-- 残留 portal 编译失败关闭。
-- React：`GasGraphEditorPage` 的 `dialect`（`bt` / `fsm` / `func`）过滤调色板与目录；门户带 `functionGraphPortal`。
-- 样例（默认 Mod）：`Graph.BT.Tree.EditorSample`、`Graph.FSM.EditorSample`，叶子在 `Graph.Func.*`。
-- **下一刀（未做）**：外层从「Script 上挂糖」拆回真正的 L2 拓扑文档（BT 与 FSM 各一套 IR / 装载 / 校验）；旗舰树迁纯门户。不新开 `GraphKind.BehaviorTree`/`Fsm`——L2 不是 L1 Kind。
+- Schema：`behavior_trees.schema.json` / `hfsm.schema.json`。
+- 装载：`GraphBehaviorDefinitionLoader` → `GraphBehaviorCatalog`（生产路径，与演武场一致）。
+- 默认数据源：Core（仓库根 `assets/AI/`）；有 `assets/AI/*.json` 的 Mod 也会出现在目录里。
+- 糖宿主 / 门户织入（`BehaviorGraphLeafWeaver`、`GraphBehaviorTreeHost`、`GraphFsmHost`）保留为**回归**，不得再当 featured 作者面。
 
 ## 4. 场景
 
-1. 打开 BT Editor，目录只见树壳；调色板只有 Sequence / Selector / Decorator / Action / Condition。
-2. 双击 `BtCondition`（已填 functionName），跳进 Graph Editor 改感知逻辑；保存后外层仍指向同一 id。
-3. 打开 FSM Editor，双击 `FsmAction` 进状态体函数图。
-4. 装载时织入，真机仍走既有 Host。
+1. 打开 `/bt-editor`，数据源选 Core，目录出现 `bt.patrolChaseAttack`；调色板语义是树节点，不是加减查询。
+2. 双击挂了 `bt.seeEnemy` 的 Condition，跳进 Graph Editor 打开 `Graph.BT.Leaf.SeeEnemy`；保存后外层仍指向同一 ActionLib 名。
+3. 打开 `/fsm-editor`，编辑 `hfsm.sentry.scripted` 的 combat 生命周期；双击 `onTick` 进叶子函数图。
+4. 跑演武场：BT 走 `BehaviorTreeWorld`，哨兵走 `HfsmWorld` + 叶子 Script。
 
 ## 5. 边界
 
 - 不新开 opcode；不新开平行 VM（L0 共用）。
 - **BT ≠ FSM ≠ Func Graph**：作者面、拓扑语义、宿主分派各走各的；共享的只是 L0 指令机。
 - **BT / FSM 不是 GraphKind**：它们是 L2 行为调度；Func Graph 才是 L1（今日为 Script）。
-- 门户禁止出边；只用 `functionName`，不用 `graphId`。
-- Graph Editor 调色板隐藏 BT/FSM 组合糖；错方言打开会按图 id 启发式跳到对应编辑器。
-- 旗舰 `Graph.BT.Tree.PatrolChaseAttack` 仍可暂时内联叶子；迁门户另提交。
-- **已知债务**：外层仍以 Script 文档 + 作者糖落地——编辑器已拆开，装载/校验合同尚未拆成独立 L2 IR。
+- 叶子只用 ActionLib **名字**，不用硬编码 graphId。
+- Graph Editor 不再以 `Graph.BT.Tree.*` / `Graph.FSM.*` 为作者外壳目录。
+- 一期边界：BT Parallel 不支持；子树跨图复用等归 BT-2，**不要和本轮 L2 身份恢复捆在一起**。
 
 ## 6. UAT
 
 ```gherkin
-Feature: 行为树编辑器与函数图叶子
+Feature: 行为树拓扑编辑器
 
-  Scenario: BT 编辑器只露树节点
+  Scenario: 打开就能改真正的树资产
     Given 我打开 /bt-editor
-    When 我打开节点调色板
-    Then 我只看到 Sequence、Selector、Decorator、Action、Condition 一类树节点
-    And 我看不到普通函数图里的加减、查询节点
+    And 数据源是 Core
+    When 我选中 bt.patrolChaseAttack
+    Then 我看到 Sequence / Selector 与挂着 ActionLib 的叶子
+    And 保存写入的是 AI/behavior_trees.json，不是一张 Script 糖图
 
-  Scenario: 双击 Action 进函数图编辑器
-    Given BT 编辑器里有一个 Action，已经填好函数图名字
-    When 我双击这个 Action
-    Then 页面跳到 Graph Editor，并打开那张函数图
+  Scenario: 双击叶子进函数图
+    Given 树上有一个 Condition，已经挂好 bt.seeEnemy
+    When 我双击这个叶子
+    Then 页面跳到 Graph Editor，并打开 Graph.BT.Leaf.SeeEnemy
 
-  Scenario: 织入后外层不再留门户
-    Given 一张 BT 外层树，child 臂挂着 BtAction，functionName 指向一张 Script
-    When 装载展开并编译
-    Then 外层文档里没有 BtAction / BtCondition / BtLeaf 节点
-    And 编译成功
+Feature: 状态机拓扑编辑器
 
-Feature: 状态机编辑器与函数图状态体
-
-  Scenario: FSM 编辑器双击进状态体
-    Given FSM 编辑器里有一个 FsmAction，已经填好函数图名字
-    When 我双击这个节点
-    Then 页面跳到 Graph Editor，并打开那张状态体函数图
+  Scenario: 编辑哨兵机并进叶子
+    Given 我打开 /fsm-editor 并选中 hfsm.sentry.scripted
+    When 我双击 combat 的 onTick
+    Then 页面跳到 Graph Editor，并打开对应的叶子函数图
 ```
