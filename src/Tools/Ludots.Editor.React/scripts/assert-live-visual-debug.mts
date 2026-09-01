@@ -5,9 +5,12 @@
 import {
   applyLiveDebugToEdges,
   applyLiveDebugToNodes,
+  applyWatchFocusToEdges,
+  applyWatchFocusToNodes,
   computeLiveEdgeIds,
   computeLiveNodeHeat,
   computeLivePinValues,
+  computeWatchedEntryFocus,
   formatLiveValue,
   type LiveDebugEvent,
 } from '../src/pages/gas-graph-editor/liveVisualDebug.ts';
@@ -55,5 +58,26 @@ assert(Array.isArray((lit.find((n) => n.id === 'a')?.data as { liveDebug?: { pin
 const litEdges = applyLiveDebugToEdges(edges, hot);
 assert(litEdges.find((e) => e.id === 'e1')?.animated === true, 'hot edge animated');
 assert(litEdges.find((e) => e.id === 'e3')?.animated !== true, 'cold edge not animated');
+
+const focusNodes: Node<Record<string, unknown>>[] = [
+  { id: '@entry:on_teleport', position: { x: 0, y: 0 }, data: { entry: { start: 'tp_px' } } },
+  { id: 'tp_px', position: { x: 0, y: 0 }, data: { op: 'LoadEntryPayloadFloat' } },
+  { id: 'tp_ground', position: { x: 0, y: 0 }, data: { op: 'ScreenPointToGround' } },
+  { id: 'noise', position: { x: 0, y: 0 }, data: { op: 'ConstInt' } },
+];
+const focusEdges: Edge[] = [
+  { id: 'c1', source: '@entry:on_teleport', target: 'tp_px', data: { kind: 'control' } },
+  { id: 'c2', source: 'tp_px', target: 'tp_ground', data: { kind: 'control' } },
+  { id: 'c3', source: 'noise', target: 'tp_px', data: { kind: 'control' } },
+];
+const focus = computeWatchedEntryFocus(focusNodes, focusEdges, 'on_teleport', (label) => `@entry:${label}`);
+assert(focus.nodeIds.has('tp_px') && focus.nodeIds.has('tp_ground'), 'focus walks entry start chain');
+assert(!focus.nodeIds.has('noise'), 'unrelated nodes stay out of focus');
+const framed = applyWatchFocusToNodes(focusNodes, focus.nodeIds);
+assert(framed.find((n) => n.id === 'tp_ground')?.hidden !== true, 'focus node visible');
+assert(framed.find((n) => n.id === 'noise')?.hidden === true, 'noise node hidden while watching');
+const framedEdges = applyWatchFocusToEdges(focusEdges, focus.edgeIds, new Set());
+assert(framedEdges.find((e) => e.id === 'c2')?.hidden !== true, 'focus edge visible');
+assert(framedEdges.find((e) => e.id === 'c3')?.hidden === true, 'noise edge hidden');
 
 console.log('assert-live-visual-debug: ok');

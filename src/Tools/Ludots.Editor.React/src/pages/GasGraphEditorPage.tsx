@@ -2633,7 +2633,7 @@ export const GasGraphEditorPage: React.FC = () => {
             {debugEnabled ? (
               <div className="rounded border border-cyan-900/60 bg-cyan-950/40 px-2 py-1.5 text-[10px] leading-4 text-cyan-100/90">
                 Framing entry <span className="font-mono text-cyan-50">{debugEntryLabel || '—'}</span>
-                {' '}({watchFocus.nodeIds.size} nodes). Other chains are dimmed.
+                {' '}({watchFocus.nodeIds.size} nodes). Other chains are hidden.
                 Play the game action that fires this entry — the framed path lights up.
               </div>
             ) : null}

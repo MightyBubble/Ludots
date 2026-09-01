@@ -269,17 +269,15 @@ export function applyWatchFocusToNodes<T extends Record<string, unknown>>(
     if (focusNodeIds.has(node.id)) {
       return {
         ...node,
+        hidden: false,
         className: [node.className, 'gas-watch-focus'].filter(Boolean).join(' '),
       };
     }
+    // Hide the rest so Watch is a short story, not a dimmed blob.
     return {
       ...node,
+      hidden: true,
       className: [node.className, 'gas-watch-dim'].filter(Boolean).join(' '),
-      style: {
-        ...node.style,
-        opacity: 0.16,
-        filter: 'grayscale(0.7)',
-      },
     };
   });
 }
@@ -291,10 +289,13 @@ export function applyWatchFocusToEdges(
 ): Edge[] {
   if (focusEdgeIds.size === 0) return edges;
   return edges.map((edge) => {
-    if (hotEdgeIds.has(edge.id)) return edge;
+    if (hotEdgeIds.has(edge.id)) {
+      return { ...edge, hidden: false };
+    }
     if (focusEdgeIds.has(edge.id)) {
       return {
         ...edge,
+        hidden: false,
         style: {
           ...edge.style,
           stroke: '#67e8f9',
@@ -305,11 +306,8 @@ export function applyWatchFocusToEdges(
     }
     return {
       ...edge,
+      hidden: true,
       animated: false,
-      style: {
-        ...edge.style,
-        opacity: 0.08,
-      },
     };
   });
 }
