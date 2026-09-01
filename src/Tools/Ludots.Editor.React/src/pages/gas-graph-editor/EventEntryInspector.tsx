@@ -1,4 +1,5 @@
 import React from 'react';
+import type { EventSchemaView } from './GasNode';
 import {
   EVENT_DIRECTIONS,
   EVENT_REFIRE_IGNORE,
@@ -40,6 +41,7 @@ function TextInput({
 
 export function EventEntryInspector({
   entry,
+  eventSchemas,
   startOptions,
   instanceOptions,
   variableOptions,
@@ -47,6 +49,7 @@ export function EventEntryInspector({
   onAdd,
 }: {
   entry: EventEntryConfig;
+  eventSchemas: EventSchemaView[];
   startOptions: string[];
   instanceOptions: string[];
   variableOptions: string[];
@@ -57,12 +60,26 @@ export function EventEntryInspector({
   const startChoices = entry.start && !startOptions.includes(entry.start)
     ? [entry.start, ...startOptions]
     : startOptions;
+  const schemaNames = new Set(eventSchemas.map((schema) => schema.name));
+  const selectedSchema = eventSchemas.find((schema) => schema.name === entry.event) ?? null;
+  const catalogValue = selectedSchema ? entry.event : '';
 
   const patchFilters = (patch: EventEntryFilters) => {
     onChange({
       ...entry,
       filters: { ...filters, ...patch },
     });
+  };
+
+  const pickSchema = (eventName: string) => {
+    if (!eventName) {
+      onChange({ ...entry, event: '' });
+      return;
+    }
+    const autoLabel = entry.label.trim() === '' || entry.label.startsWith('on_')
+      ? `on_${eventName.replace(/[^A-Za-z0-9_]+/g, '_')}`
+      : entry.label;
+    onChange({ ...entry, event: eventName, label: autoLabel });
   };
 
   return (
@@ -79,13 +96,51 @@ export function EventEntryInspector({
           </button>
         ) : null}
       </div>
-      <Field label="Event">
+      <Field label="Event schema">
+        <select
+          value={catalogValue}
+          onChange={(event) => pickSchema(event.target.value)}
+          className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+        >
+          <option value="">{eventSchemas.length === 0 ? 'No schemas loaded' : 'Pick a registered event…'}</option>
+          {eventSchemas.map((schema) => (
+            <option key={schema.name} value={schema.name}>
+              {schema.name} · {schema.scope}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Event name">
         <TextInput
           value={entry.event}
           placeholder="EntityDied"
           onChange={(eventName) => onChange({ ...entry, event: eventName })}
         />
       </Field>
+      {entry.event && !schemaNames.has(entry.event) ? (
+        <p className="rounded border border-amber-900/60 bg-amber-950/40 p-2 text-[11px] leading-5 text-amber-100/90">
+          This name is not in the schema catalog. Payload pins stay untyped until you pick a registered event.
+        </p>
+      ) : null}
+      {selectedSchema ? (
+        <div className="rounded border border-rose-950 bg-slate-950/70 p-2 text-[11px] leading-5 text-rose-100/80">
+          <div className="mb-1 font-semibold text-rose-100">Payload pins</div>
+          {selectedSchema.parameters.length === 0 ? (
+            <div>No parameters.</div>
+          ) : (
+            <ul className="space-y-0.5 font-mono text-[10px]">
+              {selectedSchema.parameters.map((param) => (
+                <li key={param.key}>
+                  {param.name}
+                  <span className="text-slate-500"> : {param.type}</span>
+                  {param.optional ? <span className="text-slate-500"> (optional)</span> : null}
+                  {param.type === 'String' ? <span className="text-amber-300"> — String pin not wired yet</span> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
       <Field label="Label">
         <TextInput
           value={entry.label}

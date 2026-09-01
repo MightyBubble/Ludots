@@ -60,6 +60,11 @@ export type GasNodeViewData = {
   };
   sugar?: { valueInputPorts: string[] };
   controlOutputPorts?: string[];
+  liveDebug?: {
+    intensity: number;
+    current: boolean;
+    pins: { pinIndex: number; value: string }[];
+  };
 };
 
 export function isPureValueOp(op: string): boolean {
@@ -140,10 +145,29 @@ function pinClass(kind: 'exec' | 'value' | 'list'): string {
   return 'text-sky-300';
 }
 
+function LivePinStrip({ pins }: { pins: { pinIndex: number; value: string }[] }) {
+  if (pins.length === 0) return null;
+  return (
+    <div className="gas-live-pin-strip">
+      {pins.map((pin) => (
+        <span key={pin.pinIndex} className="gas-live-pin-chip">
+          [{pin.pinIndex}] {pin.value}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function liveHeaderBadge(data: GasNodeViewData): React.ReactNode {
+  if (!data.liveDebug?.current) return null;
+  return <span className="gas-live-badge">LIVE</span>;
+}
+
 export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
   const isEvent = data.role === 'event-entry';
   const inputs = collectInputPorts(data);
   const outputs = outputPorts(data);
+  const livePins = data.liveDebug?.pins ?? [];
 
   if (isEvent) {
     const params = data.schema?.parameters.filter((param) => param.type !== 'String') ?? [];
@@ -154,7 +178,10 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
         }`}
       >
         <div className="bg-rose-700 px-3 py-1.5">
-          <div className="text-[9px] font-bold uppercase tracking-[.18em] text-rose-100">Event</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[9px] font-bold uppercase tracking-[.18em] text-rose-100">Event</div>
+            {liveHeaderBadge(data)}
+          </div>
           <div className="text-sm font-semibold text-white">{data.entry?.event ?? 'Event'}</div>
         </div>
         <div className="relative bg-slate-950 px-3 py-2">
@@ -207,6 +234,7 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
               className={`gas-pin gas-pin-right ${pinClass('exec')}`}
             />
           </div>
+          <LivePinStrip pins={livePins} />
         </div>
       </div>
     );
@@ -220,7 +248,10 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
         }`}
       >
         <div className="bg-violet-800 px-3 py-1.5">
-          <div className="text-sm font-semibold text-white">{data.op}</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm font-semibold text-white">{data.op}</div>
+            {liveHeaderBadge(data)}
+          </div>
         </div>
         <div className="relative bg-slate-950 px-3 py-2">
           <div className="text-lg font-semibold tabular-nums text-violet-100">{literalText(data)}</div>
@@ -233,6 +264,7 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
               className={`gas-pin gas-pin-right ${pinClass('value')}`}
             />
           </div>
+          <LivePinStrip pins={livePins} />
         </div>
       </div>
     );
@@ -245,7 +277,10 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
       }`}
     >
       <div className="bg-slate-700 px-3 py-1.5">
-        <div className="text-sm font-semibold text-white">{data.op}</div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-sm font-semibold text-white">{data.op}</div>
+          {liveHeaderBadge(data)}
+        </div>
         {authoredCaption(data) ? (
           <div className="mt-0.5 truncate text-[10px] text-amber-200">{authoredCaption(data)}</div>
         ) : null}
@@ -287,6 +322,7 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
           ))}
         </div>
       </div>
+      <LivePinStrip pins={livePins} />
     </div>
   );
 }

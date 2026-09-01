@@ -44,6 +44,14 @@ import {
   uniqueEventLabel,
   type EventEntryConfig,
 } from './gas-graph-editor/eventEntry';
+import {
+  applyLiveDebugToEdges,
+  applyLiveDebugToNodes,
+  computeLiveEdgeIds,
+  computeLiveNodeHeat,
+  computeLivePinValues,
+  type LiveDebugEvent,
+} from './gas-graph-editor/liveVisualDebug';
 import './gas-graph-editor/editor.css';
 
 type GraphNodeConfig = {
@@ -118,6 +126,11 @@ type GasNodeData = GraphNodeConfig & {
   descriptor?: GraphDescriptor;
   sugar?: GraphSugarDescriptor;
   controlOutputPorts?: string[];
+  liveDebug?: {
+    intensity: number;
+    current: boolean;
+    pins: { pinIndex: number; value: string }[];
+  };
 };
 
 type GraphDescriptor = {
@@ -173,15 +186,7 @@ type DebugMount = {
   cursor: { pc: number; steps: number; status: string; suspended: boolean };
 };
 
-type DebugEvent = {
-  sequence: number;
-  event: string;
-  nodeId?: string | null;
-  op?: string | null;
-  pinIndex?: number;
-  value?: number | boolean;
-  steps: number;
-};
+type DebugEvent = LiveDebugEvent;
 
 type GraphControlEdgeConfig = {
   from: string;
@@ -610,6 +615,8 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
       delete created.role;
       delete created.entry;
       delete created.schema;
+      delete created.liveDebug;
+      delete created.controlOutputPorts;
       return toWireNode({ ...created, id: flowNode.id, op: edited.op });
     }
     const rest = { ...edited };
@@ -620,6 +627,7 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
     delete rest.role;
     delete rest.entry;
     delete rest.schema;
+    delete rest.liveDebug;
     return toWireNode({
       ...n,
       ...rest,
@@ -1654,27 +1662,44 @@ export const GasGraphEditorPage: React.FC = () => {
   };
 
   const activeDebugNodes = React.useMemo(() => {
-    const ids = new Set<string>();
-    const latestEvent = debugEvents[debugEvents.length - 1];
-    if (latestEvent?.nodeId) ids.add(latestEvent.nodeId);
-    return ids;
-  }, [debugEvents]);
+    if (!debugEnabled || debugEvents.length === 0) {
+      return {
+        heat: new Map(),
+        pins: new Map(),
+        hotEdges: new Set<string>(),
+      };
+    }
+    const heat = computeLiveNodeHeat(debugEvents);
+    const pins = computeLivePinValues(debugEvents);
+    const hotEdges = computeLiveEdgeIds(debugEvents, edges);
+    return { heat, pins, hotEdges };
+  }, [debugEnabled, debugEvents, edges]);
 
-  const displayNodes = React.useMemo(() => nodes.map((node) => {
-    const debug = activeDebugNodes.has(node.id);
-    const usesVar = selectedVariable != null && node.data.var === selectedVariable;
-    if (!debug && !usesVar) return node;
-    return {
-      ...node,
-      style: {
-        ...node.style,
-        border: debug ? '2px solid #facc15' : '2px solid #fbbf24',
-        boxShadow: debug ? '0 0 18px rgba(250,204,21,.45)' : '0 0 14px rgba(251,191,36,.35)',
-      },
-    };
-  }), [activeDebugNodes, nodes, selectedVariable]);
+  const displayNodes = React.useMemo(() => {
+    let next = nodes as Node<GasNodeData & Record<string, unknown>>[];
+    if (debugEnabled) {
+      next = applyLiveDebugToNodes(next, activeDebugNodes.heat, activeDebugNodes.pins);
+    }
+    if (selectedVariable == null) return next as Node<GasNodeData>[];
+    return next.map((node) => {
+      const usesVar = node.data.var === selectedVariable;
+      if (!usesVar) return node as Node<GasNodeData>;
+      return {
+        ...node,
+        style: {
+          ...node.style,
+          outline: '2px solid #fbbf24',
+          outlineOffset: '2px',
+        },
+      } as Node<GasNodeData>;
+    });
+  }, [activeDebugNodes, debugEnabled, nodes, selectedVariable]);
 
-  const displayEdges = React.useMemo(() => toDisplayEdges(nodes, edges), [edges, nodes]);
+  const displayEdges = React.useMemo(() => {
+    const base = toDisplayEdges(nodes, edges);
+    if (!debugEnabled) return base;
+    return applyLiveDebugToEdges(base, activeDebugNodes.hotEdges);
+  }, [activeDebugNodes.hotEdges, debugEnabled, edges, nodes]);
 
   const mapVariables = React.useMemo<GraphVariableRow[]>(() => {
     const rows = new Map<string, GraphVariableRow>();
@@ -2172,6 +2197,7 @@ export const GasGraphEditorPage: React.FC = () => {
                 {selectedData.role === 'event-entry' && selectedData.entry ? (
                   <EventEntryInspector
                     entry={selectedData.entry}
+                    eventSchemas={eventSchemas}
                     startOptions={nodes.filter((node) => node.data.role !== 'event-entry').map((node) => node.id)}
                     instanceOptions={mapInstances.map((instance) => instance.instanceId)}
                     variableOptions={declaredVariables.map((variable) => variable.name)}
@@ -2577,10 +2603,18 @@ export const GasGraphEditorPage: React.FC = () => {
               </button>
             </div>
             <div className="text-[10px] text-slate-400">{debugStatus}</div>
-            <div className="max-h-40 overflow-auto rounded border border-slate-800 bg-slate-950 p-2 font-mono text-[10px]">
-              {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-40).map((event) => (
-                <div key={event.sequence} className={event.nodeId ? 'text-amber-200' : 'text-slate-400'}>
-                  #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}{event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}
+            {debugEnabled ? (
+              <div className="rounded border border-cyan-900/60 bg-cyan-950/40 px-2 py-1.5 text-[10px] leading-4 text-cyan-100/90">
+                Canvas lights up like Flow Canvas: current node pulses green, recent path glows cyan,
+                taken control edges animate, pin chips show live values. The log below is only a trail.
+              </div>
+            ) : null}
+            <div className="max-h-28 overflow-auto rounded border border-slate-800 bg-slate-950 p-2 font-mono text-[10px]">
+              {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-24).map((event) => (
+                <div key={event.sequence} className={event.nodeId ? 'text-cyan-200' : 'text-slate-400'}>
+                  #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
+                  {event.controlPort ? ` →${event.controlPort}` : ''}
+                  {event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}
                 </div>
               ))}
             </div>
