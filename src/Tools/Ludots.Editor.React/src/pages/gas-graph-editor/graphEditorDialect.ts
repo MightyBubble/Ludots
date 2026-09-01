@@ -66,27 +66,19 @@ export function isFunctionGraphPortalOp(op: string): boolean {
 }
 
 /**
- * Catalog heuristics for editor dialects.
- * Leaves / state bodies live as Func Graphs (Graph.Func.* or Graph.BT.Leaf.*) — Func editor only.
- * BT shells: Graph.BT.Tree.* / Graph.BT.Root.*
- * FSM shells: Graph.FSM.<Name> (single segment after FSM — not Graph.FSM.X.Body).
- * BT/FSM are editor dialects + hosts, not GraphKind values.
+ * Catalog heuristics for leftover dialect filters on GasGraphEditorPage (func editor).
+ * BT/FSM author shells live in AI/*.json now — /bt-editor and /fsm-editor no longer use this.
+ * Leaves / state bodies stay as Func Graphs (Graph.BT.Leaf.* / Graph.HFSM.*).
  */
 export function catalogGraphMatchesDialect(graphId: string, kind: string, dialect: GraphEditorDialect): boolean {
   const id = graphId;
-  if (dialect === 'bt') {
-    return /(^|\.)BT\.(Tree|Root)(\.|$)/i.test(id)
-      || /Graph\.BT\.Tree\./i.test(id)
-      || /BehaviorTree/i.test(id);
+  if (dialect === 'bt' || dialect === 'fsm') {
+    // Dialect routes retired for Script shells; keep heuristic for fail-closed redirects only.
+    return false;
   }
-  if (dialect === 'fsm') {
-    return /^Graph\.FSM\.[^.]+$/i.test(id)
-      || /^Graph\.HFSM\.[^.]+$/i.test(id)
-      || /(^|\.)FSM$/i.test(id);
-  }
-  // Func editor: exclude outer BT trees and FSM shells; keep leaves / bodies.
+  // Func editor: exclude any leftover outer BT/FSM Script shell ids if they reappear.
   if (/(^|\.)BT\.(Tree|Root)(\.|$)/i.test(id) || /Graph\.BT\.Tree\./i.test(id)) return false;
-  if (/^Graph\.FSM\.[^.]+$/i.test(id) || /^Graph\.HFSM\.[^.]+$/i.test(id)) return false;
+  if (/^Graph\.FSM\.[^.]+$/i.test(id)) return false;
   return true;
 }
 
