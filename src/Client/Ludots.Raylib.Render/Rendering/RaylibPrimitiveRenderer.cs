@@ -2728,8 +2728,57 @@ namespace Ludots.Raylib.Render
                 return true;
             }
 
-            uint colorKey = RaylibInstancedMaterialPipeline.PackRgba(first.Color);
-            long batchKey = BuildModelInstanceBatchKey(first.MeshAssetId, colorKey);
+            // One tint per instanced draw: a lane bucket may mix authored colors on the same
+            // mesh (e.g. cube props), so split by packed color before batching. Uniform-color
+            // buckets keep the single-batch fast path.
+            uint firstColorKey = RaylibInstancedMaterialPipeline.PackRgba(first.Color);
+            bool mixedColors = false;
+            for (int i = 1; i < items.Count; i++)
+            {
+                if (RaylibInstancedMaterialPipeline.PackRgba(items[i].Color) != firstColorKey)
+                {
+                    mixedColors = true;
+                    break;
+                }
+            }
+
+            if (!mixedColors)
+            {
+                DrawModelInstancedColorGroup(bucket, items, first.MeshAssetId, cached, firstColorKey, first.MaterialId, scaleMul);
+                return true;
+            }
+
+            List<PrimitiveDrawItem> group = new(items.Count);
+            Dictionary<uint, List<PrimitiveDrawItem>> byColor = new();
+            for (int i = 0; i < items.Count; i++)
+            {
+                uint colorKey = RaylibInstancedMaterialPipeline.PackRgba(items[i].Color);
+                if (!byColor.TryGetValue(colorKey, out List<PrimitiveDrawItem> list))
+                {
+                    list = new List<PrimitiveDrawItem>(Math.Max(1, items.Count / 2));
+                    byColor[colorKey] = list;
+                }
+                list.Add(items[i]);
+            }
+
+            foreach (KeyValuePair<uint, List<PrimitiveDrawItem>> entry in byColor)
+            {
+                DrawModelInstancedColorGroup(bucket, entry.Value, entry.Value[0].MeshAssetId, cached, entry.Key, entry.Value[0].MaterialId, scaleMul);
+            }
+
+            return true;
+        }
+
+        private void DrawModelInstancedColorGroup(
+            RaylibIsmRenderBridge.Bucket bucket,
+            List<PrimitiveDrawItem> items,
+            int meshAssetId,
+            CachedModel cached,
+            uint colorKey,
+            int materialId,
+            float scaleMul)
+        {
+            long batchKey = BuildModelInstanceBatchKey(meshAssetId, colorKey);
             bool canCacheStaticMatrices = bucket.Lane.Mobility == VisualMobility.Static && MathF.Abs(scaleMul - 1f) <= 0.0001f;
             ModelInstanceBatch batch;
             if (canCacheStaticMatrices)
@@ -2754,10 +2803,9 @@ namespace Ludots.Raylib.Render
                 _modelInstanceBatches[batchKey] = batch;
             }
 
-            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey, first.MaterialId);
+            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey, materialId);
             LastInstancedInstances += batch.Count;
             LastInstancedBatches += drawCalls;
-            return true;
         }
 
         private void DrawPrimitiveInstancedBucketShadow(
