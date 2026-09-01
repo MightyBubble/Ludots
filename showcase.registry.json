@@ -406,6 +406,29 @@
       "status": "active"
     },
     {
+      "id": "case_e_selection",
+      "path": "mods/showcases/case_e_selection/CaseESelectionMod",
+      "projectPath": "CaseESelectionMod.csproj",
+      "title": "Case E 框选（纯数据链路）",
+      "summary": "#1398 S3 Case E 框选全链纯配置 showcase：模板 initialInteractionContext 出生挂战斗 context、Profile triggers 门控、左键 Tap/Drag 双 action、按下激活衍生 boxing context、抬起经修饰键语义映射以事件 key 透传命中集写 selected 集合、presenter 观察 ContextActivated 与集合成员变化高亮。",
+      "tier": "T1",
+      "category": "capability",
+      "binding": "case_e_selection",
+      "preset": "case_e_selection_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "CaseESelectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/case-e-selection",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "input",
+        "interaction",
+        "selection",
+        "case-e"
+      ]
+    },
+    {
       "id": "capability_standard_ability_graph_sandbox",
       "path": "mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod",
       "projectPath": "CapabilityStandardAbilityGraphSandboxMod.csproj",
