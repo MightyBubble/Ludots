@@ -1,0 +1,158 @@
+[
+  {
+    "id": "presenter.case_e.commander_root",
+    "bindSpawn": {
+      "template": "case_e_commander",
+      "scopeSource": "EventPayloadA"
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "case_e.commander_cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0, 1.5, 0],
+          "localScale": [2.6, 3.0, 2.6]
+        },
+        "style": {
+          "color": [1.0, 0.85, 0.2, 1]
+        }
+      }
+    ]
+  },
+  {
+    "id": "presenter.case_e.marine_root",
+    "bindSpawn": {
+      "template": "case_e_marine",
+      "scopeSource": "EventPayloadA"
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "case_e.marine_cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0, 1.2, 0],
+          "localScale": [1.8, 2.4, 1.8]
+        },
+        "style": {
+          "color": [0.2, 0.9, 0.4, 1]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "AssetBinding",
+        "activeByDefault": false,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "case_e.select_ring_slab",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0, 0.2, 0],
+          "localScale": [2.6, 0.12, 2.6]
+        },
+        "style": {
+          "color": [0.3, 0.7, 1.0, 1]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "selected"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "attachment"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "selected"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "attachment"
+        }
+      }
+    ]
+  },
+  {
+    "id": "presenter.case_e.raider_root",
+    "bindSpawn": {
+      "template": "case_e_raider",
+      "scopeSource": "EventPayloadA"
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "case_e.raider_cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0, 1.2, 0],
+          "localScale": [1.8, 2.4, 1.8]
+        },
+        "style": {
+          "color": [1.0, 0.25, 0.25, 1]
+        }
+      }
+    ]
+  },
+  {
+    "id": "presenter.case_e.boxing_marker",
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "rules": [
+      {
+        "event": {
+          "kind": "ContextActivated",
+          "key": "interaction.context.case_e.boxing"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "presenter.case_e.boxing_marker",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "case_e.boxing_marker_slab",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0, 6.0, 0],
+          "localScale": [5.0, 0.3, 5.0]
+        },
+        "style": {
+          "color": [0.3, 0.6, 1.0, 1]
+        }
+      }
+    ]
+  }
+]

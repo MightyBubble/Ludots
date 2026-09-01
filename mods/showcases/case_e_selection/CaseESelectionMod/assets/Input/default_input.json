@@ -1,0 +1,46 @@
+{
+  "actions": [
+    { "id": "CaseE.BoxSelectBegin", "name": "CaseE_BoxSelectBegin", "type": "Button" },
+    { "id": "CaseE.BoxSelect", "name": "CaseE_BoxSelect", "type": "Button" },
+    { "id": "CaseE.TapSelect", "name": "CaseE_TapSelect", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "CaseE.Controls",
+      "name": "Case E Selection Controls",
+      "priority": 60,
+      "bindings": [
+        {
+          "actionId": "CaseE.BoxSelectBegin",
+          "path": "<Mouse>/leftButton"
+        },
+        {
+          "actionId": "CaseE.BoxSelect",
+          "path": "<Mouse>/leftButton",
+          "interactions": [
+            { "type": "Drag" }
+          ]
+        },
+        {
+          "actionId": "CaseE.TapSelect",
+          "path": "<Mouse>/leftButton",
+          "interactions": [
+            { "type": "Tap" }
+          ]
+        },
+        {
+          "actionId": "QueueModifier",
+          "path": "<Keyboard>/leftShift"
+        },
+        {
+          "actionId": "PrecisionModifier",
+          "path": "<Keyboard>/leftCtrl"
+        },
+        {
+          "actionId": "ModifierSubtract",
+          "path": "<Keyboard>/leftAlt"
+        }
+      ]
+    }
+  ]
+}

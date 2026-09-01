@@ -1,0 +1,74 @@
+[
+  {
+    "id": "graph.case_e.box_begin",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_box_select_begin",
+        "event": "InputActionFired",
+        "start": "read_press_x",
+        "refire": "restart",
+        "filters": {
+          "action": "CaseE.BoxSelectBegin"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "read_press_x",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.GroundPointXCm"
+      },
+      {
+        "id": "store_press_x",
+        "op": "WriteMapVarFloat",
+        "var": "case_e_press_x"
+      },
+      {
+        "id": "read_press_y",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.GroundPointYCm"
+      },
+      {
+        "id": "store_press_y",
+        "op": "WriteMapVarFloat",
+        "var": "case_e_press_y"
+      },
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "activate_boxing",
+        "op": "ActivateContext",
+        "context": "interaction.context.case_e.boxing",
+        "parentContext": "interaction.context.case_e.battle"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      { "from": "read_press_x", "fromPort": "next", "to": "store_press_x" },
+      { "from": "store_press_x", "fromPort": "next", "to": "read_press_y" },
+      { "from": "read_press_y", "fromPort": "next", "to": "store_press_y" },
+      { "from": "store_press_y", "fromPort": "next", "to": "rep" },
+      { "from": "rep", "fromPort": "next", "to": "activate_boxing" },
+      { "from": "activate_boxing", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "read_press_x", "fromPort": "value", "to": "store_press_x", "toPort": "value" },
+      { "from": "read_press_y", "fromPort": "value", "to": "store_press_y", "toPort": "value" },
+      { "from": "rep", "fromPort": "value", "to": "activate_boxing", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

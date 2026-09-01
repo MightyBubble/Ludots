@@ -44,6 +44,7 @@ namespace Ludots.Tests.GAS
                 "NoneComponents": [ "PlayerIdentity" ]
               },
               "Flags": "RequireSelectable, ExcludePlayerIdentity, RequireMapMatch",
+              "OwnerMatchPolicy": "Public",
               "Presence": "LiveVisible",
               "Position": "Live",
               "SourceRef": "viewer",
@@ -58,6 +59,7 @@ namespace Ludots.Tests.GAS
                 DynamicParticipantQueryFlags.RequireSelectable |
                 DynamicParticipantQueryFlags.ExcludePlayerIdentity |
                 DynamicParticipantQueryFlags.RequireMapMatch));
+            Assert.That(spec.OwnerMatchPolicy, Is.EqualTo(DynamicParticipantOwnerMatchPolicy.Public));
             Assert.That(spec.Query.AllComponents, Is.EqualTo(new[] { "MapEntity", "PlayerOwner", "CommandSourceSelectableTag" }));
             Assert.That(CoreComponentRegistry.TryGetComponentType("MapEntity", out _), Is.True);
             Assert.That(CoreComponentRegistry.TryGetComponentType("PlayerOwner", out _), Is.True);
@@ -96,7 +98,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void PublishSkipsReplacementAndAllocationsWhenMembershipIsUnchangedAfterWarmup()
+        public void PublishRefreshesKnowledgeWithoutReplacingCollectionWhenMembershipIsUnchanged()
         {
             using var fixture = PublisherFixture.Create();
             Entity target = fixture.CreatePlayerOwnedParticipant(playerId: 1, teamId: 1);
@@ -109,12 +111,75 @@ namespace Ludots.Tests.GAS
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
             Assert.That(result.ChangedCollections, Is.EqualTo(0));
-            Assert.That(result.UpsertedKnowledgeRecords, Is.EqualTo(0));
+            Assert.That(result.UpsertedKnowledgeRecords, Is.EqualTo(1));
             Assert.That(result.RemovedKnowledgeRecords, Is.EqualTo(0));
             Assert.That(allocated, Is.EqualTo(0));
             Assert.That(fixture.Collections.TryGet(fixture.Viewer, CollectionKey, out EntityCollectionHandle after), Is.True);
             Assert.That(after.Revision, Is.EqualTo(handle.Revision));
             AssertCollection(fixture.Collections, fixture.Viewer, target);
+            AssertLiveKnowledge(fixture.Knowledge, fixture.Viewer, target, expectedSource: fixture.Viewer, expectedTick: 2);
+        }
+
+        [Test]
+        public void ConsecutivePublish_RestoresDisclosureMasksOverwrittenByFogProjection()
+        {
+            using var fixture = PublisherFixture.Create();
+            Entity target = fixture.CreatePlayerOwnedParticipant(playerId: 1, teamId: 1);
+            fixture.Publisher.Publish(1);
+            fixture.Knowledge.Upsert(
+                fixture.Viewer,
+                target,
+                new KnowledgeDisclosureRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    KnowledgeIdMask256.Empty,
+                    KnowledgeIdMask256.Empty,
+                    KnowledgeIdMask256.Empty,
+                    fixture.Viewer,
+                    observedTick: 2,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    revision: 0));
+
+            DynamicParticipantVisibilityPublishResult result = fixture.Publisher.Publish(2);
+
+            Assert.That(result.ChangedCollections, Is.Zero);
+            Assert.That(result.UpsertedKnowledgeRecords, Is.EqualTo(1));
+            Assert.That(fixture.Knowledge.TryGet(fixture.Viewer, target, 2, out KnowledgeDisclosureRecord restored), Is.True);
+            Assert.Multiple(() =>
+            {
+                Assert.That(restored.AttributeMask.ContainsId(1), Is.True);
+                Assert.That(restored.RelationshipTypeMask.ContainsId(2), Is.True);
+                Assert.That(restored.ObservedTick, Is.EqualTo(2));
+            });
+        }
+
+        [Test]
+        public void PublicOwnerMatchPolicy_IncludesNeutralEntityWithoutPlayerOwner()
+        {
+            using var fixture = PublisherFixture.CreatePublic();
+            Entity neutral = fixture.CreateNeutralParticipant();
+
+            DynamicParticipantVisibilityPublishResult result = fixture.Publisher.Publish(5);
+
+            Assert.That(result.ChangedCollections, Is.EqualTo(1));
+            Assert.That(result.UpsertedKnowledgeRecords, Is.EqualTo(1));
+            AssertCollection(fixture.Collections, fixture.Viewer, neutral);
+            AssertLiveKnowledge(fixture.Knowledge, fixture.Viewer, neutral, fixture.Viewer, expectedTick: 5);
+        }
+
+        [Test]
+        public void Publish_PreservesZeroTickAndZeroConfidenceWithoutInventingDisclosureValues()
+        {
+            using var fixture = PublisherFixture.Create(confidencePermille: 0);
+            Entity target = fixture.CreatePlayerOwnedParticipant(playerId: 1, teamId: 1);
+
+            fixture.Publisher.Publish(0);
+
+            Assert.That(fixture.Knowledge.TryGet(fixture.Viewer, target, currentTick: 0, out KnowledgeDisclosureRecord record), Is.True);
+            Assert.That(record.ObservedTick, Is.Zero);
+            Assert.That(record.ConfidencePermille, Is.Zero);
+            Assert.That(() => fixture.Publisher.Publish(-1), Throws.TypeOf<ArgumentOutOfRangeException>());
         }
 
         [TestCase(StaleMutation.Destroy)]
@@ -182,7 +247,8 @@ namespace Ludots.Tests.GAS
                         sourceRef: "entity:runtime-source",
                         sourceKind: DynamicParticipantSourceKind.Entity,
                         attributeIds: new[] { healthAttributeId },
-                        relationshipTypes: new[] { "Participant" })
+                        relationshipTypes: new[] { "Participant" },
+                        ownerMatchPolicy: DynamicParticipantOwnerMatchPolicy.Public)
                 },
                 relationships);
 
@@ -190,6 +256,7 @@ namespace Ludots.Tests.GAS
             Assert.That(bindings[0].Viewer, Is.EqualTo(viewer));
             Assert.That(bindings[0].Source, Is.EqualTo(target));
             Assert.That(bindings[0].CollectionDescriptor.SourceKind, Is.EqualTo(EntityCollectionSourceKind.DynamicParticipant));
+            Assert.That(bindings[0].OwnerMatchPolicy, Is.EqualTo(DynamicParticipantOwnerMatchPolicy.Public));
             Assert.That(bindings[0].AttributeMask.ContainsId(healthAttributeId), Is.True);
             Assert.That(bindings[0].RelationshipTypeMask.ContainsId(participantType), Is.True);
         }
@@ -248,12 +315,12 @@ namespace Ludots.Tests.GAS
             public EntityCollectionStore Collections { get; }
             public KnowledgeProjectionStore Knowledge { get; }
 
-            public static PublisherFixture Create()
+            public static PublisherFixture Create(int confidencePermille = 1000)
             {
                 World world = World.Create();
                 var mapId = new MapId("test-map");
                 Entity viewer = world.Create(new PlayerIdentity { PlayerId = 1 }, new MapEntity { MapId = mapId });
-                return Create(world, viewer, mapId, BuildPlayerBinding(viewer, mapId));
+                return Create(world, viewer, mapId, BuildPlayerBinding(viewer, mapId, confidencePermille));
             }
 
             public static PublisherFixture CreateForTeamViewer()
@@ -264,12 +331,27 @@ namespace Ludots.Tests.GAS
                 return Create(world, viewer, mapId, BuildTeamBinding(viewer, mapId));
             }
 
+            public static PublisherFixture CreatePublic()
+            {
+                World world = World.Create();
+                var mapId = new MapId("test-map");
+                Entity viewer = world.Create(new PlayerIdentity { PlayerId = 1 }, new MapEntity { MapId = mapId });
+                return Create(world, viewer, mapId, BuildPublicBinding(viewer, mapId));
+            }
+
             public Entity CreatePlayerOwnedParticipant(int playerId, int teamId)
             {
                 return World.Create(
                     new MapEntity { MapId = _mapId },
                     new PlayerOwner { PlayerId = playerId },
                     new Team { Id = teamId },
+                    new CommandSourceSelectableTag());
+            }
+
+            public Entity CreateNeutralParticipant()
+            {
+                return World.Create(
+                    new MapEntity { MapId = _mapId },
                     new CommandSourceSelectableTag());
             }
 
@@ -321,7 +403,10 @@ namespace Ludots.Tests.GAS
                 return new PublisherFixture(world, viewer, publisher, collections, knowledge);
             }
 
-            private static DynamicParticipantVisibilityBinding BuildPlayerBinding(Entity viewer, in MapId mapId)
+            private static DynamicParticipantVisibilityBinding BuildPlayerBinding(
+                Entity viewer,
+                in MapId mapId,
+                int confidencePermille)
             {
                 return BuildBinding(
                     viewer,
@@ -335,7 +420,8 @@ namespace Ludots.Tests.GAS
                     new[] { Component<PlayerIdentity>.ComponentType },
                     DynamicParticipantQueryFlags.RequireSelectable |
                     DynamicParticipantQueryFlags.ExcludePlayerIdentity |
-                    DynamicParticipantQueryFlags.RequireMapMatch);
+                    DynamicParticipantQueryFlags.RequireMapMatch,
+                    confidencePermille: confidencePermille);
             }
 
             private static DynamicParticipantVisibilityBinding BuildTeamBinding(Entity viewer, in MapId mapId)
@@ -360,12 +446,36 @@ namespace Ludots.Tests.GAS
                     DynamicParticipantQueryFlags.RequireMapMatch);
             }
 
+            private static DynamicParticipantVisibilityBinding BuildPublicBinding(Entity viewer, in MapId mapId)
+            {
+                return BuildBinding(
+                    viewer,
+                    mapId,
+                    new[]
+                    {
+                        Component<MapEntity>.ComponentType,
+                        Component<CommandSourceSelectableTag>.ComponentType
+                    },
+                    new[]
+                    {
+                        Component<TeamIdentity>.ComponentType,
+                        Component<PlayerIdentity>.ComponentType
+                    },
+                    DynamicParticipantQueryFlags.RequireSelectable |
+                    DynamicParticipantQueryFlags.ExcludePlayerIdentity |
+                    DynamicParticipantQueryFlags.ExcludeTeamIdentity |
+                    DynamicParticipantQueryFlags.RequireMapMatch,
+                    DynamicParticipantOwnerMatchPolicy.Public);
+            }
+
             private static DynamicParticipantVisibilityBinding BuildBinding(
                 Entity viewer,
                 in MapId mapId,
                 ComponentType[] all,
                 ComponentType[] none,
-                DynamicParticipantQueryFlags flags)
+                DynamicParticipantQueryFlags flags,
+                DynamicParticipantOwnerMatchPolicy ownerMatchPolicy = DynamicParticipantOwnerMatchPolicy.MatchViewer,
+                int confidencePermille = 1000)
             {
                 return DynamicParticipantVisibilityBinding.Create(
                     viewer,
@@ -386,7 +496,9 @@ namespace Ludots.Tests.GAS
                     KnowledgePositionAccess.Live,
                     KnowledgeIdMask256.Empty.WithId(1),
                     KnowledgeIdMask256.Empty.WithId(2),
-                    KnowledgeIdMask256.Empty);
+                    KnowledgeIdMask256.Empty,
+                    confidencePermille: confidencePermille,
+                    ownerMatchPolicy: ownerMatchPolicy);
             }
         }
     }

@@ -1,0 +1,31 @@
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "frontlineGather": {
+      "orderTypeId": 172,
+      "label": "Gather Crystals",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 70,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none",
+      "instantComplete": false
+    }
+  },
+  "orderRules": {
+    "frontlineGather": {
+      "orderTypeKey": "frontlineGather",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": ["moveTo", "attackTarget"]
+    }
+  }
+}

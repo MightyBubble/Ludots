@@ -1,0 +1,96 @@
+[
+  {
+    "id": "case_e_commander",
+    "initialInteractionContext": "interaction.context.case_e.battle",
+    "components": {
+      "Name": {
+        "Value": "Case E 指挥官（玩家 rep）"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": -600
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "case_e_marine",
+    "components": {
+      "Name": {
+        "Value": "可框选单位"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 60
+        }
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "case_e_raider",
+    "components": {
+      "Name": {
+        "Value": "敌方单位（不可框选）"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 600
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 60
+        }
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  }
+]

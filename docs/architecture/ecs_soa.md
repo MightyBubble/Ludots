@@ -50,15 +50,17 @@ public struct IsPlayerTag { }
 所有系统必须归属于以下分组之一（定义于 `GameEngine.SystemGroup`）：
 
 1.  **SchemaUpdate**：运行时注册与 schema 变更（属性、Graph 等）。
-2.  **InputCollection**：输入与状态收集（时钟、输入缓冲等）。
-3.  **PostMovement**：移动后同步与空间更新（SSOT 更新与空间索引刷新）。
-4.  **AbilityActivation**：能力激活与指令管线入口。
-5.  **EffectProcessing**：效果处理与响应链主循环。
-6.  **AttributeCalculation**：属性聚合与绑定。
-7.  **DeferredTriggerCollection**：延迟触发器收集与处理。
-8.  **Cleanup**：清理与帧末收束。
-9.  **EventDispatch**：事件分发。
-10. **ClearPresentationFlags**：仅服务于表现层的脏标记位清理。
+2.  **LocalInput**：复制客户端本地意图采样；不可时间切片，确保每个视觉帧只执行一次。
+3.  **InputCollection**：输入与状态收集（时钟、输入缓冲等）。
+4.  **PostMovement**：移动后同步与空间更新（SSOT 更新与空间索引刷新）。
+5.  **AbilityActivation**：能力激活与指令管线入口。
+6.  **EffectProcessing**：效果处理与响应链主循环。
+7.  **RuntimeEntityBinding**：运行时实体绑定与权威映射同步。
+8.  **AttributeCalculation**：属性聚合与绑定。
+9.  **DeferredTriggerCollection**：延迟触发器收集与处理。
+10. **Cleanup**：清理与帧末收束。
+11. **EventDispatch**：事件分发。
+12. **ClearPresentationFlags**：仅服务于表现层的脏标记位清理。
 
 ### 3.2 编写一个系统
 

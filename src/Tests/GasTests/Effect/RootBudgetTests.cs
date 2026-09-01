@@ -648,6 +648,14 @@ namespace Ludots.Tests.GAS
                         eventTagId: 2000 + i + 1,
                         priority: 0), Is.True);
                 }
+                var context = new EffectContext
+                {
+                    RootId = 0,
+                    Source = caster,
+                    Target = target,
+                    TargetContext = default,
+                };
+                EffectConfigParams mergedParams = default;
 
                 var api = new GasGraphRuntimeApi(world, eventBus: eventBus);
                 using var transaction = new EffectPhaseSideEffectTransaction(

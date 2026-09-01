@@ -1,0 +1,16 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.default",
+      "inputContexts": []
+    },
+    {
+      "id": "scheme.case_e",
+      "inputContexts": ["CaseE.Controls"]
+    }
+  ],
+  "allowedSchemes": [
+    "scheme.default",
+    "scheme.case_e"
+  ]
+}

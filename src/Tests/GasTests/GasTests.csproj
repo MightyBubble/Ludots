@@ -68,6 +68,8 @@
     <ProjectReference Include="..\..\..\mods\showcases\tcg_demo\TcgDemoMod\TcgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\arpg_demo\ArpgDemoMod\ArpgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\rts_demo\RtsDemoMod\RtsDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_showcase\RtsShowcaseMod\RtsShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\RtsMultiplayerFrontlineMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\ai_demo\AIDemoMod\AIDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIInspectorMod\AIInspectorMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CombatStanceBehaviorMod\CombatStanceBehaviorMod.csproj" />
@@ -76,6 +78,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\camera\CameraShowcaseMod\CameraShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\browser_minimap_composited_overlay\BrowserMinimapCompositedOverlayShowcaseMod\BrowserMinimapCompositedOverlayShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\interaction\InteractionShowcaseMod\InteractionShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\case_e_selection\CaseESelectionMod\CaseESelectionMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\entity_command_panel\EntityCommandPanelShowcaseMod\EntityCommandPanelShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\superweapon_context\SuperweaponContextShowcaseMod\SuperweaponContextShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\relationship\RelationshipShowcaseMod\RelationshipShowcaseMod.csproj" />

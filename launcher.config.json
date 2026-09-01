@@ -18,6 +18,14 @@
       }
     },
     {
+      "name": "case_e_selection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/case_e_selection/CaseESelectionMod",
+        "projectPath": "CaseESelectionMod.csproj"
+      }
+    },
+    {
       "name": "save_panel",
       "target": {
         "type": "path",
@@ -175,6 +183,30 @@
         "type": "path",
         "value": "mods/showcases/formation_capability/FormationCapabilityShowcaseMod",
         "projectPath": "FormationCapabilityShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "rts_multiplayer_frontline",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rts_multiplayer_frontline/RtsMultiplayerFrontlineMod",
+        "projectPath": "RtsMultiplayerFrontlineMod.csproj"
+      }
+    },
+    {
+      "name": "rts_multiplayer_frontline_networked",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rts_multiplayer_frontline/RtsMultiplayerFrontlineNetworkedMod",
+        "projectPath": "RtsMultiplayerFrontlineNetworkedMod.csproj"
+      }
+    },
+    {
+      "name": "rts_multiplayer_frontline_three_process_uat",
+      "target": {
+        "type": "path",
+        "value": "mods/fixtures/rts_multiplayer_frontline_three_process/RtsMultiplayerFrontlineThreeProcessAcceptanceMod",
+        "projectPath": "RtsMultiplayerFrontlineThreeProcessAcceptanceMod.csproj"
       }
     },
     {

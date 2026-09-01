@@ -69,9 +69,16 @@ namespace Ludots.Core.Client
                 ?? throw new InvalidOperationException("ClientLocalSeatRegistry missing.");
             LogicViewRegistry views = engine.GetService(CoreServiceKeys.LogicViewRegistry)
                 ?? throw new InvalidOperationException("LogicViewRegistry missing.");
+            CameraManager? preservedCamera = null;
+            if (views.Count == 1)
+            {
+                var cameras = new System.Collections.Generic.List<CameraManager>(1);
+                views.CopyCameras(cameras);
+                preservedCamera = cameras[0];
+            }
             seats.Clear();
             views.Clear();
-            string viewId = views.EnsureDefaultView(possessedRep);
+            string viewId = views.EnsureDefaultView(possessedRep, camera: preservedCamera);
             Vector2 presentResolution = ResolvePresentResolution(engine, presentResolutionPx);
             seats.Add(new ClientLocalSeat(seatId)
             {
