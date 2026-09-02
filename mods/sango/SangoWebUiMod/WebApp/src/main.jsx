@@ -76,9 +76,25 @@ function App() {
       : { text: `结束回合失败:${result.message}`, tone: 'error' });
   }, [command]);
 
+  const saveGame = useCallback(async () => {
+    setLastOrder({ text: '存档:写入引擎存档槽……', tone: 'pending' });
+    const result = await command('sango.save', {});
+    setLastOrder(result.ok
+      ? { text: '存档:已写入存档槽(世界态 + 随机流)', tone: 'ok' }
+      : { text: `存档失败:${result.message}`, tone: 'error' });
+  }, [command]);
+
+  const loadGame = useCallback(async () => {
+    setLastOrder({ text: '读档:回灌最近存档……', tone: 'pending' });
+    const result = await command('sango.load', {});
+    setLastOrder(result.ok
+      ? { text: '读档:已回灌最近存档,话题下一轮刷新', tone: 'ok' }
+      : { text: `读档失败:${result.message}`, tone: 'error' });
+  }, [command]);
+
   return (
     <main className="app">
-      <TopBar turn={data.turn} connection={connection} onEndTurn={endTurn} />
+      <TopBar turn={data.turn} connection={connection} onEndTurn={endTurn} onSave={saveGame} onLoad={loadGame} />
       <div className="app-body">
         <MessageStream messages={data.messages.messages} />
         <section className="main-area">
@@ -261,7 +277,7 @@ function useCityDetail(clientRef, cityId, revision) {
   return detail;
 }
 
-function TopBar({ turn, connection, onEndTurn }) {
+function TopBar({ turn, connection, onEndTurn, onSave, onLoad }) {
   return (
     <header className="top-bar">
       <h1>三国 · 内政</h1>
@@ -269,7 +285,11 @@ function TopBar({ turn, connection, onEndTurn }) {
         <strong>{turn.dateText}</strong>
         <span>第 {turn.turnCount} 回合</span>
       </div>
-      <button type="button" className="end-turn" onClick={onEndTurn}>结束回合</button>
+      <div className="top-actions">
+        <button type="button" className="secondary" onClick={onSave}>存档</button>
+        <button type="button" className="secondary" onClick={onLoad}>读档</button>
+        <button type="button" className="end-turn" onClick={onEndTurn}>结束回合</button>
+      </div>
       {connection.error ? <span className="error-line">{connection.error}</span> : null}
     </header>
   );

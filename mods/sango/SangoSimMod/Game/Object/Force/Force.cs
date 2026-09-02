@@ -312,7 +312,10 @@ namespace Sango.Core
                 x.InitActions(actionList, this);
             });
             InitTechniquesTree(scenario);
-            UpdateTurnInfo(scenario);
+            // M1.d:回灌装载不重演回合开始结算(见 Scenario.IsRestoreLoad);回合信息
+            // 由回灌后首次 Force.OnForceTurnStart 的 UpdateTurnInfo 全量重算。
+            if (!scenario.IsRestoreLoad)
+                UpdateTurnInfo(scenario);
         }
 
         public override void Clear()

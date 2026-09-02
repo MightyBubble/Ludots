@@ -287,6 +287,12 @@ namespace Sango.Core
         /// </summary>
         internal int PauseTrunCount = -1;
 
+        // M1.d 存档回灌装载标志:仅在回灌启动序(StartScenarioCore)期间为真。回灌世界的
+        // Force.Init 不重演 UpdateTurnInfo(回合开始结算,含 CostFood/收成/伤兵治疗等
+        // 非幂等效果)——这些效果的累计已存在于捕获态,重演等于替世界多付一回合;回合
+        // 级的回合信息由下一次 Force.OnForceTurnStart 全量重算。启动序结束后复位。
+        internal bool IsRestoreLoad;
+
         /// <summary>
         /// 当前回合数
         /// </summary>
@@ -664,6 +670,28 @@ namespace Sango.Core
                 Variables = new ScenarioVariables();
         }
 
+        // M1.d 存档域:与 LoadInfo(path) 同一 token 走查,但 Info 取自内存中的存档 JSON 文本
+        // (Ludots 存档容器不落 VFS 文件,FilePath 仍指向剧本资产,供身份与延迟修改目录使用)。
+        public void LoadInfoFromText(string content)
+        {
+            using (StringReader stringReader = new StringReader(content))
+            using (JsonTextReader reader = new JsonTextReader(stringReader))
+            {
+                while (reader.Read())
+                {
+                    if (reader.TokenType == JsonToken.StartObject)
+                    {
+                        if (!string.IsNullOrEmpty(reader.Path) && reader.Path == "Info")
+                        {
+                            Info = JsonSerializer.CreateDefault().Deserialize<ScenarioInfo>(reader);
+                            Name = Info.name;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
         public void LoadContent()
         {
             LoadContent(FilePath);
@@ -697,7 +725,7 @@ namespace Sango.Core
         }
 
 
-        public void LoadBaseContent()
+        public void LoadBaseContent(string content = null)
         {
             Cur = this;
             IsAlive = false;
@@ -728,7 +756,8 @@ namespace Sango.Core
                 });
             }
 
-            JsonConvert.PopulateObject(File.ReadAllText(FilePath), this);
+            // M1.d:content 非空时从内存中的存档 JSON 回灌(存档容器不经 VFS 落盘)。
+            JsonConvert.PopulateObject(content ?? File.ReadAllText(FilePath), this);
 
             GameData.Instance.LoadCommonData(CommonData);
 
@@ -737,9 +766,9 @@ namespace Sango.Core
             GameEvent.OnScenarioPrepare?.Invoke(this);
         }
 
-        public void LoadContent(string path)
+        public void LoadContent(string path, string content = null)
         {
-            LoadBaseContent();
+            LoadBaseContent(content);
 
             prepareList.Add(forceSet);
             prepareList.Add(corpsSet);

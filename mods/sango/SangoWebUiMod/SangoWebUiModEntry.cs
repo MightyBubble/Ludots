@@ -93,6 +93,8 @@ public sealed class SangoWebUiModEntry : IMod
             new SangoWebUiPermissionValidator());
         router.Register(SangoCityCommandHandler.CommandName, new SangoCityCommandHandler());
         router.Register(SangoEndTurnCommandHandler.CommandName, new SangoEndTurnCommandHandler(stepPolicy));
+        router.Register(SangoSaveCommandHandler.CommandName, new SangoSaveCommandHandler(engine));
+        router.Register(SangoLoadCommandHandler.CommandName, new SangoLoadCommandHandler(engine));
 
         _commandDispatcher = new WebUiQueuedCommandDispatcher(router);
         _dataPlaneRuntime = new WebUiDataPlaneRuntime(_commandDispatcher);

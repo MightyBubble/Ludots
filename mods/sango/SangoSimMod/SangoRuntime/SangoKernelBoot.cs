@@ -49,6 +49,49 @@ namespace Sango.Runtime
         public static BootResult Boot(IVirtualFileSystem vfs, string contentModId, int seed,
             string scenarioAssetPath = "Scenario/Scenario.json")
         {
+            Scenario scenario = PrepareKernel(vfs, contentModId, scenarioAssetPath);
+            scenario.LoadInfo();
+            if (scenario.Info == null)
+                throw new InvalidOperationException($"Scenario asset has no Info section: {scenario.FilePath}");
+
+            // Scenario.StartScenario(scenario)(无玩家列表)的等价展开。
+            // Cur 的赋权发生在 LoadBaseContent 首行(与原版一致,setter 对外不可见)。
+            GameRandom.Init(seed);
+            return StartScenarioCore(scenario, forceSyntheticMap: false, populateContent: null);
+        }
+
+        /// <summary>
+        /// 从存档捕获回灌世界(M1.d):与 Boot 同一启动序列,差异仅在两处——
+        /// Info/正文取自内存中的存档 JSON(SangoSaveParticipant 捕获面,CommonData 仍从
+        /// 数据表整表重载),结束后导入捕获的 GameRandom 流位置,续跑确定性由此成立。
+        /// </summary>
+        public static BootResult Restore(IVirtualFileSystem vfs, string contentModId,
+            string scenarioJson, int[] randomState, string scenarioAssetPath = "Scenario/Scenario.json")
+        {
+            if (string.IsNullOrEmpty(scenarioJson))
+                throw new ArgumentException("Captured scenario JSON is required.", nameof(scenarioJson));
+
+            Scenario scenario = PrepareKernel(vfs, contentModId, scenarioAssetPath);
+            scenario.LoadInfoFromText(scenarioJson);
+            if (scenario.Info == null)
+                throw new InvalidOperationException("Captured sango.sim payload has no Info section.");
+            if (!scenario.Info.isSave)
+                throw new InvalidOperationException(
+                    "sango.sim restore requires a save-state capture (Info.isSave); a raw scenario asset must go through Boot.");
+
+            GameRandom.Init(0);
+            // 回灌启动序期间抑制 Force.Init 的回合开始重演(见 Scenario.IsRestoreLoad)。
+            scenario.IsRestoreLoad = true;
+            BootResult result = StartScenarioCore(scenario, forceSyntheticMap: true, populateContent: scenarioJson);
+            scenario.IsRestoreLoad = false;
+            // 启动线(Prepare/Init/Start)自身的随机消耗不属于存档时点;流位置整体覆盖。
+            GameRandom.ImportState(randomState);
+            return result;
+        }
+
+        /// <summary>Boot/Restore 共享的进程级序:IO 网关、静态注册表、系统单例、上一局关停。</summary>
+        static Scenario PrepareKernel(IVirtualFileSystem vfs, string contentModId, string scenarioAssetPath)
+        {
             SangoVfsIO.Install(vfs, contentModId);
 
             // Game.Init 序(GameStart.cs → Game.cs Init):注册表 → 语言 → 系统 → 数据。
@@ -82,16 +125,20 @@ namespace Sango.Runtime
             var scenario = new Scenario();
             scenario.FilePath = SangoVfsIO.FindFile(scenarioAssetPath) ?? throw new FileNotFoundException(
                 $"Scenario asset not found via VFS: {contentModId}:assets/{scenarioAssetPath}");
-            scenario.LoadInfo();
-            if (scenario.Info == null)
-                throw new InvalidOperationException($"Scenario asset has no Info section: {scenario.FilePath}");
+            return scenario;
+        }
 
-            // Scenario.StartScenario(scenario)(无玩家列表)的等价展开。
-            // Cur 的赋权发生在 LoadBaseContent 首行(与原版一致,setter 对外不可见)。
-            GameRandom.Init(seed);
+        /// <summary>StartScenario(scenario) 无玩家列表重载的等价展开,Boot 与 Restore 共用。</summary>
+        static BootResult StartScenarioCore(Scenario scenario, bool forceSyntheticMap, string populateContent)
+        {
             scenario.IsAlive = false;
             GameEvent.OnScenarioLoadStart?.Invoke(scenario);
-            scenario.LoadContent();
+            scenario.LoadContent(scenario.FilePath, populateContent);
+            // 回灌 JSON 的根 IsAlive=true(捕获自运行中的世界)会让 Start() 内的首次 Run()
+            // 越过存活闸、在装载尾声推进半步真实回合;装载完成前重申存活=false,世界的
+            // 第一步只属于调用方的回合驱动(原版 StartScenario 在 LoadContent 前的置位
+            // 同义,这里补在 populate 之后)。
+            scenario.IsAlive = false;
             scenario.CheckPlayer();
             // 本剧本资产未导出 View(相机初始状态);headless 下相机为 no-op,补默认视图
             // 使 Start() 的 SetCamera 调用可走通(相机字段由 ScenarioView 构造默认)。
@@ -102,10 +149,13 @@ namespace Sango.Runtime
             scenario.LoadWorld();
             // LoadWorld 已订阅 OnMapLoaded,但 shim 的 LoadMap 不产文件流;
             // DefaultMap.bin(D3 地形管线)接入前,补合成均匀网格再手动触发世界就绪回调。
-            if (scenario.Map.CellSet == null)
+            // Restore 无条件重建:原版存档不序列化 CellSet,装载侧总是从地图源(原版 bin/
+            // 本线合成网格)重建;JSON 填充出的空 CellSet 不能短路这条重建。
+            if (forceSyntheticMap || scenario.Map.CellSet == null)
                 BuildSyntheticMap(scenario);
             MapRender.Instance.FireOnMapLoaded();
-            // OnWorldLoaded 内完成 Prepare/Init/Start(含 MakeForceQuene 与首次 Run)。
+            // OnWorldLoaded 内完成 Prepare/Init/Start(含 MakeForceQuene 与首次 Run;
+            // Run 的 IsAlive 闸在 Start 内先 Run 后置位,启动期不消耗模拟)。
 
             return new BootResult
             {

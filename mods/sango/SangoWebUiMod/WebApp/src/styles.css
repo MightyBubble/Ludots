@@ -120,6 +120,30 @@ body {
   background: #e6c46e;
 }
 
+.top-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.top-actions .end-turn {
+  margin-left: 0;
+}
+
+.top-actions .secondary {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 14px;
+  padding: 5px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.top-actions .secondary:hover {
+  background: rgba(230, 196, 110, 0.15);
+}
+
 .app-body {
   display: flex;
   gap: 8px;

@@ -8,6 +8,10 @@
 // 不新增平行命令、不放宽门槛;失败按类型化错误回传。
 
 using System.Text.Json;
+using Ludots.Core.Engine;
+using Ludots.Core.Persistence;
+using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.WebUI.DataPlane;
 using Sango.Core;
@@ -295,12 +299,110 @@ public sealed class SangoEndTurnCommandHandler : IWebUiCommandHandler
     }
 }
 
+/// <summary>
+/// 存档/读档(M1.d 可选增量):走 Ludots 正式持久化管线(WorldSnapshotService 清洁边界捕获 →
+/// SaveSlotStore 槽位 → WorldRestoreService 回灌),sango 世界态由引擎存档注册表里的
+/// SangoSaveParticipant(sango.sim 域)承载。存储后端是引擎 ISaveStorage 服务,缺席即
+/// 类型化失败——本 mod 不落任何文件,也不造替代存储(照 SavePanelRuntime 用法)。
+/// </summary>
+public sealed class SangoSaveCommandHandler : IWebUiCommandHandler
+{
+    public const string CommandName = "sango.save";
+    internal const string SlotPrefix = "sango-";
+
+    private readonly GameEngine _engine;
+
+    public SangoSaveCommandHandler(GameEngine engine)
+    {
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+    }
+
+    public ValueTask<WebUiCommandResult> HandleAsync(WebUiCommandRequest request, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.FromResult(Handle());
+    }
+
+    internal WebUiCommandResult Handle()
+    {
+        if (Scenario.Cur == null)
+        {
+            return WebUiCommandResult.Fail("kernel_not_booted", "Sango kernel is not booted; save is unavailable.");
+        }
+
+        ISaveStorage? storage = _engine.GetService(CoreServiceKeys.SaveStorage);
+        if (storage == null)
+        {
+            return WebUiCommandResult.Fail("storage_unavailable",
+                "This host did not register an ISaveStorage service; sango.save requires engine save storage.");
+        }
+
+        SaveSlotId id = SaveSlotId.Manual($"{SlotPrefix}{DateTime.UtcNow:yyyyMMdd-HHmmss}");
+        WorldSaveSnapshot snapshot = new WorldSnapshotService().Capture(
+            _engine, SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
+        new SaveSlotStore(storage).WriteSlot(id, snapshot);
+        return WebUiCommandResult.Ok();
+    }
+}
+
+public sealed class SangoLoadCommandHandler : IWebUiCommandHandler
+{
+    public const string CommandName = "sango.load";
+
+    private readonly GameEngine _engine;
+
+    public SangoLoadCommandHandler(GameEngine engine)
+    {
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+    }
+
+    public ValueTask<WebUiCommandResult> HandleAsync(WebUiCommandRequest request, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.FromResult(Handle());
+    }
+
+    internal WebUiCommandResult Handle()
+    {
+        ISaveStorage? storage = _engine.GetService(CoreServiceKeys.SaveStorage);
+        if (storage == null)
+        {
+            return WebUiCommandResult.Fail("storage_unavailable",
+                "This host did not register an ISaveStorage service; sango.load requires engine save storage.");
+        }
+
+        var store = new SaveSlotStore(storage);
+        SaveSlotId? latest = null;
+        foreach (SaveSlotHeader header in store.ListSlots())
+        {
+            if (!string.Equals(header.Id.Kind, "manual", StringComparison.Ordinal) ||
+                !header.Id.Name.StartsWith(SangoSaveCommandHandler.SlotPrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (latest == null || string.Compare(header.Id.Name, latest.Value.Name, StringComparison.Ordinal) > 0)
+            {
+                latest = header.Id;
+            }
+        }
+
+        if (latest == null)
+        {
+            return WebUiCommandResult.Fail("no_save_slot", "No sango save slot exists yet; save first.");
+        }
+
+        new WorldRestoreService().Restore(_engine, store.ReadSlot(latest.Value));
+        return WebUiCommandResult.Ok();
+    }
+}
+
 public sealed class SangoWebUiPermissionValidator : IWebUiCommandPermissionValidator
 {
     private static readonly HashSet<string> AllowedCommands = new(StringComparer.Ordinal)
     {
         SangoCityCommandHandler.CommandName,
         SangoEndTurnCommandHandler.CommandName,
+        SangoSaveCommandHandler.CommandName,
+        SangoLoadCommandHandler.CommandName,
     };
 
     public bool CanUse(WebUiCommandRequest request, out string error)
