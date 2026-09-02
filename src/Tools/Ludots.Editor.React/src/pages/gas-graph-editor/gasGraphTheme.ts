@@ -24,13 +24,13 @@ export const GAS_GRAPH_THEME = {
   valueBorder: '#0369a1',
 
   execAccent: '#fbbf24',
-  execIdle: '#52525b',
+  execIdle: '#a8a29e',
   execLive: '#fbbf24',
   execLiveHot: '#f59e0b',
-  execBead: '#fef3c7',
+  execBead: '#fff7ed',
 
-  dataIdle: '#71717a',
-  dataLive: '#94a3b8',
+  dataIdle: '#64748b',
+  dataLive: '#bae6fd',
   dataLabel: '#e2e8f0',
   listAccent: '#2dd4bf',
 
