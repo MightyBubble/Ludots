@@ -68,12 +68,28 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 1. 编辑器加载与游戏同一 `graphId`（如 `Graph.NightRaid.Flow`）。
 2. 右侧 Live Debug → 选择已挂载入口 → Watch。
 3. 工具动作：`list` → `configure { mode: nodeAndPins }` → `drain { since }`；drain 事件带 `nodeId` / `op` / `controlPort` / pin 值。
-4. 画布做 Flow Canvas 式可视化：**控制边**走暖黄粗线 + 流动光点（只亮当前走过的路径）；**数值边**走细实线，当前值标在线上或引脚旁（不用虚线）；节点本身只做轻量高亮，热度约 2 秒内衰减。配色参考 agent 前端套件（zinc 深色画布、n8n 节点壳、暖黄执行 / 冷蓝数据）。Watch 某一入口时只留下从该入口可达的短链（含其间的数值边），其它链隐藏；同时自动收起左右侧栏，把 Live Debug 收到画布底栏，方便单屏「左游戏右编辑器」。夜袭图上，Watch `on_raider_died` / `on_elite_raider_died` 时底栏会用人话标出事件流（杀敌 → 计数 → 够门槛刷 Boss），并随当前节点切换「正在走」的那一步。右侧日志只是辅助轨迹，不再是唯一反馈。
-5. 不声称完整 `NodeExit` 生命周期。嵌套 `InvokeScript` 记录带 `graphId`；source map 缺失时 AgentBridge 失败关闭，错误含 graph id 与 pc。
+4. 画布做 Flow Canvas 式可视化：**控制边**走暖黄粗线 + 流动光点（只亮当前走过的路径）；**数值边**走细实线，当前值标在线上或引脚旁（不用虚线）；节点本身只做轻量高亮，热度约 2 秒内衰减。配色参考 agent 前端套件（zinc 深色画布、n8n 节点壳、暖黄执行 / 冷蓝数据）。Watch 某一入口时只留下从该入口可达的短链（含其间的数值边），其它链隐藏；同时自动收起左右侧栏，把 Live Debug 收到画布底栏，方便单屏「左游戏右编辑器」。右侧日志只是辅助轨迹，不再是唯一反馈。
+5. **一拍跑完的链是齐亮齐灭，不是逐步流动。** `GraphDebugTraceRecord` 只有序号和步数，没有时间或帧号；编辑器按 `drain` 收到的时刻盖戳。所以纯读写比较、没有 `Wait` / `AwaitCallback` 的链在同一拍跑完，整批事件同时到达、同时衰减。跨拍挂起的链才看得到先后。不许把单拍链的齐闪说成流动光点。
+6. 不声称完整 `NodeExit` 生命周期。嵌套 `InvokeScript` 记录带 `graphId`；source map 缺失时 AgentBridge 失败关闭，错误含 graph id 与 pc。
 
 ### 3.4 TriggerGraph 事件入口
 
-事件名优先从 `/api/graph/event-schemas/{modId}` 下拉选择；选中后自动建议 `on_<Event>` 标签，并在检查器展示 Schema 载荷针。仍可手填未登记事件名，但会标明载荷针未类型化。
+一条入口只有一个起因：等一个游戏事件，或者等一个输入动作。检查器把这件事做成一次选择，两边不会同时填上——运行时要求 `event` / `action` 恰有其一，编辑器不许存出运行时挂不上的入口。
+
+等事件时，事件名优先从 `/api/graph/event-schemas/{modId}` 下拉选择；选中后自动建议 `on_<Event>` 标签，并在检查器展示 Schema 载荷针。仍可手填未登记事件名，但会标明载荷针未类型化。
+
+等输入动作时，动作 id 从 `/api/graph/input-actions/{modId}` 下拉选择（各 mod `Input/default_input.json` 的合并目录），不手打。这类入口不进事件总线，载荷针走共用的 `InputAction` schema；「事件载荷里带的动作」那个过滤器对它不适用，检查器直接说明而不是留个能填坏的空框。
+
+### 3.5 作者标注：底栏用人话讲这一趟
+
+底栏那几句人话是 **mod 自己的数据**，不在编辑器源码里。写在该 mod 的 `assets/GAS/graph_editor.json`：
+
+- `annotations.groups`：给节点分组，每组一句人话。**每张图只声明一次**，共用同一段链的入口自然复用，不重抄节点表。一个节点只能属于一组。
+- `annotations.entries`：按入口标签写 `title` / `summary`，作为底栏抬头。
+
+Watch 之后，底栏按执行到达的顺序列出这一趟走过的每一组，最后一组标成落点；衰减用的是和画布热度同一个 TTL，热度灭了这几句一起撤，不会留一句「正在走」在黑屏上。没写标注的图照常能 live debug，底栏只是不讲人话。
+
+分组里的节点名和入口标签都要在 `graphs.json` 里真实存在：Bridge 读写 sidecar 时都对着图核对，改了节点名就点名报错，不会悄悄不讲了。`npm run assert` 在 CI 里对仓库内所有 mod 做同样的核对。
 
 ---
 
@@ -81,11 +97,13 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 
 1. 新人打开 `/gas-graphs`，加载夜袭 Flow 图，看见控制端口与 Bridge 投影的作者糖，Validate 通过。
 2. 故意加未连线的 Until，Validate 点名缺 `body`/`next`/`condition`。
-3. 夜袭 + AgentBridge 运行中，Watch `on_raider_died`：右边只剩「杀敌刷 Boss」短链，底栏写清事件流；游戏里右键处决敌人后，链路上的节点与暖黄控制边亮起。门槛若是精锐死亡才凑满，改 Watch `on_elite_raider_died` 才能在本入口 trace 里看到刷 Boss 那段（两条入口共用同一段 `rd_*` 链）。
-4. TriggerGraph 事件入口从 Schema 下拉选事件，检查器列出载荷针。
-5. 在 Script 图里加入 `FsmState`，填写枚举与相位变量并挂 case 臂，保存后再打开字段仍在。
-6. 在 Script 图里加入 `BtSequence`，用 child 臂挂子节点；`BtDecorator` 选 `decoratorKind` 后连 `child:0`，保存后再打开仍在。
-7. 变量面板类型只见 Integer / Float，没有 Array / Map。
+3. 夜袭 + AgentBridge 运行中，Watch 杀敌那条入口：右边只剩这条入口够得到的短链，底栏写出这条链是干什么的。游戏里砍倒一个敌人，链路上的节点和暖黄控制边一起亮起，底栏按顺序列出这一趟走过的几步、最后停在哪一步；两秒后画面和文字一起安静下来。
+4. 同一张图上，凑满门槛那一刀走完整条链，底栏多出刷 Boss 那一步，游戏里 Boss 出现、提醒面板弹出。
+5. 一条入口改成等输入动作：起因切到「an input action」，动作 id 从下拉里选，事件名那栏收起，载荷针换成 `InputAction`。把动作 id 留空按保存，编辑器点名这条入口拒绝保存。
+6. TriggerGraph 事件入口从 Schema 下拉选事件，检查器列出载荷针。
+7. 在 Script 图里加入 `FsmState`，填写枚举与相位变量并挂 case 臂，保存后再打开字段仍在。
+8. 在 Script 图里加入 `BtSequence`，用 child 臂挂子节点；`BtDecorator` 选 `decoratorKind` 后连 `child:0`，保存后再打开仍在。
+9. 变量面板类型只见 Integer / Float，没有 Array / Map。
 
 ---
 
@@ -93,6 +111,9 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 
 - 正式文字节点与 FormatText 糖只来自运行时 descriptor / 糖名册；未登记前不得展示可保存假节点。
 - Live Debug 依赖真实挂载与 source map；无游戏进程时面板应明示 Bridge 错误，不得假装有事件。
+- 底栏人话只来自 mod 的 `graph_editor.json`。编辑器源码里不得出现任何具体图 id、mod id 或节点 id（`DEFAULT_*_ID` 落地默认值除外），`ReactEditor_MustNotNameShowcaseGraphsOrMods` 守着这条。
+- 标注点到的节点或入口在图里不存在时，读写 sidecar 都失败关闭并点名；不得退回「不讲人话」的静默降级。
+- 单拍跑完的链只能说齐亮齐灭。要演逐步流动，先给 trace 记录补时间或帧号，别在文档里先许诺。
 - 本页不替代 [Agent 调试桥](agent-debug-bridge.md) 的全工具手册。
 - 文字值容量与表现出口细则见 [图正式文字](graph-formal-text.md)。
 
@@ -114,18 +135,43 @@ Feature: 蓝图编辑器与 live debug 可教可验
     When 我点 Validate
     Then 编译失败并点名缺 body、next、condition
 
-  Scenario: Live debug 看见杀敌刷 Boss
+  Scenario: 砍一刀，右边用人话讲清刚才发生了什么
     Given 夜袭 showcase 与 AgentBridge 正在跑
-    And tools 目录含 ludots.graph.debug
-    And 编辑器已加载 Graph.NightRaid.Flow
-    When 我 Watch on_raider_died
-    Then 底栏写出「杀敌刷 Boss」和事件流摘要
-    And 画布只留下该入口可达的短链，其它链不可见
-    When 我在战场右键处决一名可杀敌人
-    Then 短链按记击杀 → 对照门槛的顺序亮起暖黄控制边
-    And 底栏「正在走」会跟着当前节点换成对应人话
-    And 若本入口这次处决够门槛，链路继续亮到刷 Boss / 提醒面板
-    And 若门槛是精锐死亡才凑满，需改 Watch on_elite_raider_died 才能在本入口 trace 里看到刷 Boss 那段热度（两条入口共用同一段 rd_* 链）
+    And 编辑器左边是战场，右边是这张图
+    When 我在入口列表里挑「杀敌刷 Boss」并按 Watch
+    Then 底栏抬头写出这条链叫什么、干什么
+    And 画布只留下这条链，别的链看不见
+    And 底栏说在等游戏里发生这件事
+    When 我在战场上砍倒一个敌人
+    Then 这条链上的节点和暖黄的线一起亮起来
+    And 底栏按先后列出这一趟走过的几步
+    And 最后那一步被标出来，就是这一刀停在哪儿
+    When 我等两秒不动
+    Then 线和节点暗下去
+    And 底栏那几步也一起撤掉，不会留一句「正在走」
+
+  Scenario: 凑满门槛那一刀，能看到 Boss 被刷出来
+    Given 我正在 Watch「杀敌刷 Boss」
+    And 我已经砍倒了差一个就够门槛的敌人数
+    When 我砍倒凑满门槛的那一个
+    Then 底栏多出「营地刷出 Boss」这一步，并停在那儿
+    And 战场上出现 Boss
+    And 提醒面板弹出来
+
+  Scenario: 作者改了节点名，编辑器当场点名，而不是不吭声
+    Given 某一组人话说明里点到了一个节点
+    When 我把图里那个节点改名，再打开这张图
+    Then 编辑器报错并写出是哪一组、点到了哪个不存在的节点
+    And 底栏不会假装什么都好、只是不讲话
+
+  Scenario: 一条入口只能有一个起因
+    Given 我选中一张入口卡
+    When 我把起因切成「等一个输入动作」
+    Then 事件名那栏收起来
+    And 动作 id 只能从已登记的动作里挑
+    And 「事件载荷里带的动作」那个过滤器写明对它不适用
+    When 我把动作 id 清空再按保存
+    Then 编辑器点名这条入口，拒绝保存
 
   Scenario: 左键瞬移看得到落点
     Given 夜袭 showcase 与 AgentBridge 正在跑

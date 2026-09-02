@@ -86,6 +86,10 @@ Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 St
 
 Live debug 记录实际执行节点归因、Yield/预算挂起、Halt、游标、引脚和黑板变化；嵌套 `InvokeScript` 继承固定容量 trace 并携带子图 id。编辑器侧按 Flow Canvas 方式点亮节点/控制边并贴 pin 芯片，`drain` 事件带 `controlPort`；当前不伪造 `NodeExit` 生命周期事件。黑板 buffer 缺失仍在运行时明确失败；实体能力在 authoring 阶段的声明和编译校验仍是下一条合同切片，不能把运行时隐式安装路径写成已完成。
 
+底栏用人话讲这一趟，数据是 mod 自己的：`assets/GAS/graph_editor.json` 的 `annotations`（节点分组每图声明一次 + 按入口写抬头），Bridge 读写都对着 `graphs.json` 核对分组节点与入口标签，改名失败关闭并点名。底栏按执行到达顺序列出走过的每一组，和画布热度同一个 TTL 一起冷掉。编辑器源码里不得出现具体图 / mod / 节点 id，`ReactEditor_MustNotNameShowcaseGraphsOrMods` 扫全前端目录守这条。入口起因是「等事件」或「等输入动作」的单选，运行时 `event` / `action` 恰有其一；动作 id 从 `/api/graph/input-actions/{modId}` 合并目录下拉，保存路径跑 `RequireTriggerGraphEntryShape`。编辑器前端已进 CI（`graph-editor-frontend`：tsc + 图编辑器目录 lint + 断言脚本）。
+
+trace 记录只有序号和步数，没有时间或帧号：一拍跑完的链是齐亮齐灭，不是逐步流动。要真做流动，先给记录补时间或帧号，别在文档里先许诺。
+
 字符串花括号自动引脚、字符串寄存器、组合文本与 `Concat` 的运行时合同已落地：`GraphValueType.Text` + 固定容量 `GraphTextHeap`、`ConstText` / `ConcatText` / `IntToText` / `FloatToText` / `SinkPresentationText`，以及作者糖 `FormatText`（花括号自动引脚，编译期降为原子文字 op）。合同正本见 [图正式文字](graph-formal-text.md)；作者接法见 [拼句指南](graph-formal-text-authoring-guide.md)。玩家短剧「拼一句上字幕」见 [验收](../acceptance/graph-formal-text-subtitle.md)（`capability_standard_graph_formal_text`）。编辑器只从运行时 descriptor / 已登记糖露出可保存节点，不再留假 Concat。
 
 TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面量轨分离：可保存 op `LoadTextKey`、Bridge `/api/graph/text-keys/{modId}`、编辑器 `textKey` 选择器。合同正本见 [图 TextKey 发现糖](graph-textkey.md)。本切片零参；带参 `FormatTextKey`、ActiveLocale 对齐、生产 Dialogue drain sink 另线。
@@ -126,6 +130,9 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 | `FormatTextKey` / ActiveLocale / 生产 Dialogue drain | TextKey 后续 | 见 graph-textkey.md |
 | 实体能力 authoring 声明与编译校验 | 编辑器下一切片 | 不得把运行时隐式安装写成已完成 |
 | `LoadEntryPayloadText`（事件 String 载荷进 Text 寄存器） | **合同缺口** | FormalText 已落地，但入口捕获表尚无 String 槽；编辑器对 String 针脚返回空 |
+| trace 记录没有时间 / 帧号 | **合同缺口** | 想要真的逐步流动就给 `GraphDebugTraceRecord` 补时间源；在那之前只许说齐亮齐灭 |
+| `GraphDebugTool` 无自动化测试 | 债 | 编辑器和游戏之间唯一通道；`GraphDebugTraceTests` 只测环形缓冲 |
+| 编辑器前端 lint 只门到图编辑器目录 | 债 | `StoryAuthoringPage.tsx`（10 处 `no-explicit-any`）与 `ui-panel-authoring/model.ts`（1 处未用变量）先欠着，清完再放宽 `graph-editor-frontend` 的 lint 范围 |
 | 可调用函数远景（Case E：入参表、continuous 改名、预览 S1/S2、Invoke 与 FuncLib） | **开着 · 先出方案** | 正本 [可调用函数远景](graph-callable-function-vision.md)；Case E 短任务条 `mods/showcases/case_e_selection/CaseESelectionMod/docs/NEXT-AGENT-BRIEF.md`。PR #1444 是台阶。评审前不大改 Core。 |
 
 分层合同条款同步修订在 [图怎么分层](graph-layering-flow-and-behavior.md)。
