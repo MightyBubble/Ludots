@@ -83,7 +83,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return;
             }
 
-            foreach (string actionId in _bindings.ActionIds)
+            foreach (string actionId in _bindings.MountedActionIds)
             {
                 if (!FiredThisTick(input, actionId))
                 {
@@ -132,7 +132,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
                 IInputActionReader input = channel.Reader;
                 Entity rep = seat.PossessedRep;
-                foreach (string actionId in _bindings.ActionIds)
+                foreach (string actionId in _bindings.MountedActionIds)
                 {
                     if (!FiredThisTick(input, actionId))
                     {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Ludots.Core.Gameplay.MapTriggers
@@ -15,6 +16,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly HashSet<string> _knownActionIds = new(StringComparer.Ordinal);
 
         public IReadOnlyCollection<string> ActionIds => _knownActionIds;
+
+        /// <summary>Action ids that currently have at least one live mount.</summary>
+        public IEnumerable<string> MountedActionIds => _byAction.Keys;
 
         public void RememberActionId(string actionId)
         {
