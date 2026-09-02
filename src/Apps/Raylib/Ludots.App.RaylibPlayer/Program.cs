@@ -77,11 +77,34 @@ namespace Ludots.App.RaylibPlayer
                     Console.Error.WriteLine("No engine project found.");
                     return 2;
                 }
+                if (found.Count > 1)
+                {
+                    Console.Error.WriteLine($"Shipping: multiple projects found ({found.Count}); --project <path> required.");
+                    return 2;
+                }
                 shipProject = found[0].Path;
             }
-            EngineProject shipOpened = EngineProject.Open(shipProject);
+            EngineProject shipOpened;
+            try
+            {
+                shipOpened = EngineProject.Open(shipProject);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Shipping: failed to open project '{shipProject}': {ex.Message}");
+                return 2;
+            }
+
             string shipScene = ParseOption(args, "--scene") ?? shipOpened.Ids[0];
-            return RunScene(shipOpened, shipOpened.Create(shipScene), ParseOption(args, "--screenshot"), ParseOption(args, "--json"), ParseFrames(args));
+            try
+            {
+                return RunScene(shipOpened, shipOpened.Create(shipScene), ParseOption(args, "--screenshot"), ParseOption(args, "--json"), ParseFrames(args));
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Shipping: failed to run scene '{shipScene}': {ex.Message}");
+                return 2;
+            }
 #else
             string? sceneId = ParseOption(args, "--scene");
             string? screenshotPath = ParseOption(args, "--screenshot");
