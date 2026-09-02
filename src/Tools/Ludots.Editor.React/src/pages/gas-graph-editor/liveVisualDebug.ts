@@ -131,7 +131,7 @@ export function computeLiveControlEdgeHeat(
 
 /**
  * Value / data edges light when a producer node emits Pin* (or was just entered
- * with pins). Distinct from control exec trail — purple, not green.
+ * with pins). Distinct from control exec trail — quiet solid wire + live label.
  */
 export function computeLiveValueEdgeHeat(
   events: LiveDebugEvent[],
@@ -223,17 +223,19 @@ export function formatLiveValue(value: number | boolean | undefined): string {
   return '—';
 }
 
-export function heatBorderColor(intensity: number, current: boolean): string {
-  if (current) return '#4ade80';
-  if (intensity > 0.66) return '#22d3ee';
-  if (intensity > 0.33) return '#38bdf8';
-  return '#64748b';
-}
-
-export function heatGlow(intensity: number, current: boolean): string {
-  if (current) return '0 0 22px rgba(74,222,128,.65)';
-  const alpha = 0.2 + intensity * 0.45;
-  return `0 0 ${10 + intensity * 14}px rgba(34,211,238,${alpha.toFixed(2)})`;
+/** Prefer a single readable value for an outgoing value port / wire. */
+export function pickLiveValueLabel(
+  pins: LivePinValue[] | undefined,
+  sourceHandle?: string | null,
+): string | null {
+  if (!pins || pins.length === 0) return null;
+  if (pins.length === 1) return pins[0]!.value;
+  const handle = (sourceHandle ?? '').trim();
+  if (handle === 'list') {
+    return pins.map((pin) => pin.value).join(', ');
+  }
+  // Value ports / unnamed: show lowest pin index (usually the primary result).
+  return [...pins].sort((a, b) => a.pinIndex - b.pinIndex)[0]!.value;
 }
 
 /** Apply live heat / pin chips onto React Flow node data without mutating originals. */
@@ -248,15 +250,18 @@ export function applyLiveDebugToNodes<T extends Record<string, unknown>>(
     if (!nodeHeat && (!nodePins || nodePins.length === 0)) {
       if ((node.data as { liveDebug?: unknown }).liveDebug == null) return node;
       const { liveDebug: _drop, ...rest } = node.data as T & { liveDebug?: unknown };
-      return { ...node, data: rest as T, className: undefined, style: node.style };
+      return { ...node, data: rest as T, className: undefined };
     }
+    const liveClass = nodeHeat?.current
+      ? 'gas-live-current'
+      : nodeHeat && nodeHeat.intensity > 0.66
+        ? 'gas-live-hot'
+        : nodeHeat
+          ? 'gas-live-trail'
+          : undefined;
     return {
       ...node,
-      className: nodeHeat?.current
-        ? 'gas-live-current'
-        : nodeHeat
-          ? 'gas-live-hot'
-          : node.className,
+      className: liveClass,
       data: {
         ...node.data,
         liveDebug: {
@@ -264,16 +269,6 @@ export function applyLiveDebugToNodes<T extends Record<string, unknown>>(
           current: nodeHeat?.current ?? false,
           pins: nodePins ?? [],
         },
-      },
-      style: {
-        ...node.style,
-        ...(nodeHeat
-          ? {
-              border: `2px solid ${heatBorderColor(nodeHeat.intensity, nodeHeat.current)}`,
-              boxShadow: heatGlow(nodeHeat.intensity, nodeHeat.current),
-              opacity: 0.45 + nodeHeat.intensity * 0.55,
-            }
-          : {}),
       },
     };
   });
@@ -283,56 +278,90 @@ export function applyLiveDebugToEdges(
   edges: Edge[],
   controlHeat: Map<string, LiveEdgeHeat> | Set<string>,
   valueHeat: Map<string, LiveEdgeHeat> = new Map(),
+  pinValues: Map<string, LivePinValue[]> = new Map(),
 ): Edge[] {
   const control = controlHeat instanceof Set
     ? new Map([...controlHeat].map((id) => [id, { intensity: 1, kind: 'control' as const }]))
     : controlHeat;
-  if (control.size === 0 && valueHeat.size === 0) {
-    return edges.map((edge) => {
-      if (edge.className !== 'gas-live-edge-control' && edge.className !== 'gas-live-edge-value' && edge.className !== 'gas-live-edge') {
-        return edge;
-      }
-      return { ...edge, animated: false, className: undefined };
-    });
-  }
 
   return edges.map((edge) => {
+    const kind = edge.data?.kind === 'value' ? 'value' : 'control';
+    const type = kind === 'value' ? 'gasValue' : 'gasControl';
     const ctl = control.get(edge.id);
     const val = valueHeat.get(edge.id);
+    const sourcePins = pinValues.get(edge.source);
+    const liveValue = kind === 'value'
+      ? pickLiveValueLabel(sourcePins, edge.sourceHandle)
+      : null;
+
     if (ctl) {
       return {
         ...edge,
-        animated: true,
+        type,
+        animated: false,
         hidden: false,
         className: 'gas-live-edge-control',
+        label: undefined,
+        data: {
+          ...edge.data,
+          kind: 'control',
+          live: true,
+          intensity: ctl.intensity,
+          liveValue: null,
+        },
         style: {
           ...edge.style,
-          stroke: '#4ade80',
-          strokeWidth: 2.5 + ctl.intensity * 1.5,
-          opacity: 0.45 + ctl.intensity * 0.55,
           strokeDasharray: undefined,
         },
       };
     }
-    if (val) {
+    if (val || liveValue) {
       return {
         ...edge,
-        animated: true,
+        type,
+        animated: false,
         hidden: false,
-        className: 'gas-live-edge-value',
+        className: val ? 'gas-live-edge-value' : edge.className,
+        label: liveValue ?? undefined,
+        data: {
+          ...edge.data,
+          kind: 'value',
+          live: Boolean(val),
+          intensity: val?.intensity ?? 0,
+          liveValue,
+        },
         style: {
           ...edge.style,
-          stroke: '#c084fc',
-          strokeWidth: 2 + val.intensity,
-          opacity: 0.4 + val.intensity * 0.6,
-          strokeDasharray: '5 4',
+          strokeDasharray: undefined,
         },
       };
     }
-    if (edge.className === 'gas-live-edge-control' || edge.className === 'gas-live-edge-value' || edge.className === 'gas-live-edge') {
-      return { ...edge, animated: false, className: undefined };
-    }
-    return edge;
+
+    const hadLive = edge.className === 'gas-live-edge-control'
+      || edge.className === 'gas-live-edge-value'
+      || edge.className === 'gas-live-edge'
+      || Boolean((edge.data as { live?: boolean } | undefined)?.live);
+
+    if (!hadLive && edge.type === type) return edge;
+
+    return {
+      ...edge,
+      type,
+      animated: false,
+      className: undefined,
+      label: kind === 'value' ? edge.label : undefined,
+      data: {
+        ...edge.data,
+        kind,
+        live: false,
+        intensity: 0,
+        liveValue: null,
+      },
+      style: {
+        ...edge.style,
+        strokeDasharray: undefined,
+      },
+    };
   });
 }
 
@@ -425,15 +454,19 @@ export function applyWatchFocusToEdges(
     }
     if (focusEdgeIds.has(edge.id)) {
       const isValue = edge.data?.kind === 'value';
+      const live = Boolean((edge.data as { live?: boolean } | undefined)?.live);
       return {
         ...edge,
+        type: isValue ? 'gasValue' : 'gasControl',
         hidden: false,
         style: {
           ...edge.style,
-          stroke: isValue ? '#a78bfa' : '#67e8f9',
-          strokeWidth: isValue ? 1.5 : 2,
-          opacity: isValue ? 0.55 : 1,
-          strokeDasharray: isValue ? '4 3' : undefined,
+          stroke: live
+            ? (isValue ? '#94a3b8' : '#fbbf24')
+            : (isValue ? '#71717a' : '#52525b'),
+          strokeWidth: isValue ? 1.5 : (live ? 3.2 : 2),
+          opacity: isValue ? 0.7 : 1,
+          strokeDasharray: undefined,
         },
       };
     }

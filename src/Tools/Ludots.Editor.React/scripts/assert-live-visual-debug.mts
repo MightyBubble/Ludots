@@ -13,6 +13,7 @@ import {
   computeLiveValueEdgeHeat,
   computeWatchedEntryFocus,
   formatLiveValue,
+  pickLiveValueLabel,
   LIVE_HEAT_TTL_MS,
   type LiveDebugEvent,
 } from '../src/pages/gas-graph-editor/liveVisualDebug.ts';
@@ -58,6 +59,7 @@ const pins = computeLivePinValues(events, now);
 assert(pins.get('a')?.[0]?.value === '42', 'pin int formats');
 assert(pins.get('b')?.[0]?.value === '1.25', 'pin float formats');
 assert(formatLiveValue(true) === 'true', 'bool true');
+assert(pickLiveValueLabel(pins.get('a'), 'value') === '42', 'value label from pin');
 assert(computeLivePinValues(events, now + LIVE_HEAT_TTL_MS + 50).size === 0, 'pins cool with TTL');
 
 const nodes: Node<Record<string, unknown>>[] = [
@@ -67,10 +69,18 @@ const nodes: Node<Record<string, unknown>>[] = [
 const lit = applyLiveDebugToNodes(nodes, heat, pins);
 assert(lit.find((n) => n.id === 'c')?.className === 'gas-live-current', 'current class');
 assert(Array.isArray((lit.find((n) => n.id === 'a')?.data as { liveDebug?: { pins: unknown[] } }).liveDebug?.pins), 'pins attached');
+assert((lit.find((n) => n.id === 'c')?.style as { border?: string } | undefined)?.border == null, 'no neon border style on nodes');
 
-const litEdges = applyLiveDebugToEdges(edges, controlHeat, valueHeat);
-assert(litEdges.find((e) => e.id === 'e1')?.className === 'gas-live-edge-control', 'hot control class');
-assert(litEdges.find((e) => e.id === 'v1')?.className === 'gas-live-edge-value', 'hot value class');
+const litEdges = applyLiveDebugToEdges(edges, controlHeat, valueHeat, pins);
+const hotControl = litEdges.find((e) => e.id === 'e1');
+const hotValue = litEdges.find((e) => e.id === 'v1');
+assert(hotControl?.className === 'gas-live-edge-control', 'hot control class');
+assert(hotControl?.type === 'gasControl', 'control edge type');
+assert((hotControl?.data as { live?: boolean })?.live === true, 'control live flag');
+assert(hotValue?.className === 'gas-live-edge-value', 'hot value class');
+assert(hotValue?.type === 'gasValue', 'value edge type');
+assert((hotValue?.data as { liveValue?: string })?.liveValue === '42', 'value on wire');
+assert(hotValue?.style?.strokeDasharray == null || hotValue?.style?.strokeDasharray === undefined, 'value edge must not be dashed');
 assert(litEdges.find((e) => e.id === 'e3')?.className !== 'gas-live-edge-control', 'cold edge not control-lit');
 
 const focusNodes: Node<Record<string, unknown>>[] = [
@@ -95,6 +105,8 @@ assert(framed.find((n) => n.id === 'noise')?.hidden === true, 'noise node hidden
 const framedEdges = applyWatchFocusToEdges(focusEdges, focus.edgeIds, new Set());
 assert(framedEdges.find((e) => e.id === 'c2')?.hidden !== true, 'focus control edge visible');
 assert(framedEdges.find((e) => e.id === 'vFocus')?.hidden !== true, 'focus value edge visible');
+assert(framedEdges.find((e) => e.id === 'vFocus')?.style?.strokeDasharray == null
+  || framedEdges.find((e) => e.id === 'vFocus')?.style?.strokeDasharray === undefined, 'focus value edge solid');
 assert(framedEdges.find((e) => e.id === 'c3')?.hidden === true, 'noise edge hidden');
 
 console.log('assert-live-visual-debug: ok');

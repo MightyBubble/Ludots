@@ -32,6 +32,8 @@ import {
   type MapVariableScalarType,
 } from './gas-graph-editor/GraphVariablePanel';
 import { GasNode, isPureValueOp, type EventSchemaView } from './gas-graph-editor/GasNode';
+import { gasEdgeTypes } from './gas-graph-editor/GasEdges';
+import { GAS_GRAPH_THEME } from './gas-graph-editor/gasGraphTheme';
 import { authoredFieldsForOp, type AuthoredFieldKey } from './gas-graph-editor/authoredFields';
 import { computeAutoLayout, eventEntryNodeId, isEventEntryNodeId } from './gas-graph-editor/autoLayout';
 import { EventEntryInspector } from './gas-graph-editor/EventEntryInspector';
@@ -208,6 +210,9 @@ type GraphValueEdgeConfig = {
 type GasEdgeData = {
   kind: 'control' | 'value';
   synthetic?: boolean;
+  live?: boolean;
+  intensity?: number;
+  liveValue?: string | null;
 };
 
 type GraphOutputConfig = {
@@ -265,6 +270,21 @@ const DEFAULT_MOD_ID = 'UiPlayerAggregateGraphMvpShowcaseMod';
 const DEFAULT_GRAPH_ID = 'ui.panel.player.resource.aggregate';
 
 const nodeTypes = { gas: GasNode };
+const edgeTypes = gasEdgeTypes;
+
+function themedEdge(
+  kind: 'control' | 'value',
+  stroke: string,
+  strokeWidth = 2,
+  extras: Partial<Edge<GasEdgeData>> = {},
+): Pick<Edge<GasEdgeData>, 'type' | 'style' | 'data'> & Partial<Edge<GasEdgeData>> {
+  return {
+    type: kind === 'value' ? 'gasValue' : 'gasControl',
+    style: { stroke, strokeWidth, strokeDasharray: undefined },
+    data: { kind },
+    ...extras,
+  };
+}
 
 function omitUndefined<T extends Record<string, unknown>>(value: T): T {
   const out: Record<string, unknown> = {};
@@ -494,8 +514,9 @@ function graphToFlow(
       target: entry.start,
       targetHandle: 'control-in',
       markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: '#fb7185', strokeWidth: 2 },
-      data: { kind: 'control', synthetic: true },
+      ...themedEdge('control', GAS_GRAPH_THEME.eventAccent, 2, {
+        data: { kind: 'control', synthetic: true },
+      }),
     });
   }
 
@@ -508,8 +529,7 @@ function graphToFlow(
         target: edge.to,
         targetHandle: 'control-in',
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#38bdf8', strokeWidth: 2 },
-        data: { kind: 'control' },
+        ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2),
       });
     }
 
@@ -521,8 +541,11 @@ function graphToFlow(
         target: edge.to,
         targetHandle: edge.toPort,
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: edge.fromPort === 'list' ? '#34d399' : '#a78bfa', strokeWidth: 2 },
-        data: { kind: 'value' },
+        ...themedEdge(
+          'value',
+          edge.fromPort === 'list' ? GAS_GRAPH_THEME.listAccent : GAS_GRAPH_THEME.dataIdle,
+          1.5,
+        ),
       });
     }
 
@@ -537,8 +560,7 @@ function graphToFlow(
       target: n.next,
       markerEnd: { type: MarkerType.ArrowClosed },
       label: 'next',
-      style: { stroke: '#64748b' },
-      data: { kind: 'control' },
+      ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2),
     });
   }
 
@@ -593,10 +615,11 @@ function toDisplayEdges(nodes: Node<GasNodeData>[], edges: Edge<GasEdgeData>[]):
         target: terminal,
         targetHandle: 'control-in',
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#38bdf8', strokeWidth: 2 },
         deletable: false,
         selectable: false,
-        data: { kind: 'control', synthetic: true },
+        ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2, {
+          data: { kind: 'control', synthetic: true },
+        }),
       });
     }
   }
@@ -1210,8 +1233,7 @@ export const GasGraphEditorPage: React.FC = () => {
           target: connection.target,
           targetHandle: connection.targetHandle,
           markerEnd: { type: MarkerType.ArrowClosed },
-          style: { stroke: '#a78bfa', strokeWidth: 2 },
-          data: { kind: 'value' },
+          ...themedEdge('value', GAS_GRAPH_THEME.dataIdle, 1.5),
         }, prev));
         setSelectedNodeId(nodeId);
         setStatus(`Placed ${pin.op}${pin.payloadKey ? ` for ${pin.payloadKey}` : ''}.`);
@@ -1225,8 +1247,9 @@ export const GasGraphEditorPage: React.FC = () => {
         target: connection.target,
         targetHandle: 'control-in',
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#fb7185', strokeWidth: 2 },
-        data: { kind: 'control', synthetic: true },
+        ...themedEdge('control', GAS_GRAPH_THEME.eventAccent, 2, {
+          data: { kind: 'control', synthetic: true },
+        }),
       }, prev.filter((edge) => !(edge.source === connection.source && edge.sourceHandle === 'exec'))));
       setNodes((previous) => previous.map((node) => (
         node.id === connection.source && node.data.entry
@@ -1239,8 +1262,11 @@ export const GasGraphEditorPage: React.FC = () => {
       ...connection,
       id: `${kind}:${connection.source}:${connection.sourceHandle}:${connection.target}:${connection.targetHandle}`,
       markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: kind === 'control' ? '#38bdf8' : '#a78bfa', strokeWidth: 2 },
-      data: { kind },
+      ...themedEdge(
+        kind,
+        kind === 'control' ? GAS_GRAPH_THEME.execIdle : GAS_GRAPH_THEME.dataIdle,
+        kind === 'control' ? 2 : 1.5,
+      ),
     }, prev));
   }, [nodes, descriptors, sugars]);
 
@@ -1308,7 +1334,7 @@ export const GasGraphEditorPage: React.FC = () => {
       targetHandle: 'control-in',
       markerEnd: { type: MarkerType.ArrowClosed },
       label: sourceHandle,
-      data: { kind: 'control' },
+      ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2),
     }, previous));
     setNodes((previous) => previous.map((node) => node.id !== selectedNodeId
       ? node
@@ -1343,7 +1369,7 @@ export const GasGraphEditorPage: React.FC = () => {
       targetHandle: 'control-in',
       markerEnd: { type: MarkerType.ArrowClosed },
       label: sourceHandle,
-      data: { kind: 'control' },
+      ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2),
     }, previous));
     setNodes((previous) => previous.map((node) => node.id !== selectedNodeId
       ? node
@@ -1494,8 +1520,9 @@ export const GasGraphEditorPage: React.FC = () => {
           target: nextStart,
           targetHandle: 'control-in',
           markerEnd: { type: MarkerType.ArrowClosed },
-          style: { stroke: '#fb7185', strokeWidth: 2 },
-          data: { kind: 'control', synthetic: true },
+          ...themedEdge('control', GAS_GRAPH_THEME.eventAccent, 2, {
+            data: { kind: 'control', synthetic: true },
+          }),
         }, without);
       });
     }
@@ -1756,10 +1783,20 @@ export const GasGraphEditorPage: React.FC = () => {
 
   const displayEdges = React.useMemo(() => {
     let base = toDisplayEdges(nodes, edges);
-    if (!debugEnabled) return base;
-    base = applyLiveDebugToEdges(base, activeDebugNodes.controlHeat, activeDebugNodes.valueHeat) as Edge<GasEdgeData>[];
+    if (!debugEnabled) {
+      return base.map((edge) => ({
+        ...edge,
+        type: edge.data?.kind === 'value' ? 'gasValue' : 'gasControl',
+      }));
+    }
+    base = applyLiveDebugToEdges(
+      base,
+      activeDebugNodes.controlHeat,
+      activeDebugNodes.valueHeat,
+      activeDebugNodes.pins,
+    ) as Edge<GasEdgeData>[];
     return applyWatchFocusToEdges(base, watchFocus.edgeIds, activeDebugNodes.hotEdges) as Edge<GasEdgeData>[];
-  }, [activeDebugNodes.controlHeat, activeDebugNodes.hotEdges, activeDebugNodes.valueHeat, debugEnabled, edges, nodes, watchFocus.edgeIds]);
+  }, [activeDebugNodes.controlHeat, activeDebugNodes.hotEdges, activeDebugNodes.pins, activeDebugNodes.valueHeat, debugEnabled, edges, nodes, watchFocus.edgeIds]);
 
   const mapVariables = React.useMemo<GraphVariableRow[]>(() => {
     const rows = new Map<string, GraphVariableRow>();
@@ -2125,6 +2162,7 @@ export const GasGraphEditorPage: React.FC = () => {
                 nodes={displayNodes}
                 edges={displayEdges}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 onInit={(instance) => { reactFlowRef.current = instance; }}
                 onPaneClick={() => {
                   setPaletteMenu(null);
@@ -2154,35 +2192,36 @@ export const GasGraphEditorPage: React.FC = () => {
                 fitView
                 proOptions={{ hideAttribution: true }}
               >
-                <Background gap={16} color="#334155" />
+                <Background gap={18} color={GAS_GRAPH_THEME.canvasDot} />
                 <Controls />
                 <MiniMap
                   pannable
                   zoomable
-                  bgColor="#020617"
-                  maskColor="rgba(2, 6, 23, 0.35)"
-                  nodeStrokeColor="#94a3b8"
+                  bgColor={GAS_GRAPH_THEME.minimapBg}
+                  maskColor={GAS_GRAPH_THEME.minimapMask}
+                  nodeStrokeColor="#71717a"
                   nodeColor={(node) => {
-                    if (node.data.role === 'event-entry') return '#fb7185';
-                    if (node.data.op === 'SwitchInt' || node.data.op === 'FsmState') return '#f59e0b';
+                    if (node.data.role === 'event-entry') return GAS_GRAPH_THEME.eventAccent;
+                    if (node.data.op === 'SwitchInt' || node.data.op === 'FsmState') return GAS_GRAPH_THEME.execLiveHot;
                     if (sugars[node.data.op as string]?.childArms || node.data.op === 'BtDecorator') return '#a78bfa';
-                    return '#38bdf8';
+                    if (isPureValueOp(String(node.data.op ?? ''))) return GAS_GRAPH_THEME.valueAccent;
+                    return GAS_GRAPH_THEME.dataLive;
                   }}
                 />
               </ReactFlow>
-              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-slate-800 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-400">
+              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-zinc-800 bg-zinc-950/80 px-2 py-1 text-[10px] text-zinc-400">
                 Middle-drag to pan · Left-drag to box-select · Right-click to add a node
               </div>
               {(debugEnabled || rightRailCollapsed) ? (
-                <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-amber-900/50 bg-slate-950/95 px-3 py-2 shadow-[0_-8px_24px_rgba(0,0,0,.45)]">
+                <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-amber-900/40 bg-zinc-950/95 px-3 py-2 shadow-[0_-8px_24px_rgba(0,0,0,.45)]">
                   <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
                     <span>
                       Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
                         ?? debugMounts[0]?.executionBackend
                         ?? 'Interpret'}
                     </span>
-                    <span className="font-normal normal-case tracking-normal text-slate-500">
-                      green = control · purple dashed = value · heat fades in ~2s
+                    <span className="font-normal normal-case tracking-normal text-zinc-500">
+                      amber flow = control · value on wire/pin · heat ~2s
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs">

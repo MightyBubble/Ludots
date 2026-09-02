@@ -68,7 +68,7 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 1. 编辑器加载与游戏同一 `graphId`（如 `Graph.NightRaid.Flow`）。
 2. 右侧 Live Debug → 选择已挂载入口 → Watch。
 3. 工具动作：`list` → `configure { mode: nodeAndPins }` → `drain { since }`；drain 事件带 `nodeId` / `op` / `controlPort` / pin 值。
-4. 画布做 Flow Canvas 式可视化：当前节点青绿脉冲，近期路径青色拖尾；**控制边**走青绿实线动画，**数值边**走紫色虚线动画；热度约 2 秒内衰减熄灭，不会一直亮着。Watch 某一入口时只留下从该入口可达的短链（含其间的数值边），其它链隐藏；同时自动收起左右侧栏，把 Live Debug 收到画布底栏，方便单屏「左游戏右编辑器」。右侧日志只是辅助轨迹，不再是唯一反馈。
+4. 画布做 Flow Canvas 式可视化：**控制边**走暖黄粗线 + 流动光点（只亮当前走过的路径）；**数值边**走细实线，当前值标在线上或引脚旁（不用虚线）；节点本身只做轻量高亮，热度约 2 秒内衰减。配色参考 agent 前端套件（zinc 深色画布、n8n 节点壳、暖黄执行 / 冷蓝数据）。Watch 某一入口时只留下从该入口可达的短链（含其间的数值边），其它链隐藏；同时自动收起左右侧栏，把 Live Debug 收到画布底栏，方便单屏「左游戏右编辑器」。右侧日志只是辅助轨迹，不再是唯一反馈。
 5. 不声称完整 `NodeExit` 生命周期。嵌套 `InvokeScript` 记录带 `graphId`；source map 缺失时 AgentBridge 失败关闭，错误含 graph id 与 pc。
 
 ### 3.4 TriggerGraph 事件入口
