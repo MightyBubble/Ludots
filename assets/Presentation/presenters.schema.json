@@ -203,7 +203,7 @@
           "enum": [
             "AssetBinding", "AttributeBinding", "TagBinding", "Animator",
             "Attachment", "Sound", "Material", "Spline",
-            "Grounding", "MinimapMarker", "SurfaceSource", "WorldText", "InstancedBatch", "TrailMesh"
+            "Grounding", "MinimapMarker", "SurfaceSource", "WorldText", "InstancedBatch", "TrailMesh", "ScreenRect"
           ]
         },
         "activeByDefault": { "type": "boolean" },
@@ -457,6 +457,22 @@
             "sampleLifetimeSeconds": { "type": "number", "exclusiveMinimum": 0 },
             "headColor": { "$ref": "#/$defs/color4" },
             "tailColor": { "$ref": "#/$defs/color4" }
+          }
+        },
+        "screenRect": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["corner0XParamKey", "corner0YParamKey", "corner1XParamKey", "corner1YParamKey"],
+          "properties": {
+            "fill": { "$ref": "#/$defs/color4" },
+            "border": { "$ref": "#/$defs/color4" },
+            "corner0XParamKey": { "type": "string", "minLength": 1 },
+            "corner0YParamKey": { "type": "string", "minLength": 1 },
+            "corner1XParamKey": { "type": "string", "minLength": 1 },
+            "corner1YParamKey": { "type": "string", "minLength": 1 },
+            "fillParamKey": { "type": "string", "minLength": 1 },
+            "borderParamKey": { "type": "string", "minLength": 1 },
+            "visibilityParamKey": { "type": "string", "minLength": 1 }
           }
         },
         "worldText": {

@@ -15,11 +15,6 @@
     "primitiveKind": "Cube"
   },
   {
-    "id": "case_e.boxing_marker_slab",
-    "type": "Primitive",
-    "primitiveKind": "Cube"
-  },
-  {
     "id": "case_e.select_ring_slab",
     "type": "Primitive",
     "primitiveKind": "Cube"

@@ -947,7 +947,7 @@ namespace Ludots.Core.Presentation.Config
             "assetBinding", "attributeBinding", "tagBinding", "animator",
             "attachment", "sound", "material", "spline", "grounding",
             "minimapMarker", "worldText", "surfaceSource", "instancedBatch",
-            "trailMesh",
+            "trailMesh", "screenRect",
         };
 
         private static readonly string[] ChildFields =
@@ -1094,6 +1094,13 @@ namespace Ludots.Core.Presentation.Config
             "shape", "color", "sizePx", "colorParamKey", "sizeParamKey",
             "visibilityParamKey", "orientationMode", "orientationParamKey",
             "orientationOffsetRad", "orientationLengthPx",
+        };
+
+        private static readonly string[] ScreenRectFields =
+        {
+            "fill", "border", "corner0XParamKey", "corner0YParamKey",
+            "corner1XParamKey", "corner1YParamKey", "fillParamKey",
+            "borderParamKey", "visibilityParamKey",
         };
 
         private static readonly string[] SurfaceSourceFields =
@@ -2915,63 +2922,67 @@ namespace Ludots.Core.Presentation.Config
                 switch (kind)
                 {
                     case BehaviorKind.AssetBinding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "surfaceSource", "instancedBatch", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.AssetBinding = ParseAssetBinding(obj["assetBinding"], $"{behaviorPath}.assetBinding");
                         slot.Style = ParseBehaviorStyle(obj["style"], $"{behaviorPath}.style");
                         slot.Motion = ParseBehaviorMotion(obj["motion"], $"{behaviorPath}.motion");
                         break;
                     case BehaviorKind.AttributeBinding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.AttributeBinding = ParseAttributeBinding(obj["attributeBinding"], $"{behaviorPath}.attributeBinding");
                         break;
                     case BehaviorKind.TagBinding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.TagBinding = ParseTagBinding(obj["tagBinding"], $"{behaviorPath}.tagBinding");
                         break;
                     case BehaviorKind.Animator:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.Animator = ParseAnimator(obj["animator"], $"{behaviorPath}.animator");
                         break;
                     case BehaviorKind.Attachment:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.Attachment = ParseAttachment(obj["attachment"], $"{behaviorPath}.attachment");
                         break;
                     case BehaviorKind.Sound:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.Sound = ParseSound(obj["sound"], $"{behaviorPath}.sound");
                         break;
                     case BehaviorKind.Material:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.Material = ParseMaterial(obj["material"], $"{behaviorPath}.material");
                         break;
                     case BehaviorKind.Spline:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.Spline = ParseSpline(obj["spline"], $"{behaviorPath}.spline");
                         break;
                     case BehaviorKind.TrailMesh:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "screenRect");
                         slot.TrailMesh = ParseTrailMesh(obj["trailMesh"], $"{behaviorPath}.trailMesh");
                         break;
                     case BehaviorKind.Grounding:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.Grounding = ParseGrounding(obj["grounding"], $"{behaviorPath}.grounding");
                         break;
                     case BehaviorKind.MinimapMarker:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.MinimapMarker = ParseMinimapMarker(obj["minimapMarker"], $"{behaviorPath}.minimapMarker");
                         break;
+                    case BehaviorKind.ScreenRect:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh");
+                        slot.ScreenRect = ParseScreenRect(obj["screenRect"], $"{behaviorPath}.screenRect");
+                        break;
                     case BehaviorKind.WorldText:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "surfaceSource", "instancedBatch", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.WorldText = ParseWorldText(obj["worldText"], $"{behaviorPath}.worldText");
                         slot.Style = ParseBehaviorStyle(obj["style"], $"{behaviorPath}.style");
                         slot.Motion = ParseBehaviorMotion(obj["motion"], $"{behaviorPath}.motion");
                         break;
                     case BehaviorKind.SurfaceSource:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "instancedBatch", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "instancedBatch", "trailMesh", "screenRect");
                         slot.SurfaceSource = ParseSurface(obj["surfaceSource"], ownerKey, $"{behaviorPath}.surfaceSource");
                         break;
                     case BehaviorKind.InstancedBatch:
-                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "surfaceSource", "trailMesh");
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "surfaceSource", "trailMesh", "screenRect");
                         slot.InstancedBatch = ParseInstancedBatchBehavior(obj["instancedBatch"], ownerKey, $"{behaviorPath}.instancedBatch");
                         break;
                     case BehaviorKind.Extension:
@@ -3704,6 +3715,34 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
+        private static ScreenRectConfig ParseScreenRect(JsonNode? node, string path)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException("ScreenRect behavior requires object field 'screenRect'.");
+            }
+
+            RejectUnknownFields(obj, path, ScreenRectFields);
+
+            int corner0XParamKey = ParseRequiredParamKey(obj["corner0XParamKey"], "ScreenRect.corner0XParamKey");
+            int corner0YParamKey = ParseRequiredParamKey(obj["corner0YParamKey"], "ScreenRect.corner0YParamKey");
+            int corner1XParamKey = ParseRequiredParamKey(obj["corner1XParamKey"], "ScreenRect.corner1XParamKey");
+            int corner1YParamKey = ParseRequiredParamKey(obj["corner1YParamKey"], "ScreenRect.corner1YParamKey");
+
+            return new ScreenRectConfig
+            {
+                FillColor = ParseOptionalFiniteVector4(obj["fill"], new Vector4(1f, 1f, 1f, 0.25f), "ScreenRect.fill"),
+                BorderColor = ParseOptionalFiniteVector4(obj["border"], new Vector4(1f, 1f, 1f, 1f), "ScreenRect.border"),
+                Corner0XParamKey = corner0XParamKey,
+                Corner0YParamKey = corner0YParamKey,
+                Corner1XParamKey = corner1XParamKey,
+                Corner1YParamKey = corner1YParamKey,
+                FillColorParamKey = ParseOptionalParamKey(obj["fillParamKey"], "ScreenRect.fillParamKey"),
+                BorderColorParamKey = ParseOptionalParamKey(obj["borderParamKey"], "ScreenRect.borderParamKey"),
+                VisibilityParamKey = ParseOptionalParamKey(obj["visibilityParamKey"], "ScreenRect.visibilityParamKey"),
+            };
+        }
+
         private SoundConfig ParseSound(JsonNode? node, string path)
         {
             if (node is not JsonObject obj)
@@ -4011,6 +4050,7 @@ namespace Ludots.Core.Presentation.Config
                 ["attributeBase"] = 15,
                 ["instancedBatch"] = 16,
                 ["trail"] = 17,
+                ["screenRect"] = 18,
             };
 
             public static int Register(string key)

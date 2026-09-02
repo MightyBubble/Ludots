@@ -1,0 +1,162 @@
+[
+  {
+    "id": "graph.case_e.tap_commit",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_tap_select",
+        "start": "rep",
+        "refire": "restart",
+        "action": "CaseE.TapSelect"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "tap_px",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenX"
+      },
+      {
+        "id": "tap_py",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenY"
+      },
+      {
+        "id": "roster",
+        "op": "QueryFromCollection",
+        "collectionKey": "case_e.selectable"
+      },
+      {
+        "id": "pick_hits",
+        "op": "ScreenRegionToEntities"
+      },
+      {
+        "id": "op_replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "commit",
+        "op": "DispatchCollectionEvent",
+        "event": "gameplay.case_e.selection_committed",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "deactivate_boxing",
+        "op": "DeactivateContext",
+        "context": "interaction.context.case_e.boxing"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "tap_px"
+      },
+      {
+        "from": "tap_px",
+        "fromPort": "next",
+        "to": "tap_py"
+      },
+      {
+        "from": "tap_py",
+        "fromPort": "next",
+        "to": "roster"
+      },
+      {
+        "from": "roster",
+        "fromPort": "next",
+        "to": "pick_hits"
+      },
+      {
+        "from": "pick_hits",
+        "fromPort": "next",
+        "to": "op_replace"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "next",
+        "to": "commit"
+      },
+      {
+        "from": "commit",
+        "fromPort": "next",
+        "to": "deactivate_boxing"
+      },
+      {
+        "from": "deactivate_boxing",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "roster",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "deactivate_boxing",
+        "toPort": "source"
+      },
+      {
+        "from": "tap_px",
+        "fromPort": "value",
+        "to": "pick_hits",
+        "toPort": "a"
+      },
+      {
+        "from": "tap_py",
+        "fromPort": "value",
+        "to": "pick_hits",
+        "toPort": "b"
+      },
+      {
+        "from": "tap_px",
+        "fromPort": "value",
+        "to": "pick_hits",
+        "toPort": "c"
+      },
+      {
+        "from": "tap_py",
+        "fromPort": "value",
+        "to": "pick_hits",
+        "toPort": "max"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "value",
+        "to": "commit",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

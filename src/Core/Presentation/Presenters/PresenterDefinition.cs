@@ -94,7 +94,7 @@ namespace Ludots.Core.Presentation.Presenters
             }
         }
 
-        internal readonly struct MinimapMarkerWorkItem
+        internal struct MinimapMarkerWorkItem
         {
             public readonly int SlotIndex;
             public readonly MinimapMarkerConfig Marker;
@@ -103,6 +103,18 @@ namespace Ludots.Core.Presentation.Presenters
             {
                 SlotIndex = slotIndex;
                 Marker = marker;
+            }
+        }
+
+        internal struct ScreenRectWorkItem
+        {
+            public readonly int SlotIndex;
+            public readonly ScreenRectConfig Rect;
+
+            public ScreenRectWorkItem(int slotIndex, in ScreenRectConfig rect)
+            {
+                SlotIndex = slotIndex;
+                Rect = rect;
             }
         }
 
@@ -126,6 +138,7 @@ namespace Ludots.Core.Presentation.Presenters
         internal bool HasAnimatorBehavior;
         internal bool HasSoundBehavior;
         internal bool HasMinimapMarkerBehavior;
+        internal bool HasScreenRectBehavior;
         internal bool HasExtensionBehavior;
         internal bool HasSurfaceAuthoring;
         internal bool HasOutputMotionOrFade;
@@ -163,6 +176,7 @@ namespace Ludots.Core.Presentation.Presenters
         internal ExtensionOwnerAttributeWorkItem[] ExtensionOwnerAttributeWork = System.Array.Empty<ExtensionOwnerAttributeWorkItem>();
         internal ExtensionOwnerTagWorkItem[] ExtensionOwnerTagWork = System.Array.Empty<ExtensionOwnerTagWorkItem>();
         internal MinimapMarkerWorkItem[] MinimapMarkerWorkItems = System.Array.Empty<MinimapMarkerWorkItem>();
+        internal ScreenRectWorkItem[] ScreenRectWorkItems = System.Array.Empty<ScreenRectWorkItem>();
         internal bool HasEveryFrameGroundingWork;
         internal bool TickBehaviorsAreGroundingOnly;
         internal int[] MaterialSourceFloatParamKeys = System.Array.Empty<int>();
@@ -334,6 +348,7 @@ namespace Ludots.Core.Presentation.Presenters
             HasAnimatorBehavior = false;
             HasSoundBehavior = false;
             HasMinimapMarkerBehavior = false;
+            HasScreenRectBehavior = false;
             HasExtensionBehavior = false;
             HasSurfaceAuthoring = false;
             HasOutputMotionOrFade = false;
@@ -370,6 +385,7 @@ namespace Ludots.Core.Presentation.Presenters
             ExtensionOwnerAttributeWork = System.Array.Empty<ExtensionOwnerAttributeWorkItem>();
             ExtensionOwnerTagWork = System.Array.Empty<ExtensionOwnerTagWorkItem>();
             MinimapMarkerWorkItems = System.Array.Empty<MinimapMarkerWorkItem>();
+            ScreenRectWorkItems = System.Array.Empty<ScreenRectWorkItem>();
             HasEveryFrameGroundingWork = false;
             TickBehaviorsAreGroundingOnly = false;
             MaterialSourceFloatParamKeys = System.Array.Empty<int>();
@@ -397,6 +413,7 @@ namespace Ludots.Core.Presentation.Presenters
             System.Collections.Generic.List<int>? extensionBootstrapBehaviorIndices = null;
             System.Collections.Generic.List<int>? extensionTickBehaviorIndices = null;
             System.Collections.Generic.List<MinimapMarkerWorkItem>? minimapMarkerWorkItems = null;
+            System.Collections.Generic.List<ScreenRectWorkItem>? screenRectWorkItems = null;
             bool blocksEventDrivenStaticEmit = HasSurfaceAuthoring;
 
             if (Bindings != null)
@@ -641,6 +658,11 @@ namespace Ludots.Core.Presentation.Presenters
                         minimapMarkerWorkItems ??= new System.Collections.Generic.List<MinimapMarkerWorkItem>(2);
                         minimapMarkerWorkItems.Add(new MinimapMarkerWorkItem(slot.SlotIndex, in slot.MinimapMarker));
                         break;
+                    case BehaviorKind.ScreenRect:
+                        HasScreenRectBehavior = true;
+                        screenRectWorkItems ??= new System.Collections.Generic.List<ScreenRectWorkItem>(2);
+                        screenRectWorkItems.Add(new ScreenRectWorkItem(slot.SlotIndex, in slot.ScreenRect));
+                        break;
                     case BehaviorKind.Extension:
                         HasExtensionBehavior = true;
                         extensionBehaviorIndices ??= new System.Collections.Generic.List<int>(2);
@@ -704,6 +726,7 @@ namespace Ludots.Core.Presentation.Presenters
             ExtensionOwnerAttributeWork = BuildExtensionOwnerAttributeWork(extensionAttributeBehaviorMap);
             ExtensionOwnerTagWork = BuildExtensionOwnerTagWork(extensionTagBehaviorMap);
             MinimapMarkerWorkItems = minimapMarkerWorkItems?.ToArray() ?? System.Array.Empty<MinimapMarkerWorkItem>();
+            ScreenRectWorkItems = screenRectWorkItems?.ToArray() ?? System.Array.Empty<ScreenRectWorkItem>();
             TickBehaviorsAreGroundingOnly = HasEveryFrameGroundingWork &&
                                            TickBehaviorIndices.Length != 0 &&
                                            TickBehaviorIndices.Length == CountEveryFrameGroundingTickBehaviors(Behaviors, TickBehaviorIndices);

@@ -5,9 +5,9 @@
     "entries": [
       {
         "label": "on_box_select_release",
-        "action": "CaseE.BoxSelectEnd",
         "start": "read_modifiers",
-        "refire": "restart"
+        "refire": "restart",
+        "action": "CaseE.BoxSelect"
       }
     ],
     "nodes": [
