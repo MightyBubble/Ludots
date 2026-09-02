@@ -22,9 +22,10 @@ namespace Ludots.Tests.GAS.Production;
 /// Case E (#1398 D6/D8/§05) 框选全链 headless 验收（忠实形态），对照 case-e-config-report.html
 /// 的七步：01 进图出生 / 02 模板 initialInteractionContext 挂 Instance / 03 Profile triggers 门控 /
 /// 04 语义动作直绑触发衍生 context（框起角=press 屏幕像素 + 候选集世界侧刷新）/
-/// 05 boxing context 持续过程：ScreenRect 框 + continuousQuery 每帧命中写 case_e.box_hover 预览集 →
-/// presenter 观察成员变化高亮 / 06 框结束对「可框选单位」候选集（case_e.selectable）做屏幕矩形命中
+/// 05 boxing context 持续过程：ScreenRect 框 + 存活期命中写 case_e.box_hover 预览集 →
+/// presenter 观察成员变化高亮 / 06 抬起（BoxSelectEnd）对「可框选单位」候选集做屏幕矩形命中
 /// + 修饰键语义透传事件 key 写 selected 集合（与候选、预览三套集合分离）。
+/// 输入合同：按下=BoxSelectBegin、抬起=BoxSelectEnd（firesOn=release），无 Tap/Drag 判定器。
 /// </summary>
 [NonParallelizable]
 [TestFixture]
@@ -111,7 +112,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(1),
             "ContextActivated 事件驱动框指示 presenter 创建");
 
-        // 拖拽中（>8px 行程）——门控系统在此 tick 挂上 boxing 的 triggers
+        // 拖拽中——门控系统在此 tick 挂上 boxing 的 triggers（抬起边沿 BoxSelectEnd）
         backend.SetMousePosition(new Vector2(-300f, 100f));
         TickUntil(engine, 10, () => false);
 
@@ -140,7 +141,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Tick(engine, 2);
         AssertCollection(engine, commander, BoxHoverKey, "指针回缩后预览集随之收缩", marine1, marine2);
 
-        // ── 06：抬起（Drag 判定完成）→ 矩形 [press,release] 命中 + replace 语义 → selected ──
+        // ── 06：抬起（BoxSelectEnd / firesOn=release）→ 矩形 [press,release] 命中 + replace 语义 → selected ──
         ReleaseAt(engine, backend);
         TickUntil(engine, 30, () =>
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances settled) ||
@@ -205,9 +206,9 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             !CollectionContains(engine, commander, SelectedKey, raider2),
             "敌方单位在矩形内也永不入选（候选集=case_e.selectable，敌我在集合侧过滤）");
 
-        // ── 04 零位移 = 点选：TapSelect 完成，零位移矩形与单位屏幕包围盒相交即命中（无判定器） ──
+        // ── 04 零位移 = 点选：按下+抬起同一点，零位移矩形与单位屏幕包围盒相交即命中（无 Tap/Drag 判定器） ──
         TapAt(engine, backend, commander, new Vector2(900f, 0f));
-        AssertCollection(engine, commander, SelectedKey, "零位移走点选（零位移矩形×单位屏幕包围盒）并 replace", marine4);
+        AssertCollection(engine, commander, SelectedKey, "零位移按下抬起＝点选（零位移矩形×单位屏幕包围盒）并 replace", marine4);
         Assert.That(
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances afterTap) ||
             afterTap.Count == 0,

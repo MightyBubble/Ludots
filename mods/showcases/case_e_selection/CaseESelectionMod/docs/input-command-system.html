@@ -199,20 +199,20 @@ hr{border:none;border-top:1px solid var(--border);margin:30px 0}
 <li>选宝物（键鼠指点 vs 手柄按键）—— 一个是 <code>pointAt(pos)</code>、一个是 <code>pressKey(A)</code>，<strong>不同套</strong>。</li>
 </ul>
 <p>所以「是否一套 action」，判据是<strong>语义动作相不相同</strong>，不是设备。上面的例子要分清两层：<strong>「移动」这个动作，WASD 和摇杆语义相同</strong>（都是"往一个方向位移"）；<strong>「选宝物」这个交互，键鼠和手柄语义不同</strong>（键鼠是"点位置"、手柄是"按键"）——这两个<strong>是不同的事</strong>，不是"有时设备相同语义、有时不同"。</p>
-<h3 id="41-action-processor">4.1 action 定义层的 processor：处理"单击 / 长按 / 框选"</h3>
-<p><strong>同一个物理左键，怎么区分"单击（点选）"和"按下→拖动→抬起（框选）"？</strong> 这是 <strong>action 定义层的 processor</strong>（时间序列处理器）的职责，<strong>不属于 context 的职责</strong>——照 Unity Input System 的 <strong>Interactions</strong> / UE Enhanced Input 的 <strong>Triggers</strong> 结构：</p>
-<ul>
-<li><strong>Interactions / Triggers（时间序列）</strong>：决定"怎么算触发"——<code>Tap</code>（单击，按下同位置抬起）、<code>Hold</code>（长按）、<code>Drag</code>（拖动，按下→移动→抬起）、<code>MultiTap</code>（连按）。</li>
-<li><strong>Processors / Modifiers（数值）</strong>：处理输入值——<code>Deadzone</code>、<code>Normalize</code>、<code>Scale</code>、<code>Invert</code>。</li>
-</ul>
-<p><strong>同一个物理左键，配不同的 Interaction，就是不同的 action：</strong></p>
-<pre><code class="language-jsonc">// 同一个 &lt;Mouse&gt;/leftButton，配不同 Interaction → 不同 action
-{ &quot;actionId&quot;: &quot;TapSelect&quot;,    &quot;path&quot;: &quot;&lt;Mouse&gt;/leftButton&quot;, &quot;interaction&quot;: &quot;Tap&quot; }         // 单击 → 点选
-{ &quot;actionId&quot;: &quot;BoxSelect&quot;,    &quot;path&quot;: &quot;&lt;Mouse&gt;/leftButton&quot;, &quot;interaction&quot;: &quot;Drag&quot; }       // 拖动 → 框选
+<h3 id="41-action-processor">4.1 框选 / 点选：按下与抬起两个裸边沿（Case E 合同）</h3>
+<p><strong>Case E 框选不靠 Tap/Drag 判定器。</strong> 同一个物理左键拆成两个语义动作，时机写在 action 定义的 <code>firesOn</code> 上：</p>
+<pre><code class="language-jsonc">// Case E 现行：按下开框、抬起落定；点选 = 零位移的同一次按下抬起
+{ "actionId": "CaseE.BoxSelectBegin", "path": "&lt;Mouse&gt;/leftButton" }                 // 缺省 firesOn=press
+{ "actionId": "CaseE.BoxSelectEnd",   "path": "&lt;Mouse&gt;/leftButton", "firesOn": "release" }
 </code></pre>
-<p><strong>注意：<code>Drag</code> 隐含"按下"——拖动必然要先按住，所以不写 <code>Hold+Drag</code></strong>（那只是一种 Interaction：<code>Drag</code>）。同理 <code>Tap</code> 隐含"按下后同位置抬起"。</p>
-<p><strong>所以"单击 vs 框选"在 action 定义层就分开了</strong>——单击是 <code>TapSelect</code>（点选），按住拖动是 <code>BoxSelect</code>（框选）。这是<strong>两个不同的 action</strong>，各自有语义，<strong>不是 context 去判断"这次是单击还是拖拽"</strong>。零长度框（同帧按下+抬起）也由 Interaction 的阈值/判定处理（<code>Tap</code> 就是"没拖动"的框选 → 点选）。</p>
-<p><strong>这属于 action 定义层的配置</strong>（绑定 + Interaction/Processor），和 scheme（物理→action 映射）、context（哪些 action 启用）分层明确：<strong>action 定义层管"怎么从物理输入识别出这个 action"，不掺 context。</strong></p>
+<ul>
+<li><strong>按下</strong> → <code>BoxSelectBegin</code> → 写起角、刷新候选集、激活「正在框选」context。</li>
+<li><strong>抬起</strong> → <code>BoxSelectEnd</code> → 再调同一张命中函数写 selected、停用 boxing。</li>
+<li><strong>点选</strong>：起角与抬起点重合（零位移矩形 × 单位屏幕包围盒），仍走同一条抬起图，不另配 Tap action、不另配点选图。</li>
+<li>拖拽中的框与预览<strong>跟着 boxing context 活</strong>，不靠再监听一套 Drag 完成脉冲。</li>
+</ul>
+<p><strong>和 Unity / UE 的关系</strong>：两边都有「时间序列判定」层（Unity Interactions / UE Triggers），常见是 Press / Hold / Tap（多半按<strong>时间</strong>）。<strong>没有</strong>现成的「拖了多少像素算 Drag」内置判定，也没有 Case E 这套 <code>ThresholdPixels</code> / <code>MaxTravelPixels</code>。引擎里保留 Tap/Hold/Drag 能力可以服务别的玩法；<strong>Case E 框选合同就是按下 / 抬起两个裸边沿</strong>，禁止再把框结束做成 Drag 完成、把点选做成独立 Tap action。</p>
+<p>这属于 action 定义层（绑定 + <code>firesOn</code>），和 scheme（物理→action）、context（哪些 action 启用、拖拽中挂哪些持续过程）分层明确。</p>
 <hr>
 <h2 id="5-context">5. 语义动作之后：它停在 context，还是走向意图</h2>
 <blockquote>
