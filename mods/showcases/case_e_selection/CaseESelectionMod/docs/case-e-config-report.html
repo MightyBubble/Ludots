@@ -99,7 +99,7 @@
       <span class="k">进图</span><span class="v">→ 实体出生（代码）</span>
       <span class="k">挂默认 context</span><span class="v">→ 模板配 initialInteractionContext（配置）</span>
       <span class="k">Definition 启用 trigger</span><span class="v">→ 绑定 + 启用的 trigger graph（配置）</span>
-      <span class="k">动作桥接</span><span class="v">→ 按下 → InputActionFired 事件（代码）</span>
+      <span class="k">语义动作直绑</span><span class="v">→ 按下 → 图入口 action（配置）</span>
       <span class="k">trigger 触发</span><span class="v">→ 框开始 → 画框 → 框结束 → 写集合（配置图体 + 代码基建）</span>
     </div>
   </div>
@@ -163,14 +163,14 @@
       <div class="box">
         <h4>这是怎么触发的</h4>
         <div class="kv" style="font-size:12.5px">
-          graph.box_select 的 entry <b>挂载在 InputActionFired 事件上</b>（entry 的 event 字段）。左键按下 → "框开始"这个 InputActionFired 事件来了 → <b>graph.box_select 被触发</b>。
+          graph.box_select 的 entry <b>直绑语义动作</b>（entry 的 action 字段）。左键按下 → CaseE.BoxSelectBegin 触发 → <b>graph.box_select 被触发</b>。
         </div>
       </div>
       <div class="box">
         <h4>配置结构：trigger graph entry</h4>
         <div class="form" style="margin-top:0;border:none;background:transparent;padding:0">
-          <div class="field"><span class="fname">event<span class="ftype">string</span></span><span class="fdesc">挂载监听的事件（InputActionFired）</span></div>
-          <div class="field"><span class="fname">filters<span class="ftype">object · 可选</span></span><span class="fdesc">过滤条件（只响应 BoxSelect 这个 action）</span></div>
+          <div class="field"><span class="fname">action<span class="ftype">string</span></span><span class="fdesc">直绑的语义动作（CaseE.BoxSelectBegin）</span></div>
+          <div class="field"><span class="fname">firesOn<span class="ftype">action 定义</span></span><span class="fdesc">按下/松手时机写在 InputActionDef，不进图 entry</span></div>
         </div>
       </div>
       <div class="box">
@@ -198,10 +198,10 @@
           </defs>
           <text class="gkind" x="15" y="18">trigger graph（Event Graph 形态：有事件入口 + exec 执行流 + data 参数流）</text>
 
-          <!-- 事件入口：InputActionFired -->
+          <!-- 入口：语义动作直绑 -->
           <rect class="gnode" x="15" y="90" width="170" height="80" rx="6"/>
           <text x="25" y="112">事件: 左键按下</text>
-          <text class="lbl" x="25" y="126">InputActionFired</text>
+          <text class="lbl" x="25" y="126">action=BoxSelectBegin</text>
           <text class="lbl" x="25" y="140">action=BoxSelect</text>
           <text class="lbl" x="25" y="154">source=玩家 rep</text>
           <!-- exec 输出 -->
@@ -497,7 +497,7 @@
       <tr><td style="padding:8px 11px;border-bottom:1px solid var(--border)">02 挂默认</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">挂 Instance</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">instance, ref(Definition), owner</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">模板 initialInteractionContext</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">配置+代码</td></tr>
       <tr><td style="padding:8px 11px;border-bottom:1px solid var(--border)">03 启用 trigger</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">Definition 激活</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">—（配置激活，不透传）</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">InteractionContextDefinition</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">配置</td></tr>
       
-      <tr><td style="padding:8px 11px;border-bottom:1px solid var(--border)">04 触发/画框</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">graph 触发</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">action, source, groundPoint, contextId, rep</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">graph entry{event, filters}</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">配置+代码</td></tr>
+      <tr><td style="padding:8px 11px;border-bottom:1px solid var(--border)">04 触发/画框</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">graph 触发</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">action, source, groundPoint, contextId, rep</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">graph entry{action}</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">配置</td></tr>
       <tr><td style="padding:8px 11px;border-bottom:1px solid var(--border)">05 拖拽中</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">持续过程</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">命中集（每帧算）</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">query graph + presenter rule</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">配置+代码</td></tr>
       <tr><td style="padding:8px 11px;border-bottom:1px solid var(--border)">06 写集合</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">框结束→写</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">rectangle, entitySet, modifier, op, collectionKey</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">graph 图体 + 修饰键绑定</td><td style="padding:8px 11px;border-bottom:1px solid var(--border)">配置图体</td></tr>
     </tbody>

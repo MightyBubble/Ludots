@@ -15,7 +15,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// when the action's configured moment (press started / release completed) fires,
     /// stamps the shared InputAction payload (rep from the mount subject, pointer
     /// window pixels, held modifiers) and executes the mount. Replaces the retired
-    /// InputActionFired bridge.
+    /// retired input-action bridge.
     /// </summary>
     public sealed class TriggerGraphActionBindingSystem : Arch.System.ISystem<float>
     {
