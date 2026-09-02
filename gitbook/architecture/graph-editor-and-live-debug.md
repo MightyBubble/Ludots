@@ -68,7 +68,7 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 1. 编辑器加载与游戏同一 `graphId`（如 `Graph.NightRaid.Flow`）。
 2. 右侧 Live Debug → 选择已挂载入口 → Watch。
 3. 工具动作：`list` → `configure { mode: nodeAndPins }` → `drain { since }`；drain 事件带 `nodeId` / `op` / `controlPort` / pin 值。
-4. 画布做 Flow Canvas 式可视化：**控制边**走暖黄粗线 + 流动光点（只亮当前走过的路径）；**数值边**走细实线，当前值标在线上或引脚旁（不用虚线）；节点本身只做轻量高亮，热度约 2 秒内衰减。配色参考 agent 前端套件（zinc 深色画布、n8n 节点壳、暖黄执行 / 冷蓝数据）。Watch 某一入口时只留下从该入口可达的短链（含其间的数值边），其它链隐藏；同时自动收起左右侧栏，把 Live Debug 收到画布底栏，方便单屏「左游戏右编辑器」。右侧日志只是辅助轨迹，不再是唯一反馈。
+4. 画布做 Flow Canvas 式可视化：**控制边**走暖黄粗线 + 流动光点（只亮当前走过的路径）；**数值边**走细实线，当前值标在线上或引脚旁（不用虚线）；节点本身只做轻量高亮，热度约 2 秒内衰减。配色参考 agent 前端套件（zinc 深色画布、n8n 节点壳、暖黄执行 / 冷蓝数据）。Watch 某一入口时只留下从该入口可达的短链（含其间的数值边），其它链隐藏；同时自动收起左右侧栏，把 Live Debug 收到画布底栏，方便单屏「左游戏右编辑器」。夜袭图上，Watch `on_raider_died` / `on_elite_raider_died` 时底栏会用人话标出事件流（杀敌 → 计数 → 够门槛刷 Boss），并随当前节点切换「正在走」的那一步。右侧日志只是辅助轨迹，不再是唯一反馈。
 5. 不声称完整 `NodeExit` 生命周期。嵌套 `InvokeScript` 记录带 `graphId`；source map 缺失时 AgentBridge 失败关闭，错误含 graph id 与 pc。
 
 ### 3.4 TriggerGraph 事件入口
@@ -81,7 +81,7 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 
 1. 新人打开 `/gas-graphs`，加载夜袭 Flow 图，看见控制端口与 Bridge 投影的作者糖，Validate 通过。
 2. 故意加未连线的 Until，Validate 点名缺 `body`/`next`/`condition`。
-3. 夜袭 + AgentBridge 运行中，Watch 后看到节点/连线亮起与 pin 芯片，而不只是右侧日志滚动。
+3. 夜袭 + AgentBridge 运行中，Watch `on_raider_died`：右边只剩「杀敌刷 Boss」短链，底栏写清事件流；游戏里右键处决敌人后，链路上的节点与暖黄控制边亮起，击杀够门槛时走到刷 Boss 那段。
 4. TriggerGraph 事件入口从 Schema 下拉选事件，检查器列出载荷针。
 5. 在 Script 图里加入 `FsmState`，填写枚举与相位变量并挂 case 臂，保存后再打开字段仍在。
 6. 在 Script 图里加入 `BtSequence`，用 child 臂挂子节点；`BtDecorator` 选 `decoratorKind` 后连 `child:0`，保存后再打开仍在。
@@ -114,16 +114,17 @@ Feature: 蓝图编辑器与 live debug 可教可验
     When 我点 Validate
     Then 编译失败并点名缺 body、next、condition
 
-  Scenario: Live debug 看见执行
+  Scenario: Live debug 看见杀敌刷 Boss
     Given 夜袭 showcase 与 AgentBridge 正在跑
     And tools 目录含 ludots.graph.debug
-    When 我在编辑器对 Graph.NightRaid.Flow 打开 Watch
-    Then 画布只留下该入口可达的短链，其它链不可见
-    And 画布上当前节点亮起并带 LIVE 标记
-    And 最近走过的控制边加粗动画
-    And 有 pin 变化时节点上出现数值芯片
-    And 右侧事件流仍可见节点归因或挂起/停机记录
-    And 缺 source map 时请求失败并点名 graph 与 pc
+    And 编辑器已加载 Graph.NightRaid.Flow
+    When 我 Watch on_raider_died
+    Then 底栏写出「杀敌刷 Boss」和事件流摘要
+    And 画布只留下该入口可达的短链，其它链不可见
+    When 我在战场右键处决一名可杀敌人
+    Then 短链按记击杀 → 对照门槛的顺序亮起暖黄控制边
+    And 底栏「正在走」会跟着当前节点换成对应人话
+    And 击杀数达到门槛时，链路继续亮到刷 Boss / 提醒面板
 
   Scenario: 左键瞬移看得到落点
     Given 夜袭 showcase 与 AgentBridge 正在跑
