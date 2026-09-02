@@ -165,7 +165,7 @@ namespace Ludots.Core.Input.Runtime
             if (InputBlocked)
             {
                 // Suppressed frames read as up without erasing gesture history: wiping the
-                // press/release moment memory here fabricates a fresh press-started when the
+                // previous-frame press/release memory here fabricates a fresh press when the
                 // block lifts while the button is still held, and re-anchoring interaction
                 // judges mid-gesture re-measures travel from the re-anchor so long drags
                 // misjudge as taps.
@@ -263,8 +263,8 @@ namespace Ludots.Core.Input.Runtime
         /// Steps every configured interaction of one binding against the raw press state
         /// and this frame's pointer; true on exactly the frame one of the time-sequence
         /// judges completes. The gated contribution is a one-frame pulse, so the action's
-        /// press/release detectors report the completion as a press-started that folds into
-        /// the tick snapshot like any other action press-started.
+        /// PressedThisFrame detectors report the completion as pressed-this-frame and it
+        /// folds into the tick snapshot like any other action press.
         /// </summary>
         private static bool EvaluateBindingInteractions(
             CompiledBinding binding,
@@ -587,8 +587,8 @@ namespace Ludots.Core.Input.Runtime
         /// <summary>
         /// Compiles a binding's Interactions: time-sequence judges (Tap/Hold/Drag/MultiTap)
         /// that turn the raw button press into a completion pulse. Only button-like sources
-        /// carry them — a time sequence over an axis or pointer stream has no press-started
-        /// moment to judge, so those fail closed at compile instead of silently passing through.
+        /// carry them — a time sequence over an axis or pointer stream has no press/release
+        /// to judge, so those fail closed at compile instead of silently passing through.
         /// </summary>
         private static CompiledInteraction[] CompileInteractions(List<InputModifierDef> interactionDefs, string? path, BindingSourceKind sourceKind)
         {
@@ -600,7 +600,7 @@ namespace Ludots.Core.Input.Runtime
             if (sourceKind != BindingSourceKind.Button && sourceKind != BindingSourceKind.CompositeButtonChord)
             {
                 throw new InvalidOperationException(
-                    $"LUDOTS_INPUT_INTERACTION_UNSUPPORTED_SOURCE: binding '{path}' declares Interactions on a non-button source ({sourceKind}); time-sequence judging needs a press-started moment.");
+                    $"LUDOTS_INPUT_INTERACTION_UNSUPPORTED_SOURCE: binding '{path}' declares Interactions on a non-button source ({sourceKind}); time-sequence judging needs a button press.");
             }
 
             var compiled = new CompiledInteraction[interactionDefs.Count];

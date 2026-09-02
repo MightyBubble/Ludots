@@ -19,7 +19,7 @@ namespace Ludots.Tests.Gas.Graph;
 /// Real-machine rhythm regression for the context trigger gate: visual frames decouple from
 /// logic ticks (jittered frame delta, accumulator catch-up bursts) while a derived context is
 /// held for a long drag, with periodic UI-capture windows like the pointer crossing interactive
-/// UI mid-drag. A held button must not re-report press edges after blocked frames (duplicate
+/// UI mid-drag. A held button must not re-report pressed-this-frame after blocked frames (duplicate
 /// action-bound TriggerGraph re-executes context graphs), interaction judges must keep their gesture
 /// anchor across blocked frames (long drags must not misjudge as taps), and the profile's
 /// triggers must mount exactly once per context activation.
@@ -95,7 +95,7 @@ public sealed class InteractionContextGateChurnRegressionTests
         engine.SetService(CoreServiceKeys.UiCaptured, false);
 
         Assert.That(spuriousPressEdges, Is.EqualTo(0),
-            "UI 捕获窗口结束后按钮仍按住，不得伪造新的按下边沿");
+            "UI 捕获窗口结束后按钮仍按住，不得伪造新的本帧按下");
         Assert.That(BoxingActive(engine, commander)(), Is.True, "长持期间 boxing context 保持激活");
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0),
             $"触发图执行不应出错：{string.Join(" | ", engine.TriggerManager.Errors)}");

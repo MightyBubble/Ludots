@@ -10,7 +10,7 @@ namespace Ludots.Tests.GAS
     /// <summary>
     /// Binding Interactions runtime: the same physical key bound to different actions
     /// with different time-sequence judges (Tap / Hold / Drag / MultiTap) produces
-    /// different action edges, judged on the visual-frame cadence per the input/command
+    /// different action presses, judged on the visual-frame cadence per the input/command
     /// constitution: Tap = press then release at the same position; Drag = press, move,
     /// release (press implied, never stacked with Hold); a zero-travel press completes
     /// Tap, not Drag; MultiTap completes inside its tap window.
@@ -33,8 +33,8 @@ namespace Ludots.Tests.GAS
             backend.MousePosition = new Vector2(140f, 100f);
             handler.Update(FrameSeconds);
 
-            Assert.That(handler.PressedThisFrame("TapSelect"), Is.False, "no release yet: no Tap edge");
-            Assert.That(handler.PressedThisFrame("BoxSelect"), Is.False, "no release yet: no Drag edge");
+            Assert.That(handler.PressedThisFrame("TapSelect"), Is.False, "no release yet: no Tap completion");
+            Assert.That(handler.PressedThisFrame("BoxSelect"), Is.False, "no release yet: no Drag completion");
 
             backend.Buttons["<Mouse>/leftButton"] = false;
             handler.Update(FrameSeconds);
@@ -82,7 +82,7 @@ namespace Ludots.Tests.GAS
             handler.Update(FrameSeconds);
 
             Assert.That(handler.PressedThisFrame("TapSelect"), Is.False,
-                "Tap completes on release, not on the press edge");
+                "Tap completes on release, not on the press");
             Assert.That(handler.IsDown("TapSelect"), Is.False,
                 "an interaction-gated action is not down while its judge is pending");
         }
@@ -207,7 +207,7 @@ namespace Ludots.Tests.GAS
             handler.Update(FrameSeconds);
 
             Assert.That(handler.PressedThisFrame("PlainPress"), Is.True,
-                "bindings without interactions keep the raw press edge");
+                "bindings without interactions keep the raw pressed-this-frame");
             Assert.That(handler.IsDown("PlainPress"), Is.True);
         }
 
