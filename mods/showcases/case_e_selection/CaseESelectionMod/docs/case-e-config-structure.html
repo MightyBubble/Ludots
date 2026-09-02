@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case E：配置结构（修订）</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#1b2030; --panel2:#202739; --border:#2b3247;
+    --text:#dfe3ec; --dim:#97a3b8; --faint:#6f7a90;
+    --accent:#5aa5ff; --accent2:#37d0b0; --warn:#f0b45a; --ok:#46c98b; --bad:#ff7a76;
+    --mono:"SF Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7;font-size:15px;padding-bottom:90px}
+  .wrap{max-width:1100px;margin:0 auto;padding:36px 28px}
+
+  .hero{padding:36px 0 22px;border-bottom:1px solid var(--border);margin-bottom:26px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent2);margin-bottom:9px}
+  .hero h1{font-size:27px;font-weight:700;margin-bottom:10px}
+  .hero p{color:var(--dim);max-width:860px}
+
+  h2{font-size:19px;font-weight:700;margin:38px 0 12px;display:flex;align-items:center;gap:10px}
+  h2 .no{font-family:var(--mono);color:var(--accent);font-size:13px;background:rgba(90,165,255,.12);padding:2px 9px;border-radius:6px;border:1px solid rgba(90,165,255,.28)}
+  h3{font-size:15px;font-weight:600;margin:20px 0 8px}
+
+  .step{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin:16px 0}
+  .step h3{display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap}
+  .tag{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:5px;border:1px solid}
+  .tag.cfg{color:var(--warn);border-color:rgba(240,180,90,.4);background:rgba(240,180,90,.08)}
+  .tag.code{color:var(--accent2);border-color:rgba(55,208,176,.4);background:rgba(55,208,176,.08)}
+  .tag.gap{color:var(--bad);border-color:rgba(255,122,118,.45);background:rgba(255,122,118,.08)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+  .box{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .box h4{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--accent)}
+  .box h4.code{color:var(--accent2)}
+  .kv{font-size:12.5px;color:var(--dim);line-height:1.8}
+  .kv .k{font-family:var(--mono);color:var(--accent);background:rgba(90,165,255,.08);padding:1px 6px;border-radius:4px;margin-right:6px;font-size:12px}
+  .kv .v{color:var(--text)}
+  .kv .dim{color:var(--faint)}
+
+  .form{background:var(--panel2);border:1px dashed var(--border);border-radius:10px;padding:16px 18px;margin-top:14px}
+  .form .ft{font-size:12px;font-family:var(--mono);color:var(--faint);margin-bottom:10px;letter-spacing:.05em}
+  .field{display:grid;grid-template-columns:220px 1fr;gap:8px 14px;align-items:baseline;padding:7px 0;border-bottom:1px solid rgba(43,50,71,.5);font-size:13px}
+  .field:last-child{border-bottom:none}
+  .field .fname{font-family:var(--mono);font-size:12.5px;color:var(--accent)}
+  .field .ftype{font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:6px}
+  .field .fdesc{color:var(--dim);font-size:12.5px}
+  @media(max-width:700px){.field{grid-template-columns:1fr}}
+
+  .flowbox{background:linear-gradient(180deg,rgba(90,165,255,.05),transparent);border:1px solid rgba(90,165,255,.22);border-radius:10px;padding:14px 16px;margin-top:12px}
+  .flowbox .ft{font-size:12px;font-family:var(--mono);color:var(--accent);margin-bottom:8px;letter-spacing:.05em}
+  .payload{display:flex;flex-wrap:wrap;gap:8px}
+  .pl{font-family:var(--mono);font-size:11.5px;color:var(--dim);background:var(--bg);border:1px solid var(--border);padding:4px 9px;border-radius:6px}
+  .pl b{color:var(--accent);font-weight:600}
+
+  .callout{border-left:3px solid var(--warn);background:rgba(240,180,90,.06);padding:10px 14px;margin:12px 0;border-radius:0 8px 8px 0;font-size:13px;color:var(--dim)}
+  .callout.bad{border-left-color:var(--bad);background:rgba(255,122,118,.06)}
+  .callout.ok{border-left-color:var(--ok);background:rgba(70,201,139,.06)}
+
+  footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--border);color:var(--faint);font-size:12px;font-family:var(--mono)}
+
+  .gflow{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:12px;overflow-x:auto}
+  .gflow .gt{font-size:11.5px;font-family:var(--mono);color:var(--faint);margin-bottom:8px;letter-spacing:.04em}
+  .gnode{fill:var(--panel2);stroke:var(--accent);stroke-width:1.2;rx:6}
+  .gnode text{fill:#dfe3ec;font-size:12px;font-family:var(--mono)}
+  .gnode .lbl{fill:#97a3b8;font-size:10.5px}
+  .gpin-in{fill:#37d0b0;stroke:#37d0b0;stroke-width:1.5}
+  .gpin-out{fill:#5aa5ff;stroke:#5aa5ff;stroke-width:1.5}
+  .gpin-lbl{fill:#97a3b8;font-size:10px;font-family:var(--mono)}
+  .gexec{fill:#ffffff;stroke:#ffffff;stroke-width:1.5}
+  .gexec-lbl{fill:#c8d2e0;font-size:10px;font-family:var(--mono)}
+  .eexec{stroke:#ffffff;stroke-width:2;fill:none;marker-end:url(#earrow)}
+  .edata{stroke:#5aa5ff;stroke-width:1.4;fill:none;marker-end:url(#darrow)}
+  .gkind{font-size:10px;font-family:var(--mono);fill:#5aa5ff}
+
+  table.summary{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+  table.summary th{text-align:left;color:var(--faint);padding:9px 11px;border-bottom:1px solid var(--border)}
+  table.summary td{padding:8px 11px;border-bottom:1px solid var(--border);color:var(--dim);vertical-align:top}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="kicker">Case E · 配置结构修订（落地合同）</div>
+    <h1>框选：矩形单源 · 一张命中 Query · 预览/已选中同面</h1>
+    <p>
+      本文是 Case E 框选链路的<strong>现行配置合同</strong>，粒度对齐旧版宪法 HTML（每步：事件 / 透传 / 字段表 / 配置还是代码 / 流图）。
+      相对旧版，修正四件事：矩形只留起角 + 活指针；命中只配一张 Query，Trigger 与拖拽调度都调用它；候选不必进重型集合仓库；废弃临时字段名 <span class="k">continuousQuery</span>，改成 context 的 <span class="k">whileActive</span>。
+      01–03 与旧版同构，从 04 起按修订写。
+    </p>
+  </div>
+
+  <div class="callout ok">
+    <b>和旧文档的关系</b>：旧 <code>case-e-config-report.html</code> 保留作对照；<strong>以本文为准</strong>落地与验收。文中标 <span class="tag gap">缺口</span> 的项是引擎尚缺、必须先补再建 Case E 资产的能力。
+  </div>
+
+  <!-- 00 -->
+  <h2><span class="no">00</span>全链路概览</h2>
+  <div class="box">
+    <div class="kv">
+      <span class="k">01 进图</span><span class="v">实体出生</span><br>
+      <span class="k">02 挂默认</span><span class="v">模板 initialInteractionContext → 战斗 context</span><br>
+      <span class="k">03 启用边沿</span><span class="v">profile.triggers[] 挂抬起/点选 TriggerGraph</span><br>
+      <span class="k">04 框开始</span><span class="v">记下起角（一个变量）→ 激活「正在框选」→ 可选刷新候选名单</span><br>
+      <span class="k">05 拖拽中</span><span class="v">whileActive 每帧：起角 + 当前指针 → 调同一张命中 Query → 写预览集</span><br>
+      <span class="k">06 框结束</span><span class="v">Trigger：再调同一张命中 Query（或读当帧预览）+ 修饰语义 → 写已选中 → 停用框选 → 预览清空</span><br>
+      <span class="k">07 高亮</span><span class="v">预览集 / 已选中集都走「集合成员变化」事件；presenter 只换订阅 key</span>
+    </div>
+  </div>
+
+  <div class="box" style="margin-top:12px">
+    <h4>三层语义（玩家侧）</h4>
+    <div class="form" style="margin-top:8px">
+      <div class="ft">不是三个同等重量的仓库对象——只有「谁会被画环」才必须进成员事件面</div>
+      <div class="field"><span class="fname">候选<span class="ftype">命中入参</span></span><span class="fdesc">能被框的人。默认在命中 Query 图内用过滤算出来（临时名单）。<b>不必</b>写入 EntityCollectionStore。若作者要缓存可写，但是可选优化，不是合同。</span></div>
+      <div class="field"><span class="fname">预览<span class="ftype">collection key</span></span><span class="fdesc">拖拽时框里现在是谁。写入轻量预览集合（如 case_e.box_hover），驱动黄环。离开「正在框选」必须清空。</span></div>
+      <div class="field"><span class="fname">已选中<span class="ftype">collection key</span></span><span class="fdesc">松手后正式结果（如 selected），驱动蓝环；支持 replace / add / subtract。</span></div>
+    </div>
+  </div>
+
+  <!-- 01 -->
+  <h2><span class="no">01</span>进图：实体出生</h2>
+  <div class="step">
+    <h3>事件：实体出生 <span class="tag code">代码</span></h3>
+    <div class="flowbox">
+      <div class="ft">事件透传参数</div>
+      <div class="payload">
+        <span class="pl"><b>entity</b> 出生的 rep</span>
+        <span class="pl"><b>templateId</b> 模板</span>
+      </div>
+    </div>
+    <div class="form">
+      <div class="ft">配置结构：实体模板</div>
+      <div class="field"><span class="fname">templateId<span class="ftype">string</span></span><span class="fdesc">如 case_e_commander</span></div>
+      <div class="field"><span class="fname">initialInteractionContext<span class="ftype">string</span></span><span class="fdesc">出生挂哪个 context profile id（战斗）</span></div>
+    </div>
+  </div>
+
+  <!-- 02 -->
+  <h2><span class="no">02</span>出生挂默认 context</h2>
+  <div class="step">
+    <h3>动作：挂 InteractionContextInstance <span class="tag cfg">配置</span> + <span class="tag code">代码</span></h3>
+    <div class="kv">出生代码读模板 <span class="k">initialInteractionContext</span> → 挂 Instance。挂哪个是配置，怎么挂是代码。</div>
+  </div>
+
+  <!-- 03 -->
+  <h2><span class="no">03</span>Definition：边沿 trigger + 存活期 whileActive</h2>
+  <div class="step">
+    <h3>配置：InteractionContext profile <span class="tag cfg">配置</span></h3>
+    <div class="callout">
+      <b>不要</b>使用已落地的临时字段名 <code>continuousQuery</code>。合同字段是 <code>whileActive</code>：context 活着时每仿真 tick 跑哪些 <b>Query</b>。边沿图仍走 <code>triggers[]</code>。
+    </div>
+    <div class="form">
+      <div class="ft">配置结构：Input/interaction_context_profiles.json · 一条 profile</div>
+      <div class="field"><span class="fname">id<span class="ftype">string</span></span><span class="fdesc">如 interaction.context.case_e.boxing</span></div>
+      <div class="field"><span class="fname">activeCollectionKey<span class="ftype">string</span></span><span class="fdesc">该 context 下施法/指令路由用的集合 key（与框选预览无关）</span></div>
+      <div class="field"><span class="fname">activeEntityViewKey<span class="ftype">string</span></span><span class="fdesc">对外视图 key</span></div>
+      <div class="field"><span class="fname">bindings<span class="ftype">string[]</span></span><span class="fdesc">此 context 下成立的语义动作 id</span></div>
+      <div class="field"><span class="fname">triggers[]<span class="ftype">mount</span></span><span class="fdesc"><b>边沿</b> TriggerGraph 挂载（按下/抬起/点选完成）。结构同现网：trigger / 可选 event / 可选 filters</span></div>
+      <div class="field"><span class="fname">whileActive[]<span class="ftype">mount · 新</span></span><span class="fdesc"><b>存活期</b>：context 已挂载的每个逻辑 tick，对 subject 执行列出的 Query。不是边沿，不监听 action。</span></div>
+    </div>
+    <div class="form">
+      <div class="ft">whileActive[] 每一项</div>
+      <div class="field"><span class="fname">query<span class="ftype">string · GraphKind.Query id</span></span><span class="fdesc">必填。必须是已注册 Query；安装时校验 kind=Query，且至少有一个 EntityCollection 类 output（预览集物化）。</span></div>
+    </div>
+    <div class="form">
+      <div class="ft">Case E · boxing profile 作者形态（示意）</div>
+      <div class="field"><span class="fname">triggers</span><span class="fdesc">graph.case_e.box_commit、graph.case_e.tap_commit</span></div>
+      <div class="field"><span class="fname">whileActive</span><span class="fdesc">[{ "query": "graph.case_e.box_hit" }]</span></div>
+    </div>
+    <div class="box" style="margin-top:12px">
+      <h4 class="code">谁跑 whileActive</h4>
+      <div class="kv">
+        代码：context 存活期调度系统（可从现有 ContinuousQuery 脚手架改名/改字段）。每 tick：有 whileActive 的挂载实例 → 以 context subject 为 owner/caster 执行 Query → GraphReturnWriter 按 output schema 写集合。
+        离开 context → 按该 Query 的 EntityCollection outputs <b>清空</b>（预览灭）。
+        <span class="dim">没有「continuousQuery」这个产品概念；只有 whileActive 调度 + Query 资产。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 -->
+  <h2><span class="no">04</span>框开始：记起角 + 进「正在框选」</h2>
+  <div class="step">
+    <h3>事件：框开始语义动作（按下） <span class="tag cfg">配置图体</span></h3>
+    <div class="grid2">
+      <div class="box">
+        <h4>触发</h4>
+        <div class="kv">战斗 context 的 triggers 挂 <span class="k">graph.case_e.box_begin</span>；entry.action = CaseE.BoxSelectBegin（firesOn=press，写在 InputActionDef）。</div>
+      </div>
+      <div class="box">
+        <h4>进入图体的 payload</h4>
+        <div class="payload" style="margin-top:4px">
+          <span class="pl"><b>rep</b> MapTrigger.Rep</span>
+          <span class="pl"><b>pointerScreenX/Y</b> 按下瞬间窗口像素</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout ok">
+      <b>矩形事实（修订）</b>：只要两个点。<br>
+      ① <b>起角</b>：按下时写入 <em>一个</em> 地图变量（或等价的单一存档槽），全程不再改。<br>
+      ② <b>活角</b>：之后一律向 <em>指针屏幕位置 helper</em> 取当前（或抬起）窗口像素——不另建第二套 Press 属性专供命中、不在 commit 再从别处拼角。
+    </div>
+
+    <div class="form">
+      <div class="ft">框开始图体必须做的事</div>
+      <div class="field"><span class="fname">写起角<span class="ftype">WriteMapVarFloat ×2</span></span><span class="fdesc">如 case_e_press_px / case_e_press_py ← payload 指针。这是矩形起角的唯一写入点。</span></div>
+      <div class="field"><span class="fname">ActivateContext<span class="ftype">op</span></span><span class="fdesc">激活 interaction.context.case_e.boxing（父=战斗）。框 presenter / whileActive 跟着活。</span></div>
+      <div class="field"><span class="fname">候选（可选）<span class="ftype">图内过滤</span></span><span class="fdesc">若命中 Query 自己从世界过滤候选，开始图<strong>不必</strong>写 case_e.selectable。若作者要缓存名单，可在此 DispatchCollectionEvent 写入——可选，不是合同。</span></div>
+    </div>
+
+    <div class="form">
+      <div class="ft">明确不做</div>
+      <div class="field"><span class="fname">不再双写<span class="ftype">—</span></span><span class="fdesc">不为命中再 ModifyAttributeSet 一套 CaseE.Press*（旧路径）。表现层若仍要属性驱动 ScreenRect，由「指针 helper → 属性绑定」承担活角，起角由单一 map var 经绑定或专用读口进 presenter——但命中链路只认 map var + helper。</span></div>
+    </div>
+
+    <div class="gflow">
+      <div class="gt">trigger graph · 框开始（修订）</div>
+<svg width="780" height="200" viewBox="0 0 780 200" xmlns="http://www.w3.org/2000/svg" style="fill:#dfe3ec">
+  <defs>
+    <marker id="earrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#ffffff"/></marker>
+    <marker id="darrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5aa5ff"/></marker>
+  </defs>
+  <text class="gkind" x="15" y="18">TriggerGraph：按下 → 记起角 → 激活 boxing</text>
+  <rect class="gnode" x="20" y="70" width="150" height="70" rx="6"/>
+  <text x="30" y="95">按下 payload</text>
+  <text class="lbl" x="30" y="112">pointer + rep</text>
+  <circle class="gexec" cx="170" cy="90" r="5"/>
+  <circle class="gpin-out" cx="170" cy="120" r="4"/>
+  <rect class="gnode" x="240" y="55" width="160" height="90" rx="6"/>
+  <text x="250" y="80">写起角</text>
+  <text class="lbl" x="250" y="98">map var px/py</text>
+  <text class="lbl" x="250" y="114">唯一写入</text>
+  <circle class="gexec" cx="240" cy="75" r="5"/>
+  <circle class="gexec" cx="400" cy="75" r="5"/>
+  <rect class="gnode" x="480" y="55" width="180" height="90" rx="6"/>
+  <text x="490" y="80">ActivateContext</text>
+  <text class="lbl" x="490" y="98">boxing</text>
+  <text class="lbl" x="490" y="114">→ whileActive 开始</text>
+  <circle class="gexec" cx="480" cy="75" r="5"/>
+  <path class="eexec" d="M170,90 C200,90 200,75 240,75"/>
+  <path class="eexec" d="M400,75 C440,75 440,75 480,75"/>
+  <path class="edata" d="M170,120 C200,120 200,130 240,130"/>
+</svg>
+    </div>
+  </div>
+
+  <!-- 05 -->
+  <h2><span class="no">05</span>命中 Query（唯一）+ 拖拽中 whileActive</h2>
+  <div class="step">
+    <h3>一张纯计算 Query：所有命中只配这一遍 <span class="tag cfg">配置</span> + <span class="tag code">代码调度</span></h3>
+
+    <div class="box" style="margin-bottom:12px">
+      <h4>① 矩形两个脚从哪来（调用方接线，不是图外第二套 API）</h4>
+      <div class="kv">
+        Query 只声明 data 入参：起角 x/y、活角 x/y、以及候选名单（图内算出或外部传入）。<br>
+        <b>拖拽 whileActive 调用方</b>：起角 = ReadMapVar；活角 = <b>指针屏幕位置 helper</b>（当前帧）。<br>
+        <b>松手 Trigger 调用方</b>：起角 = 同一 map var；活角 = 抬起 payload 的指针（或同一 helper 在抬起帧的值）。<br>
+        禁止：一边读属性、一边读 map var、一边读 payload 拼第三套角。
+      </div>
+    </div>
+
+    <div class="form">
+      <div class="ft">配置结构：graph.case_e.box_hit · kind=Query</div>
+      <div class="field"><span class="fname">kind<span class="ftype">Query</span></span><span class="fdesc">无事件入口、无世界副作用（除通过 output schema 物化集合——由 GraphReturnWriter 在调用方执行后写入）</span></div>
+      <div class="field"><span class="fname">候选段<span class="ftype">图内</span></span><span class="fdesc">推荐：QueryAllMapEntities → FilterTeam → FilterTemplate（或标签）。产出临时 TargetList。<b>不要求</b>先有 case_e.selectable 集合。</span></div>
+      <div class="field"><span class="fname">矩形段<span class="ftype">data in</span></span><span class="fdesc">四个 float：pressX/pressY/liveX/liveY（命名以图内端口为准），进 ScreenRegionToEntities</span></div>
+      <div class="field"><span class="fname">outputs[]<span class="ftype">EntityCollection</span></span><span class="fdesc">collectionKey = 预览 key（如 case_e.box_hover）；role = AcquisitionPreview。whileActive / GraphReturnWriter 用它物化预览。</span></div>
+    </div>
+
+    <div class="gflow">
+      <div class="gt">Query · 命中（示意）</div>
+<svg width="820" height="240" viewBox="0 0 820 240" xmlns="http://www.w3.org/2000/svg" style="fill:#dfe3ec">
+  <defs>
+    <marker id="darrow2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5aa5ff"/></marker>
+  </defs>
+  <text class="gkind" x="15" y="18">func Query：候选过滤 + 屏幕矩形 → TargetList（output → 预览集）</text>
+  <rect class="gnode" x="20" y="40" width="140" height="55" rx="6"/>
+  <text x="30" y="62">起角</text>
+  <text class="lbl" x="30" y="78">map var</text>
+  <circle class="gpin-out" cx="160" cy="65" r="4"/>
+  <rect class="gnode" x="20" y="110" width="140" height="55" rx="6"/>
+  <text x="30" y="132">活角</text>
+  <text class="lbl" x="30" y="148">pointer helper</text>
+  <circle class="gpin-out" cx="160" cy="135" r="4"/>
+  <rect class="gnode" x="20" y="175" width="140" height="50" rx="6"/>
+  <text x="30" y="197">候选</text>
+  <text class="lbl" x="30" y="212">图内过滤</text>
+  <circle class="gpin-out" cx="160" cy="200" r="4"/>
+  <rect class="gnode" x="280" y="80" width="180" height="100" rx="6"/>
+  <text x="290" y="110">ScreenRegionToEntities</text>
+  <text class="lbl" x="290" y="128">矩形 ∩ 候选</text>
+  <circle class="gpin-in" cx="280" cy="100" r="4"/>
+  <circle class="gpin-in" cx="280" cy="130" r="4"/>
+  <circle class="gpin-in" cx="280" cy="160" r="4"/>
+  <circle class="gpin-out" cx="460" cy="130" r="4"/>
+  <rect class="gnode" x="540" y="90" width="200" height="80" rx="6"/>
+  <text x="550" y="118">output → box_hover</text>
+  <text class="lbl" x="550" y="138">EntityCollection</text>
+  <circle class="gpin-in" cx="540" cy="130" r="4"/>
+  <path class="edata" d="M160,65 C220,65 220,100 280,100"/>
+  <path class="edata" d="M160,135 C220,135 220,130 280,130"/>
+  <path class="edata" d="M160,200 C220,200 220,160 280,160"/>
+  <path class="edata" d="M460,130 C500,130 500,130 540,130"/>
+</svg>
+    </div>
+
+    <div class="box" style="margin-top:14px">
+      <h4>② 拖拽中 = whileActive 调这张 Query</h4>
+      <div class="kv">
+        不是再听 action。boxing context 活着 → 调度每 tick 调 query → Replace 预览集。<br>
+        高亮：<b>集合成员变化</b>才发事件（已有 EntityCollectionPresentationEventSystem），不是每帧打外观。
+      </div>
+      <div class="payload" style="margin-top:8px">
+        <span class="pl"><b>每帧</b> 起角+活角 → Query</span>
+        <span class="pl"><b>集变时</b> MemberAdded/Removed</span>
+        <span class="pl"><b>presenter</b> 订预览 key → 黄环</span>
+      </div>
+    </div>
+
+    <div class="box" style="margin-top:12px">
+      <h4>③ 指针 helper（合同名，实现可演进）</h4>
+      <div class="kv">
+        调用方需要「当前指针的窗口像素」。合同名：<span class="k">指针屏幕位置 helper</span>。<br>
+        实现可以是：既有 Input 动作 → 属性绑定后的读口、Aim/Screen 运行时、或图内专用读 op——<b>命中与框指示共用这一条活角来源</b>。<br>
+        <span class="dim">旧 CaseE.PointerX/Y 属性绑定若仍存在，只应作为 helper 的一种实现，不得再当第二套「命中专用角」。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 06 -->
+  <h2><span class="no">06</span>框结束：Trigger 调用同一张 Query → 写已选中</h2>
+  <div class="step">
+    <h3>事件：抬起 / 点选完成 <span class="tag cfg">配置图体</span> + <span class="tag gap">缺口：InvokeQuery</span></h3>
+
+    <div class="callout bad">
+      <b>引擎缺口</b>：今日 InvokeGraph 只能嵌 TriggerGraph。修订合同要求 TriggerGraph 可调用 Query（建议 op 名 <code>InvokeQuery</code>）：exec 流入、data 传入参、data 出 TargetList。未补齐前不得再手抄第二份 ScreenRegion 链冒充复用。
+    </div>
+
+    <div class="form">
+      <div class="ft">框结束图体（box_commit）步骤</div>
+      <div class="field"><span class="fname">1. 读修饰<span class="ftype">payload</span></span><span class="fdesc">MapTrigger.Modifiers → replace / add / subtract</span></div>
+      <div class="field"><span class="fname">2. 组矩形脚<span class="ftype">data</span></span><span class="fdesc">起角 = map var；活角 = 抬起指针（payload 或 helper）</span></div>
+      <div class="field"><span class="fname">3. InvokeQuery<span class="ftype">op · 新</span></span><span class="fdesc">functionName = graph.case_e.box_hit；把四个 float（及若需要的 source）传入；取出 TargetList</span></div>
+      <div class="field"><span class="fname">4. 透传写入<span class="ftype">DispatchCollectionEvent</span></span><span class="fdesc">event + collectionKey=selected + op 语义；下游 EventKeyedCollectionWriter 写正式集</span></div>
+      <div class="field"><span class="fname">5. DeactivateContext<span class="ftype">op</span></span><span class="fdesc">停用 boxing → whileActive 停 → 调度清空预览 outputs</span></div>
+    </div>
+
+    <div class="callout">
+      <b>可否松手直接读预览集？</b>可以当作优化（少调一次 Query），但合同仍要求「命中算法只有 Query 这一份」。验收以 InvokeQuery 同一资产为准；读预览集不得变成第二套命中逻辑。
+    </div>
+
+    <div class="gflow">
+      <div class="gt">TriggerGraph · 框结束（修订）</div>
+<svg width="900" height="220" viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg" style="fill:#dfe3ec">
+  <defs>
+    <marker id="earrow3" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#ffffff"/></marker>
+    <marker id="darrow3" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5aa5ff"/></marker>
+  </defs>
+  <text class="gkind" x="15" y="18">抬起 → InvokeQuery(box_hit) → 写 selected → DeactivateContext</text>
+  <rect class="gnode" x="15" y="70" width="130" height="70" rx="6"/>
+  <text x="25" y="95">抬起</text>
+  <text class="lbl" x="25" y="112">修饰+指针</text>
+  <circle class="gexec" cx="145" cy="90" r="5"/>
+  <rect class="gnode" x="200" y="50" width="160" height="100" rx="6"/>
+  <text x="210" y="78">InvokeQuery</text>
+  <text class="lbl" x="210" y="96">box_hit</text>
+  <text class="lbl" x="210" y="114">起角+活角 in</text>
+  <circle class="gexec" cx="200" cy="70" r="5"/>
+  <circle class="gexec" cx="360" cy="70" r="5"/>
+  <circle class="gpin-out" cx="360" cy="120" r="4"/>
+  <rect class="gnode" x="420" y="50" width="170" height="100" rx="6"/>
+  <text x="430" y="78">DispatchCollection</text>
+  <text class="lbl" x="430" y="96">→ selected</text>
+  <text class="lbl" x="430" y="114">+ op 语义</text>
+  <circle class="gexec" cx="420" cy="70" r="5"/>
+  <circle class="gexec" cx="590" cy="70" r="5"/>
+  <rect class="gnode" x="640" y="60" width="180" height="80" rx="6"/>
+  <text x="650" y="90">DeactivateContext</text>
+  <text class="lbl" x="650" y="108">预览随 whileActive 清</text>
+  <circle class="gexec" cx="640" cy="80" r="5"/>
+  <path class="eexec" d="M145,90 C170,90 170,70 200,70"/>
+  <path class="eexec" d="M360,70 C390,70 390,70 420,70"/>
+  <path class="eexec" d="M590,70 C615,70 615,80 640,80"/>
+  <path class="edata" d="M360,120 C390,120 390,120 420,120"/>
+</svg>
+    </div>
+
+    <div class="form">
+      <div class="ft">点选 tap_commit</div>
+      <div class="field"><span class="fname">同 Query<span class="ftype">—</span></span><span class="fdesc">零位移矩形（起角=活角=同一点）仍调 graph.case_e.box_hit；不要第三套点选命中算法。</span></div>
+    </div>
+  </div>
+
+  <!-- 07 -->
+  <h2><span class="no">07</span>高亮：预览与已选中共用成员事件面</h2>
+  <div class="step">
+    <h3>presenter 只适配一套事件 <span class="tag cfg">配置</span> + <span class="tag code">已有基建</span></h3>
+    <div class="kv">
+      候选不进表现管线 → <b>不为候选做第二套 presenter 适配</b>。<br>
+      预览 key 与已选中 key 都发 EntityCollectionMemberAdded / Removed；规则里换 <span class="k">event.key</span> 与行为槽（黄环 preview / 蓝环 attachment）。
+    </div>
+    <div class="form">
+      <div class="ft">marine presenter rules（示意）</div>
+      <div class="field"><span class="fname">订 selected<span class="ftype">Added/Removed</span></span><span class="fdesc">Activate/Deactivate 行为槽 attachment（蓝环）</span></div>
+      <div class="field"><span class="fname">订 case_e.box_hover<span class="ftype">Added/Removed</span></span><span class="fdesc">Activate/Deactivate 行为槽 preview（黄环）</span></div>
+    </div>
+    <div class="callout ok">
+      若预览改成另一种存储/事件，才需要第二套适配——合同选择「预览也走集合成员事件」，就是为了避免这件事。
+    </div>
+    <div class="box" style="margin-top:12px">
+      <h4>框指示（ScreenRect）</h4>
+      <div class="kv">
+        presenter 观察 ContextActivated(boxing) 创建；角0=起角 map var（或与之同步的唯读口）；角1=指针 helper。
+        Context 结束随 scope 销毁。与命中共用同一对脚的语义，禁止另造第三套角。
+      </div>
+    </div>
+  </div>
+
+  <!-- 08 -->
+  <h2><span class="no">08</span>InvokeQuery 字段合同 <span class="tag gap">缺口</span></h2>
+  <div class="step">
+    <h3>TriggerGraph 节点：调用 Query <span class="tag code">代码</span> + <span class="tag cfg">图内引用</span></h3>
+    <div class="form">
+      <div class="ft">作者形态（目标）</div>
+      <div class="field"><span class="fname">op<span class="ftype">InvokeQuery</span></span><span class="fdesc">或扩展后的 InvokeGraph（允许目标 kind=Query）——以落地实现名为准，语义如下</span></div>
+      <div class="field"><span class="fname">functionName<span class="ftype">string</span></span><span class="fdesc">目标 Query 图 id</span></div>
+      <div class="field"><span class="fname">data in<span class="ftype">ports</span></span><span class="fdesc">与 Query 入参端口对齐（起角/活角/…）；由 valueEdges 接入</span></div>
+      <div class="field"><span class="fname">data out<span class="ftype">TargetList</span></span><span class="fdesc">命中名单，接到 DispatchCollectionEvent 或后续节点</span></div>
+      <div class="field"><span class="fname">禁止<span class="ftype">—</span></span><span class="fdesc">Query 内不得 DispatchCollectionEvent / ActivateContext 等副作用；物化走 output schema 或调用方显式写</span></div>
+    </div>
+  </div>
+
+  <!-- 09 -->
+  <h2><span class="no">09</span>汇总表</h2>
+  <table class="summary">
+    <thead>
+      <tr><th>步骤</th><th>事件 / 过程</th><th>关键配置</th><th>配置 / 代码</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>01 进图</td><td>实体出生</td><td>templates.json</td><td>代码</td></tr>
+      <tr><td>02 挂默认</td><td>挂 Instance</td><td>initialInteractionContext</td><td>配置+代码</td></tr>
+      <tr><td>03 profile</td><td>边沿 + 存活期</td><td>triggers[] + whileActive[]</td><td>配置；调度代码</td></tr>
+      <tr><td>04 框开始</td><td>按下</td><td>写起角 map var；ActivateContext</td><td>配置图体</td></tr>
+      <tr><td>05 拖拽</td><td>whileActive 每 tick</td><td>同一 Query + 预览 output</td><td>配置+调度代码</td></tr>
+      <tr><td>06 框结束</td><td>抬起</td><td>InvokeQuery 同 Query → selected；Deactivate</td><td>配置图体；缺 InvokeQuery 基建</td></tr>
+      <tr><td>07 高亮</td><td>成员变化</td><td>presenter 订两 key</td><td>配置；事件基建已有</td></tr>
+    </tbody>
+  </table>
+
+  <h2><span class="no">10</span>相对旧实现：要删 / 要改 / 要补</h2>
+  <div class="grid2">
+    <div class="box">
+      <h4>删或停用</h4>
+      <div class="kv">
+        · profile.<b>continuousQuery</b> 字段名（改为 whileActive）<br>
+        · 命中路径上的双写 Press 属性<br>
+        · commit / tap 图内手抄的第二份 ScreenRegion 链（在 InvokeQuery 落地后）<br>
+        · 「候选必须进 EntityCollectionStore」作为合同（可留作可选缓存）
+      </div>
+    </div>
+    <div class="box">
+      <h4>补</h4>
+      <div class="kv">
+        · Trigger → Query：InvokeQuery（或等价）<br>
+        · whileActive 安装校验 + 每 tick 调度 + 离开清空 outputs<br>
+        · 指针屏幕位置 helper 作为活角唯一读口（可先复用现有通道，收口命名）<br>
+        · 验收：拖拽预览与松手结果同一 Query；矩形单源
+      </div>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:16px">
+    <b>UAT 口径（玩家话）</b>：按下后拖，框跟着走，框里的兵亮黄环；松手黄环灭、蓝环留在框过的兵上；加选/减选只改蓝环集合；敌人永远不进黄环也不进蓝环。换皮肤/scheme 时只改 Query 或修饰映射，不配第二套命中。
+  </div>
+
+  <footer>
+    Case E · 配置结构修订 · 取代 continuousQuery 临时挂法 · 与 case-e-config-report.html 对照阅读
+  </footer>
+</div>
+</body>
+</html>
