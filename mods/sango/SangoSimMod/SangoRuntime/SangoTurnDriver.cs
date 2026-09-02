@@ -85,7 +85,9 @@ namespace Sango.Runtime
 
         /// <summary>
         /// 世界态确定性指纹:全城市 (id, gold, food) + 全武将 (id, loyalty, BelongForce, state)
-        /// 升序拼接后的 SHA-256。同种子重放必须逐位相等(对齐 deterministic_replay 验收)。
+        /// + 全部队 (id, corpsId, forceId, cell x/y, 兵力) 升序拼接后的 SHA-256。同种子重放
+        /// 必须逐位相等(对齐 deterministic_replay 验收)。部队行语义:编成/移动/消灭都改变
+        /// 该行;无任务部队逐回合仅耗粮不动(id/corps/force/cell/兵力恒定),行稳定。
         /// 武将行是换种子差异的落点:上游快照的 City.AIPrepare 内政指令被整段注释,
         /// 城市金粮在短期内只走俸给/军粮公式(与随机无关);种子差异由武将层
         /// (忠诚流动/官职/状态)承接,M1.c 重启内政 AI 后城市行自然加入差异面。
@@ -104,6 +106,11 @@ namespace Sango.Runtime
             {
                 if (person != null)
                     rows.Add($"person {person.Id}:{person.loyalty}:{person.BelongForce}:{person.state}");
+            });
+            scenario.troopsSet.ForEach(troop =>
+            {
+                if (troop != null && troop.IsAlive)
+                    rows.Add($"troop {troop.Id}:{troop.mBelongCorps?.Id ?? 0}:{troop.mBelongForce?.Id ?? 0}:{troop.x}:{troop.y}:{troop.troops}");
             });
             rows.Sort(StringComparer.Ordinal);
 

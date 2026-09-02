@@ -5,6 +5,7 @@ import {
   SANGO_CITY_TOPIC,
   SANGO_FORCES_TOPIC,
   SANGO_MESSAGES_TOPIC,
+  SANGO_TROOPS_TOPIC,
   SANGO_TURN_TOPIC,
   createLudotsDataPlaneClient,
   ensureLudotsDataPlaneTransport
@@ -35,6 +36,7 @@ const EMPTY_FORCES = { tick: 0, turnCount: 0, forces: [] };
 const EMPTY_TURN = { turnCount: 0, year: 0, month: 0, day: 0, dateText: '----', summary: '' };
 const EMPTY_MESSAGES = { tick: 0, turnCount: 0, messages: [] };
 const EMPTY_DETAIL = null;
+const EMPTY_TROOPS = { tick: 0, turnCount: 0, troops: [] };
 
 function App() {
   const { clientRef, data, connection, command } = useSangoSession();
@@ -63,6 +65,19 @@ function App() {
       setLastOrder({ text: `${CITY_COMMAND_LABELS[type] ?? type}:已受理,下一轮话题刷新后可见变化`, tone: 'ok' });
     } else {
       setLastOrder({ text: `${CITY_COMMAND_LABELS[type] ?? type} 被拒绝:${result.message}`, tone: 'error' });
+    }
+
+    return result;
+  }, [command]);
+
+  const troopCommand = useCallback(async (label, name, payload) => {
+    setLastOrder({ text: `${label}:下达中……`, tone: 'pending' });
+    const result = await command(name, payload);
+    if (result.ok) {
+      setCommandCount((count) => count + 1);
+      setLastOrder({ text: `${label}:已受理,部队面板与地图标记随后刷新`, tone: 'ok' });
+    } else {
+      setLastOrder({ text: `${label} 被拒绝:${result.message}`, tone: 'error' });
     }
 
     return result;
@@ -113,29 +128,46 @@ function App() {
             >
               势力
             </button>
+            <button
+              type="button"
+              className={activeTab === 'troops' ? 'tab active' : 'tab'}
+              onClick={() => setActiveTab('troops')}
+            >
+              部队
+            </button>
           </nav>
           {activeTab === 'forces'
             ? <ForceOverview forces={data.forces.forces} />
-            : (
-              <div className="city-layout">
-                <CityListPanel
-                  cities={visibleCities}
+            : activeTab === 'troops'
+              ? (
+                <TroopPanel
+                  troops={data.troops.troops}
                   forces={data.forces.forces}
                   forceFilter={forceFilter}
                   onForceFilter={setForceFilter}
-                  selectedCityId={selectedCityId}
-                  onSelect={setSelectedCityId}
+                  onMove={(payload) => troopCommand('移动', 'sango.moveTroop', payload)}
                 />
-                {detail
-                  ? <CityDetailPanel detail={detail} onCommand={issueCommand} />
-                  : <section className="panel detail empty">点击左侧城市查看详情与内政指令</section>}
-              </div>
-            )}
+                )
+              : (
+                <div className="city-layout">
+                  <CityListPanel
+                    cities={visibleCities}
+                    forces={data.forces.forces}
+                    forceFilter={forceFilter}
+                    onForceFilter={setForceFilter}
+                    selectedCityId={selectedCityId}
+                    onSelect={setSelectedCityId}
+                  />
+                  {detail
+                    ? <CityDetailPanel detail={detail} onCommand={issueCommand} onExpedition={(payload) => troopCommand('出征', 'sango.createTroop', payload)} />
+                    : <section className="panel detail empty">点击左侧城市查看详情与内政指令</section>}
+                </div>
+              )}
         </section>
       </div>
       <footer className="status-bar">
         <span className={lastOrder.tone}>{lastOrder.text}</span>
-        <span>{connection.phase} · {connection.transport} · 城市 {data.cities.cities.length} · 势力 {data.forces.forces.length}</span>
+        <span>{connection.phase} · {connection.transport} · 城市 {data.cities.cities.length} · 势力 {data.forces.forces.length} · 部队 {data.troops.troops.length}</span>
       </footer>
     </main>
   );
@@ -147,7 +179,8 @@ function useSangoSession() {
     cities: EMPTY_CITIES,
     forces: EMPTY_FORCES,
     turn: EMPTY_TURN,
-    messages: EMPTY_MESSAGES
+    messages: EMPTY_MESSAGES,
+    troops: EMPTY_TROOPS
   });
   const [connection, setConnection] = useState({ phase: 'boot', transport: 'none', error: '' });
 
@@ -171,7 +204,8 @@ function useSangoSession() {
       [SANGO_CITIES_TOPIC, (cities) => setData((current) => ({ ...current, cities }))],
       [SANGO_FORCES_TOPIC, (forces) => setData((current) => ({ ...current, forces }))],
       [SANGO_TURN_TOPIC, (turn) => setData((current) => ({ ...current, turn }))],
-      [SANGO_MESSAGES_TOPIC, (messages) => setData((current) => ({ ...current, messages }))]
+      [SANGO_MESSAGES_TOPIC, (messages) => setData((current) => ({ ...current, messages }))],
+      [SANGO_TROOPS_TOPIC, (troops) => setData((current) => ({ ...current, troops }))]
     ]);
 
     client
@@ -346,15 +380,22 @@ function CityListPanel({ cities, forces, forceFilter, onForceFilter, selectedCit
   );
 }
 
-function CityDetailPanel({ detail, onCommand }) {
+function CityDetailPanel({ detail, onCommand, onExpedition }) {
   const [executorIds, setExecutorIds] = useState([]);
   const [rewardIds, setRewardIds] = useState([]);
   const [recruitTargetId, setRecruitTargetId] = useState(0);
+  const [expeditionIds, setExpeditionIds] = useState([]);
+  const [landTypeId, setLandTypeId] = useState(0);
+  const [expeditionTroops, setExpeditionTroops] = useState(3000);
+  const [expeditionGold, setExpeditionGold] = useState(500);
+  const [expeditionFood, setExpeditionFood] = useState(20000);
 
   useEffect(() => {
     setExecutorIds([]);
     setRewardIds([]);
     setRecruitTargetId(0);
+    setExpeditionIds([]);
+    setLandTypeId(0);
   }, [detail.id]);
 
   const freePersons = detail.persons.filter((person) => person.free);
@@ -364,6 +405,8 @@ function CityDetailPanel({ detail, onCommand }) {
   const executors = freePersons.filter((person) => executorIds.includes(person.id));
   const rewardPersons = rewardTargets.filter((person) => rewardIds.includes(person.id));
   const recruitTarget = detail.wildPersons.find((person) => person.id === recruitTargetId) ?? null;
+  const expeditionPersons = freePersons.filter((person) => expeditionIds.includes(person.id));
+  const landTypes = (detail.troopTypes ?? []).filter((type) => type.isLand);
 
   const toggle = (ids, setIds, personId, cap) => {
     if (ids.includes(personId)) {
@@ -435,13 +478,14 @@ function CityDetailPanel({ detail, onCommand }) {
       <div className="person-section">
         <div className="panel-title">
           <h3>武将</h3>
-          <span>勾「执」为执行武将(≤3),勾「赏」为奖励对象</span>
+          <span>勾「执」为执行武将(≤3),勾「赏」为奖励对象,勾「征」为出征编成(≤3)</span>
         </div>
         <table className="person-table">
           <thead>
             <tr>
               <th>执</th>
               <th>赏</th>
+              <th>征</th>
               <th>姓名</th>
               <th>身份</th>
               <th>忠诚</th>
@@ -473,6 +517,17 @@ function CityDetailPanel({ detail, onCommand }) {
                         type="checkbox"
                         checked={rewardIds.includes(person.id)}
                         onChange={() => toggle(rewardIds, setRewardIds, person.id, 10)}
+                      />
+                    )
+                    : null}
+                </td>
+                <td>
+                  {person.free
+                    ? (
+                      <input
+                        type="checkbox"
+                        checked={expeditionIds.includes(person.id)}
+                        onChange={() => toggle(expeditionIds, setExpeditionIds, person.id, 3)}
                       />
                     )
                     : null}
@@ -511,9 +566,200 @@ function CityDetailPanel({ detail, onCommand }) {
               ))}
             </div>
           </div>
-        )
+          )
         : null}
+
+      <div className="person-section">
+        <div className="panel-title">
+          <h3>出征(军事/出征)</h3>
+          <span>勾「征」选编成武将(≤3,首位为主将)</span>
+        </div>
+        <div className="expedition-form">
+          <label>
+            陆战兵种
+            <select
+              value={landTypeId}
+              onChange={(event) => setLandTypeId(Number(event.target.value))}
+            >
+              {landTypes.map((type) => (
+                <option key={type.id} value={type.id}>{type.name}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            兵力
+            <input
+              type="number"
+              min={1}
+              max={detail.troops}
+              value={expeditionTroops}
+              onChange={(event) => setExpeditionTroops(Math.max(0, Number(event.target.value)))}
+            />
+          </label>
+          <label>
+            携金
+            <input
+              type="number"
+              min={0}
+              max={detail.gold}
+              value={expeditionGold}
+              onChange={(event) => setExpeditionGold(Math.max(0, Number(event.target.value)))}
+            />
+          </label>
+          <label>
+            携粮
+            <input
+              type="number"
+              min={0}
+              max={detail.food}
+              value={expeditionFood}
+              onChange={(event) => setExpeditionFood(Math.max(0, Number(event.target.value)))}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={expeditionPersons.length === 0 || landTypes.length === 0}
+            title="军事/出征:按城内可组兵种编成部队(消耗兵力/金钱/军粮与军团行动力)"
+            onClick={() => onExpedition({
+              cityId: detail.id,
+              personIds: expeditionPersons.map((person) => person.id),
+              landTroopTypeId: landTypeId || landTypes[0]?.id,
+              troops: expeditionTroops,
+              gold: expeditionGold,
+              food: expeditionFood
+            })}
+          >
+            出征({expeditionPersons.length})
+          </button>
+        </div>
+      </div>
+
+      <div className="person-section">
+        <div className="panel-title">
+          <h3>本城部队</h3>
+          <span>{(detail.fieldTroops ?? []).length} 支</span>
+        </div>
+        {(detail.fieldTroops ?? []).length === 0
+          ? <p className="empty">本城暂无在外部队</p>
+          : (
+            <table className="force-table">
+              <thead>
+                <tr><th>部队</th><th>格坐标</th><th>兵力</th><th>携粮</th><th>状态</th></tr>
+              </thead>
+              <tbody>
+                {(detail.fieldTroops ?? []).map((troop) => (
+                  <tr key={troop.id}>
+                    <td><strong>{troop.name}</strong></td>
+                    <td>({troop.x}, {troop.y})</td>
+                    <td>{formatNumber(troop.troops)}</td>
+                    <td>{formatNumber(troop.food)}</td>
+                    <td>{troop.actionOver ? '已行动' : '待命'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            )}
+      </div>
     </section>
+  );
+}
+
+// 部队面板(M2.b):势力过滤 + 选中部队发 sango.moveTroop。目标格是内核格坐标
+// (x=北、y=东,范围 0..255);地图点击选格需要引擎侧 pick,接入前用坐标输入。
+function TroopPanel({ troops, forces, forceFilter, onForceFilter, onMove }) {
+  const [selectedTroopId, setSelectedTroopId] = useState(0);
+  const [targetX, setTargetX] = useState(0);
+  const [targetY, setTargetY] = useState(0);
+
+  const visibleTroops = forceFilter === 0
+    ? troops
+    : troops.filter((troop) => troop.forceId === forceFilter);
+  const selected = visibleTroops.find((troop) => troop.id === selectedTroopId) ?? null;
+
+  return (
+    <div className="city-layout">
+      <section className="panel city-list-panel">
+        <div className="panel-title">
+          <h2>部队</h2>
+          <select value={forceFilter} onChange={(event) => onForceFilter(Number(event.target.value))}>
+            <option value={0}>全部势力</option>
+            {forces.map((force) => (
+              <option key={force.id} value={force.id}>{force.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="city-rows">
+          {visibleTroops.length === 0 ? <p className="empty">暂无部队(开局无人出征;城市详情可出征编成)</p> : null}
+          {visibleTroops.map((troop) => (
+            <button
+              key={troop.id}
+              type="button"
+              className={troop.id === selectedTroopId ? 'city-row selected' : 'city-row'}
+              onClick={() => {
+                setSelectedTroopId(troop.id);
+                setTargetX(troop.x);
+                setTargetY(troop.y);
+              }}
+            >
+              <strong>{troop.name}</strong>
+              <span>{troop.forceName || '无主'}</span>
+              <small>
+                ({troop.x}, {troop.y}) · 兵 {formatNumber(troop.troops)} · 粮 {formatNumber(troop.food)} · 士气 {troop.morale}
+                {' '}{troop.actionOver ? '· 已行动' : ''}
+              </small>
+            </button>
+          ))}
+        </div>
+      </section>
+      {selected
+        ? (
+          <section className="panel detail">
+            <div className="panel-title">
+              <h2>{selected.name}</h2>
+              <span>{selected.forceName} · {selected.landTroopTypeName} · 移动力 {selected.moveAbility}</span>
+            </div>
+            <div className="stats-grid">
+              <div><span>兵力</span><strong>{formatNumber(selected.troops)}</strong></div>
+              <div><span>携粮</span><strong>{formatNumber(selected.food)}</strong></div>
+              <div><span>士气</span><strong>{selected.morale}</strong></div>
+              <div><span>格坐标</span><strong>({selected.x}, {selected.y})</strong></div>
+              <div><span>军团</span><strong>#{selected.corpsId}</strong></div>
+              <div><span>状态</span><strong>{selected.actionOver ? '已行动' : '待命'}</strong></div>
+            </div>
+            <div className="expedition-form">
+              <label>
+                目标格 x(北)
+                <input
+                  type="number"
+                  min={0}
+                  max={255}
+                  value={targetX}
+                  onChange={(event) => setTargetX(Math.max(0, Number(event.target.value)))}
+                />
+              </label>
+              <label>
+                目标格 y(东)
+                <input
+                  type="number"
+                  min={0}
+                  max={255}
+                  value={targetY}
+                  onChange={(event) => setTargetY(Math.max(0, Number(event.target.value)))}
+                />
+              </label>
+              <button
+                type="button"
+                disabled={selected.actionOver}
+                title="选中部队移动到目标格(限本回合移动范围;范围外/占位目标会被拒绝)"
+                onClick={() => onMove({ troopId: selected.id, x: targetX, y: targetY })}
+              >
+                移动
+              </button>
+            </div>
+          </section>
+          )
+        : <section className="panel detail empty">点击左侧部队查看详情与移动指令</section>}
+    </div>
   );
 }
 

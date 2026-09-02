@@ -333,7 +333,9 @@ public sealed class SangoWorldCityTopic : IWebUiTopicProducer
             city.freePersons.Count,
             city.mBelongCorps?.ActionPoint ?? 0,
             ProjectPersons(city),
-            ProjectWildPersons(city));
+            ProjectWildPersons(city),
+            ProjectCityTroops(scenario, city),
+            ProjectTroopTypes(city));
         packet = new WebUiOutboundPacket(
             context.SessionId,
             TopicName,
@@ -404,6 +406,109 @@ public sealed class SangoWorldCityTopic : IWebUiTopicProducer
             person.Politics,
             person.Glamour);
     }
+
+    // 本城部队 = troopsSet 中 mBelongCity==城 的存活部队(编成城的所属关系)。
+    internal static SangoCityTroopRow[] ProjectCityTroops(Scenario scenario, City city)
+    {
+        var rows = new List<SangoCityTroopRow>();
+        scenario.troopsSet.ForEach(troop =>
+        {
+            if (troop == null || !troop.IsAlive || troop.mBelongCity != city)
+            {
+                return;
+            }
+
+            rows.Add(new SangoCityTroopRow(
+                troop.Id,
+                troop.Name ?? string.Empty,
+                troop.x,
+                troop.y,
+                troop.troops,
+                troop.food,
+                troop.ActionOver));
+        });
+        return rows.ToArray();
+    }
+
+    // 出征表单的兵种选项(UICityExpedition.OnEnter 的可组兵种表,TroopType.
+    // CheckActivTroopTypeList(城 freePersons));isLand 分组由 UI 呈现。
+    internal static SangoTroopTypeRow[] ProjectTroopTypes(City city)
+    {
+        var active = new List<TroopType>();
+        TroopType.CheckActivTroopTypeList(city.freePersons, active);
+        return active
+            .Select(type => new SangoTroopTypeRow(type.Id, type.Name ?? string.Empty, type.isLand))
+            .ToArray();
+    }
+}
+
+/// <summary>
+/// 部队列表(M2.b):troopsSet 存活部队的瘦行投影(势力过滤在 UI 侧)。
+/// 行字段即 digest 的部队语义(id/corps/force/cell/兵力)加表单展示项(粮/士气/移动力/待命)。
+/// </summary>
+public sealed class SangoWorldTroopsTopic : IWebUiTopicProducer
+{
+    public const string TopicName = "sango.world.troops";
+
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    private readonly SangoWorldFeed _feed;
+
+    public SangoWorldTroopsTopic(SangoWorldFeed feed)
+    {
+        _feed = feed ?? throw new ArgumentNullException(nameof(feed));
+    }
+
+    public string Topic => TopicName;
+
+    public bool TryCreateSnapshot(in WebUiTopicContext context, out WebUiOutboundPacket packet)
+    {
+        Scenario scenario = Scenario.Cur
+            ?? throw new InvalidOperationException("Sango kernel is not booted; topic snapshot is unavailable.");
+        bool isSubscription = context.RequestId != 0;
+        var snapshot = new SangoTroopsSnapshot(
+            isSubscription ? 0 : _feed.NextTick(),
+            scenario.Info.turnCount,
+            ProjectTroops(scenario));
+        packet = new WebUiOutboundPacket(
+            context.SessionId,
+            TopicName,
+            isSubscription ? WebUiPacketKind.Snapshot : WebUiPacketKind.Delta,
+            WebUiDeliverySemantics.LatestWins,
+            JsonSerializer.SerializeToUtf8Bytes(snapshot, JsonOptions),
+            "application/json",
+            context.RequestId);
+        return true;
+    }
+
+    internal static SangoTroopRow[] ProjectTroops(Scenario scenario)
+    {
+        var rows = new List<SangoTroopRow>(scenario.troopsSet.Count);
+        scenario.troopsSet.ForEach(troop =>
+        {
+            if (troop == null || !troop.IsAlive)
+            {
+                return;
+            }
+
+            rows.Add(new SangoTroopRow(
+                troop.Id,
+                troop.Name ?? string.Empty,
+                troop.mBelongForce?.Id ?? 0,
+                troop.mBelongForce?.Name ?? string.Empty,
+                troop.mBelongCorps?.Id ?? 0,
+                troop.mBelongCity?.Id ?? 0,
+                troop.x,
+                troop.y,
+                troop.troops,
+                troop.food,
+                troop.morale,
+                troop.MoveAbility,
+                troop.ActionOver,
+                troop.LandTroopType?.Name ?? string.Empty));
+        });
+        return rows.ToArray();
+    }
 }
 
 public sealed record SangoCityRow(
@@ -427,6 +532,36 @@ public sealed record SangoForceRow(
     bool Alive);
 
 public sealed record SangoForcesSnapshot(int Tick, int TurnCount, SangoForceRow[] Forces);
+
+public sealed record SangoTroopRow(
+    int Id,
+    string Name,
+    int ForceId,
+    string ForceName,
+    int CorpsId,
+    int BelongCityId,
+    int X,
+    int Y,
+    int Troops,
+    int Food,
+    int Morale,
+    int MoveAbility,
+    bool ActionOver,
+    string LandTroopTypeName);
+
+public sealed record SangoTroopsSnapshot(int Tick, int TurnCount, SangoTroopRow[] Troops);
+
+public sealed record SangoTroopTypeRow(int Id, string Name, bool IsLand);
+
+/// <summary>城市详情的部队区行:本城编成的部队(Leader 的 mBelongCity 即编成城)。</summary>
+public sealed record SangoCityTroopRow(
+    int Id,
+    string Name,
+    int X,
+    int Y,
+    int Troops,
+    int Food,
+    bool ActionOver);
 
 public sealed record SangoTurnSnapshot(
     int TurnCount,
@@ -469,4 +604,6 @@ public sealed record SangoCityDetailSnapshot(
     int FreePersonCount,
     int ActionPoint,
     SangoPersonRow[] Persons,
-    SangoPersonRow[] WildPersons);
+    SangoPersonRow[] WildPersons,
+    SangoCityTroopRow[] FieldTroops,
+    SangoTroopTypeRow[] TroopTypes);

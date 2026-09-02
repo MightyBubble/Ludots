@@ -6,6 +6,7 @@
 //   奖励(reward)  UICityReward.OnSure → CityReward.DoJob → City.JobRewardPersons(persons)
 // 下单前置条件逐条照抄各 CityXxx 系统的 IsValid 原语义(含城/军团双层 jobCounter 与行动力门槛),
 // 不新增平行命令、不放宽门槛;失败按类型化错误回传。
+// M2.b 增两命令(编成/移动,见各 handler 注释与 SangoTroopOps 文件头的原版调用链)。
 
 using System.Text.Json;
 using Ludots.Core.Engine;
@@ -15,6 +16,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.WebUI.DataPlane;
 using Sango.Core;
+using Sango.Runtime;
 
 namespace Sango.WebUi;
 
@@ -213,7 +215,7 @@ public sealed class SangoCityCommandHandler : IWebUiCommandHandler
             target.state == (int)PersonStateType.Prisoner;
     }
 
-    private static bool TryReadCityId(JsonElement payload, Scenario scenario, out City? city)
+    internal static bool TryReadCityId(JsonElement payload, Scenario scenario, out City? city)
     {
         city = null;
         if (!payload.TryGetProperty("cityId", out JsonElement cityElement) ||
@@ -227,7 +229,7 @@ public sealed class SangoCityCommandHandler : IWebUiCommandHandler
         return city != null;
     }
 
-    private static bool TryReadPersonIds(WebUiCommandRequest request, out int[] personIds)
+    internal static bool TryReadPersonIds(WebUiCommandRequest request, out int[] personIds)
     {
         personIds = Array.Empty<int>();
         if (!request.Payload.TryGetProperty("personIds", out JsonElement element) ||
@@ -395,6 +397,134 @@ public sealed class SangoLoadCommandHandler : IWebUiCommandHandler
     }
 }
 
+/// <summary>
+/// 部队编成(M2.b):UICityExpedition 表单终态 → SangoTroopOps.CreateTroop(原版
+/// CityExpedition.DoJob 链的 headless 等价展开,门槛/结算见 SangoTroopOps 文件头)。
+/// payload = {cityId, personIds[1..3], landTroopTypeId?, waterTroopTypeId?, troops, gold, food};
+/// 兵种 id 取自城市详情话题的 troopTypes 表单选项(OnEnter 的可组兵种表)。
+/// </summary>
+public sealed class SangoCreateTroopCommandHandler : IWebUiCommandHandler
+{
+    public const string CommandName = "sango.createTroop";
+
+    public ValueTask<WebUiCommandResult> HandleAsync(WebUiCommandRequest request, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.FromResult(Handle(request));
+    }
+
+    internal static WebUiCommandResult Handle(WebUiCommandRequest request)
+    {
+        if (request.Payload.ValueKind != JsonValueKind.Object)
+        {
+            return WebUiCommandResult.Fail("invalid_payload", "sango.createTroop requires a JSON object payload.");
+        }
+
+        Scenario? scenario = Scenario.Cur;
+        if (scenario == null)
+        {
+            return WebUiCommandResult.Fail("kernel_not_booted", "Sango kernel is not booted; commands are unavailable.");
+        }
+
+        if (!SangoCityCommandHandler.TryReadCityId(request.Payload, scenario, out City? city) || city == null)
+        {
+            return WebUiCommandResult.Fail("city_not_found", "sango.createTroop requires a known payload.cityId.");
+        }
+
+        if (!SangoCityCommandHandler.TryReadPersonIds(request, out int[] personIds))
+        {
+            return WebUiCommandResult.Fail("invalid_payload", "sango.createTroop requires payload.personIds.");
+        }
+
+        (SangoTroopOpResult result, Troop? troop) = SangoTroopOps.CreateTroop(
+            scenario,
+            city,
+            personIds,
+            ReadOptionalId(request.Payload, "landTroopTypeId"),
+            ReadOptionalId(request.Payload, "waterTroopTypeId"),
+            ReadInt(request.Payload, "troops"),
+            ReadInt(request.Payload, "gold"),
+            ReadInt(request.Payload, "food"));
+
+        if (!result.Succeeded)
+        {
+            return WebUiCommandResult.Fail(result.ErrorCode, result.Message);
+        }
+
+        return WebUiCommandResult.Ok();
+    }
+
+    private static int ReadInt(JsonElement payload, string name)
+    {
+        return payload.TryGetProperty(name, out JsonElement element) &&
+            element.ValueKind == JsonValueKind.Number &&
+            element.TryGetInt32(out int value)
+                ? value
+                : 0;
+    }
+
+    private static int? ReadOptionalId(JsonElement payload, string name)
+    {
+        return payload.TryGetProperty(name, out JsonElement element) &&
+            element.ValueKind == JsonValueKind.Number &&
+            element.TryGetInt32(out int value)
+                ? value
+                : null;
+    }
+}
+
+/// <summary>
+/// 部队移动(M2.b):目标格在移动范围内时单步落地(TroopSystem/TroopActionStay 链,见
+/// SangoTroopOps 文件头);范围外按原版门槛拒绝(原版该路径走多回合委任链,不在本命令面)。
+/// payload = {troopId, x, y}(内核格坐标,x=北、y=东)。
+/// </summary>
+public sealed class SangoMoveTroopCommandHandler : IWebUiCommandHandler
+{
+    public const string CommandName = "sango.moveTroop";
+
+    public ValueTask<WebUiCommandResult> HandleAsync(WebUiCommandRequest request, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.FromResult(Handle(request));
+    }
+
+    internal static WebUiCommandResult Handle(WebUiCommandRequest request)
+    {
+        if (request.Payload.ValueKind != JsonValueKind.Object)
+        {
+            return WebUiCommandResult.Fail("invalid_payload", "sango.moveTroop requires a JSON object payload.");
+        }
+
+        Scenario? scenario = Scenario.Cur;
+        if (scenario == null)
+        {
+            return WebUiCommandResult.Fail("kernel_not_booted", "Sango kernel is not booted; commands are unavailable.");
+        }
+
+        if (!request.Payload.TryGetProperty("troopId", out JsonElement troopElement) ||
+            troopElement.ValueKind != JsonValueKind.Number ||
+            !troopElement.TryGetInt32(out int troopId) ||
+            scenario.troopsSet.Get(troopId) is not { } troop)
+        {
+            return WebUiCommandResult.Fail("troop_not_found", "sango.moveTroop requires a known payload.troopId.");
+        }
+
+        if (!request.Payload.TryGetProperty("x", out JsonElement xElement) ||
+            xElement.ValueKind != JsonValueKind.Number || !xElement.TryGetInt32(out int x) ||
+            !request.Payload.TryGetProperty("y", out JsonElement yElement) ||
+            yElement.ValueKind != JsonValueKind.Number || !yElement.TryGetInt32(out int y))
+        {
+            return WebUiCommandResult.Fail("invalid_payload", "sango.moveTroop requires integer payload.x / payload.y cell coordinates.");
+        }
+
+        (SangoTroopOpResult result, _) = SangoTroopOps.MoveTroop(scenario, troop, scenario.Map.GetCell(x, y));
+        if (!result.Succeeded)
+        {
+            return WebUiCommandResult.Fail(result.ErrorCode, result.Message);
+        }
+
+        return WebUiCommandResult.Ok();
+    }
+}
+
 public sealed class SangoWebUiPermissionValidator : IWebUiCommandPermissionValidator
 {
     private static readonly HashSet<string> AllowedCommands = new(StringComparer.Ordinal)
@@ -403,6 +533,8 @@ public sealed class SangoWebUiPermissionValidator : IWebUiCommandPermissionValid
         SangoEndTurnCommandHandler.CommandName,
         SangoSaveCommandHandler.CommandName,
         SangoLoadCommandHandler.CommandName,
+        SangoCreateTroopCommandHandler.CommandName,
+        SangoMoveTroopCommandHandler.CommandName,
     };
 
     public bool CanUse(WebUiCommandRequest request, out string error)

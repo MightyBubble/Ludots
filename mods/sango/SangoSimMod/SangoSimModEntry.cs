@@ -18,21 +18,32 @@ namespace Sango
     /// GameStart;内核与 SangoWebUiModEntry 收敛于同一 Scenario.Cur 判空门)把内核地图灌入
     /// 引擎 Field2D 层并落地城池标记 presenter;地图会话未启用 sango 层的宿主(非 sango
     /// 地图)整体跳过。
+    /// M2.b:同挂点建 SangoTroopMarkerRuntime(部队增删改经内核部队事件驱动,见其注释);
+    /// 另挂开发播种事件 SangoSeedTroops(AgentBridge events.fire 触发,验收取证用:
+    /// 开局无部队且 AI 不自行编成,需外部播种才能看到部队标记;事件键只在带 AgentBridge
+    /// 的开发宿主存在,生产链路无感)。
     /// </summary>
     public sealed class SangoSimModEntry : IMod
     {
+        private const string SeedTroopsEventKey = "SangoSeedTroops";
+        private const int SeedTroopBudget = 8;
+
         private static SaveParticipantRegistry? _registeredRegistry;
+        private static SangoTroopMarkerRuntime? _troopMarkers;
 
         public void OnLoad(IModContext context)
         {
             IVirtualFileSystem vfs = context.VFS;
-            context.Log("[SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/marker sync)");
+            context.Log("[SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers + seed event)");
             context.OnEvent(GameEvents.MapLoaded, OnMapLoaded(vfs));
             context.OnEvent(GameEvents.TurnAdvanced, OnTurnAdvanced(vfs));
+            context.OnEvent(new EventKey(SeedTroopsEventKey), OnSeedTroops(vfs));
         }
 
         public void OnUnload()
         {
+            _troopMarkers?.Dispose();
+            _troopMarkers = null;
         }
 
         private static System.Func<ScriptContext, Task> OnMapLoaded(IVirtualFileSystem vfs)
@@ -78,7 +89,95 @@ namespace Sango
             int spawned = SangoCityMarkers.Spawn(
                 engine.World, presenterRuntime, definitions, stableIds,
                 SangoCityMarkers.BuildPlacements(Sango.Core.Scenario.Cur));
-            Log.Info($"[SangoSimMod] M2.a: field layers populated; {spawned} city markers spawned");
+
+            _troopMarkers?.Dispose();
+            _troopMarkers = new SangoTroopMarkerRuntime(engine.World, presenterRuntime, definitions, stableIds);
+            _troopMarkers.SyncAll(Sango.Core.Scenario.Cur);
+            Log.Info($"[SangoSimMod] M2.a: field layers populated; {spawned} city markers spawned; M2.b: troop marker runtime online ({_troopMarkers.ActiveMarkers} troops)");
+        }
+
+        // 开发播种(AgentBridge events.fire SangoSeedTroops):按 citySet 顺序找满足出征
+        // 门槛的城市各编成一支部队(SangoTroopOps.CreateTroop 走真实门槛与结算),预算
+        // SeedTroopBudget 支,让标记/部队面板在无玩家操作的可视宿主里有可看对象;
+        // 重复触发继续吃剩余预算,门槛耗尽自然拒绝。
+        private static System.Func<ScriptContext, Task> OnSeedTroops(IVirtualFileSystem vfs)
+        {
+            return context =>
+            {
+                if (Sango.Core.Scenario.Cur == null)
+                {
+                    SangoKernelBoot.Boot(vfs, "SangoContentMod", SangoTurnDriver.DefaultSeed);
+                }
+
+                var scenario = Sango.Core.Scenario.Cur;
+                // 开局各军团行动力为 0(Corps.OnForceTurnStart 才发放),先推进一回合再播种
+                // (与 M1.c 命令测试的次序约定一致);纯开发取证路径,不进正式测试链。
+                SangoTurnDriver.AdvanceTurn();
+                int created = 0;
+                int rejected = 0;
+                scenario.citySet.ForEach(city =>
+                {
+                    if (city == null || created >= SeedTroopBudget)
+                    {
+                        return;
+                    }
+
+                    var persons = new System.Collections.Generic.List<int>();
+                    foreach (Sango.Core.Person person in city.freePersons)
+                    {
+                        if (person != null && persons.Count < SangoTroopOps.MaxMembers)
+                        {
+                            persons.Add(person.Id);
+                        }
+                    }
+
+                    (SangoTroopOpResult result, Sango.Core.Troop? troop) = SangoTroopOps.CreateTroop(
+                        scenario, city, persons,
+                        troops: System.Math.Min(3000, city.troops),
+                        food: System.Math.Min(20000, city.food / 2));
+                    if (result.Succeeded && troop != null)
+                    {
+                        created++;
+                        MoveSeedTroopAside(scenario, troop);
+                    }
+                    else
+                    {
+                        rejected++;
+                    }
+                });
+
+                Log.Info($"[SangoSimMod] M2.b seed event: {created} troop(s) created (budget {SeedTroopBudget}), {rejected} city gate rejection(s)");
+                return Task.CompletedTask;
+            };
+        }
+
+        // 取证观感:播种部队走真实移动链挪出城中心几格(与城标 sphere 错开,否则同格叠影);
+        // 移动失败(占位/越程)只影响构图,不影响播种本身,吞掉不抛。
+        static void MoveSeedTroopAside(Sango.Core.Scenario scenario, Sango.Core.Troop troop)
+        {
+            troop.MoveRange.Clear();
+            scenario.Map.GetMoveRange(troop, troop.MoveRange);
+            Sango.Core.Cell? best = null;
+            int bestDistance = 2; // 至少隔 2 格,避免与城标叠影
+            foreach (Sango.Core.Cell cell in troop.MoveRange)
+            {
+                if (cell.troop != null || cell.building != null)
+                {
+                    continue;
+                }
+
+                int distance = System.Math.Abs(cell.x - troop.x) + System.Math.Abs(cell.y - troop.y);
+                if (distance > bestDistance)
+                {
+                    best = cell;
+                    bestDistance = distance;
+                }
+            }
+
+            if (best != null)
+            {
+                SangoTroopOps.MoveTroop(scenario, troop, best);
+            }
         }
 
         private static System.Func<ScriptContext, Task> OnTurnAdvanced(IVirtualFileSystem vfs)

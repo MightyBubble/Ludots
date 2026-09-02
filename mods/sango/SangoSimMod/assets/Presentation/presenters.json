@@ -1,5 +1,60 @@
 [
   {
+    "id": "sango.troop.marker",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [70, 140, 70],
+          "colorParamKey": "sango.troop.marker.color"
+        },
+        "style": {
+          "color": [1, 1, 1, 1]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 70,
+          "updatePolicy": "Once"
+        }
+      },
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1, 1, 1, 0.9],
+          "sizePx": 2,
+          "colorParamKey": "sango.troop.marker.color",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "None",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0,
+          "orientationLengthPx": 0
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "sango.troop.marker.color",
+        "lane": "Vector",
+        "vectorValue": [1, 1, 1, 1]
+      }
+    ]
+  },
+  {
     "id": "sango.city.marker",
     "behaviors": [
       {

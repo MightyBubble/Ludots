@@ -95,6 +95,8 @@ public sealed class SangoWebUiModEntry : IMod
         router.Register(SangoEndTurnCommandHandler.CommandName, new SangoEndTurnCommandHandler(stepPolicy));
         router.Register(SangoSaveCommandHandler.CommandName, new SangoSaveCommandHandler(engine));
         router.Register(SangoLoadCommandHandler.CommandName, new SangoLoadCommandHandler(engine));
+        router.Register(SangoCreateTroopCommandHandler.CommandName, new SangoCreateTroopCommandHandler());
+        router.Register(SangoMoveTroopCommandHandler.CommandName, new SangoMoveTroopCommandHandler());
 
         _commandDispatcher = new WebUiQueuedCommandDispatcher(router);
         _dataPlaneRuntime = new WebUiDataPlaneRuntime(_commandDispatcher);
@@ -103,6 +105,7 @@ public sealed class SangoWebUiModEntry : IMod
         _dataPlaneRuntime.RegisterTopic(new SangoWorldTurnTopic());
         _dataPlaneRuntime.RegisterTopic(new SangoWorldMessagesTopic(feed));
         _dataPlaneRuntime.RegisterTopic(new SangoWorldCityTopic(feed));
+        _dataPlaneRuntime.RegisterTopic(new SangoWorldTroopsTopic(feed));
 
         IUiSurfaceHost surfaceHost = context.Get(CoreServiceKeys.UiSurfaceHost) as IUiSurfaceHost
             ?? throw new InvalidOperationException("UiSurfaceHost service is missing from ScriptContext.");
@@ -126,6 +129,7 @@ public sealed class SangoWebUiModEntry : IMod
         pump.TrackTopic(SangoWorldForcesTopic.TopicName);
         pump.TrackTopic(SangoWorldTurnTopic.TopicName);
         pump.TrackTopic(SangoWorldMessagesTopic.TopicName);
+        pump.TrackTopic(SangoWorldTroopsTopic.TopicName);
         _pump = pump;
 
         // 回合事件后立即推一轮(turn 话题携带新摘要);摘要消息行真源见 SangoWorldFeed。

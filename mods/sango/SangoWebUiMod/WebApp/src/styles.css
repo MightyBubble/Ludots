@@ -420,3 +420,37 @@ body {
 .error-line {
   color: var(--error);
 }
+
+/* M2.b 出征编成表单与部队移动表单 */
+.expedition-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: flex-end;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.expedition-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted, #9aa4b2);
+}
+
+.expedition-form select,
+.expedition-form input {
+  min-width: 96px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  color: inherit;
+}
+
+.expedition-form button {
+  padding: 6px 16px;
+}
