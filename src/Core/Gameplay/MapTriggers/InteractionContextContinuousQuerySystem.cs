@@ -178,9 +178,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
                         $"Continuous Query graph id {graphId} DispatchCollectionEvent has no resolved collection key.");
                 }
 
-                string collectionKey = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(collectionKeyId)
+                // Imm's collection half is EntityCollectionStore space (see GraphProgramSymbolPatcher),
+                // not ConfigKeyRegistry — same lookup as EventKeyedCollectionWriter.
+                string collectionKey = _collections.KeyRegistry.GetName(collectionKeyId)
                     ?? throw new InvalidOperationException(
-                        $"Continuous Query graph id {graphId} collection key id {collectionKeyId} resolves to no config key.");
+                        $"Continuous Query graph id {graphId} collection key id {collectionKeyId} resolves to no entity-collection key.");
                 var descriptor = EntityCollectionDescriptor.Create(
                     collectionKey,
                     EntityCollectionSourceKind.GasGraphResult,
