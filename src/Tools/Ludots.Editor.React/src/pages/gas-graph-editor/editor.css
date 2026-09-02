@@ -91,10 +91,18 @@
   z-index: 5 !important;
 }
 
-.gas-graph-flow .react-flow__edge.gas-live-edge path {
+.gas-graph-flow .react-flow__edge.gas-live-edge path,
+.gas-graph-flow .react-flow__edge.gas-live-edge-control path {
   stroke: #4ade80 !important;
   stroke-width: 3 !important;
   filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.55));
+}
+
+.gas-graph-flow .react-flow__edge.gas-live-edge-value path {
+  stroke: #c084fc !important;
+  stroke-width: 2.5 !important;
+  stroke-dasharray: 5 4;
+  filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.55));
 }
 
 .gas-live-badge {

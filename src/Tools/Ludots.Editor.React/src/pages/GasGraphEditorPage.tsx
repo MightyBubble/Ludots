@@ -49,9 +49,10 @@ import {
   applyLiveDebugToNodes,
   applyWatchFocusToEdges,
   applyWatchFocusToNodes,
-  computeLiveEdgeIds,
+  computeLiveControlEdgeHeat,
   computeLiveNodeHeat,
   computeLivePinValues,
+  computeLiveValueEdgeHeat,
   computeWatchedEntryFocus,
   type LiveDebugEvent,
 } from './gas-graph-editor/liveVisualDebug';
@@ -716,6 +717,8 @@ export const GasGraphEditorPage: React.FC = () => {
   const [debugEvents, setDebugEvents] = React.useState<DebugEvent[]>([]);
   const [debugSince, setDebugSince] = React.useState(0);
   const [debugStatus, setDebugStatus] = React.useState('Bridge idle');
+  /** Ticks while Watching so heat / edges cool off without new drain traffic. */
+  const [debugClockMs, setDebugClockMs] = React.useState(() => Date.now());
   /** Half-screen (game|editor) needs the canvas, not twin sidebars. */
   const [leftRailCollapsed, setLeftRailCollapsed] = React.useState(false);
   const [rightRailCollapsed, setRightRailCollapsed] = React.useState(false);
@@ -1630,7 +1633,11 @@ export const GasGraphEditorPage: React.FC = () => {
       const result = await bridgeRpc('ludots.graph.debug', {
         action: 'drain', graphId, entryLabel: debugEntryLabel, since: debugSince, max: 128,
       });
-      const incoming = (result.events ?? []) as DebugEvent[];
+      const receivedAt = Date.now();
+      const incoming = ((result.events ?? []) as DebugEvent[]).map((event) => ({
+        ...event,
+        atMs: receivedAt,
+      }));
       if (result.gap) setDebugEvents([]);
       const latestSequence = Number(result.latestSequence ?? debugSince);
       if (incoming.length > 0) {
@@ -1652,6 +1659,13 @@ export const GasGraphEditorPage: React.FC = () => {
     const timer = window.setInterval(() => { void pollDebug(); }, 250);
     return () => window.clearInterval(timer);
   }, [debugEnabled, pollDebug, refreshDebugMounts]);
+
+  React.useEffect(() => {
+    if (!debugEnabled) return undefined;
+    setDebugClockMs(Date.now());
+    const timer = window.setInterval(() => setDebugClockMs(Date.now()), 100);
+    return () => window.clearInterval(timer);
+  }, [debugEnabled]);
 
   const toggleDebug = async () => {
     try {
@@ -1683,14 +1697,19 @@ export const GasGraphEditorPage: React.FC = () => {
       return {
         heat: new Map(),
         pins: new Map(),
+        controlHeat: new Map(),
+        valueHeat: new Map(),
         hotEdges: new Set<string>(),
       };
     }
-    const heat = computeLiveNodeHeat(debugEvents);
-    const pins = computeLivePinValues(debugEvents);
-    const hotEdges = computeLiveEdgeIds(debugEvents, edges);
-    return { heat, pins, hotEdges };
-  }, [debugEnabled, debugEvents, edges]);
+    const now = debugClockMs;
+    const heat = computeLiveNodeHeat(debugEvents, now);
+    const pins = computeLivePinValues(debugEvents, now);
+    const controlHeat = computeLiveControlEdgeHeat(debugEvents, edges, now);
+    const valueHeat = computeLiveValueEdgeHeat(debugEvents, edges, now);
+    const hotEdges = new Set<string>([...controlHeat.keys(), ...valueHeat.keys()]);
+    return { heat, pins, controlHeat, valueHeat, hotEdges };
+  }, [debugClockMs, debugEnabled, debugEvents, edges]);
 
   const watchFocus = React.useMemo(() => {
     if (!debugEnabled || !debugEntryLabel) {
@@ -1738,9 +1757,9 @@ export const GasGraphEditorPage: React.FC = () => {
   const displayEdges = React.useMemo(() => {
     let base = toDisplayEdges(nodes, edges);
     if (!debugEnabled) return base;
-    base = applyLiveDebugToEdges(base, activeDebugNodes.hotEdges) as Edge<GasEdgeData>[];
+    base = applyLiveDebugToEdges(base, activeDebugNodes.controlHeat, activeDebugNodes.valueHeat) as Edge<GasEdgeData>[];
     return applyWatchFocusToEdges(base, watchFocus.edgeIds, activeDebugNodes.hotEdges) as Edge<GasEdgeData>[];
-  }, [activeDebugNodes.hotEdges, debugEnabled, edges, nodes, watchFocus.edgeIds]);
+  }, [activeDebugNodes.controlHeat, activeDebugNodes.hotEdges, activeDebugNodes.valueHeat, debugEnabled, edges, nodes, watchFocus.edgeIds]);
 
   const mapVariables = React.useMemo<GraphVariableRow[]>(() => {
     const rows = new Map<string, GraphVariableRow>();
@@ -2162,7 +2181,9 @@ export const GasGraphEditorPage: React.FC = () => {
                         ?? debugMounts[0]?.executionBackend
                         ?? 'Interpret'}
                     </span>
-                    <span className="font-normal normal-case tracking-normal text-slate-500">canvas-first for one-screen side-by-side</span>
+                    <span className="font-normal normal-case tracking-normal text-slate-500">
+                      green = control · purple dashed = value · heat fades in ~2s
+                    </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <select

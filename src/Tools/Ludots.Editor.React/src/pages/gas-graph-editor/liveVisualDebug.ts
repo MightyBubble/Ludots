@@ -9,12 +9,14 @@ export type LiveDebugEvent = {
   pinIndex?: number;
   value?: number | boolean;
   steps: number;
+  /** Client receive time — used for heat / edge decay. */
+  atMs?: number;
 };
 
 export type LiveNodeHeat = {
-  /** 0..1 — 1 is the hottest / most recent */
+  /** 0..1 — 1 is hottest / most recent */
   intensity: number;
-  /** true if this node was the latest NodeEnter */
+  /** true if this node is the latest NodeEnter still within the hot window */
   current: boolean;
 };
 
@@ -23,7 +25,16 @@ export type LivePinValue = {
   value: string;
 };
 
-const HEAT_WINDOW = 48;
+export type LiveEdgeHeat = {
+  intensity: number;
+  kind: 'control' | 'value';
+};
+
+/** How long a NodeEnter / pin keep visual heat after they arrive. */
+export const LIVE_HEAT_TTL_MS = 2200;
+/** Only the freshest enter stays "current" within this window. */
+export const LIVE_CURRENT_MS = 280;
+
 const PIN_WINDOW = 120;
 
 function isNodeEnter(event: string): boolean {
@@ -37,57 +48,131 @@ function isPinEvent(event: string): boolean {
     || event === 'PinEntity';
 }
 
-/** Build per-node heat from recent NodeEnter events (Flow Canvas style trail). */
-export function computeLiveNodeHeat(events: LiveDebugEvent[]): Map<string, LiveNodeHeat> {
-  const enters = events.filter((e) => isNodeEnter(e.event) && e.nodeId);
-  const window = enters.slice(-HEAT_WINDOW);
-  const heat = new Map<string, LiveNodeHeat>();
-  if (window.length === 0) return heat;
+function eventTime(event: LiveDebugEvent, fallbackMs: number): number {
+  return typeof event.atMs === 'number' ? event.atMs : fallbackMs;
+}
 
-  const latestId = window[window.length - 1]!.nodeId!;
-  for (let i = 0; i < window.length; i++) {
-    const id = window[i]!.nodeId!;
-    const intensity = (i + 1) / window.length;
+function decayIntensity(ageMs: number, ttlMs: number): number {
+  if (ageMs < 0) return 1;
+  if (ageMs >= ttlMs) return 0;
+  return 1 - ageMs / ttlMs;
+}
+
+/**
+ * Build per-node heat from recent NodeEnter events.
+ * Intensity decays with wall-clock age so a finished run cools off —
+ * nodes must not stay lit forever after one fire.
+ */
+export function computeLiveNodeHeat(
+  events: LiveDebugEvent[],
+  nowMs: number = Date.now(),
+  ttlMs: number = LIVE_HEAT_TTL_MS,
+): Map<string, LiveNodeHeat> {
+  const enters = events.filter((e) => isNodeEnter(e.event) && e.nodeId);
+  const heat = new Map<string, LiveNodeHeat>();
+  if (enters.length === 0) return heat;
+
+  let latestId: string | null = null;
+  let latestAt = -Infinity;
+  for (const event of enters) {
+    const id = event.nodeId!;
+    const at = eventTime(event, nowMs);
+    const intensity = decayIntensity(nowMs - at, ttlMs);
+    if (intensity <= 0) continue;
     const previous = heat.get(id);
     if (!previous || intensity >= previous.intensity) {
-      heat.set(id, { intensity, current: id === latestId });
-    } else if (id === latestId) {
-      heat.set(id, { intensity: previous.intensity, current: true });
+      heat.set(id, { intensity, current: false });
     }
+    if (at >= latestAt) {
+      latestAt = at;
+      latestId = id;
+    }
+  }
+
+  if (latestId && nowMs - latestAt <= LIVE_CURRENT_MS) {
+    const row = heat.get(latestId);
+    if (row) heat.set(latestId, { ...row, current: true });
   }
   return heat;
 }
 
 /**
- * Highlight control edges taken during the recent trail:
- * consecutive NodeEnter pairs, optionally matched by controlPort → sourceHandle.
+ * Control-flow edges taken by consecutive NodeEnter pairs (exec trail).
+ * Decays with the later enter's age.
  */
-export function computeLiveEdgeIds(
+export function computeLiveControlEdgeHeat(
   events: LiveDebugEvent[],
   edges: Edge[],
-): Set<string> {
-  const enters = events.filter((e) => isNodeEnter(e.event) && e.nodeId).slice(-HEAT_WINDOW);
-  const hot = new Set<string>();
+  nowMs: number = Date.now(),
+  ttlMs: number = LIVE_HEAT_TTL_MS,
+): Map<string, LiveEdgeHeat> {
+  const enters = events.filter((e) => isNodeEnter(e.event) && e.nodeId);
+  const hot = new Map<string, LiveEdgeHeat>();
   for (let i = 1; i < enters.length; i++) {
     const from = enters[i - 1]!;
     const to = enters[i]!;
     if (!from.nodeId || !to.nodeId || from.nodeId === to.nodeId) continue;
+    const at = Math.max(eventTime(from, nowMs), eventTime(to, nowMs));
+    const intensity = decayIntensity(nowMs - at, ttlMs);
+    if (intensity <= 0) continue;
     const port = from.controlPort?.trim() || null;
     for (const edge of edges) {
       if (edge.data?.kind !== 'control') continue;
       if (edge.source !== from.nodeId || edge.target !== to.nodeId) continue;
       if (port && !controlPortMatchesHandle(port, edge.sourceHandle)) continue;
-      hot.add(edge.id);
+      const previous = hot.get(edge.id);
+      if (!previous || intensity >= previous.intensity) {
+        hot.set(edge.id, { intensity, kind: 'control' });
+      }
     }
   }
   return hot;
+}
+
+/**
+ * Value / data edges light when a producer node emits Pin* (or was just entered
+ * with pins). Distinct from control exec trail — purple, not green.
+ */
+export function computeLiveValueEdgeHeat(
+  events: LiveDebugEvent[],
+  edges: Edge[],
+  nowMs: number = Date.now(),
+  ttlMs: number = LIVE_HEAT_TTL_MS,
+): Map<string, LiveEdgeHeat> {
+  const hot = new Map<string, LiveEdgeHeat>();
+  const producerAt = new Map<string, number>();
+  for (const event of events) {
+    if (!event.nodeId) continue;
+    if (!isPinEvent(event.event) && !isNodeEnter(event.event)) continue;
+    const at = eventTime(event, nowMs);
+    const previous = producerAt.get(event.nodeId) ?? -Infinity;
+    if (at > previous) producerAt.set(event.nodeId, at);
+  }
+
+  for (const edge of edges) {
+    if (edge.data?.kind !== 'value') continue;
+    const at = producerAt.get(edge.source);
+    if (at == null) continue;
+    const intensity = decayIntensity(nowMs - at, ttlMs);
+    if (intensity <= 0) continue;
+    hot.set(edge.id, { intensity, kind: 'value' });
+  }
+  return hot;
+}
+
+/** @deprecated Prefer computeLiveControlEdgeHeat — kept for call-site migration. */
+export function computeLiveEdgeIds(
+  events: LiveDebugEvent[],
+  edges: Edge[],
+  nowMs: number = Date.now(),
+): Set<string> {
+  return new Set(computeLiveControlEdgeHeat(events, edges, nowMs).keys());
 }
 
 function controlPortMatchesHandle(port: string, sourceHandle: string | null | undefined): boolean {
   const handle = (sourceHandle ?? '').trim();
   if (!handle) return true;
   if (handle === port) return true;
-  // Event Then / generic next often author as exec while source map says next/Enter.
   if ((port === 'next' || port === 'Enter' || port === 'exec')
     && (handle === 'next' || handle === 'exec')) {
     return true;
@@ -95,15 +180,26 @@ function controlPortMatchesHandle(port: string, sourceHandle: string | null | un
   return false;
 }
 
-/** Latest pin values per node from recent Pin* events. */
-export function computeLivePinValues(events: LiveDebugEvent[]): Map<string, LivePinValue[]> {
-  const pins = events.filter((e) => isPinEvent(e.event) && e.nodeId && e.pinIndex !== undefined).slice(-PIN_WINDOW);
-  const byNode = new Map<string, Map<number, string>>();
+/** Latest pin values per node from recent Pin* events (still within TTL). */
+export function computeLivePinValues(
+  events: LiveDebugEvent[],
+  nowMs: number = Date.now(),
+  ttlMs: number = LIVE_HEAT_TTL_MS,
+): Map<string, LivePinValue[]> {
+  const pins = events
+    .filter((e) => isPinEvent(e.event) && e.nodeId && e.pinIndex !== undefined)
+    .slice(-PIN_WINDOW);
+  const byNode = new Map<string, Map<number, { value: string; at: number }>>();
   for (const event of pins) {
     const id = event.nodeId!;
     const index = event.pinIndex!;
-    const map = byNode.get(id) ?? new Map<number, string>();
-    map.set(index, formatLiveValue(event.value));
+    const at = eventTime(event, nowMs);
+    if (decayIntensity(nowMs - at, ttlMs) <= 0) continue;
+    const map = byNode.get(id) ?? new Map();
+    const previous = map.get(index);
+    if (!previous || at >= previous.at) {
+      map.set(index, { value: formatLiveValue(event.value), at });
+    }
     byNode.set(id, map);
   }
   const result = new Map<string, LivePinValue[]>();
@@ -112,7 +208,7 @@ export function computeLivePinValues(events: LiveDebugEvent[]): Map<string, Live
       id,
       [...map.entries()]
         .sort((a, b) => a[0] - b[0])
-        .map(([pinIndex, value]) => ({ pinIndex, value })),
+        .map(([pinIndex, row]) => ({ pinIndex, value: row.value })),
     );
   }
   return result;
@@ -136,8 +232,8 @@ export function heatBorderColor(intensity: number, current: boolean): string {
 
 export function heatGlow(intensity: number, current: boolean): string {
   if (current) return '0 0 22px rgba(74,222,128,.65)';
-  const alpha = 0.25 + intensity * 0.45;
-  return `0 0 ${12 + intensity * 14}px rgba(34,211,238,${alpha.toFixed(2)})`;
+  const alpha = 0.2 + intensity * 0.45;
+  return `0 0 ${10 + intensity * 14}px rgba(34,211,238,${alpha.toFixed(2)})`;
 }
 
 /** Apply live heat / pin chips onto React Flow node data without mutating originals. */
@@ -152,7 +248,7 @@ export function applyLiveDebugToNodes<T extends Record<string, unknown>>(
     if (!nodeHeat && (!nodePins || nodePins.length === 0)) {
       if ((node.data as { liveDebug?: unknown }).liveDebug == null) return node;
       const { liveDebug: _drop, ...rest } = node.data as T & { liveDebug?: unknown };
-      return { ...node, data: rest as T, className: undefined };
+      return { ...node, data: rest as T, className: undefined, style: node.style };
     }
     return {
       ...node,
@@ -175,6 +271,7 @@ export function applyLiveDebugToNodes<T extends Record<string, unknown>>(
           ? {
               border: `2px solid ${heatBorderColor(nodeHeat.intensity, nodeHeat.current)}`,
               boxShadow: heatGlow(nodeHeat.intensity, nodeHeat.current),
+              opacity: 0.45 + nodeHeat.intensity * 0.55,
             }
           : {}),
       },
@@ -184,34 +281,64 @@ export function applyLiveDebugToNodes<T extends Record<string, unknown>>(
 
 export function applyLiveDebugToEdges(
   edges: Edge[],
-  hotEdgeIds: Set<string>,
+  controlHeat: Map<string, LiveEdgeHeat> | Set<string>,
+  valueHeat: Map<string, LiveEdgeHeat> = new Map(),
 ): Edge[] {
-  if (hotEdgeIds.size === 0) return edges;
+  const control = controlHeat instanceof Set
+    ? new Map([...controlHeat].map((id) => [id, { intensity: 1, kind: 'control' as const }]))
+    : controlHeat;
+  if (control.size === 0 && valueHeat.size === 0) {
+    return edges.map((edge) => {
+      if (edge.className !== 'gas-live-edge-control' && edge.className !== 'gas-live-edge-value' && edge.className !== 'gas-live-edge') {
+        return edge;
+      }
+      return { ...edge, animated: false, className: undefined };
+    });
+  }
+
   return edges.map((edge) => {
-    if (!hotEdgeIds.has(edge.id)) {
-      if (edge.className !== 'gas-live-edge' && !edge.animated) return edge;
+    const ctl = control.get(edge.id);
+    const val = valueHeat.get(edge.id);
+    if (ctl) {
       return {
         ...edge,
-        animated: false,
-        className: undefined,
+        animated: true,
+        hidden: false,
+        className: 'gas-live-edge-control',
+        style: {
+          ...edge.style,
+          stroke: '#4ade80',
+          strokeWidth: 2.5 + ctl.intensity * 1.5,
+          opacity: 0.45 + ctl.intensity * 0.55,
+          strokeDasharray: undefined,
+        },
       };
     }
-    return {
-      ...edge,
-      animated: true,
-      style: {
-        ...edge.style,
-        stroke: '#4ade80',
-        strokeWidth: 3,
-      },
-      className: 'gas-live-edge',
-    };
+    if (val) {
+      return {
+        ...edge,
+        animated: true,
+        hidden: false,
+        className: 'gas-live-edge-value',
+        style: {
+          ...edge.style,
+          stroke: '#c084fc',
+          strokeWidth: 2 + val.intensity,
+          opacity: 0.4 + val.intensity * 0.6,
+          strokeDasharray: '5 4',
+        },
+      };
+    }
+    if (edge.className === 'gas-live-edge-control' || edge.className === 'gas-live-edge-value' || edge.className === 'gas-live-edge') {
+      return { ...edge, animated: false, className: undefined };
+    }
+    return edge;
   });
 }
 
 /**
  * Walk control edges from a watched event entry (and its start node) so the
- * canvas can dim everything else and frame only the story being watched.
+ * canvas can hide everything else. Value edges between focused nodes stay too.
  */
 export function computeWatchedEntryFocus(
   nodes: Node[],
@@ -231,7 +358,6 @@ export function computeWatchedEntryFocus(
   const startFromEntry = (eventNode?.data as { entry?: { start?: string } } | undefined)?.entry?.start?.trim();
   const queue: string[] = [];
   if (startFromEntry) queue.push(startFromEntry);
-  // Also accept Then edges leaving the event card.
   for (const edge of edges) {
     if (edge.source !== eventId) continue;
     if (edge.data?.kind && edge.data.kind !== 'control') continue;
@@ -257,6 +383,12 @@ export function computeWatchedEntryFocus(
     }
   }
 
+  for (const edge of edges) {
+    if (edge.data?.kind !== 'value') continue;
+    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) continue;
+    edgeIds.add(edge.id);
+  }
+
   return { nodeIds, edgeIds };
 }
 
@@ -273,7 +405,6 @@ export function applyWatchFocusToNodes<T extends Record<string, unknown>>(
         className: [node.className, 'gas-watch-focus'].filter(Boolean).join(' '),
       };
     }
-    // Hide the rest so Watch is a short story, not a dimmed blob.
     return {
       ...node,
       hidden: true,
@@ -293,14 +424,16 @@ export function applyWatchFocusToEdges(
       return { ...edge, hidden: false };
     }
     if (focusEdgeIds.has(edge.id)) {
+      const isValue = edge.data?.kind === 'value';
       return {
         ...edge,
         hidden: false,
         style: {
           ...edge.style,
-          stroke: '#67e8f9',
-          strokeWidth: 2,
-          opacity: 1,
+          stroke: isValue ? '#a78bfa' : '#67e8f9',
+          strokeWidth: isValue ? 1.5 : 2,
+          opacity: isValue ? 0.55 : 1,
+          strokeDasharray: isValue ? '4 3' : undefined,
         },
       };
     }
