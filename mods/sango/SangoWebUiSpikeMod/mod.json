@@ -1,0 +1,12 @@
+{
+  "name": "SangoWebUiSpikeMod",
+  "version": "0.1.0",
+  "description": "Sango port M0.4 Web UI spike: CEF browser surface + WebUI DataPlane topic/command loop with a Vite/React sample panel.",
+  "main": "bin/net9.0/SangoWebUiSpikeMod.dll",
+  "priority": 10,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["sango", "web-ui", "spike", "browser-ui"]
+}
