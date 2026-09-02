@@ -7,26 +7,26 @@
 ## 30K Entity Only - Naive Per Entity Create
 
 - created entities: `30000`
-- total create time: `79.5626 ms`
-- per entity: `0.002652 ms`
+- total create time: `50.2607 ms`
+- per entity: `0.001675 ms`
 
 ## 30K Entity Only - Bulk Allocate Only
 
 - created entities: `30000`
-- total create time: `4.0979 ms`
-- per entity: `0.000137 ms`
+- total create time: `3.0920 ms`
+- per entity: `0.000103 ms`
 
 ## 30K Entity Only - Bulk Allocate + Component Set
 
 - created entities: `30000`
-- total create time: `32.4915 ms`
-- per entity: `0.001083 ms`
+- total create time: `21.9416 ms`
+- per entity: `0.000731 ms`
 
 ## 30K Entity Only - Bulk Create With Shared Payload
 
 - created entities: `30000`
-- total create time: `22.7924 ms`
-- per entity: `0.000760 ms`
+- total create time: `13.8645 ms`
+- per entity: `0.000462 ms`
 - payload path uses Arch generated `Create<T0..Tn>(amount, ...)` overloads
 
 ## 30K Entity + Presenter (No Mesh)
@@ -35,12 +35,12 @@
 - created owners: `30000`
 - created presenters: `30000`
 - presenter active count: `30000`
-- total create time: `543.6557 ms`
-- per owner: `0.018122 ms`
+- total create time: `344.3919 ms`
+- per owner: `0.011480 ms`
 
 ## Delta
 
-- saved by bulk allocation before component writes: `75.4647 ms`
-- component write cost after bulk allocation: `28.3936 ms`
-- saved by shared payload bulk create vs naive per-entity create: `56.7702 ms`
-- presenter creation only, after owners already exist: `543.6557 ms`
+- saved by bulk allocation before component writes: `47.1687 ms`
+- component write cost after bulk allocation: `18.8496 ms`
+- saved by shared payload bulk create vs naive per-entity create: `36.3962 ms`
+- presenter creation only, after owners already exist: `344.3919 ms`

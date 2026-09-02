@@ -8,12 +8,12 @@
 
 ## steady_same_view
 
-- avg total: `3.789 ms`
-- p95 total: `5.840 ms`
-- max total: `13.002 ms`
+- avg total: `3.027 ms`
+- p95 total: `3.794 ms`
+- max total: `5.899 ms`
 - avg build: `0.002 ms`
 - avg render: `0.000 ms`
-- avg fps: `263.9`
+- avg fps: `330.4`
 - alloc per frame: `0.0 B`
 - avg dirty lanes: `0.00`
 - avg rebuilt lanes: `0.00`
@@ -22,12 +22,12 @@
 
 ## camera_pan
 
-- avg total: `24.770 ms`
-- p95 total: `37.664 ms`
-- max total: `82.206 ms`
-- avg build: `0.271 ms`
-- avg render: `20.333 ms`
-- avg fps: `40.4`
+- avg total: `19.176 ms`
+- p95 total: `25.137 ms`
+- max total: `30.073 ms`
+- avg build: `0.209 ms`
+- avg render: `15.595 ms`
+- avg fps: `52.1`
 - alloc per frame: `0.0 B`
 - avg dirty lanes: `2.00`
 - avg rebuilt lanes: `0.00`
@@ -36,12 +36,12 @@
 
 ## value_churn
 
-- avg total: `30.793 ms`
-- p95 total: `40.294 ms`
-- max total: `49.629 ms`
-- avg build: `4.965 ms`
-- avg render: `22.199 ms`
-- avg fps: `32.5`
+- avg total: `28.243 ms`
+- p95 total: `34.981 ms`
+- max total: `38.526 ms`
+- avg build: `4.331 ms`
+- avg render: `20.752 ms`
+- avg fps: `35.4`
 - alloc per frame: `0.0 B`
 - avg dirty lanes: `2.00`
 - avg rebuilt lanes: `0.00`
@@ -50,12 +50,12 @@
 
 ## value_churn_bars_only
 
-- avg total: `10.823 ms`
-- p95 total: `13.682 ms`
-- max total: `36.574 ms`
-- avg build: `2.085 ms`
-- avg render: `6.815 ms`
-- avg fps: `92.4`
+- avg total: `7.864 ms`
+- p95 total: `13.025 ms`
+- max total: `14.369 ms`
+- avg build: `1.554 ms`
+- avg render: `4.800 ms`
+- avg fps: `127.2`
 - alloc per frame: `0.0 B`
 - avg dirty lanes: `1.00`
 - avg rebuilt lanes: `0.00`
@@ -64,12 +64,12 @@
 
 ## value_churn_text_only
 
-- avg total: `18.804 ms`
-- p95 total: `23.464 ms`
-- max total: `37.572 ms`
-- avg build: `2.832 ms`
-- avg render: `14.374 ms`
-- avg fps: `53.2`
+- avg total: `19.464 ms`
+- p95 total: `25.033 ms`
+- max total: `30.560 ms`
+- avg build: `2.842 ms`
+- avg render: `15.006 ms`
+- avg fps: `51.4`
 - alloc per frame: `0.0 B`
 - avg dirty lanes: `1.00`
 - avg rebuilt lanes: `0.00`
@@ -78,12 +78,12 @@
 
 ## camera_pan_bars_only
 
-- avg total: `3.422 ms`
-- p95 total: `4.484 ms`
-- max total: `4.805 ms`
-- avg build: `0.087 ms`
-- avg render: `2.064 ms`
-- avg fps: `292.3`
+- avg total: `3.161 ms`
+- p95 total: `3.959 ms`
+- max total: `4.836 ms`
+- avg build: `0.084 ms`
+- avg render: `1.888 ms`
+- avg fps: `316.4`
 - alloc per frame: `0.0 B`
 - avg dirty lanes: `1.00`
 - avg rebuilt lanes: `0.00`
@@ -92,12 +92,12 @@
 
 ## camera_pan_text_only
 
-- avg total: `13.560 ms`
-- p95 total: `16.272 ms`
-- max total: `18.497 ms`
-- avg build: `0.100 ms`
-- avg render: `11.828 ms`
-- avg fps: `73.7`
+- avg total: `12.254 ms`
+- p95 total: `13.077 ms`
+- max total: `15.624 ms`
+- avg build: `0.088 ms`
+- avg render: `10.735 ms`
+- avg fps: `81.6`
 - alloc per frame: `0.0 B`
 - avg dirty lanes: `1.00`
 - avg rebuilt lanes: `0.00`
