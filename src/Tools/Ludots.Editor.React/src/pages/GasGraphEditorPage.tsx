@@ -36,12 +36,14 @@ import { gasEdgeTypes } from './gas-graph-editor/GasEdges';
 import { GAS_GRAPH_THEME } from './gas-graph-editor/gasGraphTheme';
 import { authoredFieldsForOp, type AuthoredFieldKey } from './gas-graph-editor/authoredFields';
 import { computeAutoLayout, eventEntryNodeId, isEventEntryNodeId } from './gas-graph-editor/autoLayout';
-import { EventEntryInspector } from './gas-graph-editor/EventEntryInspector';
+import { EventEntryInspector, type InputActionView } from './gas-graph-editor/EventEntryInspector';
 import { GraphCodegenPanel } from './gas-graph-editor/GraphCodegenPanel';
 import {
   collectEventEntries,
   createEmptyEventEntry,
+  describeEntryProblem,
   entryLabelsFromNodes,
+  entryTriggerName,
   eventThenEdgeId,
   uniqueEventLabel,
   type EventEntryConfig,
@@ -56,9 +58,17 @@ import {
   computeLivePinValues,
   computeLiveValueEdgeHeat,
   computeWatchedEntryFocus,
+  LIVE_HEAT_TTL_MS,
   type LiveDebugEvent,
 } from './gas-graph-editor/liveVisualDebug';
-import { lookupLiveDebugStory, resolveLiveDebugBeat } from './gas-graph-editor/liveDebugStory';
+import {
+  EMPTY_GRAPH_ANNOTATIONS,
+  lookupEntryStory,
+  parseGraphAnnotations,
+  resolveWalkedGroups,
+  type GraphAnnotations,
+} from './gas-graph-editor/graphAnnotations';
+import { LiveDebugEntryPicker } from './gas-graph-editor/LiveDebugEntryPicker';
 import './gas-graph-editor/editor.css';
 
 type GraphNodeConfig = {
@@ -180,6 +190,7 @@ type TextKeyView = {
 type EditorLayout = {
   nodes?: Record<string, { x: number; y: number; collapsed?: boolean }>;
   viewport?: { x: number; y: number; zoom: number };
+  annotations?: unknown;
 };
 
 type DebugMount = {
@@ -498,7 +509,7 @@ function graphToFlow(
         role: 'event-entry',
         entry,
         schema: schemaFor(entry.event ?? ''),
-        label: entry.event ?? entry.action ?? entry.label,
+        label: entryTriggerName(entry) || entry.label,
         controlOutputPorts: ['exec'],
       },
     });
@@ -722,6 +733,8 @@ export const GasGraphEditorPage: React.FC = () => {
   const [descriptors, setDescriptors] = React.useState<Record<string, GraphDescriptor>>({});
   const [sugars, setSugars] = React.useState<Record<string, GraphSugarDescriptor>>({});
   const [panelAnchors, setPanelAnchors] = React.useState<string[]>([]);
+  const [annotations, setAnnotations] = React.useState<GraphAnnotations>(EMPTY_GRAPH_ANNOTATIONS);
+  const [inputActions, setInputActions] = React.useState<InputActionView[]>([]);
   const [payloadKeys, setPayloadKeys] = React.useState<string[]>([]);
   const [eventSchemas, setEventSchemas] = React.useState<EventSchemaView[]>([]);
   const [enumCatalog, setEnumCatalog] = React.useState<EnumTypeView[]>([]);
@@ -868,6 +881,26 @@ export const GasGraphEditorPage: React.FC = () => {
     void loadEventSchemas();
   }, [loadEventSchemas]);
 
+  // Semantic input action vocabulary for action-bound TriggerGraph entries, so the
+  // inspector offers registered ids instead of taking a typed guess.
+  const loadInputActions = React.useCallback(async () => {
+    try {
+      const res = await fetch(`/api/graph/input-actions/${encodeURIComponent(modId)}`);
+      const payload = await res.json();
+      if (!res.ok || !payload.ok || !Array.isArray(payload.actions)) {
+        throw new Error(payload.error ?? `Input action load failed (${res.status})`);
+      }
+      setInputActions(payload.actions as InputActionView[]);
+    } catch (err) {
+      setInputActions([]);
+      setStatus(`Input actions unavailable: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [modId]);
+
+  React.useEffect(() => {
+    void loadInputActions();
+  }, [loadInputActions]);
+
   // #1125: launcher-wide enum vocabulary — feeds the SwitchInt enumType picker and the
   // case:{member} dropdown once a node is bound.
   const loadEnumCatalog = React.useCallback(async () => {
@@ -1009,12 +1042,14 @@ export const GasGraphEditorPage: React.FC = () => {
       const missingDescriptor = loaded.nodes.find((node) => !nextDescriptors[node.op] && !nextSugars[node.op]);
       if (missingDescriptor) throw new Error(`Descriptor missing for graph op '${missingDescriptor.op}'.`);
       const nextLayout = (layoutPayload.layout ?? {}) as EditorLayout;
+      const nextAnnotations = parseGraphAnnotations(nextLayout.annotations);
       if (descriptorPayload.panelAnchors != null && !Array.isArray(descriptorPayload.panelAnchors)) {
         throw new Error('Descriptor response is missing panel anchors.');
       }
       const nextAnchors = (descriptorPayload.panelAnchors ?? []) as string[];
       setDescriptors(nextDescriptors);
       setSugars(nextSugars);
+      setAnnotations(nextAnnotations);
       setPanelAnchors(nextAnchors);
       setPayloadKeys(Array.isArray(descriptorPayload.payloadKeys) ? descriptorPayload.payloadKeys as string[] : []);
       setGraph(loaded);
@@ -1043,6 +1078,7 @@ export const GasGraphEditorPage: React.FC = () => {
       setEdges([]);
       setDeclaredVariables([]);
       setVariableMapId(null);
+      setAnnotations(EMPTY_GRAPH_ANNOTATIONS);
       setStatus(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
@@ -1483,7 +1519,7 @@ export const GasGraphEditorPage: React.FC = () => {
           id: nextId,
           label: nextLabel,
           entry: { ...nextEntry, label: nextLabel, start: nextStart },
-          schema: schemaFor(nextEntry.event),
+          schema: schemaFor(nextEntry.event ?? ''),
         },
       };
     }));
@@ -1593,6 +1629,13 @@ export const GasGraphEditorPage: React.FC = () => {
 
   const onSave = async () => {
     if (!currentGraph) return;
+    const entryProblem = (currentGraph.entries ?? [])
+      .map((entry) => describeEntryProblem(entry))
+      .find((problem) => problem != null);
+    if (entryProblem) {
+      setStatus(`Save refused: ${entryProblem}`);
+      return;
+    }
     setBusy(true);
     setStatus('Validating before save…');
     try {
@@ -1740,18 +1783,17 @@ export const GasGraphEditorPage: React.FC = () => {
     return { heat, pins, controlHeat, valueHeat, hotEdges };
   }, [debugClockMs, debugEnabled, debugEvents, edges]);
 
-  const liveDebugStory = React.useMemo(
-    () => lookupLiveDebugStory(graphId, debugEntryLabel),
-    [debugEntryLabel, graphId],
+  const entryStory = React.useMemo(
+    () => (debugEntryLabel ? lookupEntryStory(annotations, debugEntryLabel) : null),
+    [annotations, debugEntryLabel],
   );
 
-  const liveDebugBeat = React.useMemo(() => {
-    if (!debugEnabled || !liveDebugStory) return null;
-    const recent = debugEvents
-      .filter((event) => event.event === 'NodeEnter' && event.nodeId)
-      .map((event) => event.nodeId!);
-    return resolveLiveDebugBeat(liveDebugStory, recent);
-  }, [debugEnabled, debugEvents, liveDebugStory]);
+  const walkedGroups = React.useMemo(
+    () => (debugEnabled
+      ? resolveWalkedGroups(annotations, debugEvents, debugClockMs, LIVE_HEAT_TTL_MS)
+      : []),
+    [annotations, debugClockMs, debugEnabled, debugEvents],
+  );
 
   const watchFocus = React.useMemo(() => {
     if (!debugEnabled || !debugEntryLabel) {
@@ -2240,21 +2282,12 @@ export const GasGraphEditorPage: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <select
+                    <LiveDebugEntryPicker
+                      mounts={debugMounts}
+                      annotations={annotations}
                       value={debugEntryLabel}
-                      onChange={(event) => { setDebugEntryLabel(event.target.value); setDebugSince(0); setDebugEvents([]); }}
-                      className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[11px]"
-                    >
-                      <option value="">Select mounted entry</option>
-                      {debugMounts.map((mount) => (
-                        <option key={`${mount.graphName}:${mount.entryLabel}`} value={mount.entryLabel}>
-                          {mount.entryLabel}
-                          {lookupLiveDebugStory(graphId, mount.entryLabel)
-                            ? ` · ${lookupLiveDebugStory(graphId, mount.entryLabel)!.title}`
-                            : ` · ${mount.event}`}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(entryLabel) => { setDebugEntryLabel(entryLabel); setDebugSince(0); setDebugEvents([]); }}
+                    />
                     <button type="button" onClick={() => void toggleDebug()} className="rounded bg-amber-700 px-2 py-1 font-semibold text-amber-50 hover:bg-amber-600">
                       {debugEnabled ? 'Stop' : 'Watch'}
                     </button>
@@ -2262,24 +2295,38 @@ export const GasGraphEditorPage: React.FC = () => {
                   <div className="mt-1 text-[10px] text-slate-400">{debugStatus}</div>
                   {debugEnabled ? (
                     <div className="mt-1 rounded border border-amber-900/50 bg-amber-950/30 px-2 py-1.5 text-[11px] leading-4 text-amber-50/95">
-                      {liveDebugStory ? (
-                        <>
-                          <div className="font-semibold text-amber-200">
-                            {liveDebugStory.title}
-                            <span className="ml-2 font-normal text-zinc-400">{liveDebugStory.summary}</span>
-                          </div>
-                          <div className="mt-0.5 text-amber-100">
-                            {liveDebugBeat
-                              ? `正在走：${liveDebugBeat.text}`
-                              : '等游戏里发生对应事件——左边战场，右边这条链会亮起来。'}
-                          </div>
-                        </>
+                      <div className="font-semibold text-amber-200">
+                        {entryStory ? entryStory.title : (debugEntryLabel || '—')}
+                        <span className="ml-2 font-normal text-zinc-400">
+                          {entryStory
+                            ? entryStory.summary
+                            : `${watchFocus.nodeIds.size} nodes framed; other chains hidden.`}
+                        </span>
+                      </div>
+                      {walkedGroups.length > 0 ? (
+                        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                          {walkedGroups.map((group, index) => (
+                            <React.Fragment key={group.id}>
+                              {index > 0 ? <span className="text-amber-700">›</span> : null}
+                              <span
+                                className={index === walkedGroups.length - 1
+                                  ? 'rounded bg-amber-800/70 px-1.5 py-0.5 font-semibold text-amber-50'
+                                  : 'rounded bg-amber-950/70 px-1.5 py-0.5 text-amber-100/80'}
+                              >
+                                {group.text}
+                              </span>
+                            </React.Fragment>
+                          ))}
+                          <span className="ml-1 text-[10px] text-zinc-500">
+                            {annotations.groups.length > 0 ? '这一趟走到这里为止' : null}
+                          </span>
+                        </div>
                       ) : (
-                        <>
-                          Framing entry <span className="font-mono text-cyan-50">{debugEntryLabel || '—'}</span>
-                          {' '}({watchFocus.nodeIds.size} nodes). Other chains are hidden.
-                          Play the game action that fires this entry — the framed path lights up.
-                        </>
+                        <div className="mt-0.5 text-amber-100/80">
+                          {annotations.groups.length > 0
+                            ? '等游戏里发生对应事件——左边战场，右边这条链会亮起来。'
+                            : '等这个入口被触发；链路上的节点和控制边会亮起来。给节点分组写说明，这里就会用人话讲这一趟。'}
+                        </div>
                       )}
                     </div>
                   ) : null}
@@ -2434,6 +2481,7 @@ export const GasGraphEditorPage: React.FC = () => {
                   <EventEntryInspector
                     entry={selectedData.entry}
                     eventSchemas={eventSchemas}
+                    inputActions={inputActions}
                     startOptions={nodes.filter((node) => node.data.role !== 'event-entry').map((node) => node.id)}
                     instanceOptions={mapInstances.map((instance) => instance.instanceId)}
                     variableOptions={declaredVariables.map((variable) => variable.name)}
@@ -2832,14 +2880,12 @@ export const GasGraphEditorPage: React.FC = () => {
           </div>
           <div className="space-y-2 border-t border-slate-800 p-3 text-xs">
             <div className="flex items-center gap-2">
-              <select
+              <LiveDebugEntryPicker
+                mounts={debugMounts}
+                annotations={annotations}
                 value={debugEntryLabel}
-                onChange={(event) => { setDebugEntryLabel(event.target.value); setDebugSince(0); setDebugEvents([]); }}
-                className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[11px]"
-              >
-                <option value="">Select mounted entry</option>
-                {debugMounts.map((mount) => <option key={`${mount.graphName}:${mount.entryLabel}`} value={mount.entryLabel}>{mount.entryLabel} · {mount.event}</option>)}
-              </select>
+                onChange={(entryLabel) => { setDebugEntryLabel(entryLabel); setDebugSince(0); setDebugEvents([]); }}
+              />
               <button type="button" onClick={() => void toggleDebug()} className="rounded bg-amber-700 px-2 py-1 font-semibold text-amber-50 hover:bg-amber-600">
                 {debugEnabled ? 'Stop' : 'Watch'}
               </button>

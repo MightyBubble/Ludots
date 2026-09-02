@@ -77,10 +77,103 @@ static bool IsValidGraphEditorLayout(JsonNode? node, out string error)
             viewport["zoom"] is not JsonValue vz || !vz.TryGetValue<double>(out _))
         { error = "layout.viewport requires numeric x, y, and zoom."; return false; }
     }
+    if (layout["annotations"] is JsonNode annotationsNode &&
+        !IsValidGraphEditorAnnotations(annotationsNode, out error))
+    {
+        return false;
+    }
     foreach (KeyValuePair<string, JsonNode?> field in layout)
     {
-        if (field.Key is not ("nodes" or "viewport")) { error = $"Unknown layout field '{field.Key}'."; return false; }
+        if (field.Key is not ("nodes" or "viewport" or "annotations")) { error = $"Unknown layout field '{field.Key}'."; return false; }
     }
+    return true;
+}
+
+// Authoring annotations the Live Debug dock narrates: named groups of nodes with plain
+// prose, plus a per-entry title / summary. Groups are declared once per graph so entries
+// sharing a chain reuse them instead of restating the node list.
+static bool IsValidGraphEditorAnnotations(JsonNode? node, out string error)
+{
+    error = string.Empty;
+    if (node is not JsonObject annotations) { error = "layout.annotations must be an object."; return false; }
+
+    var groupIds = new HashSet<string>(StringComparer.Ordinal);
+    var claimedNodes = new Dictionary<string, string>(StringComparer.Ordinal);
+    if (annotations["groups"] is JsonNode groupsNode)
+    {
+        if (groupsNode is not JsonArray groups) { error = "layout.annotations.groups must be an array."; return false; }
+        for (int i = 0; i < groups.Count; i++)
+        {
+            if (groups[i] is not JsonObject group)
+            { error = $"layout.annotations.groups[{i}] must be an object."; return false; }
+            if (!TryReadRequiredText(group, "id", $"layout.annotations.groups[{i}]", out string groupId, out error)) return false;
+            if (!TryReadRequiredText(group, "text", $"layout.annotations.groups[{i}]", out _, out error)) return false;
+            if (!groupIds.Add(groupId))
+            { error = $"layout.annotations.groups[{i}] duplicates group id '{groupId}'."; return false; }
+            if (group["nodes"] is not JsonArray groupNodes || groupNodes.Count == 0)
+            { error = $"layout.annotations.groups['{groupId}'].nodes must be a non-empty array."; return false; }
+            for (int n = 0; n < groupNodes.Count; n++)
+            {
+                if (groupNodes[n] is not JsonValue nodeValue ||
+                    !nodeValue.TryGetValue(out string? nodeId) ||
+                    string.IsNullOrWhiteSpace(nodeId) ||
+                    !string.Equals(nodeId, nodeId.Trim(), StringComparison.Ordinal))
+                { error = $"layout.annotations.groups['{groupId}'].nodes[{n}] must be a trimmed non-empty string."; return false; }
+                if (claimedNodes.TryGetValue(nodeId, out string? owner))
+                {
+                    error = $"layout.annotations.groups['{groupId}'] claims node '{nodeId}' already claimed by group '{owner}'; " +
+                        "a node belongs to at most one group.";
+                    return false;
+                }
+                claimedNodes[nodeId] = groupId;
+            }
+            foreach (KeyValuePair<string, JsonNode?> field in group)
+            {
+                if (field.Key is not ("id" or "text" or "nodes"))
+                { error = $"Unknown field '{field.Key}' in layout.annotations.groups['{groupId}']."; return false; }
+            }
+        }
+    }
+
+    if (annotations["entries"] is JsonNode entriesNode)
+    {
+        if (entriesNode is not JsonObject entries) { error = "layout.annotations.entries must be an object."; return false; }
+        foreach (KeyValuePair<string, JsonNode?> entry in entries)
+        {
+            if (entry.Value is not JsonObject story)
+            { error = $"layout.annotations.entries['{entry.Key}'] must be an object."; return false; }
+            if (!TryReadRequiredText(story, "title", $"layout.annotations.entries['{entry.Key}']", out _, out error)) return false;
+            if (!TryReadRequiredText(story, "summary", $"layout.annotations.entries['{entry.Key}']", out _, out error)) return false;
+            foreach (KeyValuePair<string, JsonNode?> field in story)
+            {
+                if (field.Key is not ("title" or "summary"))
+                { error = $"Unknown field '{field.Key}' in layout.annotations.entries['{entry.Key}']."; return false; }
+            }
+        }
+    }
+
+    foreach (KeyValuePair<string, JsonNode?> field in annotations)
+    {
+        if (field.Key is not ("groups" or "entries"))
+        { error = $"Unknown layout.annotations field '{field.Key}'."; return false; }
+    }
+    return true;
+}
+
+static bool TryReadRequiredText(JsonObject owner, string field, string path, out string value, out string error)
+{
+    value = string.Empty;
+    error = string.Empty;
+    if (owner[field] is not JsonValue text ||
+        !text.TryGetValue(out string? raw) ||
+        string.IsNullOrWhiteSpace(raw) ||
+        !string.Equals(raw, raw.Trim(), StringComparison.Ordinal))
+    {
+        error = $"{path}.{field} must be a trimmed non-empty string.";
+        return false;
+    }
+
+    value = raw;
     return true;
 }
 
@@ -2126,6 +2219,59 @@ app.MapGet("/api/graph/enums/{modId}", (string modId) =>
     return Results.Ok(new { ok = true, enums });
 });
 
+// Launcher-wide semantic input action vocabulary for action-bound TriggerGraph entries.
+// Same merge shape as enums: every discovered mod contributes, later mods override by id.
+app.MapGet("/api/graph/input-actions/{modId}", (string modId) =>
+{
+    _ = modId;
+    var byId = new Dictionary<string, (string Type, string Source)>(StringComparer.Ordinal);
+    var order = new List<string>();
+    foreach (var mod in launcher.DiscoverMods().OrderBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase))
+    {
+        string inputPath = Path.Combine(mod.RootPath, "assets", "Input", "default_input.json");
+        if (!File.Exists(inputPath))
+        {
+            continue;
+        }
+
+        Ludots.Core.Input.Config.InputConfigRoot? config;
+        try
+        {
+            config = JsonSerializer.Deserialize<Ludots.Core.Input.Config.InputConfigRoot>(
+                File.ReadAllText(inputPath),
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+                });
+            if (config == null)
+            {
+                return Results.BadRequest(new { ok = false, error = $"Failed to read input config: {inputPath}" });
+            }
+
+            Ludots.Core.Input.Config.InputConfigPipelineLoader.Validate(config, inputPath);
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        {
+            return Results.BadRequest(new { ok = false, error = ex.Message });
+        }
+
+        for (int i = 0; i < config.Actions.Count; i++)
+        {
+            Ludots.Core.Input.Config.InputActionDef action = config.Actions[i];
+            if (!byId.ContainsKey(action.Id)) order.Add(action.Id);
+            byId[action.Id] = (action.Type.ToString(), mod.Id);
+        }
+    }
+
+    var actions = order
+        .OrderBy(id => id, StringComparer.Ordinal)
+        .Select(id => new { id, type = byId[id].Type, source = byId[id].Source })
+        .ToArray();
+
+    return Results.Ok(new { ok = true, actions });
+});
+
 app.MapGet("/api/graph/text-keys/{modId}", (string modId) =>
 {
     // Launcher-wide TextToken vocabulary for LoadTextKey / Story textToken pickers.
@@ -2356,6 +2502,8 @@ app.MapGet("/api/mods/{modId}/gas/graph-editor/{graphId}", (string modId, string
         JsonNode? layoutNode = graphs[graphId];
         if (layoutNode != null && !IsValidGraphEditorLayout(layoutNode, out string layoutError))
             return Results.BadRequest(new { ok = false, error = layoutError });
+        if (layoutNode != null && !TryValidateAnnotationTargets(modRoot, graphId, layoutNode, out string targetError))
+            return Results.BadRequest(new { ok = false, error = targetError });
 
         return Results.Ok(new
         {
@@ -2385,6 +2533,8 @@ app.MapPut("/api/mods/{modId}/gas/graph-editor/{graphId}", async (string modId, 
         return Results.BadRequest(new { ok = false, error = "Layout must be a JSON object." });
     if (!IsValidGraphEditorLayout(layout, out string layoutError))
         return Results.BadRequest(new { ok = false, error = layoutError });
+    if (!TryValidateAnnotationTargets(modRoot, graphId, layout, out string targetError))
+        return Results.BadRequest(new { ok = false, error = targetError });
 
     string sidecarPath = Path.Combine(modRoot, "assets", "GAS", "graph_editor.json");
     JsonObject root;
@@ -2781,6 +2931,7 @@ static bool TryNormalizeGasGraphBody(JsonObject bodyObj, string graphId, out str
     {
         GraphKind kind = GraphProgramAuthoringFrontDoor.RequireKind(bodyObj, graphId);
         GraphProgramAuthoringFrontDoor.RequireControlFlowAuthoringShape(bodyObj, graphId, kind);
+        GraphProgramAuthoringFrontDoor.RequireTriggerGraphEntryShape(bodyObj, graphId, kind);
 
         GraphControlFlowDocument? doc = bodyObj.Deserialize<GraphControlFlowDocument>(StrictJsonOptions.CreateCamelCase(includeFields: true));
         if (doc == null)
@@ -2945,6 +3096,102 @@ static bool TryReadGraphsArray(string graphsPath, out JsonArray arr, out IResult
         error = Results.BadRequest(new { ok = false, error = $"Failed to read graphs.json: {ex.Message}", path = graphsPath });
         return false;
     }
+}
+
+// Annotations name nodes and entries that live in graphs.json. Checking them against the
+// graph is what keeps a rename loud: without this the dock would just stop narrating.
+static bool TryValidateAnnotationTargets(string modRoot, string graphId, JsonNode? layoutNode, out string error)
+{
+    error = string.Empty;
+    if (layoutNode is not JsonObject layout ||
+        layout["annotations"] is not JsonObject annotations)
+    {
+        return true;
+    }
+
+    string graphsPath = Path.Combine(modRoot, "assets", "GAS", "graphs.json");
+    if (!File.Exists(graphsPath))
+    {
+        error = $"Graph annotations for '{graphId}' cannot be checked: {graphsPath} is missing.";
+        return false;
+    }
+
+    if (!TryReadGraphsArray(graphsPath, out JsonArray graphs, out _))
+    {
+        error = $"Graph annotations for '{graphId}' cannot be checked: failed to read {graphsPath}.";
+        return false;
+    }
+
+    if (!TryFindGraphObject(graphs, graphId, out JsonObject graph, out _))
+    {
+        error = $"Graph annotations name graph '{graphId}', which is not declared in {graphsPath}.";
+        return false;
+    }
+
+    var nodeIds = new HashSet<string>(StringComparer.Ordinal);
+    if (graph["nodes"] is JsonArray graphNodes)
+    {
+        for (int i = 0; i < graphNodes.Count; i++)
+        {
+            if (graphNodes[i] is JsonObject graphNode &&
+                graphNode["id"] is JsonValue idValue &&
+                idValue.TryGetValue(out string? id) &&
+                !string.IsNullOrWhiteSpace(id))
+            {
+                nodeIds.Add(id);
+            }
+        }
+    }
+
+    var entryLabels = new HashSet<string>(StringComparer.Ordinal);
+    if (graph["entries"] is JsonArray graphEntries)
+    {
+        for (int i = 0; i < graphEntries.Count; i++)
+        {
+            if (graphEntries[i] is JsonObject graphEntry &&
+                graphEntry["label"] is JsonValue labelValue &&
+                labelValue.TryGetValue(out string? label) &&
+                !string.IsNullOrWhiteSpace(label))
+            {
+                entryLabels.Add(label);
+            }
+        }
+    }
+
+    if (annotations["groups"] is JsonArray groups)
+    {
+        for (int i = 0; i < groups.Count; i++)
+        {
+            if (groups[i] is not JsonObject group) continue;
+            string groupId = group["id"]?.GetValue<string>() ?? $"#{i}";
+            if (group["nodes"] is not JsonArray groupNodes) continue;
+            for (int n = 0; n < groupNodes.Count; n++)
+            {
+                string? nodeId = groupNodes[n]?.GetValue<string>();
+                if (nodeId != null && !nodeIds.Contains(nodeId))
+                {
+                    error = $"Graph annotation group '{groupId}' names node '{nodeId}', " +
+                        $"which graph '{graphId}' does not declare in {graphsPath}.";
+                    return false;
+                }
+            }
+        }
+    }
+
+    if (annotations["entries"] is JsonObject annotationEntries)
+    {
+        foreach (KeyValuePair<string, JsonNode?> entry in annotationEntries)
+        {
+            if (!entryLabels.Contains(entry.Key))
+            {
+                error = $"Graph annotation names entry '{entry.Key}', " +
+                    $"which graph '{graphId}' does not declare in {graphsPath}.";
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 static bool TryFindGraphObject(JsonArray arr, string graphId, out JsonObject graphObj, out int index)

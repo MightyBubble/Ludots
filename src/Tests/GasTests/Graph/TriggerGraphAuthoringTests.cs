@@ -839,6 +839,63 @@ namespace Ludots.Tests.Gas.Graph
                 GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
         }
 
+        [TestCase(
+            "{ \"label\": \"on_x\", \"event\": \"MapLoaded\", \"action\": \"CommandSourceAcquire\", \"start\": \"a1\" }",
+            "event=True, action=True",
+            TestName = "EntryNamingBothEventAndActionIsRejected")]
+        [TestCase(
+            "{ \"label\": \"on_x\", \"start\": \"a1\" }",
+            "event=False, action=False",
+            TestName = "EntryNamingNeitherEventNorActionIsRejected")]
+        public void TriggerGraphEntry_RequiresExactlyOneTriggerSource(string entryJson, string expected)
+        {
+            var ex = Assert.Throws<InvalidOperationException>(() => CompileFrontDoor(
+                EntryOnlyTriggerGraph(entryJson),
+                "tests.maptrigger.entry.exactlyone"))!;
+            Assert.That(ex.Message, Does.Contain("must declare exactly one of 'event' or 'action'"));
+            Assert.That(ex.Message, Does.Contain(expected));
+        }
+
+        [Test]
+        public void TriggerGraphEntry_ActionBoundEntryMustNotAlsoFilterOnAction()
+        {
+            var ex = Assert.Throws<InvalidOperationException>(() => CompileFrontDoor(
+                EntryOnlyTriggerGraph(
+                    "{ \"label\": \"on_x\", \"action\": \"CommandSourceAcquire\", \"start\": \"a1\", "
+                    + "\"filters\": { \"action\": \"CommandSourceAcquire\" } }"),
+                "tests.maptrigger.entry.actionfilter"))!;
+            Assert.That(ex.Message, Does.Contain("must not also declare filters.action"));
+        }
+
+        [Test]
+        public void TriggerGraphEntry_ActionBoundEntryAloneCompiles()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                EntryOnlyTriggerGraph(
+                    "{ \"label\": \"on_teleport\", \"action\": \"CommandSourceAcquire\", \"start\": \"a1\", "
+                    + "\"refire\": \"restart\" }"),
+                "tests.maptrigger.entry.actiononly");
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+        }
+
+        private static string EntryOnlyTriggerGraph(string entryJson) =>
+            $$"""
+            {
+              "kind": "TriggerGraph",
+              "entries": [ {{entryJson}} ],
+              "nodes": [
+                { "id": "a1", "op": "ConstInt", "intValue": 7 },
+                { "id": "aHalt", "op": "HaltReturnInt" }
+              ],
+              "controlEdges": [
+                { "from": "a1", "fromPort": "next", "to": "aHalt" }
+              ],
+              "valueEdges": [
+                { "from": "a1", "fromPort": "value", "to": "aHalt", "toPort": "value" }
+              ]
+            }
+            """;
+
         private static GraphControlFlowCompileResult CompileSmallTriggerGraph()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
