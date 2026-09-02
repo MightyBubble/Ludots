@@ -259,4 +259,4 @@ Feature: 框选只靠一张命中函数
 | Case E `case-e-config-structure.html` | Showcase 现网配置结构 |
 | PR #1444 | 当前台阶实现 |
 | Issue #1398 | Case E / 输入命令总题 |
-| `mods/showcases/case_e_selection/.../docs/NEXT-AGENT-BRIEF.md` | 短任务条 |
+| `mods/showcases/case_e_selection/CaseESelectionMod/docs/NEXT-AGENT-BRIEF.md` | 短任务条 |

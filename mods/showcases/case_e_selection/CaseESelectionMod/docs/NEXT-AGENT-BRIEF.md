@@ -1,7 +1,7 @@
 # 下一位：图当可调用函数 — 先写方案
 
-> **正本**：[可调用函数远景](../../../../../../gitbook/architecture/graph-callable-function-vision.md)  
-> **进度入口**：[图能力状态](../../../../../../gitbook/architecture/graph-capability-status.md)  
+> **正本**：[可调用函数远景](../../../../../gitbook/architecture/graph-callable-function-vision.md)  
+> **进度入口**：[图能力状态](../../../../../gitbook/architecture/graph-capability-status.md)  
 > **Case E 说明**：[结构与配置](./case-e-config-structure.html)
 
 ## 这张单子要你干什么
