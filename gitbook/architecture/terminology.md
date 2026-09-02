@@ -9,7 +9,7 @@
 | 层 | 正式术语 | SSOT 归属 | 代码建类型？ |
 |---|---|---|---|
 | 机器 | **Machine / 机器**（原设计稿称 Client，已更名） | 唯一表达形式 = 一个 AgentBridge discovery 目录（环回 + pid/port 集合点）；launcher / 部署层概念 | 不建（跨机需求出现前） |
-| 进程 | **App**（进程宿主） | launcher 启动构型 + Adapter（进程内宿主能力库）+ HostLoop（App 帧循环，`src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs`）；多进程编排归 [#711](https://github.com/MightyBubble/Ludots/issues/711) 联机线（待合入，main 上暂无） | 已有 |
+| 进程 | **App**（进程宿主） | launcher 启动构型 + Adapter（进程内宿主能力库）+ HostLoop（App 帧循环，`src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs`）；多进程编排归联机线（[#711](https://github.com/MightyBubble/Ludots/issues/711) 已合入 main：`src/Core/Networking`、DedicatedServer、launcher 进程组） | 已有 |
 | 席位 | **Seat** | `ClientLocalSeatRegistry`（已落地，`src/Core/Client/ClientLocalSeatRegistry.cs`） | 已是 |
 | 设备 | **Device（Seat 域内）** | ControlScheme = 设备布局档案（纯键位：IMC context 组合 + axisMove 拓扑，#1306 路线③收窄）；Input Action Mapping 解释设备参数为语义；Mock = SyntheticInputDevice（`src/Core/Input/Runtime/SyntheticInputDevice.cs`）/ AgentBridge | 暂不建设备注册表；P3 预留唯一钩子 = ClientLocalSeat 设备句柄集合（见 #1058） |
 
@@ -22,7 +22,7 @@ ControlScheme 归设备层，但玩家的下单偏好不归它（#1306 路线③
 仓库内「client」只保留两个精确义：
 
 1. **client-local 前缀 = 本机**（如 `ClientLocalSeatRegistry` = 本机座位表）
-2. **ReplicatedClient = 网络角色**（待 [#711](https://github.com/MightyBubble/Ludots/issues/711) 合入 main；main 上暂无，合入前不得在任何合同中写作现状）
+2. **ReplicatedClient = 网络角色**（[#711](https://github.com/MightyBubble/Ludots/issues/711) 已合入 main，是现状：`NetworkProcessRole.ReplicatedClient` 只执行 LocalInput 组）
 
 禁止第四义：**client ≠ 机器**。机器一律称 Machine。
 
