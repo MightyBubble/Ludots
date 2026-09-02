@@ -255,7 +255,7 @@
       <tr><td>03</td><td>边沿 + 存活期调函数</td><td>triggers[]；存活期函数 id</td><td>配置；调度代码</td></tr>
       <tr><td>04</td><td>按下</td><td>起角 map var；候选集；ActivateContext</td><td>配置图体</td></tr>
       <tr><td>05</td><td>拖拽每 tick</td><td>同一命中函数（候选+矩形→名单）</td><td>函数资产+调度</td></tr>
-      <tr><td>06</td><td>抬起</td><td>再调同一函数 → selected；Deactivate</td><td>配置图体；缺宿主调函数</td></tr>
+      <tr><td>06</td><td>抬起</td><td>再调同一函数 → selected；Deactivate</td><td>配置图体（现网 InvokeGraph 已调 box_hit）</td></tr>
       <tr><td>07</td><td>成员变化</td><td>presenter 两 key</td><td>配置</td></tr>
     </tbody>
   </table>
@@ -263,24 +263,28 @@
   <h2><span class="no">10</span>相对现网：删 / 改 / 补</h2>
   <div class="grid2">
     <div class="box">
-      <h4>停用或改掉</h4>
+      <h4>本台阶已停用或改掉（PR #1444）</h4>
       <div class="kv">
-        · 把 Query 当特殊 kind 的产品叙事<br>
-        · continuousQuery 临时字段名<br>
-        · 命中路径双写 Press 属性<br>
+        · continuous 强制 kind=Query<br>
+        · GraphReturnWriter 代写 hover<br>
         · commit/tap 手抄第二份命中链<br>
-        · 把 activeEntityViewKey 当成预览出参
+        · 把「调用方统一回写」写成现网合同
       </div>
     </div>
     <div class="box">
-      <h4>补</h4>
+      <h4>远景仍要补（见可调用函数远景正本）</h4>
       <div class="kv">
-        · 函数等价 + 返回类型<br>
-        · 图级入参声明（候选 key、矩形）<br>
-        · 宿主调函数（拖拽与松手共用）<br>
-        · 存活期按函数 id 调度并清空预览返回物化
+        · 图级入参表<br>
+        · continuousQuery 改名 / 废 Query 产品叙事<br>
+        · 预览 S1/S2 择一写死<br>
+        · Invoke 命名与 FuncLib 划界<br>
+        · 与 #1084/#1099 准纯叙事对齐
       </div>
     </div>
+  </div>
+  <div class="callout" style="margin-top:12px">
+    下一任先出方案：<code>gitbook/architecture/graph-callable-function-vision.md</code>；
+    Case E 任务条：<code>docs/NEXT-AGENT-BRIEF.md</code>。
   </div>
 
   <div class="callout" style="margin-top:16px">

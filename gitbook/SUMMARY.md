@@ -52,6 +52,7 @@
   - [GAS 分层架构](architecture/gas-layered-architecture.md)
   - [图分层：Flow / Script 与行为调度](architecture/graph-layering-flow-and-behavior.md)
   - [图能力唯一入口](architecture/graph-capability-status.md)
+  - [可调用函数远景（Case E 驱动）](architecture/graph-callable-function-vision.md)
   - [Graph 编辑器与 Live Debug 上手](architecture/graph-editor-and-live-debug.md)
   - [图 Codegen 产品化](architecture/graph-codegen-productization.md)
   - [图编成代码还能对得上](acceptance/graph-codegen-parity.md)
