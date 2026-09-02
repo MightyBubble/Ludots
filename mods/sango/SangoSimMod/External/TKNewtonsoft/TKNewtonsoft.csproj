@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Vendored copy of sango's Json.NET fork (sango-src/Project/Assets/Scripts/Extensions/Newtonsoft.Json,
+       "Json.NET for Unity" 11.0.1-beta2, MIT (c) James Newton-King, namespaces renamed TKNewtonsoft).
+
+       Why vendored instead of NuGet Newtonsoft.Json: the fork extends the deserialization pipeline so
+       converters receive member context — JsonConverter.ReadJson(reader, objectType, existingValue,
+       serializer, JsonProperty property, object target) plus JsonConverter<T>.Create — which sango's
+       Id2ObjConverter/XY2CellConverter delayed reference-binding depends on. Stock Newtonsoft cannot
+       provide it without rewriting the scenario loader's binding model.
+
+       Build configuration: zero HAVE_* capability defines — the same "no defines" build the Unity
+       asmdef produced (!HAVE_LINQ turns on LinqBridge, which also declares the Serialization.Func/Action
+       delegate family the fork's own code references; !HAVE_ASYNC disables the .Async sources, whose
+       class redeclarations are not partial). -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>annotations</Nullable>
+    <AssemblyName>TKNewtonsoft</AssemblyName>
+    <RootNamespace>TKNewtonsoft</RootNamespace>
+    <LangVersion>9.0</LangVersion>
+    <DefineConstants></DefineConstants>
+  </PropertyGroup>
+</Project>

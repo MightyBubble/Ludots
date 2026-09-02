@@ -1,0 +1,79 @@
+{
+  "_items": {
+    "1": {
+      "Id": 1,
+      "Name": "中毒",
+      "kind": 1,
+      "asset": "Buff/Poison",
+      "offset": [0, 1, 0],
+      "buffEffects": [
+        {
+          "class": "Poison",
+          "damagePerTurn": 10
+        }
+      ]
+    },
+    "2": {
+      "Id": 2,
+      "Name": "燃烧",
+      "kind": 2,
+      "asset": "Buff/Burn",
+      "offset": [0, 1, 0],
+      "buffEffects": [
+        {
+          "class": "Burn",
+          "damagePerTurn": 15
+        }
+      ]
+    },
+    "3": {
+      "Id": 3,
+      "Name": "冰冻",
+      "kind": 3,
+      "asset": "Buff/Freeze",
+      "offset": [0, 1, 0],
+      "buffEffects": [
+        {
+          "class": "Freeze"
+        }
+      ]
+    },
+    "4": {
+      "Id": 4,
+      "Name": "沉默",
+      "kind": 4,
+      "asset": "Buff/Silence",
+      "offset": [0, 1, 0],
+      "buffEffects": [
+        {
+          "class": "Silence"
+        }
+      ]
+    },
+    "5": {
+      "Id": 5,
+      "Name": "无敌",
+      "kind": 5,
+      "asset": "Buff/Invincible",
+      "offset": [0, 1, 0],
+      "buffEffects": [
+        {
+          "class": "Invincible"
+        }
+      ]
+    },
+    "6": {
+      "Id": 6,
+      "Name": "护盾",
+      "kind": 6,
+      "asset": "Buff/Shield",
+      "offset": [0, 1, 0],
+      "buffEffects": [
+        {
+          "class": "Shield",
+          "shieldValue": 100
+        }
+      ]
+    }
+  }
+}

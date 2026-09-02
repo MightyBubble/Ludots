@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Ported sango simulation sources predate nullable annotations; annotations-only keeps PriorityQueue2's
+         `T?` syntax legal without flooding the port with nullable analysis warnings. -->
+    <Nullable>annotations</Nullable>
+    <!-- PriorityQueue2 predates the BCL PriorityQueue<TElement,TPriority>; the local type intentionally wins. -->
+    <NoWarn>$(NoWarn);CS0436</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Core\Ludots.Core.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="External\TKNewtonsoft\TKNewtonsoft.csproj" />
+  </ItemGroup>
+
+  <!-- Vendored TKNewtonsoft lives in its own project; keep it out of this project's automatic glob. -->
+  <ItemGroup>
+    <Compile Remove="External\**\*.cs" />
+  </ItemGroup>
+</Project>
