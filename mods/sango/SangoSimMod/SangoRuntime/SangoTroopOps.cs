@@ -1,5 +1,5 @@
-// M2.b 部队编成/移动内核操作:原版两条 UI→内核链的 headless 等价展开,命令层
-// (SangoWebUiMod sango.createTroop/sango.moveTroop)、测试播种与演示播种共用,
+// M2.b 部队编成/移动 + M2.c 战斗分派内核操作:原版 UI→内核链的 headless 等价展开,
+// 命令层(SangoWebUiMod sango.createTroop/sango.moveTroop)、测试播种与演示播种共用,
 // 不再有平行实现。
 //   编成:UICityExpedition.OnOK → CityExpedition.DoJob(Game/System/City/CityExpedition.cs)
 //     门槛 IsValid:城兵力>0 && 城军粮>0 && 空闲武将>0 && 军团行动力>=MakeTroop 费;
@@ -11,8 +11,24 @@
 //     TroopActionStay.OnEnter(逐步 TroopMoveEvent,原版由渲染队列逐帧结算)→
 //     OnMoveDone(ActionOver=true)。headless 下部队 Render 不可见,事件一拍即结,
 //     这里显式泵空渲染队列后返回,路径步数与 Map.GetMovePath 一致。
+//   战斗分派(M2.c):TroopSystem.HandleEvent Click → TroopInteractiveDialog(在程占位)
+//     与 TroopInteractiveMenu(范围外右键委任菜单)的合流展开(Game/System/Troop/
+//     Interactive/*,订阅者 Check 条件为分派依据,UI 状态机不搬,见 SangoUnityShim 裁定):
+//     敌部队 = TroopInteractiveDestroyTroop:歼灭任务(TroopDestroyTroop 行为,
+//       TroopAIUtility.PriorityAction 选移位+技能,SpellSkill 一击解算,反击/击退在
+//       SkillInstance.Action 内)。范围无关——敌占格永远进不了 MoveRange
+//       (Cell.CanPassThrough 势力门),原版对敌目标的攻击入口本就是委任菜单;
+//     敌城 = TroopInteractiveOccupyCity:占城任务(TroopOccupyCity 行为:逼近→攻城→
+//       城陷,City.ChangeTroops/ChangeDurability/OnFall→OnCityFall/OnForceFall 链);
+//     同势力城(在程)= TroopInteractiveCityEnter:走移动路径 → ActionOver → EnterCity;
+//     己方未完工/破损建筑 = TroopInteractiveBuildingFix(TroopFixBuilding 任务,
+//       原 Check 无范围条件)。
+//     任务型交互的逐帧 Update(TroopInteractive*.Update 每帧一次 DoAI)压缩为
+//     "DoAI 一拍 + 泵空演出队列" 循环,直至 DoAI 完成(ActionOver)。
 // 范围外目标在原版走"委任移动"确认链(TroopInteractiveMoveToCell,多回合任务制),
-// M2.b 不复用该链,按越程拒绝;有建筑/部队占位的落格在原版走接近/战斗对话框(M2.c)。
+// M2.b 不复用该链,按越程拒绝。
+// 上游怪癖(保留):TroopInteractiveBase.Start 对玩家控部队 ClearMission 后再授新任务,
+// AI 托管部队旧任务直接覆盖(SetMission);运输队(IsTransport)不得歼灭/占城。
 
 using System;
 using System.Collections.Generic;
@@ -21,10 +37,10 @@ using Sango.Render;
 
 namespace Sango.Runtime
 {
-    /// <summary>编成/移动操作的类型化结果(命令层原样转 WebUiCommandResult)。</summary>
+    /// <summary>编成/移动/战斗操作的类型化结果(命令层原样转 WebUiCommandResult)。</summary>
     public sealed record SangoTroopOpResult(bool Succeeded, string ErrorCode, string Message)
     {
-        public static SangoTroopOpResult Ok() => new(true, string.Empty, string.Empty);
+        public static SangoTroopOpResult Ok(string action = "") => new(true, string.Empty, action);
 
         public static SangoTroopOpResult Fail(string errorCode, string message) =>
             new(false, errorCode, message);
@@ -172,14 +188,28 @@ namespace Sango.Runtime
             troop.MoveRange.Clear();
             scenario.Map.GetMoveRange(troop, troop.MoveRange);
 
+            // 委任分派先行:敌对目标(敌部队/敌城)与己方破损建筑不受移动范围限制
+            // (原版委任菜单语义;敌占格本就进不了 MoveRange,见文件头)。
+            if (IsDelegateInteraction(troop, destCell))
+                return InteractAtCell(scenario, troop, destCell);
+
             if (!troop.MoveRange.Contains(destCell))
                 return (SangoTroopOpResult.Fail("out_of_range",
                     "target cell is outside the troop move range (original UI routes it to the multi-turn delegate-move chain, not available here)."), 0);
 
-            // HandleEvent Click 分派:空格/本格走行动菜单;有建筑或部队占位走接近/战斗对话框(M2.c)。
+            // HandleEvent Click 分派:空格/本格走待命;同势力城在程走入城;其余占位
+            // (完好己方建筑/同阵营部队)在原版对话框无订阅者匹配,保持占位拒绝。
             if (!(destCell == troop.cell && destCell.building == null) && !destCell.IsEmpty())
+            {
+                if (destCell.building != null && destCell.building.IsCityBase() &&
+                    destCell.building.mBelongForce == troop.mBelongForce)
+                {
+                    return EnterSameForceCity(scenario, troop, destCell);
+                }
+
                 return (SangoTroopOpResult.Fail("occupied_target",
-                    "target cell holds a building or troop; approach/attack interactions arrive with M2.c combat."), 0);
+                    "target cell holds a friendly troop or an intact friendly building; the original dialog offers no interaction there."), 0);
+            }
 
             var movePath = new List<Cell>(troop.MoveRange.Count);
             scenario.Map.GetMovePath(troop, destCell, movePath);
@@ -208,6 +238,164 @@ namespace Sango.Runtime
             }
 
             return (SangoTroopOpResult.Ok(), movePath.Count);
+        }
+
+        // 任务型交互的单回合步进预算:一次接敌任务每拍至多"一次 DoAI + 排空演出队列"
+        // (移动 N 格 + 一次技能解算),量级远小于此;触顶即视为任务链卡死,fail-fast。
+        private const int MaxMissionPumpRounds = 10_000;
+
+        /// <summary>
+        /// 委任交互判定:敌部队占格、非同势力城基、己方破损/在建建筑。三者对应原版
+        /// TroopInteractiveDestroyTroop / OccupyCity / BuildingFix 的 Check(范围条件见各分支),
+        /// 是 moveTroop 的战斗入口;其余占位(同阵营部队、完好己方建筑)不在此列。
+        /// </summary>
+        static bool IsDelegateInteraction(Troop troop, Cell destCell)
+        {
+            if (destCell.troop != null && troop.IsEnemy(destCell.troop))
+            {
+                return true;
+            }
+
+            if (destCell.building != null)
+            {
+                if (destCell.building.IsCityBase())
+                {
+                    return destCell.building.mBelongForce != troop.mBelongForce;
+                }
+
+                return destCell.building.mBelongForce == troop.mBelongForce &&
+                       (destCell.building.isUpgrading || destCell.building.durability < destCell.building.DurabilityLimit);
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// TroopInteractive*(歼灭/占城/修补)分派:IsDelegateInteraction 命中后按占位物类型
+        /// 授任务并当回合压缩执行。城基优先(敌城在部队+城同格时仍以城为攻击对象,
+        /// 与原版 TroopInteractiveOccupyCity 的任务目标一致),敌部队次之,己方建筑末位。
+        /// </summary>
+        static (SangoTroopOpResult Result, int PathSteps) InteractAtCell(Scenario scenario, Troop troop, Cell destCell)
+        {
+            if (destCell.building != null && destCell.building.IsCityBase())
+            {
+                // TroopInteractiveOccupyCity.Check:非同势力城基(敌/白城),运输队拒。
+                if (troop.IsTransport)
+                {
+                    return (SangoTroopOpResult.Fail("troop_transport",
+                        "transport troops cannot occupy cities (TroopInteractiveOccupyCity gate)."), 0);
+                }
+
+                return RunTroopMission(scenario, troop, MissionType.TroopOccupyCity,
+                    ((City)destCell.building).Id, "occupation");
+            }
+
+            // TroopInteractiveDestroyTroop.Check:敌部队占格(运输队拒)。
+            if (destCell.troop != null && troop.IsEnemy(destCell.troop))
+            {
+                if (troop.IsTransport)
+                {
+                    return (SangoTroopOpResult.Fail("troop_transport",
+                        "transport troops cannot engage in field combat (TroopInteractiveDestroyTroop gate)."), 0);
+                }
+
+                return RunTroopMission(scenario, troop, MissionType.TroopDestroyTroop,
+                    destCell.troop.Id, "field-strike");
+            }
+
+            // TroopInteractiveBuildingFix.Check:己方非城基建筑,升级中或耐久破损(无范围条件)。
+            return RunTroopMission(scenario, troop, MissionType.TroopFixBuilding,
+                destCell.building!.Id, "building-fix");
+        }
+
+        /// <summary>
+        /// TroopInteractiveCityEnter 的移动+入城:逐步 TroopMoveEvent 走完路径(与移动链同源),
+        /// OnMoveDone 置 ActionOver,落格仍是同势力城基才 EnterCity(原版终判)。
+        /// </summary>
+        static (SangoTroopOpResult Result, int PathSteps) EnterSameForceCity(Scenario scenario, Troop troop, Cell destCell)
+        {
+            var movePath = new List<Cell>(troop.MoveRange.Count);
+            scenario.Map.GetMovePath(troop, destCell, movePath);
+
+            var onMoveDone = (System.Action)(() =>
+            {
+                troop.ActionOver = true;
+                if (destCell.building != null && destCell.building.IsSameForce(troop) && destCell.building.IsCityBase())
+                {
+                    troop.EnterCity((City)destCell.building);
+                }
+            });
+
+            if (movePath.Count > 1)
+            {
+                Cell start = troop.cell;
+                for (int i = 1; i < movePath.Count; i++)
+                {
+                    bool isLast = i == movePath.Count - 1;
+                    Cell dest = movePath[i];
+                    TroopMoveEvent moveEvent = RenderEvent.Instance.Create<TroopMoveEvent>();
+                    moveEvent.Init(troop, start, dest, isLast, isLast ? onMoveDone : null);
+                    RenderEvent.Instance.Add(moveEvent);
+                    start = dest;
+                }
+
+                PumpRenderEvents(scenario);
+            }
+            else
+            {
+                onMoveDone();
+            }
+
+            return (SangoTroopOpResult.Ok("enter-city"), movePath.Count);
+        }
+
+        /// <summary>
+        /// TroopInteractive*(歼灭/占城/修建)OnEnter→Update 链的当回合压缩:
+        /// SetMission(玩家控先 ClearMission,原 Base.Start 语义)后逐拍"DoAI 一次 + 泵空演出
+        /// 队列",直至 DoAI 完成或部队溃灭/已行动;任务完成后 ActionOver 由 DoAI 自置
+        /// (OnAIDone 同义),这里只兜底(溃灭路径 DoAI 可能不再被调)。
+        /// </summary>
+        static (SangoTroopOpResult Result, int PathSteps) RunTroopMission(
+            Scenario scenario, Troop troop, MissionType missionType, int missionTarget, string action)
+        {
+            if (troop.IsPlayerControl)
+            {
+                troop.ClearMission();
+            }
+
+            troop.SetMission(missionType, missionTarget);
+
+            bool completed = false;
+            for (int i = 0; i < MaxMissionPumpRounds; i++)
+            {
+                if (!troop.IsAlive || troop.ActionOver)
+                {
+                    completed = true;
+                    break;
+                }
+
+                if (troop.DoAI(scenario))
+                {
+                    completed = true;
+                    break;
+                }
+
+                PumpRenderEvents(scenario);
+            }
+
+            if (!completed)
+            {
+                throw new InvalidOperationException(
+                    $"troop {troop.Id} mission {missionType} stalled after {MaxMissionPumpRounds} DoAI/pump rounds; the mission chain is waiting on player input or never completes.");
+            }
+
+            PumpRenderEvents(scenario);
+            if (troop.IsAlive)
+            {
+                troop.ActionOver = true;
+            }
+
+            return (SangoTroopOpResult.Ok(action), 0);
         }
 
         static TroopType? SelectTroopType(List<TroopType> types, int? requestedId)

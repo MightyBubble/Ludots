@@ -11,10 +11,12 @@ using Ludots.WebUI.DataPlane;
 namespace Sango.WebUi;
 
 /// <summary>
-/// 订阅方共享的世界消息流。两个真源:
+/// 订阅方共享的世界消息流。三个真源:
 ///   1. 内核 PlayerMessage(原版玩家消息系统,经 onTextMessageAdd 回调投真源;当前
 ///      M1.b 全托管启动下无玩家势力,IsPlayer 门控路径暂不产消息,M3 玩家接入后自然激活);
-///   2. SangoTurnDriver.DescribeTurn 的回合摘要行(内核侧确定性摘要,作为无玩家时的回合事件源)。
+///   2. SangoTurnDriver.DescribeTurn 的回合摘要行(内核侧确定性摘要,作为无玩家时的回合事件源);
+///   3. SangoCombatAnnals 战报行(M2.c:战斗 GameEvent 群的逐事件 MUD 行,命令/回合内
+///      即时入流,消息话题由 tick 泵自然刷新,不新增 topic)。
 /// </summary>
 public sealed class SangoWorldFeed
 {
@@ -26,6 +28,7 @@ public sealed class SangoWorldFeed
     private long _seq;
     private int _tick;
     private PlayerMessage.PlayerTextMessageCallback? _playerMessageCallback;
+    private SangoCombatAnnals? _combatAnnals;
 
     /// <summary>投影层发布序号(每次非订阅发布 +1,UI 据此感知数据新鲜度)。</summary>
     public int NextTick()
@@ -54,6 +57,23 @@ public sealed class SangoWorldFeed
     public void NoteTurnAdvanced()
     {
         Append(SangoTurnDriver.DescribeTurn(), dateText: string.Empty);
+    }
+
+    /// <summary>
+    /// 挂 M2.c 战报采集器:战斗 GameEvent 群 → MUD 战报行,经既有消息流面板呈现
+    /// (消息话题已由 tick 泵逐帧刷新,无需新 topic)。重复调用幂等。
+    /// </summary>
+    public void AttachCombatAnnals()
+    {
+        if (_combatAnnals != null)
+        {
+            return;
+        }
+
+        var annals = new SangoCombatAnnals();
+        annals.LinePublished += line => Append(line, dateText: string.Empty);
+        annals.Attach();
+        _combatAnnals = annals;
     }
 
     public SangoMessageRow[] SnapshotMessages()

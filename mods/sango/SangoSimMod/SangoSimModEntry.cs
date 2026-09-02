@@ -27,6 +27,7 @@ namespace Sango
     {
         private const string SeedTroopsEventKey = "SangoSeedTroops";
         private const int SeedTroopBudget = 8;
+        private const string SeedBattleEventKey = "SangoSeedBattle";
 
         private static SaveParticipantRegistry? _registeredRegistry;
         private static SangoTroopMarkerRuntime? _troopMarkers;
@@ -38,6 +39,7 @@ namespace Sango
             context.OnEvent(GameEvents.MapLoaded, OnMapLoaded(vfs));
             context.OnEvent(GameEvents.TurnAdvanced, OnTurnAdvanced(vfs));
             context.OnEvent(new EventKey(SeedTroopsEventKey), OnSeedTroops(vfs));
+            context.OnEvent(new EventKey(SeedBattleEventKey), OnSeedBattle(vfs));
         }
 
         public void OnUnload()
@@ -178,6 +180,103 @@ namespace Sango
             {
                 SangoTroopOps.MoveTroop(scenario, troop, best);
             }
+        }
+
+        // 开发播种·敌对遭遇(AgentBridge events.fire SangoSeedBattle,M2.c 取证):找相互
+        // 敌对且都过出征门槛的最近两城各编成一支部队(SangoTroopOps.CreateTroop 真实门槛),
+        // 互授歼灭任务(TroopInteractiveDestroyTroop.OnEnter 的 SetMission 语义)。只摆对阵,
+        // 不推回合——战斗由后续回合推进自然展开(CorpsAI.AITroops 逐回合驱动两军相撞),
+        // 战报行进 SangoCombatAnnals。重复触发幂等拒绝(已有存活歼灭任务即视为已播种)。
+        private static System.Func<ScriptContext, Task> OnSeedBattle(IVirtualFileSystem vfs)
+        {
+            return context =>
+            {
+                if (Sango.Core.Scenario.Cur == null)
+                {
+                    SangoKernelBoot.Boot(vfs, "SangoContentMod", SangoTurnDriver.DefaultSeed);
+                }
+
+                var scenario = Sango.Core.Scenario.Cur;
+                if (scenario.troopsSet.Count > 0)
+                {
+                    Log.Info("[SangoSimMod] M2.c seed battle: world already has troops; refusing to seed a second encounter");
+                    return Task.CompletedTask;
+                }
+
+                SangoTurnDriver.AdvanceTurn();
+
+                Sango.Core.City? home = null;
+                Sango.Core.City? foe = null;
+                int bestDistance = int.MaxValue;
+                System.Collections.Generic.List<Sango.Core.City> cities = new();
+                scenario.citySet.ForEach(city => cities.Add(city));
+                foreach (Sango.Core.City a in cities)
+                {
+                    if (a?.mBelongForce == null || a.mBelongCorps == null || !PassExpeditionGate(a))
+                    {
+                        continue;
+                    }
+
+                    foreach (Sango.Core.City b in cities)
+                    {
+                        if (b == a || b?.mBelongForce == null || b.mBelongCorps == null || !a.IsEnemy(b) || !PassExpeditionGate(b))
+                        {
+                            continue;
+                        }
+
+                        int distance = scenario.Map.Distance(a.CenterCell, b.CenterCell);
+                        if (distance < bestDistance)
+                        {
+                            (home, foe, bestDistance) = (a, b, distance);
+                        }
+                    }
+                }
+
+                if (home == null || foe == null)
+                {
+                    Log.Info("[SangoSimMod] M2.c seed battle: no mutually hostile eligible city pair found");
+                    return Task.CompletedTask;
+                }
+
+                Sango.Core.Troop? attacker = SeedEncounterTroop(scenario, home);
+                Sango.Core.Troop? defender = SeedEncounterTroop(scenario, foe);
+                if (attacker == null || defender == null)
+                {
+                    Log.Info("[SangoSimMod] M2.c seed battle: expedition gate rejected a side; no encounter seeded");
+                    return Task.CompletedTask;
+                }
+
+                attacker.SetMission(Sango.Core.MissionType.TroopDestroyTroop, defender.Id);
+                defender.SetMission(Sango.Core.MissionType.TroopDestroyTroop, attacker.Id);
+                Log.Info(
+                    $"[SangoSimMod] M2.c seed battle: {attacker.Name}({home.Name}) vs {defender.Name}({foe.Name}), mutual destroy missions, distance {bestDistance}; advance turns to let the war unfold");
+                return Task.CompletedTask;
+            };
+        }
+
+        static bool PassExpeditionGate(Sango.Core.City city)
+        {
+            int cost = Sango.Core.JobType.GetJobCostAP((int)Sango.Core.CityJobType.MakeTroop);
+            return city.troops > 0 && city.food > 0 && city.freePersons.Count > 0 &&
+                   city.mBelongCorps!.ActionPoint >= cost;
+        }
+
+        static Sango.Core.Troop? SeedEncounterTroop(Sango.Core.Scenario scenario, Sango.Core.City city)
+        {
+            var persons = new System.Collections.Generic.List<int>();
+            foreach (Sango.Core.Person person in city.freePersons)
+            {
+                if (person != null && persons.Count < SangoTroopOps.MaxMembers)
+                {
+                    persons.Add(person.Id);
+                }
+            }
+
+            (SangoTroopOpResult result, Sango.Core.Troop? troop) = SangoTroopOps.CreateTroop(
+                scenario, city, persons,
+                troops: System.Math.Min(3000, city.troops),
+                food: System.Math.Min(20000, city.food / 2));
+            return result.Succeeded ? troop : null;
         }
 
         private static System.Func<ScriptContext, Task> OnTurnAdvanced(IVirtualFileSystem vfs)

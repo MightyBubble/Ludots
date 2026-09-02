@@ -391,7 +391,17 @@ namespace Sango.Tests
             Assert.That(IntOf(troop, "x"), Is.EqualTo(originX), "rejected move must not change the troop position");
             Assert.That(IntOf(troop, "y"), Is.EqualTo(originY), "rejected move must not change the troop position");
 
-            // 占位:异城中心格(建筑占位;接近/战斗是 M2.c 面)——若恰在移动范围内则断言拒绝。
+            // 正常移动一次 → 同回合再动被拒(ActionOver,原版命令菜单门)。
+            object dest = PickEmptyRangeCell(kernel, troop);
+            (ok, error, _, _) = kernel.MoveTroop(troop, dest);
+            Assert.That(ok, Is.True, $"first move must succeed: {error}");
+            (ok, error, _, _) = kernel.MoveTroop(troop, dest);
+            Assert.That(ok, Is.False, "second order in the same turn must be rejected");
+            Assert.That(error, Is.EqualTo("troop_acted"));
+
+            // 占位:M2.c 起占位分派取代占位拒绝。能进移动范围的异城中心格只有同势力城
+            // (敌占格被 Cell.CanPassThrough 挡在 MoveRange 外),走 TroopInteractiveCityEnter:
+            // 命令成功且部队入城解散;敌部队/敌城分派由 SangoCombatTests 覆盖。
             int homeCityId = IntOf(PropertyValue(troop, "mBelongCity")!, "Id");
             object? otherCenter = kernel.Cities()
                 .Cast<object>()
@@ -401,18 +411,10 @@ namespace Sango.Tests
             if (otherCenter != null)
             {
                 (ok, error, _, _) = kernel.MoveTroop(troop, otherCenter);
-                Assert.That(ok, Is.False, "occupied target must be rejected");
-                Assert.That(error, Is.EqualTo("occupied_target"));
-                Assert.That(IntOf(troop, "x"), Is.EqualTo(originX), "rejected move must not change the troop position");
+                Assert.That(ok, Is.True, $"same-force city center in range must dispatch the enter-city interaction: {error}");
+                Assert.That((bool)PropertyValue(troop, "IsAlive")!, Is.False,
+                    "TroopInteractiveCityEnter.OnMoveDone must dissolve the troop into the entered city");
             }
-
-            // 正常移动一次 → 同回合再动被拒(ActionOver,原版命令菜单门)。
-            object dest = PickEmptyRangeCell(kernel, troop);
-            (ok, error, _, _) = kernel.MoveTroop(troop, dest);
-            Assert.That(ok, Is.True, $"first move must succeed: {error}");
-            (ok, error, _, _) = kernel.MoveTroop(troop, dest);
-            Assert.That(ok, Is.False, "second order in the same turn must be rejected");
-            Assert.That(error, Is.EqualTo("troop_acted"));
         }
 
         [Test]

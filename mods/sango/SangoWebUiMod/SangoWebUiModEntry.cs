@@ -86,6 +86,7 @@ public sealed class SangoWebUiModEntry : IMod
 
         var feed = new SangoWorldFeed();
         feed.AttachPlayerMessageSystem();
+        feed.AttachCombatAnnals();
         _feed = feed;
 
         var router = new WebUiCommandRouter(
