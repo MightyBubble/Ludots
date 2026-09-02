@@ -716,6 +716,10 @@ export const GasGraphEditorPage: React.FC = () => {
   const [debugEvents, setDebugEvents] = React.useState<DebugEvent[]>([]);
   const [debugSince, setDebugSince] = React.useState(0);
   const [debugStatus, setDebugStatus] = React.useState('Bridge idle');
+  /** Half-screen (game|editor) needs the canvas, not twin sidebars. */
+  const [leftRailCollapsed, setLeftRailCollapsed] = React.useState(false);
+  const [rightRailCollapsed, setRightRailCollapsed] = React.useState(false);
+  const railsBeforeWatch = React.useRef<{ left: boolean; right: boolean } | null>(null);
   const [switchCaseValue, setSwitchCaseValue] = React.useState('0');
   const [switchCaseTarget, setSwitchCaseTarget] = React.useState('');
   const [btChildTarget, setBtChildTarget] = React.useState('');
@@ -1653,12 +1657,22 @@ export const GasGraphEditorPage: React.FC = () => {
     try {
       const entry = debugEntryLabel || debugMounts[0]?.entryLabel;
       if (!entry) throw new Error('No mounted entry selected. Refresh the bridge mount list first.');
-      await bridgeRpc('ludots.graph.debug', { action: 'configure', graphId, entryLabel: entry, mode: debugEnabled ? 'off' : 'nodeAndPins' });
+      const turningOn = !debugEnabled;
+      await bridgeRpc('ludots.graph.debug', { action: 'configure', graphId, entryLabel: entry, mode: turningOn ? 'nodeAndPins' : 'off' });
       setDebugEntryLabel(entry);
       setDebugSince(0);
       setDebugEvents([]);
-      setDebugEnabled(!debugEnabled);
-      setDebugStatus(debugEnabled ? 'Live debug off' : 'Live debug armed');
+      setDebugEnabled(turningOn);
+      setDebugStatus(turningOn ? 'Live debug armed' : 'Live debug off');
+      if (turningOn) {
+        railsBeforeWatch.current = { left: leftRailCollapsed, right: rightRailCollapsed };
+        setLeftRailCollapsed(true);
+        setRightRailCollapsed(true);
+      } else if (railsBeforeWatch.current) {
+        setLeftRailCollapsed(railsBeforeWatch.current.left);
+        setRightRailCollapsed(railsBeforeWatch.current.right);
+        railsBeforeWatch.current = null;
+      }
     } catch (err) {
       setDebugStatus(err instanceof Error ? err.message : String(err));
     }
@@ -1691,14 +1705,14 @@ export const GasGraphEditorPage: React.FC = () => {
     const timer = window.setTimeout(() => {
       reactFlowRef.current?.fitView({
         nodes: focusIds.map((id) => ({ id })),
-        padding: 0.2,
+        padding: 0.18,
         duration: 280,
         minZoom: 0.55,
         maxZoom: 1.85,
       });
-    }, 120);
+    }, 160);
     return () => window.clearTimeout(timer);
-  }, [debugEnabled, debugEntryLabel, watchFocus.nodeIds.size]);
+  }, [debugEnabled, debugEntryLabel, watchFocus.nodeIds.size, leftRailCollapsed, rightRailCollapsed]);
 
   const displayNodes = React.useMemo(() => {
     let next = nodes as Node<GasNodeData & Record<string, unknown>>[];
@@ -2006,10 +2020,47 @@ export const GasGraphEditorPage: React.FC = () => {
         >
           Refresh Live
         </button>
+        <button
+          type="button"
+          onClick={() => setLeftRailCollapsed((v) => !v)}
+          className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800"
+          title="Toggle catalog / variables rail"
+        >
+          {leftRailCollapsed ? 'Show Tree' : 'Hide Tree'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setRightRailCollapsed((v) => !v)}
+          className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800"
+          title="Toggle inspector rail"
+        >
+          {rightRailCollapsed ? 'Show Inspector' : 'Hide Inspector'}
+        </button>
         <div className="text-xs text-slate-400">{status}</div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[260px_1fr_320px]">
+      <div
+        className={[
+          'grid min-h-0 flex-1',
+          leftRailCollapsed && rightRailCollapsed
+            ? 'grid-cols-[32px_minmax(0,1fr)_32px]'
+            : leftRailCollapsed
+              ? 'grid-cols-[32px_minmax(0,1fr)_240px]'
+              : rightRailCollapsed
+                ? 'grid-cols-[220px_minmax(0,1fr)_32px]'
+                : 'grid-cols-[220px_minmax(0,1fr)_280px]',
+        ].join(' ')}
+      >
+        {leftRailCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setLeftRailCollapsed(false)}
+            className="flex min-h-0 flex-col items-center justify-start gap-2 border-r border-slate-800 bg-slate-950/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+            title="Show catalog and variables"
+          >
+            <span className="[writing-mode:vertical-rl] rotate-180">Tree</span>
+          </button>
+        ) : (
         <div className="flex min-h-0 flex-col border-r border-slate-800">
           <div className="min-h-0 flex-[3] overflow-hidden [&_aside]:h-full [&_aside]:border-r-0">
             <GraphCatalogTree
@@ -2039,9 +2090,17 @@ export const GasGraphEditorPage: React.FC = () => {
             onDelete={() => void deleteMapVariable()}
           />
         </div>
+        )}
         <div className="min-h-0">
           {graph ? (
-            <div className="relative h-full" onDragOver={onVariableDragOver} onDrop={onVariableDrop}>
+            <div
+              className={[
+                'relative h-full',
+                (debugEnabled || rightRailCollapsed) ? 'pb-[10.5rem]' : '',
+              ].join(' ')}
+              onDragOver={onVariableDragOver}
+              onDrop={onVariableDrop}
+            >
               <ReactFlow
                 className="gas-graph-flow"
                 nodes={displayNodes}
@@ -2095,6 +2154,52 @@ export const GasGraphEditorPage: React.FC = () => {
               <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-slate-800 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-400">
                 Middle-drag to pan · Left-drag to box-select · Right-click to add a node
               </div>
+              {(debugEnabled || rightRailCollapsed) ? (
+                <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-amber-900/50 bg-slate-950/95 px-3 py-2 shadow-[0_-8px_24px_rgba(0,0,0,.45)]">
+                  <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                    <span>
+                      Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
+                        ?? debugMounts[0]?.executionBackend
+                        ?? 'Interpret'}
+                    </span>
+                    <span className="font-normal normal-case tracking-normal text-slate-500">canvas-first for one-screen side-by-side</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <select
+                      value={debugEntryLabel}
+                      onChange={(event) => { setDebugEntryLabel(event.target.value); setDebugSince(0); setDebugEvents([]); }}
+                      className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[11px]"
+                    >
+                      <option value="">Select mounted entry</option>
+                      {debugMounts.map((mount) => (
+                        <option key={`${mount.graphName}:${mount.entryLabel}`} value={mount.entryLabel}>
+                          {mount.entryLabel} · {mount.event}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={() => void toggleDebug()} className="rounded bg-amber-700 px-2 py-1 font-semibold text-amber-50 hover:bg-amber-600">
+                      {debugEnabled ? 'Stop' : 'Watch'}
+                    </button>
+                  </div>
+                  <div className="mt-1 text-[10px] text-slate-400">{debugStatus}</div>
+                  {debugEnabled ? (
+                    <div className="mt-1 rounded border border-cyan-900/60 bg-cyan-950/40 px-2 py-1 text-[10px] leading-4 text-cyan-100/90">
+                      Framing entry <span className="font-mono text-cyan-50">{debugEntryLabel || '—'}</span>
+                      {' '}({watchFocus.nodeIds.size} nodes). Other chains are hidden.
+                      Play the game action that fires this entry — the framed path lights up.
+                    </div>
+                  ) : null}
+                  <div className="mt-1 max-h-16 overflow-auto rounded border border-slate-800 bg-slate-950 p-1.5 font-mono text-[10px]">
+                    {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-16).map((event) => (
+                      <div key={event.sequence} className={event.nodeId ? 'text-cyan-200' : 'text-slate-400'}>
+                        #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
+                        {event.controlPort ? ` →${event.controlPort}` : ''}
+                        {event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {paletteMenu ? (
                 <div
                   className="fixed z-50 w-72 rounded border border-slate-700 bg-slate-950/95 p-2 shadow-xl"
@@ -2214,6 +2319,16 @@ export const GasGraphEditorPage: React.FC = () => {
           )}
         </div>
 
+        {rightRailCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setRightRailCollapsed(false)}
+            className="flex min-h-0 flex-col items-center justify-start gap-2 border-l border-slate-800 bg-slate-950/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+            title="Show inspector"
+          >
+            <span className="[writing-mode:vertical-rl]">Inspector</span>
+          </button>
+        ) : (
         <aside className="flex min-h-0 flex-col border-l border-slate-800 bg-slate-900/80">
           <div className="border-b border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
             Inspector
@@ -2610,6 +2725,12 @@ export const GasGraphEditorPage: React.FC = () => {
             />
           ) : null}
 
+          {debugEnabled ? (
+            <div className="border-t border-slate-800 px-3 py-2 text-[10px] leading-4 text-slate-500">
+              Live Debug is docked under the canvas while Watching — keeps the node chain readable on a half screen.
+            </div>
+          ) : (
+            <>
           <div className="border-t border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-300">
             Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
               ?? debugMounts[0]?.executionBackend
@@ -2630,13 +2751,6 @@ export const GasGraphEditorPage: React.FC = () => {
               </button>
             </div>
             <div className="text-[10px] text-slate-400">{debugStatus}</div>
-            {debugEnabled ? (
-              <div className="rounded border border-cyan-900/60 bg-cyan-950/40 px-2 py-1.5 text-[10px] leading-4 text-cyan-100/90">
-                Framing entry <span className="font-mono text-cyan-50">{debugEntryLabel || '—'}</span>
-                {' '}({watchFocus.nodeIds.size} nodes). Other chains are hidden.
-                Play the game action that fires this entry — the framed path lights up.
-              </div>
-            ) : null}
             <div className="max-h-28 overflow-auto rounded border border-slate-800 bg-slate-950 p-2 font-mono text-[10px]">
               {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-24).map((event) => (
                 <div key={event.sequence} className={event.nodeId ? 'text-cyan-200' : 'text-slate-400'}>
@@ -2647,7 +2761,10 @@ export const GasGraphEditorPage: React.FC = () => {
               ))}
             </div>
           </div>
+            </>
+          )}
         </aside>
+        )}
       </div>
     </div>
   );
