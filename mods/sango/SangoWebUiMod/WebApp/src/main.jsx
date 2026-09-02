@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
+  SANGO_BATTLES_TOPIC,
   SANGO_CITIES_TOPIC,
   SANGO_CITY_TOPIC,
   SANGO_FORCES_TOPIC,
@@ -37,6 +38,26 @@ const EMPTY_TURN = { turnCount: 0, year: 0, month: 0, day: 0, dateText: '----', 
 const EMPTY_MESSAGES = { tick: 0, turnCount: 0, messages: [] };
 const EMPTY_DETAIL = null;
 const EMPTY_TROOPS = { tick: 0, turnCount: 0, troops: [] };
+const EMPTY_BATTLES = { tick: 0, turnCount: 0, battles: [] };
+
+// 战报卡终局/事件型标签(SangoCombatAnnals 的 result/event kind 中文投影)。
+const BATTLE_RESULT_LABELS = {
+  ongoing: '进行中',
+  'defender-destroyed': '守方溃灭',
+  'attacker-destroyed': '攻方溃灭',
+  'city-fallen': '城陷',
+  'force-fallen': '势力灭亡'
+};
+const BATTLE_EVENT_LABELS = {
+  strike: '打击',
+  counter: '反击',
+  'siege-garrison': '守军杀伤',
+  'siege-durability': '城防破坏',
+  'troop-destroyed': '溃灭',
+  'city-fall': '城陷',
+  'force-fall': '灭亡'
+};
+const PARTICIPANT_KIND_LABELS = { troop: '部队', city: '城池', building: '据点' };
 
 function App() {
   const { clientRef, data, connection, command } = useSangoSession();
@@ -135,6 +156,13 @@ function App() {
             >
               部队
             </button>
+            <button
+              type="button"
+              className={activeTab === 'battles' ? 'tab active' : 'tab'}
+              onClick={() => setActiveTab('battles')}
+            >
+              战报
+            </button>
           </nav>
           {activeTab === 'forces'
             ? <ForceOverview forces={data.forces.forces} />
@@ -148,7 +176,9 @@ function App() {
                   onMove={(payload) => troopCommand('移动', 'sango.moveTroop', payload)}
                 />
                 )
-              : (
+              : activeTab === 'battles'
+                ? <BattlePanel battles={data.battles.battles} />
+                : (
                 <div className="city-layout">
                   <CityListPanel
                     cities={visibleCities}
@@ -167,7 +197,7 @@ function App() {
       </div>
       <footer className="status-bar">
         <span className={lastOrder.tone}>{lastOrder.text}</span>
-        <span>{connection.phase} · {connection.transport} · 城市 {data.cities.cities.length} · 势力 {data.forces.forces.length} · 部队 {data.troops.troops.length}</span>
+        <span>{connection.phase} · {connection.transport} · 城市 {data.cities.cities.length} · 势力 {data.forces.forces.length} · 部队 {data.troops.troops.length} · 战报 {data.battles.battles.length}</span>
       </footer>
     </main>
   );
@@ -180,7 +210,8 @@ function useSangoSession() {
     forces: EMPTY_FORCES,
     turn: EMPTY_TURN,
     messages: EMPTY_MESSAGES,
-    troops: EMPTY_TROOPS
+    troops: EMPTY_TROOPS,
+    battles: EMPTY_BATTLES
   });
   const [connection, setConnection] = useState({ phase: 'boot', transport: 'none', error: '' });
 
@@ -205,7 +236,8 @@ function useSangoSession() {
       [SANGO_FORCES_TOPIC, (forces) => setData((current) => ({ ...current, forces }))],
       [SANGO_TURN_TOPIC, (turn) => setData((current) => ({ ...current, turn }))],
       [SANGO_MESSAGES_TOPIC, (messages) => setData((current) => ({ ...current, messages }))],
-      [SANGO_TROOPS_TOPIC, (troops) => setData((current) => ({ ...current, troops }))]
+      [SANGO_TROOPS_TOPIC, (troops) => setData((current) => ({ ...current, troops }))],
+      [SANGO_BATTLES_TOPIC, (battles) => setData((current) => ({ ...current, battles }))]
     ]);
 
     client
@@ -705,7 +737,7 @@ function TroopPanel({ troops, forces, forceFilter, onForceFilter, onMove }) {
               <span>{troop.forceName || '无主'}</span>
               <small>
                 ({troop.x}, {troop.y}) · 兵 {formatNumber(troop.troops)} · 粮 {formatNumber(troop.food)} · 士气 {troop.morale}
-                {' '}{troop.actionOver ? '· 已行动' : ''}
+                {' '}{troop.actionOver ? '· 已行动' : ''}{troop.missionType > 0 ? ' · 委任中' : ''}
               </small>
             </button>
           ))}
@@ -725,6 +757,16 @@ function TroopPanel({ troops, forces, forceFilter, onForceFilter, onMove }) {
               <div><span>格坐标</span><strong>({selected.x}, {selected.y})</strong></div>
               <div><span>军团</span><strong>#{selected.corpsId}</strong></div>
               <div><span>状态</span><strong>{selected.actionOver ? '已行动' : '待命'}</strong></div>
+            </div>
+            <div className="mission-line">
+              {selected.missionType > 0
+                ? (
+                  <span>
+                    <strong>任务:</strong>{selected.missionLabel || `#${selected.missionType}`}
+                    <small>(机会主义执行:占城任务沿途将顺势打击敌据点)</small>
+                  </span>
+                )
+                : <span className="hint">无任务(自由行动;无任务部队下回合可能被回城吸收)</span>}
             </div>
             <div className="expedition-form">
               <label>
@@ -760,6 +802,109 @@ function TroopPanel({ troops, forces, forceFilter, onForceFilter, onMove }) {
           )
         : <section className="panel detail empty">点击左侧部队查看详情与移动指令</section>}
     </div>
+  );
+}
+
+// 战报面板(M2.d):SangoCombatAnnals 结构化 per-battle 卡(参战方/技能/伤害序列/结果/
+// 城池归属变化),按回合过滤在 UI 侧完成(卡自带回合区间)。
+function BattlePanel({ battles }) {
+  const [turnFilter, setTurnFilter] = useState(0);
+
+  const turns = useMemo(() => {
+    const set = new Set();
+    battles.forEach((battle) => {
+      for (let turn = battle.turnStart; turn <= battle.turnLast; turn += 1) {
+        set.add(turn);
+      }
+    });
+    return [...set].sort((a, b) => b - a);
+  }, [battles]);
+
+  const visible = turnFilter === 0
+    ? battles
+    : battles.filter((battle) => battle.turnStart <= turnFilter && turnFilter <= battle.turnLast);
+  const cards = [...visible].reverse();
+
+  return (
+    <section className="panel battle-panel">
+      <div className="panel-title">
+        <h2>战报</h2>
+        <span>
+          <select value={turnFilter} onChange={(event) => setTurnFilter(Number(event.target.value))}>
+            <option value={0}>全部回合({battles.length} 战)</option>
+            {turns.map((turn) => (
+              <option key={turn} value={turn}>第 {turn} 回合</option>
+            ))}
+          </select>
+        </span>
+      </div>
+      <div className="battle-list">
+        {cards.length === 0 ? <p className="empty">尚无交战记录(播种部队并推进回合后,战斗在此聚合呈现)</p> : null}
+        {cards.map((battle) => <BattleCard key={battle.seq} battle={battle} />)}
+      </div>
+    </section>
+  );
+}
+
+function BattleCard({ battle }) {
+  return (
+    <article className={`battle-card result-${battle.result}`}>
+      <header>
+        <div className="battle-title">
+          <span className="side">
+            <strong>{battle.attacker.name}</strong>
+            <small>{battle.attacker.forceName} · {PARTICIPANT_KIND_LABELS[battle.attacker.kind] ?? ''}</small>
+          </span>
+          <span className="vs">对战</span>
+          <span className="side">
+            <strong>{battle.defender.name}</strong>
+            <small>{battle.defender.forceName || '无主'} · {PARTICIPANT_KIND_LABELS[battle.defender.kind] ?? ''}</small>
+          </span>
+        </div>
+        <div className="battle-meta">
+          <span className={`result-badge ${battle.result}`}>{BATTLE_RESULT_LABELS[battle.result] ?? battle.result}</span>
+          <span>第 {battle.turnStart}{battle.turnLast > battle.turnStart ? `–${battle.turnLast}` : ''} 回合</span>
+          <span>总杀伤 {formatNumber(battle.damageDealt)}</span>
+        </div>
+      </header>
+      {(battle.skills ?? []).length > 0
+        ? (
+          <div className="skill-chips">
+            {(battle.skills ?? []).map((skill) => <span key={skill} className="chip">{skill}</span>)}
+          </div>
+        )
+        : null}
+      {(battle.troopChanges ?? []).length > 0
+        ? (
+          <div className="troop-changes">
+            {(battle.troopChanges ?? []).map((change, index) => (
+              <span key={`${change.name}-${index}`} className={change.end < change.start ? 'loss' : ''}>
+                {change.name}({PARTICIPANT_KIND_LABELS[change.kind] ?? ''}) {formatNumber(change.start)} → {formatNumber(change.end)}
+              </span>
+            ))}
+          </div>
+        )
+        : null}
+      {battle.city
+        ? (
+          <div className="city-change">
+            城池易主:{battle.city.name} · {battle.city.oldForce} → <strong>{battle.city.newForce}</strong>
+          </div>
+        )
+        : null}
+      <div className="event-rows">
+        {(battle.events ?? []).map((event, index) => (
+          <div key={index} className="event-row">
+            <span className="turn">T{event.turn}</span>
+            <span className="kind">{BATTLE_EVENT_LABELS[event.kind] ?? event.kind}</span>
+            <span className="actors">{event.attacker} → {event.defender}</span>
+            {event.skill ? <span className="chip">{event.skill}</span> : null}
+            {event.damage > 0 ? <span className="damage">伤 {formatNumber(event.damage)}</span> : null}
+            {event.targetTroopsAfter > 0 ? <span className="after">余 {formatNumber(event.targetTroopsAfter)}</span> : null}
+          </div>
+        ))}
+      </div>
+    </article>
   );
 }
 

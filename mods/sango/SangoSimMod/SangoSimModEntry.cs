@@ -22,12 +22,20 @@ namespace Sango
     /// 另挂开发播种事件 SangoSeedTroops(AgentBridge events.fire 触发,验收取证用:
     /// 开局无部队且 AI 不自行编成,需外部播种才能看到部队标记;事件键只在带 AgentBridge
     /// 的开发宿主存在,生产链路无感)。
+    /// M2.d:开发便利事件 SangoStepTurns{n}(1..99,经引擎 Manual 时钟 RequestStep(n) 累积
+    /// 待步数,GasClockSystem 逐 fixed tick 消费并发 TurnAdvanced——不绕过 clock;取证脚本
+    /// 一次触发推进 n 回合)与 SangoJournalReport(命令 journal 运行时可见性,取证用;
+    /// journal 全量重放会换掉 Scenario.Cur,单世界内核里不可在运行中做,逐位重放由
+    /// headless SangoReplayTests 承担)。
     /// </summary>
     public sealed class SangoSimModEntry : IMod
     {
         private const string SeedTroopsEventKey = "SangoSeedTroops";
         private const int SeedTroopBudget = 8;
         private const string SeedBattleEventKey = "SangoSeedBattle";
+        private const string StepTurnsEventKey = "SangoStepTurns";
+        private const int MaxStepTurnsPerFire = 99;
+        private const string JournalReportEventKey = "SangoJournalReport";
 
         private static SaveParticipantRegistry? _registeredRegistry;
         private static SangoTroopMarkerRuntime? _troopMarkers;
@@ -35,11 +43,18 @@ namespace Sango
         public void OnLoad(IModContext context)
         {
             IVirtualFileSystem vfs = context.VFS;
-            context.Log("[SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers + seed event)");
+            context.Log("[SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers + seed event; M2.d: step-turns/journal dev events)");
             context.OnEvent(GameEvents.MapLoaded, OnMapLoaded(vfs));
             context.OnEvent(GameEvents.TurnAdvanced, OnTurnAdvanced(vfs));
             context.OnEvent(new EventKey(SeedTroopsEventKey), OnSeedTroops(vfs));
             context.OnEvent(new EventKey(SeedBattleEventKey), OnSeedBattle(vfs));
+            // SangoStepTurns{n}:bridge events.fire 只带事件键,步数编码进键名(裸键=1 步)。
+            for (int count = 1; count <= MaxStepTurnsPerFire; count++)
+            {
+                context.OnEvent(new EventKey(count == 1 ? StepTurnsEventKey : $"{StepTurnsEventKey}{count}"), OnStepTurns(count));
+            }
+
+            context.OnEvent(new EventKey(JournalReportEventKey), OnJournalReport());
         }
 
         public void OnUnload()
@@ -248,8 +263,73 @@ namespace Sango
 
                 attacker.SetMission(Sango.Core.MissionType.TroopDestroyTroop, defender.Id);
                 defender.SetMission(Sango.Core.MissionType.TroopDestroyTroop, attacker.Id);
+                // Entry 级直接授任务(moveTroop 分派之外的显式入口),入命令 journal;
+                // 编成与回合推进已由 op 层自动记录,seed 对阵由此分解为可重放原语序列。
+                SangoCommandJournal.Record(SangoReplayJournal.SetMissionKind,
+                    new SangoSetMissionArgs(attacker.Id, (int)Sango.Core.MissionType.TroopDestroyTroop, defender.Id));
+                SangoCommandJournal.Record(SangoReplayJournal.SetMissionKind,
+                    new SangoSetMissionArgs(defender.Id, (int)Sango.Core.MissionType.TroopDestroyTroop, attacker.Id));
                 Log.Info(
                     $"[SangoSimMod] M2.c seed battle: {attacker.Name}({home.Name}) vs {defender.Name}({foe.Name}), mutual destroy missions, distance {bestDistance}; advance turns to let the war unfold");
+                return Task.CompletedTask;
+            };
+        }
+
+        // 开发便利·回合推进(AgentBridge events.fire SangoStepTurns{n},M2.d 取证):对引擎
+        // Manual 时钟 stepPolicy 调 RequestStep(n)(循环 RequestStep(1) 的等价累积),由
+        // GasClockSystem 逐 fixed tick 消费并发 TurnAdvanced → 内核逐回合推进 + 话题逐回合
+        // 推送——全程走正式时钟链。宿主无 Manual 时钟服务即类型化拒绝,不代推。
+        private static System.Func<ScriptContext, Task> OnStepTurns(int count)
+        {
+            return context =>
+            {
+                if (!context.TryGet(CoreServiceKeys.GasClockStepPolicy, out Ludots.Core.Gameplay.GAS.GasClockStepPolicy? stepPolicy) ||
+                    stepPolicy == null)
+                {
+                    Log.Info($"[SangoSimMod] M2.d step turns: host exposes no GasClockStepPolicy; refusing to step {count} turn(s) outside the clock");
+                    return Task.CompletedTask;
+                }
+
+                stepPolicy.RequestStep(count);
+                Log.Info($"[SangoSimMod] M2.d step turns: {count} manual step(s) requested via the engine clock; turns will advance one per fixed tick");
+                return Task.CompletedTask;
+            };
+        }
+
+        // 开发便利·journal 可见性(AgentBridge events.fire SangoJournalReport,M2.d 取证):
+        // 打印命令 journal 的形状证据(按类计数、JSON 导出、首末记录)。全量重放会替换
+        // Scenario.Cur,单世界内核不可在运行中执行——逐位重放验收在 headless SangoReplayTests。
+        private static System.Func<ScriptContext, Task> OnJournalReport()
+        {
+            return _ =>
+            {
+                SangoJournalCommand[] commands = SangoCommandJournal.Snapshot();
+                if (commands.Length == 0)
+                {
+                    Log.Info("[SangoSimMod] M2.d journal report: empty (no simulation entry commands recorded yet)");
+                    return Task.CompletedTask;
+                }
+
+                var byKind = new System.Collections.Generic.SortedDictionary<string, int>();
+                foreach (SangoJournalCommand command in commands)
+                {
+                    byKind[command.Kind] = byKind.GetValueOrDefault(command.Kind) + 1;
+                }
+
+                string kinds = string.Join(", ", System.Linq.Enumerable.Select(byKind, pair => $"{pair.Key}={pair.Value}"));
+                string json = SangoCommandJournal.ExportJson();
+                Log.Info($"[SangoSimMod] M2.d journal report: {commands.Length} command(s) [{kinds}]; export {json.Length} chars; live turn {commands[^1].Turn}");
+                foreach (SangoJournalCommand command in commands.Take(3))
+                {
+                    Log.Info($"[SangoSimMod] M2.d journal #{command.Seq} turn {command.Turn} {command.Kind}: {command.ArgsJson}");
+                }
+
+                SangoJournalCommand? lastStep = System.Linq.Enumerable.LastOrDefault(commands, command => command.Kind == SangoReplayJournal.StepKind);
+                if (lastStep != null)
+                {
+                    Log.Info($"[SangoSimMod] M2.d journal last step: turn {lastStep.Turn} digest {lastStep.DigestAfter}");
+                }
+
                 return Task.CompletedTask;
             };
         }

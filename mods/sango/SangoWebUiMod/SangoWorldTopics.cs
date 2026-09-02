@@ -59,10 +59,8 @@ public sealed class SangoWorldFeed
         Append(SangoTurnDriver.DescribeTurn(), dateText: string.Empty);
     }
 
-    /// <summary>
-    /// 挂 M2.c 战报采集器:战斗 GameEvent 群 → MUD 战报行,经既有消息流面板呈现
-    /// (消息话题已由 tick 泵逐帧刷新,无需新 topic)。重复调用幂等。
-    /// </summary>
+    /// <summary>挂 M2.c 战报采集器:战斗 GameEvent 群 → MUD 战报行,经既有消息流面板呈现
+    /// (消息话题已由 tick 泵逐帧刷新,无需新 topic)。重复调用幂等。</summary>
     public void AttachCombatAnnals()
     {
         if (_combatAnnals != null)
@@ -75,6 +73,11 @@ public sealed class SangoWorldFeed
         annals.Attach();
         _combatAnnals = annals;
     }
+
+    /// <summary>已挂的战报采集器(战报面板话题的结构化真源;未挂即装配缺陷,fail-fast)。</summary>
+    public SangoCombatAnnals CombatAnnals =>
+        _combatAnnals ?? throw new InvalidOperationException(
+            "SangoWorldFeed has no combat annals attached; call AttachCombatAnnals before serving battle topics.");
 
     public SangoMessageRow[] SnapshotMessages()
     {
@@ -465,6 +468,8 @@ public sealed class SangoWorldCityTopic : IWebUiTopicProducer
 /// <summary>
 /// 部队列表(M2.b):troopsSet 存活部队的瘦行投影(势力过滤在 UI 侧)。
 /// 行字段即 digest 的部队语义(id/corps/force/cell/兵力)加表单展示项(粮/士气/移动力/待命)。
+/// M2.d 增任务态:missionType/missionLabel(委任目标的提示按机会主义语义表述,
+/// 见 SangoMissionLabels)。
 /// </summary>
 public sealed class SangoWorldTroopsTopic : IWebUiTopicProducer
 {
@@ -525,10 +530,94 @@ public sealed class SangoWorldTroopsTopic : IWebUiTopicProducer
                 troop.morale,
                 troop.MoveAbility,
                 troop.ActionOver,
-                troop.LandTroopType?.Name ?? string.Empty));
+                troop.LandTroopType?.Name ?? string.Empty,
+                troop.missionType,
+                SangoMissionLabels.Describe(scenario, troop)));
         });
         return rows.ToArray();
     }
+}
+
+/// <summary>
+/// 战报面板话题(M2.d):SangoCombatAnnals 的结构化 per-battle 卡快照(真源 =
+/// feed.CombatAnnals.SnapshotBattles;卡聚合语义见 SangoCombatAnnals 文件头)。
+/// 回合过滤在 UI 侧(卡自带 TurnStart/TurnLast)。
+/// </summary>
+public sealed class SangoWorldBattlesTopic : IWebUiTopicProducer
+{
+    public const string TopicName = "sango.world.battles";
+
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    private readonly SangoWorldFeed _feed;
+
+    public SangoWorldBattlesTopic(SangoWorldFeed feed)
+    {
+        _feed = feed ?? throw new ArgumentNullException(nameof(feed));
+    }
+
+    public string Topic => TopicName;
+
+    public bool TryCreateSnapshot(in WebUiTopicContext context, out WebUiOutboundPacket packet)
+    {
+        Scenario scenario = Scenario.Cur
+            ?? throw new InvalidOperationException("Sango kernel is not booted; topic snapshot is unavailable.");
+        bool isSubscription = context.RequestId != 0;
+        var snapshot = new SangoBattlesSnapshot(
+            isSubscription ? 0 : _feed.NextTick(),
+            scenario.Info.turnCount,
+            _feed.CombatAnnals.SnapshotBattles());
+        packet = new WebUiOutboundPacket(
+            context.SessionId,
+            TopicName,
+            isSubscription ? WebUiPacketKind.Snapshot : WebUiPacketKind.Delta,
+            WebUiDeliverySemantics.LatestWins,
+            JsonSerializer.SerializeToUtf8Bytes(snapshot, JsonOptions),
+            "application/json",
+            context.RequestId);
+        return true;
+    }
+}
+
+/// <summary>
+/// 部队任务态的展示语(M2.d):Troop.missionType/missionTarget 的只读投影。占城任务按
+/// 机会主义评分语义表述(沿途敌据点顺手攻陷、近战陷城即入城解散,见 SangoTroopOps
+/// 文件头 TroopOccupyCity 链),不承诺直线行军。
+/// </summary>
+public static class SangoMissionLabels
+{
+    public static string Describe(Scenario scenario, Troop troop)
+    {
+        if (troop.missionType <= 0)
+        {
+            return string.Empty;
+        }
+
+        return (MissionType)troop.missionType switch
+        {
+            MissionType.TroopDestroyTroop => $"歼灭 {TroopName(scenario, troop.missionTarget)}",
+            MissionType.TroopOccupyCity => $"攻占 {CityName(scenario, troop.missionTarget)}(沿途将顺势打击敌据点)",
+            MissionType.TroopHarassCity => $"骚扰 {CityName(scenario, troop.missionTarget)}",
+            MissionType.TroopBanishTroop => $"驱逐 {TroopName(scenario, troop.missionTarget)}",
+            MissionType.TroopDestroyBuilding => $"摧毁 {BuildingName(scenario, troop.missionTarget)}",
+            MissionType.TroopProtectTroop => $"护卫 {TroopName(scenario, troop.missionTarget)}",
+            MissionType.TroopProtectBuilding => $"护卫 {BuildingName(scenario, troop.missionTarget)}",
+            MissionType.TroopProtectCity => $"护卫 {CityName(scenario, troop.missionTarget)}",
+            MissionType.TroopBuildBuilding => $"修建 {BuildingName(scenario, troop.missionTarget)}",
+            MissionType.TroopFixBuilding => $"修缮 {BuildingName(scenario, troop.missionTarget)}",
+            MissionType.TroopTransformGoodsToCity => $"输送至 {CityName(scenario, troop.missionTarget)}",
+            MissionType.TroopReturnCity => $"返回 {CityName(scenario, troop.missionTarget)}",
+            MissionType.TroopMovetoCity => $"前往 {CityName(scenario, troop.missionTarget)}",
+            MissionType.TroopMovetoBuild => $"前往 {BuildingName(scenario, troop.missionTarget)}",
+            MissionType.TroopMovetoCell => "前往指定格",
+            MissionType.TroopStay => "原地驻守",
+            _ => $"任务 #{troop.missionType}",
+        };
+    }
+
+    static string TroopName(Scenario scenario, int id) => scenario.troopsSet.Get(id)?.Name ?? $"部队#{id}";
+    static string CityName(Scenario scenario, int id) => scenario.citySet.Get(id)?.Name ?? $"城市#{id}";
+    static string BuildingName(Scenario scenario, int id) => scenario.buildingSet.Get(id)?.Name ?? $"据点#{id}";
 }
 
 public sealed record SangoCityRow(
@@ -567,9 +656,13 @@ public sealed record SangoTroopRow(
     int Morale,
     int MoveAbility,
     bool ActionOver,
-    string LandTroopTypeName);
+    string LandTroopTypeName,
+    int MissionType,
+    string MissionLabel);
 
 public sealed record SangoTroopsSnapshot(int Tick, int TurnCount, SangoTroopRow[] Troops);
+
+public sealed record SangoBattlesSnapshot(int Tick, int TurnCount, Sango.Runtime.SangoBattleRecord[] Battles);
 
 public sealed record SangoTroopTypeRow(int Id, string Name, bool IsLand);
 

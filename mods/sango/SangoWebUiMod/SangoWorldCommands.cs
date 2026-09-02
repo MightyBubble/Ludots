@@ -4,8 +4,8 @@
 //   探索(search)  UICitySearching.OnSure → CitySeraching.DoJob → City.JobSearching(persons)
 //   训练(train)   UICityTrainTroops.OnSure → CityTrainTroops.DoJob → City.JobTrainTroops(persons)
 //   奖励(reward)  UICityReward.OnSure → CityReward.DoJob → City.JobRewardPersons(persons)
-// 下单前置条件逐条照抄各 CityXxx 系统的 IsValid 原语义(含城/军团双层 jobCounter 与行动力门槛),
-// 不新增平行命令、不放宽门槛;失败按类型化错误回传。
+// M2.d:门槛/执行体已内核化为 SangoCityOps(命令层与 SangoReplayJournal 共用同一实现,
+// 含 journal 埋点),本层只做 payload 解析与城市解析,不再持有第二份门槛。
 // M2.b 增两命令(编成/移动,见各 handler 注释与 SangoTroopOps 文件头的原版调用链)。
 
 using System.Text.Json;
@@ -49,170 +49,28 @@ public sealed class SangoCityCommandHandler : IWebUiCommandHandler
             return WebUiCommandResult.Fail("kernel_not_booted", "Sango kernel is not booted; commands are unavailable.");
         }
 
-        if (!TryReadCityId(request.Payload, scenario, out City? city))
+        if (!TryReadCityId(request.Payload, scenario, out City? city) || city == null)
         {
             return WebUiCommandResult.Fail("city_not_found", "sango.cityCommand requires a known payload.cityId.");
         }
 
-        if (city!.mBelongForce == null || city.mBelongCorps == null)
-        {
-            return WebUiCommandResult.Fail("city_not_owned",
-                "sango.cityCommand targets an unowned city; internal affairs require a force and corps.");
-        }
-
-        return type switch
-        {
-            "train" => Train(request, city),
-            "search" => Search(request, city),
-            "reward" => Reward(request, city),
-            "recruit" => Recruit(request, scenario, city),
-            _ => WebUiCommandResult.Fail("invalid_payload",
-                $"Unknown sango.cityCommand type '{type}'; expected train/search/reward/recruit."),
-        };
-    }
-
-    // CityTrainTroops.IsValid:freePersons.Count>0 && CheckJobCost && morale<MaxMorale &&
-    // 城 jobCounter(TrainTroops)==0 && 军团 ActionPoint>=costAP;DoJob → JobTrainTroops(全选武将)。
-    private static WebUiCommandResult Train(WebUiCommandRequest request, City city)
-    {
-        int jobId = (int)CityJobType.TrainTroops;
-        if (city.freePersons.Count == 0 ||
-            !city.CheckJobCost(CityJobType.TrainTroops) ||
-            city.morale >= city.MaxMorale ||
-            city.GetJobCounter(jobId) != 0 ||
-            city.mBelongCorps.ActionPoint < JobType.GetJobCostAP(jobId))
-        {
-            return WebUiCommandResult.Fail("invalid_state",
-                "CityTrainTroops.IsValid gate rejected the order (no free persons / gold / morale cap / already trained / action points).");
-        }
-
-        Person[]? persons = ResolveFreePersons(request, city);
-        if (persons == null || persons.Length == 0)
-        {
-            return WebUiCommandResult.Fail("person_not_free",
-                "train requires payload.personIds of persons currently in the city freePersons list.");
-        }
-
-        city.JobTrainTroops(persons);
-        return WebUiCommandResult.Ok();
-    }
-
-    // CitySeraching.IsValid:freePersons.Count>0 && ActionPoint>=costAP;DoJob → JobSearching(入 RenderEvent 队列,
-    // 下一回合 Run 时 DoJobSearching 结算:发现人才/资金)。
-    private static WebUiCommandResult Search(WebUiCommandRequest request, City city)
-    {
-        int jobId = (int)CityJobType.Searching;
-        if (city.freePersons.Count == 0 ||
-            city.mBelongCorps.ActionPoint < JobType.GetJobCostAP(jobId))
-        {
-            return WebUiCommandResult.Fail("invalid_state",
-                "CitySeraching.IsValid gate rejected the order (no free persons / action points).");
-        }
-
-        Person[]? persons = ResolveFreePersons(request, city);
-        if (persons == null || persons.Length == 0)
-        {
-            return WebUiCommandResult.Fail("person_not_free",
-                "search requires payload.personIds of persons currently in the city freePersons list.");
-        }
-
-        city.JobSearching(persons);
-        return WebUiCommandResult.Ok();
-    }
-
-    // CityReward.IsValid:gold>100 && CheckJobCost && 军团 jobCounter(Reward)==0 && ActionPoint>=costAP;
-    // OnEnter targetList = 势力武将(非君主、无部队、忠诚<100);DoJob → JobRewardPersons(选中者,忠诚+10)。
-    private static WebUiCommandResult Reward(WebUiCommandRequest request, City city)
-    {
-        int jobId = (int)CityJobType.Reward;
-        if (city.gold <= 100 ||
-            !city.CheckJobCost(CityJobType.Reward) ||
-            city.mBelongCorps.GetJobCounter(jobId) != 0 ||
-            city.mBelongCorps.ActionPoint < JobType.GetJobCostAP(jobId))
-        {
-            return WebUiCommandResult.Fail("invalid_state",
-                "CityReward.IsValid gate rejected the order (gold / already rewarded this turn / action points).");
-        }
-
         if (!TryReadPersonIds(request, out int[] personIds))
         {
-            return WebUiCommandResult.Fail("invalid_payload", "reward requires payload.personIds.");
+            personIds = Array.Empty<int>();
         }
 
-        Force force = city.mBelongForce
-            ?? throw new InvalidOperationException("City force gate must run before reward dispatch.");
-
-        var targets = new List<Person>(personIds.Length);
-        foreach (int personId in personIds)
+        int targetPersonId = 0;
+        if (request.Payload.TryGetProperty("targetPersonId", out JsonElement targetElement) &&
+            targetElement.ValueKind == JsonValueKind.Number &&
+            !targetElement.TryGetInt32(out targetPersonId))
         {
-            Person? person = Scenario.Cur.personSet.Get(personId);
-            if (person == null || person.mBelongForce != force ||
-                person == force.mGovernor || person.mTroop != null || person.loyalty >= 100)
-            {
-                return WebUiCommandResult.Fail("invalid_state",
-                    $"person {personId} is outside the CityReward target list (own force, not governor, no troop, loyalty<100).");
-            }
-
-            targets.Add(person);
+            targetPersonId = 0;
         }
 
-        city.JobRewardPersons(targets.ToArray());
-        return WebUiCommandResult.Ok();
-    }
-
-    // CityRecruit.IsValid:freePersons.Count>0 && ActionPoint>=costAP;DoJob → JobRecruitPerson(executor, target);
-    // targetList 语义(CityRecruit.OnEnter):他势力非君主非俘虏武将 + 本势力在野/俘虏。
-    private static WebUiCommandResult Recruit(WebUiCommandRequest request, Scenario scenario, City city)
-    {
-        int jobId = (int)CityJobType.RecruitPerson;
-        if (city.freePersons.Count == 0 ||
-            city.mBelongCorps.ActionPoint < JobType.GetJobCostAP(jobId))
-        {
-            return WebUiCommandResult.Fail("invalid_state",
-                "CityRecruit.IsValid gate rejected the order (no free persons / action points).");
-        }
-
-        Person[]? persons = ResolveFreePersons(request, city);
-        if (persons == null || persons.Length != 1)
-        {
-            return WebUiCommandResult.Fail("person_not_free",
-                "recruit requires exactly one payload.personIds executor from the city freePersons list.");
-        }
-
-        if (!request.Payload.TryGetProperty("targetPersonId", out JsonElement targetElement) ||
-            targetElement.ValueKind != JsonValueKind.Number ||
-            !targetElement.TryGetInt32(out int targetId))
-        {
-            return WebUiCommandResult.Fail("invalid_payload", "recruit requires payload.targetPersonId.");
-        }
-
-        Person? target = scenario.personSet.Get(targetId);
-        if (target == null || !IsRecruitTarget(city, target))
-        {
-            return WebUiCommandResult.Fail("invalid_state",
-                $"person {targetId} is outside the CityRecruit target list.");
-        }
-
-        city.JobRecruitPerson(persons[0], target);
-        return WebUiCommandResult.Ok();
-    }
-
-    private static bool IsRecruitTarget(City city, Person target)
-    {
-        Force? force = city.mBelongForce;
-        if (force == null)
-        {
-            return false;
-        }
-
-        if (target.mBelongForce != force)
-        {
-            return target.state != (int)PersonStateType.Governor &&
-                target.state != (int)PersonStateType.Prisoner;
-        }
-
-        return target.state == (int)PersonStateType.Unemployed ||
-            target.state == (int)PersonStateType.Prisoner;
+        SangoTroopOpResult result = SangoCityOps.Execute(scenario, city, type, personIds, targetPersonId);
+        return result.Succeeded
+            ? WebUiCommandResult.Ok()
+            : WebUiCommandResult.Fail(result.ErrorCode, result.Message);
     }
 
     internal static bool TryReadCityId(JsonElement payload, Scenario scenario, out City? city)
@@ -253,29 +111,6 @@ public sealed class SangoCityCommandHandler : IWebUiCommandHandler
         return true;
     }
 
-    // 原版各窗口的执行武将选择列表 = TargetCity.freePersons(UICityTrainTroops/UICitySearching/
-    // UICityPersonCall 的 PersonSelectSystem.Start 入参);这里要求 personIds 全部落在该列表内。
-    private static Person[]? ResolveFreePersons(WebUiCommandRequest request, City city)
-    {
-        if (!TryReadPersonIds(request, out int[] personIds) || personIds.Length == 0)
-        {
-            return null;
-        }
-
-        var persons = new List<Person>(personIds.Length);
-        foreach (int personId in personIds)
-        {
-            Person? person = city.freePersons.FirstOrDefault(candidate => candidate != null && candidate.Id == personId);
-            if (person == null)
-            {
-                return null;
-            }
-
-            persons.Add(person);
-        }
-
-        return persons.ToArray();
-    }
 }
 
 /// <summary>

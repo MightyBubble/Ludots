@@ -165,14 +165,43 @@ namespace Sango.Runtime
             troop.ForEachPerson(person => city.freePersons.Remove(person));
             city.mBelongCorps.ReduceActionPoint(jobCostAP);
             city.EnsureTroop(troop, scenario);
+            SangoCommandJournal.Record(
+                SangoReplayJournal.CreateTroopKind,
+                new SangoCreateTroopArgs(city.Id, ToArray(personIds), landTroopTypeId, waterTroopTypeId, troops, gold, food, troop.Id));
             return (SangoTroopOpResult.Ok(), troop);
+        }
+
+        static int[] ToArray(IReadOnlyList<int> personIds)
+        {
+            var ids = new int[personIds.Count];
+            for (int i = 0; i < personIds.Count; i++)
+            {
+                ids[i] = personIds[i];
+            }
+
+            return ids;
         }
 
         /// <summary>
         /// 移动(移动范围内单步落地,含原地待命)。返回 (结果, 路径步数含起点)。
         /// 路径结算与 TroopActionStay 同源:Map.GetMovePath → 逐步 TroopMoveEvent → 泵空 → ActionOver。
+        /// 成功路径入命令 journal(result.Message 即行动型:待命/enter-city/field-strike/occupation/
+        /// building-fix,重放侧按 troopId+x+y 重放同一分派)。
         /// </summary>
         public static (SangoTroopOpResult Result, int PathSteps) MoveTroop(Scenario scenario, Troop troop, Cell destCell)
+        {
+            (SangoTroopOpResult result, int pathSteps) = MoveTroopCore(scenario, troop, destCell);
+            if (result.Succeeded)
+            {
+                SangoCommandJournal.Record(
+                    SangoReplayJournal.MoveTroopKind,
+                    new SangoMoveTroopArgs(troop.Id, destCell!.x, destCell.y, result.Message));
+            }
+
+            return (result, pathSteps);
+        }
+
+        static (SangoTroopOpResult Result, int PathSteps) MoveTroopCore(Scenario scenario, Troop troop, Cell destCell)
         {
             if (scenario == null) throw new ArgumentNullException(nameof(scenario));
             if (troop == null) throw new ArgumentNullException(nameof(troop));

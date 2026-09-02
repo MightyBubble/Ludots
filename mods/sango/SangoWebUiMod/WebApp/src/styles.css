@@ -454,3 +454,150 @@ body {
 .expedition-form button {
   padding: 6px 16px;
 }
+
+/* ---- 战报面板(M2.d)与部队任务态 ---- */
+
+.mission-line {
+  padding: 8px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 13px;
+}
+
+.mission-line small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted, #9aa4b2);
+}
+
+.battle-panel {
+  overflow-y: auto;
+}
+
+.battle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.battle-card {
+  border: 1px solid var(--line);
+  border-left: 4px solid #5a81b5;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px 12px;
+}
+
+.battle-card.result-city-fallen { border-left-color: #c9a227; }
+.battle-card.result-force-fallen { border-left-color: #b5453c; }
+.battle-card.result-defender-destroyed,
+.battle-card.result-attacker-destroyed { border-left-color: #b5693c; }
+
+.battle-card header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  align-items: center;
+}
+
+.battle-title {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.battle-title .side {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+.battle-title .side small {
+  color: var(--muted, #9aa4b2);
+  font-size: 11px;
+}
+
+.battle-title .vs {
+  font-size: 11px;
+  color: var(--muted, #9aa4b2);
+}
+
+.battle-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted, #9aa4b2);
+}
+
+.result-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: inherit;
+}
+
+.result-badge.ongoing { border-color: #5a81b5; color: #8fb0dd; }
+.result-badge.city-fallen { border-color: #c9a227; color: #e0c05e; }
+.result-badge.force-fallen { border-color: #b5453c; color: #dd857d; }
+
+.skill-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.chip {
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--muted, #9aa4b2);
+}
+
+.troop-changes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.troop-changes .loss { color: #dd857d; }
+
+.city-change {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: rgba(201, 162, 39, 0.12);
+  font-size: 12px;
+}
+
+.event-rows {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.event-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+  font-size: 12px;
+  padding: 2px 0;
+  border-top: 1px dotted rgba(255, 255, 255, 0.08);
+}
+
+.event-row:first-child { border-top: none; }
+
+.event-row .turn { color: var(--muted, #9aa4b2); min-width: 34px; }
+.event-row .kind { color: #8fb0dd; }
+.event-row .actors { flex: 1; min-width: 200px; }
+.event-row .damage { color: #dd857d; }
+.event-row .after { color: var(--muted, #9aa4b2); }

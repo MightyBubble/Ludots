@@ -45,7 +45,10 @@ namespace Sango.Runtime
         /// <summary>最近一次 AdvanceTurn 期间跑完 AI 的势力数(MUD 摘要用)。</summary>
         public static int LastTurnAiCount { get; private set; }
 
-        /// <summary>推进一个 sango 回合(全部势力按队列行动 + 旬/月结算)。</summary>
+        /// <summary>
+        /// 推进一个 sango 回合(全部势力按队列行动 + 旬/月结算)。成功路径入命令 journal
+        /// (kind=step,含推进后 WorldDigest——重放侧逐回合比对的期望值真源)。
+        /// </summary>
         public static void AdvanceTurn()
         {
             Scenario scenario = Scenario.Cur
@@ -63,6 +66,8 @@ namespace Sango.Runtime
                 {
                     LastTurnForceCount = _forceTurnsStarted - forcesBefore;
                     LastTurnAiCount = _forceAiRuns - aiBefore;
+                    SangoCommandJournal.Record(
+                        SangoReplayJournal.StepKind, SangoStepArgs.Instance, digestAfter: WorldDigest());
                     return;
                 }
             }
