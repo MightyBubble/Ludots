@@ -544,6 +544,7 @@
         "Derived",
         "Effect",
         "TriggerGraph",
+        "Query",
         "Score",
         "Script",
         "Validation"
@@ -3609,6 +3610,7 @@
       "op": "DispatchCollectionEvent",
       "authorableKinds": [
         "TriggerGraph",
+        "Query",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_DispatchCollectionEvent",
