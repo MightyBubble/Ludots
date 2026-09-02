@@ -1,0 +1,13 @@
+{
+  "Id": 13,
+  "Name": "共同庆典",
+  "Description": "双方共同举办庆典，增进友谊。",
+  "MinRelation": 400,
+  "MaxRelation": 900,
+  "Probability": 4,
+  "EffectType": "CommonCelebration",
+  "EffectParams": {
+    "RelationValue": 100,
+    "GoldValue": 1000
+  }
+}

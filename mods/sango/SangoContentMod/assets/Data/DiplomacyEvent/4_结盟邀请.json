@@ -1,0 +1,10 @@
+{
+  "Id": 4,
+  "Name": "结盟邀请",
+  "Description": "对方邀请你结成同盟。",
+  "MinRelation": 800,
+  "MaxRelation": 1500,
+  "Probability": 5,
+  "EffectType": "AllianceRequest",
+  "EffectParams": {}
+}

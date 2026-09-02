@@ -1,0 +1,10 @@
+{
+  "Id": 3,
+  "Name": "贸易提议",
+  "Description": "对方提出了贸易合作的提议。",
+  "MinRelation": 300,
+  "MaxRelation": 800,
+  "Probability": 10,
+  "EffectType": "Trade",
+  "EffectParams": {}
+}

@@ -1,0 +1,14 @@
+{
+  "Id": 17,
+  "Name": "经济援助",
+  "Description": "对方提供经济援助，帮助你度过难关。",
+  "MinRelation": 500,
+  "MaxRelation": 1000,
+  "Probability": 4,
+  "EffectType": "EconomicAssistance",
+  "EffectParams": {
+    "RelationValue": 100,
+    "MinGold": 1000,
+    "MaxGold": 3000
+  }
+}

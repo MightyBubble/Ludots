@@ -1,0 +1,146 @@
+{
+  "ItemTypes": {
+    "1": {
+      "Id": 1,
+      "Name": "剑",
+      "kind": 0,
+      "storeKind": 1,
+      "store": false,
+      "desc": "标准装备的兵装，威力是最弱的",
+      "icon": "4846-8/4846-8_0",
+      "cost": 0
+    },
+    "2": {
+      "Id": 2,
+      "Name": "枪",
+      "kind": 1,
+      "storeKind": 2,
+      "store": true,
+      "desc": "有利于对付骑兵，但不利于戟兵",
+      "createBuildingKind": 35,
+      "icon": "4846-8/4846-8_1",
+      "cost": 500
+    },
+    "3": {
+      "Id": 3,
+      "Name": "戟",
+      "kind": 1,
+      "storeKind": 3,
+      "store": true,
+      "desc": "有利于对付枪兵，但不利于骑兵",
+      "createBuildingKind": 35,
+      "icon": "4846-8/4846-8_2",
+      "cost": 500
+    },
+    "4": {
+      "Id": 4,
+      "Name": "弓",
+      "kind": 1,
+      "storeKind": 4,
+      "store": true,
+      "desc": "可对２区格之外的敌人执行弓箭攻击",
+      "createBuildingKind": 35,
+      "icon": "4846-8/4846-8_3",
+      "cost": 500
+    },
+    "5": {
+      "Id": 5,
+      "Name": "军马",
+      "kind": 2,
+      "storeKind": 5,
+      "store": true,
+      "desc": "有利于对付戟兵，但不利于枪兵",
+      "createBuildingKind": 36,
+      "icon": "4846-8/4846-8_4",
+      "cost": 800
+    },
+    "6": {
+      "Id": 6,
+      "Name": "冲车",
+      "kind": 3,
+      "storeKind": 6,
+      "store": true,
+      "nextId": 7,
+      "desc": "直接攻击建筑物的兵器，可大大削弱建筑物的耐久",
+      "createBuildingKind": 37,
+      "icon": "4846-8/4846-8_5",
+      "cost": 800,
+      "p1": "10"
+    },
+    "7": {
+      "Id": 7,
+      "Name": "木兽",
+      "kind": 3,
+      "storeKind": 6,
+      "store": true,
+      "validTechId": 1,
+      "desc": "将冲车强化后的兵器，可削减建筑物的耐久，并放火",
+      "createBuildingKind": 37,
+      "icon": "4846-8/4846-8_8",
+      "cost": 800,
+      "p1": "10"
+    },
+    "8": {
+      "Id": 8,
+      "Name": "井阑",
+      "kind": 3,
+      "storeKind": 7,
+      "store": true,
+      "nextId": 8,
+      "desc": "以弓箭攻击建筑物的兵器，可大大削减士兵数",
+      "createBuildingKind": 37,
+      "icon": "4846-8/4846-8_6",
+      "cost": 800,
+      "p1": "10"
+    },
+    "9": {
+      "Id": 9,
+      "Name": "投石",
+      "kind": 3,
+      "storeKind": 7,
+      "store": true,
+      "validTechId": 2,
+      "desc": "强化井阑后的兵器，以投石攻击３区格外之敌方耐久与士兵",
+      "createBuildingKind": 37,
+      "icon": "4846-8/4846-8_7",
+      "cost": 800,
+      "p1": "10"
+    },
+    "10": {
+      "Id": 10,
+      "Name": "走舸",
+      "kind": 4,
+      "storeKind": 8,
+      "store": false,
+      "desc": "标准装备的舰船。",
+      "icon": "4846-8/4846-8_9",
+      "cost": 0
+    },
+    "11": {
+      "Id": 11,
+      "Name": "楼船",
+      "kind": 4,
+      "storeKind": 8,
+      "store": true,
+      "nextId": 12,
+      "desc": "大型船，移动力、装甲都比走舸强化许多",
+      "createBuildingKind": 38,
+      "icon": "4846-8/4846-8_10",
+      "cost": 1000,
+      "p1": "10"
+    },
+    "12": {
+      "Id": 12,
+      "Name": "斗舰",
+      "kind": 4,
+      "storeKind": 8,
+      "store": true,
+      "validTechId": 2,
+      "desc": "将楼船强化后的舰船，可执行投石攻击",
+      "createBuildingKind": 38,
+      "icon": "4846-8/4846-8_11",
+      "cost": 1000,
+      "p1": "8"
+    }
+  }
+}

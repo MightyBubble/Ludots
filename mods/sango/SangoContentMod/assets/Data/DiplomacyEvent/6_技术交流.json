@@ -1,0 +1,10 @@
+{
+  "Id": 6,
+  "Name": "技术交流",
+  "Description": "对方提议进行技术交流。",
+  "MinRelation": 500,
+  "MaxRelation": 1000,
+  "Probability": 6,
+  "EffectType": "TechniqueExchange",
+  "EffectParams": {}
+}

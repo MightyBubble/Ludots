@@ -1,0 +1,10 @@
+{
+  "name": "SangoContentMod",
+  "version": "0.1.0",
+  "description": "Sango (sango_infinity) JSON data tables and scenario assets for the Ludots port.",
+  "main": "bin/net9.0/SangoContentMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

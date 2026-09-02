@@ -1,0 +1,134 @@
+{
+  "1": {
+    "Id": 1,
+    "Name": "城类型一",
+    "modelType": 1,
+    "model": "Assets/Model/Prefab/p_city_1.prefab"
+  },
+  "2": {
+    "Id": 2,
+    "Name": "城类型二",
+    "modelType": 1,
+    "model": "Assets/Model/Prefab/p_city_2.prefab"
+  },
+  "3": {
+    "Id": 3,
+    "Name": "港口",
+    "modelType": 3,
+    "model": "Assets/Model/Prefab/p_port.prefab"
+  },
+  "4": {
+    "Id": 4,
+    "Name": "关卡",
+    "modelType": 2,
+    "model": "Assets/Model/Prefab/p_gate_lv2.prefab"
+  },
+  "5": {
+    "Id": 5,
+    "Name": "矮植1",
+    "modelType": 6,
+    "model": "Assets/Model/Prefab/p_tree_1.prefab"
+  },
+  "6": {
+    "Id": 6,
+    "Name": "矮植2",
+    "modelType": 6,
+    "model": "Assets/Model/Prefab/p_tree_2.prefab"
+  },
+  "7": {
+    "Id": 7,
+    "Name": "松树1",
+    "modelType": 6,
+    "model": "Assets/Model/Prefab/p_tree_3.prefab"
+  },
+  "8": {
+    "Id": 8,
+    "Name": "松树2",
+    "modelType": 6,
+    "model": "Assets/Model/Prefab/p_tree_4.prefab"
+  },
+  "9": {
+    "Id": 9,
+    "Name": "扇叶1",
+    "modelType": 6,
+    "model": "Assets/Model/Prefab/p_tree_5.prefab"
+  },
+  "10": {
+    "Id": 10,
+    "Name": "扇枝丛",
+    "modelType": 6,
+    "model": "Assets/Model/Prefab/p_tree_6.prefab"
+  },
+  "11": {
+    "Id": 11,
+    "Name": "芭叶1",
+    "modelType": 6,
+    "model": "Assets/Model/Prefab/p_tree_7.prefab"
+  },
+  "12": {
+    "Id": 12,
+    "Name": "芭叶2",
+    "modelType": 6,
+    "model": "Assets/Model/Prefab/p_tree_8.prefab"
+  },
+  "13": {
+    "Id": 13,
+    "Name": "矮植3",
+    "modelType": 6,
+    "model": "Assets/Model/Prefab/p_tree_9.prefab"
+  },
+  "14": {
+    "Id": 14,
+    "Name": "高松",
+    "modelType": 6,
+    "model": "Assets/Model/Prefab/p_tree_10.prefab"
+  },
+  "15": {
+    "Id": 15,
+    "Name": "标注蓝",
+    "modelType": 7,
+    "model": "Assets/Model/Prefab/MapLabel_blue.prefab"
+  },
+  "16": {
+    "Id": 16,
+    "Name": "标注红",
+    "modelType": 7,
+    "model": "Assets/Model/Prefab/MapLabel_red.prefab"
+  },
+  "17": {
+    "Id": 17,
+    "Name": "标注绿",
+    "modelType": 7,
+    "model": "Assets/Model/Prefab/MapLabel_green.prefab"
+  },
+  "18": {
+    "Id": 18,
+    "Name": "标注黄",
+    "modelType": 7,
+    "model": "Assets/Model/Prefab/MapLabel_yellow.prefab"
+  },
+  "19": {
+    "Id": 19,
+    "Name": "小城类型一",
+    "modelType": 1,
+    "model": "Assets/Model/Prefab/4306.prefab"
+  },
+  "20": {
+    "Id": 20,
+    "Name": "小城类型二",
+    "modelType": 1,
+    "model": "Assets/Model/Prefab/4308.prefab"
+  },
+  "21": {
+    "Id": 21,
+    "Name": "小城类型三",
+    "modelType": 1,
+    "model": "Assets/Model/Prefab/4310.prefab"
+  },
+  "22": {
+    "Id": 22,
+    "Name": "小城类型四",
+    "modelType": 1,
+    "model": "Assets/Model/Prefab/4312.prefab"
+  }
+}

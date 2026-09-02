@@ -1,0 +1,13 @@
+{
+  "Id": 14,
+  "Name": "边境贸易",
+  "Description": "双方在边境开展贸易活动，促进经济发展。",
+  "MinRelation": -100,
+  "MaxRelation": 600,
+  "Probability": 8,
+  "EffectType": "BorderTrade",
+  "EffectParams": {
+    "RelationValue": 60,
+    "GoldValue": 500
+  }
+}

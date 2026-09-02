@@ -1,0 +1,1092 @@
+{
+  "TerrainTypes": {
+    "0": {
+      "Id": 0,
+      "Name": "无",
+      "foodDeposit": 1000,
+      "fertility": [
+        0.0,
+        0.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        0.0,
+        0.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        0,
+        0,
+        0
+      ]
+    },
+    "1": {
+      "Id": 1,
+      "Name": "草地",
+      "foodDeposit": 1000,
+      "fertility": [
+        20.0,
+        40.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        5.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 20,
+      "canBuild": true,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 5,
+      "color": [
+        74,
+        187,
+        74
+      ]
+    },
+    "2": {
+      "Id": 2,
+      "Name": "土",
+      "foodDeposit": 1000,
+      "fertility": [
+        20.0,
+        30.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        2.0,
+        8.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 20,
+      "canBuild": true,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 5,
+      "color": [
+        120,
+        70,
+        26
+      ]
+    },
+    "3": {
+      "Id": 3,
+      "Name": "砂地",
+      "foodDeposit": 1000,
+      "fertility": [
+        5.0,
+        15.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        10.0,
+        20.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 20,
+      "canBuild": true,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 5,
+      "color": [
+        164,
+        149,
+        108
+      ]
+    },
+    "4": {
+      "Id": 4,
+      "Name": "湿地",
+      "foodDeposit": 1000,
+      "fertility": [
+        10.0,
+        15.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        9.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 8,
+      "color": [
+        161,
+        98,
+        88
+      ]
+    },
+    "5": {
+      "Id": 5,
+      "Name": "毒泉",
+      "foodDeposit": 1000,
+      "fertility": [
+        5.0,
+        10.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        10.0,
+        16.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 5,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 12,
+      "color": [
+        172,
+        28,
+        254
+      ]
+    },
+    "6": {
+      "Id": 6,
+      "Name": "森",
+      "foodDeposit": 1000,
+      "fertility": [
+        10.0,
+        30.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        9.0,
+        20.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 25,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 6,
+      "color": [
+        35,
+        120,
+        18
+      ]
+    },
+    "7": {
+      "Id": 7,
+      "Name": "川",
+      "foodDeposit": 1000,
+      "fertility": [
+        10.0,
+        20.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": true,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        250,
+        0,
+        0
+      ]
+    },
+    "8": {
+      "Id": 8,
+      "Name": "河",
+      "foodDeposit": 1000,
+      "fertility": [
+        10.0,
+        20.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        10.0,
+        20.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": true,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 5,
+      "color": [
+        175,
+        134,
+        64
+      ]
+    },
+    "9": {
+      "Id": 9,
+      "Name": "海",
+      "foodDeposit": 1000,
+      "fertility": [
+        10.0,
+        20.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        10.0,
+        20.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": true,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 5,
+      "color": [
+        36,
+        95,
+        123
+      ]
+    },
+    "10": {
+      "Id": 10,
+      "Name": "荒地",
+      "foodDeposit": 1000,
+      "fertility": [
+        5.0,
+        10.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        15.0,
+        30.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 17,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 6,
+      "color": [
+        123,
+        36,
+        114
+      ]
+    },
+    "11": {
+      "Id": 11,
+      "Name": "主径",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        8.0,
+        30.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 15,
+      "canBuild": true,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 4,
+      "color": [
+        254,
+        255,
+        190
+      ]
+    },
+    "12": {
+      "Id": 12,
+      "Name": "栈道",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        8.0,
+        30.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 7,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 6,
+      "color": [
+        255,
+        128,
+        128
+      ]
+    },
+    "13": {
+      "Id": 13,
+      "Name": "渡所",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        9.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 10,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 5,
+      "color": [
+        127,
+        115,
+        78
+      ]
+    },
+    "14": {
+      "Id": 14,
+      "Name": "浅滩",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        9.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 5,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 5,
+      "color": [
+        39,
+        146,
+        130
+      ]
+    },
+    "15": {
+      "Id": 15,
+      "Name": "岸",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        100,
+        0,
+        0
+      ]
+    },
+    "16": {
+      "Id": 16,
+      "Name": "崖",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": true,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        220,
+        0,
+        0
+      ]
+    },
+    "17": {
+      "Id": 17,
+      "Name": "都市",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        10.0,
+        10.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 4,
+      "color": [
+        221,
+        147,
+        3
+      ]
+    },
+    "18": {
+      "Id": 18,
+      "Name": "港",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        10.0,
+        10.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 4,
+      "color": [
+        143,
+        81,
+        71
+      ]
+    },
+    "19": {
+      "Id": 19,
+      "Name": "关所",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        10.0,
+        10.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 4,
+      "color": [
+        109,
+        98,
+        23
+      ]
+    },
+    "20": {
+      "Id": 20,
+      "Name": "小径",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 5,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": true,
+      "canAmbush": true,
+      "baseCost": 7,
+      "color": [
+        255,
+        179,
+        167
+      ]
+    },
+    "21": {
+      "Id": 21,
+      "Name": "地20",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        50,
+        0,
+        0
+      ]
+    },
+    "22": {
+      "Id": 22,
+      "Name": "地21",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        50,
+        0,
+        0
+      ]
+    },
+    "23": {
+      "Id": 23,
+      "Name": "地22",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        50,
+        0,
+        0
+      ]
+    },
+    "24": {
+      "Id": 24,
+      "Name": "地23",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        50,
+        0,
+        0
+      ]
+    },
+    "25": {
+      "Id": 25,
+      "Name": "地24",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        50,
+        0,
+        0
+      ]
+    },
+    "26": {
+      "Id": 26,
+      "Name": "地25",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        50,
+        0,
+        0
+      ]
+    },
+    "27": {
+      "Id": 27,
+      "Name": "地26",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        50,
+        0,
+        0
+      ]
+    },
+    "28": {
+      "Id": 28,
+      "Name": "地27",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        50,
+        0,
+        0
+      ]
+    },
+    "29": {
+      "Id": 29,
+      "Name": "地28",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        50,
+        0,
+        0
+      ]
+    },
+    "30": {
+      "Id": 30,
+      "Name": "地29",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        50,
+        0,
+        0
+      ]
+    },
+    "31": {
+      "Id": 31,
+      "Name": "地30",
+      "foodDeposit": 1000,
+      "fertility": [
+        1.0,
+        2.0
+      ],
+      "goldDeposit": 10,
+      "prosperity": [
+        1.0,
+        1.0
+      ],
+      "foodRate": [
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "foodRegainDays": 0,
+      "fireDamageRate": 1.0,
+      "fireRate": 0,
+      "canBuild": false,
+      "viewThrough": false,
+      "isWater": false,
+      "moveable": false,
+      "canAmbush": true,
+      "baseCost": 999,
+      "color": [
+        50,
+        0,
+        0
+      ]
+    }
+  }
+}

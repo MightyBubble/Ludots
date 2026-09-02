@@ -1,0 +1,12 @@
+{
+  "Id": 18,
+  "Name": "间谍事件",
+  "Description": "发现对方在你的领土上进行间谍活动。",
+  "MinRelation": -600,
+  "MaxRelation": 100,
+  "Probability": 5,
+  "EffectType": "ReduceRelation",
+  "EffectParams": {
+    "Value": 180
+  }
+}

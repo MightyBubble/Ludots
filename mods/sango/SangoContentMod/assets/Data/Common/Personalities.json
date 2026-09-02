@@ -1,0 +1,56 @@
+{
+  "Personalities": {
+    "1": {
+      "Id": 1,
+      "Name": "胆小",
+      "kind": 1,
+      "falseReportSuccessAdd": 3,
+      "disturbSuccessAdd": -2,
+      "calmdownSuccessAdd": -5,
+      "ambushSuccessAdd": 3,
+      "infightingSuccessAdd": -2,
+      "sorcerySuccessAdd": -2,
+      "falseReportCriticalAdd": 10,
+      "disturbCriticalAdd": -5
+    },
+    "2": {
+      "Id": 2,
+      "Name": "冷静",
+      "kind": 2,
+      "falseReportSuccessAdd": 1,
+      "disturbSuccessAdd": 0,
+      "calmdownSuccessAdd": 5,
+      "ambushSuccessAdd": -2,
+      "infightingSuccessAdd": 0,
+      "sorcerySuccessAdd": 0,
+      "falseReportCriticalAdd": 5,
+      "disturbCriticalAdd": 0
+    },
+    "3": {
+      "Id": 3,
+      "Name": "刚胆",
+      "kind": 3,
+      "falseReportSuccessAdd": 0,
+      "disturbSuccessAdd": 1,
+      "calmdownSuccessAdd": 0,
+      "ambushSuccessAdd": 0,
+      "infightingSuccessAdd": 1,
+      "sorcerySuccessAdd": 1,
+      "falseReportCriticalAdd": 0,
+      "disturbCriticalAdd": 5
+    },
+    "4": {
+      "Id": 4,
+      "Name": "莽撞",
+      "kind": 4,
+      "falseReportSuccessAdd": -2,
+      "disturbSuccessAdd": 3,
+      "calmdownSuccessAdd": -10,
+      "ambushSuccessAdd": 1,
+      "infightingSuccessAdd": 3,
+      "sorcerySuccessAdd": 3,
+      "falseReportCriticalAdd": -5,
+      "disturbCriticalAdd": 10
+    }
+  }
+}

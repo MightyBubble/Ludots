@@ -1,0 +1,12 @@
+{
+  "Id": 10,
+  "Name": "共同敌人",
+  "Description": "双方发现了共同的敌人。",
+  "MinRelation": -300,
+  "MaxRelation": 300,
+  "Probability": 7,
+  "EffectType": "AddRelation",
+  "EffectParams": {
+    "Value": 100
+  }
+}

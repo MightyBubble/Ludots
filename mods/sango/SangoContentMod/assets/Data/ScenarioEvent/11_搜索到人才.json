@@ -1,0 +1,17 @@
+[
+  {
+    "Id": 11,
+    "eventType": "Dialog:ClickPersonSay",
+    "variables": [
+      "ActionPerson"
+    ],
+    "formatContent": "搜索结果，\n发现了名为{:TargetPerson}的武将。"
+  },
+  {
+    "eventType": "GameSystem:PersonRecruit",
+    "variables": [
+      "ActionPerson"
+    ],
+    "formatContent": "搜索结果，\n发现了名为{:TargetPerson}的武将。"
+  }
+]

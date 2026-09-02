@@ -1,0 +1,13 @@
+{
+  "Id": 7,
+  "Name": "军事援助请求",
+  "Description": "对方请求军事援助。",
+  "MinRelation": 600,
+  "MaxRelation": 900,
+  "Probability": 4,
+  "EffectType": "RequestTroops",
+  "EffectParams": {
+    "MinTroops": 1000,
+    "MaxTroops": 5000
+  }
+}

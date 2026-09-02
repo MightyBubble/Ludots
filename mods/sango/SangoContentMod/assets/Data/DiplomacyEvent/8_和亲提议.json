@@ -1,0 +1,10 @@
+{
+  "Id": 8,
+  "Name": "和亲提议",
+  "Description": "对方提议通过和亲来加强关系。",
+  "MinRelation": 700,
+  "MaxRelation": 1200,
+  "Probability": 5,
+  "EffectType": "Marriage",
+  "EffectParams": {}
+}

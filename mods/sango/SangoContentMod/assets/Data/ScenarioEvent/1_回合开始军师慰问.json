@@ -1,0 +1,10 @@
+[
+  {
+    "Id": 1,
+    "eventType": "PersonTalk",
+    "variables": [
+      "ActionCounsellor"
+    ],
+    "formatContent": "{:ActionForce}大人，\n终于轮到我们了啊。"
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "Id": 11,
+  "Name": "文化交流",
+  "Description": "对方提议进行文化交流，促进相互了解。",
+  "MinRelation": 200,
+  "MaxRelation": 700,
+  "Probability": 6,
+  "EffectType": "CulturalExchange",
+  "EffectParams": {
+    "RelationValue": 80
+  }
+}

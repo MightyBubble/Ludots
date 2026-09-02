@@ -1,0 +1,12 @@
+{
+  "Id": 2,
+  "Name": "边境冲突",
+  "Description": "双方在边境发生了小规模冲突。",
+  "MinRelation": -500,
+  "MaxRelation": 0,
+  "Probability": 8,
+  "EffectType": "ReduceRelation",
+  "EffectParams": {
+    "Value": 100
+  }
+}

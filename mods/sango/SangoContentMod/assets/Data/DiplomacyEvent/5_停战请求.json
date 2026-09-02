@@ -1,0 +1,10 @@
+{
+  "Id": 5,
+  "Name": "停战请求",
+  "Description": "对方请求停战。",
+  "MinRelation": -800,
+  "MaxRelation": -300,
+  "Probability": 7,
+  "EffectType": "TruceRequest",
+  "EffectParams": {}
+}

@@ -1,0 +1,1138 @@
+{
+  "Skills": {
+    "1": {
+      "Id": 1,
+      "Name": "近战普攻",
+      "kind": 1,
+      "atk": 10,
+      "atkDurability": 15,
+      "costEnergy": 0,
+      "successRate": 100,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 0,
+      "isRange": false,
+      "actionSound": 82,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2698,
+        2684
+      ]
+    },
+    "2": {
+      "Id": 2,
+      "Name": "远程普攻",
+      "kind": 1,
+      "atk": 1,
+      "atkDurability": 5,
+      "costEnergy": 0,
+      "successRate": 100,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        2
+      ],
+      "needAblilityLevel": 0,
+      "isRange": true,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2684
+      ]
+    },
+    "3": {
+      "Id": 3,
+      "Name": "突刺",
+      "kind": 2,
+      "atk": 25,
+      "atkDurability": 0,
+      "costEnergy": 15,
+      "successRate": 70,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 1,
+      "isRange": false,
+      "offsetAction": [
+        4,
+        1
+      ],
+      "blockFactor": 30,
+      "actionSound": 67,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": false,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2852
+      ]
+    },
+    "4": {
+      "Id": 4,
+      "Name": "螺旋突刺",
+      "kind": 2,
+      "atk": 30,
+      "atkDurability": 0,
+      "costEnergy": 20,
+      "successRate": 70,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 2,
+      "isRange": false,
+      "skillEffects": [
+        {
+          "class": "AddBuff",
+          "buffId": 1,
+          "probability": 1500,
+          "values": [
+            1,
+            2
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 0
+          }
+        },
+        {
+          "class": "AddBuff",
+          "buffId": 1,
+          "probability": 10000,
+          "values": [
+            2,
+            3
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 1
+          }
+        }
+      ],
+      "actionSound": 67,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": false,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2838
+      ]
+    },
+    "5": {
+      "Id": 5,
+      "Name": "二段突刺",
+      "kind": 2,
+      "atk": 35,
+      "atkDurability": 0,
+      "costEnergy": 25,
+      "successRate": 60,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 3,
+      "isRange": false,
+      "offsetAction": [
+        4,
+        2
+      ],
+      "blockFactor": 50,
+      "actionSound": 67,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": false,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2810
+      ]
+    },
+    "6": {
+      "Id": 6,
+      "Name": "熊手",
+      "kind": 2,
+      "atk": 25,
+      "atkDurability": 0,
+      "costEnergy": 15,
+      "successRate": 70,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 1,
+      "isRange": false,
+      "offsetAction": [
+        1,
+        -1,
+        2,
+        -1
+      ],
+      "actionSound": 77,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": false,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2866
+      ]
+    },
+    "7": {
+      "Id": 7,
+      "Name": "横扫",
+      "kind": 2,
+      "atk": 30,
+      "atkDurability": 0,
+      "costEnergy": 20,
+      "successRate": 70,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 2,
+      "isRange": false,
+      "atkOffsetPoint": [
+        4
+      ],
+      "actionSound": 79,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": false,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2824
+      ]
+    },
+    "8": {
+      "Id": 8,
+      "Name": "旋风",
+      "kind": 2,
+      "atk": 33,
+      "atkDurability": 0,
+      "costEnergy": 25,
+      "successRate": 65,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 3,
+      "isRange": false,
+      "atkOffsetPoint": [
+        3,
+        1
+      ],
+      "actionSound": 80,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": false,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2824
+      ]
+    },
+    "9": {
+      "Id": 9,
+      "Name": "火矢",
+      "kind": 2,
+      "atk": 10,
+      "atkDurability": 15,
+      "costEnergy": 15,
+      "successRate": 75,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        2
+      ],
+      "needAblilityLevel": 1,
+      "isRange": true,
+      "skillEffects": [
+        {
+          "class": "SetFire",
+          "probability": 5000,
+          "values": [
+            1,
+            2
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 0
+          }
+        },
+        {
+          "class": "SetFire",
+          "probability": 5000,
+          "values": [
+            2,
+            3
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 1
+          }
+        }
+      ],
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2880,
+        2894,
+        2908
+      ]
+    },
+    "10": {
+      "Id": 10,
+      "Name": "贯箭",
+      "kind": 2,
+      "atk": 20,
+      "atkDurability": 15,
+      "costEnergy": 20,
+      "successRate": 70,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "rangeFilterMethod": "QRSLineMethod",
+      "spellRanges": [
+        2
+      ],
+      "needAblilityLevel": 2,
+      "isRange": true,
+      "atkOffsetPoint": [
+        2,
+        4
+      ],
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2880,
+        2894,
+        2908
+      ]
+    },
+    "11": {
+      "Id": 11,
+      "Name": "乱射",
+      "kind": 2,
+      "atk": 25,
+      "atkDurability": 15,
+      "costEnergy": 25,
+      "successRate": 65,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        2
+      ],
+      "needAblilityLevel": 3,
+      "isRange": true,
+      "atkOffsetPoint": [
+        5,
+        1
+      ],
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2880,
+        2894,
+        2908
+      ]
+    },
+    "12": {
+      "Id": 12,
+      "Name": "突击",
+      "kind": 2,
+      "atk": 30,
+      "atkDurability": 0,
+      "costEnergy": 15,
+      "successRate": 70,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 1,
+      "isRange": false,
+      "offsetAction": [
+        2,
+        1,
+        1,
+        1
+      ],
+      "actionSound": 72,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": false,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2936
+      ]
+    },
+    "13": {
+      "Id": 13,
+      "Name": "突破",
+      "kind": 2,
+      "atk": 35,
+      "atkDurability": 0,
+      "costEnergy": 20,
+      "successRate": 65,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 2,
+      "isRange": false,
+      "offsetAction": [
+        5,
+        2
+      ],
+      "actionSound": 72,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": false,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2922
+      ]
+    },
+    "14": {
+      "Id": 14,
+      "Name": "突进",
+      "kind": 2,
+      "atk": 40,
+      "atkDurability": 0,
+      "costEnergy": 25,
+      "successRate": 60,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 3,
+      "isRange": false,
+      "offsetAction": [
+        2,
+        2,
+        1,
+        2
+      ],
+      "actionSound": 73,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": false,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2936
+      ]
+    },
+    "15": {
+      "Id": 15,
+      "Name": "火矢",
+      "kind": 2,
+      "atk": 50,
+      "atkDurability": 15,
+      "costEnergy": 15,
+      "successRate": 100,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        2
+      ],
+      "needAblilityLevel": 0,
+      "needItem": 7,
+      "isRange": true,
+      "skillEffects": [
+        {
+          "class": "SetFire",
+          "probability": 5000,
+          "values": [
+            1,
+            2
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 0
+          }
+        },
+        {
+          "class": "SetFire",
+          "probability": 5000,
+          "values": [
+            2,
+            3
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 1
+          }
+        }
+      ],
+      "canDamageTroop": true,
+      "canDamageMachine": false,
+      "canDamageBoat": false,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2880,
+        2894,
+        2908
+      ]
+    },
+    "16": {
+      "Id": 16,
+      "Name": "破碎",
+      "kind": 2,
+      "atk": 0,
+      "atkDurability": 50,
+      "costEnergy": 10,
+      "successRate": 100,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 0,
+      "needItem": 6,
+      "isRange": false,
+      "canDamageTroop": false,
+      "canDamageMachine": false,
+      "canDamageBoat": false,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2824
+      ]
+    },
+    "17": {
+      "Id": 17,
+      "Name": "放射",
+      "kind": 2,
+      "atk": 20,
+      "atkDurability": 60,
+      "costEnergy": 15,
+      "successRate": 100,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 0,
+      "needItem": 9,
+      "isRange": true,
+      "skillEffects": [
+        {
+          "class": "SetFire",
+          "probability": 5000,
+          "values": [
+            1,
+            2
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 0
+          }
+        },
+        {
+          "class": "SetFire",
+          "probability": 5000,
+          "values": [
+            2,
+            3
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 1
+          }
+        }
+      ],
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": false,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2824,
+        3020
+      ]
+    },
+    "18": {
+      "Id": 18,
+      "Name": "投石",
+      "kind": 2,
+      "atk": 20,
+      "atkDurability": 40,
+      "costEnergy": 20,
+      "successRate": 100,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        2,
+        3
+      ],
+      "needAblilityLevel": 0,
+      "needItem": 8,
+      "isRange": true,
+      "atkOffsetPoint": [
+        5,
+        1
+      ],
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2950
+      ]
+    },
+    "19": {
+      "Id": 19,
+      "Name": "火矢",
+      "kind": 2,
+      "atk": 15,
+      "atkDurability": 15,
+      "costEnergy": 15,
+      "successRate": 100,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        2
+      ],
+      "needAblilityLevel": 1,
+      "needItem": 10,
+      "isRange": true,
+      "skillEffects": [
+        {
+          "class": "SetFire",
+          "probability": 5000,
+          "values": [
+            1,
+            2
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 0
+          }
+        },
+        {
+          "class": "SetFire",
+          "probability": 5000,
+          "values": [
+            2,
+            3
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 1
+          }
+        }
+      ],
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2880
+      ]
+    },
+    "20": {
+      "Id": 20,
+      "Name": "猛撞",
+      "kind": 2,
+      "atk": 25,
+      "atkDurability": 30,
+      "costEnergy": 15,
+      "successRate": 70,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 2,
+      "needItem": 11,
+      "isRange": false,
+      "offsetAction": [
+        2,
+        1,
+        1,
+        1
+      ],
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2852,
+        2964
+      ]
+    },
+    "21": {
+      "Id": 21,
+      "Name": "投石",
+      "kind": 2,
+      "atk": 35,
+      "atkDurability": 40,
+      "costEnergy": 20,
+      "successRate": 100,
+      "successMethod": "CommonMethod",
+      "criticalMethod": "CommonMethod",
+      "spellRanges": [
+        2,
+        3
+      ],
+      "needAblilityLevel": 3,
+      "needItem": 12,
+      "isRange": true,
+      "atkOffsetPoint": [
+        5,
+        1
+      ],
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        3048
+      ]
+    },
+    "22": {
+      "Id": 22,
+      "Name": "火计",
+      "kind": 3,
+      "atk": 1,
+      "atkDurability": 15,
+      "costEnergy": 10,
+      "successRate": 0,
+      "successMethod": "FireSuccessMethod",
+      "criticalMethod": "FireCriticalMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 0,
+      "isRange": true,
+      "skillEffects": [
+        {
+          "class": "SetFire",
+          "probability": 10000,
+          "values": [
+            1,
+            2
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 0
+          }
+        },
+        {
+          "class": "SetFire",
+          "probability": 10000,
+          "values": [
+            2,
+            3
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 1
+          }
+        }
+      ],
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": true,
+      "onlySpellToTeam": false,
+      "personSound": [
+        3020,
+        3034
+      ]
+    },
+    "23": {
+      "Id": 23,
+      "Name": "灭火",
+      "kind": 3,
+      "costEnergy": 10,
+      "successRate": 0,
+      "successMethod": "PutOutFireSuccessMethod",
+      "criticalMethod": "PutOutFireCriticalMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 0,
+      "isRange": true,
+      "skillEffects": [
+        {
+          "class": "PutoutFire",
+          "probability": 10000
+        }
+      ],
+      "actionSound": 87,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": true,
+      "canDamageTeam": false,
+      "canSpellToCell": true,
+      "onlySpellToTeam": true,
+      "spellConditionMethod": "CheckFire",
+      "personSound": [
+        3048
+      ]
+    },
+    "24": {
+      "Id": 24,
+      "Name": "伪报",
+      "kind": 3,
+      "atk": 1,
+      "costEnergy": 15,
+      "successRate": 0,
+      "successMethod": "FalseReportSuccessMethod",
+      "criticalMethod": "FalseReportCriticalMethod",
+      "spellRanges": [
+        1,
+        2
+      ],
+      "needAblilityLevel": 0,
+      "isRange": true,
+      "skillEffects": [
+        {
+          "class": "AddBuff",
+          "buffId": 2,
+          "probability": 10000,
+          "values": [
+            1,
+            2
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 0
+          }
+        },
+        {
+          "class": "AddBuff",
+          "buffId": 2,
+          "probability": 10000,
+          "values": [
+            2,
+            3
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 1
+          }
+        }
+      ],
+      "actionSound": 88,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2852
+      ]
+    },
+    "25": {
+      "Id": 25,
+      "Name": "扰乱",
+      "kind": 3,
+      "atk": 1,
+      "costEnergy": 15,
+      "successRate": 0,
+      "successMethod": "DisturbSuccessMethod",
+      "criticalMethod": "DisturbCriticalMethod",
+      "spellRanges": [
+        1,
+        2
+      ],
+      "needAblilityLevel": 0,
+      "isRange": true,
+      "skillEffects": [
+        {
+          "class": "AddBuff",
+          "buffId": 1,
+          "probability": 10000,
+          "values": [
+            1,
+            2
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 0
+          }
+        },
+        {
+          "class": "AddBuff",
+          "buffId": 1,
+          "probability": 10000,
+          "values": [
+            2,
+            3
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 1
+          }
+        }
+      ],
+      "actionSound": 89,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2852
+      ]
+    },
+    "26": {
+      "Id": 26,
+      "Name": "镇静",
+      "kind": 3,
+      "costEnergy": 10,
+      "successRate": 0,
+      "successMethod": "CalmdownSuccessMethod",
+      "criticalMethod": "CalmdownCriticalMethod",
+      "spellRanges": [
+        1,
+        2
+      ],
+      "needAblilityLevel": 0,
+      "isRange": true,
+      "skillEffects": [
+        {
+          "class": "RemoveBuffById",
+          "values": [
+            1,
+            2
+          ],
+          "probability": 10000
+        },
+        {
+          "class": "RecureWoundedTroops",
+          "probability": 10000,
+          "values": [
+            20,
+            30
+          ],
+          "weight": [
+            70,
+            30
+          ],
+          "condition": {
+            "class": "SkillIsCritical",
+            "result": 1
+          }
+        }
+      ],
+      "actionSound": 90,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": false,
+      "canDamageTeam": true,
+      "canSpellToCell": false,
+      "onlySpellToTeam": true,
+      "spellConditionMethod": "CheckDebuffTroop",
+      "personSound": [
+        3062
+      ]
+    },
+    "27": {
+      "Id": 27,
+      "Name": "伏兵",
+      "kind": 3,
+      "atk": 35,
+      "costEnergy": 10,
+      "successRate": 0,
+      "successMethod": "AmbushSuccessMethod",
+      "criticalMethod": "AmbushCriticalMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 0,
+      "isRange": true,
+      "actionSound": 29,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2852
+      ]
+    },
+    "28": {
+      "Id": 28,
+      "Name": "内讧",
+      "kind": 3,
+      "atk": 2,
+      "costEnergy": 20,
+      "successRate": 0,
+      "successMethod": "InfightingSuccessMethod",
+      "criticalMethod": "InfightingCriticalMethod",
+      "spellRanges": [
+        1
+      ],
+      "needAblilityLevel": 0,
+      "isRange": true,
+      "actionSound": 92,
+      "canDamageTroop": true,
+      "canDamageMachine": true,
+      "canDamageBoat": true,
+      "canDamageBuilding": false,
+      "canDamageTeam": false,
+      "canSpellToCell": false,
+      "onlySpellToTeam": false,
+      "personSound": [
+        2852
+      ]
+    }
+  }
+}

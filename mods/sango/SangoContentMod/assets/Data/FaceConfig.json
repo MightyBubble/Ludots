@@ -1,0 +1,16 @@
+{
+"HeadIdRanges" : [
+    {
+        "name": "自定义男性",
+        "startId": 2000,
+        "endId": 2099,
+        "sexType": 0
+    },
+    {
+        "name": "自定义女性",
+        "startId": 2100,
+        "endId": 2173,
+        "sexType": 1
+    }
+]
+}

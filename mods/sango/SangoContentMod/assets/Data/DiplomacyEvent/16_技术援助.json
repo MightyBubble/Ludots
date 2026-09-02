@@ -1,0 +1,12 @@
+{
+  "Id": 16,
+  "Name": "技术援助",
+  "Description": "对方提供技术援助，帮助你发展。",
+  "MinRelation": 600,
+  "MaxRelation": 1200,
+  "Probability": 5,
+  "EffectType": "TechnicalAssistance",
+  "EffectParams": {
+    "RelationValue": 80
+  }
+}

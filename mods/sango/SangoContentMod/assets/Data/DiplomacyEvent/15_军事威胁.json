@@ -1,0 +1,12 @@
+{
+  "Id": 15,
+  "Name": "军事威胁",
+  "Description": "对方在边境集结军队，对你构成威胁。",
+  "MinRelation": -900,
+  "MaxRelation": -300,
+  "Probability": 6,
+  "EffectType": "ReduceRelation",
+  "EffectParams": {
+    "Value": 150
+  }
+}

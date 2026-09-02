@@ -1,0 +1,12 @@
+{
+  "Id": 1,
+  "Name": "使者来访",
+  "Description": "对方派遣使者来访，带来了友好的问候。",
+  "MinRelation": 0,
+  "MaxRelation": 500,
+  "Probability": 5,
+  "EffectType": "AddRelation",
+  "EffectParams": {
+    "Value": 50
+  }
+}

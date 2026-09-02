@@ -1,0 +1,12 @@
+{
+  "Id": 12,
+  "Name": "使者被扣留",
+  "Description": "你的使者被对方扣留，引发外交危机。",
+  "MinRelation": -700,
+  "MaxRelation": -200,
+  "Probability": 5,
+  "EffectType": "ReduceRelation",
+  "EffectParams": {
+    "Value": 200
+  }
+}

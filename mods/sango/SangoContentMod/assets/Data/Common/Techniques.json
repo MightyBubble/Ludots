@@ -1,0 +1,1006 @@
+{
+  "Techniques": {
+    "1": {
+      "Id": 1,
+      "Name": "锻炼枪兵",
+      "desc": "增加枪兵战法的威力",
+      "kind": 1,
+      "level": 0,
+      "col": 0,
+      "row": 0,
+      "needAttr": 0,
+      "goldCost": 1000,
+      "tabColor": [
+        255,
+        100,
+        100
+      ],
+      "techPointCost": 2000,
+      "counter": 3,
+      "effects": [
+        {
+          "class": "TroopChangeDamage",
+          "value": 10,
+          "kinds": [
+            2
+          ]
+        }
+      ]
+    },
+    "2": {
+      "Id": 2,
+      "Name": "袭击兵粮",
+      "desc": "以枪兵攻击时，夺取敌方部队的兵粮",
+      "kind": 1,
+      "level": 1,
+      "col": 1,
+      "row": 0,
+      "needAttr": 0,
+      "goldCost": 2000,
+      "tabColor": [
+        255,
+        100,
+        100
+      ],
+      "techPointCost": 3000,
+      "counter": 4,
+      "needTech": 1,
+      "effects": [
+        {
+          "class": "TroopTriggerAction",
+          "triggerList": [
+            {
+              "class": "TriggerWhenSkillAfterHitTroop"
+            }
+          ],
+          "actionList": [
+            {
+              "class": "TroopStealFood",
+              "kinds": [
+                2
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "3": {
+      "Id": 3,
+      "Name": "奇袭",
+      "desc": "枪兵于森林中攻击时，不会遭到反击",
+      "kind": 1,
+      "level": 2,
+      "col": 2,
+      "row": 0,
+      "needAttr": 0,
+      "goldCost": 3000,
+      "tabColor": [
+        255,
+        100,
+        100
+      ],
+      "techPointCost": 5000,
+      "counter": 6,
+      "needTech": 2
+    },
+    "4": {
+      "Id": 4,
+      "Name": "精锐枪兵",
+      "desc": "强化枪兵的攻击力、防御力、移动力",
+      "kind": 1,
+      "level": 3,
+      "col": 3,
+      "row": 0,
+      "needAttr": 0,
+      "goldCost": 5000,
+      "tabColor": [
+        255,
+        100,
+        100
+      ],
+      "techPointCost": 8000,
+      "counter": 9,
+      "needTech": 3,
+      "effects": [
+        {
+          "class": "TroopChangeDamage",
+          "value": 15,
+          "kinds": [
+            2
+          ]
+        },
+        {
+          "class": "TroopAddAttack",
+          "value": 10,
+          "kinds": [
+            2
+          ]
+        },
+        {
+          "class": "TroopAddDefence",
+          "value": 10,
+          "kinds": [
+            2
+          ]
+        },
+        {
+          "class": "TroopAddMoveAbility",
+          "value": 6,
+          "kinds": [
+            2
+          ]
+        }
+      ]
+    },
+    "5": {
+      "Id": 5,
+      "Name": "锻炼戟兵",
+      "desc": "增加戟兵战法的威力",
+      "kind": 2,
+      "level": 0,
+      "col": 0,
+      "row": 1,
+      "needAttr": 0,
+      "goldCost": 1000,
+      "tabColor": [
+        100,
+        100,
+        255
+      ],
+      "techPointCost": 2000,
+      "counter": 3,
+      "effects": [
+        {
+          "class": "TroopChangeDamage",
+          "value": 10,
+          "kinds": [
+            3
+          ]
+        }
+      ]
+    },
+    "6": {
+      "Id": 6,
+      "Name": "箭盾",
+      "desc": "以30％的机率来防御弓箭攻击",
+      "kind": 2,
+      "level": 1,
+      "col": 1,
+      "row": 1,
+      "needAttr": 0,
+      "goldCost": 2000,
+      "tabColor": [
+        100,
+        100,
+        255
+      ],
+      "techPointCost": 3000,
+      "counter": 4,
+      "needTech": 5
+    },
+    "7": {
+      "Id": 7,
+      "Name": "大盾",
+      "desc": "以30％的机率来防御一般攻击",
+      "kind": 2,
+      "level": 2,
+      "col": 2,
+      "row": 1,
+      "needAttr": 0,
+      "goldCost": 3000,
+      "tabColor": [
+        100,
+        100,
+        255
+      ],
+      "techPointCost": 5000,
+      "counter": 6,
+      "needTech": 6,
+      "effects": [
+        {
+          "class": "TroopSetDamage",
+          "value": -1,
+          "kinds": [
+            3
+          ],
+          "isDefender": 1,
+          "condition": {
+            "class": "andList",
+            "list": [
+              {
+                "class": "SkillIsNormalSkill",
+                "result": 1
+              },
+              {
+                "class": "ProbabilityCheck",
+                "probability": 3000
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "8": {
+      "Id": 8,
+      "Name": "精锐戟兵",
+      "desc": "强化戟兵的攻击力、防御力、移动力",
+      "kind": 2,
+      "level": 3,
+      "col": 3,
+      "row": 1,
+      "needAttr": 0,
+      "goldCost": 5000,
+      "tabColor": [
+        100,
+        100,
+        255
+      ],
+      "techPointCost": 8000,
+      "counter": 9,
+      "needTech": 7,
+      "effects": [
+        {
+          "class": "TroopChangeDamage",
+          "value": 15,
+          "kinds": [
+            3
+          ]
+        },
+        {
+          "class": "TroopAddAttack",
+          "value": 10,
+          "kinds": [
+            3
+          ]
+        },
+        {
+          "class": "TroopAddDefence",
+          "value": 10,
+          "kinds": [
+            3
+          ]
+        },
+        {
+          "class": "TroopAddMoveAbility",
+          "value": 6,
+          "kinds": [
+            3
+          ]
+        }
+      ]
+    },
+    "9": {
+      "Id": 9,
+      "Name": "锻炼弩兵",
+      "desc": "增加弩兵战法的威力",
+      "kind": 3,
+      "level": 0,
+      "col": 0,
+      "row": 2,
+      "needAttr": 0,
+      "goldCost": 1000,
+      "tabColor": [
+        100,
+        255,
+        100
+      ],
+      "techPointCost": 2000,
+      "counter": 3,
+      "effects": [
+        {
+          "class": "TroopChangeDamage",
+          "value": 10,
+          "kinds": [
+            4
+          ]
+        }
+      ]
+    },
+    "10": {
+      "Id": 10,
+      "Name": "还射",
+      "desc": "弩兵遭受弓箭攻击时会自动反击",
+      "kind": 3,
+      "level": 1,
+      "col": 1,
+      "row": 2,
+      "needAttr": 0,
+      "goldCost": 2000,
+      "tabColor": [
+        100,
+        255,
+        100
+      ],
+      "techPointCost": 3000,
+      "counter": 4,
+      "needTech": 9,
+      "effects": [
+        {
+          "class": "TroopTriggerAction",
+          "triggerList": [
+            {
+              "class": "TriggerWhenSkillAfterHitTroop"
+            }
+          ],
+          "actionList": [
+            {
+              "class": "TroopAttackBack",
+              "value": 2,
+              "isDefender": 1,
+              "isRange": 1,
+              "isNormal": 1,
+              "kinds": [
+                4
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "11": {
+      "Id": 11,
+      "Name": "强弩",
+      "desc": "弩兵的射程增加１区格",
+      "kind": 3,
+      "level": 2,
+      "col": 2,
+      "row": 2,
+      "needAttr": 0,
+      "goldCost": 3000,
+      "tabColor": [
+        100,
+        255,
+        100
+      ],
+      "techPointCost": 5000,
+      "counter": 6,
+      "needTech": 10,
+      "effects": [
+        {
+          "class": "TroopChangeSkillSpellRange",
+          "value": 1,
+          "isRange": 1,
+          "kinds": [
+            4
+          ]
+        }
+      ]
+    },
+    "12": {
+      "Id": 12,
+      "Name": "精锐弩兵",
+      "desc": "强化弩兵的攻击力、防御力、移动力",
+      "kind": 3,
+      "level": 3,
+      "col": 3,
+      "row": 2,
+      "needAttr": 0,
+      "goldCost": 5000,
+      "tabColor": [
+        100,
+        255,
+        100
+      ],
+      "techPointCost": 8000,
+      "counter": 9,
+      "needTech": 11,
+      "effects": [
+        {
+          "class": "TroopChangeDamage",
+          "value": 15,
+          "kinds": [
+            4
+          ]
+        },
+        {
+          "class": "TroopAddAttack",
+          "value": 10,
+          "kinds": [
+            4
+          ]
+        },
+        {
+          "class": "TroopAddDefence",
+          "value": 10,
+          "kinds": [
+            4
+          ]
+        },
+        {
+          "class": "TroopAddMoveAbility",
+          "value": 6,
+          "kinds": [
+            4
+          ]
+        }
+      ]
+    },
+    "13": {
+      "Id": 13,
+      "Name": "锻炼骑兵",
+      "desc": "增加骑兵战法的威力",
+      "kind": 4,
+      "level": 0,
+      "col": 0,
+      "row": 3,
+      "needAttr": 0,
+      "goldCost": 1000,
+      "tabColor": [
+        150,
+        100,
+        100
+      ],
+      "techPointCost": 2000,
+      "counter": 3,
+      "effects": [
+        {
+          "class": "TroopChangeDamage",
+          "value": 10,
+          "kinds": [
+            5
+          ]
+        }
+      ]
+    },
+    "14": {
+      "Id": 14,
+      "Name": "出产良马",
+      "desc": "增加骑兵的移动力",
+      "kind": 4,
+      "level": 1,
+      "col": 1,
+      "row": 3,
+      "needAttr": 0,
+      "goldCost": 2000,
+      "tabColor": [
+        150,
+        100,
+        100
+      ],
+      "techPointCost": 3000,
+      "counter": 4,
+      "needTech": 13,
+      "effects": [
+        {
+          "class": "TroopAddMoveAbility",
+          "value": 10,
+          "kinds": [
+            5
+          ]
+        }
+      ]
+    },
+    "15": {
+      "Id": 15,
+      "Name": "骑射",
+      "desc": "骑兵可执行弓箭攻击",
+      "kind": 4,
+      "level": 2,
+      "col": 2,
+      "row": 3,
+      "needAttr": 0,
+      "goldCost": 3000,
+      "tabColor": [
+        150,
+        100,
+        100
+      ],
+      "techPointCost": 5000,
+      "counter": 6,
+      "needTech": 14,
+      "effects": [
+        {
+          "class": "TroopAddSkill",
+          "value": 2,
+          "kinds": [
+            5
+          ]
+        }
+      ]
+    },
+    "16": {
+      "Id": 16,
+      "Name": "精锐骑兵",
+      "desc": "强化骑兵的攻击力、防御力、移动力",
+      "kind": 4,
+      "level": 3,
+      "col": 3,
+      "row": 3,
+      "needAttr": 0,
+      "goldCost": 5000,
+      "tabColor": [
+        150,
+        100,
+        100
+      ],
+      "techPointCost": 8000,
+      "counter": 9,
+      "needTech": 15,
+      "effects": [
+        {
+          "class": "TroopChangeDamage",
+          "value": 15,
+          "kinds": [
+            5
+          ]
+        },
+        {
+          "class": "TroopAddAttack",
+          "value": 10,
+          "kinds": [
+            5
+          ]
+        },
+        {
+          "class": "TroopAddDefence",
+          "value": 10,
+          "kinds": [
+            5
+          ]
+        },
+        {
+          "class": "TroopAddMoveAbility",
+          "value": 6,
+          "kinds": [
+            5
+          ]
+        }
+      ]
+    },
+    "17": {
+      "Id": 17,
+      "Name": "熟练兵",
+      "desc": "士兵的气力上限增加20",
+      "kind": 5,
+      "level": 0,
+      "col": 0,
+      "row": 4,
+      "needAttr": 1,
+      "goldCost": 1000,
+      "tabColor": [
+        255,
+        255,
+        100
+      ],
+      "techPointCost": 2000,
+      "counter": 3,
+      "effects": [
+        {
+          "class": "ForceCityMaxMorale",
+          "value": 20
+        }
+      ]
+    },
+    "18": {
+      "Id": 18,
+      "Name": "难所行军",
+      "desc": "可通行间道与浅滩，通行栈道时不会受到损伤",
+      "kind": 5,
+      "level": 1,
+      "col": 1,
+      "row": 4,
+      "needAttr": 1,
+      "goldCost": 2000,
+      "tabColor": [
+        255,
+        255,
+        100
+      ],
+      "techPointCost": 3000,
+      "counter": 4,
+      "needTech": 17
+    },
+    "19": {
+      "Id": 19,
+      "Name": "军制改革",
+      "desc": "部队士兵上限增加3000",
+      "kind": 5,
+      "level": 2,
+      "col": 2,
+      "row": 4,
+      "needAttr": 1,
+      "goldCost": 3000,
+      "tabColor": [
+        255,
+        255,
+        100
+      ],
+      "techPointCost": 5000,
+      "counter": 6,
+      "needTech": 18,
+      "effects": [
+        {
+          "class": "ForceTroopMaxTroop",
+          "value": 3000
+        }
+      ]
+    },
+    "20": {
+      "Id": 20,
+      "Name": "云梯",
+      "desc": "增加部队的据点攻击力",
+      "kind": 5,
+      "level": 3,
+      "col": 3,
+      "row": 4,
+      "needAttr": 1,
+      "goldCost": 5000,
+      "tabColor": [
+        255,
+        255,
+        100
+      ],
+      "techPointCost": 8000,
+      "counter": 9,
+      "needTech": 19
+    },
+    "21": {
+      "Id": 21,
+      "Name": "强化车轴",
+      "desc": "增加兵器的移动力",
+      "kind": 6,
+      "level": 0,
+      "col": 0,
+      "row": 5,
+      "needAttr": 2,
+      "goldCost": 1000,
+      "tabColor": [
+        100,
+        255,
+        200
+      ],
+      "techPointCost": 2000,
+      "counter": 3,
+      "effects": [
+        {
+          "class": "TroopAddMoveAbility",
+          "value": 4,
+          "kinds": [
+            8,
+            9
+          ]
+        }
+      ]
+    },
+    "22": {
+      "Id": 22,
+      "Name": "石造建筑",
+      "desc": "可使用障害物「石墙」、设施「石兵八阵」",
+      "kind": 6,
+      "level": 1,
+      "col": 1,
+      "row": 5,
+      "needAttr": 2,
+      "goldCost": 2000,
+      "tabColor": [
+        100,
+        255,
+        200
+      ],
+      "techPointCost": 3000,
+      "counter": 4,
+      "needTech": 21
+    },
+    "23": {
+      "Id": 23,
+      "Name": "开发投石",
+      "desc": "可使用兵装「投石、斗舰」、设施「投石台」",
+      "kind": 6,
+      "level": 2,
+      "col": 2,
+      "row": 5,
+      "needAttr": 2,
+      "goldCost": 3000,
+      "tabColor": [
+        100,
+        255,
+        200
+      ],
+      "techPointCost": 5000,
+      "counter": 6,
+      "needTech": 22
+    },
+    "24": {
+      "Id": 24,
+      "Name": "霹雳",
+      "desc": "执行投石攻击时，同时攻击周围１区格",
+      "kind": 6,
+      "level": 3,
+      "col": 3,
+      "row": 5,
+      "needAttr": 2,
+      "goldCost": 5000,
+      "tabColor": [
+        100,
+        255,
+        200
+      ],
+      "techPointCost": 8000,
+      "counter": 9,
+      "needTech": 23,
+      "effects": [
+        {
+          "class": "TroopChangeSkillAttackRange",
+          "atkType": 5,
+          "atkRange": 1,
+          "condition": {
+            "class": "SkillIdInList",
+            "ids": [
+              18
+            ],
+            "result": 1
+          }
+        }
+      ]
+    },
+    "25": {
+      "Id": 25,
+      "Name": "培训工兵",
+      "desc": "增加每回合的耐久回复量",
+      "kind": 7,
+      "level": 0,
+      "col": 0,
+      "row": 6,
+      "needAttr": 3,
+      "goldCost": 1000,
+      "tabColor": [
+        200,
+        100,
+        200
+      ],
+      "techPointCost": 2000,
+      "counter": 4
+    },
+    "26": {
+      "Id": 26,
+      "Name": "强化设施",
+      "desc": "可使用设施「砦、连弩楼」",
+      "kind": 7,
+      "level": 1,
+      "col": 1,
+      "row": 6,
+      "needAttr": 3,
+      "goldCost": 2000,
+      "tabColor": [
+        200,
+        100,
+        200
+      ],
+      "techPointCost": 3000,
+      "counter": 5,
+      "needTech": 25
+    },
+    "27": {
+      "Id": 27,
+      "Name": "强化城墙",
+      "desc": "可使用设施「城塞」、增加据点的耐久",
+      "kind": 7,
+      "level": 2,
+      "col": 2,
+      "row": 6,
+      "needAttr": 3,
+      "goldCost": 3000,
+      "tabColor": [
+        200,
+        100,
+        200
+      ],
+      "techPointCost": 5000,
+      "counter": 7,
+      "needTech": 26,
+      "effects": [
+        {
+          "class": "CityDurabilityLimit",
+          "value": 3000,
+          "kinds": [
+            1,
+            2,
+            3
+          ]
+        }
+      ]
+    },
+    "28": {
+      "Id": 28,
+      "Name": "强化防卫",
+      "desc": "强化据点的反击力",
+      "kind": 7,
+      "level": 3,
+      "col": 3,
+      "row": 6,
+      "needAttr": 3,
+      "goldCost": 5000,
+      "tabColor": [
+        200,
+        100,
+        200
+      ],
+      "techPointCost": 8000,
+      "counter": 10,
+      "needTech": 27,
+      "effects": [
+        {
+          "class": "BuildingBaseAttackBack",
+          "value": "200"
+        }
+      ]
+    },
+    "29": {
+      "Id": 29,
+      "Name": "开发木兽",
+      "desc": "可使用兵装「木兽」",
+      "kind": 8,
+      "level": 0,
+      "col": 0,
+      "row": 7,
+      "needAttr": 2,
+      "goldCost": 1000,
+      "tabColor": [
+        100,
+        255,
+        255
+      ],
+      "techPointCost": 2000,
+      "counter": 3
+    },
+    "30": {
+      "Id": 30,
+      "Name": "神火计",
+      "desc": "可于３区格范围内执行火计",
+      "kind": 8,
+      "level": 1,
+      "col": 1,
+      "row": 7,
+      "needAttr": 2,
+      "goldCost": 2000,
+      "tabColor": [
+        100,
+        255,
+        255
+      ],
+      "techPointCost": 3000,
+      "counter": 4,
+      "needTech": 29,
+      "effects": [
+        {
+          "class": "TroopChangeSkillSpellRange",
+          "value": 2,
+          "condition": {
+            "class": "andList",
+            "list": [
+              {
+                "class": "SkillIdInList",
+                "ids": [
+                  22
+                ],
+                "result": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "31": {
+      "Id": 31,
+      "Name": "炼成火药",
+      "desc": "可使用陷阱「火焰种、火焰球」",
+      "kind": 8,
+      "level": 2,
+      "col": 2,
+      "row": 7,
+      "needAttr": 2,
+      "goldCost": 3000,
+      "tabColor": [
+        100,
+        255,
+        255
+      ],
+      "techPointCost": 5000,
+      "counter": 6,
+      "needTech": 30
+    },
+    "32": {
+      "Id": 32,
+      "Name": "炼成炸药",
+      "desc": "可使用陷阱「业火种、业火球」，增强火势",
+      "kind": 8,
+      "level": 3,
+      "col": 3,
+      "row": 7,
+      "needAttr": 2,
+      "goldCost": 5000,
+      "tabColor": [
+        100,
+        255,
+        255
+      ],
+      "techPointCost": 8000,
+      "counter": 9,
+      "needTech": 31
+    },
+    "33": {
+      "Id": 33,
+      "Name": "木牛流马",
+      "desc": "提升输送队的移动力",
+      "kind": 9,
+      "level": 0,
+      "col": 0,
+      "row": 8,
+      "needAttr": 3,
+      "goldCost": 1000,
+      "tabColor": [
+        255,
+        150,
+        100
+      ],
+      "techPointCost": 2000,
+      "counter": 4,
+      "effects": [
+        {
+          "class": "TroopAddMoveAbility",
+          "value": 6,
+          "kinds": [
+            7
+          ]
+        }
+      ]
+    },
+    "34": {
+      "Id": 34,
+      "Name": "扩展港关",
+      "desc": "提升关所、港的最大资金、兵粮、士兵、兵装",
+      "kind": 9,
+      "level": 1,
+      "col": 1,
+      "row": 8,
+      "needAttr": 3,
+      "goldCost": 2000,
+      "tabColor": [
+        255,
+        150,
+        100
+      ],
+      "techPointCost": 3000,
+      "counter": 5,
+      "needTech": 33
+    },
+    "35": {
+      "Id": 35,
+      "Name": "整备政令",
+      "desc": "治安变得不容易下降",
+      "kind": 9,
+      "level": 2,
+      "col": 2,
+      "row": 8,
+      "needAttr": 3,
+      "goldCost": 3000,
+      "tabColor": [
+        255,
+        150,
+        100
+      ],
+      "techPointCost": 5000,
+      "counter": 7,
+      "needTech": 34
+    },
+    "36": {
+      "Id": 36,
+      "Name": "掌握人心",
+      "desc": "麾下武将的忠诚变得不容易下降",
+      "kind": 9,
+      "level": 3,
+      "col": 3,
+      "row": 8,
+      "needAttr": 3,
+      "goldCost": 5000,
+      "tabColor": [
+        255,
+        150,
+        100
+      ],
+      "techPointCost": 8000,
+      "counter": 10,
+      "needTech": 35
+    }
+  }
+}

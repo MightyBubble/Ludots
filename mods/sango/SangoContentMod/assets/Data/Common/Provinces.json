@@ -1,0 +1,138 @@
+{
+  "Provinces": {
+    "1": {
+      "Id": 1,
+      "Name": "幽州",
+      "desc": "幽州",
+      "Region": 1,
+      "neighbors": [
+        2
+      ]
+    },
+    "2": {
+      "Id": 2,
+      "Name": "冀州",
+      "desc": "冀州",
+      "Region": 1,
+      "neighbors": [
+        1,
+        3,
+        4
+      ]
+    },
+    "3": {
+      "Id": 3,
+      "Name": "青徐",
+      "desc": "青州徐?",
+      "Region": 2,
+      "neighbors": [
+        2,
+        4,
+        8
+      ]
+    },
+    "4": {
+      "Id": 4,
+      "Name": "兖予",
+      "desc": "兖州予?",
+      "Region": 2,
+      "neighbors": [
+        2,
+        3,
+        5,
+        6,
+        9
+      ]
+    },
+    "5": {
+      "Id": 5,
+      "Name": "司隶",
+      "desc": "司隶",
+      "Region": 2,
+      "neighbors": [
+        4,
+        6
+      ]
+    },
+    "6": {
+      "Id": 6,
+      "Name": "京兆",
+      "desc": "京兆",
+      "Region": 3,
+      "neighbors": [
+        4,
+        5,
+        7,
+        9,
+        11
+      ]
+    },
+    "7": {
+      "Id": 7,
+      "Name": "凉州",
+      "desc": "凉州",
+      "Region": 3,
+      "neighbors": [
+        6,
+        11
+      ]
+    },
+    "8": {
+      "Id": 8,
+      "Name": "扬州",
+      "desc": "扬州",
+      "Region": 4,
+      "neighbors": [
+        3,
+        9,
+        10
+      ]
+    },
+    "9": {
+      "Id": 9,
+      "Name": "荆北",
+      "desc": "荆州北?",
+      "Region": 4,
+      "neighbors": [
+        4,
+        6,
+        8,
+        10,
+        11
+      ]
+    },
+    "10": {
+      "Id": 10,
+      "Name": "荆南",
+      "desc": "荆州南?",
+      "Region": 4,
+      "neighbors": [
+        8,
+        9,
+        11
+      ]
+    },
+    "11": {
+      "Id": 11,
+      "Name": "益州",
+      "desc": "益州",
+      "Region": 5,
+      "neighbors": [
+        6,
+        7,
+        9,
+        10,
+        12
+      ]
+    },
+    "12": {
+      "Id": 12,
+      "Name": "南中",
+      "desc": "南中",
+      "Region": 6,
+      "neighbors": [
+        11
+      ]
+    }
+  }
+}

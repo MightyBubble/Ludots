@@ -1,0 +1,12 @@
+{
+  "Id": 9,
+  "Name": "领土争端",
+  "Description": "双方因领土问题产生了争端。",
+  "MinRelation": -800,
+  "MaxRelation": -400,
+  "Probability": 6,
+  "EffectType": "ReduceRelation",
+  "EffectParams": {
+    "Value": 150
+  }
+}
