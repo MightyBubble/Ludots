@@ -58,6 +58,7 @@ import {
   computeWatchedEntryFocus,
   type LiveDebugEvent,
 } from './gas-graph-editor/liveVisualDebug';
+import { lookupLiveDebugStory, resolveLiveDebugBeat } from './gas-graph-editor/liveDebugStory';
 import './gas-graph-editor/editor.css';
 
 type GraphNodeConfig = {
@@ -225,7 +226,8 @@ type GraphOutputConfig = {
 
 type GraphEntryConfig = {
   label: string;
-  event: string;
+  event?: string;
+  action?: string;
   start: string;
   once?: boolean;
   refire?: string | null;
@@ -495,8 +497,8 @@ function graphToFlow(
         op: 'Event',
         role: 'event-entry',
         entry,
-        schema: schemaFor(entry.event),
-        label: entry.event,
+        schema: schemaFor(entry.event ?? ''),
+        label: entry.event ?? entry.action ?? entry.label,
         controlOutputPorts: ['exec'],
       },
     });
@@ -1738,6 +1740,19 @@ export const GasGraphEditorPage: React.FC = () => {
     return { heat, pins, controlHeat, valueHeat, hotEdges };
   }, [debugClockMs, debugEnabled, debugEvents, edges]);
 
+  const liveDebugStory = React.useMemo(
+    () => lookupLiveDebugStory(graphId, debugEntryLabel),
+    [debugEntryLabel, graphId],
+  );
+
+  const liveDebugBeat = React.useMemo(() => {
+    if (!debugEnabled || !liveDebugStory) return null;
+    const recent = debugEvents
+      .filter((event) => event.event === 'NodeEnter' && event.nodeId)
+      .map((event) => event.nodeId!);
+    return resolveLiveDebugBeat(liveDebugStory, recent);
+  }, [debugEnabled, debugEvents, liveDebugStory]);
+
   const watchFocus = React.useMemo(() => {
     if (!debugEnabled || !debugEntryLabel) {
       return { nodeIds: new Set<string>(), edgeIds: new Set<string>() };
@@ -2233,7 +2248,10 @@ export const GasGraphEditorPage: React.FC = () => {
                       <option value="">Select mounted entry</option>
                       {debugMounts.map((mount) => (
                         <option key={`${mount.graphName}:${mount.entryLabel}`} value={mount.entryLabel}>
-                          {mount.entryLabel} · {mount.event}
+                          {mount.entryLabel}
+                          {lookupLiveDebugStory(graphId, mount.entryLabel)
+                            ? ` · ${lookupLiveDebugStory(graphId, mount.entryLabel)!.title}`
+                            : ` · ${mount.event}`}
                         </option>
                       ))}
                     </select>
@@ -2243,10 +2261,26 @@ export const GasGraphEditorPage: React.FC = () => {
                   </div>
                   <div className="mt-1 text-[10px] text-slate-400">{debugStatus}</div>
                   {debugEnabled ? (
-                    <div className="mt-1 rounded border border-cyan-900/60 bg-cyan-950/40 px-2 py-1 text-[10px] leading-4 text-cyan-100/90">
-                      Framing entry <span className="font-mono text-cyan-50">{debugEntryLabel || '—'}</span>
-                      {' '}({watchFocus.nodeIds.size} nodes). Other chains are hidden.
-                      Play the game action that fires this entry — the framed path lights up.
+                    <div className="mt-1 rounded border border-amber-900/50 bg-amber-950/30 px-2 py-1.5 text-[11px] leading-4 text-amber-50/95">
+                      {liveDebugStory ? (
+                        <>
+                          <div className="font-semibold text-amber-200">
+                            {liveDebugStory.title}
+                            <span className="ml-2 font-normal text-zinc-400">{liveDebugStory.summary}</span>
+                          </div>
+                          <div className="mt-0.5 text-amber-100">
+                            {liveDebugBeat
+                              ? `正在走：${liveDebugBeat.text}`
+                              : '等游戏里发生对应事件——左边战场，右边这条链会亮起来。'}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          Framing entry <span className="font-mono text-cyan-50">{debugEntryLabel || '—'}</span>
+                          {' '}({watchFocus.nodeIds.size} nodes). Other chains are hidden.
+                          Play the game action that fires this entry — the framed path lights up.
+                        </>
+                      )}
                     </div>
                   ) : null}
                   <div className="mt-1 max-h-16 overflow-auto rounded border border-slate-800 bg-slate-950 p-1.5 font-mono text-[10px]">

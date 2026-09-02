@@ -61,8 +61,8 @@ export function EventEntryInspector({
     ? [entry.start, ...startOptions]
     : startOptions;
   const schemaNames = new Set(eventSchemas.map((schema) => schema.name));
-  const selectedSchema = eventSchemas.find((schema) => schema.name === entry.event) ?? null;
-  const catalogValue = selectedSchema ? entry.event : '';
+  const selectedSchema = eventSchemas.find((schema) => schema.name === (entry.event ?? '')) ?? null;
+  const catalogValue = selectedSchema ? (entry.event ?? '') : '';
 
   const patchFilters = (patch: EventEntryFilters) => {
     onChange({
@@ -112,9 +112,20 @@ export function EventEntryInspector({
       </Field>
       <Field label="Event name">
         <TextInput
-          value={entry.event}
+          value={entry.event ?? ''}
           placeholder="EntityDied"
-          onChange={(eventName) => onChange({ ...entry, event: eventName })}
+          onChange={(eventName) => onChange({ ...entry, event: eventName, action: undefined })}
+        />
+      </Field>
+      <Field label="Action id (action-bound entry)">
+        <TextInput
+          value={entry.action ?? ''}
+          placeholder="CommandSourceAcquire"
+          onChange={(actionName) => onChange({
+            ...entry,
+            action: actionName,
+            ...(actionName.trim() ? { event: undefined } : {}),
+          })}
         />
       </Field>
       {entry.event && !schemaNames.has(entry.event) ? (
