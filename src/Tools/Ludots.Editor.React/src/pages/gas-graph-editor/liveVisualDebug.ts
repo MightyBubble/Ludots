@@ -462,10 +462,10 @@ export function applyWatchFocusToEdges(
         style: {
           ...edge.style,
           stroke: live
-            ? (isValue ? '#94a3b8' : '#fbbf24')
-            : (isValue ? '#71717a' : '#52525b'),
-          strokeWidth: isValue ? 1.5 : (live ? 3.2 : 2),
-          opacity: isValue ? 0.7 : 1,
+            ? (isValue ? '#bae6fd' : '#fbbf24')
+            : (isValue ? '#64748b' : '#a8a29e'),
+          strokeWidth: isValue ? 1.45 : (live ? 4 : 2.25),
+          opacity: isValue ? 0.75 : 1,
           strokeDasharray: undefined,
         },
       };

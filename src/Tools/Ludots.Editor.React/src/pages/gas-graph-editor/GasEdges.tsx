@@ -43,9 +43,9 @@ export function GasControlEdge({
   const intensity = Math.max(0, Math.min(1, data?.intensity ?? 0));
   const stroke = live ? GAS_GRAPH_THEME.execLive : (style?.stroke as string) ?? GAS_GRAPH_THEME.execIdle;
   const strokeWidth = live
-    ? 3.2 + intensity * 1.6
-    : Number(style?.strokeWidth ?? 2);
-  const beadDur = `${0.48 + (1 - intensity) * 0.35}s`;
+    ? 3.8 + intensity * 2.2
+    : Number(style?.strokeWidth ?? 2.25);
+  const beadDur = `${0.42 + (1 - intensity) * 0.28}s`;
 
   return (
     <>
@@ -57,15 +57,20 @@ export function GasControlEdge({
           ...style,
           stroke,
           strokeWidth,
-          opacity: live ? 0.55 + intensity * 0.45 : style?.opacity ?? 0.85,
+          opacity: live ? 0.7 + intensity * 0.3 : style?.opacity ?? 0.9,
           strokeDasharray: undefined,
-          filter: live ? `drop-shadow(0 0 ${4 + intensity * 6}px rgba(251, 191, 36, ${0.35 + intensity * 0.35}))` : undefined,
+          filter: live ? `drop-shadow(0 0 ${6 + intensity * 8}px rgba(251, 191, 36, ${0.45 + intensity * 0.4}))` : undefined,
         }}
       />
       {live ? (
-        <circle r={3.6} fill={GAS_GRAPH_THEME.execBead} className="gas-control-bead">
-          <animateMotion dur={beadDur} repeatCount="indefinite" path={path} rotate="auto" />
-        </circle>
+        <>
+          <circle r={4.8} fill={GAS_GRAPH_THEME.execBead} className="gas-control-bead">
+            <animateMotion dur={beadDur} repeatCount="indefinite" path={path} rotate="auto" />
+          </circle>
+          <circle r={2.4} fill="#f59e0b" className="gas-control-bead" opacity={0.85}>
+            <animateMotion dur={beadDur} begin="0.18s" repeatCount="indefinite" path={path} rotate="auto" />
+          </circle>
+        </>
       ) : null}
     </>
   );
