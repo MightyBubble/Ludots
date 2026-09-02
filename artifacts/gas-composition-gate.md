@@ -10,7 +10,7 @@
 
 结论: PASS
 
-一句话理由: 预览集写入改回图内 DispatchCollectionEvent；调度只 Execute，不再 GraphReturnWriter 物化 outputs。
+一句话理由: 预览集写入改回图内 DispatchCollectionEvent；调度只 Execute，不再 GraphReturnWriter 物化 outputs。Query 策略改为：仅当 op 明确可创作于 Query 时，才放行带 WorldSideEffect 的 Pure 元数据（放行 DispatchCollectionEvent，继续拦 ShowPanel 等 #1410 禁令）。
 
 ### 2. Layer assignment
 
@@ -30,7 +30,7 @@
 
 ### 4. New Layer 0 ops (if any)
 
-N/A（仅放宽 DispatchCollectionEvent / ConstInt 对 Query 的可创作白名单）
+N/A（仅放宽 DispatchCollectionEvent / ConstInt 对 Query 的可创作白名单；Query 策略按 AuthorableKinds 放行该 op 的 WorldSideEffect）
 
 ### 5. Transaction boundary
 

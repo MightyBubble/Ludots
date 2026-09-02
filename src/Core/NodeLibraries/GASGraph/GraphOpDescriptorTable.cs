@@ -86,11 +86,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             // Query / Score / Validation: Pure metadata alone is not enough — some world/UI
-            // ops stay Pure so Script policy can host them. Reject WorldSideEffect (#1410).
-            // Do not gate on AuthorableKinds: compilers emit Jump etc. that are not authorable nodes.
+            // ops stay Pure so Script policy can host them (#1410). Reject WorldSideEffect
+            // unless the op is explicitly authorable on this kind (Query may
+            // DispatchCollectionEvent to write a collection itself).
+            // Do not gate the Pure path on AuthorableKinds: compilers emit Jump etc.
             if (kind is GraphKind.Query or GraphKind.Score or GraphKind.Validation)
             {
-                return metadata.Kind == EffectOperationKind.Pure && !descriptor.WorldSideEffect;
+                if (metadata.Kind != EffectOperationKind.Pure)
+                {
+                    return false;
+                }
+
+                if (!descriptor.WorldSideEffect)
+                {
+                    return true;
+                }
+
+                return descriptor.IsAuthorable(kind);
             }
 
             if (metadata.Kind == EffectOperationKind.Pure)
