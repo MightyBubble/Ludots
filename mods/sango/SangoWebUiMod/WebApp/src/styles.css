@@ -25,7 +25,7 @@ body,
 
 body {
   font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
-  background: var(--bg);
+  background: transparent;
   color: var(--text);
   font-size: 13px;
 }

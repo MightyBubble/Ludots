@@ -2,6 +2,18 @@
   "schemaVersion": 1,
   "presets": [
     {
+      "id": "sango_m1_raylib",
+      "name": "Sango M1 (kernel + interior UI)",
+      "selectors": [
+        "mod:SangoTerrainMod",
+        "mod:SangoSimMod",
+        "mod:SangoWebUiMod",
+        "mod:AgentBridgeMod"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "sango_m0_raylib",
       "name": "Sango M0 (terrain + web UI)",
       "selectors": [
