@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Interaction;
@@ -155,6 +156,71 @@ namespace Ludots.Tests.GAS
             Assert.That(definition.Triggers![0].Trigger, Is.EqualTo(GraphName));
         }
 
+        [Test]
+        public void Loader_RejectsBlankContinuousQueryGraph()
+        {
+            var config = Config(Profile(ContinuousQuery: new InteractionContextContinuousQuery { Graph = " " }));
+            Assert.That(
+                () => InteractionContextProfileConfigLoader.Validate(config, "test"),
+                Throws.InvalidOperationException.With.Message.Contains("continuousQuery.graph"));
+        }
+
+        [Test]
+        public void Install_ContinuousQuery_NonQueryKind_FailsFast()
+        {
+            InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
+            var programs = new GraphProgramRegistry();
+            RegisterProgram(programs, OtherGraphName, GraphKind.TriggerGraph, HaltProgram(), ProbeEntries());
+            var schemas = new GraphOutputSchemaRegistry();
+            var config = Config(Profile(ContinuousQuery: new InteractionContextContinuousQuery { Graph = OtherGraphName }));
+
+            Assert.That(
+                () => registry.Install(
+                    config,
+                    collectionKeys,
+                    filters,
+                    intents,
+                    Catalog(programs, schemas)),
+                Throws.InvalidOperationException.With.Message.Contains("Query"));
+        }
+
+        [Test]
+        public void Install_ContinuousQuery_ResolvesGraphId()
+        {
+            InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
+            var programs = new GraphProgramRegistry();
+            const string queryName = "Graph.Query.ContextPreview";
+            int graphId = GraphIdRegistry.Register(queryName);
+            programs.Register(graphId, HaltProgram(), GraphKind.Query);
+            var schemas = new GraphOutputSchemaRegistry();
+            schemas.Register(
+                graphId,
+                new GraphOutputSchema(
+                    new[]
+                    {
+                        new GraphOutputBinding(
+                            "preview",
+                            GraphOutputDestinationKind.EntityCollection,
+                            GraphOutputValueKind.TargetList,
+                            0,
+                            0,
+                            string.Empty,
+                            "test.preview",
+                            EntityCollectionRoleKind.AcquisitionPreview,
+                            string.Empty,
+                            string.Empty),
+                    }));
+            var config = Config(Profile(ContinuousQuery: new InteractionContextContinuousQuery { Graph = queryName }));
+
+            Assert.That(
+                () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs, schemas)),
+                Throws.Nothing);
+
+            int profileId = registry.ProfileIdRegistry.GetId(ProfileId);
+            Assert.That(registry.TryGetContinuousQueryGraphId(profileId, out int resolved), Is.True);
+            Assert.That(resolved, Is.EqualTo(graphId));
+        }
+
         private static InteractionContextProfileRegistry NewRegistry(
             out StringIntRegistry collectionKeys,
             out StringIntRegistry filters,
@@ -176,12 +242,24 @@ namespace Ludots.Tests.GAS
                 inputActionIds);
         }
 
+        private static InteractionContextProfileReferenceCatalog Catalog(
+            GraphProgramRegistry programs,
+            GraphOutputSchemaRegistry outputSchemas,
+            params string[] inputActionIds)
+        {
+            return new InteractionContextProfileReferenceCatalog(
+                programs,
+                inputActionIds,
+                outputSchemas);
+        }
+
         private static InteractionContextProfilesConfig Config(InteractionContextProfileDefinition profile)
             => new() { Profiles = new List<InteractionContextProfileDefinition> { profile } };
 
         private static InteractionContextProfileDefinition Profile(
             List<string>? Bindings = null,
-            List<InteractionContextTriggerMount>? Triggers = null)
+            List<InteractionContextTriggerMount>? Triggers = null,
+            InteractionContextContinuousQuery? ContinuousQuery = null)
             => new()
             {
                 Id = ProfileId,
@@ -189,6 +267,7 @@ namespace Ludots.Tests.GAS
                 ActiveEntityViewKey = "test.context.view",
                 Bindings = Bindings,
                 Triggers = Triggers,
+                ContinuousQuery = ContinuousQuery,
             };
 
         private static GraphInstruction[] HaltProgram()

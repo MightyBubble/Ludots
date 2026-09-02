@@ -1,0 +1,68 @@
+[
+  {
+    "id": "graph.case_e.box_hit",
+    "kind": "Query",
+    "entry": "rep",
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "press_px",
+        "op": "LoadSelfAttribute",
+        "attribute": "CaseE.PressPx"
+      },
+      {
+        "id": "press_py",
+        "op": "LoadSelfAttribute",
+        "attribute": "CaseE.PressPy"
+      },
+      {
+        "id": "pointer_x",
+        "op": "LoadSelfAttribute",
+        "attribute": "CaseE.PointerX"
+      },
+      {
+        "id": "pointer_y",
+        "op": "LoadSelfAttribute",
+        "attribute": "CaseE.PointerY"
+      },
+      {
+        "id": "roster",
+        "op": "QueryFromCollection",
+        "collectionKey": "case_e.selectable"
+      },
+      {
+        "id": "rect_hits",
+        "op": "ScreenRegionToEntities"
+      }
+    ],
+    "controlEdges": [
+      { "from": "rep", "fromPort": "next", "to": "press_px" },
+      { "from": "press_px", "fromPort": "next", "to": "press_py" },
+      { "from": "press_py", "fromPort": "next", "to": "pointer_x" },
+      { "from": "pointer_x", "fromPort": "next", "to": "pointer_y" },
+      { "from": "pointer_y", "fromPort": "next", "to": "roster" },
+      { "from": "roster", "fromPort": "next", "to": "rect_hits" }
+    ],
+    "valueEdges": [
+      { "from": "rep", "fromPort": "value", "to": "roster", "toPort": "source" },
+      { "from": "press_px", "fromPort": "value", "to": "rect_hits", "toPort": "a" },
+      { "from": "press_py", "fromPort": "value", "to": "rect_hits", "toPort": "b" },
+      { "from": "pointer_x", "fromPort": "value", "to": "rect_hits", "toPort": "c" },
+      { "from": "pointer_y", "fromPort": "value", "to": "rect_hits", "toPort": "max" }
+    ],
+    "outputs": [
+      {
+        "id": "boxHover",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "case_e.box_hover",
+        "role": "AcquisitionPreview",
+        "title": "Box hover",
+        "summary": "Drag-time screen-rect hits over case_e.selectable; cleared when boxing context ends."
+      }
+    ]
+  }
+]

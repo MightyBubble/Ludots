@@ -79,6 +79,7 @@ namespace Ludots.Core.Input.Interaction
                 RequireTrimmedWhenPresent(profile.CommandIntentId, $"{path}.commandIntentId");
                 ValidateBindings(profile.Bindings, path);
                 ValidateTriggers(profile.Triggers, path);
+                ValidateContinuousQuery(profile.ContinuousQuery, path);
             }
         }
 
@@ -121,6 +122,16 @@ namespace Ludots.Core.Input.Interaction
                     RequireTrimmedWhenPresent(mount.Filters.InstanceId, $"{mountPath}.filters.instanceId");
                 }
             }
+        }
+
+        private static void ValidateContinuousQuery(InteractionContextContinuousQuery? continuousQuery, string path)
+        {
+            if (continuousQuery == null)
+            {
+                return;
+            }
+
+            RequireTrimmedNonEmpty(continuousQuery.Graph, $"{path}.continuousQuery.graph");
         }
 
         private static void RequireTrimmedWhenPresent(string value, string path)

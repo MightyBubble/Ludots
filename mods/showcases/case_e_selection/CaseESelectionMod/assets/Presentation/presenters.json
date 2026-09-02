@@ -104,6 +104,36 @@
             1
           ]
         }
+      },
+      {
+        "slot": "preview",
+        "kind": "AssetBinding",
+        "activeByDefault": false,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "case_e.select_ring_slab",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            0.35,
+            0
+          ],
+          "localScale": [
+            3.0,
+            0.08,
+            3.0
+          ]
+        },
+        "style": {
+          "color": [
+            1.0,
+            0.85,
+            0.25,
+            0.95
+          ]
+        }
       }
     ],
     "rules": [
@@ -125,6 +155,26 @@
         "command": {
           "kind": "DeactivateBehavior",
           "targetBehaviorSlot": "attachment"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "case_e.box_hover"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "preview"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "case_e.box_hover"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "preview"
         }
       }
     ]

@@ -1627,7 +1627,8 @@ namespace Ludots.Core.Engine
                 commandIntentProfileIds,
                 new InteractionContextProfileReferenceCatalog(
                     graphProgramRegistry,
-                    inputConfigRoot.Actions.Select(action => action.Id)));
+                    inputConfigRoot.Actions.Select(action => action.Id),
+                    graphOutputSchemas));
             var interactionContextInstances = new InteractionContextInstanceRuntime(
                 World,
                 interactionContextProfileRegistry,
@@ -2135,6 +2136,18 @@ namespace Ludots.Core.Engine
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.InputCollection);
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
+            // #1398 Case E §05: while a context with continuousQuery is active, every tick run
+            // the Query graph and Replace its EntityCollection outputs (preview hit set). Must
+            // follow InputActionAttributeBindingSystem so pointer attrs are live for the rect.
+            RegisterSystem(
+                new InteractionContextContinuousQuerySystem(
+                    World,
+                    interactionContextProfileRegistry,
+                    graphReturnWriter,
+                    graphOutputSchemas,
+                    entityCollectionStore,
+                    gasGraphApi),
+                SystemGroup.InputCollection);
             RegisterSystem(new StoryRuntimeSystem(this, dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);

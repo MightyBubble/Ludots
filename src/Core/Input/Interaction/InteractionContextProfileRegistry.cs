@@ -2,21 +2,26 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Reference catalogs the profile install chain resolves <c>bindings[]</c> and
-    /// <c>triggers[]</c> against (#1398 S2b): the graph program registry for trigger mounts
-    /// and the input action id space for semantic action bindings. A profile declaring either
-    /// field fails fast at install when its catalog is absent.
+    /// Reference catalogs the profile install chain resolves <c>bindings[]</c>,
+    /// <c>triggers[]</c>, and <c>continuousQuery</c> against (#1398 S2b / Case E §05): the graph
+    /// program registry for trigger mounts and continuous Query mounts, optional output schemas
+    /// for continuous Query EntityCollection outputs, and the input action id space for semantic
+    /// action bindings. A profile declaring any of those fields fails fast at install when its
+    /// catalog is absent or incomplete.
     /// </summary>
     public sealed class InteractionContextProfileReferenceCatalog
     {
         public InteractionContextProfileReferenceCatalog(
             GraphProgramRegistry programs,
-            IEnumerable<string> inputActionIds)
+            IEnumerable<string> inputActionIds,
+            GraphOutputSchemaRegistry? outputSchemas = null)
         {
             Programs = programs ?? throw new ArgumentNullException(nameof(programs));
             if (inputActionIds == null)
@@ -34,11 +39,15 @@ namespace Ludots.Core.Input.Interaction
             }
 
             InputActionIds = actionIds;
+            OutputSchemas = outputSchemas;
         }
 
         public GraphProgramRegistry Programs { get; }
 
         public IReadOnlyCollection<string> InputActionIds { get; }
+
+        /// <summary>Required when any profile declares <c>continuousQuery</c>; null otherwise.</summary>
+        public GraphOutputSchemaRegistry? OutputSchemas { get; }
     }
 
     /// <summary>
@@ -60,6 +69,7 @@ namespace Ludots.Core.Input.Interaction
         private int[] _filterProfileIds = new int[8];
         private int[] _commandIntentProfileIds = new int[8];
         private int[] _inputContextIdsByProfile = new int[8];
+        private int[] _continuousQueryGraphIds = new int[8];
 
         public InteractionContextProfileRegistry(StringIntRegistry profileIdRegistry)
         {
@@ -173,6 +183,22 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
+        /// Continuous Query graph id for the profile (#1398 Case E §05); 0 when the profile
+        /// declares no <c>continuousQuery</c>. Allocation free after install.
+        /// </summary>
+        public bool TryGetContinuousQueryGraphId(int profileId, out int graphId)
+        {
+            if (!IsInstalled(profileId))
+            {
+                graphId = 0;
+                return false;
+            }
+
+            graphId = _continuousQueryGraphIds[profileId];
+            return graphId > 0;
+        }
+
+        /// <summary>
         /// Steady-state routing anchor: the reserved default profile's resolved collection key
         /// and filter profile ids (the data-declared home of the retired engine default frame).
         /// Returns false when the default profile is not installed.
@@ -226,6 +252,7 @@ namespace Ludots.Core.Input.Interaction
                 Array.Resize(ref _filterProfileIds, next);
                 Array.Resize(ref _commandIntentProfileIds, next);
                 Array.Resize(ref _inputContextIdsByProfile, next);
+                Array.Resize(ref _continuousQueryGraphIds, next);
             }
 
             int filterProfileId = ResolveDeclaredId(
@@ -246,8 +273,68 @@ namespace Ludots.Core.Input.Interaction
             _filterProfileIds[profileId] = filterProfileId;
             _commandIntentProfileIds[profileId] = commandIntentProfileId;
             _inputContextIdsByProfile[profileId] = _inputContextIdsFor(profileId);
+            _continuousQueryGraphIds[profileId] = ResolveContinuousQueryGraphId(definition, referenceCatalog);
             ValidateBindings(definition, referenceCatalog);
             ValidateTriggers(definition, referenceCatalog);
+        }
+
+        private static int ResolveContinuousQueryGraphId(
+            InteractionContextProfileDefinition definition,
+            InteractionContextProfileReferenceCatalog? referenceCatalog)
+        {
+            InteractionContextContinuousQuery? continuousQuery = definition.ContinuousQuery;
+            if (continuousQuery == null)
+            {
+                return 0;
+            }
+
+            if (referenceCatalog == null)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction context profile '{definition.Id}' declares continuousQuery but no reference catalog was provided at install; continuous Query mounts require the graph program registry.");
+            }
+
+            if (referenceCatalog.OutputSchemas == null)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction context profile '{definition.Id}' declares continuousQuery but the reference catalog has no GraphOutputSchemaRegistry; continuous Query mounts require EntityCollection outputs.");
+            }
+
+            string graphName = continuousQuery.Graph;
+            int graphId = GraphIdRegistry.GetId(graphName);
+            if (graphId == GraphIdRegistry.InvalidId ||
+                !referenceCatalog.Programs.TryGetProgram(graphId, out _))
+            {
+                throw new InvalidOperationException(
+                    $"Interaction context profile '{definition.Id}' continuousQuery.graph references unknown graph '{graphName}'.");
+            }
+
+            referenceCatalog.Programs.RequireKind(graphId, GraphKind.Query);
+            GraphOutputSchema schema = referenceCatalog.OutputSchemas.Get(graphId);
+            if (!schema.HasBindings)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction context profile '{definition.Id}' continuousQuery.graph '{graphName}' has no output schema; continuous Query mounts require at least one EntityCollection output.");
+            }
+
+            bool hasEntityCollection = false;
+            GraphOutputBinding[] bindings = schema.Bindings;
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                if (GraphOutputDestinationKinds.IsEntityBagDestination(bindings[i].Destination))
+                {
+                    hasEntityCollection = true;
+                    break;
+                }
+            }
+
+            if (!hasEntityCollection)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction context profile '{definition.Id}' continuousQuery.graph '{graphName}' must declare at least one EntityCollection output for the preview membership surface.");
+            }
+
+            return graphId;
         }
 
         private static void ValidateBindings(

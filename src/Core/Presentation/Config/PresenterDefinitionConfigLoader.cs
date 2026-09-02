@@ -4051,6 +4051,7 @@ namespace Ludots.Core.Presentation.Config
                 ["instancedBatch"] = 16,
                 ["trail"] = 17,
                 ["screenRect"] = 18,
+                ["preview"] = 19,
             };
 
             public static int Register(string key)
