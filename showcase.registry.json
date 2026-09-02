@@ -59,6 +59,28 @@
   ],
   "showcases": [
     {
+      "id": "sango_port_m0",
+      "path": "mods/sango/SangoTerrainMod",
+      "projectPath": null,
+      "title": "无限三国移植 M0：地形管线 + Web UI 尖峰",
+      "summary": "Unity 三国志11重置项目 sango_infinity 的移植 M0 里程碑：DefaultMap.bin 读取器与 TerrainExport 转换器（CHTM 高度图 + HexGridBoard VertexMap）、SangoTerrainMod 三国大地图 raylib 渲染、SangoWebUiSpikeMod 的 CEF + WebUI DataPlane 全链路。preset sango_m0_raylib 同启地形与 Web 面板。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": null,
+      "preset": "sango_m0_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "experimental",
+      "tags": [
+        "sango",
+        "terrain",
+        "webui"
+      ]
+    },
+    {
       "id": "ai_demo",
       "path": "mods/showcases/ai_demo/AIDemoMod",
       "projectPath": "AIDemoMod.csproj",

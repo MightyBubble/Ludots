@@ -2,6 +2,17 @@
   "schemaVersion": 1,
   "presets": [
     {
+      "id": "sango_m0_raylib",
+      "name": "Sango M0 (terrain + web UI)",
+      "selectors": [
+        "mod:SangoTerrainMod",
+        "mod:SangoWebUiSpikeMod",
+        "mod:AgentBridgeMod"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "save_load_showcase_raylib",
       "name": "Save Load Raylib",
       "selectors": [
