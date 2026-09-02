@@ -49,10 +49,13 @@ export function sanitizeEventFilters(filters?: EventEntryFilters | null): EventE
 export function toWireEventEntry(entry: EventEntryConfig, start: string): EventEntryConfig {
   const filters = sanitizeEventFilters(entry.filters);
   const refire = entry.refire?.trim();
+  const event = entry.event?.trim() || undefined;
+  const action = entry.action?.trim() || undefined;
   return {
-    label: entry.label.trim(),
-    event: entry.event.trim(),
+    label: (entry.label ?? '').trim(),
     start: start.trim(),
+    ...(event ? { event } : {}),
+    ...(action ? { action } : {}),
     ...(entry.once ? { once: true } : {}),
     ...(refire && refire !== EVENT_REFIRE_IGNORE ? { refire } : {}),
     ...(filters ? { filters } : {}),

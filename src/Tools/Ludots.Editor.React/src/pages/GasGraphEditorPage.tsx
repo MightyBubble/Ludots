@@ -226,7 +226,8 @@ type GraphOutputConfig = {
 
 type GraphEntryConfig = {
   label: string;
-  event: string;
+  event?: string;
+  action?: string;
   start: string;
   once?: boolean;
   refire?: string | null;
@@ -496,8 +497,8 @@ function graphToFlow(
         op: 'Event',
         role: 'event-entry',
         entry,
-        schema: schemaFor(entry.event),
-        label: entry.event,
+        schema: schemaFor(entry.event ?? ''),
+        label: entry.event ?? entry.action ?? entry.label,
         controlOutputPorts: ['exec'],
       },
     });
