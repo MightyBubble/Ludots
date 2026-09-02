@@ -601,10 +601,16 @@ namespace Ludots.Core.GraphRuntime
                         $"InvokeGraph target graph id {targetGraphId} is not registered.");
                 }
 
-                if (target.Kind != GraphKind.TriggerGraph)
+                if (target.Kind is not (GraphKind.TriggerGraph or GraphKind.Query))
                 {
                     throw new InvalidOperationException(
-                        $"InvokeGraph target graph id {targetGraphId} must be TriggerGraph, but is '{target.Kind}'.");
+                        $"InvokeGraph target graph id {targetGraphId} must be TriggerGraph or Query (host→function), but is '{target.Kind}'.");
+                }
+
+                if (target.Kind == GraphKind.Query)
+                {
+                    // Query callees start at pc 0; entry-label rewrite is TriggerGraph-only.
+                    continue;
                 }
 
                 if ((ins.Flags & 2) == 0)

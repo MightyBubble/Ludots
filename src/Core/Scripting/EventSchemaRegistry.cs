@@ -33,6 +33,7 @@ namespace Ludots.Core.Scripting
             // Collection pass-through family (#1398 S2b): authored per-game event keys, so
             // per-name schemas are not enumerable at build time either.
             MapTriggerEventPayloadKeys.CollectionEntitySet,
+            MapTriggerEventPayloadKeys.CollectionEntityCount,
             MapTriggerEventPayloadKeys.CollectionOp,
             MapTriggerEventPayloadKeys.CollectionKey,
         };
@@ -47,6 +48,7 @@ namespace Ludots.Core.Scripting
             MapTriggerEventPayloadKeys.SourceMapId,
             MapTriggerEventPayloadKeys.SourceEntity,
             MapTriggerEventPayloadKeys.CollectionEntitySet,
+            MapTriggerEventPayloadKeys.CollectionEntityCount,
             MapTriggerEventPayloadKeys.CollectionOp,
             MapTriggerEventPayloadKeys.CollectionKey,
         };

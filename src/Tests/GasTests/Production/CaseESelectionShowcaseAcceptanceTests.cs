@@ -19,12 +19,12 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Production;
 
 /// <summary>
-/// Case E (#1398 D6) 框选全链 headless 验收（忠实形态），对照 tmp/case-e-config-report.html
+/// Case E (#1398 D6/D8/§05) 框选全链 headless 验收（忠实形态），对照 case-e-config-report.html
 /// 的七步：01 进图出生 / 02 模板 initialInteractionContext 挂 Instance / 03 Profile triggers 门控 /
 /// 04 语义动作直绑触发衍生 context（框起角=press 屏幕像素 + 候选集世界侧刷新）/
-/// 05 presenter 观察 ContextActivated + 集合变化高亮 / 06 框结束对「可框选单位」候选集
-/// （case_e.selectable 集合 key）做屏幕矩形命中（ScreenRegionToEntities）+ 修饰键语义
-/// 透传事件 key 写 selected 集合。引擎零改动，全部行为来自 CaseESelectionMod 的配置资产。
+/// 05 boxing context 持续过程：ScreenRect 框 + continuousQuery 每帧命中写 case_e.box_hover 预览集 →
+/// presenter 观察成员变化高亮 / 06 框结束对「可框选单位」候选集（case_e.selectable）做屏幕矩形命中
+/// + 修饰键语义透传事件 key 写 selected 集合（与候选、预览三套集合分离）。
 /// </summary>
 [NonParallelizable]
 [TestFixture]
@@ -39,7 +39,9 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     private const string BoxingMarkerPresenter = "presenter.case_e.boxing_marker";
     private const string SelectedKey = "selected";
     private const string SelectableKey = "case_e.selectable";
+    private const string BoxHoverKey = "case_e.box_hover";
     private const int AttachmentSlotBit = 1 << 1; // semantic slot "attachment"
+    private const int PreviewSlotBit = 1 << 19; // semantic slot "preview"
 
     [Test]
     public void BoxSelectFullChain_SpawnContextTriggerPresenterRectHitRosterAndModifierSemantics()
@@ -124,8 +126,19 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(
             HasScreenRect(screenOverlay, x: -1200, y: -100, width: 1200, height: 300),
             "指针继续移动，矩形框随之扩大（跟随当前拖拽数据）");
+
+        // ── 05③：continuousQuery 每帧命中 → case_e.box_hover（预览集 ≠ selected）──
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
+        AssertCollection(engine, commander, BoxHoverKey, "拖拽中预览命中=当前矩形覆盖的可框选单位",
+            marine1, marine2);
+        Assert.That(CollectionCount(engine, commander, SelectedKey), Is.LessThanOrEqualTo(0),
+            "拖拽中不得写入已选中集合（候选/预览/已选中三套分离）");
+        AssertPreviewOn(engine, presenterRuntime, marineDefId, "预览环跟命中集", marine1, marine2);
+        AssertPreviewOff(engine, presenterRuntime, marineDefId, "框外单位无预览环", marine3, marine4);
+
         backend.SetMousePosition(new Vector2(-300f, 100f));
         Tick(engine, 2);
+        AssertCollection(engine, commander, BoxHoverKey, "指针回缩后预览集随之收缩", marine1, marine2);
 
         // ── 06：抬起（Drag 判定完成）→ 矩形 [press,release] 命中 + replace 语义 → selected ──
         ReleaseAt(engine, backend);
@@ -136,6 +149,10 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         AssertNoTriggerErrors(engine);
 
         AssertCollection(engine, commander, SelectedKey, "无修饰 → replace 语义", marine1, marine2);
+        Assert.That(
+            CollectionCount(engine, commander, BoxHoverKey) <= 0,
+            "框结束停用 boxing → continuousQuery 清空预览集");
+        AssertPreviewOff(engine, presenterRuntime, marineDefId, "预览环随预览集清空", marine1, marine2, marine3, marine4);
         Assert.That(
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances cleared) ||
             cleared.Count == 0,
@@ -403,6 +420,36 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             Entity presenter = RequirePresenter(runtime, marineDefId, unit);
             uint mask = engine.World.Get<PresenterState>(presenter).BehaviorActiveMask;
             Assert.That((mask & AttachmentSlotBit) != 0, Is.False, $"{message}：{unit} 的选择环行为应关闭");
+        }
+    }
+
+    private static void AssertPreviewOn(
+        GameEngine engine,
+        PresenterEntityRuntime runtime,
+        int marineDefId,
+        string message,
+        params Entity[] units)
+    {
+        foreach (Entity unit in units)
+        {
+            Entity presenter = RequirePresenter(runtime, marineDefId, unit);
+            uint mask = engine.World.Get<PresenterState>(presenter).BehaviorActiveMask;
+            Assert.That((mask & PreviewSlotBit) != 0, Is.True, $"{message}：{unit} 的预览环行为应激活");
+        }
+    }
+
+    private static void AssertPreviewOff(
+        GameEngine engine,
+        PresenterEntityRuntime runtime,
+        int marineDefId,
+        string message,
+        params Entity[] units)
+    {
+        foreach (Entity unit in units)
+        {
+            Entity presenter = RequirePresenter(runtime, marineDefId, unit);
+            uint mask = engine.World.Get<PresenterState>(presenter).BehaviorActiveMask;
+            Assert.That((mask & PreviewSlotBit) != 0, Is.False, $"{message}：{unit} 的预览环行为应关闭");
         }
     }
 

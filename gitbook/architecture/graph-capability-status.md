@@ -126,6 +126,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 | `FormatTextKey` / ActiveLocale / 生产 Dialogue drain | TextKey 后续 | 见 graph-textkey.md |
 | 实体能力 authoring 声明与编译校验 | 编辑器下一切片 | 不得把运行时隐式安装写成已完成 |
 | `LoadEntryPayloadText`（事件 String 载荷进 Text 寄存器） | **合同缺口** | FormalText 已落地，但入口捕获表尚无 String 槽；编辑器对 String 针脚返回空 |
+| 可调用函数远景（Case E：入参表、continuous 改名、预览 S1/S2、Invoke 与 FuncLib） | **开着 · 先出方案** | 正本 [可调用函数远景](graph-callable-function-vision.md)；Case E 短任务条 `mods/showcases/case_e_selection/CaseESelectionMod/docs/NEXT-AGENT-BRIEF.md`。PR #1444 是台阶。评审前不大改 Core。 |
 
 分层合同条款同步修订在 [图怎么分层](graph-layering-flow-and-behavior.md)。
 

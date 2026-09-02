@@ -68,16 +68,24 @@ namespace Ludots.Core.Input.Interaction
             Entity[] entitySet = context.Get<object>(MapTriggerEventPayloadKeys.CollectionEntitySet) as Entity[]
                 ?? throw new InvalidOperationException(
                     $"EVENT.COLLECTION.EntitySetMissing: event '{eventKey.Value}' carries no {MapTriggerEventPayloadKeys.CollectionEntitySet} payload.");
+            int entityCount = ResolveEntityCount(context, entitySet.Length);
             int opKind = context.Get<int>(MapTriggerEventPayloadKeys.CollectionOp);
 
             switch (opKind)
             {
                 case (int)EventCollectionWriteOp.Replace:
-                    Write(owner, collectionKeyId, entitySet);
+                    Write(owner, collectionKeyId, entitySet.AsSpan(0, entityCount));
                     break;
                 case (int)EventCollectionWriteOp.Add:
                 case (int)EventCollectionWriteOp.Subtract:
-                    Write(owner, collectionKeyId, MergeWithCurrent(owner, collectionKeyId, entitySet, adding: opKind == (int)EventCollectionWriteOp.Add));
+                    Write(
+                        owner,
+                        collectionKeyId,
+                        MergeWithCurrent(
+                            owner,
+                            collectionKeyId,
+                            entitySet.AsSpan(0, entityCount),
+                            adding: opKind == (int)EventCollectionWriteOp.Add));
                     break;
                 default:
                     throw new InvalidOperationException(
@@ -85,6 +93,23 @@ namespace Ludots.Core.Input.Interaction
             }
 
             return Task.CompletedTask;
+        }
+
+        private static int ResolveEntityCount(ScriptContext context, int arrayLength)
+        {
+            if (!context.Contains(MapTriggerEventPayloadKeys.CollectionEntityCount))
+            {
+                return arrayLength;
+            }
+
+            int count = context.Get<int>(MapTriggerEventPayloadKeys.CollectionEntityCount);
+            if (count < 0 || count > arrayLength)
+            {
+                throw new InvalidOperationException(
+                    $"EVENT.COLLECTION.EntityCountInvalid: count {count} is outside CollectionEntitySet length {arrayLength}.");
+            }
+
+            return count;
         }
 
         private Entity ResolveOwner(ScriptContext context)
@@ -117,7 +142,9 @@ namespace Ludots.Core.Input.Interaction
             return collectionKeyId;
         }
 
-        private Entity[] MergeWithCurrent(Entity owner, int collectionKeyId, Entity[] entitySet, bool adding)
+        private Entity[] _mergeResultScratch = Array.Empty<Entity>();
+
+        private ReadOnlySpan<Entity> MergeWithCurrent(Entity owner, int collectionKeyId, ReadOnlySpan<Entity> entitySet, bool adding)
         {
             _mergeScratch.Clear();
             if (_store.TryGet(owner, collectionKeyId, out EntityCollectionHandle handle) &&
@@ -131,8 +158,8 @@ namespace Ludots.Core.Input.Interaction
                 int currentCount = _store.CopyEntities(owner, collectionKeyId, _currentScratch);
                 if (adding)
                 {
-                    AppendDistinct(_mergeScratch, _currentScratch, currentCount);
-                    AppendDistinct(_mergeScratch, entitySet, entitySet.Length);
+                    AppendDistinct(_mergeScratch, _currentScratch.AsSpan(0, currentCount));
+                    AppendDistinct(_mergeScratch, entitySet);
                 }
                 else
                 {
@@ -158,15 +185,31 @@ namespace Ludots.Core.Input.Interaction
             }
             else if (adding)
             {
-                AppendDistinct(_mergeScratch, entitySet, entitySet.Length);
+                AppendDistinct(_mergeScratch, entitySet);
             }
 
-            return _mergeScratch.ToArray();
+            if (_mergeScratch.Count > _mergeResultScratch.Length)
+            {
+                int next = _mergeResultScratch.Length == 0 ? 64 : _mergeResultScratch.Length;
+                while (next < _mergeScratch.Count)
+                {
+                    next *= 2;
+                }
+
+                _mergeResultScratch = new Entity[next];
+            }
+
+            for (int i = 0; i < _mergeScratch.Count; i++)
+            {
+                _mergeResultScratch[i] = _mergeScratch[i];
+            }
+
+            return _mergeResultScratch.AsSpan(0, _mergeScratch.Count);
         }
 
-        private static void AppendDistinct(List<Entity> destination, Entity[] source, int count)
+        private static void AppendDistinct(List<Entity> destination, ReadOnlySpan<Entity> source)
         {
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < source.Length; i++)
             {
                 if (destination.Contains(source[i]))
                 {
@@ -177,7 +220,7 @@ namespace Ludots.Core.Input.Interaction
             }
         }
 
-        private void Write(Entity owner, int collectionKeyId, Entity[] entities)
+        private void Write(Entity owner, int collectionKeyId, ReadOnlySpan<Entity> entities)
         {
             string key = _store.KeyRegistry.GetName(collectionKeyId)
                 ?? throw new InvalidOperationException(

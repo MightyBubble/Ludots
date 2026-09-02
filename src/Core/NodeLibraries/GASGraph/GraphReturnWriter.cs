@@ -47,6 +47,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             IGraphRuntimeApi api,
             int subjectIntId = 0)
         {
+            Entity resolvedOwner = owner == Entity.Null ? caster : owner;
+            if (resolvedOwner == Entity.Null)
+            {
+                throw new InvalidOperationException("Graph return writer requires an owner or caster entity for materialized outputs.");
+            }
+
+            GraphOutputSchema schema = _schemas.Get(graphId);
+            if (!schema.HasBindings)
+            {
+                throw new InvalidOperationException($"Graph program id {graphId} has no output schema.");
+            }
+
             if (!_programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
             {
                 throw new InvalidOperationException($"Graph return writer references unknown graph program id {graphId}.");
@@ -59,18 +71,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 _handlers,
                 graphId,
                 nameof(GraphReturnWriter));
-
-            GraphOutputSchema schema = _schemas.Get(graphId);
-            if (!schema.HasBindings)
-            {
-                throw new InvalidOperationException($"Graph program id {graphId} has no output schema.");
-            }
-
-            Entity resolvedOwner = owner == Entity.Null ? caster : owner;
-            if (resolvedOwner == Entity.Null)
-            {
-                throw new InvalidOperationException("Graph return writer requires an owner or caster entity for materialized outputs.");
-            }
 
             Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
@@ -99,6 +99,66 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 subjectIntId: subjectIntId);
             GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true);
             WriteOutputs(resolvedOwner, caster, explicitTarget, targetContext, schema, ref frame);
+        }
+
+        /// <summary>
+        /// Run a continuous-mount graph for its authored side effects (e.g. DispatchCollectionEvent)
+        /// without materializing <c>outputs[]</c>. Host binds the program's registered kind —
+        /// not a Query privilege. GraphReturnWriter must not steal collection writes.
+        /// </summary>
+        public void Execute(
+            int graphId,
+            Entity caster,
+            Entity explicitTarget,
+            Entity targetContext,
+            IntVector2 targetPosCm,
+            uint randomSeed,
+            IGraphRuntimeApi api,
+            int subjectIntId = 0)
+        {
+            if (!_programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
+            {
+                throw new InvalidOperationException($"Graph return writer references unknown graph program id {graphId}.");
+            }
+
+            if (!_programs.TryGetKind(graphId, out GraphKind kind))
+            {
+                throw new InvalidOperationException($"Graph return writer references untyped graph program id {graphId}.");
+            }
+
+            GraphKindOperationPolicy.RequireAllowed(
+                kind,
+                program,
+                _handlers,
+                graphId,
+                nameof(GraphReturnWriter));
+
+            Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
+            Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
+            Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
+            Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
+            GraphFrame frame = GraphFrame.Bind(
+                kind,
+                GraphEntityPreset.TargetContext(targetContext),
+                _world,
+                caster,
+                explicitTarget,
+                targetPosCm,
+                api ?? throw new ArgumentNullException(nameof(api)),
+                _programs,
+                floats,
+                ints,
+                bools,
+                entities,
+                targets,
+                intIds,
+                callStack,
+                randomSeed: randomSeed,
+                subjectIntId: subjectIntId);
+            GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true);
         }
 
         private void WriteOutputs(

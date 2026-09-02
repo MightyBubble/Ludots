@@ -1,7 +1,7 @@
 {
   "name": "CaseESelectionMod",
   "version": "1.0.0",
-  "description": "Case E (#1398 S3) 框选纯数据 showcase：模板 initialInteractionContext 出生挂 context、Profile triggers 门控、图入口直绑语义动作、事件 key 透传写 selected 集合、presenter 观察高亮，全链配置资产拼装。",
+  "description": "Case E (#1398) 框选纯数据 showcase：候选集 case_e.selectable、拖拽预览集 case_e.box_hover（命中图 DispatchCollectionEvent 自写）、已选中 selected 三套分离；boxing 存活期每 tick 调命中图 + ScreenRect 框 + 松手写 selected。",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

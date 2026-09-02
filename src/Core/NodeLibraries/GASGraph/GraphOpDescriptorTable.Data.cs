@@ -101,7 +101,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             var rows = new List<GraphOpDescriptor>(160);
             Add(rows, GraphNodeOp.ConstBool, LinearAll, GraphValueType.Bool);
-            Add(rows, GraphNodeOp.ConstInt, LinearAndScript, GraphValueType.Int, scriptOut: GraphValueType.Int);
+            Add(rows, GraphNodeOp.ConstInt, LinearQueryScript, GraphValueType.Int, scriptOut: GraphValueType.Int, queryOut: GraphValueType.Int);
             Add(rows, GraphNodeOp.ConstFloat, LinearQueryScript, GraphValueType.Float, queryOut: GraphValueType.Float, scriptOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.LoadCaster, LinearQueryScript, GraphValueType.Entity, queryOut: GraphValueType.Entity, scriptOut: GraphValueType.Entity);
             Add(rows, GraphNodeOp.LoadExplicitTarget, LinearAndScript, GraphValueType.Entity, scriptOut: GraphValueType.Entity);
@@ -172,7 +172,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.SetInteractionMode, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.ActivateContext, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.DeactivateContext, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
-            Add(rows, GraphNodeOp.DispatchCollectionEvent, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
+            // Query may write collections itself (Case E hover): call-site must not GraphReturnWriter-steal.
+            Add(rows, GraphNodeOp.DispatchCollectionEvent, ScriptTriggerQuery, GraphValueType.Void, queryPorts: portValue, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.SetPanelAudience, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.ModifyAttributeSet, EffectAndTriggerGraph, GraphValueType.Void, portTargetValue, scriptPorts: portTargetValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.OfferActivity, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);

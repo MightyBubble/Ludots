@@ -335,6 +335,29 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
+        public void GraphKindOperationPolicy_QueryAllowsAuthorableDispatchCollectionEvent()
+        {
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Imm = 0, Dst = 0 },
+                new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.DispatchCollectionEvent,
+                    B = 0,
+                    Imm = 1 | (1 << 16),
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+
+            Assert.DoesNotThrow(() => GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.Query,
+                program,
+                GasGraphOpHandlerTable.Instance,
+                graphId: 14103,
+                entrypoint: nameof(GraphKindOperationPolicy_QueryAllowsAuthorableDispatchCollectionEvent)));
+        }
+
+        [Test]
         public void GraphKindOperationPolicy_ScriptStillAllowsShowPanel()
         {
             var program = new[]
