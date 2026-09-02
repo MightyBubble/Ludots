@@ -1,4 +1,4 @@
-import { EVENT_ENTRY_PREFIX, eventEntryNodeId, isEventEntryNodeId } from './autoLayout';
+import { EVENT_ENTRY_PREFIX, isEventEntryNodeId } from './autoLayout';
 import type { GasNodeViewEntry } from './GasNode';
 
 export type EventEntryFilters = NonNullable<GasNodeViewEntry['filters']>;
@@ -7,6 +7,31 @@ export type EventEntryConfig = GasNodeViewEntry;
 export const EVENT_REFIRE_IGNORE = 'ignore';
 export const EVENT_REFIRE_RESTART = 'restart';
 export const EVENT_DIRECTIONS = ['cross_above', 'cross_below'] as const;
+
+/** What starts the chain. The runtime requires exactly one of these per entry. */
+export type EntryTriggerKind = 'event' | 'action';
+
+export function entryTriggerKind(entry: EventEntryConfig): EntryTriggerKind {
+  return entry.action != null ? 'action' : 'event';
+}
+
+export function entryTriggerName(entry: EventEntryConfig): string {
+  return (entryTriggerKind(entry) === 'action' ? entry.action : entry.event) ?? '';
+}
+
+/**
+ * Single writer for the event / action choice. Keeping both fields out of reach of the
+ * individual form controls is what stops the editor from authoring an entry that names
+ * both or neither — shapes the runtime refuses to mount.
+ */
+export function setEntryTrigger(
+  entry: EventEntryConfig,
+  kind: EntryTriggerKind,
+  name: string,
+): EventEntryConfig {
+  const { event: _event, action: _action, ...rest } = entry;
+  return kind === 'action' ? { ...rest, action: name } : { ...rest, event: name };
+}
 
 export function uniqueEventLabel(used: Iterable<string>, base = 'on_event'): string {
   const taken = new Set(used);
@@ -49,14 +74,36 @@ export function sanitizeEventFilters(filters?: EventEntryFilters | null): EventE
 export function toWireEventEntry(entry: EventEntryConfig, start: string): EventEntryConfig {
   const filters = sanitizeEventFilters(entry.filters);
   const refire = entry.refire?.trim();
+  const kind = entryTriggerKind(entry);
+  const name = entryTriggerName(entry).trim();
   return {
     label: entry.label.trim(),
-    event: entry.event.trim(),
     start: start.trim(),
+    ...(kind === 'action' ? { action: name } : { event: name }),
     ...(entry.once ? { once: true } : {}),
     ...(refire && refire !== EVENT_REFIRE_IGNORE ? { refire } : {}),
     ...(filters ? { filters } : {}),
   };
+}
+
+/**
+ * Why this entry cannot be saved, in the author's terms. Checked before the compiler so
+ * a half-filled card names itself instead of surfacing as a graph-wide compile error.
+ */
+export function describeEntryProblem(entry: EventEntryConfig): string | null {
+  const label = entry.label.trim() || '(unnamed entry)';
+  if (label !== entry.label) {
+    return `Entry '${label}' must not have leading or trailing spaces in its label.`;
+  }
+  if (entryTriggerName(entry).trim() === '') {
+    return entryTriggerKind(entry) === 'action'
+      ? `Entry '${label}' starts on an input action but no action id is picked.`
+      : `Entry '${label}' starts on an event but no event name is set.`;
+  }
+  if (entryTriggerKind(entry) === 'action' && entry.filters?.action?.trim()) {
+    return `Entry '${label}' already starts on an input action; clear the 'Action' payload filter.`;
+  }
+  return null;
 }
 
 export function eventStartFromEdges(
@@ -75,7 +122,7 @@ export function collectEventEntries(
     .filter((node) => node.data.role === 'event-entry')
     .map((node) => {
       const fallbackLabel = isEventEntryNodeId(node.id) ? node.id.slice(EVENT_ENTRY_PREFIX.length) : node.id;
-      const entry = node.data.entry ?? { label: fallbackLabel, event: '', start: '' };
+      const entry = node.data.entry ?? createEmptyEventEntry(fallbackLabel);
       return toWireEventEntry(entry, eventStartFromEdges(node.id, edges) || entry.start);
     });
 }
