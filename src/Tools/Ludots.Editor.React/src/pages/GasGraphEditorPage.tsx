@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ReactFlow,
   Background,
@@ -35,6 +35,15 @@ import { GasNode, isPureValueOp, type EventSchemaView } from './gas-graph-editor
 import { gasEdgeTypes } from './gas-graph-editor/GasEdges';
 import { GAS_GRAPH_THEME } from './gas-graph-editor/gasGraphTheme';
 import { authoredFieldsForOp, type AuthoredFieldKey } from './gas-graph-editor/authoredFields';
+import {
+  catalogGraphMatchesDialect,
+  dialectPath,
+  dialectTitle,
+  isFunctionGraphPortalOp,
+  isOpAllowedInDialect,
+  preferredDialectForGraphId,
+  type GraphEditorDialect,
+} from './gas-graph-editor/graphEditorDialect';
 import { computeAutoLayout, eventEntryNodeId, isEventEntryNodeId } from './gas-graph-editor/autoLayout';
 import { EventEntryInspector } from './gas-graph-editor/EventEntryInspector';
 import { GraphCodegenPanel } from './gas-graph-editor/GraphCodegenPanel';
@@ -161,6 +170,7 @@ type GraphSugarDescriptor = {
   outputType: string;
   lowersTo: string;
   childArms?: boolean;
+  functionGraphPortal?: boolean;
 };
 
 type EnumTypeView = {
@@ -267,7 +277,15 @@ type ValidateResponse = {
 };
 
 const DEFAULT_MOD_ID = 'UiPlayerAggregateGraphMvpShowcaseMod';
-const DEFAULT_GRAPH_ID = 'ui.panel.player.resource.aggregate';
+const DEFAULT_FUNC_GRAPH_ID = 'ui.panel.player.resource.aggregate';
+const DEFAULT_BT_GRAPH_ID = 'Graph.BT.Leaf.SeeEnemy';
+const DEFAULT_FSM_GRAPH_ID = 'Graph.HFSM.Combat.OnTick';
+
+function defaultGraphIdForDialect(dialect: GraphEditorDialect): string {
+  if (dialect === 'bt') return DEFAULT_BT_GRAPH_ID;
+  if (dialect === 'fsm') return DEFAULT_FSM_GRAPH_ID;
+  return DEFAULT_FUNC_GRAPH_ID;
+}
 
 const nodeTypes = { gas: GasNode };
 const edgeTypes = gasEdgeTypes;
@@ -704,16 +722,18 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
   };
 }
 
-function readEditorSelection(): { modId: string; graphId: string } {
+function readEditorSelection(dialect: GraphEditorDialect): { modId: string; graphId: string } {
   const params = new URLSearchParams(window.location.search);
   return {
     modId: params.get('mod')?.trim() || DEFAULT_MOD_ID,
-    graphId: params.get('graph')?.trim() || DEFAULT_GRAPH_ID,
+    graphId: params.get('graph')?.trim() || defaultGraphIdForDialect(dialect),
   };
 }
 
-export const GasGraphEditorPage: React.FC = () => {
-  const initialSelection = React.useMemo(() => readEditorSelection(), []);
+export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({ dialect = 'func' }) => {
+  const navigate = useNavigate();
+  const titles = dialectTitle(dialect);
+  const initialSelection = React.useMemo(() => readEditorSelection(dialect), [dialect]);
   const [modId, setModId] = React.useState(initialSelection.modId);
   const [graphId, setGraphId] = React.useState(initialSelection.graphId);
   const [graph, setGraph] = React.useState<GraphConfig | null>(null);
@@ -1034,7 +1054,13 @@ export const GasGraphEditorPage: React.FC = () => {
       setSelectedEdgeId(null);
       setSelectedVariable(null);
       setStatus(`Loaded ${loaded.id} (${loaded.kind})`);
-      await loadMapVariables(loaded.id);
+      try {
+        await loadMapVariables(loaded.id);
+      } catch (mapVarErr) {
+        setDeclaredVariables([]);
+        setVariableMapId(null);
+        setVariableStatus(mapVarErr instanceof Error ? mapVarErr.message : String(mapVarErr));
+      }
     } catch (err) {
       setGraph(null);
       setNodes([]);
@@ -1058,6 +1084,13 @@ export const GasGraphEditorPage: React.FC = () => {
     const next = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, '', next);
   }, [graphId, modId]);
+
+  React.useEffect(() => {
+    const preferred = preferredDialectForGraphId(graphId);
+    if (preferred === dialect) return;
+    const params = new URLSearchParams({ mod: modId, graph: graphId });
+    navigate(`${dialectPath(preferred)}?${params.toString()}`, { replace: true });
+  }, [dialect, graphId, modId, navigate]);
 
   const loadCatalog = React.useCallback(async () => {
     try {
@@ -1151,6 +1184,26 @@ export const GasGraphEditorPage: React.FC = () => {
       }),
     );
   };
+
+  const openFunctionGraphPortal = React.useCallback((node: Node<GasNodeData>) => {
+    const portal = sugars[node.data.op]?.functionGraphPortal
+      || isFunctionGraphPortalOp(node.data.op);
+    if (!portal) return;
+    const target = (node.data.functionName ?? '').trim();
+    if (!target) {
+      setStatus(`${node.data.op} needs a function graph id before you can open it.`);
+      return;
+    }
+    // BT/FSM editors jump into the Func Graph editor; Func editor stays in-place.
+    if (dialect === 'bt' || dialect === 'fsm') {
+      const params = new URLSearchParams({ mod: modId, graph: target });
+      navigate(`/gas-graphs?${params.toString()}`);
+      setStatus(`Opened Func Graph ${target} in Graph Editor.`);
+      return;
+    }
+    setGraphId(target);
+    setStatus(`Opened function graph ${target}.`);
+  }, [dialect, modId, navigate, sugars]);
 
   const onNodesChange = React.useCallback((changes: NodeChange<Node<GasNodeData>>[]) => {
     setNodes((prev) => applyNodeChanges(changes, prev));
@@ -1379,17 +1432,31 @@ export const GasGraphEditorPage: React.FC = () => {
 
   const availableNodes = React.useMemo(() => {
     const entries = [
-      ...Object.values(descriptors).map((descriptor) => ({ op: descriptor.op, descriptor, sugar: undefined })),
-      ...Object.values(sugars).map((sugar) => ({ op: sugar.op, descriptor: undefined, sugar })),
+      ...Object.values(descriptors).map((descriptor) => ({ op: descriptor.op, descriptor, sugar: undefined as GraphSugarDescriptor | undefined })),
+      ...Object.values(sugars).map((sugar) => ({ op: sugar.op, descriptor: undefined as GraphDescriptor | undefined, sugar })),
     ];
     const query = nodeSearch.trim().toLocaleLowerCase();
     return entries
+      .filter((entry) => isOpAllowedInDialect(entry.op, dialect))
       .filter((entry) => !query || entry.op.toLocaleLowerCase().includes(query))
       .sort((a, b) => a.op.localeCompare(b.op));
-  }, [descriptors, nodeSearch, sugars]);
+  }, [descriptors, dialect, nodeSearch, sugars]);
+
+  const catalogModsForDialect = React.useMemo(() => {
+    return catalog
+      .map((mod) => ({
+        ...mod,
+        graphs: (mod.graphs ?? []).filter((graph) => catalogGraphMatchesDialect(graph.id, graph.kind, dialect)),
+      }))
+      .filter((mod) => (mod.graphs?.length ?? 0) > 0);
+  }, [catalog, dialect]);
 
   const addAuthoringNode = React.useCallback((op: string, position?: { x: number; y: number }, extras?: { var?: string; instanceId?: string }) => {
     if (!graph) return;
+    if (!isOpAllowedInDialect(op, dialect)) {
+      setStatus(`Cannot add '${op}' in the ${dialect} editor — open the matching editor.`);
+      return;
+    }
     if (!descriptors[op] && !sugars[op]) {
       setStatus(`Cannot add '${op}': this graph kind has no runtime descriptor for it.`);
       return;
@@ -1423,7 +1490,7 @@ export const GasGraphEditorPage: React.FC = () => {
     setPaletteMenu(null);
     setVarDropMenu(null);
     setStatus(extras?.var ?? extras?.instanceId ? `Added ${op} for ${extras.var ?? extras.instanceId}.` : `Added ${op}; wire its pins before validation.`);
-  }, [descriptors, graph, nodes, sugars]);
+  }, [descriptors, dialect, graph, nodes, sugars]);
 
   const addEventEntry = React.useCallback((position?: { x: number; y: number }) => {
     if (!graph || graph.kind !== 'TriggerGraph') {
@@ -1996,15 +2063,29 @@ export const GasGraphEditorPage: React.FC = () => {
     addAuthoringNode(op, position, { instanceId });
   };
 
+  const dialectNavClass = (target: GraphEditorDialect) =>
+    target === dialect
+      ? 'rounded border border-sky-500 bg-sky-950 px-2 py-1 text-xs font-semibold text-sky-200'
+      : 'rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800';
+
   return (
     <div className="flex h-screen w-screen flex-col bg-slate-950 text-slate-100">
       <header className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3">
         <div className="min-w-40">
-          <div className="text-sm font-semibold text-white">Ludots Graph Editor</div>
-          <div className="text-[10px] text-slate-500">Author contract · compiler diagnostics · live execution</div>
+          <div className="text-sm font-semibold text-white">{titles.title}</div>
+          <div className="text-[10px] text-slate-500">{titles.subtitle}</div>
         </div>
         <Link to="/" className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800">
           Map Editor
+        </Link>
+        <Link to={dialectPath('func')} className={dialectNavClass('func')}>
+          Graph Editor
+        </Link>
+        <Link to={dialectPath('bt')} className={dialectNavClass('bt')}>
+          BT Editor
+        </Link>
+        <Link to={dialectPath('fsm')} className={dialectNavClass('fsm')}>
+          FSM Editor
         </Link>
         <label className="flex items-center gap-2 text-xs text-slate-400">
           modId
@@ -2120,11 +2201,17 @@ export const GasGraphEditorPage: React.FC = () => {
         <div className="flex min-h-0 flex-col border-r border-slate-800">
           <div className="min-h-0 flex-[3] overflow-hidden [&_aside]:h-full [&_aside]:border-r-0">
             <GraphCatalogTree
-              mods={catalog}
+              mods={catalogModsForDialect}
               selectedModId={modId}
               selectedGraphId={graphId}
               status={catalogStatus}
               onSelect={(nextModId, nextGraphId) => {
+                const preferred = preferredDialectForGraphId(nextGraphId);
+                if (preferred !== dialect) {
+                  const params = new URLSearchParams({ mod: nextModId, graph: nextGraphId });
+                  navigate(`${dialectPath(preferred)}?${params.toString()}`);
+                  return;
+                }
                 setModId(nextModId);
                 setGraphId(nextGraphId);
                 setSelectedVariable(null);
@@ -2176,6 +2263,7 @@ export const GasGraphEditorPage: React.FC = () => {
                   event.preventDefault();
                   openPaletteAt(event.clientX, event.clientY);
                 }}
+                onNodeDoubleClick={(_, node) => openFunctionGraphPortal(node)}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}

@@ -376,6 +376,11 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}", async (string modId, string mapId, 
 
 app.MapGet("/api/mods/{modId}/gas/graphs/{graphId}/map-variables", (string modId, string graphId) =>
 {
+    if (string.Equals(modId, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.Ok(new { ok = true, graphId, maps = Array.Empty<object>() });
+    }
+
     string repoRoot = FindAssetsRoot();
     try
     {
@@ -563,6 +568,159 @@ app.MapPut("/api/mods/{modId}/story/catalogs/{catalogId}", async (string modId, 
 
         return Results.BadRequest(new { ok = false, error = ex.Message, path });
     }
+});
+
+// L2 AI topology SSOT: AI/behavior_trees.json + AI/hfsm.json (not Script sugar shells).
+app.MapGet("/api/ai/topology-catalog", () =>
+{
+    string repoRoot = FindAssetsRoot();
+    var sources = new List<object>();
+
+    string coreBt = Path.Combine(repoRoot, "assets", "AI", "behavior_trees.json");
+    string coreHfsm = Path.Combine(repoRoot, "assets", "AI", "hfsm.json");
+    sources.Add(new
+    {
+        id = "core",
+        name = "Core",
+        kind = "core",
+        behaviorTrees = new
+        {
+            path = coreBt,
+            exists = File.Exists(coreBt),
+            items = TryReadAiTopologyIds(coreBt),
+        },
+        hfsm = new
+        {
+            path = coreHfsm,
+            exists = File.Exists(coreHfsm),
+            items = TryReadAiTopologyIds(coreHfsm),
+        },
+    });
+
+    foreach (var mod in launcher.DiscoverMods().OrderBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase))
+    {
+        string btPath = Path.Combine(mod.RootPath, "assets", "AI", "behavior_trees.json");
+        string hfsmPath = Path.Combine(mod.RootPath, "assets", "AI", "hfsm.json");
+        bool hasBt = File.Exists(btPath);
+        bool hasHfsm = File.Exists(hfsmPath);
+        if (!hasBt && !hasHfsm)
+            continue;
+
+        sources.Add(new
+        {
+            id = mod.Id,
+            name = string.IsNullOrWhiteSpace(mod.Name) ? mod.Id : mod.Name,
+            kind = "mod",
+            behaviorTrees = new
+            {
+                path = btPath,
+                exists = hasBt,
+                items = hasBt ? TryReadAiTopologyIds(btPath) : Array.Empty<object>(),
+            },
+            hfsm = new
+            {
+                path = hfsmPath,
+                exists = hasHfsm,
+                items = hasHfsm ? TryReadAiTopologyIds(hfsmPath) : Array.Empty<object>(),
+            },
+        });
+    }
+
+    return Results.Ok(new { ok = true, sources });
+});
+
+app.MapGet("/api/ai/behavior-trees", (string? source) =>
+{
+    if (!TryResolveAiTopologyPath(launcher, source, "behavior_trees.json", out string path, out string resolvedSource, out IResult? error))
+        return error!;
+    if (!File.Exists(path))
+        return Results.NotFound(new { ok = false, error = $"behavior_trees.json missing at {path}", source = resolvedSource, path });
+    if (!TryReadJsonArrayFile(path, out JsonArray items, out string? readError))
+        return Results.BadRequest(new { ok = false, error = readError, path });
+    return Results.Ok(new { ok = true, source = resolvedSource, relativePath = "AI/behavior_trees.json", path, items });
+});
+
+app.MapPut("/api/ai/behavior-trees", async (HttpRequest req, string? source) =>
+{
+    if (!TryResolveAiTopologyPath(launcher, source, "behavior_trees.json", out string path, out string resolvedSource, out IResult? error))
+        return error!;
+    using var reader = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await reader.ReadToEndAsync();
+    if (!TryParseAiTopologyItemsBody(body, out JsonArray items, out string? parseError))
+        return Results.BadRequest(new { ok = false, error = parseError });
+    foreach (string field in new[] { "id", "root", "nodes" })
+    {
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i] is not JsonObject row || row[field] is null)
+                return Results.BadRequest(new { ok = false, error = $"items[{i}] must include '{field}'." });
+        }
+    }
+
+    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    WriteTextAtomically(path, items.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+    return Results.Ok(new { ok = true, source = resolvedSource, relativePath = "AI/behavior_trees.json", path });
+});
+
+app.MapGet("/api/ai/hfsm", (string? source) =>
+{
+    if (!TryResolveAiTopologyPath(launcher, source, "hfsm.json", out string path, out string resolvedSource, out IResult? error))
+        return error!;
+    if (!File.Exists(path))
+        return Results.NotFound(new { ok = false, error = $"hfsm.json missing at {path}", source = resolvedSource, path });
+    if (!TryReadJsonArrayFile(path, out JsonArray items, out string? readError))
+        return Results.BadRequest(new { ok = false, error = readError, path });
+    return Results.Ok(new { ok = true, source = resolvedSource, relativePath = "AI/hfsm.json", path, items });
+});
+
+app.MapPut("/api/ai/hfsm", async (HttpRequest req, string? source) =>
+{
+    if (!TryResolveAiTopologyPath(launcher, source, "hfsm.json", out string path, out string resolvedSource, out IResult? error))
+        return error!;
+    using var reader = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await reader.ReadToEndAsync();
+    if (!TryParseAiTopologyItemsBody(body, out JsonArray items, out string? parseError))
+        return Results.BadRequest(new { ok = false, error = parseError });
+    foreach (string field in new[] { "id", "root", "states" })
+    {
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i] is not JsonObject row || row[field] is null)
+                return Results.BadRequest(new { ok = false, error = $"items[{i}] must include '{field}'." });
+        }
+    }
+
+    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    WriteTextAtomically(path, items.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+    return Results.Ok(new { ok = true, source = resolvedSource, relativePath = "AI/hfsm.json", path });
+});
+
+app.MapGet("/api/ai/action-lib", (string? host) =>
+{
+    string repoRoot = FindAssetsRoot();
+    string path = Path.Combine(repoRoot, "assets", "GAS", "action_lib.json");
+    if (!File.Exists(path))
+        return Results.NotFound(new { ok = false, error = $"action_lib.json missing at {path}", path });
+    if (!TryReadJsonArrayFile(path, out JsonArray items, out string? readError))
+        return Results.BadRequest(new { ok = false, error = readError, path });
+
+    string? hostFilter = string.IsNullOrWhiteSpace(host) ? null : host.Trim();
+    var actions = new List<object>();
+    foreach (JsonNode? node in items)
+    {
+        if (node is not JsonObject row)
+            continue;
+        string name = row["name"]?.GetValue<string>() ?? "";
+        string actionHost = row["host"]?.GetValue<string>() ?? "";
+        string graph = row["graph"]?.GetValue<string>() ?? "";
+        if (name.Length == 0)
+            continue;
+        if (hostFilter != null && !string.Equals(actionHost, hostFilter, StringComparison.OrdinalIgnoreCase))
+            continue;
+        actions.Add(new { name, host = actionHost, graph });
+    }
+
+    return Results.Ok(new { ok = true, path, host = hostFilter, actions });
 });
 
 app.MapPost("/api/mods/{modId}/maps/{mapId}/boards", async (string modId, string mapId, HttpRequest req) =>
@@ -1762,6 +1920,45 @@ app.MapDelete("/api/bindings/{name}", (string name) =>
 app.MapGet("/api/gas/graph-catalog", () =>
 {
     var catalog = new List<object>();
+
+    string coreGraphsPath = Path.Combine(FindAssetsRoot(), "assets", "GAS", "graphs.json");
+    if (File.Exists(coreGraphsPath))
+    {
+        if (!TryReadGraphsArray(coreGraphsPath, out var coreArr, out _))
+        {
+            catalog.Add(new
+            {
+                id = "core",
+                name = "Core",
+                path = coreGraphsPath,
+                error = $"graphs.json unreadable: {coreGraphsPath}",
+                graphs = Array.Empty<object>(),
+            });
+        }
+        else if (!TryCollectCatalogGraphs(coreArr, coreGraphsPath, out var coreGraphs, out var coreCollectError))
+        {
+            catalog.Add(new
+            {
+                id = "core",
+                name = "Core",
+                path = coreGraphsPath,
+                error = coreCollectError,
+                graphs = coreGraphs,
+            });
+        }
+        else
+        {
+            catalog.Add(new
+            {
+                id = "core",
+                name = "Core",
+                path = coreGraphsPath,
+                error = (string?)null,
+                graphs = coreGraphs,
+            });
+        }
+    }
+
     foreach (var mod in launcher.DiscoverMods().OrderBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase))
     {
         var graphsPath = Path.Combine(mod.RootPath, "assets", "GAS", "graphs.json");
@@ -1959,6 +2156,42 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
                 valueInputPorts = Array.Empty<string>(),
                 outputType = GraphValueType.Int.ToString(),
                 lowersTo = GraphNodeOp.Call.ToString(),
+            });
+            authoringSugars.Add(new
+            {
+                op = GraphAuthoringSugar.BtLeaf,
+                controlOutputPorts = Array.Empty<string>(),
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Int.ToString(),
+                lowersTo = "compile-time-splice",
+                functionGraphPortal = true,
+            });
+            authoringSugars.Add(new
+            {
+                op = GraphAuthoringSugar.BtAction,
+                controlOutputPorts = Array.Empty<string>(),
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Int.ToString(),
+                lowersTo = "compile-time-splice",
+                functionGraphPortal = true,
+            });
+            authoringSugars.Add(new
+            {
+                op = GraphAuthoringSugar.BtCondition,
+                controlOutputPorts = Array.Empty<string>(),
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Int.ToString(),
+                lowersTo = "compile-time-splice",
+                functionGraphPortal = true,
+            });
+            authoringSugars.Add(new
+            {
+                op = GraphAuthoringSugar.FsmAction,
+                controlOutputPorts = Array.Empty<string>(),
+                valueInputPorts = Array.Empty<string>(),
+                outputType = GraphValueType.Int.ToString(),
+                lowersTo = "compile-time-splice",
+                functionGraphPortal = true,
             });
         }
         if (graphKind == GraphKind.TriggerGraph)
@@ -2529,7 +2762,7 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string mod
         return Results.BadRequest(new { ok = false, error = $"Failed to read graph JSON: {ex.Message}" });
     }
 
-    if (!TryCompileGasGraph(graphObj, graphId, out var package, out var diagnostics, out var compileError))
+    if (!TryCompileGasGraph(graphObj, graphId, graphsPath, out var package, out var diagnostics, out var compileError))
         return Results.BadRequest(new { ok = false, error = compileError });
     bool hasErrors = false;
     for (int i = 0; i < diagnostics.Count; i++)
@@ -2611,7 +2844,7 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/codegen/preview", async (str
         return Results.BadRequest(new { ok = false, error = $"Failed to read graph JSON: {ex.Message}" });
     }
 
-    if (!TryCompileGasGraph(graphObj, graphId, out var package, out var diagnostics, out var compileError))
+    if (!TryCompileGasGraph(graphObj, graphId, graphsPath, out var package, out var diagnostics, out var compileError))
         return Results.BadRequest(new { ok = false, error = compileError });
 
     bool hasErrors = diagnostics.Any(d => d.Severity == GraphDiagnosticSeverity.Error);
@@ -2715,7 +2948,7 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/codegen/parity", async (stri
         graphObj = fileGraphObj;
     }
 
-    if (!TryCompileGasGraph(graphObj, graphId, out var package, out var diagnostics, out var compileError))
+    if (!TryCompileGasGraph(graphObj, graphId, graphsPath, out var package, out var diagnostics, out var compileError))
         return Results.BadRequest(new { ok = false, error = compileError });
 
     if (!package.HasValue || diagnostics.Any(d => d.Severity == GraphDiagnosticSeverity.Error))
@@ -2814,6 +3047,7 @@ static bool TryNormalizeGasGraphBody(JsonObject bodyObj, string graphId, out str
 bool TryCompileGasGraph(
     JsonObject graphObj,
     string graphId,
+    string graphsPath,
     out GraphProgramPackage? package,
     out List<GraphDiagnostic> diagnostics,
     out string error)
@@ -2823,12 +3057,37 @@ bool TryCompileGasGraph(
     error = string.Empty;
     try
     {
+        var options = StrictJsonOptions.CreateCamelCase(includeFields: true);
         var enumCatalog = BuildLauncherEnumCatalog(new Dictionary<string, string>(StringComparer.Ordinal));
+        var eventSchemas = BuildLauncherEventSchemas(new List<string>(), new Dictionary<string, string>(StringComparer.Ordinal), enumCatalog);
+
+        if (GraphAuthoringNeedsCompileTimeWeave(graphObj))
+        {
+            if (!TryLoadSiblingDocumentsForWeave(graphsPath, graphId, graphObj, options, out var documents, out var weaveLoadError))
+            {
+                error = weaveLoadError ?? $"Failed to load sibling graphs for weave at '{graphsPath}'.";
+                return false;
+            }
+
+            TriggerGraphInlineWeaver.ExpandDocuments(documents);
+            BehaviorGraphLeafWeaver.ExpandDocuments(documents);
+            if (!documents.TryGetValue(graphId, out GraphControlFlowDocument? woven) || woven == null)
+            {
+                error = $"Weave produced no host document for '{graphId}'.";
+                return false;
+            }
+
+            GraphControlFlowCompileResult wovenResult = GraphControlFlowCompiler.Compile(woven, eventSchemas, enumCatalog);
+            package = wovenResult.Package;
+            diagnostics = wovenResult.Diagnostics;
+            return true;
+        }
+
         var result = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(
             graphObj,
             graphId,
-            StrictJsonOptions.CreateCamelCase(includeFields: true),
-            BuildLauncherEventSchemas(new List<string>(), new Dictionary<string, string>(StringComparer.Ordinal), enumCatalog),
+            options,
+            eventSchemas,
             enumCatalog);
         package = result.Package;
         diagnostics = result.Diagnostics;
@@ -2846,6 +3105,121 @@ bool TryCompileGasGraph(
     }
 }
 
+static bool GraphAuthoringNeedsCompileTimeWeave(JsonObject graphObj)
+{
+    if (graphObj["nodes"] is not JsonArray nodes)
+    {
+        return false;
+    }
+
+    for (int i = 0; i < nodes.Count; i++)
+    {
+        if (nodes[i] is not JsonObject node)
+        {
+            continue;
+        }
+
+        string? op = node["op"]?.GetValue<string>();
+        if (GraphAuthoringSugar.IsBtLeafPortal(op)
+            || GraphAuthoringSugar.IsFsmActionPortal(op)
+            || string.Equals(op, GraphAuthoringSugar.InlineGraph, StringComparison.Ordinal))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool TryLoadSiblingDocumentsForWeave(
+    string graphsPath,
+    string hostGraphId,
+    JsonObject hostGraphObj,
+    JsonSerializerOptions options,
+    out Dictionary<string, GraphControlFlowDocument> documents,
+    out string? error)
+{
+    documents = new Dictionary<string, GraphControlFlowDocument>(StringComparer.OrdinalIgnoreCase);
+    error = null;
+
+    if (!TryReadGraphsArray(graphsPath, out var arr, out _))
+    {
+        error = $"Failed to read sibling graphs for weave at '{graphsPath}'.";
+        return false;
+    }
+
+    for (int i = 0; i < arr.Count; i++)
+    {
+        if (arr[i] is not JsonObject obj)
+        {
+            continue;
+        }
+
+        string? id = obj["id"]?.GetValue<string>();
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            continue;
+        }
+
+        JsonObject source = string.Equals(id, hostGraphId, StringComparison.OrdinalIgnoreCase)
+            ? hostGraphObj
+            : obj;
+
+        GraphControlFlowDocument? doc;
+        try
+        {
+            doc = source.Deserialize<GraphControlFlowDocument>(options);
+        }
+        catch (JsonException ex)
+        {
+            error = $"Failed to deserialize sibling graph '{id}' for weave: {ex.Message}";
+            return false;
+        }
+
+        if (doc == null)
+        {
+            error = $"Failed to deserialize sibling graph '{id}' for weave.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(doc.Id))
+        {
+            doc.Id = id;
+        }
+
+        documents[id] = doc;
+    }
+
+    if (!documents.ContainsKey(hostGraphId))
+    {
+        GraphControlFlowDocument? hostDoc;
+        try
+        {
+            hostDoc = hostGraphObj.Deserialize<GraphControlFlowDocument>(options);
+        }
+        catch (JsonException ex)
+        {
+            error = $"Failed to deserialize host graph '{hostGraphId}' for weave: {ex.Message}";
+            return false;
+        }
+
+        if (hostDoc == null)
+        {
+            error = $"Failed to deserialize host graph '{hostGraphId}' for weave.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(hostDoc.Id))
+        {
+            hostDoc.Id = hostGraphId;
+        }
+
+        documents[hostGraphId] = hostDoc;
+    }
+
+    return true;
+}
+
 app.Run("http://localhost:5299");
 
 static bool TryResolveModGraphsPath(LauncherService launcher, string modId, out string graphsPath, out IResult? error)
@@ -2857,6 +3231,18 @@ static bool TryResolveModGraphsPath(LauncherService launcher, string modId, out 
     {
         error = Results.BadRequest(new { ok = false, error = "Missing modId." });
         return false;
+    }
+
+    if (string.Equals(modId, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        graphsPath = Path.Combine(FindAssetsRoot(), "assets", "GAS", "graphs.json");
+        if (!File.Exists(graphsPath))
+        {
+            error = Results.NotFound(new { ok = false, error = $"Core graphs.json not found at '{graphsPath}'." });
+            return false;
+        }
+
+        return true;
     }
 
     var mods = launcher.DiscoverMods();
@@ -2885,6 +3271,12 @@ static bool TryResolveModRoot(LauncherService launcher, string modId, out string
     {
         error = Results.BadRequest(new { ok = false, error = "Missing modId." });
         return false;
+    }
+
+    if (string.Equals(modId, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        modRoot = FindAssetsRoot();
+        return true;
     }
 
     var mod = launcher.DiscoverMods().FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
@@ -2965,6 +3357,123 @@ static bool TryFindGraphObject(JsonArray arr, string graphId, out JsonObject gra
     }
 
     return false;
+}
+
+static bool TryResolveAiTopologyPath(
+    LauncherService launcher,
+    string? source,
+    string fileName,
+    out string path,
+    out string resolvedSource,
+    out IResult? error)
+{
+    path = "";
+    resolvedSource = string.IsNullOrWhiteSpace(source) ? "core" : source.Trim();
+    error = null;
+    string repoRoot = FindAssetsRoot();
+    string sourceKey = resolvedSource;
+
+    if (string.Equals(sourceKey, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        path = Path.Combine(repoRoot, "assets", "AI", fileName);
+        return true;
+    }
+
+    var mod = launcher.DiscoverMods().FirstOrDefault(m =>
+        string.Equals(m.Id, sourceKey, StringComparison.OrdinalIgnoreCase));
+    if (mod == null)
+    {
+        error = Results.BadRequest(new
+        {
+            ok = false,
+            error = $"Unknown AI topology source '{sourceKey}'. Use 'core' or a launcher mod id.",
+        });
+        return false;
+    }
+
+    path = Path.Combine(mod.RootPath, "assets", "AI", fileName);
+    return true;
+}
+
+static object[] TryReadAiTopologyIds(string path)
+{
+    if (!TryReadJsonArrayFile(path, out JsonArray items, out _))
+        return Array.Empty<object>();
+
+    var list = new List<object>(items.Count);
+    foreach (JsonNode? node in items)
+    {
+        if (node is not JsonObject row)
+            continue;
+        string id = row["id"]?.GetValue<string>() ?? "";
+        if (id.Length == 0)
+            continue;
+        list.Add(new { id });
+    }
+
+    return list.ToArray();
+}
+
+static bool TryReadJsonArrayFile(string path, out JsonArray items, out string? error)
+{
+    items = new JsonArray();
+    error = null;
+    try
+    {
+        JsonNode? node = JsonNode.Parse(File.ReadAllText(path));
+        if (node is not JsonArray arr)
+        {
+            error = $"Expected a JSON array at {path}.";
+            return false;
+        }
+
+        items = arr;
+        return true;
+    }
+    catch (Exception ex)
+    {
+        error = ex.Message;
+        return false;
+    }
+}
+
+static bool TryParseAiTopologyItemsBody(string body, out JsonArray items, out string? error)
+{
+    items = new JsonArray();
+    error = null;
+    try
+    {
+        JsonNode? root = JsonNode.Parse(string.IsNullOrWhiteSpace(body) ? "null" : body);
+        if (root is not JsonObject payload || payload["items"] is null)
+        {
+            error = "Body must be { items: <array> }.";
+            return false;
+        }
+
+        if (payload["items"] is not JsonArray array)
+        {
+            error = "items must be a JSON array.";
+            return false;
+        }
+
+        for (int i = 0; i < array.Count; i++)
+        {
+            if (array[i] is not JsonObject row ||
+                row["id"]?.GetValue<string>() is not { Length: > 0 })
+            {
+                error = $"items[{i}] must be an object with non-empty id.";
+                return false;
+            }
+        }
+
+        items = (JsonArray)array.DeepClone();
+        return true;
+    }
+    catch (JsonException ex)
+    {
+        error = $"Malformed JSON: {ex.Message}";
+        return false;
+    }
 }
 
 static void WriteTextAtomically(string path, string content)

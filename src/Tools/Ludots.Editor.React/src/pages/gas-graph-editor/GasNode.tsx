@@ -45,6 +45,7 @@ export type GasNodeViewData = {
   textKey?: string | null;
   presentationSurface?: string | null;
   decoratorKind?: string | null;
+  functionName?: string | null;
   var?: string | null;
   template?: string | null;
   panelType?: string | null;
@@ -91,6 +92,7 @@ function authoredCaption(data: GasNodeViewData): string | null {
   if (data.op === 'InvokeGraph' && data.entryLabel) return `@${data.entryLabel}`;
   if (data.op === 'HaltReturnInt') return 'end this run';
   if (data.op === 'Yield') return 'wait one tick';
+  if (data.functionName) return data.functionName;
   if (data.decoratorKind) return data.decoratorKind;
   return null;
 }

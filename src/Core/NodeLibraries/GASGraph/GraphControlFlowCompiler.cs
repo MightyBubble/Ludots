@@ -1010,6 +1010,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
+                if (GraphAuthoringSugar.IsBtLeafPortal(node.Op)
+                    || GraphAuthoringSugar.IsFsmActionPortal(node.Op))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                        $"{node.Op} is compile-time sugar that must be expanded by " +
+                        "BehaviorGraphLeafWeaver before GraphControlFlowCompiler; leftover sites fail closed.",
+                        node.Id));
+                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                    continue;
+                }
+
                 if (string.Equals(node.Op, WhileOp, StringComparison.Ordinal))
                 {
                     if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))

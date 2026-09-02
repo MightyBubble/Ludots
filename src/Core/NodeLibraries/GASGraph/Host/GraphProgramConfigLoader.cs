@@ -130,11 +130,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             try
             {
                 TriggerGraphInlineWeaver.ExpandDocuments(documents);
+                BehaviorGraphLeafWeaver.ExpandDocuments(documents);
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    $"[GraphProgramConfigLoader] InlineGraph expand failed in '{relativePath}': {ex.Message}",
+                    $"[GraphProgramConfigLoader] leaf/Inline expand failed in '{relativePath}': {ex.Message}",
                     ex);
             }
 
