@@ -14,8 +14,9 @@
 //      GameRandom.Init(seed)(D7:种子显式注入,对应原版 StartScenario 首行)
 //      → LoadContent(LoadBaseContent:公共表/PersonLibrary/PopulateObject 延迟引用/Map.Load)
 //      → CheckPlayer → LoadWorld(MapRender shim)
-//   7. shim 的 LoadMap 不产文件流,由本启动线在装载后补合成地图并手动 FireOnMapLoaded
-//      → OnWorldLoaded(Prepare/Init/Start,含 MakeForceQuene 与首次 Run)
+//   7. shim 的 LoadMap 不产文件流:Map.Load 在 LoadBaseContent 内已按 bin 有无装载真图或
+//      no-op(M2.a 起真 DefaultMap.bin 经 SangoVfsIO 直读),装载后仅对 bin 缺席的世界补合成
+//      网格并手动 FireOnMapLoaded → OnWorldLoaded(Prepare/Init/Start,含 MakeForceQuene 与首次 Run)
 // 不搬的 Unity 侧环节(窗口/菜单/媒体/Debate/协程)见 PLAN D8 与 SangoUnityShim 注释。
 
 using System;
@@ -57,7 +58,7 @@ namespace Sango.Runtime
             // Scenario.StartScenario(scenario)(无玩家列表)的等价展开。
             // Cur 的赋权发生在 LoadBaseContent 首行(与原版一致,setter 对外不可见)。
             GameRandom.Init(seed);
-            return StartScenarioCore(scenario, forceSyntheticMap: false, populateContent: null);
+            return StartScenarioCore(scenario, populateContent: null);
         }
 
         /// <summary>
@@ -82,7 +83,7 @@ namespace Sango.Runtime
             GameRandom.Init(0);
             // 回灌启动序期间抑制 Force.Init 的回合开始重演(见 Scenario.IsRestoreLoad)。
             scenario.IsRestoreLoad = true;
-            BootResult result = StartScenarioCore(scenario, forceSyntheticMap: true, populateContent: scenarioJson);
+            BootResult result = StartScenarioCore(scenario, populateContent: scenarioJson);
             scenario.IsRestoreLoad = false;
             // 启动线(Prepare/Init/Start)自身的随机消耗不属于存档时点;流位置整体覆盖。
             GameRandom.ImportState(randomState);
@@ -129,7 +130,7 @@ namespace Sango.Runtime
         }
 
         /// <summary>StartScenario(scenario) 无玩家列表重载的等价展开,Boot 与 Restore 共用。</summary>
-        static BootResult StartScenarioCore(Scenario scenario, bool forceSyntheticMap, string populateContent)
+        static BootResult StartScenarioCore(Scenario scenario, string populateContent)
         {
             scenario.IsAlive = false;
             GameEvent.OnScenarioLoadStart?.Invoke(scenario);
@@ -147,12 +148,18 @@ namespace Sango.Runtime
             GameEvent.OnScenarioLoadEnd?.Invoke(Scenario.Cur);
             GameEvent.OnWorldLoadStart?.Invoke(Scenario.Cur);
             scenario.LoadWorld();
-            // LoadWorld 已订阅 OnMapLoaded,但 shim 的 LoadMap 不产文件流;
-            // DefaultMap.bin(D3 地形管线)接入前,补合成均匀网格再手动触发世界就绪回调。
-            // Restore 无条件重建:原版存档不序列化 CellSet,装载侧总是从地图源(原版 bin/
-            // 本线合成网格)重建;JSON 填充出的空 CellSet 不能短路这条重建。
-            if (forceSyntheticMap || scenario.Map.CellSet == null)
+            // 装载侧地图源语义(M2.a 真 bin 接入后):LoadContent 内的 Map.Load 已经从
+            // SangoVfsIO 读真实 DefaultMap.bin(Boot 与 Restore 同序——PopulateObject 之后
+            // 总是紧接 Map.Load,回灌 JSON 的空 CellSet 不会短路它);bin 缺席时 Map.Load
+            // 是原版装载器的缺席 no-op(Width<6 早退/File 缺席跳过),此时补合成均匀网格。
+            // 探测用 GetCell(0,0):bin 装载与合成重建都会填 (0,0),JSON 填充出的空 CellSet
+            // (width=0)返回 null。
+            bool syntheticMap = false;
+            if (scenario.Map.CellSet?.GetCell(0, 0) == null)
+            {
                 BuildSyntheticMap(scenario);
+                syntheticMap = true;
+            }
             MapRender.Instance.FireOnMapLoaded();
             // OnWorldLoaded 内完成 Prepare/Init/Start(含 MakeForceQuene 与首次 Run;
             // Run 的 IsAlive 闸在 Start 内先 Run 后置位,启动期不消耗模拟)。
@@ -164,16 +171,15 @@ namespace Sango.Runtime
                 Cities = scenario.citySet.Count,
                 Forces = scenario.forceSet.Count,
                 RegisteredSystems = GameSystemManager.Instance.systemMap.Count,
-                SyntheticMap = true,
+                SyntheticMap = syntheticMap,
             };
         }
 
         /// <summary>
-        /// 无 bin 时的最小可玩地图:按剧本城市坐标 + 建筑半径外扩的均匀网格 + 默认地形,
-        /// 满足 City.OnScenarioPrepare 的 GetSpiral 占格与 Cell.Init 的邻居缝合。
+        /// bin 缺席(CI 等环境)时的最小可玩地图:按剧本城市坐标 + 建筑半径外扩的均匀网格 +
+        /// 默认地形,满足 City.OnScenarioPrepare 的 GetSpiral 占格与 Cell.Init 的邻居缝合。
         /// 默认地形取草地(id 1,可建造):真实地图主体即草地,且 CityAI.AIBuilding 的
         /// 选址要求 canBuild 地形;取"无"(id 0,不可建)会让建筑 AI 整体休眠。
-        /// 真实地形(terrainType/areaId 层)由 D3/M0.3 遗留项接入后替换。
         /// </summary>
         static void BuildSyntheticMap(Scenario scenario)
         {

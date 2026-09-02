@@ -38,6 +38,18 @@ namespace Sango.Runtime
         /// </summary>
         public static string? Resolve(string? path) => Resolve(path, allowDirectory: false);
 
+        /// <summary>
+        /// 同 <see cref="Resolve(string)"/>,但返回挂载根下的物理文件全路径;供二进制流装载
+        /// (内核 Map.Load 的 FileStream)把 VFS uri 落到真实文件。不存在返回 null。
+        /// </summary>
+        public static string? ResolveToFullPath(string? path)
+        {
+            string? uri = Resolve(path);
+            if (uri == null || !_vfs!.TryResolveFullPath(uri, out string full))
+                return null;
+            return full;
+        }
+
         static string? Resolve(string? path, bool allowDirectory)
         {
             if (_vfs == null || string.IsNullOrWhiteSpace(path))

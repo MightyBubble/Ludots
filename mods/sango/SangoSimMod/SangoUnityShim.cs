@@ -351,6 +351,8 @@ namespace Sango.Render
     }
 
     // Game/Map/Cell.cs(512)interiorModel = MapObject.Create(...) 及 RenderEvent 的模型字段赋值。
+    // Create 必须给实例:调用方(真图 terrainState 的 Interior 位)紧接着写字段,渲染挂点
+    // (MapRender.AddStatic)在 headless 下本来就是空操作,不需要用 null 表达"不渲染"。
     public class MapObject
     {
         public Sango.Tools.Rect bounds { get; set; }
@@ -361,7 +363,7 @@ namespace Sango.Render
         public Transform transform { get; } = new Transform();
         public GameObject gameObject => null;
 
-        public static MapObject Create(string name) => null;
+        public static MapObject Create(string name) => new MapObject();
         public void Clear() { }
         public void Destroy() { }
     }
@@ -639,6 +641,20 @@ namespace Sango
         public static void WriteAllText(string path, string contents) => Runtime.SangoVfsIO.WriteAllText(path, contents);
         public static void Delete(string path) => Runtime.SangoVfsIO.Delete(path);
         public static bool Exists(string path) => Runtime.SangoVfsIO.Exists(path);
+    }
+
+    // 内核二进制装载(Game/Map/Map.cs 与 Scenario/ShortScenario.cs 的 new FileStream(binUri,
+    // FileMode.Open, FileAccess.Read))收口:Path.FindFile 已回流 VFS uri,此处把 uri 还原为
+    // 挂载根物理路径后交给 System.IO.FileStream;uri 不可解析即 fail-fast。
+    public class FileStream : System.IO.FileStream
+    {
+        public FileStream(string path, FileMode mode, FileAccess access)
+            : base(Runtime.SangoVfsIO.ResolveToFullPath(path)
+                  ?? throw new System.IO.FileNotFoundException(
+                      $"Sango binary asset not found in VFS mount: {path}"),
+                  mode, access)
+        {
+        }
     }
 }
 

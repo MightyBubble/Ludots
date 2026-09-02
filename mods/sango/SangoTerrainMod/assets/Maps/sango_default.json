@@ -51,14 +51,20 @@
       "NavigationEnabled": false
     }
   ],
+  "Fields": {
+    "Layers": [
+      "sango.terrainType",
+      "sango.areaId"
+    ]
+  },
   "TriggerTypes": [],
   "DefaultCamera": {
     "VirtualCameraId": "Sango.Camera.DefaultMap",
     "TargetXCm": 0,
     "TargetYCm": 0,
-    "Yaw": 225,
-    "Pitch": 50,
-    "DistanceCm": 900000,
+    "Yaw": 45,
+    "Pitch": 45,
+    "DistanceCm": 400000,
     "FovYDeg": 55
   }
 }

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "sango.terrainType",
+    "kind": "discreteId",
+    "cellSizeCm": 2000,
+    "chunkSizeCells": 8,
+    "default": 0,
+    "writerDomain": "sango.sim.field.terrainType",
+    "maxRegionIds": 255,
+    "persistent": true
+  },
+  {
+    "id": "sango.areaId",
+    "kind": "discreteId",
+    "cellSizeCm": 2000,
+    "chunkSizeCells": 8,
+    "default": 0,
+    "writerDomain": "sango.sim.field.areaId",
+    "maxRegionIds": 255,
+    "persistent": true
+  }
+]

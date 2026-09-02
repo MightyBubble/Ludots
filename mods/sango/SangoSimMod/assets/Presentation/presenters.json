@@ -1,0 +1,57 @@
+[
+  {
+    "id": "sango.city.marker",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [100, 100, 100],
+          "colorParamKey": "sango.city.marker.color"
+        },
+        "style": {
+          "color": [1, 1, 1, 1]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 60,
+          "updatePolicy": "Once"
+        }
+      },
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1, 1, 1, 0.9],
+          "sizePx": 3,
+          "colorParamKey": "sango.city.marker.color",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "None",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0,
+          "orientationLengthPx": 0
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "sango.city.marker.color",
+        "lane": "Vector",
+        "vectorValue": [1, 1, 1, 1]
+      }
+    ]
+  }
+]
