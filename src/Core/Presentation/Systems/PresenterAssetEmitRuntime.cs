@@ -133,12 +133,21 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < assetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
+                ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
                 if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
                 {
+                    // Multi-slot StaticMesh: sibling slots may still emit, so the outer
+                    // "nothing emitted → clear all" fallback never runs. Inactive slots must
+                    // Remove their own retained entries (same as cull/visibility below).
+                    if (TryGetVisualStableId(in state, slot.SlotIndex, asset.AssetKind, state.DefId, out int inactiveStableId))
+                    {
+                        stableDrawCache.Remove(inactiveStableId);
+                        removedAny = true;
+                    }
+
                     continue;
                 }
 
-                ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
                 if (!ownerCullVisible ||
                     !IsWithinMaxLod(lod, in asset) ||
                     !ResolveAssetVisibility(entity, in asset))
