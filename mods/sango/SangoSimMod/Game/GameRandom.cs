@@ -10,6 +10,12 @@ namespace Sango.Core
         {
             random = new Random(Guid.NewGuid().GetHashCode());
         }
+
+        // PLAN D7:移植线随机必须可种子化(确定性重放的根基);内核内禁止绕行此入口的环境随机。
+        public static void Init(int seed)
+        {
+            random = new Random(seed);
+        }
         public static double Random()
         {
             return random.NextDouble();

@@ -166,10 +166,12 @@ namespace UnityEngine
         Return = 13,
     }
 
-    // Scenario/Scenario.cs 演出队列步进使用;0 让纯演出事件按无耗时处理。
+    // Scenario/Scenario.cs 演出队列步进使用;默认 0(纯演出事件不耗时)。
+    // M1.b:SangoTurnDriver 在推进回合前写入虚拟帧长,让计时型演出事件(DelayEvent 等)
+    // 在 headless 下按"一拍完成"结算;默认 0 保留原语义。
     public static class Time
     {
-        public static float deltaTime => 0f;
+        public static float deltaTime { get; set; }
     }
 
     // Game/Data/DataLoader.cs 的 Bounds 存取区块使用(center/size 走 System.Numerics)。
@@ -583,8 +585,9 @@ namespace Sango
         public void AddPackage(string packageName, string file, bool force) { }
     }
 
-    // sango Framework/IO 的 Path/Directory/File 外壳(D8 大件不搬);按移植文件的调用面
-    // 委托 System.IO,语义与源一致。
+    // sango Framework/IO 的 Path/Directory/File 外壳(D8 大件不搬)。
+    // M1.b:读写全部经 SangoVfsIO 网关(Ludots VFS 后端由启动线显式 Install;未安装时
+    // 读 fail-fast,存在性判定为假),禁止 shim 直读盘。相对路径按内容 mod 的 assets/ 映射。
     public static class Path
     {
         public static string ContentRootPath { get; set; } = ".";
@@ -594,7 +597,7 @@ namespace Sango
         public static void AddSearchPath(string path) { }
         public static void AddSearchPath(string path, bool front) { }
 
-        public static string FindFile(string file) => System.IO.File.Exists(file) ? file : null;
+        public static string FindFile(string file) => Runtime.SangoVfsIO.FindFile(file);
     }
 
     public static class Directory
@@ -602,9 +605,9 @@ namespace Sango
         public static void EnumFiles(string path, string searchPattern,
             System.IO.SearchOption searchOption, Action<string> onFile)
         {
-            if (onFile == null || !System.IO.Directory.Exists(path))
+            if (onFile == null || !Runtime.SangoVfsIO.DirectoryExists(path))
                 return;
-            foreach (string file in System.IO.Directory.EnumerateFiles(path, searchPattern, searchOption))
+            foreach (string file in Runtime.SangoVfsIO.EnumerateFiles(path, searchPattern, searchOption))
             {
                 onFile(file);
             }
@@ -620,21 +623,22 @@ namespace Sango
             EnumFiles(path, "*", System.IO.SearchOption.TopDirectoryOnly, onFile);
         }
 
-        public static bool Exists(string path) => System.IO.Directory.Exists(path);
-        public static void Create(string path) => System.IO.Directory.CreateDirectory(path);
-        public static void Create(string path, bool recursive) => System.IO.Directory.CreateDirectory(path);
-        public static void Delete(string path) => System.IO.Directory.Delete(path, true);
+        public static bool Exists(string path) => Runtime.SangoVfsIO.DirectoryExists(path);
+        public static void Create(string path) => Runtime.SangoVfsIO.CreateDirectory(path);
+        public static void Create(string path, bool recursive) => Runtime.SangoVfsIO.CreateDirectory(path);
+        public static void Delete(string path) => Runtime.SangoVfsIO.DeleteDirectory(path, true);
         public static string[] GetDirectories(string path, string searchPattern, System.IO.SearchOption searchOption)
-            => System.IO.Directory.GetDirectories(path, searchPattern, searchOption);
+            => Runtime.SangoVfsIO.GetDirectories(path, searchPattern, searchOption);
     }
 
     public static class File
     {
-        public static string ReadAllText(string path) => System.IO.File.ReadAllText(path);
-        public static string[] ReadAllLines(string path) => System.IO.File.ReadAllLines(path);
-        public static void WriteAllText(string path, string contents) => System.IO.File.WriteAllText(path, contents);
-        public static void Delete(string path) => System.IO.File.Delete(path);
-        public static bool Exists(string path) => System.IO.File.Exists(path);
+        public static string ReadAllText(string path) => Runtime.SangoVfsIO.ReadAllText(path);
+        public static string[] ReadAllLines(string path) => Runtime.SangoVfsIO.ReadAllLines(path);
+        public static System.IO.StreamReader OpenText(string path) => Runtime.SangoVfsIO.OpenText(path);
+        public static void WriteAllText(string path, string contents) => Runtime.SangoVfsIO.WriteAllText(path, contents);
+        public static void Delete(string path) => Runtime.SangoVfsIO.Delete(path);
+        public static bool Exists(string path) => Runtime.SangoVfsIO.Exists(path);
     }
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "SangoSimMod",
   "version": "0.1.0",
-  "description": "Sango (sango_infinity) simulation kernel port: framework core subset, hex math, game objects, custom JSON converters, and the scenario/system/action closure they need to compile. Turn loop and launcher bootstrap land with the later M1 waves.",
+  "description": "Sango (sango_infinity) simulation kernel port: framework core subset, hex math, game objects, custom JSON converters, and the scenario/system/action closure they need to compile. SangoRuntime boots the world from SangoContentMod assets via VFS (seeded GameRandom, deferred reference binding) and bridges Ludots Manual clock TurnAdvanced to sango turn advancement.",
   "main": "bin/net9.0/SangoSimMod.dll",
   "priority": 5,
   "dependencies": {

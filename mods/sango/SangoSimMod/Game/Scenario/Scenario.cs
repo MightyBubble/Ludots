@@ -622,7 +622,8 @@ namespace Sango.Core
         {
             FilePath = path;
 
-            using (StreamReader file = System.IO.File.OpenText(FilePath))
+            // M1.b:经 Sango.File shim(VFS 后端)读取,剧本流不再绕过 IO 网关直读盘。
+            using (StreamReader file = Sango.File.OpenText(FilePath))
             using (JsonTextReader reader = new JsonTextReader(file))
             {
                 while (reader.Read()) // Advances to the next token in the JSON stream.
@@ -642,7 +643,7 @@ namespace Sango.Core
 
         public void LoadVariables()
         {
-            using (StreamReader file = System.IO.File.OpenText(FilePath))
+            using (StreamReader file = Sango.File.OpenText(FilePath))
             using (JsonTextReader reader = new JsonTextReader(file))
             {
                 while (reader.Read()) // Advances to the next token in the JSON stream.
