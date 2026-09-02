@@ -16,5 +16,6 @@
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.WebUI.DataPlane\Ludots.WebUI.DataPlane.csproj" />
     <ProjectReference Include="..\..\..\mods\sango\SangoWebUiSpikeMod\SangoWebUiSpikeMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\sango\SangoWebUiMod\SangoWebUiMod.csproj" />
   </ItemGroup>
 </Project>

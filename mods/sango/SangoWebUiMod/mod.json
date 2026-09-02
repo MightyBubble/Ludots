@@ -1,0 +1,13 @@
+{
+  "name": "SangoWebUiMod",
+  "version": "0.1.0",
+  "description": "Sango port M1.c real Web UI mod: CEF browser surface + WebUI DataPlane projection of the sango kernel world (cities/forces/turn/messages topics), city internal-affairs commands mapped to the kernel City.Job* entries the original UI windows called, and endTurn routed through the Ludots Manual clock step policy. Vite/React app in Assets/sango-app.",
+  "main": "bin/net9.0/SangoWebUiMod.dll",
+  "priority": 10,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "SangoSimMod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["sango", "web-ui", "browser-ui"]
+}
