@@ -32,6 +32,8 @@ import {
   type MapVariableScalarType,
 } from './gas-graph-editor/GraphVariablePanel';
 import { GasNode, isPureValueOp, type EventSchemaView } from './gas-graph-editor/GasNode';
+import { gasEdgeTypes } from './gas-graph-editor/GasEdges';
+import { GAS_GRAPH_THEME } from './gas-graph-editor/gasGraphTheme';
 import { authoredFieldsForOp, type AuthoredFieldKey } from './gas-graph-editor/authoredFields';
 import { computeAutoLayout, eventEntryNodeId, isEventEntryNodeId } from './gas-graph-editor/autoLayout';
 import { EventEntryInspector } from './gas-graph-editor/EventEntryInspector';
@@ -44,6 +46,18 @@ import {
   uniqueEventLabel,
   type EventEntryConfig,
 } from './gas-graph-editor/eventEntry';
+import {
+  applyLiveDebugToEdges,
+  applyLiveDebugToNodes,
+  applyWatchFocusToEdges,
+  applyWatchFocusToNodes,
+  computeLiveControlEdgeHeat,
+  computeLiveNodeHeat,
+  computeLivePinValues,
+  computeLiveValueEdgeHeat,
+  computeWatchedEntryFocus,
+  type LiveDebugEvent,
+} from './gas-graph-editor/liveVisualDebug';
 import './gas-graph-editor/editor.css';
 
 type GraphNodeConfig = {
@@ -118,6 +132,11 @@ type GasNodeData = GraphNodeConfig & {
   descriptor?: GraphDescriptor;
   sugar?: GraphSugarDescriptor;
   controlOutputPorts?: string[];
+  liveDebug?: {
+    intensity: number;
+    current: boolean;
+    pins: { pinIndex: number; value: string }[];
+  };
 };
 
 type GraphDescriptor = {
@@ -173,15 +192,7 @@ type DebugMount = {
   cursor: { pc: number; steps: number; status: string; suspended: boolean };
 };
 
-type DebugEvent = {
-  sequence: number;
-  event: string;
-  nodeId?: string | null;
-  op?: string | null;
-  pinIndex?: number;
-  value?: number | boolean;
-  steps: number;
-};
+type DebugEvent = LiveDebugEvent;
 
 type GraphControlEdgeConfig = {
   from: string;
@@ -199,6 +210,9 @@ type GraphValueEdgeConfig = {
 type GasEdgeData = {
   kind: 'control' | 'value';
   synthetic?: boolean;
+  live?: boolean;
+  intensity?: number;
+  liveValue?: string | null;
 };
 
 type GraphOutputConfig = {
@@ -256,6 +270,21 @@ const DEFAULT_MOD_ID = 'UiPlayerAggregateGraphMvpShowcaseMod';
 const DEFAULT_GRAPH_ID = 'ui.panel.player.resource.aggregate';
 
 const nodeTypes = { gas: GasNode };
+const edgeTypes = gasEdgeTypes;
+
+function themedEdge(
+  kind: 'control' | 'value',
+  stroke: string,
+  strokeWidth = 2,
+  extras: Partial<Edge<GasEdgeData>> = {},
+): Pick<Edge<GasEdgeData>, 'type' | 'style' | 'data'> & Partial<Edge<GasEdgeData>> {
+  return {
+    type: kind === 'value' ? 'gasValue' : 'gasControl',
+    style: { stroke, strokeWidth, strokeDasharray: undefined },
+    data: { kind },
+    ...extras,
+  };
+}
 
 function omitUndefined<T extends Record<string, unknown>>(value: T): T {
   const out: Record<string, unknown> = {};
@@ -485,8 +514,9 @@ function graphToFlow(
       target: entry.start,
       targetHandle: 'control-in',
       markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: '#fb7185', strokeWidth: 2 },
-      data: { kind: 'control', synthetic: true },
+      ...themedEdge('control', GAS_GRAPH_THEME.eventAccent, 2, {
+        data: { kind: 'control', synthetic: true },
+      }),
     });
   }
 
@@ -499,8 +529,7 @@ function graphToFlow(
         target: edge.to,
         targetHandle: 'control-in',
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#38bdf8', strokeWidth: 2 },
-        data: { kind: 'control' },
+        ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2),
       });
     }
 
@@ -512,8 +541,11 @@ function graphToFlow(
         target: edge.to,
         targetHandle: edge.toPort,
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: edge.fromPort === 'list' ? '#34d399' : '#a78bfa', strokeWidth: 2 },
-        data: { kind: 'value' },
+        ...themedEdge(
+          'value',
+          edge.fromPort === 'list' ? GAS_GRAPH_THEME.listAccent : GAS_GRAPH_THEME.dataIdle,
+          1.5,
+        ),
       });
     }
 
@@ -528,8 +560,7 @@ function graphToFlow(
       target: n.next,
       markerEnd: { type: MarkerType.ArrowClosed },
       label: 'next',
-      style: { stroke: '#64748b' },
-      data: { kind: 'control' },
+      ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2),
     });
   }
 
@@ -584,10 +615,11 @@ function toDisplayEdges(nodes: Node<GasNodeData>[], edges: Edge<GasEdgeData>[]):
         target: terminal,
         targetHandle: 'control-in',
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#38bdf8', strokeWidth: 2 },
         deletable: false,
         selectable: false,
-        data: { kind: 'control', synthetic: true },
+        ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2, {
+          data: { kind: 'control', synthetic: true },
+        }),
       });
     }
   }
@@ -610,6 +642,8 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
       delete created.role;
       delete created.entry;
       delete created.schema;
+      delete created.liveDebug;
+      delete created.controlOutputPorts;
       return toWireNode({ ...created, id: flowNode.id, op: edited.op });
     }
     const rest = { ...edited };
@@ -620,6 +654,7 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
     delete rest.role;
     delete rest.entry;
     delete rest.schema;
+    delete rest.liveDebug;
     return toWireNode({
       ...n,
       ...rest,
@@ -705,6 +740,12 @@ export const GasGraphEditorPage: React.FC = () => {
   const [debugEvents, setDebugEvents] = React.useState<DebugEvent[]>([]);
   const [debugSince, setDebugSince] = React.useState(0);
   const [debugStatus, setDebugStatus] = React.useState('Bridge idle');
+  /** Ticks while Watching so heat / edges cool off without new drain traffic. */
+  const [debugClockMs, setDebugClockMs] = React.useState(() => Date.now());
+  /** Half-screen (game|editor) needs the canvas, not twin sidebars. */
+  const [leftRailCollapsed, setLeftRailCollapsed] = React.useState(false);
+  const [rightRailCollapsed, setRightRailCollapsed] = React.useState(false);
+  const railsBeforeWatch = React.useRef<{ left: boolean; right: boolean } | null>(null);
   const [switchCaseValue, setSwitchCaseValue] = React.useState('0');
   const [switchCaseTarget, setSwitchCaseTarget] = React.useState('');
   const [btChildTarget, setBtChildTarget] = React.useState('');
@@ -1192,8 +1233,7 @@ export const GasGraphEditorPage: React.FC = () => {
           target: connection.target,
           targetHandle: connection.targetHandle,
           markerEnd: { type: MarkerType.ArrowClosed },
-          style: { stroke: '#a78bfa', strokeWidth: 2 },
-          data: { kind: 'value' },
+          ...themedEdge('value', GAS_GRAPH_THEME.dataIdle, 1.5),
         }, prev));
         setSelectedNodeId(nodeId);
         setStatus(`Placed ${pin.op}${pin.payloadKey ? ` for ${pin.payloadKey}` : ''}.`);
@@ -1207,8 +1247,9 @@ export const GasGraphEditorPage: React.FC = () => {
         target: connection.target,
         targetHandle: 'control-in',
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#fb7185', strokeWidth: 2 },
-        data: { kind: 'control', synthetic: true },
+        ...themedEdge('control', GAS_GRAPH_THEME.eventAccent, 2, {
+          data: { kind: 'control', synthetic: true },
+        }),
       }, prev.filter((edge) => !(edge.source === connection.source && edge.sourceHandle === 'exec'))));
       setNodes((previous) => previous.map((node) => (
         node.id === connection.source && node.data.entry
@@ -1221,8 +1262,11 @@ export const GasGraphEditorPage: React.FC = () => {
       ...connection,
       id: `${kind}:${connection.source}:${connection.sourceHandle}:${connection.target}:${connection.targetHandle}`,
       markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: kind === 'control' ? '#38bdf8' : '#a78bfa', strokeWidth: 2 },
-      data: { kind },
+      ...themedEdge(
+        kind,
+        kind === 'control' ? GAS_GRAPH_THEME.execIdle : GAS_GRAPH_THEME.dataIdle,
+        kind === 'control' ? 2 : 1.5,
+      ),
     }, prev));
   }, [nodes, descriptors, sugars]);
 
@@ -1290,7 +1334,7 @@ export const GasGraphEditorPage: React.FC = () => {
       targetHandle: 'control-in',
       markerEnd: { type: MarkerType.ArrowClosed },
       label: sourceHandle,
-      data: { kind: 'control' },
+      ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2),
     }, previous));
     setNodes((previous) => previous.map((node) => node.id !== selectedNodeId
       ? node
@@ -1325,7 +1369,7 @@ export const GasGraphEditorPage: React.FC = () => {
       targetHandle: 'control-in',
       markerEnd: { type: MarkerType.ArrowClosed },
       label: sourceHandle,
-      data: { kind: 'control' },
+      ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2),
     }, previous));
     setNodes((previous) => previous.map((node) => node.id !== selectedNodeId
       ? node
@@ -1476,8 +1520,9 @@ export const GasGraphEditorPage: React.FC = () => {
           target: nextStart,
           targetHandle: 'control-in',
           markerEnd: { type: MarkerType.ArrowClosed },
-          style: { stroke: '#fb7185', strokeWidth: 2 },
-          data: { kind: 'control', synthetic: true },
+          ...themedEdge('control', GAS_GRAPH_THEME.eventAccent, 2, {
+            data: { kind: 'control', synthetic: true },
+          }),
         }, without);
       });
     }
@@ -1615,7 +1660,11 @@ export const GasGraphEditorPage: React.FC = () => {
       const result = await bridgeRpc('ludots.graph.debug', {
         action: 'drain', graphId, entryLabel: debugEntryLabel, since: debugSince, max: 128,
       });
-      const incoming = (result.events ?? []) as DebugEvent[];
+      const receivedAt = Date.now();
+      const incoming = ((result.events ?? []) as DebugEvent[]).map((event) => ({
+        ...event,
+        atMs: receivedAt,
+      }));
       if (result.gap) setDebugEvents([]);
       const latestSequence = Number(result.latestSequence ?? debugSince);
       if (incoming.length > 0) {
@@ -1638,43 +1687,116 @@ export const GasGraphEditorPage: React.FC = () => {
     return () => window.clearInterval(timer);
   }, [debugEnabled, pollDebug, refreshDebugMounts]);
 
+  React.useEffect(() => {
+    if (!debugEnabled) return undefined;
+    setDebugClockMs(Date.now());
+    const timer = window.setInterval(() => setDebugClockMs(Date.now()), 100);
+    return () => window.clearInterval(timer);
+  }, [debugEnabled]);
+
   const toggleDebug = async () => {
     try {
       const entry = debugEntryLabel || debugMounts[0]?.entryLabel;
       if (!entry) throw new Error('No mounted entry selected. Refresh the bridge mount list first.');
-      await bridgeRpc('ludots.graph.debug', { action: 'configure', graphId, entryLabel: entry, mode: debugEnabled ? 'off' : 'nodeAndPins' });
+      const turningOn = !debugEnabled;
+      await bridgeRpc('ludots.graph.debug', { action: 'configure', graphId, entryLabel: entry, mode: turningOn ? 'nodeAndPins' : 'off' });
       setDebugEntryLabel(entry);
       setDebugSince(0);
       setDebugEvents([]);
-      setDebugEnabled(!debugEnabled);
-      setDebugStatus(debugEnabled ? 'Live debug off' : 'Live debug armed');
+      setDebugEnabled(turningOn);
+      setDebugStatus(turningOn ? 'Live debug armed' : 'Live debug off');
+      if (turningOn) {
+        railsBeforeWatch.current = { left: leftRailCollapsed, right: rightRailCollapsed };
+        setLeftRailCollapsed(true);
+        setRightRailCollapsed(true);
+      } else if (railsBeforeWatch.current) {
+        setLeftRailCollapsed(railsBeforeWatch.current.left);
+        setRightRailCollapsed(railsBeforeWatch.current.right);
+        railsBeforeWatch.current = null;
+      }
     } catch (err) {
       setDebugStatus(err instanceof Error ? err.message : String(err));
     }
   };
 
   const activeDebugNodes = React.useMemo(() => {
-    const ids = new Set<string>();
-    const latestEvent = debugEvents[debugEvents.length - 1];
-    if (latestEvent?.nodeId) ids.add(latestEvent.nodeId);
-    return ids;
-  }, [debugEvents]);
+    if (!debugEnabled || debugEvents.length === 0) {
+      return {
+        heat: new Map(),
+        pins: new Map(),
+        controlHeat: new Map(),
+        valueHeat: new Map(),
+        hotEdges: new Set<string>(),
+      };
+    }
+    const now = debugClockMs;
+    const heat = computeLiveNodeHeat(debugEvents, now);
+    const pins = computeLivePinValues(debugEvents, now);
+    const controlHeat = computeLiveControlEdgeHeat(debugEvents, edges, now);
+    const valueHeat = computeLiveValueEdgeHeat(debugEvents, edges, now);
+    const hotEdges = new Set<string>([...controlHeat.keys(), ...valueHeat.keys()]);
+    return { heat, pins, controlHeat, valueHeat, hotEdges };
+  }, [debugClockMs, debugEnabled, debugEvents, edges]);
 
-  const displayNodes = React.useMemo(() => nodes.map((node) => {
-    const debug = activeDebugNodes.has(node.id);
-    const usesVar = selectedVariable != null && node.data.var === selectedVariable;
-    if (!debug && !usesVar) return node;
-    return {
-      ...node,
-      style: {
-        ...node.style,
-        border: debug ? '2px solid #facc15' : '2px solid #fbbf24',
-        boxShadow: debug ? '0 0 18px rgba(250,204,21,.45)' : '0 0 14px rgba(251,191,36,.35)',
-      },
-    };
-  }), [activeDebugNodes, nodes, selectedVariable]);
+  const watchFocus = React.useMemo(() => {
+    if (!debugEnabled || !debugEntryLabel) {
+      return { nodeIds: new Set<string>(), edgeIds: new Set<string>() };
+    }
+    return computeWatchedEntryFocus(nodes, edges, debugEntryLabel, eventEntryNodeId);
+  }, [debugEnabled, debugEntryLabel, edges, nodes]);
 
-  const displayEdges = React.useMemo(() => toDisplayEdges(nodes, edges), [edges, nodes]);
+  React.useEffect(() => {
+    if (!debugEnabled || watchFocus.nodeIds.size === 0) return;
+    const focusIds = [...watchFocus.nodeIds];
+    const timer = window.setTimeout(() => {
+      reactFlowRef.current?.fitView({
+        nodes: focusIds.map((id) => ({ id })),
+        padding: 0.18,
+        duration: 280,
+        minZoom: 0.55,
+        maxZoom: 1.85,
+      });
+    }, 160);
+    return () => window.clearTimeout(timer);
+  }, [debugEnabled, debugEntryLabel, watchFocus.nodeIds.size, leftRailCollapsed, rightRailCollapsed]);
+
+  const displayNodes = React.useMemo(() => {
+    let next = nodes as Node<GasNodeData & Record<string, unknown>>[];
+    if (debugEnabled) {
+      next = applyLiveDebugToNodes(next, activeDebugNodes.heat, activeDebugNodes.pins);
+      next = applyWatchFocusToNodes(next, watchFocus.nodeIds);
+    }
+    if (selectedVariable == null) return next as Node<GasNodeData>[];
+    return next.map((node) => {
+      const usesVar = node.data.var === selectedVariable;
+      if (!usesVar) return node as Node<GasNodeData>;
+      return {
+        ...node,
+        style: {
+          ...node.style,
+          outline: '2px solid #fbbf24',
+          outlineOffset: '2px',
+        },
+      } as Node<GasNodeData>;
+    });
+  }, [activeDebugNodes, debugEnabled, nodes, selectedVariable, watchFocus.nodeIds]);
+
+  const displayEdges = React.useMemo(() => {
+    let base = toDisplayEdges(nodes, edges);
+    if (!debugEnabled) {
+      return base.map((edge) => ({
+        ...edge,
+        type: edge.data?.kind === 'value' ? 'gasValue' : 'gasControl',
+      }));
+    }
+    base = applyLiveDebugToEdges(
+      base,
+      activeDebugNodes.controlHeat,
+      activeDebugNodes.valueHeat,
+      activeDebugNodes.pins,
+    ) as Edge<GasEdgeData>[];
+    return applyWatchFocusToEdges(base, watchFocus.edgeIds, activeDebugNodes.hotEdges) as Edge<GasEdgeData>[];
+  }, [activeDebugNodes.controlHeat, activeDebugNodes.hotEdges, activeDebugNodes.pins, activeDebugNodes.valueHeat, debugEnabled, edges, nodes, watchFocus.edgeIds]);
 
   const mapVariables = React.useMemo<GraphVariableRow[]>(() => {
     const rows = new Map<string, GraphVariableRow>();
@@ -1954,10 +2076,47 @@ export const GasGraphEditorPage: React.FC = () => {
         >
           Refresh Live
         </button>
+        <button
+          type="button"
+          onClick={() => setLeftRailCollapsed((v) => !v)}
+          className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800"
+          title="Toggle catalog / variables rail"
+        >
+          {leftRailCollapsed ? 'Show Tree' : 'Hide Tree'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setRightRailCollapsed((v) => !v)}
+          className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800"
+          title="Toggle inspector rail"
+        >
+          {rightRailCollapsed ? 'Show Inspector' : 'Hide Inspector'}
+        </button>
         <div className="text-xs text-slate-400">{status}</div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[260px_1fr_320px]">
+      <div
+        className={[
+          'grid min-h-0 flex-1',
+          leftRailCollapsed && rightRailCollapsed
+            ? 'grid-cols-[32px_minmax(0,1fr)_32px]'
+            : leftRailCollapsed
+              ? 'grid-cols-[32px_minmax(0,1fr)_240px]'
+              : rightRailCollapsed
+                ? 'grid-cols-[220px_minmax(0,1fr)_32px]'
+                : 'grid-cols-[220px_minmax(0,1fr)_280px]',
+        ].join(' ')}
+      >
+        {leftRailCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setLeftRailCollapsed(false)}
+            className="flex min-h-0 flex-col items-center justify-start gap-2 border-r border-slate-800 bg-slate-950/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+            title="Show catalog and variables"
+          >
+            <span className="[writing-mode:vertical-rl] rotate-180">Tree</span>
+          </button>
+        ) : (
         <div className="flex min-h-0 flex-col border-r border-slate-800">
           <div className="min-h-0 flex-[3] overflow-hidden [&_aside]:h-full [&_aside]:border-r-0">
             <GraphCatalogTree
@@ -1987,14 +2146,23 @@ export const GasGraphEditorPage: React.FC = () => {
             onDelete={() => void deleteMapVariable()}
           />
         </div>
+        )}
         <div className="min-h-0">
           {graph ? (
-            <div className="relative h-full" onDragOver={onVariableDragOver} onDrop={onVariableDrop}>
+            <div
+              className={[
+                'relative h-full',
+                (debugEnabled || rightRailCollapsed) ? 'pb-[10.5rem]' : '',
+              ].join(' ')}
+              onDragOver={onVariableDragOver}
+              onDrop={onVariableDrop}
+            >
               <ReactFlow
                 className="gas-graph-flow"
                 nodes={displayNodes}
                 edges={displayEdges}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 onInit={(instance) => { reactFlowRef.current = instance; }}
                 onPaneClick={() => {
                   setPaletteMenu(null);
@@ -2024,25 +2192,74 @@ export const GasGraphEditorPage: React.FC = () => {
                 fitView
                 proOptions={{ hideAttribution: true }}
               >
-                <Background gap={16} color="#334155" />
+                <Background gap={18} color={GAS_GRAPH_THEME.canvasDot} />
                 <Controls />
                 <MiniMap
                   pannable
                   zoomable
-                  bgColor="#020617"
-                  maskColor="rgba(2, 6, 23, 0.35)"
-                  nodeStrokeColor="#94a3b8"
+                  bgColor={GAS_GRAPH_THEME.minimapBg}
+                  maskColor={GAS_GRAPH_THEME.minimapMask}
+                  nodeStrokeColor="#71717a"
                   nodeColor={(node) => {
-                    if (node.data.role === 'event-entry') return '#fb7185';
-                    if (node.data.op === 'SwitchInt' || node.data.op === 'FsmState') return '#f59e0b';
+                    if (node.data.role === 'event-entry') return GAS_GRAPH_THEME.eventAccent;
+                    if (node.data.op === 'SwitchInt' || node.data.op === 'FsmState') return GAS_GRAPH_THEME.execLiveHot;
                     if (sugars[node.data.op as string]?.childArms || node.data.op === 'BtDecorator') return '#a78bfa';
-                    return '#38bdf8';
+                    if (isPureValueOp(String(node.data.op ?? ''))) return GAS_GRAPH_THEME.valueAccent;
+                    return GAS_GRAPH_THEME.dataLive;
                   }}
                 />
               </ReactFlow>
-              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-slate-800 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-400">
+              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-zinc-800 bg-zinc-950/80 px-2 py-1 text-[10px] text-zinc-400">
                 Middle-drag to pan · Left-drag to box-select · Right-click to add a node
               </div>
+              {(debugEnabled || rightRailCollapsed) ? (
+                <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-amber-900/40 bg-zinc-950/95 px-3 py-2 shadow-[0_-8px_24px_rgba(0,0,0,.45)]">
+                  <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                    <span>
+                      Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
+                        ?? debugMounts[0]?.executionBackend
+                        ?? 'Interpret'}
+                    </span>
+                    <span className="font-normal normal-case tracking-normal text-zinc-500">
+                      amber flow = control · value on wire/pin · heat ~2s
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <select
+                      value={debugEntryLabel}
+                      onChange={(event) => { setDebugEntryLabel(event.target.value); setDebugSince(0); setDebugEvents([]); }}
+                      className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[11px]"
+                    >
+                      <option value="">Select mounted entry</option>
+                      {debugMounts.map((mount) => (
+                        <option key={`${mount.graphName}:${mount.entryLabel}`} value={mount.entryLabel}>
+                          {mount.entryLabel} · {mount.event}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={() => void toggleDebug()} className="rounded bg-amber-700 px-2 py-1 font-semibold text-amber-50 hover:bg-amber-600">
+                      {debugEnabled ? 'Stop' : 'Watch'}
+                    </button>
+                  </div>
+                  <div className="mt-1 text-[10px] text-slate-400">{debugStatus}</div>
+                  {debugEnabled ? (
+                    <div className="mt-1 rounded border border-cyan-900/60 bg-cyan-950/40 px-2 py-1 text-[10px] leading-4 text-cyan-100/90">
+                      Framing entry <span className="font-mono text-cyan-50">{debugEntryLabel || '—'}</span>
+                      {' '}({watchFocus.nodeIds.size} nodes). Other chains are hidden.
+                      Play the game action that fires this entry — the framed path lights up.
+                    </div>
+                  ) : null}
+                  <div className="mt-1 max-h-16 overflow-auto rounded border border-slate-800 bg-slate-950 p-1.5 font-mono text-[10px]">
+                    {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-16).map((event) => (
+                      <div key={event.sequence} className={event.nodeId ? 'text-cyan-200' : 'text-slate-400'}>
+                        #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
+                        {event.controlPort ? ` →${event.controlPort}` : ''}
+                        {event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {paletteMenu ? (
                 <div
                   className="fixed z-50 w-72 rounded border border-slate-700 bg-slate-950/95 p-2 shadow-xl"
@@ -2162,6 +2379,16 @@ export const GasGraphEditorPage: React.FC = () => {
           )}
         </div>
 
+        {rightRailCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setRightRailCollapsed(false)}
+            className="flex min-h-0 flex-col items-center justify-start gap-2 border-l border-slate-800 bg-slate-950/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+            title="Show inspector"
+          >
+            <span className="[writing-mode:vertical-rl]">Inspector</span>
+          </button>
+        ) : (
         <aside className="flex min-h-0 flex-col border-l border-slate-800 bg-slate-900/80">
           <div className="border-b border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
             Inspector
@@ -2172,6 +2399,7 @@ export const GasGraphEditorPage: React.FC = () => {
                 {selectedData.role === 'event-entry' && selectedData.entry ? (
                   <EventEntryInspector
                     entry={selectedData.entry}
+                    eventSchemas={eventSchemas}
                     startOptions={nodes.filter((node) => node.data.role !== 'event-entry').map((node) => node.id)}
                     instanceOptions={mapInstances.map((instance) => instance.instanceId)}
                     variableOptions={declaredVariables.map((variable) => variable.name)}
@@ -2557,6 +2785,12 @@ export const GasGraphEditorPage: React.FC = () => {
             />
           ) : null}
 
+          {debugEnabled ? (
+            <div className="border-t border-slate-800 px-3 py-2 text-[10px] leading-4 text-slate-500">
+              Live Debug is docked under the canvas while Watching — keeps the node chain readable on a half screen.
+            </div>
+          ) : (
+            <>
           <div className="border-t border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-300">
             Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
               ?? debugMounts[0]?.executionBackend
@@ -2577,15 +2811,20 @@ export const GasGraphEditorPage: React.FC = () => {
               </button>
             </div>
             <div className="text-[10px] text-slate-400">{debugStatus}</div>
-            <div className="max-h-40 overflow-auto rounded border border-slate-800 bg-slate-950 p-2 font-mono text-[10px]">
-              {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-40).map((event) => (
-                <div key={event.sequence} className={event.nodeId ? 'text-amber-200' : 'text-slate-400'}>
-                  #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}{event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}
+            <div className="max-h-28 overflow-auto rounded border border-slate-800 bg-slate-950 p-2 font-mono text-[10px]">
+              {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-24).map((event) => (
+                <div key={event.sequence} className={event.nodeId ? 'text-cyan-200' : 'text-slate-400'}>
+                  #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
+                  {event.controlPort ? ` →${event.controlPort}` : ''}
+                  {event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}
                 </div>
               ))}
             </div>
           </div>
+            </>
+          )}
         </aside>
+        )}
       </div>
     </div>
   );

@@ -199,6 +199,7 @@ namespace Ludots.AgentBridge.Tools
                 ["steps"] = record.Steps,
                 ["nodeId"] = string.IsNullOrWhiteSpace(source.NodeId) ? null : source.NodeId,
                 ["op"] = string.IsNullOrWhiteSpace(source.Op) ? null : source.Op,
+                ["controlPort"] = string.IsNullOrWhiteSpace(source.ControlPort) ? null : source.ControlPort,
             };
 
             if (record.EventKind == GraphDebugTraceEvent.PinInt || record.EventKind == GraphDebugTraceEvent.PinBool)

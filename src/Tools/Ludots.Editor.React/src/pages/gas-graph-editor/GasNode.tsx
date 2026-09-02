@@ -1,5 +1,6 @@
 import React from 'react';
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { pickLiveValueLabel } from './liveVisualDebug';
 
 export type GasNodeViewEntry = {
   label: string;
@@ -60,6 +61,11 @@ export type GasNodeViewData = {
   };
   sugar?: { valueInputPorts: string[] };
   controlOutputPorts?: string[];
+  liveDebug?: {
+    intensity: number;
+    current: boolean;
+    pins: { pinIndex: number; value: string }[];
+  };
 };
 
 export function isPureValueOp(op: string): boolean {
@@ -134,159 +140,212 @@ function filterChips(entry?: GasNodeViewEntry): string[] {
   return chips;
 }
 
-function pinClass(kind: 'exec' | 'value' | 'list'): string {
-  if (kind === 'value') return 'text-violet-300';
-  if (kind === 'list') return 'text-emerald-300';
-  return 'text-sky-300';
+function pinKindClass(kind: 'exec' | 'value' | 'list'): string {
+  if (kind === 'value') return 'gas-pin-kind-value';
+  if (kind === 'list') return 'gas-pin-kind-list';
+  return 'gas-pin-kind-exec';
+}
+
+function liveShellClass(data: GasNodeViewData, selected: boolean): string {
+  const parts = ['gas-node'];
+  if (selected) parts.push('is-selected');
+  const live = data.liveDebug;
+  if (live?.current) parts.push('is-live-current');
+  else if (live && live.intensity > 0.66) parts.push('is-live-hot');
+  else if (live && live.intensity > 0) parts.push('is-live-trail');
+  return parts.join(' ');
+}
+
+function liveHeaderBadge(data: GasNodeViewData): React.ReactNode {
+  if (!data.liveDebug) return null;
+  if (data.liveDebug.current) return <span className="gas-live-badge">NOW</span>;
+  if (data.liveDebug.intensity > 0.66) return <span className="gas-live-badge gas-live-badge-hot">HOT</span>;
+  if (data.liveDebug.intensity > 0) return <span className="gas-live-badge gas-live-badge-trail">RUN</span>;
+  return null;
+}
+
+function PortLiveValue({ value }: { value: string | null }) {
+  if (!value) return null;
+  return <span className="gas-port-live-value">{value}</span>;
+}
+
+/** Extra pin chips only when values are not already shown beside ports. */
+function LivePinStrip({
+  pins,
+  shownOnPorts,
+}: {
+  pins: { pinIndex: number; value: string }[];
+  shownOnPorts: boolean;
+}) {
+  if (pins.length === 0 || shownOnPorts) return null;
+  return (
+    <div className="gas-live-pin-strip">
+      {pins.map((pin) => (
+        <span key={pin.pinIndex} className="gas-live-pin-chip">
+          [{pin.pinIndex}] {pin.value}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
   const isEvent = data.role === 'event-entry';
   const inputs = collectInputPorts(data);
   const outputs = outputPorts(data);
+  const livePins = data.liveDebug?.pins ?? [];
+  const primaryLive = pickLiveValueLabel(livePins, 'value');
 
   if (isEvent) {
     const params = data.schema?.parameters.filter((param) => param.type !== 'String') ?? [];
     return (
-      <div
-        className={`min-w-[220px] overflow-hidden rounded-md border shadow-lg ${
-          selected ? 'border-rose-200' : 'border-rose-800'
-        }`}
-      >
-        <div className="bg-rose-700 px-3 py-1.5">
-          <div className="text-[9px] font-bold uppercase tracking-[.18em] text-rose-100">Event</div>
-          <div className="text-sm font-semibold text-white">{data.entry?.event ?? 'Event'}</div>
+      <div className={`${liveShellClass(data, selected)} gas-node--event`}>
+        <div className="gas-node__header">
+          <div className="gas-node__eyebrow-row">
+            <div className="gas-node__eyebrow">Event</div>
+            {liveHeaderBadge(data)}
+          </div>
+          <div className="gas-node__title">{data.entry?.event ?? 'Event'}</div>
         </div>
-        <div className="relative bg-slate-950 px-3 py-2">
-          <div className="text-[11px] text-rose-100">{data.entry?.label}</div>
+        <div className="gas-node__body">
+          <div className="gas-node__caption">{data.entry?.label}</div>
           {filterChips(data.entry).length > 0 ? (
-            <div className="mt-1 flex flex-wrap gap-1">
+            <div className="gas-node__chips">
               {filterChips(data.entry).map((chip) => (
-                <span key={chip} className="rounded bg-rose-950 px-1 text-[9px] text-rose-100">{chip}</span>
+                <span key={chip} className="gas-node__chip">{chip}</span>
               ))}
             </div>
           ) : null}
-          <div className="mt-2 space-y-1">
-            <div className="flex h-5 items-center text-[10px] font-medium text-amber-200">
+          <div className="gas-node__ports gas-node__ports--stack">
+            <div className={`gas-port gas-port--out ${pinKindClass('exec')}`}>
               <Handle
                 id="owner"
                 type="source"
                 position={Position.Right}
-                className={`gas-pin gas-pin-right ${pinClass('exec')}`}
+                className={`gas-pin gas-pin-right ${pinKindClass('exec')}`}
               />
               owner (mount)
             </div>
-            <div className="flex h-5 items-center text-[10px] font-medium text-amber-200">
+            <div className={`gas-port gas-port--out ${pinKindClass('exec')}`}>
               <Handle
                 id="caster"
                 type="source"
                 position={Position.Right}
-                className={`gas-pin gas-pin-right ${pinClass('exec')}`}
+                className={`gas-pin gas-pin-right ${pinKindClass('exec')}`}
               />
               caster (event actor)
             </div>
             {params.map((param) => (
-              <div key={param.key} className="flex h-5 items-center text-[10px] font-medium text-violet-200">
+              <div key={param.key} className={`gas-port gas-port--out ${pinKindClass('value')}`}>
                 <Handle
                   id={`payload:${param.key}`}
                   type="source"
                   position={Position.Right}
-                  className={`gas-pin gas-pin-right ${pinClass('value')}`}
+                  className={`gas-pin gas-pin-right ${pinKindClass('value')}`}
                 />
                 {param.name}
-                <span className="ml-1 text-[8px] uppercase text-slate-500">{param.type}</span>
+                <span className="gas-port__type">{param.type}</span>
               </div>
             ))}
           </div>
-          <div className="mt-3 flex items-center justify-end text-[10px] font-medium text-sky-200">
+          <div className={`gas-port gas-port--out gas-port--then ${pinKindClass('exec')}`}>
             Then
             <Handle
               id="exec"
               type="source"
               position={Position.Right}
-              className={`gas-pin gas-pin-right ${pinClass('exec')}`}
+              className={`gas-pin gas-pin-right ${pinKindClass('exec')}`}
             />
           </div>
+          <LivePinStrip pins={livePins} shownOnPorts={false} />
         </div>
       </div>
     );
   }
 
   if (isPureValueOp(data.op)) {
+    const liveBeside = primaryLive;
     return (
-      <div
-        className={`min-w-[140px] overflow-hidden rounded-md border shadow-lg ${
-          selected ? 'border-violet-300' : 'border-violet-800'
-        }`}
-      >
-        <div className="bg-violet-800 px-3 py-1.5">
-          <div className="text-sm font-semibold text-white">{data.op}</div>
+      <div className={`${liveShellClass(data, selected)} gas-node--value`}>
+        <div className="gas-node__header">
+          <div className="gas-node__eyebrow-row">
+            <div className="gas-node__title">{data.op}</div>
+            {liveHeaderBadge(data)}
+          </div>
         </div>
-        <div className="relative bg-slate-950 px-3 py-2">
-          <div className="text-lg font-semibold tabular-nums text-violet-100">{literalText(data)}</div>
-          <div className="mt-2 flex items-center justify-end text-[10px] font-medium text-violet-200">
+        <div className="gas-node__body">
+          <div className="gas-node__literal">{literalText(data)}</div>
+          <div className={`gas-port gas-port--out ${pinKindClass('value')}`}>
             Value
+            <PortLiveValue value={liveBeside} />
             <Handle
               id="value"
               type="source"
               position={Position.Right}
-              className={`gas-pin gas-pin-right ${pinClass('value')}`}
+              className={`gas-pin gas-pin-right ${pinKindClass('value')}`}
             />
           </div>
+          <LivePinStrip pins={livePins} shownOnPorts={Boolean(liveBeside)} />
         </div>
       </div>
     );
   }
 
+  const valueOut = outputs.find((port) => port.kind === 'value' || port.kind === 'list');
+  const liveBeside = valueOut ? pickLiveValueLabel(livePins, valueOut.id) : null;
+
   return (
-    <div
-      className={`min-w-[210px] overflow-hidden rounded-md border shadow-lg ${
-        selected ? 'border-sky-300' : 'border-slate-600'
-      }`}
-    >
-      <div className="bg-slate-700 px-3 py-1.5">
-        <div className="text-sm font-semibold text-white">{data.op}</div>
+    <div className={`${liveShellClass(data, selected)} gas-node--op`}>
+      <div className="gas-node__header">
+        <div className="gas-node__eyebrow-row">
+          <div className="gas-node__title">{data.op}</div>
+          {liveHeaderBadge(data)}
+        </div>
         {authoredCaption(data) ? (
-          <div className="mt-0.5 truncate text-[10px] text-amber-200">{authoredCaption(data)}</div>
+          <div className="gas-node__caption gas-node__caption--accent">{authoredCaption(data)}</div>
         ) : null}
       </div>
-      <div className="grid grid-cols-2 gap-x-6 bg-slate-950 px-3 py-2">
-        <div className="space-y-1">
-          <div className="flex h-5 items-center text-[10px] font-medium text-sky-200">
+      <div className="gas-node__ports gas-node__ports--split">
+        <div className="gas-node__port-col">
+          <div className={`gas-port gas-port--in ${pinKindClass('exec')}`}>
             <Handle
               id="control-in"
               type="target"
               position={Position.Left}
-              className={`gas-pin gas-pin-left ${pinClass('exec')}`}
+              className={`gas-pin gas-pin-left ${pinKindClass('exec')}`}
             />
             Exec
           </div>
           {inputs.map((port) => (
-            <div key={port} className="flex h-5 items-center text-[10px] font-medium text-emerald-200">
+            <div key={port} className={`gas-port gas-port--in ${pinKindClass('list')}`}>
               <Handle
                 id={port}
                 type="target"
                 position={Position.Left}
-                className={`gas-pin gas-pin-left ${pinClass('list')}`}
+                className={`gas-pin gas-pin-left ${pinKindClass('list')}`}
               />
               {port}
             </div>
           ))}
         </div>
-        <div className="space-y-1">
+        <div className="gas-node__port-col gas-node__port-col--out">
           {outputs.map((port) => (
-            <div key={port.id} className={`flex h-5 items-center justify-end text-[10px] font-medium ${pinClass(port.kind)}`}>
+            <div key={port.id} className={`gas-port gas-port--out ${pinKindClass(port.kind)}`}>
               {port.label}
+              {(port.kind === 'value' || port.kind === 'list') ? (
+                <PortLiveValue value={liveBeside} />
+              ) : null}
               <Handle
                 id={port.id}
                 type="source"
                 position={Position.Right}
-                className={`gas-pin gas-pin-right ${pinClass(port.kind)}`}
+                className={`gas-pin gas-pin-right ${pinKindClass(port.kind)}`}
               />
             </div>
           ))}
         </div>
       </div>
+      <LivePinStrip pins={livePins} shownOnPorts={Boolean(liveBeside)} />
     </div>
   );
 }

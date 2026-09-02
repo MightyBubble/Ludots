@@ -65,7 +65,7 @@
    {
     "label": "on_teleport",
     "action": "CommandSourceAcquire",
-    "start": "tp_caster",
+    "start": "tp_px",
     "refire": "restart"
    }
   ],
@@ -480,6 +480,20 @@
    {
     "id": "kt_done",
     "op": "HaltReturnInt"
+   },
+   {
+    "id": "tp_px",
+    "op": "LoadEntryPayloadFloat",
+    "payloadKey": "MapTrigger.PointerScreenX"
+   },
+   {
+    "id": "tp_py",
+    "op": "LoadEntryPayloadFloat",
+    "payloadKey": "MapTrigger.PointerScreenY"
+   },
+   {
+    "id": "tp_ground",
+    "op": "ScreenPointToGround"
    },
    {
     "id": "tp_caster",
@@ -904,6 +918,21 @@
     "to": "kt_done"
    },
    {
+    "from": "tp_px",
+    "fromPort": "next",
+    "to": "tp_py"
+   },
+   {
+    "from": "tp_py",
+    "fromPort": "next",
+    "to": "tp_ground"
+   },
+   {
+    "from": "tp_ground",
+    "fromPort": "next",
+    "to": "tp_caster"
+   },
+   {
     "from": "tp_caster",
     "fromPort": "next",
     "to": "tp_x"
@@ -1164,6 +1193,18 @@
     "fromPort": "value",
     "to": "kt_done",
     "toPort": "value"
+   },
+   {
+    "from": "tp_px",
+    "fromPort": "value",
+    "to": "tp_ground",
+    "toPort": "a"
+   },
+   {
+    "from": "tp_py",
+    "fromPort": "value",
+    "to": "tp_ground",
+    "toPort": "b"
    },
    {
     "from": "tp_caster",

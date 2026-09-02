@@ -14,6 +14,7 @@
     <ProjectReference Include="..\..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
     <ProjectReference Include="..\..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
     <ProjectReference Include="..\..\..\Core\Ludots.Movement.Physics2DBridge\Ludots.Movement.Physics2DBridge.csproj" />
+    <ProjectReference Include="..\..\..\Graph\Ludots.Graph.Codegen\Ludots.Graph.Codegen.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
