@@ -734,6 +734,9 @@ export const StoryAuthoringPage: React.FC = () => {
         <Link to="/" className="text-emerald-400 hover:underline text-sm">
           ← 编辑器
         </Link>
+        <Link to="/timeline" className="text-fuchsia-300 hover:underline text-sm">
+          统一时间轴
+        </Link>
         <h1 className="text-xl text-amber-200">叙事配置</h1>
         <span className="text-xs text-zinc-500">台词 / 对话树 / 演出序列用表单；换肤只动 panelTheme + CSS</span>
       </div>

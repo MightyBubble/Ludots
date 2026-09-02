@@ -565,6 +565,103 @@ app.MapPut("/api/mods/{modId}/story/catalogs/{catalogId}", async (string modId, 
     }
 });
 
+app.MapGet("/api/mods/{modId}/timeline/catalogs", (string modId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    EditorRepo.ModContext ctx;
+    try { ctx = EditorRepo.CreateContext(repoRoot, modId); }
+    catch (Exception ex) { return Results.BadRequest(new { ok = false, error = ex.Message }); }
+
+    return Results.Ok(new { ok = true, catalogs = EditorRepo.ListTimelineCatalogs(ctx) });
+});
+
+app.MapGet("/api/mods/{modId}/timeline/file", (string modId, string relativePath) =>
+{
+    string repoRoot = FindAssetsRoot();
+    EditorRepo.ModContext ctx;
+    try { ctx = EditorRepo.CreateContext(repoRoot, modId); }
+    catch (Exception ex) { return Results.BadRequest(new { ok = false, error = ex.Message }); }
+
+    if (!EditorRepo.TryResolveWritableTimelinePath(ctx, relativePath, out string path, out string resolveError))
+    {
+        return Results.BadRequest(new { ok = false, error = resolveError });
+    }
+
+    if (!File.Exists(path))
+    {
+        return Results.NotFound(new { ok = false, error = $"Timeline file missing: {relativePath}", path });
+    }
+
+    string text = File.ReadAllText(path);
+    JsonNode? node;
+    try { node = JsonNode.Parse(text); }
+    catch (JsonException ex) { return Results.BadRequest(new { ok = false, error = ex.Message, path }); }
+
+    if (node is not JsonArray)
+    {
+        return Results.BadRequest(new { ok = false, error = "Timeline file must be a JSON array.", path });
+    }
+
+    return Results.Ok(new { ok = true, relativePath, path, items = node });
+});
+
+app.MapPut("/api/mods/{modId}/timeline/file", async (string modId, string relativePath, HttpRequest req) =>
+{
+    string repoRoot = FindAssetsRoot();
+    EditorRepo.ModContext ctx;
+    try { ctx = EditorRepo.CreateContext(repoRoot, modId); }
+    catch (Exception ex) { return Results.BadRequest(new { ok = false, error = ex.Message }); }
+
+    if (!EditorRepo.TryResolveWritableTimelinePath(ctx, relativePath, out string path, out string resolveError))
+    {
+        return Results.BadRequest(new { ok = false, error = resolveError });
+    }
+
+    using var reader = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await reader.ReadToEndAsync();
+    JsonNode? root;
+    try { root = JsonNode.Parse(string.IsNullOrWhiteSpace(body) ? "null" : body); }
+    catch (JsonException ex) { return Results.BadRequest(new { ok = false, error = $"Malformed JSON: {ex.Message}" }); }
+    if (root is not JsonObject payload || payload["items"] is null)
+    {
+        return Results.BadRequest(new { ok = false, error = "Body must be { items: <array> }." });
+    }
+
+    if (payload["items"] is not JsonArray items)
+    {
+        return Results.BadRequest(new { ok = false, error = "items must be a JSON array." });
+    }
+
+    for (int i = 0; i < items.Count; i++)
+    {
+        if (items[i] is not JsonObject row ||
+            row["id"]?.GetValue<string>() is not { Length: > 0 })
+        {
+            return Results.BadRequest(new { ok = false, error = $"items[{i}] must be an object with non-empty id." });
+        }
+    }
+
+    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    string previous = File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+    try
+    {
+        File.WriteAllText(
+            path,
+            items.ToJsonString(new JsonSerializerOptions { WriteIndented = true }),
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return Results.Ok(new { ok = true, relativePath, path });
+    }
+    catch (Exception ex)
+    {
+        if (!string.IsNullOrEmpty(previous))
+        {
+            File.WriteAllText(path, previous);
+        }
+
+        return Results.BadRequest(new { ok = false, error = ex.Message, path });
+    }
+});
+
 app.MapPost("/api/mods/{modId}/maps/{mapId}/boards", async (string modId, string mapId, HttpRequest req) =>
 {
     string repoRoot = FindAssetsRoot();
@@ -3512,6 +3609,111 @@ static class EditorRepo
         ["semantic_maps"] = "Presentation/semantic_maps.json",
         ["image_assets"] = "Presentation/image_assets.json",
     };
+
+    public sealed record TimelineCatalogSpec(string Id, string Context, string RelativePath, string? ShardDirectory);
+
+    public static readonly TimelineCatalogSpec[] TimelineCatalogs =
+    {
+        new("sequences", "sequencer", "Sequencer/sequences.json", null),
+        new("abilities", "ability-exec", "GAS/abilities.json", "GAS/abilities"),
+        new("presenters", "presenter-timer", "Presentation/presenters.json", "Presentation/presenters"),
+    };
+
+    public static bool TryResolveWritableTimelinePath(ModContext ctx, string relativePath, out string fullPath, out string error)
+    {
+        fullPath = string.Empty;
+        error = string.Empty;
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            error = "relativePath is required.";
+            return false;
+        }
+
+        string normalized = relativePath.Replace('\\', '/').TrimStart('/');
+        if (normalized.Contains("..", StringComparison.Ordinal) || Path.IsPathRooted(normalized))
+        {
+            error = "relativePath must stay inside the mod assets tree.";
+            return false;
+        }
+
+        if (!IsAllowedTimelineRelativePath(normalized))
+        {
+            error = $"relativePath '{normalized}' is outside the timeline catalog allow-list.";
+            return false;
+        }
+
+        fullPath = ResolveWritableStoryCatalogPath(ctx, normalized);
+        return true;
+    }
+
+    public static bool IsAllowedTimelineRelativePath(string relativePath)
+    {
+        foreach (TimelineCatalogSpec spec in TimelineCatalogs)
+        {
+            if (string.Equals(relativePath, spec.RelativePath, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (string.IsNullOrWhiteSpace(spec.ShardDirectory))
+            {
+                continue;
+            }
+
+            string prefix = spec.ShardDirectory.TrimEnd('/') + "/";
+            if (relativePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                && relativePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+                && relativePath.IndexOf('/', prefix.Length) < 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static List<object> ListTimelineCatalogs(ModContext ctx)
+    {
+        var catalogs = new List<object>();
+        foreach (TimelineCatalogSpec spec in TimelineCatalogs)
+        {
+            string mainPath = ResolveWritableStoryCatalogPath(ctx, spec.RelativePath);
+            catalogs.Add(new
+            {
+                id = spec.Id,
+                context = spec.Context,
+                relativePath = spec.RelativePath,
+                path = mainPath,
+                exists = File.Exists(mainPath),
+            });
+
+            if (string.IsNullOrWhiteSpace(spec.ShardDirectory))
+            {
+                continue;
+            }
+
+            string shardDir = ResolveWritableStoryCatalogPath(ctx, spec.ShardDirectory);
+            if (!Directory.Exists(shardDir))
+            {
+                continue;
+            }
+
+            foreach (string file in Directory.GetFiles(shardDir, "*.json", SearchOption.TopDirectoryOnly).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+            {
+                string relative = $"{spec.ShardDirectory}/{Path.GetFileName(file)}".Replace('\\', '/');
+                catalogs.Add(new
+                {
+                    id = $"{spec.Id}/{Path.GetFileNameWithoutExtension(file)}",
+                    context = spec.Context,
+                    relativePath = relative,
+                    path = file,
+                    exists = true,
+                });
+            }
+        }
+
+        return catalogs;
+    }
 
     public static string ResolveWritableStoryCatalogPath(ModContext ctx, string relativePath)
     {

@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "check": "tsc -b --noEmit && node scripts/validate-panel-templates.mjs",
+    "check": "tsc -b --noEmit && node scripts/validate-panel-templates.mjs && node --experimental-strip-types scripts/validate-timeline-adapters.mts",
     "validate:panel-templates": "node scripts/validate-panel-templates.mjs"
   },
   "dependencies": {
