@@ -5,12 +5,9 @@
     "entries": [
       {
         "label": "on_box_select_begin",
-        "event": "InputActionFired",
+        "action": "CaseE.BoxSelectBegin",
         "start": "read_press_px",
-        "refire": "restart",
-        "filters": {
-          "action": "CaseE.BoxSelectBegin"
-        }
+        "refire": "restart"
       }
     ],
     "nodes": [

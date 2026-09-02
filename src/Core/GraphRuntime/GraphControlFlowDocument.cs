@@ -26,6 +26,8 @@ namespace Ludots.Core.GraphRuntime
     {
         public string Label { get; set; } = string.Empty;
         public string Event { get; set; } = string.Empty;
+        /// <summary>Semantic input action id; mutually exclusive with <see cref="Event"/>.</summary>
+        public string Action { get; set; } = string.Empty;
         public string Start { get; set; } = string.Empty;
         public bool Once { get; set; }
         public string? Refire { get; set; }

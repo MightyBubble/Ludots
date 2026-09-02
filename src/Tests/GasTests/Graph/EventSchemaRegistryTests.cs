@@ -49,7 +49,7 @@ namespace Ludots.Tests.Gas.Graph
                 GameEvents.EntityAliveCountChanged.Value,
                 GameEvents.RegionEntered.Value,
                 GameEvents.RegionExited.Value,
-                GameEvents.InputActionFired.Value,
+                GameEvents.InputAction.Value,
             };
 
             foreach (string eventName in payloadBearing)
@@ -63,13 +63,13 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(died.Params[0].Type, Is.EqualTo(EventParamType.Entity));
             Assert.That(died.Params[1].Type, Is.EqualTo(EventParamType.Int));
 
-            Assert.That(registry.TryGet(GameEvents.InputActionFired.Value, out EventSchema input), Is.True);
-            EventParamSchema target = input.Params.Single(p => p.Name == "targetEntity");
-            Assert.That(target.Optional, Is.True, "InputActionFired only carries targetEntity when an entity was picked.");
+            Assert.That(registry.TryGet(GameEvents.InputAction.Value, out EventSchema input), Is.True);
+            Assert.That(input.Params.Select(p => p.Name).ToArray(),
+                Is.EqualTo(new[] { "rep", "action", "pointerScreenX", "pointerScreenY", "modifiers" }));
             EventParamSchema pointerX = input.Params.Single(p => p.Name == "pointerScreenX");
             EventParamSchema pointerY = input.Params.Single(p => p.Name == "pointerScreenY");
-            Assert.That(pointerX.Optional, Is.False, "pointerScreenX is a required fact of every InputActionFired.");
-            Assert.That(pointerY.Optional, Is.False, "pointerScreenY is a required fact of every InputActionFired.");
+            Assert.That(pointerX.Optional, Is.False, "pointerScreenX is a required fact of every InputAction payload.");
+            Assert.That(pointerY.Optional, Is.False, "pointerScreenY is a required fact of every InputAction payload.");
             Assert.That(pointerX.Type, Is.EqualTo(EventParamType.Float));
             Assert.That(pointerY.Type, Is.EqualTo(EventParamType.Float));
         }

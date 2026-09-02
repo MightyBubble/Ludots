@@ -27,7 +27,6 @@ public sealed class EntryPayloadNodeDriver : IGraphOpsNodeDriver
     private const float PointerScreenY = 200f;
     private const string StagedInputAction = "GraphOps.Probe";
     private const int StagedModifiers = InputActionFiredModifiers.Queue;
-    private const int StagedContextId = 0;
     private const float SourceMarkRadiusCm = 90f;
 
     private static readonly DebugDrawColor SourceMark = DebugDrawColor.Cyan;
@@ -158,13 +157,12 @@ public sealed class EntryPayloadNodeDriver : IGraphOpsNodeDriver
                 firing.Set(MapTriggerEventPayloadKeys.Count, AliveCount);
                 firing.Set(MapTriggerEventPayloadKeys.Delta, AliveDelta);
                 break;
-            case "InputActionFired":
+            case "InputAction":
                 firing.Set(MapTriggerEventPayloadKeys.Rep, ctx.Caster);
                 firing.Set(MapTriggerEventPayloadKeys.Action, StagedInputAction);
                 firing.Set(MapTriggerEventPayloadKeys.PointerScreenX, PointerScreenX);
                 firing.Set(MapTriggerEventPayloadKeys.PointerScreenY, PointerScreenY);
                 firing.Set(MapTriggerEventPayloadKeys.Modifiers, StagedModifiers);
-                firing.Set(MapTriggerEventPayloadKeys.ContextId, StagedContextId);
                 break;
             default:
                 throw new InvalidOperationException(

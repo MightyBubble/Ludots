@@ -64,12 +64,9 @@
    },
    {
     "label": "on_teleport",
-    "event": "InputActionFired",
+    "action": "CommandSourceAcquire",
     "start": "tp_caster",
-    "refire": "restart",
-    "filters": {
-     "action": "CommandSourceAcquire"
-    }
+    "refire": "restart"
    }
   ],
   "nodes": [

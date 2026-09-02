@@ -81,7 +81,14 @@ namespace Ludots.Core.Scripting
         /// captured at destroy time. Payload: SourceEntity, SourceTeamId.
         /// </summary>
         public static readonly EventKey EntityDied = new EventKey("EntityDied");
-        public static readonly EventKey InputActionFired = new EventKey("InputActionFired");
+
+        /// <summary>
+        /// Map-scoped payload-schema name for TriggerGraph entries that bind a semantic
+        /// input action directly. Action-bound mounts do not subscribe on the event bus
+        /// under this key; the binding system stamps the shared InputAction payload and
+        /// dispatches the mount.
+        /// </summary>
+        public static readonly EventKey InputAction = new EventKey("InputAction");
 
         /// <summary>
         /// Map-scoped: fired at think-wave granularity when a team's alive-entity count
@@ -133,7 +140,7 @@ namespace Ludots.Core.Scripting
                 eventName == EntitySpawned.Value ||
                 eventName == EntityDied.Value ||
                 eventName == EntityAliveCountChanged.Value ||
-                eventName == InputActionFired.Value ||
+                eventName == InputAction.Value ||
                 eventName == RegionEntered.Value ||
                 eventName == RegionExited.Value ||
                 eventName == MapVariableChanged.Value ||

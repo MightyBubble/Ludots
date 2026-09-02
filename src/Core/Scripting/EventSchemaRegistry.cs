@@ -108,15 +108,13 @@ namespace Ludots.Core.Scripting
                 new("regionId", EventParamType.String, MapTriggerEventPayloadKeys.RegionId),
                 new("fieldLayer", EventParamType.String, MapTriggerEventPayloadKeys.FieldLayer),
             }),
-            new(GameEvents.InputActionFired.Value, EventScope.Map, new EventParamSchema[]
+            new(GameEvents.InputAction.Value, EventScope.Map, new EventParamSchema[]
             {
                 new("rep", EventParamType.Entity, MapTriggerEventPayloadKeys.Rep),
                 new("action", EventParamType.String, MapTriggerEventPayloadKeys.Action),
                 new("pointerScreenX", EventParamType.Float, MapTriggerEventPayloadKeys.PointerScreenX),
                 new("pointerScreenY", EventParamType.Float, MapTriggerEventPayloadKeys.PointerScreenY),
                 new("modifiers", EventParamType.Int, MapTriggerEventPayloadKeys.Modifiers),
-                new("contextId", EventParamType.Int, MapTriggerEventPayloadKeys.ContextId),
-                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity, Optional: true),
             }),
             new(GameEvents.MapVariableChanged.Value, EventScope.Map, new EventParamSchema[]
             {

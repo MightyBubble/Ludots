@@ -11,12 +11,9 @@
       },
       {
         "label": "on_cycle_mapmode",
-        "event": "InputActionFired",
+        "action": "FieldHierarchyQuery.CycleMapMode",
         "start": "mode_scope",
-        "refire": "restart",
-        "filters": {
-          "action": "FieldHierarchyQuery.CycleMapMode"
-        }
+        "refire": "restart"
       }
     ],
     "nodes": [

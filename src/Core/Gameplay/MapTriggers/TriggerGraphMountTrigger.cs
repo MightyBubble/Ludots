@@ -130,10 +130,19 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 throw new ArgumentException("Graph name is required.", nameof(graphName));
             }
 
-            if (entry.EventName == null || string.IsNullOrWhiteSpace(entry.EventName))
+            if (string.IsNullOrWhiteSpace(entry.ActionId))
+            {
+                if (entry.EventName == null || string.IsNullOrWhiteSpace(entry.EventName))
+                {
+                    throw new ArgumentException(
+                        $"TriggerGraph '{graphName}' entry '{entry.Label}' requires a non-empty event name.",
+                        nameof(entry));
+                }
+            }
+            else if (string.IsNullOrWhiteSpace(entry.EventName))
             {
                 throw new ArgumentException(
-                    $"TriggerGraph '{graphName}' entry '{entry.Label}' requires a non-empty event name.",
+                    $"TriggerGraph '{graphName}' action-bound entry '{entry.Label}' requires payload schema event name '{TriggerGraphEntry.InputActionSchemaEventName}'.",
                     nameof(entry));
             }
 
@@ -187,13 +196,18 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _modIdFilter = modIdFilter;
             _refirePolicy = refirePolicy;
             _subscriptionScope = subscriptionScope;
-            _entryIsResumeEvent = new EventKey(entry.EventName) == ResumeEventKey;
+            _entryIsResumeEvent = !entry.IsActionBound && new EventKey(entry.EventName) == ResumeEventKey;
             _runCaster = scope;
-            EventKey = new EventKey(entry.EventName);
+            // Action-bound mounts dispatch through TriggerGraphActionBindingSystem, not the
+            // event bus — keep EventKey empty so registration skips the event table.
+            EventKey = entry.IsActionBound ? default : new EventKey(entry.EventName);
             Priority = entry.Priority;
         }
 
         public override string Name => $"TriggerGraph:{_graphName}:{_entry.Label}";
+
+        /// <summary>Semantic action id when this mount binds an input action; empty otherwise.</summary>
+        public string ActionId => _entry.ActionId;
 
         /// <summary>
         /// Which dispatch table this entry's subscription routes to (#1123): derived from

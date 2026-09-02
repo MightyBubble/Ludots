@@ -20,7 +20,7 @@ namespace Ludots.Tests.GAS.Production;
 /// <summary>
 /// Case E (#1398 D6) 框选全链 headless 验收（忠实形态），对照 tmp/case-e-config-report.html
 /// 的七步：01 进图出生 / 02 模板 initialInteractionContext 挂 Instance / 03 Profile triggers 门控 /
-/// 04 InputActionFired 触发衍生 context（框起角=press 屏幕像素 + 候选集世界侧刷新）/
+/// 04 语义动作直绑触发衍生 context（框起角=press 屏幕像素 + 候选集世界侧刷新）/
 /// 05 presenter 观察 ContextActivated + 集合变化高亮 / 06 框结束对「可框选单位」候选集
 /// （case_e.selectable 集合 key）做屏幕矩形命中（ScreenRegionToEntities）+ 修饰键语义
 /// 透传事件 key 写 selected 集合。引擎零改动，全部行为来自 CaseESelectionMod 的配置资产。
@@ -82,7 +82,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(0),
             "框指示 presenter 在按下前不存在");
 
-        // ── 04：按下（BoxSelectBegin raw 边沿）→ InputActionFired → 激活衍生「正在框选」context ──
+        // ── 04：按下（BoxSelectBegin）→ 图入口 action 直绑 → 激活衍生「正在框选」context ──
         // 窗口像素 ↔ 世界 cm 1:1 伪件下，marines 1-4 屏幕位置 = (-900,0)/(-300,0)/(300,0)/(900,0)。
         PressAt(engine, backend, new Vector2(-1200f, -100f));
         TickUntil(engine, 20, () =>
@@ -210,7 +210,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     /// <summary>
     /// 完整一次框选：按下 → 拖拽行程 → 抬起（框矩形 = press..release 指针窗口像素）。
     /// 修饰键动作注入是单帧脉冲，pacemaker 又会跨帧攒逻辑 tick，逐帧重注入保证
-    /// InputActionFired 冻结快照读到的 IsDown 在整个释放窗口内成立。
+    /// 输入动作冻结快照读到的 IsDown 在整个释放窗口内成立。
     /// </summary>
     private static void DragBox(
         GameEngine engine,

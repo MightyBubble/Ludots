@@ -314,10 +314,21 @@ namespace Ludots.Core.GraphRuntime
                             $"Graph program id {graphId} has duplicate TriggerGraph entry label '{label}'.");
                     }
 
-                    if (string.IsNullOrWhiteSpace(entries[i].EventName))
+                    if (string.IsNullOrWhiteSpace(entries[i].ActionId))
+                    {
+                        if (string.IsNullOrWhiteSpace(entries[i].EventName))
+                        {
+                            throw new InvalidOperationException(
+                                $"Graph program id {graphId} TriggerGraph entry '{label}' requires a non-empty event name.");
+                        }
+                    }
+                    else if (!string.Equals(
+                                 entries[i].EventName,
+                                 TriggerGraphEntry.InputActionSchemaEventName,
+                                 StringComparison.Ordinal))
                     {
                         throw new InvalidOperationException(
-                            $"Graph program id {graphId} TriggerGraph entry '{label}' requires a non-empty event name.");
+                            $"Graph program id {graphId} TriggerGraph action-bound entry '{label}' must use event name '{TriggerGraphEntry.InputActionSchemaEventName}' (got '{entries[i].EventName}').");
                     }
 
                     int startPc = entries[i].StartPc;
@@ -663,6 +674,14 @@ namespace Ludots.Core.GraphRuntime
 
         public bool TryGetRegistration(int graphId, out GraphProgramRegistration registration)
             => _programs.TryGetValue(graphId, out registration);
+
+        /// <summary>Copy of currently registered graph ids (stable snapshot for one-shot scans).</summary>
+        public int[] GetRegisteredGraphIds()
+        {
+            var ids = new int[_programs.Count];
+            _programs.Keys.CopyTo(ids, 0);
+            return ids;
+        }
 
         public GraphKind RequireKind(int graphId, GraphKind expected)
         {

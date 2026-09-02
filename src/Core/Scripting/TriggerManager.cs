@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
 
 namespace Ludots.Core.Scripting
@@ -74,6 +75,17 @@ namespace Ludots.Core.Scripting
 
         private readonly List<TriggerError> _errors = new List<TriggerError>();
         private readonly object _errorsLock = new object();
+        private TriggerGraphActionBindingIndex? _actionBindings;
+
+        /// <summary>
+        /// Optional index of action-bound TriggerGraph mounts. When set, Register/Remove
+        /// of map triggers keeps the index in sync with action-bound mounts.
+        /// </summary>
+        public TriggerGraphActionBindingIndex? ActionBindings
+        {
+            get => _actionBindings;
+            set => _actionBindings = value;
+        }
 
         public IReadOnlyList<TriggerError> Errors
         {
@@ -220,6 +232,12 @@ namespace Ludots.Core.Scripting
 
             for (int i = 0; i < triggers.Count; i++)
             {
+                if (triggers[i] is TriggerGraphMountTrigger actionMount &&
+                    !string.IsNullOrWhiteSpace(actionMount.ActionId))
+                {
+                    _actionBindings?.Remove(actionMount);
+                }
+
                 list.Remove(triggers[i]);
                 RemoveMapEventTrigger(mapId, triggers[i]);
                 UnregisterTrigger(triggers[i]);
@@ -233,6 +251,11 @@ namespace Ludots.Core.Scripting
                 RegisterTrigger(triggers[i]);
                 list.Add(triggers[i]);
                 AddMapEventTrigger(mapId, triggers[i]);
+                if (triggers[i] is TriggerGraphMountTrigger actionMount &&
+                    !string.IsNullOrWhiteSpace(actionMount.ActionId))
+                {
+                    _actionBindings?.Add(actionMount);
+                }
             }
         }
 
@@ -796,6 +819,22 @@ private async Task ObserveTriggerExecutionAsync(Trigger trigger, EventKey eventK
             {
                 RecordTriggerError(eventKey, trigger, ex);
             }
+        }
+
+        /// <summary>
+        /// Dispatches one already-mounted trigger outside the event bus (action-bound
+        /// TriggerGraph entries). Uses the same CheckConditions / ExecuteAsync / error
+        /// recording path as map-event fire.
+        /// </summary>
+        public void DispatchMountedTrigger(Trigger trigger, ScriptContext context)
+        {
+            ArgumentNullException.ThrowIfNull(trigger);
+            ArgumentNullException.ThrowIfNull(context);
+            EventKey key = string.IsNullOrEmpty(trigger.EventKey.Value)
+                ? GameEvents.InputAction
+                : trigger.EventKey;
+            EventSchemas?.ValidateFirePayload(key, context);
+            FireTrigger(trigger, key, context);
         }
 
         /// <summary>

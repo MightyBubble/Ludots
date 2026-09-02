@@ -25,20 +25,18 @@ namespace Ludots.Core.Scripting
         public const string EffectId = "MapTrigger.EffectId";              // int
         public const string Moment = "MapTrigger.Moment";                  // string
         public const string ModId = "ModId";                               // string
-        // InputActionFired contract (input/command chain): the acting
-        // representative entity, the semantic action id, the pointer's window-pixel
-        // position at the fired edge (press edge -> press point, release edge ->
-        // release point; window pixels so per-binding routing stays possible), the
-        // held semantic-modifier bitmask (InputActionFiredModifiers), and the active
-        // interaction context profile id (0 = none installed). Input events carry
-        // pointer facts only — ground projection is a graph-side derivation through
-        // ScreenPointToGround on the same LogicView ray.
+        // InputAction contract (input/command chain): the acting representative entity,
+        // the semantic action id, the pointer's window-pixel position at the fired moment
+        // (press -> press point, release -> release point; window pixels so per-binding
+        // routing stays possible), and the held semantic-modifier bitmask
+        // (InputActionFiredModifiers). Input events carry pointer facts only — ground
+        // projection is a graph-side derivation through ScreenPointToGround on the same
+        // LogicView ray.
         public const string Rep = "MapTrigger.Rep";                              // Entity
         public const string Action = "MapTrigger.Action";                        // string
         public const string PointerScreenX = "MapTrigger.PointerScreenX";        // float (window px)
         public const string PointerScreenY = "MapTrigger.PointerScreenY";        // float (window px)
         public const string Modifiers = "MapTrigger.Modifiers";                  // int (bitmask)
-        public const string ContextId = "MapTrigger.ContextId";                  // int (registry id)
         public const string SourceMapId = "MapTrigger.SourceMapId";              // MapId (cross-map/global dispatch transport metadata)
         // Collection pass-through contract (#1398 S2b gap 9, Case E 06): DispatchCollectionEvent
         // fires a schema-less map event carrying the final entity set plus the set semantics;

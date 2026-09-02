@@ -20,7 +20,7 @@ namespace Ludots.Tests.Gas.Graph;
 /// logic ticks (jittered frame delta, accumulator catch-up bursts) while a derived context is
 /// held for a long drag, with periodic UI-capture windows like the pointer crossing interactive
 /// UI mid-drag. A held button must not re-report press edges after blocked frames (duplicate
-/// InputActionFired re-executes context graphs), interaction judges must keep their gesture
+/// action-bound TriggerGraph re-executes context graphs), interaction judges must keep their gesture
 /// anchor across blocked frames (long drags must not misjudge as taps), and the profile's
 /// triggers must mount exactly once per context activation.
 /// </summary>

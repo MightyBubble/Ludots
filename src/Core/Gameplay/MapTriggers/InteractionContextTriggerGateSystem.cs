@@ -24,10 +24,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// <para>
     /// Mounts are entity-domain TriggerGraph mounts (scope = the context subject) registered
     /// through the map trigger tables, so dead subjects go inert and map unload reclaims
-    /// them wholesale; this system's tracking follows via <see cref="DropMap"/>. Input events
-    /// carrying no entity payload (InputActionFired seeds <c>MapTrigger.Rep</c>, not
-    /// SourceEntity) match entity-domain mounts unscoped; per-rep disambiguation is graph
-    /// data (the payload carries the active context id).
+    /// them wholesale; this system's tracking follows via <see cref="DropMap"/>. Input-action
+    /// payloads seed <c>MapTrigger.Rep</c> (not SourceEntity) from the mount subject; entity-domain
+    /// mounts therefore match unscoped on the bus path, while action-bound mounts are dispatched
+    /// per-subject by the action binding system.
     /// </para>
     /// </summary>
     public sealed class InteractionContextTriggerGateSystem : BaseSystem<World, float>

@@ -8,7 +8,8 @@
     {
       "id": "CaseE.BoxSelectEnd",
       "name": "CaseE_BoxSelectEnd",
-      "type": "Button"
+      "type": "Button",
+      "firesOn": "release"
     }
   ],
   "contexts": [

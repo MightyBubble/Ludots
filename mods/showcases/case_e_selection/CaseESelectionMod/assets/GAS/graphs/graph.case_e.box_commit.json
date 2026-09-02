@@ -5,12 +5,9 @@
     "entries": [
       {
         "label": "on_box_select_release",
-        "event": "InputActionFired",
+        "action": "CaseE.BoxSelectEnd",
         "start": "read_modifiers",
-        "refire": "restart",
-        "filters": {
-          "action": "CaseE.BoxSelectEnd"
-        }
+        "refire": "restart"
       }
     ],
     "nodes": [
