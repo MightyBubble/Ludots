@@ -1,47 +1,46 @@
 ## GAS Composition Gate — Self Review
 
-- **Task / Issue**: #1398 Case E 宪法 05 — boxing context 下每帧命中 query → 预览集合成员变化 → presenter 高亮
+- **Task / Issue**: #1398 Case E — 命中图自己写 hover，去掉 GraphReturnWriter 代写偷鸡
 - **Date**: 2026-09-02
 - **Agent / Author**: cursor cloud agent
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A**（Query graph 连线 + 与现有 `triggers[]` 同构的 profile 挂载字段 `continuousQuery.graph`）
+新变体主要交付物是（A/B/C/D）: A（op 组合：既有 DispatchCollectionEvent + 既有 continuous tick 调度）
 
-结论: **PASS**
+结论: PASS
 
-一句话理由: 命中算法落在 Query graph（`QueryFromCollection` + `ScreenRegionToEntities`）；profile 只声明「本 context 活着时每帧跑哪张 Query」，与已有 `triggers[]` 挂载同型，不是 inherit/placement enum 或行为开关 DSL。
+一句话理由: 预览集写入改回图内 DispatchCollectionEvent；调度只 Execute，不再 GraphReturnWriter 物化 outputs。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| 屏幕矩形命中 | 2 | Query graph op 组合 |
-| 候选集入参 | 2 | `QueryFromCollection(case_e.selectable)` |
-| 预览集合物化 | 2 | GraphReturnWriter → EntityCollectionStore.Replace |
-| 成员变化 → 高亮 | 2 | EntityCollectionPresentationEventSystem + presenter rules |
-| context 持续调度 | 2/基建 | InteractionContextContinuousQuerySystem（挂 profile.continuousQuery） |
+| 每 tick 调命中图 | 2 | InteractionContextContinuousQuerySystem → GraphReturnWriter.Execute |
+| 写 hover 集 | 1 | graph.case_e.box_hit · DispatchCollectionEvent |
+| 成员变化 → 黄环 | 2 | EventKeyedCollectionWriter + EntityCollectionPresentationEventSystem + presenter rules |
+| 离开清空 hover | 2 | ContinuousQuerySystem 扫图内 DispatchCollectionEvent 的 collection key 后 Replace 空 |
 
 ### 3. Reuse list
 
-- Handlers: GraphReturnWriter、GasGraphRuntimeApi、ScreenRegionToEntities / QueryFromCollection
-- Queues / Systems: EntityCollectionPresentationEventSystem、InputActionAttributeBindingSystem、AbilityAim hover Replace 模式
-- Resolvers / Registries: InteractionContextProfileRegistry、GraphProgramRegistry、GraphOutputSchemaRegistry、EntityCollectionStore
-- Existing presets / graphs: Case E box_commit 命中链；entity_query_tactics Query+outputs
+- Handlers: DispatchCollectionEvent、ScreenRegionToEntities、QueryFromCollection、EventKeyedCollectionWriter
+- Queues / Systems: InteractionContextContinuousQuerySystem、EntityCollectionPresentationEventSystem
+- Resolvers / Registries: InteractionContextProfileRegistry（校验图必须含 DispatchCollectionEvent）
+- Existing presets / graphs: graph.case_e.box_hit、collection_event_writers、custom_events
 
 ### 4. New Layer 0 ops (if any)
 
-N/A
+N/A（仅放宽 DispatchCollectionEvent / ConstInt 对 Query 的可创作白名单）
 
 ### 5. Transaction boundary
 
-无跨实体事务；预览 Replace 与 commit 写 selected 分属不同集合 key，失败即抛（NO fallback）。
+必须原子 rollback 的步骤: 无（每 tick Replace 语义写 hover；失败关闭）
 
 ### 6. Config SSOT
 
-行为配置落在: Query graph `graph.case_e.box_hit` + profile `continuousQuery` + presenter rules（`case_e.box_hover`）
+行为配置落在: graph.case_e.box_hit + Events/custom_events + Input/collection_event_writers + interaction_context_profiles.continuousQuery.graph
 
-是否新增 JSON schema: **YES** — `continuousQuery.graph` 与 `triggers[]` 同为「context 挂载图引用」，无法用单张 graph 表达「每帧调度」（TriggerGraph 无 Held/EveryFrame）；调度是 context 生命周期基建，挂载点必须在 profile。
+是否新增 JSON schema: NO — 复用 DispatchCollectionEvent；去掉对 outputs[] 的 continuous 依赖
 
 ### 7. Red flag scan
 
@@ -52,6 +51,4 @@ N/A
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: **graph 连线**（换候选 key / 矩形来源属性 / 预览 collectionKey 于 Query outputs）
-
-若选了 Core enum → FAIL — 未选。
+「下一个 Mod 变体」将修改: graph 连线

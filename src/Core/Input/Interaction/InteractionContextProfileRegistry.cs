@@ -11,10 +11,10 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// Reference catalogs the profile install chain resolves <c>bindings[]</c>,
     /// <c>triggers[]</c>, and <c>continuousQuery</c> against (#1398 S2b / Case E §05): the graph
-    /// program registry for trigger mounts and continuous Query mounts, optional output schemas
-    /// for continuous Query EntityCollection outputs, and the input action id space for semantic
-    /// action bindings. A profile declaring any of those fields fails fast at install when its
-    /// catalog is absent or incomplete.
+    /// program registry for trigger mounts and continuous Query mounts (graphs that
+    /// DispatchCollectionEvent their preview collection), and the input action id space for
+    /// semantic action bindings. A profile declaring any of those fields fails fast at install
+    /// when its catalog is absent or incomplete.
     /// </summary>
     public sealed class InteractionContextProfileReferenceCatalog
     {
@@ -294,44 +294,30 @@ namespace Ludots.Core.Input.Interaction
                     $"Interaction context profile '{definition.Id}' declares continuousQuery but no reference catalog was provided at install; continuous Query mounts require the graph program registry.");
             }
 
-            if (referenceCatalog.OutputSchemas == null)
-            {
-                throw new InvalidOperationException(
-                    $"Interaction context profile '{definition.Id}' declares continuousQuery but the reference catalog has no GraphOutputSchemaRegistry; continuous Query mounts require EntityCollection outputs.");
-            }
-
             string graphName = continuousQuery.Graph;
             int graphId = GraphIdRegistry.GetId(graphName);
             if (graphId == GraphIdRegistry.InvalidId ||
-                !referenceCatalog.Programs.TryGetProgram(graphId, out _))
+                !referenceCatalog.Programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
             {
                 throw new InvalidOperationException(
                     $"Interaction context profile '{definition.Id}' continuousQuery.graph references unknown graph '{graphName}'.");
             }
 
             referenceCatalog.Programs.RequireKind(graphId, GraphKind.Query);
-            GraphOutputSchema schema = referenceCatalog.OutputSchemas.Get(graphId);
-            if (!schema.HasBindings)
+            bool writesCollection = false;
+            for (int i = 0; i < program.Length; i++)
             {
-                throw new InvalidOperationException(
-                    $"Interaction context profile '{definition.Id}' continuousQuery.graph '{graphName}' has no output schema; continuous Query mounts require at least one EntityCollection output.");
-            }
-
-            bool hasEntityCollection = false;
-            GraphOutputBinding[] bindings = schema.Bindings;
-            for (int i = 0; i < bindings.Length; i++)
-            {
-                if (GraphOutputDestinationKinds.IsEntityBagDestination(bindings[i].Destination))
+                if (program[i].Op == (ushort)GraphNodeOp.DispatchCollectionEvent)
                 {
-                    hasEntityCollection = true;
+                    writesCollection = true;
                     break;
                 }
             }
 
-            if (!hasEntityCollection)
+            if (!writesCollection)
             {
                 throw new InvalidOperationException(
-                    $"Interaction context profile '{definition.Id}' continuousQuery.graph '{graphName}' must declare at least one EntityCollection output for the preview membership surface.");
+                    $"Interaction context profile '{definition.Id}' continuousQuery.graph '{graphName}' must DispatchCollectionEvent to write its preview collection; GraphReturnWriter output materialization is not the continuous-tick write path.");
             }
 
             return graphId;

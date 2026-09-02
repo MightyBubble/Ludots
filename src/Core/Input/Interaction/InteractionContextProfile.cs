@@ -63,11 +63,10 @@ namespace Ludots.Core.Input.Interaction
         public List<InteractionContextTriggerMount>? Triggers { get; set; }
 
         /// <summary>
-        /// Optional continuous Query while this context is active (#1398 Case E §05): every
-        /// simulation tick the continuous-query system runs the named Query graph for the
-        /// context subject and materializes its EntityCollection outputs (preview hit set).
-        /// Absent = no per-frame query. Same mount-wiring shape as <see cref="Triggers"/> —
-        /// behavior lives in the Query graph, not in profile enums.
+    /// Optional continuous graph while this context is active (#1398 Case E §05): every
+    /// simulation tick the continuous system runs the named Query graph for the context
+    /// subject; the graph itself must DispatchCollectionEvent to write its preview collection.
+    /// Absent = no per-tick graph. Scheduler invokes only — it does not GraphReturnWriter-steal.
         /// </summary>
         public InteractionContextContinuousQuery? ContinuousQuery { get; set; }
     }

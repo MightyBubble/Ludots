@@ -36,6 +36,26 @@
       {
         "id": "rect_hits",
         "op": "ScreenRegionToEntities"
+      },
+      {
+        "id": "op_replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write_hover",
+        "op": "DispatchCollectionEvent",
+        "event": "gameplay.case_e.box_hover_refreshed",
+        "collectionKey": "case_e.box_hover"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
@@ -44,25 +64,20 @@
       { "from": "press_py", "fromPort": "next", "to": "pointer_x" },
       { "from": "pointer_x", "fromPort": "next", "to": "pointer_y" },
       { "from": "pointer_y", "fromPort": "next", "to": "roster" },
-      { "from": "roster", "fromPort": "next", "to": "rect_hits" }
+      { "from": "roster", "fromPort": "next", "to": "rect_hits" },
+      { "from": "rect_hits", "fromPort": "next", "to": "op_replace" },
+      { "from": "op_replace", "fromPort": "next", "to": "write_hover" },
+      { "from": "write_hover", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
     ],
     "valueEdges": [
       { "from": "rep", "fromPort": "value", "to": "roster", "toPort": "source" },
       { "from": "press_px", "fromPort": "value", "to": "rect_hits", "toPort": "a" },
       { "from": "press_py", "fromPort": "value", "to": "rect_hits", "toPort": "b" },
       { "from": "pointer_x", "fromPort": "value", "to": "rect_hits", "toPort": "c" },
-      { "from": "pointer_y", "fromPort": "value", "to": "rect_hits", "toPort": "max" }
-    ],
-    "outputs": [
-      {
-        "id": "boxHover",
-        "destination": "EntityCollection",
-        "type": "TargetList",
-        "collectionKey": "case_e.box_hover",
-        "role": "AcquisitionPreview",
-        "title": "Box hover",
-        "summary": "Drag-time screen-rect hits over case_e.selectable; cleared when boxing context ends."
-      }
+      { "from": "pointer_y", "fromPort": "value", "to": "rect_hits", "toPort": "max" },
+      { "from": "op_replace", "fromPort": "value", "to": "write_hover", "toPort": "value" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
     ]
   }
 ]

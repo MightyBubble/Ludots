@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -11,13 +12,12 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
-    /// Context continuous Query (#1398 Case E §05): every tick, for each subject carrying an
-    /// active interaction context whose profile declares <c>continuousQuery</c>, runs that Query
-    /// graph through <see cref="GraphReturnWriter"/> so EntityCollection outputs (preview hit
-    /// sets) stay in sync with live rect/attrs. When a subject leaves every continuous-query
-    /// context, clears those collection outputs so membership events tear down preview
-    /// highlights. Pattern mirrors ability-aim / command-hover every-frame Replace — membership
-    /// events fire only on set change via <c>EntityCollectionPresentationEventSystem</c>.
+    /// Context continuous tick (#1398 Case E §05): every tick, for each subject carrying an
+    /// active interaction context whose profile declares <c>continuousQuery</c>, runs that
+    /// graph for its authored side effects (DispatchCollectionEvent writes the hover set).
+    /// Does not GraphReturnWriter-materialize outputs — the graph owns the write. When a
+    /// subject leaves every continuous-query context, clears collection keys the graph
+    /// dispatches to so membership events tear down preview highlights.
     /// </summary>
     public sealed class InteractionContextContinuousQuerySystem : BaseSystem<World, float>
     {
@@ -26,7 +26,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         private readonly InteractionContextProfileRegistry _contextProfiles;
         private readonly GraphReturnWriter _graphReturnWriter;
-        private readonly GraphOutputSchemaRegistry _outputSchemas;
+        private readonly GraphProgramRegistry _programs;
         private readonly EntityCollectionStore _collections;
         private readonly IGraphRuntimeApi _graphApi;
 
@@ -39,14 +39,14 @@ namespace Ludots.Core.Gameplay.MapTriggers
             World world,
             InteractionContextProfileRegistry contextProfiles,
             GraphReturnWriter graphReturnWriter,
-            GraphOutputSchemaRegistry outputSchemas,
+            GraphProgramRegistry programs,
             EntityCollectionStore collections,
             IGraphRuntimeApi graphApi)
             : base(world)
         {
             _contextProfiles = contextProfiles ?? throw new ArgumentNullException(nameof(contextProfiles));
             _graphReturnWriter = graphReturnWriter ?? throw new ArgumentNullException(nameof(graphReturnWriter));
-            _outputSchemas = outputSchemas ?? throw new ArgumentNullException(nameof(outputSchemas));
+            _programs = programs ?? throw new ArgumentNullException(nameof(programs));
             _collections = collections ?? throw new ArgumentNullException(nameof(collections));
             _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
         }
@@ -63,9 +63,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
-                _graphReturnWriter.ExecuteAndWrite(
+                _graphReturnWriter.Execute(
                     graphId,
-                    owner: subject,
                     caster: subject,
                     explicitTarget: Entity.Null,
                     targetContext: Entity.Null,
@@ -82,7 +81,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
-                ClearPreviewOutputs(previous.Key, previous.Value);
+                ClearDispatchedCollections(previous.Key, previous.Value);
             }
 
             _previousGraphBySubject.Clear();
@@ -151,43 +150,44 @@ namespace Ludots.Core.Gameplay.MapTriggers
             return graphId > 0;
         }
 
-        private void ClearPreviewOutputs(Entity owner, int graphId)
+        private void ClearDispatchedCollections(Entity owner, int graphId)
         {
             if (!World.IsAlive(owner))
             {
                 return;
             }
 
-            GraphOutputSchema schema = _outputSchemas.Get(graphId);
-            GraphOutputBinding[] bindings = schema.Bindings;
-            for (int i = 0; i < bindings.Length; i++)
+            if (!_programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
             {
-                GraphOutputBinding binding = bindings[i];
-                if (!GraphOutputDestinationKinds.IsEntityBagDestination(binding.Destination))
+                throw new InvalidOperationException(
+                    $"Continuous Query clear references unknown graph program id {graphId}.");
+            }
+
+            for (int i = 0; i < program.Length; i++)
+            {
+                GraphInstruction instruction = program[i];
+                if (instruction.Op != (ushort)GraphNodeOp.DispatchCollectionEvent)
                 {
                     continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(binding.CollectionKey))
+                int collectionKeyId = CollectionEventOpEncoding.UnpackCollectionKey(instruction.Imm);
+                if (collectionKeyId <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Continuous Query graph id {graphId} output '{binding.Id}' clears an EntityCollection without collectionKey.");
+                        $"Continuous Query graph id {graphId} DispatchCollectionEvent has no resolved collection key.");
                 }
 
+                string collectionKey = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(collectionKeyId)
+                    ?? throw new InvalidOperationException(
+                        $"Continuous Query graph id {graphId} collection key id {collectionKeyId} resolves to no config key.");
                 var descriptor = EntityCollectionDescriptor.Create(
-                    binding.CollectionKey,
+                    collectionKey,
                     EntityCollectionSourceKind.GasGraphResult,
-                    binding.CollectionRole,
-                    title: binding.Title,
+                    EntityCollectionRoleKind.AcquisitionPreview,
+                    title: collectionKey,
                     summary: "continuous-query-cleared");
-                if (binding.CollectionKeyId > 0)
-                {
-                    _collections.Replace(owner, binding.CollectionKeyId, descriptor, ReadOnlySpan<Entity>.Empty);
-                }
-                else
-                {
-                    _collections.Replace(owner, descriptor, ReadOnlySpan<Entity>.Empty);
-                }
+                _collections.Replace(owner, collectionKeyId, descriptor, ReadOnlySpan<Entity>.Empty);
             }
         }
     }

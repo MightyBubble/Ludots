@@ -2137,14 +2137,14 @@ namespace Ludots.Core.Engine
                 SystemGroup.InputCollection);
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
             // #1398 Case E §05: while a context with continuousQuery is active, every tick run
-            // the Query graph and Replace its EntityCollection outputs (preview hit set). Must
-            // follow InputActionAttributeBindingSystem so pointer attrs are live for the rect.
+            // the hit graph so it can DispatchCollectionEvent-write the preview set itself.
+            // Follows InputActionAttributeBindingSystem so pointer attrs are live for the rect.
             RegisterSystem(
                 new InteractionContextContinuousQuerySystem(
                     World,
                     interactionContextProfileRegistry,
                     graphReturnWriter,
-                    graphOutputSchemas,
+                    graphProgramRegistry,
                     entityCollectionStore,
                     gasGraphApi),
                 SystemGroup.InputCollection);

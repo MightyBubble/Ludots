@@ -191,34 +191,39 @@ namespace Ludots.Tests.GAS
             var programs = new GraphProgramRegistry();
             const string queryName = "Graph.Query.ContextPreview";
             int graphId = GraphIdRegistry.Register(queryName);
-            programs.Register(graphId, HaltProgram(), GraphKind.Query);
-            var schemas = new GraphOutputSchemaRegistry();
-            schemas.Register(
+            programs.Register(
                 graphId,
-                new GraphOutputSchema(
-                    new[]
-                    {
-                        new GraphOutputBinding(
-                            "preview",
-                            GraphOutputDestinationKind.EntityCollection,
-                            GraphOutputValueKind.TargetList,
-                            0,
-                            0,
-                            string.Empty,
-                            "test.preview",
-                            EntityCollectionRoleKind.AcquisitionPreview,
-                            string.Empty,
-                            string.Empty),
-                    }));
+                new[]
+                {
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 0 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.DispatchCollectionEvent, B = 0, Imm = 1 | (1 << 16) },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+                },
+                GraphKind.Query);
             var config = Config(Profile(ContinuousQuery: new InteractionContextContinuousQuery { Graph = queryName }));
 
             Assert.That(
-                () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs, schemas)),
+                () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs)),
                 Throws.Nothing);
 
             int profileId = registry.ProfileIdRegistry.GetId(ProfileId);
             Assert.That(registry.TryGetContinuousQueryGraphId(profileId, out int resolved), Is.True);
             Assert.That(resolved, Is.EqualTo(graphId));
+        }
+
+        [Test]
+        public void Install_ContinuousQuery_WithoutDispatchCollectionEvent_FailsFast()
+        {
+            InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
+            var programs = new GraphProgramRegistry();
+            const string queryName = "Graph.Query.NoWrite";
+            int graphId = GraphIdRegistry.Register(queryName);
+            programs.Register(graphId, HaltProgram(), GraphKind.Query);
+            var config = Config(Profile(ContinuousQuery: new InteractionContextContinuousQuery { Graph = queryName }));
+
+            Assert.That(
+                () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs)),
+                Throws.InvalidOperationException.With.Message.Contains("DispatchCollectionEvent"));
         }
 
         private static InteractionContextProfileRegistry NewRegistry(
