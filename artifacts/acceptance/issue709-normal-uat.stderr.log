@@ -1,0 +1,12 @@
+C:\001_AI\LudotsProd_issue709\scripts\acceptance\run-rts-multiplayer-frontline-three-process.ps1 : Process 'authoritati
+ve-server' exited early with code 1. See C:\001_AI\LudotsProd_issue709\artifacts\acceptance\rts-multiplayer-frontline-t
+hree-process\20260725T201313640Z\server\stdout.log and C:\001_AI\LudotsProd_issue709\artifacts\acceptance\rts-multiplay
+er-frontline-three-process\20260725T201313640Z\server\stderr.log. Evidence: C:\001_AI\LudotsProd_issue709\artifacts\acc
+eptance\rts-multiplayer-frontline-three-process\20260725T201313640Z\run-manifest.json
+ËùÔÚÎ»ÖÃ C:\001_AI\LudotsProd_issue709\scripts\acceptance\run-rts-multiplayer-frontline-three-process.ps1:2064 ×Ö·û: 5
++     Write-Error "$failureMessage Evidence: $manifestPath"
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,run-rts-multiplayer-frontline-three-pr 
+   ocess.ps1
+ 

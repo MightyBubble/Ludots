@@ -1,0 +1,40 @@
+[
+  {
+    "id": "Ability.Rts.Frontline.TrainInfantry",
+    "categories": ["Ability.Rts.Frontline.Train"],
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 240,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 240,
+          "template": "Effect.Rts.Frontline.CreateInfantry"
+        },
+        {
+          "kind": "End",
+          "tick": 240
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": ["Status.Rts.Training"]
+    },
+    "input": {
+      "castModeOverride": "SmartCast",
+      "targetType": "None",
+      "modifierBehavior": "PersistentQueueOnModifier"
+    },
+    "presentation": {
+      "displayName": "Train Infantry",
+      "iconGlyph": "I",
+      "accentColor": "#E3B341",
+      "hintText": "60 crystals. Ready in 8 seconds."
+    }
+  }
+]

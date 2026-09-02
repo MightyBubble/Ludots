@@ -17,13 +17,13 @@
 
 ## Throughput
 
-- avg total: `32.828 ms`
-- p95 total: `38.287 ms`
-- max total: `45.209 ms`
-- avg HP->HUD sync: `23.314 ms`
-- avg HUD->overlay build: `9.513 ms`
-- avg fps equivalent: `30.5`
-- alloc per frame: `489.9 B`
+- avg total: `23.534 ms`
+- p95 total: `24.794 ms`
+- max total: `24.814 ms`
+- avg HP->HUD sync: `15.466 ms`
+- avg HUD->overlay build: `8.068 ms`
+- avg fps equivalent: `42.5`
+- alloc per frame: `382.7 B`
 - avg changed entities: `50000`
 - avg dirty lanes: `2.00`
 - avg retained overlay items: `0`

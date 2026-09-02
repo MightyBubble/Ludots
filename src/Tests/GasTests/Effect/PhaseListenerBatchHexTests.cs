@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
@@ -537,6 +537,13 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             var api = new GasGraphRuntimeApi(world, null, null, eventBus);
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
             var transaction = new EffectPhaseSideEffectTransaction(
                 world,
                 tagOps: null,
@@ -1439,6 +1446,60 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ExecutorDispatch_ListenerGraphBuiltin_IsRejectedByListenerOperationPolicy()
+        {
+            // Main's GraphKindOperationPolicy bans InvokeBuiltin in listener graphs because listener
+            // execution carries no owner EffectTemplate context; the PR-era "listener builtin receives
+            // effect context" contract was retired with that policy decision.
+            using var world = World.Create();
+            var caster = world.Create();
+            var target = world.Create();
+            var programs = new GraphProgramRegistry();
+            const int graphId = 2;
+            programs.Register(graphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.InvokeBuiltin, Imm = (int)BuiltinHandlerId.ApplyModifiers },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            ], GraphKind.Effect);
+            var listenerBuffer = new EffectPhaseListenerBuffer();
+            That(listenerBuffer.TryAdd(
+                listenCategoryId: 0,
+                listenEffectId: 0,
+                EffectPhaseId.OnApply,
+                PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph,
+                graphId,
+                eventTagId: 0,
+                priority: 0,
+                ownerEffectId: 1), Is.True);
+            world.Add(target, listenerBuffer);
+
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+            var api = new GasGraphRuntimeApi(world);
+            EffectPhaseGraphBindings behavior = default;
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.ExecutePhase(
+                    world,
+                    api,
+                    caster,
+                    target,
+                    default,
+                    default,
+                    EffectPhaseId.OnApply,
+                    in behavior,
+                    EffectPresetType.None,
+                    effectCategoryId: 1,
+                    effectTemplateId: 1))!;
+
+            That(error.Message, Does.StartWith(GraphKindOperationPolicy.ListenerOperationNotAllowedError));
+        }
+        [Test]
         public void ExecutorDispatch_PublishesEvent_OnCasterBuffer()
         {
             var world = World.Create();
@@ -1463,6 +1524,13 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             var api = new GasGraphRuntimeApi(world, null, null, eventBus);
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
             using var transaction = new EffectPhaseSideEffectTransaction(
                 world,
                 tagOps: null,
@@ -1672,12 +1740,33 @@ namespace Ludots.Tests.GAS
             var behavior = new EffectPhaseGraphBindings();
             int fireballHitTag = 10;
             int fireballHitTemplate = 42;
+            var victim1Context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = victim1,
+                TargetContext = default,
+            };
+            var victim2Context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = victim2,
+                TargetContext = default,
+            };
+            var victim3Context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = victim3,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, victim1, default, default,
+            executor.ExecutePhase(world, api, victim1Context.Source, victim1Context.Target, victim1Context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
-            executor.ExecutePhase(world, api, caster, victim2, default, default,
+            executor.ExecutePhase(world, api, victim2Context.Source, victim2Context.Target, victim2Context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
-            executor.ExecutePhase(world, api, caster, victim3, default, default,
+            executor.ExecutePhase(world, api, victim3Context.Source, victim3Context.Target, victim3Context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
             transaction.Commit();
             api.EndEffectSideEffectTransaction(transaction);

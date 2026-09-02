@@ -42,6 +42,14 @@ namespace Ludots.Core.ParticipantVisibility
             _states = new BindingState[bindings.Length];
             for (int i = 0; i < bindings.Length; i++)
             {
+                if (bindings[i].OwnerMatchPolicy is not DynamicParticipantOwnerMatchPolicy.MatchViewer and
+                    not DynamicParticipantOwnerMatchPolicy.Public)
+                {
+                    throw new ArgumentException(
+                        $"Dynamic participant binding[{i}] has an unknown owner-match policy.",
+                        nameof(bindings));
+                }
+
                 _states[i] = new BindingState(bindings[i], InitialScratchCapacity);
             }
         }
@@ -50,6 +58,11 @@ namespace Ludots.Core.ParticipantVisibility
 
         public DynamicParticipantVisibilityPublishResult Publish(int currentTick)
         {
+            if (currentTick < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(currentTick));
+            }
+
             int changedCollections = 0;
             int upsertedKnowledge = 0;
             int removedKnowledge = 0;
@@ -84,9 +97,10 @@ namespace Ludots.Core.ParticipantVisibility
                     changedCollections++;
 
                     removedKnowledge += RemoveStaleKnowledge(ref state, members);
-                    upsertedKnowledge += UpsertKnowledge(in binding, members, currentTick);
                     state.ReplacePrevious(members, signature);
                 }
+
+                upsertedKnowledge += UpsertKnowledge(in binding, members, currentTick);
             }
 
             return new DynamicParticipantVisibilityPublishResult(
@@ -162,7 +176,8 @@ namespace Ludots.Core.ParticipantVisibility
                 return false;
             }
 
-            if (!MatchesOwner(binding.Viewer, candidate))
+            if (binding.OwnerMatchPolicy == DynamicParticipantOwnerMatchPolicy.MatchViewer &&
+                !MatchesOwner(binding.Viewer, candidate))
             {
                 return false;
             }
@@ -221,9 +236,9 @@ namespace Ludots.Core.ParticipantVisibility
                         binding.RelationshipTypeMask,
                         binding.TagMask,
                         source,
-                        currentTick <= 0 ? 1 : currentTick,
+                        currentTick,
                         binding.ExpiryTick,
-                        binding.ConfidencePermille <= 0 ? 1000 : binding.ConfidencePermille,
+                        binding.ConfidencePermille,
                         revision: 0));
                 upserted++;
             }

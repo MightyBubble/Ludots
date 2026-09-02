@@ -104,6 +104,7 @@ namespace Ludots.Tool
             }
 
             return Directory.GetFiles(modsRoot, "mod.json", SearchOption.AllDirectories)
+                .Where(path => !IsBuildOutputPath(path))
                 .Select(path =>
                 {
                     using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
@@ -131,6 +132,22 @@ namespace Ludots.Tool
                 .OrderBy(mod => mod.Priority)
                 .ThenBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase)
                 .ToList();
+        }
+
+        private static bool IsBuildOutputPath(string path)
+        {
+            foreach (string segment in path.Split(
+                new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static List<string> ResolveUniqueMapLoadOrder(string repoRoot, IReadOnlyList<ModInfo> mods, string mapId)
@@ -283,6 +300,7 @@ namespace Ludots.Tool
             if (!string.IsNullOrWhiteSpace(source.Id)) target.Id = source.Id;
             if (!string.IsNullOrWhiteSpace(source.ParentId)) target.ParentId = source.ParentId;
             if (!string.IsNullOrWhiteSpace(source.ContinuousHeightmapAsset)) target.ContinuousHeightmapAsset = source.ContinuousHeightmapAsset;
+            if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
 
             if (source.Dependencies != null)
             {

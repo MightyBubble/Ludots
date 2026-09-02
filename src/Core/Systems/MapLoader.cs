@@ -87,6 +87,17 @@ namespace Ludots.Core.Systems
             _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
         }
 
+        public ComponentAuthoringContext RequireComponentAuthoringContext()
+        {
+            if (ReferenceEquals(_authoringContext, ComponentAuthoringContext.Empty))
+            {
+                throw new InvalidOperationException(
+                    "MapLoader ComponentAuthoringContext has not been configured by the engine.");
+            }
+
+            return _authoringContext;
+        }
+
         public void SetPresentationRuntime(
             PresentationStableIdAllocator stableIds,
             PresenterEntityRuntime presenterRuntime,

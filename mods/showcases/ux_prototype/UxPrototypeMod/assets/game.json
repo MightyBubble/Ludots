@@ -3,5 +3,11 @@
   "commandSource": {
     "clickPickRadiusPixels": 72,
     "dragThresholdPixels": 6
-  }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

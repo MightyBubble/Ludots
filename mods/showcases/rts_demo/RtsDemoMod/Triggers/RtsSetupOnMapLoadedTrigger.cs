@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Client;
@@ -52,9 +53,20 @@ namespace RtsDemoMod.Triggers
                 }
             });
 
-            RtsPresentationBootstrapper.EnsureReadableActors(engine, world);
-            EnsureLocalCommandSourceOwner(engine, world);
+            bool isAuthoritativeServer =
+                engine.GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer;
+            if (!isAuthoritativeServer)
+            {
+                RtsPresentationBootstrapper.EnsureReadableActors(engine, world);
+                EnsureLocalCommandSourceOwner(engine, world);
+            }
+
             RequirePlayerOwnership(world);
+            if (isAuthoritativeServer)
+            {
+                return Task.CompletedTask;
+            }
+
             RtsShowcaseCommandSourceHelper.EnsureCommandSourceBinding(engine);
             return Task.CompletedTask;
         }
@@ -73,6 +85,9 @@ namespace RtsDemoMod.Triggers
             });
         }
 
+        // TODO(#711-merge): main removed the name-based default command source seeding
+        // (EnsureDefaultCommandSource / FindPreferredTarget chain) — the PR's seeding path was not
+        // resurrected under the seat model; initial selection comes from the quick-select toolbar.
         private static void EnsureLocalCommandSourceOwner(GameEngine engine, World world)
         {
             Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);

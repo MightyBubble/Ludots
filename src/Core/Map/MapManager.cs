@@ -221,6 +221,7 @@ namespace Ludots.Core.Map
                 }
             }
 
+            if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
             if (!string.IsNullOrWhiteSpace(source.StructureCollisionAsset)) target.StructureCollisionAsset = source.StructureCollisionAsset;
             if (source.StructureAwareGrounding) target.StructureAwareGrounding = true;
             if (source.StructureAwareNavigation) target.StructureAwareNavigation = true;

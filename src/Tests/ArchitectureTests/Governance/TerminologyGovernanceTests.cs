@@ -156,8 +156,7 @@ namespace Ludots.Tests.Architecture.Governance
 
         /// <summary>
         /// Save-side guard for terminology rule 4. The network-payload counterpart is
-        /// deferred until the online replication line lands on main; when it does, this
-        /// test class must gain an equivalent scan over the network payload codecs.
+        /// <see cref="NetworkPayloads_DoNotCarryLocalIoConceptKeys"/>; both must stay in lockstep.
         /// </summary>
         [Test]
         public void SavePayloads_DoNotCarryLocalIoConceptKeys()
@@ -230,6 +229,84 @@ namespace Ludots.Tests.Architecture.Governance
                 "The rule 4 save guard must not flag participant / player / semantic-order payload keys.");
         }
 
+        /// <summary>
+        /// Network-payload-side guard for terminology rule 4 (#902 3.5): local I/O concepts
+        /// (seatId / controlSchemeId / device identifiers) must not enter network payloads —
+        /// wire payloads carry participant / player / semantic command identity only. Scans the
+        /// wire codecs, schemas, and session payload shapes under src/Core/Networking and the
+        /// transport adapters under src/Adapters/Networking. The allowlist is shrink-only and
+        /// starts empty: any hit is a rule-4 violation that needs an adjudicated exception
+        /// (mirroring the save-side launchContext precedent) before it may be listed here.
+        /// </summary>
+        [Test]
+        public void NetworkPayloads_DoNotCarryLocalIoConceptKeys()
+        {
+            string repoRoot = FindRepoRoot();
+            var hits = new List<string>();
+
+            foreach (string file in EnumerateNetworkPayloadCodeFiles(repoRoot))
+            {
+                string relativePath = ToRepoRelativePath(repoRoot, file);
+                foreach (SaveKeyOccurrence occurrence in FindLocalIoSaveKeyOccurrences(File.ReadAllText(file)))
+                {
+                    SaveKeyAllowance allowance = NetworkLocalIoKeyAllowlist
+                        .FirstOrDefault(entry => entry.Path == relativePath && entry.Key == occurrence.Key);
+                    if (allowance.Path is null)
+                    {
+                        hits.Add($"{relativePath}: network payload key \"{occurrence.Key}\" ({occurrence.Occurrences}x)");
+                    }
+                    else if (occurrence.Occurrences > allowance.AllowedCount)
+                    {
+                        hits.Add($"{relativePath}: network payload key \"{occurrence.Key}\" occurs {occurrence.Occurrences}x (allowed {allowance.AllowedCount})");
+                    }
+                }
+            }
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "Terminology rule 4 (#902 3.5): local I/O concepts (seatId / controlSchemeId / device identifiers) must not enter network payloads; " +
+                "the wire carries participant / player / semantic command identity only. Scans payload shapes under src/Core/Networking and " +
+                "src/Adapters/Networking. The allowlist below is shrink-only and starts empty; listing an entry requires an adjudicated " +
+                "exception like the save-side launchContext.localSeats precedent:\n" +
+                string.Join("\n", hits));
+        }
+
+        [Test]
+        public void NetworkPayloadGuard_DetectsSyntheticLocalIoKeyViolations()
+        {
+            string violatingSource = """
+                var admission = new JsonObject
+                {
+                    ["seatId"] = binding.SeatId,
+                    ["controlSchemeId"] = binding.ControlSchemeId,
+                    ["deviceName"] = binding.DeviceName,
+                };
+                """;
+
+            var flagged = FindLocalIoSaveKeyOccurrences(violatingSource)
+                .OrderBy(occurrence => occurrence.Key, StringComparer.Ordinal)
+                .ToList();
+
+            Assert.That(
+                flagged.Select(occurrence => $"{occurrence.Key}={occurrence.Occurrences}"),
+                Is.EqualTo(new[] { "controlSchemeId=1", "deviceName=1", "seatId=1" }),
+                "The rule 4 network guard must flag synthetic local I/O payload keys; a miss here means the guard is dead.");
+
+            string cleanSource = """
+                var admission = new JsonObject
+                {
+                    ["playerId"] = player.Id,
+                    ["admissionCode"] = admission.Code,
+                };
+                """;
+
+            Assert.That(
+                FindLocalIoSaveKeyOccurrences(cleanSource),
+                Is.Empty,
+                "The rule 4 network guard must not flag participant / player / semantic-command payload keys.");
+        }
+
         private static readonly DeviceServiceAllowance[] DeviceServiceAllowlist =
         {
             new("src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostComposer.cs", "SyntheticInput", 1),
@@ -256,6 +333,13 @@ namespace Ludots.Tests.Architecture.Governance
             new("src/Core/Persistence/CoreSaveParticipants.cs", "controlSchemeId", 2),
         };
 
+        // Network-payload counterpart of LocalIoSaveKeyAllowlist: shrink-only, adjudicated
+        // exceptions only. The online wire (#711) landed with zero local I/O payload keys,
+        // so the list starts empty.
+        private static readonly SaveKeyAllowance[] NetworkLocalIoKeyAllowlist =
+        {
+        };
+
         private static IEnumerable<string> EnumerateTerminologyScanFiles(string repoRoot)
         {
             string[] roots =
@@ -280,6 +364,16 @@ namespace Ludots.Tests.Architecture.Governance
             string[] roots =
             {
                 Path.Combine(repoRoot, "src", "Core", "Persistence"),
+            };
+            return EnumerateFiles(roots, "*.cs");
+        }
+
+        private static IEnumerable<string> EnumerateNetworkPayloadCodeFiles(string repoRoot)
+        {
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core", "Networking"),
+                Path.Combine(repoRoot, "src", "Adapters", "Networking"),
             };
             return EnumerateFiles(roots, "*.cs");
         }

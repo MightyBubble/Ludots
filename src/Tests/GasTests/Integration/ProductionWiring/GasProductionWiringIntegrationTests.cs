@@ -208,11 +208,13 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
         [Test]
         public void GasBudgetReport_PublishesEveryAdmissionCapacityRejectionFromFormalResultStorage()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var admissions = new OrderAdmissionResultBuffer(capacity: 1, rejectionCapacity: 2);
             var queue = new OrderQueue(64, admissions);
-            var first = new Order { OrderTypeId = 2 };
-            var second = new Order { OrderTypeId = 2 };
-            var third = new Order { OrderTypeId = 2 };
+            var first = new Order { Actor = actor, OrderTypeId = 2 };
+            var second = new Order { Actor = actor, OrderTypeId = 2 };
+            var third = new Order { Actor = actor, OrderTypeId = 2 };
             Assert.That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(queue.SubmitAssigned(ref second), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
             Assert.That(queue.SubmitAssigned(ref third), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));

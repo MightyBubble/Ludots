@@ -1,0 +1,34 @@
+{
+    "schemaVersion":  1,
+    "acceptanceScope":  "three-process-session-establishment",
+    "status":  "failed",
+    "startedAtUtc":  "2026-07-24T14:11:43.1621642Z",
+    "completedAtUtc":  "2026-07-24T14:13:12.3585103Z",
+    "profilePath":  "C:\\001_AI\\LudotsProd_issue709\\scripts\\acceptance\\rts-multiplayer-frontline-three-process.profile.json",
+    "artifactDirectory":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260724T141143117Z",
+    "host":  "127.0.0.1",
+    "port":  27777,
+    "planFingerprint":  "6a98f86435ca2ec2d0028c7447f3c4f010f4b8347512aae4e8f5d75397333ac9",
+    "orderedModIds":  [
+                          "LudotsCoreMod",
+                          "CoreInputMod",
+                          "EntityCommandPanelMod",
+                          "RtsDemoMod",
+                          "RtsShowcaseMod",
+                          "RtsMultiplayerFrontlineMod",
+                          "RtsMultiplayerFrontlineNetworkedMod"
+                      ],
+    "sourceLaunchGraph":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260724T141143117Z\\launcher-resolved.graph.json",
+    "roleArtifacts":  [
+
+                      ],
+    "processes":  [
+
+                  ],
+    "clientCredentials":  [
+
+                          ],
+    "credentialValidation":  "LUDCRD01/64-byte/SHA256/non-empty/distinct",
+    "failure":  "Cannot bind argument to parameter \u0027CredentialPath\u0027 because it is an empty string.",
+    "cleanup":  "attempted"
+}

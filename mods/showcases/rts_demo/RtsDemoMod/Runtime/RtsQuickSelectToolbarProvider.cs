@@ -25,13 +25,15 @@ namespace RtsDemoMod.Runtime
         };
 
         private readonly GameEngine _engine;
+        private MapConfig? _cachedMapConfig;
+        private RtsCommandSourceUiMapConfig? _cachedUiConfig;
 
         public RtsQuickSelectToolbarProvider(GameEngine engine)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         }
 
-        public bool IsVisible => IsRtsMapActive();
+        public bool IsVisible => IsRtsMapActive() && ResolveUiConfig().ToolbarVisible;
 
         public uint Revision
         {
@@ -210,6 +212,18 @@ namespace RtsDemoMod.Runtime
             }
 
             return false;
+        }
+
+        private RtsCommandSourceUiMapConfig ResolveUiConfig()
+        {
+            MapConfig? mapConfig = _engine.CurrentMapSession?.MapConfig;
+            if (!ReferenceEquals(mapConfig, _cachedMapConfig) || _cachedUiConfig == null)
+            {
+                _cachedMapConfig = mapConfig;
+                _cachedUiConfig = RtsCommandSourceUiMapConfig.Resolve(mapConfig);
+            }
+
+            return _cachedUiConfig;
         }
 
         private ToolbarProfile ResolveToolbarProfile()

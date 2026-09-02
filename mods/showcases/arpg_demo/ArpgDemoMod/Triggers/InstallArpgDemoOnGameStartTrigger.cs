@@ -39,7 +39,7 @@ namespace ArpgDemoMod.Triggers
 
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var oq) && oq is OrderQueue orders)
             {
-                engine.RegisterSystem(new ArpgLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.InputCollection);
+                engine.RegisterSystem(new ArpgLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.LocalInput);
                 _ctx.Log("[ArpgDemoMod] ArpgLocalOrderSourceSystem registered");
             }
 
@@ -49,4 +49,3 @@ namespace ArpgDemoMod.Triggers
         }
     }
 }
-

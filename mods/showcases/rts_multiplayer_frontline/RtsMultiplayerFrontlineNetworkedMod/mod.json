@@ -1,0 +1,12 @@
+{
+  "name": "RtsMultiplayerFrontlineNetworkedMod",
+  "version": "1.0.0",
+  "description": "Production network profile for the two-player Frontline RTS match.",
+  "main": "bin/net9.0/RtsMultiplayerFrontlineNetworkedMod.dll",
+  "priority": 10,
+  "dependencies": {
+    "RtsMultiplayerFrontlineMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["rts", "multiplayer", "network-entry"]
+}

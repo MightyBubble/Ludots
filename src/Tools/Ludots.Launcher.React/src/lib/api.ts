@@ -270,11 +270,15 @@ export async function fixProject(
   );
 }
 
-export async function launchGame(platformId: string, modIds: string[]): Promise<LaunchResult> {
+export async function launchGame(
+  platformId: string,
+  modIds: string[],
+  presetId?: string,
+): Promise<LaunchResult> {
   return readJson<LaunchResult>("/api/launch", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ platformId, modIds }),
+    body: JSON.stringify(presetId ? { platformId, presetId } : { platformId, modIds }),
   });
 }
 

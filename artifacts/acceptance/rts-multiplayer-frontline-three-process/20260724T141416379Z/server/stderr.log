@@ -1,0 +1,10 @@
+System.InvalidOperationException: RTS Frontline projector registration failed for schema 701: CapacityExceeded.
+   at RtsMultiplayerFrontlineMod.Runtime.FrontlineReplication.RegisterOrThrow(ReplicationSchemaProjectorRegistry registry, Int32 schemaId, IReplicationSchemaProjector projector) in C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\Runtime\FrontlineReplication.cs:line 1535
+   at RtsMultiplayerFrontlineMod.Runtime.FrontlineReplication.RegisterHandlers(ReplicationSchemaProjectorRegistry projectors, ClientReplicationSchemaApplierRegistry appliers, FrontlineClientTemplateFactory templates, FrontlineRuntime runtime, FrontlineSideConfig[] sides, Int32 matchStateSchemaId, ReadOnlySpan`1 specs, Int32 healthId, Int32 crystalId) in C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\Runtime\FrontlineReplication.cs:line 1506
+   at RtsMultiplayerFrontlineMod.Runtime.FrontlineReplication.Install(GameEngine engine, FrontlineRuntime runtime) in C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\Runtime\FrontlineReplication.cs:line 1425
+   at RtsMultiplayerFrontlineMod.Runtime.FrontlineReplicationLifecycle.<>c__DisplayClass4_0.<HandleGameStartAsync>b__0() in C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\Runtime\FrontlineReplication.cs:line 1320
+   at RtsMultiplayerFrontlineMod.Runtime.FrontlineReplicationLifecycle.Execute(Action action) in C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\Runtime\FrontlineReplication.cs:line 1411
+--- End of stack trace from previous location ---
+   at Ludots.Core.Engine.GameEngine.CompleteLifecycleEvent(Task task) in C:\001_AI\LudotsProd_issue709\src\Core\Engine\GameEngine.cs:line 3352
+   at Ludots.Core.Engine.GameEngine.Start() in C:\001_AI\LudotsProd_issue709\src\Core\Engine\GameEngine.cs:line 3253
+   at Program.<Main>$(String[] args) in C:\001_AI\LudotsProd_issue709\src\Apps\DedicatedServer\Ludots.App.DedicatedServer\Program.cs:line 30

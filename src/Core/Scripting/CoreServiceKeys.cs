@@ -58,6 +58,11 @@ using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Networking.Commands;
+using Ludots.Core.Networking.Configuration;
+using Ludots.Core.Networking.Replication;
+using Ludots.Core.Networking.Runtime;
+using Ludots.Core.Networking.Session;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Persistence;
@@ -338,6 +343,23 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ResponseChainTelemetryBuffer> ResponseChainTelemetryBuffer = new("ResponseChainTelemetryBuffer");
         public static readonly ServiceKey<OrderQueue> ChainOrderQueue = new("ChainOrderQueue");
         public static readonly ServiceKey<ResponseChainUiState> ResponseChainUiState = new("ResponseChainUiState");
+        public static readonly ServiceKey<NetworkRuntimeConfig> NetworkRuntimeConfig = new("NetworkRuntimeConfig");
+        public static readonly ServiceKey<ContentFingerprint> NetworkContentFingerprint = new("NetworkContentFingerprint");
+        public static readonly ServiceKey<NetworkProcessRole> NetworkProcessRole = new("NetworkProcessRole");
+        public static readonly ServiceKey<INetworkRuntimePort> NetworkRuntimePort = new("NetworkRuntimePort");
+        public static readonly ServiceKey<INetworkFaultInjectionMetricsPort> NetworkFaultInjectionMetrics =
+            new("NetworkFaultInjectionMetrics");
+        public static readonly ServiceKey<IReplicatedClientCommandPort> ReplicatedClientCommandPort = new("ReplicatedClientCommandPort");
+        public static readonly ServiceKey<IReplicatedClientRoomControlPort> ReplicatedClientRoomControlPort = new("ReplicatedClientRoomControlPort");
+        public static readonly ServiceKey<NetworkCommandIngress> NetworkCommandIngress = new("NetworkCommandIngress");
+        public static readonly ServiceKey<NetworkGameplayCommandGate> NetworkGameplayCommandGate = new("NetworkGameplayCommandGate");
+        public static readonly ServiceKey<NetworkCommandSchemaRegistry> NetworkCommandSchemaRegistry = new("NetworkCommandSchemaRegistry");
+        public static readonly ServiceKey<NetworkCommandAdmissionResultBuffer> NetworkCommandAdmissionResults = new("NetworkCommandAdmissionResults");
+        public static readonly ServiceKey<NetworkEntityTable> NetworkEntityTable = new("NetworkEntityTable");
+        public static readonly ServiceKey<AuthoritativeSeatControllerRegistry> AuthoritativeSeatControllers = new("AuthoritativeSeatControllers");
+        public static readonly ServiceKey<NetworkRuntimeStateObserver> NetworkRuntimeStateObserver = new("NetworkRuntimeStateObserver");
+        public static readonly ServiceKey<ReplicationSchemaProjectorRegistry> ReplicationSchemaProjectors = new("ReplicationSchemaProjectors");
+        public static readonly ServiceKey<ClientReplicationSchemaApplierRegistry> ClientReplicationSchemaAppliers = new("ClientReplicationSchemaAppliers");
         public static readonly ServiceKey<IEntityCommandPanelCollectionQueryConfigRegistry> EntityCommandPanelCollectionQueryConfigRegistry =
             new("EntityCommandPanelCollectionQueryConfigRegistry");
 
@@ -371,6 +393,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<StableDrawCache> PresentationStableDrawCache = new("PresentationStableDrawCache");
         public static readonly ServiceKey<PresentationTargetGeneration> PresentationTargetGeneration = new("PresentationTargetGeneration");
         public static readonly ServiceKey<PrimitiveDrawBuffer> PresentationPrimitiveDrawBuffer = new("PresentationPrimitiveDrawBuffer");
+        public static readonly ServiceKey<PresentationFrameReceiptBuffer> PresentationFrameReceiptBuffer = new("PresentationFrameReceiptBuffer");
+        public static readonly ServiceKey<IPresentationCaptureMilestoneSource> PresentationCaptureMilestoneSource = new("PresentationCaptureMilestoneSource");
         public static readonly ServiceKey<PrimitiveDrawBuffer> PresentationVisualSnapshotBuffer = new("PresentationVisualSnapshotBuffer");
         public static readonly ServiceKey<PresentationVisualProxyBuffer> PresentationVisualProxyBuffer = new("PresentationVisualProxyBuffer");
         public static readonly ServiceKey<PresentationVisualRequestBuffer> PresentationVisualRequestBuffer = new("PresentationVisualRequestBuffer");
@@ -421,6 +445,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<WorldSizeSpec> WorldSizeSpec = new("WorldSizeSpec");
         public static readonly ServiceKey<ISpatialCoordinateConverter> SpatialCoordinateConverter = new("SpatialCoordinateConverter");
         public static readonly ServiceKey<ISpatialQueryService> SpatialQueryService = new("SpatialQueryService");
+        public static readonly ServiceKey<ISpatialPartitionMembership> SpatialPartitionMembership = new("SpatialPartitionMembership");
         public static readonly ServiceKey<HexMetrics> HexMetrics = new("HexMetrics");
         public static readonly ServiceKey<ILoadedChunks> LoadedChunks = new("LoadedChunks");
 

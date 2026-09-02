@@ -32,7 +32,6 @@ namespace Ludots.Core.Knowledge
         public uint Upsert(Entity viewer, Entity target, in KnowledgeDisclosureRecord record)
         {
             ValidateViewerAndTarget(viewer, target);
-
             EntityKeyedSoaKey key = EntityKeyedSoaKey.ForPair(viewer, target);
             var next = KnowledgeProjectionPayload.FromRecord(in record);
             bool changed = !_records.TryGet(key, int.MinValue, out KnowledgeProjectionPayload current, out _, out _) ||

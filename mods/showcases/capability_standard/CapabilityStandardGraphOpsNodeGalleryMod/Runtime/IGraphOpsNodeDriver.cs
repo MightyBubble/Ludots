@@ -108,6 +108,7 @@ public sealed class GraphOpsNodeDriverContext
             BuiltinHandlers,
             EffectTemplates,
             BuiltinRuntime,
+            Caster,
             ConfigEffectTemplateId,
             in effectContext,
             in template.ConfigParams);

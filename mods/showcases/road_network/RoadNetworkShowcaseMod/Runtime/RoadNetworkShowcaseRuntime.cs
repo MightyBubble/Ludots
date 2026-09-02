@@ -18,6 +18,7 @@ using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.UI;
 using Ludots.UI;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Teams;
 
 namespace RoadNetworkShowcaseMod.Runtime
 {
@@ -253,7 +254,7 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private void EnsurePrimaryPlayerControl(GameEngine engine)
         {
-            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            Entity owner = ResolveSolePossessedRepOrRepair(engine);
             if (!engine.World.IsAlive(owner))
             {
                 throw new InvalidOperationException(
@@ -278,6 +279,38 @@ namespace RoadNetworkShowcaseMod.Runtime
                     collections.Replace(owner, descriptor, initialCommandSource, owner);
                 }
             }
+        }
+
+        /// <summary>
+        /// The seat registry is runtime state, not identity: when it was cleared (replicated-client rebind,
+        /// harness reset) the authoritative possession still lives in MapSession.LocalSeats — rebuild the sole
+        /// seat from there before failing.
+        /// </summary>
+        private static Entity ResolveSolePossessedRepOrRepair(GameEngine engine)
+        {
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity possessed) &&
+                engine.World.IsAlive(possessed))
+            {
+                return possessed;
+            }
+
+            var sessionSeats = engine.CurrentMapSession?.LocalSeats;
+            if (sessionSeats is { Count: > 0 })
+            {
+                for (int i = 0; i < sessionSeats.Count; i++)
+                {
+                    ResolvedLocalSeatPossession seat = sessionSeats[i];
+                    if (seat.RepEntity != Entity.Null && engine.World.IsAlive(seat.RepEntity))
+                    {
+                        ClientLocalSeatBindings.BindSoleSeat(
+                            engine, seat.RepEntity, seat.PlayerId, seat.SeatId,
+                            presentResolutionPx: new Vector2(1280f, 720f));
+                        return seat.RepEntity;
+                    }
+                }
+            }
+
+            return ClientLocalSeatAccess.RequireSolePossessedRep(engine);
         }
 
         private Vector2 ResolveInitialCameraTarget(GameEngine engine)

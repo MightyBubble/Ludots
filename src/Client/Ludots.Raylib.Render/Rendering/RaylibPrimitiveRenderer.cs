@@ -77,6 +77,11 @@ namespace Ludots.Raylib.Render
         private readonly RaylibStaticMeshReceiverProjector _staticMeshReceiverProjector = new();
         private readonly RaylibVegetationCutoutRenderer _vegetationCutout = new();
         private double _frameTimeSeconds;
+        private PresentationFrameReceiptBuffer? _frameReceipts;
+        private int _receiptSourceOwnerStableId;
+        private int _receiptSourceVisualStableId;
+        private int _receiptSourceTemplateId;
+        private Vector3 _receiptSourceWorldPosition;
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
         private readonly RaylibAssetStore<Texture2D> _textureStore;
@@ -308,12 +313,12 @@ namespace Ludots.Raylib.Render
 
         public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IContinuousHeightmap? continuousHeightmap = null, double timeSeconds = 0d)
         {
-            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, continuousHeightmap, timeSeconds);
+            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, continuousHeightmap, frameReceipts: null, timeSeconds);
         }
 
         public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IPrimitiveDrawSnapshot? snapshot, IRenderMeshAssets meshes, float scaleMul = 1f, IContinuousHeightmap? continuousHeightmap = null, double timeSeconds = 0d)
         {
-            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, continuousHeightmap, timeSeconds);
+            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, continuousHeightmap, frameReceipts: null, timeSeconds);
         }
 
         public void Draw(
@@ -324,6 +329,7 @@ namespace Ludots.Raylib.Render
             IRenderMeshAssets meshes,
             float scaleMul = 1f,
             IContinuousHeightmap? continuousHeightmap = null,
+            PresentationFrameReceiptBuffer? frameReceipts = null,
             double timeSeconds = 0d)
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
@@ -335,6 +341,11 @@ namespace Ludots.Raylib.Render
             _frameViewPos = camera.position;
             _hasFrameViewPos = true;
             _frameTimeSeconds = timeSeconds;
+            _frameReceipts = frameReceipts;
+            _receiptSourceOwnerStableId = 0;
+            _receiptSourceVisualStableId = 0;
+            _receiptSourceTemplateId = 0;
+            _receiptSourceWorldPosition = default;
 
             LastInstancedInstances = 0;
             LastInstancedBatches = 0;
@@ -597,6 +608,7 @@ namespace Ludots.Raylib.Render
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                SetReceiptSource(in item);
                 if (TryDrawTypedPresenterChild(in item, camera, meshes, scaleMul, instancedPrimitives: false))
                 {
                     continue;
@@ -641,6 +653,7 @@ namespace Ludots.Raylib.Render
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                SetReceiptSource(in item);
                 if (TryDrawTypedPresenterChild(in item, camera, meshes, scaleMul, instancedPrimitives: true))
                 {
                     continue;
@@ -677,6 +690,29 @@ namespace Ludots.Raylib.Render
             FlushInstancedBatches();
         }
 
+        private void SetReceiptSource(in PrimitiveDrawItem item)
+        {
+            _receiptSourceOwnerStableId = item.OwnerStableId;
+            _receiptSourceVisualStableId = item.StableId;
+            _receiptSourceTemplateId = item.TemplateId;
+            _receiptSourceWorldPosition = item.Position;
+        }
+
+        private void RecordSubmittedLeaf(in MeshAssetDescriptor descriptor, in Vector3 position, in Quaternion rotation, in Vector3 scale)
+        {
+            _frameReceipts?.RecordSubmitted(
+                _receiptSourceOwnerStableId,
+                _receiptSourceVisualStableId,
+                _receiptSourceTemplateId,
+                _receiptSourceWorldPosition,
+                position,
+                rotation,
+                scale,
+                descriptor.Type == MeshAssetType.ProceduralMesh && descriptor.ProceduralMeshData != null
+                    ? descriptor.ProceduralMeshData.LocalBounds
+                    : new ProceduralMeshBounds(Vector3.Zero, new Vector3(0.5f, 0.5f, 0.5f)));
+        }
+
         internal bool ShouldSkipImmediateDraw(in PrimitiveDrawItem item, bool persistentStaticLanesActive)
         {
             if (!persistentStaticLanesActive ||
@@ -696,6 +732,7 @@ namespace Ludots.Raylib.Render
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                SetReceiptSource(in item);
                 if (TryDrawTypedPresenterChild(in item, camera, meshes, scaleMul, instancedPrimitives: true))
                 {
                     continue;
@@ -996,6 +1033,8 @@ namespace Ludots.Raylib.Render
                         CountMeshVisual();
                     }
 
+                    RecordSubmittedLeaf(in descriptor, position, rotation, scale);
+
                     if (instancedPrimitives)
                     {
                         SubmitPrimitive(descriptor.PrimitiveKind, position, rotation, scale, color, materialId);
@@ -1012,6 +1051,8 @@ namespace Ludots.Raylib.Render
                         CountMeshVisual();
                     }
 
+                    RecordSubmittedLeaf(in descriptor, position, rotation, scale);
+
                     DrawModel(meshAssetId, descriptor, position, rotation, scale, color, materialId);
                     return;
                 case MeshAssetType.Billboard:
@@ -1020,6 +1061,8 @@ namespace Ludots.Raylib.Render
                         CountMeshVisual();
                     }
 
+                    RecordSubmittedLeaf(in descriptor, position, rotation, scale);
+
                     DrawBillboard(meshAssetId, descriptor, position, scale, color, camera, materialId);
                     return;
                 case MeshAssetType.ProceduralMesh:
@@ -1027,6 +1070,8 @@ namespace Ludots.Raylib.Render
                     {
                         CountMeshVisual();
                     }
+
+                    RecordSubmittedLeaf(in descriptor, position, rotation, scale);
 
                     DrawProceduralMesh(meshAssetId, in descriptor, position, rotation, scale, materialId);
                     return;
@@ -2683,8 +2728,57 @@ namespace Ludots.Raylib.Render
                 return true;
             }
 
-            uint colorKey = RaylibInstancedMaterialPipeline.PackRgba(first.Color);
-            long batchKey = BuildModelInstanceBatchKey(first.MeshAssetId, colorKey);
+            // One tint per instanced draw: a lane bucket may mix authored colors on the same
+            // mesh (e.g. cube props), so split by packed color before batching. Uniform-color
+            // buckets keep the single-batch fast path.
+            uint firstColorKey = RaylibInstancedMaterialPipeline.PackRgba(first.Color);
+            bool mixedColors = false;
+            for (int i = 1; i < items.Count; i++)
+            {
+                if (RaylibInstancedMaterialPipeline.PackRgba(items[i].Color) != firstColorKey)
+                {
+                    mixedColors = true;
+                    break;
+                }
+            }
+
+            if (!mixedColors)
+            {
+                DrawModelInstancedColorGroup(bucket, items, first.MeshAssetId, cached, firstColorKey, first.MaterialId, scaleMul);
+                return true;
+            }
+
+            List<PrimitiveDrawItem> group = new(items.Count);
+            Dictionary<uint, List<PrimitiveDrawItem>> byColor = new();
+            for (int i = 0; i < items.Count; i++)
+            {
+                uint colorKey = RaylibInstancedMaterialPipeline.PackRgba(items[i].Color);
+                if (!byColor.TryGetValue(colorKey, out List<PrimitiveDrawItem> list))
+                {
+                    list = new List<PrimitiveDrawItem>(Math.Max(1, items.Count / 2));
+                    byColor[colorKey] = list;
+                }
+                list.Add(items[i]);
+            }
+
+            foreach (KeyValuePair<uint, List<PrimitiveDrawItem>> entry in byColor)
+            {
+                DrawModelInstancedColorGroup(bucket, entry.Value, entry.Value[0].MeshAssetId, cached, entry.Key, entry.Value[0].MaterialId, scaleMul);
+            }
+
+            return true;
+        }
+
+        private void DrawModelInstancedColorGroup(
+            RaylibIsmRenderBridge.Bucket bucket,
+            List<PrimitiveDrawItem> items,
+            int meshAssetId,
+            CachedModel cached,
+            uint colorKey,
+            int materialId,
+            float scaleMul)
+        {
+            long batchKey = BuildModelInstanceBatchKey(meshAssetId, colorKey);
             bool canCacheStaticMatrices = bucket.Lane.Mobility == VisualMobility.Static && MathF.Abs(scaleMul - 1f) <= 0.0001f;
             ModelInstanceBatch batch;
             if (canCacheStaticMatrices)
@@ -2709,10 +2803,9 @@ namespace Ludots.Raylib.Render
                 _modelInstanceBatches[batchKey] = batch;
             }
 
-            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey, first.MaterialId);
+            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey, materialId);
             LastInstancedInstances += batch.Count;
             LastInstancedBatches += drawCalls;
-            return true;
         }
 
         private void DrawPrimitiveInstancedBucketShadow(

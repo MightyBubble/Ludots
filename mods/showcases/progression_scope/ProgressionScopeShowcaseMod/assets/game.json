@@ -1,3 +1,9 @@
 {
-  "startupMapId": "progression_scope_showcase"
+  "startupMapId": "progression_scope_showcase",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

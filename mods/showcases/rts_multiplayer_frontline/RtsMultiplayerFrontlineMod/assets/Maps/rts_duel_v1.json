@@ -1,0 +1,228 @@
+{
+  "Id": "rts_duel_v1",
+  "ContinuousHeightmapAsset": "assets/terrain/rts_duel_v1_flat.vhtm",
+  "TerrainPresentation": {
+    "Source": "BoardTerrain",
+    "BoardName": "default"
+  },
+  "Tags": ["rts", "multiplayer", "frontline", "duel"],
+  "Metadata": {
+    "rts.commandSourceUi": {
+      "toolbarVisible": false,
+      "skillBarVisible": false,
+      "cameraFocusDistanceCm": 5200,
+      "cameraFocusFovYDeg": 46,
+      "cameraFocusTowardDefaultTargetCm": 1800,
+      "commandDeck": {
+        "visible": true,
+        "anchor": "BottomCenter",
+        "offsetX": 0,
+        "offsetY": 14,
+        "widthPx": 520,
+        "heightPx": 260
+      },
+      "orderMonitor": {
+        "visible": false,
+        "anchor": "TopRight",
+        "offsetX": 28,
+        "offsetY": 126,
+        "widthPx": 390,
+        "heightPx": 428
+      }
+    }
+  },
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts.Frontline",
+    "TargetXCm": 15000,
+    "TargetYCm": 15000,
+    "Yaw": 180,
+    "Pitch": 54,
+    "DistanceCm": 9000,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "rts_duel_v1_flat.vtxm" }
+  ],
+  "Entities": [
+    {
+      "Template": "rts_frontline_team_representative",
+      "InstanceId": "north_team",
+      "Overrides": {
+        "Name": { "Value": "Northern Team" }
+      }
+    },
+    {
+      "Template": "rts_frontline_player_representative",
+      "InstanceId": "north_player",
+      "Overrides": {
+        "Name": { "Value": "Northern Commander" }
+      }
+    },
+    {
+      "Template": "rts_frontline_team_representative",
+      "InstanceId": "south_team",
+      "Overrides": {
+        "Name": { "Value": "Southern Team" }
+      }
+    },
+    {
+      "Template": "rts_frontline_player_representative",
+      "InstanceId": "south_player",
+      "Overrides": {
+        "Name": { "Value": "Southern Commander" }
+      }
+    },
+    {
+      "Template": "rts_frontline_match_state",
+      "InstanceId": "match_state"
+    },
+    {
+      "Template": "rts_frontline_core",
+      "InstanceId": "north_core",
+      "Overrides": {
+        "Name": { "Value": "Northern Command Core" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 13000, "Y": 15000 } },
+        "ResourceSinkProfile": {
+          "ResourceAttribute": "Crystals",
+          "DockOffsetXCm": -800,
+          "DockOffsetYCm": 0
+        },
+        "FrontlineParticipant": { "SideIndex": 0 }
+      }
+    },
+    {
+      "Template": "rts_frontline_harvester",
+      "Overrides": {
+        "Name": { "Value": "Northern Harvester A" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 13800, "Y": 14600 } },
+        "FrontlineParticipant": { "SideIndex": 0 }
+      }
+    },
+    {
+      "Template": "rts_frontline_harvester",
+      "Overrides": {
+        "Name": { "Value": "Northern Harvester B" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 13800, "Y": 15400 } },
+        "FrontlineParticipant": { "SideIndex": 0 }
+      }
+    },
+    {
+      "Template": "rts_frontline_infantry",
+      "Overrides": {
+        "Name": { "Value": "Northern Infantry A" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 14400, "Y": 14400 } },
+        "FrontlineParticipant": { "SideIndex": 0 }
+      }
+    },
+    {
+      "Template": "rts_frontline_infantry",
+      "Overrides": {
+        "Name": { "Value": "Northern Infantry B" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 14400, "Y": 15600 } },
+        "FrontlineParticipant": { "SideIndex": 0 }
+      }
+    },
+    {
+      "Template": "rts_frontline_crystal_node",
+      "Overrides": {
+        "Name": { "Value": "Northern Crystal Field" },
+        "WorldPositionCm": { "Value": { "X": 14200, "Y": 15000 } }
+      }
+    },
+    {
+      "Template": "rts_frontline_crystal_node",
+      "Overrides": {
+        "Name": { "Value": "Southern Crystal Field" },
+        "WorldPositionCm": { "Value": { "X": 15800, "Y": 15000 } }
+      }
+    },
+    {
+      "Template": "rts_frontline_core",
+      "InstanceId": "south_core",
+      "Overrides": {
+        "Name": { "Value": "Southern Command Core" },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 2 },
+        "WorldPositionCm": { "Value": { "X": 17000, "Y": 15000 } },
+        "ResourceSinkProfile": {
+          "ResourceAttribute": "Crystals",
+          "DockOffsetXCm": 800,
+          "DockOffsetYCm": 0
+        },
+        "FrontlineParticipant": { "SideIndex": 1 }
+      }
+    },
+    {
+      "Template": "rts_frontline_harvester",
+      "Overrides": {
+        "Name": { "Value": "Southern Harvester A" },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 2 },
+        "WorldPositionCm": { "Value": { "X": 16200, "Y": 14600 } },
+        "FrontlineParticipant": { "SideIndex": 1 }
+      }
+    },
+    {
+      "Template": "rts_frontline_harvester",
+      "Overrides": {
+        "Name": { "Value": "Southern Harvester B" },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 2 },
+        "WorldPositionCm": { "Value": { "X": 16200, "Y": 15400 } },
+        "FrontlineParticipant": { "SideIndex": 1 }
+      }
+    },
+    {
+      "Template": "rts_frontline_infantry",
+      "Overrides": {
+        "Name": { "Value": "Southern Infantry A" },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 2 },
+        "WorldPositionCm": { "Value": { "X": 15600, "Y": 14400 } },
+        "FrontlineParticipant": { "SideIndex": 1 }
+      }
+    },
+    {
+      "Template": "rts_frontline_infantry",
+      "Overrides": {
+        "Name": { "Value": "Southern Infantry B" },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 2 },
+        "WorldPositionCm": { "Value": { "X": 15600, "Y": 15600 } },
+        "FrontlineParticipant": { "SideIndex": 1 }
+      }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "north_team" },
+    { "TeamId": 2, "RepresentativeInstanceId": "south_team" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "north_player" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "south_player" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "RtsShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "RtsShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "RtsShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [
+      { "PlayerA": 1, "PlayerB": 2, "TypeId": "RtsShowcase.Participant", "Symmetric": true }
+    ],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "RtsShowcase.Participant", "Symmetric": false },
+      { "PlayerId": 2, "TeamId": 2, "TypeId": "RtsShowcase.Participant", "Symmetric": false }
+    ]
+  }
+}

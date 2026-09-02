@@ -1,0 +1,33 @@
+{
+    "LaunchGraphPath":  "launcher.graph.json",
+    "LaunchGraphFullPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\codex-governance-validation-20260725\\server\\launcher.graph.json",
+    "PlanSelectors":  [
+                          "preset:rts_multiplayer_frontline_networked_raylib"
+                      ],
+    "PlanRootModIds":  [
+                           "RtsMultiplayerFrontlineNetworkedMod"
+                       ],
+    "PlanOrderedModIds":  [
+                              "LudotsCoreMod",
+                              "CoreInputMod",
+                              "EntityCommandPanelMod",
+                              "RtsDemoMod",
+                              "RtsShowcaseMod",
+                              "RtsMultiplayerFrontlineMod",
+                              "RtsMultiplayerFrontlineNetworkedMod"
+                          ],
+    "PlanFingerprint":  "6a98f86435ca2ec2d0028c7447f3c4f010f4b8347512aae4e8f5d75397333ac9",
+    "PlanSchemaVersion":  1,
+    "PlanGeneratedAtUtc":  "2026-07-24T17:10:33.8954360+00:00",
+    "BrowserRuntime":  null,
+    "NetworkHost":  {
+                        "ProcessRole":  "authoritativeServer",
+                        "Host":  "",
+                        "Port":  28791,
+                        "ConnectionKey":  "rts-frontline-local-uat",
+                        "ClientInstanceId":  0,
+                        "CredentialPath":  "",
+                        "FaultProfile":  "normal",
+                        "FaultSeed":  70901
+                    }
+}

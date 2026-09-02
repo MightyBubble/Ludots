@@ -30,7 +30,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly PresenterEntityRuntime _runtime;
-        private readonly PresenterDefinitionRegistry _definitions;
+        private readonly PresenterDefinitionRegistry? _definitions;
 
         public bool DebugSyncPathAssertionsEnabled { get; set; }
 
@@ -43,7 +43,11 @@ namespace Ludots.Core.Presentation.Systems
         {
             _timingDiagnostics = timingDiagnostics;
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+            _definitions = definitions;
+            if (definitions != null)
+            {
+                _runtime.BindDefinitions(definitions);
+            }
         }
 
         public override void Update(in float dt)
@@ -103,6 +107,7 @@ namespace Ludots.Core.Presentation.Systems
                     Entity presenter = Unsafe.Add(ref entityFirst, index);
                     MarkEmitDirty(presenter);
                     SyncFastAttachedChildren(presenter, in newPosition, in newRotation, in newFacing, in newScale);
+                    PropagateInheritedChildTransforms(presenter);
                 }
             }
 
@@ -242,6 +247,7 @@ namespace Ludots.Core.Presentation.Systems
                     scale.Value = newScale;
                     MarkEmitDirty(payload.SingleRootPresenter);
                     SyncFastAttachedChildren(payload.SingleRootPresenter, in newPosition, in newRotation, in newFacing, in newScale);
+                    PropagateInheritedChildTransforms(payload.SingleRootPresenter);
                 }
             }
         }
@@ -296,6 +302,44 @@ namespace Ludots.Core.Presentation.Systems
                     in parentRotation,
                     in parentFacing,
                     in parentScale);
+            }
+        }
+
+        // 无 Attachment 行为、未挂快速标记的 InheritParent 子级只能经完整传播跟随父级；
+        // 缺这一步时它们的稳定可视层会冻结在创建时的变换上。
+        private void PropagateInheritedChildTransforms(Entity parent)
+        {
+            if (_definitions == null ||
+                parent == Entity.Null ||
+                !World.IsAlive(parent) ||
+                !World.Has<PresenterChildren>(parent))
+            {
+                return;
+            }
+
+            ref PresenterChildren children = ref World.Get<PresenterChildren>(parent);
+            for (int i = 0; i < children.Count; i++)
+            {
+                Entity child = children.Get(i);
+                if (!World.IsAlive(child) ||
+                    World.Has<PerfOwnerPayloadAttachedTransformSync>(child) ||
+                    World.Has<PerfHasAttachmentTick>(child) ||
+                    !World.Has<PresenterState>(child) ||
+                    !World.Has<PresenterTransformSource>(child) ||
+                    !World.Has<PresenterParent>(child) ||
+                    World.Get<PresenterParent>(child).Parent != parent)
+                {
+                    continue;
+                }
+
+                TransformSource source = World.Get<PresenterTransformSource>(child).Value;
+                if (source != TransformSource.InheritParent && source != TransformSource.AttachedToParent)
+                {
+                    continue;
+                }
+
+                _runtime.PropagateParentDrivenTransforms(parent);
+                return;
             }
         }
 
@@ -355,7 +399,6 @@ namespace Ludots.Core.Presentation.Systems
             scale.Value = nextScale;
             MarkEmitDirty(child);
         }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private PresenterWorldFacing ResolveOwnerFacing(Entity owner)
         {

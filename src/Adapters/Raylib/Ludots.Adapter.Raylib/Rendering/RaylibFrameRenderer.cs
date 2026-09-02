@@ -828,7 +828,8 @@ namespace Ludots.Adapter.Raylib
                     meshes,
                     frame.RenderDebug.AcceptanceScaleMultiplier,
                     continuousHeightmap,
-                    frame.TimeSeconds);
+                    frameReceipts: null,
+                    timeSeconds: frame.TimeSeconds);
                 _presentationTiming?.ObservePrimitiveRender(
                     ElapsedMs(primitiveStart),
                     _primitiveRenderer.LastInstancedInstances,

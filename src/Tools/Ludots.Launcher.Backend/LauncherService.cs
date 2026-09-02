@@ -21,11 +21,17 @@ public sealed class LauncherService
     };
 
     private sealed record ActiveLaunchProcessRecord(
+        string Id,
+        string ProcessRole,
         int Pid,
         long StartedAtUtcTicks,
-        string AdapterId,
         string AppAssemblyPath,
         string BootstrapPath);
+
+    private sealed record ActiveLaunchGroupRecord(
+        string LaunchId,
+        string AdapterId,
+        IReadOnlyList<ActiveLaunchProcessRecord> Processes);
 
     private readonly string _repoRoot;
     private readonly LauncherConfigService _configService;
@@ -218,6 +224,9 @@ public sealed class LauncherService
             throw new InvalidOperationException("At least one selector is required to save a preset.");
         }
 
+        LauncherProcessGroupDefinition? existingProcessGroup = presetDocument.Presets
+            .FirstOrDefault(item => string.Equals(item.Id, resolvedPresetId, StringComparison.OrdinalIgnoreCase))
+            ?.ProcessGroup;
         presetDocument.Presets.RemoveAll(item => string.Equals(item.Id, resolvedPresetId, StringComparison.OrdinalIgnoreCase));
         presetDocument.Presets.Add(new LauncherPresetDefinition
         {
@@ -225,7 +234,8 @@ public sealed class LauncherService
             Name = name.Trim(),
             Selectors = selectorList,
             AdapterId = string.IsNullOrWhiteSpace(adapterId) ? null : adapterId.Trim().ToLowerInvariant(),
-            BuildMode = buildMode.ToString().ToLowerInvariant()
+            BuildMode = buildMode.ToString().ToLowerInvariant(),
+            ProcessGroup = existingProcessGroup
         });
         SavePresets(presetDocument);
 
@@ -412,6 +422,39 @@ public sealed class LauncherService
         return WriteRuntimeBootstrap(plan);
     }
 
+    public LauncherResolvedProcessGroup ResolveProcessGroup(
+        IEnumerable<string> selectors,
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+    {
+        var resolvedSelectors = selectors
+            .Where(selector => !string.IsNullOrWhiteSpace(selector))
+            .Select(selector => selector.Trim())
+            .ToList();
+        var config = LoadConfig();
+        var presets = LoadPresets();
+        LauncherPresetDefinition preset = RequireDirectProcessGroupPreset(resolvedSelectors, presets);
+        var resolveResult = ResolvePlan(
+            resolvedSelectors,
+            preset.AdapterId,
+            buildMode,
+            config,
+            BuildCatalog(config),
+            presets);
+        return LauncherNetworkProcessGroupResolver.Resolve(
+            _repoRoot,
+            preset.Id,
+            preset.ProcessGroup!,
+            resolveResult.Plan);
+    }
+
+    public LauncherProcessGroupArtifacts WriteProcessGroupArtifacts(
+        IEnumerable<string> selectors,
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+    {
+        return new LauncherNetworkRoleArtifactGenerator().Generate(
+            ResolveProcessGroup(selectors, buildMode));
+    }
+
     public async Task<LauncherLaunchResult> LaunchAsync(
         IEnumerable<string> selectors,
         string? adapterId = null,
@@ -422,13 +465,16 @@ public sealed class LauncherService
             .Where(selector => !string.IsNullOrWhiteSpace(selector))
             .ToList();
         var config = LoadConfig();
+        var presets = LoadPresets();
+        LauncherPresetDefinition? processGroupPreset = FindDirectProcessGroupPreset(resolvedSelectors, presets);
+        EnsureProcessGroupsAreLaunchedDirectly(resolvedSelectors, presets, processGroupPreset);
         var resolveResult = ResolvePlan(
             resolvedSelectors,
-            adapterId,
+            processGroupPreset?.AdapterId ?? adapterId,
             buildMode,
             config,
             BuildCatalog(config),
-            LoadPresets(),
+            presets,
             browserProviderOverride);
         if (resolveResult.Plan.IsExecutableTarget)
         {
@@ -442,6 +488,27 @@ public sealed class LauncherService
             return new LauncherLaunchResult(false, failedModBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
         }
 
+        if (processGroupPreset != null)
+        {
+            LauncherResolvedProcessGroup group = LauncherNetworkProcessGroupResolver.Resolve(
+                _repoRoot,
+                processGroupPreset.Id,
+                processGroupPreset.ProcessGroup!,
+                resolveResult.Plan);
+            IReadOnlyList<LauncherBuildResult> appBuilds = await BuildProcessGroupApplicationsAsync(group);
+            LauncherBuildResult? failedAppBuild = appBuilds.FirstOrDefault(result => !result.Ok);
+            if (failedAppBuild != null)
+            {
+                return new LauncherLaunchResult(false, failedAppBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
+            }
+
+            ReplacePreviousActiveLaunch(resolveResult.Plan.AdapterId);
+            var artifactGenerator = new LauncherNetworkRoleArtifactGenerator();
+            artifactGenerator.PrepareCredentialsForLaunch(group);
+            LauncherProcessGroupArtifacts artifacts = artifactGenerator.Generate(group);
+            return await StartProcessGroupAsync(resolveResult.Plan, artifacts);
+        }
+
         var appBuild = ShouldSkipAppBuild(resolveResult.Plan)
             ? new LauncherBuildResult(resolveResult.Plan.AdapterId, true, 0, "App build skipped by request; using prebuilt assembly.")
             : await BuildAppAsync(resolveResult.Plan.AdapterId);
@@ -451,7 +518,7 @@ public sealed class LauncherService
         }
 
         var bootstrapPath = WriteRuntimeBootstrap(resolveResult.Plan);
-        ReplacePreviousActiveProcess(resolveResult.Plan);
+        ReplacePreviousActiveLaunch(resolveResult.Plan.AdapterId);
         Process process;
         try
         {
@@ -470,8 +537,50 @@ public sealed class LauncherService
             return new LauncherLaunchResult(false, "Failed to start platform process.", -1, string.Empty, bootstrapPath, resolveResult.Plan);
         }
 
-        PersistActiveProcess(resolveResult.Plan, bootstrapPath, process);
-        return new LauncherLaunchResult(true, string.Empty, process.Id, resolveResult.Plan.LaunchUrl, bootstrapPath, resolveResult.Plan);
+        try
+        {
+            var started = new LauncherStartedProcess(
+                "primary",
+                string.Empty,
+                process.Id,
+                resolveResult.Plan.AppAssemblyPath,
+                bootstrapPath);
+            PersistActiveLaunch(
+                resolveResult.Plan.AdapterId,
+                resolveResult.Plan.PlanFingerprint,
+                new[] { CreateActiveProcessRecord(started, process) });
+            return new LauncherLaunchResult(true, string.Empty, process.Id, resolveResult.Plan.LaunchUrl, bootstrapPath, resolveResult.Plan)
+            {
+                Processes = new[] { started }
+            };
+        }
+        catch (Exception exception)
+        {
+            List<string> cleanupFailures = StopOwnedProcesses(new[] { process });
+            if (cleanupFailures.Count == 0)
+            {
+                try
+                {
+                    DeleteActiveProcessRecord(GetActiveProcessRecordPath(resolveResult.Plan.AdapterId));
+                }
+                catch (Exception cleanupException) when (cleanupException is IOException or UnauthorizedAccessException)
+                {
+                    cleanupFailures.Add($"active record cleanup: {cleanupException.Message}");
+                }
+            }
+
+            string error = $"Failed to register launched process: {exception.Message}";
+            if (cleanupFailures.Count > 0)
+            {
+                error += Environment.NewLine + string.Join("; ", cleanupFailures);
+            }
+
+            return new LauncherLaunchResult(false, error, -1, string.Empty, bootstrapPath, resolveResult.Plan);
+        }
+        finally
+        {
+            process.Dispose();
+        }
     }
 
     private async Task<LauncherLaunchResult> LaunchExecutableTargetAsync(LauncherLaunchPlan plan, LauncherConfig config)
@@ -483,7 +592,7 @@ public sealed class LauncherService
             return new LauncherLaunchResult(false, failedBuild.Output, -1, string.Empty, string.Empty, plan);
         }
 
-        ReplacePreviousActiveProcess(plan);
+        ReplacePreviousActiveLaunch(plan.AdapterId);
         Process process;
         try
         {
@@ -502,8 +611,20 @@ public sealed class LauncherService
             return new LauncherLaunchResult(false, "Failed to start executable target process.", -1, string.Empty, string.Empty, plan);
         }
 
-        PersistActiveProcess(plan, string.Empty, process);
-        return new LauncherLaunchResult(true, string.Empty, process.Id, string.Empty, string.Empty, plan);
+        var started = new LauncherStartedProcess(
+            "primary",
+            string.Empty,
+            process.Id,
+            plan.AppAssemblyPath,
+            string.Empty);
+        PersistActiveLaunch(
+            plan.AdapterId,
+            plan.PlanFingerprint,
+            new[] { CreateActiveProcessRecord(started, process) });
+        return new LauncherLaunchResult(true, string.Empty, process.Id, string.Empty, string.Empty, plan)
+        {
+            Processes = new[] { started }
+        };
     }
 
     public async Task<LauncherExecutableTargetRun> ExecuteExecutableTargetAsync(LauncherLaunchPlan plan, CancellationToken ct = default)
@@ -739,6 +860,101 @@ public sealed class LauncherService
     private void SaveRepoConfig(LauncherConfig config) => _configService.SaveRepoConfig(config);
     private void SavePresets(LauncherPresetDocument presets) => _configService.SavePresets(presets);
     private void SavePreferences(LauncherPreferences preferences) => _configService.SavePreferences(preferences);
+
+    private static LauncherPresetDefinition RequireDirectProcessGroupPreset(
+        IReadOnlyList<string> selectors,
+        LauncherPresetDocument presets)
+    {
+        LauncherPresetDefinition? preset = FindDirectProcessGroupPreset(selectors, presets);
+        EnsureProcessGroupsAreLaunchedDirectly(selectors, presets, preset);
+        return preset ?? throw new InvalidOperationException(
+            "A process group must be selected directly with exactly one preset:<id> selector.");
+    }
+
+    private static LauncherPresetDefinition? FindDirectProcessGroupPreset(
+        IReadOnlyList<string> selectors,
+        LauncherPresetDocument presets)
+    {
+        if (selectors.Count != 1 || !selectors[0].StartsWith("preset:", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        string presetId = selectors[0]["preset:".Length..];
+        LauncherPresetDefinition? preset = presets.Presets.FirstOrDefault(item =>
+            string.Equals(item.Id, presetId, StringComparison.OrdinalIgnoreCase));
+        return preset?.ProcessGroup == null ? null : preset;
+    }
+
+    private static void EnsureProcessGroupsAreLaunchedDirectly(
+        IReadOnlyList<string> selectors,
+        LauncherPresetDocument presets,
+        LauncherPresetDefinition? directProcessGroup)
+    {
+        if (directProcessGroup != null)
+        {
+            return;
+        }
+
+        var stack = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string selector in selectors)
+        {
+            string? groupId = FindReferencedProcessGroup(selector, presets, stack);
+            if (groupId != null)
+            {
+                throw new InvalidOperationException(
+                    $"Process group preset '{groupId}' must be launched directly as the only selector. " +
+                    "Mixing a process group with bindings, mods, paths, or wrapper presets is not supported.");
+            }
+        }
+    }
+
+    private static string? FindReferencedProcessGroup(
+        string selector,
+        LauncherPresetDocument presets,
+        HashSet<string> stack)
+    {
+        if (!selector.StartsWith("preset:", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        string presetId = selector["preset:".Length..];
+        LauncherPresetDefinition? preset = presets.Presets.FirstOrDefault(item =>
+            string.Equals(item.Id, presetId, StringComparison.OrdinalIgnoreCase));
+        if (preset == null)
+        {
+            return null;
+        }
+
+        if (preset.ProcessGroup != null)
+        {
+            return preset.Id;
+        }
+
+        if (!stack.Add(preset.Id))
+        {
+            throw new InvalidOperationException($"Preset cycle detected at '{preset.Id}'.");
+        }
+
+        try
+        {
+            foreach (string nestedSelector in preset.Selectors)
+            {
+                string? groupId = FindReferencedProcessGroup(nestedSelector, presets, stack);
+                if (groupId != null)
+                {
+                    return groupId;
+                }
+            }
+
+            return null;
+        }
+        finally
+        {
+            stack.Remove(preset.Id);
+        }
+    }
 
     private LauncherResolveResult ResolvePlan(
         IReadOnlyList<string> selectors,
@@ -1866,9 +2082,18 @@ public sealed class LauncherService
                     config,
                     catalog,
                     presetDocument);
+                if (preset.ProcessGroup != null)
+                {
+                    _ = LauncherNetworkProcessGroupResolver.Resolve(
+                        _repoRoot,
+                        preset.Id,
+                        preset.ProcessGroup,
+                        resolved.Plan);
+                }
+
                 activeModIds.AddRange(resolved.Plan.OrderedModIds);
             }
-            catch
+            catch when (preset.ProcessGroup == null)
             {
             }
 
@@ -1902,6 +2127,35 @@ public sealed class LauncherService
 
         results.AddRange(await BuildPlannedModsAsync(plan, config, ct));
         results.AddRange(await BuildHostBrowserRuntimeAsync(plan, ct));
+        return results;
+    }
+
+    private async Task<IReadOnlyList<LauncherBuildResult>> BuildProcessGroupApplicationsAsync(
+        LauncherResolvedProcessGroup group)
+    {
+        var results = new List<LauncherBuildResult>(group.Applications.Count);
+        foreach (LauncherResolvedProcessApplication application in group.Applications)
+        {
+            var build = await RunDotnetAsync(
+                $"build \"{application.ProjectPath}\" -c Release",
+                _repoRoot,
+                timeoutMs: 300_000);
+            string output = build.Output;
+            if (build.ExitCode == 0 && !File.Exists(application.AssemblyPath))
+            {
+                output += Environment.NewLine +
+                    $"Configured process-group assembly was not produced: {application.AssemblyPath}";
+                results.Add(new LauncherBuildResult(application.Id, false, 1, output));
+                continue;
+            }
+
+            results.Add(new LauncherBuildResult(
+                application.Id,
+                build.ExitCode == 0,
+                build.ExitCode,
+                output));
+        }
+
         return results;
     }
 
@@ -2275,120 +2529,417 @@ public sealed class LauncherService
         return plan.GraphArtifactPath;
     }
 
-    private void ReplacePreviousActiveProcess(LauncherLaunchPlan plan)
+    private async Task<LauncherLaunchResult> StartProcessGroupAsync(
+        LauncherLaunchPlan plan,
+        LauncherProcessGroupArtifacts artifacts)
     {
-        var recordPath = GetActiveProcessRecordPath(plan.AdapterId);
-        var record = ReadActiveProcessRecord(recordPath);
+        var ownedProcesses = new List<Process>(artifacts.Processes.Count);
+        var activeRecords = new List<ActiveLaunchProcessRecord>(artifacts.Processes.Count);
+        var startedProcesses = new List<LauncherStartedProcess>(artifacts.Processes.Count);
+        string recordPath = GetActiveProcessRecordPath(plan.AdapterId);
+        try
+        {
+            void StartRole(LauncherNetworkRoleArtifact artifact)
+            {
+                if (!File.Exists(artifact.ApplicationAssemblyPath))
+                {
+                    throw new FileNotFoundException(
+                        $"Configured process-group assembly was not found: {artifact.ApplicationAssemblyPath}",
+                        artifact.ApplicationAssemblyPath);
+                }
+
+                var startInfo = new ProcessStartInfo(ResolveDotnetCommand())
+                {
+                    WorkingDirectory = artifact.WorkingDirectory,
+                    UseShellExecute = false
+                };
+                startInfo.ArgumentList.Add("exec");
+                startInfo.ArgumentList.Add("--roll-forward");
+                startInfo.ArgumentList.Add("Major");
+                startInfo.ArgumentList.Add(artifact.ApplicationAssemblyPath);
+                startInfo.ArgumentList.Add(artifact.BootstrapPath);
+                Process process = Process.Start(startInfo)
+                    ?? throw new InvalidOperationException(
+                        $"Failed to start process-group role '{artifact.ProcessId}'.");
+                ownedProcesses.Add(process);
+
+                var started = new LauncherStartedProcess(
+                    artifact.ProcessId,
+                    artifact.ProcessRole,
+                    process.Id,
+                    artifact.ApplicationAssemblyPath,
+                    artifact.BootstrapPath);
+                startedProcesses.Add(started);
+                activeRecords.Add(CreateActiveProcessRecord(started, process));
+                PersistActiveLaunch(plan.AdapterId, artifacts.PresetId, activeRecords);
+            }
+
+            if (artifacts.Topology == LauncherProcessGroupTopologies.LocalAuthoritative)
+            {
+                LauncherNetworkRoleArtifact server = artifacts.Processes[0];
+                StartRole(server);
+                await WaitForProcessGroupReadinessAsync(
+                    artifacts,
+                    ownedProcesses,
+                    serverRuntimeOnly: true);
+                foreach (LauncherNetworkRoleArtifact client in artifacts.Processes.Skip(1))
+                {
+                    StartRole(client);
+                }
+            }
+            else
+            {
+                foreach (LauncherNetworkRoleArtifact process in artifacts.Processes)
+                {
+                    StartRole(process);
+                }
+            }
+
+            await WaitForProcessGroupReadinessAsync(
+                artifacts,
+                ownedProcesses,
+                serverRuntimeOnly: false);
+            new LauncherNetworkRoleArtifactGenerator().DeleteSensitiveBootstrapArtifacts(artifacts);
+
+            LauncherStartedProcess primary = startedProcesses[0];
+            return new LauncherLaunchResult(
+                true,
+                string.Empty,
+                primary.Pid,
+                string.Empty,
+                primary.BootstrapPath,
+                plan)
+            {
+                Processes = startedProcesses
+            };
+        }
+        catch (Exception exception)
+        {
+            var cleanupFailures = StopOwnedProcesses(ownedProcesses);
+            if (cleanupFailures.Count == 0)
+            {
+                try
+                {
+                    DeleteActiveProcessRecord(recordPath);
+                }
+                catch (Exception cleanupException) when (cleanupException is IOException or UnauthorizedAccessException)
+                {
+                    cleanupFailures.Add($"active record cleanup: {cleanupException.Message}");
+                }
+
+            }
+
+            try
+            {
+                new LauncherNetworkRoleArtifactGenerator().DeleteSensitiveBootstrapArtifacts(artifacts);
+            }
+            catch (Exception cleanupException) when (
+                cleanupException is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                cleanupFailures.Add($"sensitive bootstrap cleanup: {cleanupException.Message}");
+            }
+
+            string error = exception.Message;
+            if (cleanupFailures.Count > 0)
+            {
+                error += Environment.NewLine +
+                    $"Process-group rollback could not confirm every role stopped: {string.Join("; ", cleanupFailures)}";
+            }
+
+            return new LauncherLaunchResult(false, error, -1, string.Empty, string.Empty, plan)
+            {
+                Processes = startedProcesses
+            };
+        }
+        finally
+        {
+            foreach (Process process in ownedProcesses)
+            {
+                process.Dispose();
+            }
+        }
+    }
+
+    private static async Task WaitForProcessGroupReadinessAsync(
+        LauncherProcessGroupArtifacts artifacts,
+        IReadOnlyList<Process> ownedProcesses,
+        bool serverRuntimeOnly)
+    {
+        var reader = new LauncherNetworkProcessReadinessReader();
+        var stopwatch = Stopwatch.StartNew();
+        string lastPending = "readiness artifacts have not been written";
+        while (stopwatch.ElapsedMilliseconds < artifacts.ReadinessTimeoutMilliseconds)
+        {
+            for (int index = 0; index < ownedProcesses.Count; index++)
+            {
+                Process process = ownedProcesses[index];
+                if (process.HasExited)
+                {
+                    LauncherNetworkRoleArtifact role = artifacts.Processes[index];
+                    throw new InvalidOperationException(
+                        $"Process-group role '{role.ProcessId}' exited with code {process.ExitCode} before " +
+                        $"{(serverRuntimeOnly ? "server runtime" : "the process group")} became ready.");
+                }
+            }
+
+            if (serverRuntimeOnly)
+            {
+                LauncherNetworkRoleArtifact server = artifacts.Processes[0];
+                if (reader.TryRead(
+                        server.ReadinessArtifactPath,
+                        ownedProcesses[0].StartTime.ToUniversalTime(),
+                        out LauncherNetworkProcessReadinessArtifact readiness) &&
+                    LauncherNetworkProcessReadinessEvaluator.IsServerRuntimeReady(server, readiness))
+                {
+                    return;
+                }
+
+                lastPending = $"server '{server.ProcessId}' has not reported runtimeReady=true";
+            }
+            else
+            {
+                bool allReady = true;
+                for (int index = 0; index < ownedProcesses.Count; index++)
+                {
+                    LauncherNetworkRoleArtifact role = artifacts.Processes[index];
+                    if (!reader.TryRead(
+                            role.ReadinessArtifactPath,
+                            ownedProcesses[index].StartTime.ToUniversalTime(),
+                            out LauncherNetworkProcessReadinessArtifact readiness))
+                    {
+                        allReady = false;
+                        lastPending = $"role '{role.ProcessId}' has not written '{role.ReadinessArtifactPath}'";
+                        break;
+                    }
+
+                    if (!LauncherNetworkProcessReadinessEvaluator.IsGroupReady(
+                            role,
+                            readiness,
+                            artifacts.ClientCount))
+                    {
+                        allReady = false;
+                        lastPending = role.ProcessRole == "authoritativeServer"
+                            ? $"server '{role.ProcessId}' connectedSeatCount={readiness.ConnectedSeatCount}/{artifacts.ClientCount}"
+                            : $"client '{role.ProcessId}' session={readiness.SessionEstablished}, " +
+                              $"replicatedMirrors={readiness.ReplicatedMirrorCount}/{role.MinimumReplicatedMirrorCount}, " +
+                              $"renderableMirrors={readiness.RenderableMirrorCount}/{role.MinimumRenderableMirrorCount}, " +
+                              $"credential={File.Exists(role.CredentialPath)}";
+                        break;
+                    }
+                }
+
+                if (allReady)
+                {
+                    return;
+                }
+            }
+
+            await Task.Delay(artifacts.ReadinessPollIntervalMilliseconds);
+        }
+
+        throw new TimeoutException(
+            $"Process group '{artifacts.PresetId}' timed out after {artifacts.ReadinessTimeoutMilliseconds} ms waiting for " +
+            $"{(serverRuntimeOnly ? "the authoritative server runtime" : "all roles")} readiness: {lastPending}.");
+    }
+
+    private static List<string> StopOwnedProcesses(IEnumerable<Process> processes)
+    {
+        var failures = new List<string>();
+        foreach (Process process in processes.Reverse())
+        {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                    if (!process.WaitForExit(5000))
+                    {
+                        failures.Add($"pid {process.Id} did not exit within 5 seconds");
+                    }
+                }
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+                failures.Add($"pid {process.Id}: {exception.Message}");
+            }
+        }
+
+        return failures;
+    }
+
+    private void ReplacePreviousActiveLaunch(string adapterId)
+    {
+        string recordPath = GetActiveProcessRecordPath(adapterId);
+        ActiveLaunchGroupRecord? record = ReadActiveLaunchRecord(recordPath);
         if (record == null)
         {
             return;
         }
 
-        if (!PathsEqual(record.AppAssemblyPath, plan.AppAssemblyPath))
+        if (!string.Equals(record.AdapterId, adapterId, StringComparison.OrdinalIgnoreCase))
         {
-            DeleteActiveProcessRecord(recordPath);
-            return;
+            throw new InvalidOperationException(
+                $"Active launch record '{recordPath}' belongs to adapter '{record.AdapterId}', not '{adapterId}'.");
         }
 
+        var failures = new List<string>();
+        foreach (ActiveLaunchProcessRecord owned in record.Processes.Reverse())
+        {
+            try
+            {
+                using Process process = Process.GetProcessById(owned.Pid);
+                if (process.HasExited || !StartTimeMatches(process, owned.StartedAtUtcTicks))
+                {
+                    continue;
+                }
+
+                process.Kill(entireProcessTree: true);
+                if (!process.WaitForExit(5000))
+                {
+                    failures.Add($"{owned.Id} (pid {owned.Pid}) did not exit within 5 seconds");
+                }
+            }
+            catch (ArgumentException)
+            {
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+                failures.Add($"{owned.Id} (pid {owned.Pid}): {exception.Message}");
+            }
+        }
+
+        if (failures.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Cannot replace active launch '{record.LaunchId}' because its process group was not fully stopped: " +
+                string.Join("; ", failures));
+        }
+
+        DeleteActiveProcessRecord(recordPath);
+    }
+
+    private static ActiveLaunchProcessRecord CreateActiveProcessRecord(
+        LauncherStartedProcess started,
+        Process process)
+    {
+        return new ActiveLaunchProcessRecord(
+            started.Id,
+            started.ProcessRole,
+            started.Pid,
+            process.StartTime.ToUniversalTime().Ticks,
+            Path.GetFullPath(started.AppAssemblyPath),
+            Path.GetFullPath(started.BootstrapPath));
+    }
+
+    private void PersistActiveLaunch(
+        string adapterId,
+        string launchId,
+        IReadOnlyList<ActiveLaunchProcessRecord> processes)
+    {
+        if (processes.Count == 0)
+        {
+            throw new InvalidOperationException("An active launch record must contain at least one process.");
+        }
+
+        var record = new ActiveLaunchGroupRecord(launchId, adapterId, processes.ToArray());
+        string recordPath = GetActiveProcessRecordPath(adapterId);
+        string directory = Path.GetDirectoryName(recordPath)
+            ?? throw new InvalidOperationException($"Active launch record path has no parent directory: {recordPath}");
+        Directory.CreateDirectory(directory);
+        string temporaryPath = Path.Combine(
+            directory,
+            $".{Path.GetFileName(recordPath)}.{Guid.NewGuid():N}.tmp");
         try
         {
-            using var process = Process.GetProcessById(record.Pid);
-            if (process.HasExited || !StartTimeMatches(process, record.StartedAtUtcTicks))
-            {
-                DeleteActiveProcessRecord(recordPath);
-                return;
-            }
-
-            process.Kill(entireProcessTree: true);
-            process.WaitForExit(5000);
-        }
-        catch (ArgumentException)
-        {
-        }
-        catch (InvalidOperationException)
-        {
+            var json = JsonSerializer.Serialize(record, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(temporaryPath, json);
+            File.Move(temporaryPath, recordPath, overwrite: true);
         }
         finally
         {
-            DeleteActiveProcessRecord(recordPath);
-        }
-    }
-
-    private void PersistActiveProcess(LauncherLaunchPlan plan, string bootstrapPath, Process process)
-    {
-        var record = new ActiveLaunchProcessRecord(
-            process.Id,
-            process.StartTime.ToUniversalTime().Ticks,
-            plan.AdapterId,
-            Path.GetFullPath(plan.AppAssemblyPath),
-            Path.GetFullPath(bootstrapPath));
-        var recordPath = GetActiveProcessRecordPath(plan.AdapterId);
-        var directory = Path.GetDirectoryName(recordPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        var json = JsonSerializer.Serialize(record, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(recordPath, json);
-    }
-
-    private static ActiveLaunchProcessRecord? ReadActiveProcessRecord(string path)
-    {
-        try
-        {
-            if (!File.Exists(path))
+            if (File.Exists(temporaryPath))
             {
-                return null;
+                File.Delete(temporaryPath);
             }
-
-            var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<ActiveLaunchProcessRecord>(json);
         }
-        catch
+    }
+
+    private static ActiveLaunchGroupRecord? ReadActiveLaunchRecord(string path)
+    {
+        if (!File.Exists(path))
         {
             return null;
         }
+
+        ActiveLaunchGroupRecord record;
+        try
+        {
+            record = JsonSerializer.Deserialize<ActiveLaunchGroupRecord>(
+                    File.ReadAllText(path),
+                    new JsonSerializerOptions
+                    {
+                        UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow
+                    })
+                ?? throw new InvalidOperationException("Active launch record deserialized to null.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"Failed to parse active launch record '{path}': {exception.Message}",
+                exception);
+        }
+
+        if (string.IsNullOrWhiteSpace(record.LaunchId) ||
+            string.IsNullOrWhiteSpace(record.AdapterId) ||
+            record.Processes == null ||
+            record.Processes.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Active launch record '{path}' is incomplete and cannot be replaced safely.");
+        }
+
+        var processIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pids = new HashSet<int>();
+        foreach (ActiveLaunchProcessRecord process in record.Processes)
+        {
+            if (string.IsNullOrWhiteSpace(process.Id) ||
+                process.Pid <= 0 ||
+                process.StartedAtUtcTicks <= 0 ||
+                string.IsNullOrWhiteSpace(process.AppAssemblyPath) ||
+                string.IsNullOrWhiteSpace(process.BootstrapPath) ||
+                !processIds.Add(process.Id) ||
+                !pids.Add(process.Pid))
+            {
+                throw new InvalidOperationException(
+                    $"Active launch record '{path}' contains an invalid or duplicate process identity.");
+            }
+        }
+
+        return record;
     }
 
     private static void DeleteActiveProcessRecord(string path)
     {
-        try
+        if (File.Exists(path))
         {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch
-        {
+            File.Delete(path);
         }
     }
 
     private static bool StartTimeMatches(Process process, long startedAtUtcTicks)
     {
-        try
-        {
-            return process.StartTime.ToUniversalTime().Ticks == startedAtUtcTicks;
-        }
-        catch
-        {
-            return false;
-        }
+        return process.StartTime.ToUniversalTime().Ticks == startedAtUtcTicks;
     }
 
-    private static string GetActiveProcessRecordPath(string adapterId)
+    internal string GetActiveProcessRecordPath(string adapterId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(adapterId);
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var safeAdapterId = string.IsNullOrWhiteSpace(adapterId)
-            ? "default"
-            : string.Concat(adapterId.Where(char.IsLetterOrDigit));
-        if (string.IsNullOrWhiteSpace(safeAdapterId))
-        {
-            safeAdapterId = "default";
-        }
-
-        return Path.Combine(appData, "Ludots", "Launcher", "active-processes", $"{safeAdapterId}.json");
+        string repoIdentity = OperatingSystem.IsWindows() ? _repoRoot.ToUpperInvariant() : _repoRoot;
+        string identity = $"{repoIdentity}\n{adapterId.Trim().ToLowerInvariant()}";
+        byte[] digest = SHA256.HashData(Encoding.UTF8.GetBytes(identity));
+        string key = Convert.ToHexString(digest).ToLowerInvariant();
+        return Path.Combine(appData, "Ludots", "Launcher", "active-processes", $"launch-{key}.json");
     }
 
     private string? ResolveBuildProjectPath(LauncherConfig config, string rootPath, string modId, string preferredProjectPath)

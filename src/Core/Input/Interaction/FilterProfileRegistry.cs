@@ -35,7 +35,7 @@ namespace Ludots.Core.Input.Interaction
             _anchorKinds.Add(FilterAnchorKinds.SolePossessedRep);
         }
 
-        /// <summary>Profile id space shared with <see cref="InteractionContextStack.FilterProfileIdRegistry"/>.</summary>
+        /// <summary>Profile id space shared with the retired InteractionContextStack profile registry (#1306 route 4).</summary>
         public StringIntRegistry ProfileIdRegistry => _profileIds;
 
         /// <summary>

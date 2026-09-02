@@ -1,8 +1,11 @@
+using Arch.System;
 using System;
 using Arch.Core;
-using Arch.System;
-using Ludots.Core.Components;
+using CoreInputMod.Systems;
+using Ludots.Core.Client;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -20,6 +23,11 @@ namespace RtsDemoMod.Systems
         private EntityCommandPanelHandle _commandDeckHandle = EntityCommandPanelHandle.Invalid;
         private EntityCommandPanelHandle _orderMonitorHandle = EntityCommandPanelHandle.Invalid;
         private Entity _lastTarget = Entity.Null;
+        private MapConfig? _cachedMapConfig;
+        private RtsCommandSourceUiMapConfig? _cachedUiConfig;
+        private bool _skillBarVisibilityOwned;
+        private bool _hadPreviousSkillBarVisibility;
+        private bool _previousSkillBarVisibility;
 
         public RtsCommandSourceCommandPanelSystem(GameEngine engine)
         {
@@ -45,16 +53,21 @@ namespace RtsDemoMod.Systems
             if (!IsRtsMapActive())
             {
                 ClosePanel(service);
+                RestoreSkillBarVisibility();
                 return;
             }
 
             RtsShowcaseCommandSourceHelper.EnsureCommandSourceBinding(_engine);
 
+            int localPlayerId = ResolveLocalPlayerId();
+            RtsCommandSourceUiMapConfig uiConfig = ResolveUiConfig();
+            ApplySkillBarVisibility(uiConfig.SkillBarVisible);
+
             Entity commandSource = RtsShowcaseCommandSourceHelper.TryGetCommandSourcePrimary(_engine, out Entity current)
                 ? current
                 : Entity.Null;
 
-            if (!IsPanelTarget(commandSource))
+            if (!IsPanelTarget(commandSource, localPlayerId))
             {
                 SetVisible(service, _commandDeckHandle, visible: false);
                 SetVisible(service, _orderMonitorHandle, visible: false);
@@ -62,10 +75,10 @@ namespace RtsDemoMod.Systems
                 return;
             }
 
-            var commandAnchor = new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.BottomCenter, 0f, 18f);
-            var commandSize = new EntityCommandPanelSize(702f, 226f);
-            var monitorAnchor = new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.TopRight, 28f, 126f);
-            var monitorSize = new EntityCommandPanelSize(390f, 428f);
+            EntityCommandPanelAnchor commandAnchor = uiConfig.CommandDeck.ToAnchor();
+            EntityCommandPanelSize commandSize = uiConfig.CommandDeck.ToSize();
+            EntityCommandPanelAnchor monitorAnchor = uiConfig.OrderMonitor.ToAnchor();
+            EntityCommandPanelSize monitorSize = uiConfig.OrderMonitor.ToSize();
 
             EnsurePanel(
                 service,
@@ -93,8 +106,8 @@ namespace RtsDemoMod.Systems
                 _lastTarget = commandSource;
             }
 
-            SetVisible(service, _commandDeckHandle, visible: true);
-            SetVisible(service, _orderMonitorHandle, visible: true);
+            SetVisible(service, _commandDeckHandle, uiConfig.CommandDeck.Visible);
+            SetVisible(service, _orderMonitorHandle, uiConfig.OrderMonitor.Visible);
         }
 
         public void AfterUpdate(in float dt)
@@ -108,11 +121,77 @@ namespace RtsDemoMod.Systems
             {
                 ClosePanel(service);
             }
+            RestoreSkillBarVisibility();
         }
 
-        private bool IsPanelTarget(Entity entity)
+        private bool IsPanelTarget(Entity entity, int localPlayerId)
         {
-            return _engine.World.IsAlive(entity) && _engine.World.Has<AbilityStateBuffer>(entity);
+            return localPlayerId > 0 &&
+                   _engine.World.IsAlive(entity) &&
+                   _engine.World.Has<AbilityStateBuffer>(entity) &&
+                   _engine.World.TryGet(entity, out PlayerOwner owner) &&
+                   owner.PlayerId == localPlayerId;
+        }
+
+        // TODO(#711-merge): main removed the name-based default command source seeding (FindFallbackTarget
+        // chain) — ownership is authored in map data and initial selection comes from the quick-select
+        // toolbar; the PR's per-player seeding path was not resurrected under the seat model.
+        private int ResolveLocalPlayerId()
+        {
+            return ClientLocalSeatAccess.RequireRegistry(_engine).TryGetSoleSeat(out ClientLocalSeat seat) &&
+                   seat.HasPossession
+                ? seat.PossessedPlayerId
+                : 0;
+        }
+
+        private RtsCommandSourceUiMapConfig ResolveUiConfig()
+        {
+            MapConfig? mapConfig = _engine.CurrentMapSession?.MapConfig;
+            if (!ReferenceEquals(mapConfig, _cachedMapConfig) || _cachedUiConfig == null)
+            {
+                _cachedMapConfig = mapConfig;
+                _cachedUiConfig = RtsCommandSourceUiMapConfig.Resolve(mapConfig);
+            }
+
+            return _cachedUiConfig;
+        }
+
+        private void ApplySkillBarVisibility(bool visible)
+        {
+            if (!_skillBarVisibilityOwned)
+            {
+                _skillBarVisibilityOwned = true;
+                if (_engine.GlobalContext.TryGetValue(
+                        SkillBarOverlaySystem.SkillBarEnabledKey,
+                        out object? previous) &&
+                    previous is bool previousVisibility)
+                {
+                    _hadPreviousSkillBarVisibility = true;
+                    _previousSkillBarVisibility = previousVisibility;
+                }
+            }
+
+            _engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = visible;
+        }
+
+        private void RestoreSkillBarVisibility()
+        {
+            if (!_skillBarVisibilityOwned)
+            {
+                return;
+            }
+
+            if (_hadPreviousSkillBarVisibility)
+            {
+                _engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = _previousSkillBarVisibility;
+            }
+            else
+            {
+                _engine.GlobalContext.Remove(SkillBarOverlaySystem.SkillBarEnabledKey);
+            }
+
+            _skillBarVisibilityOwned = false;
+            _hadPreviousSkillBarVisibility = false;
         }
 
         private void ClosePanel(IEntityCommandPanelService service)

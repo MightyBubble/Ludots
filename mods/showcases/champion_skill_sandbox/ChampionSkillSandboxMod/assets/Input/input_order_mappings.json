@@ -68,6 +68,7 @@
   ],
   "groupMoveTargetLayout": {
     "mode": "Grid",
+    "assignment": "ActorOrder",
     "spacingCm": 140,
     "orderTypeKeys": [ "moveTo" ]
   },

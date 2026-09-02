@@ -40,6 +40,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = value },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = bbKeyId, B = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
         }
 
@@ -57,6 +58,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 2, ImmF = delta },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 3, A = 1, B = 2 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = bbKeyId, B = 3 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
         }
 
@@ -99,8 +101,15 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
             var caster = world.Create();
             var target = world.Create(new BlackboardFloatBuffer());
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 phase, in behavior, EffectPresetType.None);
 
             ref var bb = ref world.Get<BlackboardFloatBuffer>(target);
@@ -133,8 +142,15 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
             var caster = world.Create();
             var target = world.Create(new BlackboardFloatBuffer());
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 phase, in behavior, EffectPresetType.None);
 
             ref var bb = ref world.Get<BlackboardFloatBuffer>(target);
@@ -260,9 +276,19 @@ namespace Ludots.Tests.GAS
                 GraphKind kind = allPhases[i] == EffectPhaseId.OnPropose
                     ? GraphKind.Validation
                     : GraphKind.Effect;
-                GraphInstruction[] program = allPhases[i] == EffectPhaseId.OnPropose
-                    ? [new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 }]
-                    : MakeBbWriteProgram(bbKey, (float)(i + 1));
+                GraphInstruction[] program;
+                if (allPhases[i] == EffectPhaseId.OnPropose)
+                {
+                    program =
+                    [
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                    ];
+                }
+                else
+                {
+                    program = MakeBbWriteProgram(bbKey, (float)(i + 1));
+                }
                 programs.Register(graphId, program, kind);
                 behavior.TryAddStep(allPhases[i], PhaseSlot.Pre, graphId);
             }
@@ -271,6 +297,13 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
             var caster = world.Create();
             var target = world.Create(new BlackboardFloatBuffer());
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
             // Execute each phase independently
             for (int i = 0; i < allPhases.Length; i++)
@@ -285,7 +318,7 @@ namespace Ludots.Tests.GAS
                 }
 
                 executor.ExecutePhase(
-                    world, api, caster, target, default, default,
+                    world, api, context.Source, context.Target, context.TargetContext, default,
                     allPhases[i], in behavior, EffectPresetType.None);
             }
 
@@ -376,8 +409,15 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
             var caster = world.Create();
             var target = world.Create(new BlackboardFloatBuffer());
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 phase, in behavior, EffectPresetType.None);
 
             ref var bb = ref world.Get<BlackboardFloatBuffer>(target);

@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Arch.Core;
 using Ludots.Adapter.Raylib.Services;
 using Ludots.Client.Raylib.Rendering;
@@ -16,6 +17,7 @@ using Ludots.Core.Gameplay.FieldRegions;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
+using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Requests;
@@ -392,14 +394,45 @@ namespace Ludots.Adapter.Raylib
                 string? screenshotFileName = string.IsNullOrWhiteSpace(screenshotTargetPath)
                     ? null
                     : Path.GetFileName(screenshotTargetPath);
-                int[] screenshotFrames = ReadEnvFrameList("LUDOTS_TAKE_SCREENSHOT_FRAMES");
+                string? rawScreenshotMilestones = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_MILESTONES");
+                string? rawScreenshotFrame = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAME");
+                string? rawScreenshotFrames = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAMES");
+                bool milestoneScreenshotMode = RaylibPresentationCaptureSequence.ValidateCaptureMode(
+                    rawScreenshotMilestones,
+                    rawScreenshotFrame,
+                    rawScreenshotFrames);
+
+                RaylibPresentationCaptureSequence? milestoneCaptureSequence = null;
+                if (milestoneScreenshotMode)
+                {
+                    if (!engine.TryGetService(
+                            CoreServiceKeys.PresentationCaptureMilestoneSource,
+                            out IPresentationCaptureMilestoneSource milestoneSource) ||
+                        milestoneSource == null)
+                    {
+                        throw new InvalidOperationException(
+                            "Milestone screenshot capture requires the PresentationCaptureMilestoneSource service.");
+                    }
+
+                    milestoneCaptureSequence = RaylibPresentationCaptureSequence.Create(
+                        milestoneSource,
+                        screenshotTargetPath ?? string.Empty,
+                        rawScreenshotMilestones!);
+                }
+
+                int[] screenshotFrames = milestoneScreenshotMode
+                    ? Array.Empty<int>()
+                    : ReadEnvFrameList("LUDOTS_TAKE_SCREENSHOT_FRAMES");
                 int screenshotSequenceIndex = 0;
                 bool screenshotSequenceEnabled = screenshotFrames.Length > 0;
-                bool screenshotPending = !string.IsNullOrWhiteSpace(screenshotFileName) &&
-                                         (!screenshotSequenceEnabled || screenshotFrames.Length > 0);
-                int screenshotFrame = screenshotSequenceEnabled
+                bool screenshotPending = milestoneCaptureSequence?.HasPending ??
+                                         (!string.IsNullOrWhiteSpace(screenshotFileName) &&
+                                          (!screenshotSequenceEnabled || screenshotFrames.Length > 0));
+                int screenshotFrame = milestoneScreenshotMode
+                    ? 0
+                    : screenshotSequenceEnabled
                     ? screenshotFrames[0]
-                    : int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAME"), out int parsedScreenshotFrame)
+                    : int.TryParse(rawScreenshotFrame, out int parsedScreenshotFrame)
                     ? Math.Max(1, parsedScreenshotFrame)
                     : 60;
                 int autoExitFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_AUTO_EXIT_FRAME"), out int parsedAutoExitFrame)
@@ -474,6 +507,27 @@ namespace Ludots.Adapter.Raylib
                             CoreServiceKeys.ContinuousHeightmap,
                             out IContinuousHeightmap? continuousHeightmapForFrame) &&
                             continuousHeightmapForFrame is IContinuousHeightmapRenderSource;
+                        TerrainPresentationBindingConfig? terrainPresentation =
+                            engine.CurrentMapSession?.MapConfig?.TerrainPresentation;
+                        ResolvedTerrainPresentation? resolvedTerrainPresentation =
+                            engine.CurrentMapSession?.TerrainPresentation;
+                        if (terrainPresentation != null && resolvedTerrainPresentation == null)
+                        {
+                            throw new InvalidOperationException(
+                                "The active map declares terrain presentation, but Core did not resolve its terrain source.");
+                        }
+                        if (terrainPresentation?.Source == TerrainPresentationSource.ContinuousHeightmap && !hasContinuousHeightmap)
+                        {
+                            throw new InvalidOperationException(
+                                "The active map explicitly requires ContinuousHeightmap terrain presentation, but no renderable continuous heightmap is bound.");
+                        }
+                        if (resolvedTerrainPresentation?.Source == TerrainPresentationSource.BoardTerrain)
+                        {
+                            drawContinuousHeightmap = false;
+                        }
+                        VertexMap? boardTerrain = resolvedTerrainPresentation?.Source == TerrainPresentationSource.BoardTerrain
+                            ? resolvedTerrainPresentation.BoardTerrain
+                            : engine.VertexMap;
                         bool drawPrimitives = renderDebug.DrawPrimitives;
                         bool drawDebugDraw = renderDebug.DrawDebugDraw && !cleanPerformanceMode;
                         bool drawFieldOverlays = renderDebug.DrawFieldOverlays && !cleanPerformanceMode;
@@ -705,7 +759,7 @@ namespace Ludots.Adapter.Raylib
                             }
                             else
                             {
-                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(engine.VertexMap), reflectionCamera);
+                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(boardTerrain), reflectionCamera);
                             }
 
                             EndCoreMode3D();
@@ -732,7 +786,7 @@ namespace Ludots.Adapter.Raylib
                             }
                             else
                             {
-                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(engine.VertexMap), activeCamera);
+                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(boardTerrain), activeCamera);
                             }
 
                             EndCoreMode3D();
@@ -745,6 +799,25 @@ namespace Ludots.Adapter.Raylib
                         {
                             // No-seat fallback frame: one fullscreen viewport on the current adapter camera.
                             presentFrames.Add(new ViewportDrawFrame(default, activeCamera, activeCameraState));
+                        }
+
+                        PresentationFrameReceiptBuffer? frameReceipts =
+                            engine.GetService(CoreServiceKeys.PresentationFrameReceiptBuffer);
+                        if (frameReceipts != null)
+                        {
+                            IScreenProjector frameProjector =
+                                engine.GetService(CoreServiceKeys.ScreenProjector)
+                                ?? throw new InvalidOperationException(
+                                    "Presentation frame receipts require the platform-neutral screen projector.");
+                            if (frameProjector is not IProjectionSnapshotProvider frameProjectionProvider ||
+                                !frameProjectionProvider.TryGetProjectionSnapshot(out ProjectionSnapshot frameProjection))
+                            {
+                                throw new InvalidOperationException(
+                                    "Presentation frame receipts require a valid projection snapshot.");
+                            }
+                            frameReceipts.BeginFrame(
+                                in frameProjection,
+                                frameProjectionProvider.ProjectionRevision);
                         }
 
                         for (int viewportIndex = 0; viewportIndex < presentFrames.Count; viewportIndex++)
@@ -837,7 +910,7 @@ namespace Ludots.Adapter.Raylib
                                     terrainRenderer.ClearReflectiveWater();
                                 }
 
-                                terrainRenderer.Render(TerrainSourceFor(engine.VertexMap), viewportCamera);
+                                terrainRenderer.Render(TerrainSourceFor(boardTerrain), viewportCamera);
                                 presentationTiming?.ObserveTerrain(
                                     ElapsedMs(terrainStart),
                                     terrainRenderer.ChunkBuildMsLastFrame,
@@ -929,6 +1002,7 @@ namespace Ludots.Adapter.Raylib
                                     meshes,
                                     renderDebug.AcceptanceScaleMultiplier,
                                     continuousHeightmap,
+                                    frameReceipts,
                                     runtimeStopwatch.Elapsed.TotalSeconds);
                                 presentationTiming?.ObservePrimitiveRender(
                                     ElapsedMs(primitiveStart),
@@ -1069,7 +1143,46 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                         }
 
-                        if (screenshotPending && frameIndex >= screenshotFrame &&
+                        if (milestoneCaptureSequence != null &&
+                            milestoneCaptureSequence.TryPrepareCapture(
+                                frameIndex,
+                                out RaylibPresentationCaptureRequest milestoneCapture))
+                        {
+                            string? screenshotDirectory = Path.GetDirectoryName(milestoneCapture.Path);
+                            if (!string.IsNullOrWhiteSpace(screenshotDirectory))
+                            {
+                                Directory.CreateDirectory(screenshotDirectory);
+                            }
+
+                            AppendRaylibDiagnostic(
+                                diagnosticPath,
+                                $"screenshot milestone={milestoneCapture.Milestone} milestoneOrder={milestoneCapture.MilestoneOrder} milestoneRevision={milestoneCapture.MilestoneRevision} frame={milestoneCapture.HostFrame} cameraPos=({activeCamera.position.X:F2},{activeCamera.position.Y:F2},{activeCamera.position.Z:F2}) cameraTarget=({activeCamera.target.X:F2},{activeCamera.target.Y:F2},{activeCamera.target.Z:F2})");
+                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
+                            AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildVisualKindDiagnosticSummary());
+                            if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry milestoneMeshesForDiagnostics))
+                            {
+                                AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildPrimitiveLaneDiagnosticSummary(milestoneMeshesForDiagnostics));
+                            }
+                            AppendPresentationFrameReceiptDiagnostics(engine, diagnosticPath);
+                            AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
+
+                            long screenshotStart = Stopwatch.GetTimestamp();
+                            TakeScreenshotAtomic(milestoneCapture.Path);
+                            string evidencePath = BuildPresentationEvidencePath(milestoneCapture.Path);
+                            WritePresentationCaptureEvidenceAtomic(
+                                engine,
+                                in milestoneCapture,
+                                in activeCamera,
+                                evidencePath);
+                            presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
+                            milestoneCaptureSequence.CompleteCapture(in milestoneCapture);
+                            screenshotPending = milestoneCaptureSequence.HasPending;
+                            AppendRaylibDiagnostic(
+                                diagnosticPath,
+                                $"screenshot-complete milestone={milestoneCapture.Milestone} milestoneOrder={milestoneCapture.MilestoneOrder} milestoneRevision={milestoneCapture.MilestoneRevision} frame={milestoneCapture.HostFrame} file={Path.GetFileName(milestoneCapture.Path)} evidence={Path.GetFileName(evidencePath)}");
+                            Log.Info(in LogChannels.Engine, $"Captured runtime milestone screenshot: {milestoneCapture.Path}");
+                        }
+                        else if (milestoneCaptureSequence == null && screenshotPending && frameIndex >= screenshotFrame &&
                             runtimeStopwatch.ElapsedMilliseconds >= minRuntimeMsBeforeScreenshot)
                         {
                             string fullScreenshotPath = screenshotSequenceEnabled
@@ -1085,6 +1198,7 @@ namespace Ludots.Adapter.Raylib
                             {
                                 AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildPrimitiveLaneDiagnosticSummary(meshesForDiagnostics));
                             }
+                            AppendPresentationFrameReceiptDiagnostics(engine, diagnosticPath);
 
                             AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
 
@@ -1226,6 +1340,110 @@ namespace Ludots.Adapter.Raylib
             }
 
             File.AppendAllText(fullPath, $"[{DateTime.UtcNow:O}] {message}{Environment.NewLine}");
+        }
+
+        private static void AppendPresentationFrameReceiptDiagnostics(GameEngine engine, string? diagnosticPath)
+        {
+            PresentationFrameReceiptBuffer receipts = engine.GetService(CoreServiceKeys.PresentationFrameReceiptBuffer)
+                ?? throw new InvalidOperationException("Presentation frame receipt diagnostics require the receipt buffer service.");
+            IScreenProjector projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+                ?? throw new InvalidOperationException("Presentation frame receipt diagnostics require the screen projector service.");
+            if (projector is not IProjectionSnapshotProvider projectionProvider)
+            {
+                throw new InvalidOperationException(
+                    $"Screen projector '{projector.GetType().FullName}' does not provide projection snapshots required by presentation receipt diagnostics.");
+            }
+            if (!projectionProvider.TryGetProjectionSnapshot(out ProjectionSnapshot projection))
+            {
+                throw new InvalidOperationException("Presentation frame receipt diagnostics could not resolve a valid projection snapshot.");
+            }
+
+            PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("Presentation frame receipt diagnostics require the performer definition registry.");
+            PresentationOnscreenStateReceipt worldState = receipts.BuildOnscreenStateReceipt(in projection);
+            AppendRaylibDiagnostic(
+                diagnosticPath,
+                $"world-visual-receipt onscreen={worldState.SubmissionCount} stateSha256={worldState.StateSha256}");
+            PresentationTemplateReceiptSummary[] summaries = receipts.BuildTemplateSummaries(in projection);
+            for (int i = 0; i < summaries.Length; i++)
+            {
+                ref readonly PresentationTemplateReceiptSummary summary = ref summaries[i];
+                string template = definitions.GetName(summary.TemplateId);
+                if (string.IsNullOrWhiteSpace(template))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation receipt references performer template id {summary.TemplateId} without a registered name.");
+                }
+
+                PresentationOnscreenStateReceipt templateState = receipts.BuildOnscreenStateReceipt(
+                    in projection,
+                    summary.TemplateId);
+                AppendRaylibDiagnostic(
+                    diagnosticPath,
+                    $"presentation-receipt template={template} templateId={summary.TemplateId} submitted={summary.SubmittedCount} onscreen={summary.OnscreenCount} minShortEdgePx={summary.MinimumShortEdgePx:F2} minAreaPx2={summary.MinimumAreaPx2:F2} stateSha256={templateState.StateSha256}");
+            }
+        }
+
+        private static void WritePresentationCaptureEvidenceAtomic(
+            GameEngine engine,
+            in RaylibPresentationCaptureRequest capture,
+            in Camera3D camera,
+            string evidencePath)
+        {
+            PresentationFrameReceiptBuffer receipts = engine.GetService(CoreServiceKeys.PresentationFrameReceiptBuffer)
+                ?? throw new InvalidOperationException("Presentation capture evidence requires the receipt buffer service.");
+            IScreenProjector projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+                ?? throw new InvalidOperationException("Presentation capture evidence requires the screen projector service.");
+            if (projector is not IProjectionSnapshotProvider projectionProvider ||
+                !projectionProvider.TryGetProjectionSnapshot(out ProjectionSnapshot projection))
+            {
+                throw new InvalidOperationException("Presentation capture evidence requires a valid projection snapshot.");
+            }
+            PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("Presentation capture evidence requires the performer definition registry.");
+            PresentationOnscreenInstanceReceipt[] receiptsByInstance =
+                receipts.BuildOnscreenInstanceReceipts(in projection);
+            var instances = new PresentationCaptureInstanceEvidence[receiptsByInstance.Length];
+            for (int i = 0; i < receiptsByInstance.Length; i++)
+            {
+                ref readonly PresentationOnscreenInstanceReceipt receipt = ref receiptsByInstance[i];
+                string template = definitions.GetName(receipt.TemplateId);
+                if (string.IsNullOrWhiteSpace(template))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation capture evidence references performer template id {receipt.TemplateId} without a registered name.");
+                }
+
+                instances[i] = new PresentationCaptureInstanceEvidence
+                {
+                    OwnerStableId = receipt.OwnerStableId,
+                    VisualStableId = receipt.VisualStableId,
+                    TemplateId = receipt.TemplateId,
+                    Template = template,
+                    WorldXCm = receipt.WorldXCm,
+                    WorldYCm = receipt.WorldYCm,
+                    ScreenLeftPx = receipt.ScreenLeftPx,
+                    ScreenTopPx = receipt.ScreenTopPx,
+                    ScreenRightPx = receipt.ScreenRightPx,
+                    ScreenBottomPx = receipt.ScreenBottomPx,
+                    ShortEdgePx = receipt.ShortEdgePx,
+                    AreaPx2 = receipt.AreaPx2,
+                };
+            }
+
+            var document = new PresentationCaptureEvidenceDocument
+            {
+                Milestone = capture.Milestone,
+                MilestoneOrder = capture.MilestoneOrder,
+                MilestoneRevision = capture.MilestoneRevision,
+                HostFrame = capture.HostFrame,
+                CameraTargetXCm = checked((int)MathF.Round(camera.target.X * 100f)),
+                CameraTargetYCm = checked((int)MathF.Round(camera.target.Z * 100f)),
+                ViewportWidthPx = checked((int)MathF.Round(projection.Resolution.X)),
+                ViewportHeightPx = checked((int)MathF.Round(projection.Resolution.Y)),
+                Instances = instances,
+            };
+            WriteJsonAtomic(evidencePath, document);
         }
 
         private static bool IsCleanPerformanceScene(IBenchmarkSceneController? benchmarkController)
@@ -1407,6 +1625,94 @@ namespace Ludots.Adapter.Raylib
             return string.IsNullOrWhiteSpace(directory)
                 ? Path.GetFullPath(sequencedFileName)
                 : Path.Combine(directory, sequencedFileName);
+        }
+
+        private static string BuildPresentationEvidencePath(string screenshotPath)
+        {
+            string fullScreenshotPath = Path.GetFullPath(screenshotPath);
+            return Path.ChangeExtension(fullScreenshotPath, ".evidence.json");
+        }
+
+        private static void WriteJsonAtomic(
+            string targetPath,
+            PresentationCaptureEvidenceDocument document)
+        {
+            string fullTargetPath = Path.GetFullPath(targetPath);
+            string directory = Path.GetDirectoryName(fullTargetPath)
+                ?? throw new InvalidOperationException("Presentation evidence target path has no directory.");
+            Directory.CreateDirectory(directory);
+            string temporaryPath = Path.Combine(
+                directory,
+                $".{Path.GetFileName(fullTargetPath)}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp");
+            try
+            {
+                byte[] payload = JsonSerializer.SerializeToUtf8Bytes(
+                    document,
+                    new JsonSerializerOptions(JsonSerializerDefaults.Web)
+                    {
+                        WriteIndented = true,
+                    });
+                File.WriteAllBytes(temporaryPath, payload);
+                if (!File.Exists(temporaryPath) || new FileInfo(temporaryPath).Length == 0)
+                {
+                    throw new IOException(
+                        $"Presentation evidence writer did not produce a non-empty temporary file '{temporaryPath}'.");
+                }
+
+                File.Move(temporaryPath, fullTargetPath, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(temporaryPath))
+                {
+                    File.Delete(temporaryPath);
+                }
+            }
+        }
+
+        private static void TakeScreenshotAtomic(string targetPath)
+        {
+            string fullTargetPath = Path.GetFullPath(targetPath);
+            string directory = Path.GetDirectoryName(fullTargetPath)
+                ?? throw new InvalidOperationException("Screenshot target path has no directory.");
+            Directory.CreateDirectory(directory);
+            string extension = Path.GetExtension(fullTargetPath);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = ".png";
+            }
+
+            string temporaryFileName =
+                $".{Path.GetFileNameWithoutExtension(fullTargetPath)}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp{extension}";
+            string workingTemporaryPath = Path.Combine(Environment.CurrentDirectory, temporaryFileName);
+            string targetTemporaryPath = Path.Combine(directory, temporaryFileName);
+            try
+            {
+                // Framebuffer-direct capture: TakeScreenshot composes at the monitor's physical
+                // size on Windows display scaling, which mismatches the logical framebuffer the
+                // acceptance evidence validates against (see RaylibFramebufferCapture).
+                byte[] png = Ludots.Raylib.Render.RaylibFramebufferCapture.EncodeFramebufferPng();
+                if (png.Length == 0)
+                {
+                    throw new IOException(
+                        "Framebuffer capture did not produce a non-empty screenshot buffer.");
+                }
+
+                File.WriteAllBytes(targetTemporaryPath, png);
+                File.Move(targetTemporaryPath, fullTargetPath, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(workingTemporaryPath))
+                {
+                    File.Delete(workingTemporaryPath);
+                }
+                if (!string.Equals(workingTemporaryPath, targetTemporaryPath, StringComparison.OrdinalIgnoreCase) &&
+                    File.Exists(targetTemporaryPath))
+                {
+                    File.Delete(targetTemporaryPath);
+                }
+            }
         }
 
         private static SyntheticUiPlayback ReadSyntheticUiPlayback()

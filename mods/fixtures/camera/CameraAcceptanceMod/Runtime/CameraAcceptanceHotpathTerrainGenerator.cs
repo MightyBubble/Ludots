@@ -35,7 +35,7 @@ namespace CameraAcceptanceMod.Runtime
             using FileStream stream = File.Create(fullPath);
             using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
 
-            writer.Write(Encoding.ASCII.GetBytes("VTXM"));
+            writer.Write(Encoding.ASCII.GetBytes("HEXM"));
             writer.Write(Version);
             writer.Write(WidthChunks);
             writer.Write(HeightChunks);

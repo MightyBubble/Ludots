@@ -59,6 +59,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public OrderSubmitResult Submit(in Order order)
         {
+            OrderEntityReferenceContract.Validate(in order, nameof(CompositeOrderPlanner));
             MoveThenCastPlanResult plan = BuildMoveThenCastPlan(in order, out var primaryMove, out var followUpCast);
             if (plan.State == MoveThenCastPlanState.NotApplicable)
             {
@@ -171,8 +172,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         private MoveThenCastPlanResult BuildMoveThenCastPlan(in Order order, out Order moveOrder, out Order followUpCast)
         {
-            moveOrder = default;
-            followUpCast = default;
+            moveOrder = new Order();
+            followUpCast = new Order();
 
             if (order.OrderTypeId != _castAbilityOrderTypeId)
             {
@@ -235,7 +236,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 OrderTypeId = _moveToOrderTypeId,
                 PlayerId = castOrder.PlayerId,
                 Actor = castOrder.Actor,
-                Target = default,
+                Target = Entity.Null,
                 TargetContext = castOrder.TargetContext,
                 Args = moveArgs,
                 SubmitMode = castOrder.SubmitMode

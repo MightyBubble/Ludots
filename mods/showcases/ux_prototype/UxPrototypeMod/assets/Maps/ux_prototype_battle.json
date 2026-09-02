@@ -38,6 +38,9 @@
     { "TeamId": 1, "RepresentativeInstanceId": "ux-blue-city" },
     { "TeamId": 2, "RepresentativeInstanceId": "ux-enemy-raider-a" }
   ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "ux-blue-city" }
+  ],
   "ParticipantRelationships": {
     "Teams": [
       { "TeamA": 1, "TeamB": 1, "TypeId": "UxPrototype.Participant", "Attitude": "Friendly", "Symmetric": true },

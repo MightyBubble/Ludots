@@ -93,8 +93,9 @@ namespace Ludots.Tests.GAS
                 requests.Publish(req);
 
                 var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                Entity chainSource = world.Create();
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: new GasBudget(), templates: templates,
@@ -212,8 +213,9 @@ namespace Ludots.Tests.GAS
                 requests.Publish(req);
 
                 var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                Entity chainSource = world.Create();
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: new GasBudget(), templates: templates,

@@ -1,0 +1,27 @@
+{
+    "schemaVersion":  1,
+    "acceptanceScope":  "three-process-session-establishment",
+    "status":  "failed",
+    "startedAtUtc":  "2026-07-24T13:05:48.1976584Z",
+    "completedAtUtc":  "2026-07-24T13:05:48.5443082Z",
+    "profilePath":  "C:\\001_AI\\LudotsProd_issue709\\scripts\\acceptance\\rts-multiplayer-frontline-three-process.profile.json",
+    "artifactDirectory":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260724T130548145Z",
+    "host":  "127.0.0.1",
+    "port":  27777,
+    "planFingerprint":  null,
+    "orderedModIds":  [
+
+                      ],
+    "sourceLaunchGraph":  null,
+    "roleArtifacts":  [
+
+                      ],
+    "processes":  [
+
+                  ],
+    "clientCredentials":  [
+
+                          ],
+    "failure":  "The property \u0027ArgumentList\u0027 cannot be found on this object. Verify that the property exists.",
+    "cleanup":  "attempted"
+}

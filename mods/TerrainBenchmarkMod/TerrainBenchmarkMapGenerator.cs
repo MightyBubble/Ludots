@@ -36,7 +36,7 @@ namespace TerrainBenchmarkMod
             using var fs = File.Create(fullPath);
             using var bw = new BinaryWriter(fs, Encoding.UTF8, leaveOpen: true);
 
-            bw.Write(Encoding.ASCII.GetBytes("VTXM"));
+            bw.Write(Encoding.ASCII.GetBytes("HEXM"));
             bw.Write(Version);
             bw.Write(WidthChunks);
             bw.Write(HeightChunks);
