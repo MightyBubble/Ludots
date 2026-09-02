@@ -29,7 +29,7 @@
 一份可评审方案（issue / RFC / PR 描述均可）。方案要答：
 
 1. 函数怎么登记（入参表、返回类型、副作用）？  
-2. `continuousQuery` 怎么改成「挂函数 id」？  
+2. `whileActive`（已替 continuousQuery）还要不要再改产品名？  
 3. 宿主调用叫 `InvokeGraph` 还是收成 `InvokeFunc`？和 FuncLib 纯函数怎么分开？  
 4. 预览集走图内副作用，还是纯返回再写入？缺合同怎么失败关闭？  
 5. Case E 资产改成什么样算过？哪些测试必须绿？  
@@ -46,7 +46,7 @@
         │
    ┌────┴────┐
    │ 边沿宿主 │  Trigger：按下 / 抬起 / 点选
-   │ 存活宿主 │  profile 挂函数 id（现网字段名仍是 continuousQuery）
+   │ 存活宿主 │  profile 挂函数 id（现网字段 whileActive）
    └────┬────┘
         │  宿主 → 函数
         ▼
@@ -86,7 +86,7 @@
 - `graph.case_e.box_hit` 里 `DispatchCollectionEvent` 写 `case_e.box_hover`。  
 - continuous 每 tick 只 `Execute`，不用 `ExecuteAndWrite`，不靠 `outputs[]`。  
 - continuous 不强制 `GraphKind.Query`；安装仍要求图里有 `DispatchCollectionEvent`。  
-- `InvokeGraph` 可调 Query，并把 `TargetList` 拷回宿主；`box_commit` / `tap_commit` 已调 `box_hit`。  
+- `InvokeGraph` 可调 Query，并把 `TargetList` 拷回宿主；`box_commit` 已调 `box_hit`（点选=零位移抬起，无 tap_commit）。  
 - 集合事件：实例 scratch + `MapTrigger.CollectionEntityCount`。  
 - 离开 boxing：按图里 `DispatchCollectionEvent` 的集合 key（`EntityCollectionStore` 空间）清空预览。
 
@@ -128,7 +128,7 @@
 
 #### D. 存活期字段
 
-- 产品语义上废掉 `continuousQuery` 这个名字（它暗示 Query）。  
+- 已废 `continuousQuery`；现网字段是 `whileActive`。  
 - 目标：和 `triggers[]` 同级，例如 `whileActive: { function: "graph.case_e.box_hit" }`（最终字段名以方案为准）。  
 - 行为：context 还在 → 每 tick 调函数；离开 → 按副作用声明或返回写入的 key 清空预览。  
 - 迁移：旧字段失败关闭，或一次性改名；禁止默默两套都认。

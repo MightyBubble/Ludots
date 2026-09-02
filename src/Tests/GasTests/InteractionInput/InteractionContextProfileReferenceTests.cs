@@ -157,16 +157,16 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Loader_RejectsBlankContinuousQueryGraph()
+        public void Loader_RejectsBlankWhileActiveGraph()
         {
-            var config = Config(Profile(ContinuousQuery: new InteractionContextContinuousQuery { Graph = " " }));
+            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = " " }));
             Assert.That(
                 () => InteractionContextProfileConfigLoader.Validate(config, "test"),
-                Throws.InvalidOperationException.With.Message.Contains("continuousQuery.graph"));
+                Throws.InvalidOperationException.With.Message.Contains("whileActive.graph"));
         }
 
         [Test]
-        public void Install_ContinuousQuery_NonQueryKind_WithDispatch_Succeeds()
+        public void Install_WhileActive_NonQueryKind_WithDispatch_Succeeds()
         {
             InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
             var programs = new GraphProgramRegistry();
@@ -181,24 +181,24 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
                 },
                 GraphKind.Script);
-            var config = Config(Profile(ContinuousQuery: new InteractionContextContinuousQuery { Graph = scriptName }));
+            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = scriptName }));
 
             Assert.That(
                 () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs)),
                 Throws.Nothing);
 
             int profileId = registry.ProfileIdRegistry.GetId(ProfileId);
-            Assert.That(registry.TryGetContinuousQueryGraphId(profileId, out int resolved), Is.True);
+            Assert.That(registry.TryGetWhileActiveGraphId(profileId, out int resolved), Is.True);
             Assert.That(resolved, Is.EqualTo(graphId));
         }
 
         [Test]
-        public void Install_ContinuousQuery_NonQueryKind_WithoutDispatch_FailsFast()
+        public void Install_WhileActive_NonQueryKind_WithoutDispatch_FailsFast()
         {
             InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
             var programs = new GraphProgramRegistry();
             RegisterProgram(programs, OtherGraphName, GraphKind.TriggerGraph, HaltProgram(), ProbeEntries());
-            var config = Config(Profile(ContinuousQuery: new InteractionContextContinuousQuery { Graph = OtherGraphName }));
+            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = OtherGraphName }));
 
             Assert.That(
                 () => registry.Install(
@@ -211,7 +211,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Install_ContinuousQuery_ResolvesGraphId()
+        public void Install_WhileActive_ResolvesGraphId()
         {
             InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
             var programs = new GraphProgramRegistry();
@@ -226,26 +226,26 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
                 },
                 GraphKind.Query);
-            var config = Config(Profile(ContinuousQuery: new InteractionContextContinuousQuery { Graph = queryName }));
+            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = queryName }));
 
             Assert.That(
                 () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs)),
                 Throws.Nothing);
 
             int profileId = registry.ProfileIdRegistry.GetId(ProfileId);
-            Assert.That(registry.TryGetContinuousQueryGraphId(profileId, out int resolved), Is.True);
+            Assert.That(registry.TryGetWhileActiveGraphId(profileId, out int resolved), Is.True);
             Assert.That(resolved, Is.EqualTo(graphId));
         }
 
         [Test]
-        public void Install_ContinuousQuery_WithoutDispatchCollectionEvent_FailsFast()
+        public void Install_WhileActive_WithoutDispatchCollectionEvent_FailsFast()
         {
             InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
             var programs = new GraphProgramRegistry();
             const string queryName = "Graph.Query.NoWrite";
             int graphId = GraphIdRegistry.Register(queryName);
             programs.Register(graphId, HaltProgram(), GraphKind.Query);
-            var config = Config(Profile(ContinuousQuery: new InteractionContextContinuousQuery { Graph = queryName }));
+            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = queryName }));
 
             Assert.That(
                 () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs)),
@@ -290,7 +290,7 @@ namespace Ludots.Tests.GAS
         private static InteractionContextProfileDefinition Profile(
             List<string>? Bindings = null,
             List<InteractionContextTriggerMount>? Triggers = null,
-            InteractionContextContinuousQuery? ContinuousQuery = null)
+            InteractionContextWhileActive? WhileActive = null)
             => new()
             {
                 Id = ProfileId,
@@ -298,7 +298,7 @@ namespace Ludots.Tests.GAS
                 ActiveEntityViewKey = "test.context.view",
                 Bindings = Bindings,
                 Triggers = Triggers,
-                ContinuousQuery = ContinuousQuery,
+                WhileActive = WhileActive,
             };
 
         private static GraphInstruction[] HaltProgram()

@@ -31,7 +31,7 @@
           "trigger": "graph.case_e.box_commit"
         }
       ],
-      "continuousQuery": {
+      "whileActive": {
         "graph": "graph.case_e.box_hit"
       }
     }

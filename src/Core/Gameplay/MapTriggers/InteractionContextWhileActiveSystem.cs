@@ -12,14 +12,12 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
-    /// Context continuous tick (#1398 Case E §05): every tick, for each subject carrying an
-    /// active interaction context whose profile declares <c>continuousQuery</c>, runs that
-    /// graph for its authored side effects (DispatchCollectionEvent writes the hover set).
-    /// Does not GraphReturnWriter-materialize outputs — the graph owns the write. When a
-    /// subject leaves every continuous-query context, clears collection keys the graph
-    /// dispatches to so membership events tear down preview highlights.
+    /// Case E §05: while an interaction context is active, every tick run the profile's
+    /// <c>whileActive.graph</c> so the hit function can DispatchCollectionEvent-write the
+    /// preview set. When the subject leaves every whileActive context, clear those collection
+    /// keys so membership events tear down preview highlights.
     /// </summary>
-    public sealed class InteractionContextContinuousQuerySystem : BaseSystem<World, float>
+    public sealed class InteractionContextWhileActiveSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription ActiveContextQuery =
             new QueryDescription().WithAny<InteractionContextInstance, InteractionContextInstances>();
@@ -35,7 +33,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Dictionary<Entity, int> _previousGraphBySubject = new();
         private readonly Dictionary<Entity, int> _activeGraphBySubject = new();
 
-        public InteractionContextContinuousQuerySystem(
+        public InteractionContextWhileActiveSystem(
             World world,
             InteractionContextProfileRegistry contextProfiles,
             GraphReturnWriter graphReturnWriter,
@@ -58,7 +56,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             for (int i = 0; i < _subjectCount; i++)
             {
                 Entity subject = _subjects[i];
-                if (!TryResolveContinuousQueryGraph(subject, out int graphId))
+                if (!TryResolveWhileActiveGraph(subject, out int graphId))
                 {
                     continue;
                 }
@@ -113,20 +111,20 @@ namespace Ludots.Core.Gameplay.MapTriggers
             World.GetEntities(in ActiveContextQuery, _subjects);
         }
 
-        private bool TryResolveContinuousQueryGraph(Entity subject, out int graphId)
+        private bool TryResolveWhileActiveGraph(Entity subject, out int graphId)
         {
             graphId = 0;
             if (World.TryGet(subject, out InteractionContextInstances instances))
             {
                 for (int i = 0; i < instances.Count; i++)
                 {
-                    if (_contextProfiles.TryGetContinuousQueryGraphId(instances[i].ContextId, out int candidate) &&
+                    if (_contextProfiles.TryGetWhileActiveGraphId(instances[i].ContextId, out int candidate) &&
                         candidate > 0)
                     {
                         if (graphId != 0 && graphId != candidate)
                         {
                             throw new InvalidOperationException(
-                                $"Entity {subject} has multiple active contexts with distinct continuousQuery graphs ({graphId} vs {candidate}); declare at most one continuous Query per subject.");
+                                $"Entity {subject} has multiple active contexts with distinct whileActive graphs ({graphId} vs {candidate}); declare at most one whileActive per subject.");
                         }
 
                         graphId = candidate;
@@ -135,13 +133,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             if (World.TryGet(subject, out InteractionContextInstance baseInstance) &&
-                _contextProfiles.TryGetContinuousQueryGraphId(baseInstance.ContextId, out int baseGraph) &&
+                _contextProfiles.TryGetWhileActiveGraphId(baseInstance.ContextId, out int baseGraph) &&
                 baseGraph > 0)
             {
                 if (graphId != 0 && graphId != baseGraph)
                 {
                     throw new InvalidOperationException(
-                        $"Entity {subject} has multiple active contexts with distinct continuousQuery graphs ({graphId} vs {baseGraph}); declare at most one continuous Query per subject.");
+                        $"Entity {subject} has multiple active contexts with distinct whileActive graphs ({graphId} vs {baseGraph}); declare at most one whileActive per subject.");
                 }
 
                 graphId = baseGraph;
@@ -160,7 +158,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             if (!_programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
             {
                 throw new InvalidOperationException(
-                    $"Continuous Query clear references unknown graph program id {graphId}.");
+                    $"WhileActive clear references unknown graph program id {graphId}.");
             }
 
             for (int i = 0; i < program.Length; i++)
@@ -175,20 +173,20 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 if (collectionKeyId <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Continuous Query graph id {graphId} DispatchCollectionEvent has no resolved collection key.");
+                        $"WhileActive graph id {graphId} DispatchCollectionEvent has no resolved collection key.");
                 }
 
                 // Imm's collection half is EntityCollectionStore space (see GraphProgramSymbolPatcher),
                 // not ConfigKeyRegistry — same lookup as EventKeyedCollectionWriter.
                 string collectionKey = _collections.KeyRegistry.GetName(collectionKeyId)
                     ?? throw new InvalidOperationException(
-                        $"Continuous Query graph id {graphId} collection key id {collectionKeyId} resolves to no entity-collection key.");
+                        $"WhileActive graph id {graphId} collection key id {collectionKeyId} resolves to no entity-collection key.");
                 var descriptor = EntityCollectionDescriptor.Create(
                     collectionKey,
                     EntityCollectionSourceKind.GasGraphResult,
                     EntityCollectionRoleKind.AcquisitionPreview,
                     title: collectionKey,
-                    summary: "continuous-query-cleared");
+                    summary: "whileActive-cleared");
                 _collections.Replace(owner, collectionKeyId, descriptor, ReadOnlySpan<Entity>.Empty);
             }
         }

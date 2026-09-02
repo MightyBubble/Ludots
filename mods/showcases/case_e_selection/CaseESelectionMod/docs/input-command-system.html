@@ -108,7 +108,7 @@ hr{border:none;border-top:1px solid var(--border);margin:30px 0}
    ↑ 偏好：InteractionPref（必然基于某个 InteractionContext，偏好它的交互怎么完成）
 </code></pre>
 <p><strong>两个"必然基于"（结构性）</strong>：
-- <strong>BindingOverride 必然基于一个 ControlScheme</strong>——它是"改某个键"，前提是已经有一张 scheme 的基础绑定表（"左键=BoxSelect"）。没有 scheme 就没有可覆盖的绑定，<strong>它引用它覆盖的那个 scheme</strong>。
+- <strong>BindingOverride 必然基于一个 ControlScheme</strong>——它是"改某个键"，前提是已经有一张 scheme 的基础绑定表（"左键=BoxSelectBegin"）。没有 scheme 就没有可覆盖的绑定，<strong>它引用它覆盖的那个 scheme</strong>。
 - <strong>InteractionPref 必然基于一个 InteractionContext</strong>——它是"这个交互怎么完成"，前提是当前在某个 context（战斗/瞄准）。没有 context 就没有"这个交互"，<strong>它引用它作用的那个 context</strong>。</p>
 <p>用 LOL PC 版举例，一次把四个概念全展示出来：</p>
 <p><strong>① ControlScheme（设备交互范式，基础）——不只键位，是整套交互范式</strong>

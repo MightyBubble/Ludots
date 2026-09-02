@@ -2253,11 +2253,9 @@ namespace Ludots.Core.Engine
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.LocalInput);
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
-            // #1398 Case E §05: while a context with continuousQuery is active, every tick run
-            // the hit graph so it can DispatchCollectionEvent-write the preview set itself.
-            // Follows InputActionAttributeBindingSystem so pointer attrs are live for the rect.
+            // #1398 Case E §05: whileActive graph ticks after pointer attrs are live.
             RegisterSystem(
-                new InteractionContextContinuousQuerySystem(
+                new InteractionContextWhileActiveSystem(
                     World,
                     interactionContextProfileRegistry,
                     graphReturnWriter,
