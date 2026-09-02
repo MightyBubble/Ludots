@@ -21,9 +21,10 @@ namespace Ludots.Core.Input.Runtime
     /// binding / context pipeline as physical input.
     ///
     /// Write calls (MovePointer/PointerDown/...) queue events; the host loop
-    /// calls <see cref="AdvanceFrame"/> once per frame before any input
-    /// collection, which applies the queue and produces the per-frame edge
-    /// sets (pressed/released, wheel, chars). All access is game-thread only.
+    /// calls <see cref="AdvanceFrame"/> once per visual frame before any input
+    /// collection, which applies the queue and produces the per-frame
+    /// press-started / release-completed sets (plus wheel, chars). All access
+    /// is game-thread only.
     /// </summary>
     public sealed class SyntheticInputDevice
     {
