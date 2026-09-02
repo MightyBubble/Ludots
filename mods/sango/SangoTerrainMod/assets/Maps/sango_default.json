@@ -1,0 +1,64 @@
+{
+  "Id": "sango_default",
+  "ParentId": null,
+  "Dependencies": {},
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/sango_default.height",
+    "WorldWidthCm": 512000,
+    "RenderProfile": {
+      "WaterEnabled": true,
+      "SeaLevelCm": 550,
+      "DisplayHeightScale": 1,
+      "AbsoluteColorPeakSpanCm": 12200,
+      "DisableDistanceFog": true
+    }
+  },
+  "Tags": [
+    "sango",
+    "terrain",
+    "hex",
+    "default-map"
+  ],
+  "Metadata": {
+    "source": "DefaultMap.bin (local-only KOEI-derived content; never committed)",
+    "derivation": "mods/sango/SangoContentMod/TerrainExport/README.md",
+    "axisConvention": "source vertex x = north (worldZ), vertex y = east (worldX), mirroring MapData.VertexPosition",
+    "heightMapping": "source height unit 0.5 m = 50 cm; sea level = dominant water byte 11 = 550 cm; peak span 12200 cm",
+    "hexCellData": "VertexMap extra byte layer 0 carries the raw TerrainTypes.json terrain byte per 256x256 cell"
+  },
+  "Entities": [],
+  "Teams": [],
+  "Players": [],
+  "ParticipantRelationships": {
+    "Teams": [],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthInMacroTiles": 1,
+      "HeightInMacroTiles": 1,
+      "GridCellSizeCm": 2000,
+      "HexEdgeLengthCm": 2000,
+      "ChunkSizeCells": 64,
+      "DataFile": "terrain/sango_default_hex.hex",
+      "ContinuousHeightmapAsset": null,
+      "StructureCollisionAsset": "",
+      "StructureAwareGrounding": false,
+      "StructureAwareNavigation": false,
+      "NavigationEnabled": false
+    }
+  ],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "Sango.Camera.DefaultMap",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 225,
+    "Pitch": 50,
+    "DistanceCm": 900000,
+    "FovYDeg": 55
+  }
+}

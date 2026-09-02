@@ -1,0 +1,10 @@
+{
+  "name": "SangoTerrainMod",
+  "version": "0.1.0",
+  "description": "Sango default-map terrain: CHTM visual heightmap + HexGridBoard playable surface derived offline from the local DefaultMap.bin (derived binaries stay untracked).",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "SangoContentMod": "^0.1.0"
+  }
+}

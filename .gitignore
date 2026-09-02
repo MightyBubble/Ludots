@@ -158,3 +158,8 @@ dist/
 .tmp-dotnet*/
 tmp/wt-*
 tmp/wt-issue*
+
+# Sango M0.3: terrain binaries derived from the local (copyright-restricted) DefaultMap.bin.
+# Regenerate with the TerrainExport converter; JSON declarations stay tracked.
+mods/sango/SangoTerrainMod/assets/terrain/*.height
+mods/sango/SangoTerrainMod/assets/terrain/*.hex

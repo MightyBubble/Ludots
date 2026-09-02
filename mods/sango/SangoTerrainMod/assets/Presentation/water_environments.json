@@ -1,0 +1,12 @@
+[
+  {
+    "id": "sango_default.water",
+    "backendId": "raylib",
+    "enabled": true,
+    "mapIds": ["sango_default"],
+    "waterPlaneY": 5.5,
+    "resolutionScale": 0.5,
+    "waveStrength": 0.02,
+    "moveSpeed": 0.03
+  }
+]
