@@ -1596,15 +1596,17 @@ namespace Ludots.Core.Engine
             var inputConfigRoot = new InputConfigPipelineLoader(ConfigPipeline).Load();
             var inputActionAttributeBindings = new InputActionAttributeBindingRegistry();
             new InputActionAttributeBindingLoader(ConfigPipeline, inputActionAttributeBindings).Load(ConfigCatalog, ConfigConflictReport);
-            // Populated when the trigger-action catalog loads below; the per-frame pointer
-            // lifecycle capture reads it lazily, so actions bridged into InputActionFired
-            // get exact per-edge pointer facts.
-            var bridgedPointerActionIds = new List<string>();
+            // Populated after TriggerGraph programs load: every action-bound entry's
+            // action id is captured for exact press/release pointer window pixels.
+            var pointerLifecycleActionIds = new List<string>();
+            var triggerGraphActionBindings = new Ludots.Core.Gameplay.MapTriggers.TriggerGraphActionBindingIndex();
+            SetService(CoreServiceKeys.TriggerGraphActionBindings, triggerGraphActionBindings);
+            TriggerManager.ActionBindings = triggerGraphActionBindings;
             _inputRuntimeSystem = new InputRuntimeSystem(
                 GlobalContext,
                 authoritativeInputAccumulator,
                 authoritativePointerButtonsAccumulator,
-                bridgedPointerActionIds);
+                pointerLifecycleActionIds);
             _inputRuntimeSystem.Initialize();
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
             var clockSystem = new GasClockSystem(clock, clockStepPolicy, CreateContext, TriggerManager.FireEvent);
@@ -2423,22 +2425,21 @@ namespace Ludots.Core.Engine
             RegisterSystem(new Ludots.Core.Gameplay.FieldRegions.FieldRegionMembershipSystem(World, () => MapSessions, entityCollectionStore, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
             RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
-            var inputTriggerActions = new Ludots.Core.Gameplay.MapTriggers.InputTriggerActionCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
-            for (int i = 0; i < inputTriggerActions.Count; i++)
-            {
-                bridgedPointerActionIds.Add(inputTriggerActions[i].Id);
-            }
-
+            CollectTriggerGraphActionPointerLifecycleIds(
+                graphProgramRegistry,
+                triggerGraphActionBindings,
+                pointerLifecycleActionIds);
             RegisterSystem(
-                new Ludots.Core.Gameplay.MapTriggers.InputActionTriggerBridgeSystem(
-                    World,
+                new Ludots.Core.Gameplay.MapTriggers.TriggerGraphActionBindingSystem(
                     () => CurrentMapSession,
                     TriggerManager,
                     CreateContext,
                     () => GetService(CoreServiceKeys.AuthoritativeInput),
                     () => GetService(CoreServiceKeys.AuthoritativePointerButtons),
-                    inputTriggerActions,
-                    interactionContextProfileRegistry),
+                    triggerGraphActionBindings,
+                    inputConfigRoot,
+                    () => GetService(CoreServiceKeys.ClientLocalSeatRegistry),
+                    () => GetService(CoreServiceKeys.ClientLocalSeatInputRuntime)),
                 SystemGroup.DeferredTriggerCollection);
 
             // Phase 5.5: Continuation (AwaitCallback drain — registration order)
@@ -3863,6 +3864,44 @@ namespace Ludots.Core.Engine
             triggers.AddRange(EntityTriggerGraphMounts.FlushMapLoadMounts(session));
 
             return triggers;
+        }
+
+        private static void CollectTriggerGraphActionPointerLifecycleIds(
+            GraphProgramRegistry programs,
+            Ludots.Core.Gameplay.MapTriggers.TriggerGraphActionBindingIndex bindings,
+            List<string> pointerLifecycleActionIds)
+        {
+            ArgumentNullException.ThrowIfNull(programs);
+            ArgumentNullException.ThrowIfNull(bindings);
+            ArgumentNullException.ThrowIfNull(pointerLifecycleActionIds);
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string actionId in pointerLifecycleActionIds)
+            {
+                seen.Add(actionId);
+            }
+
+            foreach (int graphId in programs.GetRegisteredGraphIds())
+            {
+                if (!programs.TryGetRegistration(graphId, out GraphProgramRegistration registration) ||
+                    registration.Kind != GraphKind.TriggerGraph)
+                {
+                    continue;
+                }
+
+                IReadOnlyList<TriggerGraphEntry> entries = registration.TriggerGraphEntries;
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    string actionId = entries[i].ActionId;
+                    if (string.IsNullOrWhiteSpace(actionId) || !seen.Add(actionId))
+                    {
+                        continue;
+                    }
+
+                    bindings.RememberActionId(actionId);
+                    pointerLifecycleActionIds.Add(actionId);
+                }
+            }
         }
 
         private void BindGraphCodegenBackend(GraphProgramRegistry programs, GameConfig config)

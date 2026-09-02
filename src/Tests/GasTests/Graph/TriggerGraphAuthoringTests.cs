@@ -772,7 +772,7 @@ namespace Ludots.Tests.Gas.Graph
                 {
                   "kind": "TriggerGraph",
                   "entries": [
-                    { "label": "on_input", "event": "InputActionFired", "start": "px" }
+                    { "label": "on_input", "action": "CaseE.BoxSelectBegin", "start": "px" }
                   ],
                   "nodes": [
                     { "id": "px", "op": "LoadEntryPayloadFloat", "payloadKey": "MapTrigger.PointerScreenX" },

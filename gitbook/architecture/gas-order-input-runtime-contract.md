@@ -39,19 +39,19 @@
 - 轻量 Ability Tag Grant 只由 Ability 执行域写入；有来源、叠层、刷新、驱散或条件结束的状态由 Effect 管理。
 - 任何失败事务都恢复权威状态、外部队列和资源句柄；诊断只记录一次最终失败。
 
-## 按键边沿语义
+## 按键按下 / 抬起语义
 
-视觉帧与逻辑 tick 不是 1:1。pacemaker 在一个视觉帧内可以跳过逻辑 tick，也可以连续补多个；真机跳帧时帧边沿约四成丢失（issue #1335 的面板注入实测，headless 1:1 测试看不到）。边沿语义按消费方的节奏分两套：
+视觉帧与逻辑 tick 不是 1:1。pacemaker 在一个视觉帧内可以跳过逻辑 tick，也可以连续补多个；真机跳帧时「本帧按下 / 抬起」约四成丢失（issue #1335 的面板注入实测，headless 1:1 测试看不到）。按下 / 抬起语义按消费方的节奏分两套：
 
-- **tick 边沿是逻辑帧消费方的唯一权威读法。** 读 `FrozenInputActionReader.PressedThisTick / ReleasedThisTick`。`AuthoritativeInputAccumulator` 把两次冻结之间所有视觉帧的边沿 OR 进快照，跳帧瞬间的按下与抬起不丢。读取入口：
+- **本 tick 按下 / 抬起是逻辑帧消费方的唯一权威读法。** 读 `FrozenInputActionReader.PressedThisTick / ReleasedThisTick`。`AuthoritativeInputAccumulator` 把两次冻结之间所有视觉帧的按下与抬起 OR 进快照，跳帧瞬间的按下与抬起不丢。读取入口：
   - 全局：`CoreServiceKeys.AuthoritativeInput`（`AuthoritativeInputSnapshotSystem` 在每个逻辑 tick 的 InputCollection 开头冻结）。
   - per-seat：`ClientLocalSeatInputChannel.Reader`，与全局快照同一 tick 冻结。
-  - 指针三键（confirm/command/cancel）：`AuthoritativePointerButtonSnapshot` 家族上的 `PressedThisFrame` 属性。它的 accumulator 同样按 tick 折叠，语义就是 tick 边沿，属性名沿用历史拼写。
-  - 回放：`AuthoritativeAction` 持久化的 Pressed/Released 即 tick 边沿；回放隔离时冻结快照整帧替换，消费方无感。
-- **帧边沿只属于视觉帧消费方。** `PlayerInputHandler.PressedThisFrame / ReleasedThisFrame` 的边沿只覆盖当前视觉帧。适用层：宿主循环（adapter 的帧回调）、presentation 系统（`RegisterPresentationSystem` 注册的 ISystem）、`IInputFrameConsumer`。固定步 SystemGroup 里注册的系统禁止读它——这些系统在 tick 节奏里跑，读帧边沿必丢。
-- `IInputActionReader` 是两种节奏共用的多态读口：同一次 `PressedThisFrame` 调用，落在 live handler 上是帧边沿，落在冻结快照上是 tick 边沿（快照每 tick 冻结一次，看不到视觉帧）。多态管线（订单映射等）持接口读冻结快照，拿到的就是 tick 边沿；能拿到具体类型的新代码优先写 `PressedThisTick`。
+  - 指针三键（confirm/command/cancel）：`AuthoritativePointerButtonSnapshot` 家族上的 `PressedThisFrame` 属性。它的 accumulator 同样按 tick 折叠，语义就是本 tick 按下 / 抬起，属性名沿用历史拼写。
+  - 回放：`AuthoritativeAction` 持久化的 Pressed/Released 即本 tick 按下 / 抬起；回放隔离时冻结快照整帧替换，消费方无感。
+- **本帧按下 / 抬起只属于视觉帧消费方。** `PlayerInputHandler.PressedThisFrame / ReleasedThisFrame` 只覆盖当前视觉帧。适用层：宿主循环（adapter 的帧回调）、presentation 系统（`RegisterPresentationSystem` 注册的 ISystem）、`IInputFrameConsumer`。固定步 SystemGroup 里注册的系统禁止读它——这些系统在 tick 节奏里跑，读本帧按下 / 抬起必丢。
+- `IInputActionReader` 是两种节奏共用的多态读口：同一次 `PressedThisFrame` 调用，落在 live handler 上是本帧按下，落在冻结快照上是本 tick 按下（快照每 tick 冻结一次，看不到视觉帧）。多态管线（订单映射等）持接口读冻结快照，拿到的就是本 tick 按下 / 抬起；能拿到具体类型的新代码优先写 `PressedThisTick`。
 
-跳帧回归：`src/Tests/GasTests/InteractionInput/InputEdgeSemanticsTests.cs`（accumulator 全局链、per-seat 通道、双跳帧边沿合并）与 `SoundShowcaseAcceptanceTests` 的热键跳帧用例（真 pacemaker 三帧一 tick，帧读旧法可复现丢失）。
+跳帧回归：`src/Tests/GasTests/InteractionInput/InputEdgeSemanticsTests.cs`（accumulator 全局链、per-seat 通道、双跳帧按下 / 抬起合并）与 `SoundShowcaseAcceptanceTests` 的热键跳帧用例（真 pacemaker 三帧一 tick，帧读旧法可复现丢失）。
 
 ## 测试归属
 

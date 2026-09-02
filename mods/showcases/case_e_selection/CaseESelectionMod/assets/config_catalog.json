@@ -5,11 +5,6 @@
     "IdField": "id"
   },
   {
-    "Path": "Input/trigger_actions.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
     "Path": "Input/collection_event_writers.json",
     "Policy": "ArrayById",
     "IdField": "id"

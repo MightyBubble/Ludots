@@ -15,10 +15,11 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// Button edge semantics across the two input rhythms: the live handler's frame edge
-    /// spans one visual frame, the frozen snapshot's tick edge folds every visual frame
-    /// since the previous freeze. When the pacemaker skips logic ticks between visual
-    /// frames, only the tick edge still reaches fixed-step consumers.
+    /// Button press/release semantics across the two input rhythms: the live handler's
+    /// pressed/released-this-frame spans one visual frame, the frozen snapshot's
+    /// pressed/released-this-tick folds every visual frame since the previous freeze.
+    /// When the pacemaker skips logic ticks between visual frames, only the tick reads
+    /// still reach fixed-step consumers.
     /// </summary>
     [TestFixture]
     public sealed class InputEdgeSemanticsTests
@@ -35,11 +36,11 @@ namespace Ludots.Tests.GAS
             frameSystem.Update(1f / 60f);
 
             Assert.That(handler.PressedThisFrame("Attack"), Is.False,
-                "the live frame edge has already expired by the time the skipped logic tick runs");
+                "the live pressed-this-frame has already expired by the time the skipped logic tick runs");
             snapshotSystem.Update(1f / 50f);
 
             Assert.That(snapshot.PressedThisTick("Attack"), Is.True,
-                "the tick snapshot must fold the press edge of every visual frame since the previous freeze");
+                "the tick snapshot must fold presses from every visual frame since the previous freeze");
             Assert.That(snapshot.IsDown("Attack"), Is.True);
         }
 
@@ -61,11 +62,11 @@ namespace Ludots.Tests.GAS
             Assert.That(snapshot.ReleasedThisTick("Attack"), Is.True);
             Assert.That(snapshot.IsDown("Attack"), Is.False);
             Assert.That(snapshot.PressedThisFrame("Attack"), Is.True,
-                "the IInputActionReader path over the frozen snapshot returns the same tick edge");
+                "the IInputActionReader path over the frozen snapshot returns the same pressed-this-tick");
 
             snapshotSystem.Update(1f / 50f);
             Assert.That(snapshot.PressedThisTick("Attack"), Is.False,
-                "tick edges are consumed by the freeze, not repeated on the next tick");
+                "pressed-this-tick is consumed by the freeze, not repeated on the next tick");
             Assert.That(snapshot.ReleasedThisTick("Attack"), Is.False);
         }
 
@@ -82,13 +83,13 @@ namespace Ludots.Tests.GAS
             harness.Runtime.UpdateVisualFrame(1f / 60f);
 
             Assert.That(channelZero.Handler.PressedThisFrame("CmdA"), Is.False,
-                "the channel handler's frame edge has expired before the freeze");
+                "the channel handler's pressed-this-frame has expired before the freeze");
             harness.Runtime.FreezeSnapshots(discardLiveInput: false);
 
             Assert.That(channelZero.Reader.PressedThisTick("CmdA"), Is.True,
-                "the seat channel's frozen reader must deliver the tick edge across skipped logic ticks");
+                "the seat channel's frozen reader must deliver pressed-this-tick across skipped logic ticks");
             Assert.That(channelOne.Reader.PressedThisTick("CmdA"), Is.False,
-                "the other seat's channel keeps its own snapshot; edges never cross seats");
+                "the other seat's channel keeps its own snapshot; presses never cross seats");
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler, Dictionary<string, object> globals, InputRuntimeSystem frameSystem, AuthoritativeInputSnapshotSystem snapshotSystem, FrozenInputActionReader snapshot) BuildGlobalChain()

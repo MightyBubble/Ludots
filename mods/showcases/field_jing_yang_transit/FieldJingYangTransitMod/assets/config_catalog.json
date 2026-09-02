@@ -43,10 +43,5 @@
     "Path": "Presentation/host_assets.json",
     "Policy": "ArrayById",
     "IdField": "id"
-  },
-  {
-    "Path": "Input/trigger_actions.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
   }
 ]

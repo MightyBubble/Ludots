@@ -5,7 +5,7 @@
     "entries": [
       {
         "label": "on_input_action",
-        "event": "InputActionFired",
+        "action": "GraphOps.Probe",
         "start": "readPointerX"
       }
     ],

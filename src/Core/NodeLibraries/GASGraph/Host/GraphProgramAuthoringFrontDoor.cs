@@ -12,7 +12,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
     /// </summary>
     public static class GraphProgramAuthoringFrontDoor
     {
-        private static readonly string[] RequiredTriggerGraphEntryFields = { "label", "event", "start" };
+        private static readonly string[] RequiredTriggerGraphEntryFields = { "label", "start" };
         private static readonly string[] HookEntryFields = { "hookAnchor", "hookNodeBefore", "hookNodeAfter" };
 
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics)
@@ -173,6 +173,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     {
                         case "label":
                         case "event":
+                        case "action":
                         case "start":
                             if (field.Value is not JsonValue value || !value.TryGetValue<string>(out _))
                             {
@@ -215,7 +216,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             break;
                         default:
                             throw new InvalidOperationException(
-                                $"TriggerGraph graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, start, once, refire, priority, filters, hookAnchor, hookNodeBefore, hookNodeAfter.");
+                                $"TriggerGraph graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, action, start, once, refire, priority, filters, hookAnchor, hookNodeBefore, hookNodeAfter.");
                     }
                 }
 
@@ -226,6 +227,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         throw new InvalidOperationException(
                             $"TriggerGraph graph '{graphId}' entries[{i}] is missing required field '{required}'.");
                     }
+                }
+
+                bool hasEvent = entry.ContainsKey("event");
+                bool hasAction = entry.ContainsKey("action");
+                if (hasEvent == hasAction)
+                {
+                    throw new InvalidOperationException(
+                        $"TriggerGraph graph '{graphId}' entries[{i}] must declare exactly one of 'event' or 'action' (got event={hasEvent}, action={hasAction}).");
+                }
+
+                if (hasAction &&
+                    entry["filters"] is JsonObject filtersObj &&
+                    filtersObj.ContainsKey("action"))
+                {
+                    throw new InvalidOperationException(
+                        $"TriggerGraph graph '{graphId}' entries[{i}] binds top-level 'action' and must not also declare filters.action.");
                 }
             }
         }

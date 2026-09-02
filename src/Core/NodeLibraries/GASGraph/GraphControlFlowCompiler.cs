@@ -435,7 +435,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     entry.ParsedFilters,
                     entry.NormalizedRefire,
                     entry.Priority,
-                    entry.ParsedHook != null);
+                    entry.ParsedHook != null,
+                    entry.Action);
             }
 
             return compiled;
@@ -648,10 +649,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 string eventName = (authored[i].Event ?? string.Empty).Trim();
-                if (eventName.Length == 0)
+                string actionId = (authored[i].Action ?? string.Empty).Trim();
+                bool hasEvent = eventName.Length > 0;
+                bool hasAction = actionId.Length > 0;
+                if (hasEvent == hasAction)
                 {
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
-                        $"TriggerGraph graph '{graphId}' entry '{shown}' requires a non-empty 'event' string."));
+                        $"TriggerGraph graph '{graphId}' entry '{shown}' must declare exactly one of 'event' or 'action'."));
+                }
+
+                if (hasAction)
+                {
+                    eventName = TriggerGraphEntry.InputActionSchemaEventName;
+                    if (authored[i].Filters?.Action != null)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
+                            $"TriggerGraph graph '{graphId}' entry '{shown}' binds top-level 'action' and must not also declare filters.action."));
+                    }
                 }
 
                 string start = (authored[i].Start ?? string.Empty).Trim();
@@ -670,6 +684,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 {
                     Label = label,
                     Event = eventName,
+                    Action = actionId,
                     Start = start,
                     Once = authored[i].Once,
                     Priority = authored[i].Priority,

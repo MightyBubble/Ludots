@@ -1317,6 +1317,96 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void StaticStableVisual_MultiSlot_DeactivateAttachmentRemovesOnlyThatCacheEntry()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            var cache = new StableDrawCache(8);
+            var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PresenterVisualStableIdTable(stableIds, capacity: 8);
+
+            int defId = definitions.Register("asset.mesh.dual_static", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1100,
+                            MaterialId = 2100,
+                            Mobility = VisualMobility.Static,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            LocalScale = Vector3.One,
+                            MaterialParamKey = -1,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = false,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1101,
+                            MaterialId = 2101,
+                            Mobility = VisualMobility.Static,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            LocalScale = Vector3.One,
+                            MaterialParamKey = -1,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                        },
+                    },
+                ],
+            });
+
+            PresenterDefinition definition = definitions.Get(defId);
+            Entity presenter = instances.Create(
+                defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 9901, Entity.Null, definition);
+            // body + attachment both active (Case E select-ring pattern)
+            world.Get<PresenterState>(presenter).BehaviorActiveMask = 3u;
+
+            using var system = new PresenterEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates: null!,
+                soundRequests: null!,
+                stableDrawCache: cache,
+                visualStableIds: visualStableIds);
+
+            system.Update(0.016f);
+            Assert.That(visualStableIds.TryGet(
+                PresenterBehaviorRuntimeUtility.ComposeVisualStableKey(9901, 0, AssetKind.Mesh, defId),
+                out int bodyStableId), Is.True);
+            Assert.That(visualStableIds.TryGet(
+                PresenterBehaviorRuntimeUtility.ComposeVisualStableKey(9901, 1, AssetKind.Mesh, defId),
+                out int ringStableId), Is.True);
+            Assert.That(cache.Contains(bodyStableId), Is.True);
+            Assert.That(cache.Contains(ringStableId), Is.True);
+
+            instances.SetBehaviorActive(presenter, definition, 1, active: false);
+            system.Update(0.016f);
+
+            Assert.That(cache.Contains(bodyStableId), Is.True, "Sibling body slot must stay retained.");
+            Assert.That(cache.Contains(ringStableId), Is.False,
+                "Deactivating one StaticMesh slot must Remove its retained entry even when siblings still emit.");
+        }
+
+        [Test]
         public void SkinnedMesh_WithAnimator_RemainsDynamicAndCarriesUpdatedOverlay()
         {
             using var world = World.Create();

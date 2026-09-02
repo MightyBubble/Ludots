@@ -172,6 +172,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<bool> PointerInputCaptured = new("PointerInputCaptured");
         public static readonly ServiceKey<InputActionAttributeBindingRegistry> InputActionAttributeBindingRegistry = new("InputActionAttributeBindingRegistry");
         public static readonly ServiceKey<IInputDeviceWatcher> InputDeviceWatcher = new("InputDeviceWatcher");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.MapTriggers.TriggerGraphActionBindingIndex> TriggerGraphActionBindings = new("TriggerGraphActionBindings");
 
         // --- Camera & View ---
         public static readonly ServiceKey<IViewController> ViewController = new("ViewController");

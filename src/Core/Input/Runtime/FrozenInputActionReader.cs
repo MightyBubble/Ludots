@@ -7,9 +7,10 @@ namespace Ludots.Core.Input.Runtime
 {
     /// <summary>
     /// The authoritative input snapshot, refrozen once per logic tick from
-    /// <see cref="AuthoritativeInputAccumulator"/>. Edge reads here are tick edges — every
-    /// visual frame since the previous freeze is folded in — so fixed-step consumers keep
-    /// their edges even when the pacemaker skips logic ticks between visual frames.
+    /// <see cref="AuthoritativeInputAccumulator"/>. Pressed/released reads here are for
+    /// this logic tick — every visual frame since the previous freeze is folded in — so
+    /// fixed-step consumers keep their presses and releases even when the pacemaker skips
+    /// logic ticks between visual frames.
     /// </summary>
     public sealed class FrozenInputActionReader : IInputActionReader
     {
@@ -143,15 +144,16 @@ namespace Ludots.Core.Input.Runtime
         }
 
         /// <summary>
-        /// Authoritative press edge for logic-tick consumers: true when the action was
-        /// pressed in any visual frame folded into this frozen snapshot. Supersedes the
-        /// live handler's single-visual-frame edge, which is lost whenever the pacemaker
+        /// Authoritative "pressed this tick" for logic-tick consumers: true when the action
+        /// was pressed in any visual frame folded into this frozen snapshot. Supersedes the
+        /// live handler's single-visual-frame press, which is lost whenever the pacemaker
         /// skips the logic tick that would consume it.
         /// </summary>
         public bool PressedThisTick(string actionId) => PressedThisFrame(actionId);
 
         /// <summary>
-        /// Authoritative release edge for logic-tick consumers; see <see cref="PressedThisTick"/>.
+        /// Authoritative "released this tick" for logic-tick consumers; see
+        /// <see cref="PressedThisTick"/>.
         /// </summary>
         public bool ReleasedThisTick(string actionId) => ReleasedThisFrame(actionId);
 

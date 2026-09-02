@@ -75,7 +75,7 @@ public sealed class GraphOpsNodeGalleryEntryPayloadAcceptanceTests
         runtime.EnsureWorld();
 
         Assert.That(runtime.Vignette.GraphKind, Is.EqualTo("TriggerGraph"));
-        AssertCompiledEntryEvent(runtime, "InputActionFired");
+        AssertCompiledEntryEvent(runtime, "InputAction");
 
         runtime.Tick(0.35f);
 
