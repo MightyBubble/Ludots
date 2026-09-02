@@ -2322,6 +2322,13 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDispatchCollectionEventEntryMod",
         "projectPath": "CapabilityStandardGraphOpDispatchCollectionEventEntryMod.csproj"
       }
+    },
+    {
+      "name": "launcher_shell",
+      "target": {
+        "type": "path",
+        "value": "mods/launcher_shell/LauncherShellUxMod"
+      }
     }
   ],
   "adapters": {

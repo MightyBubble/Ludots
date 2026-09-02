@@ -3097,6 +3097,21 @@
         "--json",
         "artifacts/acceptance/engine_raylib_composition/stats.json"
       ]
+    },
+    {
+      "id": "launcher_shell_raylib",
+      "name": "Launcher Shell (Raylib)",
+      "selectors": [
+        "$launcher_shell",
+        "mod:LudotsCoreMod"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
     }
   ]
 }
