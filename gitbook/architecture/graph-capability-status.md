@@ -133,6 +133,8 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 | trace 记录没有时间 / 帧号 | **合同缺口** | 想要真的逐步流动就给 `GraphDebugTraceRecord` 补时间源；在那之前只许说齐亮齐灭 |
 | `GraphDebugTool` 无自动化测试 | 债 | 编辑器和游戏之间唯一通道；`GraphDebugTraceTests` 只测环形缓冲 |
 | 编辑器前端 lint 只门到图编辑器目录 | 债 | `StoryAuthoringPage.tsx`（10 处 `no-explicit-any`）与 `ui-panel-authoring/model.ts`（1 处未用变量）先欠着，清完再放宽 `graph-editor-frontend` 的 lint 范围 |
+| `npm run check` 末步 `validate-panel-templates` 本来就挂 | 债（非本轮） | 报 `Unsupported schema 'ludots.ui.panel_template'`，main 上同样挂；`graph-editor-frontend` 不跑这步，属面板线 |
+| `TriggerGraphRenameMigrationTests` 误伤合法 payloadKey | 债（非本轮） | 夜袭 `graphs.json` 的 `MapTrigger.PointerScreenX/Y`（随 #1398 入口直绑 action 落地）被「不得出现退役方言名」的子串检查判红；该守卫要改成只查 `kind` / `mount` 字段而不是裸子串 |
 | 可调用函数远景（Case E：入参表、continuous 改名、预览 S1/S2、Invoke 与 FuncLib） | **开着 · 先出方案** | 正本 [可调用函数远景](graph-callable-function-vision.md)；Case E 短任务条 `mods/showcases/case_e_selection/CaseESelectionMod/docs/NEXT-AGENT-BRIEF.md`。PR #1444 是台阶。评审前不大改 Core。 |
 
 分层合同条款同步修订在 [图怎么分层](graph-layering-flow-and-behavior.md)。
