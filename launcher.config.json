@@ -2320,7 +2320,8 @@
       "target": {
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDispatchCollectionEventEntryMod",
-        "projectPath": "CapabilityStandardGraphOpDispatchCollectionEventEntryMod.csproj"      }
+        "projectPath": "CapabilityStandardGraphOpDispatchCollectionEventEntryMod.csproj"
+      }
     }
   ],
   "adapters": {
