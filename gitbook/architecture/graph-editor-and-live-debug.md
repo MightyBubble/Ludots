@@ -81,7 +81,7 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 
 1. 新人打开 `/gas-graphs`，加载夜袭 Flow 图，看见控制端口与 Bridge 投影的作者糖，Validate 通过。
 2. 故意加未连线的 Until，Validate 点名缺 `body`/`next`/`condition`。
-3. 夜袭 + AgentBridge 运行中，Watch `on_raider_died`：右边只剩「杀敌刷 Boss」短链，底栏写清事件流；游戏里右键处决敌人后，链路上的节点与暖黄控制边亮起，击杀够门槛时走到刷 Boss 那段。
+3. 夜袭 + AgentBridge 运行中，Watch `on_raider_died`：右边只剩「杀敌刷 Boss」短链，底栏写清事件流；游戏里右键处决敌人后，链路上的节点与暖黄控制边亮起。门槛若是精锐死亡才凑满，改 Watch `on_elite_raider_died` 才能在本入口 trace 里看到刷 Boss 那段（两条入口共用同一段 `rd_*` 链）。
 4. TriggerGraph 事件入口从 Schema 下拉选事件，检查器列出载荷针。
 5. 在 Script 图里加入 `FsmState`，填写枚举与相位变量并挂 case 臂，保存后再打开字段仍在。
 6. 在 Script 图里加入 `BtSequence`，用 child 臂挂子节点；`BtDecorator` 选 `decoratorKind` 后连 `child:0`，保存后再打开仍在。
@@ -124,7 +124,8 @@ Feature: 蓝图编辑器与 live debug 可教可验
     When 我在战场右键处决一名可杀敌人
     Then 短链按记击杀 → 对照门槛的顺序亮起暖黄控制边
     And 底栏「正在走」会跟着当前节点换成对应人话
-    And 击杀数达到门槛时，链路继续亮到刷 Boss / 提醒面板
+    And 若本入口这次处决够门槛，链路继续亮到刷 Boss / 提醒面板
+    And 若门槛是精锐死亡才凑满，需改 Watch on_elite_raider_died 才能在本入口 trace 里看到刷 Boss 那段热度（两条入口共用同一段 rd_* 链）
 
   Scenario: 左键瞬移看得到落点
     Given 夜袭 showcase 与 AgentBridge 正在跑
