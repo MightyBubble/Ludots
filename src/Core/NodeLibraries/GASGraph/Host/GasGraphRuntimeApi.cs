@@ -151,6 +151,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private KnowledgeProjectionResolver? _knowledgeProjections;
         private IClock? _clock;
         private int[] _graphProjectionCandidateScratch = Array.Empty<int>();
+        private Entity[] _collectionEventEntityScratch = Array.Empty<Entity>();
 
         // ── Config context: set before each graph execution, cleared after ──
         private EffectConfigParams _currentConfigParams;
@@ -963,9 +964,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 context.Set(MapTriggerEventPayloadKeys.SourceEntity, source);
             }
 
-            var entitySet = new Entity[count];
-            entities.Slice(0, count).CopyTo(entitySet);
-            context.Set(MapTriggerEventPayloadKeys.CollectionEntitySet, entitySet);
+            // Sync handlers consume before FireMapEvent returns; reuse capacity scratch + explicit count
+            // so continuous-tick hover refresh does not allocate every frame.
+            if (count > _collectionEventEntityScratch.Length)
+            {
+                int next = _collectionEventEntityScratch.Length == 0 ? 64 : _collectionEventEntityScratch.Length;
+                while (next < count)
+                {
+                    next *= 2;
+                }
+
+                _collectionEventEntityScratch = new Entity[next];
+            }
+
+            entities.Slice(0, count).CopyTo(_collectionEventEntityScratch.AsSpan(0, count));
+            context.Set(MapTriggerEventPayloadKeys.CollectionEntitySet, _collectionEventEntityScratch);
+            context.Set(MapTriggerEventPayloadKeys.CollectionEntityCount, count);
             context.Set(MapTriggerEventPayloadKeys.CollectionOp, opKind);
             context.Set(MapTriggerEventPayloadKeys.CollectionKey, CollectionEventOpEncoding.UnpackCollectionKey(packedKeyIds));
             triggerManager.FireMapEvent(mapId, new EventKey(eventName), context);

@@ -1248,7 +1248,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int graphId = ins.Imm;
             if (graphId <= 0)
             {
-                throw new InvalidOperationException("InvokeGraph requires a positive TriggerGraph graph id in Imm.");
+                throw new InvalidOperationException("InvokeGraph requires a positive graph id in Imm.");
             }
 
             if ((ins.Flags & GraphInstructionFlags.FuncLibName) != 0)
@@ -1257,7 +1257,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     "GAS.GRAPH.ERR.InvokeGraphGraphKeyUnresolved: InvokeGraph.functionName was never patched to a graph id at load time.");
             }
 
-            s.Programs.RequireKind(graphId, GraphKind.TriggerGraph);
+            if (!s.Programs.TryGetKind(graphId, out GraphKind childKind) ||
+                childKind is not (GraphKind.TriggerGraph or GraphKind.Query))
+            {
+                throw new InvalidOperationException(
+                    $"InvokeGraph target graph id {graphId} must be TriggerGraph or Query (host→function); got '{childKind}'.");
+            }
+
             if (!s.Programs.TryGetRegistration(graphId, out GraphProgramRegistration childRegistration))
             {
                 throw new InvalidOperationException($"InvokeGraph target graph id {graphId} is not registered.");
@@ -1269,7 +1275,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"InvokeGraph target graph id {graphId} contains Yield; nested Yield is not supported in this slice.");
             }
 
-            int startPc = ResolveInvokeGraphEntry(in ins, childRegistration, graphId);
+            int startPc = childKind == GraphKind.TriggerGraph
+                ? ResolveInvokeGraphEntry(in ins, childRegistration, graphId)
+                : 0;
             ReadOnlySpan<GraphInstruction> childProgram = childRegistration.Program;
 
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
@@ -1323,6 +1331,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Execute(ref child, childProgram, Instance, startPc);
                 s.TreeSteps = child.TreeSteps;
                 s.I[ins.Dst] = child.ReturnInt;
+                // Query (and Trigger) callees may leave a TargetList; copy back so the host can
+                // DispatchCollectionEvent / continue without re-running the hit chain.
+                int hitCount = child.TargetList.Count;
+                if (hitCount > s.Targets.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"InvokeGraph target graph id {graphId} returned {hitCount} targets; host capacity is {s.Targets.Length}.");
+                }
+
+                child.Targets.Slice(0, hitCount).CopyTo(s.Targets);
+                s.TargetList.SetCount(hitCount);
                 s.InvokeArgs?.Clear();
             }
             finally

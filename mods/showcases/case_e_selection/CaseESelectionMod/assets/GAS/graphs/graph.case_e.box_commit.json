@@ -22,33 +22,9 @@
         "payloadKey": "MapTrigger.Rep"
       },
       {
-        "id": "read_press_px",
-        "op": "ReadMapVarFloat",
-        "var": "case_e_press_px"
-      },
-      {
-        "id": "read_press_py",
-        "op": "ReadMapVarFloat",
-        "var": "case_e_press_py"
-      },
-      {
-        "id": "release_px",
-        "op": "LoadEntryPayloadFloat",
-        "payloadKey": "MapTrigger.PointerScreenX"
-      },
-      {
-        "id": "release_py",
-        "op": "LoadEntryPayloadFloat",
-        "payloadKey": "MapTrigger.PointerScreenY"
-      },
-      {
-        "id": "roster",
-        "op": "QueryFromCollection",
-        "collectionKey": "case_e.selectable"
-      },
-      {
-        "id": "rect_hits",
-        "op": "ScreenRegionToEntities"
+        "id": "run_hit",
+        "op": "InvokeGraph",
+        "functionName": "graph.case_e.box_hit"
       },
       {
         "id": "modifier_switch",
@@ -103,189 +79,32 @@
       }
     ],
     "controlEdges": [
-      {
-        "from": "read_modifiers",
-        "fromPort": "next",
-        "to": "rep"
-      },
-      {
-        "from": "rep",
-        "fromPort": "next",
-        "to": "read_press_px"
-      },
-      {
-        "from": "read_press_px",
-        "fromPort": "next",
-        "to": "read_press_py"
-      },
-      {
-        "from": "read_press_py",
-        "fromPort": "next",
-        "to": "release_px"
-      },
-      {
-        "from": "release_px",
-        "fromPort": "next",
-        "to": "release_py"
-      },
-      {
-        "from": "release_py",
-        "fromPort": "next",
-        "to": "roster"
-      },
-      {
-        "from": "roster",
-        "fromPort": "next",
-        "to": "rect_hits"
-      },
-      {
-        "from": "rect_hits",
-        "fromPort": "next",
-        "to": "modifier_switch"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "case:1",
-        "to": "op_add"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "case:3",
-        "to": "op_add"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "case:4",
-        "to": "op_subtract"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "case:5",
-        "to": "op_subtract"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "case:6",
-        "to": "op_subtract"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "case:7",
-        "to": "op_subtract"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "default",
-        "to": "op_replace"
-      },
-      {
-        "from": "op_replace",
-        "fromPort": "next",
-        "to": "commit_replace"
-      },
-      {
-        "from": "op_add",
-        "fromPort": "next",
-        "to": "commit_add"
-      },
-      {
-        "from": "op_subtract",
-        "fromPort": "next",
-        "to": "commit_subtract"
-      },
-      {
-        "from": "commit_replace",
-        "fromPort": "next",
-        "to": "deactivate_boxing"
-      },
-      {
-        "from": "commit_add",
-        "fromPort": "next",
-        "to": "deactivate_boxing"
-      },
-      {
-        "from": "commit_subtract",
-        "fromPort": "next",
-        "to": "deactivate_boxing"
-      },
-      {
-        "from": "deactivate_boxing",
-        "fromPort": "next",
-        "to": "ok"
-      },
-      {
-        "from": "ok",
-        "fromPort": "next",
-        "to": "halt"
-      }
+      { "from": "read_modifiers", "fromPort": "next", "to": "rep" },
+      { "from": "rep", "fromPort": "next", "to": "run_hit" },
+      { "from": "run_hit", "fromPort": "next", "to": "modifier_switch" },
+      { "from": "modifier_switch", "fromPort": "case:1", "to": "op_add" },
+      { "from": "modifier_switch", "fromPort": "case:3", "to": "op_add" },
+      { "from": "modifier_switch", "fromPort": "case:4", "to": "op_subtract" },
+      { "from": "modifier_switch", "fromPort": "case:5", "to": "op_subtract" },
+      { "from": "modifier_switch", "fromPort": "case:6", "to": "op_subtract" },
+      { "from": "modifier_switch", "fromPort": "case:7", "to": "op_subtract" },
+      { "from": "modifier_switch", "fromPort": "default", "to": "op_replace" },
+      { "from": "op_replace", "fromPort": "next", "to": "commit_replace" },
+      { "from": "op_add", "fromPort": "next", "to": "commit_add" },
+      { "from": "op_subtract", "fromPort": "next", "to": "commit_subtract" },
+      { "from": "commit_replace", "fromPort": "next", "to": "deactivate_boxing" },
+      { "from": "commit_add", "fromPort": "next", "to": "deactivate_boxing" },
+      { "from": "commit_subtract", "fromPort": "next", "to": "deactivate_boxing" },
+      { "from": "deactivate_boxing", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
     ],
     "valueEdges": [
-      {
-        "from": "read_modifiers",
-        "fromPort": "value",
-        "to": "modifier_switch",
-        "toPort": "selector"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "roster",
-        "toPort": "source"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "deactivate_boxing",
-        "toPort": "source"
-      },
-      {
-        "from": "read_press_px",
-        "fromPort": "value",
-        "to": "rect_hits",
-        "toPort": "a"
-      },
-      {
-        "from": "read_press_py",
-        "fromPort": "value",
-        "to": "rect_hits",
-        "toPort": "b"
-      },
-      {
-        "from": "release_px",
-        "fromPort": "value",
-        "to": "rect_hits",
-        "toPort": "c"
-      },
-      {
-        "from": "release_py",
-        "fromPort": "value",
-        "to": "rect_hits",
-        "toPort": "max"
-      },
-      {
-        "from": "op_replace",
-        "fromPort": "value",
-        "to": "commit_replace",
-        "toPort": "value"
-      },
-      {
-        "from": "op_add",
-        "fromPort": "value",
-        "to": "commit_add",
-        "toPort": "value"
-      },
-      {
-        "from": "op_subtract",
-        "fromPort": "value",
-        "to": "commit_subtract",
-        "toPort": "value"
-      },
-      {
-        "from": "ok",
-        "fromPort": "value",
-        "to": "halt",
-        "toPort": "value"
-      }
+      { "from": "read_modifiers", "fromPort": "value", "to": "modifier_switch", "toPort": "selector" },
+      { "from": "rep", "fromPort": "value", "to": "deactivate_boxing", "toPort": "source" },
+      { "from": "op_replace", "fromPort": "value", "to": "commit_replace", "toPort": "value" },
+      { "from": "op_add", "fromPort": "value", "to": "commit_add", "toPort": "value" },
+      { "from": "op_subtract", "fromPort": "value", "to": "commit_subtract", "toPort": "value" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
     ]
   }
 ]

@@ -89,7 +89,7 @@
       <div class="ft">命中函数 · 引脚合同（对齐最早宪法 §05②，不是现网图头字段名）</div>
       <div class="field"><span class="fname">入参 · 候选<span class="ftype">collection key</span></span><span class="fdesc">框之前就有的名单（如 case_e.selectable）。不是「每次拿全部 entity」。全图扫描若出现，只能是某个函数体内部的实现选择，不是命中合同的默认入参。</span></div>
       <div class="field"><span class="fname">入参 · 矩形<span class="ftype">四个 float</span></span><span class="fdesc">起角 x/y + 活角 x/y。调用方接线：起角=按下写入的单一 map var；活角=指针屏幕位置 helper（拖拽当帧 / 松手 payload）。</span></div>
-      <div class="field"><span class="fname">返回<span class="ftype">TargetList / 实体名单</span></span><span class="fdesc">当前矩形 ∩ 候选。物化到预览集合 key（如 case_e.box_hover）由调用方或统一回写器按返回类型办理——不是 profile 上的 activeEntityViewKey。</span></div>
+      <div class="field"><span class="fname">返回<span class="ftype">TargetList / 实体名单</span></span><span class="fdesc">当前矩形 ∩ 候选。现网：命中图内 <code>DispatchCollectionEvent</code> 自己写预览集（如 case_e.box_hover）；调度只 Execute，禁止 GraphReturnWriter / outputs[] 代写。目标模型仍可按返回类型物化，但不得再把「调用方偷写」当成现网合同。</span></div>
     </div>
     <div class="callout bad">
       <b>现网缺口</b>：图文档顶层只有 <code>outputs[]</code>（出参公示），没有对等的图级入参表；入参被写死在节点 imm / 读属性里。调用方在 profile 挂载处看不到引脚。补齐方向：函数登记声明入参类型 + 返回类型；挂载/Invoke 只传函数 id 与值边，不再靠 kind=Query 开后门。
@@ -114,7 +114,7 @@
     <div class="form" style="margin-top:8px">
       <div class="ft">只有「谁会被画环」必须进成员事件面</div>
       <div class="field"><span class="fname">候选<span class="ftype">命中入参</span></span><span class="fdesc">能被框的人。宪法：框前就有的 entity collection key。开始图负责刷新这份名单。</span></div>
-      <div class="field"><span class="fname">预览<span class="ftype">返回物化</span></span><span class="fdesc">拖拽时框里是谁（如 case_e.box_hover）→ 黄环。离开「正在框选」清空。</span></div>
+      <div class="field"><span class="fname">预览<span class="ftype">图内自写</span></span><span class="fdesc">拖拽时框里是谁（如 case_e.box_hover）→ 黄环。命中图 DispatchCollectionEvent 写入；离开「正在框选」清空。</span></div>
       <div class="field"><span class="fname">已选中<span class="ftype">collection key</span></span><span class="fdesc">松手正式结果（selected）→ 蓝环；replace / add / subtract。</span></div>
     </div>
   </div>
@@ -155,7 +155,7 @@
       <div class="field"><span class="fname">continuousQuery<span class="ftype">临时</span></span><span class="fdesc">现网临时：{ graph }。产品语义应是「存活期调用函数 id」，不应叫 continuousQuery，也不应暗示 GraphKind.Query。</span></div>
     </div>
     <div class="callout bad">
-      存活期挂载的目标形状：与 triggers 同级、只挂<strong>函数 id</strong>（调用约定与 FuncLib/Invoke 对齐），入参由调度在调用时按函数声明接线（候选 key + 矩形），返回按类型物化预览集。字段最终名以基建落地为准；禁止再发明无引脚的平行对象当合同。
+      存活期挂载的目标形状：与 triggers 同级、只挂<strong>函数 id</strong>（调用约定与 FuncLib/Invoke 对齐），入参由调度在调用时按函数声明接线（候选 key + 矩形）。现网预览写入由函数内 DispatchCollectionEvent 完成；字段最终名以基建落地为准，禁止再发明无引脚的平行对象当合同。
     </div>
   </div>
 
@@ -184,27 +184,21 @@
     </div>
     <pre class="json">{
   "id": "graph.case_e.box_hit",
-  "说明": "目标：普通可调用函数；返回名单。下面是引脚合同，不是声称现网已有 inputs[] 字段。",
-  "入参": {
-    "candidates": { "type": "EntityCollection", "key": "case_e.selectable" },
-    "pressX": "float · map var case_e_press_px",
-    "pressY": "float · map var case_e_press_py",
-    "liveX": "float · 指针屏幕 X",
-    "liveY": "float · 指针屏幕 Y"
+  "说明": "现网：可被 continuous 调度与 commit/tap InvokeGraph 共用的命中函数；图内 DispatchCollectionEvent 写 case_e.box_hover，并把 TargetList 留给调用方写 selected。",
+  "入参（现网凑合：节点自读）": {
+    "candidates": "QueryFromCollection(case_e.selectable)",
+    "press": "CaseE.PressPx/Py（按下写入）",
+    "live": "CaseE.PointerX/Y（指针绑定）"
   },
-  "返回": {
-    "type": "TargetList",
-    "物化": { "destination": "EntityCollection", "collectionKey": "case_e.box_hover", "role": "AcquisitionPreview" }
+  "副作用": {
+    "DispatchCollectionEvent": { "event": "gameplay.case_e.box_hover_refreshed", "collectionKey": "case_e.box_hover", "op": "replace" }
   },
-  "现网凑合写法（无图级入参表时）": {
-    "nodes里读": ["QueryFromCollection(collectionKey=case_e.selectable)", "ReadMapVar / Pointer 属性 → ScreenRegionToEntities"],
-    "outputs[]": "唯一正式出参公示（gr-09）"
-  }
+  "返回给宿主": "TargetList（InvokeGraph 拷回）"
 }</pre>
     <div class="box" style="margin-top:14px">
       <h4>拖拽中 = 存活期调这张函数</h4>
       <div class="kv">
-        不是再听 action。boxing 活着 → 每 tick 调函数 → 返回名单 Replace 预览集。<br>
+        不是再听 action。boxing 活着 → 每 tick Execute 命中图 → 图自己 Replace 预览集。<br>
         高亮仍只在<strong>集合成员变化</strong>时发事件（已有基建）。
       </div>
     </div>
@@ -214,9 +208,8 @@
   <h2><span class="no">06</span>框结束：再调同一张函数 → 写已选中</h2>
   <div class="step">
     <h3>抬起 / 点选 Trigger <span class="tag cfg">配置图体</span> + <span class="tag gap">函数互调</span></h3>
-    <div class="callout bad">
-      现网 InvokeGraph 只能嵌 Trigger。本合同要求宿主能<strong>调用返回名单的函数</strong>（名字以落地为准：InvokeFunc / 扩展后的 Invoke，不要再造 InvokeQuery 这种暗示特殊 kind 的名字）。
-      未补齐前禁止在 commit/tap 手抄第二份矩形命中链。
+    <div class="callout ok">
+      现网：commit/tap 用 <code>InvokeGraph</code> 调 <code>graph.case_e.box_hit</code>（允许 Query 被调），拷回 TargetList 再 <code>DispatchCollectionEvent</code> 写 selected。禁止再手抄第二份矩形命中链。
     </div>
     <div class="form">
       <div class="ft">框结束步骤</div>
@@ -244,10 +237,10 @@
   <div class="step">
     <div class="form">
       <div class="ft">必须先补，再改 Case E 资产装成目标合同</div>
-      <div class="field"><span class="fname">函数等价<span class="ftype">Core</span></span><span class="fdesc">可调用体统一为函数；用返回类型区分，不再用 GraphKind.Query 开特权通道。与 FuncLib 合同对齐。</span></div>
+      <div class="field"><span class="fname">函数等价<span class="ftype">Core</span></span><span class="fdesc">可调用体统一为函数；用返回类型区分。现网已：continuous 不强制 Query；InvokeGraph 可调 Query 并拷回名单。仍缺：图级入参表、字段改名、全面废 GraphKind 特权语义。</span></div>
       <div class="field"><span class="fname">图级入参表<span class="ftype">作者面</span></span><span class="fdesc">与 outputs 对等的入参声明；调用方可见、可接线。禁止长期靠节点 imm 藏入参。</span></div>
-      <div class="field"><span class="fname">宿主调函数<span class="ftype">op</span></span><span class="fdesc">Trigger 可调返回名单的函数；返回进后续节点 / 物化。</span></div>
-      <div class="field"><span class="fname">存活期调度<span class="ftype">profile</span></span><span class="fdesc">挂函数 id + 按声明接线；取代 continuousQuery 临时名与 Query-kind 绑定。</span></div>
+      <div class="field"><span class="fname">宿主调函数<span class="ftype">op</span></span><span class="fdesc">现网：InvokeGraph 可调 TriggerGraph 或 Query，名单拷回宿主。命名仍可演进为 InvokeFunc。</span></div>
+      <div class="field"><span class="fname">存活期调度<span class="ftype">profile</span></span><span class="fdesc">现网仍叫 continuousQuery；语义已是挂函数 id + 要求图内自写集合，不再要求 kind=Query。</span></div>
     </div>
   </div>
 

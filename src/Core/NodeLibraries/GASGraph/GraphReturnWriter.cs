@@ -102,9 +102,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Run a Query program for its authored side effects (e.g. DispatchCollectionEvent)
-        /// without materializing <c>outputs[]</c>. Continuous context ticks use this so the
-        /// graph itself owns collection writes — GraphReturnWriter must not steal that job.
+        /// Run a continuous-mount graph for its authored side effects (e.g. DispatchCollectionEvent)
+        /// without materializing <c>outputs[]</c>. Host binds the program's registered kind —
+        /// not a Query privilege. GraphReturnWriter must not steal collection writes.
         /// </summary>
         public void Execute(
             int graphId,
@@ -121,9 +121,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 throw new InvalidOperationException($"Graph return writer references unknown graph program id {graphId}.");
             }
 
-            _programs.RequireKind(graphId, GraphKind.Query);
+            if (!_programs.TryGetKind(graphId, out GraphKind kind))
+            {
+                throw new InvalidOperationException($"Graph return writer references untyped graph program id {graphId}.");
+            }
+
             GraphKindOperationPolicy.RequireAllowed(
-                GraphKind.Query,
+                kind,
                 program,
                 _handlers,
                 graphId,
@@ -137,7 +141,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             GraphFrame frame = GraphFrame.Bind(
-                GraphKind.Query,
+                kind,
                 GraphEntityPreset.TargetContext(targetContext),
                 _world,
                 caster,

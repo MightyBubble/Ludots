@@ -303,7 +303,15 @@ namespace Ludots.Core.Input.Interaction
                     $"Interaction context profile '{definition.Id}' continuousQuery.graph references unknown graph '{graphName}'.");
             }
 
-            referenceCatalog.Programs.RequireKind(graphId, GraphKind.Query);
+            // Function-equivalence direction: continuous mount is host→function id, not a
+            // GraphKind.Query privilege. Any kind is allowed if the program writes its preview
+            // collection via DispatchCollectionEvent (no GraphReturnWriter steal).
+            if (!referenceCatalog.Programs.TryGetKind(graphId, out GraphKind mountedKind))
+            {
+                throw new InvalidOperationException(
+                    $"Interaction context profile '{definition.Id}' continuousQuery.graph '{graphName}' has no registered kind.");
+            }
+
             bool writesCollection = false;
             for (int i = 0; i < program.Length; i++)
             {
@@ -319,6 +327,13 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException(
                     $"Interaction context profile '{definition.Id}' continuousQuery.graph '{graphName}' must DispatchCollectionEvent to write its preview collection; GraphReturnWriter output materialization is not the continuous-tick write path.");
             }
+
+            GraphKindOperationPolicy.RequireAllowed(
+                mountedKind,
+                program,
+                GasGraphOpHandlerTable.Instance,
+                graphId,
+                nameof(ResolveContinuousQueryGraphId));
 
             return graphId;
         }

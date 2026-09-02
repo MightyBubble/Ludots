@@ -17,23 +17,9 @@
         "payloadKey": "MapTrigger.Rep"
       },
       {
-        "id": "tap_px",
-        "op": "LoadEntryPayloadFloat",
-        "payloadKey": "MapTrigger.PointerScreenX"
-      },
-      {
-        "id": "tap_py",
-        "op": "LoadEntryPayloadFloat",
-        "payloadKey": "MapTrigger.PointerScreenY"
-      },
-      {
-        "id": "roster",
-        "op": "QueryFromCollection",
-        "collectionKey": "case_e.selectable"
-      },
-      {
-        "id": "pick_hits",
-        "op": "ScreenRegionToEntities"
+        "id": "run_hit",
+        "op": "InvokeGraph",
+        "functionName": "graph.case_e.box_hit"
       },
       {
         "id": "op_replace",
@@ -62,101 +48,17 @@
       }
     ],
     "controlEdges": [
-      {
-        "from": "rep",
-        "fromPort": "next",
-        "to": "tap_px"
-      },
-      {
-        "from": "tap_px",
-        "fromPort": "next",
-        "to": "tap_py"
-      },
-      {
-        "from": "tap_py",
-        "fromPort": "next",
-        "to": "roster"
-      },
-      {
-        "from": "roster",
-        "fromPort": "next",
-        "to": "pick_hits"
-      },
-      {
-        "from": "pick_hits",
-        "fromPort": "next",
-        "to": "op_replace"
-      },
-      {
-        "from": "op_replace",
-        "fromPort": "next",
-        "to": "commit"
-      },
-      {
-        "from": "commit",
-        "fromPort": "next",
-        "to": "deactivate_boxing"
-      },
-      {
-        "from": "deactivate_boxing",
-        "fromPort": "next",
-        "to": "ok"
-      },
-      {
-        "from": "ok",
-        "fromPort": "next",
-        "to": "halt"
-      }
+      { "from": "rep", "fromPort": "next", "to": "run_hit" },
+      { "from": "run_hit", "fromPort": "next", "to": "op_replace" },
+      { "from": "op_replace", "fromPort": "next", "to": "commit" },
+      { "from": "commit", "fromPort": "next", "to": "deactivate_boxing" },
+      { "from": "deactivate_boxing", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
     ],
     "valueEdges": [
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "roster",
-        "toPort": "source"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "deactivate_boxing",
-        "toPort": "source"
-      },
-      {
-        "from": "tap_px",
-        "fromPort": "value",
-        "to": "pick_hits",
-        "toPort": "a"
-      },
-      {
-        "from": "tap_py",
-        "fromPort": "value",
-        "to": "pick_hits",
-        "toPort": "b"
-      },
-      {
-        "from": "tap_px",
-        "fromPort": "value",
-        "to": "pick_hits",
-        "toPort": "c"
-      },
-      {
-        "from": "tap_py",
-        "fromPort": "value",
-        "to": "pick_hits",
-        "toPort": "max"
-      },
-      {
-        "from": "op_replace",
-        "fromPort": "value",
-        "to": "commit",
-        "toPort": "value"
-      },
-      {
-        "from": "ok",
-        "fromPort": "value",
-        "to": "halt",
-        "toPort": "value"
-      }
+      { "from": "rep", "fromPort": "value", "to": "deactivate_boxing", "toPort": "source" },
+      { "from": "op_replace", "fromPort": "value", "to": "commit", "toPort": "value" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
     ]
   }
 ]
