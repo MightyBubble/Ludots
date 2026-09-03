@@ -172,9 +172,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             System.Numerics.Vector2 pointer,
             int modifiers)
         {
-            // #region agent log
-            try { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "H1_H3", location = "TriggerGraphActionBindingSystem.Dispatch", message = "dispatch action with pointer payload", data = new { actionId, pointerX = pointer.X, pointerY = pointer.Y, modifiers, repId = rep.Id, mapId = session.MapId.Value }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
-            // #endregion
             ScriptContext context = _createContext();
             context.Set(CoreServiceKeys.MapId, session.MapId);
             context.Set(CoreServiceKeys.MapSession, session);
@@ -209,9 +206,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             AuthoritativePointerButtonSnapshot? buttons = _pointerButtons();
             if (buttons == null || !buttons.TryGetState(actionId, out PointerButtonState state))
             {
-                // #region agent log
-                try { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "H1", location = "TriggerGraphActionBindingSystem.TryResolveEventPointer", message = "pointer state missing for action", data = new { actionId, release, buttonsNull = buttons == null }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
-                // #endregion
                 pointer = default;
                 return false;
             }
@@ -221,25 +215,16 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 if (state.HasReleasePointer)
                 {
                     pointer = state.ReleasePointer;
-                    // #region agent log
-                    try { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "H1", location = "TriggerGraphActionBindingSystem.TryResolveEventPointer", message = "resolved release pointer", data = new { actionId, pointerX = pointer.X, pointerY = pointer.Y, source = "ReleasePointer" }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
-                    // #endregion
                     return true;
                 }
             }
             else if (state.HasPressPointer)
             {
                 pointer = state.PressPointer;
-                // #region agent log
-                try { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "H1", location = "TriggerGraphActionBindingSystem.TryResolveEventPointer", message = "resolved press pointer", data = new { actionId, pointerX = pointer.X, pointerY = pointer.Y, source = "PressPointer", livePointerX = state.Pointer.X, livePointerY = state.Pointer.Y }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
-                // #endregion
                 return true;
             }
 
             pointer = state.Pointer;
-            // #region agent log
-            try { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "H1", location = "TriggerGraphActionBindingSystem.TryResolveEventPointer", message = "fallback live pointer", data = new { actionId, release, pointerX = pointer.X, pointerY = pointer.Y, hasPress = state.HasPressPointer, hasRelease = state.HasReleasePointer }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
-            // #endregion
             return true;
         }
 

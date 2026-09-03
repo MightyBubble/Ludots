@@ -27,7 +27,7 @@ namespace Ludots.Tests.GAS.Production;
 /// + 修饰键语义透传事件 key 写 selected 集合（与候选、预览三套集合分离）。
 /// 输入合同：按下=BoxSelectBegin、抬起=BoxSelectEnd（firesOn=release），无 Tap/Drag 判定器。
 /// 键位表 CaseE.Controls 由 battle 档案 inputContextId 经座位投影激活，不靠 startupInputContexts / scheme.inputContexts。
-/// startup 仍推 Default_Gameplay：PointerPos（&lt;Mouse&gt;/Pos）只绑在该表，CapturePointerButtons 靠它写 press 角。
+/// startup 仍推 Default_Gameplay：PointerPos（鼠标 Pos 绑定）只在该表，CapturePointerButtons 靠它写 press 角。
 /// </summary>
 [NonParallelizable]
 [TestFixture]
