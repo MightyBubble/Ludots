@@ -221,6 +221,25 @@ namespace Ludots.Core.Input.Runtime
             {
                 _actionStates[i].Update(_tempValues[i]);
             }
+
+            // #region agent log
+            try
+            {
+                if (_actionIndices.TryGetValue("CaseE.BoxSelectBegin", out int boxIdx) && _actionStates[boxIdx].PressedThisFrame)
+                {
+                    var activeIds = new System.Collections.Generic.List<string>(_activeContexts.Count);
+                    for (int ci = 0; ci < _activeContexts.Count; ci++) activeIds.Add(_activeContexts[ci].Id);
+                    float pointerPosX = 0f, pointerPosY = 0f;
+                    if (_actionIndices.TryGetValue("PointerPos", out int ppIdx))
+                    {
+                        var pp = _actionStates[ppIdx].ReadValue<System.Numerics.Vector2>();
+                        pointerPosX = pp.X; pointerPosY = pp.Y;
+                    }
+                    System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "H5", location = "PlayerInputHandler.Update", message = "BoxSelectBegin pressed; active contexts + PointerPos", data = new { activeContexts = activeIds, mouseX = _mousePosition.X, mouseY = _mousePosition.Y, pointerPosX, pointerPosY }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n");
+                }
+            }
+            catch { }
+            // #endregion
         }
 
         private static void ResetInteractionStates(CompiledContext context)

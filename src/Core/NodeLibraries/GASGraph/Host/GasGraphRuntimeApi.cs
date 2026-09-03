@@ -646,7 +646,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             => ResolveMapVariableStore(mapId).WriteInt(ResolveMapVariableName(varKeyId), value);
 
         public void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
-            => ResolveMapVariableStore(mapId).WriteFloat(ResolveMapVariableName(varKeyId), value);
+        {
+            string varName = ResolveMapVariableName(varKeyId);
+            // #region agent log
+            try { if (varName.StartsWith("case_e_press_", System.StringComparison.Ordinal)) { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "H3", location = "GasGraphRuntimeApi.WriteMapVarFloat", message = "write case_e press map var", data = new { varName, mapId = mapId.Value, value }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } } catch { }
+            // #endregion
+            ResolveMapVariableStore(mapId).WriteFloat(varName, value);
+        }
 
         public bool TryGetPlacedEntity(int instanceKeyId, MapId mapId, out Entity entity)
         {

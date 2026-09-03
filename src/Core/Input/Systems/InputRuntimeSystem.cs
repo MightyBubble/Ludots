@@ -100,6 +100,9 @@ namespace Ludots.Core.Input.Systems
         {
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(InputRuntimeSystem));
             Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
+            // #region agent log
+            try { bool boxPressed = input.PressedThisFrame("CaseE.BoxSelectBegin"); if (boxPressed || System.MathF.Abs(pointer.X) > 0.01f || System.MathF.Abs(pointer.Y) > 0.01f) { System.IO.File.AppendAllText("/opt/cursor/logs/debug.log", System.Text.Json.JsonSerializer.Serialize(new { hypothesisId = "H1", location = "InputRuntimeSystem.CapturePointerButtons", message = "pointer capture sample", data = new { pointerActionId = bindings.PointerPositionActionId, pointerX = pointer.X, pointerY = pointer.Y, boxPressed, boxDown = input.IsDown("CaseE.BoxSelectBegin"), lifecycleCount = _pointerLifecycleActionIds?.Count ?? -1, hasDefaultGameplayDefined = input.HasContext("Default_Gameplay"), hasCaseEControlsDefined = input.HasContext("CaseE.Controls") }, timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } } catch { }
+            // #endregion
             CapturePointerButton(input, bindings.ConfirmActionId, pointer);
             CapturePointerButton(input, bindings.CommandActionId, pointer);
             CapturePointerButton(input, bindings.CancelActionId, pointer);
