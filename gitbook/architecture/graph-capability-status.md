@@ -86,7 +86,7 @@ Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 St
 
 Live debug 记录实际执行节点归因、Yield/预算挂起、Halt、游标、引脚和黑板变化；嵌套 `InvokeScript` 继承固定容量 trace 并携带子图 id。编辑器侧按 Flow Canvas 方式点亮节点/控制边并贴 pin 芯片，`drain` 事件带 `controlPort`；当前不伪造 `NodeExit` 生命周期事件。黑板 buffer 缺失仍在运行时明确失败；实体能力在 authoring 阶段的声明和编译校验仍是下一条合同切片，不能把运行时隐式安装路径写成已完成。
 
-底栏用人话讲这一趟，数据是 mod 自己的：`assets/GAS/graph_editor.json` 的 `annotations`（节点分组每图声明一次 + 按入口写抬头），Bridge 读写都对着 `graphs.json` 核对分组节点与入口标签，改名失败关闭并点名。底栏按执行到达顺序列出走过的每一组，和画布热度同一个 TTL 一起冷掉。编辑器源码里不得出现具体图 / mod / 节点 id，`ReactEditor_MustNotNameShowcaseGraphsOrMods` 扫全前端目录守这条。入口起因是「等事件」或「等输入动作」的单选，运行时 `event` / `action` 恰有其一；动作 id 从 `/api/graph/input-actions/{modId}` 合并目录下拉，保存路径跑 `RequireTriggerGraphEntryShape`。编辑器前端已进 CI（`graph-editor-frontend`：tsc + 图编辑器目录 lint + 断言脚本）。
+底栏用人话讲这一趟，数据是 mod 自己的：`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graph_editor.json` 的 `annotations`（节点分组每图声明一次 + 按入口写抬头），Bridge 读写都对着 `graphs.json` 核对分组节点与入口标签，改名失败关闭并点名。底栏按执行到达顺序列出走过的每一组，和画布热度同一个 TTL 一起冷掉。编辑器源码里不得出现具体图 / mod / 节点 id，`ReactEditor_MustNotNameShowcaseGraphsOrMods` 扫全前端目录守这条。入口起因是「等事件」或「等输入动作」的单选，运行时 `event` / `action` 恰有其一；动作 id 从 `/api/graph/input-actions/{modId}` 合并目录下拉，保存路径跑 `RequireTriggerGraphEntryShape`。编辑器前端已进 CI（`graph-editor-frontend`：tsc + 图编辑器目录 lint + 断言脚本）。
 
 trace 记录只有序号和步数，没有时间或帧号：一拍跑完的链是齐亮齐灭，不是逐步流动。要真做流动，先给记录补时间或帧号，别在文档里先许诺。
 
