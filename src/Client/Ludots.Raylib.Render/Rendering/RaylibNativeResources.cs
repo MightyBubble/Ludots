@@ -70,7 +70,13 @@ public static unsafe class RaylibNativeResources
 
     public static void UploadMesh(ref Mesh mesh, bool dynamic)
     {
-        Rl.UploadMesh(ref mesh, dynamic);
+        // GenMesh* 在 VAO 后端已内部上传（vaoId 非零）；重复 UploadMesh 只会触发 raylib 的
+        // "Trying to re-load an already loaded mesh" 警告并原样返回，此处提前跳过。
+        if (mesh.vaoId == 0)
+        {
+            Rl.UploadMesh(ref mesh, dynamic);
+        }
+
         TrackIfResident(
             RaylibNativeResourceKind.Mesh,
             mesh.vaoId,

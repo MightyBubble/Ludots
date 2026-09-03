@@ -239,10 +239,13 @@ namespace Ludots.Raylib.Render
             float cx = camera.target.X;
             float cz = camera.target.Z;
 
-            int minChunkX = (int)MathF.Floor((cx - VisibleRadius) / source.ChunkSpacingXMeters);
-            int maxChunkX = (int)MathF.Ceiling((cx + VisibleRadius) / source.ChunkSpacingXMeters);
-            int minChunkY = (int)MathF.Floor((cz - VisibleRadius) / source.ChunkSpacingYMeters);
-            int maxChunkY = (int)MathF.Ceiling((cz + VisibleRadius) / source.ChunkSpacingYMeters);
+            float relX = cx - source.ChunkOriginXMeters;
+            float relZ = cz - source.ChunkOriginYMeters;
+
+            int minChunkX = (int)MathF.Floor((relX - VisibleRadius) / source.ChunkSpacingXMeters);
+            int maxChunkX = (int)MathF.Ceiling((relX + VisibleRadius) / source.ChunkSpacingXMeters);
+            int minChunkY = (int)MathF.Floor((relZ - VisibleRadius) / source.ChunkSpacingYMeters);
+            int maxChunkY = (int)MathF.Ceiling((relZ + VisibleRadius) / source.ChunkSpacingYMeters);
 
             minChunkX = Math.Max(0, minChunkX);
             minChunkY = Math.Max(0, minChunkY);
@@ -254,13 +257,14 @@ namespace Ludots.Raylib.Render
             {
                 for (int x = minChunkX; x <= maxChunkX; x++)
                 {
-                    float chunkWorldX = x * source.ChunkSpacingXMeters;
-                    float chunkWorldZ = y * source.ChunkSpacingYMeters;
+                    float chunkWorldX = source.ChunkOriginXMeters + (x * source.ChunkSpacingXMeters);
+                    float chunkWorldZ = source.ChunkOriginYMeters + (y * source.ChunkSpacingYMeters);
                     float dx = chunkWorldX - cx;
                     float dz = chunkWorldZ - cz;
                     float dist = MathF.Sqrt(dx * dx + dz * dz);
                     bool simplified = dist > SimplifiedCliffRadius;
                     ref ChunkGpu chunk = ref GetOrCreateChunk(source, x, y, simplified);
+                    chunk.LastUsedFrame = _frameIndex;
                     shadow.DrawMeshShadow(chunk.TerrainMesh, identity);
                 }
             }
@@ -286,10 +290,13 @@ namespace Ludots.Raylib.Render
             float cx = camera.target.X;
             float cz = camera.target.Z;
 
-            int minChunkX = (int)MathF.Floor((cx - VisibleRadius) / source.ChunkSpacingXMeters);
-            int maxChunkX = (int)MathF.Ceiling((cx + VisibleRadius) / source.ChunkSpacingXMeters);
-            int minChunkY = (int)MathF.Floor((cz - VisibleRadius) / source.ChunkSpacingYMeters);
-            int maxChunkY = (int)MathF.Ceiling((cz + VisibleRadius) / source.ChunkSpacingYMeters);
+            float relX = cx - source.ChunkOriginXMeters;
+            float relZ = cz - source.ChunkOriginYMeters;
+
+            int minChunkX = (int)MathF.Floor((relX - VisibleRadius) / source.ChunkSpacingXMeters);
+            int maxChunkX = (int)MathF.Ceiling((relX + VisibleRadius) / source.ChunkSpacingXMeters);
+            int minChunkY = (int)MathF.Floor((relZ - VisibleRadius) / source.ChunkSpacingYMeters);
+            int maxChunkY = (int)MathF.Ceiling((relZ + VisibleRadius) / source.ChunkSpacingYMeters);
 
             minChunkX = Math.Max(0, minChunkX);
             minChunkY = Math.Max(0, minChunkY);
@@ -300,8 +307,8 @@ namespace Ludots.Raylib.Render
             {
                 for (int x = minChunkX; x <= maxChunkX; x++)
                 {
-                    float chunkWorldX = x * source.ChunkSpacingXMeters;
-                    float chunkWorldZ = y * source.ChunkSpacingYMeters;
+                    float chunkWorldX = source.ChunkOriginXMeters + (x * source.ChunkSpacingXMeters);
+                    float chunkWorldZ = source.ChunkOriginYMeters + (y * source.ChunkSpacingYMeters);
                     float dx = chunkWorldX - cx;
                     float dz = chunkWorldZ - cz;
                     float dist = MathF.Sqrt(dx * dx + dz * dz);

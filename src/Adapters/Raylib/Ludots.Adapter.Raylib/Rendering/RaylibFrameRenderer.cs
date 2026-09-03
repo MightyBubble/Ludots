@@ -637,10 +637,11 @@ namespace Ludots.Adapter.Raylib
 
         private Ludots.Platform.Abstractions.ITerrainChunkMeshSource TerrainSource()
         {
-            _terrainSource ??= new VertexMapTerrainChunkMeshSource(null);
-            if (!ReferenceEquals(_terrainSource.Map, _engine.VertexMap))
+            var layout = RaylibHostLoop.ResolveVertexMapTerrainLayout(_engine);
+            _terrainSource ??= new VertexMapTerrainChunkMeshSource(null, layout);
+            if (!ReferenceEquals(_terrainSource.Map, _engine.VertexMap) || _terrainSource.Layout != layout)
             {
-                _terrainSource = new VertexMapTerrainChunkMeshSource(_engine.VertexMap);
+                _terrainSource = new VertexMapTerrainChunkMeshSource(_engine.VertexMap, layout);
             }
 
             return _terrainSource;

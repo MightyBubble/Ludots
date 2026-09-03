@@ -7,21 +7,30 @@ namespace Ludots.Client.Raylib.Rendering
     public sealed class VertexMapTerrainChunkMeshSource : ITerrainChunkMeshSource
     {
         private VertexMapChunkMeshBuilder? _builder;
+        private VertexMap? _builderMap;
+        private VertexMapHexLayout _builderLayout;
 
-        public VertexMapTerrainChunkMeshSource(VertexMap? map)
+        public VertexMapTerrainChunkMeshSource(VertexMap? map, VertexMapHexLayout layout)
         {
             Map = map;
+            Layout = layout;
         }
 
         public VertexMap? Map { get; set; }
+
+        public VertexMapHexLayout Layout { get; set; }
 
         public int WidthInChunks => Map?.WidthInChunks ?? 0;
 
         public int HeightInChunks => Map?.HeightInChunks ?? 0;
 
-        public float ChunkSpacingXMeters => HexCoordinates.HexWidth * VertexChunk.ChunkSize;
+        public float ChunkSpacingXMeters => Layout.ColPitchMeters * VertexChunk.ChunkSize;
 
-        public float ChunkSpacingYMeters => HexCoordinates.RowSpacing * VertexChunk.ChunkSize;
+        public float ChunkSpacingYMeters => Layout.RowPitchMeters * VertexChunk.ChunkSize;
+
+        public float ChunkOriginXMeters => Layout.OriginXMeters;
+
+        public float ChunkOriginYMeters => Layout.OriginZMeters;
 
         public long GetChunkKey(int chunkX, int chunkY)
         {
@@ -38,8 +47,14 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            _builder ??= new VertexMapChunkMeshBuilder(map);
-            _builder.BuildChunk(chunkX, chunkY, 0f, 0f, heightScale, simplifiedCliffs, dst);
+            if (_builder == null || !ReferenceEquals(_builderMap, map) || _builderLayout != Layout)
+            {
+                _builder = new VertexMapChunkMeshBuilder(map, Layout);
+                _builderMap = map;
+                _builderLayout = Layout;
+            }
+
+            _builder.BuildChunk(chunkX, chunkY, heightScale, simplifiedCliffs, dst);
         }
     }
 }

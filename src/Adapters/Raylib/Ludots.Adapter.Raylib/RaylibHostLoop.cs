@@ -205,7 +205,7 @@ namespace Ludots.Adapter.Raylib
                 VisibleRadius = 900f,
                 SimplifiedCliffRadius = 350f,
             };
-            _terrainSource = new VertexMapTerrainChunkMeshSource(engine.VertexMap);
+            _terrainSource = new VertexMapTerrainChunkMeshSource(engine.VertexMap, ResolveVertexMapTerrainLayout(engine));
             var continuousHeightmapRenderer = new RaylibContinuousHeightmapRenderer(engine.VFS)
             {
                 VisibleRadiusCm = 140_000f,
@@ -759,7 +759,7 @@ namespace Ludots.Adapter.Raylib
                             }
                             else
                             {
-                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(boardTerrain), reflectionCamera);
+                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(engine, boardTerrain), reflectionCamera);
                             }
 
                             EndCoreMode3D();
@@ -786,7 +786,7 @@ namespace Ludots.Adapter.Raylib
                             }
                             else
                             {
-                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(boardTerrain), activeCamera);
+                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(engine, boardTerrain), activeCamera);
                             }
 
                             EndCoreMode3D();
@@ -910,7 +910,7 @@ namespace Ludots.Adapter.Raylib
                                     terrainRenderer.ClearReflectiveWater();
                                 }
 
-                                terrainRenderer.Render(TerrainSourceFor(boardTerrain), viewportCamera);
+                                terrainRenderer.Render(TerrainSourceFor(engine, boardTerrain), viewportCamera);
                                 presentationTiming?.ObserveTerrain(
                                     ElapsedMs(terrainStart),
                                     terrainRenderer.ChunkBuildMsLastFrame,
@@ -2817,14 +2817,29 @@ namespace Ludots.Adapter.Raylib
         }
 
 
-    private static Ludots.Platform.Abstractions.ITerrainChunkMeshSource TerrainSourceFor(Ludots.Core.Map.Hex.VertexMap? map)
+    private static Ludots.Platform.Abstractions.ITerrainChunkMeshSource TerrainSourceFor(GameEngine engine, Ludots.Core.Map.Hex.VertexMap? map)
     {
-        _terrainSource ??= new VertexMapTerrainChunkMeshSource(null);
-        if (!ReferenceEquals(_terrainSource.Map, map))
+        var layout = ResolveVertexMapTerrainLayout(engine);
+        _terrainSource ??= new VertexMapTerrainChunkMeshSource(null, layout);
+        if (!ReferenceEquals(_terrainSource.Map, map) || _terrainSource.Layout != layout)
         {
-            _terrainSource = new VertexMapTerrainChunkMeshSource(map);
+            _terrainSource = new VertexMapTerrainChunkMeshSource(map, layout);
         }
         return _terrainSource;
+    }
+
+    /// <summary>
+    /// VertexMap 视觉布局来自聚焦 board 的世界合同：地图格数与 board 世界格数一致时按
+    /// GridCellSizeCm 方形格心间距、以世界原点居中；否则沿用 HexCoordinates 静态常量布局。
+    /// </summary>
+    internal static Ludots.Core.Presentation.Rendering.VertexMapHexLayout ResolveVertexMapTerrainLayout(GameEngine engine)
+    {
+        return Ludots.Core.Presentation.Rendering.VertexMapHexLayout.TryResolveForBoard(
+            engine.WorldSizeSpec,
+            engine.VertexMap,
+            out Ludots.Core.Presentation.Rendering.VertexMapHexLayout layout)
+            ? layout
+            : Ludots.Core.Presentation.Rendering.VertexMapHexLayout.Legacy;
     }
 
     /// <summary>

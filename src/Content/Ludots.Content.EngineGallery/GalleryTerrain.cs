@@ -40,6 +40,8 @@ namespace Ludots.Content.EngineGallery
         public int HeightInChunks { get; }
         public float ChunkSpacingXMeters { get; }
         public float ChunkSpacingYMeters { get; }
+        public float ChunkOriginXMeters => 0f;
+        public float ChunkOriginYMeters => 0f;
 
         public long GetChunkKey(int chunkX, int chunkY)
         {

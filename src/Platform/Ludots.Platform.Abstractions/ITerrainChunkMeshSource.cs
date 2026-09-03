@@ -13,6 +13,12 @@ namespace Ludots.Platform.Abstractions
 
         float ChunkSpacingYMeters { get; }
 
+        /// <summary>chunk (0,0) 参考角的世界 X（米）；chunk 索引 c 的代理位置 = OriginX + c·SpacingX。</summary>
+        float ChunkOriginXMeters { get; }
+
+        /// <summary>chunk (0,0) 参考角的世界 Z（米）；chunk 索引 r 的代理位置 = OriginZ + r·SpacingY。</summary>
+        float ChunkOriginYMeters { get; }
+
         long GetChunkKey(int chunkX, int chunkY);
 
         void BuildChunk(int chunkX, int chunkY, bool simplifiedCliffs, float heightScale, VertexMapChunkMeshData dst);

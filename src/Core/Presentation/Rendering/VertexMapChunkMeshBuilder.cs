@@ -1,10 +1,81 @@
 using System;
 using System.Numerics;
 using Ludots.Core.Map.Hex;
+using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Rendering
 {
+    /// <summary>
+    /// VertexMap 视觉网格的奇偶错位（odd-r）布局参数。世界合同分支用于 VertexMap 恰好铺满
+    /// board 世界格网的地图：列/行格心间距都取 GridCellSizeCm、以世界原点居中，因此格心与
+    /// SpatialCoordinateConverter.GridToWorld（方形格心合同）对齐；奇数行东移半格保留六边形
+    /// 错位外观。Legacy 分支保留 HexCoordinates 静态常量的历史布局（角落原点、√3×边长列距），
+    /// 供未铺满世界格网的 VertexMap 地图沿用。六边形纵向拉伸（行距=列距而非 1.5×边长）是
+    /// 方形数据网格上铺六边形的几何必然。
+    /// </summary>
+    public readonly struct VertexMapHexLayout : IEquatable<VertexMapHexLayout>
+    {
+        public readonly float ColPitchMeters;
+        public readonly float RowPitchMeters;
+        public readonly float OriginXMeters;
+        public readonly float OriginZMeters;
+
+        public VertexMapHexLayout(float colPitchMeters, float rowPitchMeters, float originXMeters, float originZMeters)
+        {
+            ColPitchMeters = colPitchMeters;
+            RowPitchMeters = rowPitchMeters;
+            OriginXMeters = originXMeters;
+            OriginZMeters = originZMeters;
+        }
+
+        public static VertexMapHexLayout Legacy =>
+            new(HexCoordinates.HexWidth, HexCoordinates.RowSpacing, 0f, 0f);
+
+        /// <summary>
+        /// VertexMap 的格数与 board 世界格数完全一致时，按世界格网解析布局：格 (c,r) 心落在
+        /// (Left + (c+0.5)·cell, Top + (r+0.5)·cell)（奇数行再东移半格）。不一致时返回 false，
+        /// 调用方沿用 <see cref="Legacy"/>。
+        /// </summary>
+        public static bool TryResolveForBoard(in WorldSizeSpec world, VertexMap map, out VertexMapHexLayout layout)
+        {
+            if (map == null || world.GridCellSizeCm <= 0)
+            {
+                layout = Legacy;
+                return false;
+            }
+
+            int mapCols = map.WidthInChunks * VertexChunk.ChunkSize;
+            int mapRows = map.HeightInChunks * VertexChunk.ChunkSize;
+            int worldCols = world.Bounds.Width / world.GridCellSizeCm;
+            int worldRows = world.Bounds.Height / world.GridCellSizeCm;
+            if (mapCols != worldCols || mapRows != worldRows)
+            {
+                layout = Legacy;
+                return false;
+            }
+
+            float pitch = world.GridCellSizeCm / 100f;
+            layout = new VertexMapHexLayout(
+                pitch,
+                pitch,
+                world.Bounds.Left / 100f + (pitch * 0.5f),
+                world.Bounds.Top / 100f + (pitch * 0.5f));
+            return true;
+        }
+
+        public bool Equals(VertexMapHexLayout other) =>
+            ColPitchMeters == other.ColPitchMeters &&
+            RowPitchMeters == other.RowPitchMeters &&
+            OriginXMeters == other.OriginXMeters &&
+            OriginZMeters == other.OriginZMeters;
+
+        public override bool Equals(object obj) => obj is VertexMapHexLayout other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(ColPitchMeters, RowPitchMeters, OriginXMeters, OriginZMeters);
+        public static bool operator ==(VertexMapHexLayout left, VertexMapHexLayout right) => left.Equals(right);
+        public static bool operator !=(VertexMapHexLayout left, VertexMapHexLayout right) => !left.Equals(right);
+    }
+
     public sealed class VertexMapChunkMeshBuilder
     {
         private readonly struct Vtx
@@ -37,23 +108,27 @@ namespace Ludots.Core.Presentation.Rendering
         private readonly int _mapWidth;
         private readonly int _mapHeight;
 
-        private float _offsetX;
-        private float _offsetZ;
+        private readonly float _colPitch;
+        private readonly float _rowPitch;
+        private readonly float _originX;
+        private readonly float _originZ;
         private float _hScale;
 
-        public VertexMapChunkMeshBuilder(VertexMap map)
+        public VertexMapChunkMeshBuilder(VertexMap map, VertexMapHexLayout layout)
         {
             _map = map ?? throw new ArgumentNullException(nameof(map));
             _mapWidth = map.WidthInChunks * VertexChunk.ChunkSize;
             _mapHeight = map.HeightInChunks * VertexChunk.ChunkSize;
+            _colPitch = layout.ColPitchMeters;
+            _rowPitch = layout.RowPitchMeters;
+            _originX = layout.OriginXMeters;
+            _originZ = layout.OriginZMeters;
         }
 
-        public void BuildChunk(int chunkX, int chunkY, float offsetX, float offsetZ, float heightScale, bool simplifiedCliffs, VertexMapChunkMeshData dst)
+        public void BuildChunk(int chunkX, int chunkY, float heightScale, bool simplifiedCliffs, VertexMapChunkMeshData dst)
         {
             if (dst == null) throw new ArgumentNullException(nameof(dst));
 
-            _offsetX = offsetX;
-            _offsetZ = offsetZ;
             _hScale = heightScale;
 
             dst.Terrain.Clear();
@@ -123,8 +198,8 @@ namespace Ludots.Core.Presentation.Rendering
 
             Vector4 col = TerrainVisualRules.GetVertexColor(h, biome, f0, f1, f2, b0);
 
-            float x = HexCoordinates.HexWidth * (c + 0.5f * (r & 1)) + _offsetX;
-            float z = HexCoordinates.RowSpacing * r + _offsetZ;
+            float x = _colPitch * (c + 0.5f * (r & 1)) + _originX;
+            float z = _rowPitch * r + _originZ;
             float y = h * _hScale;
             float waterY = w * _hScale;
             return new Vtx(c, r, new Vector3(x, y, z), waterY, h, w, isRamp, veg, col);
@@ -392,8 +467,8 @@ namespace Ludots.Core.Presentation.Rendering
             if (shouldStraighten)
             {
                 float dirX = MathF.Sign(low.Pos.X - high.Pos.X);
-                float smoothedX = HexCoordinates.HexWidth * (high.C + 0.25f) + _offsetX;
-                float bias = HexCoordinates.HexWidth * 0.5f;
+                float smoothedX = _colPitch * (high.C + 0.25f) + _originX;
+                float bias = _colPitch * 0.5f;
                 if (dirX != 0f) smoothedX += dirX * bias;
                 highExtX = smoothedX;
                 lowExtX = smoothedX;
