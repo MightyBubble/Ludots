@@ -177,7 +177,7 @@ namespace Ludots.Tests.GAS
                 new[]
                 {
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 0 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.DispatchCollectionEvent, B = 0, Imm = 1 | (1 << 16) },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.WriteCollection, B = 0, Imm = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
                 },
                 GraphKind.Script);
@@ -207,7 +207,7 @@ namespace Ludots.Tests.GAS
                     filters,
                     intents,
                     Catalog(programs)),
-                Throws.InvalidOperationException.With.Message.Contains("DispatchCollectionEvent"));
+                Throws.InvalidOperationException.With.Message.Contains("WriteCollection"));
         }
 
         [Test]
@@ -222,7 +222,7 @@ namespace Ludots.Tests.GAS
                 new[]
                 {
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 0 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.DispatchCollectionEvent, B = 0, Imm = 1 | (1 << 16) },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.WriteCollection, B = 0, Imm = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
                 },
                 GraphKind.Query);
@@ -238,18 +238,18 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Install_WhileActive_WithoutDispatchCollectionEvent_FailsFast()
+        public void Install_WhileActive_WithoutWriteCollection_FailsFast()
         {
             InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
             var programs = new GraphProgramRegistry();
-            const string queryName = "Graph.Query.NoWrite";
-            int graphId = GraphIdRegistry.Register(queryName);
+            const string noWriteName = "Graph.Query.NoWrite";
+            int graphId = GraphIdRegistry.Register(noWriteName);
             programs.Register(graphId, HaltProgram(), GraphKind.Query);
-            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = queryName }));
+            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = noWriteName }));
 
             Assert.That(
                 () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs)),
-                Throws.InvalidOperationException.With.Message.Contains("DispatchCollectionEvent"));
+                Throws.InvalidOperationException.With.Message.Contains("WriteCollection"));
         }
 
         private static InteractionContextProfileRegistry NewRegistry(

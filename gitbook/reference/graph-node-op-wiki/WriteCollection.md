@@ -2,8 +2,8 @@
 
 图里点好的终选集，一声事件按 key 递出去，账房照单写进集合。
 
-<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_DispatchCollectionEvent/poster.png" src="artifacts/evidence/capability_standard_graph_op_DispatchCollectionEvent/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_DispatchCollectionEvent/play.mp4。
+<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_WriteCollection/poster.png" src="artifacts/evidence/capability_standard_graph_op_WriteCollection/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_WriteCollection/play.mp4。
 </video>
 
 ## 作者写法
@@ -19,10 +19,10 @@
 
 手册分册（全量字段与语义）：[地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)
 
-真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/DispatchCollectionEvent.json`）：
+真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/WriteCollection.json`）：
 
 ```json
-{"id": "commit", "op": "DispatchCollectionEvent", "event": "gallery.collection_commit", "collectionKey": "gallery.selected"}
+{"id": "commit", "op": "WriteCollection", "event": "gallery.collection_commit", "collectionKey": "gallery.selected"}
 ```
 
 接线（值边把上一步的结果送进本节点端口）：
@@ -33,9 +33,9 @@
 
 ## 这场是怎么搭出来的
 
-上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/DispatchCollectionEvent.json`，共 3 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
+上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/WriteCollection.json`，共 3 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
 
-ConstInt → **DispatchCollectionEvent**（本篇） → HaltReturnInt
+ConstInt → **WriteCollection**（本篇） → HaltReturnInt
 
 图跑完，字幕报出结果：
 
@@ -49,5 +49,5 @@ ConstInt → **DispatchCollectionEvent**（本篇） → HaltReturnInt
 ## 怎么进
 
 ```text
-scripts/run-mod-launcher.cmd cli launch $capability_standard_graph_op_DispatchCollectionEvent --adapter raylib
+scripts/run-mod-launcher.cmd cli launch $capability_standard_graph_op_WriteCollection --adapter raylib
 ```

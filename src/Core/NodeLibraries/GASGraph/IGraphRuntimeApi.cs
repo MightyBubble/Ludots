@@ -133,16 +133,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Fires the collection pass-through event (#1398 S2b gap 9): the authored event key
-        /// dispatches map-scoped carrying the final entity set plus the set semantics
-        /// (opKind 0=replace, 1=add, 2=subtract) and the target collection key id — all under
-        /// the reserved MapTrigger.Collection* payload keys. The event key must be a declared
-        /// custom event; downstream EventKeyedCollectionWriter instances receive by key.
-        /// Default rejects — the engine binds the trigger bridge to serve it.
+        /// Direct owned-collection write: owner = the writing rep, op = 0 replace / 1 add / 2 subtract
+        /// (computed in-graph), entity list = the graph's current query result set.
         /// </summary>
-        void DispatchCollectionEvent(int packedKeyIds, int opKind, Entity source, MapId mapId, Span<Entity> entities, int count)
+        void WriteCollection(int collectionKeyId, int opKind, Entity owner, Span<Entity> entities, int count)
         {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.CollectionEventBridgeUnavailable");
+            throw new InvalidOperationException("GAS.GRAPH.ERR.EntityCollectionsUnavailable");
         }
 
         /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>

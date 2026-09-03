@@ -382,8 +382,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
-                case GraphNodeOp.DispatchCollectionEvent:
-                    RequireNonEmpty(node.Event, "event", node, graphId, diagnostics);
+
+                case GraphNodeOp.WriteCollection:
                     RequireNonEmpty(node.CollectionKey, "collectionKey", node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
@@ -1343,9 +1343,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         : byte.MaxValue;
                     break;
 
-                case GraphNodeOp.DispatchCollectionEvent:
-                    instruction.Imm = RequireSymbol(node.Event, "event", node, symbolToIndex, symbols, graphId, diagnostics);
-                    instruction.Dst = EncodeByteSymbol(node.CollectionKey, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+
+                case GraphNodeOp.WriteCollection:
+                    instruction.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, graphId, diagnostics);
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Value, GraphValueType.Int,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);

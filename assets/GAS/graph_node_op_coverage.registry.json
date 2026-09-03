@@ -3607,20 +3607,20 @@
       "codegenStatus": "covered"
     },
     {
-      "op": "DispatchCollectionEvent",
+      "op": "WriteCollection",
       "authorableKinds": [
         "TriggerGraph",
         "Query",
         "Script"
       ],
-      "showcaseId": "capability_standard_graph_op_DispatchCollectionEvent",
+      "showcaseId": "capability_standard_graph_op_WriteCollection",
       "status": "covered",
       "unitTestRefs": [
         "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryContextAcceptanceTests.DispatchCollectionEventVignette_CommitsThroughTheEventKeyedWriter"
+        "GraphOpsNodeGalleryContextAcceptanceTests.WriteCollectionVignette_CommitsThroughTheEventKeyedWriter"
       ],
       "codegenStatus": "covered"
     }

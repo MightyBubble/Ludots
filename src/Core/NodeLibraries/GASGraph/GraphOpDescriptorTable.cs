@@ -88,7 +88,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // Query / Score / Validation: Pure metadata alone is not enough — some world/UI
             // ops stay Pure so Script policy can host them (#1410). Reject WorldSideEffect
             // unless the op is explicitly authorable on this kind (Query may
-            // DispatchCollectionEvent to write a collection itself).
+            // itself).
             // Do not gate the Pure path on AuthorableKinds: compilers emit Jump etc.
             if (kind is GraphKind.Query or GraphKind.Score or GraphKind.Validation)
             {

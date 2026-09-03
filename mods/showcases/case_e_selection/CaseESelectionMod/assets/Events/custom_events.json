@@ -1,17 +1,1 @@
-[
-  {
-    "id": "gameplay.case_e.roster_refreshed",
-    "description": "Case E 可框选单位候选集刷新事件：box_begin 图从世界侧取全体地图实体，按队伍（teamId=1，敌我过滤）与模板（case_e_marine，只留可框选）过滤后经 EventKeyedCollectionWriter 写入 case_e.selectable 集合（owner=玩家 rep）。命中查询（框选/点选）的候选集入参即此集合 key。",
-    "scope": "map"
-  },
-  {
-    "id": "gameplay.case_e.box_hover_refreshed",
-    "description": "Case E 拖拽预览集刷新：box_hit 命中函数每 tick 算出矩形命中名单后 DispatchCollectionEvent 写入 case_e.box_hover（owner=玩家 rep）。成员变化驱动预览环。",
-    "scope": "map"
-  },
-  {
-    "id": "gameplay.case_e.selection_committed",
-    "description": "Case E 框选提交事件：box_commit 图对 case_e.selectable 候选集做屏幕矩形命中后，把最终命中集 + 集合语义（replace/add/subtract，由修饰键语义动作在图内映射），经 EventKeyedCollectionWriter 写入 selected 集合（owner=玩家 rep）。",
-    "scope": "map"
-  }
-]
+[]

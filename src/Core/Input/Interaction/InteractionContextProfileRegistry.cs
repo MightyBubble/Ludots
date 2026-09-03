@@ -12,7 +12,7 @@ namespace Ludots.Core.Input.Interaction
     /// Reference catalogs the profile install chain resolves <c>bindings[]</c>,
     /// <c>triggers[]</c>, and <c>whileActive</c> against (#1398 S2b / Case E §05): the graph
     /// program registry for trigger mounts and whileActive mounts (graphs that
-    /// DispatchCollectionEvent their preview collection), and the input action id space for
+    /// WriteCollection their preview collection), and the input action id space for
     /// semantic action bindings. A profile declaring any of those fields fails fast at install
     /// when its catalog is absent or incomplete.
     /// </summary>
@@ -305,7 +305,7 @@ namespace Ludots.Core.Input.Interaction
 
             // Function-equivalence direction: continuous mount is host→function id, not a
             // GraphKind.Query privilege. Any kind is allowed if the program writes its preview
-            // collection via DispatchCollectionEvent (no GraphReturnWriter steal).
+            // collection via WriteCollection (no GraphReturnWriter steal).
             if (!referenceCatalog.Programs.TryGetKind(graphId, out GraphKind mountedKind))
             {
                 throw new InvalidOperationException(
@@ -315,7 +315,7 @@ namespace Ludots.Core.Input.Interaction
             bool writesCollection = false;
             for (int i = 0; i < program.Length; i++)
             {
-                if (program[i].Op == (ushort)GraphNodeOp.DispatchCollectionEvent)
+                if (program[i].Op == (ushort)GraphNodeOp.WriteCollection)
                 {
                     writesCollection = true;
                     break;
@@ -325,7 +325,7 @@ namespace Ludots.Core.Input.Interaction
             if (!writesCollection)
             {
                 throw new InvalidOperationException(
-                    $"Interaction context profile '{definition.Id}' whileActive.graph '{graphName}' must DispatchCollectionEvent to write its preview collection; GraphReturnWriter output materialization is not the whileActive write path.");
+                    $"Interaction context profile '{definition.Id}' whileActive.graph '{graphName}' must WriteCollection to write its preview collection; GraphReturnWriter output materialization is not the whileActive write path.");
             }
 
             GraphKindOperationPolicy.RequireAllowed(

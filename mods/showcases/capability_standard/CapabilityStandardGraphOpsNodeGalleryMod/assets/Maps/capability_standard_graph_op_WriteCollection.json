@@ -1,5 +1,5 @@
 {
-  "Id": "capability_standard_graph_op_DispatchCollectionEvent",
+  "Id": "capability_standard_graph_op_WriteCollection",
   "Tags": [
     "showcase",
     "capability-standard",

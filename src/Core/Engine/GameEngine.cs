@@ -1743,16 +1743,7 @@ namespace Ludots.Core.Engine
             gasGraphApi.BindContextInstances(interactionContextInstances);
             MapLoader.SetInitialInteractionContexts(interactionContextProfileRegistry);
             TemplateInteractionContextMounting.ValidateTemplates(MapLoader.TemplateRegistry.GetAll(), interactionContextProfileRegistry);
-            var eventKeyedCollectionWriter = new EventKeyedCollectionWriter(entityCollectionStore);
-            foreach (string eventKey in new EventKeyedCollectionWriterConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport))
-            {
-                eventKeyedCollectionWriter.Register(eventKey);
-                TriggerManager.RegisterEventHandler(
-                    new EventKey(eventKey),
-                    context => eventKeyedCollectionWriter.HandleEvent(new EventKey(eventKey), context));
-            }
 
-            SetService(CoreServiceKeys.EventKeyedCollectionWriter, eventKeyedCollectionWriter);
             gasGraphApi.BindCustomEvents(customEventCatalog.Names);
             var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
                 World,

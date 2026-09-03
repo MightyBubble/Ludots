@@ -2340,11 +2340,11 @@
       }
     },
     {
-      "name": "capability_standard_graph_op_DispatchCollectionEvent",
+      "name": "capability_standard_graph_op_WriteCollection",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDispatchCollectionEventEntryMod",
-        "projectPath": "CapabilityStandardGraphOpDispatchCollectionEventEntryMod.csproj"
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteCollectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWriteCollectionEntryMod.csproj"
       }
     }
   ],

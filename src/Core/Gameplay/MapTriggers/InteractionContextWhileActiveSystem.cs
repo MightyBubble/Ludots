@@ -13,7 +13,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
     /// Case E §05: while an interaction context is active, every tick run the profile's
-    /// <c>whileActive.graph</c> so the hit function can DispatchCollectionEvent-write the
+    /// <c>whileActive.graph</c> so the hit function can WriteCollection-write the
     /// preview set. When the subject leaves every whileActive context, clear those collection
     /// keys so membership events tear down preview highlights.
     /// </summary>
@@ -164,20 +164,19 @@ namespace Ludots.Core.Gameplay.MapTriggers
             for (int i = 0; i < program.Length; i++)
             {
                 GraphInstruction instruction = program[i];
-                if (instruction.Op != (ushort)GraphNodeOp.DispatchCollectionEvent)
+                if (instruction.Op != (ushort)GraphNodeOp.WriteCollection)
                 {
                     continue;
                 }
 
-                int collectionKeyId = CollectionEventOpEncoding.UnpackCollectionKey(instruction.Imm);
+                int collectionKeyId = instruction.Imm;
                 if (collectionKeyId <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"WhileActive graph id {graphId} DispatchCollectionEvent has no resolved collection key.");
+                        $"WhileActive graph id {graphId} WriteCollection has no resolved collection key.");
                 }
 
-                // Imm's collection half is EntityCollectionStore space (see GraphProgramSymbolPatcher),
-                // not ConfigKeyRegistry — same lookup as EventKeyedCollectionWriter.
+                // Imm is the EntityCollectionStore key id (see GraphProgramSymbolPatcher), not ConfigKeyRegistry.
                 string collectionKey = _collections.KeyRegistry.GetName(collectionKeyId)
                     ?? throw new InvalidOperationException(
                         $"WhileActive graph id {graphId} collection key id {collectionKeyId} resolves to no entity-collection key.");

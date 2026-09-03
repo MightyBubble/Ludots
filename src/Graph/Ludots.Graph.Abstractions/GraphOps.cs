@@ -371,13 +371,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         DeactivateContext = 475,
         /// <summary>
-        /// Pass-through collection commit (#1398 S2b gap 9, Case E 06 A-side): fire the
-        /// authored event key as a schema-less map event carrying the current TargetList
-        /// plus the set semantics — I[B] = op (0=replace, 1=add, 2=subtract, computed
-        /// in-graph from modifier actions). Imm = event key symbol; Dst = collection key
-        /// symbol; both packed into Imm at patch time. Downstream: EventKeyedCollectionWriter.
+        /// Direct owned-collection write: owner = caster (the writing rep), entity list = the
+        /// graph's current query result set (s.Targets), I[B] = op (0=replace, 1=add,
+        /// 2=subtract, computed in-graph), Imm = collection key symbol patched to its key id.
+        /// Set semantics execute in the CollectionWrite primitive; membership change events
+        /// fire from the store's presentation diff like any other writer.
         /// </summary>
-        DispatchCollectionEvent = 476,
+        WriteCollection = 477,
 
     }
 

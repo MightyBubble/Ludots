@@ -9766,14 +9766,14 @@
       "acceptanceTest": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_composition",
       "screenshot": "artifacts/acceptance/engine_raylib_composition/screen.png",
-      "video": "artifacts/evidence/capability_standard_graph_op_DispatchCollectionEvent/play.mp4",
+      "video": "artifacts/evidence/capability_standard_graph_op_WriteCollection/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
-      "id": "capability_standard_graph_op_DispatchCollectionEvent",
-      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDispatchCollectionEventEntryMod",
-      "projectPath": "CapabilityStandardGraphOpDispatchCollectionEventEntryMod.csproj",
+      "id": "capability_standard_graph_op_WriteCollection",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteCollectionEntryMod",
+      "projectPath": "CapabilityStandardGraphOpWriteCollectionEntryMod.csproj",
       "title": "终选集按事件 key 落账",
       "summary": "图里点好的终选集，一声事件按 key 递出去，账房照单写进集合。",
       "tier": "T2",
@@ -9784,16 +9784,16 @@
         "gas",
         "graph-ops",
         "per-op",
-        "DispatchCollectionEvent"
+        "WriteCollection"
       ],
-      "binding": "capability_standard_graph_op_DispatchCollectionEvent",
-      "preset": "capability_standard_graph_op_DispatchCollectionEvent_raylib",
-      "docsPath": "gitbook/reference/graph-node-op-wiki/DispatchCollectionEvent.md",
+      "binding": "capability_standard_graph_op_WriteCollection",
+      "preset": "capability_standard_graph_op_WriteCollection_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/WriteCollection.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_DispatchCollectionEvent",
-      "screenshot": "artifacts/evidence/capability_standard_graph_op_DispatchCollectionEvent/poster.png",
-      "video": "artifacts/evidence/capability_standard_graph_op_DispatchCollectionEvent/play.mp4",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_WriteCollection",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_WriteCollection/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_WriteCollection/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
