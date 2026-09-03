@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "check": "tsc -b --noEmit && node scripts/validate-panel-templates.mjs",
+    "check": "tsc -b --noEmit && npm run lint:graph-editor && npm run assert && node scripts/validate-panel-templates.mjs",
+    "lint:graph-editor": "eslint src/pages/GasGraphEditorPage.tsx src/pages/gas-graph-editor scripts",
+    "assert": "node --experimental-strip-types scripts/assert-live-visual-debug.mts && node --experimental-strip-types scripts/assert-graph-annotations.mts",
     "validate:panel-templates": "node scripts/validate-panel-templates.mjs"
   },
   "dependencies": {

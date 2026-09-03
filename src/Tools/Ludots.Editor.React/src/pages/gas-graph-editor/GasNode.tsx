@@ -4,7 +4,10 @@ import { pickLiveValueLabel } from './liveVisualDebug';
 
 export type GasNodeViewEntry = {
   label: string;
-  event: string;
+  /** Lifecycle / custom event key. Mutually exclusive with action. */
+  event?: string;
+  /** Input action id (action-bound entry). Mutually exclusive with event. */
+  action?: string;
   start: string;
   once?: boolean;
   refire?: string | null;
@@ -202,10 +205,10 @@ export function GasNode({ data, selected }: NodeProps<Node<GasNodeViewData>>) {
       <div className={`${liveShellClass(data, selected)} gas-node--event`}>
         <div className="gas-node__header">
           <div className="gas-node__eyebrow-row">
-            <div className="gas-node__eyebrow">Event</div>
+            <div className="gas-node__eyebrow">{data.entry?.action ? 'Action' : 'Event'}</div>
             {liveHeaderBadge(data)}
           </div>
-          <div className="gas-node__title">{data.entry?.event ?? 'Event'}</div>
+          <div className="gas-node__title">{data.entry?.event ?? data.entry?.action ?? 'Entry'}</div>
         </div>
         <div className="gas-node__body">
           <div className="gas-node__caption">{data.entry?.label}</div>
