@@ -9796,6 +9796,60 @@
       "video": "artifacts/evidence/capability_standard_graph_op_DispatchCollectionEvent/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPointerScreenX",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPointerScreenXEntryMod",
+      "projectPath": "CapabilityStandardGraphOpLoadPointerScreenXEntryMod.csproj",
+      "title": "读活指针横向",
+      "summary": "活指针横向停在 42，读数进伤害链。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "LoadPointerScreenX"
+      ],
+      "binding": "capability_standard_graph_op_LoadPointerScreenX",
+      "preset": "capability_standard_graph_op_LoadPointerScreenX_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadPointerScreenX.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadPointerScreenX",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadPointerScreenX/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadPointerScreenX/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPointerScreenY",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPointerScreenYEntryMod",
+      "projectPath": "CapabilityStandardGraphOpLoadPointerScreenYEntryMod.csproj",
+      "title": "读活指针纵向",
+      "summary": "活指针纵向停在 42，读数进伤害链。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "LoadPointerScreenY"
+      ],
+      "binding": "capability_standard_graph_op_LoadPointerScreenY",
+      "preset": "capability_standard_graph_op_LoadPointerScreenY_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadPointerScreenY.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadPointerScreenY",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadPointerScreenY/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadPointerScreenY/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

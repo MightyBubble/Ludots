@@ -32,6 +32,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private const GraphKindMask LinearAndScript = LinearAll | ScriptAndTriggerGraph;
 
+        private const GraphKindMask LinearScriptAndQuery = LinearAndScript | GraphKindMask.Query;
+
         private const GraphKindMask LinearQueryScript = LinearAll | GraphKindMask.Query | ScriptAndTriggerGraph;
 
         private const GraphKindMask EffectAndScript = GraphKindMask.Effect | ScriptAndTriggerGraph;
@@ -151,7 +153,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.ModifyAttributeAdd, LinearEffect, GraphValueType.Void, portTargetValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.SendEvent, LinearEffect, GraphValueType.Void, portTargetValue, imm: GraphOperandRole.SymbolImm);
             // ReadBlackboardFloat includes Query: Case E box_hit (Query) reads press corners from the operator rep.
-            Add(rows, GraphNodeOp.ReadBlackboardFloat, LinearAndScript | GraphKindMask.Query, GraphValueType.Float, portSource, queryOut: GraphValueType.Float, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.ReadBlackboardFloat, LinearScriptAndQuery, GraphValueType.Float, portSource, queryOut: GraphValueType.Float, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadBlackboardInt, LinearAndScript, GraphValueType.Int, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadBlackboardEntity, LinearAndScript, GraphValueType.Entity, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Entity, imm: GraphOperandRole.SymbolImm);
             // WriteBlackboardFloat includes TriggerGraph: Case E box_begin stores press corners on the operator rep.

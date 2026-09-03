@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 仅 Query |
+| 可用图种 | Query / TriggerGraph |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | 无（不收值边，靠 imm/自身上下文） |
 | 特殊写法 | — |
@@ -37,7 +37,7 @@
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Query；Effect / Score / Validation / Derived / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Query / TriggerGraph；Effect / Score / Validation / Derived / Script 图不可用（编译期白名单拒绝）。
 - 不接值边：输入来自 imm 与运行时上下文（施法者、显式目标等）。
 - 同类用法：战场统计（全场均值/最值）、点名最残或最能扛的目标、按条件筛名单再排序。
 ## 怎么进

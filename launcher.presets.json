@@ -3240,6 +3240,24 @@
         "--json",
         "artifacts/acceptance/engine_raylib_composition/stats.json"
       ]
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPointerScreenX_raylib",
+      "name": "Graph Op LoadPointerScreenX Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPointerScreenX"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPointerScreenY_raylib",
+      "name": "Graph Op LoadPointerScreenY Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPointerScreenY"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
