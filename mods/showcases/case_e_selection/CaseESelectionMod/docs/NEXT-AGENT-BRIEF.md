@@ -45,3 +45,7 @@ Case E 框选预览（PR **#1444**）已经做到：`DispatchCollectionEvent` �
 - 热路径：`DispatchCollectionEvent` 不 `new Entity[]`；合并写集走 span  
 
 细节与验收句以正本和 HTML 为准。
+
+## 已知蠢决定（别当正确合同扩）
+
+现网写集合下游不是图，是引擎 C# `EventKeyedCollectionWriter`，还要 `Input/collection_event_writers.json` 白名单才接得住事件。第三人称 / 第一人称射击不需要这套东西。进度与退役方向只认 [图能力状态 §3.3.2](../../../../../gitbook/architecture/graph-capability-status.md)；本单方案必须写清怎么回到「下游也是图」，禁止再扩这条旁路。
