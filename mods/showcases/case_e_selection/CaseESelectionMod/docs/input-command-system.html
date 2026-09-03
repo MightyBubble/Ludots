@@ -206,7 +206,7 @@ hr{border:none;border-top:1px solid var(--border);margin:30px 0}
 { "actionId": "CaseE.BoxSelectEnd",   "path": "&lt;Mouse&gt;/leftButton", "firesOn": "release" }
 </code></pre>
 <ul>
-<li><strong>按下</strong> → <code>BoxSelectBegin</code> → 写起角、刷新候选集、激活「正在框选」context。</li>
+<li><strong>按下</strong> → <code>BoxSelectBegin</code> → 写起角、激活「正在框选」context（候选集由 battle 挂载的 roster_sync 另维维护）。</li>
 <li><strong>抬起</strong> → <code>BoxSelectEnd</code> → 再调同一张命中函数写 selected、停用 boxing。</li>
 <li><strong>点选</strong>：起角与抬起点重合（零位移矩形 × 单位屏幕包围盒），仍走同一条抬起图，不另配 Tap action、不另配点选图。</li>
 <li>拖拽中的框与预览<strong>跟着 boxing context 活</strong>，不靠再监听一套 Drag 完成脉冲。</li>

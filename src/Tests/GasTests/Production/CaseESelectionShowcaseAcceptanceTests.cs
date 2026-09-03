@@ -88,6 +88,10 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
 
         // ── 03b：battle context 挂载 roster_sync（MapHeartbeat）→ 开框前候选集已就位 ──
         TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        AssertNoTriggerErrors(engine);
+        Assert.That(
+            engine.TriggerManager.HasMapEventSubscribers(new MapId(MapId), GameEvents.MapHeartbeat),
+            "battle roster_sync 应对 MapHeartbeat 有订阅");
         AssertCollection(engine, commander, SelectableKey, "候选集随 battle context 维护（敌我+模板过滤），框之前就有",
             marine1, marine2, marine3, marine4);
 

@@ -1,32 +1,21 @@
-# GAS Composition Gate — Case E whileActive（废 continuousQuery）
+# GAS Composition Gate — Case E roster_sync
 
 ## 任务摘要
 
-Case E 按配置报告彻底收口：按下/抬起裸边沿；profile 字段 `continuousQuery` 退役为 `whileActive`；`InteractionContextContinuousQuerySystem` 改名为 `InteractionContextWhileActiveSystem`（Case E §05 存活期调命中图）。不新增 profile enum / preset 开关语义，只改名对齐 Case E。
+把 `case_e.selectable` 从 `box_begin` 按压时世界扫描，迁到 battle context `triggers[]` 挂载的 `graph.case_e.roster_sync`（`MapHeartbeat`）。
 
 ## 判断标准结论
 
-**通过** — 变体是既有「context 存活期调图」挂载的字段更名与宿主改名，不是新 DSL。
-
-## 自审清单
-
-| 项 | 结论 |
-|----|------|
-| 新变体是 op 组合还是 profile enum？ | 字段更名；无新 enum |
-| 是否重复造轮子？ | 否；沿用 GraphReturnWriter.Execute + DispatchCollectionEvent |
-| 热路径分配？ | 无新增；原 scratch 字典保留 |
-| 失败关闭？ | 配置仍写 continuousQuery → loader 抛错，指向 whileActive |
+**通过** — 无新 profile enum / preset 开关；无新 Core Manager。复用 InteractionContextTriggerGate + TriggerGraph + DispatchCollectionEvent + EventKeyedCollectionWriter。
 
 ## 复用 / 新增
 
 | 类型 | 项 |
 |------|-----|
-| 复用 | InteractionContextProfileRegistry、GraphReturnWriter、DispatchCollectionEvent |
-| 改名 | continuousQuery→whileActive；ContinuousQuerySystem→WhileActiveSystem |
-| 禁止 | 再引入 continuousQuery 或 Tap/Drag 作为 Case E 合同 |
+| 复用 | context triggers 门控、MapHeartbeat、QueryAllMapEntities / FilterTeam / FilterTemplate、DispatchCollectionEvent |
+| 新增 | Mod 图资产 `graph.case_e.roster_sync.json` |
+| 禁止 | CaseESelectableManager、平行集合管线 |
 
-## Case E 输入合同（本刀一并钉死）
+## 已知边界（诚实）
 
-- BoxSelectBegin / BoxSelectEnd（firesOn=release）
-- 无 TapSelect / Drag / tap_commit
-- boxing.whileActive.graph = graph.case_e.box_hit
+Context 实体域挂载上的 `EntitySpawned` 只服务 scope 自身生命周期，不能听全图兵的出生。现网用 battle 存活期 `MapHeartbeat` Replace 名册；真正的 Add/Subtract 生命周期接线需后续能力，不是本切片偷建 Manager。
