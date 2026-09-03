@@ -6,7 +6,7 @@
     },
     {
       "id": "scheme.case_e",
-      "inputContexts": ["CaseE.Controls"]
+      "inputContexts": []
     }
   ],
   "allowedSchemes": [

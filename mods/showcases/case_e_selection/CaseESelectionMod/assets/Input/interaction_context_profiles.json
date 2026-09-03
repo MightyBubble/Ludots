@@ -4,6 +4,7 @@
       "id": "interaction.context.case_e.battle",
       "activeCollectionKey": "case_e.battle",
       "activeEntityViewKey": "case_e.battle.view",
+      "inputContextId": "CaseE.Controls",
       "bindings": [
         "CaseE.BoxSelectBegin",
         "CaseE.BoxSelectEnd",

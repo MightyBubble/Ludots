@@ -5,10 +5,7 @@
   "windowHeight": 900,
   "windowResizable": true,
   "targetFps": 60,
-  "startupInputContexts": [
-    "Default_Gameplay",
-    "CaseE.Controls"
-  ],
+  "startupInputContexts": [],
   "startupLocalSeats": [
     {
       "seatId": "seat.0",
