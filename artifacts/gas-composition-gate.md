@@ -10,7 +10,7 @@
 
 结论: PASS
 
-一句话理由: 不新增 schema/enum/op；只填档案已有字段，让 InputContextProjectionSystem 从实体挂载派生 IMC。
+一句话理由: 不新增 schema/enum/op；只填档案已有字段，让 InputContextProjectionSystem 从实体挂载派生 IMC。Default_Gameplay 仍留在 startup——它承载 PointerPos，不是 CaseE 键位表。
 
 ### 2. Layer assignment
 

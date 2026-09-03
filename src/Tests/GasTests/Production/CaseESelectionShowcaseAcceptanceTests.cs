@@ -26,6 +26,8 @@ namespace Ludots.Tests.GAS.Production;
 /// presenter 观察成员变化高亮 / 06 抬起（BoxSelectEnd）对「可框选单位」候选集做屏幕矩形命中
 /// + 修饰键语义透传事件 key 写 selected 集合（与候选、预览三套集合分离）。
 /// 输入合同：按下=BoxSelectBegin、抬起=BoxSelectEnd（firesOn=release），无 Tap/Drag 判定器。
+/// 键位表 CaseE.Controls 由 battle 档案 inputContextId 经座位投影激活，不靠 startupInputContexts / scheme.inputContexts。
+/// startup 仍推 Default_Gameplay：PointerPos（&lt;Mouse&gt;/Pos）只绑在该表，CapturePointerButtons 靠它写 press 角。
 /// </summary>
 [NonParallelizable]
 [TestFixture]
@@ -68,6 +70,22 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             baseContext.ContextId == battleProfileId &&
             baseContext.Source == InteractionContextInstanceSource.TemplateSpawn,
             "指挥官 rep 出生即携带战斗 context Instance（模板 initialInteractionContext）");
+        Assert.That(
+            engine.MergedConfig.StartupInputContexts,
+            Does.Contain("Default_Gameplay"),
+            "Default_Gameplay 必须开机推上：PointerPos 只绑在该表，box_begin press 角依赖它");
+        Assert.That(
+            engine.MergedConfig.StartupInputContexts,
+            Does.Not.Contain("CaseE.Controls"),
+            "CaseE.Controls 不得靠 startupInputContexts 开机硬推");
+        int caseEControlsId = profiles.InputContextIdRegistry.GetId("CaseE.Controls");
+        Assert.That(baseContext.InputContextId, Is.EqualTo(caseEControlsId),
+            "battle 档案 inputContextId=CaseE.Controls 应写入挂载实例");
+        var inputHandler = engine.GetService(CoreServiceKeys.InputHandler)
+            ?? throw new InvalidOperationException("InputHandler service is missing.");
+        TickUntil(engine, 10, () => inputHandler.HasContext("CaseE.Controls"));
+        Assert.That(inputHandler.HasContext("CaseE.Controls"), Is.True,
+            "占有座位后投影系统应从实体 battle 挂载推上 CaseE.Controls");
 
         Entity marine1 = Resolve(engine, "case-e-marine-1");
         Entity marine2 = Resolve(engine, "case-e-marine-2");

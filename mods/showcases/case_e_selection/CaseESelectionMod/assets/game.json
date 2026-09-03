@@ -5,7 +5,9 @@
   "windowHeight": 900,
   "windowResizable": true,
   "targetFps": 60,
-  "startupInputContexts": [],
+  "startupInputContexts": [
+    "Default_Gameplay"
+  ],
   "startupLocalSeats": [
     {
       "seatId": "seat.0",
