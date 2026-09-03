@@ -157,7 +157,7 @@ namespace Sango.Runtime
             foreach (SangoJournalCommand command in commands)
             {
                 midHook?.Invoke(command);
-                Apply(command);
+                Apply(command, vfs, contentModId, scenarioAssetPath);
                 report.CommandsApplied++;
                 if (command.Kind == StepKind)
                 {
@@ -184,8 +184,12 @@ namespace Sango.Runtime
         public const string MoveTroopKind = "moveTroop";
         public const string SetMissionKind = "setMission";
         public const string CityCommandKind = "cityCommand";
+        // M3.a 玩家命令:开局选势力(world-setup,重放侧带玩家重装世界)与玩家回合
+        // 「进行」(PlayerEndTurn 等价,见 SangoPlayerTurnOps)。
+        public const string SelectPlayerForceKind = SangoPlayerTurnOps.SelectPlayerForceKind;
+        public const string EndPlayerTurnKind = SangoPlayerTurnOps.EndPlayerTurnKind;
 
-        static void Apply(SangoJournalCommand command)
+        static void Apply(SangoJournalCommand command, IVirtualFileSystem vfs, string contentModId, string scenarioAssetPath)
         {
             Scenario scenario = Scenario.Cur
                 ?? throw new InvalidOperationException("Sango kernel is not booted; replay commands require Scenario.Cur.");
@@ -247,6 +251,16 @@ namespace Sango.Runtime
                     RequireSuccess(command, SangoCityOps.Execute(scenario, city, args.Type, args.PersonIds, args.TargetPersonId ?? 0));
                     return;
                 }
+                case SelectPlayerForceKind:
+                {
+                    // world-setup:重放以同种子带玩家重装世界(与实录同一条 Boot 数据面)。
+                    SangoSelectPlayerForceArgs args = Parse<SangoSelectPlayerForceArgs>(command);
+                    SangoPlayerTurnOps.SelectPlayerForce(vfs, contentModId, args.Seed, args.ForceId, scenarioAssetPath);
+                    return;
+                }
+                case EndPlayerTurnKind:
+                    SangoPlayerTurnOps.EndPlayerTurn();
+                    return;
                 default:
                     throw new InvalidOperationException($"Unknown sango journal command kind '{command.Kind}' (#{command.Seq}); the replay executor covers step/createTroop/moveTroop/setMission/cityCommand.");
             }

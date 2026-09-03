@@ -78,6 +78,13 @@ namespace Sango.Runtime
                 return (SangoTroopOpResult.Fail("city_not_owned", "createTroop requires an owned city (force + corps)."), null);
             }
 
+            // M3.a 玩家门(原版出征窗口从城菜单进入,同 CityBaseSystem 菜单门)。
+            SangoTroopOpResult? gate = SangoPlayerTurnOps.CityCommandGate(scenario, city);
+            if (gate != null)
+            {
+                return (gate, null);
+            }
+
             // CityExpedition.IsValid。
             int jobCostAP = JobType.GetJobCostAP((int)CityJobType.MakeTroop);
             if (city.troops <= 0 || city.food <= 0 || city.freePersons.Count == 0 ||
@@ -212,6 +219,12 @@ namespace Sango.Runtime
                 return (SangoTroopOpResult.Fail("troop_acted", "target troop has already acted this turn."), 0);
             if (destCell == null)
                 return (SangoTroopOpResult.Fail("invalid_cell", "target cell is outside the map."), 0);
+
+            // M3.a 玩家门(原版 TroopActionBase 菜单门):无玩家恒过,玩家局内只放行
+            // 玩家势力且当前行动的部队。
+            SangoTroopOpResult? gate = SangoPlayerTurnOps.TroopCommandGate(scenario, troop);
+            if (gate != null)
+                return (gate, 0);
 
             // TroopSystem.OnEnter:进入部队命令态先重建移动范围(ZOC/水陆移动力全套)。
             troop.MoveRange.Clear();

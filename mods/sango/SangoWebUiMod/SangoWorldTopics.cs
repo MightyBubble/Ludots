@@ -252,13 +252,18 @@ public sealed class SangoWorldTurnTopic : IWebUiTopicProducer
             ?? throw new InvalidOperationException("Sango kernel is not booted; topic snapshot is unavailable.");
         ScenarioInfo info = scenario.Info;
         bool isSubscription = context.RequestId != 0;
+        int playerForceId = SangoPlayerTurnOps.PlayerForceId(scenario);
+        Force? playerForce = playerForceId > 0 ? scenario.forceSet.Get(playerForceId) : null;
         var snapshot = new SangoTurnSnapshot(
             info.turnCount,
             info.year,
             info.month,
             info.day,
             scenario.GetDateStr(),
-            SangoTurnDriver.DescribeTurn());
+            SangoTurnDriver.DescribeTurn(),
+            playerForceId,
+            playerForce?.Name ?? string.Empty,
+            playerForce != null && playerForce.IsAlive && SangoPlayerTurnOps.AwaitingPlayer(scenario));
         packet = new WebUiOutboundPacket(
             context.SessionId,
             TopicName,
@@ -682,7 +687,10 @@ public sealed record SangoTurnSnapshot(
     int Month,
     int Day,
     string DateText,
-    string Summary);
+    string Summary,
+    int PlayerForceId,
+    string PlayerForceName,
+    bool AwaitingPlayer);
 
 public sealed record SangoMessageRow(long Seq, int TurnCount, string Date, string Text);
 

@@ -30,6 +30,7 @@ namespace Sango.Runtime
 
         private static int _forceTurnsStarted;
         private static int _forceAiRuns;
+        private static bool _playerControlObserved;
 
         static SangoTurnDriver()
         {
@@ -37,6 +38,10 @@ namespace Sango.Runtime
             GameEvent.OnForceTurnStart += OnForceTurnStart;
             GameEvent.OnForceAIStart -= OnForceAIStart;
             GameEvent.OnForceAIStart += OnForceAIStart;
+            // 玩家回合阻塞位(Corps.Run 对君主亲领军团触发后返回 false,见 SangoPlayerTurnOps
+            // 文件头);置旗供 AdvanceTurn 识别"世界在等玩家"并停在该点。
+            GameEvent.OnPlayerControl -= OnPlayerControl;
+            GameEvent.OnPlayerControl += OnPlayerControl;
         }
 
         /// <summary>最近一次 AdvanceTurn 期间开始行动的势力数(MUD 摘要用)。</summary>
@@ -45,11 +50,24 @@ namespace Sango.Runtime
         /// <summary>最近一次 AdvanceTurn 期间跑完 AI 的势力数(MUD 摘要用)。</summary>
         public static int LastTurnAiCount { get; private set; }
 
+        /// <summary>AdvanceTurn 的终态:回合完整走完,或停在玩家回合等待行动。</summary>
+        public enum TurnAdvanceResult
+        {
+            /// <summary>turnCount 已 +1(全托管世界的唯一终态;玩家局中玩家势力灭亡后同此)。</summary>
+            TurnCompleted,
+
+            /// <summary>世界停在本玩家回合的君主军团阻塞位(玩家下令后需 EndPlayerTurn 放行)。</summary>
+            AwaitingPlayer,
+        }
+
         /// <summary>
-        /// 推进一个 sango 回合(全部势力按队列行动 + 旬/月结算)。成功路径入命令 journal
-        /// (kind=step,含推进后 WorldDigest——重放侧逐回合比对的期望值真源)。
+        /// 推进一个 sango 回合(全部势力按队列行动 + 旬/月结算)。全托管世界:走到
+        /// turnCount+1;玩家局:跨过回合边界后继续推进到下一回合的玩家阻塞位(玩家势力
+        /// 在 MakeForceQuene 排最前,阻塞即下一回合的起点;玩家势力已灭亡则退化为全托管
+        /// 终态)。两种终态都入命令 journal(kind=step,含推进后 WorldDigest——重放侧逐
+        /// 回合比对的期望值真源)。
         /// </summary>
-        public static void AdvanceTurn()
+        public static TurnAdvanceResult AdvanceTurn()
         {
             Scenario scenario = Scenario.Cur
                 ?? throw new InvalidOperationException("Sango kernel is not booted; call SangoKernelBoot.Boot first.");
@@ -57,25 +75,37 @@ namespace Sango.Runtime
             int targetTurn = scenario.Info.turnCount + 1;
             int forcesBefore = _forceTurnsStarted;
             int aiBefore = _forceAiRuns;
+            bool playerInPlay = SangoPlayerTurnOps.PlayerForceAlive(scenario);
 
             UnityEngine.Time.deltaTime = VirtualFrameSeconds;
             for (int i = 0; i < MaxRunCallsPerTurn; i++)
             {
+                if (_playerControlObserved)
+                {
+                    _playerControlObserved = false;
+                    LastTurnForceCount = _forceTurnsStarted - forcesBefore;
+                    LastTurnAiCount = _forceAiRuns - aiBefore;
+                    SangoCommandJournal.Record(
+                        SangoReplayJournal.StepKind, SangoStepArgs.Instance, digestAfter: WorldDigest());
+                    return TurnAdvanceResult.AwaitingPlayer;
+                }
+
                 scenario.Run();
-                if (scenario.Info.turnCount >= targetTurn)
+                if (scenario.Info.turnCount >= targetTurn && !playerInPlay)
                 {
                     LastTurnForceCount = _forceTurnsStarted - forcesBefore;
                     LastTurnAiCount = _forceAiRuns - aiBefore;
                     SangoCommandJournal.Record(
                         SangoReplayJournal.StepKind, SangoStepArgs.Instance, digestAfter: WorldDigest());
-                    return;
+                    return TurnAdvanceResult.TurnCompleted;
                 }
             }
 
             throw new InvalidOperationException(
                 $"sango turn {targetTurn} stalled after {MaxRunCallsPerTurn} Run() calls " +
                 $"(turnCount={scenario.Info.turnCount}, curForce={scenario.Info.curForceId} {scenario.Info.curForceName}); " +
-                "the render-event gate is likely waiting on player input or a Unity coroutine.");
+                "the render-event gate is likely waiting on player input or a Unity coroutine.\n" +
+                Sango.Render.RenderEvent.Instance.Dump());
         }
 
         /// <summary>MUD 风格单行回合摘要(id/年月日/事件计数)。</summary>
@@ -89,13 +119,14 @@ namespace Sango.Runtime
         }
 
         /// <summary>
-        /// 世界态确定性指纹:全城市 (id, gold, food) + 全武将 (id, loyalty, BelongForce, state)
+        /// 世界态确定性指纹:全城市 (id, gold, food) + 全武将 (id, loyalty, 所属势力, state)
         /// + 全部队 (id, corpsId, forceId, cell x/y, 兵力) 升序拼接后的 SHA-256。同种子重放
         /// 必须逐位相等(对齐 deterministic_replay 验收)。部队行语义:编成/移动/消灭都改变
         /// 该行;无任务部队逐回合仅耗粮不动(id/corps/force/cell/兵力恒定),行稳定。
-        /// 武将行是换种子差异的落点:上游快照的 City.AIPrepare 内政指令被整段注释,
-        /// 城市金粮在短期内只走俸给/军粮公式(与随机无关);种子差异由武将层
-        /// (忠诚流动/官职/状态)承接,M1.c 重启内政 AI 后城市行自然加入差异面。
+        /// 武将行读对象引用真源(mBelongForce?.Id):内核运行时改归属只动引用、序列化 int
+        /// 字段(BelongForce)由 OnScenarioSave 存档时点才回写——活世界的 int 是脏值,
+        /// 捕获回灌链会把它归一,读 int 会让"存档续跑 == 直跑"出现假性分叉(M3.a 内政
+        /// AI 活化后武将流动常态化,该语义差异进入 digest 面)。
         /// </summary>
         public static string WorldDigest()
         {
@@ -110,7 +141,7 @@ namespace Sango.Runtime
             scenario.personSet.ForEach(person =>
             {
                 if (person != null)
-                    rows.Add($"person {person.Id}:{person.loyalty}:{person.BelongForce}:{person.state}");
+                    rows.Add($"person {person.Id}:{person.loyalty}:{person.mBelongForce?.Id ?? 0}:{person.state}");
             });
             scenario.troopsSet.ForEach(troop =>
             {
@@ -132,6 +163,8 @@ namespace Sango.Runtime
         static void OnForceTurnStart(Force force, Scenario scenario) => _forceTurnsStarted++;
 
         static void OnForceAIStart(Force force, Scenario scenario) => _forceAiRuns++;
+
+        static void OnPlayerControl(Corps corps, Scenario scenario) => _playerControlObserved = true;
 
         static int CountAlive(int count, Func<int, bool> isAlive)
         {

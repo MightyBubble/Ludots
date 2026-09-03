@@ -98,6 +98,8 @@ public sealed class SangoWebUiModEntry : IMod
         router.Register(SangoLoadCommandHandler.CommandName, new SangoLoadCommandHandler(engine));
         router.Register(SangoCreateTroopCommandHandler.CommandName, new SangoCreateTroopCommandHandler());
         router.Register(SangoMoveTroopCommandHandler.CommandName, new SangoMoveTroopCommandHandler());
+        router.Register(SangoSelectPlayerForceCommandHandler.CommandName,
+            new SangoSelectPlayerForceCommandHandler(engine, engine.VFS!));
 
         _commandDispatcher = new WebUiQueuedCommandDispatcher(router);
         _dataPlaneRuntime = new WebUiDataPlaneRuntime(_commandDispatcher);

@@ -134,6 +134,10 @@ namespace UnityEngine
         public static float Clamp(float v, float min, float max) => v < min ? min : (v > max ? max : v);
         public static int FloorToInt(float f) => (int)Math.Floor(f);
         public static int RoundToInt(float f) => (int)Math.Round(f);
+        // 内政经济(BuildingWorking/ClassicsCityWorking)的产量上取整与太守/武将
+        // 加成幂;UnityEngine.Mathf 的 float 语义委托 System.Math 保持。
+        public static int CeilToInt(float f) => (int)Math.Ceiling(f);
+        public static float Pow(float f, float p) => (float)Math.Pow(f, p);
     }
 
     // Framework/Log/Log.cs 与 Object 层直调 Debug.Log* 使用;输出走 Console。
@@ -425,7 +429,10 @@ namespace Sango
     {
         public class WindowInterface
         {
-            public UGUIWindow ugui_instance;
+            // M3.a:ForceFallCompleteEvent/CityFallCompleteEvent 等在 Enter 里直接挂
+            // ugui_instance.OnCloseAction;headless 替身给非空实例,窗口完成回调即闭窗
+            // (与计时型演出事件"一拍完成"同节奏)。
+            public UGUIWindow ugui_instance = new UGUIWindow();
             public void Open() { }
             public void Open(params object[] objects) { }
             public void Close() { }
@@ -437,7 +444,42 @@ namespace Sango
 
         public WindowInterface Open(string name)
         {
+            if (name == PersonRecruitWindowName)
+            {
+                HeadlessRecruitDrive();
+            }
+
             return GetWindow(name);
+        }
+
+        // PersonRecruit.OnEnter 打开的招募窗口;原版由 UIPersonRecruitInfo 的按钮驱动
+        // (招募/释放/斩首/收押),headless 无点击流,替身按「尝试招募,次数耗尽收押」
+        // 代点——终局与 CityRecruitPersonWhenCityFallEvent 的 AI 分支(失败→AddCaptive)
+        // 同策略。
+        const string PersonRecruitWindowName = "window_person_recruit_info";
+
+        static void HeadlessRecruitDrive()
+        {
+            const int maxSteps = 64;
+            for (int step = 0; step < maxSteps; step++)
+            {
+                if (GameSystemManager.Instance.CurrentCommand is not PersonRecruit recruit)
+                {
+                    return;
+                }
+
+                if (recruit.tryLimit > 0)
+                {
+                    recruit.RecruitTarget();
+                }
+                else
+                {
+                    recruit.DetainTarget();
+                }
+            }
+
+            throw new InvalidOperationException(
+                "headless PersonRecruit drive exceeded the step budget; the recruit command chain is looping.");
         }
 
         public WindowInterface Open(string name, params object[] data)
@@ -478,9 +520,21 @@ namespace Sango
     }
 
     // Game/GameDialog.cs 的 IDialog.Window 属性类型;OnCloseAction 供窗口关闭事件使用。
+    // headless 无点击流:游戏侧挂上关闭回调即视为窗口即刻关闭(回调立即执行),
+    // 灭国/陷城完成事件由此在演出泵内一拍走完,不阻塞 Run。
     public class UGUIWindow
     {
-        public Action OnCloseAction;
+        Action? onCloseAction;
+
+        public Action OnCloseAction
+        {
+            get => onCloseAction!;
+            set
+            {
+                onCloseAction = value;
+                value?.Invoke();
+            }
+        }
     }
 
     // Game/GameDialog.cs Next() 的游戏输入开关与 Player 的视控开关组。

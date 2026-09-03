@@ -34,7 +34,17 @@ const PERSON_STATE_NAMES = {
 
 const EMPTY_CITIES = { tick: 0, turnCount: 0, cities: [] };
 const EMPTY_FORCES = { tick: 0, turnCount: 0, forces: [] };
-const EMPTY_TURN = { turnCount: 0, year: 0, month: 0, day: 0, dateText: '----', summary: '' };
+const EMPTY_TURN = {
+  turnCount: 0,
+  year: 0,
+  month: 0,
+  day: 0,
+  dateText: '----',
+  summary: '',
+  playerForceId: 0,
+  playerForceName: '',
+  awaitingPlayer: false
+};
 const EMPTY_MESSAGES = { tick: 0, turnCount: 0, messages: [] };
 const EMPTY_DETAIL = null;
 const EMPTY_TROOPS = { tick: 0, turnCount: 0, troops: [] };
@@ -66,9 +76,15 @@ function App() {
   const [selectedCityId, setSelectedCityId] = useState(0);
   const [commandCount, setCommandCount] = useState(0);
   const [lastOrder, setLastOrder] = useState({ text: '尚无指令', tone: 'idle' });
+  const [selectDismissed, setSelectDismissed] = useState(false);
 
   const detailRevision = `${data.turn.turnCount}:${commandCount}`;
   const detail = useCityDetail(clientRef, selectedCityId, detailRevision);
+
+  // 开局势力选择(M3.a):第 0 回合且未选玩家时覆盖一层选势力面板;旁观模式可关闭。
+  const showForceSelect = !selectDismissed && data.turn.turnCount === 0 && data.turn.playerForceId === 0;
+  const playerForceId = data.turn.playerForceId ?? 0;
+  const awaitingPlayer = data.turn.awaitingPlayer ?? false;
 
   const visibleCities = useMemo(() => {
     if (forceFilter === 0) {
@@ -77,6 +93,15 @@ function App() {
 
     return data.cities.cities.filter((city) => city.forceId === forceFilter);
   }, [data.cities.cities, forceFilter]);
+
+  const selectPlayerForce = useCallback(async (forceId) => {
+    setLastOrder({ text: '势力选择:以所选势力重整开局……', tone: 'pending' });
+    const result = await command('sango.selectPlayerForce', { forceId });
+    setLastOrder(result.ok
+      ? { text: '势力选择:已按原版玩家路径重装世界,内政指令即刻可用', tone: 'ok' }
+      : { text: `势力选择失败:${result.message}`, tone: 'error' });
+    return result;
+  }, [command]);
 
   const issueCommand = useCallback(async (type, payload) => {
     setLastOrder({ text: `${CITY_COMMAND_LABELS[type] ?? type}:下达中……`, tone: 'pending' });
@@ -130,7 +155,13 @@ function App() {
 
   return (
     <main className="app">
-      <TopBar turn={data.turn} connection={connection} onEndTurn={endTurn} onSave={saveGame} onLoad={loadGame} />
+      <TopBar
+        turn={data.turn}
+        connection={connection}
+        onEndTurn={endTurn}
+        onSave={saveGame}
+        onLoad={loadGame}
+      />
       <div className="app-body">
         <MessageStream messages={data.messages.messages} />
         <section className="main-area">
@@ -173,6 +204,7 @@ function App() {
                   forces={data.forces.forces}
                   forceFilter={forceFilter}
                   onForceFilter={setForceFilter}
+                  playerGate={{ playerForceId, awaitingPlayer }}
                   onMove={(payload) => troopCommand('移动', 'sango.moveTroop', payload)}
                 />
                 )
@@ -189,17 +221,92 @@ function App() {
                     onSelect={setSelectedCityId}
                   />
                   {detail
-                    ? <CityDetailPanel detail={detail} onCommand={issueCommand} onExpedition={(payload) => troopCommand('出征', 'sango.createTroop', payload)} />
+                    ? <CityDetailPanel detail={detail} playerGate={{ playerForceId, awaitingPlayer }} onCommand={issueCommand} onExpedition={(payload) => troopCommand('出征', 'sango.createTroop', payload)} />
                     : <section className="panel detail empty">点击左侧城市查看详情与内政指令</section>}
                 </div>
-              )}
+                )}
         </section>
       </div>
       <footer className="status-bar">
         <span className={lastOrder.tone}>{lastOrder.text}</span>
         <span>{connection.phase} · {connection.transport} · 城市 {data.cities.cities.length} · 势力 {data.forces.forces.length} · 部队 {data.troops.troops.length} · 战报 {data.battles.battles.length}</span>
       </footer>
+      {showForceSelect
+        ? <ForceSelectOverlay forces={data.forces.forces} cities={data.cities.cities} onSelect={selectPlayerForce} onDismiss={() => setSelectDismissed(true)} />
+        : null}
     </main>
+  );
+}
+
+// 开局势力选择(M3.a,原版 window_scenario_force_select 的 Web 面):一次性开局动作,
+// 走 sango.selectPlayerForce 命令(原版 CheckPlayer 数据面)带玩家重装世界。
+function ForceSelectOverlay({ forces, cities, onSelect, onDismiss }) {
+  const [selected, setSelected] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const alive = forces.filter((force) => force.alive);
+  const cityCountByForce = useMemo(() => {
+    const counts = new Map();
+    cities.forEach((city) => {
+      if (city.forceId > 0) {
+        counts.set(city.forceId, (counts.get(city.forceId) ?? 0) + 1);
+      }
+    });
+    return counts;
+  }, [cities]);
+  const selectedForce = alive.find((force) => force.id === selected) ?? null;
+
+  const confirm = async () => {
+    if (!selectedForce || busy) {
+      return;
+    }
+    setBusy(true);
+    await onSelect(selectedForce.id);
+    setBusy(false);
+  };
+
+  return (
+    <div className="force-select-overlay">
+      <section className="panel force-select-panel">
+        <div className="panel-title">
+          <h2>选择开局势力</h2>
+          <span>{alive.length} 家 · 原版玩家接入(君主军团回合制,行动力约束生效)</span>
+        </div>
+        <div className="force-select-list">
+          {alive.map((force) => (
+            <button
+              key={force.id}
+              type="button"
+              className={force.id === selected ? 'city-row selected' : 'city-row'}
+              onClick={() => setSelected(force.id)}
+            >
+              <strong>{force.name}</strong>
+              <span>君主 {force.governorName || '—'}</span>
+              <small>城市 {cityCountByForce.get(force.id) ?? 0} · 武将 {force.personCount}</small>
+            </button>
+          ))}
+        </div>
+        <div className="force-select-actions">
+          <button
+            type="button"
+            className="end-turn"
+            disabled={!selectedForce || busy}
+            title="以所选势力开局:世界按原版玩家路径重整(仅开局一次)"
+            onClick={confirm}
+          >
+            {busy ? '重整世界中……' : selectedForce ? `以${selectedForce.name}开局` : '选择一家势力'}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            title="保持全托管观察模式:不设玩家势力,回合自由推进"
+            onClick={onDismiss}
+          >
+            旁观模式(全托管)
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -344,17 +451,33 @@ function useCityDetail(clientRef, cityId, revision) {
 }
 
 function TopBar({ turn, connection, onEndTurn, onSave, onLoad }) {
+  const playerForceId = turn.playerForceId ?? 0;
+  const awaitingPlayer = turn.awaitingPlayer ?? false;
   return (
     <header className="top-bar">
       <h1>三国 · 内政</h1>
       <div className="date-block">
         <strong>{turn.dateText}</strong>
         <span>第 {turn.turnCount} 回合</span>
+        {playerForceId > 0
+          ? (
+            <span className={awaitingPlayer ? 'player-badge active' : 'player-badge'}>
+              玩家:{turn.playerForceName || `#${playerForceId}`}{awaitingPlayer ? ' · 待玩家行动' : ' · 结算中'}
+            </span>
+            )
+          : null}
       </div>
       <div className="top-actions">
         <button type="button" className="secondary" onClick={onSave}>存档</button>
         <button type="button" className="secondary" onClick={onLoad}>读档</button>
-        <button type="button" className="end-turn" onClick={onEndTurn}>结束回合</button>
+        <button
+          type="button"
+          className="end-turn"
+          onClick={onEndTurn}
+          title={playerForceId > 0 ? '结束玩家回合(原版「进行」):放行君主军团并推进世界' : '推进一个回合'}
+        >
+          {playerForceId > 0 ? (awaitingPlayer ? '结束回合(进行)' : '推进回合') : '结束回合'}
+        </button>
       </div>
       {connection.error ? <span className="error-line">{connection.error}</span> : null}
     </header>
@@ -412,7 +535,7 @@ function CityListPanel({ cities, forces, forceFilter, onForceFilter, selectedCit
   );
 }
 
-function CityDetailPanel({ detail, onCommand, onExpedition }) {
+function CityDetailPanel({ detail, playerGate, onCommand, onExpedition }) {
   const [executorIds, setExecutorIds] = useState([]);
   const [rewardIds, setRewardIds] = useState([]);
   const [recruitTargetId, setRecruitTargetId] = useState(0);
@@ -429,6 +552,15 @@ function CityDetailPanel({ detail, onCommand, onExpedition }) {
     setExpeditionIds([]);
     setLandTypeId(0);
   }, [detail.id]);
+
+  // M3.a 玩家门(原版城菜单门):玩家局只对本势力且本回合的城开放命令。
+  const playerForceId = playerGate?.playerForceId ?? 0;
+  const commandsAllowed = playerForceId === 0 || (detail.forceId === playerForceId && playerGate.awaitingPlayer);
+  const commandsHint = playerForceId === 0
+    ? null
+    : (detail.forceId === playerForceId
+        ? (playerGate.awaitingPlayer ? null : '当前非本势力回合,内政指令待玩家回合开放')
+        : '玩家局只对本势力城市开放内政指令');
 
   const freePersons = detail.persons.filter((person) => person.free);
   const rewardTargets = detail.persons.filter(
@@ -466,9 +598,10 @@ function CityDetailPanel({ detail, onCommand, onExpedition }) {
       </div>
 
       <div className="command-bar">
+        {commandsHint ? <span className="hint">{commandsHint}</span> : null}
         <button
           type="button"
-          disabled={executors.length === 0}
+          disabled={executors.length === 0 || !commandsAllowed}
           title="军事/训练:提升城市士气(消耗资金)"
           onClick={() => send('train', { cityId: detail.id, personIds: executors.map((p) => p.id) })}
         >
@@ -476,7 +609,7 @@ function CityDetailPanel({ detail, onCommand, onExpedition }) {
         </button>
         <button
           type="button"
-          disabled={executors.length === 0}
+          disabled={executors.length === 0 || !commandsAllowed}
           title="人事/探索人才:下回合结算,可能发现人才或资金"
           onClick={() => send('search', { cityId: detail.id, personIds: executors.map((p) => p.id) })}
         >
@@ -484,7 +617,7 @@ function CityDetailPanel({ detail, onCommand, onExpedition }) {
         </button>
         <button
           type="button"
-          disabled={rewardPersons.length === 0}
+          disabled={rewardPersons.length === 0 || !commandsAllowed}
           title="人事/褒赏:消耗资金提升忠诚(+10)"
           onClick={() => send('reward', { cityId: detail.id, personIds: rewardPersons.map((p) => p.id) })}
         >
@@ -492,7 +625,7 @@ function CityDetailPanel({ detail, onCommand, onExpedition }) {
         </button>
         <button
           type="button"
-          disabled={executors.length !== 1 || !recruitTarget}
+          disabled={executors.length !== 1 || !recruitTarget || !commandsAllowed}
           title="人事/登庸武将:任命执行武将招揽在野人才"
           onClick={() => send('recruit', {
             cityId: detail.id,
@@ -650,7 +783,7 @@ function CityDetailPanel({ detail, onCommand, onExpedition }) {
           </label>
           <button
             type="button"
-            disabled={expeditionPersons.length === 0 || landTypes.length === 0}
+            disabled={expeditionPersons.length === 0 || landTypes.length === 0 || !commandsAllowed}
             title="军事/出征:按城内可组兵种编成部队(消耗兵力/金钱/军粮与军团行动力)"
             onClick={() => onExpedition({
               cityId: detail.id,
@@ -698,7 +831,8 @@ function CityDetailPanel({ detail, onCommand, onExpedition }) {
 
 // 部队面板(M2.b):势力过滤 + 选中部队发 sango.moveTroop。目标格是内核格坐标
 // (x=北、y=东,范围 0..255);地图点击选格需要引擎侧 pick,接入前用坐标输入。
-function TroopPanel({ troops, forces, forceFilter, onForceFilter, onMove }) {
+// M3.a:玩家局只对玩家势力且当前回合的部队开放移动(原版部队命令门)。
+function TroopPanel({ troops, forces, forceFilter, onForceFilter, playerGate, onMove }) {
   const [selectedTroopId, setSelectedTroopId] = useState(0);
   const [targetX, setTargetX] = useState(0);
   const [targetY, setTargetY] = useState(0);
@@ -707,6 +841,9 @@ function TroopPanel({ troops, forces, forceFilter, onForceFilter, onMove }) {
     ? troops
     : troops.filter((troop) => troop.forceId === forceFilter);
   const selected = visibleTroops.find((troop) => troop.id === selectedTroopId) ?? null;
+  const playerForceId = playerGate?.playerForceId ?? 0;
+  const moveAllowed = playerForceId === 0 ||
+    (selected != null && selected.forceId === playerForceId && playerGate.awaitingPlayer);
 
   return (
     <div className="city-layout">
@@ -791,8 +928,8 @@ function TroopPanel({ troops, forces, forceFilter, onForceFilter, onMove }) {
               </label>
               <button
                 type="button"
-                disabled={selected.actionOver}
-                title="选中部队移动到目标格(限本回合移动范围;范围外/占位目标会被拒绝)"
+                disabled={selected.actionOver || !moveAllowed}
+                title="选中部队移动到目标格(限本回合移动范围;范围外/占位目标会被拒绝;玩家局限本势力回合)"
                 onClick={() => onMove({ troopId: selected.id, x: targetX, y: targetY })}
               >
                 移动

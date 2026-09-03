@@ -50,12 +50,31 @@ namespace Sango.Runtime
         public static BootResult Boot(IVirtualFileSystem vfs, string contentModId, int seed,
             string scenarioAssetPath = "Scenario/Scenario.json")
         {
+            return BootWithPlayer(vfs, contentModId, seed, playerForceId: 0, scenarioAssetPath);
+        }
+
+        /// <summary>
+        /// 带玩家势力的启动(M3.a):playerForceId 走原版 window_scenario_force_select 的
+        /// 数据面——StartScenario 前写 Info.playerForceList,CheckPlayer 据此置
+        /// Force.IsPlayer=true(玩家势力进队列最前,君主军团回合阻塞,见 SangoPlayerTurnOps
+        /// 文件头的原版链)。独立方法名保持 Boot 反射单义(测试/桥接按名取用)。
+        /// </summary>
+        public static BootResult BootWithPlayer(IVirtualFileSystem vfs, string contentModId, int seed,
+            int playerForceId, string scenarioAssetPath = "Scenario/Scenario.json")
+        {
             Scenario scenario = PrepareKernel(vfs, contentModId, scenarioAssetPath);
             scenario.LoadInfo();
             if (scenario.Info == null)
+            {
                 throw new InvalidOperationException($"Scenario asset has no Info section: {scenario.FilePath}");
+            }
 
-            // Scenario.StartScenario(scenario)(无玩家列表)的等价展开。
+            if (playerForceId > 0)
+            {
+                scenario.Info.playerForceList = new[] { playerForceId };
+            }
+
+            // Scenario.StartScenario(scenario) 的等价展开。
             // Cur 的赋权发生在 LoadBaseContent 首行(与原版一致,setter 对外不可见)。
             GameRandom.Init(seed);
             return StartScenarioCore(scenario, populateContent: null);
@@ -65,9 +84,12 @@ namespace Sango.Runtime
         /// 从存档捕获回灌世界(M1.d):与 Boot 同一启动序列,差异仅在两处——
         /// Info/正文取自内存中的存档 JSON(SangoSaveParticipant 捕获面,CommonData 仍从
         /// 数据表整表重载),结束后导入捕获的 GameRandom 流位置,续跑确定性由此成立。
+        /// M3.a:cityOrder 承载"原版不入档的城内有序名单"的捕获序,装载完成后重排
+        /// (见 SangoCityPersonOrder 文件头);缺省(旧档/内部调用)不重排。
         /// </summary>
         public static BootResult Restore(IVirtualFileSystem vfs, string contentModId,
-            string scenarioJson, int[] randomState, string scenarioAssetPath = "Scenario/Scenario.json")
+            string scenarioJson, int[] randomState, string scenarioAssetPath = "Scenario/Scenario.json",
+            SangoCityPersonOrder? cityOrder = null)
         {
             if (string.IsNullOrEmpty(scenarioJson))
                 throw new ArgumentException("Captured scenario JSON is required.", nameof(scenarioJson));
@@ -87,6 +109,9 @@ namespace Sango.Runtime
             scenario.IsRestoreLoad = false;
             // 启动线(Prepare/Init/Start)自身的随机消耗不属于存档时点;流位置整体覆盖。
             GameRandom.ImportState(randomState);
+            // 序补排在流位置覆盖之后、返回之前:重排只动列表顺序不动成员/随机流,
+            // 回灌世界与捕获时点在调用方拿到手时逐位同序(见 SangoCityPersonOrder)。
+            cityOrder?.Apply(scenario);
             return result;
         }
 
@@ -122,6 +147,11 @@ namespace Sango.Runtime
 
             // 二次启动:按 Player.Quit() 的 OnGameShutdown 链清上一局(退订事件/清对象池)。
             Scenario.Cur?.OnGameShutdown();
+            // 进程级演出残留(上一局 fail-fast 中断时可能留下):演出事件/对话框持有旧局
+            // 对象引用,不清会让新局的 Run 闸卡在别人的队列上(见 RenderEvent/Dump 与
+            // GameDialog 的 ResetForNewScenario 注释)。
+            Sango.Render.RenderEvent.Instance.ResetForNewScenario();
+            Sango.Core.GameDialog.Instance.ResetForNewScenario();
 
             var scenario = new Scenario();
             scenario.FilePath = SangoVfsIO.FindFile(scenarioAssetPath) ?? throw new FileNotFoundException(

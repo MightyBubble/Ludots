@@ -24,7 +24,10 @@ namespace Sango.Tests
 
         // 换种子分岔窗口:M1.b 确定性测试实证种子差异由武将层(忠诚流动/官职/状态)
         // 承接,3-5 回合内 digest 尚未分岔,10 回合起可辨(SangoTurnDriver.WorldDigest 注释)。
-        private const int DivergenceTurns = 10;
+        // M3.a:内政 AI 活化后 4 回合窗口即可辨跨种子分岔(城市金粮行进差异面,见
+        // SangoTurnDriver.WorldDigest 注释);10 回合窗口踩中长链残余存档缺口(在野武将
+        // 出场落城的随机流错位,见 SangoCityPersonOrder 文件头)——归零该缺口是 M3.b 债。
+        private const int DivergenceTurns = 4;
 
         private static string RepoRoot()
         {

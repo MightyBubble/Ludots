@@ -601,3 +601,49 @@ body {
 .event-row .actors { flex: 1; min-width: 200px; }
 .event-row .damage { color: #dd857d; }
 .event-row .after { color: var(--muted, #9aa4b2); }
+
+/* M3.a 开局势力选择覆盖层与玩家态徽标 */
+.force-select-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(12, 16, 24, 0.82);
+}
+
+.force-select-panel {
+  width: min(560px, 86vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.force-select-list {
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.force-select-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.player-badge {
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: rgba(94, 129, 172, 0.25);
+  color: #9db4d0;
+  font-size: 12px;
+}
+
+.player-badge.active {
+  background: rgba(191, 146, 46, 0.3);
+  color: #e8c672;
+  font-weight: 600;
+}

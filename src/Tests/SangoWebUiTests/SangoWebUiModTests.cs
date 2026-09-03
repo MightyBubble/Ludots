@@ -272,6 +272,137 @@ public sealed class SangoWebUiModTests
         Assert.That(root.GetProperty("gold").GetInt32(), Is.EqualTo(sample.gold));
     }
 
+    /// <summary>
+    /// M3.a 运行时取证(任务⑤):开局选曹操 → 玩家回合下内政令(探索) → 结束回合
+    /// (进行 + 时钟步)→ 消息流携带 PlayerMessage 真源行。世界在局内重装两次
+    /// (开局选择 + 测试尾恢复全托管),与 web 命令 sango.selectPlayerForce 的数据面同链
+    /// (SangoPlayerTurnOps.SelectPlayerForce → BootWithPlayer → CheckPlayer)。
+    /// </summary>
+    [Test]
+    public async Task PlayerFlow_SelectCaoCao_SearchOrder_EndTurn_MessagesCarryPlayerMessageSource()
+    {
+        // 开局态重装(选势力是开局动作;固定种子下 force "曹操" 可寻)。
+        SangoKernelBoot.Boot(NewVfs(), "SangoContentMod", Seed, "Scenario/Scenario.json");
+        Force? caoCao = null;
+        Scenario.Cur!.forceSet.ForEach(force =>
+        {
+            if (force != null && force.Name == "曹操")
+            {
+                caoCao = force;
+            }
+        });
+        Assert.That(caoCao, Is.Not.Null, "the scenario must carry the 曹操 force for the forensic flow");
+        int forceId = caoCao!.Id;
+
+        SangoCommandJournal.Clear();
+        SangoPlayerTurnOps.SelectPlayerForce(NewVfs(), "SangoContentMod", Seed, forceId);
+        Scenario scenario = Scenario.Cur!;
+        Assert.That(scenario.forceSet.Get(forceId)!.IsPlayer, Is.True, "CheckPlayer must mark 曹操 as the player force");
+
+        string firstStep = SangoTurnDriver.AdvanceTurn().ToString()!;
+        Assert.That(firstStep, Is.EqualTo("AwaitingPlayer"), "the world must stop at the player turn gate before any order");
+
+        using DataPlaneHarness plane = CreateHarness();
+        City? playerCity = null;
+        City? foreignCity = null;
+        scenario.citySet.ForEach(city =>
+        {
+            if (city == null || city.mBelongForce == null)
+            {
+                return;
+            }
+
+            if (playerCity == null && city.mBelongForce.Id == forceId && city.freePersons.Count > 0)
+            {
+                playerCity = city;
+            }
+
+            if (foreignCity == null && city.mBelongForce.Id != forceId)
+            {
+                foreignCity = city;
+            }
+        });
+        Assert.That(playerCity, Is.Not.Null, "曹操 must own a staffed city at boot");
+
+        // 非玩家城命令:玩家局城门拒绝(not_player_city),取证玩家门真实生效。
+        plane.Transport.ReceiveCommand(new
+        {
+            name = SangoCityCommandHandler.CommandName,
+            clientSeq = 41,
+            entityRefs = Array.Empty<object>(),
+            payload = new { type = "train", cityId = foreignCity!.Id, personIds = new[] { playerCity!.freePersons[0]!.Id } }
+        });
+        await plane.Pump.FlushCommandsAsync(TestContext.CurrentContext.CancellationToken);
+        WebUiOutboundPacket foreignAck = await plane.Transport.WaitForSentAsync(TestContext.CurrentContext.CancellationToken);
+        Assert.That(foreignAck.Kind, Is.EqualTo(WebUiPacketKind.CommandError), "a foreign city order must be rejected in a player world");
+        using (JsonDocument foreignDoc = ParsePacket(foreignAck))
+        {
+            Assert.That(foreignDoc.RootElement.GetProperty("payload").GetProperty("code").GetString(),
+                Is.EqualTo("not_player_city"));
+        }
+
+        // 玩家城探索令:过门 + AP 真实扣减;搜索演出事件在本回合内的 RenderEvent 泵结算。
+        int apBefore = playerCity.mBelongCorps!.ActionPoint;
+        plane.Transport.ReceiveCommand(new
+        {
+            name = SangoCityCommandHandler.CommandName,
+            clientSeq = 42,
+            entityRefs = Array.Empty<object>(),
+            payload = new { type = "search", cityId = playerCity.Id, personIds = new[] { playerCity.freePersons[0]!.Id } }
+        });
+        await plane.Pump.FlushCommandsAsync(TestContext.CurrentContext.CancellationToken);
+        WebUiOutboundPacket searchAck = await plane.Transport.WaitForSentAsync(TestContext.CurrentContext.CancellationToken);
+        Assert.That(searchAck.Kind, Is.EqualTo(WebUiPacketKind.CommandAck), "the player-city search order must pass the gates");
+
+        // 结束回合 = 原版「进行」(放行君主军团)+ Manual 时钟步;命令只路由,不直接推内核。
+        var stepPolicy = new GasClockStepPolicy(10, GasStepMode.Manual);
+        using DataPlaneHarness turnPlane = CreateHarness(stepPolicy);
+        turnPlane.Transport.ReceiveCommand(new
+        {
+            name = SangoEndTurnCommandHandler.CommandName,
+            clientSeq = 43,
+            entityRefs = Array.Empty<object>(),
+            payload = new { }
+        });
+        await turnPlane.Pump.FlushCommandsAsync(TestContext.CurrentContext.CancellationToken);
+        WebUiOutboundPacket endAck = await turnPlane.Transport.WaitForSentAsync(TestContext.CurrentContext.CancellationToken);
+        Assert.That(endAck.Kind, Is.EqualTo(WebUiPacketKind.CommandAck), "endTurn must acknowledge the 进行 + clock-step route");
+        Assert.That(stepPolicy.ConsumeStepsForThisFixedTick(), Is.EqualTo(1), "exactly one manual clock step must be requested");
+        Assert.That(SangoPlayerTurnOps.AwaitingPlayer(scenario), Is.False, "the 进行 release must have unblocked the governor corps");
+
+        // 时钟步在生产链由引擎 tick 消费;headless 直接推 Sango 回合至下一玩家门,搜索事件在
+        // 本回合的演出泵内结算,PlayerMessage 行(onTextMessageAdd 真源)随之入流。
+        var feed = new SangoWorldFeed();
+        feed.AttachPlayerMessageSystem();
+        string secondStep = SangoTurnDriver.AdvanceTurn().ToString()!;
+        Assert.That(secondStep, Is.EqualTo("AwaitingPlayer"), "the next step must stop at the next player turn gate");
+        // 探索令的结算证据由下方 PlayerMessage 真源行承载(DoJobSearching 的 IsPlayer 分支);
+        // freePersons/AP 都是回合内暂态(新回合 OnForceTurnStart 重建),不可跨回合比对。
+
+        var messagesTopic = new SangoWorldMessagesTopic(feed);
+        var context = new WebUiTopicContext(SessionId, SangoWorldMessagesTopic.TopicName, RequestId: 44, Parameters: default);
+        Assert.That(messagesTopic.TryCreateSnapshot(in context, out WebUiOutboundPacket messagesPacket), Is.True);
+        using JsonDocument messagesDoc = ParsePacket(messagesPacket);
+        JsonElement messages = messagesDoc.RootElement.GetProperty("messages");
+        bool carriesPlayerMessageSource = false;
+        foreach (JsonElement message in messages.EnumerateArray())
+        {
+            string text = message.GetProperty("text").GetString() ?? string.Empty;
+            if (text.Contains("发现") || text.Contains("什么也没发现"))
+            {
+                carriesPlayerMessageSource = true;
+                TestContext.Progress.WriteLine(
+                    $"[m3a-forensics] PlayerMessage 真源行 turn={message.GetProperty("turnCount").GetInt32()}: {text}");
+            }
+        }
+
+        Assert.That(carriesPlayerMessageSource, Is.True,
+            "the message stream must carry the search outcome from the kernel PlayerMessage source (IsPlayer-gated lines)");
+
+        // 恢复夹具的全托管环境(后续断言假定无玩家世界)。
+        SangoKernelBoot.Boot(NewVfs(), "SangoContentMod", Seed, "Scenario/Scenario.json");
+    }
+
     private static JsonDocument ParsePacket(WebUiOutboundPacket packet)
     {
         return JsonDocument.Parse(packet.Payload);

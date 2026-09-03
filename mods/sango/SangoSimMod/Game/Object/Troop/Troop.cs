@@ -1828,7 +1828,7 @@ namespace Sango.Core
             });
 
             if (LandTroopType.isFight && LandTroopType.Id != 1)
-                mBelongCity.allAttackTroops.Remove(this);
+                mBelongCity?.allAttackTroops.Remove(this);
 
             mBelongCity.allTroops.Remove(this);
             city.Render.UpdateRender();
@@ -1922,8 +1922,11 @@ namespace Sango.Core
 
         public override void Clear()
         {
-            mBelongCity.allTroops.Remove(this);
-            Scenario.Cur.Remove(this);
+            // M3.a null 门:攻城/灭国链里部队可能经城陷吸收先被清一次,演出队列里
+            // 后续结算再对同一部队走到 Clear(原版按帧串行演出,双清时序罕见);
+            // headless 一拍泵空会聚出该时序,置空后重复清为幂等。
+            mBelongCity?.allTroops.Remove(this);
+            Scenario.Cur?.Remove(this);
 
             ReleaseCaptive();
             buildingImproveMap.Clear();
@@ -1937,7 +1940,7 @@ namespace Sango.Core
             }
 
             if (LandTroopType.isFight && LandTroopType.Id != 1)
-                mBelongCity.allAttackTroops.Remove(this);
+                mBelongCity?.allAttackTroops.Remove(this);
 
 
             ForEachPerson((person) =>

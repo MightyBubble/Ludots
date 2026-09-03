@@ -79,13 +79,20 @@ namespace Sango
 
         // Field2D 灌层 + 城标记只在"sango 地图会话 + presenter 管线"宿主生效:地图未启用
         // sango.terrainType 层即视为非 sango 地图,整体跳过(不代建);启用即 fail-fast。
-        private static void SyncWorldToEngine(ScriptContext context)
+        // M3.a 公开为正式入口:开局选势力(sango.selectPlayerForce)带玩家重装世界后,
+        // Web UI 命令层调同一同步面刷新城/部队标记。
+        public static void SyncWorldToEngine(ScriptContext context)
         {
             if (!context.TryGet(CoreServiceKeys.Engine, out GameEngine? engine) || engine == null)
             {
                 return;
             }
 
+            SyncWorldPresentation(engine);
+        }
+
+        public static void SyncWorldPresentation(GameEngine engine)
+        {
             Ludots.Core.Map.MapSession? session = engine.MapSessions?.FocusedSession;
             if (session?.Fields == null ||
                 !session.Fields.TryGetByKey(SangoFieldLayers.TerrainTypeLayerKey, out _))

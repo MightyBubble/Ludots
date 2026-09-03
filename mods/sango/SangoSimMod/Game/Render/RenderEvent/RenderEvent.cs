@@ -107,6 +107,18 @@ namespace Sango.Render
             stack.Push(renderEvent);
         }
 
+        /// <summary>
+        /// 进程复用(同进程第二局)时清掉上一局残留的演出队列:事件持有旧 Scenario 的
+        /// 对象引用,原版单局进程无此路径;headless 测试同进程连跑多局,上一局因
+        /// fail-fast 中断时残留事件会把新局的 Run 闸永久卡死。
+        /// </summary>
+        public void ResetForNewScenario()
+        {
+            eventQueue.Clear();
+            dependsEventQueue.Clear();
+            CurEvent = null;
+        }
+
         public string Dump()
         {
             StringBuilder stringBuilder = new StringBuilder();

@@ -74,7 +74,176 @@ namespace Sango.Runtime
             {
                 ["scenario"] = JsonNode.Parse(json),
                 ["random"] = randomNode,
+                // M3.a:不入档的城内有序名单按活世界序补捕获(见 SangoCityPersonOrder 文件头)。
+                ["cityOrder"] = CaptureCityOrder(scenario),
             };
+        }
+
+        static JsonObject CaptureCityOrder(Scenario scenario)
+        {
+            var all = new JsonObject();
+            var wild = new JsonObject();
+            var invisible = new JsonObject();
+            var buildings = new JsonObject();
+            scenario.citySet.ForEach(city =>
+            {
+                if (city == null)
+                {
+                    return;
+                }
+
+                all[city.Id.ToString()] = IdsOf(city.allPersons);
+                wild[city.Id.ToString()] = IdsOf(city.wildPersons);
+                invisible[city.Id.ToString()] = IdsOf(city.invisiblePersons);
+                buildings[city.Id.ToString()] = BuildingIdsOf(city.allBuildings);
+            });
+            var totalGainFood = new JsonObject();
+            var totalGainGold = new JsonObject();
+            var populationIncreaseFactor = new JsonObject();
+            var extraGainFoodFactor = new JsonObject();
+            var extraGainGoldFactor = new JsonObject();
+            var extraPopulationFactor = new JsonObject();
+            scenario.citySet.ForEach(city =>
+            {
+                if (city == null)
+                {
+                    return;
+                }
+
+                totalGainFood[city.Id.ToString()] = city.totalGainFood;
+                totalGainGold[city.Id.ToString()] = city.totalGainGold;
+                populationIncreaseFactor[city.Id.ToString()] = city.population_increase_factor;
+                extraGainFoodFactor[city.Id.ToString()] = city.extraGainFoodFactor;
+                extraGainGoldFactor[city.Id.ToString()] = city.extraGainGoldFactor;
+                extraPopulationFactor[city.Id.ToString()] = city.extraPopulationFactor;
+            });
+            var troopSkillCd = new JsonObject();
+            scenario.troopsSet.ForEach(troop =>
+            {
+                if (troop == null || !troop.IsAlive)
+                {
+                    return;
+                }
+
+                var skills = new JsonObject();
+                foreach (SkillInstance? skill in troop.landSkills)
+                {
+                    if (skill != null) skills[skill.Name ?? string.Empty] = skill.CDCount;
+                }
+                foreach (SkillInstance? skill in troop.waterSkills)
+                {
+                    if (skill != null) skills[skill.Name ?? string.Empty] = skill.CDCount;
+                }
+                foreach (SkillInstance? skill in troop.StrategySkills)
+                {
+                    if (skill != null) skills[skill.Name ?? string.Empty] = skill.CDCount;
+                }
+                troopSkillCd[troop.Id.ToString()] = skills;
+            });
+            var leaderPerson = new JsonObject();
+            var leaderElectionPending = new JsonObject();
+            var cityTroopMissionType = new JsonObject();
+            var cityTroopMissionTarget = new JsonObject();
+            var cityCurActiveTroop = new JsonObject();
+            scenario.citySet.ForEach(city =>
+            {
+                if (city == null)
+                {
+                    return;
+                }
+
+                leaderPerson[city.Id.ToString()] = city.Leader?.Id ?? 0;
+                leaderElectionPending[city.Id.ToString()] = LeaderElectionPendingOf(city);
+                cityTroopMissionType[city.Id.ToString()] = (int)city.TroopMissionType;
+                cityTroopMissionTarget[city.Id.ToString()] = city.TroopMissionTargetId;
+                cityCurActiveTroop[city.Id.ToString()] = city.CurActiveTroop?.Id ?? 0;
+            });
+            var personStates = new JsonObject();
+            scenario.personSet.ForEach(person =>
+            {
+                if (person != null)
+                {
+                    personStates[person.Id.ToString()] = person.state;
+                }
+            });
+            var forceIsAlive = new JsonObject();
+            scenario.forceSet.ForEach(force =>
+            {
+                if (force != null)
+                {
+                    forceIsAlive[force.Id.ToString()] = force.IsAlive;
+                }
+            });
+            return new JsonObject
+            {
+                ["troopSkillCd"] = troopSkillCd,
+                ["allPersons"] = all,
+                ["wildPersons"] = wild,
+                ["invisiblePersons"] = invisible,
+                ["allBuildings"] = buildings,
+                ["totalGainFood"] = totalGainFood,
+                ["totalGainGold"] = totalGainGold,
+                ["populationIncreaseFactor"] = populationIncreaseFactor,
+                ["extraGainFoodFactor"] = extraGainFoodFactor,
+                ["extraGainGoldFactor"] = extraGainGoldFactor,
+                ["extraPopulationFactor"] = extraPopulationFactor,
+                ["leaderPerson"] = leaderPerson,
+                ["leaderElectionPending"] = leaderElectionPending,
+                ["personStates"] = personStates,
+                ["cityTroopMissionType"] = cityTroopMissionType,
+                ["cityTroopMissionTarget"] = cityTroopMissionTarget,
+                ["cityCurActiveTroop"] = cityCurActiveTroop,
+                ["forceIsAlive"] = forceIsAlive,
+            };
+        }
+
+        // needUpdateLeader 是 City 的私有挂起位(重选排在城回合末),捕获面读原值、
+        // Apply 侧经公开 NeedUpdateLeader() 补真——不放宽内核封装。
+        static readonly System.Reflection.FieldInfo LeaderPendingField = typeof(City)
+            .GetField("needUpdateLeader", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+            ?? throw new InvalidOperationException("City.needUpdateLeader backing field is missing; the capture face cannot read the pending election flag.");
+
+        static bool LeaderElectionPendingOf(City city) => (bool)LeaderPendingField.GetValue(city)!;
+
+        // SangoObjectList.ForEach 倒序遍历(内核遍历语义);这里要的是存储正序,直接走
+        // objects 下层数组,Apply 侧按同序重排回存储序。
+        static JsonArray IdsOf(SangoObjectList<Person> persons)
+        {
+            var array = new JsonArray();
+            foreach (Person? person in persons.objects)
+            {
+                if (person != null)
+                {
+                    array.Add(person.Id);
+                }
+            }
+            return array;
+        }
+
+        static JsonArray IdsOf(List<Person> persons)
+        {
+            var array = new JsonArray();
+            foreach (Person? person in persons)
+            {
+                if (person != null)
+                {
+                    array.Add(person.Id);
+                }
+            }
+            return array;
+        }
+
+        static JsonArray BuildingIdsOf(SangoObjectList<Building> list)
+        {
+            var array = new JsonArray();
+            foreach (Building? building in list.objects)
+            {
+                if (building != null)
+                {
+                    array.Add(building.Id);
+                }
+            }
+            return array;
         }
 
         public void RestoreState(JsonNode state)
@@ -97,20 +266,23 @@ namespace Sango.Runtime
                 }
             }
 
-            SangoKernelBoot.Restore(_vfs, _contentModId, scenarioNode.ToJsonString(), randomState, _scenarioAssetPath);
+            SangoKernelBoot.Restore(_vfs, _contentModId, scenarioNode.ToJsonString(), randomState,
+                _scenarioAssetPath, SangoCityPersonOrder.FromJson(root["cityOrder"]));
         }
 
-        // 原版 Save 对 Info 的两处置写 + 回合边界校正:
+        // 原版 Save 对 Info 的两处置写 + 当前势力保真:
         // isSave 置真让回灌侧跳过 Variables/Map 重建、改由 JSON 填充;dateTime 是存档时间戳
-        // 元数据(UI 显示用,不参与 digest)。curForceId 在 headless 捕获点(TurnEnd 之后)
-        // 残留上一回合最后行动的势力,而 Start() 的恢复分支会按它重放该势力——那是原版
-        // "玩家回合中存档"的语义;边界存档的忠实表示是无当前势力(队列由 MakeForceQuene
-        // 全量重建)。
+        // 元数据(UI 显示用,不参与 digest)。curForceId:M1.d 曾一律清零(边界存档的忠实
+        // 表示,队列由 MakeForceQuene 全量重建);M3.a 玩家局的静止态是"回合中"(玩家势力
+        // 阻塞在君主军团),清零会让回灌从队列头重放该势力的回合开始(重扣军粮/重发行动力),
+        // 与直跑链分叉——改为存档时保留 CurRunForce(回合边界存档时为 null,语义与清零同)。
+        // Start() 的恢复分支按 curForceId 静默 drain 到当前势力,不重跑 OnForceTurnStart,
+        // 即原版"玩家回合中存档"的语义。
         static void InfoCaptureAdjustments(Scenario scenario)
         {
             scenario.Info.isSave = true;
             scenario.Info.dateTime = DateTime.Now.ToFileTime();
-            scenario.Info.curForceId = 0;
+            scenario.Info.curForceId = scenario.CurRunForce?.Id ?? 0;
         }
 
         // 与原版 Scenario.Save 同一设置(Formatting 仅影响体积,内存面取紧凑)。

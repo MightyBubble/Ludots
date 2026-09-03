@@ -103,6 +103,22 @@ namespace Sango.Core
             //}
 
             GameController.Instance.Enabled = false;
+
+            // headless 无点击流:确认回调在原版由对话框窗口的「确定」按钮触发;
+            // 此处在窗口打开后立即代为确认(与计时型演出事件一拍完成同节奏),
+            // sureAction 内部的 Next() 会继续排空后续队列。
+            dialogData.sureAction?.Invoke();
+        }
+
+        /// <summary>
+        /// 进程复用(同进程第二局)时清掉上一局残留:原版单局进程无此路径,
+        /// headless 测试同进程连跑多局,上一局因 fail-fast 中断时可能留下
+        /// 未确认的对话框,不清会让新局的 Open 因 windowInterface 非空而不再走 Next()。
+        /// </summary>
+        public void ResetForNewScenario()
+        {
+            dialogDatas.Clear();
+            windowInterface = null;
         }
 
         public interface IDialog

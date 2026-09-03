@@ -60,9 +60,11 @@ public sealed class SangoBattlesTopicTests
         Scenario scenario = Scenario.Cur!;
         City? home = null;
         City? foe = null;
-        int best = int.MaxValue;
+        int best = -1;
         var cities = new List<City>();
         scenario.citySet.ForEach(city => cities.Add(city));
+        // M3.a:内政 AI 活化后,近距对的在城名单可能只剩计略型武将(互歼对耗不产杀伤
+        // 事件);选对改为按两侧武力前三之和取最强对(平手取先到),保证伤害性战斗。
         foreach (City a in cities)
         {
             if (a?.mBelongForce == null || a.mBelongCorps == null || !PassGate(a))
@@ -77,10 +79,10 @@ public sealed class SangoBattlesTopicTests
                     continue;
                 }
 
-                int distance = scenario.Map.Distance(a.CenterCell, b.CenterCell);
-                if (distance < best)
+                int score = TrioStrength(a) + TrioStrength(b);
+                if (score > best)
                 {
-                    (home, foe, best) = (a, b, distance);
+                    (home, foe, best) = (a, b, score);
                 }
             }
         }
@@ -91,25 +93,43 @@ public sealed class SangoBattlesTopicTests
         attacker.SetMission(MissionType.TroopDestroyTroop, defender.Id);
         defender.SetMission(MissionType.TroopDestroyTroop, attacker.Id);
 
-        bool sawBattle = false;
+        // M3.a:内政 AI 活化后接敌节奏变慢(计略先行,杀伤后置),推满观察窗;
+        // 首卡是否出现由末态断言把关。
         for (int turn = 0; turn < 20; turn++)
         {
             SangoTurnDriver.AdvanceTurn();
-            if (!sawBattle && _annals.SnapshotBattles().Length > 0)
-            {
-                sawBattle = true;
-                // 首张卡出现后再推 3 回合:账本需要第二次观测才能呈现 start→end 的变化行。
-                for (int extra = 0; extra < 3 && turn + extra + 1 < 20; extra++)
-                {
-                    SangoTurnDriver.AdvanceTurn();
-                }
-
-                break;
-            }
         }
 
-        Assert.That(sawBattle, Is.True,
+        Assert.That(_annals.SnapshotBattles().Length, Is.GreaterThan(0),
             "the mutual-destroy encounter must produce battle cards within the turn budget");
+
+        // M3.a:内政 AI 活化后互歼会战更致命,观察窗内可能同归于尽;若场上已无带歼灭
+        // 任务的存活部队,重摆一对互授歼灭任务的遭遇(部队话题任务态行的断言对象;
+        // 话题测试不再推回合,新遭遇即存活态,战报卡不受影响)。
+        bool anyDestroyMissioned = false;
+        scenario.troopsSet.ForEach(troop =>
+        {
+            if (troop != null && troop.IsAlive && troop.missionType == (int)MissionType.TroopDestroyTroop)
+            {
+                anyDestroyMissioned = true;
+            }
+        });
+        if (!anyDestroyMissioned)
+        {
+            Troop attacker2 = SeedTroop(scenario, home!);
+            Troop defender2 = SeedTroop(scenario, foe!);
+            attacker2.SetMission(MissionType.TroopDestroyTroop, defender2.Id);
+            defender2.SetMission(MissionType.TroopDestroyTroop, attacker2.Id);
+        }
+    }
+
+    static int TrioStrength(City city)
+    {
+        return city.freePersons
+            .Where(person => person != null)
+            .OrderByDescending(person => person!.Strength)
+            .Take(SangoTroopOps.MaxMembers)
+            .Sum(person => person!.Strength);
     }
 
     static bool PassGate(City city)
@@ -121,14 +141,14 @@ public sealed class SangoBattlesTopicTests
 
     static Troop SeedTroop(Scenario scenario, City city)
     {
-        var persons = new List<int>();
-        foreach (Person person in city.freePersons)
-        {
-            if (person != null && persons.Count < SangoTroopOps.MaxMembers)
-            {
-                persons.Add(person.Id);
-            }
-        }
+        // M3.a:内政 AI 活化后城内名单随回合漂移,取武力前三(攻击技能评分随部队
+        // Attack 走)保证互歼遭遇走向伤害性战斗,而非纯计略对耗。
+        var persons = city.freePersons
+            .Where(person => person != null)
+            .OrderByDescending(person => person!.Strength)
+            .Take(SangoTroopOps.MaxMembers)
+            .Select(person => person!.Id)
+            .ToList();
 
         (SangoTroopOpResult result, Troop? troop) = SangoTroopOps.CreateTroop(
             scenario, city, persons, troops: 3000, food: 20_000);
@@ -216,18 +236,24 @@ public sealed class SangoBattlesTopicTests
 
         Assert.That(missioned, Is.Not.Null, "a mutual-destroy mission troop must be projected");
         Assert.That(missionedLabel, Does.Contain("歼灭"), "destroy missions use the destroy wording");
-        string? targetName = null;
+        // M3.a:内政 AI 活化后世界部队也带歼灭任务,目标可能在断言前被歼灭;命名断言
+        // 按 missionTarget 解析存活目标,目标已灭则跳过(标签仍携带其名)。
+        Troop? missionedKernel = null;
         Scenario.Cur!.troopsSet.ForEach(troop =>
         {
-            if (targetName == null && troop != null && troop.IsAlive && troop.Id != missionedId)
+            if (missionedKernel == null && troop != null && troop.Id == missionedId)
             {
-                targetName = troop.Name;
+                missionedKernel = troop;
             }
         });
-        if (targetName != null)
+        if (missionedKernel != null)
         {
-            Assert.That(missionedLabel, Does.Contain(targetName!),
-                "mission labels must name the appointed target");
+            Troop? appointed = Scenario.Cur.troopsSet.Get(missionedKernel!.missionTarget);
+            if (appointed != null && appointed.IsAlive)
+            {
+                Assert.That(missionedLabel, Does.Contain(appointed.Name!),
+                    "mission labels must name the appointed target");
+            }
         }
     }
 

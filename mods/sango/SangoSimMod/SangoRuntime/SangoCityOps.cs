@@ -34,6 +34,15 @@ namespace Sango.Runtime
                     "the target city is unowned; internal affairs require a force and corps.");
             }
 
+            // M3.a 玩家门(原版 CityBaseSystem.OnCityContextMenuShow):存在玩家势力时,城
+            // 命令只对"玩家势力且当前行动"的城开放;全托管世界(无玩家)保持 M1.c 的
+            // 世界命令面(测试/重放同走此面)。
+            SangoTroopOpResult? gate = SangoPlayerTurnOps.CityCommandGate(scenario, city);
+            if (gate != null)
+            {
+                return gate;
+            }
+
             SangoTroopOpResult result = type switch
             {
                 "train" => Train(city, personIds),

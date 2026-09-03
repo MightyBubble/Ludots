@@ -10,6 +10,7 @@
 
 using System.Text.Json;
 using Ludots.Core.Engine;
+using Ludots.Core.Modding;
 using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -116,7 +117,10 @@ public sealed class SangoCityCommandHandler : IWebUiCommandHandler
 /// <summary>
 /// 结束回合(Ludots 正式链):对 Manual 时钟 stepPolicy 调 RequestStep(1),由 GasClockSystem
 /// 在引擎 tick 消费并发 TurnAdvanced → SangoSimMod 推进 sango 回合(PLAN D5)。
-/// 本 handler 不直接推内核,也不做任何缺服务兜底;策略实例由 Entry 从引擎服务解析注入。
+/// M3.a 玩家分支:玩家局里世界停在本玩家回合的阻塞位(Corps.Run 的 OnPlayerControl),
+/// 先走原版「进行」语义(SangoPlayerTurnOps.EndPlayerTurn = PlayerEndTurn.Update 体)放行
+/// 当前军团,再请求时钟步进。本 handler 不直接推内核,也不做任何缺服务兜底;策略实例由
+/// Entry 从引擎服务解析注入。
 /// </summary>
 public sealed class SangoEndTurnCommandHandler : IWebUiCommandHandler
 {
@@ -131,8 +135,75 @@ public sealed class SangoEndTurnCommandHandler : IWebUiCommandHandler
 
     public ValueTask<WebUiCommandResult> HandleAsync(WebUiCommandRequest request, CancellationToken cancellationToken = default)
     {
+        // 玩家门与全托管并存:玩家局的结束回合 = 进行 + 时钟步;玩家势力灭亡后
+        // AwaitingPlayer 恒假,自然退化为纯时钟步。
+        Scenario? scenario = Scenario.Cur;
+        if (scenario != null && SangoPlayerTurnOps.AwaitingPlayer(scenario))
+        {
+            try
+            {
+                SangoPlayerTurnOps.EndPlayerTurn();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return ValueTask.FromResult(WebUiCommandResult.Fail("player_turn_invalid", ex.Message));
+            }
+        }
+
         _stepPolicy.RequestStep(1);
         return ValueTask.FromResult(WebUiCommandResult.Ok());
+    }
+}
+
+/// <summary>
+/// 开局势力选择(M3.a,原版 window_scenario_force_select 的命令面):payload = {forceId};
+/// 以同种子带玩家重装世界(SangoPlayerTurnOps.SelectPlayerForce → BootWithPlayer,走
+/// CheckPlayer 正式数据面),随后重灌引擎城/部队标记。仅开局一次(世界已推进即拒绝)。
+/// </summary>
+public sealed class SangoSelectPlayerForceCommandHandler : IWebUiCommandHandler
+{
+    public const string CommandName = "sango.selectPlayerForce";
+
+    private readonly GameEngine _engine;
+    private readonly IVirtualFileSystem _vfs;
+
+    public SangoSelectPlayerForceCommandHandler(GameEngine engine, IVirtualFileSystem vfs)
+    {
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        _vfs = vfs ?? throw new ArgumentNullException(nameof(vfs));
+    }
+
+    public ValueTask<WebUiCommandResult> HandleAsync(WebUiCommandRequest request, CancellationToken cancellationToken = default)
+    {
+        WebUiCommandResult result = Select(_vfs, request);
+        if (result.Success)
+        {
+            SangoSimModEntry.SyncWorldPresentation(_engine);
+        }
+
+        return ValueTask.FromResult(result);
+    }
+
+    internal static WebUiCommandResult Select(IVirtualFileSystem vfs, WebUiCommandRequest request)
+    {
+        if (request.Payload.ValueKind != JsonValueKind.Object ||
+            !request.Payload.TryGetProperty("forceId", out JsonElement forceElement) ||
+            forceElement.ValueKind != JsonValueKind.Number ||
+            !forceElement.TryGetInt32(out int forceId))
+        {
+            return WebUiCommandResult.Fail("invalid_payload", "sango.selectPlayerForce requires an integer payload.forceId.");
+        }
+
+        try
+        {
+            SangoPlayerTurnOps.SelectPlayerForce(vfs, "SangoContentMod", SangoTurnDriver.DefaultSeed, forceId);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentOutOfRangeException)
+        {
+            return WebUiCommandResult.Fail("select_failed", ex.Message);
+        }
+
+        return WebUiCommandResult.Ok();
     }
 }
 
@@ -362,15 +433,16 @@ public sealed class SangoMoveTroopCommandHandler : IWebUiCommandHandler
 
 public sealed class SangoWebUiPermissionValidator : IWebUiCommandPermissionValidator
 {
-    private static readonly HashSet<string> AllowedCommands = new(StringComparer.Ordinal)
-    {
-        SangoCityCommandHandler.CommandName,
-        SangoEndTurnCommandHandler.CommandName,
-        SangoSaveCommandHandler.CommandName,
-        SangoLoadCommandHandler.CommandName,
-        SangoCreateTroopCommandHandler.CommandName,
-        SangoMoveTroopCommandHandler.CommandName,
-    };
+        private static readonly HashSet<string> AllowedCommands = new(StringComparer.Ordinal)
+        {
+            SangoCityCommandHandler.CommandName,
+            SangoEndTurnCommandHandler.CommandName,
+            SangoSaveCommandHandler.CommandName,
+            SangoLoadCommandHandler.CommandName,
+            SangoCreateTroopCommandHandler.CommandName,
+            SangoMoveTroopCommandHandler.CommandName,
+            SangoSelectPlayerForceCommandHandler.CommandName,
+        };
 
     public bool CanUse(WebUiCommandRequest request, out string error)
     {
