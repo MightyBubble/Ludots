@@ -79,6 +79,23 @@ public sealed class SangoWorldFeed
         _combatAnnals ?? throw new InvalidOperationException(
             "SangoWorldFeed has no combat annals attached; call AttachCombatAnnals before serving battle topics.");
 
+    /// <summary>挂 M3.d 外交消息行采集器:GameEvent.OnDiplomacy* 群 → [外交] 行(经既有
+    /// 消息流面板呈现)。重复调用幂等。</summary>
+    public void AttachDiplomacyAnnals()
+    {
+        if (_diplomacyAnnals != null)
+        {
+            return;
+        }
+
+        var annals = new SangoDiplomacyAnnals();
+        annals.LinePublished += line => Append(line, dateText: string.Empty);
+        annals.Attach();
+        _diplomacyAnnals = annals;
+    }
+
+    private SangoDiplomacyAnnals? _diplomacyAnnals;
+
     public SangoMessageRow[] SnapshotMessages()
     {
         lock (_sync)
@@ -624,6 +641,136 @@ public static class SangoMissionLabels
     static string CityName(Scenario scenario, int id) => scenario.citySet.Get(id)?.Name ?? $"城市#{id}";
     static string BuildingName(Scenario scenario, int id) => scenario.buildingSet.Get(id)?.Name ?? $"据点#{id}";
 }
+
+/// <summary>
+/// 外交面板话题(M3.d):势力关系与同盟状态的只读投影。真源 = Scenario.RelationMap
+/// (GetRelation)+ allianceSet/Force.AllianceList;关系行以玩家势力为中心(无玩家局
+/// 以首个存活势力为中心,面板仍是全图关系观察面);可下达动作的门槛提示在 UI 侧
+/// 按同表(AP>=30、城 gold>=1000、freePersons>0,JobTypes 22/23/24)。
+/// </summary>
+public sealed class SangoWorldDiplomacyTopic : IWebUiTopicProducer
+{
+    public const string TopicName = "sango.world.diplomacy";
+
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    private readonly SangoWorldFeed _feed;
+
+    public SangoWorldDiplomacyTopic(SangoWorldFeed feed)
+    {
+        _feed = feed ?? throw new ArgumentNullException(nameof(feed));
+    }
+
+    public string Topic => TopicName;
+
+    public bool TryCreateSnapshot(in WebUiTopicContext context, out WebUiOutboundPacket packet)
+    {
+        Scenario scenario = Scenario.Cur
+            ?? throw new InvalidOperationException("Sango kernel is not booted; topic snapshot is unavailable.");
+        bool isSubscription = context.RequestId != 0;
+        int playerForceId = SangoPlayerTurnOps.PlayerForceId(scenario);
+        Force? center = playerForceId > 0 ? scenario.forceSet.Get(playerForceId) : null;
+        if (center == null)
+        {
+            center = EnumerateFirstAlive(scenario);
+        }
+
+        var snapshot = new SangoDiplomacySnapshot(
+            isSubscription ? 0 : _feed.NextTick(),
+            scenario.Info.turnCount,
+            center?.Id ?? 0,
+            center?.Name ?? string.Empty,
+            ProjectAlliances(scenario),
+            center != null ? ProjectRelations(scenario, center) : Array.Empty<SangoRelationRow>());
+        packet = new WebUiOutboundPacket(
+            context.SessionId,
+            TopicName,
+            isSubscription ? WebUiPacketKind.Snapshot : WebUiPacketKind.Delta,
+            WebUiDeliverySemantics.LatestWins,
+            JsonSerializer.SerializeToUtf8Bytes(snapshot, JsonOptions),
+            "application/json",
+            context.RequestId);
+        return true;
+    }
+
+    static Force? EnumerateFirstAlive(Scenario scenario)
+    {
+        Force? first = null;
+        scenario.forceSet.ForEach(force =>
+        {
+            if (first == null && force != null && force.IsAlive)
+            {
+                first = force;
+            }
+        });
+        return first;
+    }
+
+    internal static SangoAllianceRow[] ProjectAlliances(Scenario scenario)
+    {
+        var rows = new List<SangoAllianceRow>();
+        scenario.allianceSet.ForEach(alliance =>
+        {
+            if (alliance == null || !alliance.IsAlive)
+            {
+                return;
+            }
+
+            var names = new List<string>();
+            foreach (Force? member in alliance.ForceList)
+            {
+                if (member != null)
+                {
+                    names.Add(member.Name ?? string.Empty);
+                }
+            }
+
+            rows.Add(new SangoAllianceRow(
+                alliance.Id,
+                alliance.allianceType.ToString(),
+                alliance.leftCount,
+                names.ToArray()));
+        });
+        return rows.ToArray();
+    }
+
+    internal static SangoRelationRow[] ProjectRelations(Scenario scenario, Force center)
+    {
+        var rows = new List<SangoRelationRow>();
+        scenario.forceSet.ForEach(force =>
+        {
+            if (force == null || force == center || !force.IsAlive)
+            {
+                return;
+            }
+
+            rows.Add(new SangoRelationRow(
+                force.Id,
+                force.Name ?? string.Empty,
+                scenario.GetRelation(center, force),
+                center.IsAlliance(force),
+                center.HasActiveAgreement(force)));
+        });
+        return rows.ToArray();
+    }
+}
+
+public sealed record SangoAllianceRow(int Id, string Type, int LeftCount, string[] ForceNames);
+
+public sealed record SangoRelationRow(
+    int ForceId,
+    string ForceName,
+    int Relation,
+    bool Allied,
+    bool HasAgreement);
+
+public sealed record SangoDiplomacySnapshot(
+    int Tick,
+    int TurnCount,
+    int PlayerForceId,
+    string PlayerForceName,
+    SangoAllianceRow[] Alliances,
+    SangoRelationRow[] Relations);
 
 public sealed record SangoCityRow(
     int Id,

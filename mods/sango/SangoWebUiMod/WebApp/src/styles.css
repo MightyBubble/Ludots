@@ -944,3 +944,53 @@ body {
   color: #e8c672;
   font-weight: 600;
 }
+
+/* 外交面板(M3.d):关系表/同盟列表/派遣表单。 */
+.diplomacy-section {
+  padding: 6px 0 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.diplomacy-section:last-child {
+  border-bottom: none;
+}
+
+.force-table tr.selected td {
+  background: rgba(191, 146, 46, 0.14);
+}
+
+.relation-positive {
+  color: #8fbc7f;
+}
+
+.relation-negative {
+  color: #d98d80;
+}
+
+.alliance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.alliance-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(94, 129, 172, 0.12);
+  font-size: 12px;
+}
+
+.alliance-list li span {
+  flex: 1;
+  color: #c8d3e0;
+}
+
+.diplomacy-form {
+  display: grid;
+  gap: 6px;
+}

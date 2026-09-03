@@ -9,6 +9,8 @@
 //   moveTroop   SangoTroopOps.MoveTroop(成功路径,含委任分派 field-strike/occupation/
 //               enter-city/building-fix;分派内部的 SetMission 由 moveTroop 记录承载);
 //   cityCommand SangoCityOps 四型(train/search/reward/recruit,成功路径);
+//   diplomacyCommand SangoDiplomacyOps 三型(alliance/sendGift/discardAlliance,成功路径;
+//               M3.d 外交命令面);
 //   setMission  Entry 级直接授任务(seed 对阵;moveTroop 之外的显式入口)。
 // 明确不入 journal:
 //   sango.save      只读取证,不改世界;
@@ -46,6 +48,14 @@ namespace Sango.Runtime
     public sealed record SangoSetMissionArgs(int TroopId, int MissionType, int TargetId);
 
     public sealed record SangoCityCommandArgs(string Type, int CityId, int[] PersonIds, int? TargetPersonId);
+
+    /// <summary>diplomacyCommand 的参数面(SangoDiplomacyOps.Execute 同形)。</summary>
+    public sealed record SangoDiplomacyCommandArgs(
+        string Type,
+        int CityId,
+        int PersonId,
+        int TargetForceId,
+        int ResourceValue);
 
     /// <summary>step 命令的空参数载荷(期望 digest 在记录的 DigestAfter 字段,不在参数里)。</summary>
     public sealed record SangoStepArgs
@@ -184,6 +194,7 @@ namespace Sango.Runtime
         public const string MoveTroopKind = "moveTroop";
         public const string SetMissionKind = "setMission";
         public const string CityCommandKind = "cityCommand";
+        public const string DiplomacyCommandKind = "diplomacyCommand";
         // M3.a 玩家命令:开局选势力(world-setup,重放侧带玩家重装世界)与玩家回合
         // 「进行」(PlayerEndTurn 等价,见 SangoPlayerTurnOps)。
         public const string SelectPlayerForceKind = SangoPlayerTurnOps.SelectPlayerForceKind;
@@ -249,6 +260,19 @@ namespace Sango.Runtime
                     }
 
                     RequireSuccess(command, SangoCityOps.Execute(scenario, city, args.Type, args.PersonIds, args.TargetPersonId ?? 0));
+                    return;
+                }
+                case DiplomacyCommandKind:
+                {
+                    SangoDiplomacyCommandArgs args = Parse<SangoDiplomacyCommandArgs>(command);
+                    City? city = scenario.citySet.Get(args.CityId);
+                    if (city == null)
+                    {
+                        throw MissingTarget(command, $"city {args.CityId}");
+                    }
+
+                    RequireSuccess(command, SangoDiplomacyOps.Execute(
+                        scenario, city, args.Type, new[] { args.PersonId }, args.TargetForceId, args.ResourceValue));
                     return;
                 }
                 case SelectPlayerForceKind:

@@ -87,6 +87,7 @@ public sealed class SangoWebUiModEntry : IMod
         var feed = new SangoWorldFeed();
         feed.AttachPlayerMessageSystem();
         feed.AttachCombatAnnals();
+        feed.AttachDiplomacyAnnals();
         _feed = feed;
 
         var router = new WebUiCommandRouter(
@@ -100,6 +101,7 @@ public sealed class SangoWebUiModEntry : IMod
         router.Register(SangoMoveTroopCommandHandler.CommandName, new SangoMoveTroopCommandHandler());
         router.Register(SangoSelectPlayerForceCommandHandler.CommandName,
             new SangoSelectPlayerForceCommandHandler(engine, engine.VFS!));
+        router.Register(SangoDiplomacyCommandHandler.CommandName, new SangoDiplomacyCommandHandler());
 
         _commandDispatcher = new WebUiQueuedCommandDispatcher(router);
         _dataPlaneRuntime = new WebUiDataPlaneRuntime(_commandDispatcher);
@@ -110,6 +112,7 @@ public sealed class SangoWebUiModEntry : IMod
         _dataPlaneRuntime.RegisterTopic(new SangoWorldCityTopic(feed));
         _dataPlaneRuntime.RegisterTopic(new SangoWorldTroopsTopic(feed));
         _dataPlaneRuntime.RegisterTopic(new SangoWorldBattlesTopic(feed));
+        _dataPlaneRuntime.RegisterTopic(new SangoWorldDiplomacyTopic(feed));
 
         IUiSurfaceHost surfaceHost = context.Get(CoreServiceKeys.UiSurfaceHost) as IUiSurfaceHost
             ?? throw new InvalidOperationException("UiSurfaceHost service is missing from ScriptContext.");
@@ -135,6 +138,7 @@ public sealed class SangoWebUiModEntry : IMod
         pump.TrackTopic(SangoWorldMessagesTopic.TopicName);
         pump.TrackTopic(SangoWorldTroopsTopic.TopicName);
         pump.TrackTopic(SangoWorldBattlesTopic.TopicName);
+        pump.TrackTopic(SangoWorldDiplomacyTopic.TopicName);
         _pump = pump;
 
         // 回合事件后立即推一轮(turn 话题携带新摘要);摘要消息行真源见 SangoWorldFeed。

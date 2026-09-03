@@ -16,6 +16,9 @@
 //      重选排在城回合末)时,装载期提前落定的选举会改写武将 state 与城指针,回灌
 //      世界与捕获时点从此分叉(M3.a 内政 AI 活化后 AITransfrom 让该时序常态化)。
 //      按捕获面回放指针与 state,挂起位经公开 NeedUpdateLeader 补真。
+//   5. 势力同盟名单(Force.AllianceList)——Force 是 OptIn 且该字段无 [JsonProperty],
+//      allianceSet 入档但回灌不重建成员势力的反向名单;IsAlliance/HasActiveAgreement
+//      进宣战与攻击决策面(M3.d 外交接入后活跃)。按捕获序回放。
 // 原版 Unity 侧无 bit 级续跑约束(sango-src Game/Object/City/City.cs 上述字段均无
 // [JsonProperty]);本文件按 M1.d"修原版存档 bug"先例在保存面补捕获,不改内核重建
 // 逻辑——回灌完成(StartScenarioCore 之后、任何回合推进之前)统一重放捕获面。
@@ -69,6 +72,18 @@ namespace Sango.Runtime
         /// 队列行动——按捕获面回写(经公开 setter)。</summary>
         public Dictionary<int, bool> ForceIsAlive { get; init; } = new();
 
+        /// <summary>势力同盟名单(forceId → allianceId[]):Force.AllianceList 无 [JsonProperty]
+        /// (Force 是 OptIn),allianceSet 本身入档但回灌不重建成员势力的反向名单——
+        /// IsAlliance/HasActiveAgreement 读该名单(停战/同盟判定进宣战与攻击 AI 决策面),
+        /// 缺席即"回灌世界无同盟"与活世界分叉。按捕获序回放(镜像序,同 allPersons 先例)。</summary>
+        public Dictionary<int, int[]> ForceAllianceList { get; init; } = new();
+
+        /// <summary>势力战力(forceId → FightPower):Force.OnForceTurnStart 清零、回合内按城
+        /// 累计,不入档;送礼关系增益(DiplomacyActionSendGift 的 powerRatio)与 AI 外交
+        /// 目标评分读它。玩家门(=玩家势力回合中途)捕获回灌后未跑的势力保持 0,与活世界
+        /// 的中途累计值分叉——按捕获面回写。</summary>
+        public Dictionary<int, int> ForceFightPower { get; init; } = new();
+
         /// <summary>从存档 JSON 节点解析(SangoSaveParticipant 写出的同形结构)。</summary>
         public static SangoCityPersonOrder? FromJson(JsonNode? node)
         {
@@ -97,6 +112,8 @@ namespace Sango.Runtime
                 CityTroopMissionTarget = ParseIntMap(root["cityTroopMissionTarget"]),
                 CityCurActiveTroop = ParseIntMap(root["cityCurActiveTroop"]),
                 ForceIsAlive = ParseBoolMap(root["forceIsAlive"]),
+                ForceAllianceList = ParseMap(root["forceAllianceList"]),
+                ForceFightPower = ParseIntMap(root["forceFightPower"]),
             };
         }
 
@@ -402,6 +419,50 @@ namespace Sango.Runtime
                 }
 
                 force.IsAlive = entry.Value;
+            }
+
+            // 势力同盟名单回放(见 ForceAllianceList):allianceSet 已由 JSON 回灌,
+            // 这里按捕获序重建各成员势力的反向名单。
+            foreach (KeyValuePair<int, int[]> entry in ForceAllianceList)
+            {
+                Force? force = scenario.forceSet.Get(entry.Key);
+                if (force == null)
+                {
+                    throw new SaveOrderException(
+                        $"captured forceAllianceList references force {entry.Key} missing from the restored forceSet.");
+                }
+
+                var restored = new List<Alliance>(entry.Value.Length);
+                foreach (int allianceId in entry.Value)
+                {
+                    Alliance? alliance = scenario.allianceSet.Get(allianceId);
+                    if (alliance == null)
+                    {
+                        throw new SaveOrderException(
+                            $"captured forceAllianceList references alliance {allianceId} missing from the restored allianceSet (force {entry.Key}).");
+                    }
+
+                    restored.Add(alliance);
+                }
+
+                force.AllianceList.Clear();
+                foreach (Alliance alliance in restored)
+                {
+                    force.AllianceList.Add(alliance);
+                }
+            }
+
+            // 势力战力回写(见 ForceFightPower):回合内累计面按捕获时点补真。
+            foreach (KeyValuePair<int, int> entry in ForceFightPower)
+            {
+                Force? force = scenario.forceSet.Get(entry.Key);
+                if (force == null)
+                {
+                    throw new SaveOrderException(
+                        $"captured forceFightPower references force {entry.Key} missing from the restored forceSet.");
+                }
+
+                force.FightPower = entry.Value;
             }
         }
 

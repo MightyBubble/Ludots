@@ -4,6 +4,7 @@ import {
   SANGO_BATTLES_TOPIC,
   SANGO_CITIES_TOPIC,
   SANGO_CITY_TOPIC,
+  SANGO_DIPLOMACY_TOPIC,
   SANGO_FORCES_TOPIC,
   SANGO_MESSAGES_TOPIC,
   SANGO_TROOPS_TOPIC,
@@ -49,6 +50,26 @@ const EMPTY_MESSAGES = { tick: 0, turnCount: 0, messages: [] };
 const EMPTY_DETAIL = null;
 const EMPTY_TROOPS = { tick: 0, turnCount: 0, troops: [] };
 const EMPTY_BATTLES = { tick: 0, turnCount: 0, battles: [] };
+const EMPTY_DIPLOMACY = {
+  tick: 0,
+  turnCount: 0,
+  playerForceId: 0,
+  playerForceName: '',
+  alliances: [],
+  relations: []
+};
+
+// 外交面板的行动术语(原版 CityDiplomacy* 系统的 customMenuName)。
+const DIPLOMACY_COMMAND_LABELS = {
+  sendGift: '送礼',
+  alliance: '结盟',
+  discardAlliance: '摒弃同盟'
+};
+const ALLIANCE_TYPE_LABELS = {
+  Alliance: '同盟',
+  Truce: '停战协议',
+  Trade: '通商协议'
+};
 
 // 战报卡终局/事件型标签(SangoCombatAnnals 的 result/event kind 中文投影)。
 const BATTLE_RESULT_LABELS = {
@@ -166,6 +187,23 @@ function App() {
     return result;
   }, [command]);
 
+  const diplomacyCommand = useCallback(async (type, payload) => {
+    const label = DIPLOMACY_COMMAND_LABELS[type] ?? type;
+    setLastOrder({ text: `${label}:派遣使者中……`, tone: 'pending' });
+    const result = await command('sango.diplomacyCommand', { type, ...payload });
+    if (result.ok) {
+      setCommandCount((count) => count + 1);
+      setLastOrder({
+        text: `${label}:使者已出发(按路程逐日赶赴对方君主城,结果见消息流)`,
+        tone: 'ok'
+      });
+    } else {
+      setLastOrder({ text: `${label} 被拒绝:${result.message}`, tone: 'error' });
+    }
+
+    return result;
+  }, [command]);
+
   const endTurn = useCallback(async () => {
     setLastOrder({ text: '结束回合:等待时钟推进……', tone: 'pending' });
     const result = await command('sango.endTurn', {});
@@ -220,6 +258,19 @@ function App() {
             )
           : activeTab === 'battles'
           ? <BattlePanel battles={data.battles.battles} />
+          : activeTab === 'diplomacy'
+          ? (
+            <DiplomacyPanel
+              diplomacy={data.diplomacy}
+              forces={data.forces.forces}
+              cities={data.cities.cities}
+              turn={data.turn}
+              clientRef={clientRef}
+              commandRevision={detailRevision}
+              playerGate={{ playerForceId, awaitingPlayer }}
+              onCommand={diplomacyCommand}
+            />
+            )
           : (
             <CityListPanel
               cities={visibleCities}
@@ -355,7 +406,8 @@ function useSangoSession() {
     turn: EMPTY_TURN,
     messages: EMPTY_MESSAGES,
     troops: EMPTY_TROOPS,
-    battles: EMPTY_BATTLES
+    battles: EMPTY_BATTLES,
+    diplomacy: EMPTY_DIPLOMACY
   });
   const [connection, setConnection] = useState({ phase: 'boot', transport: 'none', error: '' });
 
@@ -381,7 +433,8 @@ function useSangoSession() {
       [SANGO_TURN_TOPIC, (turn) => setData((current) => ({ ...current, turn }))],
       [SANGO_MESSAGES_TOPIC, (messages) => setData((current) => ({ ...current, messages }))],
       [SANGO_TROOPS_TOPIC, (troops) => setData((current) => ({ ...current, troops }))],
-      [SANGO_BATTLES_TOPIC, (battles) => setData((current) => ({ ...current, battles }))]
+      [SANGO_BATTLES_TOPIC, (battles) => setData((current) => ({ ...current, battles }))],
+      [SANGO_DIPLOMACY_TOPIC, (diplomacy) => setData((current) => ({ ...current, diplomacy }))]
     ]);
 
     client
@@ -567,6 +620,13 @@ function LeftDrawer({ open, onToggle, activeTab, onTab, children }) {
                 onClick={() => onTab('battles')}
               >
                 战报
+              </button>
+              <button
+                type="button"
+                className={activeTab === 'diplomacy' ? 'tab active' : 'tab'}
+                onClick={() => onTab('diplomacy')}
+              >
+                外交
               </button>
             </nav>
             <div className="drawer-content">{children}</div>
@@ -1223,6 +1283,195 @@ function BattleCard({ battle }) {
         ))}
       </div>
     </article>
+  );
+}
+
+// 外交面板(M3.d):势力关系表(真源 RelationMap)+ 同盟列表 + 使者派遣表单。
+// 可下达动作照原版活跃面:送礼(1000 金,关系必升)/ 结盟(金额滑条,成功率=基础+
+// 关系+使者+金额)/ 摒弃同盟;宣战/停战/通商/和亲等在原版是空桩,不在此发明。
+// 原版门槛:城 freePersons>0 && 军团行动力≥30 && 城金≥1000(不扣 AP,只扣金)。
+function DiplomacyPanel({ diplomacy, forces, cities, turn, clientRef, commandRevision, playerGate, onCommand }) {
+  const [dispatchCityId, setDispatchCityId] = useState(0);
+  const [diplomatId, setDiplomatId] = useState(0);
+  const [targetForceId, setTargetForceId] = useState(0);
+  const [actionType, setActionType] = useState('sendGift');
+  const [allianceGold, setAllianceGold] = useState(3000);
+
+  const playerForceId = playerGate?.playerForceId ?? diplomacy.playerForceId ?? 0;
+  const playerCities = useMemo(
+    () => cities.filter((city) => city.forceId === playerForceId),
+    [cities, playerForceId]
+  );
+
+  // 使者候选:派遣城的待命武将(单城详情话题按 cityId 订阅,与城市卡同一真源)。
+  const dispatchCityDetail = useCityDetail(clientRef, dispatchCityId || 0, `diplomacy:${commandRevision}`);
+  const freePersons = dispatchCityDetail?.persons?.filter((person) => person.free) ?? [];
+
+  useEffect(() => {
+    if (!dispatchCityId && playerCities.length > 0) {
+      setDispatchCityId(playerCities[0].id);
+    }
+  }, [dispatchCityId, playerCities]);
+
+  useEffect(() => {
+    setDiplomatId(0);
+  }, [dispatchCityId]);
+
+  useEffect(() => {
+    if (targetForceId === 0 && diplomacy.relations.length > 0) {
+      setTargetForceId(diplomacy.relations[0].forceId);
+    }
+  }, [targetForceId, diplomacy.relations]);
+
+  const dispatchCity = playerCities.find((city) => city.id === dispatchCityId) ?? null;
+  const gatesOk = Boolean(
+    dispatchCity && freePersons.length > 0 && dispatchCity.gold >= 1000
+  );
+  const commandsAllowed = playerForceId === 0 || playerGate.awaitingPlayer;
+  const canOrder = gatesOk && commandsAllowed && diplomatId > 0 && targetForceId > 0;
+
+  const relationRows = [...diplomacy.relations].sort((a, b) => b.relation - a.relation);
+
+  const send = () => {
+    if (!canOrder) {
+      return;
+    }
+
+    onCommand(actionType, {
+      cityId: dispatchCityId,
+      personIds: [diplomatId],
+      targetForceId,
+      resourceValue: actionType === 'alliance' ? allianceGold : 0
+    });
+  };
+
+  return (
+    <section className="drawer-panel diplomacy-panel">
+      <div className="panel-title">
+        <h2>外交</h2>
+        <span>
+          {playerForceId > 0
+            ? `${diplomacy.playerForceName || `#${playerForceId}`} 的邦交面 · 关系随月势演化`
+            : '全图邦交观察(无玩家局)'}
+        </span>
+      </div>
+
+      <div className="diplomacy-section">
+        <div className="panel-title">
+          <h3>势力关系</h3>
+          <span>{relationRows.length} 家</span>
+        </div>
+        <table className="force-table">
+          <thead>
+            <tr><th>势力</th><th>关系</th><th>协议</th></tr>
+          </thead>
+          <tbody>
+            {relationRows.map((relation) => (
+              <tr
+                key={relation.forceId}
+                className={relation.forceId === targetForceId ? 'selected' : ''}
+                onClick={() => setTargetForceId(relation.forceId)}
+              >
+                <td><strong>{relation.forceName}</strong></td>
+                <td className={relation.relation >= 0 ? 'relation-positive' : 'relation-negative'}>
+                  {relation.relation > 0 ? '+' : ''}{relation.relation}
+                </td>
+                <td>{relation.allied ? '同盟' : relation.hasAgreement ? '有协议' : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="hint">点选势力作为外交对象;关系门槛:结盟需 ≥2000,月度自然衰减中同盟缓升。</p>
+      </div>
+
+      {diplomacy.alliances.length > 0
+        ? (
+          <div className="diplomacy-section">
+            <div className="panel-title">
+              <h3>同盟与协议</h3>
+              <span>{diplomacy.alliances.length} 项</span>
+            </div>
+            <ul className="alliance-list">
+              {diplomacy.alliances.map((alliance) => (
+                <li key={alliance.id}>
+                  <strong>{ALLIANCE_TYPE_LABELS[alliance.type] ?? alliance.type}</strong>
+                  <span>{alliance.forceNames.join(' · ')}</span>
+                  <small>余 {alliance.leftCount} 旬</small>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+        : null}
+
+      <div className="diplomacy-section">
+        <div className="panel-title">
+          <h3>派遣使者</h3>
+          <span>原版活跃面:送礼 / 结盟 / 摒弃同盟</span>
+        </div>
+        <div className="expedition-form diplomacy-form">
+          <label>
+            派出城市
+            <select
+              value={dispatchCityId}
+              onChange={(event) => setDispatchCityId(Number(event.target.value))}
+            >
+              {playerCities.map((city) => (
+                <option key={city.id} value={city.id}>{city.name}(金 {formatNumber(city.gold)})</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            使者(待命武将)
+            <select
+              value={diplomatId}
+              onChange={(event) => setDiplomatId(Number(event.target.value))}
+            >
+              <option value={0}>选择使者</option>
+              {freePersons.map((person) => (
+                <option key={person.id} value={person.id}>
+                  {person.name}(政 {person.politics} 魅 {person.glamour})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            行动
+            <select value={actionType} onChange={(event) => setActionType(event.target.value)}>
+              <option value="sendGift">送礼(1000 金,关系必升)</option>
+              <option value="alliance">结盟(按关系与使者定成败)</option>
+              <option value="discardAlliance">摒弃同盟(即时生效)</option>
+            </select>
+          </label>
+          {actionType === 'alliance'
+            ? (
+              <label>
+                结盟金
+                <input
+                  type="number"
+                  min={0}
+                  step={500}
+                  value={allianceGold}
+                  onChange={(event) => setAllianceGold(Math.max(0, Number(event.target.value)))}
+                />
+              </label>
+            )
+            : null}
+          <button type="button" disabled={!canOrder} onClick={send}>
+            派遣
+          </button>
+          <p className="hint expedition-hint">
+            {playerForceId === 0
+              ? '全托管局无玩家势力,外交为观察面。'
+              : !commandsAllowed
+                ? '外交与城内政同门:待玩家回合方可下令。'
+                : !gatesOk
+                  ? '门槛:城有待命武将且城金 ≥1000(行动力 ≥30)。'
+                  : '使者按路程逐日赶赴对方君主城;送达后结果行进消息流(送礼必成,结盟按成功率)。'}
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 

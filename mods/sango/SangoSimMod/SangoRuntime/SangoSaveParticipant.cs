@@ -167,12 +167,35 @@ namespace Sango.Runtime
                 }
             });
             var forceIsAlive = new JsonObject();
+            var forceFightPower = new JsonObject();
             scenario.forceSet.ForEach(force =>
             {
                 if (force != null)
                 {
                     forceIsAlive[force.Id.ToString()] = force.IsAlive;
+                    forceFightPower[force.Id.ToString()] = force.FightPower;
                 }
+            });
+            // 势力同盟名单(Force.AllianceList 不入档,见 SangoCityPersonOrder 第 5 条):
+            // SangoObjectList 存储序捕获(ForEach 是倒序遍历语义)。
+            var forceAllianceList = new JsonObject();
+            scenario.forceSet.ForEach(force =>
+            {
+                if (force == null)
+                {
+                    return;
+                }
+
+                var allianceIds = new JsonArray();
+                foreach (Alliance? alliance in force.AllianceList.objects)
+                {
+                    if (alliance != null)
+                    {
+                        allianceIds.Add(alliance.Id);
+                    }
+                }
+
+                forceAllianceList[force.Id.ToString()] = allianceIds;
             });
             return new JsonObject
             {
@@ -194,6 +217,8 @@ namespace Sango.Runtime
                 ["cityTroopMissionTarget"] = cityTroopMissionTarget,
                 ["cityCurActiveTroop"] = cityCurActiveTroop,
                 ["forceIsAlive"] = forceIsAlive,
+                ["forceAllianceList"] = forceAllianceList,
+                ["forceFightPower"] = forceFightPower,
             };
         }
 
