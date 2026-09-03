@@ -137,24 +137,24 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 | `npm run check` 末步 `validate-panel-templates` 本来就挂 | 债（非本轮） | 报 `Unsupported schema 'ludots.ui.panel_template'`，main 上同样挂；`graph-editor-frontend` 不跑这步，属面板线 |
 | `TriggerGraphRenameMigrationTests` 误伤合法 payloadKey | 债（非本轮） | 夜袭 `graphs.json` 的 `MapTrigger.PointerScreenX/Y`（随 #1398 入口直绑 action 落地）被「不得出现退役方言名」的子串检查判红；该守卫要改成只查 `kind` / `mount` 字段而不是裸子串 |
 | 可调用函数远景（Case E：入参表、whileActive（已替 continuousQuery）、预览 S1/S2、Invoke 与 FuncLib） | **开着 · 先出方案** | 正本 [可调用函数远景](graph-callable-function-vision.md)；Case E 短任务条 `mods/showcases/case_e_selection/CaseESelectionMod/docs/NEXT-AGENT-BRIEF.md`。PR #1444 是台阶。评审前不大改 Core。 |
-| `EventKeyedCollectionWriter` + `Input/collection_event_writers.json` | **蠢决定 · 待退役** | 见下方 §3.3.2。不要再扩这条引擎旁路；写集合下游应回到图。 |
+| 框选名单靠引擎特供通道落账（#1398） | **蠢决定 · 待拆** | 见下方 §3.3.2。别再扩；名单该由图听事件来写。 |
 
 
 分层合同条款同步修订在 [图怎么分层](graph-layering-flow-and-behavior.md)。
 
-### 3.3.2 蠢决定：集合落账走了引擎旁路（#1398 Case E）
+### 3.3.2 蠢决定：名单不该靠引擎特供通道写（#1398 框选）
+
+**现在怎么走。**  
+框选图算出「这些人」，派一个自定义事件。真正改「可框选 / 预览黄环 / 已选中」名单的，不是下一张图，而是引擎里一段写死的代码（`EventKeyedCollectionWriter`）。开机还要读 `Input/collection_event_writers.json`：事件名登进去才会改名单；没登就当没听见。
 
 **错在哪。**  
-框选图用 `DispatchCollectionEvent` 喊一声「这些人、这个集合、替换/加/减」。接住并真正改集合账本的，却不是下一张图，而是引擎里的 C#：`EventKeyedCollectionWriter`。开机还要读 `Input/collection_event_writers.json`，把事件 id 登进白名单，写集合器才会订阅；没登就静默不写。
+关框选态已经有一张图在听落定事件。名单落账本该同一套路：图听事件，图写名单。硬在引擎里开特供通道，等于把 RTS 框选写名单焊进核心。射击玩法根本用不上；换玩法这份配置和这段代码就是死肉。
 
-**为什么蠢。**  
-下游本该是 TriggerGraph（或图里的写集合节点）——和 `selection_handle` 听落定事件关 boxing 同一套路。硬塞 Core 旁路，等于把「RTS 框选写名单」焊进引擎。第三人称射击、第一人称射击根本不需要这套东西；玩法一变，这条配置和这个类就是死肉。一切皆 Mod、数据驱动：玩法写集合不该靠引擎特供 JSON + C# handler。
+**Case E 现网（别当正确合同）。**  
+三件事都走了特供：刷可框选、刷拖框预览、落定已选中。事件名册只管「能发」；上面那份 writers 配置才管「谁改名单」。Case E 结构说明里没写后者——别当成作者必须填的字段。
 
-**现网事实（别当合同）。**  
-Case E 三件事都走了这条旁路：`roster_refreshed` → `case_e.selectable`，`box_hover_refreshed` → `case_e.box_hover`，`selection_committed` → `selected`。`Events/custom_events.json` 只保证事件能发；`collection_event_writers.json` 才决定写集合器接不接。正式 gitbook / Case E 结构页没把后者写成作者合同——它是实现债，不是产品字段。
-
-**正确方向。**  
-跟 [可调用函数远景](graph-callable-function-vision.md) 对齐：图算名单 → 图（或声明过的图副作用）落账；禁止再扩 `EventKeyedCollectionWriter` / 再发明第二份「写集合白名单」。退役时要失败关闭，不许静默空跑。另开基建票，别和 Case E 合同纠偏捆死。
+**以后怎么走。**  
+图算名单，下一张图（或图里声明过的写名单步骤）落账。方向见 [可调用函数远景](graph-callable-function-vision.md)。别再扩这段引擎代码，别再造第二份写名单白名单。要拆另开基建票；拆的时候失败要报错，禁止静默空跑。别和 Case E 合同纠偏捆在同一单。
 
 又开了一条线：纯数据自定义枚举目录（#1125）。已落地：`Enums/enums.json` 走 ConfigPipeline（ArrayById + `ArrayAppendFields:["members"]`，mod 侧 config_catalog.json 声明）装载成 `EnumCatalog`；成员值=首次声明的顺序索引，后 mod 只能追加成员、同名重声明 fail closed 点名，未知字段/缺 id/非法成员名/缺 members 全 fail closed。`SwitchInt` 节点可绑 `enumType`，case 边写成 `case:成员名`，编译期查目录解析成 int 再走原 SwitchInt 路径（消融测试锁死：与手写 `case:1` 指令序列逐条一致），指令 source map 保留 `case:Combat` 原始拼写；enumType 未注册、成员名不在枚举内、绑定时写裸 int 全 fail closed。新作者糖 `SelectByEnum`（selector + case:成员名 候选 + 可选 default）展开 ConstInt+CompareEqInt+JumpIfFalse+MoveInt 链，零新 opcode/执行器。事件参数可注解 `enumType`（int 参数专属，EventParamType 不加 Enum 成员，防回归断言在 `EnumCatalogTests`）。GameEngine 装载序：枚举目录先于事件目录；编译通道 `Compile(doc, eventSchemas, enums)` 可空参数；Bridge validate 同源聚合，`/api/graph/enums/{modId}` 供编辑器下拉。showcase 一期不做：enum-driven-fsm 归 FSM-1 载体（artifacts/showcases/enum-driven-fsm-showcase-design.md 明说依赖 #1113+本票）。→ https://github.com/MightyBubble/Ludots/issues/1125
 

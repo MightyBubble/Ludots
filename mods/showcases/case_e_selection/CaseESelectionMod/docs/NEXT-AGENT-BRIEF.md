@@ -48,4 +48,4 @@ Case E 框选预览（PR **#1444**）已经做到：`DispatchCollectionEvent` �
 
 ## 已知蠢决定（别当正确合同扩）
 
-现网写集合下游不是图，是引擎 C# `EventKeyedCollectionWriter`，还要 `Input/collection_event_writers.json` 白名单才接得住事件。第三人称 / 第一人称射击不需要这套东西。进度与退役方向只认 [图能力状态 §3.3.2](../../../../../gitbook/architecture/graph-capability-status.md)；本单方案必须写清怎么回到「下游也是图」，禁止再扩这条旁路。
+名单现在不是下一张图写的，是引擎特供通道写的，还要额外登一份事件白名单。射击玩法用不上。怎么拆、别再扩，只看 [图能力状态 §3.3.2](../../../../../gitbook/architecture/graph-capability-status.md)。本单方案里要写清：下游改回图听事件写名单。
