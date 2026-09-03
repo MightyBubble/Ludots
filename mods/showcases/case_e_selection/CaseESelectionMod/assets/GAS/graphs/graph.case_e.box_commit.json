@@ -7,7 +7,7 @@
         "label": "on_box_select_release",
         "start": "read_modifiers",
         "refire": "restart",
-        "action": "CaseE.BoxSelect"
+        "action": "CaseE.BoxSelectEnd"
       }
     ],
     "nodes": [

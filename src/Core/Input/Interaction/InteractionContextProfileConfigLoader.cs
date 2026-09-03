@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 
 namespace Ludots.Core.Input.Interaction
@@ -41,10 +42,42 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
+            RejectRetiredContinuousQueryField(mergedObject, relativePath);
+
             var config = mergedObject.Deserialize<InteractionContextProfilesConfig>(JsonOptions)
                 ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
             Validate(config, relativePath);
             return config;
+        }
+
+        /// <summary>
+        /// Case E retired <c>continuousQuery</c>; profiles must use <c>whileActive</c>.
+        /// Unknown properties are otherwise ignored by the deserializer — fail closed instead.
+        /// </summary>
+        private static void RejectRetiredContinuousQueryField(JsonObject root, string relativePath)
+        {
+            if (!root.TryGetPropertyValue("profiles", out JsonNode? profilesNode) ||
+                profilesNode is not JsonArray profiles)
+            {
+                return;
+            }
+
+            for (int index = 0; index < profiles.Count; index++)
+            {
+                if (profiles[index] is not JsonObject profile)
+                {
+                    continue;
+                }
+
+                foreach (KeyValuePair<string, JsonNode?> property in profile)
+                {
+                    if (string.Equals(property.Key, "continuousQuery", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; use whileActive (Case E §05: graph while context is active).");
+                    }
+                }
+            }
         }
 
         /// <summary>Structural fail-fast validation; id resolution happens at profile registry install time.</summary>
@@ -79,7 +112,7 @@ namespace Ludots.Core.Input.Interaction
                 RequireTrimmedWhenPresent(profile.CommandIntentId, $"{path}.commandIntentId");
                 ValidateBindings(profile.Bindings, path);
                 ValidateTriggers(profile.Triggers, path);
-                ValidateContinuousQuery(profile.ContinuousQuery, path);
+                ValidateWhileActive(profile.WhileActive, path);
             }
         }
 
@@ -124,14 +157,14 @@ namespace Ludots.Core.Input.Interaction
             }
         }
 
-        private static void ValidateContinuousQuery(InteractionContextContinuousQuery? continuousQuery, string path)
+        private static void ValidateWhileActive(InteractionContextWhileActive? whileActive, string path)
         {
-            if (continuousQuery == null)
+            if (whileActive == null)
             {
                 return;
             }
 
-            RequireTrimmedNonEmpty(continuousQuery.Graph, $"{path}.continuousQuery.graph");
+            RequireTrimmedNonEmpty(whileActive.Graph, $"{path}.whileActive.graph");
         }
 
         private static void RequireTrimmedWhenPresent(string value, string path)

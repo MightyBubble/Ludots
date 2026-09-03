@@ -6,8 +6,7 @@
       "activeEntityViewKey": "case_e.battle.view",
       "bindings": [
         "CaseE.BoxSelectBegin",
-        "CaseE.BoxSelect",
-        "CaseE.TapSelect",
+        "CaseE.BoxSelectEnd",
         "QueueModifier",
         "PrecisionModifier",
         "ModifierSubtract",
@@ -24,19 +23,15 @@
       "activeCollectionKey": "case_e.boxing",
       "activeEntityViewKey": "case_e.boxing.view",
       "bindings": [
-        "CaseE.BoxSelect",
-        "CaseE.TapSelect",
+        "CaseE.BoxSelectEnd",
         "CaseE.Pointer"
       ],
       "triggers": [
         {
           "trigger": "graph.case_e.box_commit"
-        },
-        {
-          "trigger": "graph.case_e.tap_commit"
         }
       ],
-      "continuousQuery": {
+      "whileActive": {
         "graph": "graph.case_e.box_hit"
       }
     }

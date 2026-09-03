@@ -63,20 +63,17 @@ namespace Ludots.Core.Input.Interaction
         public List<InteractionContextTriggerMount>? Triggers { get; set; }
 
         /// <summary>
-    /// Optional continuous graph while this context is active (#1398 Case E §05): every
-    /// simulation tick the continuous system runs the named Query graph for the context
-    /// subject; the graph itself must DispatchCollectionEvent to write its preview collection.
-    /// Absent = no per-tick graph. Scheduler invokes only — it does not GraphReturnWriter-steal.
+        /// Case E §05: graph id to run every tick while this context is active. The graph must
+        /// DispatchCollectionEvent to write its preview collection. Absent = no per-tick graph.
         /// </summary>
-        public InteractionContextContinuousQuery? ContinuousQuery { get; set; }
+        public InteractionContextWhileActive? WhileActive { get; set; }
     }
 
     /// <summary>
-    /// Continuous Query mount on an <see cref="InteractionContextProfileDefinition"/>:
-    /// <c>Graph</c> names a registered <c>GraphKind.Query</c> program whose EntityCollection
-    /// outputs are the preview membership surface (e.g. drag-time box hits).
+    /// While-active graph mount on an <see cref="InteractionContextProfileDefinition"/>:
+    /// <c>Graph</c> names the hit function run each tick (e.g. drag-time box hits).
     /// </summary>
-    public sealed class InteractionContextContinuousQuery
+    public sealed class InteractionContextWhileActive
     {
         public string Graph { get; set; } = string.Empty;
     }

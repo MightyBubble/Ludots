@@ -1,53 +1,32 @@
-## GAS Composition Gate — Self Review
+# GAS Composition Gate — Case E whileActive（废 continuousQuery）
 
-- **Task / Issue**: #1398 Case E — 图内自写 hover + 去掉 Query 特权 + commit/tap 复用命中 + 热路径去分配
-- **Date**: 2026-09-02
-- **Agent / Author**: cursor cloud agent
+## 任务摘要
 
-### 1. Core judgment
+Case E 按配置报告彻底收口：按下/抬起裸边沿；profile 字段 `continuousQuery` 退役为 `whileActive`；`InteractionContextContinuousQuerySystem` 改名为 `InteractionContextWhileActiveSystem`（Case E §05 存活期调命中图）。不新增 profile enum / preset 开关语义，只改名对齐 Case E。
 
-新变体主要交付物是（A/B/C/D）: A（op 组合：DispatchCollectionEvent + InvokeGraph 调命中函数 + continuous Execute）
+## 判断标准结论
 
-结论: PASS
+**通过** — 变体是既有「context 存活期调图」挂载的字段更名与宿主改名，不是新 DSL。
 
-一句话理由: 预览由命中图自写；continuous 不强制 Query；commit/tap InvokeGraph 调同一张命中图；集合事件用 scratch+count 避免每帧 new Entity[]。
+## 自审清单
 
-### 2. Layer assignment
+| 项 | 结论 |
+|----|------|
+| 新变体是 op 组合还是 profile enum？ | 字段更名；无新 enum |
+| 是否重复造轮子？ | 否；沿用 GraphReturnWriter.Execute + DispatchCollectionEvent |
+| 热路径分配？ | 无新增；原 scratch 字典保留 |
+| 失败关闭？ | 配置仍写 continuousQuery → loader 抛错，指向 whileActive |
 
-| 步骤/能力 | Layer | 实现载体 |
-|-----------|-------|----------|
-| 每 tick 调命中图 | 2 | ContinuousQuerySystem → GraphReturnWriter.Execute（按注册 kind） |
-| 写 hover | 1 | graph.case_e.box_hit · DispatchCollectionEvent |
-| 松手/点选复用命中 | 2 | InvokeGraph → Query box_hit → 拷回 TargetList → 写 selected |
-| 热路径载荷 | 1 | GasGraphRuntimeApi scratch + CollectionEntityCount |
+## 复用 / 新增
 
-### 3. Reuse list
+| 类型 | 项 |
+|------|-----|
+| 复用 | InteractionContextProfileRegistry、GraphReturnWriter、DispatchCollectionEvent |
+| 改名 | continuousQuery→whileActive；ContinuousQuerySystem→WhileActiveSystem |
+| 禁止 | 再引入 continuousQuery 或 Tap/Drag 作为 Case E 合同 |
 
-- Handlers: DispatchCollectionEvent、InvokeGraph、ScreenRegionToEntities、EventKeyedCollectionWriter
-- Systems: InteractionContextContinuousQuerySystem
-- Graphs: graph.case_e.box_hit 唯一命中体
+## Case E 输入合同（本刀一并钉死）
 
-### 4. New Layer 0 ops
-
-N/A（扩展既有 InvokeGraph 可调 Query；未新造 InvokeQuery）
-
-### 5. Transaction boundary
-
-无额外事务；失败关闭
-
-### 6. Config SSOT
-
-box_hit / box_commit / tap_commit / continuousQuery.graph / custom_events / collection_event_writers / case-e-config-structure.html
-
-是否新增 JSON schema: NO（payload 增 CollectionEntityCount 进既有 transport family）
-
-### 7. Red flag scan
-
-- [x] 未新增 profile inherit enum
-- [x] 未新建平行物化管线
-- [x] 未 fallback
-- [x] 未发明 InvokeQuery 特权名
-
-### 8. Next variant test
-
-改 box_hit 连线；commit/tap 应自动跟上
+- BoxSelectBegin / BoxSelectEnd（firesOn=release）
+- 无 TapSelect / Drag / tap_commit
+- boxing.whileActive.graph = graph.case_e.box_hit

@@ -151,7 +151,7 @@
     <div class="form">
       <div class="ft">配置结构：InteractionContextDefinition</div>
       <div class="field"><span class="fname">id<span class="ftype">string</span></span><span class="fdesc">context 定义 id（如 interaction.context.battle）</span></div>
-      <div class="field"><span class="fname">bindings<span class="ftype">array</span></span><span class="fdesc">这个 context 下哪些语义动作成立（BoxSelect、ShiftMod、CtrlMod）</span></div>
+      <div class="field"><span class="fname">bindings<span class="ftype">array</span></span><span class="fdesc">这个 context 下哪些语义动作成立（BoxSelectBegin / BoxSelectEnd、ShiftMod、CtrlMod）</span></div>
       <div class="field"><span class="fname">triggers<span class="ftype">array · graph id</span></span><span class="fdesc"><b>启用哪些 trigger graph</b>（graph.box_select、graph.paint_zone）——框选能活的关键</span></div>
     </div>
   </div>
@@ -203,7 +203,7 @@
           <rect class="gnode" x="15" y="90" width="170" height="80" rx="6"/>
           <text x="25" y="112">事件: 左键按下</text>
           <text class="lbl" x="25" y="126">action=BoxSelectBegin</text>
-          <text class="lbl" x="25" y="140">action=BoxSelect</text>
+          <text class="lbl" x="25" y="140">action=BoxSelectEnd</text>
           <text class="lbl" x="25" y="154">source=玩家 rep</text>
           <!-- exec 输出 -->
           <circle class="gexec" cx="185" cy="105" r="5"/><text class="gexec-lbl" x="191" y="98">exec</text>

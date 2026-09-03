@@ -415,7 +415,7 @@
       "path": "mods/showcases/case_e_selection/CaseESelectionMod",
       "projectPath": "CaseESelectionMod.csproj",
       "title": "Case E 框选（纯数据链路）",
-      "summary": "#1398 Case E 框选全链纯配置 showcase：模板 initialInteractionContext 出生挂战斗 context、Profile triggers 门控、左键 Tap/Drag 双 action、按下激活衍生 boxing context 并刷新候选集 case_e.selectable；拖拽中 continuousQuery 每帧命中写预览集 case_e.box_hover（与 selected 分离）驱动预览环，ScreenRect 屏幕框跟指针；抬起对候选集做屏幕矩形命中经修饰键语义写 selected，停用 boxing 清空预览。",
+      "summary": "#1398 Case E 框选全链纯配置 showcase：模板 initialInteractionContext 出生挂战斗 context、Profile triggers 门控、左键按下 BoxSelectBegin / 抬起 BoxSelectEnd（firesOn=release，无 Tap/Drag）、按下激活 boxing context 并刷新 case_e.selectable；boxing.whileActive 每帧命中写 case_e.box_hover，ScreenRect 跟指针；抬起写 selected 并停用 boxing；零位移按下抬起即点选。",
       "tier": "T1",
       "category": "capability",
       "binding": "case_e_selection",

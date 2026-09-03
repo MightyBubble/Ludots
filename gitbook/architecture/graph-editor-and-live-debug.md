@@ -82,7 +82,7 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 
 ### 3.5 作者标注：底栏用人话讲这一趟
 
-底栏那几句人话是 **mod 自己的数据**，不在编辑器源码里。写在该 mod 的 `assets/GAS/graph_editor.json`：
+底栏那几句人话是 **mod 自己的数据**，不在编辑器源码里。写在该 mod 的 `mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graph_editor.json`：
 
 - `annotations.groups`：给节点分组，每组一句人话。**每张图只声明一次**，共用同一段链的入口自然复用，不重抄节点表。一个节点只能属于一组。
 - `annotations.entries`：按入口标签写 `title` / `summary`，作为底栏抬头。
