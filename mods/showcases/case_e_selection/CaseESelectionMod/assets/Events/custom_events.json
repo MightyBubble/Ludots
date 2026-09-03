@@ -11,7 +11,7 @@
   },
   {
     "id": "gameplay.case_e.selection_committed",
-    "description": "Case E 框选提交事件：box_commit 图对 case_e.selectable 候选集做屏幕矩形命中后，把最终命中集 + 集合语义（replace/add/subtract，由修饰键语义动作在图内映射），经 EventKeyedCollectionWriter 写入 selected 集合（owner=玩家 rep）。",
+    "description": "Case E 框选提交事件：上游 box_commit 只透传命中名单+集合语义；EventKeyedCollectionWriter 写 selected；下游 selection_handle 图听同一事件收 boxing。换框选形状只换命中函数，不改下游。",
     "scope": "map"
   }
 ]

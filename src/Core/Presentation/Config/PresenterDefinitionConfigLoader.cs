@@ -2205,7 +2205,7 @@ namespace Ludots.Core.Presentation.Config
             {
                 "attribute" or "attributeRatio" or "attributeBase" => throw new InvalidOperationException(
                     $"{context} source '{source}' duplicates AttributeBinding behavior. Use an AttributeBinding behavior with attributeBinding.targetParamKey instead."),
-                "graph" => ValueRef.FromGraph(ParseRequiredInt(node["sourceId"], "Presenter binding graph.sourceId")),
+                "graph" => ValueRef.FromGraph(ResolveGraphProgramId(node["sourceId"], context)),
                 "entityColor" => ValueRef.FromEntityColor(ParseRequiredInt(node["sourceId"], "Presenter binding entityColor.sourceId")),
                 "entityColorVector" => ValueRef.FromEntityColorVector(),
                 "facingRadians" => ValueRef.FromFacingRadians(),
@@ -2229,6 +2229,29 @@ namespace Ludots.Core.Presentation.Config
         private int ResolveTextTokenId(JsonNode node)
         {
             return ResolveTextTokenId(node["textToken"], "Presenter WorldText textToken binding textToken");
+        }
+
+        private static int ResolveGraphProgramId(JsonNode? node, string context)
+        {
+            if (node is JsonValue value && value.TryGetValue<int>(out int numericId))
+            {
+                if (numericId <= 0)
+                {
+                    throw new InvalidOperationException($"{context} graph.sourceId must be a positive program id.");
+                }
+
+                return numericId;
+            }
+
+            string graphName = ParseRequiredSemanticString(node, $"{context} graph.sourceId");
+            int graphId = Ludots.Core.NodeLibraries.GASGraph.Host.GraphIdRegistry.GetId(graphName);
+            if (graphId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{context} graph.sourceId references unknown graph '{graphName}'.");
+            }
+
+            return graphId;
         }
 
         private int ResolveTextTokenId(JsonNode? node, string context)

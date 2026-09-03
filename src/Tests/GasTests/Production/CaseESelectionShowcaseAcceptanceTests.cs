@@ -124,7 +124,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             ?? throw new InvalidOperationException("ScreenOverlayBuffer service is missing.");
         Assert.That(
             HasScreenRect(screenOverlay, x: -1200, y: -100, width: 900, height: 200),
-            "矩形框 = press 角 → 当前指针角的屏幕矩形（CaseE.Pointer 属性 → ScreenRect presenter 参数）");
+            "矩形框 = press 角 map var → 当前指针取值节点的屏幕矩形");
         backend.SetMousePosition(new Vector2(0f, 200f));
         Tick(engine, 2);
         Assert.That(

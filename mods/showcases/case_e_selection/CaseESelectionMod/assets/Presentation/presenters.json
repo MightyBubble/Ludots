@@ -239,46 +239,6 @@
     ],
     "behaviors": [
       {
-        "slot": "attribute",
-        "kind": "AttributeBinding",
-        "activeByDefault": true,
-        "attributeBinding": {
-          "attributeId": "CaseE.PressPx",
-          "targetParamKey": "case_e.rect.pressX",
-          "mode": "Attribute"
-        }
-      },
-      {
-        "slot": "attributeCurrent",
-        "kind": "AttributeBinding",
-        "activeByDefault": true,
-        "attributeBinding": {
-          "attributeId": "CaseE.PressPy",
-          "targetParamKey": "case_e.rect.pressY",
-          "mode": "Attribute"
-        }
-      },
-      {
-        "slot": "attributeBase",
-        "kind": "AttributeBinding",
-        "activeByDefault": true,
-        "attributeBinding": {
-          "attributeId": "CaseE.PointerX",
-          "targetParamKey": "case_e.rect.pointerX",
-          "mode": "Attribute"
-        }
-      },
-      {
-        "slot": "attributeRatio",
-        "kind": "AttributeBinding",
-        "activeByDefault": true,
-        "attributeBinding": {
-          "attributeId": "CaseE.PointerY",
-          "targetParamKey": "case_e.rect.pointerY",
-          "mode": "Attribute"
-        }
-      },
-      {
         "slot": "screenRect",
         "kind": "ScreenRect",
         "activeByDefault": true,
@@ -300,6 +260,28 @@
             1.0
           ]
         }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "case_e.rect.pressX",
+        "source": "graph",
+        "sourceId": "graph.case_e.score_press_x"
+      },
+      {
+        "paramKey": "case_e.rect.pressY",
+        "source": "graph",
+        "sourceId": "graph.case_e.score_press_y"
+      },
+      {
+        "paramKey": "case_e.rect.pointerX",
+        "source": "graph",
+        "sourceId": "graph.case_e.score_pointer_x"
+      },
+      {
+        "paramKey": "case_e.rect.pointerY",
+        "source": "graph",
+        "sourceId": "graph.case_e.score_pointer_y"
       }
     ]
   }

@@ -378,6 +378,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// symbol; both packed into Imm at patch time. Downstream: EventKeyedCollectionWriter.
         /// </summary>
         DispatchCollectionEvent = 476,
+        /// <summary>
+        /// Live pointer screen X (window px) for the authoritative PointerPos action.
+        /// Pure float read; fail closed when the input snapshot is unavailable.
+        /// </summary>
+        LoadPointerScreenX = 477,
+        /// <summary>
+        /// Live pointer screen Y (window px) for the authoritative PointerPos action.
+        /// Pure float read; fail closed when the input snapshot is unavailable.
+        /// </summary>
+        LoadPointerScreenY = 478,
 
     }
 

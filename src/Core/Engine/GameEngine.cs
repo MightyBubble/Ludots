@@ -1114,6 +1114,7 @@ namespace Ludots.Core.Engine
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             gasGraphApi.BindTriggerManager(TriggerManager);
             gasGraphApi.BindAimSource(new Ludots.Core.Input.AimSource.GraphAimSourceRuntime(World, GlobalContext));
+            gasGraphApi.BindEngineResolver(() => this);
             var graphCallbackService = new Ludots.Core.GraphRuntime.GraphCallbackService();
             SetService(CoreServiceKeys.GraphCallbackService, graphCallbackService);
             gasGraphApi.BindGraphCallbackService(graphCallbackService);

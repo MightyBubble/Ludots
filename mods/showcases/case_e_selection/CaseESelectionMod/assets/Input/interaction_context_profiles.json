@@ -9,8 +9,7 @@
         "CaseE.BoxSelectEnd",
         "QueueModifier",
         "PrecisionModifier",
-        "ModifierSubtract",
-        "CaseE.Pointer"
+        "ModifierSubtract"
       ],
       "triggers": [
         {
@@ -26,12 +25,14 @@
       "activeCollectionKey": "case_e.boxing",
       "activeEntityViewKey": "case_e.boxing.view",
       "bindings": [
-        "CaseE.BoxSelectEnd",
-        "CaseE.Pointer"
+        "CaseE.BoxSelectEnd"
       ],
       "triggers": [
         {
           "trigger": "graph.case_e.box_commit"
+        },
+        {
+          "trigger": "graph.case_e.selection_handle"
         }
       ],
       "whileActive": {

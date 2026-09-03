@@ -1,0 +1,12 @@
+[
+  {
+    "id": "graph.case_e.score_pointer_y",
+    "kind": "Score",
+    "entry": "pointer_y",
+    "nodes": [
+      { "id": "pointer_y", "op": "LoadPointerScreenY" }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  }
+]

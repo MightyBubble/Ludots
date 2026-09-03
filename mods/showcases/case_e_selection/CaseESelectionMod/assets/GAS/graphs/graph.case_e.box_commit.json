@@ -17,11 +17,6 @@
         "payloadKey": "MapTrigger.Modifiers"
       },
       {
-        "id": "rep",
-        "op": "LoadEntryPayloadEntity",
-        "payloadKey": "MapTrigger.Rep"
-      },
-      {
         "id": "run_hit",
         "op": "InvokeGraph",
         "functionName": "graph.case_e.box_hit"
@@ -64,11 +59,6 @@
         "collectionKey": "selected"
       },
       {
-        "id": "deactivate_boxing",
-        "op": "DeactivateContext",
-        "context": "interaction.context.case_e.boxing"
-      },
-      {
         "id": "ok",
         "op": "ConstInt",
         "intValue": 1
@@ -79,8 +69,7 @@
       }
     ],
     "controlEdges": [
-      { "from": "read_modifiers", "fromPort": "next", "to": "rep" },
-      { "from": "rep", "fromPort": "next", "to": "run_hit" },
+      { "from": "read_modifiers", "fromPort": "next", "to": "run_hit" },
       { "from": "run_hit", "fromPort": "next", "to": "modifier_switch" },
       { "from": "modifier_switch", "fromPort": "case:1", "to": "op_add" },
       { "from": "modifier_switch", "fromPort": "case:3", "to": "op_add" },
@@ -92,15 +81,13 @@
       { "from": "op_replace", "fromPort": "next", "to": "commit_replace" },
       { "from": "op_add", "fromPort": "next", "to": "commit_add" },
       { "from": "op_subtract", "fromPort": "next", "to": "commit_subtract" },
-      { "from": "commit_replace", "fromPort": "next", "to": "deactivate_boxing" },
-      { "from": "commit_add", "fromPort": "next", "to": "deactivate_boxing" },
-      { "from": "commit_subtract", "fromPort": "next", "to": "deactivate_boxing" },
-      { "from": "deactivate_boxing", "fromPort": "next", "to": "ok" },
+      { "from": "commit_replace", "fromPort": "next", "to": "ok" },
+      { "from": "commit_add", "fromPort": "next", "to": "ok" },
+      { "from": "commit_subtract", "fromPort": "next", "to": "ok" },
       { "from": "ok", "fromPort": "next", "to": "halt" }
     ],
     "valueEdges": [
       { "from": "read_modifiers", "fromPort": "value", "to": "modifier_switch", "toPort": "selector" },
-      { "from": "rep", "fromPort": "value", "to": "deactivate_boxing", "toPort": "source" },
       { "from": "op_replace", "fromPort": "value", "to": "commit_replace", "toPort": "value" },
       { "from": "op_add", "fromPort": "value", "to": "commit_add", "toPort": "value" },
       { "from": "op_subtract", "fromPort": "value", "to": "commit_subtract", "toPort": "value" },

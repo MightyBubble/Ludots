@@ -27,6 +27,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ConstFloat:
                 case GraphNodeOp.ConstInt:
                 case GraphNodeOp.LoadCaster:
+                case GraphNodeOp.LoadPointerScreenX:
+                case GraphNodeOp.LoadPointerScreenY:
                 case GraphNodeOp.QueryAllMapEntities:
                     break;
                 case GraphNodeOp.LoadSelfAttribute:
@@ -400,6 +402,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Imm = node.IntValue;
                     break;
                 case GraphNodeOp.LoadCaster:
+                case GraphNodeOp.LoadPointerScreenX:
+                case GraphNodeOp.LoadPointerScreenY:
                 case GraphNodeOp.QueryAllMapEntities:
                     break;
                 case GraphNodeOp.QueryRadius:

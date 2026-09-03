@@ -1,0 +1,17 @@
+[
+  {
+    "id": "graph.case_e.score_press_y",
+    "kind": "Score",
+    "entry": "owner",
+    "nodes": [
+      { "id": "owner", "op": "LoadCaster" },
+      { "id": "press_y", "op": "ReadMapVarFloat", "var": "case_e_press_py" }
+    ],
+    "controlEdges": [
+      { "from": "owner", "fromPort": "next", "to": "press_y" }
+    ],
+    "valueEdges": [
+      { "from": "owner", "fromPort": "value", "to": "press_y", "toPort": "source" }
+    ]
+  }
+]

@@ -21,11 +21,7 @@
       },
       "AttributeBuffer": {
         "base": {
-          "Health": 100,
-          "CaseE.PressPx": 0,
-          "CaseE.PressPy": 0,
-          "CaseE.PointerX": 0,
-          "CaseE.PointerY": 0
+          "Health": 100
         }
       },
       "GameplayTagContainer": {},

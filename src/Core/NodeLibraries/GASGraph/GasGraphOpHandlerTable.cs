@@ -342,6 +342,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ScreenRegionToEntities or
                 GraphNodeOp.PointToDirection or
                 GraphNodeOp.StickToDirection or
+                GraphNodeOp.LoadPointerScreenX or
+                GraphNodeOp.LoadPointerScreenY or
                 GraphNodeOp.ActivateContext or
                 GraphNodeOp.DeactivateContext or
                 GraphNodeOp.DispatchCollectionEvent
@@ -823,6 +825,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.ScreenRegionToEntities, HandleScreenRegionToEntities, "ScreenRegionToEntities graph opcode.");
             Register(GraphNodeOp.PointToDirection, HandlePointToDirection, "PointToDirection graph opcode.");
             Register(GraphNodeOp.StickToDirection, HandleStickToDirection, "StickToDirection graph opcode.");
+            Register(GraphNodeOp.LoadPointerScreenX, HandleLoadPointerScreenX, "LoadPointerScreenX graph opcode.");
+            Register(GraphNodeOp.LoadPointerScreenY, HandleLoadPointerScreenY, "LoadPointerScreenY graph opcode.");
             Register(GraphNodeOp.LoadEffectTiming, HandleLoadEffectTiming, "LoadEffectTiming graph opcode.");
             Register(GraphNodeOp.LoadEffectStack, HandleLoadEffectStack, "LoadEffectStack graph opcode.");
             Register(GraphNodeOp.QueryFilterTeam, HandleQueryFilterTeam, "QueryFilterTeam graph opcode.");
@@ -2149,6 +2153,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             s.F[ins.Dst] = MathF.Atan2(y, x) * (180f / MathF.PI);
+        }
+
+        private static void HandleLoadPointerScreenX(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (!s.Api.TryReadLivePointerScreen(out float screenX, out _))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.LivePointerUnavailable: LoadPointerScreenX requires an authoritative pointer snapshot.");
+            }
+
+            s.F[ins.Dst] = screenX;
+        }
+
+        private static void HandleLoadPointerScreenY(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (!s.Api.TryReadLivePointerScreen(out _, out float screenY))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.LivePointerUnavailable: LoadPointerScreenY requires an authoritative pointer snapshot.");
+            }
+
+            s.F[ins.Dst] = screenY;
         }
 
         private static void HandleQueryCollectEffectTemplates(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

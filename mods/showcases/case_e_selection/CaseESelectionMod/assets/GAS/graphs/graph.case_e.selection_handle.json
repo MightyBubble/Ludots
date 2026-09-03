@@ -1,0 +1,37 @@
+[
+  {
+    "id": "graph.case_e.selection_handle",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_selection_committed",
+        "event": "gameplay.case_e.selection_committed",
+        "start": "deactivate_boxing",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "deactivate_boxing",
+        "op": "DeactivateContext",
+        "context": "interaction.context.case_e.boxing"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      { "from": "deactivate_boxing", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

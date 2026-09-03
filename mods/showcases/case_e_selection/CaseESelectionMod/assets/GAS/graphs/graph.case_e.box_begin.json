@@ -37,16 +37,6 @@
         "payloadKey": "MapTrigger.Rep"
       },
       {
-        "id": "store_press_attr_px",
-        "op": "ModifyAttributeSet",
-        "attribute": "CaseE.PressPx"
-      },
-      {
-        "id": "store_press_attr_py",
-        "op": "ModifyAttributeSet",
-        "attribute": "CaseE.PressPy"
-      },
-      {
         "id": "activate_boxing",
         "op": "ActivateContext",
         "context": "interaction.context.case_e.boxing",
@@ -67,9 +57,7 @@
       { "from": "read_press_py", "fromPort": "next", "to": "store_press_px" },
       { "from": "store_press_px", "fromPort": "next", "to": "store_press_py" },
       { "from": "store_press_py", "fromPort": "next", "to": "rep" },
-      { "from": "rep", "fromPort": "next", "to": "store_press_attr_px" },
-      { "from": "store_press_attr_px", "fromPort": "next", "to": "store_press_attr_py" },
-      { "from": "store_press_attr_py", "fromPort": "next", "to": "activate_boxing" },
+      { "from": "rep", "fromPort": "next", "to": "activate_boxing" },
       { "from": "activate_boxing", "fromPort": "next", "to": "ok" },
       { "from": "ok", "fromPort": "next", "to": "halt" }
     ],
@@ -77,10 +65,6 @@
       { "from": "read_press_px", "fromPort": "value", "to": "store_press_px", "toPort": "value" },
       { "from": "read_press_py", "fromPort": "value", "to": "store_press_py", "toPort": "value" },
       { "from": "rep", "fromPort": "value", "to": "activate_boxing", "toPort": "source" },
-      { "from": "rep", "fromPort": "value", "to": "store_press_attr_px", "toPort": "target" },
-      { "from": "rep", "fromPort": "value", "to": "store_press_attr_py", "toPort": "target" },
-      { "from": "read_press_px", "fromPort": "value", "to": "store_press_attr_px", "toPort": "value" },
-      { "from": "read_press_py", "fromPort": "value", "to": "store_press_attr_py", "toPort": "value" },
       { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
     ]
   }

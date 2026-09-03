@@ -139,6 +139,20 @@ namespace Ludots.Core.Input.AimSource
             return kept;
         }
 
+        public bool TryReadLivePointerScreen(out float screenX, out float screenY)
+        {
+            if (!Ludots.Core.Input.Interaction.PointerInteractionSnapshotReader.TryRead(_globals, out var snapshot))
+            {
+                screenX = 0f;
+                screenY = 0f;
+                return false;
+            }
+
+            screenX = snapshot.Pointer.X;
+            screenY = snapshot.Pointer.Y;
+            return float.IsFinite(screenX) && float.IsFinite(screenY);
+        }
+
         private bool TryResolveProjector(string? seatId, float screenX, float screenY, out IScreenProjector projector, out Vector2 bindingLocalPoint)
         {
             if (seatId == null)

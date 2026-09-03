@@ -678,6 +678,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
         }
+
+        bool TryReadLivePointerScreen(out float screenX, out float screenY)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+        }
     }
 
     /// <summary>

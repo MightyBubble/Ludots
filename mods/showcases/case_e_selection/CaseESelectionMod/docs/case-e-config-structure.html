@@ -185,10 +185,10 @@
     <pre class="json">{
   "id": "graph.case_e.box_hit",
   "说明": "现网：可被 continuous 调度与 commit/tap InvokeGraph 共用的命中函数；图内 DispatchCollectionEvent 写 case_e.box_hover，并把 TargetList 留给调用方写 selected。",
-  "入参（现网凑合：节点自读）": {
+  "入参（合同）": {
     "candidates": "QueryFromCollection(case_e.selectable)",
-    "press": "CaseE.PressPx/Py（按下写入）",
-    "live": "CaseE.PointerX/Y（指针绑定）"
+    "press": "ReadMapVarFloat(case_e_press_px/py)",
+    "live": "LoadPointerScreenX/Y"
   },
   "副作用": {
     "DispatchCollectionEvent": { "event": "gameplay.case_e.box_hover_refreshed", "collectionKey": "case_e.box_hover", "op": "replace" }

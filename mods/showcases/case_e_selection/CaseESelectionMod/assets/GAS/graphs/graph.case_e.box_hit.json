@@ -10,23 +10,21 @@
       },
       {
         "id": "press_px",
-        "op": "LoadSelfAttribute",
-        "attribute": "CaseE.PressPx"
+        "op": "ReadMapVarFloat",
+        "var": "case_e_press_px"
       },
       {
         "id": "press_py",
-        "op": "LoadSelfAttribute",
-        "attribute": "CaseE.PressPy"
+        "op": "ReadMapVarFloat",
+        "var": "case_e_press_py"
       },
       {
         "id": "pointer_x",
-        "op": "LoadSelfAttribute",
-        "attribute": "CaseE.PointerX"
+        "op": "LoadPointerScreenX"
       },
       {
         "id": "pointer_y",
-        "op": "LoadSelfAttribute",
-        "attribute": "CaseE.PointerY"
+        "op": "LoadPointerScreenY"
       },
       {
         "id": "roster",
@@ -72,6 +70,8 @@
     ],
     "valueEdges": [
       { "from": "rep", "fromPort": "value", "to": "roster", "toPort": "source" },
+      { "from": "rep", "fromPort": "value", "to": "press_px", "toPort": "source" },
+      { "from": "rep", "fromPort": "value", "to": "press_py", "toPort": "source" },
       { "from": "press_px", "fromPort": "value", "to": "rect_hits", "toPort": "a" },
       { "from": "press_py", "fromPort": "value", "to": "rect_hits", "toPort": "b" },
       { "from": "pointer_x", "fromPort": "value", "to": "rect_hits", "toPort": "c" },
