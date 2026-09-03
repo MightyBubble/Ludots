@@ -3620,7 +3620,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryContextAcceptanceTests.WriteCollectionVignette_CommitsThroughTheEventKeyedWriter"
+        "GraphOpsNodeGalleryContextAcceptanceTests.WriteCollectionVignette_CommitsThroughTheStoreWrite"
       ],
       "codegenStatus": "covered"
     }
