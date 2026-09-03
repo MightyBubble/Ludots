@@ -69,10 +69,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             baseContext.ContextId == battleProfileId &&
             baseContext.Source == InteractionContextInstanceSource.TemplateSpawn,
             "指挥官 rep 出生即携带战斗 context Instance（模板 initialInteractionContext）");
-        Assert.That(
-            engine.MergedConfig.StartupInputContexts,
-            Does.Not.Contain("CaseE.Controls").And.Not.Contain("Default_Gameplay"),
-            "玩法键位与指针不得靠 startupInputContexts 开机硬推");
+        Assert.That(engine.MergedConfig.StartupInputContexts, Is.Empty,
+            "Case E 不得靠 startupInputContexts 开机硬推键位；CaseE.Controls（含 PointerPos）由实体投影");
         int caseEControlsId = profiles.InputContextIdRegistry.GetId("CaseE.Controls");
         Assert.That(baseContext.InputContextId, Is.EqualTo(caseEControlsId),
             "battle 档案 inputContextId=CaseE.Controls 应写入挂载实例");
