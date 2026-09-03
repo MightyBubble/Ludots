@@ -1408,7 +1408,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryFloatAcceptanceTests.LoadPointerScreenX_QuotesPinnedLivePointerAxis"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadPointerScreenY",
@@ -1429,7 +1430,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryFloatAcceptanceTests.LoadPointerScreenY_QuotesPinnedLivePointerAxis"
-      ]
+      ],
+      "codegenStatus": "covered"
     },
     {
       "op": "LoadSelfAttribute",
