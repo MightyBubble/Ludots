@@ -1,15 +1,18 @@
 :root {
   color-scheme: dark;
   --bg: #14181f;
-  --panel: #1d232e;
-  --panel-alt: #232b38;
+  --panel: rgba(29, 35, 46, 0.82);
+  --panel-alt: rgba(35, 43, 56, 0.9);
+  --panel-solid: #232b38;
   --line: #313b4c;
+  --hover-line: #55688a;
   --text: #dfe6f1;
   --muted: #8b98ac;
   --accent: #d8b25a;
   --accent-dark: #6b5827;
   --ok: #7fc98a;
   --error: #e07a6d;
+  --hover-transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
 
 * {
@@ -30,16 +33,26 @@ body {
   font-size: 13px;
 }
 
+/* M3.b map-first:根容器不再铺任何底色,全部 UI 变为悬浮件;透明区域事件直通地图。
+   pointer-events 由各悬浮件显式开启,避免隐形容器拦截 hover。 */
 .app {
-  display: flex;
-  flex-direction: column;
+  position: relative;
   height: 100%;
-  padding: 8px;
-  gap: 8px;
+  pointer-events: none;
+}
+
+.app > .top-bar,
+.app > .left-drawer,
+.app > .detail-card,
+.app > .bottom-strip,
+.app > .force-select-overlay {
+  pointer-events: auto;
 }
 
 .panel {
   background: var(--panel);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 10px;
@@ -74,136 +87,203 @@ body {
   flex: 1;
 }
 
+/* ---- 细悬浮顶栏(M3.b):单行高度,半透明 + blur,不横向铺满 ---- */
 .top-bar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  height: 36px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   background: var(--panel);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--line);
   border-radius: 6px;
-  padding: 8px 14px;
+  padding: 3px 10px;
 }
 
 .top-bar h1 {
   margin: 0;
-  font-size: 16px;
+  font-size: 13px;
   color: var(--accent);
+  white-space: nowrap;
 }
 
 .date-block {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .date-block strong {
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .date-block span {
   color: var(--muted);
+  font-size: 12px;
 }
 
 .end-turn {
-  margin-left: auto;
   background: var(--accent);
-  border: none;
+  border: 1px solid var(--accent);
   color: #221a06;
   font-weight: bold;
-  font-size: 14px;
-  padding: 6px 22px;
+  font-size: 13px;
+  padding: 3px 14px;
   border-radius: 4px;
   cursor: pointer;
+  transition: var(--hover-transition);
 }
 
-.end-turn:hover {
+.end-turn:hover:not(:disabled) {
   background: #e6c46e;
+  border-color: #e6c46e;
+  box-shadow: 0 0 0 1px rgba(230, 196, 110, 0.35);
+}
+
+.end-turn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .top-actions {
   margin-left: auto;
   display: flex;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .top-actions .end-turn {
   margin-left: 0;
 }
 
-.top-actions .secondary {
+.secondary {
   background: transparent;
   border: 1px solid var(--accent);
   color: var(--accent);
-  font-size: 14px;
-  padding: 5px 16px;
+  font-size: 13px;
+  padding: 3px 12px;
   border-radius: 4px;
   cursor: pointer;
+  transition: var(--hover-transition);
 }
 
-.top-actions .secondary:hover {
-  background: rgba(230, 196, 110, 0.15);
+.secondary:hover:not(:disabled) {
+  background: rgba(230, 196, 110, 0.18);
+  border-color: #e6c46e;
+  color: #e6c46e;
 }
 
-.app-body {
+.secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- 左侧可折叠抽屉(M3.b):收起只剩竖把手,默认收窄 ---- */
+.left-drawer {
+  position: absolute;
+  left: 8px;
+  top: 52px;
+  bottom: 46px;
   display: flex;
-  gap: 8px;
-  flex: 1;
-  min-height: 0;
+  align-items: stretch;
+  gap: 0;
 }
 
-.message-stream {
-  width: 280px;
+.drawer-handle {
+  width: 28px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-}
-
-.message-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 6px;
+  padding: 8px 0;
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: var(--hover-transition);
 }
 
-.message-list li {
+.drawer-handle:hover,
+.drawer-handle:focus-visible {
   background: var(--panel-alt);
-  border-radius: 4px;
-  padding: 6px 8px;
+  border-color: var(--hover-line);
+  color: var(--text);
+}
+
+.drawer-glyph {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.drawer-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 4px;
+  font-size: 12px;
+}
+
+.drawer-body {
+  width: 320px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  line-height: 1.45;
+  border-radius: 0 6px 6px 0;
+  min-height: 0;
 }
 
-.message-list small {
-  color: var(--accent);
-}
-
-.main-area {
+.drawer-content {
   flex: 1;
-  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+}
+
+.drawer-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: none;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 0;
 }
 
 .tab-bar {
   display: flex;
-  gap: 6px;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
 .tab {
-  background: var(--panel);
+  flex: 1;
+  background: rgba(35, 43, 56, 0.6);
   border: 1px solid var(--line);
   color: var(--muted);
-  padding: 5px 18px;
+  padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 13px;
+  transition: var(--hover-transition);
+}
+
+.tab:hover,
+.tab:focus-visible {
+  background: var(--panel-alt);
+  border-color: var(--hover-line);
+  color: var(--text);
 }
 
 .tab.active {
@@ -213,23 +293,14 @@ body {
   font-weight: bold;
 }
 
-.city-layout {
-  display: flex;
-  gap: 8px;
-  flex: 1;
-  min-height: 0;
-}
-
 .city-list-panel {
-  width: 300px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
+  min-height: 0;
 }
 
 .city-rows {
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -240,17 +311,28 @@ body {
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  background: var(--panel-alt);
+  background: rgba(35, 43, 56, 0.75);
   border: 1px solid transparent;
+  border-left: 3px solid transparent;
   color: var(--text);
   padding: 6px 8px;
   border-radius: 4px;
   cursor: pointer;
   text-align: left;
+  transition: var(--hover-transition);
+}
+
+.city-row:hover,
+.city-row:focus-visible {
+  background: var(--panel-alt);
+  border-color: var(--hover-line);
+  border-left-color: var(--accent);
 }
 
 .city-row.selected {
   border-color: var(--accent);
+  border-left-color: var(--accent);
+  background: rgba(216, 178, 90, 0.12);
 }
 
 .city-row span {
@@ -263,13 +345,59 @@ body {
   font-size: 11px;
 }
 
-.detail {
+/* ---- 右侧浮动详情卡(M3.b):点击城市/部队弹出,可关闭 ---- */
+.detail-card {
+  position: absolute;
+  top: 52px;
+  right: 8px;
+  bottom: 46px;
+  width: min(560px, 62vw);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.detail-card > .panel-title {
+  flex-shrink: 0;
+}
+
+.detail-scroll {
   flex: 1;
-  min-width: 0;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-right: 2px;
+}
+
+.detail-card.detail {
+  gap: 10px;
+}
+
+.detail-close {
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--hover-transition);
+}
+
+.detail-close:hover,
+.detail-close:focus-visible {
+  background: rgba(224, 122, 109, 0.18);
+  border-color: var(--error);
+  color: var(--error);
 }
 
 .stats-grid {
@@ -302,22 +430,27 @@ body {
   flex-wrap: wrap;
 }
 
-.command-bar button {
+.command-bar button,
+.expedition-form button {
   background: var(--accent-dark);
   border: 1px solid var(--accent);
   color: var(--text);
-  padding: 6px 16px;
+  padding: 5px 14px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 13px;
+  transition: var(--hover-transition);
 }
 
-.command-bar button:hover:not(:disabled) {
+.command-bar button:hover:not(:disabled),
+.expedition-form button:hover:not(:disabled) {
   background: var(--accent);
+  border-color: #e6c46e;
   color: #221a06;
 }
 
-.command-bar button:disabled {
+.command-bar button:disabled,
+.expedition-form button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -357,6 +490,18 @@ body {
   background: rgba(216, 178, 90, 0.06);
 }
 
+.person-table input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  transition: var(--hover-transition);
+}
+
+.person-table input[type="checkbox"]:hover {
+  box-shadow: 0 0 0 3px rgba(216, 178, 90, 0.25);
+}
+
 .wild-list {
   display: flex;
   gap: 6px;
@@ -367,17 +512,26 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: var(--panel-alt);
+  background: rgba(35, 43, 56, 0.75);
   border: 1px solid var(--line);
   color: var(--text);
   padding: 5px 10px;
   border-radius: 4px;
   cursor: pointer;
   text-align: left;
+  transition: var(--hover-transition);
+}
+
+.wild-row:hover,
+.wild-row:focus-visible {
+  background: var(--panel-alt);
+  border-color: var(--hover-line);
+  box-shadow: 0 0 0 1px rgba(85, 104, 138, 0.4);
 }
 
 .wild-row.selected {
   border-color: var(--accent);
+  background: rgba(216, 178, 90, 0.12);
 }
 
 .wild-row small {
@@ -385,7 +539,6 @@ body {
 }
 
 .force-overview {
-  flex: 1;
   overflow-y: auto;
 }
 
@@ -394,34 +547,146 @@ body {
   text-align: left;
 }
 
-.status-bar {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--muted);
+.error-line {
+  color: var(--error);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- 底部可折叠窄条(M3.b):收起一行(指令回执 + 最新消息 + 计数),展开消息流 ---- */
+.bottom-strip {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
   background: var(--panel);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--line);
   border-radius: 6px;
-  padding: 5px 14px;
+  overflow: hidden;
 }
 
-.status-bar .ok {
-  color: var(--ok);
+.strip-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 3px 8px;
 }
 
-.status-bar .error {
-  color: var(--error);
+.strip-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--hover-transition);
 }
 
-.status-bar .pending {
+.strip-toggle:hover,
+.strip-toggle:focus-visible {
+  background: var(--panel-alt);
+  border-color: var(--hover-line);
+  color: var(--text);
+}
+
+.strip-order {
+  flex-shrink: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.strip-order.ok { color: var(--ok); }
+.strip-order.error { color: var(--error); }
+.strip-order.pending { color: var(--accent); }
+
+.strip-latest {
+  flex-shrink: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-size: 12px;
+  border-left: 1px solid var(--line);
+  padding-left: 12px;
+}
+
+.strip-latest small {
+  color: var(--accent);
+  margin-right: 6px;
+}
+
+.strip-meta {
+  flex-shrink: 0;
+  margin-left: auto;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.strip-body {
+  height: 200px;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+  padding: 6px 8px;
+}
+
+.message-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.message-list li {
+  background: var(--panel-alt);
+  border-radius: 4px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.45;
+}
+
+.message-list small {
   color: var(--accent);
 }
 
-.error-line {
-  color: var(--error);
+/* ---- 下拉与数字输入(hover 语义补全,M3.b) ---- */
+.panel-title select,
+.expedition-form select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: inherit;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: var(--hover-transition);
 }
 
-/* M2.b 出征编成表单与部队移动表单 */
+.panel-title select:hover,
+.expedition-form select:hover {
+  border-color: var(--hover-line);
+  background: rgba(0, 0, 0, 0.45);
+}
+
 .expedition-form {
   display: flex;
   flex-wrap: wrap;
@@ -441,7 +706,6 @@ body {
   color: var(--muted, #9aa4b2);
 }
 
-.expedition-form select,
 .expedition-form input {
   min-width: 96px;
   padding: 4px 8px;
@@ -449,10 +713,29 @@ body {
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.3);
   color: inherit;
+  transition: var(--hover-transition);
 }
 
-.expedition-form button {
-  padding: 6px 16px;
+.expedition-form input:hover {
+  border-color: var(--hover-line);
+}
+
+/* ---- 键盘焦点可见性:交互件统一 2px 描边,不只靠颜色(M3.b) ---- */
+.tab:focus-visible,
+.city-row:focus-visible,
+.wild-row:focus-visible,
+.drawer-handle:focus-visible,
+.strip-toggle:focus-visible,
+.detail-close:focus-visible,
+.end-turn:focus-visible,
+.secondary:focus-visible,
+.command-bar button:focus-visible,
+.expedition-form button:focus-visible,
+.panel-title select:focus-visible,
+.expedition-form select:focus-visible,
+.expedition-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* ---- 战报面板(M2.d)与部队任务态 ---- */
@@ -602,7 +885,7 @@ body {
 .event-row .damage { color: #dd857d; }
 .event-row .after { color: var(--muted, #9aa4b2); }
 
-/* M3.a 开局势力选择覆盖层与玩家态徽标 */
+/* ---- M3.a 开局势力选择覆盖层;M3.b 自带开局标题防误读 ---- */
 .force-select-overlay {
   position: absolute;
   inset: 0;
@@ -611,6 +894,8 @@ body {
   align-items: center;
   justify-content: center;
   background: rgba(12, 16, 24, 0.82);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .force-select-panel {
@@ -618,6 +903,18 @@ body {
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+}
+
+.force-select-heading {
+  margin: 0 0 6px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--accent);
+  background: rgba(216, 178, 90, 0.12);
+  color: #f2d98c;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
 }
 
 .force-select-list {
