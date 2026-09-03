@@ -2,8 +2,6 @@
   "profiles": [
     {
       "id": "interaction.context.case_e.battle",
-      "activeCollectionKey": "case_e.battle",
-      "activeEntityViewKey": "case_e.battle.view",
       "inputContextId": "CaseE.Controls",
       "bindings": [
         "CaseE.BoxSelectBegin",
@@ -23,8 +21,6 @@
     },
     {
       "id": "interaction.context.case_e.boxing",
-      "activeCollectionKey": "case_e.boxing",
-      "activeEntityViewKey": "case_e.boxing.view",
       "bindings": [
         "CaseE.BoxSelectEnd"
       ],

@@ -5,6 +5,8 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Client;
@@ -21,7 +23,7 @@ namespace Ludots.Tests.GAS.Production;
 /// <summary>
 /// Case E (#1398 D6/D8/§05) 框选全链 headless 验收（忠实形态），对照 case-e-config-report.html
 /// 的七步：01 进图出生 / 02 模板 initialInteractionContext 挂 Instance / 03 Profile triggers 门控 /
-/// 04 语义动作直绑触发衍生 context（框起角=press 屏幕像素；候选集由 battle context 挂载的 roster_sync 维护）/
+/// 04 语义动作直绑触发衍生 context（框起角落操作者 rep 黑板；候选集由 battle context 挂载的 roster_sync 维护）/
 /// 05 boxing context 持续过程：ScreenRect 框 + 存活期命中写 case_e.box_hover 预览集 →
 /// presenter 观察成员变化高亮 / 06 抬起（BoxSelectEnd）对「可框选单位」候选集做屏幕矩形命中
 /// + 修饰键语义透传事件 key 写 selected 集合（与候选、预览三套集合分离）。
@@ -118,9 +120,15 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             boxing[0].ContextId == boxingProfileId &&
             boxing[0].ParentContextId == battleProfileId,
             "按下即激活衍生 boxing context（父=战斗）");
-        Assert.That(engine.CurrentMapSession!.Variables!.ReadFloat("case_e_press_px"), Is.EqualTo(-1200f),
-            "框起角=press 指针窗口像素（D1 事实层）写入地图变量，非派生地面点");
-        Assert.That(engine.CurrentMapSession.Variables.ReadFloat("case_e_press_py"), Is.EqualTo(-100f));
+        Assert.That(
+            engine.World.TryGet<BlackboardFloatBuffer>(commander, out BlackboardFloatBuffer pressBoard) &&
+            pressBoard.TryGet(ConfigKeyRegistry.GetId("case_e.press.px"), out float pressPx) &&
+            pressPx == -1200f,
+            "框起角 X=press 指针窗口像素写入操作者 rep 黑板，禁止 map var");
+        Assert.That(
+            pressBoard.TryGet(ConfigKeyRegistry.GetId("case_e.press.py"), out float pressPy) &&
+            pressPy == -100f,
+            "框起角 Y 同挂操作者 rep 黑板");
 
         // ── 05①b：presenter 观察者——ContextActivated 出现框指示 ──
         Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(1),
@@ -135,7 +143,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             ?? throw new InvalidOperationException("ScreenOverlayBuffer service is missing.");
         Assert.That(
             HasScreenRect(screenOverlay, x: -1200, y: -100, width: 900, height: 200),
-            "矩形框 = press 角 map var → 当前指针取值节点的屏幕矩形");
+            "矩形框 = rep 黑板起角 + 当前活指针的屏幕矩形");
         backend.SetMousePosition(new Vector2(0f, 200f));
         Tick(engine, 2);
         Assert.That(

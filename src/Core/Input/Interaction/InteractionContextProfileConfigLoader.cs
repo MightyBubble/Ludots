@@ -105,8 +105,11 @@ namespace Ludots.Core.Input.Interaction
                     throw new InvalidOperationException($"{path}.id duplicates interaction context profile '{profile.Id}'.");
                 }
 
-                RequireTrimmedNonEmpty(profile.ActiveCollectionKey, $"{path}.activeCollectionKey");
-                RequireTrimmedNonEmpty(profile.ActiveEntityViewKey, $"{path}.activeEntityViewKey");
+                // Collection/view keys are optional: cast/command routing contexts declare
+                // activeCollectionKey; entity-mounted play contexts (Case E battle/boxing) omit both.
+                // activeEntityViewKey has no runtime consumer (input-03 stack retirement).
+                RequireTrimmedWhenPresent(profile.ActiveCollectionKey, $"{path}.activeCollectionKey");
+                RequireTrimmedWhenPresent(profile.ActiveEntityViewKey, $"{path}.activeEntityViewKey");
                 RequireTrimmedWhenPresent(profile.FilterProfileId, $"{path}.filterProfileId");
                 RequireTrimmedWhenPresent(profile.InputContextId, $"{path}.inputContextId");
                 RequireTrimmedWhenPresent(profile.CommandIntentId, $"{path}.commandIntentId");

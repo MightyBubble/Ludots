@@ -265,23 +265,21 @@
     "bindings": [
       {
         "paramKey": "case_e.rect.pressX",
-        "source": "graph",
-        "sourceId": "graph.case_e.score_press_x"
+        "source": "ownerBlackboardFloat",
+        "sourceId": "case_e.press.px"
       },
       {
         "paramKey": "case_e.rect.pressY",
-        "source": "graph",
-        "sourceId": "graph.case_e.score_press_y"
+        "source": "ownerBlackboardFloat",
+        "sourceId": "case_e.press.py"
       },
       {
         "paramKey": "case_e.rect.pointerX",
-        "source": "graph",
-        "sourceId": "graph.case_e.score_pointer_x"
+        "source": "pointerScreenX"
       },
       {
         "paramKey": "case_e.rect.pointerY",
-        "source": "graph",
-        "sourceId": "graph.case_e.score_pointer_y"
+        "source": "pointerScreenY"
       }
     ]
   }

@@ -1229,11 +1229,46 @@ namespace Ludots.Core.Presentation.Systems
                     case ValueSourceKind.Constant:
                         SetParam(entity, binding.ParamKey, ParamLane.Float, value.ConstantValue, 0, Vector4.Zero);
                         break;
+                    case ValueSourceKind.OwnerBlackboardFloat:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveOwnerBlackboardFloat(owner, value.SourceId, definition.Key, binding.ParamKey), 0, Vector4.Zero);
+                        break;
+                    case ValueSourceKind.PointerScreenX:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolvePointerScreenAxis(axisX: true, definition.Key, binding.ParamKey), 0, Vector4.Zero);
+                        break;
+                    case ValueSourceKind.PointerScreenY:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolvePointerScreenAxis(axisX: false, definition.Key, binding.ParamKey), 0, Vector4.Zero);
+                        break;
                     case ValueSourceKind.Graph:
                         EvaluateGraphParamBinding(entity, owner, definition, i, in binding);
                         break;
                 }
             }
+        }
+
+        private float ResolveOwnerBlackboardFloat(Entity owner, int blackboardKeyId, string definitionKey, int paramKey)
+        {
+            if (!World.IsAlive(owner) ||
+                !World.TryGet<BlackboardFloatBuffer>(owner, out BlackboardFloatBuffer buffer) ||
+                !buffer.TryGet(blackboardKeyId, out float value))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{definitionKey}' binding paramKey={paramKey} source=ownerBlackboardFloat keyId={blackboardKeyId} " +
+                    $"requires a readable BlackboardFloatBuffer value on owner {owner.Id}.");
+            }
+
+            return value;
+        }
+
+        private float ResolvePointerScreenAxis(bool axisX, string definitionKey, int paramKey)
+        {
+            if (_graphApi == null || !_graphApi.TryReadLivePointerScreen(out float screenX, out float screenY))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{definitionKey}' binding paramKey={paramKey} source={(axisX ? "pointerScreenX" : "pointerScreenY")} " +
+                    "requires an authoritative live pointer snapshot.");
+            }
+
+            return axisX ? screenX : screenY;
         }
 
         /// <summary>

@@ -269,7 +269,9 @@ namespace Ludots.Core.Input.Interaction
                 "command intent profile");
 
             _profiles[profileId] = definition;
-            _collectionKeyIds[profileId] = collectionKeyRegistry.Register(definition.ActiveCollectionKey);
+            _collectionKeyIds[profileId] = string.IsNullOrWhiteSpace(definition.ActiveCollectionKey)
+                ? collectionKeyRegistry.InvalidId
+                : collectionKeyRegistry.Register(definition.ActiveCollectionKey.Trim());
             _filterProfileIds[profileId] = filterProfileId;
             _commandIntentProfileIds[profileId] = commandIntentProfileId;
             _inputContextIdsByProfile[profileId] = _inputContextIdsFor(profileId);

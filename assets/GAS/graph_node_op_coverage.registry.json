@@ -2129,6 +2129,7 @@
         "Derived",
         "Effect",
         "TriggerGraph",
+        "Query",
         "Score",
         "Script",
         "Validation"
@@ -3086,7 +3087,9 @@
     {
       "op": "WriteBlackboardFloat",
       "authorableKinds": [
-        "Effect"
+        "Effect",
+        "TriggerGraph",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_WriteBlackboardFloat",
       "status": "covered",

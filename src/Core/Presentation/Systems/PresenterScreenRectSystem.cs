@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
@@ -11,10 +13,10 @@ namespace Ludots.Core.Presentation.Systems
     /// <summary>
     /// Screen-space rectangle presenter lane: every frame, each active ScreenRect behavior
     /// renders the rectangle spanned by its two param-driven corners into the per-frame
-    /// screen overlay buffer. The buffer is lifted to the TopMost overlay layer by the
-    /// overlay scene builder and cleared by the host after compositing, so the rect follows
-    /// the data while it is written and disappears with the presenter (e.g. scope-scoped
-    /// drag marquee: scope destroyed → presenter destroyed → no rect written next frame).
+    /// screen overlay buffer. Interaction UI marquees are gated by local audience identity
+    /// (<see cref="PresenterRelationContext.Viewer"/> / owner vs sole local seat viewer) —
+    /// not by fog knowledge of units. The buffer is lifted to the TopMost overlay layer by the
+    /// overlay scene builder and cleared by the host after compositing.
     /// </summary>
     public sealed class PresenterScreenRectSystem : BaseSystem<World, float>
     {
@@ -24,6 +26,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private readonly PresenterDefinitionRegistry _definitions;
         private readonly ScreenOverlayBuffer _overlay;
+        private readonly Dictionary<string, object> _globals;
         private int _cachedDefinitionVersion = -1;
         private PresenterDefinition.ScreenRectWorkItem[][] _rectWorkByDefinition =
             Array.Empty<PresenterDefinition.ScreenRectWorkItem[]>();
@@ -31,20 +34,28 @@ namespace Ludots.Core.Presentation.Systems
         public PresenterScreenRectSystem(
             World world,
             PresenterDefinitionRegistry definitions,
-            ScreenOverlayBuffer overlay)
+            ScreenOverlayBuffer overlay,
+            Dictionary<string, object> globals)
             : base(world)
         {
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _overlay = overlay ?? throw new ArgumentNullException(nameof(overlay));
+            _globals = globals ?? throw new ArgumentNullException(nameof(globals));
         }
 
         public override void Update(in float dt)
         {
             EnsureDefinitionWorkCache();
+            if (!KnowledgeProjectionConsumer.TryResolveSoleLocalSeatViewer(World, _globals, out Entity localAudience))
+            {
+                return;
+            }
 
             foreach (ref var chunk in World.Query(in RectQuery))
             {
                 Span<PresenterState> states = chunk.GetSpan<PresenterState>();
+                bool hasRelation = chunk.Has<PresenterRelationContext>();
+                Span<PresenterRelationContext> relations = hasRelation ? chunk.GetSpan<PresenterRelationContext>() : default;
                 bool hasFloatParams = chunk.Has<PresenterFloatParams>();
                 bool hasFloatDefaults = chunk.Has<PresenterFloatDefaults>();
                 bool hasVectorParams = chunk.Has<PresenterVectorParams>();
@@ -61,6 +72,14 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < states.Length; i++)
                 {
                     ref readonly PresenterState state = ref states[i];
+                    if (!IsLocalAudienceMarquee(
+                            hasRelation ? relations[i].Viewer : Entity.Null,
+                            state.OwnerEntity,
+                            localAudience))
+                    {
+                        continue;
+                    }
+
                     PresenterDefinition.ScreenRectWorkItem[] workItems =
                         (uint)state.DefId < (uint)_rectWorkByDefinition.Length
                             ? _rectWorkByDefinition[state.DefId]
@@ -107,6 +126,21 @@ namespace Ludots.Core.Presentation.Systems
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Interaction marquee is visible only when this client's sole local audience matches
+        /// the presenter's Viewer (preferred) or Owner. Multi-seat / remote spectator live-corner
+        /// remains a separate contract; fail closed when no sole local audience exists.
+        /// </summary>
+        private static bool IsLocalAudienceMarquee(Entity viewer, Entity owner, Entity localAudience)
+        {
+            if (viewer != Entity.Null)
+            {
+                return viewer == localAudience;
+            }
+
+            return owner != Entity.Null && owner == localAudience;
         }
 
         private void EnsureDefinitionWorkCache()

@@ -2206,6 +2206,10 @@ namespace Ludots.Core.Presentation.Config
                 "attribute" or "attributeRatio" or "attributeBase" => throw new InvalidOperationException(
                     $"{context} source '{source}' duplicates AttributeBinding behavior. Use an AttributeBinding behavior with attributeBinding.targetParamKey instead."),
                 "graph" => ValueRef.FromGraph(ResolveGraphProgramId(node["sourceId"], context)),
+                "ownerBlackboardFloat" => ValueRef.FromOwnerBlackboardFloat(
+                    ResolveBlackboardKeyId(node["sourceId"], context)),
+                "pointerScreenX" => ValueRef.FromPointerScreenX(),
+                "pointerScreenY" => ValueRef.FromPointerScreenY(),
                 "entityColor" => ValueRef.FromEntityColor(ParseRequiredInt(node["sourceId"], "Presenter binding entityColor.sourceId")),
                 "entityColorVector" => ValueRef.FromEntityColorVector(),
                 "facingRadians" => ValueRef.FromFacingRadians(),
@@ -2215,6 +2219,19 @@ namespace Ludots.Core.Presentation.Config
                 null or "" => throw new InvalidOperationException("Presenter binding must declare explicit source."),
                 _ => throw new InvalidOperationException($"Presenter binding source has invalid value '{source}'."),
             };
+        }
+
+        private static int ResolveBlackboardKeyId(JsonNode? node, string context)
+        {
+            string keyName = ParseRequiredSemanticString(node, $"{context} ownerBlackboardFloat.sourceId");
+            int keyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(keyName);
+            if (keyId <= Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.InvalidId)
+            {
+                throw new InvalidOperationException(
+                    $"{context} ownerBlackboardFloat.sourceId '{keyName}' did not resolve to a config key id.");
+            }
+
+            return keyId;
         }
 
         private static void RejectRemovedBindingFields(JsonNode node, string context)

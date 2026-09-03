@@ -28,7 +28,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {

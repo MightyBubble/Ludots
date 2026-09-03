@@ -10,13 +10,13 @@
       },
       {
         "id": "press_px",
-        "op": "ReadMapVarFloat",
-        "var": "case_e_press_px"
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "case_e.press.px"
       },
       {
         "id": "press_py",
-        "op": "ReadMapVarFloat",
-        "var": "case_e_press_py"
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "case_e.press.py"
       },
       {
         "id": "pointer_x",
