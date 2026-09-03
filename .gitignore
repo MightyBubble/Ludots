@@ -164,6 +164,10 @@ tmp/wt-issue*
 mods/sango/SangoTerrainMod/assets/terrain/*.height
 mods/sango/SangoTerrainMod/assets/terrain/*.hex
 
+# Sango M3.b: terrain material textures baked offline from the binaries above
+# (bake_terrain_assets.py + sango_terrain_weight_rules.json stay tracked).
+mods/sango/SangoTerrainMod/assets/Textures/
+
 # Sango M2.a: the source DefaultMap.bin itself (KOEI-derived, local-only; kernel Map.Load
 # reads it via VFS, CI environments run without it on the loader's absence semantics).
 mods/sango/SangoContentMod/assets/Map/DefaultMap.bin

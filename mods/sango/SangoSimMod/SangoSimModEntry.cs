@@ -36,6 +36,8 @@ namespace Sango
         private const string StepTurnsEventKey = "SangoStepTurns";
         private const int MaxStepTurnsPerFire = 99;
         private const string JournalReportEventKey = "SangoJournalReport";
+        private const string SelectPlayerForceEventKey = "SangoSelectPlayerForce";
+        private const int MaxPlayerForceIdPerFire = 32;
 
         private static SaveParticipantRegistry? _registeredRegistry;
         private static SangoTroopMarkerRuntime? _troopMarkers;
@@ -55,6 +57,13 @@ namespace Sango
             }
 
             context.OnEvent(new EventKey(JournalReportEventKey), OnJournalReport());
+
+            // SangoSelectPlayerForce{n}:开局选势力的取证事件(与 Web UI sango.selectPlayerForce
+            // 命令同一数据面;裸键=势力 1)。forceId 编码进键名,仅带 AgentBridge 的开发宿主可见。
+            for (int forceId = 1; forceId <= MaxPlayerForceIdPerFire; forceId++)
+            {
+                context.OnEvent(new EventKey(forceId == 1 ? SelectPlayerForceEventKey : $"{SelectPlayerForceEventKey}{forceId}"), OnSelectPlayerForce(vfs, forceId));
+            }
         }
 
         public void OnUnload()
@@ -114,10 +123,16 @@ namespace Sango
                 engine.World, presenterRuntime, definitions, stableIds,
                 SangoCityMarkers.BuildPlacements(Sango.Core.Scenario.Cur));
 
+            // M3.b 地名标注:177 条河流/地名走 WorldHud 文本链(数据/定义在 SangoTerrainMod
+            // assets,提取源见 SangoMapLabels 头注);同 fail-fast 合同。
+            int labelsSpawned = SangoMapLabels.Spawn(
+                engine.World, presenterRuntime, definitions, stableIds,
+                SangoMapLabels.LoadPlacements(engine.VFS ?? throw new InvalidOperationException("SangoMapLabels requires the engine VFS.")));
+
             _troopMarkers?.Dispose();
             _troopMarkers = new SangoTroopMarkerRuntime(engine.World, presenterRuntime, definitions, stableIds);
             _troopMarkers.SyncAll(Sango.Core.Scenario.Cur);
-            Log.Info($"[SangoSimMod] M2.a: field layers populated; {spawned} city markers spawned; M2.b: troop marker runtime online ({_troopMarkers.ActiveMarkers} troops)");
+            Log.Info($"[SangoSimMod] M2.a: field layers populated; {spawned} city markers spawned; M3.b: {labelsSpawned} map labels spawned; M2.b: troop marker runtime online ({_troopMarkers.ActiveMarkers} troops)");
         }
 
         // 开发播种(AgentBridge events.fire SangoSeedTroops):按 citySet 顺序找满足出征
@@ -299,6 +314,29 @@ namespace Sango
 
                 stepPolicy.RequestStep(count);
                 Log.Info($"[SangoSimMod] M2.d step turns: {count} manual step(s) requested via the engine clock; turns will advance one per fixed tick");
+                return Task.CompletedTask;
+            };
+        }
+
+        // 开局选势力取证事件:与 Web UI 命令 sango.selectPlayerForce 完全同一数据面
+        // (SangoPlayerTurnOps.SelectPlayerForce → BootWithPlayer,CheckPlayer 正式链),
+        // 成功后走同一 SyncWorldPresentation 重灌标记;开局外拒绝照原样落日志。
+        private static System.Func<ScriptContext, Task> OnSelectPlayerForce(IVirtualFileSystem vfs, int forceId)
+        {
+            return context =>
+            {
+                try
+                {
+                    SangoPlayerTurnOps.SelectPlayerForce(vfs, "SangoContentMod", SangoTurnDriver.DefaultSeed, forceId);
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or ArgumentOutOfRangeException)
+                {
+                    Log.Info($"[SangoSimMod] M3.b select player force {forceId} rejected: {ex.Message}");
+                    return Task.CompletedTask;
+                }
+
+                SyncWorldToEngine(context);
+                Log.Info($"[SangoSimMod] M3.b select player force {forceId}: world reloaded with player and markers resynced");
                 return Task.CompletedTask;
             };
         }

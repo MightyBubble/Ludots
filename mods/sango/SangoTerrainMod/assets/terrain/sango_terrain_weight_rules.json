@@ -1,0 +1,364 @@
+{
+  "id": "sango_terrain_control_weights_v1",
+  "description": "Sango map-first terrain material rules (M3.b). Coloring contract: continuous CHTM height vertex banding (ResolveAbsoluteIslandTerrainColor) * RGBA control weights sampled per world position; the hex VertexMap nibble layer stays gameplay-only and never drives visuals, which removes its 16-level quantized look from presentation. Baker: bake_terrain_assets.py (same directory).",
+  "sources": {
+    "heightmap": "assets/terrain/sango_default.height",
+    "hexGrid": "assets/terrain/sango_default_hex.hex",
+    "terrainTypeExtraByteLayer": 0,
+    "axisConvention": "control map u = east (worldX), v = north (worldZ); hex cell col = east, row = north"
+  },
+  "seaLevelCm": 550,
+  "peakSpanCm": 12200,
+  "output": {
+    "controlMap": "assets/Textures/terrain_control_weights.png",
+    "columns": 2048,
+    "rows": 2048,
+    "channels": "R=sand G=grass B=dirt A=rock, normalized per pixel"
+  },
+  "terrainTypeWeights": {
+    "0": {
+      "name": "无",
+      "sand": 0.0,
+      "grass": 0.0,
+      "dirt": 0.0,
+      "rock": 0.0,
+      "note": "pure height/slope driven"
+    },
+    "1": {
+      "name": "草地",
+      "sand": 0.05,
+      "grass": 0.85,
+      "dirt": 0.08,
+      "rock": 0.02
+    },
+    "2": {
+      "name": "土",
+      "sand": 0.05,
+      "grass": 0.1,
+      "dirt": 0.8,
+      "rock": 0.05
+    },
+    "3": {
+      "name": "砂地",
+      "sand": 0.85,
+      "grass": 0.03,
+      "dirt": 0.1,
+      "rock": 0.02
+    },
+    "4": {
+      "name": "湿地",
+      "sand": 0.3,
+      "grass": 0.15,
+      "dirt": 0.45,
+      "rock": 0.1
+    },
+    "5": {
+      "name": "毒泉",
+      "sand": 0.1,
+      "grass": 0.05,
+      "dirt": 0.45,
+      "rock": 0.4
+    },
+    "6": {
+      "name": "森",
+      "sand": 0.02,
+      "grass": 0.48,
+      "dirt": 0.2,
+      "rock": 0.3
+    },
+    "7": {
+      "name": "川",
+      "sand": 0.55,
+      "grass": 0.2,
+      "dirt": 0.2,
+      "rock": 0.05
+    },
+    "8": {
+      "name": "河",
+      "sand": 0.5,
+      "grass": 0.18,
+      "dirt": 0.25,
+      "rock": 0.07
+    },
+    "9": {
+      "name": "海",
+      "sand": 0.8,
+      "grass": 0.05,
+      "dirt": 0.1,
+      "rock": 0.05
+    },
+    "10": {
+      "name": "荒地",
+      "sand": 0.15,
+      "grass": 0.05,
+      "dirt": 0.6,
+      "rock": 0.2
+    },
+    "11": {
+      "name": "主径",
+      "sand": 0.3,
+      "grass": 0.05,
+      "dirt": 0.6,
+      "rock": 0.05
+    },
+    "12": {
+      "name": "栈道",
+      "sand": 0.1,
+      "grass": 0.05,
+      "dirt": 0.35,
+      "rock": 0.5
+    },
+    "13": {
+      "name": "渡所",
+      "sand": 0.6,
+      "grass": 0.15,
+      "dirt": 0.2,
+      "rock": 0.05
+    },
+    "14": {
+      "name": "浅滩",
+      "sand": 0.65,
+      "grass": 0.2,
+      "dirt": 0.1,
+      "rock": 0.05
+    },
+    "15": {
+      "name": "岸",
+      "sand": 0.7,
+      "grass": 0.1,
+      "dirt": 0.15,
+      "rock": 0.05
+    },
+    "16": {
+      "name": "崖",
+      "sand": 0.02,
+      "grass": 0.03,
+      "dirt": 0.15,
+      "rock": 0.8
+    },
+    "17": {
+      "name": "都市",
+      "sand": 0.25,
+      "grass": 0.02,
+      "dirt": 0.43,
+      "rock": 0.3
+    },
+    "18": {
+      "name": "港",
+      "sand": 0.45,
+      "grass": 0.03,
+      "dirt": 0.22,
+      "rock": 0.3
+    },
+    "19": {
+      "name": "关所",
+      "sand": 0.1,
+      "grass": 0.03,
+      "dirt": 0.27,
+      "rock": 0.6
+    },
+    "20": {
+      "name": "小径",
+      "sand": 0.35,
+      "grass": 0.1,
+      "dirt": 0.5,
+      "rock": 0.05
+    },
+    "21": {
+      "name": "地21",
+      "sand": 0.1,
+      "grass": 0.3,
+      "dirt": 0.45,
+      "rock": 0.15
+    },
+    "22": {
+      "name": "地22",
+      "sand": 0.1,
+      "grass": 0.3,
+      "dirt": 0.45,
+      "rock": 0.15
+    },
+    "23": {
+      "name": "地23",
+      "sand": 0.1,
+      "grass": 0.3,
+      "dirt": 0.45,
+      "rock": 0.15
+    },
+    "24": {
+      "name": "地24",
+      "sand": 0.1,
+      "grass": 0.3,
+      "dirt": 0.45,
+      "rock": 0.15
+    },
+    "25": {
+      "name": "地25",
+      "sand": 0.1,
+      "grass": 0.3,
+      "dirt": 0.45,
+      "rock": 0.15
+    },
+    "26": {
+      "name": "地26",
+      "sand": 0.1,
+      "grass": 0.3,
+      "dirt": 0.45,
+      "rock": 0.15
+    },
+    "27": {
+      "name": "地27",
+      "sand": 0.1,
+      "grass": 0.3,
+      "dirt": 0.45,
+      "rock": 0.15
+    },
+    "28": {
+      "name": "地28",
+      "sand": 0.1,
+      "grass": 0.3,
+      "dirt": 0.45,
+      "rock": 0.15
+    },
+    "29": {
+      "name": "地29",
+      "sand": 0.1,
+      "grass": 0.3,
+      "dirt": 0.45,
+      "rock": 0.15
+    },
+    "30": {
+      "name": "地30",
+      "sand": 0.1,
+      "grass": 0.3,
+      "dirt": 0.45,
+      "rock": 0.15
+    },
+    "31": {
+      "name": "地31",
+      "sand": 0.1,
+      "grass": 0.3,
+      "dirt": 0.45,
+      "rock": 0.15
+    },
+    "32": {
+      "name": "外海",
+      "sand": 0.8,
+      "grass": 0.05,
+      "dirt": 0.1,
+      "rock": 0.05,
+      "note": "open ocean sentinel; renderer skips albedo where vertex heightBand<=0"
+    }
+  },
+  "heightSlopeModulation": {
+    "note": "Multiplicative modulation blended 65% type-base + 35% modulation before renormalize; keeps 23-type identity while restoring continuous-height/slope realism (mountain rock, shoreline sand).",
+    "typeBaseMix": 0.65,
+    "bands": {
+      "sand": {
+        "riseStart": -0.02,
+        "riseEnd": 0.005,
+        "fallStart": 0.035,
+        "fallEnd": 0.075
+      },
+      "grass": {
+        "riseStart": 0.005,
+        "riseEnd": 0.03,
+        "fallStart": 0.28,
+        "fallEnd": 0.45
+      },
+      "dirt": {
+        "riseStart": 0.1,
+        "riseEnd": 0.22,
+        "fallStart": 0.45,
+        "fallEnd": 0.62
+      },
+      "rock": {
+        "riseStart": 0.4,
+        "riseEnd": 0.55,
+        "fallStart": 1.2,
+        "fallEnd": 1.3
+      }
+    },
+    "slope": {
+      "grassDamp": 1.15,
+      "rockBoostPower": 1.35,
+      "rockBoostRise": 0.18
+    },
+    "noise": {
+      "frequency": 0.012,
+      "amplitude": 0.22,
+      "octaves": 3,
+      "seed": 20260903
+    },
+    "cellSmoothing": {
+      "note": "terrainType is per 2000cm cell; control map is 2048^2 (8px/cell). Type field is bilinearly upsampled with a 1-cell blur so material edges stay soft, then noise breaks the lattice.",
+      "blurCells": 1.0
+    }
+  },
+  "albedoTextures": {
+    "note": "Procedural tiling material textures generated by the same bake (no KOEI-derived pixels); each is 256x256 RGB PNG with multi-octave value noise around a base color.",
+    "size": 256,
+    "layers": {
+      "sand": {
+        "file": "assets/Textures/terrain_sand.png",
+        "base": [
+          222,
+          199,
+          146
+        ],
+        "amplitude": 14,
+        "frequency": 0.09,
+        "octaves": 3,
+        "grain": 6
+      },
+      "grass": {
+        "file": "assets/Textures/terrain_grass.png",
+        "base": [
+          72,
+          146,
+          52
+        ],
+        "amplitude": 20,
+        "frequency": 0.055,
+        "octaves": 4,
+        "grain": 5
+      },
+      "dirt": {
+        "file": "assets/Textures/terrain_dirt.png",
+        "base": [
+          148,
+          105,
+          62
+        ],
+        "amplitude": 18,
+        "frequency": 0.07,
+        "octaves": 3,
+        "grain": 7
+      },
+      "rock": {
+        "file": "assets/Textures/terrain_rock.png",
+        "base": [
+          142,
+          136,
+          128
+        ],
+        "amplitude": 26,
+        "frequency": 0.06,
+        "octaves": 4,
+        "grain": 9
+      }
+    }
+  },
+  "hexLattice": {
+    "enabled": true,
+    "cellMeters": 20.0,
+    "borderMeters": 4.0,
+    "borderStrength": 0.85,
+    "lineMixSand": 1.0,
+    "lineMixGrass": 0.0,
+    "lineMixDirt": 0.0,
+    "lineMixRock": 0.0,
+    "checkerAmplitude": 0.08,
+    "note": "M3.b-修: after the material blur pass, odd-r cell borders (VertexMapHexLayout world contract) pull weights to pure sand — a brighter, luminance-contrasting lattice that stays readable through the 28% field-overlay tint; alternating cells get a small dominant-weight bias. Sampled raw by terrain.fs SampleControlWeights (no anti-tile), so the lattice survives to the overview."
+  }
+}

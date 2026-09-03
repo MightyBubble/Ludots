@@ -1,112 +1,512 @@
 [
-  {
-    "id": "sango.troop.marker",
-    "behaviors": [
-      {
-        "slot": "body",
-        "kind": "AssetBinding",
-        "activeByDefault": true,
-        "assetBinding": {
-          "assetKind": "Mesh",
-          "assetId": "cube",
-          "renderPath": "StaticMesh",
-          "mobility": "Static",
-          "localScale": [70, 140, 70],
-          "colorParamKey": "sango.troop.marker.color"
-        },
-        "style": {
-          "color": [1, 1, 1, 1]
-        }
-      },
-      {
-        "slot": "grounding",
-        "kind": "Grounding",
-        "activeByDefault": true,
-        "grounding": {
-          "mode": "SnapToGround",
-          "offset": 70,
-          "updatePolicy": "Once"
-        }
-      },
-      {
-        "slot": "minimap",
-        "kind": "MinimapMarker",
-        "activeByDefault": true,
-        "minimapMarker": {
-          "shape": "Circle",
-          "color": [1, 1, 1, 0.9],
-          "sizePx": 2,
-          "colorParamKey": "sango.troop.marker.color",
-          "sizeParamKey": "none",
-          "visibilityParamKey": "none",
-          "orientationMode": "None",
-          "orientationParamKey": "none",
-          "orientationOffsetRad": 0,
-          "orientationLengthPx": 0
-        }
-      }
-    ],
-    "paramDefaults": [
-      {
-        "paramKey": "sango.troop.marker.color",
-        "lane": "Vector",
-        "vectorValue": [1, 1, 1, 1]
-      }
+ {
+  "id": "sango.troop.marker",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "cube",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localScale": [
+      70,
+      140,
+      70
+     ],
+     "colorParamKey": "sango.troop.marker.color"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 70,
+     "updatePolicy": "Once"
+    }
+   },
+   {
+    "slot": "minimap",
+    "kind": "MinimapMarker",
+    "activeByDefault": true,
+    "minimapMarker": {
+     "shape": "Circle",
+     "color": [
+      1,
+      1,
+      1,
+      0.9
+     ],
+     "sizePx": 2,
+     "colorParamKey": "sango.troop.marker.color",
+     "sizeParamKey": "none",
+     "visibilityParamKey": "none",
+     "orientationMode": "None",
+     "orientationParamKey": "none",
+     "orientationOffsetRad": 0,
+     "orientationLengthPx": 0
+    }
+   }
+  ],
+  "paramDefaults": [
+   {
+    "paramKey": "sango.troop.marker.color",
+    "lane": "Vector",
+    "vectorValue": [
+     1,
+     1,
+     1,
+     1
     ]
-  },
-  {
-    "id": "sango.city.marker",
-    "behaviors": [
-      {
-        "slot": "body",
-        "kind": "AssetBinding",
-        "activeByDefault": true,
-        "assetBinding": {
-          "assetKind": "Mesh",
-          "assetId": "sphere",
-          "renderPath": "StaticMesh",
-          "mobility": "Static",
-          "localScale": [100, 100, 100],
-          "colorParamKey": "sango.city.marker.color"
-        },
-        "style": {
-          "color": [1, 1, 1, 1]
-        }
-      },
-      {
-        "slot": "grounding",
-        "kind": "Grounding",
-        "activeByDefault": true,
-        "grounding": {
-          "mode": "SnapToGround",
-          "offset": 60,
-          "updatePolicy": "Once"
-        }
-      },
-      {
-        "slot": "minimap",
-        "kind": "MinimapMarker",
-        "activeByDefault": true,
-        "minimapMarker": {
-          "shape": "Circle",
-          "color": [1, 1, 1, 0.9],
-          "sizePx": 3,
-          "colorParamKey": "sango.city.marker.color",
-          "sizeParamKey": "none",
-          "visibilityParamKey": "none",
-          "orientationMode": "None",
-          "orientationParamKey": "none",
-          "orientationOffsetRad": 0,
-          "orientationLengthPx": 0
-        }
-      }
-    ],
-    "paramDefaults": [
-      {
-        "paramKey": "sango.city.marker.color",
-        "lane": "Vector",
-        "vectorValue": [1, 1, 1, 1]
-      }
+   }
+  ]
+ },
+ {
+  "id": "sango.city.marker.city",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "cube",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      0,
+      0
+     ],
+     "localScale": [
+      6400,
+      800,
+      6400
+     ],
+     "scaleParamKey": "sango.city.marker.scale",
+     "colorParamKey": "sango.city.marker.color"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "attachment",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "cube",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      1200,
+      0
+     ],
+     "localScale": [
+      2400,
+      1600,
+      2400
+     ],
+     "scaleParamKey": "sango.city.marker.scale",
+     "colorParamKey": "sango.city.marker.color"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "orientation",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sphere",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      2050,
+      0
+     ],
+     "localScale": [
+      1600,
+      1600,
+      1600
+     ],
+     "scaleParamKey": "sango.city.marker.scale"
+    },
+    "style": {
+     "color": [
+      0.78,
+      0.74,
+      0.62,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 400,
+     "updatePolicy": "Once"
+    }
+   },
+   {
+    "slot": "minimap",
+    "kind": "MinimapMarker",
+    "activeByDefault": true,
+    "minimapMarker": {
+     "shape": "Circle",
+     "color": [
+      1,
+      1,
+      1,
+      0.9
+     ],
+     "sizePx": 3,
+     "colorParamKey": "sango.city.marker.color",
+     "sizeParamKey": "none",
+     "visibilityParamKey": "none",
+     "orientationMode": "None",
+     "orientationParamKey": "none",
+     "orientationOffsetRad": 0,
+     "orientationLengthPx": 0
+    }
+   }
+  ],
+  "paramDefaults": [
+   {
+    "paramKey": "sango.city.marker.color",
+    "lane": "Vector",
+    "vectorValue": [
+     1,
+     1,
+     1,
+     1
     ]
-  }
+   },
+   {
+    "paramKey": "sango.city.marker.scale",
+    "lane": "Float",
+    "floatValue": 1
+   }
+  ]
+ },
+ {
+  "id": "sango.city.marker.pass",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "cube",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      0,
+      0
+     ],
+     "localScale": [
+      5600,
+      600,
+      3000
+     ],
+     "scaleParamKey": "sango.city.marker.scale"
+    },
+    "style": {
+     "color": [
+      0.62,
+      0.58,
+      0.52,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "attachment",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "cube",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      1050,
+      0
+     ],
+     "localScale": [
+      5000,
+      1500,
+      1500
+     ],
+     "scaleParamKey": "sango.city.marker.scale",
+     "colorParamKey": "sango.city.marker.color"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "orientation",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "cube",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      1350,
+      0
+     ],
+     "localScale": [
+      6200,
+      450,
+      1250
+     ],
+     "scaleParamKey": "sango.city.marker.scale"
+    },
+    "style": {
+     "color": [
+      0.5,
+      0.36,
+      0.24,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 300,
+     "updatePolicy": "Once"
+    }
+   },
+   {
+    "slot": "minimap",
+    "kind": "MinimapMarker",
+    "activeByDefault": true,
+    "minimapMarker": {
+     "shape": "Circle",
+     "color": [
+      1,
+      1,
+      1,
+      0.9
+     ],
+     "sizePx": 2,
+     "colorParamKey": "sango.city.marker.color",
+     "sizeParamKey": "none",
+     "visibilityParamKey": "none",
+     "orientationMode": "None",
+     "orientationParamKey": "none",
+     "orientationOffsetRad": 0,
+     "orientationLengthPx": 0
+    }
+   }
+  ],
+  "paramDefaults": [
+   {
+    "paramKey": "sango.city.marker.color",
+    "lane": "Vector",
+    "vectorValue": [
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "paramKey": "sango.city.marker.scale",
+    "lane": "Float",
+    "floatValue": 1
+   }
+  ]
+ },
+ {
+  "id": "sango.city.marker.port",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "cube",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      0,
+      0
+     ],
+     "localScale": [
+      7000,
+      350,
+      3500
+     ],
+     "scaleParamKey": "sango.city.marker.scale"
+    },
+    "style": {
+     "color": [
+      0.46,
+      0.37,
+      0.27,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "attachment",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "cube",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      -1700,
+      800,
+      0
+     ],
+     "localScale": [
+      2200,
+      900,
+      2200
+     ],
+     "scaleParamKey": "sango.city.marker.scale",
+     "colorParamKey": "sango.city.marker.color"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "orientation",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "cube",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      2400,
+      1400,
+      0
+     ],
+     "localScale": [
+      350,
+      2200,
+      350
+     ],
+     "scaleParamKey": "sango.city.marker.scale"
+    },
+    "style": {
+     "color": [
+      0.72,
+      0.66,
+      0.54,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 175,
+     "updatePolicy": "Once"
+    }
+   },
+   {
+    "slot": "minimap",
+    "kind": "MinimapMarker",
+    "activeByDefault": true,
+    "minimapMarker": {
+     "shape": "Circle",
+     "color": [
+      1,
+      1,
+      1,
+      0.9
+     ],
+     "sizePx": 2,
+     "colorParamKey": "sango.city.marker.color",
+     "sizeParamKey": "none",
+     "visibilityParamKey": "none",
+     "orientationMode": "None",
+     "orientationParamKey": "none",
+     "orientationOffsetRad": 0,
+     "orientationLengthPx": 0
+    }
+   }
+  ],
+  "paramDefaults": [
+   {
+    "paramKey": "sango.city.marker.color",
+    "lane": "Vector",
+    "vectorValue": [
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "paramKey": "sango.city.marker.scale",
+    "lane": "Float",
+    "floatValue": 1
+   }
+  ]
+ }
 ]

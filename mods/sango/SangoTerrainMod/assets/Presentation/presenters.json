@@ -1,0 +1,4073 @@
+[
+ {
+  "id": "sango.map.label.0",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.0",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.1",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.1",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.2",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.2",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.3",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.3",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.4",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.4",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.5",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.5",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.6",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.6",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.7",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.7",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.8",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.8",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.9",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.9",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.10",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.10",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.11",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.11",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.12",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.12",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.13",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.13",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.14",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.14",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.15",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.15",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.16",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.16",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.17",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.17",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.18",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.18",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.19",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.19",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.20",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.20",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.21",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.21",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.22",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.22",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.23",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.23",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.24",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.24",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.25",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.25",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.26",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.26",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.27",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.27",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.28",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.28",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.29",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.29",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.30",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.30",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.31",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.31",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.32",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.32",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.33",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.33",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.34",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.34",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.35",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.35",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.36",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.36",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.37",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.37",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.38",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.38",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.39",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.39",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.40",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.40",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.41",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.41",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.42",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.42",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.43",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.43",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.44",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.44",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.45",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.45",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.46",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.46",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.47",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.47",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.48",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.48",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.49",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.49",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.50",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.50",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.51",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.51",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.52",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.52",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.53",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.53",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.54",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.54",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.55",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.55",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.56",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.56",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.57",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.57",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.58",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.58",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.59",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.59",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.60",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.60",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.61",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.61",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.62",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.62",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.63",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.63",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.64",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.64",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.65",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.65",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.66",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.66",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.67",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.67",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.68",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.68",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.69",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.69",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.70",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.70",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.71",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.71",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.72",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.72",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.73",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.73",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.74",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.74",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.75",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.75",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.76",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.76",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.77",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.77",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.78",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.78",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.79",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.79",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.80",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.80",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.81",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.81",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.82",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.82",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.83",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.83",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.84",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.84",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.85",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.85",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.86",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.86",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.87",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.87",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.88",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.88",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.89",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.89",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.90",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.90",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.91",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.91",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.92",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.92",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.93",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.93",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.94",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.94",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.95",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.95",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.96",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.96",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.97",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.97",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.98",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.98",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.99",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.99",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.100",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.100",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.101",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.101",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.102",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.102",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.103",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.103",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.104",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.104",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.105",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.105",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.106",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.106",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.107",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.107",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.108",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.108",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.109",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.109",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.110",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.110",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.111",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.111",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.112",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.112",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.113",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.113",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.114",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.114",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.115",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.115",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.116",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.116",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.117",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.117",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.118",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.118",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.119",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.119",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.120",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.120",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.121",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.121",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.122",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.122",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.123",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.123",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.124",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.124",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.125",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.125",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.126",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.126",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.127",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.127",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.128",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.128",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.129",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.129",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.130",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.130",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.131",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.131",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.132",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.132",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.133",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.133",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.134",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.134",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.135",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.135",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.136",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.136",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.137",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.137",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.138",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.138",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.139",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.139",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.140",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.140",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.141",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.141",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.142",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.142",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.143",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.143",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.144",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.144",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.145",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.145",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.146",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.146",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.147",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.147",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.148",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.148",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.149",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.149",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.150",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.150",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.151",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.151",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      0,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.152",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.152",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.153",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.153",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.154",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.154",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.155",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.155",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.156",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.156",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.157",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.157",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.158",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.158",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.159",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.159",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.160",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.160",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.161",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.161",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.162",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.162",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.163",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.163",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.164",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.164",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.165",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.165",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.166",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.166",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.167",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.167",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.168",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.168",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.169",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.169",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.170",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.170",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.171",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.171",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.172",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.172",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.173",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.173",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.174",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.174",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.175",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.175",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.map.label.176",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "sango.map.label.176",
+     "mode": "None",
+     "fontSize": 20
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ }
+]
