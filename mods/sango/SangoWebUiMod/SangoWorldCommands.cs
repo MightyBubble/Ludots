@@ -427,6 +427,8 @@ public sealed class SangoMoveTroopCommandHandler : IWebUiCommandHandler
             return WebUiCommandResult.Fail(result.ErrorCode, result.Message);
         }
 
+        // M3.c:成功 ack 的 message 段被引擎 CreateAck 平铺丢弃(引擎面不在本任务边界内),
+        // 行动面语义经 sango.world.troops 的 missionLabel("前往指定格 (x,y)")向 UI 表达。
         return WebUiCommandResult.Ok();
     }
 }

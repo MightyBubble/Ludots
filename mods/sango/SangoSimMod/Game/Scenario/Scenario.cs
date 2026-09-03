@@ -796,6 +796,10 @@ namespace Sango.Core
         public void OnWorldLoaded()
         {
             GameEvent.OnWorldLoadEnd?.Invoke(this);
+            // M3.c:回灌装载线在 Prepare/Init 按序重建派生态(actionList 等)之前抵消
+            // SangoObjectList 序列化的倒序写出镜像(见 SangoRestoreListMirror 文件头);Boot 不走。
+            if (IsRestoreLoad)
+                Sango.Runtime.SangoRestoreListMirror.Apply(this);
             this.Map.Init(this);
             GameEvent.OnScenarioPrepare?.Invoke(this);
             this.LoadModModify();

@@ -1108,11 +1108,15 @@ function TroopDetailCard({ troops, troopId, onClose, playerGate, onMove }) {
           <button
             type="button"
             disabled={selected.actionOver || !moveAllowed}
-            title="选中部队移动到目标格(限本回合移动范围;范围外/占位目标会被拒绝;玩家局限本势力回合)"
+            title="选中部队移动到目标格(范围内即时落地;范围外可驻空格转为多回合委任移动,逐回合自动推进;玩家局限本势力回合)"
             onClick={() => onMove({ troopId: selected.id, x: targetX, y: targetY })}
           >
             移动
           </button>
+          <p className="hint expedition-hint">
+            范围外可驻空格 = 委任移动:授多回合行军任务,每回合按移动力推进,抵达后待命;
+            途中目标格被敌占则就近平驻等待。占位格(城/建筑/敌据点)仍按越程拒绝。
+          </p>
         </div>
       </div>
     </section>

@@ -540,11 +540,6 @@ namespace Sango.Tests
         }
 
         [Test]
-        [Ignore("M3.a(续)诊断收窄后仍残留:存档边界本身已逐位一致(太守选举面/势力存活面/"
-                + "城 AI 任务面入捕获面后,restore 点与捕获点全行相等);分岔发生在回灌后的第一个"
-                + "回合内——同种子同流位置下,各势力逐个跑出与实录完全相同的随机序列后,回灌世界"
-                + "继续把回合队列多跑了约 6 遍(回合数/日期只 +1,但逐势力随机消耗 ×7),属回灌侧"
-                + "RunForces 队列生命周期不对称,归 M3.b 立案(见 SangoCityPersonOrder 文件头)。")]
         public void Replay_MidChainSaveAndLoad_StillBitIdentical()
         {
             Assembly sim = LoadSangoSimMod();

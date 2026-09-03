@@ -25,8 +25,16 @@
 //       原 Check 无范围条件)。
 //     任务型交互的逐帧 Update(TroopInteractive*.Update 每帧一次 DoAI)压缩为
 //     "DoAI 一拍 + 泵空演出队列" 循环,直至 DoAI 完成(ActionOver)。
-// 范围外目标在原版走"委任移动"确认链(TroopInteractiveMoveToCell,多回合任务制),
-// M2.b 不复用该链,按越程拒绝。
+// 范围外目标:M3.c 展开原版委任移动链(TroopSystem 范围外落格 → TroopInteractiveMenu
+// 订阅者 TroopInteractiveMoveToCell:Check = 目标格 CanStay && moveAble && 越程;
+// OnEnter = SetMission(TroopMovetoCell,0) + missionParams1/2=目标格坐标 +
+// NeedPrepareMission,Update 逐帧泵 TargetTroop.DoAI 至完成 → OnAIDone(ActionOver)),
+// 多回合推进由 TroopMovetoCell 任务行为按回合驱动(TryMoveToCell:目标在本回合
+// MoveRange 内直达;否则沿 GetDirectMovePath 前进到范围内最远格;落格不可驻时改取
+// 范围内最近可驻格)。抵达后 Prepare 的完结分支:玩家控部队 ClearMission(待命),
+// AI 托管部队转 TroopReturnCity 回创建城(原版语义)。途中目标格被敌占:敌占格进
+// 不了 MoveRange(Cell.CanPassThrough 势力门),逐回合推进到可及边界后 DoAI 即时
+// 完结(ActionOver),任务保持 TroopMovetoCell 等待——原版不打断也不转攻击。
 // 上游怪癖(保留):TroopInteractiveBase.Start 对玩家控部队 ClearMission 后再授新任务,
 // AI 托管部队旧任务直接覆盖(SetMission);运输队(IsTransport)不得歼灭/占城。
 
@@ -236,8 +244,15 @@ namespace Sango.Runtime
                 return InteractAtCell(scenario, troop, destCell);
 
             if (!troop.MoveRange.Contains(destCell))
+            {
+                // TroopInteractiveMoveToCell.Check:越程 + 目标格可驻(空格/无建筑/可通行)
+                // 且 moveAble → 委任移动;不满足(如地图外缘)仍按越程拒绝。
+                if (destCell.CanStay(troop) && destCell.moveAble)
+                    return CommissionMoveToCell(scenario, troop, destCell);
+
                 return (SangoTroopOpResult.Fail("out_of_range",
-                    "target cell is outside the troop move range (original UI routes it to the multi-turn delegate-move chain, not available here)."), 0);
+                    "target cell is outside the troop move range and is not a stayable commissioned-move destination."), 0);
+            }
 
             // HandleEvent Click 分派:空格/本格走待命;同势力城在程走入城;其余占位
             // (完好己方建筑/同阵营部队)在原版对话框无订阅者匹配,保持占位拒绝。
@@ -438,6 +453,57 @@ namespace Sango.Runtime
             }
 
             return (SangoTroopOpResult.Ok(action), 0);
+        }
+
+        /// <summary>
+        /// TroopInteractiveMoveToCell 的 OnEnter→Update 链当回合压缩:授 TroopMovetoCell
+        /// 任务(missionParams1/2 = 目标格坐标)后逐拍"DoAI 一次 + 泵空演出队列"完成
+        /// 首回合推进;后续回合由军团回合链按任务行为推进(见文件头)。
+        /// </summary>
+        static (SangoTroopOpResult Result, int PathSteps) CommissionMoveToCell(
+            Scenario scenario, Troop troop, Cell destCell)
+        {
+            if (troop.IsPlayerControl)
+            {
+                troop.ClearMission();
+            }
+
+            troop.SetMission(MissionType.TroopMovetoCell, 0);
+            troop.missionParams1 = destCell.x;
+            troop.missionParams2 = destCell.y;
+            troop.NeedPrepareMission();
+
+            bool completed = false;
+            for (int i = 0; i < MaxMissionPumpRounds; i++)
+            {
+                if (!troop.IsAlive || troop.ActionOver)
+                {
+                    completed = true;
+                    break;
+                }
+
+                if (troop.DoAI(scenario))
+                {
+                    completed = true;
+                    break;
+                }
+
+                PumpRenderEvents(scenario);
+            }
+
+            if (!completed)
+            {
+                throw new InvalidOperationException(
+                    $"troop {troop.Id} commissioned move to ({destCell.x},{destCell.y}) stalled after {MaxMissionPumpRounds} DoAI/pump rounds; the mission chain is waiting on player input or never completes.");
+            }
+
+            PumpRenderEvents(scenario);
+            if (troop.IsAlive)
+            {
+                troop.ActionOver = true;
+            }
+
+            return (SangoTroopOpResult.Ok("commission-move"), 0);
         }
 
         static TroopType? SelectTroopType(List<TroopType> types, int? requestedId)

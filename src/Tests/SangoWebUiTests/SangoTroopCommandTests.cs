@@ -119,6 +119,56 @@ public sealed class SangoTroopCommandTests
         throw new InvalidOperationException("the whole map is inside the move range; cannot test out_of_range");
     }
 
+    // M3.c:越程可驻空格(委任移动目标)与越程不可驻格(占位建筑,仍拒)的选格器。
+    private static Cell PickOutOfRangeStayableCell(Troop troop)
+    {
+        troop.MoveRange.Clear();
+        Scenario.Cur!.Map.GetMoveRange(troop, troop.MoveRange);
+        Map map = Scenario.Cur.Map;
+        Cell? best = null;
+        int bestDistance = -1;
+        for (int x = 0; x < map.Width; x++)
+        {
+            for (int y = 0; y < map.Height; y++)
+            {
+                Cell? cell = map.GetCell(x, y);
+                if (cell == null || troop.MoveRange.Contains(cell) || !cell.CanStay(troop) || !cell.moveAble)
+                {
+                    continue;
+                }
+
+                int distance = Math.Abs(cell.x - troop.x) + Math.Abs(cell.y - troop.y);
+                if (distance > bestDistance)
+                {
+                    best = cell;
+                    bestDistance = distance;
+                }
+            }
+        }
+
+        return best ?? throw new InvalidOperationException("no stayable out-of-range cell on the map");
+    }
+
+    private static Cell PickOutOfRangeNonStayableCell(Troop troop)
+    {
+        troop.MoveRange.Clear();
+        Scenario.Cur!.Map.GetMoveRange(troop, troop.MoveRange);
+        Map map = Scenario.Cur.Map;
+        for (int x = 0; x < map.Width; x++)
+        {
+            for (int y = 0; y < map.Height; y++)
+            {
+                Cell? cell = map.GetCell(x, y);
+                if (cell != null && !troop.MoveRange.Contains(cell) && !cell.CanStay(troop))
+                {
+                    return cell;
+                }
+            }
+        }
+
+        throw new InvalidOperationException("no non-stayable out-of-range cell on the map");
+    }
+
     private sealed class CommandHarness : IDisposable
     {
         public CommandHarness(WebUiDataPlaneRuntime runtime, WebUiQueuedCommandDispatcher dispatcher)
@@ -296,20 +346,38 @@ public sealed class SangoTroopCommandTests
         Assert.That(troop.cell, Is.SameAs(dest), "kernel troop must land on the ordered cell");
         Assert.That(troop.ActionOver, Is.True, "the ordered move ends the troop action");
 
-        // 越程类型化拒绝(位置不变)。
+        // M3.c:越程可驻空格 = 委任移动(TroopMovetoCell 多回合任务,首回合推进+行动完结)。
         Troop second = SeedExtraTroop();
         Cell origin = second.cell;
-        Cell far = PickOutOfRangeCell(second);
-        (acked, code, _) = await DispatchAsync(harness,
+        Cell far = PickOutOfRangeStayableCell(second);
+        (acked, code, message) = await DispatchAsync(harness,
             SangoMoveTroopCommandHandler.CommandName, new
             {
                 troopId = second.Id,
                 x = far.x,
                 y = far.y
             }, clientSeq: 22);
+        Assert.That(acked, Is.True, $"commissioned move rejected: {code} {message}");
+        Assert.That(second.missionType, Is.EqualTo((int)MissionType.TroopMovetoCell), "the far order must grant the march mission");
+        Assert.That(second.missionParams1, Is.EqualTo(far.x));
+        Assert.That(second.missionParams2, Is.EqualTo(far.y));
+        Assert.That(second.cell, Is.Not.SameAs(origin), "the command turn's advance must run");
+        Assert.That(second.ActionOver, Is.True, "the commissioned order ends the command turn's action");
+
+        // 越程不可驻格(占位建筑)仍类型化拒绝(位置不变)。
+        Troop third = SeedExtraTroop();
+        Cell thirdOrigin = third.cell;
+        Cell blocked = PickOutOfRangeNonStayableCell(third);
+        (acked, code, _) = await DispatchAsync(harness,
+            SangoMoveTroopCommandHandler.CommandName, new
+            {
+                troopId = third.Id,
+                x = blocked.x,
+                y = blocked.y
+            }, clientSeq: 24);
         Assert.That(acked, Is.False);
         Assert.That(code, Is.EqualTo("out_of_range"));
-        Assert.That(second.cell, Is.SameAs(origin), "rejected order must not move the troop");
+        Assert.That(third.cell, Is.SameAs(thirdOrigin), "rejected order must not move the troop");
 
         (acked, code, _) = await DispatchAsync(harness,
             SangoMoveTroopCommandHandler.CommandName, new

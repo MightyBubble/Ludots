@@ -115,7 +115,9 @@ namespace Sango.Runtime
 
             GameEvent.OnPlayerEndTurn?.Invoke(force, scenario);
 
-            // 原版逐帧重试 DoAI;headless 以有界泵等效推进,超界即事件链卡死 fail-fast。
+            // 原版逐帧重试 DoAI 且渲染队列同帧推进(M3.c:移动任务的 MoveTo 靠 TroopMoveEvent
+            // 逐帧结算,只重试 DoAI 不排空演出队列会永远等 isMoving);headless 以有界泵
+            // "DoAI 一拍 + 虚拟帧长排空演出" 等效推进,超界即事件链卡死 fail-fast。
             const int maxTroopAiPumpCalls = 10_000;
             for (int i = 0; i < scenario.troopsSet.Count; ++i)
             {
@@ -130,6 +132,8 @@ namespace Sango.Runtime
                             throw new InvalidOperationException(
                                 $"troop {troop.Id} mission AI stalled after {maxTroopAiPumpCalls} DoAI calls during EndPlayerTurn.");
                         }
+
+                        Sango.Render.RenderEvent.Instance.Update(scenario, SangoTurnDriver.VirtualFrameSeconds);
                     }
                     troop.Render?.UpdateRender();
                 }

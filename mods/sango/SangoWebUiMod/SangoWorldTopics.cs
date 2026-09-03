@@ -614,7 +614,7 @@ public static class SangoMissionLabels
             MissionType.TroopReturnCity => $"返回 {CityName(scenario, troop.missionTarget)}",
             MissionType.TroopMovetoCity => $"前往 {CityName(scenario, troop.missionTarget)}",
             MissionType.TroopMovetoBuild => $"前往 {BuildingName(scenario, troop.missionTarget)}",
-            MissionType.TroopMovetoCell => "前往指定格",
+            MissionType.TroopMovetoCell => $"前往指定格 ({troop.missionParams1},{troop.missionParams2})",
             MissionType.TroopStay => "原地驻守",
             _ => $"任务 #{troop.missionType}",
         };
