@@ -102,7 +102,7 @@
       <span class="k">01 进图</span><span class="v">实体出生</span><br>
       <span class="k">02 挂默认</span><span class="v">模板 initialInteractionContext → 战斗 context</span><br>
       <span class="k">03 边沿挂载</span><span class="v">profile.triggers[] 挂抬起/点选 Trigger</span><br>
-      <span class="k">04 框开始</span><span class="v">写起角 → 刷新候选集（宪法入参）→ 激活「正在框选」</span><br>
+      <span class="k">04 框开始</span><span class="v">写起角 → 激活「正在框选」（候选集由 battle 挂载的 roster_sync 另维）</span><br>
       <span class="k">05 拖拽中</span><span class="v">context 存活期每 tick：调同一张命中函数（候选 key + 矩形）→ 返回名单写预览集</span><br>
       <span class="k">06 框结束</span><span class="v">Trigger 再调同一张命中函数 → 按修饰写已选中 → 停用框选 → 预览清空</span><br>
       <span class="k">07 高亮</span><span class="v">预览 / 已选中都走集合成员变化；presenter 只换订阅 key</span>
@@ -113,7 +113,7 @@
     <h4>三层名单（重量不同）</h4>
     <div class="form" style="margin-top:8px">
       <div class="ft">只有「谁会被画环」必须进成员事件面</div>
-      <div class="field"><span class="fname">候选<span class="ftype">命中入参</span></span><span class="fdesc">能被框的人。宪法：框前就有的 entity collection key。开始图负责刷新这份名单。</span></div>
+      <div class="field"><span class="fname">候选<span class="ftype">命中入参</span></span><span class="fdesc">能被框的人。宪法：框前就有的 entity collection key。battle context 挂载的 roster_sync 图维护这份名单。</span></div>
       <div class="field"><span class="fname">预览<span class="ftype">图内自写</span></span><span class="fdesc">拖拽时框里是谁（如 case_e.box_hover）→ 黄环。命中图 DispatchCollectionEvent 写入；离开「正在框选」清空。</span></div>
       <div class="field"><span class="fname">已选中<span class="ftype">collection key</span></span><span class="fdesc">松手正式结果（selected）→ 蓝环；replace / add / subtract。</span></div>
     </div>
@@ -169,8 +169,8 @@
     <div class="form">
       <div class="ft">框开始必须做</div>
       <div class="field"><span class="fname">写起角<span class="ftype">WriteMapVarFloat ×2</span></span><span class="fdesc">case_e_press_px / case_e_press_py</span></div>
-      <div class="field"><span class="fname">刷新候选<span class="ftype">DispatchCollectionEvent</span></span><span class="fdesc">写入 case_e.selectable（或合同选定的候选 key）——这是命中函数的入参来源，不是可有可无。</span></div>
       <div class="field"><span class="fname">ActivateContext<span class="ftype">op</span></span><span class="fdesc">激活 boxing；存活期开始反复调命中函数</span></div>
+      <div class="field"><span class="fname">候选集<span class="ftype">另维</span></span><span class="fdesc">不在按下图里捞人。battle context 的 triggers 挂 graph.case_e.roster_sync（MapHeartbeat）写入 case_e.selectable。</span></div>
     </div>
   </div>
 
@@ -253,7 +253,8 @@
     <tbody>
       <tr><td>01–02</td><td>出生挂战斗</td><td>templates / profile</td><td>配置+代码</td></tr>
       <tr><td>03</td><td>边沿 + 存活期调函数</td><td>triggers[]；存活期函数 id</td><td>配置；调度代码</td></tr>
-      <tr><td>04</td><td>按下</td><td>起角 map var；候选集；ActivateContext</td><td>配置图体</td></tr>
+      <tr><td>04</td><td>按下</td><td>起角 map var；ActivateContext</td><td>配置图体</td></tr>
+      <tr><td>03′</td><td>battle 存活</td><td>roster_sync → case_e.selectable</td><td>context triggers[]</td></tr>
       <tr><td>05</td><td>拖拽每 tick</td><td>同一命中函数（候选+矩形→名单）</td><td>函数资产+调度</td></tr>
       <tr><td>06</td><td>抬起</td><td>再调同一函数 → selected；Deactivate</td><td>配置图体（现网 InvokeGraph 已调 box_hit）</td></tr>
       <tr><td>07</td><td>成员变化</td><td>presenter 两 key</td><td>配置</td></tr>

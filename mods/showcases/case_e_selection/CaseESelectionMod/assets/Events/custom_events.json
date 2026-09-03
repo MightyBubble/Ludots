@@ -1,7 +1,7 @@
 [
   {
     "id": "gameplay.case_e.roster_refreshed",
-    "description": "Case E 可框选单位候选集刷新事件：box_begin 图从世界侧取全体地图实体，按队伍（teamId=1，敌我过滤）与模板（case_e_marine，只留可框选）过滤后经 EventKeyedCollectionWriter 写入 case_e.selectable 集合（owner=玩家 rep）。命中查询（框选/点选）的候选集入参即此集合 key。",
+    "description": "Case E 可框选单位候选集刷新事件：battle context 挂载的 roster_sync 图在 MapHeartbeat 上从世界侧取全体地图实体，按队伍（teamId=1）与模板（case_e_marine）过滤后经 EventKeyedCollectionWriter 写入 case_e.selectable（owner=玩家 rep）。随 battle context 启用/停用挂拆，不在按下开框时现场捞。命中入参即此集合 key。",
     "scope": "map"
   },
   {

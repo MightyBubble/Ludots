@@ -21,7 +21,7 @@ namespace Ludots.Tests.GAS.Production;
 /// <summary>
 /// Case E (#1398 D6/D8/§05) 框选全链 headless 验收（忠实形态），对照 case-e-config-report.html
 /// 的七步：01 进图出生 / 02 模板 initialInteractionContext 挂 Instance / 03 Profile triggers 门控 /
-/// 04 语义动作直绑触发衍生 context（框起角=press 屏幕像素 + 候选集世界侧刷新）/
+/// 04 语义动作直绑触发衍生 context（框起角=press 屏幕像素；候选集由 battle context 挂载的 roster_sync 维护）/
 /// 05 boxing context 持续过程：ScreenRect 框 + 存活期命中写 case_e.box_hover 预览集 →
 /// presenter 观察成员变化高亮 / 06 抬起（BoxSelectEnd）对「可框选单位」候选集做屏幕矩形命中
 /// + 修饰键语义透传事件 key 写 selected 集合（与候选、预览三套集合分离）。
@@ -86,6 +86,11 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(0),
             "框指示 presenter 在按下前不存在");
 
+        // ── 03b：battle context 挂载 roster_sync（MapHeartbeat）→ 开框前候选集已就位 ──
+        TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        AssertCollection(engine, commander, SelectableKey, "候选集随 battle context 维护（敌我+模板过滤），框之前就有",
+            marine1, marine2, marine3, marine4);
+
         // ── 04：按下（BoxSelectBegin）→ 图入口 action 直绑 → 激活衍生「正在框选」context ──
         // 窗口像素 ↔ 世界 cm 1:1 伪件下，marines 1-4 屏幕位置 = (-900,0)/(-300,0)/(300,0)/(900,0)。
         PressAt(engine, backend, new Vector2(-1200f, -100f));
@@ -101,12 +106,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(engine.CurrentMapSession!.Variables!.ReadFloat("case_e_press_px"), Is.EqualTo(-1200f),
             "框起角=press 指针窗口像素（D1 事实层）写入地图变量，非派生地面点");
         Assert.That(engine.CurrentMapSession.Variables.ReadFloat("case_e_press_py"), Is.EqualTo(-100f));
-
-        // ── 04b：候选集入参——box_begin 世界侧取全体地图实体，敌我（teamId=1）+ 模板
-        //（case_e_marine）过滤后写入 case_e.selectable 集合（owner=rep）──
-        TickUntil(engine, 20, () => CollectionCount(engine, commander, SelectableKey) == 4);
-        AssertCollection(engine, commander, SelectableKey, "候选集=可框选单位（敌我+模板过滤）",
-            marine1, marine2, marine3, marine4);
 
         // ── 05①b：presenter 观察者——ContextActivated 出现框指示 ──
         Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(1),

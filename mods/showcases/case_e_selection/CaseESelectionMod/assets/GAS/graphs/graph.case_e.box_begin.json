@@ -47,31 +47,6 @@
         "attribute": "CaseE.PressPy"
       },
       {
-        "id": "map_units",
-        "op": "QueryAllMapEntities"
-      },
-      {
-        "id": "own_team",
-        "op": "QueryFilterTeam",
-        "teamId": 1
-      },
-      {
-        "id": "selectable_units",
-        "op": "QueryFilterTemplate",
-        "template": "case_e_marine"
-      },
-      {
-        "id": "roster_replace",
-        "op": "ConstInt",
-        "intValue": 0
-      },
-      {
-        "id": "refresh_roster",
-        "op": "DispatchCollectionEvent",
-        "event": "gameplay.case_e.roster_refreshed",
-        "collectionKey": "case_e.selectable"
-      },
-      {
         "id": "activate_boxing",
         "op": "ActivateContext",
         "context": "interaction.context.case_e.boxing",
@@ -94,12 +69,7 @@
       { "from": "store_press_py", "fromPort": "next", "to": "rep" },
       { "from": "rep", "fromPort": "next", "to": "store_press_attr_px" },
       { "from": "store_press_attr_px", "fromPort": "next", "to": "store_press_attr_py" },
-      { "from": "store_press_attr_py", "fromPort": "next", "to": "map_units" },
-      { "from": "map_units", "fromPort": "next", "to": "own_team" },
-      { "from": "own_team", "fromPort": "next", "to": "selectable_units" },
-      { "from": "selectable_units", "fromPort": "next", "to": "roster_replace" },
-      { "from": "roster_replace", "fromPort": "next", "to": "refresh_roster" },
-      { "from": "refresh_roster", "fromPort": "next", "to": "activate_boxing" },
+      { "from": "store_press_attr_py", "fromPort": "next", "to": "activate_boxing" },
       { "from": "activate_boxing", "fromPort": "next", "to": "ok" },
       { "from": "ok", "fromPort": "next", "to": "halt" }
     ],
@@ -111,7 +81,6 @@
       { "from": "rep", "fromPort": "value", "to": "store_press_attr_py", "toPort": "target" },
       { "from": "read_press_px", "fromPort": "value", "to": "store_press_attr_px", "toPort": "value" },
       { "from": "read_press_py", "fromPort": "value", "to": "store_press_attr_py", "toPort": "value" },
-      { "from": "roster_replace", "fromPort": "value", "to": "refresh_roster", "toPort": "value" },
       { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
     ]
   }
