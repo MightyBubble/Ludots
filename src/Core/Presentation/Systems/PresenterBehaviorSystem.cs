@@ -85,7 +85,7 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<PresenterState, PresenterBootstrapPending>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterWorldPosition, PresenterWorldPlanePosition>()
-            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasGraphParamBinding, PerfHasExtensionBehavior, PerfHasTrailMesh>()
+            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasGraphParamBinding, PerfHasLiveParamBinding, PerfHasExtensionBehavior, PerfHasTrailMesh>()
             .WithNone<PresenterBootstrapPending>();
         private readonly QueryDescription _materialDirtyQuery = new QueryDescription()
             .WithAll<PresenterState, PerfMaterialDirty>()
@@ -630,7 +630,8 @@ namespace Ludots.Core.Presentation.Systems
                 if (batchGrounding &&
                     chunkDefinition!.TickBehaviorsAreGroundingOnly &&
                     !chunkDefinition.HasOwnerFacingBindingWork &&
-                    !chunkDefinition.HasGraphParamBindingWork)
+                    !chunkDefinition.HasGraphParamBindingWork &&
+                    !chunkDefinition.HasLiveParamBindingWork)
                 {
                     if (TrySkipOwnerBackedSnapToGroundBatch(
                             states,
@@ -672,6 +673,7 @@ namespace Ludots.Core.Presentation.Systems
                     chunkDefinition != null &&
                     !chunkDefinition.HasOwnerFacingBindingWork &&
                     !chunkDefinition.HasGraphParamBindingWork &&
+                    !chunkDefinition.HasLiveParamBindingWork &&
                     TryResolveParentAttachmentOnly(chunkDefinition, out AttachmentConfig attachmentConfig, out int attachmentSlot))
                 {
                     Span<PresenterParent> parents = chunk.GetSpan<PresenterParent>();
@@ -880,9 +882,12 @@ namespace Ludots.Core.Presentation.Systems
                     applyAttributes: firstFrame || updateAttributeBindings,
                     applyTags: firstFrame || updateTagBindings);
             }
-            else if (definition.HasOwnerFacingBindingWork || definition.HasGraphParamBindingWork)
+            else if (definition.HasOwnerFacingBindingWork ||
+                     definition.HasGraphParamBindingWork ||
+                     definition.HasLiveParamBindingWork)
             {
                 ApplyOwnerFacingBindings(entity, owner, definition);
+                ApplyLiveParamBindings(entity, owner, definition);
                 ApplyGraphParamBindings(entity, owner, definition);
             }
 
@@ -1269,6 +1274,30 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             return axisX ? screenX : screenY;
+        }
+
+        private void ApplyLiveParamBindings(Entity entity, Entity owner, PresenterDefinition definition)
+        {
+            int[] liveBindingIndices = definition.LiveParamBindingIndices;
+            PresenterParamBinding[] bindings = definition.Bindings;
+            for (int i = 0; i < liveBindingIndices.Length; i++)
+            {
+                int bindingIndex = liveBindingIndices[i];
+                ref readonly PresenterParamBinding binding = ref bindings[bindingIndex];
+                ValueRef value = binding.Value;
+                switch (value.Source)
+                {
+                    case ValueSourceKind.OwnerBlackboardFloat:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveOwnerBlackboardFloat(owner, value.SourceId, definition.Key, binding.ParamKey), 0, Vector4.Zero);
+                        break;
+                    case ValueSourceKind.PointerScreenX:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolvePointerScreenAxis(axisX: true, definition.Key, binding.ParamKey), 0, Vector4.Zero);
+                        break;
+                    case ValueSourceKind.PointerScreenY:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolvePointerScreenAxis(axisX: false, definition.Key, binding.ParamKey), 0, Vector4.Zero);
+                        break;
+                }
+            }
         }
 
         /// <summary>

@@ -172,12 +172,16 @@ namespace Ludots.Core.Input.Interaction
 
         private static void RequireTrimmedWhenPresent(string value, string path)
         {
-            if (value == null)
+            // Omitted JSON fields deserialize to "" via property defaults; treat blank as absent.
+            if (string.IsNullOrWhiteSpace(value))
             {
                 return;
             }
 
-            RequireTrimmedNonEmpty(value, path);
+            if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{path} must not contain leading or trailing whitespace.");
+            }
         }
 
         private static void RequireTrimmedNonEmpty(string value, string path)
