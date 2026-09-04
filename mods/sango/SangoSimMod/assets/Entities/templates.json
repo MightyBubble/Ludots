@@ -44,6 +44,32 @@
     }
   },
   {
+    "id": "sango.troop",
+    "components": {
+      "Name": { "Value": "" },
+      "AttributeBuffer": {
+        "base": {
+          "sango.troop.troops": 0,
+          "sango.troop.morale": 0,
+          "sango.troop.food": 0
+        },
+        "current": {
+          "sango.troop.troops": 0,
+          "sango.troop.morale": 0,
+          "sango.troop.food": 0
+        }
+      },
+      "DirtyFlags": {}
+    }
+  },
+  {
+    "id": "sango.corps",
+    "components": {
+      "Name": { "Value": "" },
+      "DirtyFlags": {}
+    }
+  },
+  {
     "id": "sango.mirror.person",
     "components": {
       "Name": { "Value": "" }

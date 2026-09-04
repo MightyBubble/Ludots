@@ -50,7 +50,7 @@ namespace Sango
         public void OnLoad(IModContext context)
         {
             IVirtualFileSystem vfs = context.VFS;
-            context.Log("[SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers + seed event; M2.d: step-turns/journal dev events; M3.f: combat challenge trigger online; M3-end: entity mirror read model; D-1': native city entities + GAS attributes; D-2': native person entities + GAS attributes)");
+            context.Log("[SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers + seed event; M2.d: step-turns/journal dev events; M3.f: combat challenge trigger online; M3-end: entity mirror read model; D-1': native city entities + GAS attributes; D-2': native person entities + GAS attributes; D-3': native troop/corps entities + GAS attributes)");
             // D-1' 城 GAS 属性注册(引擎 AttributeRegistry 唯一表;模板 sango.city 的
             // AttributeBuffer 数据按名解析到同一批 id)。幂等:重名注册由注册表显式拒绝。
             foreach (string attributeName in new[]
@@ -80,6 +80,19 @@ namespace Sango
                 }
             }
 
+            // D-3' 部队 GAS 属性注册(同表同规;模板 sango.troop 的 AttributeBuffer
+            // 数据按名解析到同一批 id)。
+            foreach (string attributeName in new[]
+                     {
+                         SangoTroopAttributes.Troops, SangoTroopAttributes.Morale, SangoTroopAttributes.Food,
+                     })
+            {
+                if (context.Registries.GetAttributeId(attributeName) == -1)
+                {
+                    context.Registries.RegisterAttribute(attributeName);
+                }
+            }
+
             // M3.f 战斗演出触发(单挑/舌战):静态内核事件订阅,与内核同进程生命周期
             // (内核未启动时事件不来);headless 测试按用例自行 Attach/Detach。
             SangoChallengeOps.Attach();
@@ -93,6 +106,9 @@ namespace Sango
             // D-2' 原生武将域系统:回合结算(Cleanup,与城域结算同相位——掉忠/登场/
             // 逃逸的组件落账与运行时自举)。
             context.Systems.RegisterSystem(new SangoPersonSettlementSystem(() => _engine), SystemGroup.Cleanup);
+            // D-3' 原生部队/军团域系统:回合结算(Cleanup,与城/武将域结算同相位——
+            // 耗粮/断粮士气/AP 发放的镜像对账与运行时自举)。
+            context.Systems.RegisterSystem(new SangoTroopSettlementSystem(() => _engine), SystemGroup.Cleanup);
             context.OnEvent(GameEvents.MapLoaded, OnMapLoaded(vfs));
             context.OnEvent(GameEvents.TurnAdvanced, OnTurnAdvanced(vfs));
             context.OnEvent(new EventKey(SeedTroopsEventKey), OnSeedTroops(vfs));
@@ -180,10 +196,13 @@ namespace Sango
                 engine.World, presenterRuntime, definitions, stableIds,
                 SangoMapLabels.LoadPlacements(engine.VFS ?? throw new InvalidOperationException("SangoMapLabels requires the engine VFS.")));
 
+            // D-3':部队标记 owner 迁移——原生部队运行时先行(标记 presenter 挂接在
+            // 部队实体上),缺席即标记运行时构造失败(fail-fast,不回落双实体路径)。
+            SangoTroopNativeRuntime troopRuntime = SangoTroopNativeRuntime.Attach(engine);
             _troopMarkers?.Dispose();
-            _troopMarkers = new SangoTroopMarkerRuntime(engine.World, presenterRuntime, definitions, stableIds);
+            _troopMarkers = new SangoTroopMarkerRuntime(engine.World, troopRuntime, presenterRuntime, definitions, stableIds);
             _troopMarkers.SyncAll(Sango.Core.Scenario.Cur);
-            EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.a: field layers populated; {spawned} city markers spawned; M3.b: {labelsSpawned} map labels spawned; M2.b: troop marker runtime online ({_troopMarkers.ActiveMarkers} troops)");
+            EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.a: field layers populated; {spawned} city markers spawned; M3.b: {labelsSpawned} map labels spawned; M2.b/D-3': troop marker runtime online on native troop entities ({_troopMarkers.ActiveMarkers} troops)");
         }
 
         // 开发播种(AgentBridge events.fire SangoSeedTroops):按 citySet 顺序找满足出征
@@ -334,8 +353,8 @@ namespace Sango
                     return Task.CompletedTask;
                 }
 
-                attacker.SetMission(Sango.Core.MissionType.TroopDestroyTroop, defender.Id);
-                defender.SetMission(Sango.Core.MissionType.TroopDestroyTroop, attacker.Id);
+                SangoTroopWriteFace.ApplyMission(attacker, Sango.Core.MissionType.TroopDestroyTroop, defender.Id);
+                SangoTroopWriteFace.ApplyMission(defender, Sango.Core.MissionType.TroopDestroyTroop, attacker.Id);
                 // Entry 级直接授任务(moveTroop 分派之外的显式入口),入命令 journal;
                 // 编成与回合推进已由 op 层自动记录,seed 对阵由此分解为可重放原语序列。
                 SangoCommandJournal.Record(SangoReplayJournal.SetMissionKind,
@@ -434,7 +453,7 @@ namespace Sango
         {
             int cost = Sango.Core.JobType.GetJobCostAP((int)Sango.Core.CityJobType.MakeTroop);
             return city.troops > 0 && city.food > 0 && city.freePersons.Count > 0 &&
-                   city.mBelongCorps!.ActionPoint >= cost;
+                   SangoCorpsReadFace.ActionPoint(city) >= cost;
         }
 
         static Sango.Core.Troop? SeedEncounterTroop(Sango.Core.Scenario scenario, Sango.Core.City city)
@@ -480,7 +499,9 @@ namespace Sango
         // 镜像挂载(幂等):内核已启动且引擎在座即挂;内核未启动时由镜像系统在内核
         // 启动后的帧自举(SangoWebUiMod 的 GameStart 启动先于本 mod 任何事件的路径)。
         // D-1':原生城运行时先行(城实体/属性/保序组件;镜像城分支随其挂载退役);
-        // D-2':原生武将运行时同理先行(镜像武将分支随其挂载退役)。
+        // D-2':原生武将运行时同理先行(镜像武将分支随其挂载退役);
+        // D-3':原生部队/军团运行时同理先行(镜像部队分支随其挂载退役;presenter
+        // 部队标记 owner 迁部队实体,标记运行时按其挂载为前置)。
         private static void EnsureEntityMirror(GameEngine engine)
         {
             _engine = engine;
@@ -491,6 +512,7 @@ namespace Sango
 
             SangoCityNativeRuntime.Attach(engine);
             SangoPersonNativeRuntime.Attach(engine);
+            SangoTroopNativeRuntime.Attach(engine);
             SangoEntityMirrorRuntime.Attach(engine);
         }
 

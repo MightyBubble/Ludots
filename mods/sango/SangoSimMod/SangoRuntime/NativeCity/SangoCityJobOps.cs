@@ -108,7 +108,7 @@ namespace Sango.Runtime
 
             city.gold -= goldNeed;
             city.morale += totalValue;
-            city.mBelongCorps!.ReduceActionPoint(JobType.GetJobCostAP(jobId));
+            SangoCorpsWriteFace.ReduceActionPoint(city, JobType.GetJobCostAP(jobId));
             if (city.morale > city.MaxMorale)
             {
                 city.morale = city.MaxMorale;
@@ -147,8 +147,8 @@ namespace Sango.Runtime
             }
 
             city.gold -= totalGoldCost;
-            city.mBelongCorps!.ReduceActionPoint(totalApCost);
-            city.mBelongCorps.AddJobCounter(jobId);
+            SangoCorpsWriteFace.ReduceActionPoint(city, totalApCost);
+            SangoCorpsWriteFace.AddJobCounter(city, jobId);
             return true;
         }
 
@@ -164,14 +164,14 @@ namespace Sango.Runtime
                 CityRecruitPersonEvent recruitEvent = RenderEvent.Instance.Create<CityRecruitPersonEvent>();
                 recruitEvent.Init(executor, dest);
                 RenderEvent.Instance.Add(recruitEvent);
-                city.mBelongCorps!.ReduceActionPoint(apCost);
+                SangoCorpsWriteFace.ReduceActionPoint(city, apCost);
                 return true;
             }
 
             // 武将写面(D-2' 消桥 #3):任务态/行动位组件化。
             SangoPersonWriteFace.ApplyMission(executor, MissionType.PersonRecruitPerson, dest, 100, dest.mCurrentCity!.Id);
             SangoPersonWriteFace.SetActionOver(executor, true);
-            city.mBelongCorps!.ReduceActionPoint(apCost);
+            SangoCorpsWriteFace.ReduceActionPoint(city, apCost);
             return false;
         }
 

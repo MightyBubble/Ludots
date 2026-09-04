@@ -1,9 +1,10 @@
 // M3 末 ECS 溶解第一片:内核读模型 → Arch ECS 镜像实体(SangoEntityMirror)。
 // D-1' 起城面升级为原生城实体(sango.city 模板 + GAS 属性 + 保序组件,
 // SangoCityNativeRuntime 持有);D-2' 起武将面升级为原生武将实体(sango.person 模板 +
-// GAS 属性 + 状态/归属组件,SangoPersonNativeRuntime 持有)。原生运行时挂载时镜像
-// 只保部队,城/武将实体不再双份(镜像城/武将分支退役;presenter owner 迁移后的
-// 最终消灭见 M3.h 在案后续片)。
+// GAS 属性 + 状态/归属组件,SangoPersonNativeRuntime 持有);D-3' 起部队面升级为原生
+// 部队实体(sango.troop 模板 + GAS 属性 + 任务/CD/路径组件,SangoTroopNativeRuntime
+// 持有)。原生运行时挂载时镜像城/武将/部队分支全部退役(消灭双实体;镜像仅在全原生
+// 未挂载的裸内核跑(预言机对拍)中物化,供读模型纯净性双跑验收)。
 // 合同:内核(Scenario.Cur 对象池)是唯一真相源,本文件只读内核、只写引擎世界;
 // 镜像开关(注入与否)不影响 WorldDigest(读模型纯净性由 SangoEntityMirrorTests 双跑验收)。
 // 物化走 Layer 0 原子 op EntityLifecycleAtomicOps.MaterializeTemplate(模板
@@ -206,8 +207,11 @@ namespace Sango.Runtime
             // D-1':城数值面归原生城实体(GAS 属性),镜像只保武将/部队刷新。
             // D-2':武将面归原生武将实体(sango.person 模板 + GAS 属性 + 组件),
             // 镜像武将分支随原生武将运行时挂载退役(消灭双实体,城域先例)。
+            // D-3':部队面归原生部队实体(sango.troop 模板 + GAS 属性 + 组件,
+            // SangoTroopNativeRuntime),镜像部队分支随其挂载退役。
             bool nativeCities = SangoCityNativeRuntime.Active is { IsDisposed: false };
             bool nativePersons = SangoPersonNativeRuntime.Active is { IsDisposed: false };
+            bool nativeTroops = SangoTroopNativeRuntime.Active is { IsDisposed: false };
             if (!nativeCities)
             {
                 foreach (KeyValuePair<int, Entity> pair in _cities)
@@ -234,6 +238,11 @@ namespace Sango.Runtime
 
                     ApplyPersonSnapshot(_world, pair.Value, person, PersonPositionCm(_scenario, person));
                 }
+            }
+
+            if (nativeTroops)
+            {
+                return;
             }
 
             List<int>? deadTroops = null;
@@ -326,6 +335,7 @@ namespace Sango.Runtime
             // D-1':城面升级为原生城实体(sango.city 模板 + GAS 属性 + 保序组件,
             // SangoCityNativeRuntime 持有);原生运行时挂载时镜像不再重复建城实体。
             // D-2':武将面同理归 sango.person 原生实体,镜像武将分支随其挂载退役。
+            // D-3':部队面同理归 sango.troop 原生实体,镜像部队分支随其挂载退役。
             bool nativeCities = SangoCityNativeRuntime.Active is { IsDisposed: false };
             if (!nativeCities)
             {
@@ -349,13 +359,18 @@ namespace Sango.Runtime
                     }
                 });
             }
-            scenario.troopsSet.ForEach(troop =>
+
+            // D-3':部队面归原生部队实体时镜像不再重复建部队实体。
+            if (SangoTroopNativeRuntime.Active is not { IsDisposed: false })
             {
-                if (troop != null && troop.IsAlive)
+                scenario.troopsSet.ForEach(troop =>
                 {
-                    _troops[troop.Id] = SpawnMirror(SangoMirrorKind.Troop, troop.Id, TroopDisplayName(troop), CellToCm(scenario.Map, troop.x, troop.y));
-                }
-            });
+                    if (troop != null && troop.IsAlive)
+                    {
+                        _troops[troop.Id] = SpawnMirror(SangoMirrorKind.Troop, troop.Id, TroopDisplayName(troop), CellToCm(scenario.Map, troop.x, troop.y));
+                    }
+                });
+            }
 
             RefreshAllStats();
             EngineLog.Info(MirrorChannel, $"[SangoEntityMirror] rebuilt for scenario turn {scenario.Info.turnCount}: {_cities.Count} cities, {_persons.Count} persons, {_troops.Count} troops");
@@ -426,7 +441,8 @@ namespace Sango.Runtime
 
         void OnTroopCreated(Troop troop, Scenario scenario)
         {
-            if (!HandlesCurrentWorld(scenario) || troop == null || !troop.IsAlive)
+            // D-3':部队面归原生部队实体时镜像无部队分支(无实体可建)。
+            if (SangoTroopNativeRuntime.Active is { IsDisposed: false } || !HandlesCurrentWorld(scenario) || troop == null || !troop.IsAlive)
             {
                 return;
             }
@@ -442,6 +458,11 @@ namespace Sango.Runtime
 
         void OnTroopEnterCell(Troop troop, Cell destCell, Cell lastCell)
         {
+            if (SangoTroopNativeRuntime.Active is { IsDisposed: false })
+            {
+                return;
+            }
+
             if (!HandlesCurrentKernel() || troop == null || !_troops.TryGetValue(troop.Id, out Entity entity) || !_world.IsAlive(entity))
             {
                 return;
@@ -695,9 +716,11 @@ namespace Sango.Runtime
             if (engine != null && Sango.Core.Scenario.Cur != null)
             {
                 // D-1':城面原生运行时先行(城模板升级为 sango.city,镜像城分支随其挂载退役);
-                // D-2':武将面原生运行时同理先行(sango.person,镜像武将分支随其挂载退役)。
+                // D-2':武将面原生运行时同理先行(sango.person,镜像武将分支随其挂载退役);
+                // D-3':部队/军团面原生运行时同理先行(sango.troop/sango.corps,镜像部队分支随其挂载退役)。
                 SangoCityNativeRuntime.Attach(engine);
                 SangoPersonNativeRuntime.Attach(engine);
+                SangoTroopNativeRuntime.Attach(engine);
                 SangoEntityMirrorRuntime.Attach(engine);
             }
         }

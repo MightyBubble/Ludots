@@ -565,8 +565,23 @@ namespace Sango.Runtime
                 _world.Add(entity, default(SangoPersonMission));
                 _world.Add(entity, default(SangoPersonLedger));
                 _persons[person.Id] = entity;
+                InitializePersonAttributes(entity, person);
                 SyncPersonInto(entity, person);
             });
+        }
+
+        // 物化期初值直写 AttributeBuffer(与模板数据初始化同义,非变更):850 武将 ×5 属性
+        // 的首拍批量变更会超出引擎 AttributeChanged 延迟队列容量(1024,GAS.
+        // DEFERRED_TRIGGER.ERR.CapacityExceeded——D-3' 运行时启动实测),后续值变化仍走
+        // AttributeMutationOps.SetBase 正式通道(同值幂等,常态逐回合变更量远低于容量)。
+        void InitializePersonAttributes(Entity entity, Person person)
+        {
+            ref AttributeBuffer attributes = ref _world.Get<AttributeBuffer>(entity);
+            attributes.SetBase(SangoPersonAttributes.CommandId, person.Command);
+            attributes.SetBase(SangoPersonAttributes.StrengthId, person.Strength);
+            attributes.SetBase(SangoPersonAttributes.IntelligenceId, person.Intelligence);
+            attributes.SetBase(SangoPersonAttributes.PoliticsId, person.Politics);
+            attributes.SetBase(SangoPersonAttributes.LoyaltyId, person.loyalty);
         }
 
         void SetBase(Entity entity, int attributeId, float value)

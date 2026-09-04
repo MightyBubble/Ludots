@@ -386,7 +386,7 @@ namespace Sango.Runtime
                 TrainCounter = city.GetJobCounter((int)CityJobType.TrainTroops),
                 SearchingCounter = city.GetJobCounter((int)CityJobType.Searching),
                 RecruitCounter = city.GetJobCounter((int)CityJobType.RecruitPerson),
-                RewardCounter = SangoLegacyBridge.CorpsJobCounter(city, (int)CityJobType.Reward),
+                RewardCounter = SangoCorpsReadFace.JobCounter(city, (int)CityJobType.Reward),
                 AIPrepared = city.AIPrepared ? (byte)1 : (byte)0,
                 AIFinished = city.AIFinished ? (byte)1 : (byte)0,
                 ActionOver = city.ActionOver ? (byte)1 : (byte)0,

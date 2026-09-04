@@ -80,6 +80,10 @@ namespace Sango.Runtime
                 // (SangoCityRoster/SangoCityEconomy/SangoCityJobState)随引擎 world.bin
                 // 持久化;等价证明(对拍逐位相等)后本捕获节随内核城域终局一并退役。
                 ["cityOrder"] = CaptureCityOrder(scenario),
+                // D-3' 部队域捕获面(组件化退役原 SangoCityPersonOrder.TroopSkillCd):
+                // 技能冷却是原生组件 SangoTroopSkillCooldowns 的 world.bin 原生载体;
+                // 本节承担"内核回灌链尚未退场"期间的 CD 注入,随 D-5'/D-6' 退役。
+                ["troopDomain"] = SangoTroopDomainCapture.Capture(scenario),
             };
         }
 
@@ -121,29 +125,8 @@ namespace Sango.Runtime
                 extraGainGoldFactor[city.Id.ToString()] = city.extraGainGoldFactor;
                 extraPopulationFactor[city.Id.ToString()] = city.extraPopulationFactor;
             });
-            var troopSkillCd = new JsonObject();
-            scenario.troopsSet.ForEach(troop =>
-            {
-                if (troop == null || !troop.IsAlive)
-                {
-                    return;
-                }
-
-                var skills = new JsonObject();
-                foreach (SkillInstance? skill in troop.landSkills)
-                {
-                    if (skill != null) skills[skill.Name ?? string.Empty] = skill.CDCount;
-                }
-                foreach (SkillInstance? skill in troop.waterSkills)
-                {
-                    if (skill != null) skills[skill.Name ?? string.Empty] = skill.CDCount;
-                }
-                foreach (SkillInstance? skill in troop.StrategySkills)
-                {
-                    if (skill != null) skills[skill.Name ?? string.Empty] = skill.CDCount;
-                }
-                troopSkillCd[troop.Id.ToString()] = skills;
-            });
+            // 部队技能冷却(D-3' 迁出:捕获面归 SangoTroopDomainCapture,原
+            // SangoCityPersonOrder.TroopSkillCd 退役)。
             var leaderPerson = new JsonObject();
             var leaderElectionPending = new JsonObject();
             var cityTroopMissionType = new JsonObject();
@@ -207,6 +190,9 @@ namespace Sango.Runtime
             // 俘虏三面(M3.g):Troop/City.captiveList 与 Force.BeCaptiveList 的序列化特性
             // 被上游注释(Troop.cs:94/City.cs:360),按 M1.d"修原版存档 bug"先例在保存面
             // 补捕获,SangoCityPersonOrder 文件头第 6-8 条。
+            // D-3' 退役候选(troop 段):部队俘囚名单已由原生组件 SangoTroopCaptives 随
+            // world.bin 持久化;本节继续承担内核回灌链(Troop.captiveList 重建)的注入,
+            // 随 D-5'/D-6' 存档收敛波退役。
             var troopCaptives = new JsonObject();
             scenario.troopsSet.ForEach(troop =>
             {
@@ -253,6 +239,9 @@ namespace Sango.Runtime
             {
                 if (corps != null)
                 {
+                    // D-3' 退役候选(corps 段):AIPrepared/AIFinished/命令队列残余已由
+                    // 原生组件 SangoCorpsCommand(进度位)随 world.bin 持久化;本节继续
+                    // 承担内核回灌链(AICommandQueue 重建)的削前缀,随 D-5'/D-6' 退役。
                     corpsAi[corps.Id.ToString()] = AiProgressRow(corps.AIPrepared, corps.AIFinished, corps.AICommandQueue.Count);
                 }
             });
@@ -274,7 +263,6 @@ namespace Sango.Runtime
             });
             return new JsonObject
             {
-                ["troopSkillCd"] = troopSkillCd,
                 ["allPersons"] = all,
                 ["wildPersons"] = wild,
                 ["invisiblePersons"] = invisible,
@@ -433,8 +421,12 @@ namespace Sango.Runtime
                 }
             }
 
+            SangoTroopDomainCapture? troopDomain = SangoTroopDomainCapture.FromJson(root["troopDomain"]);
             SangoKernelBoot.Restore(_vfs, _contentModId, scenarioNode.ToJsonString(), randomState,
                 _scenarioAssetPath, SangoCityPersonOrder.FromJson(root["cityOrder"]));
+            // 部队域回放排在内核回灌之后(回放对象是重建的 SkillInstance;原生部队
+            // 运行体在下一对账拍从内核同步组件,与本回放同值)。
+            troopDomain?.Apply(Scenario.Cur!);
         }
 
         // 原版 Save 对 Info 的两处置写 + 当前势力保真:

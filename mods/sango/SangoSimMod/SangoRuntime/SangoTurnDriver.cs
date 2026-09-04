@@ -157,11 +157,16 @@ namespace Sango.Runtime
                 rows.AddRange(SangoPersonNativeRuntime.KernelPersonRows(scenario));
             }
 
-            scenario.troopsSet.ForEach(troop =>
+            // 部队行双源(D-3'):原生部队运行时挂载且为当前世界权威时读组件源
+            // (GAS 兵力 + 格位/编成组件,读缝同步后产出);未挂载读内核源。
+            if (SangoTroopNativeRuntime.Active is { IsDisposed: false } nativeTroops && nativeTroops.IsCurrentKernel)
             {
-                if (troop != null && troop.IsAlive)
-                    rows.Add($"troop {troop.Id}:{troop.mBelongCorps?.Id ?? 0}:{troop.mBelongForce?.Id ?? 0}:{troop.x}:{troop.y}:{troop.troops}");
-            });
+                rows.AddRange(nativeTroops.TroopDigestRows());
+            }
+            else
+            {
+                rows.AddRange(SangoTroopNativeRuntime.KernelTroopRows(scenario));
+            }
             rows.Sort(StringComparer.Ordinal);
 
             var builder = new StringBuilder();

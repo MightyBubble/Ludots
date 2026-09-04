@@ -96,7 +96,7 @@ namespace Sango.Runtime
             // CityExpedition.IsValid。
             int jobCostAP = JobType.GetJobCostAP((int)CityJobType.MakeTroop);
             if (city.troops <= 0 || city.food <= 0 || city.freePersons.Count == 0 ||
-                city.mBelongCorps.ActionPoint < jobCostAP)
+                SangoCorpsReadFace.ActionPoint(city) < jobCostAP)
             {
                 return (SangoTroopOpResult.Fail("invalid_state",
                     "CityExpedition.IsValid gate rejected the order (city troops / food / free persons / corps action points)."), null);
@@ -178,7 +178,7 @@ namespace Sango.Runtime
             city.food -= troop.food;
             city.gold -= troop.gold;
             troop.ForEachPerson(person => city.freePersons.Remove(person));
-            city.mBelongCorps.ReduceActionPoint(jobCostAP);
+            SangoCorpsWriteFace.ReduceActionPoint(city, jobCostAP);
             city.EnsureTroop(troop, scenario);
             SangoCommandJournal.Record(
                 SangoReplayJournal.CreateTroopKind,
@@ -417,10 +417,10 @@ namespace Sango.Runtime
         {
             if (troop.IsPlayerControl)
             {
-                troop.ClearMission();
+                SangoTroopWriteFace.ApplyClearMission(troop);
             }
 
-            troop.SetMission(missionType, missionTarget);
+            SangoTroopWriteFace.ApplyMission(troop, missionType, missionTarget);
 
             bool completed = false;
             for (int i = 0; i < MaxMissionPumpRounds; i++)
@@ -465,13 +465,11 @@ namespace Sango.Runtime
         {
             if (troop.IsPlayerControl)
             {
-                troop.ClearMission();
+                SangoTroopWriteFace.ApplyClearMission(troop);
             }
 
-            troop.SetMission(MissionType.TroopMovetoCell, 0);
-            troop.missionParams1 = destCell.x;
-            troop.missionParams2 = destCell.y;
-            troop.NeedPrepareMission();
+            SangoTroopWriteFace.ApplyMission(troop, MissionType.TroopMovetoCell, 0);
+            SangoTroopWriteFace.ApplyCommissionTarget(troop, destCell);
 
             bool completed = false;
             for (int i = 0; i < MaxMissionPumpRounds; i++)

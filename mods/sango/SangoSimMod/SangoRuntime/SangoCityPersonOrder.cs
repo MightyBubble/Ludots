@@ -6,11 +6,9 @@
 //   2. 经济暂态(totalGainFood/Gold、人口/收入因子)——原版不入档,回灌装载线的
 //      City.Init→CalculateHarvest 用装载期输入重算,与捕获时点的活值不同(捕获前刚
 //      完工的建筑等已计入活值)。
-//   3. 部队技能冷却(Troop.land/water/StrategySkills 的 SkillInstance.CDCount)——原版
-//      技能表不入档(Troop.cs 的 [JsonProperty] 整段注释),回灌按兵种/武将重建后 CD
-//      归零;活世界的冷却进度在长战役里决定技能可用性(CanBeSpell),CD 错位会让
-//      战斗 AI 决策分叉(短链偶然对齐,M2 存档回归在短窗内不暴露)。按 技能名→CD
-//      捕获,回灌后回放。
+//   3. 部队技能冷却——D-3' 组件化退役:捕获/回放迁至部队域面 SangoTroopDomainCapture
+//      (sango.sim 域 troopDomain 节,键=技能表 id),组件载体 SangoTroopSkillCooldowns
+//      随引擎 world.bin 持久化;本文件不再持该面。
 //   4. 太守面(城 Leader 指针 + needUpdateLeader 挂起位 + 全武将 state)——装载线
 //      City.Init 无条件 UpdateNewLeader:活世界处于"选举挂起"(太守在途/已转任,
 //      重选排在城回合末)时,装载期提前落定的选举会改写武将 state 与城指针,回灌
@@ -64,7 +62,6 @@ namespace Sango.Runtime
         public Dictionary<int, float> ExtraGainFoodFactor { get; init; } = new();
         public Dictionary<int, float> ExtraGainGoldFactor { get; init; } = new();
         public Dictionary<int, float> ExtraPopulationFactor { get; init; } = new();
-        public Dictionary<int, Dictionary<string, int>> TroopSkillCd { get; init; } = new();
 
         /// <summary>太守指针(cityId → person id,0 = 空):装载线 City.Init 无条件重选太守,
         /// 活世界"选举挂起"(needUpdateLeader)时点的指针与选举结果都还未落定,按捕获面回放。</summary>
@@ -151,7 +148,6 @@ namespace Sango.Runtime
                 ExtraGainFoodFactor = ParseFloatMap(root["extraGainFoodFactor"]),
                 ExtraGainGoldFactor = ParseFloatMap(root["extraGainGoldFactor"]),
                 ExtraPopulationFactor = ParseFloatMap(root["extraPopulationFactor"]),
-                TroopSkillCd = ParseSkillCdMap(root["troopSkillCd"]),
                 LeaderPerson = ParseIntMap(root["leaderPerson"]),
                 LeaderElectionPending = ParseBoolMap(root["leaderElectionPending"]),
                 PersonStates = ParseIntMap(root["personStates"]),
@@ -224,36 +220,6 @@ namespace Sango.Runtime
                 {
                     map[cityId] = (float)entry.Value;
                 }
-            }
-
-            return map;
-        }
-
-        static Dictionary<int, Dictionary<string, int>> ParseSkillCdMap(JsonNode? node)
-        {
-            var map = new Dictionary<int, Dictionary<string, int>>();
-            if (node is not JsonObject troops)
-            {
-                return map;
-            }
-
-            foreach (KeyValuePair<string, JsonNode?> entry in troops)
-            {
-                if (!int.TryParse(entry.Key, out int troopId) || entry.Value is not JsonObject skills)
-                {
-                    continue;
-                }
-
-                var cds = new Dictionary<string, int>(StringComparer.Ordinal);
-                foreach (KeyValuePair<string, JsonNode?> skill in skills)
-                {
-                    if (skill.Value != null)
-                    {
-                        cds[skill.Key] = (int)skill.Value;
-                    }
-                }
-
-                map[troopId] = cds;
             }
 
             return map;
@@ -427,42 +393,8 @@ namespace Sango.Runtime
                 }
             });
 
-            // 部队技能冷却回放(见文件头第 3 条):按技能名对位,缺名即回灌重建面与
-            // 捕获面技能集不同——回灌分叉,fail-fast。
-            foreach (int troopId in TroopSkillCd.Keys)
-            {
-                Troop? troop = scenario.troopsSet.Get(troopId);
-                if (troop == null)
-                {
-                    throw new SaveOrderException(
-                        $"captured troopSkillCd references troop {troopId} missing from the restored troopsSet.");
-                }
-
-                Dictionary<string, int> captured = TroopSkillCd[troopId];
-                var rebuilt = new Dictionary<string, int>(StringComparer.Ordinal);
-                foreach (SkillInstance skill in EnumerateSkills(troop))
-                {
-                    rebuilt[skill.Name ?? string.Empty] = skill.CDCount;
-                }
-
-                foreach (string skillName in captured.Keys)
-                {
-                    if (!rebuilt.TryGetValue(skillName, out _))
-                    {
-                        throw new SaveOrderException(
-                            $"troop {troopId} rebuilt without captured skill '{skillName}'; the restore diverged from the capture.");
-                    }
-                }
-
-                foreach (SkillInstance skill in EnumerateSkills(troop))
-                {
-                    if (captured.TryGetValue(skill.Name ?? string.Empty, out int cd))
-                    {
-                        skill.CDCount = cd;
-                    }
-                }
-            }
-
+            // 部队技能冷却回放已迁出(D-3' 组件化退役:捕获/回放归部队域面
+            // SangoTroopDomainCapture,组件载体 SangoTroopSkillCooldowns 随 world.bin)。
             // 太守面回放(见文件头第 4 条):先撤装载期改写的武将 state,再回放太守指针,
             // 最后把"选举挂起"补真——活世界的重选发生在城回合末,不在装载线。
             foreach (KeyValuePair<int, int> entry in PersonStates)
@@ -816,33 +748,6 @@ namespace Sango.Runtime
                 }
 
                 list.Add(person);
-            }
-        }
-
-        static IEnumerable<SkillInstance> EnumerateSkills(Troop troop)
-        {
-            foreach (SkillInstance? skill in troop.landSkills)
-            {
-                if (skill != null)
-                {
-                    yield return skill;
-                }
-            }
-
-            foreach (SkillInstance? skill in troop.waterSkills)
-            {
-                if (skill != null)
-                {
-                    yield return skill;
-                }
-            }
-
-            foreach (SkillInstance? skill in troop.StrategySkills)
-            {
-                if (skill != null)
-                {
-                    yield return skill;
-                }
             }
         }
 

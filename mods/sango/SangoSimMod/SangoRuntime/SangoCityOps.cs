@@ -73,7 +73,7 @@ namespace Sango.Runtime
                 !city.CheckJobCost(CityJobType.TrainTroops) ||
                 city.morale >= city.MaxMorale ||
                 city.GetJobCounter(jobId) != 0 ||
-                city.mBelongCorps!.ActionPoint < JobType.GetJobCostAP(jobId))
+                SangoCorpsReadFace.ActionPoint(city) < JobType.GetJobCostAP(jobId))
             {
                 return SangoTroopOpResult.Fail("invalid_state",
                     "CityTrainTroops.IsValid gate rejected the order (no free persons / gold / morale cap / already trained / action points).");
@@ -96,7 +96,7 @@ namespace Sango.Runtime
         {
             int jobId = (int)CityJobType.Searching;
             if (city.freePersons.Count == 0 ||
-                city.mBelongCorps!.ActionPoint < JobType.GetJobCostAP(jobId))
+                SangoCorpsReadFace.ActionPoint(city) < JobType.GetJobCostAP(jobId))
             {
                 return SangoTroopOpResult.Fail("invalid_state",
                     "CitySeraching.IsValid gate rejected the order (no free persons / action points).");
@@ -120,8 +120,8 @@ namespace Sango.Runtime
             int jobId = (int)CityJobType.Reward;
             if (city.gold <= 100 ||
                 !city.CheckJobCost(CityJobType.Reward) ||
-                city.mBelongCorps!.GetJobCounter(jobId) != 0 ||
-                city.mBelongCorps.ActionPoint < JobType.GetJobCostAP(jobId))
+                SangoCorpsReadFace.JobCounter(city, jobId) != 0 ||
+                SangoCorpsReadFace.ActionPoint(city) < JobType.GetJobCostAP(jobId))
             {
                 return SangoTroopOpResult.Fail("invalid_state",
                     "CityReward.IsValid gate rejected the order (gold / already rewarded this turn / action points).");
@@ -158,7 +158,7 @@ namespace Sango.Runtime
         {
             int jobId = (int)CityJobType.RecruitPerson;
             if (city.freePersons.Count == 0 ||
-                city.mBelongCorps!.ActionPoint < JobType.GetJobCostAP(jobId))
+                SangoCorpsReadFace.ActionPoint(city) < JobType.GetJobCostAP(jobId))
             {
                 return SangoTroopOpResult.Fail("invalid_state",
                     "CityRecruit.IsValid gate rejected the order (no free persons / action points).");
