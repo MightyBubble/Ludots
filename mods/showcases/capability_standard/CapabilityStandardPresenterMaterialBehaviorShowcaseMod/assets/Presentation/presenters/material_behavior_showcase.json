@@ -1,0 +1,62 @@
+[
+  {
+    "id": "material_behavior_showcase.prop",
+    "paramDefaults": [
+      {
+        "paramKey": "material_behavior_showcase.swap",
+        "lane": "Float",
+        "floatValue": 0
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "materialParamKey": "material_behavior_showcase.swap",
+          "localScale": [1.4, 1.4, 1.4]
+        }
+      },
+      {
+        "slot": "material",
+        "kind": "Material",
+        "activeByDefault": true,
+        "material": {
+          "baseMaterialId": "material_behavior_showcase.mat.cool",
+          "materialSwapParamKey": "material_behavior_showcase.swap",
+          "swapTable": [
+            { "paramValue": 0, "materialId": "material_behavior_showcase.mat.cool" },
+            { "paramValue": 1, "materialId": "material_behavior_showcase.mat.warm" }
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "material_behavior_showcase.swap.cool" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "material_behavior_showcase.swap",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0
+        }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "material_behavior_showcase.swap.warm" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "material_behavior_showcase.swap",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 1
+        }
+      }
+    ]
+  }
+]

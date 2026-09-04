@@ -4104,6 +4104,72 @@
       "notes": "无音频设备的 CI 走逻辑断言；原生设备测试失败显式 skip。"
     },
     {
+      "id": "capability_standard_presenter_activation_condition_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardPresenterActivationConditionShowcaseMod",
+      "projectPath": "CapabilityStandardPresenterActivationConditionShowcaseMod.csproj",
+      "title": "标准能力·Presenter activationCondition",
+      "summary": "BehaviorSlot.activationCondition（inline SourceHasVisualTransform）在 PresenterCreated 时决定发光球是否点亮；左站有 VisualTransform 亮，右站无则灭，按 1/2 重生切换。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "presenter",
+        "activation-condition"
+      ],
+      "binding": "capability_standard_presenter_activation_condition_showcase",
+      "preset": "capability_standard_presenter_activation_condition_showcase_raylib",
+      "docsPath": "gitbook/reference/presenter-capability-catalog/behaviors.md",
+      "readmePath": null,
+      "acceptanceTest": "ActivationConditionShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "notes": null
+    },
+    {
+      "id": "capability_standard_presenter_material_behavior_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardPresenterMaterialBehaviorShowcaseMod",
+      "projectPath": "CapabilityStandardPresenterMaterialBehaviorShowcaseMod.csproj",
+      "title": "标准能力·Presenter Material 行为",
+      "summary": "L1：BehaviorKind.Material 的 swapTable 随参数换材质；C=冷色 W=暖色 Space=切换。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "presenter",
+        "material"
+      ],
+      "binding": "capability_standard_presenter_material_behavior_showcase",
+      "preset": "capability_standard_presenter_material_behavior_showcase_raylib",
+      "docsPath": "gitbook/reference/presenter-capability-catalog/behaviors.md",
+      "readmePath": null,
+      "acceptanceTest": "MaterialBehaviorShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "notes": "作者路径单能力；渲染课见 engine_raylib_material_binding。"
+    },
+    {
+      "id": "capability_standard_presenter_trailmesh_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardPresenterTrailMeshShowcaseMod",
+      "projectPath": "CapabilityStandardPresenterTrailMeshShowcaseMod.csproj",
+      "title": "标准能力·Presenter TrailMesh",
+      "summary": "L1：presenters.json TrailMesh 行为采样写入 TrailMeshBuffer；运行时只移动/旋转 owner。按 T 开合拖尾。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "presenter",
+        "trailmesh"
+      ],
+      "binding": "capability_standard_presenter_trailmesh_showcase",
+      "preset": "capability_standard_presenter_trailmesh_showcase_raylib",
+      "docsPath": "gitbook/reference/presenter-capability-catalog/behaviors.md",
+      "readmePath": null,
+      "acceptanceTest": "TrailMeshShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "notes": "作者路径单能力；渲染器验收见 engine_raylib_slash_trail。"
+    },
+    {
       "id": "capability_standard_time_flow_showcase",
       "path": "mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod",
       "projectPath": "CapabilityStandardTimeFlowShowcaseMod.csproj",
@@ -5753,13 +5819,13 @@
       "id": "presenter_blacksmith",
       "path": "mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod",
       "projectPath": "PresenterBlacksmithShowcaseMod.csproj",
-      "title": "铁匠铺演示",
-      "summary": "可玩的一座铁匠铺：左侧开工/昼夜/拆铺。同一场标左右两块金色方块大小不同；干活的烟跟开工走，拆铺整棵一起没。完整诊断用 LUDOTS_BLACKSMITH_FORCE_PANEL。",
+      "title": "铁匠铺集成巡演",
+      "summary": "L3 故事集成巡演：开工/昼夜/拆铺串起多条 presenter 能力。逐条学习走能力目录的 L1 单能力入口。",
       "tier": "T3",
-      "category": "stress",
+      "category": "integration",
       "binding": "presenter_blacksmith_showcase",
       "preset": "presenter_blacksmith_showcase_raylib",
-      "docsPath": "gitbook/architecture/presenter-raylib-uat.md",
+      "docsPath": "docs/architecture/presenter-capability-showcase-refresh.md",
       "readmePath": null,
       "acceptanceTest": null,
       "artifactDir": null,
@@ -5767,8 +5833,10 @@
       "status": "active",
       "tags": [
         "presenter",
-        "rendering"
-      ]
+        "rendering",
+        "integration-tour"
+      ],
+      "notes": "职责：集成巡演；逐条 SSOT 见 presenter-capability-catalog。"
     },
     {
       "id": "presenter_blacksmith_large_world_entry",
@@ -7299,7 +7367,7 @@
       "path": "projects/engine_gallery",
       "projectPath": "project.json",
       "title": "引擎能力·材质绑定",
-      "summary": "同一网格多材质对比——零 Core 依赖独立场景",
+      "summary": "L4 引擎画廊：材质实例/贴图/自发光渲染课。Material BehaviorKind 作者路径见 capability_standard_presenter_material_behavior_showcase_raylib。",
       "tier": "T1",
       "category": "engine",
       "tags": [
@@ -7313,7 +7381,8 @@
       "acceptanceTest": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_material_binding",
       "screenshot": "artifacts/acceptance/engine_raylib_material_binding/screen.png",
-      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md",
+      "notes": "L4 渲染证明；作者路径见 capability_standard_presenter_material_behavior_showcase。"
     },
     {
       "id": "engine_raylib_ribbon_overlay",
@@ -7543,7 +7612,7 @@
       "path": "projects/engine_gallery",
       "projectPath": "project.json",
       "title": "引擎能力·刀光轨迹",
-      "summary": "TrailMeshBuffer 武器弧形 mesh 拖尾 + 顶点色渐隐——零 Core 依赖独立场景",
+      "summary": "L4 引擎画廊：TrailMeshBuffer 弧形 mesh 拖尾渲染课。TrailMesh 作者路径见 capability_standard_presenter_trailmesh_showcase_raylib。",
       "tier": "T1",
       "category": "engine",
       "tags": [
@@ -7556,7 +7625,8 @@
       "preset": "engine_raylib_slash_trail",
       "acceptanceTest": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_slash_trail",
-      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md",
+      "notes": "L4 渲染证明；作者路径见 capability_standard_presenter_trailmesh_showcase。"
     },
     {
       "id": "capability_standard_graph_op_HidePanel",

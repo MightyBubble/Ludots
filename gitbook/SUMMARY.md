@@ -135,7 +135,7 @@
   - [Raylib 渲染配置结构](reference/raylib-render-config-structure.md)
   - [Presenter 能力逐条目录](reference/presenter-capability-catalog/README.md)
     - [资产十种 AssetKind](reference/presenter-capability-catalog/asset-kinds.md)
-    - [行为十三种 BehaviorKind](reference/presenter-capability-catalog/behaviors.md)
+    - [行为十四种 BehaviorKind](reference/presenter-capability-catalog/behaviors.md)
     - [渲染六车道](reference/presenter-capability-catalog/render-lanes.md)
     - [环境与光照](reference/presenter-capability-catalog/environment.md)
     - [指令十一加一 PresenterCommandKind](reference/presenter-capability-catalog/commands.md)
