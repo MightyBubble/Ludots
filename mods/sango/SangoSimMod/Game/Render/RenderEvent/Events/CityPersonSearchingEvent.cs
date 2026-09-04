@@ -1,4 +1,5 @@
 using Sango.Core;
+using Sango.Core.Player;
 
 namespace Sango.Render
 {
@@ -20,11 +21,17 @@ namespace Sango.Render
         public override void Enter(Scenario scenario)
         {
             int rs = city.DoJobSearching(person, out target);
+            // M3.e:玩家侧搜索结果对话框改由 ScenarioEvent 表驱动(Data/ScenarioEvent/
+            // 10_搜索失败 / 11_搜索到人才;表 formatContent 与本处原硬编码串逐字同源,
+            // 变量面 {:ActionPerson}=执行搜索武将、{:TargetPerson}=发现的人才)。
+            // 表文本随对话框镜像入玩家消息流(headless/Web 消息流的自然承载面)。
             if (rs < 0)
             {
                 if (city.mBelongCorps.IsPlayerControl && searchingType == 0)
                 {
-                    GameDialog.Instance.Open(GameDialog.DialogStyle.ClickPersonSay, "很遗憾, 什么都没有发现...", () =>
+                    string content = ScenarioEventContent(10, 0);
+                    PlayerMessage.AddTextMessage(content, city.mBelongForce, city.x, city.y);
+                    GameDialog.Instance.Open(GameDialog.DialogStyle.ClickPersonSay, content, () =>
                     {
                         IsDone = true;
                     }, person);
@@ -48,7 +55,7 @@ namespace Sango.Render
 
             if (rs == 0)
             {
-                string content = $"搜索结果，\n发现了名为{target.ColorName}的武将。";
+                string content = ScenarioEventContent(11, 0);
                 GameDialog.Instance.Open(GameDialog.DialogStyle.ClickPersonSay, content, () =>
                 {
                     //展示武将
@@ -97,6 +104,19 @@ namespace Sango.Render
                     IsDone = true;
                 }
             }
+        }
+
+        /// <summary>ScenarioEvent 组条目文本(变量绑定:ActionPerson/TargetPerson/ActionCity/ActionForce)。</summary>
+        string ScenarioEventContent(int groupId, int entryIndex)
+        {
+            ScenarioEventTableEntry entry = ScenerioEventManager.Instance.GetGroup(groupId)[entryIndex];
+            return entry.FormatContent(new ScenarioEventData
+            {
+                ActionPerson = person,
+                TargetPerson = target,
+                ActionCity = city,
+                ActionForce = city.mBelongForce,
+            });
         }
 
         public override void Exit(Scenario scenario)

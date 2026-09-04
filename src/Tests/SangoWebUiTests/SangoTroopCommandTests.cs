@@ -306,11 +306,18 @@ public sealed class SangoTroopCommandTests
         Assert.That(troop.Leader!.Id, Is.EqualTo(personIds[0]), "first personId is the leader (UpdateJobValue order)");
         Assert.That(city.freePersons, Does.Not.Contain(troop.Leader), "leader must leave freePersons");
 
-        // 未知武将/缺载荷的类型化失败。
+        // 未知武将/缺载荷的类型化失败。M3.e 起 AI 城会立项研究(原版 AIResearch:
+        // 扣军团 AP 50、执行武将离城),共享世界跨测试演进后首个编成可能恰好耗尽
+        // 出征 AP 或待命武将,让负例掉进 invalid_state 门——重选一个状态门仍过的
+        // 城再发负例,保住"未知武将 → person_not_free"的受测面(状态门与人员门
+        // 的先后是内核合同,不在此改)。
+        City negativeCity = FindEligibleCity();
+        negativeCity.mBelongCorps!.ActionPoint = Math.Max(
+            negativeCity.mBelongCorps.ActionPoint, JobType.GetJobCostAP((int)CityJobType.MakeTroop));
         (acked, code, _) = await DispatchAsync(harness,
             SangoCreateTroopCommandHandler.CommandName, new
             {
-                cityId = city.Id,
+                cityId = negativeCity.Id,
                 personIds = new[] { 999999 },
                 troops = 100
             }, clientSeq: 12);

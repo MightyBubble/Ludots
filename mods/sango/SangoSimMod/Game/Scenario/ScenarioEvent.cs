@@ -283,21 +283,140 @@ namespace Sango.Core
 
 
 
+    /// <summary>
+    /// IScenarioEventData 的通用实现(M3.e):触发点现地装配变量面(执行武将/目标/
+    /// 城市等),FormatContent 按 variables 消费。
+    /// </summary>
+    public sealed class ScenarioEventData : IScenarioEventData
+    {
+        public Person ActionGovernor { get; set; }
+        public Person ActionCounsellor { get; set; }
+        public Person TargetGovernor { get; set; }
+        public Person TargetCounsellor { get; set; }
+        public SkillInstance ActionSkill { get; set; }
+        public SkillInstance TargetSkill { get; set; }
+        public Person ActionPerson { get; set; }
+        public Person TargetPerson { get; set; }
+        public Troop ActionTroop { get; set; }
+        public Troop TargetTroop { get; set; }
+        public Cell ActionCell { get; set; }
+        public Cell TargetCell { get; set; }
+        public City ActionCity { get; set; }
+        public City TargetCity { get; set; }
+        public Corps ActionCorps { get; set; }
+        public Corps TargetCorps { get; set; }
+        public Force ActionForce { get; set; }
+        public Force TargetForce { get; set; }
+        public object ActionObject { get; set; }
+        public object TargetObject { get; set; }
+    }
+
+    /// <summary>
+    /// Data/ScenarioEvent/*.json 表行的反序列化面。eventType 在表里是字符串编码
+    /// ("PersonTalk" = 人物对话;"Dialog:&lt;GameDialog.DialogStyle&gt;" = 对话框样式;
+    /// "GameSystem:&lt;系统名&gt;" = 推入游戏系统)——ScenarioEvent.eventType 的枚举
+    /// 面存不下这些前缀编码,表驱动触发面消费本类型。
+    /// </summary>
+    public sealed class ScenarioEventTableEntry
+    {
+        public int Id { get; set; }
+        public string eventType { get; set; }
+        public List<string> variables { get; set; }
+        public string formatContent { get; set; }
+
+        /// <summary>复用 ScenarioEvent.FormatContent 的占位符解析({:变量名} → Name)。</summary>
+        public string FormatContent(IScenarioEventData data)
+        {
+            var scenarioEvent = new ScenarioEvent { formatContent = formatContent };
+            return scenarioEvent.FormatContent(data);
+        }
+    }
+
+
+
+
     public class ScenerioEventManager : Singleton<ScenerioEventManager>
     {
         public ScenerioEventManager() { }
 
+        /// <summary>
+        /// 原设计的事件登记面(键=事件 Id)。表驱动的触发面用 eventGroups(见 Init);
+        /// 本表保留给后续接入 nextEvent 链的剧情事件。
+        /// </summary>
         public Dictionary<int, ScenarioEvent> eventMap = new Dictionary<int, ScenarioEvent>();
 
+        /// <summary>
+        /// 表驱动事件组(键=表文件名前缀的组 id:1=回合开始军师慰问、10=搜索失败、
+        /// 11=搜索到人才);组内条目按文件序,即一次触发的演出步骤序列。
+        /// </summary>
+        public Dictionary<int, List<ScenarioEventTableEntry>> eventGroups =
+            new Dictionary<int, List<ScenarioEventTableEntry>>();
 
+        bool _loaded;
+
+        /// <summary>
+        /// 加载 Data/ScenarioEvent/*.json(M3.e 激活;进程内一次,表是静态内容)。
+        /// 时机:启动线(SangoKernelBoot.PrepareKernel)在 VFS 网关安装后调用。
+        /// </summary>
         public void Init()
         {
+            if (_loaded)
+            {
+                return;
+            }
 
+            var groups = new List<(int GroupId, string File)>();
+            Sango.Directory.EnumFiles(Path.ContentRootPath + "/Data/ScenarioEvent", "*.json",
+                System.IO.SearchOption.TopDirectoryOnly, file =>
+                {
+                    string fileName = System.IO.Path.GetFileNameWithoutExtension(file);
+                    int separator = fileName.IndexOf('_');
+                    if (separator <= 0 || !int.TryParse(fileName.Substring(0, separator), out int groupId))
+                    {
+                        throw new InvalidOperationException(
+                            $"ScenarioEvent table '{fileName}' lacks the '<groupId>_<name>' file contract.");
+                    }
+
+                    groups.Add((groupId, file));
+                });
+
+            // 组序确定性:按组 id 升序装载(文件系统枚举序不做确定性假设)。
+            groups.Sort((a, b) => a.GroupId.CompareTo(b.GroupId));
+            foreach ((int groupId, string file) in groups)
+            {
+                List<ScenarioEventTableEntry> entries =
+                    TKNewtonsoft.Json.JsonConvert.DeserializeObject<List<ScenarioEventTableEntry>>(File.ReadAllText(file))
+                    ?? throw new InvalidOperationException(
+                        $"ScenarioEvent table '{file}' is not a JSON array of event entries.");
+                foreach (ScenarioEventTableEntry entry in entries)
+                {
+                    if (string.IsNullOrEmpty(entry.eventType) || string.IsNullOrEmpty(entry.formatContent))
+                    {
+                        throw new InvalidOperationException(
+                            $"ScenarioEvent table '{file}' has an entry missing eventType/formatContent.");
+                    }
+                }
+
+                eventGroups[groupId] = entries;
+            }
+
+            _loaded = true;
         }
 
         public void Clear()
         {
+            eventMap.Clear();
+            eventGroups.Clear();
+            _loaded = false;
+        }
 
+        /// <summary>取事件组(缺组即装配缺陷:内容 mod 必须随表)。</summary>
+        public List<ScenarioEventTableEntry> GetGroup(int groupId)
+        {
+            return eventGroups.TryGetValue(groupId, out List<ScenarioEventTableEntry> entries)
+                ? entries
+                : throw new InvalidOperationException(
+                    $"ScenarioEvent group {groupId} is not loaded; the content mod must ship Data/ScenarioEvent/{groupId}_*.json.");
         }
     }
 }

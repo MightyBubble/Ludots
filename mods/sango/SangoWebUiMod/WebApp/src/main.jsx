@@ -7,6 +7,7 @@ import {
   SANGO_DIPLOMACY_TOPIC,
   SANGO_FORCES_TOPIC,
   SANGO_MESSAGES_TOPIC,
+  SANGO_TECHNIQUES_TOPIC,
   SANGO_TROOPS_TOPIC,
   SANGO_TURN_TOPIC,
   createLudotsDataPlaneClient,
@@ -58,6 +59,15 @@ const EMPTY_DIPLOMACY = {
   alliances: [],
   relations: []
 };
+const EMPTY_TECHNIQUES = {
+  tick: 0,
+  turnCount: 0,
+  forceId: 0,
+  forceName: '',
+  techniquePoint: 0,
+  researching: null,
+  techniques: []
+};
 
 // 外交面板的行动术语(原版 CityDiplomacy* 系统的 customMenuName)。
 const DIPLOMACY_COMMAND_LABELS = {
@@ -69,6 +79,19 @@ const ALLIANCE_TYPE_LABELS = {
   Alliance: '同盟',
   Truce: '停战协议',
   Trade: '通商协议'
+};
+
+// 科技系名(Techniques.json 的 kind 分组,窗口 tabColor 分栏的同源数据)。
+const TECHNIQUE_KIND_LABELS = {
+  1: '枪兵系',
+  2: '戟兵系',
+  3: '弩兵系',
+  4: '骑兵系',
+  5: '军制系',
+  6: '兵器系',
+  7: '设施系',
+  8: '火器系',
+  9: '政略系'
 };
 
 // 战报卡终局/事件型标签(SangoCombatAnnals 的 result/event kind 中文投影)。
@@ -204,6 +227,24 @@ function App() {
     return result;
   }, [command]);
 
+  // 玩家研究命令(M3.e,原版「都市/研究技巧」链):城内下令,扣城金/技巧点,
+  // 研究跨回合推进,完成后效果对全军兵种生效(见消息流/科技面板)。
+  const researchCommand = useCallback(async (payload) => {
+    setLastOrder({ text: '研究:军师正在核算成本……', tone: 'pending' });
+    const result = await command('sango.researchCommand', payload);
+    if (result.ok) {
+      setCommandCount((count) => count + 1);
+      setLastOrder({
+        text: '研究:已立项(执行武将入研究任务,跨回合推进,完成时消息流与科技面板刷新)',
+        tone: 'ok'
+      });
+    } else {
+      setLastOrder({ text: `研究被拒绝:${result.message}`, tone: 'error' });
+    }
+
+    return result;
+  }, [command]);
+
   const endTurn = useCallback(async () => {
     setLastOrder({ text: '结束回合:等待时钟推进……', tone: 'pending' });
     const result = await command('sango.endTurn', {});
@@ -269,6 +310,18 @@ function App() {
               commandRevision={detailRevision}
               playerGate={{ playerForceId, awaitingPlayer }}
               onCommand={diplomacyCommand}
+            />
+            )
+          : activeTab === 'techniques'
+          ? (
+            <TechniquePanel
+              techniques={data.techniques}
+              cities={data.cities.cities}
+              turn={data.turn}
+              clientRef={clientRef}
+              commandRevision={detailRevision}
+              playerGate={{ playerForceId, awaitingPlayer }}
+              onCommand={researchCommand}
             />
             )
           : (
@@ -407,7 +460,8 @@ function useSangoSession() {
     messages: EMPTY_MESSAGES,
     troops: EMPTY_TROOPS,
     battles: EMPTY_BATTLES,
-    diplomacy: EMPTY_DIPLOMACY
+    diplomacy: EMPTY_DIPLOMACY,
+    techniques: EMPTY_TECHNIQUES
   });
   const [connection, setConnection] = useState({ phase: 'boot', transport: 'none', error: '' });
 
@@ -434,7 +488,8 @@ function useSangoSession() {
       [SANGO_MESSAGES_TOPIC, (messages) => setData((current) => ({ ...current, messages }))],
       [SANGO_TROOPS_TOPIC, (troops) => setData((current) => ({ ...current, troops }))],
       [SANGO_BATTLES_TOPIC, (battles) => setData((current) => ({ ...current, battles }))],
-      [SANGO_DIPLOMACY_TOPIC, (diplomacy) => setData((current) => ({ ...current, diplomacy }))]
+      [SANGO_DIPLOMACY_TOPIC, (diplomacy) => setData((current) => ({ ...current, diplomacy }))],
+      [SANGO_TECHNIQUES_TOPIC, (techniques) => setData((current) => ({ ...current, techniques }))]
     ]);
 
     client
@@ -627,6 +682,13 @@ function LeftDrawer({ open, onToggle, activeTab, onTab, children }) {
                 onClick={() => onTab('diplomacy')}
               >
                 外交
+              </button>
+              <button
+                type="button"
+                className={activeTab === 'techniques' ? 'tab active' : 'tab'}
+                onClick={() => onTab('techniques')}
+              >
+                科技
               </button>
             </nav>
             <div className="drawer-content">{children}</div>
@@ -1469,6 +1531,206 @@ function DiplomacyPanel({ diplomacy, forces, cities, turn, clientRef, commandRev
                   ? '门槛:城有待命武将且城金 ≥1000(行动力 ≥30)。'
                   : '使者按路程逐日赶赴对方君主城;送达后结果行进消息流(送礼必成,结盟按成功率)。'}
           </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// 科技面板(M3.e,原版 window_technique 的 Web 面):按系(kind)分组的科技列表,
+// 状态三档 已拥有/可研究/未满足前置;进行中研究置顶;下令走 sango.researchCommand
+// (城金/技巧点/前置门槛照原版,执行武将默认军师自动推荐)。
+function TechniquePanel({ techniques, cities, turn, clientRef, commandRevision, playerGate, onCommand }) {
+  const [dispatchCityId, setDispatchCityId] = useState(0);
+  const [researcherIds, setResearcherIds] = useState([]);
+  const [expandedKind, setExpandedKind] = useState('');
+
+  const playerForceId = playerGate?.playerForceId ?? techniques.forceId ?? 0;
+  const playerCities = useMemo(
+    () => cities.filter((city) => city.forceId === playerForceId),
+    [cities, playerForceId]
+  );
+
+  // 研究执行人候选:派遣城待命武将(原版 PersonSelectSystem 最多 3 人;留空 = 军师推荐)。
+  const dispatchCityDetail = useCityDetail(clientRef, dispatchCityId || 0, `technique:${commandRevision}`);
+  const freePersons = dispatchCityDetail?.persons?.filter((person) => person.free) ?? [];
+
+  useEffect(() => {
+    if (!dispatchCityId && playerCities.length > 0) {
+      setDispatchCityId(playerCities[0].id);
+    }
+  }, [dispatchCityId, playerCities]);
+
+  useEffect(() => {
+    setResearcherIds([]);
+  }, [dispatchCityId]);
+
+  const dispatchCity = playerCities.find((city) => city.id === dispatchCityId) ?? null;
+  const commandsAllowed = playerForceId === 0 || playerGate.awaitingPlayer;
+  const researching = techniques.researching ?? null;
+
+  const toggleResearcher = (personId) => {
+    setResearcherIds((ids) => (
+      ids.includes(personId)
+        ? ids.filter((id) => id !== personId)
+        : (ids.length < 3 ? [...ids, personId] : ids)
+    ));
+  };
+
+  const order = (technique) => {
+    if (!dispatchCity || !commandsAllowed) {
+      return;
+    }
+
+    onCommand({
+      cityId: dispatchCity.id,
+      techniqueId: technique.id,
+      personIds: researcherIds
+    });
+  };
+
+  // 分组:同系科技按 level 升序(原版科技树的列序);展开态单系。
+  const groups = useMemo(() => {
+    const map = new Map();
+    (techniques.techniques ?? []).forEach((technique) => {
+      const key = technique.kind ?? '';
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key).push(technique);
+    });
+    return [...map.entries()]
+      .map(([kind, rows]) => [kind, rows.sort((a, b) => (a.level ?? 0) - (b.level ?? 0) || a.id - b.id)]);
+  }, [techniques.techniques]);
+
+  return (
+    <section className="drawer-panel technique-panel">
+      <div className="panel-title">
+        <h2>科技</h2>
+        <span>
+          {techniques.forceName || '——'} · 技巧点 {formatNumber(techniques.techniquePoint)}
+          {researching
+            ? ` · 研究中:${researching.name}(余 ${researching.leftCounter} 回合)`
+            : ' · 当前无研究'}
+        </span>
+      </div>
+
+      <div className="diplomacy-section">
+        <div className="panel-title">
+          <h3>下令研究</h3>
+          <span>原版「都市/研究技巧」:扣城金与技巧点,执行武将入研究任务</span>
+        </div>
+        <div className="expedition-form diplomacy-form">
+          <label>
+            研究城市
+            <select
+              value={dispatchCityId}
+              onChange={(event) => setDispatchCityId(Number(event.target.value))}
+            >
+              {playerCities.map((city) => (
+                <option key={city.id} value={city.id}>{city.name}(金 {formatNumber(city.gold)})</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            执行武将(留空 = 军师推荐,≤3)
+            <div className="researcher-chips">
+              {freePersons.map((person) => (
+                <button
+                  key={person.id}
+                  type="button"
+                  className={researcherIds.includes(person.id) ? 'chip selected' : 'chip'}
+                  onClick={() => toggleResearcher(person.id)}
+                >
+                  {person.name}
+                </button>
+              ))}
+              {freePersons.length === 0 ? <span className="hint">该城无待命武将</span> : null}
+            </div>
+          </label>
+          <p className="hint expedition-hint">
+            {playerForceId === 0
+              ? '全托管局无玩家势力,科技为观察面(各家 AI 也在研究)。'
+              : !commandsAllowed
+                ? '研究与其他城内政同门:待玩家回合方可下令。'
+                : researching
+                  ? '该势力已有进行中的研究,完成后才能立新项。'
+                  : '选中下方「可研究」科技即立项;成本随执行武将的对应属性降低耗时。'}
+          </p>
+        </div>
+      </div>
+
+      <div className="diplomacy-section">
+        <div className="panel-title">
+          <h3>科技树</h3>
+          <span>{(techniques.techniques ?? []).length} 项 · 点系名展开</span>
+        </div>
+        <div className="technique-groups">
+          {groups.map(([kind, rows]) => {
+            const ownedCount = rows.filter((row) => row.owned).length;
+            const open = expandedKind === String(kind);
+            return (
+              <div key={kind} className="technique-group">
+                <button
+                  type="button"
+                  className="technique-group-head"
+                  onClick={() => setExpandedKind(open ? '' : String(kind))}
+                >
+                  <strong>{TECHNIQUE_KIND_LABELS[kind] ?? `系 ${kind}`}</strong>
+                  <span>{ownedCount} / {rows.length}</span>
+                </button>
+                {open
+                  ? (
+                    <table className="force-table">
+                      <thead>
+                        <tr><th>科技</th><th>前置</th><th>金</th><th>技巧点</th><th>耗时</th><th>状态</th><th></th></tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row) => {
+                          const prereq = row.needTech > 0
+                            ? ((techniques.techniques ?? []).find((t) => t.id === row.needTech)?.name ?? `#${row.needTech}`)
+                            : '—';
+                          return (
+                            <tr key={row.id} className={row.owned ? 'owned' : ''}>
+                              <td>
+                                <strong>{row.name}</strong>
+                                <small className="technique-desc">{row.desc}</small>
+                              </td>
+                              <td>{prereq}</td>
+                              <td>{formatNumber(row.goldCost)}</td>
+                              <td>{formatNumber(row.techPointCost)}</td>
+                              <td>{row.counter} 回合起</td>
+                              <td>
+                                {row.owned
+                                  ? '已拥有'
+                                  : row.canResearch
+                                    ? '可研究'
+                                    : '前置未满足'}
+                              </td>
+                              <td>
+                                {row.owned || !commandsAllowed || researching
+                                  ? null
+                                  : (
+                                    <button
+                                      type="button"
+                                      disabled={!row.canResearch || !dispatchCity}
+                                      title="立项研究(扣城金与技巧点;执行武将留空则军师自动推荐)"
+                                      onClick={() => order(row)}
+                                    >
+                                      研究
+                                    </button>
+                                    )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    )
+                  : null}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

@@ -11,6 +11,7 @@
 //   cityCommand SangoCityOps 四型(train/search/reward/recruit,成功路径);
 //   diplomacyCommand SangoDiplomacyOps 三型(alliance/sendGift/discardAlliance,成功路径;
 //               M3.d 外交命令面);
+//   researchCommand SangoTechniqueOps 玩家研究下单(成功路径;M3.e 科技命令面);
 //   setMission  Entry 级直接授任务(seed 对阵;moveTroop 之外的显式入口)。
 // 明确不入 journal:
 //   sango.save      只读取证,不改世界;
@@ -56,6 +57,12 @@ namespace Sango.Runtime
         int PersonId,
         int TargetForceId,
         int ResourceValue);
+
+    /// <summary>
+    /// researchCommand 的参数面(SangoTechniqueOps.Execute 同形)。personIds 空数组 =
+    /// 军师自动推荐面(原版窗口默认),重放侧同序复现推荐结果。
+    /// </summary>
+    public sealed record SangoResearchCommandArgs(int TechniqueId, int CityId, int[] PersonIds);
 
     /// <summary>step 命令的空参数载荷(期望 digest 在记录的 DigestAfter 字段,不在参数里)。</summary>
     public sealed record SangoStepArgs
@@ -195,6 +202,7 @@ namespace Sango.Runtime
         public const string SetMissionKind = "setMission";
         public const string CityCommandKind = "cityCommand";
         public const string DiplomacyCommandKind = "diplomacyCommand";
+        public const string ResearchCommandKind = "researchCommand";
         // M3.a 玩家命令:开局选势力(world-setup,重放侧带玩家重装世界)与玩家回合
         // 「进行」(PlayerEndTurn 等价,见 SangoPlayerTurnOps)。
         public const string SelectPlayerForceKind = SangoPlayerTurnOps.SelectPlayerForceKind;
@@ -273,6 +281,20 @@ namespace Sango.Runtime
 
                     RequireSuccess(command, SangoDiplomacyOps.Execute(
                         scenario, city, args.Type, new[] { args.PersonId }, args.TargetForceId, args.ResourceValue));
+                    return;
+                }
+                case ResearchCommandKind:
+                {
+                    SangoResearchCommandArgs args = Parse<SangoResearchCommandArgs>(command);
+                    City? city = scenario.citySet.Get(args.CityId);
+                    if (city == null)
+                    {
+                        throw MissingTarget(command, $"city {args.CityId}");
+                    }
+
+                    RequireSuccess(command, SangoTechniqueOps.Execute(
+                        scenario, city, args.TechniqueId,
+                        args.PersonIds is { Length: > 0 } ? args.PersonIds : null));
                     return;
                 }
                 case SelectPlayerForceKind:

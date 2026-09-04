@@ -145,6 +145,11 @@ namespace Sango.Runtime
 
             GameData.Instance.Init();
 
+            // M3.e 剧情事件表(Data/ScenarioEvent/*.json):进程内一次装载,触发面见
+            // CityPersonSearchingEvent(搜索 10/11 组)与 Force.OnForceTurnStart(1 组
+            // 军师慰问)。
+            ScenerioEventManager.Instance.Init();
+
             // 二次启动:按 Player.Quit() 的 OnGameShutdown 链清上一局(退订事件/清对象池)。
             Scenario.Cur?.OnGameShutdown();
             // 进程级演出残留(上一局 fail-fast 中断时可能留下):演出事件/对话框持有旧局

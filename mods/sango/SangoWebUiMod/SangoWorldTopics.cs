@@ -755,6 +755,144 @@ public sealed class SangoWorldDiplomacyTopic : IWebUiTopicProducer
     }
 }
 
+/// <summary>
+/// 科技面板话题(M3.e):原版 window_technique(UITechnique)数据面的只读投影。
+/// 视角势力 = 玩家(无玩家局取首个存活势力);行字段覆盖原版窗口的展示要素:
+/// 进行中(ResearchTechnique/ResearchLeftCounter + 军师推荐成本面)、可研究
+/// (Technique.CanResearch)、已拥有(IsValid);分组键 kind(原版 tabColor 分栏)、
+/// 树位 col/row/level(needTech 前置)。科技点 TechniquePoint 同行投影。
+/// </summary>
+public sealed class SangoWorldTechniquesTopic : IWebUiTopicProducer
+{
+    public const string TopicName = "sango.world.techniques";
+
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    private readonly SangoWorldFeed _feed;
+
+    public SangoWorldTechniquesTopic(SangoWorldFeed feed)
+    {
+        _feed = feed ?? throw new ArgumentNullException(nameof(feed));
+    }
+
+    public string Topic => TopicName;
+
+    public bool TryCreateSnapshot(in WebUiTopicContext context, out WebUiOutboundPacket packet)
+    {
+        Scenario scenario = Scenario.Cur
+            ?? throw new InvalidOperationException("Sango kernel is not booted; topic snapshot is unavailable.");
+        bool isSubscription = context.RequestId != 0;
+        int playerForceId = SangoPlayerTurnOps.PlayerForceId(scenario);
+        Force? center = playerForceId > 0 ? scenario.forceSet.Get(playerForceId) : null;
+        if (center == null)
+        {
+            center = FirstAliveForce(scenario);
+        }
+
+        var snapshot = new SangoTechniquesSnapshot(
+            isSubscription ? 0 : _feed.NextTick(),
+            scenario.Info.turnCount,
+            center?.Id ?? 0,
+            center?.Name ?? string.Empty,
+            center?.TechniquePoint ?? 0,
+            center != null ? ProjectResearching(scenario, center) : null,
+            center != null ? ProjectTechniques(scenario, center) : Array.Empty<SangoTechniqueRow>());
+        packet = new WebUiOutboundPacket(
+            context.SessionId,
+            TopicName,
+            isSubscription ? WebUiPacketKind.Snapshot : WebUiPacketKind.Delta,
+            WebUiDeliverySemantics.LatestWins,
+            JsonSerializer.SerializeToUtf8Bytes(snapshot, JsonOptions),
+            "application/json",
+            context.RequestId);
+        return true;
+    }
+
+    static Force? FirstAliveForce(Scenario scenario)
+    {
+        Force? first = null;
+        scenario.forceSet.ForEach(force =>
+        {
+            if (first == null && force != null && force.IsAlive)
+            {
+                first = force;
+            }
+        });
+        return first;
+    }
+
+    // 进行中面:ResearchTechnique>0 时给科技行 + 剩余回合(原版窗口标题区/完成弹窗的
+    // 数据源);军师推荐执行人(SelectTechnique 的自动人名单)一并投影。
+    internal static SangoResearchingRow? ProjectResearching(Scenario scenario, Force force)
+    {
+        if (force.ResearchTechnique <= 0)
+        {
+            return null;
+        }
+
+        Technique? technique = scenario.CommonData.Techniques.Get(force.ResearchTechnique);
+        return technique == null
+            ? null
+            : new SangoResearchingRow(technique.Id, technique.Name ?? string.Empty, force.ResearchLeftCounter);
+    }
+
+    internal static SangoTechniqueRow[] ProjectTechniques(Scenario scenario, Force force)
+    {
+        // 直读 objects.Values(ForEach 的 Action<T>/Action<SangoObject> 双载对带
+        // Technique 专属成员的 lambda 解析不稳);键序升序 = 表 Id 序,确定性投影。
+        var ordered = new List<KeyValuePair<int, Technique>>(scenario.CommonData.Techniques.objects);
+        ordered.Sort((a, b) => a.Key.CompareTo(b.Key));
+        var rows = new List<SangoTechniqueRow>(ordered.Count);
+        foreach (KeyValuePair<int, Technique> pair in ordered)
+        {
+            Technique technique = pair.Value;
+            if (technique == null)
+            {
+                continue;
+            }
+
+            rows.Add(new SangoTechniqueRow(
+                technique.Id,
+                technique.Name ?? string.Empty,
+                technique.desc ?? string.Empty,
+                technique.kind,
+                technique.level,
+                technique.needTech,
+                technique.goldCost,
+                technique.techPointCost,
+                technique.counter,
+                force.HasTechnique(technique.Id),
+                technique.CanResearch(force)));
+        }
+
+        return rows.ToArray();
+    }
+}
+
+public sealed record SangoTechniqueRow(
+    int Id,
+    string Name,
+    string Desc,
+    string Kind,
+    int Level,
+    int NeedTech,
+    int GoldCost,
+    int TechPointCost,
+    int Counter,
+    bool Owned,
+    bool CanResearch);
+
+public sealed record SangoResearchingRow(int TechniqueId, string Name, int LeftCounter);
+
+public sealed record SangoTechniquesSnapshot(
+    int Tick,
+    int TurnCount,
+    int ForceId,
+    string ForceName,
+    int TechniquePoint,
+    SangoResearchingRow? Researching,
+    SangoTechniqueRow[] Techniques);
+
 public sealed record SangoAllianceRow(int Id, string Type, int LeftCount, string[] ForceNames);
 
 public sealed record SangoRelationRow(

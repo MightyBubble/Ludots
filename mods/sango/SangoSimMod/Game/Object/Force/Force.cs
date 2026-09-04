@@ -4,6 +4,7 @@ using TKNewtonsoft.Json;
 using TKNewtonsoft.Json.Linq;
 using TKNewtonsoft.Json.Serialization;
 using Sango.Core.Action;
+using Sango.Core.Player;
 using Sango.Render;
 using UnityEngine;
 using System.Linq;
@@ -710,6 +711,21 @@ namespace Sango.Core
             // 检查敌方新建部队是否有占领我方城池的任务
             if (IsPlayer)
             {
+                // M3.e 军师慰问(Data/ScenarioEvent/1_回合开始军师慰问,PersonTalk):
+                // 玩家势力回合开始的固定问候,变量面 {:ActionCounsellor}=军师、
+                // {:ActionForce}=本势力;表文本随对话框镜像入玩家消息流。
+                if (mCounsellor != null)
+                {
+                    ScenarioEventTableEntry greeting = ScenerioEventManager.Instance.GetGroup(1)[0];
+                    string greetingContent = greeting.FormatContent(new ScenarioEventData
+                    {
+                        ActionCounsellor = mCounsellor,
+                        ActionForce = this,
+                    });
+                    PlayerMessage.AddTextMessage(greetingContent, this, mGovernor?.mBelongCity?.x ?? 0, mGovernor?.mBelongCity?.y ?? 0);
+                    GameDialog.Instance.Open(GameDialog.DialogStyle.ClickPersonSay, greetingContent, null, mCounsellor);
+                }
+
                 List<City> checkedCity = null;
                 foreach (Troop troop in scenario.troopsSet)
                 {

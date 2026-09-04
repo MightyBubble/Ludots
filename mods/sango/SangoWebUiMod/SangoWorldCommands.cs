@@ -502,6 +502,81 @@ public sealed class SangoDiplomacyCommandHandler : IWebUiCommandHandler
     }
 }
 
+/// <summary>
+/// 玩家研究命令(M3.e):原版「都市/研究技巧」菜单链(TechniqueResearch 系统 →
+/// window_technique → DoResearch → JobResearch)的 Web 命令面。payload =
+/// {cityId, techniqueId, personIds?};personIds 缺省走军师自动推荐(原版窗口默认)。
+/// 门槛/执行体在 SangoTechniqueOps 内核化(见其文件头的原版调用链)。
+/// </summary>
+public sealed class SangoResearchCommandHandler : IWebUiCommandHandler
+{
+    public const string CommandName = "sango.researchCommand";
+
+    public ValueTask<WebUiCommandResult> HandleAsync(WebUiCommandRequest request, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.FromResult(Handle(request));
+    }
+
+    internal static WebUiCommandResult Handle(WebUiCommandRequest request)
+    {
+        if (request.Payload.ValueKind != JsonValueKind.Object)
+        {
+            return WebUiCommandResult.Fail("invalid_payload", "sango.researchCommand requires a JSON object payload.");
+        }
+
+        Scenario? scenario = Scenario.Cur;
+        if (scenario == null)
+        {
+            return WebUiCommandResult.Fail("kernel_not_booted", "Sango kernel is not booted; commands are unavailable.");
+        }
+
+        if (!request.Payload.TryGetProperty("cityId", out JsonElement cityElement) ||
+            cityElement.ValueKind != JsonValueKind.Number)
+        {
+            return WebUiCommandResult.Fail("invalid_payload", "sango.researchCommand requires an integer payload.cityId.");
+        }
+
+        if (!SangoCityCommandHandler.TryReadCityId(request.Payload, scenario, out City? city) || city == null)
+        {
+            return WebUiCommandResult.Fail("city_not_found", "sango.researchCommand requires a known payload.cityId.");
+        }
+
+        if (!request.Payload.TryGetProperty("techniqueId", out JsonElement techniqueElement) ||
+            techniqueElement.ValueKind != JsonValueKind.Number ||
+            !techniqueElement.TryGetInt32(out int techniqueId) || techniqueId <= 0)
+        {
+            return WebUiCommandResult.Fail("invalid_payload", "sango.researchCommand requires a positive integer payload.techniqueId.");
+        }
+
+        int[]? personIds = null;
+        if (request.Payload.TryGetProperty("personIds", out JsonElement personsElement))
+        {
+            if (personsElement.ValueKind != JsonValueKind.Array)
+            {
+                return WebUiCommandResult.Fail("invalid_payload", "payload.personIds must be an array when present.");
+            }
+
+            var ids = new List<int>(personsElement.GetArrayLength());
+            foreach (JsonElement item in personsElement.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Number || !item.TryGetInt32(out int id))
+                {
+                    return WebUiCommandResult.Fail("invalid_payload", "payload.personIds must contain integers.");
+                }
+
+                ids.Add(id);
+            }
+
+            personIds = ids.Count > 0 ? ids.ToArray() : null;
+        }
+
+        SangoTroopOpResult result = SangoTechniqueOps.Execute(scenario, city, techniqueId, personIds);
+        return result.Succeeded
+            ? WebUiCommandResult.Ok()
+            : WebUiCommandResult.Fail(result.ErrorCode, result.Message);
+    }
+}
+
 public sealed class SangoWebUiPermissionValidator : IWebUiCommandPermissionValidator
 {
         private static readonly HashSet<string> AllowedCommands = new(StringComparer.Ordinal)
@@ -514,6 +589,7 @@ public sealed class SangoWebUiPermissionValidator : IWebUiCommandPermissionValid
             SangoMoveTroopCommandHandler.CommandName,
             SangoSelectPlayerForceCommandHandler.CommandName,
             SangoDiplomacyCommandHandler.CommandName,
+            SangoResearchCommandHandler.CommandName,
         };
 
     public bool CanUse(WebUiCommandRequest request, out string error)

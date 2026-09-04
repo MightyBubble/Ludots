@@ -14,6 +14,7 @@ export const SANGO_CITY_TOPIC = 'sango.world.city';
 export const SANGO_TROOPS_TOPIC = 'sango.world.troops';
 export const SANGO_BATTLES_TOPIC = 'sango.world.battles';
 export const SANGO_DIPLOMACY_TOPIC = 'sango.world.diplomacy';
+export const SANGO_TECHNIQUES_TOPIC = 'sango.world.techniques';
 
 const CLIENT_CAPABILITIES = Object.freeze([
   'handshake',

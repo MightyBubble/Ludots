@@ -994,3 +994,65 @@ body {
   display: grid;
   gap: 6px;
 }
+
+/* 科技面板(M3.e):系分组折叠 + 研究人 chips。 */
+.technique-groups {
+  display: grid;
+  gap: 6px;
+}
+
+.technique-group-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(94, 129, 172, 0.18);
+  color: #dfe8f4;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.technique-group-head:hover {
+  background: rgba(94, 129, 172, 0.3);
+}
+
+.technique-group-head span {
+  color: #93a4b8;
+  font-size: 12px;
+}
+
+.technique-desc {
+  display: block;
+  color: #93a4b8;
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.force-table tr.owned td {
+  color: #8fbf8f;
+}
+
+.researcher-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.researcher-chips .chip {
+  border: 1px solid rgba(148, 170, 200, 0.35);
+  border-radius: 10px;
+  background: transparent;
+  color: #c8d3e0;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.researcher-chips .chip.selected {
+  border-color: #7fb0e8;
+  background: rgba(127, 176, 232, 0.22);
+  color: #eaf2fc;
+}
