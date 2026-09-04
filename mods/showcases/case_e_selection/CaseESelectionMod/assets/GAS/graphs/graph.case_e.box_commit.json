@@ -17,11 +17,6 @@
         "payloadKey": "MapTrigger.Modifiers"
       },
       {
-        "id": "rep",
-        "op": "LoadEntryPayloadEntity",
-        "payloadKey": "MapTrigger.Rep"
-      },
-      {
         "id": "run_hit",
         "op": "InvokeGraph",
         "functionName": "graph.case_e.box_hit"
@@ -61,14 +56,19 @@
         "collectionKey": "selected"
       },
       {
-        "id": "deactivate_boxing",
-        "op": "DeactivateContext",
-        "context": "interaction.context.case_e.boxing"
-      },
-      {
         "id": "ok",
         "op": "ConstInt",
         "intValue": 1
+      },
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "deactivate_boxing",
+        "op": "DeactivateContext",
+        "context": "interaction.context.case_e.boxing"
       },
       {
         "id": "halt",
@@ -85,6 +85,16 @@
         "from": "rep",
         "fromPort": "next",
         "to": "run_hit"
+      },
+      {
+        "from": "run_hit",
+        "fromPort": "next",
+        "to": "deactivate_boxing"
+      },
+      {
+        "from": "deactivate_boxing",
+        "fromPort": "next",
+        "to": "modifier_switch"
       },
       {
         "from": "modifier_switch",
@@ -137,21 +147,6 @@
         "to": "commit_subtract"
       },
       {
-        "from": "ok",
-        "fromPort": "next",
-        "to": "halt"
-      },
-      {
-        "from": "run_hit",
-        "fromPort": "next",
-        "to": "deactivate_boxing"
-      },
-      {
-        "from": "deactivate_boxing",
-        "fromPort": "next",
-        "to": "modifier_switch"
-      },
-      {
         "from": "commit_replace",
         "fromPort": "next",
         "to": "ok"
@@ -165,6 +160,11 @@
         "from": "commit_subtract",
         "fromPort": "next",
         "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
       }
     ],
     "valueEdges": [

@@ -1114,6 +1114,7 @@ namespace Ludots.Core.Engine
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             gasGraphApi.BindTriggerManager(TriggerManager);
             gasGraphApi.BindAimSource(new Ludots.Core.Input.AimSource.GraphAimSourceRuntime(World, GlobalContext));
+            gasGraphApi.BindEngineResolver(() => this);
             var graphCallbackService = new Ludots.Core.GraphRuntime.GraphCallbackService();
             SetService(CoreServiceKeys.GraphCallbackService, graphCallbackService);
             gasGraphApi.BindGraphCallbackService(graphCallbackService);
@@ -2539,7 +2540,7 @@ namespace Ludots.Core.Engine
             // PresenterBehaviorSystem drives blackboard-bound behavior before animator and emit read it.
             RegisterPresentationSystem(presenterBehaviorSystem);
             RegisterPresentationSystem(animatorRuntimeSystem);
-            RegisterPresentationSystem(new PresenterScreenRectSystem(World, presenterDefinitions, screenOverlayBuffer));
+            RegisterPresentationSystem(new PresenterScreenRectSystem(World, presenterDefinitions, screenOverlayBuffer, GlobalContext));
             RegisterPresentationSystem(new PresenterMinimapMarkerSystem(World, presenterDefinitions, minimapMarkerBuffer, presentationTimingDiagnostics));
             // PresenterEmitSystem is the Wave 4 asset-binding emitter.
             RegisterPresentationSystem(presenterEmitSystem);

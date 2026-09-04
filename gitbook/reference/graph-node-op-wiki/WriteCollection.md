@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Script / TriggerGraph |
+| 可用图种 | Script / TriggerGraph / Query |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `value`（数值） |
 | 特殊写法 | dst 填符号名（编译期解析）；imm 填符号名（编译期解析） |
@@ -43,7 +43,7 @@ ConstInt → **WriteCollection**（本篇） → HaltReturnInt
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Script / TriggerGraph；Effect / Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Query / Script / TriggerGraph；Effect / Score / Validation / Derived 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：见手册分册的场景节。
 ## 怎么进

@@ -30,7 +30,7 @@
 
 - [倒下的是谁，问载荷就知道](LoadEntryPayloadEntity.md) — 木桩倒下那一刻，名册记下了它的名字。
 - [场上还剩几个人，载荷报数](LoadEntryPayloadInt.md) — 清点哨一响，存活数从事件载荷里飞进信件板。
-- [落点读数，小数也不丢](LoadEntryPayloadFloat.md) — 号令一落，东西读数带着小数从事件载荷里飞进信件板。
+- [指针读数，小数也不丢](LoadEntryPayloadFloat.md) — 号令一落，指针像素读数带着小数从事件载荷里飞进信件板。
 
 ## 关系与好感
 
@@ -185,6 +185,8 @@
 - [砍不砍得死，比一下](CompareGtFloat.md) — 同样长的一刀，血条比它长的木桩挨不动，血条比它短的木桩一刀就没。
 - [读名册上的扣血力度](TableReadFloat.md) — 同一行名册，读出这一击该扣多少血，木桩照单落账。
 - [读名册上的星数](TableReadInt.md) — 点到 2 号那行，册上记着三颗星，照数挂印。
+- [读活指针横向](LoadPointerScreenX.md) — 活指针横向停在 42，读数进伤害链。
+- [读活指针纵向](LoadPointerScreenY.md) — 活指针纵向停在 42，读数进伤害链。
 - [负债翻面成正数](NegFloat.md) — 负 8 的欠条摆在零轴左边，沿零轴翻到右边变成正 8，翻过来的就是打出去的一刀。
 - [隔空落子](SetWorldPosition.md) — 不用挪动命令，一枚棋子从图里被放到了指定点。
 - [面板落地](CreatePanel.md) — 关卡蓝图一句话，属性卡从模板里长了出来。

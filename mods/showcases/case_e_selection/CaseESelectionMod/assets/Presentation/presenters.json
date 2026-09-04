@@ -239,46 +239,6 @@
     ],
     "behaviors": [
       {
-        "slot": "attribute",
-        "kind": "AttributeBinding",
-        "activeByDefault": true,
-        "attributeBinding": {
-          "attributeId": "CaseE.PressPx",
-          "targetParamKey": "case_e.rect.pressX",
-          "mode": "Attribute"
-        }
-      },
-      {
-        "slot": "attributeCurrent",
-        "kind": "AttributeBinding",
-        "activeByDefault": true,
-        "attributeBinding": {
-          "attributeId": "CaseE.PressPy",
-          "targetParamKey": "case_e.rect.pressY",
-          "mode": "Attribute"
-        }
-      },
-      {
-        "slot": "attributeBase",
-        "kind": "AttributeBinding",
-        "activeByDefault": true,
-        "attributeBinding": {
-          "attributeId": "CaseE.PointerX",
-          "targetParamKey": "case_e.rect.pointerX",
-          "mode": "Attribute"
-        }
-      },
-      {
-        "slot": "attributeRatio",
-        "kind": "AttributeBinding",
-        "activeByDefault": true,
-        "attributeBinding": {
-          "attributeId": "CaseE.PointerY",
-          "targetParamKey": "case_e.rect.pointerY",
-          "mode": "Attribute"
-        }
-      },
-      {
         "slot": "screenRect",
         "kind": "ScreenRect",
         "activeByDefault": true,
@@ -300,6 +260,26 @@
             1.0
           ]
         }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "case_e.rect.pressX",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "case_e.press.px"
+      },
+      {
+        "paramKey": "case_e.rect.pressY",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "case_e.press.py"
+      },
+      {
+        "paramKey": "case_e.rect.pointerX",
+        "source": "pointerScreenX"
+      },
+      {
+        "paramKey": "case_e.rect.pointerY",
+        "source": "pointerScreenY"
       }
     ]
   }

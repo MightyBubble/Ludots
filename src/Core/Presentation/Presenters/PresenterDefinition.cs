@@ -154,6 +154,7 @@ namespace Ludots.Core.Presentation.Presenters
         internal bool HasOwnerTagBindingWork;
         internal bool HasOwnerFacingBindingWork;
         internal bool HasGraphParamBindingWork;
+        internal bool HasLiveParamBindingWork;
         internal uint BehaviorPresenceMask;
         internal CompiledBinding[] CompiledBindings = System.Array.Empty<CompiledBinding>();
         internal bool SupportsSingleRequestReplay;
@@ -162,6 +163,7 @@ namespace Ludots.Core.Presentation.Presenters
         internal OwnerTagWorkItem[] OwnerTagWork = System.Array.Empty<OwnerTagWorkItem>();
         internal int[] OwnerFacingParamBindingIndices = System.Array.Empty<int>();
         internal int[] GraphParamBindingIndices = System.Array.Empty<int>();
+        internal int[] LiveParamBindingIndices = System.Array.Empty<int>();
         internal int AnimationProfileId;
         internal int PrimaryAssetBehaviorIndex;
         internal int[] AssetBehaviorIndices = System.Array.Empty<int>();
@@ -363,6 +365,7 @@ namespace Ludots.Core.Presentation.Presenters
             HasOwnerTagBindingWork = false;
             HasOwnerFacingBindingWork = false;
             HasGraphParamBindingWork = false;
+            HasLiveParamBindingWork = false;
             BehaviorPresenceMask = 0u;
             CompiledBindings = System.Array.Empty<CompiledBinding>();
             SupportsSingleRequestReplay = false;
@@ -371,6 +374,7 @@ namespace Ludots.Core.Presentation.Presenters
             OwnerTagWork = System.Array.Empty<OwnerTagWorkItem>();
             OwnerFacingParamBindingIndices = System.Array.Empty<int>();
             GraphParamBindingIndices = System.Array.Empty<int>();
+            LiveParamBindingIndices = System.Array.Empty<int>();
             AnimationProfileId = 0;
             PrimaryAssetBehaviorIndex = -1;
             AssetBehaviorIndices = System.Array.Empty<int>();
@@ -403,6 +407,7 @@ namespace Ludots.Core.Presentation.Presenters
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? extensionTagBehaviorMap = null;
             System.Collections.Generic.List<int>? ownerFacingParamBindingIndices = null;
             System.Collections.Generic.List<int>? graphParamBindingIndices = null;
+            System.Collections.Generic.List<int>? liveParamBindingIndices = null;
             var staticFloatParams = new System.Collections.Generic.HashSet<int>();
             var staticIntParams = new System.Collections.Generic.HashSet<int>();
             var staticVectorParams = new System.Collections.Generic.HashSet<int>();
@@ -433,12 +438,20 @@ namespace Ludots.Core.Presentation.Presenters
                             graphParamBindingIndices ??= new System.Collections.Generic.List<int>(2);
                             graphParamBindingIndices.Add(i);
                             break;
+                        case ValueSourceKind.OwnerBlackboardFloat:
+                        case ValueSourceKind.PointerScreenX:
+                        case ValueSourceKind.PointerScreenY:
+                            HasLiveParamBindingWork = true;
+                            liveParamBindingIndices ??= new System.Collections.Generic.List<int>(4);
+                            liveParamBindingIndices.Add(i);
+                            break;
                     }
                 }
             }
 
             OwnerFacingParamBindingIndices = ownerFacingParamBindingIndices?.ToArray() ?? System.Array.Empty<int>();
             GraphParamBindingIndices = graphParamBindingIndices?.ToArray() ?? System.Array.Empty<int>();
+            LiveParamBindingIndices = liveParamBindingIndices?.ToArray() ?? System.Array.Empty<int>();
             if (Behaviors == null || Behaviors.Length == 0)
             {
                 OwnerAttributeWork = BuildOwnerAttributeWork(attributeCompiledMap);

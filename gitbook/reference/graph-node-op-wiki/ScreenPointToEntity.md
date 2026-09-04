@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 仅 Query |
+| 可用图种 | Query / TriggerGraph |
 | 返回 | Entity → 实体寄存器 |
 | 输入端口（值边 toPort） | `source`（来源实体）、`a`（第一操作数）、`b`（第二操作数） |
 | 特殊写法 | 结果写入 dst 寄存器；imm 填符号名（编译期解析） |
@@ -45,7 +45,7 @@ LoadCaster → ConstFloat → ConstFloat → **ScreenPointToEntity**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Query；Effect / Score / Validation / Derived / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Query / TriggerGraph；Effect / Score / Validation / Derived / Script 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：见手册分册的场景节。
 ## 怎么进

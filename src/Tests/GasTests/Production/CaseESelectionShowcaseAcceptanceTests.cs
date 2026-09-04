@@ -5,6 +5,8 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Client;
@@ -21,11 +23,12 @@ namespace Ludots.Tests.GAS.Production;
 /// <summary>
 /// Case E (#1398 D6/D8/§05) 框选全链 headless 验收（忠实形态），对照 case-e-config-report.html
 /// 的七步：01 进图出生 / 02 模板 initialInteractionContext 挂 Instance / 03 Profile triggers 门控 /
-/// 04 语义动作直绑触发衍生 context（框起角=press 屏幕像素 + 候选集世界侧刷新）/
+/// 04 语义动作直绑触发衍生 context（框起角落操作者 rep 黑板；候选集由 battle context 挂载的 roster_sync 维护）/
 /// 05 boxing context 持续过程：ScreenRect 框 + 存活期命中写 case_e.box_hover 预览集 →
 /// presenter 观察成员变化高亮 / 06 抬起（BoxSelectEnd）对「可框选单位」候选集做屏幕矩形命中
 /// + 修饰键语义透传事件 key 写 selected 集合（与候选、预览三套集合分离）。
 /// 输入合同：按下=BoxSelectBegin、抬起=BoxSelectEnd（firesOn=release），无 Tap/Drag 判定器。
+/// 键位表 CaseE.Controls（含 PointerPos）由 battle 档案 inputContextId 经座位投影激活；startupInputContexts / scheme.inputContexts 不硬推玩法键。
 /// </summary>
 [NonParallelizable]
 [TestFixture]
@@ -68,6 +71,16 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             baseContext.ContextId == battleProfileId &&
             baseContext.Source == InteractionContextInstanceSource.TemplateSpawn,
             "指挥官 rep 出生即携带战斗 context Instance（模板 initialInteractionContext）");
+        Assert.That(engine.MergedConfig.StartupInputContexts, Is.Empty,
+            "Case E 不得靠 startupInputContexts 开机硬推键位；CaseE.Controls（含 PointerPos）由实体投影");
+        int caseEControlsId = profiles.InputContextIdRegistry.GetId("CaseE.Controls");
+        Assert.That(baseContext.InputContextId, Is.EqualTo(caseEControlsId),
+            "battle 档案 inputContextId=CaseE.Controls 应写入挂载实例");
+        var inputHandler = engine.GetService(CoreServiceKeys.InputHandler)
+            ?? throw new InvalidOperationException("InputHandler service is missing.");
+        TickUntil(engine, 10, () => inputHandler.HasContext("CaseE.Controls"));
+        Assert.That(inputHandler.HasContext("CaseE.Controls"), Is.True,
+            "占有座位后投影系统应从实体 battle 挂载推上 CaseE.Controls");
 
         Entity marine1 = Resolve(engine, "case-e-marine-1");
         Entity marine2 = Resolve(engine, "case-e-marine-2");
@@ -86,6 +99,15 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(0),
             "框指示 presenter 在按下前不存在");
 
+        // ── 03b：battle context 挂载 roster_sync（MapHeartbeat）→ 开框前候选集已就位 ──
+        TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        AssertNoTriggerErrors(engine);
+        Assert.That(
+            engine.TriggerManager.HasMapEventSubscribers(new MapId(MapId), GameEvents.MapHeartbeat),
+            "battle roster_sync 应对 MapHeartbeat 有订阅");
+        AssertCollection(engine, commander, SelectableKey, "候选集随 battle context 维护（敌我+模板过滤），框之前就有",
+            marine1, marine2, marine3, marine4);
+
         // ── 04：按下（BoxSelectBegin）→ 图入口 action 直绑 → 激活衍生「正在框选」context ──
         // 窗口像素 ↔ 世界 cm 1:1 伪件下，marines 1-4 屏幕位置 = (-900,0)/(-300,0)/(300,0)/(900,0)。
         PressAt(engine, backend, new Vector2(-1200f, -100f));
@@ -98,15 +120,15 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             boxing[0].ContextId == boxingProfileId &&
             boxing[0].ParentContextId == battleProfileId,
             "按下即激活衍生 boxing context（父=战斗）");
-        Assert.That(engine.CurrentMapSession!.Variables!.ReadFloat("case_e_press_px"), Is.EqualTo(-1200f),
-            "框起角=press 指针窗口像素（D1 事实层）写入地图变量，非派生地面点");
-        Assert.That(engine.CurrentMapSession.Variables.ReadFloat("case_e_press_py"), Is.EqualTo(-100f));
-
-        // ── 04b：候选集入参——box_begin 世界侧取全体地图实体，敌我（teamId=1）+ 模板
-        //（case_e_marine）过滤后写入 case_e.selectable 集合（owner=rep）──
-        TickUntil(engine, 20, () => CollectionCount(engine, commander, SelectableKey) == 4);
-        AssertCollection(engine, commander, SelectableKey, "候选集=可框选单位（敌我+模板过滤）",
-            marine1, marine2, marine3, marine4);
+        Assert.That(
+            engine.World.TryGet<BlackboardFloatBuffer>(commander, out BlackboardFloatBuffer pressBoard) &&
+            pressBoard.TryGet(ConfigKeyRegistry.GetId("case_e.press.px"), out float pressPx) &&
+            pressPx == -1200f,
+            "框起角 X=press 指针窗口像素写入操作者 rep 黑板，禁止 map var");
+        Assert.That(
+            pressBoard.TryGet(ConfigKeyRegistry.GetId("case_e.press.py"), out float pressPy) &&
+            pressPy == -100f,
+            "框起角 Y 同挂操作者 rep 黑板");
 
         // ── 05①b：presenter 观察者——ContextActivated 出现框指示 ──
         Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(1),
@@ -121,7 +143,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             ?? throw new InvalidOperationException("ScreenOverlayBuffer service is missing.");
         Assert.That(
             HasScreenRect(screenOverlay, x: -1200, y: -100, width: 900, height: 200),
-            "矩形框 = press 角 → 当前指针角的屏幕矩形（CaseE.Pointer 属性 → ScreenRect presenter 参数）");
+            "矩形框 = rep 黑板起角 + 当前活指针的屏幕矩形");
         backend.SetMousePosition(new Vector2(0f, 200f));
         Tick(engine, 5);
         Assert.That(

@@ -145,6 +145,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.Input.Interaction.InteractionModeMap? _interactionModeMap;
         private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
         private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
+        private Func<GameEngine?>? _engineResolver;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -343,6 +344,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindCustomEvents(Gameplay.MapTriggers.CustomEventNameRegistry customEvents)
         {
             _customEvents = customEvents ?? throw new ArgumentNullException(nameof(customEvents));
+        }
+
+        public void BindEngineResolver(Func<GameEngine?> engineResolver)
+        {
+            _engineResolver = engineResolver ?? throw new ArgumentNullException(nameof(engineResolver));
         }
 
         public GasGraphRuntimeApi(
@@ -554,6 +560,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
         {
             return RequireAimSource().FilterScreenRegionEntities(entities, count, in rect, seatId);
+        }
+
+        public bool TryReadLivePointerScreen(out float screenX, out float screenY)
+        {
+            return RequireAimSource().TryReadLivePointerScreen(out screenX, out screenY);
         }
 
         public void BindResolveDialogueChoiceDisplayText(Func<int, string?> resolveDialogueChoiceDisplayText)

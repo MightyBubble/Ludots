@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Config;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Commands;
@@ -250,7 +252,14 @@ namespace Ludots.Tests.Presentation
             floats.Set(KeyId("rect.pointerY"), corner1.Y);
 
             var overlay = new ScreenOverlayBuffer();
-            var system = new PresenterScreenRectSystem(world, definitions, overlay);
+            var seats = new ClientLocalSeatRegistry();
+            seats.Add(new ClientLocalSeat("test"));
+            seats.SetPossession("test", 1, owner);
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = seats,
+            };
+            var system = new PresenterScreenRectSystem(world, definitions, overlay, globals);
             return (world, definitions, presenter, overlay, system);
         }
 
