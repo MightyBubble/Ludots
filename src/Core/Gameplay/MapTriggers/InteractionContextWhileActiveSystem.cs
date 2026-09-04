@@ -19,19 +19,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// </summary>
     public sealed class InteractionContextWhileActiveSystem : BaseSystem<World, float>
     {
-        private static readonly QueryDescription ActiveContextQuery =
-            new QueryDescription().WithAny<InteractionContextInstance, InteractionContextInstances>();
-
         private readonly InteractionContextProfileRegistry _contextProfiles;
         private readonly GraphReturnWriter _graphReturnWriter;
         private readonly GraphProgramRegistry _programs;
         private readonly EntityCollectionStore _collections;
         private readonly IGraphRuntimeApi _graphApi;
 
-        private Entity[] _subjects = new Entity[16];
-        private int _subjectCount;
-        private readonly Dictionary<Entity, int> _previousGraphBySubject = new();
-        private readonly Dictionary<Entity, int> _activeGraphBySubject = new();
+        private readonly InteractionContextTriggerMountSystem _contextGate;
+        private Dictionary<Entity, int> _activeGraphBySubject = new();
+        private Dictionary<Entity, int> _retiredGraphBySubject = new();
 
         public InteractionContextWhileActiveSystem(
             World world,
@@ -39,7 +35,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             GraphReturnWriter graphReturnWriter,
             GraphProgramRegistry programs,
             EntityCollectionStore collections,
-            IGraphRuntimeApi graphApi)
+            IGraphRuntimeApi graphApi,
+            InteractionContextTriggerMountSystem contextGate)
             : base(world)
         {
             _contextProfiles = contextProfiles ?? throw new ArgumentNullException(nameof(contextProfiles));
@@ -47,68 +44,54 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _programs = programs ?? throw new ArgumentNullException(nameof(programs));
             _collections = collections ?? throw new ArgumentNullException(nameof(collections));
             _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
+            _contextGate = contextGate ?? throw new ArgumentNullException(nameof(contextGate));
         }
 
         public override void Update(in float deltaTime)
         {
-            _activeGraphBySubject.Clear();
-            CollectSubjects();
-            for (int i = 0; i < _subjectCount; i++)
+            // Double-buffer swap instead of clear + full copy every frame (#1398 D12):
+            // the retired buffer holds last frame's active set, the active buffer is
+            // rebuilt in place, then the references swap.
+            Dictionary<Entity, int> retired = _retiredGraphBySubject;
+            Dictionary<Entity, int> current = _activeGraphBySubject;
+            current.Clear();
+
+            if (_contextGate.TryGetFrameSubjects(out Entity[] subjects, out int count))
             {
-                Entity subject = _subjects[i];
-                if (!TryResolveWhileActiveGraph(subject, out int graphId))
+                for (int i = 0; i < count; i++)
                 {
-                    continue;
+                    TickSubject(subjects[i], current);
                 }
-
-                _graphReturnWriter.Execute(
-                    graphId,
-                    caster: subject,
-                    explicitTarget: Entity.Null,
-                    targetContext: Entity.Null,
-                    targetPosCm: default(IntVector2),
-                    randomSeed: 0u,
-                    api: _graphApi);
-                _activeGraphBySubject[subject] = graphId;
             }
 
-            foreach (KeyValuePair<Entity, int> previous in _previousGraphBySubject)
+            foreach (KeyValuePair<Entity, int> previous in retired)
             {
-                if (_activeGraphBySubject.ContainsKey(previous.Key))
+                if (!current.ContainsKey(previous.Key))
                 {
-                    continue;
+                    ClearDispatchedCollections(previous.Key, previous.Value);
                 }
-
-                ClearDispatchedCollections(previous.Key, previous.Value);
             }
 
-            _previousGraphBySubject.Clear();
-            foreach (KeyValuePair<Entity, int> active in _activeGraphBySubject)
-            {
-                _previousGraphBySubject[active.Key] = active.Value;
-            }
+            _activeGraphBySubject = retired;
+            _retiredGraphBySubject = current;
         }
 
-        private void CollectSubjects()
+        private void TickSubject(Entity subject, Dictionary<Entity, int> current)
         {
-            _subjectCount = World.CountEntities(in ActiveContextQuery);
-            if (_subjectCount == 0)
+            if (!TryResolveWhileActiveGraph(subject, out int graphId))
             {
                 return;
             }
 
-            if (_subjectCount > _subjects.Length)
-            {
-                int next = _subjects.Length;
-                while (next < _subjectCount)
-                {
-                    next *= 2;
-                }
-
-                _subjects = new Entity[next];
-            }
-
-            World.GetEntities(in ActiveContextQuery, _subjects);
+            _graphReturnWriter.Execute(
+                graphId,
+                caster: subject,
+                explicitTarget: Entity.Null,
+                targetContext: Entity.Null,
+                targetPosCm: default(IntVector2),
+                randomSeed: 0u,
+                api: _graphApi);
+            current[subject] = graphId;
         }
 
         private bool TryResolveWhileActiveGraph(Entity subject, out int graphId)
