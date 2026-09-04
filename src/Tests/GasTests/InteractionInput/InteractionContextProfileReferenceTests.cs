@@ -295,7 +295,6 @@ namespace Ludots.Tests.GAS
             {
                 Id = ProfileId,
                 ActiveCollectionKey = "test.context.collection",
-                ActiveEntityViewKey = "test.context.view",
                 Bindings = Bindings,
                 Triggers = Triggers,
                 WhileActive = WhileActive,

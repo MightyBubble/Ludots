@@ -24,7 +24,7 @@ namespace Ludots.Tests.Gas.Graph
     /// </summary>
     [TestFixture]
     [NonParallelizable]
-    public sealed class InteractionContextTriggerGateTests
+    public sealed class InteractionContextTriggerMountTests
     {
         private const string MapIdValue = "map_context_gate_probe";
         private const string GraphName = "Graph.TriggerGraph.ContextGate";
@@ -103,18 +103,40 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void DeadSubject_IsSweptNextUpdate()
+        public void DeadSubject_IsInertThenReclaimedByHeartbeatSweep()
         {
             using World world = NewWorld(out var gate, out var profiles, out var triggers);
+            var entityMounts = new EntityTriggerGraphMounts(
+                world,
+                sessions: () => null,
+                triggers,
+                contextFactory: () => new ScriptContext(),
+                decorators: () => null,
+                programs: () => null,
+                customEvents: () => null);
             Entity subject = world.Create(NewMapEntity());
             MountBaseContext(world, profiles, subject, BattleProfile);
             gate.Update(0.016f);
+            Assert.That(triggers.HasMapEventSubscribers(_mapId, GameEvents.MapLoaded), Is.True);
 
             world.Destroy(subject);
             gate.Update(0.016f);
 
+            // New reclamation contract (#1398 D11): dead subjects go inert immediately —
+            // not counted, never dispatching — and the bounded heartbeat sweep reclaims
+            // the mounts, the same policy template mounts follow.
             Assert.That(gate.MountedSubjectCount, Is.EqualTo(0));
+            Assert.That(
+                triggers.HasMapEventSubscribers(_mapId, GameEvents.MapLoaded),
+                Is.True,
+                "dead-subject mounts stay registered until the budgeted sweep reclaims them");
+
+            var heartbeat = new ScriptContext();
+            heartbeat.Set(CoreServiceKeys.MapId, _mapId);
+            triggers.FireMapEvent(_mapId, GameEvents.MapHeartbeat, heartbeat);
+
             Assert.That(triggers.HasMapEventSubscribers(_mapId, GameEvents.MapLoaded), Is.False);
+            Assert.That(entityMounts.GetDeadMountCount(_mapId), Is.EqualTo(0));
         }
 
         [Test]
@@ -158,7 +180,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         private static World NewWorld(
-            out InteractionContextTriggerGateSystem gate,
+            out InteractionContextTriggerMountSystem gate,
             out InteractionContextProfileRegistry profiles,
             out TriggerManager triggers)
         {
@@ -177,7 +199,6 @@ namespace Ludots.Tests.Gas.Graph
                         {
                             Id = BattleProfile,
                             ActiveCollectionKey = "collection.gate.battle",
-                            ActiveEntityViewKey = "view.gate.battle",
                             Triggers = new List<InteractionContextTriggerMount>
                             {
                                 new() { Trigger = GraphName, Event = GameEvents.MapLoaded.Value },
@@ -187,7 +208,6 @@ namespace Ludots.Tests.Gas.Graph
                         {
                             Id = BoxingProfile,
                             ActiveCollectionKey = "collection.gate.boxing",
-                            ActiveEntityViewKey = "view.gate.boxing",
                             Triggers = new List<InteractionContextTriggerMount>
                             {
                                 new() { Trigger = GraphName, Event = GameEvents.MapLoaded.Value },
@@ -197,7 +217,6 @@ namespace Ludots.Tests.Gas.Graph
                         {
                             Id = IdleProfile,
                             ActiveCollectionKey = "collection.gate.idle",
-                            ActiveEntityViewKey = "view.gate.idle",
                         },
                     },
                 },
@@ -208,7 +227,7 @@ namespace Ludots.Tests.Gas.Graph
 
             triggers = new TriggerManager();
             var customEvents = new CustomEventNameRegistry();
-            gate = new InteractionContextTriggerGateSystem(
+            gate = new InteractionContextTriggerMountSystem(
                 world,
                 triggers,
                 profiles,

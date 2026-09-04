@@ -12,8 +12,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// <summary>
     /// Context trigger gate (#1398 S2b): every tick, diffs the world-side active interaction
     /// context set per entity — the mounted base <see cref="InteractionContextInstance"/> plus
-    /// every <see cref="InteractionContextInstances"/> instance — against the trigger
-    /// mounts this system owns, and mounts/unmounts the profiles' declared
+    /// every <see cref="InteractionContextInstances"/> instance — against the context-owned
+    /// mounts in the TriggerManager ledger, and mounts/unmounts the profiles' declared
     /// <c>triggers[]</c> graphs on the context subject accordingly. Entering a context
     /// activates its TriggerGraph listeners; leaving deactivates them; derived contexts gate
     /// their own triggers exactly like base mounts. This is the simulation-side twin of the
@@ -22,15 +22,23 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// writer — exec reconciliation, cast ops, derived-context ops, and template spawns —
     /// without any of them knowing about triggers.
     /// <para>
+    /// Ledger: mounts are stamped with a <see cref="TriggerMountOwner"/> before registration
+    /// and this system keeps no parallel mount list (#1398 D10); the TriggerManager owner
+    /// index answers "what is mounted for (subject, profile)" and removes by owner. Dead
+    /// subjects are skipped here — their inert mounts are reclaimed by the unified
+    /// heartbeat sweep in <see cref="EntityTriggerGraphMounts"/> (#1398 D11), the same
+    /// policy template mounts follow.
+    /// </para>
+    /// <para>
     /// Mounts are entity-domain TriggerGraph mounts (scope = the context subject) registered
-    /// through the map trigger tables, so dead subjects go inert and map unload reclaims
-    /// them wholesale; this system's tracking follows via <see cref="DropMap"/>. Input-action
-    /// payloads seed <c>MapTrigger.Rep</c> (not SourceEntity) from the mount subject; entity-domain
-    /// mounts therefore match unscoped on the bus path, while action-bound mounts are dispatched
-    /// per-subject by the action binding system.
+    /// through the map trigger tables, so map unload reclaims them wholesale when the map's
+    /// tables are unregistered; dead subjects go inert and the sweep reclaims them with a
+    /// bounded budget. Input-action payloads seed <c>MapTrigger.Rep</c> (not SourceEntity)
+    /// from the mount subject; entity-domain mounts therefore match unscoped on the bus path,
+    /// while action-bound mounts are dispatched per-subject by the action binding system.
     /// </para>
     /// </summary>
-    public sealed class InteractionContextTriggerGateSystem : BaseSystem<World, float>
+    public sealed class InteractionContextTriggerMountSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription _activeContextQuery =
             new QueryDescription().WithAny<InteractionContextInstance, InteractionContextInstances>();
@@ -42,12 +50,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly EventSchemaRegistry? _eventSchemas;
         private readonly Func<MapSessionManager?> _sessions;
 
-        private readonly Dictionary<Entity, List<ContextMountSet>> _mounted = new();
         private Entity[] _subjects = new Entity[16];
         private int _subjectCount;
         private readonly List<int> _desiredProfileIds = new(4);
+        private readonly List<KeyValuePair<TriggerMountOwner, List<Trigger>>> _ownedScratch = new();
+        private readonly HashSet<Entity> _frameSubjectSet = new();
 
-        public InteractionContextTriggerGateSystem(
+        public InteractionContextTriggerMountSystem(
             World world,
             TriggerManager triggerManager,
             InteractionContextProfileRegistry contextProfiles,
@@ -65,50 +74,99 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
         }
 
-        /// <summary>Mounted context trigger count; test observability.</summary>
-        public int MountedSubjectCount => _mounted.Count;
+        /// <summary>
+        /// Live subjects carrying context-owned mounts. Dead subjects awaiting the budget
+        /// sweep do not count: their mounts are inert the tick they die.
+        /// </summary>
+        public int MountedSubjectCount
+            => _triggerManager.CountOwnedMountSubjects(
+                TriggerMountOwnerKind.InteractionContext,
+                subject => World.IsAlive(subject));
 
         /// <summary>The triggers mounted for one subject × context; test observability.</summary>
         public bool TryGetMountedTriggers(Entity subject, int profileId, out IReadOnlyList<Trigger> triggers)
         {
-            triggers = Array.Empty<Trigger>();
-            if (!_mounted.TryGetValue(subject, out List<ContextMountSet> sets))
-            {
-                return false;
-            }
+            return _triggerManager.TryGetOwnedMounts(
+                new TriggerMountOwner(TriggerMountOwnerKind.InteractionContext, subject, profileId),
+                out triggers);
+        }
 
-            ContextMountSet? match = sets.Find(set => set.ProfileId == profileId);
-            if (match == null)
-            {
-                return false;
-            }
-
-            triggers = match.Triggers;
-            return true;
+        /// <summary>
+        /// This frame's context-subject snapshot (filled by Update). Consumed by
+        /// <see cref="InteractionContextWhileActiveSystem"/> so both systems share one world
+        /// scan per tick instead of each running the same query (#1398 D12). Valid until the
+        /// next Update; the consumer must run after this system in the same tick.
+        /// </summary>
+        public bool TryGetFrameSubjects(out Entity[] subjects, out int count)
+        {
+            subjects = _subjects;
+            count = _subjectCount;
+            return count > 0;
         }
 
         public override void Update(in float dt)
         {
             CollectSubjects();
-            UnmountStale();
-            MountMissing();
-        }
-
-        /// <summary>Drops all tracking for a map (its trigger tables were unregistered wholesale).</summary>
-        public void DropMap(MapId mapId)
-        {
-            foreach (List<ContextMountSet> sets in _mounted.Values)
+            _frameSubjectSet.Clear();
+            for (int s = 0; s < _subjectCount; s++)
             {
-                for (int i = sets.Count - 1; i >= 0; i--)
+                Entity subject = _subjects[s];
+                if (!World.IsAlive(subject))
                 {
-                    if (sets[i].MapId.Equals(mapId))
-                    {
-                        sets.RemoveAt(i);
-                    }
+                    // Dead subjects keep their (inert) mounts until the unified heartbeat
+                    // sweep reclaims them — the same policy template mounts follow (#1398 D11).
+                    continue;
                 }
+
+                _frameSubjectSet.Add(subject);
+                CollectDesiredProfiles(subject, _desiredProfileIds);
+                ReconcileSubject(subject);
+                _desiredProfileIds.Clear();
             }
 
-            PruneEmptySubjects();
+            // Catch-up: a live subject that left the scan entirely (its last context was
+            // deactivated) no longer matches the component query, so the loop above cannot
+            // unmount its stale context mounts. Owning no context components means its
+            // desired set is empty — remove every context-owned mount it still carries.
+            _ownedScratch.Clear();
+            _triggerManager.CollectOwnedMounts(TriggerMountOwnerKind.InteractionContext, _ownedScratch);
+            for (int i = 0; i < _ownedScratch.Count; i++)
+            {
+                Entity subject = _ownedScratch[i].Key.Subject;
+                if (World.IsAlive(subject) && !_frameSubjectSet.Contains(subject))
+                {
+                    _triggerManager.RemoveOwnedMounts(_ownedScratch[i].Key);
+                }
+            }
+        }
+
+        /// <summary>
+        /// One pass per subject: unmount context mounts that are no longer desired, mount the
+        /// missing ones. The desired set is computed once per subject per frame (#1398 D12).
+        /// </summary>
+        private void ReconcileSubject(Entity subject)
+        {
+            _ownedScratch.Clear();
+            _triggerManager.CollectOwnedMounts(subject, TriggerMountOwnerKind.InteractionContext, _ownedScratch);
+            for (int i = 0; i < _ownedScratch.Count; i++)
+            {
+                if (_desiredProfileIds.Contains(_ownedScratch[i].Key.OwnerId))
+                {
+                    continue;
+                }
+
+                _triggerManager.RemoveOwnedMounts(_ownedScratch[i].Key);
+            }
+
+            for (int d = 0; d < _desiredProfileIds.Count; d++)
+            {
+                int profileId = _desiredProfileIds[d];
+                TriggerMountOwner owner = new(TriggerMountOwnerKind.InteractionContext, subject, profileId);
+                if (!_triggerManager.TryGetOwnedMounts(owner, out _))
+                {
+                    TryMount(subject, profileId, owner);
+                }
+            }
         }
 
         private void CollectSubjects()
@@ -133,66 +191,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             World.GetEntities(in _activeContextQuery, _subjects);
         }
 
-        private void UnmountStale()
-        {
-            foreach (KeyValuePair<Entity, List<ContextMountSet>> pair in _mounted)
-            {
-                Entity subject = pair.Key;
-                if (World.IsAlive(subject))
-                {
-                    CollectDesiredProfiles(subject, _desiredProfileIds);
-                }
-                else
-                {
-                    _desiredProfileIds.Clear();
-                }
-
-                List<ContextMountSet> sets = pair.Value;
-                for (int i = sets.Count - 1; i >= 0; i--)
-                {
-                    if (_desiredProfileIds.Contains(sets[i].ProfileId))
-                    {
-                        continue;
-                    }
-
-                    _triggerManager.RemoveMapTriggers(sets[i].MapId, sets[i].Triggers);
-                    sets.RemoveAt(i);
-                }
-
-                _desiredProfileIds.Clear();
-            }
-
-            PruneEmptySubjects();
-        }
-
-        private void MountMissing()
-        {
-            for (int s = 0; s < _subjectCount; s++)
-            {
-                Entity subject = _subjects[s];
-                if (!World.IsAlive(subject))
-                {
-                    continue;
-                }
-
-                CollectDesiredProfiles(subject, _desiredProfileIds);
-                for (int d = 0; d < _desiredProfileIds.Count; d++)
-                {
-                    int profileId = _desiredProfileIds[d];
-                    if (!HasMounted(subject, profileId) &&
-                        TryMount(subject, profileId, out ContextMountSet? mounted))
-                    {
-                        Track(subject, mounted!);
-                    }
-                }
-
-                _desiredProfileIds.Clear();
-            }
-        }
-
         private void CollectDesiredProfiles(Entity subject, List<int> profileIds)
         {
-            profileIds.Clear();
             if (World.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance baseContext) &&
                 !profileIds.Contains(baseContext.ContextId))
             {
@@ -211,12 +211,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
         }
 
-        private bool TryMount(Entity subject, int profileId, out ContextMountSet? mounted)
+        private bool TryMount(Entity subject, int profileId, TriggerMountOwner owner)
         {
             if (!_contextProfiles.TryGetDefinition(profileId, out InteractionContextProfileDefinition definition) ||
                 definition.Triggers is not { Count: > 0 })
             {
-                mounted = null;
                 return false;
             }
 
@@ -237,6 +236,14 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             MapId mapId = session?.MapId ?? ResolveRequiredMapId(subject);
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is TriggerGraphMountTrigger mount)
+                {
+                    mount.Owner = owner;
+                }
+            }
+
             if (_triggerManager.OwnsMapTriggers(mapId))
             {
                 _triggerManager.AddMapTriggers(mapId, triggers);
@@ -248,7 +255,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 _triggerManager.RegisterMapTriggers(mapId, triggers);
             }
 
-            mounted = new ContextMountSet(profileId, mapId, triggers);
             return true;
         }
 
@@ -267,62 +273,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             return mapEntity.MapId;
-        }
-
-        private bool HasMounted(Entity subject, int profileId)
-        {
-            return _mounted.TryGetValue(subject, out List<ContextMountSet> sets) &&
-                sets.Exists(set => set.ProfileId == profileId);
-        }
-
-        private void Track(Entity subject, ContextMountSet mounted)
-        {
-            if (!_mounted.TryGetValue(subject, out List<ContextMountSet> sets))
-            {
-                sets = new List<ContextMountSet>(2);
-                _mounted[subject] = sets;
-            }
-
-            sets.Add(mounted);
-        }
-
-        private void PruneEmptySubjects()
-        {
-            List<Entity>? empty = null;
-            foreach (KeyValuePair<Entity, List<ContextMountSet>> pair in _mounted)
-            {
-                if (pair.Value.Count == 0)
-                {
-                    empty ??= new List<Entity>();
-                    empty.Add(pair.Key);
-                }
-            }
-
-            if (empty == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < empty.Count; i++)
-            {
-                _mounted.Remove(empty[i]);
-            }
-        }
-
-        private sealed class ContextMountSet
-        {
-            public ContextMountSet(int profileId, MapId mapId, List<Trigger> triggers)
-            {
-                ProfileId = profileId;
-                MapId = mapId;
-                Triggers = triggers;
-            }
-
-            public int ProfileId { get; }
-
-            public MapId MapId { get; }
-
-            public List<Trigger> Triggers { get; }
         }
     }
 }

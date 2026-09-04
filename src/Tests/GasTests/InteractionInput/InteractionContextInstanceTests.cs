@@ -328,7 +328,6 @@ namespace Ludots.Tests.GAS
             {
                 Id = id,
                 ActiveCollectionKey = "collection." + id,
-                ActiveEntityViewKey = "view." + id,
             };
 
         private static StringIntRegistry NewRegistry()

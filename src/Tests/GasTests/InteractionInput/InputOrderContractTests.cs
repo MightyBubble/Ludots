@@ -3424,7 +3424,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     {
                         Id = InteractionContextIds.Default,
                         ActiveCollectionKey = EntityCollectionKeys.CommandSource,
-                        ActiveEntityViewKey = "view.test.command",
                     },
                 },
             }, collectionKeys,

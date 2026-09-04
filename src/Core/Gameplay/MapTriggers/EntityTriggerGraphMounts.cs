@@ -48,9 +48,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Func<TriggerDecoratorRegistry?> _decorators;
         private readonly Func<GraphProgramRegistry?> _programs;
         private readonly Func<CustomEventNameRegistry?> _customEvents;
-        private readonly Dictionary<MapId, List<EntityMountSet>> _mapMounts = new();
         private readonly List<MapLoadSpawn> _mapLoadBuffer = new();
-        private readonly List<EntityMountSet> _sweepScratch = new();
+        private readonly List<KeyValuePair<TriggerMountOwner, List<Trigger>>> _ownedScratch = new();
+        private readonly List<TriggerMountOwner> _reclaimScratch = new();
 
         public EntityTriggerGraphMounts(
             World world,
@@ -72,12 +72,25 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _triggerManager.RegisterEventHandler(GameEvents.MapHeartbeat, OnMapHeartbeat);
         }
 
-        /// <summary>Mounts created for still-unswept dead entities; test observability.</summary>
+        /// <summary>
+        /// Mount owners whose subject is dead but whose mounts are not yet reclaimed;
+        /// test observability. Counts template and context mounts alike — both follow the
+        /// same budgeted heartbeat sweep (#1398 D11).
+        /// </summary>
         public int GetDeadMountCount(MapId mapId)
         {
-            return _mapMounts.TryGetValue(mapId, out List<EntityMountSet> sets)
-                ? CountDead(sets)
-                : 0;
+            _ownedScratch.Clear();
+            _triggerManager.CollectOwnedMounts(mapId, _ownedScratch);
+            int dead = 0;
+            for (int i = 0; i < _ownedScratch.Count; i++)
+            {
+                if (!_world.IsAlive(_ownedScratch[i].Key.Subject))
+                {
+                    dead++;
+                }
+            }
+
+            return dead;
         }
 
         /// <summary>
@@ -184,7 +197,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         private void DecorateTrackAndDispatch(MapSession session, Entity scope, List<Trigger> triggers)
         {
-            Track(session.MapId, scope, triggers);
+            TriggerMountOwner owner = new(TriggerMountOwnerKind.TemplateEntity, scope, 0);
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is TriggerGraphMountTrigger mount)
+                {
+                    mount.Owner = owner;
+                }
+            }
+
             TriggerDecoratorRegistry? decorators = _decorators();
             for (int i = 0; i < triggers.Count; i++)
             {
@@ -219,23 +240,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             return triggers;
         }
 
-        /// <summary>Drops all entity-mount state for a map; called before entity teardown on unload.</summary>
-        public void DropMap(MapId mapId)
-        {
-            _mapMounts.Remove(mapId);
-        }
-
-        private void Track(MapId mapId, Entity scope, List<Trigger> triggers)
-        {
-            if (!_mapMounts.TryGetValue(mapId, out List<EntityMountSet> sets))
-            {
-                sets = new List<EntityMountSet>();
-                _mapMounts[mapId] = sets;
-            }
-
-            sets.Add(new EntityMountSet(scope, triggers));
-        }
-
         private void OnEntityDestroyed(in Entity entity)
         {
             // Arch raises EntityDestroyed before components are stripped; map ownership
@@ -246,59 +250,55 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             MapId mapId = _world.Get<MapEntity>(entity).MapId;
-            if (!_mapMounts.TryGetValue(mapId, out List<EntityMountSet> sets))
+            MapSession? session = _sessions()?.GetSession(mapId);
+            if (session == null || session.State != MapSessionState.Active)
             {
                 return;
             }
 
-            for (int i = 0; i < sets.Count; i++)
+            _ownedScratch.Clear();
+            _triggerManager.CollectOwnedMounts(entity, TriggerMountOwnerKind.TemplateEntity, _ownedScratch);
+            for (int i = 0; i < _ownedScratch.Count; i++)
             {
-                if (sets[i].Dead || sets[i].Scope != entity)
-                {
-                    continue;
-                }
-
-                MapSession? session = _sessions()?.GetSession(mapId);
-                if (session != null && session.State == MapSessionState.Active)
-                {
-                    DispatchLifecycle(session, entity, GameEvents.EntityDied, sets[i].Triggers, destroyTick: true);
-                }
-
-                sets[i].Dead = true;
+                DispatchLifecycle(session, entity, GameEvents.EntityDied, _ownedScratch[i].Value, destroyTick: true);
             }
+
+            // Reclamation is not done here: the heartbeat sweep below reclaims dead-subject
+            // mounts of both kinds with a bounded budget (#1398 D11).
         }
 
         private Task OnMapHeartbeat(ScriptContext context)
         {
             MapId mapId = context.Get<MapId>(CoreServiceKeys.MapId);
-            if (mapId.Value != null && _mapMounts.TryGetValue(mapId, out List<EntityMountSet> sets))
+            if (mapId.Value != null)
             {
-                SweepDeadMounts(mapId, sets);
+                SweepDeadSubjectMounts(mapId);
             }
 
             return Task.CompletedTask;
         }
 
-        private void SweepDeadMounts(MapId mapId, List<EntityMountSet> sets)
+        /// <summary>
+        /// Reclaim owned mounts whose subject died — template and context mounts alike,
+        /// bounded by <see cref="SweepBudgetPerWave"/> per heartbeat wave (#1398 D11:
+        /// one reclamation policy for every entity-domain mount kind).
+        /// </summary>
+        private void SweepDeadSubjectMounts(MapId mapId)
         {
-            _sweepScratch.Clear();
-            for (int i = 0; i < sets.Count && _sweepScratch.Count < SweepBudgetPerWave; i++)
+            _ownedScratch.Clear();
+            _triggerManager.CollectOwnedMounts(mapId, _ownedScratch);
+            _reclaimScratch.Clear();
+            for (int i = 0; i < _ownedScratch.Count && _reclaimScratch.Count < SweepBudgetPerWave; i++)
             {
-                if (sets[i].Dead)
+                if (!_world.IsAlive(_ownedScratch[i].Key.Subject))
                 {
-                    _sweepScratch.Add(sets[i]);
+                    _reclaimScratch.Add(_ownedScratch[i].Key);
                 }
             }
 
-            for (int i = 0; i < _sweepScratch.Count; i++)
+            for (int i = 0; i < _reclaimScratch.Count; i++)
             {
-                sets.Remove(_sweepScratch[i]);
-                _triggerManager.RemoveMapTriggers(mapId, _sweepScratch[i].Triggers);
-            }
-
-            if (sets.Count == 0)
-            {
-                _mapMounts.Remove(mapId);
+                _triggerManager.RemoveOwnedMounts(_reclaimScratch[i]);
             }
         }
 
@@ -345,20 +345,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             return _world.Get<MapEntity>(entity).MapId;
         }
 
-        private static int CountDead(List<EntityMountSet> sets)
-        {
-            int dead = 0;
-            for (int i = 0; i < sets.Count; i++)
-            {
-                if (sets[i].Dead)
-                {
-                    dead++;
-                }
-            }
-
-            return dead;
-        }
-
         private readonly struct MapLoadSpawn
         {
             public MapLoadSpawn(Entity entity, string templateId, IReadOnlyList<string> graphNames)
@@ -371,19 +357,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             public Entity Entity { get; }
             public string TemplateId { get; }
             public IReadOnlyList<string> GraphNames { get; }
-        }
-
-        private sealed class EntityMountSet
-        {
-            public EntityMountSet(Entity scope, List<Trigger> triggers)
-            {
-                Scope = scope;
-                Triggers = triggers;
-            }
-
-            public Entity Scope { get; }
-            public List<Trigger> Triggers { get; }
-            public bool Dead { get; set; }
         }
     }
 }
