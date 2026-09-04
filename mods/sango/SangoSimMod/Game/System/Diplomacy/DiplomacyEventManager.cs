@@ -143,7 +143,11 @@ namespace Sango.Core
         ///   Trade / AllianceRequest / TruceRequest:照原注释设计调 PerformDiplomacyAction
         ///     (内核无对应 DiplomacyAction 实现时返回 false,静默不落地,M3.d 停用面同源);
         ///   TechniqueExchange / RequestTroops / Marriage:提议型事件,无注释原设计、无
-        ///     内核动作实现,仅入消息流(M3.f 激活对应外交动作时补映射)。
+        ///     内核动作实现,仅入消息流。M3.f 裁定:AI 外交已激活(Force.AIPrepare 的
+        ///     AIDiplomacy 入列),但其 Marriage/Trade/AllianceRequest 分支在
+        ///     CreateDiplomacyAction default→null 处静默不触发——上游连语义都没写
+        ///     (CityDiplomacyMarriage.DoJob 原文"暂时留空,等待具体实现"),补实现即
+        ///     发明玩法,保持消息流呈现,留待上游语义出现再映射。
         /// </summary>
         static void ApplyEffect(DiplomacyEvent diplomacyEvent, Force sender, Force receiver)
         {

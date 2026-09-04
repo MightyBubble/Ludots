@@ -92,6 +92,11 @@ namespace Sango.Runtime
             GameEvent.OnSkillDamageBuildingDurability += OnSkillDamageBuildingDurability;
             GameEvent.OnCityFall += OnCityFall;
             GameEvent.OnForceFall += OnForceFall;
+            // M3.f 战斗演出:单挑走内核静态事件;舌战事件挂在实例上,经
+            // SangoChallengeOps 的静态转发汇入同一消息流。
+            GameEvent.OnDuelStart += OnDuelStart;
+            GameEvent.OnDuelEnd += OnDuelEnd;
+            SangoChallengeOps.DebateLinePublished += OnDebateLine;
             _attached = true;
         }
 
@@ -109,6 +114,9 @@ namespace Sango.Runtime
             GameEvent.OnSkillDamageBuildingDurability -= OnSkillDamageBuildingDurability;
             GameEvent.OnCityFall -= OnCityFall;
             GameEvent.OnForceFall -= OnForceFall;
+            GameEvent.OnDuelStart -= OnDuelStart;
+            GameEvent.OnDuelEnd -= OnDuelEnd;
+            SangoChallengeOps.DebateLinePublished -= OnDebateLine;
             _attached = false;
         }
 
@@ -335,8 +343,7 @@ namespace Sango.Runtime
         }
 
         void OnForceFall(Force force, City city, Troop atkTroop)
-        {
-            if (force == null)
+        {            if (force == null)
             {
                 return;
             }
@@ -359,6 +366,82 @@ namespace Sango.Runtime
                 }
             }
         }
+
+        // ---- M3.f 战斗演出行(单挑/舌战;与上面事件群同一消息流) ----
+
+        // DuelSystem.StartDuel 尾部触发;此刻结果尚未结算,只报对阵。
+        void OnDuelStart(DuelSystem duel)
+        {
+            if (duel?.AttackerTroop == null || duel.DefenderTroop == null)
+            {
+                return;
+            }
+
+            Publish(
+                $"[单挑] {DuelLeaderLabel(duel.AttackerTroop)}(士气 {duel.AttackerTroop.morale}) 向 " +
+                $"{DuelLeaderLabel(duel.DefenderTroop)}(士气 {duel.DefenderTroop.morale}) 发起单挑");
+            lock (_sync)
+            {
+                BattleFor(duel.AttackerTroop, duel.DefenderTroop)
+                    .Append(CurrentTurn, "duel", TroopLabel(duel.AttackerTroop), TroopLabel(duel.DefenderTroop), null, 0, 0);
+            }
+        }
+
+        // EndDuel 尾部触发:HandleDuelResult(士气直写 ±20、30% 俘将、20% 部队溃灭)
+        // 已结算完毕,此处读的是落点后状态。
+        void OnDuelEnd(DuelSystem duel, DuelResult result)
+        {
+            if (duel?.AttackerTroop == null || duel.DefenderTroop == null)
+            {
+                return;
+            }
+
+            Troop winner = result == DuelResult.AttackerWin ? duel.AttackerTroop
+                : result == DuelResult.DefenderWin ? duel.DefenderTroop
+                : null!;
+            Troop loser = ReferenceEquals(winner, duel.AttackerTroop) ? duel.DefenderTroop
+                : winner == null ? null!
+                : duel.AttackerTroop;
+
+            string verdict = result switch
+            {
+                DuelResult.AttackerWin => "攻将获胜",
+                DuelResult.DefenderWin => "守将获胜",
+                DuelResult.Draw => "不分胜负",
+                _ => result.ToString(),
+            };
+
+            string aftermath = string.Empty;
+            if (winner != null && loser != null)
+            {
+                bool captured = winner.captiveList.Contains(loser.Leader!);
+                bool destroyed = !loser.IsAlive;
+                if (captured)
+                {
+                    aftermath += $",{loser.Leader!.Name} 被生擒";
+                }
+
+                if (destroyed)
+                {
+                    aftermath += $",{loser.Name} 全军溃灭";
+                }
+            }
+
+            Publish(
+                $"[单挑·终] {DuelLeaderLabel(duel.AttackerTroop)} 对 {DuelLeaderLabel(duel.DefenderTroop)}:{verdict}," +
+                $"攻军士气 {duel.AttackerTroop.morale},守军士气 {duel.DefenderTroop.morale}{aftermath}");
+            lock (_sync)
+            {
+                BattleFor(duel.AttackerTroop, duel.DefenderTroop)
+                    .Append(CurrentTurn, "duel-end", TroopLabel(duel.AttackerTroop), TroopLabel(duel.DefenderTroop), null, 0, 0);
+            }
+        }
+
+        // SangoChallengeOps 的舌战行转发(内核舌战事件挂实例,不进 GameEvent 静态群)。
+        void OnDebateLine(string line) => Publish(line);
+
+        static string DuelLeaderLabel(Troop troop) =>
+            $"{ForceLabel(troop.mBelongForce)}·{troop.Leader?.Name ?? "未知"}({troop.Name})";
 
         // ---- 聚合索引(全部在 _sync 内调用) ----
 

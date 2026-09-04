@@ -45,7 +45,10 @@ namespace Sango
         public void OnLoad(IModContext context)
         {
             IVirtualFileSystem vfs = context.VFS;
-            context.Log("[SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers + seed event; M2.d: step-turns/journal dev events)");
+            context.Log("[SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers + seed event; M2.d: step-turns/journal dev events; M3.f: combat challenge trigger online)");
+            // M3.f 战斗演出触发(单挑/舌战):静态内核事件订阅,与内核同进程生命周期
+            // (内核未启动时事件不来);headless 测试按用例自行 Attach/Detach。
+            SangoChallengeOps.Attach();
             context.OnEvent(GameEvents.MapLoaded, OnMapLoaded(vfs));
             context.OnEvent(GameEvents.TurnAdvanced, OnTurnAdvanced(vfs));
             context.OnEvent(new EventKey(SeedTroopsEventKey), OnSeedTroops(vfs));
@@ -68,6 +71,7 @@ namespace Sango
 
         public void OnUnload()
         {
+            SangoChallengeOps.Detach();
             _troopMarkers?.Dispose();
             _troopMarkers = null;
         }
