@@ -246,6 +246,8 @@ namespace Sango.Tests
 
         static int IntOf(object target, string member) => Convert.ToInt32(FieldValue(target, member));
 
+        static bool BoolOf(object target, string member) => Convert.ToBoolean(FieldValue(target, member));
+
         static List<object> FreePersons(object city) => ((IEnumerable)FieldValue(city, "freePersons")).Cast<object>().ToList();
 
         static object FirstPlayerCity(Kernel kernel, int forceId) =>
@@ -353,6 +355,168 @@ namespace Sango.Tests
             TestContext.Progress.WriteLine($"[m3a-player] plain={plain} acrossSave={across}");
             Assert.That(across, Is.EqualTo(plain), "player-world save→restore→continue must stay bit-identical (player flag + gates included)");
         }
+
+        // ---- M3.g 玩家回合中途存档确定性 ----
+
+        /// <summary>
+        /// 玩家下令内政(train 即时结算 + search 挂 RenderEvent 队列)→ 回合内(玩家门
+        /// 阻塞位)存档 → 回灌 → 续跑 == 直跑链逐位。覆盖两面:
+        ///   · jobCounter 面:同名令二连发在两链必须同样被"本回合已训"门拒绝
+        ///     (City/Corps.jobCounter 均 [JsonProperty] 在档,门跨边界成立);
+        ///   · pendingJobs 面:search 的结算事件(M3.g 前不入档)必须按捕获序回放,
+        ///     回灌链下一次 Run 的随机消耗与直跑链同点(修复前:回灌丢单,搜索永不结算)。
+        /// </summary>
+        [Test]
+        public void PlayerInteriorOrders_MidTurnSaveRestore_MatchesDirectChain()
+        {
+            Assembly sim = LoadSangoSimMod();
+            int forceId = FindAliveForceId(new Kernel(sim, Seed));
+
+            string RunChain(bool withSave)
+            {
+                var kernel = new Kernel(sim, Seed);
+                kernel.SelectPlayerForce(forceId);
+                Assert.That(kernel.AdvanceTurn(), Is.EqualTo("AwaitingPlayer"));
+
+                object city = FirstPlayerCity(kernel, forceId);
+                var free = FreePersons(city);
+                Assume.That(free.Count, Is.GreaterThanOrEqualTo(2), "the player capital must staff two free persons");
+                int cityId = (int)PropertyValue(city, "Id")!;
+                int trainer = (int)PropertyValue(free[0], "Id")!;
+                int searcher = (int)PropertyValue(free[1], "Id")!;
+
+                (bool ok, string error, _) = kernel.CityCommand(city, "train", new[] { trainer });
+                Assume.That(ok, Is.True, $"player train must pass the original gates: {error}");
+                (ok, error, _) = kernel.CityCommand(city, "search", new[] { searcher });
+                Assume.That(ok, Is.True, $"player search must pass the original gates: {error}");
+
+                // 同名令二连发:直跑链必然吃"本回合已训"门(jobCounter=1)。
+                (bool dupOk, string dupError, _) = kernel.CityCommand(city, "train", new[] { trainer });
+                Assert.That(dupOk, Is.False, "the duplicate train order must be gated within the same turn");
+                Assert.That(dupError, Is.EqualTo("invalid_state"), "the duplicate must fail the CityTrainTroops.IsValid gate (jobCounter face)");
+
+                object capture = withSave ? kernel.Capture() : null!;
+                if (withSave)
+                {
+                    kernel.Restore(capture);
+                    // 回灌世界步进回玩家门(CurRunCorps 是运行态,经一次 Run 重建阻塞位);
+                    // 世界整体重建,城引用按 Id 重新解析。
+                    Assert.That(kernel.AdvanceTurn(), Is.EqualTo("AwaitingPlayer"), "the restored world must re-block at the player gate");
+
+                    // jobCounter 门跨存档边界成立:回灌后同名令仍被拒(且回灌没有把
+                    // 挂起的 search 单丢掉——digest 等值由链尾断言总把关)。
+                    object restoredCity = kernel.CityById(cityId)!;
+                    (bool dupAfterRestore, string dupErrorAfter, _) = kernel.CityCommand(restoredCity, "train", new[] { trainer });
+                    Assert.That(dupAfterRestore, Is.False, "the duplicate train order must stay gated after restore (jobCounter survived the boundary)");
+                    Assert.That(dupErrorAfter, Is.EqualTo("invalid_state"));
+                }
+
+                for (int i = 0; i < 3; i++)
+                {
+                    Assert.That(kernel.AdvanceTurn(), Is.EqualTo("AwaitingPlayer"));
+                    kernel.EndPlayerTurn();
+                }
+
+                return kernel.WorldDigest();
+            }
+
+            string direct = RunChain(withSave: false);
+            string across = RunChain(withSave: true);
+            TestContext.Progress.WriteLine($"[m3g-midturn] direct={direct} across={across}");
+            Assert.That(across, Is.EqualTo(direct),
+                "player interior orders (train + queued search) across a mid-turn save must replay the direct chain bit for bit");
+        }
+
+        /// <summary>
+        /// 回合内 AI 决策面(AICommandList 类)双跑验收:按原版逐帧 Run() 的合法时点把
+        /// 世界停在"势力 AI 中途"(存在 AIPrepared 且未 AIFinished 且未 ActionOver 的
+        /// 实体,即命令队列半途)→ 存档 → 回灌 → 续推 == 直跑链逐位。修复前:回灌后
+        /// prepared 归零,DoAI 重走 AIPrepare 把整队命令重灌,已执行命令(外交/内政掷点)
+        /// 双跑,随机流与直跑链错位。
+        /// </summary>
+        [Test]
+        public void MidAiTurnSaveRestore_CommandQueuesReplay_MatchesDirectChain()
+        {
+            Assembly sim = LoadSangoSimMod();
+
+            string RunChain(bool withSave)
+            {
+                var kernel = new Kernel(sim, Seed);
+                // 步进到首个"AI 中途"悬挂点:每 Run() 后扫四池,任一实体 prepared 且
+                // 未 finished 且未 ActionOver 即停(原版逐帧驱动的自然停点)。
+                int steps = StepToMidAiSuspension(kernel);
+                TestContext.Progress.WriteLine($"[m3g-midai] suspension after {steps} Run() calls (withSave={withSave})");
+
+                object capture = withSave ? kernel.Capture() : null!;
+                if (withSave)
+                {
+                    kernel.Restore(capture);
+                }
+
+                for (int i = 0; i < 4; i++)
+                {
+                    kernel.AdvanceTurn();
+                }
+
+                return kernel.WorldDigest();
+            }
+
+            string direct = RunChain(withSave: false);
+            string across = RunChain(withSave: true);
+            TestContext.Progress.WriteLine($"[m3g-midai] direct={direct} across={across}");
+            Assert.That(across, Is.EqualTo(direct),
+                "a mid-AI-turn save must replay the direct chain bit for bit (command queues + progress flags replayed)");
+        }
+
+        /// <summary>逐帧步进直至 AI 中途悬挂;一整回合未出现即失败(种子/剧本不满足面)。</summary>
+        static int StepToMidAiSuspension(Kernel kernel)
+        {
+            const int maxSteps = 20_000;
+            for (int step = 0; step < maxSteps; step++)
+            {
+                Call(kernel.Scenario, "Run");
+                if (AtMidAiSuspension(kernel))
+                {
+                    return step + 1;
+                }
+            }
+
+            throw new InvalidOperationException(
+                "no mid-AI suspension found within the step budget; the scenario/seed no longer exposes the AICommandList face");
+        }
+
+        static bool AtMidAiSuspension(Kernel kernel)
+        {
+            foreach (object entity in kernel.Forces().Cast<object>())
+            {
+                if (MidAiFlags(entity))
+                {
+                    return true;
+                }
+            }
+
+            foreach (object entity in EnumerateSet(FieldValue(kernel.Scenario, "corpsSet")))
+            {
+                if (MidAiFlags(entity))
+                {
+                    return true;
+                }
+            }
+
+            foreach (object entity in kernel.Cities())
+            {
+                if (MidAiFlags(entity))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // prepared && !finished && !ActionOver = 命令队列半途(AIPrepare 已灌队、DoAI 未收尾)。
+        static bool MidAiFlags(object entity) =>
+            BoolOf(entity, "AIPrepared") && !BoolOf(entity, "AIFinished") && !BoolOf(entity, "ActionOver");
 
         // ---- 内政 AI 活化:世界经济从静态转运转 ----
 

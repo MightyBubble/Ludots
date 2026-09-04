@@ -22,7 +22,10 @@ namespace Sango.Tests
     ///      (Troop.ChangeMorale 的 MaxMorale clamp);
     ///   3. 长时段混战(默认 5% 概率):互授歼灭任务 40 回合,挑战零异常,世界仍确定;
     ///   4. 确定性:带挑战的战斗剧本同种子双跑 digest 逐位相等,换种子发散;
-    ///   5. 存档:首击挑战后入档回灌续跑 == 不入档链(挑战全程同步结算,无跨帧状态)。
+    ///   5. 存档:首击挑战(带俘将终局,30% 路径正面覆盖)后入档回灌续跑 == 不入档链
+    ///      (挑战全程同步结算,无跨帧状态;俘将三面经 cityOrder 捕获面回放,M3.g);
+    ///   6. 溃灭收口(M3.g):20% 溃灭终局补 [溃灭] 行 + 涉战结构化卡全部终局收口
+    ///      (Clear 不发 OnTroopDestroyed 是上游语义,收口在战报侧)。
     /// </summary>
     [TestFixture]
     public sealed class SangoChallengeTests
@@ -438,24 +441,39 @@ namespace Sango.Tests
         }
 
         /// <summary>
-        /// 存档回灌脚本的种子:首击为攻击技且单挑终局无俘将。俘将状态
-        /// (Troop.captiveList / Force.BeCaptiveList)上游不序列化(序列化特性被注释,
-        /// 普通战斗俘将同洞),带俘将的存档链必然分叉——该洞属既有内核存档面,
-        /// 如实记录移交,不在 M3.f 扩序列化面;溃灭面(troopsSet 移除)正常入档。
+        /// 存档回灌脚本的种子:首击为攻击技且单挑终局带俘将(被生擒)。M3.g 起俘虏三面
+        /// (Troop.captiveList/Force.BeCaptiveList)按捕获序入 cityOrder 回放,带俘将的
+        /// 存档链是正面验收面(此前用无俘将种子规避的洞已修)。
         /// </summary>
-        static int SelectCaptureFreeDuelSeed(Assembly sim)
+        static int SelectCapturingDuelSeed(Assembly sim)
         {
             foreach (int seed in SeedLadder.Concat(new[] { 20260908, 20260909, 20260910, 20260911, 20260912, 20260913 }))
             {
                 (bool strikeLanded, string? endLine) = StrikeWithChallengeOnce(sim, seed, "Duel");
-                if (strikeLanded && endLine != null && !endLine.Contains("被生擒"))
+                if (strikeLanded && endLine != null && endLine.Contains("被生擒"))
                 {
                     return seed;
                 }
             }
 
             throw new InvalidOperationException(
-                "no seed in the fixed ladder produced a capture-free attack-first duel; widen the ladder");
+                "no seed in the fixed ladder produced a capture-bearing attack-first duel; widen the ladder");
+        }
+
+        /// <summary>溃灭终局的种子:首击为攻击技且单挑终局带 20% 溃灭(全军溃灭)。</summary>
+        static int SelectRoutDuelSeed(Assembly sim)
+        {
+            foreach (int seed in SeedLadder.Concat(new[] { 20260908, 20260909, 20260910, 20260911, 20260912, 20260913 }))
+            {
+                (bool strikeLanded, string? endLine) = StrikeWithChallengeOnce(sim, seed, "Duel");
+                if (strikeLanded && endLine != null && endLine.Contains("全军溃灭"))
+                {
+                    return seed;
+                }
+            }
+
+            throw new InvalidOperationException(
+                "no seed in the fixed ladder produced a rout-bearing attack-first duel; widen the ladder");
         }
 
         // ---- 断言面 ----
@@ -553,6 +571,15 @@ namespace Sango.Tests
                 object loserTroop = duelEnd.Contains("攻将获胜") ? defender : attacker;
                 Assert.That(BoolOf(loserTroop, "IsAlive"), Is.False, "the duel-destroyed troop must be dead");
                 Assert.That(kernel.TroopById(IntOf(loserTroop, "Id")), Is.Null, "the duel-destroyed troop must leave troopsSet");
+
+                // M3.g 单挑溃灭战报收口:Clear() 不发 OnTroopDestroyed(上游语义,和平
+                // 解散共用该路径),战报侧在 [单挑·终] 补标准 [溃灭] 行;消息流里必须
+                // 能看到该部队的溃灭行(败于对阵胜方)。
+                string? routLine = lines.FirstOrDefault(line =>
+                    line.StartsWith("[溃灭]") && line.Contains($"·{loserTroop.GetType().GetProperty("Name")!.GetValue(loserTroop)}("));
+                Assert.That(routLine, Is.Not.Null,
+                    "the duel-routed troop must carry a [溃灭] annals line (annals-side closure)");
+                Console.Out.WriteLine($"[m3g-duel-rout] {routLine}");
             }
             else
             {
@@ -566,6 +593,69 @@ namespace Sango.Tests
                 Console.Out.WriteLine($"[m3f-duel-annals] {line}");
             }
         }
+
+        [Test]
+        public void Duel_Rout_ClosesAnnalsLineAndBattleCards()
+        {
+            Assembly sim = LoadSangoSimMod();
+            int seed = SelectRoutDuelSeed(sim);
+            Console.Out.WriteLine($"[m3g-rout-seed] {seed}");
+
+            var kernel = new Kernel(sim, seed);
+            FieldEncounter encounter = SeedFieldEncounter(kernel);
+            object attacker = encounter.Attacker;
+            object defender = encounter.Defender;
+
+            var lines = new List<string>();
+            object annals = kernel.CreateAnnals(lines);
+            try
+            {
+                kernel.AttachChallenges("Duel", 100);
+                (bool ok, string error, _, _) = kernel.MoveTroop(attacker, encounter.DefenderCell);
+                Assert.That(ok, Is.True, $"strike dispatch rejected: {error}");
+
+                string? duelEnd = lines.FirstOrDefault(line => line.StartsWith("[单挑·终]"));
+                Assert.That(duelEnd, Is.Not.Null);
+                Assert.That(duelEnd!, Does.Contain("全军溃灭"), "the selected seed must end the duel with a rout");
+
+                // M3.g 战报侧收口:Clear() 只发 OnTroopClear(上游语义,解散/吸收共用,
+                // 内核补发击杀事件会让和平解散吃俘虏掷点)——战报必须在 [单挑·终] 之外
+                // 补标准 [溃灭] 行,且结构化卡不再有该部队的 ongoing 卡。
+                object loserTroop = duelEnd!.Contains("攻将获胜") ? defender : attacker;
+                int loserId = IntOf(loserTroop, "Id");
+                string loserName = (string)loserTroop.GetType().GetProperty("Name")!.GetValue(loserTroop)!;
+                string? routLine = lines.FirstOrDefault(line =>
+                    line.StartsWith("[溃灭]") && line.Contains($"·{loserName}("));
+                Assert.That(routLine, Is.Not.Null, "the duel-routed troop must carry a [溃灭] line in the message stream");
+                Console.Out.WriteLine($"[m3g-rout-line] {routLine}");
+
+                var battles = (System.Array)annals.GetType()
+                    .GetMethod("SnapshotBattles", BindingFlags.Public | BindingFlags.Instance)!.Invoke(annals, null)!;
+                foreach (object battle in battles)
+                {
+                    object battleAttacker = battle.GetType().GetProperty("Attacker")!.GetValue(battle)!;
+                    object battleDefender = battle.GetType().GetProperty("Defender")!.GetValue(battle)!;
+                    bool involvesLoser = IdOf(battleAttacker) == loserId || IdOf(battleDefender) == loserId;
+                    if (!involvesLoser)
+                    {
+                        continue;
+                    }
+
+                    string result = (string)battle.GetType().GetProperty("Result")!.GetValue(battle)!;
+                    Assert.That(result, Is.Not.EqualTo("ongoing"),
+                        "every battle card involving the duel-routed troop must be closed with a terminal result");
+                    Assert.That(result, Is.EqualTo(
+                        IdOf(battleDefender) == loserId ? "defender-destroyed" : "attacker-destroyed"),
+                        "the closed card result must match the routed side");
+                }
+            }
+            finally
+            {
+                kernel.DisposeAnnals(annals);
+            }
+        }
+
+        static int IdOf(object participant) => (int)participant.GetType().GetProperty("Id")!.GetValue(participant)!;
 
         [Test]
         public void Debate_TriggeredFromFieldStrike_LandsMoraleAndAnnalsLines()
@@ -712,7 +802,7 @@ namespace Sango.Tests
         public void ChallengeScript_MidChallengeSaveRestore_MatchesUnsavedChain()
         {
             Assembly sim = LoadSangoSimMod();
-            int seed = SelectCaptureFreeDuelSeed(sim);
+            int seed = SelectCapturingDuelSeed(sim);
 
             string ChainWithSave()
             {
@@ -726,9 +816,14 @@ namespace Sango.Tests
                     kernel.SetDestroyMission(encounter.Defender, IntOf(encounter.Attacker, "Id"));
 
                     // 首击挑战结算完毕后入档(挑战全程同步,无跨帧状态);回灌后续跑 ==
-                    // 不入档链,含 GameRandom 流位与部队士气/俘斩状态。
+                    // 不入档链,含 GameRandom 流位、部队士气与俘将三面(单挑 30% 路径)。
                     object capture = kernel.Capture();
                     kernel.Restore(capture);
+
+                    // 回灌后俘将确实在档:胜方部队俘虏名单 + 败将原势力被俘名单都要
+                    // 逐位重建(直跑链同点断言同一成员)。
+                    AssertCaptivesRestored(kernel, encounter);
+
                     for (int i = 0; i < 5; i++)
                     {
                         kernel.AdvanceTurn();
@@ -770,6 +865,64 @@ namespace Sango.Tests
             Console.Out.WriteLine($"[m3f-challenge-save] across={across} never={neverSaved}");
             Assert.That(across, Is.EqualTo(neverSaved),
                 "post-challenge save→restore→continue must replay the unsaved chain bit for bit");
+        }
+
+        // 俘将三面回放断言:挑出带俘虏的胜方部队(直跑链在此点必然存在——种子已筛出
+        // 被生擒终局),校验部队 captiveList 与败将原势力 BeCaptiveList 的成员一致。
+        static void AssertCaptivesRestored(Kernel kernel, FieldEncounter encounter)
+        {
+            int winnerId = WinnerTroopId(kernel, IntOf(encounter.Attacker, "Id"), IntOf(encounter.Defender, "Id"));
+            object? winner = kernel.TroopById(winnerId);
+            Assert.That(winner, Is.Not.Null, "the duel winner troop must still be alive at the capture point");
+
+            object captiveList = FieldValue(winner!, "captiveList");
+            var members = new List<object>();
+            var enumerator = (IEnumerator)captiveList.GetType()
+                .GetMethod("GetEnumerator", Type.EmptyTypes)!.Invoke(captiveList, null)!;
+            while (enumerator.MoveNext())
+            {
+                if (enumerator.Current != null)
+                {
+                    members.Add(enumerator.Current);
+                }
+            }
+
+            Assert.That(members.Count, Is.GreaterThan(0),
+                "the duel capture face must survive the save boundary (troop.captiveList replayed)");
+
+            foreach (object captive in members)
+            {
+                object? belongForce = PropertyValue(captive, "mBelongForce");
+                Assert.That(belongForce, Is.Not.Null, "a captured person must keep their original force link");
+                var beCaptive = ((IEnumerable)FieldValue(belongForce!, "BeCaptiveList")).Cast<object>().ToList();
+                Assert.That(beCaptive.Contains(captive), Is.True,
+                    "the captor force's BeCaptiveList must carry the captured person after restore");
+            }
+        }
+
+        // 胜方部队 id:存活者即胜方(单挑 20% 溃灭只打输家;两存活时读攻方部队——
+        // 攻/守胜负由俘虏所在部队判定,此处以"带俘虏的存活部队"为准)。
+        static int WinnerTroopId(Kernel kernel, int attackerId, int defenderId)
+        {
+            foreach (int troopId in new[] { attackerId, defenderId })
+            {
+                object? troop = kernel.TroopById(troopId);
+                if (troop == null)
+                {
+                    continue;
+                }
+
+                object captiveList = FieldValue(troop, "captiveList");
+                var enumerator = (IEnumerator)captiveList.GetType()
+                    .GetMethod("GetEnumerator", Type.EmptyTypes)!.Invoke(captiveList, null)!;
+                if (enumerator.MoveNext())
+                {
+                    return troopId;
+                }
+            }
+
+            Assert.Fail("neither troop carries captives at the capture point; the seed selection is inconsistent");
+            return 0;
         }
 
         static object LeaderOf(object troop) => FieldValue(troop, "Leader")!;

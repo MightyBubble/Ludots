@@ -192,6 +192,13 @@ namespace Sango.Core
             DiplomacyActionBase action = CreateDiplomacyAction(actionType, sender, receiver, diplomat, resourceValue);
             if (action != null)
             {
+                // 即时执行面的派遣补全(M3.g 送礼铸造修复):本入口只服务无行程的直执
+                // 链(ForceAI 全部分支;CityDiplomacy*/ExecuteDiplomacyProcess 走
+                // DispatchDiplomat,不经过此处)。原版设计的资源扣点唯一在 OnDispatch
+                // (DispatchDiplomat 唯一调用),直执链跳过派遣等于只入账不出账——
+                // 送礼在接收方首都凭空铸金。执行前补派遣扣款,失败路径与 Perform
+                // 自身一致(OnDispatch 内有余额门,付不起即零扣)。
+                action.OnDispatch();
                 return action.Perform();
             }
             return false;

@@ -249,6 +249,13 @@ namespace Sango.Runtime
             Publish(source.Length > 0
                 ? $"[溃灭] {TroopLabel(troop)} 全军覆没(败于 {source})"
                 : $"[溃灭] {TroopLabel(troop)} 全军覆没");
+            CloseTroopBattles(troop, source);
+        }
+
+        /// <summary>部队消失时收口全部涉战卡:账本归零、终局行入卡、按攻/守位定 Result。
+        /// 战斗击杀(OnTroopDestroyed)与单挑溃灭(OnDuelEnd,见下)共用。</summary>
+        void CloseTroopBattles(Troop troop, string source)
+        {
             lock (_sync)
             {
                 foreach (BattleState battle in _battles)
@@ -388,7 +395,7 @@ namespace Sango.Runtime
         }
 
         // EndDuel 尾部触发:HandleDuelResult(士气直写 ±20、30% 俘将、20% 部队溃灭)
-        // 已结算完毕,此处读的是落点后状态。
+        // 已结算完毕,此处读的是落点后状态;溃灭时补 [溃灭] 行并收口涉战卡(M3.g)。
         void OnDuelEnd(DuelSystem duel, DuelResult result)
         {
             if (duel?.AttackerTroop == null || duel.DefenderTroop == null)
@@ -434,6 +441,17 @@ namespace Sango.Runtime
             {
                 BattleFor(duel.AttackerTroop, duel.DefenderTroop)
                     .Append(CurrentTurn, "duel-end", TroopLabel(duel.AttackerTroop), TroopLabel(duel.DefenderTroop), null, 0, 0);
+            }
+
+            // M3.g 单挑溃灭收口:溃灭走 Troop.Clear()(只发 OnTroopClear,不发
+            // OnTroopDestroyed)是上游语义——Clear 是解散/吸收/溃灭共用路径,内核补发
+            // 击杀事件会让和平解散也吃俘虏掷点与击杀战报,不改内核行为;战报侧在此
+            // 收口(此刻 HandleDuelResult 已结算,loser.IsAlive 即溃灭位):补标准
+            // [溃灭] 行 + 关闭涉战卡,消息流与卡片终局与战斗击杀同构。
+            if (winner != null && loser != null && !loser.IsAlive)
+            {
+                Publish($"[溃灭] {TroopLabel(loser)} 全军覆没(败于 {TroopLabel(winner)} 阵前单挑)");
+                CloseTroopBattles(loser, $"{TroopLabel(winner)} 阵前单挑");
             }
         }
 

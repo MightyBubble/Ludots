@@ -10,6 +10,7 @@
 // 回灌 = SangoKernelBoot.Restore:与 Boot 同一启动序列,正文换内存 JSON。
 
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Ludots.Core.Modding;
 using Ludots.Core.Persistence;
@@ -197,6 +198,74 @@ namespace Sango.Runtime
 
                 forceAllianceList[force.Id.ToString()] = allianceIds;
             });
+            // 俘虏三面(M3.g):Troop/City.captiveList 与 Force.BeCaptiveList 的序列化特性
+            // 被上游注释(Troop.cs:94/City.cs:360),按 M1.d"修原版存档 bug"先例在保存面
+            // 补捕获,SangoCityPersonOrder 文件头第 6-8 条。
+            var troopCaptives = new JsonObject();
+            scenario.troopsSet.ForEach(troop =>
+            {
+                if (troop == null || !troop.IsAlive || troop.captiveList.Count == 0)
+                {
+                    return;
+                }
+
+                troopCaptives[troop.Id.ToString()] = IdsOf(troop.captiveList);
+            });
+            var cityCaptives = new JsonObject();
+            scenario.citySet.ForEach(city =>
+            {
+                if (city == null || city.captiveList.Count == 0)
+                {
+                    return;
+                }
+
+                cityCaptives[city.Id.ToString()] = IdsOf(city.captiveList);
+            });
+            var forceBeCaptives = new JsonObject();
+            scenario.forceSet.ForEach(force =>
+            {
+                if (force == null || force.BeCaptiveList.Count == 0)
+                {
+                    return;
+                }
+
+                forceBeCaptives[force.Id.ToString()] = IdsOf(force.BeCaptiveList);
+            });
+            // 回合内决策面(M3.g):AI 进度位 + 命令队列残余数,与挂起内政演出事件
+            // (搜索/登庸,Resolve 在 RenderEvent 队列、消耗随机)——见
+            // SangoCityPersonOrder 文件头第 7/8 条。
+            var forceAi = new JsonObject();
+            scenario.forceSet.ForEach(force =>
+            {
+                if (force != null)
+                {
+                    forceAi[force.Id.ToString()] = AiProgressRow(force.AIPrepared, force.AIFinished, force.AICommandList.Count);
+                }
+            });
+            var corpsAi = new JsonObject();
+            scenario.corpsSet.ForEach(corps =>
+            {
+                if (corps != null)
+                {
+                    corpsAi[corps.Id.ToString()] = AiProgressRow(corps.AIPrepared, corps.AIFinished, corps.AICommandQueue.Count);
+                }
+            });
+            var cityAi = new JsonObject();
+            scenario.citySet.ForEach(city =>
+            {
+                if (city != null)
+                {
+                    cityAi[city.Id.ToString()] = AiProgressRow(city.AIPrepared, city.AIFinished, city.AICommandList.Count);
+                }
+            });
+            var troopAi = new JsonObject();
+            scenario.troopsSet.ForEach(troop =>
+            {
+                if (troop != null)
+                {
+                    troopAi[troop.Id.ToString()] = AiProgressRow(troop.AIPrepared, troop.AIFinished, 0);
+                }
+            });
             return new JsonObject
             {
                 ["troopSkillCd"] = troopSkillCd,
@@ -209,7 +278,6 @@ namespace Sango.Runtime
                 ["populationIncreaseFactor"] = populationIncreaseFactor,
                 ["extraGainFoodFactor"] = extraGainFoodFactor,
                 ["extraGainGoldFactor"] = extraGainGoldFactor,
-                ["extraPopulationFactor"] = extraPopulationFactor,
                 ["leaderPerson"] = leaderPerson,
                 ["leaderElectionPending"] = leaderElectionPending,
                 ["personStates"] = personStates,
@@ -219,6 +287,17 @@ namespace Sango.Runtime
                 ["forceIsAlive"] = forceIsAlive,
                 ["forceAllianceList"] = forceAllianceList,
                 ["forceFightPower"] = forceFightPower,
+                ["troopCaptives"] = troopCaptives,
+                ["cityCaptives"] = cityCaptives,
+                ["forceBeCaptives"] = forceBeCaptives,
+                ["aiProgress"] = new JsonObject
+                {
+                    ["force"] = forceAi,
+                    ["corps"] = corpsAi,
+                    ["city"] = cityAi,
+                    ["troop"] = troopAi,
+                },
+                ["pendingJobs"] = CapturePendingJobEvents(),
             };
         }
 
@@ -269,6 +348,59 @@ namespace Sango.Runtime
                 }
             }
             return array;
+        }
+
+        // [prepared, finished, 队列残余命令数]——残余数 + 内核 AIPrepare 的确定性重建
+        // 即"已入列命令的语义重放"(Apply 侧削前缀)。
+        static JsonArray AiProgressRow(bool prepared, bool finished, int remainingCommands)
+        {
+            return new JsonArray { prepared, finished, remainingCommands };
+        }
+
+        // 挂起的玩法型演出事件(Enter 才结算世界/消耗随机;IsInited=已入 Enter 的不再捕获,
+        // 否则回放会二次结算)。只认搜索/同域登庸两类;纯演出(战斗动画等)不入档——
+        // M2.c/M3.f 中途存档回归实证其掉落为 digest 中立。
+        static JsonArray CapturePendingJobEvents()
+        {
+            var jobs = new JsonArray();
+            var renderEvent = Sango.Render.RenderEvent.Instance;
+            foreach (Sango.Render.IRenderEventBase? pendingEvent in
+                     EnumerateRenderQueue(renderEvent, "dependsEventQueue").Concat(EnumerateRenderQueue(renderEvent, "eventQueue")))
+            {
+                if (pendingEvent == null || pendingEvent.IsInited)
+                {
+                    continue;
+                }
+
+                switch (pendingEvent)
+                {
+                    case Sango.Render.CityPersonSearchingEvent search when search.city != null && search.person != null:
+                        jobs.Add(new JsonObject
+                        {
+                            ["kind"] = "search",
+                            ["cityId"] = search.city.Id,
+                            ["personId"] = search.person.Id,
+                        });
+                        break;
+                    case Sango.Render.CityRecruitPersonEvent recruit when recruit.person != null && recruit.target != null:
+                        jobs.Add(new JsonObject
+                        {
+                            ["kind"] = "recruit",
+                            ["personId"] = recruit.person.Id,
+                            ["targetPersonId"] = recruit.target.Id,
+                        });
+                        break;
+                }
+            }
+
+            return jobs;
+        }
+
+        static IEnumerable<Sango.Render.IRenderEventBase> EnumerateRenderQueue(Sango.Render.RenderEvent renderEvent, string fieldName)
+        {
+            return (List<Sango.Render.IRenderEventBase>)typeof(Sango.Render.RenderEvent)
+                .GetField(fieldName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .GetValue(renderEvent)!;
         }
 
         public void RestoreState(JsonNode state)

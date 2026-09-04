@@ -19,6 +19,26 @@
 //   5. 势力同盟名单(Force.AllianceList)——Force 是 OptIn 且该字段无 [JsonProperty],
 //      allianceSet 入档但回灌不重建成员势力的反向名单;IsAlliance/HasActiveAgreement
 //      进宣战与攻击决策面(M3.d 外交接入后活跃)。按捕获序回放。
+//   6. 俘虏三面(M3.g)——Troop.captiveList/City.captiveList(SangoObjectList,序列化
+//      特性被上游注释:Game/Object/Troop/Troop.cs captiveList、Game/Object/City/City.cs
+//      captiveList)与 Force.BeCaptiveList(普通 List,无特性)。单挑 30% 俘将
+//      (DuelSystem.CaptureGeneral)、部队溃灭俘将(Troop.OnDestroy)、入城献俘
+//      (Troop.OnEnterCity)都写这三面;不入档则带俘将的存档链回灌后俘将凭空消失
+//      (ReleaseCaptive/Escape 不再发生,忠诚/在野流动分叉)。按捕获序回放。
+//   7. 回合内 AI 决策面(M3.g)——Force/Corps/City/Troop 的 AIPrepared/AIFinished 与
+//      Force.AICommandList/City.AICommandList/Corps.AICommandQueue(委托队列不可序列化)
+//      不入档。回合边界存档无害(已跑实体由序列化的 ActionOver 把门);回合中途存档
+//      (原版逐帧 Run 的合法时点)回灌后 prepared 归零 → DoAI 重走 AIPrepare 把整队
+//      命令重灌 → 已执行命令双跑(外交/俘虏/内政再结算一遍)。回放 = captured
+//      prepared 位 + "残余命令数":经内核 AIPrepare 重建完整队列(其事件订阅面只有
+//      纯入列的 ClassicsCityWorking.OnCityAIPrepare 与零订阅的 OnForceAIPrepare,重建
+//      无世界副作用)后削去已执行前缀。City/Corps.jobCounter 与 Corps.ActionPoint 本就
+//      [JsonProperty] 在档(内政命令门在存档边界自然成立)。
+//   8. 挂起内政演出事件(M3.g)——玩家/AI 的搜索(JobSearching→CityPersonSearchingEvent)
+//      与同域登庸(JobRecruitPerson→CityRecruitPersonEvent)把结算排进 RenderEvent
+//      队列,下一 Run() 的 Enter 才消耗随机/落世界;队列不入档,中途存档回灌即静默
+//      丢单(内政"欠跑")。回放 = 按捕获序重建事件对(city/person、person/target),
+//      只认未入 Enter(IsInited=false)的实例。
 // 原版 Unity 侧无 bit 级续跑约束(sango-src Game/Object/City/City.cs 上述字段均无
 // [JsonProperty]);本文件按 M1.d"修原版存档 bug"先例在保存面补捕获,不改内核重建
 // 逻辑——回灌完成(StartScenarioCore 之后、任何回合推进之前)统一重放捕获面。
@@ -26,6 +46,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.Core.Persistence;
 using Sango.Core;
 
 namespace Sango.Runtime
@@ -84,6 +105,32 @@ namespace Sango.Runtime
         /// 的中途累计值分叉——按捕获面回写。</summary>
         public Dictionary<int, int> ForceFightPower { get; init; } = new();
 
+        /// <summary>部队俘虏名单(troopId → personId[],存储序):Troop.captiveList 不入档
+        /// (特性被上游注释),回灌后空名单让单挑/溃灭俘将在存档链凭空获释——按捕获序回放。</summary>
+        public Dictionary<int, int[]> TroopCaptives { get; init; } = new();
+
+        /// <summary>城内俘虏名单(cityId → personId[],存储序):同 TroopCaptives(City.captiveList)。</summary>
+        public Dictionary<int, int[]> CityCaptives { get; init; } = new();
+
+        /// <summary>势力被俘名单(forceId → personId[],List 序):Force.BeCaptiveList 无特性,
+        /// 是俘将的势力侧反向登记(OnFall 清算读它)——按捕获序回放。</summary>
+        public Dictionary<int, int[]> ForceBeCaptives { get; init; } = new();
+
+        /// <summary>回合内 AI 决策面(id → [prepared, finished, 残余命令数]):prepared 实体
+        /// 经内核 AIPrepare 重建队列后削去已执行前缀,双跑即消;见文件头第 7 条。</summary>
+        public Dictionary<int, int[]> ForceAiProgress { get; init; } = new();
+        public Dictionary<int, int[]> CorpsAiProgress { get; init; } = new();
+        public Dictionary<int, int[]> CityAiProgress { get; init; } = new();
+        public Dictionary<int, int[]> TroopAiProgress { get; init; } = new();
+
+        /// <summary>挂起内政演出事件(捕获序):搜索(cityId+personId)与同域登庸
+        /// (personId+targetPersonId),回放 = 重建事件对象回 RenderEvent 队列;
+        /// 见文件头第 8 条。</summary>
+        public List<PendingJobEvent> PendingJobs { get; init; } = new();
+
+        /// <summary>一条挂起的玩法型演出事件(搜索/同域登庸),按捕获序重排进队列。</summary>
+        public sealed record PendingJobEvent(string Kind, int CityId, int PersonId, int TargetPersonId);
+
         /// <summary>从存档 JSON 节点解析(SangoSaveParticipant 写出的同形结构)。</summary>
         public static SangoCityPersonOrder? FromJson(JsonNode? node)
         {
@@ -114,6 +161,14 @@ namespace Sango.Runtime
                 ForceIsAlive = ParseBoolMap(root["forceIsAlive"]),
                 ForceAllianceList = ParseMap(root["forceAllianceList"]),
                 ForceFightPower = ParseIntMap(root["forceFightPower"]),
+                TroopCaptives = ParseMap(root["troopCaptives"]),
+                CityCaptives = ParseMap(root["cityCaptives"]),
+                ForceBeCaptives = ParseMap(root["forceBeCaptives"]),
+                ForceAiProgress = ParseAiProgressMap(root["aiProgress"]?["force"]),
+                CorpsAiProgress = ParseAiProgressMap(root["aiProgress"]?["corps"]),
+                CityAiProgress = ParseAiProgressMap(root["aiProgress"]?["city"]),
+                TroopAiProgress = ParseAiProgressMap(root["aiProgress"]?["troop"]),
+                PendingJobs = ParsePendingJobs(root["pendingJobs"]),
             };
         }
 
@@ -226,6 +281,75 @@ namespace Sango.Runtime
                 }
 
                 map[cityId] = values;
+            }
+
+            return map;
+        }
+
+        static List<PendingJobEvent> ParsePendingJobs(JsonNode? node)
+        {
+            var jobs = new List<PendingJobEvent>();
+            if (node is not JsonArray entries)
+            {
+                return jobs;
+            }
+
+            foreach (JsonNode? entry in entries)
+            {
+                if (entry is not JsonObject job)
+                {
+                    continue;
+                }
+
+                jobs.Add(new PendingJobEvent(
+                    (string?)job["kind"] ?? string.Empty,
+                    (int?)job["cityId"] ?? 0,
+                    (int?)job["personId"] ?? 0,
+                    (int?)job["targetPersonId"] ?? 0));
+            }
+
+            return jobs;
+        }
+
+        // [prepared(bool), finished(bool), remaining(int)] 混型行,统一转 int(0/1 + 计数)。
+        static Dictionary<int, int[]> ParseAiProgressMap(JsonNode? node)
+        {
+            var map = new Dictionary<int, int[]>();
+            if (node is not JsonObject entries)
+            {
+                return map;
+            }
+
+            foreach (KeyValuePair<string, JsonNode?> entry in entries)
+            {
+                if (!int.TryParse(entry.Key, out int id) || entry.Value is not JsonArray row)
+                {
+                    continue;
+                }
+
+                var values = new int[row.Count];
+                for (int i = 0; i < row.Count; i++)
+                {
+                    if (row[i] is not JsonValue value)
+                    {
+                        throw new SaveContextException($"aiProgress row for {id} has a non-scalar element at {i}.");
+                    }
+
+                    if (value.TryGetValue<bool>(out bool flag))
+                    {
+                        values[i] = flag ? 1 : 0;
+                    }
+                    else if (value.TryGetValue<int>(out int number))
+                    {
+                        values[i] = number;
+                    }
+                    else
+                    {
+                        throw new SaveContextException($"aiProgress row for {id} element {i} is neither bool nor int.");
+                    }
+                }
+
+                map[id] = values;
             }
 
             return map;
@@ -463,6 +587,235 @@ namespace Sango.Runtime
                 }
 
                 force.FightPower = entry.Value;
+            }
+
+            // 俘虏三面回放(见文件头第 6 条):名单本体不入档,回灌侧按捕获序重建;
+            // 成员缺席即回灌分叉,fail-fast。
+            foreach (KeyValuePair<int, int[]> entry in TroopCaptives)
+            {
+                Troop? troop = scenario.troopsSet.Get(entry.Key);
+                if (troop == null)
+                {
+                    throw new SaveOrderException(
+                        $"captured troopCaptives references troop {entry.Key} missing from the restored troopsSet.");
+                }
+
+                ReplayCaptiveList(troop.captiveList, entry.Value, scenario, $"troop {entry.Key}");
+            }
+
+            scenario.citySet.ForEach(city =>
+            {
+                if (city == null || !CityCaptives.TryGetValue(city.Id, out int[]? personIds))
+                {
+                    return;
+                }
+
+                ReplayCaptiveList(city.captiveList, personIds!, scenario, $"city {city.Id}");
+            });
+
+            foreach (KeyValuePair<int, int[]> entry in ForceBeCaptives)
+            {
+                Force? force = scenario.forceSet.Get(entry.Key);
+                if (force == null)
+                {
+                    throw new SaveOrderException(
+                        $"captured forceBeCaptives references force {entry.Key} missing from the restored forceSet.");
+                }
+
+                var restored = new List<Person>(entry.Value.Length);
+                foreach (int personId in entry.Value)
+                {
+                    Person? person = scenario.personSet.Get(personId);
+                    if (person == null)
+                    {
+                        throw new SaveOrderException(
+                            $"captured forceBeCaptives references person {personId} missing from the restored personSet (force {entry.Key}).");
+                    }
+
+                    restored.Add(person);
+                }
+
+                force.BeCaptiveList.Clear();
+                force.BeCaptiveList.AddRange(restored);
+            }
+
+            // 回合内 AI 决策面回放(见文件头第 7 条):prepared 实体重建完整队列后削去
+            // 已执行前缀,prepared/finished 位按捕获补真;残余数超建队总量即回灌分叉,
+            // fail-fast。Troop 无命令队列,只补进度位(其 AIPrepare 为空方法)。
+            foreach (KeyValuePair<int, int[]> entry in ForceAiProgress)
+            {
+                Force? force = scenario.forceSet.Get(entry.Key);
+                if (force == null)
+                {
+                    throw new SaveOrderException(
+                        $"captured aiProgress references force {entry.Key} missing from the restored forceSet.");
+                }
+
+                ReplayAiProgress(force, entry.Value, force.AICommandList, scenario, $"force {entry.Key}");
+            }
+
+            foreach (KeyValuePair<int, int[]> entry in CorpsAiProgress)
+            {
+                Corps? corps = scenario.corpsSet.Get(entry.Key);
+                if (corps == null)
+                {
+                    throw new SaveOrderException(
+                        $"captured aiProgress references corps {entry.Key} missing from the restored corpsSet.");
+                }
+
+                ReplayAiProgress(corps, entry.Value, corps.AICommandQueue, scenario, $"corps {entry.Key}");
+            }
+
+            scenario.citySet.ForEach(city =>
+            {
+                if (city == null || !CityAiProgress.TryGetValue(city.Id, out int[]? progress) || progress == null)
+                {
+                    return;
+                }
+
+                ReplayAiProgress(city, progress, city.AICommandList, scenario, $"city {city.Id}");
+            });
+
+            scenario.troopsSet.ForEach(troop =>
+            {
+                if (troop == null || !TroopAiProgress.TryGetValue(troop.Id, out int[]? progress) || progress == null)
+                {
+                    return;
+                }
+
+                SetAiFlags(troop, progress.Length > 0 && progress[0] != 0, progress.Length > 1 && progress[1] != 0);
+            });
+
+            // 挂起内政演出事件回放(见文件头第 8 条):按捕获序重建事件对象回
+            // RenderEvent 队列(装载线已 Reset,队列为空,尾部 Add 即捕获序)。
+            foreach (PendingJobEvent job in PendingJobs)
+            {
+                Person? person = scenario.personSet.Get(job.PersonId);
+                if (person == null)
+                {
+                    throw new SaveOrderException(
+                        $"captured pendingJobs references person {job.PersonId} missing from the restored personSet.");
+                }
+
+                if (job.Kind == "search")
+                {
+                    City? city = scenario.citySet.Get(job.CityId);
+                    if (city == null)
+                    {
+                        throw new SaveOrderException(
+                            $"captured pendingJobs references city {job.CityId} missing from the restored citySet.");
+                    }
+
+                    var search = Sango.Render.RenderEvent.Instance.Create<Sango.Render.CityPersonSearchingEvent>();
+                    search.Init(city, person);
+                    Sango.Render.RenderEvent.Instance.Add(search);
+                }
+                else if (job.Kind == "recruit")
+                {
+                    Person? target = scenario.personSet.Get(job.TargetPersonId);
+                    if (target == null)
+                    {
+                        throw new SaveOrderException(
+                            $"captured pendingJobs references target person {job.TargetPersonId} missing from the restored personSet.");
+                    }
+
+                    var recruit = Sango.Render.RenderEvent.Instance.Create<Sango.Render.CityRecruitPersonEvent>();
+                    recruit.Init(person, target);
+                    Sango.Render.RenderEvent.Instance.Add(recruit);
+                }
+            }
+        }
+
+        // AIPrepare/进度位的反射入口缓存:Force/Corps 的 AIPrepare 私有、City 公开虚
+        // (子类覆写按运行时型取)——重建队列走内核唯一入口,不复制命令清单(内核
+        // 演进时回放自动跟随);AIPrepared/AIFinished 四类各自声明,无公共基面,同经缓存。
+        static readonly Dictionary<Type, System.Reflection.MethodInfo> AIPrepareCache = new();
+        static readonly Dictionary<Type, (System.Reflection.PropertyInfo Prepared, System.Reflection.PropertyInfo Finished)> ProgressPropsCache = new();
+
+        static System.Reflection.MethodInfo AIPrepareOf(Type type)
+        {
+            lock (AIPrepareCache)
+            {
+                if (!AIPrepareCache.TryGetValue(type, out System.Reflection.MethodInfo? method))
+                {
+                    method = type.GetMethod("AIPrepare", System.Reflection.BindingFlags.Instance |
+                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+                        ?? throw new InvalidOperationException($"{type.Name}.AIPrepare is missing; the aiProgress replay cannot rebuild the command queue.");
+                    AIPrepareCache[type] = method;
+                }
+
+                return method;
+            }
+        }
+
+        static void SetAiFlags(object entity, bool prepared, bool finished)
+        {
+            Type type = entity.GetType();
+            (System.Reflection.PropertyInfo preparedProp, System.Reflection.PropertyInfo finishedProp) flags;
+            lock (ProgressPropsCache)
+            {
+                if (!ProgressPropsCache.TryGetValue(type, out flags))
+                {
+                    flags = (type.GetProperty("AIPrepared") ?? throw new InvalidOperationException($"{type.Name}.AIPrepared is missing."),
+                        type.GetProperty("AIFinished") ?? throw new InvalidOperationException($"{type.Name}.AIFinished is missing."));
+                    ProgressPropsCache[type] = flags;
+                }
+            }
+
+            flags.preparedProp.SetValue(entity, prepared);
+            flags.finishedProp.SetValue(entity, finished);
+        }
+
+        static void ReplayAiProgress(SangoObject entity, int[] progress, object commandQueue, Scenario scenario, string owner)
+        {
+            bool prepared = progress.Length > 0 && progress[0] != 0;
+            bool finished = progress.Length > 1 && progress[1] != 0;
+            int remaining = progress.Length > 2 ? progress[2] : 0;
+
+            if (prepared)
+            {
+                AIPrepareOf(entity.GetType()).Invoke(entity, new object[] { scenario });
+                int total = commandQueue is System.Collections.ICollection collection ? collection.Count : 0;
+                if (remaining > total)
+                {
+                    throw new SaveOrderException(
+                        $"captured aiProgress of {owner} keeps {remaining} commands but the rebuilt queue holds {total}; the restore diverged from the capture.");
+                }
+
+                int executed = total - remaining;
+                if (commandQueue is List<System.Func<Force, Scenario, bool>> forceList)
+                {
+                    forceList.RemoveRange(0, executed);
+                }
+                else if (commandQueue is List<System.Func<City, Scenario, bool>> cityList)
+                {
+                    cityList.RemoveRange(0, executed);
+                }
+                else if (commandQueue is Queue<System.Func<Corps, Scenario, bool>> corpsQueue)
+                {
+                    for (int i = 0; i < executed; i++)
+                    {
+                        corpsQueue.Dequeue();
+                    }
+                }
+            }
+
+            SetAiFlags(entity, prepared, finished);
+        }
+
+        static void ReplayCaptiveList(SangoObjectList<Person> list, int[] personIds, Scenario scenario, string owner)
+        {
+            list.Clear();
+            foreach (int personId in personIds)
+            {
+                Person? person = scenario.personSet.Get(personId);
+                if (person == null)
+                {
+                    throw new SaveOrderException(
+                        $"captured captive list of {owner} references person {personId} missing from the restored personSet.");
+                }
+
+                list.Add(person);
             }
         }
 
