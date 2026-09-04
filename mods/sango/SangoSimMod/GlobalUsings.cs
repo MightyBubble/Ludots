@@ -8,4 +8,4 @@ global using Vector4 = System.Numerics.Vector4;
 // sango 的 Newtonsoft vendor 在 Extensions/ 下、命名空间为 TKNewtonsoft.*(D8 不搬)。
 // C# 的 using 指令不允许别名做限定符(global using TKNewtonsoft = Newtonsoft 也救不了
 // 文件级 using TKNewtonsoft.Json;),因此移植时把源文件里的 TKNewtonsoft 统一改写为
-// NuGet Newtonsoft.Json(版本锁定 external/nuget 在库版本)。代码体与类型语义不变。
+// vendored TKNewtonsoft fork(mod 内 External/ 工程,D6:成员上下文转换器是剧本延迟绑定根基,不可换官方 Newtonsoft)。代码体与类型语义不变。

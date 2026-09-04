@@ -43,12 +43,15 @@ namespace Sango.Runtime
         public static List<SangoMapLabelPlacement> LoadPlacements(IVirtualFileSystem vfs)
         {
             if (vfs == null) throw new ArgumentNullException(nameof(vfs));
-            if (!vfs.TryResolveFullPath(LabelsAssetUri, out string? fullPath) || fullPath == null)
+            System.IO.Stream? stream = null;
+            try
             {
-                throw new InvalidOperationException($"SangoMapLabels asset missing: {LabelsAssetUri}");
+                stream = vfs.GetStream(LabelsAssetUri);
             }
-
-            using System.IO.Stream stream = System.IO.File.OpenRead(fullPath);
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"SangoMapLabels asset missing: {LabelsAssetUri}", ex);
+            }
             using JsonDocument document = JsonDocument.Parse(stream);
             var placements = new List<SangoMapLabelPlacement>();
             foreach (JsonElement row in document.RootElement.EnumerateArray())

@@ -24,6 +24,8 @@
 // Scenario.Cur 引用,替换即全量重建(镜像实体全销毁重摆)。
 
 using System;
+using EngineLog = Ludots.Core.Diagnostics.Log;
+using EngineLogChannel = Ludots.Core.Diagnostics.LogChannel;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
@@ -100,6 +102,8 @@ namespace Sango.Runtime
         internal const string CityTemplateId = "sango.mirror.city";
         internal const string PersonTemplateId = "sango.mirror.person";
         internal const string TroopTemplateId = "sango.mirror.troop";
+
+        static readonly EngineLogChannel MirrorChannel = EngineLog.GetOrCreateModChannel("SangoSimMod");
 
         static readonly Vector4 UnownedColor = new(0.55f, 0.55f, 0.55f, 1f);
 
@@ -326,7 +330,7 @@ namespace Sango.Runtime
             });
 
             RefreshAllStats();
-            Log.Info($"[SangoEntityMirror] rebuilt for scenario turn {scenario.Info.turnCount}: {_cities.Count} cities, {_persons.Count} persons, {_troops.Count} troops");
+            EngineLog.Info(MirrorChannel, $"[SangoEntityMirror] rebuilt for scenario turn {scenario.Info.turnCount}: {_cities.Count} cities, {_persons.Count} persons, {_troops.Count} troops");
         }
 
         void DestroyAllMirrorEntities()

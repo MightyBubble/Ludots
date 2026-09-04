@@ -3,6 +3,8 @@ using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
+using EngineLog = Ludots.Core.Diagnostics.Log;
+using EngineLogChannel = Ludots.Core.Diagnostics.LogChannel;
 using Sango.Runtime;
 
 namespace Sango
@@ -30,6 +32,8 @@ namespace Sango
     /// </summary>
     public sealed class SangoSimModEntry : IMod
     {
+        private static readonly EngineLogChannel EngineChannel = EngineLog.GetOrCreateModChannel("SangoSimMod");
+
         private const string SeedTroopsEventKey = "SangoSeedTroops";
         private const int SeedTroopBudget = 8;
         private const string SeedBattleEventKey = "SangoSeedBattle";
@@ -143,7 +147,7 @@ namespace Sango
             _troopMarkers?.Dispose();
             _troopMarkers = new SangoTroopMarkerRuntime(engine.World, presenterRuntime, definitions, stableIds);
             _troopMarkers.SyncAll(Sango.Core.Scenario.Cur);
-            Log.Info($"[SangoSimMod] M2.a: field layers populated; {spawned} city markers spawned; M3.b: {labelsSpawned} map labels spawned; M2.b: troop marker runtime online ({_troopMarkers.ActiveMarkers} troops)");
+            EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.a: field layers populated; {spawned} city markers spawned; M3.b: {labelsSpawned} map labels spawned; M2.b: troop marker runtime online ({_troopMarkers.ActiveMarkers} troops)");
         }
 
         // 开发播种(AgentBridge events.fire SangoSeedTroops):按 citySet 顺序找满足出征
@@ -196,7 +200,7 @@ namespace Sango
                     }
                 });
 
-                Log.Info($"[SangoSimMod] M2.b seed event: {created} troop(s) created (budget {SeedTroopBudget}), {rejected} city gate rejection(s)");
+                EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.b seed event: {created} troop(s) created (budget {SeedTroopBudget}), {rejected} city gate rejection(s)");
                 return Task.CompletedTask;
             };
         }
@@ -247,7 +251,7 @@ namespace Sango
                 var scenario = Sango.Core.Scenario.Cur;
                 if (scenario.troopsSet.Count > 0)
                 {
-                    Log.Info("[SangoSimMod] M2.c seed battle: world already has troops; refusing to seed a second encounter");
+                    EngineLog.Info(EngineChannel, "[SangoSimMod] M2.c seed battle: world already has troops; refusing to seed a second encounter");
                     return Task.CompletedTask;
                 }
 
@@ -282,7 +286,7 @@ namespace Sango
 
                 if (home == null || foe == null)
                 {
-                    Log.Info("[SangoSimMod] M2.c seed battle: no mutually hostile eligible city pair found");
+                    EngineLog.Info(EngineChannel, "[SangoSimMod] M2.c seed battle: no mutually hostile eligible city pair found");
                     return Task.CompletedTask;
                 }
 
@@ -290,7 +294,7 @@ namespace Sango
                 Sango.Core.Troop? defender = SeedEncounterTroop(scenario, foe);
                 if (attacker == null || defender == null)
                 {
-                    Log.Info("[SangoSimMod] M2.c seed battle: expedition gate rejected a side; no encounter seeded");
+                    EngineLog.Info(EngineChannel, "[SangoSimMod] M2.c seed battle: expedition gate rejected a side; no encounter seeded");
                     return Task.CompletedTask;
                 }
 
@@ -302,7 +306,7 @@ namespace Sango
                     new SangoSetMissionArgs(attacker.Id, (int)Sango.Core.MissionType.TroopDestroyTroop, defender.Id));
                 SangoCommandJournal.Record(SangoReplayJournal.SetMissionKind,
                     new SangoSetMissionArgs(defender.Id, (int)Sango.Core.MissionType.TroopDestroyTroop, attacker.Id));
-                Log.Info(
+                EngineLog.Info(EngineChannel, 
                     $"[SangoSimMod] M2.c seed battle: {attacker.Name}({home.Name}) vs {defender.Name}({foe.Name}), mutual destroy missions, distance {bestDistance}; advance turns to let the war unfold");
                 return Task.CompletedTask;
             };
@@ -319,12 +323,12 @@ namespace Sango
                 if (!context.TryGet(CoreServiceKeys.GasClockStepPolicy, out Ludots.Core.Gameplay.GAS.GasClockStepPolicy? stepPolicy) ||
                     stepPolicy == null)
                 {
-                    Log.Info($"[SangoSimMod] M2.d step turns: host exposes no GasClockStepPolicy; refusing to step {count} turn(s) outside the clock");
+                    EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.d step turns: host exposes no GasClockStepPolicy; refusing to step {count} turn(s) outside the clock");
                     return Task.CompletedTask;
                 }
 
                 stepPolicy.RequestStep(count);
-                Log.Info($"[SangoSimMod] M2.d step turns: {count} manual step(s) requested via the engine clock; turns will advance one per fixed tick");
+                EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.d step turns: {count} manual step(s) requested via the engine clock; turns will advance one per fixed tick");
                 return Task.CompletedTask;
             };
         }
@@ -342,12 +346,12 @@ namespace Sango
                 }
                 catch (Exception ex) when (ex is InvalidOperationException or ArgumentOutOfRangeException)
                 {
-                    Log.Info($"[SangoSimMod] M3.b select player force {forceId} rejected: {ex.Message}");
+                    EngineLog.Info(EngineChannel, $"[SangoSimMod] M3.b select player force {forceId} rejected: {ex.Message}");
                     return Task.CompletedTask;
                 }
 
                 SyncWorldToEngine(context);
-                Log.Info($"[SangoSimMod] M3.b select player force {forceId}: world reloaded with player and markers resynced");
+                EngineLog.Info(EngineChannel, $"[SangoSimMod] M3.b select player force {forceId}: world reloaded with player and markers resynced");
                 return Task.CompletedTask;
             };
         }
@@ -362,7 +366,7 @@ namespace Sango
                 SangoJournalCommand[] commands = SangoCommandJournal.Snapshot();
                 if (commands.Length == 0)
                 {
-                    Log.Info("[SangoSimMod] M2.d journal report: empty (no simulation entry commands recorded yet)");
+                    EngineLog.Info(EngineChannel, "[SangoSimMod] M2.d journal report: empty (no simulation entry commands recorded yet)");
                     return Task.CompletedTask;
                 }
 
@@ -374,16 +378,16 @@ namespace Sango
 
                 string kinds = string.Join(", ", System.Linq.Enumerable.Select(byKind, pair => $"{pair.Key}={pair.Value}"));
                 string json = SangoCommandJournal.ExportJson();
-                Log.Info($"[SangoSimMod] M2.d journal report: {commands.Length} command(s) [{kinds}]; export {json.Length} chars; live turn {commands[^1].Turn}");
+                EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.d journal report: {commands.Length} command(s) [{kinds}]; export {json.Length} chars; live turn {commands[^1].Turn}");
                 foreach (SangoJournalCommand command in commands.Take(3))
                 {
-                    Log.Info($"[SangoSimMod] M2.d journal #{command.Seq} turn {command.Turn} {command.Kind}: {command.ArgsJson}");
+                    EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.d journal #{command.Seq} turn {command.Turn} {command.Kind}: {command.ArgsJson}");
                 }
 
                 SangoJournalCommand? lastStep = System.Linq.Enumerable.LastOrDefault(commands, command => command.Kind == SangoReplayJournal.StepKind);
                 if (lastStep != null)
                 {
-                    Log.Info($"[SangoSimMod] M2.d journal last step: turn {lastStep.Turn} digest {lastStep.DigestAfter}");
+                    EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.d journal last step: turn {lastStep.Turn} digest {lastStep.DigestAfter}");
                 }
 
                 return Task.CompletedTask;
