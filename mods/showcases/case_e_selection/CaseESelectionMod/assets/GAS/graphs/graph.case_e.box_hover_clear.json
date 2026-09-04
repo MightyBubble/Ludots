@@ -1,0 +1,42 @@
+[
+  {
+    "id": "graph.case_e.box_hover_clear",
+    "kind": "Script",
+    "nodes": [
+      {
+        "id": "op_replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write_clear",
+        "op": "WriteCollection",
+        "collectionKey": "case_e.box_hover"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "op_replace",
+        "fromPort": "next",
+        "to": "write_clear"
+      },
+      {
+        "from": "write_clear",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "op_replace",
+        "fromPort": "value",
+        "to": "write_clear",
+        "toPort": "value"
+      }
+    ]
+  }
+]

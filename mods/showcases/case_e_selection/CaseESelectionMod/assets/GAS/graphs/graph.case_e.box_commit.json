@@ -17,13 +17,19 @@
         "payloadKey": "MapTrigger.Modifiers"
       },
       {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "write_modifiers",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "case_e.select.modifiers"
+      },
+      {
         "id": "run_hit",
         "op": "InvokeGraph",
         "functionName": "graph.case_e.box_hit"
-      },
-      {
-        "id": "modifier_switch",
-        "op": "SwitchInt"
       },
       {
         "id": "op_replace",
@@ -31,44 +37,19 @@
         "intValue": 0
       },
       {
-        "id": "commit_replace",
+        "id": "write_pending",
         "op": "WriteCollection",
-        "collectionKey": "selected"
-      },
-      {
-        "id": "op_add",
-        "op": "ConstInt",
-        "intValue": 1
-      },
-      {
-        "id": "commit_add",
-        "op": "WriteCollection",
-        "collectionKey": "selected"
-      },
-      {
-        "id": "op_subtract",
-        "op": "ConstInt",
-        "intValue": 2
-      },
-      {
-        "id": "commit_subtract",
-        "op": "WriteCollection",
-        "collectionKey": "selected"
-      },
-      {
-        "id": "ok",
-        "op": "ConstInt",
-        "intValue": 1
-      },
-      {
-        "id": "rep",
-        "op": "LoadEntryPayloadEntity",
-        "payloadKey": "MapTrigger.Rep"
+        "collectionKey": "selection.pending"
       },
       {
         "id": "deactivate_boxing",
         "op": "DeactivateContext",
         "context": "interaction.context.case_e.boxing"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
       },
       {
         "id": "halt",
@@ -84,80 +65,25 @@
       {
         "from": "rep",
         "fromPort": "next",
+        "to": "write_modifiers"
+      },
+      {
+        "from": "write_modifiers",
+        "fromPort": "next",
         "to": "run_hit"
       },
       {
         "from": "run_hit",
         "fromPort": "next",
+        "to": "write_pending"
+      },
+      {
+        "from": "write_pending",
+        "fromPort": "next",
         "to": "deactivate_boxing"
       },
       {
         "from": "deactivate_boxing",
-        "fromPort": "next",
-        "to": "modifier_switch"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "case:1",
-        "to": "op_add"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "case:3",
-        "to": "op_add"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "case:4",
-        "to": "op_subtract"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "case:5",
-        "to": "op_subtract"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "case:6",
-        "to": "op_subtract"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "case:7",
-        "to": "op_subtract"
-      },
-      {
-        "from": "modifier_switch",
-        "fromPort": "default",
-        "to": "op_replace"
-      },
-      {
-        "from": "op_replace",
-        "fromPort": "next",
-        "to": "commit_replace"
-      },
-      {
-        "from": "op_add",
-        "fromPort": "next",
-        "to": "commit_add"
-      },
-      {
-        "from": "op_subtract",
-        "fromPort": "next",
-        "to": "commit_subtract"
-      },
-      {
-        "from": "commit_replace",
-        "fromPort": "next",
-        "to": "ok"
-      },
-      {
-        "from": "commit_add",
-        "fromPort": "next",
-        "to": "ok"
-      },
-      {
-        "from": "commit_subtract",
         "fromPort": "next",
         "to": "ok"
       },
@@ -171,31 +97,19 @@
       {
         "from": "read_modifiers",
         "fromPort": "value",
-        "to": "modifier_switch",
-        "toPort": "selector"
+        "to": "write_modifiers",
+        "toPort": "value"
       },
       {
         "from": "rep",
         "fromPort": "value",
-        "to": "deactivate_boxing",
+        "to": "write_modifiers",
         "toPort": "source"
       },
       {
         "from": "op_replace",
         "fromPort": "value",
-        "to": "commit_replace",
-        "toPort": "value"
-      },
-      {
-        "from": "op_add",
-        "fromPort": "value",
-        "to": "commit_add",
-        "toPort": "value"
-      },
-      {
-        "from": "op_subtract",
-        "fromPort": "value",
-        "to": "commit_subtract",
+        "to": "write_pending",
         "toPort": "value"
       },
       {

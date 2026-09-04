@@ -346,7 +346,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.LoadPointerScreenY or
                 GraphNodeOp.ActivateContext or
                 GraphNodeOp.DeactivateContext or
-                GraphNodeOp.WriteCollection
+                GraphNodeOp.WriteCollection or
+                GraphNodeOp.ResetTargetList
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
