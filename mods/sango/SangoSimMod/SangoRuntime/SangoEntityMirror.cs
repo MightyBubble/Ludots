@@ -1,4 +1,7 @@
 // M3 末 ECS 溶解第一片:内核读模型 → Arch ECS 镜像实体(SangoEntityMirror)。
+// D-1' 起城面升级为原生城实体(sango.city 模板 + GAS 属性 + 保序组件,
+// SangoCityNativeRuntime 持有):原生运行时挂载时镜像只保武将/部队,城实体不再
+// 双份(镜像城分支退役;presenter owner 迁移后的最终消灭见 M3.h 在案后续片)。
 // 合同:内核(Scenario.Cur 对象池)是唯一真相源,本文件只读内核、只写引擎世界;
 // 镜像开关(注入与否)不影响 WorldDigest(读模型纯净性由 SangoEntityMirrorTests 双跑验收)。
 // 物化走 Layer 0 原子 op EntityLifecycleAtomicOps.MaterializeTemplate(模板
@@ -198,15 +201,20 @@ namespace Sango.Runtime
                 return;
             }
 
-            foreach (KeyValuePair<int, Entity> pair in _cities)
+            // D-1':城数值面归原生城实体(GAS 属性),镜像只保武将/部队刷新。
+            bool nativeCities = SangoCityNativeRuntime.Active is { IsDisposed: false };
+            if (!nativeCities)
             {
-                City? city = _scenario.citySet.Get(pair.Key);
-                if (city == null || !_world.IsAlive(pair.Value))
+                foreach (KeyValuePair<int, Entity> pair in _cities)
                 {
-                    continue;
-                }
+                    City? city = _scenario.citySet.Get(pair.Key);
+                    if (city == null || !_world.IsAlive(pair.Value))
+                    {
+                        continue;
+                    }
 
-                ApplyCitySnapshot(_world, pair.Value, city);
+                    ApplyCitySnapshot(_world, pair.Value, city);
+                }
             }
 
             foreach (KeyValuePair<int, Entity> pair in _persons)
@@ -307,13 +315,19 @@ namespace Sango.Runtime
             _troops.Clear();
             _scenario = scenario;
 
-            scenario.citySet.ForEach(city =>
+            // D-1':城面升级为原生城实体(sango.city 模板 + GAS 属性 + 保序组件,
+            // SangoCityNativeRuntime 持有);原生运行时挂载时镜像不再重复建城实体。
+            bool nativeCities = SangoCityNativeRuntime.Active is { IsDisposed: false };
+            if (!nativeCities)
             {
-                if (city != null)
+                scenario.citySet.ForEach(city =>
                 {
-                    _cities[city.Id] = SpawnMirror(SangoMirrorKind.City, city.Id, CityDisplayName(city), CellToCm(scenario.Map, city.x, city.y));
-                }
-            });
+                    if (city != null)
+                    {
+                        _cities[city.Id] = SpawnMirror(SangoMirrorKind.City, city.Id, CityDisplayName(city), CellToCm(scenario.Map, city.x, city.y));
+                    }
+                });
+            }
             scenario.personSet.ForEach(person =>
             {
                 if (person != null)
@@ -453,6 +467,7 @@ namespace Sango.Runtime
             }
 
             // 城陷语义:归属变更改 ForceRef(白城不删);俘虏解救等连带状态由全量刷新收敛。
+            // D-1':城面归原生城实体时本段空转(原生运行时自订 OnCityFall)。
             if (_cities.TryGetValue(city.Id, out Entity entity) && _world.IsAlive(entity))
             {
                 _world.Set(entity, ForceRefOf(city.mBelongForce));
@@ -659,6 +674,8 @@ namespace Sango.Runtime
             GameEngine? engine = _engineSource();
             if (engine != null && Sango.Core.Scenario.Cur != null)
             {
+                // D-1':城面原生运行时先行(城模板升级为 sango.city,镜像城分支随其挂载退役)。
+                SangoCityNativeRuntime.Attach(engine);
                 SangoEntityMirrorRuntime.Attach(engine);
             }
         }

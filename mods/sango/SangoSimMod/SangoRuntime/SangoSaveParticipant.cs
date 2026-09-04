@@ -76,6 +76,9 @@ namespace Sango.Runtime
                 ["scenario"] = JsonNode.Parse(json),
                 ["random"] = randomNode,
                 // M3.a:不入档的城内有序名单按活世界序补捕获(见 SangoCityPersonOrder 文件头)。
+                // D-1' 退役候选:城域有序名单/经济暂态/job 位已由原生城组件
+                // (SangoCityRoster/SangoCityEconomy/SangoCityJobState)随引擎 world.bin
+                // 持久化;等价证明(对拍逐位相等)后本捕获节随内核城域终局一并退役。
                 ["cityOrder"] = CaptureCityOrder(scenario),
             };
         }
@@ -292,11 +295,15 @@ namespace Sango.Runtime
                 ["forceBeCaptives"] = forceBeCaptives,
                 ["aiProgress"] = new JsonObject
                 {
+                    // D-1' 退役候选:city 段(AIPrepared/AIFinished/命令残余)已入原生
+                    // SangoCityJobState/SangoCityAIPlan 组件随 world.bin 持久化。
                     ["force"] = forceAi,
                     ["corps"] = corpsAi,
                     ["city"] = cityAi,
                     ["troop"] = troopAi,
                 },
+                // D-1' 退役候选:内政演出排程(搜索/登庸)的原生等价物是城 job 组件 +
+                // 命令 journal;随演出面迁移波退役。
                 ["pendingJobs"] = CapturePendingJobEvents(),
             };
         }

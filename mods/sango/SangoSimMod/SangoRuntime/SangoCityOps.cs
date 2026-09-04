@@ -65,6 +65,7 @@ namespace Sango.Runtime
 
         // CityTrainTroops.IsValid:freePersons.Count>0 && CheckJobCost && morale<MaxMorale &&
         // 城 jobCounter(TrainTroops)==0 && 军团 ActionPoint>=costAP;DoJob → JobTrainTroops(全选武将)。
+        // D-1':原生运行时挂载时结算体走原生系统路径(SangoCityJobOps port),门槛双路共用。
         static SangoTroopOpResult Train(City city, IReadOnlyList<int> personIds)
         {
             int jobId = (int)CityJobType.TrainTroops;
@@ -85,7 +86,7 @@ namespace Sango.Runtime
                     "train requires personIds of persons currently in the city freePersons list.");
             }
 
-            city.JobTrainTroops(persons);
+            ExecuteJob(city, "train", persons);
             return SangoTroopOpResult.Ok();
         }
 
@@ -108,7 +109,7 @@ namespace Sango.Runtime
                     "search requires personIds of persons currently in the city freePersons list.");
             }
 
-            city.JobSearching(persons);
+            ExecuteJob(city, "search", persons);
             return SangoTroopOpResult.Ok();
         }
 
@@ -146,7 +147,7 @@ namespace Sango.Runtime
                 targets.Add(person);
             }
 
-            city.JobRewardPersons(targets.ToArray());
+            ExecuteJob(city, "reward", targets.ToArray());
             return SangoTroopOpResult.Ok();
         }
 
@@ -187,8 +188,39 @@ namespace Sango.Runtime
                     $"person {targetPersonId} is outside the CityRecruit target list.");
             }
 
-            city.JobRecruitPerson(executor, target);
+            ExecuteJob(city, "recruit", new[] { executor }, target);
             return SangoTroopOpResult.Ok();
+        }
+
+        /// <summary>
+        /// 结算路由(D-1'):原生城运行时挂载时走原生 job 结算(SangoCityJobOps port +
+        /// 组件同步);未挂载(内核预言机跑)保持内核 Job* 调用。门槛两路同一(上层已过)。
+        /// </summary>
+        static void ExecuteJob(City city, string type, Person[] persons, Person? recruitTarget = null)
+        {
+            if (SangoCityNativeRuntime.Active is { IsDisposed: false } native)
+            {
+                native.ExecuteJob(city, type, persons, recruitTarget);
+                return;
+            }
+
+            switch (type)
+            {
+                case "train":
+                    city.JobTrainTroops(persons);
+                    break;
+                case "search":
+                    city.JobSearching(persons);
+                    break;
+                case "reward":
+                    city.JobRewardPersons(persons);
+                    break;
+                case "recruit":
+                    city.JobRecruitPerson(persons[0], recruitTarget!);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown city job type '{type}'.");
+            }
         }
 
         static bool IsRecruitTarget(City city, Person target)

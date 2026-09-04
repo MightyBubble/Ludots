@@ -1,8 +1,23 @@
 [
   {
-    "id": "sango.mirror.city",
+    "id": "sango.city",
     "components": {
-      "Name": { "Value": "" }
+      "Name": { "Value": "" },
+      "AttributeBuffer": {
+        "base": {
+          "sango.city.gold": 0,
+          "sango.city.food": 0,
+          "sango.city.population": 0,
+          "sango.city.durability": 0
+        },
+        "current": {
+          "sango.city.gold": 0,
+          "sango.city.food": 0,
+          "sango.city.population": 0,
+          "sango.city.durability": 0
+        }
+      },
+      "DirtyFlags": {}
     }
   },
   {

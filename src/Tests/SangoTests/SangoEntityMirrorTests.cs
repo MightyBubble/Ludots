@@ -18,7 +18,8 @@ namespace Sango.Tests
 {
     /// <summary>
     /// M3 末读模型桥验收(SangoEntityMirror,反射调用 SangoRuntime,不引用 SangoSimMod
-    /// 工程——同 SangoCombatTests 惯例)。覆盖:
+    /// 工程——同 SangoCombatTests 惯例)。D-1' 起城面断言改读组件源
+    /// (SangoCityNativeRuntime:GAS 属性 + 保序组件;镜像城分支随原生城挂载退役)。覆盖:
     ///   1. 启动镜像 == 内核真相:逐类计数 + 字段全等(城全量,武将抽样,部队全量;
     ///      势力/位置换算同轴断言,城数 88 按 SangoRealMapTests 口径);
     ///   2. 播种战斗推 10 回合(白城攻陷 + 俘将)后镜像 == 内核,且逐回合部队计数一致
@@ -70,7 +71,7 @@ namespace Sango.Tests
         /// 临时 Core 挂载(目录 + 拷贝 mod 真实模板资产 + 最小 config_catalog),产出与引擎
         /// 同链的模板注册表;镜像物化服务的其余组件与 GasTests 同款直构。
         /// </summary>
-        private static (EntityLifecycleRuntimeServices Services, string TempRoot) BuildLifecycleServices(World world)
+        private static (EntityLifecycleRuntimeServices Services, TagOps TagOps, string TempRoot) BuildLifecycleServices(World world)
         {
             string modTemplates = Path.Combine(RepoRoot(), "mods", "sango", "SangoSimMod", "assets", "Entities", "templates.json");
             Assert.That(File.Exists(modTemplates), Is.True, "SangoSimMod must ship assets/Entities/templates.json (mirror templates)");
@@ -88,21 +89,62 @@ namespace Sango.Tests
             var templates = new DataRegistry<EntityTemplate>(pipeline);
             templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
 
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var services = new EntityLifecycleRuntimeServices(
                 world,
                 templates,
                 new EntityTemplateKeyRegistry(),
                 new PresentationStableIdAllocator(),
-                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
-            return (services, tempRoot);
+                tagOps);
+            return (services, tagOps, tempRoot);
         }
 
-        private static object AttachMirror(Assembly sim, World world, out string tempRoot)
+        /// <summary>D-1' 挂载序:先原生城(城实体持有者)后镜像(城分支随其挂载退役)。</summary>
+        private static (MirrorHandle Mirror, NativeCityHandle Native) AttachMirrors(Assembly sim, World world, out string tempRoot)
         {
-            (EntityLifecycleRuntimeServices services, tempRoot) = BuildLifecycleServices(world);
-            return Activator.CreateInstance(
+            (EntityLifecycleRuntimeServices services, TagOps tagOps, tempRoot) = BuildLifecycleServices(world);
+            var native = new NativeCityHandle(AttachNativeCities(sim, world, services, tagOps));
+            object mirrorRuntime = Activator.CreateInstance(
                 sim.GetType("Sango.Runtime.SangoEntityMirrorRuntime", throwOnError: true)!,
                 world, services)!;
+            return (new MirrorHandle(mirrorRuntime), native);
+        }
+
+        /// <summary>D-1' 原生城运行时挂载(城实体:GAS 属性 + 保序组件;组件源断言面)。</summary>
+        private static object AttachNativeCities(Assembly sim, World world, EntityLifecycleRuntimeServices services, TagOps tagOps)
+        {
+            return sim.GetType("Sango.Runtime.SangoCityNativeRuntime", throwOnError: true)!
+                .GetMethod("AttachBare", BindingFlags.Public | BindingFlags.Static)!
+                .Invoke(null, new object[] { world, services, tagOps })!;
+        }
+
+        private sealed class NativeCityHandle
+        {
+            public readonly object Runtime;
+
+            public NativeCityHandle(object runtime) => Runtime = runtime;
+
+            public int Count => (int)Runtime.GetType().GetProperty("CityCount")!.GetValue(Runtime)!;
+
+            public List<object> Snapshot() => ((IEnumerable)Runtime.GetType()
+                .GetMethod("Snapshot", BindingFlags.Public | BindingFlags.Instance)!
+                .Invoke(Runtime, null)!).Cast<object>().ToList();
+
+            public void Reconcile() => Runtime.GetType()
+                .GetMethod("Reconcile", BindingFlags.Public | BindingFlags.Instance)!.Invoke(Runtime, null);
+
+            public List<string> SnapshotRows() => ((IEnumerable)Runtime.GetType()
+                .GetMethod("CityDigestRows", BindingFlags.Public | BindingFlags.Instance)!
+                .Invoke(Runtime, null)!).Cast<string>().ToList();
+
+            public void Dispose() => Runtime.GetType()
+                .GetMethod("Dispose", BindingFlags.Public | BindingFlags.Instance)!.Invoke(Runtime, null);
+
+            public static int CityIdOf(object probe) => (int)probe.GetType().GetProperty("CityId")!.GetValue(probe)!;
+            public static string NameOf(object probe) => (string)probe.GetType().GetProperty("Name")!.GetValue(probe)!;
+            public static int IntOf(object probe, string prop) => (int)probe.GetType().GetProperty(prop)!.GetValue(probe)!;
+            public static System.Numerics.Vector2 PositionOf(object probe) =>
+                (System.Numerics.Vector2)probe.GetType().GetProperty("PositionCm")!.GetValue(probe)!;
         }
 
         // ---- 反射小门面:本套测试触碰的内核/镜像面,全部为既有公共成员。 ----
@@ -335,6 +377,10 @@ namespace Sango.Tests
             public void Reconcile() => Runtime.GetType()
                 .GetMethod("Reconcile", BindingFlags.Public | BindingFlags.Instance)!.Invoke(Runtime, null);
 
+            public List<string> SnapshotRows() => ((IEnumerable)Runtime.GetType()
+                .GetMethod("CityDigestRows", BindingFlags.Public | BindingFlags.Instance)!
+                .Invoke(Runtime, null)!).Cast<string>().ToList();
+
             public void Dispose() => Runtime.GetType()
                 .GetMethod("Dispose", BindingFlags.Public | BindingFlags.Instance)!.Invoke(Runtime, null);
 
@@ -388,34 +434,34 @@ namespace Sango.Tests
             return (0f, 0f);
         }
 
-        static void AssertMirrorMatchesKernel(Kernel kernel, MirrorHandle mirror)
+        static void AssertMirrorMatchesKernel(Kernel kernel, MirrorHandle mirror, NativeCityHandle native)
         {
             var cities = kernel.Cities().Cast<object>().ToList();
             var persons = kernel.Persons().Cast<object>().ToList();
             var troops = kernel.Troops().Cast<object>().Where(troop => BoolOf(troop, "IsAlive")).ToList();
 
-            Assert.That(mirror.Count("CityCount"), Is.EqualTo(cities.Count), "mirrored city count must equal kernel non-null cities");
+            Assert.That(native.Count, Is.EqualTo(cities.Count), "native city count must equal kernel non-null cities");
             Assert.That(mirror.Count("PersonCount"), Is.EqualTo(persons.Count), "mirrored person count must equal kernel non-null persons");
             Assert.That(mirror.Count("TroopCount"), Is.EqualTo(troops.Count), "mirrored troop count must equal kernel alive troops");
 
-            Dictionary<int, object> cityProbeById = mirror.Snapshot("City").ToDictionary(MirrorHandle.KernelIdOf);
+            Dictionary<int, object> cityProbeById = native.Snapshot().ToDictionary(NativeCityHandle.CityIdOf);
             foreach (object city in cities)
             {
                 int id = IntOf(city, "Id");
-                Assert.That(cityProbeById.ContainsKey(id), Is.True, $"city {id} must be mirrored");
+                Assert.That(cityProbeById.ContainsKey(id), Is.True, $"city {id} must be native");
                 object probe = cityProbeById[id];
                 object? force = PropertyValue(city, "mBelongForce");
-                Assert.That(MirrorHandle.ForceIdOf(probe), Is.EqualTo(force == null ? 0 : IntOf(force, "Id")),
+                Assert.That(NativeCityHandle.IntOf(probe, "ForceId"), Is.EqualTo(force == null ? 0 : IntOf(force, "Id")),
                     $"city {id} force id mismatch");
-                Assert.That(StatsOf(probe, "Gold"), Is.EqualTo(IntOf(city, "gold")), $"city {id} gold mismatch");
-                Assert.That(StatsOf(probe, "Food"), Is.EqualTo(IntOf(city, "food")), $"city {id} food mismatch");
-                Assert.That(StatsOf(probe, "Population"), Is.EqualTo(IntOf(city, "population")), $"city {id} population mismatch");
-                Assert.That(StatsOf(probe, "Durability"), Is.EqualTo(IntOf(city, "durability")), $"city {id} durability mismatch");
-                Assert.That(StatsOf(probe, "PersonCount"), Is.EqualTo(CountOf(FieldValue(city, "allPersons"))),
+                Assert.That(NativeCityHandle.IntOf(probe, "Gold"), Is.EqualTo(IntOf(city, "gold")), $"city {id} gold mismatch");
+                Assert.That(NativeCityHandle.IntOf(probe, "Food"), Is.EqualTo(IntOf(city, "food")), $"city {id} food mismatch");
+                Assert.That(NativeCityHandle.IntOf(probe, "Population"), Is.EqualTo(IntOf(city, "population")), $"city {id} population mismatch");
+                Assert.That(NativeCityHandle.IntOf(probe, "Durability"), Is.EqualTo(IntOf(city, "durability")), $"city {id} durability mismatch");
+                Assert.That(NativeCityHandle.IntOf(probe, "PersonCount"), Is.EqualTo(CountOf(FieldValue(city, "allPersons"))),
                     $"city {id} person count mismatch");
 
                 (float expectedX, float expectedY) = CellToCm(kernel, IntOf(city, "x"), IntOf(city, "y"));
-                var position = MirrorHandle.PositionOf(probe);
+                var position = NativeCityHandle.PositionOf(probe);
                 Assert.That(position.X, Is.EqualTo(expectedX).Within(0.01f), $"city {id} position X mismatch");
                 Assert.That(position.Y, Is.EqualTo(expectedY).Within(0.01f), $"city {id} position Y mismatch");
             }
@@ -471,7 +517,7 @@ namespace Sango.Tests
         /// 带镜像时逐回合断言镜像部队计数 == 内核存活数(事件驱动生灭正确性)。
         /// </summary>
         private static (bool Fell, int Prisoners, List<string> Digests, object TargetCity) RunBattleScript(
-            Assembly sim, Kernel kernel, MirrorHandle? mirror)
+            Assembly sim, Kernel kernel, MirrorHandle? mirror, NativeCityHandle? native = null)
         {
             kernel.AdvanceTurn();
 
@@ -543,6 +589,22 @@ namespace Sango.Tests
                         Assert.That(mirror.Count("TroopCount"), Is.EqualTo(alive),
                             $"turn {turn}: mirror troop count must track kernel alive troops (event-driven spawn/despawn)");
                     }
+
+                    if (native != null)
+                    {
+                        // D-1' 对账:组件源城行 == 内核源城行(定位分歧用:行级而非哈希级)。
+                        List<string> kernelRows = (List<string>)sim.GetType("Sango.Runtime.SangoCityNativeRuntime", throwOnError: true)!
+                            .GetMethod("KernelCityRows", BindingFlags.Public | BindingFlags.Static)!
+                            .Invoke(null, new[] { kernel.Scenario })!;
+                        List<string> nativeRows = native.SnapshotRows();
+                        Assert.That(kernelRows.Count, Is.EqualTo(nativeRows.Count), $"turn {turn}: component/kernel city row count must match");
+                        for (int row = 0; row < Math.Min(kernelRows.Count, nativeRows.Count); row++)
+                        {
+                            Assert.That(nativeRows[row], Is.EqualTo(kernelRows[row]),
+                                $"turn {turn} row {row}: component-source city row diverged from kernel source");
+                        }
+
+                    }
                 }
             }
             finally
@@ -576,10 +638,10 @@ namespace Sango.Tests
                 return RunBattleScript(sim, kernel, null);
             }
 
-            // 镜像跑:内核启动后立即注入,再进剧本(镜像订阅覆盖全部回合推进)。
+            // 镜像跑:内核启动后立即注入,再进剧本(镜像订阅覆盖全部回合推进;
+            // D-1' 原生城运行时同挂,城实体走组件源)。
             using var world = World.Create();
-            object mirrorRuntime = AttachMirror(sim, world, out string tempRoot);
-            var handle = new MirrorHandle(mirrorRuntime);
+            (MirrorHandle handle, NativeCityHandle native) = AttachMirrors(sim, world, out string tempRoot);
             try
             {
                 return RunBattleScript(sim, kernel, handle);
@@ -587,6 +649,7 @@ namespace Sango.Tests
             finally
             {
                 handle.Dispose();
+                native.Dispose();
                 Directory.Delete(tempRoot, recursive: true);
             }
         }
@@ -634,25 +697,25 @@ namespace Sango.Tests
             Assembly sim = LoadSangoSimMod();
             var kernel = new Kernel(sim, 20260902);
             using var world = World.Create();
-            object mirrorRuntime = AttachMirror(sim, world, out string tempRoot);
-            var mirror = new MirrorHandle(mirrorRuntime);
+            (MirrorHandle mirror, NativeCityHandle native) = AttachMirrors(sim, world, out string tempRoot);
             try
             {
-                AssertMirrorMatchesKernel(kernel, mirror);
-                var cityProbes = mirror.Snapshot("City");
-                Assert.That(cityProbes.Count, Is.EqualTo(88), "the scenario must mirror its 88 non-null cities (SangoRealMapTests 口径)");
+                AssertMirrorMatchesKernel(kernel, mirror, native);
+                var cityProbes = native.Snapshot();
+                Assert.That(cityProbes.Count, Is.EqualTo(88), "the scenario must carry its 88 non-null native cities (SangoRealMapTests 口径)");
                 foreach (object probe in cityProbes)
                 {
-                    Assert.That(MirrorHandle.NameOf(probe), Does.Contain("[sango.city "),
-                        "city mirror names must carry the queryable sango type tag for entities.query forensics");
+                    Assert.That(NativeCityHandle.NameOf(probe), Does.Contain("[sango.city "),
+                        "native city names must carry the queryable sango type tag for entities.query forensics");
                 }
 
                 Assert.That(mirror.Snapshot("Person").Count, Is.GreaterThan(800), "the scenario must mirror its full person roster");
                 Assert.That(mirror.Count("TroopCount"), Is.EqualTo(0), "a fresh boot carries no alive troops");
-                Console.Out.WriteLine($"[m3h-boot] cities={mirror.Count("CityCount")} persons={mirror.Count("PersonCount")} troops={mirror.Count("TroopCount")}");
+                Console.Out.WriteLine($"[m3h-boot] cities={native.Count} persons={mirror.Count("PersonCount")} troops={mirror.Count("TroopCount")}");
             }
             finally
             {
+                native.Dispose();
                 mirror.Dispose();
                 Directory.Delete(tempRoot, recursive: true);
             }
@@ -678,42 +741,45 @@ namespace Sango.Tests
 
             Assert.That(chosen, Is.Not.EqualTo(0), "no ladder seed reached city fall with captures; widen the ladder");
 
-            // 跑 A:带镜像(内核启动后立即注入)——镜像 == 内核 + 城陷/俘将命中。
+            // 跑 A:带镜像 + 原生城(内核启动后立即注入)——镜像(武将/部队)== 内核 +
+            // 组件源城 == 内核 + 城陷/俘将命中。
             var kernelA = new Kernel(sim, chosen);
             using (var world = World.Create())
             {
-                object mirrorRuntime = AttachMirror(sim, world, out string tempRoot);
-                var mirror = new MirrorHandle(mirrorRuntime);
+                (MirrorHandle mirror, NativeCityHandle native) = AttachMirrors(sim, world, out string tempRoot);
                 try
                 {
-                    (bool fell, int prisoners, List<string> digestsA, object targetCity) = RunBattleScript(sim, kernelA, mirror);
-                    AssertMirrorMatchesKernel(kernelA, mirror);
+                    (bool fell, int prisoners, List<string> digestsA, object targetCity) = RunBattleScript(sim, kernelA, mirror, native);
+                    AssertMirrorMatchesKernel(kernelA, mirror, native);
                     Assert.That(fell, Is.True, "the seeded white city must fall within the turn budget");
                     Assert.That(prisoners, Is.GreaterThan(0), "the seeded duels must produce captured persons");
                     Console.Out.WriteLine($"[m3h-mirror-run] seed {chosen}: cityFall={fell} prisoners={prisoners}; " +
-                                          $"mirror cities={mirror.Count("CityCount")} persons={mirror.Count("PersonCount")} troops={mirror.Count("TroopCount")}");
+                                          $"native cities={native.Count} mirror persons={mirror.Count("PersonCount")} troops={mirror.Count("TroopCount")}");
 
-                    // 城陷镜像语义:归属变更改 ForceRef,城实体不消失。
+                    // 城陷组件源语义:归属变更改 ForceRef,城实体不消失。
                     int targetId = IntOf(targetCity, "Id");
-                    object probe = mirror.Snapshot("City").Single(candidate => MirrorHandle.KernelIdOf(candidate) == targetId);
+                    object probe = native.Snapshot().Single(candidate => NativeCityHandle.CityIdOf(candidate) == targetId);
                     object? newForce = PropertyValue(targetCity, "mBelongForce");
-                    Assert.That(MirrorHandle.ForceIdOf(probe), Is.EqualTo(newForce == null ? 0 : IntOf(newForce, "Id")),
-                        "the fallen city mirror must carry the new owning force");
-                    Assert.That(mirror.Count("CityCount"), Is.EqualTo(88), "city fall must not remove the city mirror entity");
+                    Assert.That(NativeCityHandle.IntOf(probe, "ForceId"), Is.EqualTo(newForce == null ? 0 : IntOf(newForce, "Id")),
+                        "the fallen city entity must carry the new owning force");
+                    Assert.That(native.Count, Is.EqualTo(88), "city fall must not remove the native city entity");
 
-                    // 跑 B:同种子同剧本,不注入镜像——逐回合 digest 逐位相等(读模型纯净性)。
+                    // 跑 B:同种子同剧本,不注入镜像/原生城——逐回合 digest 逐位相等
+                    // (读模型 + 原生城组件源纯净性;run A 的 digest 城域行读组件源,
+                    //  run B 期间 run A 的原生运行时虽在挂但已非当前世界权威,城域行回内核源)。
                     (_, _, List<string> digestsB, _) = RunBattleScriptFresh(sim, chosen, null);
                     Assert.That(digestsA.Count, Is.EqualTo(digestsB.Count), "both runs must advance the same number of turns");
                     for (int turn = 0; turn < digestsB.Count; turn++)
                     {
                         Assert.That(digestsA[turn], Is.EqualTo(digestsB[turn]),
-                            $"turn {turn}: WorldDigest must be bit-identical with and without the mirror attached");
+                            $"turn {turn}: WorldDigest must be bit-identical with and without the mirror/native attached");
                     }
 
-                    Console.Out.WriteLine($"[m3h-digest] {digestsB.Count} turns bit-identical across mirror on/off (seed {chosen})");
+                    Console.Out.WriteLine($"[m3h-digest] {digestsB.Count} turns bit-identical across mirror+native on/off (seed {chosen})");
                 }
                 finally
                 {
+                    native.Dispose();
                     mirror.Dispose();
                     Directory.Delete(tempRoot, recursive: true);
                 }
@@ -726,8 +792,7 @@ namespace Sango.Tests
             Assembly sim = LoadSangoSimMod();
             var kernel = new Kernel(sim, 20260902);
             using var world = World.Create();
-            object mirrorRuntime = AttachMirror(sim, world, out string tempRoot);
-            var mirror = new MirrorHandle(mirrorRuntime);
+            (MirrorHandle mirror, NativeCityHandle native) = AttachMirrors(sim, world, out string tempRoot);
             try
             {
                 object probeCity = kernel.Cities().Cast<object>().OrderBy(city => IntOf(city, "Id")).First();
@@ -736,19 +801,21 @@ namespace Sango.Tests
 
                 kernel.AdvanceTurn();
                 int goldAfterTurn = IntOf(kernel.Cities().Cast<object>().Single(city => IntOf(city, "Id") == probeId), "gold");
-                object probe = mirror.Snapshot("City").Single(candidate => MirrorHandle.KernelIdOf(candidate) == probeId);
-                Assert.That(StatsOf(probe, "Gold"), Is.EqualTo(goldAfterTurn), "turn-boundary refresh must track kernel gold");
+                object probe = native.Snapshot().Single(candidate => NativeCityHandle.CityIdOf(candidate) == probeId);
+                Assert.That(NativeCityHandle.IntOf(probe, "Gold"), Is.EqualTo(goldAfterTurn), "turn-boundary refresh must track kernel gold");
 
-                // 内核世界替换(读档/重装路径):Reconcile 全量重建,镜像回到新世界初值。
+                // 内核世界替换(读档/重装路径):Reconcile 全量重建,镜像/原生城回到新世界初值。
                 new Kernel(sim, 20260902);
+                native.Reconcile();
                 mirror.Reconcile();
-                probe = mirror.Snapshot("City").Single(candidate => MirrorHandle.KernelIdOf(candidate) == probeId);
-                Assert.That(StatsOf(probe, "Gold"), Is.EqualTo(goldAfterBoot),
+                probe = native.Snapshot().Single(candidate => NativeCityHandle.CityIdOf(candidate) == probeId);
+                Assert.That(NativeCityHandle.IntOf(probe, "Gold"), Is.EqualTo(goldAfterBoot),
                     "world replacement rebuild must restore the fresh-boot snapshot");
                 Assert.That(mirror.Count("TroopCount"), Is.EqualTo(0), "the replacement world starts with no alive troops");
             }
             finally
             {
+                native.Dispose();
                 mirror.Dispose();
                 Directory.Delete(tempRoot, recursive: true);
             }
