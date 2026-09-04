@@ -893,7 +893,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(12, 16, 24, 0.82);
+  background: rgba(12, 16, 24, 0.35);
+  backdrop-filter: blur(2px);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
