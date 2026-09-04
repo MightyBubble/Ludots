@@ -471,7 +471,6 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             simulation.ToLocalYCm(worldYCm),
             profile.Heavy,
             geometry.Mass,
-            profile.VisualScale,
             geometry.RadiusCm,
             profile.SpeedCmPerSecond,
             new MassNavigationAgentLayer(layer.Value.Category, layer.Value.Mask));

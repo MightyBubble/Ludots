@@ -986,7 +986,6 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
             config.NavigationProbe.StartYCm,
             heavy: false,
             config.NavigationProbe.NavMass,
-            config.NavigationProbe.VisualScale,
             config.NavigationProbe.BodyRadiusCm,
             config.NavigationProbe.SpeedCmPerSecond,
             new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u));

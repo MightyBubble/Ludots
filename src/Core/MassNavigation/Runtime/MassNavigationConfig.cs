@@ -184,7 +184,6 @@ public sealed class MassNavigationConfig
                 profile,
                 "id",
                 "heavy",
-                "visualScale",
                 "speedCmPerSecond",
                 "everyNth",
                 "nthOffset");
@@ -307,7 +306,6 @@ public sealed class MassNavigationConfig
         RequireProperties(
             RequireProperty(semantics, "solver"),
             "minNavMass",
-            "minVisualScale",
             "maxStepDtSeconds",
             "parallelStepMinAgents",
             "directionEpsilonSq",

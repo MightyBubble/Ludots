@@ -334,7 +334,8 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigation agentProfiles must author at least one heavy profile.");
             Assert.That(heavy["everyNth"]?.GetValue<int>(), Is.GreaterThan(0),
                 "Heavy distribution is an authored profile rule, not a solver hardcode.");
-            Assert.That(heavy["visualScale"]?.GetValue<float>(), Is.GreaterThan(0f));
+            Assert.That(heavy.ContainsKey("visualScale"), Is.False,
+                "MassNavigation execution profiles must not own visual scale; presenter AssetBinding.localScale is the drawn size.");
             Assert.That(heavy.ContainsKey("navMass"), Is.False,
                 "MassNavigation execution profiles must not own geometry or solver mass.");
             Assert.That(heavy.ContainsKey("bodyRadiusCm"), Is.False,
@@ -352,9 +353,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(avoidance.ContainsKey("heavyNavMass"), Is.False,
                 "Agent mass must be owned only by Navigation/agent_profiles.json, not duplicated in avoidance.");
             Assert.That(avoidance.ContainsKey("lightVisualScale"), Is.False,
-                "Agent visualScale must be owned only by agentProfiles, not duplicated in avoidance.");
+                "Drawn size is owned by presenter AssetBinding.localScale, not avoidance or MassNavigation execution profiles.");
             Assert.That(avoidance.ContainsKey("heavyVisualScale"), Is.False,
-                "Agent visualScale must be owned only by agentProfiles, not duplicated in avoidance.");
+                "Drawn size is owned by presenter AssetBinding.localScale, not avoidance or MassNavigation execution profiles.");
             Assert.That(avoidance["dominantMassRatio"]?.GetValue<float>(), Is.GreaterThan(0f));
 
             JsonObject obstacle = config["semantics"]?["obstacle"]?.AsObject()
@@ -373,6 +374,12 @@ namespace Ludots.Tests.Presentation
             JsonException legacyObstacleField = Assert.Throws<JsonException>(
                 () => MassNavigationConfig.Load(legacyObstacleConfig))!;
             Assert.That(legacyObstacleField.Message, Does.Contain("agentBodyRadiusCm"));
+
+            JsonObject leftoverVisualScaleConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
+            leftoverVisualScaleConfig["agentProfiles"]!["profiles"]![0]!["visualScale"] = 0.34f;
+            JsonException leftoverVisualScaleField = Assert.Throws<JsonException>(
+                () => MassNavigationConfig.Load(leftoverVisualScaleConfig))!;
+            Assert.That(leftoverVisualScaleField.Message, Does.Contain("visualScale"));
         }
 
         [Test]

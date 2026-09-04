@@ -268,7 +268,6 @@ public sealed class MassNavigationSteeringSemantics
 public sealed class MassNavigationSolverSemantics
 {
     public float MinNavMass { get; set; }
-    public float MinVisualScale { get; set; }
     public float MaxStepDtSeconds { get; set; }
     public int ParallelStepMinAgents { get; set; }
     public float DirectionEpsilonSq { get; set; }
@@ -293,7 +292,6 @@ public sealed class MassNavigationSolverSemantics
     {
         System.ArgumentNullException.ThrowIfNull(source);
         MinNavMass = source.MinNavMass;
-        MinVisualScale = source.MinVisualScale;
         MaxStepDtSeconds = source.MaxStepDtSeconds;
         ParallelStepMinAgents = source.ParallelStepMinAgents;
         DirectionEpsilonSq = source.DirectionEpsilonSq;
@@ -318,7 +316,6 @@ public sealed class MassNavigationSolverSemantics
     public void Validate()
     {
         RequirePositive(MinNavMass, nameof(MinNavMass));
-        RequirePositive(MinVisualScale, nameof(MinVisualScale));
         RequirePositive(MaxStepDtSeconds, nameof(MaxStepDtSeconds));
         RequirePositive(ParallelStepMinAgents, nameof(ParallelStepMinAgents));
         RequirePositive(DirectionEpsilonSq, nameof(DirectionEpsilonSq));
