@@ -2219,14 +2219,11 @@ namespace Ludots.Core.Engine
                         ? channel.Handler
                         : GetService(CoreServiceKeys.InputHandler)),
                 SystemGroup.InputCollection);
-            // #1398 S2b: context trigger gate — the world-side active context set diff
-            // mounts/unmounts profile-declared triggers[] graphs on the context subject;
-            // simulation-side twin of the local IMC projection above (observers and all
-            // context writers included, not only local seats).
-            // #1398 S2b: context trigger gate — the world-side active context set diff
-            // mounts/unmounts profile-declared triggers[] graphs on the context subject;
-            // simulation-side twin of the local IMC projection above (observers and all
-            // context writers included, not only local seats).
+            // #1398 S2b + D15: context trigger gate — the world-side active context set diff
+            // mounts/unmounts profile-declared triggers[] graphs on the context subject and
+            // runs the onActivated/onDeactivated lifecycle slot bodies at the mount window
+            // boundaries; simulation-side twin of the local IMC projection above (observers
+            // and all context writers included, not only local seats).
             var interactionContextTriggerGate = new Gameplay.MapTriggers.InteractionContextTriggerMountSystem(
                 World,
                 TriggerManager,
@@ -2234,7 +2231,9 @@ namespace Ludots.Core.Engine
                 graphProgramRegistry,
                 customEventCatalog.Names,
                 customEventCatalog.Schemas,
-                () => MapSessions);
+                () => MapSessions,
+                graphReturnWriter,
+                gasGraphApi);
             _interactionContextTriggerGate = interactionContextTriggerGate;
             RegisterSystem(interactionContextTriggerGate, SystemGroup.InputCollection);
             // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,
@@ -2244,17 +2243,6 @@ namespace Ludots.Core.Engine
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.LocalInput);
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
-            // #1398 Case E §05: whileActive graph ticks after pointer attrs are live.
-            RegisterSystem(
-                new InteractionContextWhileActiveSystem(
-                    World,
-                    interactionContextProfileRegistry,
-                    graphReturnWriter,
-                    graphProgramRegistry,
-                    entityCollectionStore,
-                    gasGraphApi,
-                    interactionContextTriggerGate),
-                SystemGroup.InputCollection);
             RegisterSystem(new StoryRuntimeSystem(this, dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);

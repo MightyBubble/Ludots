@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.GraphRuntime;
@@ -11,6 +12,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
+using Ludots.Core.TypedCollections;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Graph
@@ -227,6 +229,7 @@ namespace Ludots.Tests.Gas.Graph
 
             triggers = new TriggerManager();
             var customEvents = new CustomEventNameRegistry();
+            var writer = NewReturnWriter(world, programs);
             gate = new InteractionContextTriggerMountSystem(
                 world,
                 triggers,
@@ -234,8 +237,26 @@ namespace Ludots.Tests.Gas.Graph
                 programs,
                 customEvents,
                 eventSchemas: null,
-                sessions: () => null);
+                sessions: () => null,
+                writer,
+                new GasGraphRuntimeApi(world));
             return world;
+        }
+
+        private static GraphReturnWriter NewReturnWriter(World world, GraphProgramRegistry programs)
+        {
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var entityCollections = new EntityCollectionStore(collectionKeys);
+            var intIdCollections = new IntIdCollectionStore(collectionKeys);
+            var outputValues = new GraphOutputValueStore(new StringIntRegistry(), initialCapacity: 4);
+            return new GraphReturnWriter(
+                world,
+                programs,
+                new GraphOutputSchemaRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                entityCollections,
+                intIdCollections,
+                outputValues);
         }
 
         private static void RegisterProbeGraph(GraphProgramRegistry programs)

@@ -10,9 +10,10 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
-    /// Context trigger gate (#1398 S2b): every tick, diffs the world-side active interaction
-    /// context set per entity — the mounted base <see cref="InteractionContextInstance"/> plus
-    /// every <see cref="InteractionContextInstances"/> instance — against the context-owned
+    /// Context trigger gate (#1398 S2b + D15): every tick, diffs the world-side active
+    /// interaction context set per entity — the mounted base
+    /// <see cref="InteractionContextInstance"/> plus every
+    /// <see cref="InteractionContextInstances"/> instance — against the context-owned
     /// mounts in the TriggerManager ledger, and mounts/unmounts the profiles' declared
     /// <c>triggers[]</c> graphs on the context subject accordingly. Entering a context
     /// activates its TriggerGraph listeners; leaving deactivates them; derived contexts gate
@@ -21,6 +22,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// seats): trigger gating follows entity world state, so it holds for every observer and
     /// writer — exec reconciliation, cast ops, derived-context ops, and template spawns —
     /// without any of them knowing about triggers.
+    /// <para>
+    /// D15 lifecycle slots: the same mount window is flanked by the profiles'
+    /// <c>onActivated</c>/<c>onDeactivated</c> graph bodies — Activated runs as the window
+    /// opens (before the profile's triggers register), Deactivated as it closes (after they
+    /// are removed, plus the owner-death path via the destroy boundary). Slots are instant
+    /// boundary hooks (explicitly not a per-tick period, unlike the retired
+    /// <c>whileActive</c>), and belong to their own profile — no owner matching is ever
+    /// needed.
+    /// </para>
     /// <para>
     /// Ledger: mounts are stamped with a <see cref="TriggerMountOwner"/> before registration
     /// and this system keeps no parallel mount list (#1398 D10); the TriggerManager owner
@@ -49,6 +59,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly CustomEventNameRegistry _customEvents;
         private readonly EventSchemaRegistry? _eventSchemas;
         private readonly Func<MapSessionManager?> _sessions;
+        private readonly Ludots.Core.NodeLibraries.GASGraph.GraphReturnWriter _graphReturnWriter;
+        private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
 
         private Entity[] _subjects = new Entity[16];
         private int _subjectCount;
@@ -64,7 +76,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
             GraphRuntime.GraphProgramRegistry programs,
             CustomEventNameRegistry customEvents,
             EventSchemaRegistry? eventSchemas,
-            Func<MapSessionManager?> sessions)
+            Func<MapSessionManager?> sessions,
+            Ludots.Core.NodeLibraries.GASGraph.GraphReturnWriter graphReturnWriter,
+            Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi)
             : base(world)
         {
             _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
@@ -73,6 +87,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _customEvents = customEvents ?? throw new ArgumentNullException(nameof(customEvents));
             _eventSchemas = eventSchemas;
             _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
+            _graphReturnWriter = graphReturnWriter ?? throw new ArgumentNullException(nameof(graphReturnWriter));
+            _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
+            // #1398 D15: an owner destroyed while still carrying context components never
+            // went through an explicit deactivation — run each carried context's
+            // onDeactivated slot at the destroy boundary so settlement/preview cleanup
+            // still happen (the retired gate skipped dead subjects entirely).
+            World.SubscribeEntityDestroyed(OnContextOwnerDestroyed);
         }
 
         /// <summary>
@@ -93,10 +114,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// This frame's context-subject snapshot (filled by Update). Consumed by
-        /// <see cref="InteractionContextWhileActiveSystem"/> so both systems share one world
-        /// scan per tick instead of each running the same query (#1398 D12). Valid until the
-        /// next Update; the consumer must run after this system in the same tick.
+        /// This frame's context-subject snapshot (filled by Update). Consumed by lifecycle
+        /// slot execution and exposed for test observability; runs after this system in the
+        /// same tick. Valid until the next Update.
         /// </summary>
         public bool TryGetFrameSubjects(out Entity[] subjects, out int count)
         {
@@ -153,10 +173,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _triggerManager.CollectOwnedMounts(subject, _ownedScratch);
             for (int i = 0; i < _ownedScratch.Count; i++)
             {
-                if (_ownedScratch[i].Key.Kind == TriggerMountOwnerKind.InteractionContext)
+                if (_ownedScratch[i].Key.Kind != TriggerMountOwnerKind.InteractionContext)
                 {
-                    _triggerManager.RemoveOwnedMounts(_ownedScratch[i].Key);
+                    continue;
                 }
+
+                _triggerManager.RemoveOwnedMounts(_ownedScratch[i].Key);
+                // Context window closed on this subject — run the Deactivated slot after
+                // its mounts are gone, so the slot sees a fully taken-down window.
+                RunLifecycleSlot(subject, _ownedScratch[i].Key.OwnerId, InteractionContextLifecycleSlot.Deactivated);
             }
         }
 
@@ -177,16 +202,23 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 }
 
                 _triggerManager.RemoveOwnedMounts(_ownedScratch[i].Key);
+                // Window closing (profile no longer desired): Deactivated slot after unmount.
+                RunLifecycleSlot(subject, _ownedScratch[i].Key.OwnerId, InteractionContextLifecycleSlot.Deactivated);
             }
 
             for (int d = 0; d < _desiredProfileIds.Count; d++)
             {
                 int profileId = _desiredProfileIds[d];
                 TriggerMountOwner owner = new(TriggerMountOwnerKind.InteractionContext, subject, profileId);
-                if (!_triggerManager.TryGetOwnedMounts(owner, out _))
+                if (_triggerManager.TryGetOwnedMounts(owner, out _))
                 {
-                    TryMount(subject, profileId, owner);
+                    continue;
                 }
+
+                // Window opening (newly desired profile): Activated slot runs before the
+                // trigger mounts register — "onActivated 在 trigger 开启之前" by construction.
+                RunLifecycleSlot(subject, profileId, InteractionContextLifecycleSlot.Activated);
+                TryMount(subject, profileId, owner);
             }
         }
 
@@ -228,6 +260,66 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     {
                         profileIds.Add(derived[i].ContextId);
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Runs one lifecycle slot's graph bodies on the subject (instant window-boundary
+        /// hooks; see <see cref="InteractionContextLifecycleSlot"/>). The graph is a plain
+        /// body via GraphReturnWriter — no entries, no bus, no owner matching: the slot
+        /// belongs to its own profile, so it can never observe a sibling context.
+        /// </summary>
+        private void RunLifecycleSlot(Entity subject, int profileId, InteractionContextLifecycleSlot slot)
+        {
+            if (!_contextProfiles.TryGetLifecycleGraphIds(profileId, slot, out ReadOnlySpan<int> graphIds))
+            {
+                return;
+            }
+
+            for (int i = 0; i < graphIds.Length; i++)
+            {
+                _graphReturnWriter.Execute(
+                    graphIds[i],
+                    caster: subject,
+                    explicitTarget: Entity.Null,
+                    targetContext: Entity.Null,
+                    targetPosCm: default,
+                    randomSeed: 0u,
+                    api: _graphApi);
+            }
+        }
+
+        /// <summary>
+        /// Owner-destroyed boundary: while components are still attached, run the
+        /// Deactivated slot for every context the entity carries (base mount + instances).
+        /// This is the death path the retired gate skipped — settlement and preview cleanup
+        /// still run when an owner dies mid-gesture. Mirrors the entity-mount death
+        /// dispatch guard: active map sessions only, no unload-time firing.
+        /// </summary>
+        private void OnContextOwnerDestroyed(in Entity entity)
+        {
+            if (!World.TryGet<MapEntity>(entity, out MapEntity mapEntity))
+            {
+                return;
+            }
+
+            MapSession? session = _sessions()?.GetSession(mapEntity.MapId);
+            if (session == null || session.State != MapSessionState.Active)
+            {
+                return;
+            }
+
+            if (World.TryGet<InteractionContextInstance>(entity, out InteractionContextInstance baseContext))
+            {
+                RunLifecycleSlot(entity, baseContext.ContextId, InteractionContextLifecycleSlot.Deactivated);
+            }
+
+            if (World.TryGet<InteractionContextInstances>(entity, out InteractionContextInstances instances))
+            {
+                for (int i = 0; i < instances.Count; i++)
+                {
+                    RunLifecycleSlot(entity, instances[i].ContextId, InteractionContextLifecycleSlot.Deactivated);
                 }
             }
         }

@@ -60,19 +60,33 @@ namespace Ludots.Core.Input.Interaction
         public List<InteractionContextTriggerMount>? Triggers { get; set; }
 
         /// <summary>
-        /// Case E §05: graph id to run every tick while this context is active. The graph must
-        /// WriteCollection to write its preview collection. Absent = no per-tick graph.
+        /// Graph bodies (plain bodies, no entries) run once when this context's
+        /// <c>triggers[]</c> window opens — before the trigger mounts are registered on the
+        /// subject (#1398 D15). Instant boundary hooks flanking the mounted window, never a
+        /// per-tick clock (the retired <c>whileActive</c> was a period field; these are not).
         /// </summary>
-        public InteractionContextWhileActive? WhileActive { get; set; }
+        public List<string>? OnActivated { get; set; }
+
+        /// <summary>
+        /// Graph bodies run once when this context's <c>triggers[]</c> window closes — after
+        /// the trigger mounts are removed (explicit deactivation or owner death; #1398 D15).
+        /// Settlement/cleanup graphs (selection_commit, preview clears) live here and are
+        /// shared verbatim across every gesture context, because they only read the
+        /// handoff collections/blackboard the exit graph wrote, never the gesture shape.
+        /// </summary>
+        public List<string>? OnDeactivated { get; set; }
     }
 
     /// <summary>
-    /// While-active graph mount on an <see cref="InteractionContextProfileDefinition"/>:
-    /// <c>Graph</c> names the hit function run each tick (e.g. drag-time box hits).
+    /// Lifecycle slot on a profile: graph bodies flank the context's trigger window.
+    /// Activated runs as the window opens (before mount), Deactivated as it closes (after
+    /// unmount, including the owner-death path). One profile id per slot is unambiguous —
+    /// no owner matching is ever needed because the slot belongs to its own profile.
     /// </summary>
-    public sealed class InteractionContextWhileActive
+    public enum InteractionContextLifecycleSlot
     {
-        public string Graph { get; set; } = string.Empty;
+        Activated = 0,
+        Deactivated = 1,
     }
 
     /// <summary>
