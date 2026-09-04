@@ -111,12 +111,6 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 contextProfiles.InputContextIdRegistry.GetName(mountedContext.InputContextId),
                 Is.EqualTo(SuperweaponContextShowcaseIds.ConfirmInputContextId));
-            Assert.That(
-                contextProfiles.TryGetDefinition(mountedContext.ContextId, out var contextDefinition) &&
-                    contextDefinition.ActiveEntityViewKey == SuperweaponContextShowcaseIds.TargetsViewKey,
-                Is.True,
-                "the installed profile row keeps the declared entity view key.");
-
             Assert.That(engine.World.Has<AbilityExecInstance>(state.Commander), Is.True);
             Assert.That(engine.World.Get<AbilityExecInstance>(state.Commander).AbilityId, Is.EqualTo(state.AbilityId));
             Assert.That(state.AbilityId, Is.EqualTo(AbilityIdRegistry.GetId(SuperweaponContextShowcaseIds.AbilityId)));

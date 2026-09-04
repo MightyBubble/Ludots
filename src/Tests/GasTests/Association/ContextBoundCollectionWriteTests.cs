@@ -277,7 +277,6 @@ namespace Ludots.Tests.GAS
                         {
                             Id = InteractionContextIds.Default,
                             ActiveCollectionKey = EntityCollectionKeys.CommandSource,
-                            ActiveEntityViewKey = "view.test.default",
                             FilterProfileId = DefaultProfileId,
                         },
                     },

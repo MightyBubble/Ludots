@@ -1718,7 +1718,6 @@ namespace Ludots.Core.Engine
                         {
                             Id = InteractionContextIds.Default,
                             ActiveCollectionKey = EntityCollectionKeys.CommandSource,
-                            ActiveEntityViewKey = EntityViewKeys.ControlPlaneCommand,
                         },
                     },
                 },

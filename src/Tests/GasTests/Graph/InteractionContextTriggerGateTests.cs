@@ -177,7 +177,6 @@ namespace Ludots.Tests.Gas.Graph
                         {
                             Id = BattleProfile,
                             ActiveCollectionKey = "collection.gate.battle",
-                            ActiveEntityViewKey = "view.gate.battle",
                             Triggers = new List<InteractionContextTriggerMount>
                             {
                                 new() { Trigger = GraphName, Event = GameEvents.MapLoaded.Value },
@@ -187,7 +186,6 @@ namespace Ludots.Tests.Gas.Graph
                         {
                             Id = BoxingProfile,
                             ActiveCollectionKey = "collection.gate.boxing",
-                            ActiveEntityViewKey = "view.gate.boxing",
                             Triggers = new List<InteractionContextTriggerMount>
                             {
                                 new() { Trigger = GraphName, Event = GameEvents.MapLoaded.Value },
@@ -197,7 +195,6 @@ namespace Ludots.Tests.Gas.Graph
                         {
                             Id = IdleProfile,
                             ActiveCollectionKey = "collection.gate.idle",
-                            ActiveEntityViewKey = "view.gate.idle",
                         },
                     },
                 },

@@ -401,7 +401,6 @@ namespace Ludots.Tests.GAS
                         {
                             Id = InteractionContextIds.Default,
                             ActiveCollectionKey = EntityCollectionKeys.CommandSource,
-                            ActiveEntityViewKey = "view.pref.command",
                         },
                     },
                 }, collectionKeys, new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal), intents.Intents.ProfileIdRegistry);
