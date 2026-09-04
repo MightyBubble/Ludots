@@ -150,7 +150,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             HasScreenRect(screenOverlay, x: -1200, y: -100, width: 1200, height: 300),
             "指针继续移动，矩形框随之扩大（跟随当前拖拽数据）");
 
-        // ── 05③：whileActive 每帧命中 → case_e.box_hover（预览集 ≠ selected）──
+        // ── 05③：PointerMoved 输入边沿命中 → case_e.box_hover（预览集 ≠ selected）──
         TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
         AssertCollection(engine, commander, BoxHoverKey, "拖拽中预览命中=当前矩形覆盖的可框选单位",
             marine1, marine2);
@@ -174,7 +174,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         AssertCollection(engine, commander, SelectedKey, "无修饰 → replace 语义", marine1, marine2);
         Assert.That(
             CollectionCount(engine, commander, BoxHoverKey) <= 0,
-            "框结束停用 boxing → whileActive 清空预览集");
+            "框结束停用 boxing → onDeactivated 槽 box_hover_clear 清空预览集");
         AssertPreviewOff(engine, presenterRuntime, marineDefId, "预览环随预览集清空", marine1, marine2, marine3, marine4);
         Assert.That(
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances cleared) ||
