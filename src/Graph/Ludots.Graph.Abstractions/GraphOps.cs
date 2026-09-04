@@ -379,6 +379,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         WriteCollection = 477,
         /// <summary>
+        /// TargetList := ∅ (the frame's working set is discarded). No inputs, no world
+        /// side effect — the only TargetList "clear" primitive, used at the tail of a graph
+        /// body to write an explicit empty collection (e.g. a settle graph consuming its
+        /// handoff set), which per-op composition cannot express.
+        /// </summary>
+        ResetTargetList = 478,
+        /// <summary>
         /// Live pointer screen X (window px) for the authoritative PointerPos action.
         /// Pure float read; fail closed when the input snapshot is unavailable.
         /// </summary>

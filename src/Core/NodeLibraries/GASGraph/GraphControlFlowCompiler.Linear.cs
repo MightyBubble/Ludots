@@ -40,6 +40,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.LoadTargetPosY:
                 case GraphNodeOp.LoadPointerScreenX:
                 case GraphNodeOp.LoadPointerScreenY:
+                case GraphNodeOp.ResetTargetList:
                     break;
 
                 case GraphNodeOp.HaltReturnInt:
@@ -870,6 +871,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.LoadTargetPosY:
                 case GraphNodeOp.LoadPointerScreenX:
                 case GraphNodeOp.LoadPointerScreenY:
+                case GraphNodeOp.ResetTargetList:
                     break;
 
                 case GraphNodeOp.QueryHexNeighbors:
