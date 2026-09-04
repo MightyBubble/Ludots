@@ -2,7 +2,6 @@
   {
     "id": "graph.case_e.box_hit",
     "kind": "Query",
-    "entry": "rep",
     "nodes": [
       {
         "id": "rep",
@@ -44,8 +43,7 @@
       },
       {
         "id": "write_hover",
-        "op": "DispatchCollectionEvent",
-        "event": "gameplay.case_e.box_hover_refreshed",
+        "op": "WriteCollection",
         "collectionKey": "case_e.box_hover"
       },
       {
@@ -59,25 +57,101 @@
       }
     ],
     "controlEdges": [
-      { "from": "rep", "fromPort": "next", "to": "press_px" },
-      { "from": "press_px", "fromPort": "next", "to": "press_py" },
-      { "from": "press_py", "fromPort": "next", "to": "pointer_x" },
-      { "from": "pointer_x", "fromPort": "next", "to": "pointer_y" },
-      { "from": "pointer_y", "fromPort": "next", "to": "roster" },
-      { "from": "roster", "fromPort": "next", "to": "rect_hits" },
-      { "from": "rect_hits", "fromPort": "next", "to": "op_replace" },
-      { "from": "op_replace", "fromPort": "next", "to": "write_hover" },
-      { "from": "write_hover", "fromPort": "next", "to": "ok" },
-      { "from": "ok", "fromPort": "next", "to": "halt" }
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "press_px"
+      },
+      {
+        "from": "press_px",
+        "fromPort": "next",
+        "to": "press_py"
+      },
+      {
+        "from": "press_py",
+        "fromPort": "next",
+        "to": "pointer_x"
+      },
+      {
+        "from": "pointer_x",
+        "fromPort": "next",
+        "to": "pointer_y"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "next",
+        "to": "roster"
+      },
+      {
+        "from": "roster",
+        "fromPort": "next",
+        "to": "rect_hits"
+      },
+      {
+        "from": "rect_hits",
+        "fromPort": "next",
+        "to": "op_replace"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "next",
+        "to": "write_hover"
+      },
+      {
+        "from": "write_hover",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
     ],
     "valueEdges": [
-      { "from": "rep", "fromPort": "value", "to": "roster", "toPort": "source" },
-      { "from": "press_px", "fromPort": "value", "to": "rect_hits", "toPort": "a" },
-      { "from": "press_py", "fromPort": "value", "to": "rect_hits", "toPort": "b" },
-      { "from": "pointer_x", "fromPort": "value", "to": "rect_hits", "toPort": "c" },
-      { "from": "pointer_y", "fromPort": "value", "to": "rect_hits", "toPort": "max" },
-      { "from": "op_replace", "fromPort": "value", "to": "write_hover", "toPort": "value" },
-      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
-    ]
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "roster",
+        "toPort": "source"
+      },
+      {
+        "from": "press_px",
+        "fromPort": "value",
+        "to": "rect_hits",
+        "toPort": "a"
+      },
+      {
+        "from": "press_py",
+        "fromPort": "value",
+        "to": "rect_hits",
+        "toPort": "b"
+      },
+      {
+        "from": "pointer_x",
+        "fromPort": "value",
+        "to": "rect_hits",
+        "toPort": "c"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "value",
+        "to": "rect_hits",
+        "toPort": "max"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "value",
+        "to": "write_hover",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ],
+    "entry": "rep"
   }
 ]

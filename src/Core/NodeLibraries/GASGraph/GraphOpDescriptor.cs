@@ -90,7 +90,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>
         /// True when the op mutates world/UI/map state despite Pure effect metadata
         /// (Script policy still needs Pure). Score/Validation reject these; Query
-        /// allows only when the op is authorable on Query (e.g. DispatchCollectionEvent).
+        /// allows only when the op is authorable on Query.
         /// </summary>
         public bool WorldSideEffect { get; }
 

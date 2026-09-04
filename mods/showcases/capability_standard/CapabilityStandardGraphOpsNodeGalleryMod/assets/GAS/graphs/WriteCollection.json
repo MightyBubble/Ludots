@@ -1,6 +1,6 @@
 [
   {
-    "id": "showcase.graph_op.DispatchCollectionEvent",
+    "id": "showcase.graph_op.WriteCollection",
     "kind": "TriggerGraph",
     "entries": [
       {
@@ -17,7 +17,7 @@
       },
       {
         "id": "commit",
-        "op": "DispatchCollectionEvent",
+        "op": "WriteCollection",
         "event": "gallery.collection_commit",
         "collectionKey": "gallery.selected"
       },

@@ -1,5 +1,5 @@
 {
-  "startupMapId": "capability_standard_graph_op_DispatchCollectionEvent",
+  "startupMapId": "capability_standard_graph_op_WriteCollection",
   "windowTitle": "Ludots - 终选集按事件 key 落账",
   "targetFps": 60,
   "windowWidth": 1600,

@@ -132,14 +132,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.DeactivateContext:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
-                    case GraphNodeOp.DispatchCollectionEvent:
-                        // The event key resolves in the config key space; the collection key
-                        // resolves in the EntityCollectionStore key space (the writer reads it
-                        // back through the store registry), mirroring QueryFromCollection.
-                        ins.Imm = CollectionEventOpEncoding.Pack(
-                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
-                            ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Dst)));
-                        ins.Dst = 0;
+
+                    case GraphNodeOp.WriteCollection:
+                        // The collection key resolves in the EntityCollectionStore key space,
+                        // same space QueryFromCollection reads.
+                        ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.SetPanelAudience:
                         ins.Imm = UI.PanelHosting.PanelOpEncoding.PackAudience(

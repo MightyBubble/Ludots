@@ -102,7 +102,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Run a continuous-mount graph for its authored side effects (e.g. DispatchCollectionEvent)
+        /// Run a continuous-mount graph for its authored side effects (e.g. WriteCollection)
         /// without materializing <c>outputs[]</c>. Host binds the program's registered kind —
         /// not a Query privilege. GraphReturnWriter must not steal collection writes.
         /// </summary>

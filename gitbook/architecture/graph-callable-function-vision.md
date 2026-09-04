@@ -21,7 +21,7 @@
 1. 可复用的图体都是函数：要有入参声明，有返回，或写明副作用。打分返回分、校验返回是否通过、命中返回名单——调用方式同一套。  
 2. 挂载和产品说明不要靠 `GraphKind` 开后门。禁止「因为 kind=Query 所以可以 continuous / 所以可以用 outputs 代写」。Kind 可以留作编译/策略标签。  
 3. 边沿（按下/抬起）用 Trigger 当宿主；拖拽存活期用调度当宿主。宿主只接线、调用，必要时把返回交给后面的节点。函数不回头调宿主。  
-4. continuous 路径禁止 `GraphReturnWriter` / `outputs[]` 代写预览集。现网是函数里 `DispatchCollectionEvent` 自己写。终态在「图内副作用」和「纯返回再按类型写入」里**只留一条**，写清迁移，禁止两套并存。  
+4. continuous 路径禁止 `GraphReturnWriter` / `outputs[]` 代写预览集。现网是函数里 `WriteCollection` 自己写。终态在「图内副作用」和「纯返回再按类型写入」里**只留一条**，写清迁移，禁止两套并存。  
 5. 三套集合分开：候选（命中入参）、预览（黄环）、已选中（蓝环）。
 
 ### 下一任交什么
@@ -53,7 +53,7 @@
    命中函数（唯一）
      入参：候选 collection key + 矩形四角
      返回：TargetList
-     现网副作用：DispatchCollectionEvent → case_e.box_hover
+     现网副作用：WriteCollection → case_e.box_hover
         │
         ├─ 拖拽每 tick：刷新预览集 → 黄环
         └─ 松手：同一名单 + 修饰 → selected → 蓝环
@@ -83,12 +83,12 @@
 
 ### 3.1 PR #1444 已经有的（别重做）
 
-- `graph.case_e.box_hit` 里 `DispatchCollectionEvent` 写 `case_e.box_hover`。  
+- `graph.case_e.box_hit` 里 `WriteCollection` 写 `case_e.box_hover`。  
 - continuous 每 tick 只 `Execute`，不用 `ExecuteAndWrite`，不靠 `outputs[]`。  
-- continuous 不强制 `GraphKind.Query`；安装仍要求图里有 `DispatchCollectionEvent`。  
+- continuous 不强制 `GraphKind.Query`；安装仍要求图里有 `WriteCollection`。  
 - `InvokeGraph` 可调 Query，并把 `TargetList` 拷回宿主；`box_commit` 已调 `box_hit`（点选=零位移抬起，无 tap_commit）。  
 - 集合事件：实例 scratch + `MapTrigger.CollectionEntityCount`。  
-- 离开 boxing：按图里 `DispatchCollectionEvent` 的集合 key（`EntityCollectionStore` 空间）清空预览。
+- 离开 boxing：按图里 `WriteCollection` 的集合 key（`EntityCollectionStore` 空间）清空预览。
 
 ### 3.2 还要补的
 
@@ -114,7 +114,7 @@
 
 | 选项 | 怎么做 | 好处 | 代价 |
 |------|--------|------|------|
-| **S1 图内副作用**（接近现网） | 函数声明要写哪些集合；自己 `DispatchCollectionEvent` | 和现网一致；调度不用代写 | 和「Query 准纯」旧说法冲突；每 tick 仍走事件 |
+| **S1 图内副作用**（接近现网） | 函数声明要写哪些集合；自己 `WriteCollection` | 和现网一致；调度不用代写 | 和「Query 准纯」旧说法冲突；每 tick 仍走事件 |
 | **S2 纯返回再写入** | 函数只返回 `TargetList`；调用方按返回类型写入声明好的 key | 纯度清楚，好测 | 必须是「按返回类型合同写入」，禁止猜着写；continuous 不得再扫 `outputs[]` |
 
 禁止第三种：有时自写、有时代写、文档说不清。
@@ -227,7 +227,7 @@ Feature: 框选只靠一张命中函数
 自动化（方案须保留或写明等价替换）：
 
 - `CaseESelectionShowcaseAcceptanceTests`  
-- continuous 安装：缺 `DispatchCollectionEvent`（或未来的副作用声明）要失败  
+- continuous 安装：缺 `WriteCollection`（或未来的副作用声明）要失败  
 - commit / tap：没有手抄的 `ScreenRegionToEntities` 链
 
 ---

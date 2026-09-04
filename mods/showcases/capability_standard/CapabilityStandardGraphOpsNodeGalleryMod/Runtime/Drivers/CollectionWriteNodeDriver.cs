@@ -1,12 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.GraphRuntime;
-using Ludots.Core.Input.Interaction;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -14,16 +11,13 @@ using Ludots.Platform.Abstractions;
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 
 /// <summary>
-/// Hosts the DispatchCollectionEvent vignette (#1398 S2b): the TriggerGraph stages the
-/// final set semantics and dispatches under the authored event key; this driver binds a
-/// local TriggerManager + custom-event vocabulary + a real EventKeyedCollectionWriter over
-/// the engine's EntityCollectionStore (the same local-bind pattern the invokeGraph driver
-/// uses for its map bus), pre-seeds the run's TargetList with the gallery target, and
-/// captions from what the writer actually committed.
+/// Hosts the WriteCollection vignette: the TriggerGraph computes the set semantics in-graph
+/// and writes the owned collection directly through the graph-side write primitive; this
+/// driver binds the engine EntityCollectionStore, pre-seeds the run's TargetList with the
+/// gallery target, and captions from what the store actually holds.
 /// </summary>
-public sealed class CollectionEventNodeDriver : IGraphOpsNodeDriver
+public sealed class CollectionWriteNodeDriver : IGraphOpsNodeDriver
 {
-    public const string EventName = "gallery.collection_commit";
     public const string CollectionKey = "gallery.selected";
     private const int SliceBudget = 96;
 
@@ -34,12 +28,9 @@ public sealed class CollectionEventNodeDriver : IGraphOpsNodeDriver
     private readonly Entity[] _targets = new Entity[GraphVmLimits.MaxTargets];
     private readonly int[] _intIds = new int[GraphVmLimits.MaxIntIds];
     private readonly int[] _callStack = new int[GraphVmLimits.MaxCallStackDepth];
-    private readonly TriggerManager _triggers = new();
-    private readonly CustomEventNameRegistry _customEvents = new();
     private GraphInstruction[] _program = Array.Empty<GraphInstruction>();
     private GraphExecutionCursor _cursor;
     private bool _halted;
-    private EventKeyedCollectionWriter _writer = null!;
     private EntityCollectionStore _store = null!;
     private int _collectionKeyId;
 
@@ -55,14 +46,6 @@ public sealed class CollectionEventNodeDriver : IGraphOpsNodeDriver
             ?? throw new InvalidOperationException(
                 $"Collection gallery '{ctx.Vignette.Op}' requires the engine EntityCollectionStore.");
         _collectionKeyId = _store.KeyRegistry.Register(CollectionKey);
-        _writer = new EventKeyedCollectionWriter(_store);
-        _writer.Register(EventName);
-        _customEvents.Register(EventName);
-        ctx.Api.BindTriggerManager(_triggers);
-        ctx.Api.BindCustomEvents(_customEvents);
-        _triggers.RegisterEventHandler(
-            new EventKey(EventName),
-            context => _writer.HandleEvent(new EventKey(EventName), context));
 
         GraphProgramPackage package = ctx.Compiled.Package!.Value;
         if (package.TriggerGraphEntries is not { Length: 1 } entries)
@@ -103,7 +86,7 @@ public sealed class CollectionEventNodeDriver : IGraphOpsNodeDriver
             if (!result.Halted)
             {
                 throw new InvalidOperationException(
-                    $"Collection gallery '{ctx.Vignette.Op}' ended with status {result.Status}; the commit must halt in one slice.");
+                    $"Collection gallery '{ctx.Vignette.Op}' ended with status {result.Status}; the write must halt in one slice.");
             }
 
             _halted = true;
@@ -126,7 +109,7 @@ public sealed class CollectionEventNodeDriver : IGraphOpsNodeDriver
         if (CommittedCount != 1)
         {
             throw new InvalidOperationException(
-                $"Collection gallery '{ctx.Vignette.Op}' expected the writer to commit exactly one member, got {CommittedCount}.");
+                $"Collection gallery '{ctx.Vignette.Op}' expected the write to commit exactly one member, got {CommittedCount}.");
         }
 
         var values = ctx.CaptionValues;

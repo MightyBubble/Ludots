@@ -344,7 +344,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.StickToDirection or
                 GraphNodeOp.ActivateContext or
                 GraphNodeOp.DeactivateContext or
-                GraphNodeOp.DispatchCollectionEvent
+                GraphNodeOp.WriteCollection
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -909,7 +909,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.SetInteractionMode, HandleSetInteractionMode, "SetInteractionMode graph opcode.");
             Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
             Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
-            Register(GraphNodeOp.DispatchCollectionEvent, HandleDispatchCollectionEvent, "DispatchCollectionEvent graph opcode.");
+            Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
         Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
@@ -1332,7 +1332,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 s.TreeSteps = child.TreeSteps;
                 s.I[ins.Dst] = child.ReturnInt;
                 // Query (and Trigger) callees may leave a TargetList; copy back so the host can
-                // DispatchCollectionEvent / continue without re-running the hit chain.
+                // WriteCollection / continue without re-running the hit chain.
                 int hitCount = child.TargetList.Count;
                 if (hitCount > s.Targets.Length)
                 {
@@ -1531,14 +1531,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.Api.DeactivateContext(target, ContextOpEncoding.UnpackContext(ins.Imm));
         }
 
-        private static void HandleDispatchCollectionEvent(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        private static void HandleWriteCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            MapId mapId = s.MapScope ?? ResolveMapOfEntity(ref s, s.Caster);
-            s.Api.DispatchCollectionEvent(
+            s.Api.WriteCollection(
                 ins.Imm,
                 s.I[ins.B],
                 s.Caster,
-                mapId,
                 s.Targets,
                 s.TargetList.Count);
         }

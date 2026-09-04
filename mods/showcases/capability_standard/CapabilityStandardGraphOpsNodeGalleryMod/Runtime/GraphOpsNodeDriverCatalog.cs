@@ -26,7 +26,7 @@ public static class GraphOpsNodeDriverCatalog
             "rel" => new Drivers.RelNodeDriver(),
             "query" => new Drivers.QueryNodeDriver(),
             "aimsource" => new Drivers.AimSourceNodeDriver(),
-            "collectionEvent" => new Drivers.CollectionEventNodeDriver(),
+            "collectionWrite" => new Drivers.CollectionWriteNodeDriver(),
             _ => throw new InvalidOperationException($"Unknown GraphOps node driver '{driver}'.")
         };
     }

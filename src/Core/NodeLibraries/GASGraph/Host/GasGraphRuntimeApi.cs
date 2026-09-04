@@ -338,7 +338,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         /// <summary>
         /// Binds the custom event name registry so collection pass-through dispatches can
-        /// fail closed on undeclared event keys (<see cref="DispatchCollectionEvent"/>).
+        
         /// </summary>
         public void BindCustomEvents(Gameplay.MapTriggers.CustomEventNameRegistry customEvents)
         {
@@ -929,61 +929,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         /// so the Entity[] payload rides the reserved MapTrigger.Collection* keys; the event
         /// key must be a declared custom event (fail closed) and a map scope is required.
         /// </summary>
-        public void DispatchCollectionEvent(int packedKeyIds, int opKind, Entity source, MapId mapId, Span<Entity> entities, int count)
+        /// <summary>
+        /// Direct owned-collection write (graph-side primitive): the caller computed owner, op,
+        /// and the entity set in-graph; set semantics execute in CollectionWrite and membership
+        /// change events fire from the store's presentation diff like any other writer.
+        /// </summary>
+        public void WriteCollection(int collectionKeyId, int opKind, Entity owner, Span<Entity> entities, int count)
         {
-            RejectDerivedAttributeSideEffect(nameof(DispatchCollectionEvent));
-            var triggerManager = _triggerManager
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
-            var customEvents = _customEvents
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CollectionEventBridgeUnavailable");
-
-            if (opKind is < 0 or > 2)
+            var store = _entityCollections
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.EntityCollectionsUnavailable");
+            if (count < 0 || count > entities.Length)
             {
                 throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.CollectionEventOpInvalid: op kind {opKind} is not one of replace(0)/add(1)/subtract(2).");
+                    $"GAS.GRAPH.ERR.CollectionWriteCountInvalid: count {count} is outside entity list length {entities.Length}.");
             }
 
-            if (string.IsNullOrEmpty(mapId.Value))
-            {
-                throw new InvalidOperationException(
-                    "GAS.GRAPH.ERR.CollectionEventNoMapScope: DispatchCollectionEvent requires a map scope.");
-            }
-
-            string eventName = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(CollectionEventOpEncoding.UnpackEventKey(packedKeyIds))
-                ?? throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.CollectionEventKeyUnknown: event key id {CollectionEventOpEncoding.UnpackEventKey(packedKeyIds)} resolves to no config key.");
-            if (!customEvents.IsDeclaredCustom(eventName))
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.CollectionEventKeyUnknown: '{eventName}' is not a declared custom event; declare it in {Gameplay.MapTriggers.CustomEventNameRegistry.ConfigPath}.");
-            }
-
-            var context = new ScriptContext();
-            context.Set(ContextKeys.MapId, mapId);
-            if (source != Entity.Null && source != default)
-            {
-                context.Set(MapTriggerEventPayloadKeys.SourceEntity, source);
-            }
-
-            // Sync handlers consume before FireMapEvent returns; reuse capacity scratch + explicit count
-            // so continuous-tick hover refresh does not allocate every frame.
-            if (count > _collectionEventEntityScratch.Length)
-            {
-                int next = _collectionEventEntityScratch.Length == 0 ? 64 : _collectionEventEntityScratch.Length;
-                while (next < count)
-                {
-                    next *= 2;
-                }
-
-                _collectionEventEntityScratch = new Entity[next];
-            }
-
-            entities.Slice(0, count).CopyTo(_collectionEventEntityScratch.AsSpan(0, count));
-            context.Set(MapTriggerEventPayloadKeys.CollectionEntitySet, _collectionEventEntityScratch);
-            context.Set(MapTriggerEventPayloadKeys.CollectionEntityCount, count);
-            context.Set(MapTriggerEventPayloadKeys.CollectionOp, opKind);
-            context.Set(MapTriggerEventPayloadKeys.CollectionKey, CollectionEventOpEncoding.UnpackCollectionKey(packedKeyIds));
-            triggerManager.FireMapEvent(mapId, new EventKey(eventName), context);
+            CollectionWrite.Apply(store, owner, collectionKeyId, (CollectionWriteOp)opKind, entities.Slice(0, count));
         }
 
         /// <summary>

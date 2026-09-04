@@ -44,7 +44,7 @@ DRIVER_LABELS = {
     "placedEntity": "放置实体名册",
     "placedRegion": "放置区域名册",
     "sandbox": "组合短剧",
-    "collectionEvent": "集合透传",
+    "collectionWrite": "集合写入",
 }
 
 HANDBOOK_BY_DRIVER = {
@@ -63,7 +63,7 @@ HANDBOOK_BY_DRIVER = {
     "activity": ("map-02-triggers.md", "地图触发器 · map-02"),
     "sandbox": ("gr-02-document.md", "图文档写法 · gr-02"),
     "aimsource": ("gr-op-06-spatial.md", "空间圈人 · gr-op-06"),
-    "collectionEvent": ("map-02-triggers.md", "地图触发器 · map-02"),
+    "collectionWrite": ("map-02-triggers.md", "地图触发器 · map-02"),
 }
 
 ALL_KINDS = [

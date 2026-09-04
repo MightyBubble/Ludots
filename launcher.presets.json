@@ -3212,10 +3212,10 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_DispatchCollectionEvent_raylib",
-      "name": "Graph Op DispatchCollectionEvent Raylib",
+      "id": "capability_standard_graph_op_WriteCollection_raylib",
+      "name": "Graph Op WriteCollection Raylib",
       "selectors": [
-        "$capability_standard_graph_op_DispatchCollectionEvent"
+        "$capability_standard_graph_op_WriteCollection"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

@@ -113,7 +113,7 @@ namespace Ludots.Tests.GAS.Graph
             Assert.That(kind, Is.EqualTo(GraphKind.Score));
             Assert.That(programs.RequireKind(graphId, GraphKind.Score), Is.EqualTo(GraphKind.Score));
 
-            Assert.Throws<InvalidOperationException>(() =>
+            Assert.Throws<ArgumentException>(() =>
                 programs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Effect));
         }
 
@@ -335,16 +335,16 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
-        public void GraphKindOperationPolicy_QueryAllowsAuthorableDispatchCollectionEvent()
+        public void GraphKindOperationPolicy_QueryAllowsAuthorableWriteCollection()
         {
             var program = new[]
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Imm = 0, Dst = 0 },
                 new GraphInstruction
                 {
-                    Op = (ushort)GraphNodeOp.DispatchCollectionEvent,
+                    Op = (ushort)GraphNodeOp.WriteCollection,
                     B = 0,
-                    Imm = 1 | (1 << 16),
+                    Imm = 1,
                 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
@@ -354,7 +354,14 @@ namespace Ludots.Tests.GAS.Graph
                 program,
                 GasGraphOpHandlerTable.Instance,
                 graphId: 14103,
-                entrypoint: nameof(GraphKindOperationPolicy_QueryAllowsAuthorableDispatchCollectionEvent)));
+                entrypoint: nameof(GraphKindOperationPolicy_QueryAllowsAuthorableWriteCollection)));
+
+            Assert.DoesNotThrow(() => GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.TriggerGraph,
+                program,
+                GasGraphOpHandlerTable.Instance,
+                graphId: 14103,
+                entrypoint: nameof(GraphKindOperationPolicy_QueryAllowsAuthorableWriteCollection)));
         }
 
         [Test]

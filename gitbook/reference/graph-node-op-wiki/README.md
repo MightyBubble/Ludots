@@ -238,7 +238,7 @@
 
 > 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
 
-- [终选集按事件 key 落账](DispatchCollectionEvent.md) — 图里点好的终选集，一声事件按 key 递出去，账房照单写进集合。
+- [终选集按事件 key 落账](WriteCollection.md) — 图里点好的终选集，一声事件按 key 递出去，账房照单写进集合。
 
 ## 黑板与配置
 

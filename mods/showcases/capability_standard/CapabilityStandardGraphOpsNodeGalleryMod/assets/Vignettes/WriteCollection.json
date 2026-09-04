@@ -1,6 +1,6 @@
 {
-  "op": "DispatchCollectionEvent",
-  "driver": "collectionEvent",
+  "op": "WriteCollection",
+  "driver": "collectionWrite",
   "title": "终选集按事件 key 落账",
   "beat": "图里点好的终选集，一声事件按 key 递出去，账房照单写进集合。",
   "detailTemplate": "事件按 key 送达，账房写进 {count} 名成员。",

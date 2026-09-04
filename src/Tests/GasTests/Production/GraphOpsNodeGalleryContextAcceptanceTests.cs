@@ -8,7 +8,7 @@ namespace Ludots.Tests.Gas.Production;
 /// <summary>
 /// #1398 S2b per-op gallery acceptance: ActivateContext/DeactivateContext settle real
 /// damage through their graph tails while the target carries (or no longer carries) the
-/// gallery aim context instance; DispatchCollectionEvent lands the final set through the
+/// gallery aim context instance; WriteCollection lands the final set through the
 /// event-keyed writer into the EntityCollectionStore.
 /// </summary>
 [TestFixture]
@@ -61,17 +61,17 @@ public sealed class GraphOpsNodeGalleryContextAcceptanceTests
     }
 
     [Test]
-    public void DispatchCollectionEventVignette_CommitsThroughTheEventKeyedWriter()
+    public void WriteCollectionVignette_CommitsThroughTheStoreWrite()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();
-        runtime.BindOp("DispatchCollectionEvent");
+        runtime.BindOp("WriteCollection");
         runtime.EnsureWorld();
         runtime.Tick(0.35f);
 
         foreach (string phrase in runtime.Vignette.AssertDetailContains)
         {
             Assert.That(runtime.Metrics.Detail, Does.Contain(phrase),
-                $"DispatchCollectionEvent detail missing phrase: {runtime.Metrics.Detail}");
+                $"WriteCollection detail missing phrase: {runtime.Metrics.Detail}");
         }
 
         Assert.That(runtime.Metrics.Detail, Does.Contain("1"), "the caption quotes the committed member count");

@@ -64,7 +64,7 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>
         /// Case E §05: graph id to run every tick while this context is active. The graph must
-        /// DispatchCollectionEvent to write its preview collection. Absent = no per-tick graph.
+        /// WriteCollection to write its preview collection. Absent = no per-tick graph.
         /// </summary>
         public InteractionContextWhileActive? WhileActive { get; set; }
     }
