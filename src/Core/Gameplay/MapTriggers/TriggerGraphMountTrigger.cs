@@ -225,6 +225,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public Entity Scope => _scope;
 
+        /// <summary>
+        /// Stamped by the mounting feature before registration (default: unowned). The
+        /// TriggerManager owner index reads it so mounts can be queried and removed by
+        /// owner; see <see cref="TriggerMountOwner"/>.
+        /// </summary>
+        public TriggerMountOwner Owner { get; internal set; }
+
         public GraphDebugTrace DebugTrace => _debugTrace;
 
         public GraphExecutionCursor Cursor => _cursor;

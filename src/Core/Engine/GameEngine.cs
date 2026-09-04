@@ -161,7 +161,7 @@ namespace Ludots.Core.Engine
         /// <summary>Entity-domain TriggerGraph mount pipeline; owns spawn/destroy-tick dispatch and dead-mount sweeps.</summary>
         public Gameplay.MapTriggers.EntityTriggerGraphMounts EntityTriggerGraphMounts { get; private set; }
 
-        private Gameplay.MapTriggers.InteractionContextTriggerGateSystem? _interactionContextTriggerGate;
+        private Gameplay.MapTriggers.InteractionContextTriggerMountSystem? _interactionContextTriggerGate;
         public SystemFactoryRegistry SystemFactoryRegistry { get; private set; }
         public TriggerDecoratorRegistry TriggerDecoratorRegistry { get; private set; }
         internal ModExtensionHub ModExtensions { get; private set; }
@@ -2227,7 +2227,7 @@ namespace Ludots.Core.Engine
             // mounts/unmounts profile-declared triggers[] graphs on the context subject;
             // simulation-side twin of the local IMC projection above (observers and all
             // context writers included, not only local seats).
-            var interactionContextTriggerGate = new Gameplay.MapTriggers.InteractionContextTriggerGateSystem(
+            var interactionContextTriggerGate = new Gameplay.MapTriggers.InteractionContextTriggerMountSystem(
                 World,
                 TriggerManager,
                 interactionContextProfileRegistry,
@@ -2252,7 +2252,8 @@ namespace Ludots.Core.Engine
                     graphReturnWriter,
                     graphProgramRegistry,
                     entityCollectionStore,
-                    gasGraphApi),
+                    gasGraphApi,
+                    interactionContextTriggerGate),
                 SystemGroup.InputCollection);
             RegisterSystem(new StoryRuntimeSystem(this, dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
@@ -2931,8 +2932,6 @@ namespace Ludots.Core.Engine
             var focused = MapSessions.FocusedSession;
             bool wasFocused = focused != null && focused.MapId == mid;
 
-            EntityTriggerGraphMounts?.DropMap(mid);
-            _interactionContextTriggerGate?.DropMap(mid);
             MapSessions.UnloadSession(mid, World);
             _mapLoadStatuses.Remove(mid);
 
@@ -3102,8 +3101,6 @@ namespace Ludots.Core.Engine
             var poppedId = MapSessions.PopFocused();
             if (innerSession != null)
             {
-                EntityTriggerGraphMounts?.DropMap(poppedId);
-                _interactionContextTriggerGate?.DropMap(poppedId);
                 MapSessions.UnloadSession(poppedId, World);
                 _mapLoadStatuses.Remove(poppedId);
             }

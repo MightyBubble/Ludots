@@ -1,4 +1,5 @@
 using System;
+using Arch.Core;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -42,6 +43,10 @@ namespace Ludots.Core.Scripting
 
         // Map-scoped trigger tracking
         private readonly Dictionary<MapId, List<Trigger>> _mapTriggers = new Dictionary<MapId, List<Trigger>>();
+        // Owner-keyed view over the map tables (entity-domain mounts only). The map tables
+        // stay the single ledger; this index only answers "which mounts did owner X create"
+        // so no feature keeps a parallel shadow list (#1398 D10).
+        private readonly Dictionary<TriggerMountOwner, OwnedMountRecord> _ownedMounts = new();
 
         // Map -> Event -> triggers, maintained in priority order at registration time so
         // steady-state dispatch is a dictionary lookup with zero allocations.
@@ -241,7 +246,151 @@ namespace Ludots.Core.Scripting
                 list.Remove(triggers[i]);
                 RemoveMapEventTrigger(mapId, triggers[i]);
                 UnregisterTrigger(triggers[i]);
+                ForgetOwnedMount(triggers[i]);
             }
+        }
+
+        /// <summary>Live mounts one owner created (entity-domain mounts only), or false when none.</summary>
+        public bool TryGetOwnedMounts(TriggerMountOwner owner, out IReadOnlyList<Trigger> mounts)
+        {
+            if (_ownedMounts.TryGetValue(owner, out OwnedMountRecord? record) && record.Triggers.Count > 0)
+            {
+                mounts = record.Triggers;
+                return true;
+            }
+
+            mounts = Array.Empty<Trigger>();
+            return false;
+        }
+
+        /// <summary>
+        /// Remove exactly one owner's mounts from its map — the owner-scoped removal path
+        /// features use instead of tracking their own trigger lists (#1398 D10).
+        /// </summary>
+        public void RemoveOwnedMounts(TriggerMountOwner owner)
+        {
+            if (!_ownedMounts.TryGetValue(owner, out OwnedMountRecord? record) || record.Triggers.Count == 0)
+            {
+                return;
+            }
+
+            // Copy: RemoveMapTriggers mutates the record list via ForgetOwnedMount.
+            Trigger[] snapshot = record.Triggers.ToArray();
+            RemoveMapTriggers(record.MapId, snapshot);
+        }
+
+        /// <summary>All owned mounts registered for one map (sweep / death dispatch / diagnostics).</summary>
+        public void CollectOwnedMounts(MapId mapId, List<KeyValuePair<TriggerMountOwner, List<Trigger>>> sink)
+        {
+            ArgumentNullException.ThrowIfNull(sink);
+            foreach (KeyValuePair<TriggerMountOwner, OwnedMountRecord> pair in _ownedMounts)
+            {
+                if (pair.Value.MapId.Equals(mapId) && pair.Value.Triggers.Count > 0)
+                {
+                    sink.Add(new KeyValuePair<TriggerMountOwner, List<Trigger>>(pair.Key, pair.Value.Triggers));
+                }
+            }
+        }
+
+        /// <summary>All owned mounts of one subject and kind, any map (entity death dispatch).</summary>
+        public void CollectOwnedMounts(Entity subject, TriggerMountOwnerKind kind, List<KeyValuePair<TriggerMountOwner, List<Trigger>>> sink)
+        {
+            ArgumentNullException.ThrowIfNull(sink);
+            foreach (KeyValuePair<TriggerMountOwner, OwnedMountRecord> pair in _ownedMounts)
+            {
+                if (pair.Key.Kind == kind && pair.Key.Subject == subject && pair.Value.Triggers.Count > 0)
+                {
+                    sink.Add(new KeyValuePair<TriggerMountOwner, List<Trigger>>(pair.Key, pair.Value.Triggers));
+                }
+            }
+        }
+
+        /// <summary>Distinct subjects with live mounts of one owner kind; test observability.</summary>
+        public int CountOwnedMountSubjects(TriggerMountOwnerKind kind, Func<Entity, bool> subjectAlive)
+        {
+            ArgumentNullException.ThrowIfNull(subjectAlive);
+            HashSet<Entity> subjects = new();
+            foreach (KeyValuePair<TriggerMountOwner, OwnedMountRecord> pair in _ownedMounts)
+            {
+                if (pair.Key.Kind == kind &&
+                    pair.Value.Triggers.Count > 0 &&
+                    subjectAlive(pair.Key.Subject))
+                {
+                    subjects.Add(pair.Key.Subject);
+                }
+            }
+
+            return subjects.Count;
+        }
+
+        /// <summary>All owned mounts of one kind, any subject/map (reconcile catch-up).</summary>
+        public void CollectOwnedMounts(TriggerMountOwnerKind kind, List<KeyValuePair<TriggerMountOwner, List<Trigger>>> sink)
+        {
+            ArgumentNullException.ThrowIfNull(sink);
+            foreach (KeyValuePair<TriggerMountOwner, OwnedMountRecord> pair in _ownedMounts)
+            {
+                if (pair.Key.Kind == kind && pair.Value.Triggers.Count > 0)
+                {
+                    sink.Add(new KeyValuePair<TriggerMountOwner, List<Trigger>>(pair.Key, pair.Value.Triggers));
+                }
+            }
+        }
+
+        private void RememberOwnedMount(MapId mapId, TriggerGraphMountTrigger mount)
+        {
+            if (!_ownedMounts.TryGetValue(mount.Owner, out OwnedMountRecord? record))
+            {
+                record = new OwnedMountRecord(mapId);
+                _ownedMounts[mount.Owner] = record;
+            }
+
+            if (!record.Triggers.Contains(mount))
+            {
+                record.Triggers.Add(mount);
+            }
+        }
+
+        private void ForgetOwnedMount(Trigger trigger)
+        {
+            if (trigger is not TriggerGraphMountTrigger { Owner.IsOwned: true } mount ||
+                !_ownedMounts.TryGetValue(mount.Owner, out OwnedMountRecord? record))
+            {
+                return;
+            }
+
+            record.Triggers.Remove(mount);
+            if (record.Triggers.Count == 0)
+            {
+                _ownedMounts.Remove(mount.Owner);
+            }
+        }
+
+        private void ForgetOwnedMountsForMap(MapId mapId, List<Trigger> mapList)
+        {
+            for (int i = 0; i < mapList.Count; i++)
+            {
+                if (mapList[i] is TriggerGraphMountTrigger { Owner.IsOwned: true } mount &&
+                    _ownedMounts.TryGetValue(mount.Owner, out OwnedMountRecord? record) &&
+                    record.MapId.Equals(mapId))
+                {
+                    record.Triggers.Remove(mount);
+                    if (record.Triggers.Count == 0)
+                    {
+                        _ownedMounts.Remove(mount.Owner);
+                    }
+                }
+            }
+        }
+
+        private sealed class OwnedMountRecord
+        {
+            public OwnedMountRecord(MapId mapId)
+            {
+                MapId = mapId;
+            }
+
+            public MapId MapId { get; }
+            public List<Trigger> Triggers { get; } = new();
         }
 
         private void RegisterIntoMapList(MapId mapId, IReadOnlyList<Trigger> triggers, List<Trigger> list)
@@ -255,6 +404,11 @@ namespace Ludots.Core.Scripting
                     !string.IsNullOrWhiteSpace(actionMount.ActionId))
                 {
                     _actionBindings?.Add(actionMount);
+                }
+
+                if (triggers[i] is TriggerGraphMountTrigger ownedMount && ownedMount.Owner.IsOwned)
+                {
+                    RememberOwnedMount(mapId, ownedMount);
                 }
             }
         }
@@ -493,6 +647,7 @@ namespace Ludots.Core.Scripting
                 UnregisterTrigger(list[i]);
             }
 
+            ForgetOwnedMountsForMap(mapId, list);
             _mapTriggers.Remove(mapId);
             _mapEventTriggers.Remove(mapId);
             UnregisterGlobalTriggers(mapId);

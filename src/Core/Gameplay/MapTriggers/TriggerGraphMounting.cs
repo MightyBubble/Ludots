@@ -153,7 +153,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// tag resolution, subscription-scope routing); the mount's optional event narrows the
         /// graph's dispatch entries and its optional filters block replaces the entries' own
         /// filters for this mount (reference-time override, not a merge). Caller owns
-        /// registration and lifecycle (InteractionContextTriggerGateSystem).
+        /// registration and lifecycle (InteractionContextTriggerMountSystem).
         /// </summary>
         public static List<Trigger> BuildContextMountTriggers(
             GraphProgramRegistry programs,
