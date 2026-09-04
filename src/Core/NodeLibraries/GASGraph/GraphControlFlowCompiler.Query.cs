@@ -27,6 +27,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ConstFloat:
                 case GraphNodeOp.ConstInt:
                 case GraphNodeOp.LoadCaster:
+                case GraphNodeOp.LoadPointerScreenX:
+                case GraphNodeOp.LoadPointerScreenY:
                 case GraphNodeOp.QueryAllMapEntities:
                     break;
                 case GraphNodeOp.LoadSelfAttribute:
@@ -40,6 +42,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     }
 
+                    break;
+                case GraphNodeOp.ReadBlackboardFloat:
+                    RequireNonEmpty(node.BlackboardKey, "blackboardKey", node, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QueryRadius:
                     RequireSpatialCapacityPolicy(node, graphId, diagnostics);
@@ -391,10 +397,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ReadMapVarFloat:
                     instruction.Imm = RequireSymbol(node.Var, "var", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
+                case GraphNodeOp.ReadBlackboardFloat:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
                 case GraphNodeOp.ConstInt:
                     instruction.Imm = node.IntValue;
                     break;
                 case GraphNodeOp.LoadCaster:
+                case GraphNodeOp.LoadPointerScreenX:
+                case GraphNodeOp.LoadPointerScreenY:
                 case GraphNodeOp.QueryAllMapEntities:
                     break;
                 case GraphNodeOp.QueryRadius:

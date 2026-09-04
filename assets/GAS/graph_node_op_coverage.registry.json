@@ -1390,6 +1390,50 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "LoadPointerScreenX",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_LoadPointerScreenX",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryFloatAcceptanceTests.LoadPointerScreenX_QuotesPinnedLivePointerAxis"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "LoadPointerScreenY",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_LoadPointerScreenY",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryFloatAcceptanceTests.LoadPointerScreenY_QuotesPinnedLivePointerAxis"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "LoadSelfAttribute",
       "authorableKinds": [
         "Derived",
@@ -2129,6 +2173,7 @@
         "Derived",
         "Effect",
         "TriggerGraph",
+        "Query",
         "Score",
         "Script",
         "Validation"
@@ -3086,7 +3131,9 @@
     {
       "op": "WriteBlackboardFloat",
       "authorableKinds": [
-        "Effect"
+        "Effect",
+        "TriggerGraph",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_WriteBlackboardFloat",
       "status": "covered",

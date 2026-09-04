@@ -32,6 +32,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private const GraphKindMask LinearAndScript = LinearAll | ScriptAndTriggerGraph;
 
+        private const GraphKindMask LinearScriptAndQuery = LinearAndScript | GraphKindMask.Query;
+
         private const GraphKindMask LinearQueryScript = LinearAll | GraphKindMask.Query | ScriptAndTriggerGraph;
 
         private const GraphKindMask EffectAndScript = GraphKindMask.Effect | ScriptAndTriggerGraph;
@@ -150,10 +152,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.FanOutDispatchEffectDynamic, LinearEffect, GraphValueType.Void, portValue, dst: GraphOperandRole.DispatchPresetDst);
             Add(rows, GraphNodeOp.ModifyAttributeAdd, LinearEffect, GraphValueType.Void, portTargetValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.SendEvent, LinearEffect, GraphValueType.Void, portTargetValue, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.ReadBlackboardFloat, LinearAndScript, GraphValueType.Float, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
+            // ReadBlackboardFloat includes Query: Case E box_hit (Query) reads press corners from the operator rep.
+            Add(rows, GraphNodeOp.ReadBlackboardFloat, LinearScriptAndQuery, GraphValueType.Float, portSource, queryOut: GraphValueType.Float, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadBlackboardInt, LinearAndScript, GraphValueType.Int, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadBlackboardEntity, LinearAndScript, GraphValueType.Entity, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Entity, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.WriteBlackboardFloat, LinearEffect, GraphValueType.Void, portSourceValue, imm: GraphOperandRole.SymbolImm);
+            // WriteBlackboardFloat includes TriggerGraph: Case E box_begin stores press corners on the operator rep.
+            Add(rows, GraphNodeOp.WriteBlackboardFloat, EffectAndScript, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.WriteBlackboardInt, LinearEffect, GraphValueType.Void, portSourceValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.WriteBlackboardEntity, LinearEffect, GraphValueType.Void, portSourceValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadConfigFloat, LinearAll, GraphValueType.Float, imm: GraphOperandRole.SymbolImm, listenerOwner: true);
@@ -172,7 +176,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.SetInteractionMode, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.ActivateContext, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.DeactivateContext, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
-            // Query may write collections itself (Case E hover): call-site must not GraphReturnWriter-steal.
+            // Host TriggerGraphs write collections themselves (pure Query callees leave the TargetList
+            // to the caller; GraphReturnWriter must not steal collection writes).
             Add(rows, GraphNodeOp.WriteCollection, ScriptAndTriggerGraph, GraphValueType.Void, portValue, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.SetPanelAudience, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.ModifyAttributeSet, EffectAndTriggerGraph, GraphValueType.Void, portTargetValue, scriptPorts: portTargetValue, imm: GraphOperandRole.SymbolImm);
@@ -222,6 +227,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // ── Aimsource pure helpers: read-only screen/pointer/stick math for aim graphs ──
             Add(rows, GraphNodeOp.ScreenPointToGround, QueryAndTriggerGraph, GraphValueType.Bool, queryOut: GraphValueType.Bool, queryPorts: portAB, scriptPorts: portAB);
             Add(rows, GraphNodeOp.ScreenPointToEntity, QueryAndTriggerGraph, GraphValueType.Entity, queryOut: GraphValueType.Entity, queryPorts: portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.LoadPointerScreenX, LinearQueryScript, GraphValueType.Float, queryOut: GraphValueType.Float, scriptOut: GraphValueType.Float);
+            Add(rows, GraphNodeOp.LoadPointerScreenY, LinearQueryScript, GraphValueType.Float, queryOut: GraphValueType.Float, scriptOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.ScreenRegionToEntities, QueryAndTriggerGraph, GraphValueType.Void, queryPorts: portRect, scriptPorts: portRectCorners, queryOut: GraphValueType.TargetList, flags: GraphOperandRole.SrcRegisterFlags);
             Add(rows, GraphNodeOp.PointToDirection, QueryAndTriggerGraph, GraphValueType.Float, queryOut: GraphValueType.Float, queryPorts: portSource, scriptPorts: portSource, flags: GraphOperandRole.BoolScratchFlags);
             Add(rows, GraphNodeOp.StickToDirection, QueryAndTriggerGraph, GraphValueType.Float, queryOut: GraphValueType.Float, queryPorts: portAB, scriptPorts: portAB, flags: GraphOperandRole.BoolScratchFlags);

@@ -1,7 +1,7 @@
 {
   "name": "CaseESelectionMod",
   "version": "1.0.0",
-  "description": "Case E (#1398) 框选纯数据 showcase：候选集 case_e.selectable、拖拽预览集 case_e.box_hover、已选中 selected 三套分离；按下开框 / 抬起落定（无 Tap/Drag）；boxing 存活期命中 + ScreenRect 框 + 松手写 selected。",
+      "description": "Case E (#1398) 框选纯数据 showcase：候选集 case_e.selectable（battle context 挂载 roster_sync 维护）、拖拽预览集 case_e.box_hover、已选中 selected 三套分离；按下开框 / 抬起落定（无 Tap/Drag）；boxing 存活期命中 + ScreenRect 框 + 松手写 selected。",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

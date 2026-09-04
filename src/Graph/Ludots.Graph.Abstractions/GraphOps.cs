@@ -378,6 +378,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// fire from the store's presentation diff like any other writer.
         /// </summary>
         WriteCollection = 477,
+        /// <summary>
+        /// Live pointer screen X (window px) for the authoritative PointerPos action.
+        /// Pure float read; fail closed when the input snapshot is unavailable.
+        /// </summary>
+        LoadPointerScreenX = 479,
+        /// <summary>
+        /// Live pointer screen Y (window px) for the authoritative PointerPos action.
+        /// Pure float read; fail closed when the input snapshot is unavailable.
+        /// </summary>
+        LoadPointerScreenY = 480,
 
     }
 

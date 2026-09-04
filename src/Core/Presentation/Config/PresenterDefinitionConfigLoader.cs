@@ -2205,7 +2205,11 @@ namespace Ludots.Core.Presentation.Config
             {
                 "attribute" or "attributeRatio" or "attributeBase" => throw new InvalidOperationException(
                     $"{context} source '{source}' duplicates AttributeBinding behavior. Use an AttributeBinding behavior with attributeBinding.targetParamKey instead."),
-                "graph" => ValueRef.FromGraph(ParseRequiredInt(node["sourceId"], "Presenter binding graph.sourceId")),
+                "graph" => ValueRef.FromGraph(ResolveGraphProgramId(node["sourceId"], context)),
+                "ownerBlackboardFloat" => ValueRef.FromOwnerBlackboardFloat(
+                    ResolveBlackboardKeyId(node["sourceId"], context)),
+                "pointerScreenX" => ValueRef.FromPointerScreenX(),
+                "pointerScreenY" => ValueRef.FromPointerScreenY(),
                 "entityColor" => ValueRef.FromEntityColor(ParseRequiredInt(node["sourceId"], "Presenter binding entityColor.sourceId")),
                 "entityColorVector" => ValueRef.FromEntityColorVector(),
                 "facingRadians" => ValueRef.FromFacingRadians(),
@@ -2215,6 +2219,19 @@ namespace Ludots.Core.Presentation.Config
                 null or "" => throw new InvalidOperationException("Presenter binding must declare explicit source."),
                 _ => throw new InvalidOperationException($"Presenter binding source has invalid value '{source}'."),
             };
+        }
+
+        private static int ResolveBlackboardKeyId(JsonNode? node, string context)
+        {
+            string keyName = ParseRequiredSemanticString(node, $"{context} ownerBlackboardFloat.sourceId");
+            int keyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(keyName);
+            if (keyId <= Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.InvalidId)
+            {
+                throw new InvalidOperationException(
+                    $"{context} ownerBlackboardFloat.sourceId '{keyName}' did not resolve to a config key id.");
+            }
+
+            return keyId;
         }
 
         private static void RejectRemovedBindingFields(JsonNode node, string context)
@@ -2229,6 +2246,29 @@ namespace Ludots.Core.Presentation.Config
         private int ResolveTextTokenId(JsonNode node)
         {
             return ResolveTextTokenId(node["textToken"], "Presenter WorldText textToken binding textToken");
+        }
+
+        private static int ResolveGraphProgramId(JsonNode? node, string context)
+        {
+            if (node is JsonValue value && value.TryGetValue<int>(out int numericId))
+            {
+                if (numericId <= 0)
+                {
+                    throw new InvalidOperationException($"{context} graph.sourceId must be a positive program id.");
+                }
+
+                return numericId;
+            }
+
+            string graphName = ParseRequiredSemanticString(node, $"{context} graph.sourceId");
+            int graphId = Ludots.Core.NodeLibraries.GASGraph.Host.GraphIdRegistry.GetId(graphName);
+            if (graphId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{context} graph.sourceId references unknown graph '{graphName}'.");
+            }
+
+            return graphId;
         }
 
         private int ResolveTextTokenId(JsonNode? node, string context)

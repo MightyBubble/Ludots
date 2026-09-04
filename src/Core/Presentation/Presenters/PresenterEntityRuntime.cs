@@ -1467,6 +1467,7 @@ namespace Ludots.Core.Presentation.Presenters
             bool hasAnimator = false;
             bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
             bool hasGraphParamBinding = definition.HasGraphParamBindingWork;
+            bool hasLiveParamBinding = definition.HasLiveParamBindingWork;
             bool hasMinimapMarker = false;
             bool hasScreenRect = false;
             bool hasExtensionBehavior = false;
@@ -1555,6 +1556,7 @@ namespace Ludots.Core.Presentation.Presenters
             SyncTickBehaviorMarker<PerfHasGrounding>(entity, hasGrounding);
             SyncTickBehaviorMarker<PerfHasOwnerFacingBinding>(entity, hasOwnerFacingBinding);
             SyncTickBehaviorMarker<PerfHasGraphParamBinding>(entity, hasGraphParamBinding);
+            SyncTickBehaviorMarker<PerfHasLiveParamBinding>(entity, hasLiveParamBinding);
             SyncTickBehaviorMarker<PerfHasMinimapMarker>(entity, hasMinimapMarker);
             SyncTickBehaviorMarker<PerfHasScreenRect>(entity, hasScreenRect);
             SyncTickBehaviorMarker<PerfHasExtensionBehavior>(entity, hasExtensionBehavior);
@@ -1735,6 +1737,11 @@ namespace Ludots.Core.Presentation.Presenters
             if (_world.Has<PerfHasGraphParamBinding>(entity))
             {
                 RemoveMarker<PerfHasGraphParamBinding>(entity);
+            }
+
+            if (_world.Has<PerfHasLiveParamBinding>(entity))
+            {
+                RemoveMarker<PerfHasLiveParamBinding>(entity);
             }
 
             if (_world.Has<PerfHasMinimapMarker>(entity))
@@ -2776,6 +2783,7 @@ namespace Ludots.Core.Presentation.Presenters
                 bool hasAnimator = false;
                 bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
                 bool hasGraphParamBinding = definition.HasGraphParamBindingWork;
+                bool hasLiveParamBinding = definition.HasLiveParamBindingWork;
                 bool hasMinimapMarker = false;
                 bool hasScreenRect = false;
                 bool hasExtensionBehavior = false;
@@ -2827,6 +2835,7 @@ namespace Ludots.Core.Presentation.Presenters
                 if (hasGrounding) signature += Component<PerfHasGrounding>.Signature;
                 if (hasOwnerFacingBinding) signature += Component<PerfHasOwnerFacingBinding>.Signature;
                 if (hasGraphParamBinding) signature += Component<PerfHasGraphParamBinding>.Signature;
+                if (hasLiveParamBinding) signature += Component<PerfHasLiveParamBinding>.Signature;
                 if (hasMinimapMarker) signature += Component<PerfHasMinimapMarker>.Signature;
                 if (hasScreenRect) signature += Component<PerfHasScreenRect>.Signature;
                 if (hasExtensionBehavior) signature += Component<PerfHasExtensionBehavior>.Signature;

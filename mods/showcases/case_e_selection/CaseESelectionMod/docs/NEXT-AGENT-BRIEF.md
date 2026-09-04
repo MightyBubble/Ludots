@@ -1,47 +1,78 @@
-# 下一位：图当可调用函数 — 先写方案
+# Case E 交接
 
-> **正本**：[可调用函数远景](../../../../../gitbook/architecture/graph-callable-function-vision.md)  
-> **进度入口**：[图能力状态](../../../../../gitbook/architecture/graph-capability-status.md)  
-> **Case E 说明**：[结构与配置](./case-e-config-structure.html)
+> 结构说明：[case-e-config-structure.html](./case-e-config-structure.html)  
+> 图当可调用函数（另单方案正本）：[graph-callable-function-vision.md](../../../../../gitbook/architecture/graph-callable-function-vision.md)
 
-## 这张单子要你干什么
+## 1. 概述
 
-写一份可评审的方案（Markdown），交人审。不要在本单里合入 Core 大改。
+Case E 是框选演示：按下拖框，抬起落定。  
+合同纠偏已到位——起角落指挥官黑板，屏幕框直读黑板和活指针，不靠地图变量，开机不硬塞玩法键。  
+还欠一笔：**三份名单不该靠引擎特供通道写。**
 
-Case E 框选预览（PR **#1444**）已经做到：`WriteCollection` 可以出现在非 Query 的连续图里，命中结果由图自己写集合，落定 / 点选用 `InvokeGraph` 复用同一张命中图。接下来要定的是：产品上「图 = 可调用函数」长什么样，以及和现有 `Query` / `Script` / `TriggerGraph` / `whileActive` 怎么统一。
+## 2. 结构
 
-## 必读（按顺序）
+```text
+已按合同
+  起角 → 指挥官黑板
+  活角 → 本机指针
+  屏幕框 → 直读上面两个
+  关框选态 → 图听落定事件
 
-1. 正本全文（含方案模板与验收表）  
-2. 本目录 `case-e-config-structure.html` 第 10 节  
-3. `gitbook/architecture/graph-capability-status.md` 与图 Kind / 宿主表  
-4. `InteractionContextProfileRegistry`（`whileActive` 与 `WriteCollection`）  
-5. `GasGraphOpHandlerTable` / `GraphProgramRegistry` 对 `InvokeGraph` 的目标校验  
-6. issue **#1084**、**#1099**（Query 准纯净）——方案里必须写清与「可写业务函数」怎么并存
+蠢决定（待拆）
+  可框选 / 预览黄环 / 已选中 → 现网不是图写的
+```
 
-## 方案必须写清
+## 3. 详情：名单这笔蠢决定
 
-| 问题 | 说明 |
-|------|------|
-| S1 还是 S2 | 图内副作用，还是纯返回 + 声明式写入；禁止静默代写 |
-| whileActive | 已替 continuousQuery；还要不要再改产品名 |
-| Invoke 纯度 | 带副作用的业务函数 vs 纯 FuncLib；目录与命名 |
-| 与 #1084 | 禁止互相否定却不写迁移 |
-| 禁区 | 见正本「边界」 |
+框选图算出「这些人」后，派一个自定义事件。  
+真正改三份名单的，**不是下一张图**，而是引擎里一段写死的代码。  
+Case E 还要在 `Input/collection_event_writers.json` 里把事件名登一遍，引擎才肯改名单；不登就当没听见。
 
-## 交付检查
+| 玩家看见 | 名单 |
+|---|---|
+| 谁能被框 | 可框选 |
+| 拖着时谁亮黄环 | 预览 |
+| 抬起后谁亮选中环 | 已选中 |
 
-- [ ] 填满正本「方案怎么交」各节  
-- [ ] 验收表每条都有设计对应  
-- [ ] 写明本单不实现的项  
-- [ ] 列出要改的文件 / 测试  
-- [ ] 与 Case E 三集合（`case_e.selectable` / `case_e.box_hover` / `selected`）对齐说明  
+关框选态已经有一张图在听落定事件。写名单本该同一套路：图听事件，图改名单。  
+硬走引擎特供，等于把 RTS 框选写名单焊进核心。射击玩法用不上；换玩法这份 Case E 配置就是死肉。
 
-## 本切片已落地（对照用，勿当远景已完成）
+事件名册只管「能发」。writers 那份配置才管「谁改名单」——结构说明里没写它，别当成作者必须填的字段去扩。
 
-- 连续框选：非 Query + `WriteCollection` → `case_e.box_hover`  
-- 离框：按程序里的集合键清悬停  
-- 落定 / 点选：`InvokeGraph` → `graph.case_e.box_hit` → 写 `selected`  
-- 热路径：`WriteCollection` 不 `new Entity[]`；合并写集走 span  
+## 4. 场景
 
-细节与验收句以正本和 HTML 为准。
+1. 接手 Case E：先读本页，知道合同已纠偏、名单落账仍是蠢决定。  
+2. 写「图当可调用函数」方案：必须写清这三份名单怎么改回图听事件写名单。  
+3. 别在 Case E 玩法单里再扩 writers 配置或引擎写名单特供。
+
+## 5. 边界
+
+- 本页只记 Case E。  
+- 合同纠偏别重做。  
+- 拆引擎特供另开基建；失败要报错，禁止静默空跑。  
+- 本页不替代可调用函数远景正本；方案仍按正本模板交。
+
+## 6. UAT
+
+```gherkin
+Feature: Case E 交接说得清
+
+  Scenario: 我知道蠢决定是什么
+    Given 我是接手 Case E 的人
+    When 我读本页
+    Then 我知道三份名单现在不是图写的
+    And 我知道不该再扩那份事件白名单配置
+
+  Scenario: 方案要对准 Case E
+    Given 我要交「图当可调用函数」方案
+    When 我对照 Case E
+    Then 方案里写清名单改回图听事件落账
+    And 我不会把引擎特供当成正确合同
+```
+
+---
+
+## 附录：可调用函数方案单（另交，别在本单合 Core）
+
+正本填满后再交人审。必读顺序与验收表见远景正本。  
+对照 Case E 时，至少对齐：可框选 / 预览 / 已选中三份名单、whileActive 拖框、抬起复用同一张命中图。

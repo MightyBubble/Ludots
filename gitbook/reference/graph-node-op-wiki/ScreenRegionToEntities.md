@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 仅 Query |
+| 可用图种 | Query / TriggerGraph |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `list`（目标名单）、`a`（第一操作数）、`b`（第二操作数）、`c`（第三操作数）、`max`（上限） |
 | 特殊写法 | flags 填第四操作数寄存器编号 |
@@ -46,7 +46,7 @@ ConstFloat → ConstFloat → ConstFloat → ConstFloat → **ScreenRegionToEnti
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Query；Effect / Score / Validation / Derived / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Query / TriggerGraph；Effect / Score / Validation / Derived / Script 图不可用（编译期白名单拒绝）。
 - 同类用法：见手册分册的场景节。
 ## 怎么进
 

@@ -28,5 +28,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             float radiusPixels);
 
         int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId);
+
+        /// <summary>
+        /// Live window-pixel pointer from the authoritative input snapshot (PointerPos).
+        /// False when the snapshot is unavailable; callers fail closed.
+        /// </summary>
+        bool TryReadLivePointerScreen(out float screenX, out float screenY);
     }
 }

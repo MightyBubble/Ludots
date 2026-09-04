@@ -1,0 +1,39 @@
+{
+  "op": "LoadPointerScreenX",
+  "driver": "linear",
+  "title": "读活指针横向",
+  "beat": "活指针横向停在 42，读数进伤害链。",
+  "detailTemplate": "活指针横向 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。",
+  "assertDetailContains": [
+    "活指针横向",
+    "42"
+  ],
+  "featuredNodeId": "pointerX",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "副官",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "graphSettled"
+  }
+}

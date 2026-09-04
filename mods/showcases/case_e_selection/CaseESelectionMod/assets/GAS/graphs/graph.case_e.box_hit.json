@@ -2,6 +2,7 @@
   {
     "id": "graph.case_e.box_hit",
     "kind": "Query",
+    "entry": "rep",
     "nodes": [
       {
         "id": "rep",
@@ -9,23 +10,21 @@
       },
       {
         "id": "press_px",
-        "op": "LoadSelfAttribute",
-        "attribute": "CaseE.PressPx"
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "case_e.press.px"
       },
       {
         "id": "press_py",
-        "op": "LoadSelfAttribute",
-        "attribute": "CaseE.PressPy"
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "case_e.press.py"
       },
       {
         "id": "pointer_x",
-        "op": "LoadSelfAttribute",
-        "attribute": "CaseE.PointerX"
+        "op": "LoadPointerScreenX"
       },
       {
         "id": "pointer_y",
-        "op": "LoadSelfAttribute",
-        "attribute": "CaseE.PointerY"
+        "op": "LoadPointerScreenY"
       },
       {
         "id": "roster",
@@ -71,11 +70,6 @@
       {
         "from": "roster",
         "fromPort": "next",
-        "to": "rect_hits"
-      },
-      {
-        "from": "rect_hits",
-        "fromPort": "next",
         "to": "halt"
       }
     ],
@@ -84,6 +78,18 @@
         "from": "rep",
         "fromPort": "value",
         "to": "roster",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "press_px",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "press_py",
         "toPort": "source"
       },
       {
@@ -110,7 +116,6 @@
         "to": "rect_hits",
         "toPort": "max"
       }
-    ],
-    "entry": "rep"
+    ]
   }
 ]

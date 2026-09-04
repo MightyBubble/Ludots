@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 仅 Query |
+| 可用图种 | Query / TriggerGraph |
 | 返回 | Float → 小数寄存器 |
 | 输入端口（值边 toPort） | `source`（来源实体） |
 | 特殊写法 | 结果写入 dst 寄存器；flags 填布尔暂存位编号 |
@@ -43,7 +43,7 @@ LoadCaster → **PointToDirection**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Query；Effect / Score / Validation / Derived / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Query / TriggerGraph；Effect / Score / Validation / Derived / Script 图不可用（编译期白名单拒绝）。
 - 同类用法：见手册分册的场景节。
 ## 怎么进
 

@@ -38,6 +38,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.QueryFilterLayer:
                 case GraphNodeOp.LoadTargetPosX:
                 case GraphNodeOp.LoadTargetPosY:
+                case GraphNodeOp.LoadPointerScreenX:
+                case GraphNodeOp.LoadPointerScreenY:
                     break;
 
                 case GraphNodeOp.HaltReturnInt:
@@ -866,6 +868,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.AggCount:
                 case GraphNodeOp.LoadTargetPosX:
                 case GraphNodeOp.LoadTargetPosY:
+                case GraphNodeOp.LoadPointerScreenX:
+                case GraphNodeOp.LoadPointerScreenY:
                     break;
 
                 case GraphNodeOp.QueryHexNeighbors:

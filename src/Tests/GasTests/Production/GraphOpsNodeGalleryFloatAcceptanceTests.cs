@@ -68,6 +68,32 @@ public sealed class GraphOpsNodeGalleryFloatAcceptanceTests
     }
 
     [Test]
+    public void LoadPointerScreenX_QuotesPinnedLivePointerAxis()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("LoadPointerScreenX");
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Metrics.Detail, Does.Contain("42"),
+            "linear gallery pins live pointer at (42,42); caption must quote screen X");
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
+        }
+    }
+
+    [Test]
+    public void LoadPointerScreenY_QuotesPinnedLivePointerAxis()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("LoadPointerScreenY");
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Metrics.Detail, Does.Contain("42"),
+            "linear gallery pins live pointer at (42,42); caption must quote screen Y");
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
+        }
+    }
+
+    [Test]
     public void CompareGtFloat_ThinStakeClearedWhileThickStakeWithstands()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();
