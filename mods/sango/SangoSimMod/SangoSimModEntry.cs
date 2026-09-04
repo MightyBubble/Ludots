@@ -50,13 +50,28 @@ namespace Sango
         public void OnLoad(IModContext context)
         {
             IVirtualFileSystem vfs = context.VFS;
-            context.Log("[SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers + seed event; M2.d: step-turns/journal dev events; M3.f: combat challenge trigger online; M3-end: entity mirror read model; D-1': native city entities + GAS attributes)");
+            context.Log("[SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers + seed event; M2.d: step-turns/journal dev events; M3.f: combat challenge trigger online; M3-end: entity mirror read model; D-1': native city entities + GAS attributes; D-2': native person entities + GAS attributes)");
             // D-1' 城 GAS 属性注册(引擎 AttributeRegistry 唯一表;模板 sango.city 的
             // AttributeBuffer 数据按名解析到同一批 id)。幂等:重名注册由注册表显式拒绝。
             foreach (string attributeName in new[]
                      {
                          SangoCityAttributes.Gold, SangoCityAttributes.Food,
                          SangoCityAttributes.Population, SangoCityAttributes.Durability,
+                     })
+            {
+                if (context.Registries.GetAttributeId(attributeName) == -1)
+                {
+                    context.Registries.RegisterAttribute(attributeName);
+                }
+            }
+
+            // D-2' 武将 GAS 属性注册(同表同规;模板 sango.person 的 AttributeBuffer
+            // 数据按名解析到同一批 id)。
+            foreach (string attributeName in new[]
+                     {
+                         SangoPersonAttributes.Command, SangoPersonAttributes.Strength,
+                         SangoPersonAttributes.Intelligence, SangoPersonAttributes.Politics,
+                         SangoPersonAttributes.Loyalty,
                      })
             {
                 if (context.Registries.GetAttributeId(attributeName) == -1)
@@ -75,6 +90,9 @@ namespace Sango
             // 城 AI(InputCollection,引擎 AI 相位——UtilityAiThinkScheduleSystem 同组)。
             context.Systems.RegisterSystem(new SangoCitySettlementSystem(() => _engine), SystemGroup.Cleanup);
             context.Systems.RegisterSystem(new SangoCityAISystem(() => _engine), SystemGroup.InputCollection);
+            // D-2' 原生武将域系统:回合结算(Cleanup,与城域结算同相位——掉忠/登场/
+            // 逃逸的组件落账与运行时自举)。
+            context.Systems.RegisterSystem(new SangoPersonSettlementSystem(() => _engine), SystemGroup.Cleanup);
             context.OnEvent(GameEvents.MapLoaded, OnMapLoaded(vfs));
             context.OnEvent(GameEvents.TurnAdvanced, OnTurnAdvanced(vfs));
             context.OnEvent(new EventKey(SeedTroopsEventKey), OnSeedTroops(vfs));
@@ -461,7 +479,8 @@ namespace Sango
 
         // 镜像挂载(幂等):内核已启动且引擎在座即挂;内核未启动时由镜像系统在内核
         // 启动后的帧自举(SangoWebUiMod 的 GameStart 启动先于本 mod 任何事件的路径)。
-        // D-1':原生城运行时先行(城实体/属性/保序组件;镜像城分支随其挂载退役)。
+        // D-1':原生城运行时先行(城实体/属性/保序组件;镜像城分支随其挂载退役);
+        // D-2':原生武将运行时同理先行(镜像武将分支随其挂载退役)。
         private static void EnsureEntityMirror(GameEngine engine)
         {
             _engine = engine;
@@ -471,6 +490,7 @@ namespace Sango
             }
 
             SangoCityNativeRuntime.Attach(engine);
+            SangoPersonNativeRuntime.Attach(engine);
             SangoEntityMirrorRuntime.Attach(engine);
         }
 

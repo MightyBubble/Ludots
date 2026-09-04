@@ -262,7 +262,8 @@ namespace Sango.Runtime
 
         // ---- 命令面:原生执行路径(SangoCityOps 在挂载态路由至此) ----
 
-        /// <summary>原生 job 结算:写 PONO(桥)后同步组件。门槛在 SangoCityOps(双路共用)。</summary>
+        /// <summary>原生 job 结算:写 PONO(桥)后同步组件。门槛在 SangoCityOps(双路共用)。
+        /// D-2':结算前先刷武将组件源(读缝合同——训练能力/忠诚/状态读组件,须先落账真值)。</summary>
         public void ExecuteJob(City city, string type, Person[] persons, Person? target)
         {
             ArgumentNullException.ThrowIfNull(city);
@@ -270,6 +271,8 @@ namespace Sango.Runtime
             {
                 throw new InvalidOperationException($"SangoCityNativeRuntime has no entity for city {city.Id}; cannot execute a native job.");
             }
+
+            SangoPersonNativeRuntime.Active?.SettleTurnEnd();
 
             switch (type)
             {
@@ -688,7 +691,8 @@ namespace Sango.Runtime
             economy.LastIncomeGold = income;
             economy.LastIncomeDrawGold = drawn;
             economy.LastIncomeBaseGold = economy.TotalGainGold;
-            // 俸给账本:与内核随后的 GoldCost 同输入(收入不改变名单),确定性同值。
+            // 俸给账本(D-2' 消桥 #1/#2):与内核随后的 GoldCost 同输入(收入不改变名单),
+            // 确定性同值;武将读面走组件源(读缝同步见 SalaryGoldCost)。
             economy.LastSalaryGold = SangoCityFormulas.SalaryGoldCost(city);
             _world.Set(entity, economy);
         }
@@ -735,6 +739,8 @@ namespace Sango.Runtime
                 return;
             }
 
+            // 收获因子读缝(D-2' 消桥 #2):太守/工作武将五维读组件属性源,先落账真值。
+            SangoPersonNativeRuntime.Active?.SettleTurnEnd();
             (int totalFood, int totalGold, float factor) = SangoCityFormulas.CompositeCalculateHarvest(city);
             if (_cities.TryGetValue(city.Id, out Entity entity) && _world.IsAlive(entity))
             {

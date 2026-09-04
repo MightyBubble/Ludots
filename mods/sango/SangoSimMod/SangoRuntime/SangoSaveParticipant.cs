@@ -170,6 +170,9 @@ namespace Sango.Runtime
                     personStates[person.Id.ToString()] = person.state;
                 }
             });
+            // D-2' 退役候选:全武将 state 面已由原生武将组件(SangoPersonStatus)随引擎
+            // world.bin 持久化;本节继续承担"装载期选举改写 state 的回放"(SangoCityPersonOrder
+            // 第 4 条,内核回灌链尚未退场),随 D-5'/D-6' 存档收敛波退役。
             var forceIsAlive = new JsonObject();
             var forceFightPower = new JsonObject();
             scenario.forceSet.ForEach(force =>

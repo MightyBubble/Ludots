@@ -138,7 +138,8 @@ namespace Sango.Runtime
             {
                 Person? person = scenario.personSet.Get(personId);
                 if (person == null || person.mBelongForce != force ||
-                    person == force.mGovernor || person.mTroop != null || person.loyalty >= 100)
+                    person == force.mGovernor || SangoPersonReadFace.HasTroop(person) ||
+                    SangoPersonReadFace.Loyalty(person) >= 100)
                 {
                     return SangoTroopOpResult.Fail("invalid_state",
                         $"person {personId} is outside the CityReward target list (own force, not governor, no troop, loyalty<100).");
@@ -231,14 +232,16 @@ namespace Sango.Runtime
                 return false;
             }
 
+            // 目标门槛的 state 读面(D-2' 消桥 #1):组件属性源。
+            int targetState = SangoPersonReadFace.State(target);
             if (target.mBelongForce != force)
             {
-                return target.state != (int)PersonStateType.Governor &&
-                       target.state != (int)PersonStateType.Prisoner;
+                return targetState != (int)PersonStateType.Governor &&
+                       targetState != (int)PersonStateType.Prisoner;
             }
 
-            return target.state == (int)PersonStateType.Unemployed ||
-                   target.state == (int)PersonStateType.Prisoner;
+            return targetState == (int)PersonStateType.Unemployed ||
+                   targetState == (int)PersonStateType.Prisoner;
         }
 
         // 原版各窗口的执行武将选择列表 = TargetCity.freePersons(UICityTrainTroops/UICitySearching/

@@ -105,7 +105,7 @@ namespace Sango.Runtime
                         for (int slot = 0; slot < buildingType.workerLimit; slot++)
                         {
                             Sango.Core.Person? person = slot < building.Workers.Count ? building.Workers.Get(slot) : null;
-                            if (person != null && person.IsFree && !person.ActionOver)
+                            if (person != null && SangoPersonReadFace.IsFree(person) && !SangoPersonReadFace.ActionOver(person))
                             {
                                 workers.Add(person);
                             }
@@ -178,9 +178,18 @@ namespace Sango.Runtime
             return (overrideData.ValueAndRecycle, drawn);
         }
 
-        /// <summary>俸给(City.GoldCost):官员俸 + 俘虏羁押费,纯确定性(无随机)。</summary>
+        /// <summary>
+        /// 俸给(City.GoldCost):官员俸 + 俘虏羁押费,纯确定性(无随机)。
+        /// D-2' 消桥 #1/#2:原生武将运行时挂载时读组件源(驻城武将 OfficialCost +
+        /// 城俘羁押,读缝同步);未挂载(城原生单挂的对拍面)保持内核 PONO 源。
+        /// </summary>
         public static int SalaryGoldCost(City city)
         {
+            if (SangoPersonNativeRuntime.Active is { IsDisposed: false, IsCurrentKernel: true } persons)
+            {
+                return persons.SalaryGoldCostFromComponents(city);
+            }
+
             int goldCost = 0;
             city.allPersons.ForEach(person =>
             {
@@ -216,15 +225,15 @@ namespace Sango.Runtime
             return overrideData.ValueAndRecycle;
         }
 
-        /// <summary>太守影响因子(BuildingWorking.GetCityLeaderInfuse)。</summary>
+        /// <summary>太守影响因子(BuildingWorking.GetCityLeaderInfuse;五维读面 D-2' 消桥 #2)。</summary>
         public static int LeaderInfuse(City city, int effectAttrType)
         {
             Sango.Core.Person? leader = city.Leader;
-            int leaderAttrValue = leader?.GetAttribute(effectAttrType) ?? 0;
+            int leaderAttrValue = leader == null ? 0 : SangoPersonReadFace.GetAttribute(leader, effectAttrType);
             return 100 + (int)((Mathf.Pow(Mathf.Max(40, leaderAttrValue), 1.5f) / 10 - 25) / 3f);
         }
 
-        /// <summary>工作武将影响因子(BuildingWorking.GetPersonInfuse)。</summary>
+        /// <summary>工作武将影响因子(BuildingWorking.GetPersonInfuse;五维读面 D-2' 消桥 #2)。</summary>
         public static int PersonInfuse(Sango.Core.Person[]? workers, int effectAttrType)
         {
             int personFactor = 100;
@@ -238,7 +247,7 @@ namespace Sango.Runtime
                 Sango.Core.Person? person = workers[i];
                 if (person != null)
                 {
-                    personFactor += (int)(Mathf.Pow(Mathf.Max(40, person.GetAttribute(effectAttrType)), 0.5f) * 100 / (8 * (i + 1)));
+                    personFactor += (int)(Mathf.Pow(Mathf.Max(40, SangoPersonReadFace.GetAttribute(person, effectAttrType)), 0.5f) * 100 / (8 * (i + 1)));
                 }
             }
 

@@ -21,6 +21,29 @@
     }
   },
   {
+    "id": "sango.person",
+    "components": {
+      "Name": { "Value": "" },
+      "AttributeBuffer": {
+        "base": {
+          "sango.person.command": 0,
+          "sango.person.strength": 0,
+          "sango.person.intelligence": 0,
+          "sango.person.politics": 0,
+          "sango.person.loyalty": 0
+        },
+        "current": {
+          "sango.person.command": 0,
+          "sango.person.strength": 0,
+          "sango.person.intelligence": 0,
+          "sango.person.politics": 0,
+          "sango.person.loyalty": 0
+        }
+      },
+      "DirtyFlags": {}
+    }
+  },
+  {
     "id": "sango.mirror.person",
     "components": {
       "Name": { "Value": "" }

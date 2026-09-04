@@ -1,7 +1,9 @@
 // M3 末 ECS 溶解第一片:内核读模型 → Arch ECS 镜像实体(SangoEntityMirror)。
 // D-1' 起城面升级为原生城实体(sango.city 模板 + GAS 属性 + 保序组件,
-// SangoCityNativeRuntime 持有):原生运行时挂载时镜像只保武将/部队,城实体不再
-// 双份(镜像城分支退役;presenter owner 迁移后的最终消灭见 M3.h 在案后续片)。
+// SangoCityNativeRuntime 持有);D-2' 起武将面升级为原生武将实体(sango.person 模板 +
+// GAS 属性 + 状态/归属组件,SangoPersonNativeRuntime 持有)。原生运行时挂载时镜像
+// 只保部队,城/武将实体不再双份(镜像城/武将分支退役;presenter owner 迁移后的
+// 最终消灭见 M3.h 在案后续片)。
 // 合同:内核(Scenario.Cur 对象池)是唯一真相源,本文件只读内核、只写引擎世界;
 // 镜像开关(注入与否)不影响 WorldDigest(读模型纯净性由 SangoEntityMirrorTests 双跑验收)。
 // 物化走 Layer 0 原子 op EntityLifecycleAtomicOps.MaterializeTemplate(模板
@@ -202,7 +204,10 @@ namespace Sango.Runtime
             }
 
             // D-1':城数值面归原生城实体(GAS 属性),镜像只保武将/部队刷新。
+            // D-2':武将面归原生武将实体(sango.person 模板 + GAS 属性 + 组件),
+            // 镜像武将分支随原生武将运行时挂载退役(消灭双实体,城域先例)。
             bool nativeCities = SangoCityNativeRuntime.Active is { IsDisposed: false };
+            bool nativePersons = SangoPersonNativeRuntime.Active is { IsDisposed: false };
             if (!nativeCities)
             {
                 foreach (KeyValuePair<int, Entity> pair in _cities)
@@ -217,15 +222,18 @@ namespace Sango.Runtime
                 }
             }
 
-            foreach (KeyValuePair<int, Entity> pair in _persons)
+            if (!nativePersons)
             {
-                Person? person = _scenario.personSet.Get(pair.Key);
-                if (person == null || !_world.IsAlive(pair.Value))
+                foreach (KeyValuePair<int, Entity> pair in _persons)
                 {
-                    continue;
-                }
+                    Person? person = _scenario.personSet.Get(pair.Key);
+                    if (person == null || !_world.IsAlive(pair.Value))
+                    {
+                        continue;
+                    }
 
-                ApplyPersonSnapshot(_world, pair.Value, person, PersonPositionCm(_scenario, person));
+                    ApplyPersonSnapshot(_world, pair.Value, person, PersonPositionCm(_scenario, person));
+                }
             }
 
             List<int>? deadTroops = null;
@@ -317,6 +325,7 @@ namespace Sango.Runtime
 
             // D-1':城面升级为原生城实体(sango.city 模板 + GAS 属性 + 保序组件,
             // SangoCityNativeRuntime 持有);原生运行时挂载时镜像不再重复建城实体。
+            // D-2':武将面同理归 sango.person 原生实体,镜像武将分支随其挂载退役。
             bool nativeCities = SangoCityNativeRuntime.Active is { IsDisposed: false };
             if (!nativeCities)
             {
@@ -328,13 +337,18 @@ namespace Sango.Runtime
                     }
                 });
             }
-            scenario.personSet.ForEach(person =>
+
+            bool nativePersons = SangoPersonNativeRuntime.Active is { IsDisposed: false };
+            if (!nativePersons)
             {
-                if (person != null)
+                scenario.personSet.ForEach(person =>
                 {
-                    _persons[person.Id] = SpawnMirror(SangoMirrorKind.Person, person.Id, PersonDisplayName(person), PersonPositionCm(scenario, person));
-                }
-            });
+                    if (person != null)
+                    {
+                        _persons[person.Id] = SpawnMirror(SangoMirrorKind.Person, person.Id, PersonDisplayName(person), PersonPositionCm(scenario, person));
+                    }
+                });
+            }
             scenario.troopsSet.ForEach(troop =>
             {
                 if (troop != null && troop.IsAlive)
@@ -508,6 +522,12 @@ namespace Sango.Runtime
                 return;
             }
 
+            // D-2':原生武将运行时挂载时镜像武将分支已退役(无实体可刷)。
+            if (SangoPersonNativeRuntime.Active is { IsDisposed: false })
+            {
+                return;
+            }
+
             if (!_persons.TryGetValue(person.Id, out Entity entity) || !_world.IsAlive(entity))
             {
                 return;
@@ -674,8 +694,10 @@ namespace Sango.Runtime
             GameEngine? engine = _engineSource();
             if (engine != null && Sango.Core.Scenario.Cur != null)
             {
-                // D-1':城面原生运行时先行(城模板升级为 sango.city,镜像城分支随其挂载退役)。
+                // D-1':城面原生运行时先行(城模板升级为 sango.city,镜像城分支随其挂载退役);
+                // D-2':武将面原生运行时同理先行(sango.person,镜像武将分支随其挂载退役)。
                 SangoCityNativeRuntime.Attach(engine);
+                SangoPersonNativeRuntime.Attach(engine);
                 SangoEntityMirrorRuntime.Attach(engine);
             }
         }

@@ -124,11 +124,15 @@ namespace Sango.Runtime
         /// 升序拼接后的 SHA-256。同种子重放必须逐位相等(对齐 deterministic_replay 验收)。
         /// 城域行双源(D-1'):SangoCityNativeRuntime 挂载时读组件源(GAS 属性+保序组件,
         /// 对拍后正式源);未挂载读内核源——两源同格式,对拍 = 同种子同命令流下逐位相等。
-        /// 部队行语义:编成/移动/消灭都改变该行;无任务部队逐回合仅耗粮不动(id/corps/
-        /// force/cell/兵力恒定),行稳定。武将行读对象引用真源(mBelongForce?.Id):内核
-        /// 运行时改归属只动引用、序列化 int 字段(BelongForce)由 OnScenarioSave 存档时点
-        /// 才回写——活世界的 int 是脏值,捕获回灌链会把它归一,读 int 会让"存档续跑 ==
-        /// 直跑"出现假性分叉(M3.a 内政 AI 活化后武将流动常态化,该语义差异进入 digest 面)。
+        /// 武将行双源(D-2'):SangoPersonNativeRuntime 挂载且为当前世界权威时读组件源
+        /// (GAS 忠诚 + 归属/状态组件,读缝同步后产出);未挂载读内核源。行格式与两源
+        /// 对照合同同城域。部队行语义:编成/移动/消灭都改变该行;无任务部队逐回合仅
+        /// 耗粮不动(id/corps/force/cell/兵力恒定),行稳定。武将行读对象引用真源
+        /// (mBelongForce?.Id):内核运行时改归属只动引用、序列化 int 字段(BelongForce)
+        /// 由 OnScenarioSave 存档时点才回写——活世界的 int 是脏值,捕获回灌链会把它
+        /// 归一,读 int 会让"存档续跑 == 直跑"出现假性分叉(M3.a 内政 AI 活化后武将
+        /// 流动常态化,该语义差异进入 digest 面);武将组件的归属引用同步(BelongForceId)
+        /// 同读活引用真源。
         /// </summary>
         public static string WorldDigest()
         {
@@ -143,11 +147,16 @@ namespace Sango.Runtime
             {
                 rows.AddRange(SangoCityNativeRuntime.KernelCityRows(scenario));
             }
-            scenario.personSet.ForEach(person =>
+
+            if (SangoPersonNativeRuntime.Active is { IsDisposed: false } nativePersons && nativePersons.IsCurrentKernel)
             {
-                if (person != null)
-                    rows.Add($"person {person.Id}:{person.loyalty}:{person.mBelongForce?.Id ?? 0}:{person.state}");
-            });
+                rows.AddRange(nativePersons.PersonDigestRows());
+            }
+            else
+            {
+                rows.AddRange(SangoPersonNativeRuntime.KernelPersonRows(scenario));
+            }
+
             scenario.troopsSet.ForEach(troop =>
             {
                 if (troop != null && troop.IsAlive)

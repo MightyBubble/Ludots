@@ -2,9 +2,10 @@
 // 语义源(逐行对照,不发明):City.JobTrainTroops/JobSearching/JobRewardPersons/
 // JobRecruitPerson(内核 Game/Object/City/City.cs)。门槛不在本文件——SangoCityOps 的
 // 门槛段(逆向自原版 CityXxx 系统 IsValid)双路共用;本文件只做"过门槛后的结算体"。
-// 写入面:城 PONO 字段(桥登记 #7/#9)+ 武将/军团对象面(桥登记 #3/#4/#11)+
-// 演出事件队列(搜索/登庸的次回合结算排程,桥登记 #11)。组件同步由
-// SangoCityNativeRuntime.ExecuteCommand 在结算后统一落账。
+// 写入面:城 PONO 字段(桥登记 #7/#9)+ 武将写面(D-2' 起组件化,SangoPersonWriteFace:
+// 原生武将运行时挂载时组件+内核 write-through 双写,未挂载时纯内核写,净效果与内核
+// Job* 逐位同)+ 军团对象面(桥登记 #4)+ 演出事件队列(搜索/登庸的次回合结算排程,
+// 桥登记 #11)。组件同步由 SangoCityNativeRuntime.ExecuteCommand 在结算后统一落账。
 // 随机纪律:本四型结算体无随机消耗(train 的士气公式/奖励的忠诚+10 均确定性;
 // 搜索/登庸的随机在其演出事件次回合 Enter 时由内核消耗——该面本波内核保留)。
 
@@ -51,10 +52,12 @@ namespace Sango.Runtime
                     continue;
                 }
 
-                if (person.BaseTrainTroopAbility > maxValue)
+                // 训练能力读面(D-2' 消桥 #2):BaseTrainTroopAbility = 武力计算值,组件属性源。
+                int trainAbility = SangoPersonReadFace.GetAttribute(person, (int)AttributeType.Strength);
+                if (trainAbility > maxValue)
                 {
                     maxPerson = person;
-                    maxValue = person.BaseTrainTroopAbility;
+                    maxValue = trainAbility;
                 }
             }
 
@@ -68,11 +71,11 @@ namespace Sango.Runtime
 
                 if (person != maxPerson)
                 {
-                    subValue += maxPerson!.BaseTrainTroopAbility;
+                    subValue += maxValue;
                 }
                 else
                 {
-                    totalValue += maxPerson.BaseTrainTroopAbility;
+                    totalValue += maxValue;
                 }
             }
 
@@ -91,10 +94,11 @@ namespace Sango.Runtime
                     continue;
                 }
 
-                person.merit += meritGain;
-                person.GainExp(meritGain);
+                // 武将写面(D-2' 消桥 #3):功勋/经验/行动位组件化,语句序保持内核原序
+                // (merit → GainExp → 名单移除 → ActionOver),内核副作用位原样触发。
+                SangoPersonWriteFace.ApplyTrainGain(person, meritGain);
                 city.freePersons.Remove(person);
-                person.ActionOver = true;
+                SangoPersonWriteFace.SetActionOver(person, true);
             }
 
             overrideData = Sango.Core.Tools.OverrideData<int>.Create(techniquePointGain);
@@ -138,7 +142,8 @@ namespace Sango.Runtime
 
                 totalApCost += apCost;
                 totalGoldCost += goldCost;
-                person.loyalty += 10;
+                // 武将写面(D-2' 消桥 #3):忠诚组件化(内核字段 write-through 同值)。
+                SangoPersonWriteFace.ApplyRewardLoyalty(person, 10);
             }
 
             city.gold -= totalGoldCost;
@@ -163,8 +168,9 @@ namespace Sango.Runtime
                 return true;
             }
 
-            executor.SetMission(MissionType.PersonRecruitPerson, dest, 100, dest.mCurrentCity!.Id);
-            executor.ActionOver = true;
+            // 武将写面(D-2' 消桥 #3):任务态/行动位组件化。
+            SangoPersonWriteFace.ApplyMission(executor, MissionType.PersonRecruitPerson, dest, 100, dest.mCurrentCity!.Id);
+            SangoPersonWriteFace.SetActionOver(executor, true);
             city.mBelongCorps!.ReduceActionPoint(apCost);
             return false;
         }
