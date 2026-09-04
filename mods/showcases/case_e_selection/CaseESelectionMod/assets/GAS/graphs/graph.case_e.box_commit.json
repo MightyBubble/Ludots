@@ -71,11 +71,6 @@
         "context": "interaction.context.case_e.boxing"
       },
       {
-        "id": "ok",
-        "op": "ConstInt",
-        "intValue": 1
-      },
-      {
         "id": "halt",
         "op": "HaltReturnInt"
       }
