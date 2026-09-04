@@ -463,7 +463,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod",
       "projectPath": "CapabilityStandardBehaviorTreeArenaMod.csproj",
       "title": "行为树演武场",
-      "summary": "独立 BT 演示：旗舰走真图宿主；万人段是无图压测基线（不含 HFSM/关卡/技能）。",
+      "summary": "独立 BT 演示：产品正统应为 L2 行为树拓扑；当前 Featured 仍挂 GraphBehaviorTreeHost（过渡债，见能力页 §3.3.0）。万人段是无图压测基线。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -478,7 +478,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_behavior_tree_arena",
       "screenshot": null,
       "status": "active",
-      "notes": "Featured = GraphBehaviorTreeHost；crowd = BehaviorTreeWorld 无图压测（ScriptSlices==0）。Headless think-wave acceptance first; visual captures follow."
+      "notes": "【过渡债】当前 Featured 仍挂 GraphBehaviorTreeHost（2026-08 流糖跑偏遗留）。产品正统应为 L2 拓扑 JSON + BehaviorTreeWorld；纠偏见 graph-capability-status.md §3.3.0 与 PR #1416。crowd = BehaviorTreeWorld 无图压测（ScriptSlices==0）。"
     },
     {
       "id": "capability_standard_config_shards_showcase",
@@ -572,7 +572,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_graph_behavior_integration",
       "screenshot": null,
       "status": "active",
-      "notes": "Metrics Detail 含 old-path；不得顶 GraphFsmHost/GraphBehaviorTreeHost 旗舰语义。Headless think-wave acceptance first; visual captures follow."
+      "notes": "整合演示走 L2 世界（BehaviorTreeWorld + HfsmWorld）；Metrics Detail 可含对照路径。不得把 GraphFsmHost/GraphBehaviorTreeHost 糖旗舰写成产品正统（见能力页 §3.3.0）。"
     },
     {
       "id": "capability_standard_graph_op_AbsFloat",
@@ -3814,7 +3814,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod",
       "projectPath": "CapabilityStandardHfsmSentryArenaMod.csproj",
       "title": "HFSM 岗哨演武场",
-      "summary": "独立分层状态机演示：旗舰走 GraphFsmHost；万人段是无图 HfsmWorld 压测基线（不含 BT/关卡/技能）。",
+      "summary": "独立分层状态机演示：产品正统应为 L2 HFSM 拓扑；当前 Featured 仍挂 GraphFsmHost（过渡债，见能力页 §3.3.0）。万人段是无图 HfsmWorld 压测基线。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3829,7 +3829,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_hfsm_sentry_arena",
       "screenshot": null,
       "status": "active",
-      "notes": "Featured = GraphFsmHost；crowd = HfsmWorld 无图（LifecycleRuns==0）。Headless think-wave acceptance first; visual captures follow."
+      "notes": "【过渡债】当前 Featured 仍挂 GraphFsmHost（2026-08 流糖跑偏遗留）。产品正统应为 L2 拓扑 JSON + HfsmWorld；纠偏见 graph-capability-status.md §3.3.0 与 PR #1416。crowd = HfsmWorld 无图（LifecycleRuns==0）。"
     },
     {
       "id": "capability_standard_live_skill_workbench",

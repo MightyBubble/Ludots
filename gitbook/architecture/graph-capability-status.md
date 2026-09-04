@@ -58,26 +58,26 @@
 ### 3.2 已合主干，待关单（别再当实现票）
 
 **第一件：Moba 护盾演示。**
-主干已经收进去了。现在这张票只剩关单，不要再当成新的实现目标。
+主干已经收进去了。票面若仍开着，只是关单卫生，不要再当成新的实现目标。
 → https://github.com/MightyBubble/Ludots/issues/916
 
 **第二件：有一条「不许乱占内存」的门槛。**
-主干已经收进去了。别为了关单把门槛放宽。
+主干已经收进去了。别为了关单把门槛放宽；票面该关。
 → https://github.com/MightyBubble/Ludots/issues/917
 
 **第三件：干净构建时同名文件打架。**
-主干已经收进去了。这里是卫生债，不是玩法。
+主干已经收进去了。这里是卫生债，不是玩法；票面该关。
 → https://github.com/MightyBubble/Ludots/issues/918
 
 **第四件：Query 图契约（#1084）。**
-Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 Store/事件/动作/continuation 的合同已由主干 GraphReturnWriter/操作策略与回归测试覆盖，本页只记关单。
+合同与回归已在主干；GitHub **已关**。本页不再派实现。
 → https://github.com/MightyBubble/Ludots/issues/1084
 
 **第五件：TriggerGraph/Dialogue 统一 QueryGraphGateway（#1099）。**
-显式 subject + pins、目标必须已登记 GraphKind.Query、typed Bool/Int/Float/Entity/EntitySet、缺失/类型不符失败关闭、禁止 Query 动作/事件/Store/continuation、不新增第二 VM 的统一 Query 网关合同已由主干 GraphReturnWriter/操作策略/编译器与回归测试覆盖（TriggerGraph 程序走同一 GraphExecutor，不经 Query 网关），本页只记关单。
+合同与回归已在主干；GitHub **已关**。本页不再派实现。
 → https://github.com/MightyBubble/Ludots/issues/1099
 
-这五张票都已经进主干；本页只记关单，不再派实现票。
+这五张：实现都在主干。#916–#918 若仍 open 就关单；#1084/#1099 已关。
 
 ### 3.3 真正还在做的
 
@@ -97,7 +97,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 **图 Codegen 产品化（CG-0…CG-6 + 运行时装载已落地）。**  
 正式程序集 `Ludots.Graph.Codegen`：F0–F3 特化发射（允许回边），其余家族 HandlerForward；coverage 全量 `covered`；Bridge 预览/对拍/覆盖；编辑器 Codegen 面板。运行时：`game.json` 键 `graphExecutionBackend`（`interpret` / `codegen` / `codegen-prefer`）在装图后绑定生成入口；`GraphExecutor` 优先走生成码；`ludots.graph.debug` 与 Live Debug 标题报 `executionBackend`。夜袭旗舰 `graphExecutionBackend=codegen`。合同正本 [图 Codegen 产品化](graph-codegen-productization.md)；自审 `artifacts/gas-composition-gate-graph-codegen-impl.md`。未知 op / 绑定失败在 `codegen` 模式失败关闭。
 
-作者面还开着的债，不要当成新发现再审：执行线没下一步就该结束，但先改“必须显式停下”的合同 https://github.com/MightyBubble/Ludots/issues/1107 。蓝图变量面板 MapVariable 作者面已随 Narrative PR #1222 / Bridge 进主干，#1109 已关单。#1108 要对齐的是「地图上具体 InstanceId（单位/区域）当变量拖取」——单实体 `LoadPlacedEntity` + 区域 `LoadPlacedRegion` + 锚点 `LoadPlacedAnchor`（InstanceId 含 `anchor`）+ Placed 栏 / Bridge `kind` 已落地；不是数组/映射集合类型。事件入口露出本次载荷（#1106）、放置实体读、地图变量变更事件（#1113）、图互调/跨图派发/全局订阅与 hook（#1115/#1116/#1123/#1124）、纯数据枚举（#1125）、图↔代码 AwaitCallback 续跑（#1126）已随 night-raid 大包进主干（PR #1239）；对应票（#1106/#1113/#1115/#1116/#1123/#1124/#1125/#1126，连同随 #1222 落地的 #1109、随 TriggerGraph core 线落地的 #1114）已于 2026-08-28 做关单卫生关闭，不要再派实现票。#1126 落地范围：`AwaitCallback=455` + `GraphCallbackService` + `SystemGroup.Continuation` 按注册序 Drain；TriggerGraph 挂载可直接挂起；嵌套 `InvokeScript`/`InvokeGraph` 仍禁 Yield/AwaitCallback（同步函数）。可等待复用走编译期糖 `InlineGraph`（`TriggerGraphInlineWeaver`，虚幻 Macro 风格，Await 落在宿主程序）。Dialogue 宿主 Completer 已接线：玩家确认选项/推进台词时 `TryCompleteByCallbackType(DialogConfirm)`，不另造第二套等待。进图开聊的正式入口已落地：`StartDialogue=462`（PR #1289，对话作者关口入门包）——`MapLoaded` TriggerGraph 起聊，`dialogue_author_kit` 展厅纯配置可玩；per-op 画廊真机证据（poster/play.mp4）已补录。未完成前，编辑器不得画出保存后引擎不认的假针脚或假集合。
+作者面债与票态以 §3.3.1 表为准，勿按过期长文派活。MapVariable 作者面、放置实体读、事件入口、跨图派发、枚举、AwaitCallback、`StartDialogue` 等已随主干落地；GitHub 上对应实现票多已关。编辑器不得画出保存后引擎不认的假针脚或假集合。
 
 **分层：架子有了，墙没有。**  
 工程里多了两份薄的契约，核心工程还是一大坨。展厅大多还能一把抓住整台引擎。把空间、输入、画面、结算真正拆开，以及不许再抓整台引擎，这两步没做。要做就单独开活，对照 `docs/audits/s14_layering_physicalization_design.md`，别和修演示、修构建捆在一起。没拆完之前，总规矩继续写「修复中」。
@@ -108,40 +108,54 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 画廊和一批门已经合了。三张旁路票只剩关单，分层没拆完，所以总账还开着。
 
 新开了一条线，别当成图能力收口的回锅：触发器图（TriggerGraph，原 MapTriggerGraph）。
-进度与计划只认两张票：地图域线 https://github.com/MightyBubble/Ludots/issues/1030 ；域扩展线（实体域挂载、GAS 事件桥、技能/效果时刻桥、presenter 时序合同）https://github.com/MightyBubble/Ludots/issues/1031 ——两张票顶部各有进度快照与剩余切片清单，新活从快照开工，别重做已落地的。
-方言/挂载、事件词典（MapHeartbeat 地图心跳/实体死生/区域）、地图变量存储、时间线续跑、实体域挂载、GAS 桥、「夜袭三波」全数据旗舰与旧 LevelDirector 试验线退役，都已落地；2026-08-24 又补上技能域 `abilities.json.triggerGraphs`、Mod 域 `mod.json.triggerGraphs` 和显式 `route: global` 跨地图路由，统一复用现有 TriggerManager/TriggerGraph VM。2026-08-26 night-raid 大包（rebase 最新 main，PR #1239）继续把事件 Schema SSOT、全局订阅表/`FireGlobalEvent`/`FireCrossMapEvent`、图互调与放置实体读、Enum 目录、图编辑器作者面 hardening 收进同一条线；真正的跨图派发走 `FireGlobalEvent`，不再靠 FireMapEvent 扇出旧表。剩余收口是 S4 时序合同全文对齐与 S5 实体/技能真实可玩 showcase、画廊和 AgentBridge 运行证据，不能把 headless 基建测试写成 showcase 完成。图侧 spawn 动词已经落地：SpawnTemplate（GraphNodeOp 447）在 TriggerGraph 与 Script 都能用，「夜袭三波」旗舰的 stage3 就用它在图内生成 boss（`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graphs.json` 的 `spawn_boss` 节点）。合不合、什么时候合，看 #1031 的最新进度快照。
+GitHub 上 **#1030 / #1031 已关单**（2026-08-25）。地图域、实体/技能/Mod 挂载、夜袭旗舰、AwaitCallback 等已随主干落地；不要再把这两张票当活入口派实现。
+若还有「技能专用可玩入口 / AgentBridge 真机证据」一类尾巴，**另开小票**，别重开整张 Epic 假装没合过。方言/挂载、事件词典、地图变量、跨图 `FireGlobalEvent`、SpawnTemplate（含夜袭 `spawn_boss`）都以当前 `main` 与 [分层合同](graph-layering-flow-and-behavior.md) 为准。
 
-又开了一条线：行为树「真图化」（BT-1）与 HFSM「真图化」（FSM-1）。设计冻结本在 `artifacts/showcases/graph-fsm-bt-refactor-design.md`。
+### 3.3.0 行为树 / HFSM：作者正轨是 L2（SSOT）
 
-**BT 侧已落地：** `BtSequence` / `BtSelector` / `BtDecorator` 三个 Script-only 作者糖把整棵树内联成单个 Script 程序（`Call`/`Return` + `CompareEqInt` + `JumpIfFalse`，零新 opcode，状态寄存器 0/1/2）；`GraphBehaviorTreeHost` 做 per-agent 帧与 think wave 驱动，Yield 叶跨波恢复，嵌套深度对齐 `MaxCallStackDepth`。真实性判据锁在 `GraphBehaviorTreeSugarTests` / `GraphBehaviorTreeHostTests`。Bridge / React 已投影三糖（`childArms`、Decorator 固定 `child:0` + `decoratorKind`），与 FSM 的编辑器面齐平。旧 `BehaviorTreeWorld`（C# JSON 树解释器）保留为旧数据路径与无图压测，图路径不碰它的遍历。BT-B 已落地：arena 主树 `bt.patrolChaseAttack` 重写为糖图并由 `GraphBehaviorTreeHost` 逐波执行；10k crowd 段实测真图超预算，保留无图压测拓扑并在注册表 summary 显式标注。还开着的（**另开活，本轮别捆**）：Parallel（一期显式不支持）、子树复用/异步叶（BT-2）。
+分层合同写死了：**L2 = 粗拓扑**（`behavior_trees.json` / `hfsm.json` + `BehaviorTreeWorld` / `HfsmWorld`），叶子再调 L1。
+进度只认本页；分层规矩只认 [图怎么分层](graph-layering-flow-and-behavior.md)。
 
-**FSM-1a 已收口：** `FsmState` 糖（ReadMapVarInt + SwitchInt 式臂链，零新 opcode）+ `GraphFsmHost`（每 agent 相位 map 变量、每波一次 halt 分派）。哨兵演武场 featured 走 `Graph.FSM.Sentry`；万人 crowd 诚实走无图 `HfsmWorld(hfsm.sentry)`（`LifecycleRuns==0`），注册表 summary/notes 与验收 `HfsmSentryArena_CrowdBand_NoGraphPressureBaseline_Labeled` 锁死。Bridge / React 投影 `FsmState`（enumType、stateVar、case 臂）。`HfsmWorld` **不删 Core**：退役的是静默双轨——旗舰真图声称必须走 `GraphFsmHost`；crowd/压测/旧 `hfsm.json` 绑定可留，但必须标注；整合演示显式 old-path（`GraphProgramHfsmHost`），不得顶 FSM-1。删除 Core `HfsmWorld` 的触发条件见冻结本 §3.3。
+| 层 | 正轨资产 | 宿主 / 编辑器方向 |
+|----|----------|-------------------|
+| L2 BT | `AI/behavior_trees.json` | `BehaviorTreeWorld`；拓扑编辑器（见 PR #1416） |
+| L2 FSM | `AI/hfsm.json` | `HfsmWorld`；拓扑编辑器（见 PR #1416） |
+| L1 叶子 | ActionLib + Script 等 | `/gas-graphs` |
+
+**2026-08 跑偏（仍在 main，不得当正统）：** agent「真图化」把旗舰整树/整机摊成 Script 糖（`BtSequence` / `BtSelector` / `BtDecorator` / `FsmState`）+ `GraphBehaviorTreeHost` / `GraphFsmHost`，还曾把 L2 JSON 路径降成「旧路径」。代码、测试、演武场 featured 糖图都还在——那是历史事实，不是产品收口。跑偏记录：[artifacts/showcases/graph-fsm-bt-refactor-design.md](../../artifacts/showcases/graph-fsm-bt-refactor-design.md)（**已不作 SSOT**）。
+
+**扳回：** [PR #1416](https://github.com/MightyBubble/Ludots/pull/1416)（恢复 L2 为作者 SSOT）。合之前先 rebase；合入前不得再写「BT-1 / FSM-1a 图糖已收口」。
+**另线：** BT Parallel、子树复用 / 异步叶（BT-2）——别和扳回捆一票。
+Script 编辑器里仍可能露出 `Bt*` / `FsmState`（流程组合糖）；那只服务 Script 图，不表示「角色 AI 就该整树写成一张糖图」。
 
 ### 3.3.1 图相关还开着的（勿当新发现重审）
 
-| 项 | 状态 | 怎么开工 |
-|----|------|----------|
-| `#1107` 执行线无下一步须显式 Halt 合同 | 开着 | 单独改合同，别捆编辑器 |
-| `#915` 每节点可写可测可看 | 总账开着 | 旁路已合，别当实现票重做 |
-| `#861` 作者只走一条边 | 总账开着 | 同上 |
+| 项 | 状态 | 该怎样 |
+|----|------|--------|
+| `#861` 作者只走一条边 | 总账开着 | 继续开着；别当实现票重做 |
+| `#915` 每节点可写可测可看 | 总账开着 | 同上 |
+| `#916` `#917` `#918` | GitHub 仍开；修复已在 main | **该关单**（卫生） |
+| `#1108` 放置实体当变量 | 仍开；LoadPlaced* 等已落地 | **该关**或缩成残留小票 |
+| `#1107` | GitHub **已关**；旧文曾写开着 | 保持关；勿再派 |
+| `#1030` `#1031` | GitHub **已关** | 保持关；尾巴另开小票 |
+| `#1084` `#1099` | GitHub **已关** | 保持关 |
+| `#1125` 纯数据枚举 | GitHub **已关**；实现在 main | 保持关 |
 | 分层物理化 | 架子有、墙没有 | 对照 `docs/audits/s14_layering_physicalization_design.md`，另开活 |
-| `#1031` S4 时序全文 / S5 实体技能可玩 showcase | 域扩展剩余 | 看 #1031 进度快照 |
-| BT Parallel / BT-2（子树复用、异步叶） | 明确另线 | 冻结本；别捆 BT-1 |
+| BT/FSM 扳回 L2 | **开着** | 正轨见上；跟踪 PR #1416 |
+| BT Parallel / BT-2 | 明确另线 | 别和扳回捆 |
 | `FormatTextKey` / ActiveLocale / 生产 Dialogue drain | TextKey 后续 | 见 graph-textkey.md |
 | 实体能力 authoring 声明与编译校验 | 编辑器下一切片 | 不得把运行时隐式安装写成已完成 |
-| `LoadEntryPayloadText`（事件 String 载荷进 Text 寄存器） | **合同缺口** | FormalText 已落地，但入口捕获表尚无 String 槽；编辑器对 String 针脚返回空 |
-
-| trace 记录没有时间 / 帧号 | **合同缺口** | 想要真的逐步流动就给 `GraphDebugTraceRecord` 补时间源；在那之前只许说齐亮齐灭 |
-| `GraphDebugTool` 无自动化测试 | 债 | 编辑器和游戏之间唯一通道；`GraphDebugTraceTests` 只测环形缓冲 |
-| 编辑器前端 lint 只门到图编辑器目录 | 债 | `StoryAuthoringPage.tsx`（10 处 `no-explicit-any`）与 `ui-panel-authoring/model.ts`（1 处未用变量）先欠着，清完再放宽 `graph-editor-frontend` 的 lint 范围 |
-| `npm run check` 末步 `validate-panel-templates` 本来就挂 | 债（非本轮） | 报 `Unsupported schema 'ludots.ui.panel_template'`，main 上同样挂；`graph-editor-frontend` 不跑这步，属面板线 |
-| `TriggerGraphRenameMigrationTests` 误伤合法 payloadKey | 债（非本轮） | 夜袭 `graphs.json` 的 `MapTrigger.PointerScreenX/Y`（随 #1398 入口直绑 action 落地）被「不得出现退役方言名」的子串检查判红；该守卫要改成只查 `kind` / `mount` 字段而不是裸子串 |
-| 可调用函数远景（Case E：入参表、whileActive（已替 continuousQuery）、预览 S1/S2、Invoke 与 FuncLib） | **开着 · 先出方案** | 正本 [可调用函数远景](graph-callable-function-vision.md)；Case E 短任务条 `mods/showcases/case_e_selection/CaseESelectionMod/docs/NEXT-AGENT-BRIEF.md`。PR #1444 是台阶。评审前不大改 Core。 |
-
+| `LoadEntryPayloadText` | **合同缺口** | FormalText 已落地，入口捕获表尚无 String 槽 |
+| trace 无时间 / 帧号 | **合同缺口** | 只许说齐亮齐灭 |
+| `GraphDebugTool` 无自动化测试 | 债 | 仅有环形缓冲测 |
+| 编辑器 lint 范围 / panel template 校验挂 | 债（非本轮） | 见既有说明 |
+| `TriggerGraphRenameMigrationTests` 误伤合法 payloadKey | 债（非本轮） | 守卫应查字段而非裸子串 |
+| 可调用函数远景（Case E） | **开着 · 先出方案** | [可调用函数远景](graph-callable-function-vision.md)；`NEXT-AGENT-BRIEF`；#1398 D1–D8 已勾完，远景另算 |
+| `#1398` | 仍开 | 债务清单可关；远景留 vision / Case E PR |
 
 分层合同条款同步修订在 [图怎么分层](graph-layering-flow-and-behavior.md)。
 
-又开了一条线：纯数据自定义枚举目录（#1125）。已落地：`Enums/enums.json` 走 ConfigPipeline（ArrayById + `ArrayAppendFields:["members"]`，mod 侧 config_catalog.json 声明）装载成 `EnumCatalog`；成员值=首次声明的顺序索引，后 mod 只能追加成员、同名重声明 fail closed 点名，未知字段/缺 id/非法成员名/缺 members 全 fail closed。`SwitchInt` 节点可绑 `enumType`，case 边写成 `case:成员名`，编译期查目录解析成 int 再走原 SwitchInt 路径（消融测试锁死：与手写 `case:1` 指令序列逐条一致），指令 source map 保留 `case:Combat` 原始拼写；enumType 未注册、成员名不在枚举内、绑定时写裸 int 全 fail closed。新作者糖 `SelectByEnum`（selector + case:成员名 候选 + 可选 default）展开 ConstInt+CompareEqInt+JumpIfFalse+MoveInt 链，零新 opcode/执行器。事件参数可注解 `enumType`（int 参数专属，EventParamType 不加 Enum 成员，防回归断言在 `EnumCatalogTests`）。GameEngine 装载序：枚举目录先于事件目录；编译通道 `Compile(doc, eventSchemas, enums)` 可空参数；Bridge validate 同源聚合，`/api/graph/enums/{modId}` 供编辑器下拉。showcase 一期不做：enum-driven-fsm 归 FSM-1 载体（artifacts/showcases/enum-driven-fsm-showcase-design.md 明说依赖 #1113+本票）。→ https://github.com/MightyBubble/Ludots/issues/1125
+`#1125`（纯数据枚举）已关单且实现在 main：`Enums/enums.json` → `EnumCatalog`；`SwitchInt` / `SelectByEnum` 绑成员名；事件参数可注 `enumType`。不要再当「新开的线」派活。
 
 下面这些早就知道、还没做，**不要当成新发现再审一轮**：默认「看见敌人 / 进入射程」还要有人先塞数字；图号在代码里还是普通整数；有一条事件丢弃计数永远是零；两个节点钉同一格时说不清。
 
@@ -151,6 +165,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 - 打分预算是另一件事。打分短剧已经能玩，别和预算捆。https://github.com/MightyBubble/Ludots/pull/723
 - 面板是另一条线。https://github.com/MightyBubble/Ludots/issues/886
 - 助手工具无关。https://github.com/MightyBubble/Ludots/pull/947
+- **不要**再开「把 BT/FSM 整树做成 Script 图糖」的实现票；正轨是 L2，扳回跟踪 PR #1416。
 
 把本页和这次图基建收口写进仓库，走 https://github.com/MightyBubble/Ludots/pull/969 。这不是单纯文档改动；它同时收紧了登记、显式结束、动作宿主和压力门。合进去之后，入口就是本页，不再是那张 PR。
 
@@ -167,8 +182,9 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 1. 新人接手。打开本页。知道能玩什么、还修哪几件、别碰什么。不再去翻十几份旧审计拼现状。
 2. 我打开启动器。大约一百二十间短剧。没有大杂烩，也没有八家族旧房间的退役卡。
 3. 我走进「残血的分更高」。不用点技能。字幕点名残血木桩，写出这一刀的分。残血掉血，满血不动。
-4. 我打开 Moba 演示。它已经能起来。那三张票只剩关单，不再是新实现目标。
-5. 我打开工程。能看见两份薄契约。核心工程还是一大坨。总规矩第一行仍是修复中。
+4. 我打开 Moba 演示。它已经能起来。#916–#918 实现在主干，票面只剩关单卫生。
+5. 我问行为树 / 状态机怎么写。答案是 L2 拓扑资产，不是整树 Script 糖；糖路径是跑偏遗留。
+6. 我打开工程。能看见两份薄契约。核心工程还是一大坨。总规矩第一行仍是修复中。
 
 ---
 
@@ -221,6 +237,13 @@ Feature: 接手的人只看一页
     Given 我打开工程
     When 我去看「纯计算和可挂起动作怎么分开」的第一行
     Then 上面写的是修复中
+
+  Scenario: 行为树和状态机我知道写哪
+    Given 我读完本页 §3.3.0
+    When 有人问角色 AI 怎么画树、怎么画状态机
+    Then 答案是 L2 拓扑资产加对应世界
+    And 不是整棵树摊成一张 Script 糖图
+    And 扳回进度指向 PR #1416
 ```
 
 ---
@@ -231,10 +254,10 @@ Feature: 接手的人只看一页
 
 已经合进主干：941、944、945、946、948、950、951、952、953、954、956、957、959、960、962、963、964、965、966、967、968。
 
-已合进主干、只剩关单：916、917、918、1084、1099。
+已合进主干、只剩关单卫生：916、917、918（实现在 main，GitHub 若仍开就关）；1084、1099（已关）。
 
-还开着、本页点过名的：915、861。
+还开着、本页点过名的：915、861；BT/FSM 扳回跟踪 PR #1416；#1398 债务可关、远景留 Case E。
 
-不要当这轮去合：961、723、886、893、947。
+不要当这轮去合：961、723、886、893、947；也不要再开「整树 Script 糖当 AI 正统」的实现票。
 
 本页和图基建收口：969。
