@@ -32,7 +32,7 @@
         }
       ],
       "whileActive": {
-        "graph": "graph.case_e.box_hit"
+        "graph": "graph.case_e.box_hover_tick"
       }
     }
   ]

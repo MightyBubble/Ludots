@@ -3610,7 +3610,6 @@
       "op": "WriteCollection",
       "authorableKinds": [
         "TriggerGraph",
-        "Query",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_WriteCollection",

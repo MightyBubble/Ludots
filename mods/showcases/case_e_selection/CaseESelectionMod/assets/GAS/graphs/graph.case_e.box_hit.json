@@ -37,23 +37,9 @@
         "op": "ScreenRegionToEntities"
       },
       {
-        "id": "op_replace",
-        "op": "ConstInt",
-        "intValue": 0
-      },
-      {
-        "id": "write_hover",
-        "op": "WriteCollection",
-        "collectionKey": "case_e.box_hover"
-      },
-      {
-        "id": "ok",
-        "op": "ConstInt",
-        "intValue": 1
-      },
-      {
         "id": "halt",
-        "op": "HaltReturnInt"
+        "op": "HaltReturnInt",
+        "intValue": 1
       }
     ],
     "controlEdges": [
@@ -90,21 +76,6 @@
       {
         "from": "rect_hits",
         "fromPort": "next",
-        "to": "op_replace"
-      },
-      {
-        "from": "op_replace",
-        "fromPort": "next",
-        "to": "write_hover"
-      },
-      {
-        "from": "write_hover",
-        "fromPort": "next",
-        "to": "ok"
-      },
-      {
-        "from": "ok",
-        "fromPort": "next",
         "to": "halt"
       }
     ],
@@ -138,18 +109,6 @@
         "fromPort": "value",
         "to": "rect_hits",
         "toPort": "max"
-      },
-      {
-        "from": "op_replace",
-        "fromPort": "value",
-        "to": "write_hover",
-        "toPort": "value"
-      },
-      {
-        "from": "ok",
-        "fromPort": "value",
-        "to": "halt",
-        "toPort": "value"
       }
     ],
     "entry": "rep"

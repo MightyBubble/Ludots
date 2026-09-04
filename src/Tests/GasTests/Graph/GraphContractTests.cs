@@ -335,7 +335,7 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
-        public void GraphKindOperationPolicy_QueryAllowsAuthorableWriteCollection()
+        public void GraphKindOperationPolicy_TriggerAllowsWriteCollection_QueryRejects()
         {
             var program = new[]
             {
@@ -350,18 +350,18 @@ namespace Ludots.Tests.GAS.Graph
             };
 
             Assert.DoesNotThrow(() => GraphKindOperationPolicy.RequireAllowed(
-                GraphKind.Query,
-                program,
-                GasGraphOpHandlerTable.Instance,
-                graphId: 14103,
-                entrypoint: nameof(GraphKindOperationPolicy_QueryAllowsAuthorableWriteCollection)));
-
-            Assert.DoesNotThrow(() => GraphKindOperationPolicy.RequireAllowed(
                 GraphKind.TriggerGraph,
                 program,
                 GasGraphOpHandlerTable.Instance,
                 graphId: 14103,
-                entrypoint: nameof(GraphKindOperationPolicy_QueryAllowsAuthorableWriteCollection)));
+                entrypoint: nameof(GraphKindOperationPolicy_TriggerAllowsWriteCollection_QueryRejects)));
+
+            Assert.Throws<InvalidOperationException>(() => GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.Query,
+                program,
+                GasGraphOpHandlerTable.Instance,
+                graphId: 14103,
+                entrypoint: nameof(GraphKindOperationPolicy_TriggerAllowsWriteCollection_QueryRejects)));
         }
 
         [Test]
