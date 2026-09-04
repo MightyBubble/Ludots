@@ -54,7 +54,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private int _subjectCount;
         private readonly List<int> _desiredProfileIds = new(4);
         private readonly List<KeyValuePair<TriggerMountOwner, List<Trigger>>> _ownedScratch = new();
-        private readonly HashSet<Entity> _frameSubjectSet = new();
+        private HashSet<Entity> _frameSubjects = new();
+        private HashSet<Entity> _retiredSubjects = new();
 
         public InteractionContextTriggerMountSystem(
             World world,
@@ -107,7 +108,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public override void Update(in float dt)
         {
             CollectSubjects();
-            _frameSubjectSet.Clear();
+
+            // Double-buffered subject sets: the retired buffer holds last frame's scan so
+            // the catch-up below only reconciles subjects that actually left the scan this
+            // frame (O(delta)), never the whole mount index (#1398 D12).
+            HashSet<Entity> retired = _retiredSubjects;
+            HashSet<Entity> current = _frameSubjects;
+            current.Clear();
             for (int s = 0; s < _subjectCount; s++)
             {
                 Entity subject = _subjects[s];
@@ -118,7 +125,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
-                _frameSubjectSet.Add(subject);
+                current.Add(subject);
                 CollectDesiredProfiles(subject, _desiredProfileIds);
                 ReconcileSubject(subject);
                 _desiredProfileIds.Clear();
@@ -128,12 +135,25 @@ namespace Ludots.Core.Gameplay.MapTriggers
             // deactivated) no longer matches the component query, so the loop above cannot
             // unmount its stale context mounts. Owning no context components means its
             // desired set is empty — remove every context-owned mount it still carries.
+            foreach (Entity subject in retired)
+            {
+                if (!current.Contains(subject) && World.IsAlive(subject))
+                {
+                    RemoveAllContextMounts(subject);
+                }
+            }
+
+            _retiredSubjects = current;
+            _frameSubjects = retired;
+        }
+
+        private void RemoveAllContextMounts(Entity subject)
+        {
             _ownedScratch.Clear();
-            _triggerManager.CollectOwnedMounts(TriggerMountOwnerKind.InteractionContext, _ownedScratch);
+            _triggerManager.CollectOwnedMounts(subject, _ownedScratch);
             for (int i = 0; i < _ownedScratch.Count; i++)
             {
-                Entity subject = _ownedScratch[i].Key.Subject;
-                if (World.IsAlive(subject) && !_frameSubjectSet.Contains(subject))
+                if (_ownedScratch[i].Key.Kind == TriggerMountOwnerKind.InteractionContext)
                 {
                     _triggerManager.RemoveOwnedMounts(_ownedScratch[i].Key);
                 }
@@ -147,10 +167,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private void ReconcileSubject(Entity subject)
         {
             _ownedScratch.Clear();
-            _triggerManager.CollectOwnedMounts(subject, TriggerMountOwnerKind.InteractionContext, _ownedScratch);
+            _triggerManager.CollectOwnedMounts(subject, _ownedScratch);
             for (int i = 0; i < _ownedScratch.Count; i++)
             {
-                if (_desiredProfileIds.Contains(_ownedScratch[i].Key.OwnerId))
+                if (_ownedScratch[i].Key.Kind != TriggerMountOwnerKind.InteractionContext ||
+                    _desiredProfileIds.Contains(_ownedScratch[i].Key.OwnerId))
                 {
                     continue;
                 }

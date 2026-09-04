@@ -257,10 +257,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             _ownedScratch.Clear();
-            _triggerManager.CollectOwnedMounts(entity, TriggerMountOwnerKind.TemplateEntity, _ownedScratch);
+            _triggerManager.CollectOwnedMounts(entity, _ownedScratch);
             for (int i = 0; i < _ownedScratch.Count; i++)
             {
-                DispatchLifecycle(session, entity, GameEvents.EntityDied, _ownedScratch[i].Value, destroyTick: true);
+                if (_ownedScratch[i].Key.Kind == TriggerMountOwnerKind.TemplateEntity)
+                {
+                    DispatchLifecycle(session, entity, GameEvents.EntityDied, _ownedScratch[i].Value, destroyTick: true);
+                }
             }
 
             // Reclamation is not done here: the heartbeat sweep below reclaims dead-subject

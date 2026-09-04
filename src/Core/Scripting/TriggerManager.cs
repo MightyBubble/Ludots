@@ -46,7 +46,7 @@ namespace Ludots.Core.Scripting
         // Owner-keyed view over the map tables (entity-domain mounts only). The map tables
         // stay the single ledger; this index only answers "which mounts did owner X create"
         // so no feature keeps a parallel shadow list (#1398 D10).
-        private readonly Dictionary<TriggerMountOwner, OwnedMountRecord> _ownedMounts = new();
+        private readonly Dictionary<Entity, List<OwnedMountRecord>> _ownedMountsBySubject = new();
 
         // Map -> Event -> triggers, maintained in priority order at registration time so
         // steady-state dispatch is a dictionary lookup with zero allocations.
@@ -253,10 +253,16 @@ namespace Ludots.Core.Scripting
         /// <summary>Live mounts one owner created (entity-domain mounts only), or false when none.</summary>
         public bool TryGetOwnedMounts(TriggerMountOwner owner, out IReadOnlyList<Trigger> mounts)
         {
-            if (_ownedMounts.TryGetValue(owner, out OwnedMountRecord? record) && record.Triggers.Count > 0)
+            if (_ownedMountsBySubject.TryGetValue(owner.Subject, out List<OwnedMountRecord>? records))
             {
-                mounts = record.Triggers;
-                return true;
+                for (int i = 0; i < records.Count; i++)
+                {
+                    if (records[i].Owner == owner && records[i].Triggers.Count > 0)
+                    {
+                        mounts = records[i].Triggers;
+                        return true;
+                    }
+                }
             }
 
             mounts = Array.Empty<Trigger>();
@@ -269,38 +275,54 @@ namespace Ludots.Core.Scripting
         /// </summary>
         public void RemoveOwnedMounts(TriggerMountOwner owner)
         {
-            if (!_ownedMounts.TryGetValue(owner, out OwnedMountRecord? record) || record.Triggers.Count == 0)
+            if (!_ownedMountsBySubject.TryGetValue(owner.Subject, out List<OwnedMountRecord>? records))
             {
                 return;
             }
 
-            // Copy: RemoveMapTriggers mutates the record list via ForgetOwnedMount.
-            Trigger[] snapshot = record.Triggers.ToArray();
-            RemoveMapTriggers(record.MapId, snapshot);
+            for (int i = 0; i < records.Count; i++)
+            {
+                if (records[i].Owner == owner)
+                {
+                    // Copy: RemoveMapTriggers mutates the record list via ForgetOwnedMount.
+                    Trigger[] snapshot = records[i].Triggers.ToArray();
+                    RemoveMapTriggers(records[i].MapId, snapshot);
+                    return;
+                }
+            }
         }
 
         /// <summary>All owned mounts registered for one map (sweep / death dispatch / diagnostics).</summary>
         public void CollectOwnedMounts(MapId mapId, List<KeyValuePair<TriggerMountOwner, List<Trigger>>> sink)
         {
             ArgumentNullException.ThrowIfNull(sink);
-            foreach (KeyValuePair<TriggerMountOwner, OwnedMountRecord> pair in _ownedMounts)
+            foreach (List<OwnedMountRecord> records in _ownedMountsBySubject.Values)
             {
-                if (pair.Value.MapId.Equals(mapId) && pair.Value.Triggers.Count > 0)
+                for (int i = 0; i < records.Count; i++)
                 {
-                    sink.Add(new KeyValuePair<TriggerMountOwner, List<Trigger>>(pair.Key, pair.Value.Triggers));
+                    if (records[i].MapId.Equals(mapId) && records[i].Triggers.Count > 0)
+                    {
+                        sink.Add(new KeyValuePair<TriggerMountOwner, List<Trigger>>(records[i].Owner, records[i].Triggers));
+                    }
                 }
             }
         }
 
-        /// <summary>All owned mounts of one subject and kind, any map (entity death dispatch).</summary>
-        public void CollectOwnedMounts(Entity subject, TriggerMountOwnerKind kind, List<KeyValuePair<TriggerMountOwner, List<Trigger>>> sink)
+        /// <summary>All owned mounts of one subject (any kind) - per-subject queries stay
+        /// O(that subject's mounts), never O(all mounts).</summary>
+        public void CollectOwnedMounts(Entity subject, List<KeyValuePair<TriggerMountOwner, List<Trigger>>> sink)
         {
             ArgumentNullException.ThrowIfNull(sink);
-            foreach (KeyValuePair<TriggerMountOwner, OwnedMountRecord> pair in _ownedMounts)
+            if (!_ownedMountsBySubject.TryGetValue(subject, out List<OwnedMountRecord>? records))
             {
-                if (pair.Key.Kind == kind && pair.Key.Subject == subject && pair.Value.Triggers.Count > 0)
+                return;
+            }
+
+            for (int i = 0; i < records.Count; i++)
+            {
+                if (records[i].Triggers.Count > 0)
                 {
-                    sink.Add(new KeyValuePair<TriggerMountOwner, List<Trigger>>(pair.Key, pair.Value.Triggers));
+                    sink.Add(new KeyValuePair<TriggerMountOwner, List<Trigger>>(records[i].Owner, records[i].Triggers));
                 }
             }
         }
@@ -309,59 +331,80 @@ namespace Ludots.Core.Scripting
         public int CountOwnedMountSubjects(TriggerMountOwnerKind kind, Func<Entity, bool> subjectAlive)
         {
             ArgumentNullException.ThrowIfNull(subjectAlive);
-            HashSet<Entity> subjects = new();
-            foreach (KeyValuePair<TriggerMountOwner, OwnedMountRecord> pair in _ownedMounts)
+            int count = 0;
+            foreach (KeyValuePair<Entity, List<OwnedMountRecord>> pair in _ownedMountsBySubject)
             {
-                if (pair.Key.Kind == kind &&
-                    pair.Value.Triggers.Count > 0 &&
-                    subjectAlive(pair.Key.Subject))
+                if (!subjectAlive(pair.Key))
                 {
-                    subjects.Add(pair.Key.Subject);
+                    continue;
+                }
+
+                for (int i = 0; i < pair.Value.Count; i++)
+                {
+                    if (pair.Value[i].Owner.Kind == kind && pair.Value[i].Triggers.Count > 0)
+                    {
+                        count++;
+                        break;
+                    }
                 }
             }
 
-            return subjects.Count;
-        }
-
-        /// <summary>All owned mounts of one kind, any subject/map (reconcile catch-up).</summary>
-        public void CollectOwnedMounts(TriggerMountOwnerKind kind, List<KeyValuePair<TriggerMountOwner, List<Trigger>>> sink)
-        {
-            ArgumentNullException.ThrowIfNull(sink);
-            foreach (KeyValuePair<TriggerMountOwner, OwnedMountRecord> pair in _ownedMounts)
-            {
-                if (pair.Key.Kind == kind && pair.Value.Triggers.Count > 0)
-                {
-                    sink.Add(new KeyValuePair<TriggerMountOwner, List<Trigger>>(pair.Key, pair.Value.Triggers));
-                }
-            }
+            return count;
         }
 
         private void RememberOwnedMount(MapId mapId, TriggerGraphMountTrigger mount)
         {
-            if (!_ownedMounts.TryGetValue(mount.Owner, out OwnedMountRecord? record))
+            if (!_ownedMountsBySubject.TryGetValue(mount.Owner.Subject, out List<OwnedMountRecord>? records))
             {
-                record = new OwnedMountRecord(mapId);
-                _ownedMounts[mount.Owner] = record;
+                records = new List<OwnedMountRecord>(2);
+                _ownedMountsBySubject[mount.Owner.Subject] = records;
             }
 
-            if (!record.Triggers.Contains(mount))
+            for (int i = 0; i < records.Count; i++)
             {
-                record.Triggers.Add(mount);
+                if (records[i].Owner == mount.Owner)
+                {
+                    if (!records[i].Triggers.Contains(mount))
+                    {
+                        records[i].Triggers.Add(mount);
+                    }
+
+                    return;
+                }
             }
+
+            OwnedMountRecord record = new(mapId, mount.Owner);
+            record.Triggers.Add(mount);
+            records.Add(record);
         }
 
         private void ForgetOwnedMount(Trigger trigger)
         {
             if (trigger is not TriggerGraphMountTrigger { Owner.IsOwned: true } mount ||
-                !_ownedMounts.TryGetValue(mount.Owner, out OwnedMountRecord? record))
+                !_ownedMountsBySubject.TryGetValue(mount.Owner.Subject, out List<OwnedMountRecord>? records))
             {
                 return;
             }
 
-            record.Triggers.Remove(mount);
-            if (record.Triggers.Count == 0)
+            for (int i = 0; i < records.Count; i++)
             {
-                _ownedMounts.Remove(mount.Owner);
+                if (records[i].Owner != mount.Owner)
+                {
+                    continue;
+                }
+
+                records[i].Triggers.Remove(mount);
+                if (records[i].Triggers.Count == 0)
+                {
+                    records.RemoveAt(i);
+                }
+
+                break;
+            }
+
+            if (records.Count == 0)
+            {
+                _ownedMountsBySubject.Remove(mount.Owner.Subject);
             }
         }
 
@@ -369,27 +412,37 @@ namespace Ludots.Core.Scripting
         {
             for (int i = 0; i < mapList.Count; i++)
             {
-                if (mapList[i] is TriggerGraphMountTrigger { Owner.IsOwned: true } mount &&
-                    _ownedMounts.TryGetValue(mount.Owner, out OwnedMountRecord? record) &&
-                    record.MapId.Equals(mapId))
+                if (mapList[i] is not TriggerGraphMountTrigger { Owner.IsOwned: true } mount ||
+                    !_ownedMountsBySubject.TryGetValue(mount.Owner.Subject, out List<OwnedMountRecord>? records))
                 {
-                    record.Triggers.Remove(mount);
-                    if (record.Triggers.Count == 0)
+                    continue;
+                }
+
+                for (int r = records.Count - 1; r >= 0; r--)
+                {
+                    if (records[r].MapId.Equals(mapId))
                     {
-                        _ownedMounts.Remove(mount.Owner);
+                        records.RemoveAt(r);
                     }
+                }
+
+                if (records.Count == 0)
+                {
+                    _ownedMountsBySubject.Remove(mount.Owner.Subject);
                 }
             }
         }
 
         private sealed class OwnedMountRecord
         {
-            public OwnedMountRecord(MapId mapId)
+            public OwnedMountRecord(MapId mapId, TriggerMountOwner owner)
             {
                 MapId = mapId;
+                Owner = owner;
             }
 
             public MapId MapId { get; }
+            public TriggerMountOwner Owner { get; }
             public List<Trigger> Triggers { get; } = new();
         }
 
