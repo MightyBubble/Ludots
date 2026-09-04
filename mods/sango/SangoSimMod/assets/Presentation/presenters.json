@@ -91,9 +91,9 @@
       0
      ],
      "localScale": [
-      2300,
-      2300,
-      2300
+      690,
+      690,
+      690
      ],
      "scaleParamKey": "sango.city.marker.scale"
     },
@@ -126,9 +126,9 @@
       0
      ],
      "localScale": [
-      2600,
-      1800,
-      900
+      1000,
+      420,
+      320
      ],
      "scaleParamKey": "sango.city.marker.scale"
     },
@@ -161,9 +161,9 @@
       0
      ],
      "localScale": [
-      3200,
-      3200,
-      3200
+      160,
+      160,
+      160
      ],
      "scaleParamKey": "sango.city.marker.scale"
     },
@@ -196,9 +196,9 @@
       0
      ],
      "localScale": [
-      2600,
-      2600,
-      2600
+      370,
+      370,
+      370
      ],
      "scaleParamKey": "sango.city.marker.scale",
      "colorParamKey": "sango.city.marker.color"
@@ -232,9 +232,9 @@
       0
      ],
      "localScale": [
-      2800,
-      2800,
-      2800
+      345,
+      345,
+      345
      ],
      "scaleParamKey": "sango.city.marker.scale",
      "colorParamKey": "sango.city.marker.color"
@@ -268,9 +268,9 @@
       0
      ],
      "localScale": [
-      3400,
-      3400,
-      3400
+      322,
+      322,
+      322
      ],
      "scaleParamKey": "sango.city.marker.scale"
     },
@@ -303,9 +303,9 @@
       0
      ],
      "localScale": [
-      2400,
-      2400,
-      2400
+      140,
+      140,
+      140
      ],
      "scaleParamKey": "sango.city.marker.scale"
     },
@@ -338,9 +338,9 @@
       0
      ],
      "localScale": [
-      2400,
-      2400,
-      2400
+      95,
+      95,
+      95
      ],
      "scaleParamKey": "sango.city.marker.scale"
     },
@@ -373,9 +373,9 @@
       0
      ],
      "localScale": [
-      2600,
-      2600,
-      2600
+      167,
+      167,
+      167
      ],
      "scaleParamKey": "sango.city.marker.scale",
      "colorParamKey": "sango.city.marker.color"
@@ -409,9 +409,9 @@
       0
      ],
      "localScale": [
-      4200,
-      4200,
-      4200
+      1220,
+      1220,
+      1220
      ],
      "scaleParamKey": "sango.city.marker.scale"
     },
@@ -430,7 +430,7 @@
     "activeByDefault": true,
     "grounding": {
      "mode": "SnapToGround",
-     "offset": 400,
+     "offset": 150,
      "updatePolicy": "Once"
     }
    },
@@ -463,9 +463,9 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       -3000,
+       -1100,
        0,
-       3000
+       1100
       ]
      }
     }
@@ -475,9 +475,9 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       3000,
+       1100,
        0,
-       3000
+       1100
       ]
      }
     }
@@ -487,9 +487,9 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       -3000,
+       -1100,
        0,
-       -3000
+       -1100
       ]
      }
     }
@@ -499,9 +499,9 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       3000,
+       1100,
        0,
-       -3000
+       -1100
       ]
      }
     }
@@ -513,7 +513,7 @@
       "localPosition": [
        0,
        0,
-       3000
+       1100
       ]
      }
     }
@@ -523,7 +523,7 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       3000,
+       1100,
        0,
        0
       ],
@@ -540,7 +540,7 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       -3000,
+       -1100,
        0,
        0
       ],
@@ -559,7 +559,7 @@
       "localPosition": [
        0,
        0,
-       -3600
+       -1300
       ]
      }
     }
@@ -569,9 +569,9 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       1300,
-       5300,
-       1300
+       450,
+       1550,
+       450
       ]
      }
     }
@@ -613,9 +613,9 @@
       0
      ],
      "localScale": [
-      4200,
-      4200,
-      4200
+      205,
+      205,
+      205
      ],
      "scaleParamKey": "sango.city.marker.scale"
     },
@@ -634,7 +634,7 @@
     "activeByDefault": true,
     "grounding": {
      "mode": "SnapToGround",
-     "offset": 300,
+     "offset": 120,
      "updatePolicy": "Once"
     }
    },
@@ -667,7 +667,7 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       3900,
+       850,
        0,
        0
       ],
@@ -684,7 +684,7 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       -3900,
+       -850,
        0,
        0
       ],
@@ -702,7 +702,7 @@
      "transform": {
       "localPosition": [
        0,
-       18400,
+       850,
        0
       ]
      }
@@ -745,9 +745,9 @@
       0
      ],
      "localScale": [
-      5200,
-      5200,
-      5200
+      380,
+      380,
+      380
      ],
      "scaleParamKey": "sango.city.marker.scale"
     },
@@ -766,7 +766,7 @@
     "activeByDefault": true,
     "grounding": {
      "mode": "SnapToGround",
-     "offset": 300,
+     "offset": 120,
      "updatePolicy": "Once"
     }
    },
@@ -799,9 +799,9 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       2800,
+       950,
        0,
-       2600
+       880
       ]
      }
     }
@@ -811,9 +811,9 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       -4600,
-       -400,
-       -1600
+       -1550,
+       -150,
+       -550
       ]
      }
     }
@@ -823,9 +823,9 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       1500,
-       1300,
-       -1400
+       500,
+       440,
+       -470
       ]
      }
     }
@@ -835,9 +835,9 @@
     "overrides": {
      "transform": {
       "localPosition": [
-       -2400,
-       6800,
-       2400
+       -810,
+       1750,
+       810
       ]
      }
     }
