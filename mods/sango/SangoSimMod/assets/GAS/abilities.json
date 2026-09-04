@@ -1,0 +1,542 @@
+[
+ {
+  "id": "Ability.Sango.Skill.1",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.1",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.2",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.2",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.3",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.3",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.4",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.4",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.5",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.5",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.6",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.6",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.7",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.7",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.8",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.8",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.9",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.9",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.10",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.10",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.11",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.11",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.12",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.12",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.13",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.13",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.14",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.14",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.15",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.15",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.16",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.16",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.17",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.17",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.18",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.18",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.19",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.19",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.20",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.20",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.21",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.21",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.22",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.22",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.23",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.23",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.24",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.24",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.25",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.25",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.26",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.26",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.27",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.27",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Skill.28",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Skill.28",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Challenge.DebateWin",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Challenge.DebateWin",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ability.Sango.Challenge.DebateLose",
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 0,
+     "template": "Effect.Sango.Challenge.DebateLose",
+     "dispatchTarget": "Source"
+    },
+    {
+     "kind": "End",
+     "tick": 0
+    }
+   ]
+  }
+ }
+]

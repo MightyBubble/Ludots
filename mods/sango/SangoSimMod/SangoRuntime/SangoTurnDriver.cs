@@ -90,6 +90,14 @@ namespace Sango.Runtime
                     return TurnAdvanceResult.AwaitingPlayer;
                 }
 
+                // D-4' 战斗转移泵位:内核 Run() 顶部的演出队列闸在下一个 Run() 调用前排空
+                // 待决事件;战斗运行时权威时在此位先行逐事件解算(技能演出改走 GAS,与内核
+                // 泵位逐拍相邻=同解算位),未挂载不进此分支(预言机路径零改动)。
+                if (SangoCombatNativeRuntime.Active is { IsDisposed: false, IsCurrentKernel: true })
+                {
+                    SangoCombatNativeRuntime.Active.Pump(scenario, VirtualFrameSeconds);
+                }
+
                 scenario.Run();
                 if (scenario.Info.turnCount >= targetTurn && !playerInPlay)
                 {

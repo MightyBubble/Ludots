@@ -1,0 +1,2040 @@
+[
+ {
+  "id": "Effect.Sango.Skill.1",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 10
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.2",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 5
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.3",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 3
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 25
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 30
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.offset.0": {
+    "type": "Int",
+    "value": 4
+   },
+   "_ep.offset.1": {
+    "type": "Int",
+    "value": 1
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.4",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 4
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 30
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 20
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.5",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 5
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 35
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 25
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 50
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.offset.0": {
+    "type": "Int",
+    "value": 4
+   },
+   "_ep.offset.1": {
+    "type": "Int",
+    "value": 2
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.6",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 6
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 25
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 4
+   },
+   "_ep.offset.0": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.offset.1": {
+    "type": "Int",
+    "value": -1
+   },
+   "_ep.offset.2": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.offset.3": {
+    "type": "Int",
+    "value": -1
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.7",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 7
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 30
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 20
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.atkOffset.0": {
+    "type": "Int",
+    "value": 4
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.8",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 8
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 33
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 25
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.atkOffset.0": {
+    "type": "Int",
+    "value": 3
+   },
+   "_ep.atkOffset.1": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.9",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 9
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 10
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.10",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 10
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 20
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 20
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.atkOffset.0": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.atkOffset.1": {
+    "type": "Int",
+    "value": 4
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.11",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 11
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 25
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 25
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.atkOffset.0": {
+    "type": "Int",
+    "value": 5
+   },
+   "_ep.atkOffset.1": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.12",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 12
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 30
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 4
+   },
+   "_ep.offset.0": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.offset.1": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.offset.2": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.offset.3": {
+    "type": "Int",
+    "value": 1
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.13",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 13
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 35
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 20
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.offset.0": {
+    "type": "Int",
+    "value": 5
+   },
+   "_ep.offset.1": {
+    "type": "Int",
+    "value": 2
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.14",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 14
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 40
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 25
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 4
+   },
+   "_ep.offset.0": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.offset.1": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.offset.2": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.offset.3": {
+    "type": "Int",
+    "value": 2
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.15",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 50
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.16",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 16
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 50
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 10
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.17",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 17
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 20
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 60
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.18",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 18
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 20
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 40
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 20
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.atkOffset.0": {
+    "type": "Int",
+    "value": 5
+   },
+   "_ep.atkOffset.1": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.19",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 19
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.20",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 20
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 25
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 30
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 4
+   },
+   "_ep.offset.0": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.offset.1": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.offset.2": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.offset.3": {
+    "type": "Int",
+    "value": 1
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.21",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 21
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 35
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 40
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 20
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.atkOffset.0": {
+    "type": "Int",
+    "value": 5
+   },
+   "_ep.atkOffset.1": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.22",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 22
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 10
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.23",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 23
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 10
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.24",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 24
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.25",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 25
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 15
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.26",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 26
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 10
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.27",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 27
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 35
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 10
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Skill.28",
+  "categories": [
+   "Effect.Sango.Skill"
+  ],
+  "presetType": "SangoSkillAction",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.sangoSkillId": {
+    "type": "Int",
+    "value": 28
+   },
+   "_ep.atk": {
+    "type": "Int",
+    "value": 2
+   },
+   "_ep.atkDurability": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.costEnergy": {
+    "type": "Int",
+    "value": 20
+   },
+   "_ep.canDamageTroop": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageMachine": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBoat": {
+    "type": "Int",
+    "value": 1
+   },
+   "_ep.canDamageBuilding": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canDamageTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.canSpellToCell": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.onlySpellToTeam": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.blockFactor": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.atkOffsetCount": {
+    "type": "Int",
+    "value": 0
+   },
+   "_ep.offsetCount": {
+    "type": "Int",
+    "value": 0
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Challenge.DebateWin",
+  "categories": [
+   "Effect.Sango.Challenge"
+  ],
+  "presetType": "SangoMoraleChange",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.moraleDelta": {
+    "type": "Int",
+    "value": 10
+   }
+  }
+ },
+ {
+  "id": "Effect.Sango.Challenge.DebateLose",
+  "categories": [
+   "Effect.Sango.Challenge"
+  ],
+  "presetType": "SangoMoraleChange",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "_ep.moraleDelta": {
+    "type": "Int",
+    "value": -10
+   }
+  }
+ }
+]

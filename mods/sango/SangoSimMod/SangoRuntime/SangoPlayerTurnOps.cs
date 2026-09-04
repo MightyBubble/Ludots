@@ -133,7 +133,7 @@ namespace Sango.Runtime
                                 $"troop {troop.Id} mission AI stalled after {maxTroopAiPumpCalls} DoAI calls during EndPlayerTurn.");
                         }
 
-                        Sango.Render.RenderEvent.Instance.Update(scenario, SangoTurnDriver.VirtualFrameSeconds);
+                        SangoCombatPump.Update(scenario, SangoTurnDriver.VirtualFrameSeconds);
                     }
                     troop.Render?.UpdateRender();
                 }

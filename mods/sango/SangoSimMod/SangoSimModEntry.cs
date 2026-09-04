@@ -96,6 +96,16 @@ namespace Sango
             // M3.f 战斗演出触发(单挑/舌战):静态内核事件订阅,与内核同进程生命周期
             // (内核未启动时事件不来);headless 测试按用例自行 Attach/Detach。
             SangoChallengeOps.Attach();
+            // D-4' 战斗解算 GAS 化:mod builtin 阶段 handler 注册进引擎扩展表(引擎配置
+            // 编译本 mod 的 preset/effects 时按 key 解析;运行时自持同步栈另行注册同一函数)。
+            context.Extensions.Gas.RegisterBuiltinHandler(
+                SangoCombatSteps.SkillActionHandlerKey,
+                SangoCombatSteps.SkillActionHandler,
+                Ludots.Core.Gameplay.GAS.EffectOperationMetadata.GasTransactional(SangoCombatSteps.SkillActionHandlerKey));
+            context.Extensions.Gas.RegisterBuiltinHandler(
+                SangoCombatSteps.MoraleChangeHandlerKey,
+                SangoCombatSteps.MoraleChangeHandler,
+                Ludots.Core.Gameplay.GAS.EffectOperationMetadata.GasTransactional(SangoCombatSteps.MoraleChangeHandlerKey));
             // M3 末读模型守卫:Cleanup 相位对账内核世界替换;引擎实例由事件面喂入
             // (ISystemRegistrar 正式面注册,见 SangoEntityMirrorSystem 注释)。
             context.Systems.RegisterSystem(new SangoEntityMirrorSystem(() => _engine), SystemGroup.Cleanup);
@@ -132,6 +142,7 @@ namespace Sango
         public void OnUnload()
         {
             SangoChallengeOps.Detach();
+            SangoCombatNativeRuntime.Active?.Dispose();
             SangoEntityMirrorRuntime.Active?.Dispose();
             _troopMarkers?.Dispose();
             _troopMarkers = null;
@@ -199,6 +210,9 @@ namespace Sango
             // D-3':部队标记 owner 迁移——原生部队运行时先行(标记 presenter 挂接在
             // 部队实体上),缺席即标记运行时构造失败(fail-fast,不回落双实体路径)。
             SangoTroopNativeRuntime troopRuntime = SangoTroopNativeRuntime.Attach(engine);
+            // D-4':战斗解算 GAS 化运行时(依赖部队运行时的实体面;mod 根由引擎 VFS 解析,
+            // 解析不到即本宿主未挂 SangoSimMod 资产,战斗保持内核路径)。
+            SangoCombatNativeRuntime.Attach(engine);
             _troopMarkers?.Dispose();
             _troopMarkers = new SangoTroopMarkerRuntime(engine.World, troopRuntime, presenterRuntime, definitions, stableIds);
             _troopMarkers.SyncAll(Sango.Core.Scenario.Cur);

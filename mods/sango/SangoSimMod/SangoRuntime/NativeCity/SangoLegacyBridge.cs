@@ -12,9 +12,10 @@
 // | 3 | 武将 Person | ~~merit+=/GainExp/ActionOver/loyalty+=/SetMission 写~~ | D-2' 已消:城域 job 结算体的武将写入段全部经 SangoPersonWriteFace(组件+内核 write-through,语句序保持内核原序) | 消亡 |
 // | 4 | 军团 Corps | ~~ActionPoint/ReduceActionPoint/GetJobCounter/AddJobCounter~~ | D-3' 已消:读写面经 SangoCorpsReadFace/SangoCorpsWriteFace 组件化(SangoTroopNativeRuntime;Reward 切片外 jobCounter 暂读内核字典,见读面注) | 基本消亡 |
 // | 4a | 部队 Troop | missionType/missionTarget/missionParams/missionTargetCell 读;setMission/ClearMission/NeedPrepareMission 写 | D-3' 任务态组件化(SangoTroopMission + SangoTroopWriteFace):原生读写面不再触碰 TroopMissionBehaviour 懒重建链;内核行为体内部仍按其原语义运行(P2 同款保留面) | 随内核终局(D-5') |
-// | 4b | 部队 Troop | troops/morale/food/foodCost/liveDays/captiveList 读 | D-3' GAS 属性(sango.troop.*)+ 组件(SangoTroopLedger/SangoTroopCaptives);战斗解算本体(ChangeTroops/ChangeMorale/技能链)仍是 D-4' 的面,本波承载域按读缝同步 | D-4'(解算全 GAS) |
+// | 4b | 部队 Troop | ~~战斗面的 troops/morale/food/foodCost/liveDays/captiveList 读~~ | D-4' 已消:战斗解算本体(SkillInstance.Action/ChangeTroops/ChangeMorale/反击/击退/攻城两段/俘获)迁 GAS 正式面(SangoCombatNativeRuntime + SangoCombatSteps,经引擎激活面);数值写入 = GAS 属性 SetBase + 内核 PONO write-through,读缝同步合同不变 | 消亡(承载域)/D-5'(内核终局) |
+// | 4c | 战斗解算 | SkillInstance.Action 调用链(演出事件 TroopSpellSkill{,Critical,Fail}Event) | D-4' 转移泵:SangoCombatNativeRuntime 在 mod 持泵位逐事件 FIFO 转移(Troop.SpellSkill 的释放判定掷点留在内核,共享随机流);未挂载即内核路径(预言机)。内核 SkillInstance/演出事件类与 PONO 存档捕获面(SaveParticipant 部队技能态)为退役候选,消亡波 D-5' | D-5' |
 // | 5 | 势力 Force | GainTechniquePoint/mGovernor/IsPlayer 读 | 内政令功勋点/俸给门槛 | 势力域波 |
-// | 6 | 城 City(PONO) | gold/food/population/durability/morale/MaxMorale/troops/woundedTroops 读 | 内核保留面(combat/OnForceTurnStart)对账与公式输入 | 城域终局 |
+// | 6 | 城 City(PONO) | gold/food/population/durability/morale/MaxMorale/troops/woundedTroops 读 | 内核保留面(combat/OnForceTurnStart)对账与公式输入;D-4' 战斗面(攻城两段的城 troops/durability 写)已迁 GAS 解算步骤(City.ChangeTroops/ChangeDurability/OnFall 为城域保留原语被原生步骤调用,与内核路径同一调用位) | 城域终局 |
 // | 7 | 城 City(PONO) | gold/food/totalGainGold/totalGainFood/population_increase_factor 字段写 | 原生结算面 write-through(内核下游读内核值,见 SangoCityNativeRuntime 文件头) | 城域终局 |
 // | 8 | 城 City(PONO) | freePersons/wildPersons/invisiblePersons/captiveList/allPersons/allBuildings/jobCounter/AIPrepared/AIFinished/ActionOver 读 | 有序名单/job 状态镜像面 | 城域终局 |
 // | 9 | 城 City(PONO) | freePersons.Remove/GetJobCounter 读, morale/jobCounter 写 | 四型内政令结算的名单与计数面 | 城域终局 |

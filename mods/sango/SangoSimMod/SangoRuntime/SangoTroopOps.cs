@@ -513,11 +513,13 @@ namespace Sango.Runtime
 
         // headless 部队 Render 不可见(ObjectRender.IsVisible 恒 false),每个 TroopMoveEvent
         // 一拍即结;泵到队列排空,语义与原版"渲染队列驱动 Scenario.Run"一致,只是压缩时间。
+        // D-4':泵位收敛到 SangoCombatPump(战斗运行时权威时逐事件转移——技能演出改走
+        // GAS 解算;未挂载即内核泵,预言机路径)。
         static void PumpRenderEvents(Scenario scenario)
         {
             for (int i = 0; i < MaxRenderEventPumpCalls; i++)
             {
-                if (RenderEvent.Instance.Update(scenario, SangoTurnDriver.VirtualFrameSeconds))
+                if (SangoCombatPump.Update(scenario, SangoTurnDriver.VirtualFrameSeconds))
                 {
                     return;
                 }

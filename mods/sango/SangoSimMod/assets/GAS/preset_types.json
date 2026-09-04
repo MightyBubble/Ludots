@@ -1,0 +1,34 @@
+[
+ {
+  "id": "SangoSkillAction",
+  "components": [],
+  "activePhases": [
+   "OnApply"
+  ],
+  "allowedLifetimes": [
+   "Instant"
+  ],
+  "defaultPhaseHandlers": {
+   "OnApply": {
+    "type": "builtin",
+    "id": "SangoSimMod.SangoSkillAction"
+   }
+  }
+ },
+ {
+  "id": "SangoMoraleChange",
+  "components": [],
+  "activePhases": [
+   "OnApply"
+  ],
+  "allowedLifetimes": [
+   "Instant"
+  ],
+  "defaultPhaseHandlers": {
+   "OnApply": {
+    "type": "builtin",
+    "id": "SangoSimMod.SangoMoraleChange"
+   }
+  }
+ }
+]

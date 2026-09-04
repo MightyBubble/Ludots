@@ -165,20 +165,34 @@ namespace Sango.Runtime
             HostPlayerTurns(debate);
 
             // 胜负面落点:胜方部队 +10 士气,败方 -10,平局不动(单挑内核 ±20 的一半量级)。
+            // D-4':写入改走 GAS 激活(SangoCombatNativeRuntime.ResolveChallengeMorale →
+            // Ability.Sango.Challenge.DebateWin/Lose → 士气步骤);未挂载时退化为纯内核写
+            // (写面惯例,语义与内核逐位同)。
             switch (debate.Result)
             {
                 case DebateResult.Participant1Win:
-                    attacker.ChangeMorale(10);
-                    defender.ChangeMorale(-10);
+                    ApplyDebateMorale(attacker, defender);
                     break;
                 case DebateResult.Participant2Win:
-                    defender.ChangeMorale(10);
-                    attacker.ChangeMorale(-10);
+                    ApplyDebateMorale(defender, attacker);
                     break;
             }
 
             DebateLinePublished?.Invoke(DebateEndLine(attacker, defender, debate.Result));
         }
+        static void ApplyDebateMorale(Troop winner, Troop loser)
+        {
+            if (SangoCombatNativeRuntime.Active is { IsDisposed: false, IsCurrentKernel: true })
+            {
+                SangoCombatNativeRuntime.Active.ResolveChallengeMorale(winner, win: true);
+                SangoCombatNativeRuntime.Active.ResolveChallengeMorale(loser, win: false);
+                return;
+            }
+
+            winner.ChangeMorale(10);
+            loser.ChangeMorale(-10);
+        }
+
         // 玩家侧托管:轮到 Player 参与者时按内核 AI 的同一决策面(随机话术)代答。
         static void HostPlayerTurns(DebateInstance debate)
         {
