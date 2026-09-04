@@ -597,14 +597,12 @@ namespace Ludots.Tests.GAS
                         {
                             Id = ContextProfileName,
                             ActiveCollectionKey = AbilityTargetsCollectionKey,
-                            ActiveEntityViewKey = "view.ability.test.targets",
                             CommandIntentId = ContextIntentName,
                         },
                         new()
                         {
                             Id = InteractionContextIds.Default,
                             ActiveCollectionKey = EntityCollectionKeys.CommandSource,
-                            ActiveEntityViewKey = "view.test.default",
                         },
                     },
                 }, keyRegistry, filterProfileIds, commandIntentProfileIds);

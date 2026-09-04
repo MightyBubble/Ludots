@@ -368,7 +368,6 @@ namespace Ludots.Tests.GAS
                         {
                             Id = TargetingContextProfileId,
                             ActiveCollectionKey = TargetingCollectionKey,
-                            ActiveEntityViewKey = "view.test.targeting",
                         },
                     },
                 }, collectionKeys, filterProfileIds, commandIntentProfileIds);

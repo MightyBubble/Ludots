@@ -3,7 +3,6 @@
     {
       "id": "ctx.ability.superweapon.confirm_targets",
       "activeCollectionKey": "collection.ability.superweapon.targets",
-      "activeEntityViewKey": "view.ability.superweapon.targets",
       "filterProfileId": "filter.superweapon.valid_targets",
       "inputContextId": "imc.ability.confirm"
     }

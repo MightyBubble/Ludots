@@ -2,8 +2,7 @@
   "profiles": [
     {
       "id": "interaction.context.gallery.aim",
-      "activeCollectionKey": "gallery.aim",
-      "activeEntityViewKey": "gallery.aim.view"
+      "activeCollectionKey": "gallery.aim"
     }
   ]
 }
