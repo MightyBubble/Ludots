@@ -1,0 +1,62 @@
+[
+ {
+  "id": "sango.model.tower.square",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.wall",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.wall.corner",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.gate.house",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.banner.long",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.banner.flag",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.banner.pennant.high",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.tree.large",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.tree.small",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.rock.large",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.rock.small",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.dock.platform",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.ship.small",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.tower.watch",
+  "type": "Model"
+ },
+ {
+  "id": "sango.model.crate",
+  "type": "Model"
+ }
+]

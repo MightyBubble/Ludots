@@ -1,0 +1,137 @@
+[
+ {
+  "id": "sango.model.tower.square.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.tower.square",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/castle-kit/tower-square.glb"
+  ]
+ },
+ {
+  "id": "sango.model.wall.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.wall",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/castle-kit/wall.glb"
+  ]
+ },
+ {
+  "id": "sango.model.wall.corner.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.wall.corner",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/castle-kit/wall-corner.glb"
+  ]
+ },
+ {
+  "id": "sango.model.gate.house.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.gate.house",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/pirate-kit/castle-gate.glb"
+  ]
+ },
+ {
+  "id": "sango.model.banner.long.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.banner.long",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/castle-kit/flag-banner-long.glb"
+  ]
+ },
+ {
+  "id": "sango.model.banner.flag.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.banner.flag",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/castle-kit/flag.glb"
+  ]
+ },
+ {
+  "id": "sango.model.banner.pennant.high.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.banner.pennant.high",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/pirate-kit/flag-high-pennant.glb"
+  ]
+ },
+ {
+  "id": "sango.model.tree.large.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.tree.large",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/castle-kit/tree-large.glb"
+  ]
+ },
+ {
+  "id": "sango.model.tree.small.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.tree.small",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/castle-kit/tree-small.glb"
+  ]
+ },
+ {
+  "id": "sango.model.rock.large.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.rock.large",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/castle-kit/rocks-large.glb"
+  ]
+ },
+ {
+  "id": "sango.model.rock.small.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.rock.small",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/castle-kit/rocks-small.glb"
+  ]
+ },
+ {
+  "id": "sango.model.dock.platform.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.dock.platform",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/pirate-kit/structure-platform-dock.glb"
+  ]
+ },
+ {
+  "id": "sango.model.ship.small.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.ship.small",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/pirate-kit/ship-small.glb"
+  ]
+ },
+ {
+  "id": "sango.model.tower.watch.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.tower.watch",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/pirate-kit/tower-watch.glb"
+  ]
+ },
+ {
+  "id": "sango.model.crate.raylib",
+  "assetKind": "Mesh",
+  "assetId": "sango.model.crate",
+  "backendId": "raylib",
+  "sourceUris": [
+   "SangoTerrainMod:assets/Models/cc0/pirate-kit/crate.glb"
+  ]
+ }
+]

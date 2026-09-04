@@ -4069,5 +4069,44 @@
     }
    }
   ]
+ },
+ {
+  "id": "sango.terrain.scatter",
+  "behaviors": [
+   {
+    "slot": "instancedBatch",
+    "kind": "InstancedBatch",
+    "activeByDefault": true,
+    "instancedBatch": {
+     "batchAssetId": "sango.terrain.scatter"
+    }
+   }
+  ],
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "sango.scatter.anchor"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "scopeSource": "EventPayloadA",
+     "definitionId": "sango.terrain.scatter"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "sango.scatter.anchor"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
  }
 ]

@@ -74,6 +74,324 @@
   ]
  },
  {
+  "id": "sango.city.part.corner.tower",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sango.model.wall.corner",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      0,
+      0
+     ],
+     "localScale": [
+      2300,
+      2300,
+      2300
+     ],
+     "scaleParamKey": "sango.city.marker.scale"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.city.part.curtain.wall",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sango.model.wall",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      0,
+      0
+     ],
+     "localScale": [
+      2600,
+      1800,
+      900
+     ],
+     "scaleParamKey": "sango.city.marker.scale"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.city.part.gate",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sango.model.gate.house",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      0,
+      0
+     ],
+     "localScale": [
+      3200,
+      3200,
+      3200
+     ],
+     "scaleParamKey": "sango.city.marker.scale"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.city.part.banner",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sango.model.banner.long",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      0,
+      0
+     ],
+     "localScale": [
+      2600,
+      2600,
+      2600
+     ],
+     "scaleParamKey": "sango.city.marker.scale",
+     "colorParamKey": "sango.city.marker.color"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.city.part.flag",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sango.model.banner.flag",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      0,
+      0
+     ],
+     "localScale": [
+      2800,
+      2800,
+      2800
+     ],
+     "scaleParamKey": "sango.city.marker.scale",
+     "colorParamKey": "sango.city.marker.color"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.city.part.watchtower",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sango.model.tower.watch",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      0,
+      0
+     ],
+     "localScale": [
+      3400,
+      3400,
+      3400
+     ],
+     "scaleParamKey": "sango.city.marker.scale"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.city.part.ship",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sango.model.ship.small",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      0,
+      0
+     ],
+     "localScale": [
+      2400,
+      2400,
+      2400
+     ],
+     "scaleParamKey": "sango.city.marker.scale"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.city.part.crate",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sango.model.crate",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      0,
+      0
+     ],
+     "localScale": [
+      2400,
+      2400,
+      2400
+     ],
+     "scaleParamKey": "sango.city.marker.scale"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "sango.city.part.pennant",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sango.model.banner.pennant.high",
+     "renderPath": "StaticMesh",
+     "mobility": "Static",
+     "localOffset": [
+      0,
+      0,
+      0
+     ],
+     "localScale": [
+      2600,
+      2600,
+      2600
+     ],
+     "scaleParamKey": "sango.city.marker.scale",
+     "colorParamKey": "sango.city.marker.color"
+    },
+    "style": {
+     "color": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
   "id": "sango.city.marker.city",
   "behaviors": [
    {
@@ -82,7 +400,7 @@
     "activeByDefault": true,
     "assetBinding": {
      "assetKind": "Mesh",
-     "assetId": "cube",
+     "assetId": "sango.model.tower.square",
      "renderPath": "StaticMesh",
      "mobility": "Static",
      "localOffset": [
@@ -91,79 +409,17 @@
       0
      ],
      "localScale": [
-      6400,
-      800,
-      6400
-     ],
-     "scaleParamKey": "sango.city.marker.scale",
-     "colorParamKey": "sango.city.marker.color"
-    },
-    "style": {
-     "color": [
-      1,
-      1,
-      1,
-      1
-     ]
-    }
-   },
-   {
-    "slot": "attachment",
-    "kind": "AssetBinding",
-    "activeByDefault": true,
-    "assetBinding": {
-     "assetKind": "Mesh",
-     "assetId": "cube",
-     "renderPath": "StaticMesh",
-     "mobility": "Static",
-     "localOffset": [
-      0,
-      1200,
-      0
-     ],
-     "localScale": [
-      2400,
-      1600,
-      2400
-     ],
-     "scaleParamKey": "sango.city.marker.scale",
-     "colorParamKey": "sango.city.marker.color"
-    },
-    "style": {
-     "color": [
-      1,
-      1,
-      1,
-      1
-     ]
-    }
-   },
-   {
-    "slot": "orientation",
-    "kind": "AssetBinding",
-    "activeByDefault": true,
-    "assetBinding": {
-     "assetKind": "Mesh",
-     "assetId": "sphere",
-     "renderPath": "StaticMesh",
-     "mobility": "Static",
-     "localOffset": [
-      0,
-      2050,
-      0
-     ],
-     "localScale": [
-      1600,
-      1600,
-      1600
+      4200,
+      4200,
+      4200
      ],
      "scaleParamKey": "sango.city.marker.scale"
     },
     "style": {
      "color": [
-      0.78,
-      0.74,
-      0.62,
+      1,
+      1,
+      1,
       1
      ]
     }
@@ -201,6 +457,126 @@
     }
    }
   ],
+  "children": [
+   {
+    "definitionId": "sango.city.part.corner.tower",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       -3000,
+       0,
+       3000
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.corner.tower",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       3000,
+       0,
+       3000
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.corner.tower",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       -3000,
+       0,
+       -3000
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.corner.tower",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       3000,
+       0,
+       -3000
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.curtain.wall",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       0,
+       0,
+       3000
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.curtain.wall",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       3000,
+       0,
+       0
+      ],
+      "localRotation": [
+       0,
+       90,
+       0
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.curtain.wall",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       -3000,
+       0,
+       0
+      ],
+      "localRotation": [
+       0,
+       90,
+       0
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.gate",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       0,
+       0,
+       -3600
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.banner",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       1300,
+       5300,
+       1300
+      ]
+     }
+    }
+   }
+  ],
   "paramDefaults": [
    {
     "paramKey": "sango.city.marker.color",
@@ -228,7 +604,7 @@
     "activeByDefault": true,
     "assetBinding": {
      "assetKind": "Mesh",
-     "assetId": "cube",
+     "assetId": "sango.model.gate.house",
      "renderPath": "StaticMesh",
      "mobility": "Static",
      "localOffset": [
@@ -237,78 +613,17 @@
       0
      ],
      "localScale": [
-      5600,
-      600,
-      3000
+      4200,
+      4200,
+      4200
      ],
      "scaleParamKey": "sango.city.marker.scale"
     },
     "style": {
      "color": [
-      0.62,
-      0.58,
-      0.52,
-      1
-     ]
-    }
-   },
-   {
-    "slot": "attachment",
-    "kind": "AssetBinding",
-    "activeByDefault": true,
-    "assetBinding": {
-     "assetKind": "Mesh",
-     "assetId": "cube",
-     "renderPath": "StaticMesh",
-     "mobility": "Static",
-     "localOffset": [
-      0,
-      1050,
-      0
-     ],
-     "localScale": [
-      5000,
-      1500,
-      1500
-     ],
-     "scaleParamKey": "sango.city.marker.scale",
-     "colorParamKey": "sango.city.marker.color"
-    },
-    "style": {
-     "color": [
       1,
       1,
       1,
-      1
-     ]
-    }
-   },
-   {
-    "slot": "orientation",
-    "kind": "AssetBinding",
-    "activeByDefault": true,
-    "assetBinding": {
-     "assetKind": "Mesh",
-     "assetId": "cube",
-     "renderPath": "StaticMesh",
-     "mobility": "Static",
-     "localOffset": [
-      0,
-      1350,
-      0
-     ],
-     "localScale": [
-      6200,
-      450,
-      1250
-     ],
-     "scaleParamKey": "sango.city.marker.scale"
-    },
-    "style": {
-     "color": [
-      0.5,
-      0.36,
-      0.24,
       1
      ]
     }
@@ -346,6 +661,54 @@
     }
    }
   ],
+  "children": [
+   {
+    "definitionId": "sango.city.part.curtain.wall",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       3900,
+       0,
+       0
+      ],
+      "localScale": [
+       1.15,
+       1.1,
+       1
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.curtain.wall",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       -3900,
+       0,
+       0
+      ],
+      "localScale": [
+       1.15,
+       1.1,
+       1
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.flag",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       0,
+       18400,
+       0
+      ]
+     }
+    }
+   }
+  ],
   "paramDefaults": [
    {
     "paramKey": "sango.city.marker.color",
@@ -373,7 +736,7 @@
     "activeByDefault": true,
     "assetBinding": {
      "assetKind": "Mesh",
-     "assetId": "cube",
+     "assetId": "sango.model.dock.platform",
      "renderPath": "StaticMesh",
      "mobility": "Static",
      "localOffset": [
@@ -382,78 +745,17 @@
       0
      ],
      "localScale": [
-      7000,
-      350,
-      3500
+      5200,
+      5200,
+      5200
      ],
      "scaleParamKey": "sango.city.marker.scale"
     },
     "style": {
      "color": [
-      0.46,
-      0.37,
-      0.27,
-      1
-     ]
-    }
-   },
-   {
-    "slot": "attachment",
-    "kind": "AssetBinding",
-    "activeByDefault": true,
-    "assetBinding": {
-     "assetKind": "Mesh",
-     "assetId": "cube",
-     "renderPath": "StaticMesh",
-     "mobility": "Static",
-     "localOffset": [
-      -1700,
-      800,
-      0
-     ],
-     "localScale": [
-      2200,
-      900,
-      2200
-     ],
-     "scaleParamKey": "sango.city.marker.scale",
-     "colorParamKey": "sango.city.marker.color"
-    },
-    "style": {
-     "color": [
       1,
       1,
       1,
-      1
-     ]
-    }
-   },
-   {
-    "slot": "orientation",
-    "kind": "AssetBinding",
-    "activeByDefault": true,
-    "assetBinding": {
-     "assetKind": "Mesh",
-     "assetId": "cube",
-     "renderPath": "StaticMesh",
-     "mobility": "Static",
-     "localOffset": [
-      2400,
-      1400,
-      0
-     ],
-     "localScale": [
-      350,
-      2200,
-      350
-     ],
-     "scaleParamKey": "sango.city.marker.scale"
-    },
-    "style": {
-     "color": [
-      0.72,
-      0.66,
-      0.54,
       1
      ]
     }
@@ -464,7 +766,7 @@
     "activeByDefault": true,
     "grounding": {
      "mode": "SnapToGround",
-     "offset": 175,
+     "offset": 300,
      "updatePolicy": "Once"
     }
    },
@@ -488,6 +790,56 @@
      "orientationParamKey": "none",
      "orientationOffsetRad": 0,
      "orientationLengthPx": 0
+    }
+   }
+  ],
+  "children": [
+   {
+    "definitionId": "sango.city.part.watchtower",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       2800,
+       0,
+       2600
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.ship",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       -4600,
+       -400,
+       -1600
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.crate",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       1500,
+       1300,
+       -1400
+      ]
+     }
+    }
+   },
+   {
+    "definitionId": "sango.city.part.pennant",
+    "overrides": {
+     "transform": {
+      "localPosition": [
+       -2400,
+       6800,
+       2400
+      ]
+     }
     }
    }
   ],

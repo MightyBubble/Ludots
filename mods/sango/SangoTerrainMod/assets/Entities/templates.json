@@ -1,0 +1,16 @@
+[
+ {
+  "id": "sango.scatter.anchor",
+  "components": {
+   "Name": {
+    "Value": "Sango terrain scatter anchor"
+   },
+   "WorldPositionCm": {
+    "Value": {
+     "X": 0,
+     "Y": 0
+    }
+   }
+  }
+ }
+]

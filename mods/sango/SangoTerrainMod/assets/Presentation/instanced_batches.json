@@ -1,0 +1,61 @@
+[
+ {
+  "id": "sango.terrain.scatter",
+  "renderPath": "InstancedStaticMesh",
+  "ownerStableId": "sango.terrain.scatter.anchor",
+  "groups": [
+   {
+    "id": "trees.large",
+    "meshAssetId": "sango.model.tree.large",
+    "bucketId": "sango.scatter.trees.large",
+    "instanceSpanId": "sango.scatter.trees.large.span",
+    "source": {
+     "format": "ludots.instanced_transform_factorized.v1",
+     "assetUri": "SangoTerrainMod:assets/Scatter/sango_scatter_sets.json",
+     "setId": "trees.large",
+     "instanceCount": 2079,
+     "groundToContinuousHeightmap": true
+    }
+   },
+   {
+    "id": "trees.small",
+    "meshAssetId": "sango.model.tree.small",
+    "bucketId": "sango.scatter.trees.small",
+    "instanceSpanId": "sango.scatter.trees.small.span",
+    "source": {
+     "format": "ludots.instanced_transform_factorized.v1",
+     "assetUri": "SangoTerrainMod:assets/Scatter/sango_scatter_sets.json",
+     "setId": "trees.small",
+     "instanceCount": 1474,
+     "groundToContinuousHeightmap": true
+    }
+   },
+   {
+    "id": "rocks.large",
+    "meshAssetId": "sango.model.rock.large",
+    "bucketId": "sango.scatter.rocks.large",
+    "instanceSpanId": "sango.scatter.rocks.large.span",
+    "source": {
+     "format": "ludots.instanced_transform_factorized.v1",
+     "assetUri": "SangoTerrainMod:assets/Scatter/sango_scatter_sets.json",
+     "setId": "rocks.large",
+     "instanceCount": 387,
+     "groundToContinuousHeightmap": true
+    }
+   },
+   {
+    "id": "rocks.small",
+    "meshAssetId": "sango.model.rock.small",
+    "bucketId": "sango.scatter.rocks.small",
+    "instanceSpanId": "sango.scatter.rocks.small.span",
+    "source": {
+     "format": "ludots.instanced_transform_factorized.v1",
+     "assetUri": "SangoTerrainMod:assets/Scatter/sango_scatter_sets.json",
+     "setId": "rocks.small",
+     "instanceCount": 409,
+     "groundToContinuousHeightmap": true
+    }
+   }
+  ]
+ }
+]
