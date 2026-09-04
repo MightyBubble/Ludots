@@ -167,6 +167,11 @@
       {
         "from": "reset",
         "fromPort": "next",
+        "to": "op_clear"
+      },
+      {
+        "from": "op_clear",
+        "fromPort": "next",
         "to": "clear_pending"
       },
       {

@@ -2,6 +2,7 @@
   {
     "id": "graph.case_e.box_hover_clear",
     "kind": "Script",
+    "entry": "op_replace",
     "nodes": [
       {
         "id": "op_replace",

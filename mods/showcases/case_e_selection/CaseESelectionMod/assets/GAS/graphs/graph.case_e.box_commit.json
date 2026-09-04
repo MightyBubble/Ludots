@@ -75,6 +75,11 @@
       {
         "from": "run_hit",
         "fromPort": "next",
+        "to": "op_replace"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "next",
         "to": "write_pending"
       },
       {
