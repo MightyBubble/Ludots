@@ -73,7 +73,7 @@ L0 GraphInstruction[] + Symbols + SourceMap
 | Api | 世界副作用只调用 `state.Api.*`；文字堆只碰 `state.Text`；程序符号只读登记表 |
 | 失败 | 与解释器同一失败关闭；禁止截断、禁止缺绑定时空操作 |
 | Source map | 生成代码可嵌入 `#line` 或旁路 map；Live Debug 仍按指令下标归因作者节点 |
-| 糖 | `FormatText` / `FsmState` / `Bt*` / `While`… 只编**降级后的 L0**；资格报告按降级后 op 集合判定 |
+| 糖 | `FormatText` / `FsmState` / `Bt*` / `While`… 只编**降级后的 L0**；资格报告按降级后 op 集合判定。`Bt*` / `FsmState` 是 Script 流程组合糖，**不是** L2 角色 AI 作者正统（正统见分层合同与能力页 §3.3.0） |
 
 ### 3.3 全量覆盖：按家族发射策略（终态目录）
 

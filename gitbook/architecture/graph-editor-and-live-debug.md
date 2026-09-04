@@ -10,7 +10,7 @@
 
 打开编辑器后，节点联想和控制输出端口只来自 Bridge 投影的运行时 descriptor / 作者糖，不在前端自造 op。游戏进程加载 `AgentBridgeMod` 后，编辑器右侧 Live Debug 能列出已挂载的 TriggerGraph 条目，开启固定容量 trace，并按 sequence 增量拉取变化。
 
-当前收口：控制流端口、作者糖（含 `FsmState` / `SelectByEnum` / `InlineGraph` / `FormatText`，以及 Script-only 的 `BtSequence` / `BtSelector` / `BtDecorator` 与动态 `child:{n}` 臂）、删节点清悬挂边、source map 缺失失败关闭。正式文字合同已齐：`ConstText` / `ConcatText` / `IntToText` / `FloatToText` / `SinkPresentationText` 与 `FormatText` 花括号自动引脚进入 descriptor / 糖名册（见 [图正式文字](graph-formal-text.md)）。地图变量面板只暴露 Integer / Float；不再列出引擎还不认的 Array / Map。
+当前收口：控制流端口、作者糖（含 Script/TriggerGraph 可用的流程糖如 `FsmState` / `SelectByEnum` / `InlineGraph` / `FormatText`，以及 Script-only 的 `BtSequence` / `BtSelector` / `BtDecorator` 与动态 `child:{n}` 臂——**这些是流程图组合糖，不是角色 AI 的 L2 正统**；L2 见 [图怎么分层](graph-layering-flow-and-behavior.md)）、删节点清悬挂边、source map 缺失失败关闭。正式文字合同已齐：`ConstText` / `ConcatText` / `IntToText` / `FloatToText` / `SinkPresentationText` 与 `FormatText` 花括号自动引脚进入 descriptor / 糖名册（见 [图正式文字](graph-formal-text.md)）。地图变量面板只暴露 Integer / Float；不再列出引擎还不认的 Array / Map。
 
 Codegen 产品化合同见 [图 Codegen 产品化](graph-codegen-productization.md)：右侧 **Codegen** 面板可预览生成 C#、看资格红绿灯、一键对拍；Bridge 提供 `codegen/preview`、`codegen/parity`、`GET /api/graph/codegen/coverage`。Live Debug 后端徽章可显示当前执行后端标签（面板已预留 `backend` 展示位）。
 
@@ -42,7 +42,7 @@ cd src/Tools/Ludots.Editor.React && npm ci && npm run dev
 | modId | `MapTriggerNightRaidMod` |
 | graphId | `Graph.NightRaid.Flow` |
 
-Load 后画布显示控制边（蓝）与值边。左侧节点表里的作者糖只来自 Bridge `authoringSugars`（含 `BranchBool`、`SwitchInt`、`SelectByEnum`、`FsmState`、`Wait`、`While`、`Until`、`Break`；Script 另有 `BtSequence` / `BtSelector` / `BtDecorator`；TriggerGraph 另有 `InlineGraph`）。普通节点的 `Jump.target`、`Call.call/next` 等端口来自 Bridge，不是前端硬编码。`FsmState` 必须绑 `enumType` + `stateVar`，case 臂用枚举成员名。BT 组合糖用 `child:{n}` 臂（Decorator 固定 `child:0` + `decoratorKind`）。
+Load 后画布显示控制边（蓝）与值边。左侧节点表里的作者糖只来自 Bridge `authoringSugars`（含 `BranchBool`、`SwitchInt`、`SelectByEnum`、`FsmState`、`Wait`、`While`、`Until`、`Break`；Script 另有 `BtSequence` / `BtSelector` / `BtDecorator`；TriggerGraph 另有 `InlineGraph`）。普通节点的 `Jump.target`、`Call.call/next` 等端口来自 Bridge，不是前端硬编码。`FsmState` 必须绑 `enumType` + `stateVar`，case 臂用枚举成员名。BT 组合糖用 `child:{n}` 臂（Decorator 固定 `child:0` + `decoratorKind`）。**角色 AI 行为树 / 状态机的正统作者面是 L2 JSON 拓扑，不在本页 `/gas-graphs` 用整树糖代替**（见 [图能力唯一入口](graph-capability-status.md) §3.3.0）。
 
 Validate 走 `GraphProgramAuthoringFrontDoor`；缺控制边 / 未知 op 失败关闭。Save 只在 Validate 通过后写 `assets/GAS/graphs.json`；布局写 `graph_editor.json`，不进运行时合同。
 
@@ -101,8 +101,8 @@ Watch 之后，底栏按执行到达的顺序列出这一趟走过的每一组�
 4. 同一张图上，凑满门槛那一刀走完整条链，底栏多出刷 Boss 那一步，游戏里 Boss 出现、提醒面板弹出。
 5. 一条入口改成等输入动作：起因切到「an input action」，动作 id 从下拉里选，事件名那栏收起，载荷针换成 `InputAction`。把动作 id 留空按保存，编辑器点名这条入口拒绝保存。
 6. TriggerGraph 事件入口从 Schema 下拉选事件，检查器列出载荷针。
-7. 在 Script 图里加入 `FsmState`，填写枚举与相位变量并挂 case 臂，保存后再打开字段仍在。
-8. 在 Script 图里加入 `BtSequence`，用 child 臂挂子节点；`BtDecorator` 选 `decoratorKind` 后连 `child:0`，保存后再打开仍在。
+7. 在 Script 图里加入 `FsmState`（流程糖），填写枚举与相位变量并挂 case 臂，保存后再打开字段仍在——这不表示角色 AI 正统已迁到糖图。
+8. 在 Script 图里加入 `BtSequence`（流程糖），用 child 臂挂子节点；`BtDecorator` 选 `decoratorKind` 后连 `child:0`，保存后再打开仍在——同上，L2 行为树正统仍是 `behavior_trees.json`。
 9. 变量面板类型只见 Integer / Float，没有 Array / Map。
 
 ---

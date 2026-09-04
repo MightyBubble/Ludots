@@ -10,6 +10,10 @@ Ludots 的图能力分成三层，对标 Paradox **FlowCanvas（细流程）+ No
 
 本页是分层合同的文档 SSOT；实现以 `GraphKind`、`GasGraphOpHandlerTable`、`GraphKindOperationPolicy` 为准。
 
+**角色 AI 的作者正轨是 L2 拓扑，不是 Script 图糖。**  
+行为树写 `AI/behavior_trees.json`，由 `BehaviorTreeWorld` 跑；分层状态机写 `AI/hfsm.json`，由 `HfsmWorld` 跑；叶子再进 L1（ActionLib / Script）。  
+2026-08 有一条「真图化」把旗舰整树/整机摊进 Script 糖（`Bt*` / `FsmState` + `Graph*Host`）。那是跑偏，见 [跑偏记录](../../artifacts/showcases/graph-fsm-bt-refactor-design.md)；进度与扳回见 [图能力唯一入口](graph-capability-status.md)。Script 里仍可保留 `Bt*` / `FsmState` 当**流程组合糖**，但不得再写成「角色 AI 的正统作者面」。
+
 ## 2. 结构
 
 ```text
@@ -48,7 +52,7 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 
 作者节点名 SSOT：`GraphAuthoringSugar`（非 `GraphNodeOp`）。`BranchBool` 可用于 **Script / Effect**（`IsBranchBoolAuthorable`）；`SwitchInt` / `Wait` / `While` / `Until` 仅 **Script**。Query / Score / Validation / Derived 使用上述糖名必须失败关闭。运行时仍是同一套 L0 handler 表，不新增 While/Switch opcode。
 
-BT 组合糖（`BtSequence` / `BtSelector` / `BtDecorator`，仅 Script）同属这张名册：整棵行为树在编译期内联成**单个 Script 程序**——组合节点降级为 `Call`/`Return` + `CompareEqInt` + `JumpIfFalse`（子状态走共享 int 寄存器，0=Failure / 1=Success / 2=Running，见 `GraphBtStatusCodes`），叶子链终端按产出类型降级为状态尾声（Int→`MoveInt`、Bool→分支写 0/1、Void→恒 1），只有树根出口 `HaltReturnInt`；嵌套深度受 `MaxCallStackDepth`（16，与 BT `MaxStackDepth` 对齐）静态与运行时双重失败关闭。`GraphBehaviorTreeHost` 只做 per-agent 帧驻留与 think wave `ExecuteSlice` 续跑（Yield 叶跨波恢复天然复用 callStack），不自带树遍历；旧 C# 解释器（`BehaviorTreeWorld`）保留为旧数据路径，图路径不得调用其遍历/PopAndPropagate。
+`BtSequence` / `BtSelector` / `BtDecorator` / `FsmState` 也在这张名册里，但是 **Script（及 TriggerGraph 上的 `FsmState`）流程组合糖**：编译期降成 `Call`/`Return`、比较与跳转等 L0，**不替代** L2 的 `behavior_trees.json` / `hfsm.json` 作者面。主仓仍有 `GraphBehaviorTreeHost` / `GraphFsmHost` 与旗舰糖图资产——那是 2026-08 跑偏留下的代码，不是正统；角色 AI 旗舰应回到 L2 拓扑（见能力页与 PR #1416）。
 
 | 节点 | 端口 | 降级为 L0 | Kind |
 |------|------|-----------|------|
@@ -57,10 +61,10 @@ BT 组合糖（`BtSequence` / `BtSelector` / `BtDecorator`，仅 Script）同属
 | `Wait` | `next`（控制边） | 作者别名 → `Yield` | Script only |
 | `While` | `condition`（bool）；`body` / `next`（控制边） | `JumpIfFalse(cond)→next` + `Jump→body`（回边由作者边闭合） | Script only |
 | `Until` | `condition`（bool）；`body` / `next`（控制边） | `JumpIfFalse(cond)→body` + `Jump→next`（条件为真时退出） | Script only |
-| `BtSequence` | `child:{N}`（控制边，按序） | 每子 `Call` + 失败/Running 检查（`ConstInt`+`CompareEqInt`+`JumpIfFalse`+`Jump`），出口写状态寄存器后 `Return`（根则 `HaltReturnInt`） | Script only |
-| `BtSelector` | `child:{N}` | 对偶：成功短路；全失败→Failure；Running 同 Sequence | Script only |
-| `BtDecorator` | `child:0`；字段 `decoratorKind`（`inverter`/`forceSuccess`/`forceFailure`） | `Call` 子 + 状态改写检查；Running 原样透传 | Script only |
-| `FsmState` | 字段 `enumType` + `stateVar`；`case:{member}` / `default`（控制边）；**无值输入** | `ReadMapVarInt(stateVar)` + 每臂 `ConstInt`/`CompareEqInt`/`JumpIfFalse`/`Jump`，尾 `Jump(default)`；产出状态 int | Script / TriggerGraph |
+| `BtSequence` | `child:{N}`（控制边，按序） | 每子 `Call` + 失败/Running 检查（`ConstInt`+`CompareEqInt`+`JumpIfFalse`+`Jump`），出口写状态寄存器后 `Return`（根则 `HaltReturnInt`） | Script only（流程糖，非 L2 AI 正统） |
+| `BtSelector` | `child:{N}` | 对偶：成功短路；全失败→Failure；Running 同 Sequence | Script only（同上） |
+| `BtDecorator` | `child:0`；字段 `decoratorKind`（`inverter`/`forceSuccess`/`forceFailure`） | `Call` 子 + 状态改写检查；Running 原样透传 | Script only（同上） |
+| `FsmState` | 字段 `enumType` + `stateVar`；`case:{member}` / `default`（控制边）；**无值输入** | `ReadMapVarInt(stateVar)` + 每臂 `ConstInt`/`CompareEqInt`/`JumpIfFalse`/`Jump`，尾 `Jump(default)`；产出状态 int | Script / TriggerGraph（流程糖，非 L2 AI 正统） |
 
 步数硬顶：`GraphVmLimits.MaxInstructionsPerExecution`（失控循环失败关闭，禁止静默截断当成功）。
 
@@ -79,19 +83,18 @@ BT 组合糖（`BtSequence` / `BtSelector` / `BtDecorator`，仅 Script）同属
 - Tag / 显示作者糖（`GraphNodeOpParser`）：`ReadGameplayTag` → `SelectTagInMask`，`LookupTagDisplayText` → `LookupTagDisplayToken`（亦可直接写 L0 名）。字段：`displayTable`（必填）、`tagSelectPolicy`（`RequireOne` \| `AllowNone` \| `LowestId`，默认 `RequireOne`，仅 Select）。值边：`HasTag` / `SelectTagInMask` 用 `source`；`CompareEqEntity` 用 `a` / `b`；`LookupTagDisplayToken` 用 `a`（tagId）。登记与 Runtime：`TagDisplayTableRegistry`、`IGraphRuntimeApi.SelectEffectiveTagInMask` / `LookupTagDisplayToken`。详见 [Tag 显示查表](tag-display-lookup.md)。
 - Effect 线性复用：`InvokeScript.functionName` 只解析 FuncLib（禁 `graphId`、禁 ActionLib 名）。证据：`GraphEffectAuthoringExpressivenessTests`。
 
-### L2 HFSM 绑定合同
-- **真图路径（FSM-1a）：** 整机写成一张 Script（`FsmState` 糖分派相位臂），由 `GraphFsmHost` 按 think wave 驱动；相位 SSOT = per-agent map 变量（`stateVar`）；slice 必须 halt。旗舰演示（哨兵演武场）走这条。
-- **旧数据路径（可留，须标注）：** `AI/hfsm.json` → `HfsmWorld`；转移条件 `ConditionGraphId` + builtin predicate；状态 `OnEnter`/`OnTick`/`OnExit` 经 `GraphProgramHfsmHost` 跑 Script。整合演示与压力矩阵仍可走此路径，但不得顶 GraphFsmHost 语义。
-- **Crowd 诚实门：** 真图万人超预算时，crowd 可留 `HfsmWorld` 无图拓扑，注册表与验收必须锁零生命周期 Script（见冻结本）。
-- **退役：** 删 Core `HfsmWorld` 的触发条件见 `artifacts/showcases/graph-fsm-bt-refactor-design.md` §3.3；未触发前禁止静默双轨。
+### L2 行为树 / HFSM 绑定合同（作者正轨）
+
+- **正轨：** `AI/behavior_trees.json` → `BehaviorTreeWorld`；`AI/hfsm.json` → `HfsmWorld`。组合节点（Sequence / Selector / Decorator；状态 / 转移）写在 L2 拓扑里，叶子与生命周期只绑 ActionLib 名（或已登记 GraphId），再进 L1。加载走 `GraphBehaviorDefinitionLoader`；禁止用 Core 工厂参数代替数据作者面。
+- **HFSM：** 转移条件 `ConditionGraphId` + builtin predicate；`OnEnter` / `OnTick` / `OnExit` 经 `GraphProgramHfsmHost` 跑 Script。HFSM Yield 禁止（think-wave 节拍）。
+- **Crowd / 压测：** 可继续用同一套 L2 世界做万人思考；注册表写清规模与预算，不得把「摊成 Script 糖图」冒充正统作者面。
+- **跑偏（仍在 main，不得当正统）：** `Bt*` / `FsmState` 整树整机 Script + `GraphBehaviorTreeHost` / `GraphFsmHost`。历史见 [跑偏记录](../../artifacts/showcases/graph-fsm-bt-refactor-design.md)；扳回见能力页与 [PR #1416](https://github.com/MightyBubble/Ludots/pull/1416)。
+- **另线：** BT Parallel、子树复用 / 异步叶（BT-2）——别和 L2 扳回捆成一票。
 - **Func lib（正式）**：`GAS/func_lib.json`（`name` / `graph` / `kind`）→ `GraphFunctionCatalogLoader` 在图登记后加载；作者节点 `InvokeScript.functionName` 编译期进符号表，`PatchFuncLib` 在 ActionLib 加载前解析为 GraphId。未登记到 FuncLib 的名字失败关闭，ActionLib 名不得通过 `functionName` 进入 Effect / 线性 Kind。引擎服务键：`CoreServiceKeys.GraphFunctionCatalog`。
 - **加载顺序**：graphs 注册 → func_lib 加载 → FuncLib Invoke patch → action_lib 加载（详见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)）。
 - **Macro**：不支持编译期文本宏；复用只走 Func lib + `InvokeScript` / Script 内 `Call`
-- **L2 数据作者面**：`AI/behavior_trees.json` + `AI/hfsm.json` → `GraphBehaviorDefinitionLoader`；叶子与生命周期绑定只写 ActionLib 名，禁止用 Core 工厂参数代替数据作者面。
-- **HFSM Yield**：禁止。OnTick / FsmState 分派均是 think-wave 节拍；含 Yield 的 `Hfsm` ActionLib 条目与 `GraphFsmHost` 分派在加载/运行期失败关闭。
 - **行为入口**：L2 叶子 / 切片宿主解析 ActionLib 名或已登记 GraphId；勿使用已标 obsolete 的 `GraphRegistryScriptResolver.RequireId(string)` 字符串旁路。
 - **FuncLib / ActionLib 合同**：纯函数库与可挂起动作库拆分、Effect Duration/Period 与阶段表达力——见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)。
-- 拓扑合同（BT-1 / FSM-1 修订）：组合语义（BT 的 Sequence/Selector/Decorator；FSM 的 FsmState）以作者面糖在编译期内联进图指令（糖永不成为 opcode）；L2 真图宿主（`GraphBehaviorTreeHost` / `GraphFsmHost`）只负责 per-agent 帧与 think wave 驱动，不得自带第二套图 VM。C# `BehaviorTreeWorld` / `HfsmWorld` 保留为旧 JSON 数据路径与标注无图压测。一期边界：BT Parallel 不支持；子树跨图复用等 BT-2；**不要和 FSM-1 收口捆在一起**。
 
 ### L2 TriggerGraph 时序合同
 
@@ -100,9 +103,9 @@ TriggerGraph 的域与事件时序以 [Trigger Guide](../../docs/architecture/tr
 ## 4. 场景
 
 - 技能复用一段通用「结算脚本」→ Effect/`InvokeScript` → Script
-- 角色 AI 行为树整树写成 Script 图（`BtSequence`/`BtSelector`/`BtDecorator` 糖 + 真实 op 叶子），`GraphBehaviorTreeHost` 按 think wave 逐拍 `ExecuteSlice`；叶子内 `Yield` 跨拍恢复
-- 角色 AI 状态机整机写成 Script 图（`FsmState` 糖 + 相位臂），`GraphFsmHost` 每波一次 halt 分派；传感器只喂距离等胶水数
-- 角色 AI 行为树叶子「巡逻一步」→ BT scheduler → Script（可 Yield 跨拍；旧 JSON 树数据路径保留）
+- 角色 AI 行为树 → `behavior_trees.json` + `BehaviorTreeWorld`；叶子「巡逻一步」→ ActionLib / Script（可 Yield 跨拍）
+- 角色 AI 分层状态机 → `hfsm.json` + `HfsmWorld`；生命周期叶子进 Script
+- Script 里用 `Bt*` / `FsmState` 只表示流程组合，不表示「这就是角色 AI 作者正轨」
 - 关卡流「进圈开袭、清场过波、Boss 阵亡翻阶段」→ TriggerGraph（MapConfig.TriggerGraphs 挂载，思考波续跑）
 - 聚落反应「居民受击、根实体统计、根死亡收束」→ TriggerGraph（EntityTemplate.TriggerGraphs，attachment 子树作用域）
 - 技能反应「命中事件叠层、施法完成结算」→ TriggerGraph（abilities.json.triggerGraphs，施法者作用域）
