@@ -179,9 +179,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // Host TriggerGraphs write collections themselves (pure Query callees leave the TargetList
             // to the caller; GraphReturnWriter must not steal collection writes).
             Add(rows, GraphNodeOp.WriteCollection, ScriptAndTriggerGraph, GraphValueType.Void, portValue, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
-            // TriggerGraph-only TargetList discard: lets a settle/clear body write an explicit
-            // empty collection after consuming its frame set (no ports, no registers, no world write).
-            Add(rows, GraphNodeOp.ResetTargetList, ScriptAndTriggerGraph, GraphValueType.Void);
             Add(rows, GraphNodeOp.SetPanelAudience, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.ModifyAttributeSet, EffectAndTriggerGraph, GraphValueType.Void, portTargetValue, scriptPorts: portTargetValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.OfferActivity, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);

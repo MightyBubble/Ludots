@@ -60,13 +60,9 @@
         "collectionKey": "selected"
       },
       {
-        "id": "op_clear",
+        "id": "op_consume",
         "op": "ConstInt",
-        "intValue": 0
-      },
-      {
-        "id": "reset",
-        "op": "ResetTargetList"
+        "intValue": 2
       },
       {
         "id": "clear_pending",
@@ -152,25 +148,20 @@
       {
         "from": "commit_replace",
         "fromPort": "next",
-        "to": "reset"
+        "to": "op_consume"
       },
       {
         "from": "commit_add",
         "fromPort": "next",
-        "to": "reset"
+        "to": "op_consume"
       },
       {
         "from": "commit_subtract",
         "fromPort": "next",
-        "to": "reset"
+        "to": "op_consume"
       },
       {
-        "from": "reset",
-        "fromPort": "next",
-        "to": "op_clear"
-      },
-      {
-        "from": "op_clear",
+        "from": "op_consume",
         "fromPort": "next",
         "to": "clear_pending"
       },
@@ -223,7 +214,7 @@
         "toPort": "value"
       },
       {
-        "from": "op_clear",
+        "from": "op_consume",
         "fromPort": "value",
         "to": "clear_pending",
         "toPort": "value"

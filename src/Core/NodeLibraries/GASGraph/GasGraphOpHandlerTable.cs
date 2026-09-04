@@ -346,8 +346,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.LoadPointerScreenY or
                 GraphNodeOp.ActivateContext or
                 GraphNodeOp.DeactivateContext or
-                GraphNodeOp.WriteCollection or
-                GraphNodeOp.ResetTargetList
+                GraphNodeOp.WriteCollection
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -915,7 +914,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
             Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
             Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
-            Register(GraphNodeOp.ResetTargetList, HandleResetTargetList, "ResetTargetList graph opcode.");
         Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
@@ -1545,14 +1543,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 s.Caster,
                 s.Targets,
                 s.TargetList.Count);
-        }
-
-        private static void HandleResetTargetList(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
-        {
-            // TargetList := ∅ — the frame's working set is discarded. Count is the
-            // authority for every consumer (WriteCollection, InvokeGraph copy-back, …),
-            // so SetCount(0) is the complete primitive; the backing array stays as scratch.
-            s.TargetList.SetCount(0);
         }
 
         private static void HandleSetPanelAudience(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

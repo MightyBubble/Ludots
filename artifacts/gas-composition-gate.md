@@ -6,36 +6,36 @@
 
 ## 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A**（已有 op 的编排/连线为主）+ 一个单一职责 Layer 0 op
+新变体主要交付物是（A/B/C/D）: **A**（已有 op 的编排/连线，零新 graph 节点）
 
 结论: PASS
 
-一句话理由: 交付物是可组合的图体（box_hit/box_commit/box_hover_tick/box_hover_clear/selection_commit，全部用现有 op 连线）挂在新的 context 生命周期边界槽上；新增的唯一 op `ResetTargetList` 是"TargetList:=∅"的单一职责原子操作，无法由现有 op 组合（唯一替代是 InvokeGraph 一个空子图的 hack，否决）。onActivated/onDeactivated 是**图引用槽**（与 triggers[] 同性质），不是行为开关/继承 mode——行为 100% 在图层里，引擎只负责在边界调用命名图体，不执行任何行为。
+一句话理由: 交付物是可组合的图体（box_hit/box_commit/box_hover_tick/box_hover_clear/selection_commit，全部用现有 op 连线）挂在新的 context 生命周期边界槽上（onActivated/onDeactivated——图引用槽，与 triggers[] 同性质，不是行为开关/继承 mode）。行为 100% 在图层里，引擎只负责在边界调用命名图体，不执行任何行为。op 面零新增：交接消费用集合减法语义（pending \ M = ∅，M⊆pending），不新增清除类 op。
 
 ## 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
 | 命中计算 | 2 | 图 `box_hit`（Query，复用） |
-| 手势出口 | 2 | 图 `box_commit`（WriteBlackboardInt/InvokeGraph/WriteCollection/DeactivateContext） |
-| 拖拽预览 | 2 | 图 `box_hover_tick`（PointerMoved 输入边沿驱动） |
-| 预览清场 | 2 | 图 `box_hover_clear`（WriteCollection replace ∅） |
-| 通用落定 | 2 | 图 `selection_commit`（ReadBlackboardInt + QueryFromCollection + SwitchInt + WriteCollection + ResetTargetList） |
-| TargetList 置空 | 0 | 新 op `ResetTargetList`（单一职责、不可由现有 op 组合） |
+| 手势出口 | 2 | 图 `box_commit`（LoadEntryPayload/WriteBlackboardInt/InvokeGraph/WriteCollection/DeactivateContext） |
+| 拖拽预览 | 2 | 图 `box_hover_tick`（action PointerMoved 输入边沿驱动） |
+| 预览清场 | 2 | 图 `box_hover_clear`（Script 图体，WriteCollection replace ∅） |
+| 通用落定 | 2 | 图 `selection_commit`（ReadBlackboardInt + QueryFromCollection + SwitchInt + WriteCollection；尾段用 Subtract 消费交接集 = ∅） |
 | 候选集维护 | 2 | 图 `roster_sync`（复用，MapHeartbeat） |
-| 边界图槽调度 | 0（机制） | 门控（InteractionContextTriggerMountSystem）在"开启前/关闭后"执行命名图体；死亡走同一槽 |
+| 边界图槽调度 | 0（机制） | 门控在"开启前/关闭后"执行命名图体；死亡走 destroy 边界同一槽 |
 
 ## 3. Reuse list
 
-- Queues / Systems: `TriggerManager` owner 索引、`InteractionContextTriggerMountSystem`（门控挂/拆）、`GraphReturnWriter`（图体执行，原 whileActive 同款调用签名）、`TriggerGraphActionBindingSystem`（输入边沿派发）、`EntityTriggerGraphMounts`（死亡路径基础设施）
-- Registries: `InteractionContextProfileRegistry` / `ProfileIdRegistry`（复用，扩展字段解析）、`GraphProgramRegistry`
+- Queues / Systems: `TriggerManager` owner 索引、`InteractionContextTriggerMountSystem`（门控挂/拆 + 槽执行）、`GraphReturnWriter`（图体执行，原 whileActive 同款调用签名）、`TriggerGraphActionBindingSystem`（输入边沿派发，新增 PointerMoved 变化边）、`EntityTriggerGraphMounts`（死亡路径基础设施）
+- Registries: `InteractionContextProfileRegistry`（复用，扩展槽图解析）、`GraphProgramRegistry`
 - Existing graphs: `box_hit`（命中纯函数，两处复用：hover/commit）
+- Ops: 全部现有（Read/WriteBlackboardInt 304/301、QueryFromCollection 381、SwitchInt sugar、WriteCollection 477、InvokeGraph 450、DeactivateContext 475、ConstInt/Halt/LoadCaster）
 
 ## 4. New Layer 0 ops (if any)
 
 | Op 名 | 单一职责 | 为何不能组合现有 op |
 |-------|----------|---------------------|
-| `ResetTargetList` | TargetList := ∅ | 现有 op 只能"填"TargetList（各 Query/InvokeGraph），无"清"的能力；等价唯一替代是 InvokeGraph 一个空查询图（hitCount=0 拷贝回的副作用 hack），引入隐藏图资产且语义不明。 |
+| N/A | — | 交接消费用集合减法（WriteCollection op=2，M⊆pending ⇒ pending\ M = ∅），不做新清除 op；该替代语义即为"消费交接"，非 hack。 |
 
 ## 5. Transaction boundary
 
@@ -52,7 +52,8 @@
 - [x] 未新增 profile inherit/placement enum
 - [x] 未新建与 spawn 平行的物化管线
 - [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback（图槽引用未知图 / 非 TriggerGraph → fail-fast，同 whileActive 语义）
+- [x] 未添加「说不清的」默认 fallback（图槽引用未知图 / 非 TriggerGraph → fail-fast）
+- [x] 未新增 graph op（入籍仪式成本高；现有 op 组合足够）
 
 ## 8. Next variant test
 
@@ -63,5 +64,10 @@
 - `InteractionContextWhileActiveSystem.cs`（整个文件）
 - `InteractionContextWhileActive` 类 / `WhileActive` 属性（Profile）、`ValidateWhileActive`（Loader）、`TryGetWhileActiveGraphId`/`ResolveWhileActiveGraphId`/`_whileActiveGraphIds`（Registry）
 - GameEngine 对 WhileActiveSystem 的注册
-- `EntityCollectionRoleKind.AcquisitionPreview`（仅 WhileActiveSystem 引用）
 - mod `interaction_context_profiles.json` 的 `whileActive` 字段
+- `EntityCollectionRoleKind.AcquisitionPreview`：枚举保留（命令瞄准族其他消费者仍用），仅 whileActive 的该角色引用随系统删除
+
+## 下层缺陷修复（D15 暴露，一并合入）
+
+- `PlayerInputHandler.CompileBinding`：`Dictionary.TryGetValue` 失败时 out 参数写成 default(int)=0，未声明动作的绑定（引擎保留 id，如 PointerMoved）会别名到 index 0 动作槽并把指针值写进去。改为 TryGetValue 成功才赋值、失败编译为 -1 跳过（保留动作由引擎按 id 特判派发）。
+- `WriteBlackboardInt` 描述符补 `scriptPorts`（对齐 WriteBlackboardFloat，TriggerGraph 可作者）并在 GraphKindOperationPolicy 加入 Script/TriggerGraph 的 GasTransactional carve-out（box_commit 在 rep 黑板交接修饰键位图）。
