@@ -215,8 +215,8 @@ namespace Ludots.Tests.GAS
         {
             InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
             var programs = new GraphProgramRegistry();
-            const string queryName = "Graph.Query.ContextPreview";
-            int graphId = GraphIdRegistry.Register(queryName);
+            const string triggerName = "Graph.Trigger.ContextPreview";
+            int graphId = GraphIdRegistry.Register(triggerName);
             programs.Register(
                 graphId,
                 new[]
@@ -225,8 +225,8 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteCollection, B = 0, Imm = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
                 },
-                GraphKind.Query);
-            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = queryName }));
+                GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, null, ProbeEntries());
+            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = triggerName }));
 
             Assert.That(
                 () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs)),
@@ -242,9 +242,9 @@ namespace Ludots.Tests.GAS
         {
             InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
             var programs = new GraphProgramRegistry();
-            const string noWriteName = "Graph.Query.NoWrite";
+            const string noWriteName = "Graph.Trigger.NoWrite";
             int graphId = GraphIdRegistry.Register(noWriteName);
-            programs.Register(graphId, HaltProgram(), GraphKind.Query);
+            programs.Register(graphId, HaltProgram(), GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, null, ProbeEntries());
             var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = noWriteName }));
 
             Assert.That(

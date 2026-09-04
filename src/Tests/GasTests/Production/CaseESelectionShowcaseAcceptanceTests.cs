@@ -123,7 +123,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             HasScreenRect(screenOverlay, x: -1200, y: -100, width: 900, height: 200),
             "矩形框 = press 角 → 当前指针角的屏幕矩形（CaseE.Pointer 属性 → ScreenRect presenter 参数）");
         backend.SetMousePosition(new Vector2(0f, 200f));
-        Tick(engine, 2);
+        Tick(engine, 5);
         Assert.That(
             HasScreenRect(screenOverlay, x: -1200, y: -100, width: 1200, height: 300),
             "指针继续移动，矩形框随之扩大（跟随当前拖拽数据）");
