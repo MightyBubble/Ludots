@@ -88,6 +88,12 @@ namespace Sango.Runtime
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         };
 
+        /// <summary>
+        /// 命令生效观察面(M3 末镜像读模型订阅):每条命令成功落账后触发。观察者只读内核,
+        /// 不得改世界(录制本身不改模拟;digest 纯净性由镜像双跑验收证明)。
+        /// </summary>
+        public static event Action? CommandEffectsApplied;
+
         /// <summary>记录一条入口命令(仅命令成功后调用;turn 取 Scenario.Cur 当前回合)。</summary>
         public static void Record(string kind, object args, string? digestAfter = null)
         {
@@ -110,6 +116,8 @@ namespace Sango.Runtime
                     Entries.Dequeue();
                 }
             }
+
+            CommandEffectsApplied?.Invoke();
         }
 
         public static SangoJournalCommand[] Snapshot()

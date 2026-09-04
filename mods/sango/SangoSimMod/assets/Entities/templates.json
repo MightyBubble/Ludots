@@ -1,0 +1,20 @@
+[
+  {
+    "id": "sango.mirror.city",
+    "components": {
+      "Name": { "Value": "" }
+    }
+  },
+  {
+    "id": "sango.mirror.person",
+    "components": {
+      "Name": { "Value": "" }
+    }
+  },
+  {
+    "id": "sango.mirror.troop",
+    "components": {
+      "Name": { "Value": "" }
+    }
+  }
+]
