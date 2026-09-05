@@ -81,6 +81,24 @@ Scope: Cross-layer(Core Visual 域契约 ↔ Mod 资产/代码 ↔ AgentBridge �
    同时 SangoCityMarkers 等三处把厘米写进米域——城全部 165km 外,极巨物多被
    far-plane 裁剪,目检"8/10 通过"实为看不到。
 2. e7d8ef677(2026-09-04)按错误单位假设重标定:全部 ÷3-4 但仍差 100 倍;树
-   644-947m 进入可视距,巨物显形——用户二报。
+   644-947m 进入可视距,巨物显形——用户三报("智能体也没跑起来"的视觉半边)。
 3. 本波:Explore 全链源码审计 + presenters.query 运行时取证定位真实合同,mod 侧
    修复;上一轮"四组取证通过"作废(引导性图像分析 + 失焦陈旧帧双重污染)。
+
+## 补记 2026-09-06:同根新暴露的三项观测面缺口(用户报告"智能体没跑起来"调查)
+
+背景:修复会话(pid 62588)整场渲染零模型(裸地形+网格),用户所见即此;同码
+干净重启(pid 45224)全部模型正常。两场启动日志含**逐字相同**的 14 条
+"skipped ... could not be loaded"告警——一条是良性首帧 InFlight miss(Raylib
+PrimitiveRenderer #1328 重试语义),一条是永久失败,告警文本无法区分。
+
+- TD-VISUAL-UNIT-4 **资产装载失败不可区分且不可恢复**(P1):首帧 acquire 失败
+  的车道/桶永久不再绘制,负结果无重试;InFlight 与 Failed 共用同一告警文案与
+  Warn-once 语义。建议:Failed 与 InFlight 分级文案 + Failed 每资产一次性重试
+  (或下一帧重问)+ "本帧模型绘制数=0 而 lane 数>0"的 RenderDiagnostics 计数。
+- TD-VISUAL-UNIT-5 **暂停态截图/相机静默失效**(P2):TurnBasedPacemaker 暂停时
+  camera.control set 不生效(状态回显旧位姿)、screenshot 返回最后呈现帧(字节
+  恒定),与失焦停帧(TD-VISUAL-UNIT-3)同症不同因。建议:screenshot 结果带
+  frameTick/age,set 在暂停态返回明确 reason。
+- 附:验收教训入册——视觉验收必须含"模型绘制数>0"的机器判据(presenters.query
+  adapterDrawn / 渲染计数),不得只依赖图像分析(本轮与上轮均被其污染)。
