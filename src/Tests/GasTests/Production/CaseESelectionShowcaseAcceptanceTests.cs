@@ -41,11 +41,11 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     private const string BoxingProfile = "interaction.context.case_e.boxing";
     private const string MarinePresenter = "presenter.case_e.marine_root";
     private const string BoxingMarkerPresenter = "presenter.case_e.boxing_marker";
+    private const string RingAttachmentPresenter = "presenter.case_e.ring.attachment";
+    private const string RingPreviewPresenter = "presenter.case_e.ring.preview";
     private const string SelectedKey = "selected";
     private const string SelectableKey = "case_e.selectable";
     private const string BoxHoverKey = "case_e.box_hover";
-    private const int AttachmentSlotBit = 1 << 1; // semantic slot "attachment"
-    private const int PreviewSlotBit = 1 << 19; // semantic slot "preview"
 
     [Test]
     public void BoxSelectFullChain_SpawnContextTriggerPresenterRectHitRosterAndModifierSemantics()
@@ -95,6 +95,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             ?? throw new InvalidOperationException("PresenterDefinitionRegistry service is missing.");
         int marineDefId = presenterDefinitions.GetId(MarinePresenter);
         int boxingMarkerDefId = presenterDefinitions.GetId(BoxingMarkerPresenter);
+        int ringAttachmentDefId = presenterDefinitions.GetId(RingAttachmentPresenter);
+        int ringPreviewDefId = presenterDefinitions.GetId(RingPreviewPresenter);
         TickUntil(engine, 40, () => presenterRuntime.GetActiveByDefinition(marineDefId).Count == 4);
         Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(0),
             "框指示 presenter 在按下前不存在");
@@ -156,8 +158,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             marine1, marine2);
         Assert.That(CollectionCount(engine, commander, SelectedKey), Is.LessThanOrEqualTo(0),
             "拖拽中不得写入已选中集合（候选/预览/已选中三套分离）");
-        AssertPreviewOn(engine, presenterRuntime, marineDefId, "预览环跟命中集", marine1, marine2);
-        AssertPreviewOff(engine, presenterRuntime, marineDefId, "框外单位无预览环", marine3, marine4);
+        AssertPreviewOn(engine, presenterRuntime, ringPreviewDefId, "预览环跟命中集", marine1, marine2);
+        AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId, "框外单位无预览环", marine3, marine4);
 
         backend.SetMousePosition(new Vector2(-300f, 100f));
         Tick(engine, 2);
@@ -175,7 +177,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(
             CollectionCount(engine, commander, BoxHoverKey) <= 0,
             "框结束停用 boxing → onDeactivated 槽 box_hover_clear 清空预览集");
-        AssertPreviewOff(engine, presenterRuntime, marineDefId, "预览环随预览集清空", marine1, marine2, marine3, marine4);
+        AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId, "预览环随预览集清空", marine1, marine2, marine3, marine4);
         Assert.That(
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances cleared) ||
             cleared.Count == 0,
@@ -186,8 +188,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Tick(engine, 6);
         Assert.That(screenOverlay.Count, Is.EqualTo(overlayCountAfterScopeDeath),
             "框结束随 scope 消失：presenter 销毁后 ScreenRect 不再产出新矩形");
-        AssertRingOn(engine, presenterRuntime, marineDefId, "负 X 象限单位命中高亮", marine1, marine2);
-        AssertRingOff(engine, presenterRuntime, marineDefId, "框外单位不高亮", marine3, marine4);
+        AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "负 X 象限单位命中高亮", marine1, marine2);
+        AssertRingOff(engine, presenterRuntime, ringAttachmentDefId, "框外单位不高亮", marine3, marine4);
         Assert.That(CollectionContains(engine, commander, SelectedKey, marine2),
             "边界归属：单位屏幕包围盒与框边相交（ScreenRect.Intersects 含端）→ 归属框内");
 
@@ -200,7 +202,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             new Vector2(400f, 100f),
             "QueueModifier");
         AssertCollection(engine, commander, SelectedKey, "QueueModifier → add 语义并集", marine1, marine2, marine3);
-        AssertRingOn(engine, presenterRuntime, marineDefId, "加选后新命中单位高亮", marine1, marine2, marine3);
+        AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "加选后新命中单位高亮", marine1, marine2, marine3);
 
         // ── 06 减选：ModifierSubtract → subtract 语义（框到 marine1 差集）──
         DragBox(
@@ -211,8 +213,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             new Vector2(-600f, 100f),
             "ModifierSubtract");
         AssertCollection(engine, commander, SelectedKey, "ModifierSubtract → subtract 语义差集", marine2, marine3);
-        AssertRingOn(engine, presenterRuntime, marineDefId, "减选后仅剩命中单位保持高亮", marine2, marine3);
-        AssertRingOff(engine, presenterRuntime, marineDefId, "被减去的单位取消高亮", marine1);
+        AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "减选后仅剩命中单位保持高亮", marine2, marine3);
+        AssertRingOff(engine, presenterRuntime, ringAttachmentDefId, "被减去的单位取消高亮", marine1);
 
         // ── 06 敌我过滤：矩形盖住全图（含敌方 raiders 屏幕位置）→ 命中仍只有己方可框选单位 ──
         DragBox(
@@ -235,8 +237,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances afterTap) ||
             afterTap.Count == 0,
             "点选同样停用 boxing context");
-        AssertRingOn(engine, presenterRuntime, marineDefId, "点选命中单位高亮", marine4);
-        AssertRingOff(engine, presenterRuntime, marineDefId, "点选替换后其余单位取消高亮", marine1, marine2, marine3);
+        AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "点选命中单位高亮", marine4);
+        AssertRingOff(engine, presenterRuntime, ringAttachmentDefId, "点选替换后其余单位取消高亮", marine1, marine2, marine3);
     }
 
     /// <summary>
@@ -275,6 +277,74 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         AssertNoTriggerErrors(engine);
         Assert.That(CollectionCount(engine, commander, BoxHoverKey) <= 0,
             "主体死亡补发 onDeactivated → box_hover_clear 清空预览（死亡路径槽执行）");
+    }
+
+    /// <summary>
+    /// 全局集合装饰合同（D15+）：环不再是 marine 模板上的行为槽，而是全局规则
+    /// presenter.case_e.collection_decoration 观察集合成员增减、在成员实体上动态
+    /// Create/Destroy 的独立 Scoped 实例。验证三点：
+    ///   1. 成员入 box_hover → 成员实体上出现 ring.preview（owner=成员，跟随其 transform）；
+    ///   2. 指针离开命中 → 集合成员移除 → 环实例随之销毁（实例生灭，非行为开关）；
+    ///   3. 整个机制零引擎改动，纯配置（marine_root 只剩 body 资产）。
+    /// </summary>
+    [Test]
+    public void GlobalCollectionDecoration_RingsLiveAndDieWithCollectionMembership()
+    {
+        string repoRoot = FindRepoRoot();
+        var backend = new TestInputBackend();
+        using GameEngine engine = CreateEngine(repoRoot, backend);
+        engine.LoadMap(new MapLoadRequest(
+            new MapId(MapId),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.case_e") })));
+        TickUntil(engine, 40, () => engine.CurrentMapSession != null);
+        AssertNoTriggerErrors(engine);
+
+        Entity commander = Resolve(engine, "case-e-commander");
+        Entity marine1 = Resolve(engine, "case-e-marine-1");
+        Entity marine2 = Resolve(engine, "case-e-marine-2");
+        Entity marine3 = Resolve(engine, "case-e-marine-3");
+
+        var presenterRuntime = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+            ?? throw new InvalidOperationException("PresenterEntityRuntime service is missing.");
+        var presenterDefinitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+            ?? throw new InvalidOperationException("PresenterDefinitionRegistry service is missing.");
+        int ringPreviewDefId = presenterDefinitions.GetId(RingPreviewPresenter);
+        int ringAttachmentDefId = presenterDefinitions.GetId(RingAttachmentPresenter);
+        int marineDefId = presenterDefinitions.GetId(MarinePresenter);
+
+        // 候选集就位；marine 模板上环槽与规则早已删除（只留 body 资产）
+        TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        Assert.That(presenterRuntime.GetActiveByDefinition(marineDefId).Count, Is.EqualTo(4),
+            "marine root presenter 照常出生（body）");
+
+        // 按下 → 拖到命中 marine1/marine2 → 成员实体上出现预览环实例
+        PressAt(engine, backend, new Vector2(-1200f, -100f));
+        TickUntil(engine, 20, () =>
+            engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances boxingNow) &&
+            boxingNow.Count == 1);
+        backend.SetMousePosition(new Vector2(-300f, 100f));
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
+        AssertPreviewOn(engine, presenterRuntime, ringPreviewDefId, "成员入预览集→黄环实例挂到成员", marine1, marine2);
+        AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId, "未命中成员无环实例", marine3);
+        AssertRingOff(engine, presenterRuntime, ringAttachmentDefId, "预览阶段不连蓝环", marine1, marine2, marine3);
+
+        // 指针离开命中 → 集合成员移除 → 环实例随成员资格销毁（实例生灭，不是行为开关）
+        backend.SetMousePosition(new Vector2(-900f, 0f));
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 1);
+        AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId, "成员离开预览集→环实例销毁", marine2);
+        AssertPreviewOn(engine, presenterRuntime, ringPreviewDefId, "仍在命中集者保留黄环", marine1);
+
+        // 抬起落定 → selected 集合落定（蓝环挂到成员），boxing 停用清空预览集
+        ReleaseAt(engine, backend);
+        TickUntil(engine, 30, BoxingCleared(engine, commander));
+        Tick(engine, 2);
+        TickUntil(engine, 20, () => CollectionCount(engine, commander, SelectedKey) >= 1);
+        Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.LessThanOrEqualTo(0),
+            "停用 boxing → onDeactivated 槽清空预览集");
+        AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId,
+            "预览集清空→所有黄环实例销毁", marine1, marine2, marine3);
+        AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "selected 落定→蓝环实例挂到成员", marine1);
+        AssertNoTriggerErrors(engine);
     }
 
     private static bool HasScreenRect(ScreenOverlayBuffer overlay, int x, int y, int width, int height)
@@ -457,71 +527,84 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     private static void AssertRingOn(
         GameEngine engine,
         PresenterEntityRuntime runtime,
-        int marineDefId,
+        int ringDefId,
         string message,
         params Entity[] units)
     {
         foreach (Entity unit in units)
         {
-            Entity presenter = RequirePresenter(runtime, marineDefId, unit);
-            uint mask = engine.World.Get<PresenterState>(presenter).BehaviorActiveMask;
-            Assert.That((mask & AttachmentSlotBit) != 0, Is.True, $"{message}：{unit} 的选择环行为应激活");
+            Assert.That(CountPresentersOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(1),
+                $"{message}：{unit} 应有一个选择环 presenter 实例（蓝环）");
         }
     }
 
     private static void AssertRingOff(
         GameEngine engine,
         PresenterEntityRuntime runtime,
-        int marineDefId,
+        int ringDefId,
         string message,
         params Entity[] units)
     {
         foreach (Entity unit in units)
         {
-            Entity presenter = RequirePresenter(runtime, marineDefId, unit);
-            uint mask = engine.World.Get<PresenterState>(presenter).BehaviorActiveMask;
-            Assert.That((mask & AttachmentSlotBit) != 0, Is.False, $"{message}：{unit} 的选择环行为应关闭");
+            Assert.That(CountPresentersOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(0),
+                $"{message}：{unit} 不应有选择环 presenter 实例");
         }
     }
 
     private static void AssertPreviewOn(
         GameEngine engine,
         PresenterEntityRuntime runtime,
-        int marineDefId,
+        int ringDefId,
         string message,
         params Entity[] units)
     {
         foreach (Entity unit in units)
         {
-            Entity presenter = RequirePresenter(runtime, marineDefId, unit);
-            uint mask = engine.World.Get<PresenterState>(presenter).BehaviorActiveMask;
-            Assert.That((mask & PreviewSlotBit) != 0, Is.True, $"{message}：{unit} 的预览环行为应激活");
+            Assert.That(CountPresentersOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(1),
+                $"{message}：{unit} 应有一个预览环 presenter 实例（黄环）");
         }
     }
 
     private static void AssertPreviewOff(
         GameEngine engine,
         PresenterEntityRuntime runtime,
-        int marineDefId,
+        int ringDefId,
         string message,
         params Entity[] units)
     {
         foreach (Entity unit in units)
         {
-            Entity presenter = RequirePresenter(runtime, marineDefId, unit);
-            uint mask = engine.World.Get<PresenterState>(presenter).BehaviorActiveMask;
-            Assert.That((mask & PreviewSlotBit) != 0, Is.False, $"{message}：{unit} 的预览环行为应关闭");
+            Assert.That(CountPresentersOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(0),
+                $"{message}：{unit} 不应有预览环 presenter 实例");
         }
     }
 
-    private static Entity RequirePresenter(PresenterEntityRuntime runtime, int defId, Entity owner)
+    private static int CountPresentersOwnedBy(PresenterEntityRuntime runtime, int defId, Entity owner, World world)
     {
-        foreach (Entity candidate in runtime.GetActiveByOwnerDefinition(defId, owner))
+        // 装饰器实例是「无规则」的 Scoped presenter，不进 _byDefinition/_byOwnerDefinition
+        // 索引（那是给规则承载者定义的按需优化）；实例统一落在 owner 桶里，从桶里过滤。
+        if (!runtime.TryGetActiveByOwner(owner, out var bucket))
         {
-            return candidate;
+            return 0;
         }
 
-        throw new InvalidOperationException($"No presenter {defId} instance owned by {owner}.");
+        int count = 0;
+        for (int i = 0; i < bucket.Count; i++)
+        {
+            Entity candidate = bucket[i];
+            if (!world.IsAlive(candidate) || !world.Has<PresenterState>(candidate))
+            {
+                continue;
+            }
+
+            if (world.Get<PresenterState>(candidate).DefId == defId)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private static GameEngine CreateEngine(string repoRoot, TestInputBackend backend)
