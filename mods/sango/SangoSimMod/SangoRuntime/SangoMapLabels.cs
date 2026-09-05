@@ -18,6 +18,7 @@ using System.IO;
 using System.Numerics;
 using System.Text.Json;
 using Arch.Core;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
@@ -115,7 +116,9 @@ namespace Sango.Runtime
                 Entity anchor = world.Create(
                     new VisualTransform
                     {
-                        Position = placement.PositionCm,
+                        // VisualTransform 是米域(TemplateEntityBatchSpawner 同款换算);
+                        // PositionCm 是逻辑厘米域,直写会把标签摆到 100 倍距离外。
+                        Position = WorldPlane2D.LogicCmToVisualMeters(placement.PositionCm.X, placement.PositionCm.Z, 0f),
                         Rotation = Quaternion.Identity,
                         Scale = Vector3.One,
                     },

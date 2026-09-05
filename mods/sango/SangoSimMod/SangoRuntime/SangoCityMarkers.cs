@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Presenters;
@@ -147,7 +148,9 @@ namespace Sango.Runtime
                     owners[i] = world.Create(
                         new VisualTransform
                         {
-                            Position = placement.PositionCm,
+                            // VisualTransform 是米域(TemplateEntityBatchSpawner 同款换算);
+                            // PositionCm 是逻辑厘米域,直写会把城摆到 100 倍距离外。
+                            Position = WorldPlane2D.LogicCmToVisualMeters(placement.PositionCm.X, placement.PositionCm.Z, 0f),
                             Rotation = Quaternion.Identity,
                             Scale = Vector3.One,
                         },

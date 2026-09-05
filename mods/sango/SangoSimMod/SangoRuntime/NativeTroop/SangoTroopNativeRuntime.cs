@@ -39,6 +39,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Lifecycle;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
@@ -538,7 +539,7 @@ namespace Sango.Runtime
             if (_world.Has<VisualTransform>(entity))
             {
                 VisualTransform transform = _world.Get<VisualTransform>(entity);
-                transform.Position = new Vector3(position.X, 0f, position.Y);
+                transform.Position = WorldPlane2D.LogicCmToVisualMeters(position.X, position.Y, 0f);
                 _world.Set(entity, transform);
             }
 
@@ -748,10 +749,10 @@ namespace Sango.Runtime
             _world.Add(entity, default(SangoTroopLedger));
             // presenter owner 迁移:部队实体即标记 owner(VisualTransform/CullState 为
             // 锚定组件,引擎 PresenterEntityTransformSyncSystem 逐帧跟随;Y=0 仅锚点,
-            // SnapToGround 采样抬高同城标)。
+            // SnapToGround 采样抬高同城标)。VisualTransform 是米域,格位厘米须换算。
             _world.Add(entity, new VisualTransform
             {
-                Position = new Vector3(position.X, 0f, position.Y),
+                Position = WorldPlane2D.LogicCmToVisualMeters(position.X, position.Y, 0f),
                 Rotation = Quaternion.Identity,
                 Scale = Vector3.One,
             });
@@ -946,7 +947,7 @@ namespace Sango.Runtime
             if (_world.Has<VisualTransform>(entity))
             {
                 VisualTransform transform = _world.Get<VisualTransform>(entity);
-                transform.Position = new Vector3(position.X, 0f, position.Y);
+                transform.Position = WorldPlane2D.LogicCmToVisualMeters(position.X, position.Y, 0f);
                 _world.Set(entity, transform);
             }
         }
