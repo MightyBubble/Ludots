@@ -1680,7 +1680,8 @@
       "op": "QueryAllMapEntities",
       "authorableKinds": [
         "TriggerGraph",
-        "Query"
+        "Query",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_QueryAllMapEntities",
       "status": "covered",
@@ -1723,7 +1724,8 @@
       "op": "QueryFilterAttributeRange",
       "authorableKinds": [
         "TriggerGraph",
-        "Query"
+        "Query",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFilterAttributeRange",
       "status": "covered",
@@ -1809,7 +1811,8 @@
       "op": "QueryFilterTagAny",
       "authorableKinds": [
         "TriggerGraph",
-        "Query"
+        "Query",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFilterTagAny",
       "status": "covered",
@@ -1830,7 +1833,8 @@
       "op": "QueryFilterTagNone",
       "authorableKinds": [
         "TriggerGraph",
-        "Query"
+        "Query",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFilterTagNone",
       "status": "covered",
@@ -1851,7 +1855,8 @@
       "op": "QueryFilterTeam",
       "authorableKinds": [
         "TriggerGraph",
-        "Query"
+        "Query",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFilterTeam",
       "status": "covered",
@@ -1872,7 +1877,8 @@
       "op": "QueryFilterTemplate",
       "authorableKinds": [
         "TriggerGraph",
-        "Query"
+        "Query",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFilterTemplate",
       "status": "covered",
@@ -1893,7 +1899,8 @@
       "op": "QueryFromCollection",
       "authorableKinds": [
         "TriggerGraph",
-        "Query"
+        "Query",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFromCollection",
       "status": "covered",

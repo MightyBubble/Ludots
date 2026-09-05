@@ -1,15 +1,8 @@
 [
   {
     "id": "graph.case_e.selection_commit",
-    "kind": "TriggerGraph",
-    "entries": [
-      {
-        "label": "boundary_body",
-        "start": "caster",
-        "refire": "restart",
-        "event": "MapLoaded"
-      }
-    ],
+    "kind": "Script",
+    "entry": "caster",
     "nodes": [
       {
         "id": "caster",

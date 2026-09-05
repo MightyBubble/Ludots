@@ -239,6 +239,44 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         AssertRingOff(engine, presenterRuntime, marineDefId, "点选替换后其余单位取消高亮", marine1, marine2, marine3);
     }
 
+    /// <summary>
+    /// 死亡补发合同（#1398 D15）：主体在拖拽途中被销毁，未走显式 Deactivate——destroy 边界
+    /// 必须补跑并激活的 onDeactivated 槽（box_hover_clear 清预览），且整链不得抛错。
+    /// </summary>
+    [Test]
+    public void CommanderDeath_MidGesture_PerformsDeactivatedSlotCleanup()
+    {
+        string repoRoot = FindRepoRoot();
+        var backend = new TestInputBackend();
+        using GameEngine engine = CreateEngine(repoRoot, backend);
+        engine.LoadMap(new MapLoadRequest(
+            new MapId(MapId),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.case_e") })));
+        TickUntil(engine, 40, () => engine.CurrentMapSession != null);
+        AssertNoTriggerErrors(engine);
+
+        Entity commander = Resolve(engine, "case-e-commander");
+        Entity marine1 = Resolve(engine, "case-e-marine-1");
+        Entity marine2 = Resolve(engine, "case-e-marine-2");
+
+        // 候选集与 boxing 就位，拖到预览命中两支 marine
+        TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        PressAt(engine, backend, new Vector2(-1200f, -100f));
+        TickUntil(engine, 20, () =>
+            engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances boxingNow) &&
+            boxingNow.Count == 1);
+        backend.SetMousePosition(new Vector2(-300f, 100f));
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
+        AssertCollection(engine, commander, BoxHoverKey, "死亡前拖拽预览已就位", marine1, marine2);
+
+        // 拖拽途中主体销毁：未显式停用 → destroy 边界补跑 onDeactivated（清预览），不得抛错
+        engine.World.Destroy(commander);
+        Tick(engine, 2);
+        AssertNoTriggerErrors(engine);
+        Assert.That(CollectionCount(engine, commander, BoxHoverKey) <= 0,
+            "主体死亡补发 onDeactivated → box_hover_clear 清空预览（死亡路径槽执行）");
+    }
+
     private static bool HasScreenRect(ScreenOverlayBuffer overlay, int x, int y, int width, int height)
     {
         ReadOnlySpan<Ludots.Core.Presentation.Hud.ScreenOverlayItem> span = overlay.GetSpan();
