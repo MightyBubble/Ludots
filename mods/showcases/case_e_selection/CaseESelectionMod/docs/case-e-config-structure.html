@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Case E：配置结构（修订）</title>
+<title>Case E：配置结构（D15 现行）</title>
 <style>
   :root{
     --bg:#0f1117; --panel:#1b2030; --panel2:#202739; --border:#2b3247;
@@ -46,7 +46,6 @@
   @media(max-width:700px){.field{grid-template-columns:1fr}}
   .flowbox{background:linear-gradient(180deg,rgba(90,165,255,.05),transparent);border:1px solid rgba(90,165,255,.22);border-radius:10px;padding:14px 16px;margin-top:12px}
   .flowbox .ft{font-size:12px;font-family:var(--mono);color:var(--accent);margin-bottom:8px;letter-spacing:.05em}
-  .payload{display:flex;flex-wrap:wrap;gap:8px}
   .pl{font-family:var(--mono);font-size:11.5px;color:var(--dim);background:var(--bg);border:1px solid var(--border);padding:4px 9px;border-radius:6px}
   .pl b{color:var(--accent);font-weight:600}
   .callout{border-left:3px solid var(--warn);background:rgba(240,180,90,.06);padding:10px 14px;margin:12px 0;border-radius:0 8px 8px 0;font-size:13px;color:var(--dim)}
@@ -63,162 +62,149 @@
 <div class="wrap">
 
   <div class="hero">
-    <div class="kicker">Case E · 配置结构修订（落地合同）</div>
-    <h1>框选：矩形单源 · 一张命中函数 · 预览/已选中同面</h1>
+    <div class="kicker">Case E · 配置结构 · D15 现行合同</div>
+    <h1>框选：矩形单源 · 一张命中函数 · 生命周期函数化</h1>
     <p>
-      本文是 Case E 框选链路的<strong>现行配置合同</strong>。相对旧宪法 HTML，修正：矩形只留起角 + 活指针；命中只配<strong>一张纯函数</strong>，拖拽调度与松手 Trigger 都调用它；
-      <strong>函数彼此等价，差别只在返回类型</strong>（命中函数返回名单），不再把「Query」当成特殊 kind；
-      候选入参是集合 key（最早宪法），不是默认全图扫人。
+      本文是 Case E 框选链路的<strong>现行配置合同</strong>（D15 落地后）。输入更新回到输入域（<code>PointerMoved</code> 边沿，不设帧时钟）；
+      context 生命周期是 profile 上的<strong>瞬时边界槽</strong>（<code>onActivated</code> / <code>onDeactivated</code>，取代被废止的 whileActive 周期字段）；
+      手势与落定解耦：手势出口只写<strong>交接单</strong>，落定是<strong>一张全手势通用的 Script 函数体</strong>。
     </p>
   </div>
 
   <div class="callout ok">
-    <b>和旧文档的关系</b>：旧 <code>case-e-config-report.html</code> 保留对照；<strong>以本文为准</strong>。标 <span class="tag gap">缺口</span> 的是引擎还没对齐本合同、必须先补的基建。
+    <b>和旧文档的关系</b>：历史 <code>case-e-config-report.html</code> 与更早的「结构修订」保留对照；<strong>以本文为准</strong>。
+    本文落到 D15 合入后的真实资产上；「函数愿景」（graph-callable-function-vision）中还没落地的部分单列在 §09。
   </div>
 
   <!-- 00 -->
-  <h2><span class="no">00</span>第一性：函数等价，不是 Kind 动物园</h2>
+  <h2><span class="no">00</span>第一性：可复用的图体是函数；挂载是带监听的宿主</h2>
   <div class="step">
-    <h3>合同立场 <span class="tag cfg">合同</span> + <span class="tag gap">缺口：现网 GraphKind</span></h3>
+    <h3>合同立场 <span class="tag cfg">合同</span></h3>
     <div class="kv">
-      可复用的图体都是<strong>函数</strong>：有入参、有返回。Score 返回分、Validation 返回是否通过、命中函数返回名单——<b>同一套调用模型</b>，不靠「Query 是一种 kind」制造特权通道。<br>
-      边沿动作（按下/抬起）仍是带事件入口的 Trigger 图；那是<strong>调度宿主</strong>，不是另一种「函数物种」。宿主调函数；函数不调宿主。<br>
-      <span class="dim">boxing context 用 whileActive.graph 挂存活期命中函数；禁止再发明 continuousQuery 或第二套 Query 专用字段。</span>
-    </div>
-    <div class="form">
-      <div class="ft">命中函数 · 引脚合同（对齐最早宪法 §05②，不是现网图头字段名）</div>
-      <div class="field"><span class="fname">入参 · 候选<span class="ftype">collection key</span></span><span class="fdesc">框之前就有的名单（如 case_e.selectable）。不是「每次拿全部 entity」。全图扫描若出现，只能是某个函数体内部的实现选择，不是命中合同的默认入参。</span></div>
-      <div class="field"><span class="fname">入参 · 矩形<span class="ftype">四个 float</span></span><span class="fdesc">起角 x/y + 活角 x/y。调用方接线：起角=按下写入的单一 map var；活角=指针屏幕位置 helper（拖拽当帧 / 松手 payload）。</span></div>
-      <div class="field"><span class="fname">返回<span class="ftype">TargetList / 实体名单</span></span><span class="fdesc">当前矩形 ∩ 候选。现网：命中图是纯函数（Query 作者面禁写集合），TargetList 留给调用方接走；预览集由宿主图 box_hover_tick 尾节点 WriteCollection 写入；调度只 Execute，禁止 GraphReturnWriter / outputs[] 代写。</span></div>
-    </div>
-    <div class="callout bad">
-      <b>现网缺口</b>：图文档顶层只有 <code>outputs[]</code>（出参公示），没有对等的图级入参表；入参被写死在节点 imm / 读属性里。调用方在 profile 挂载处看不到引脚。补齐方向：函数登记声明入参类型 + 返回类型；挂载/Invoke 只传函数 id 与值边，不再靠 kind=Query 开后门。
+      可复用的图体都是<strong>函数</strong>：有入参、有返回，或写明副作用。打分返回分、校验返回是否通过、命中返回名单——<b>同一套调用模型</b>。<br>
+      <strong>函数</strong>用 <code>Script</code>（能挂起、能写、能读集合）或 <code>Query</code>（纯读、给表现层取数、作者面禁写）表达；二者是同一函数族的两种许可面，不是两种物种。<br>
+      边沿动作（按下 / 抬起 / 存活期指针变化）由<strong>带事件入口的 TriggerGraph</strong> 承载；它是<strong>调度宿主</strong>，不是另一种「函数物种」。宿主调函数；函数不回头调宿主。
     </div>
   </div>
 
-  <h2><span class="no">00b</span>全链路概览</h2>
+  <h2><span class="no">00b</span>D15 全链路概览</h2>
   <div class="box">
     <div class="kv">
-      <span class="k">01 进图</span><span class="v">实体出生</span><br>
-      <span class="k">02 挂默认</span><span class="v">模板 initialInteractionContext → 战斗 context</span><br>
-      <span class="k">03 边沿挂载</span><span class="v">profile.triggers[] 挂抬起/点选 Trigger</span><br>
-      <span class="k">04 框开始</span><span class="v">写起角 → 激活「正在框选」（候选集由 battle 挂载的 roster_sync 另维）</span><br>
-      <span class="k">05 拖拽中</span><span class="v">context 存活期每 tick：调同一张命中函数（候选 key + 矩形）→ 返回名单写预览集</span><br>
-      <span class="k">06 框结束</span><span class="v">Trigger 再调同一张命中函数 → 按修饰写已选中 → 停用框选 → 预览清空</span><br>
+      <span class="k">01 进图</span><span class="v">实体出生（模板）</span><br>
+      <span class="k">02 挂默认</span><span class="v">initialInteractionContext → 战斗 context（battle）</span><br>
+      <span class="k">03 宿主</span><span class="v">battle.triggers[]：roster_sync（心跳维护候选）+ box_begin（按下）</span><br>
+      <span class="k">04 按下</span><span class="v">box_begin：写起角黑扳 + 预写修饰键黑扳(=0) + 激活 boxing</span><br>
+      <span class="k">05 拖拽</span><span class="v">指针移动 → PointerMoved 输入边沿 → box_hover_tick 调同一张命中函数 → 写预览集（黄环）</span><br>
+      <span class="k">06 松手</span><span class="v">box_commit（出口图）：写修饰键黑扳 → 终局命中 → 写交接单 selection.pending → DeactivateContext</span><br>
+      <span class="k">06′ 结算</span><span class="v">onDeactivated 槽（下一 tick）：box_hover_clear 清预览；selection_commit 读黑扳+交接单 → 写 selected → 交接单消费成空（蓝环）</span><br>
       <span class="k">07 高亮</span><span class="v">预览 / 已选中都走集合成员变化；presenter 只换订阅 key</span>
     </div>
   </div>
 
   <div class="box" style="margin-top:12px">
-    <h4>三层名单（重量不同）</h4>
+    <h4>四个名词（先对齐）</h4>
     <div class="form" style="margin-top:8px">
-      <div class="ft">只有「谁会被画环」必须进成员事件面</div>
-      <div class="field"><span class="fname">候选<span class="ftype">命中入参</span></span><span class="fdesc">能被框的人。宪法：框前就有的 entity collection key。battle context 挂载的 roster_sync 图维护这份名单。</span></div>
-      <div class="field"><span class="fname">预览<span class="ftype">图内自写</span></span><span class="fdesc">拖拽时框里是谁（如 case_e.box_hover）→ 黄环。box_hover_tick 每帧调命中函数后 WriteCollection 写入；离开「正在框选」清空。</span></div>
-      <div class="field"><span class="fname">已选中<span class="ftype">collection key</span></span><span class="fdesc">松手正式结果（selected）→ 蓝环；replace / add / subtract。</span></div>
+      <div class="field"><span class="fname">候选<span class="ftype">集合</span></span><span class="fdesc">case_e.selectable——能被框的人。battle 挂载的 roster_sync 图随 MapHeartbeat 维护，开框前就位。</span></div>
+      <div class="field"><span class="fname">预览<span class="ftype">集合</span></span><span class="fdesc">case_e.box_hover——拖拽时框里是谁，黄环。</span></div>
+      <div class="field"><span class="fname">交接单<span class="ftype">集合</span></span><span class="fdesc">selection.pending——松手时手势出口写的「待结算名单」，是手势与落定之间的唯一通道。</span></div>
+      <div class="field"><span class="fname">已选中<span class="ftype">集合</span></span><span class="fdesc">selected——正式结果，蓝环；replace / add / subtract。</span></div>
     </div>
-  </div>
-
-  <!-- 01 -->
-  <h2><span class="no">01</span>进图：实体出生</h2>
-  <div class="step">
-    <h3>事件：实体出生 <span class="tag code">代码</span></h3>
-    <div class="form">
-      <div class="ft">实体模板</div>
-      <div class="field"><span class="fname">templateId<span class="ftype">string</span></span><span class="fdesc">如 case_e_commander</span></div>
-      <div class="field"><span class="fname">initialInteractionContext<span class="ftype">string</span></span><span class="fdesc">出生挂哪个 context profile id</span></div>
-    </div>
-  </div>
-
-  <!-- 02 -->
-  <h2><span class="no">02</span>出生挂默认 context</h2>
-  <div class="step">
-    <h3>挂 InteractionContextInstance <span class="tag cfg">配置</span> + <span class="tag code">代码</span></h3>
-    <div class="kv">出生读模板 <span class="k">initialInteractionContext</span> → 挂 Instance。</div>
   </div>
 
   <!-- 03 -->
-  <h2><span class="no">03</span>profile：边沿 Trigger + 存活期调函数</h2>
+  <h2><span class="no">03</span>profile：两类字段——监听的入口 + 生命周期的边界</h2>
   <div class="step">
-    <h3>InteractionContext profile <span class="tag cfg">配置</span></h3>
-    <div class="callout">
-      <b>分清两层</b>：<code>activeCollectionKey</code> / <code>activeEntityViewKey</code> 是 input-03 档案必填（视图键现网几乎无消费方），<strong>不是</strong>命中函数的入参/出参。
-      命中 I/O 只在函数资产上。profile 只决定：边沿挂哪些 Trigger、存活期<strong>反复调用哪个函数 id</strong>。
+    <h3>InteractionContext profile（D15 真实字段） <span class="tag cfg">配置</span></h3>
+    <div class="form">
+      <div class="ft">battle（常驻）</div>
+      <div class="field"><span class="fname">inputContextId<span class="ftype">string</span></span><span class="fdesc">CaseE.Controls（键位随实体投影，多 seat 各投影各的）</span></div>
+      <div class="field"><span class="fname">bindings<span class="ftype">string[]</span></span><span class="fdesc">按住即成立的语义动作（BoxSelectBegin/End + 修饰键）</span></div>
+      <div class="field"><span class="fname">triggers[]<span class="ftype">mount</span></span><span class="fdesc">roster_sync（MapHeartbeat）+ box_begin（CaseE.BoxSelectBegin）</span></div>
     </div>
     <div class="form">
-      <div class="ft">现网 profile 真实字段（loader 会校验）</div>
-      <div class="field"><span class="fname">id<span class="ftype">string</span></span><span class="fdesc">如 interaction.context.case_e.boxing</span></div>
-      <div class="field"><span class="fname">activeCollectionKey<span class="ftype">string</span></span><span class="fdesc">档案必填；与命中预览无关</span></div>
-      <div class="field"><span class="fname">activeEntityViewKey<span class="ftype">string</span></span><span class="fdesc">档案必填；声明数据，不是预览出参</span></div>
-      <div class="field"><span class="fname">bindings<span class="ftype">string[]</span></span><span class="fdesc">此 context 下成立的语义动作</span></div>
-      <div class="field"><span class="fname">triggers[]<span class="ftype">mount</span></span><span class="fdesc">边沿：{ trigger, event?, filters? }</span></div>
-      <div class="field"><span class="fname">whileActive<span class="ftype">{ graph }</span></span><span class="fdesc">boxing 存活期每 tick 调的命中函数 id（Case E §05）。</span></div>
+      <div class="ft">boxing（按下时激活的衍生 context）</div>
+      <div class="field"><span class="fname">triggers[]<span class="ftype">mount</span></span><span class="fdesc">box_hover_tick（action=PointerMoved）+ box_commit（action=CaseE.BoxSelectEnd）——框选活着时听的输入边沿</span></div>
+      <div class="field"><span class="fname">onActivated<span class="ftype">graph 数组</span></span><span class="fdesc">本用例留空；对称保留</span></div>
+      <div class="field"><span class="fname">onDeactivated<span class="ftype">graph 数组</span></span><span class="fdesc">box_hover_clear + selection_commit（Script 函数体，框选结束时的清场与落定；全手势复用）</span></div>
     </div>
-    <div class="callout bad">
-      存活期挂载的目标形状：与 triggers 同级、只挂<strong>函数 id</strong>（调用约定与 FuncLib/Invoke 对齐），入参由调度在调用时按函数声明接线（候选 key + 矩形）。现网预览写入由宿主图（box_hover_tick）在纯函数调用之后的尾节点 WriteCollection 完成；字段最终名以基建落地为准，禁止再发明无引脚的平行对象当合同。
+    <div class="callout ok">
+      <b>为什么是槽不是周期</b>：旧 <code>whileActive</code> 是「存活期每帧空耗周期」的野鸡字段，承载不了其他监听、还占帧。D15 把生命周期改成<strong>两个瞬间边界钩子</strong>——<code>onActivated</code> 跑在 boxing 的 triggers[] 开启之前，<code>onDeactivated</code> 跑在它们关闭之后（显式停用或主体死亡都走这里）。引擎只在边界调用命名图体，不做任何清理动作。
     </div>
   </div>
 
   <!-- 04 -->
-  <h2><span class="no">04</span>框开始：记起角 + 候选入参 + 进 boxing</h2>
+  <h2><span class="no">04</span>框开始：起角 + 修饰键黑扳初始化 + 进 boxing</h2>
   <div class="step">
-    <h3>按下 Trigger <span class="tag cfg">配置图体</span></h3>
-    <div class="callout ok">
-      矩形：起角只写一次 map var；活角永远读指针 helper。不为命中再双写 Press 属性。
-    </div>
+    <h3>按下 Trigger：box_begin <span class="tag cfg">配置图体</span></h3>
     <div class="form">
-      <div class="ft">框开始必须做</div>
-      <div class="field"><span class="fname">写起角<span class="ftype">WriteMapVarFloat ×2</span></span><span class="fdesc">case_e_press_px / case_e_press_py</span></div>
-      <div class="field"><span class="fname">ActivateContext<span class="ftype">op</span></span><span class="fdesc">激活 boxing；存活期开始反复调命中函数</span></div>
-      <div class="field"><span class="fname">候选集<span class="ftype">另维</span></span><span class="fdesc">不在按下图里捞人。battle context 的 triggers 挂 graph.case_e.roster_sync（MapHeartbeat）写入 case_e.selectable。</span></div>
+      <div class="ft">box_begin 必须做</div>
+      <div class="field"><span class="fname">写起角<span class="ftype">WriteBlackboardFloat ×2</span></span><span class="fdesc">case_e.press.px / case_e.press.py（写 rep 黑板，跨 seat 隔离）</span></div>
+      <div class="field"><span class="fname">预写修饰键<span class="ftype">WriteBlackboardInt</span></span><span class="fdesc">case_e.select.modifiers = 0——与起角同批建立，保证「boxing 存活 ⇒ 手势共享状态必在」，死亡也可直接结算</span></div>
+      <div class="field"><span class="fname">ActivateContext<span class="ftype">op</span></span><span class="fdesc">激活 boxing；父=battle，随 scope 建框 presenter</span></div>
+      <div class="field"><span class="fname">候选集<span class="ftype">另维</span></span><span class="fdesc">按下图不捞人。battle.roster_sync 已把 case_e.selectable 备好。</span></div>
     </div>
   </div>
 
   <!-- 05 -->
-  <h2><span class="no">05</span>命中函数（唯一）</h2>
+  <h2><span class="no">05</span>命中函数（唯一）与拖拽：输入更新回输入域</h2>
   <div class="step">
-    <h3>一张纯函数，拖拽与松手共用 <span class="tag cfg">配置</span> + <span class="tag gap">入参表缺口</span></h3>
+    <h3>一张纯函数，拖拽与松手共用 <span class="tag cfg">配置</span></h3>
     <div class="kv">
-      最早宪法：纯函数；入参=候选 collection key + 当前矩形；出参=命中集；拖拽每帧调、框结束也调。<br>
-      本合同沿用该引脚模型，并明确：它是<strong>函数</strong>，不是 GraphKind.Query 特权。
+      命中链只剩<strong>一张</strong>：<code>box_hit</code>（Query 纯函数，入参=候选集合 + 起角黑扳 + 活指针）返回命中集；拖拽与松手都调它，不写第二套命中算法。
     </div>
     <pre class="json">{
   "id": "graph.case_e.box_hit",
-  "说明": "现网：可被 whileActive 宿主图与 commit 的 InvokeGraph 共用的纯函数命中链；TargetList 留给调用方——box_hover_tick 写 case_e.box_hover，box_commit 写 selected。",
-  "入参（合同）": {
+  "kind": "Query",
+  "入参": {
     "candidates": "QueryFromCollection(case_e.selectable)",
-    "press": "ReadMapVarFloat(case_e_press_px/py)",
-    "live": "LoadPointerScreenX/Y"
+    "press":    "ReadBlackboardFloat(case_e.press.px/py)",
+    "live":     "LoadPointerScreenX/Y"
   },
-  "副作用": {
-    "WriteCollection": { "collectionKey": "case_e.box_hover", "op": "replace" }
-  },
-  "返回给宿主": "TargetList（InvokeGraph 拷回）"
+  "side effect": "无（Query 作者面禁写集合；命中结果留在 TargetList 交给调用方）"
 }</pre>
     <div class="box" style="margin-top:14px">
-      <h4>拖拽中 = 存活期调这张函数</h4>
+      <h4>拖拽中：PointerMoved 输入边沿，不是帧时钟</h4>
       <div class="kv">
-        不是再听 action。boxing 活着 → 每 tick Execute 命中图 → 图自己 Replace 预览集。<br>
-        高亮仍只在<strong>集合成员变化</strong>时发事件（已有基建）。
+        boxing 活着时挂 <code>box_hover_tick</code>（TriggerGraph，条目 <code>action: PointerMoved</code>）。
+        指针位置一变，输入绑定系统按 seat 派发一次；图中 <code>InvokeGraph(box_hit)</code> → 尾节点 <code>WriteCollection(case_e.box_hover, replace)</code>。
+        指针不动就不派发、不重算。<br>
+        <span class="dim">曾考虑 MapTick 每帧事件——那是把「输入更新」错当成模拟时钟，无人订阅时还空转；不用。</span>
       </div>
     </div>
   </div>
 
   <!-- 06 -->
-  <h2><span class="no">06</span>框结束：再调同一张函数 → 写已选中</h2>
+  <h2><span class="no">06</span>框结束：出口图 + 通用落定槽</h2>
   <div class="step">
-    <h3>抬起 / 点选 Trigger <span class="tag cfg">配置图体</span> + <span class="tag gap">函数互调</span></h3>
-    <div class="callout ok">
-      现网：commit/tap 用 <code>InvokeGraph</code> 调 <code>graph.case_e.box_hit</code>（允许 Query 被调），先停 boxing context（宪法 §06 顺序），拷回 TargetList 再 <code>WriteCollection</code> 写 selected。禁止再手抄第二份矩形命中链。
-    </div>
+    <h3>松手 Trigger：box_commit（手势出口图） <span class="tag cfg">配置图体</span></h3>
     <div class="form">
-      <div class="ft">框结束步骤</div>
-      <div class="field"><span class="fname">1. 修饰<span class="ftype">payload</span></span><span class="fdesc">replace / add / subtract</span></div>
-      <div class="field"><span class="fname">2. 调命中函数<span class="ftype">同 id</span></span><span class="fdesc">入参仍是候选 key + 起角 map var + 抬起指针</span></div>
-      <div class="field"><span class="fname">3. 写 selected<span class="ftype">WriteCollection</span></span><span class="fdesc">用返回名单 + 修饰语义</span></div>
-      <div class="field"><span class="fname">4. DeactivateContext<span class="ftype">op</span></span><span class="fdesc">停 boxing → 存活期停 → 预览清空</span></div>
+      <div class="ft">box_commit（瘦身为出口：只交接，不落定）</div>
+      <div class="field"><span class="fname">1. 读修饰<span class="ftype">LoadEntryPayloadInt</span></span><span class="fdesc">MapTrigger.Modifiers</span></div>
+      <div class="field"><span class="fname">2. 写修饰<span class="ftype">WriteBlackboardInt</span></span><span class="fdesc">case_e.select.modifiers ← 1：修饰键落 rep 黑板（落定槽读这里）</span></div>
+      <div class="field"><span class="fname">3. 终局命中<span class="ftype">InvokeGraph</span></span><span class="fdesc">调 box_hit（同一张命中函数）</span></div>
+      <div class="field"><span class="fname">4. 写交接单<span class="ftype">WriteCollection</span></span><span class="fdesc">selection.pending（replace）——手势产物归档，等落定</span></div>
+      <div class="field"><span class="fname">5. 停用<span class="ftype">DeactivateContext</span></span><span class="fdesc">宣布框选结束；boxing 监听卸载走门控下帧扫描</span></div>
     </div>
-    <div class="kv" style="margin-top:10px">点选：零位移矩形（起角=活角）仍调同一张命中函数，不写第三套算法。</div>
+    <h3 style="margin-top:18px">onDeactivated 槽：清场 + 落定（Script 函数体） <span class="tag cfg">图体</span></h3>
+    <div class="form">
+      <div class="ft">两张槽图（都在 boxing 的 onDeactivated 里，顺序执行）</div>
+      <div class="field"><span class="fname">box_hover_clear<span class="ftype">Script</span></span><span class="fdesc">WriteCollection(case_e.box_hover, replace 空)——黄环灭</span></div>
+      <div class="field"><span class="fname">selection_commit<span class="ftype">Script</span></span><span class="fdesc">读黑扳修饰 → 读交接单 selection.pending → SwitchInt（无/Precision→replace，Queue→add，Subtract→subtract）→ WriteCollection(selected) → 交接单集合减法消费成空</span></div>
+    </div>
+    <div class="callout ok">
+      <b>交接单消费</b>：落定尾段用 <code>WriteCollection(selection.pending, subtract=2)</code> 把刚读出的名单从交接单里减去——M⊆pending 恒成立，减完必空。语义即「消费」，不需要额外的清除 op。
+    </div>
+  </div>
+
+  <!-- 06b -->
+  <h2><span class="no">06b</span>生命周期与结算的边界（D15 定稿）</h2>
+  <div class="step">
+    <div class="form">
+      <div class="ft">三件事按结构保证，不靠约定</div>
+      <div class="field"><span class="fname">开启前 / 关闭后<span class="ftype">结构顺序</span></span><span class="fdesc">onActivated 在 boxing 的 triggers[] 注册之前跑；onDeactivated 在它们卸载之后跑。挂 / 拆是门控的唯一汇点，槽贴在这两侧——顺序是结构事实，不是两个系统之间的时序约定。</span></div>
+      <div class="field"><span class="fname">死亡补发<span class="ftype">destroy 边界</span></span><span class="fdesc">主体带着 context 被销毁（拖拽半途被击杀、未走显式停用）时，门控在 destroy 回调里对携带的每个 context 跑 onDeactivated 槽——结算与清场不会因死亡漏掉。</span></div>
+      <div class="field"><span class="fname">结算延迟<span class="ftype">1 tick</span></span><span class="fdesc">selected 在「停用后的下一 tick」更新（帧 N 松手写交接单，帧 N+1 槽结算）。原因是槽执行点固定在门控拆监听之后，而门控每帧扫一次世界。玩家不可见（隔 1 tick）；对读 selected 的逻辑是契约窗口：停用后 1 tick 内读到的还是旧值。当前 selected 无并发读者；「同拍即时结算」需把槽挂到 DeactivateContext 同帧，会引入同帧嵌套执行，暂不采用。</span></div>
+    </div>
   </div>
 
   <!-- 07 -->
@@ -233,69 +219,52 @@
   </div>
 
   <!-- 08 -->
-  <h2><span class="no">08</span>基建缺口清单</h2>
+  <h2><span class="no">08</span>换手柄意味着什么（设计的验收思想实验）</h2>
   <div class="step">
-    <div class="form">
-      <div class="ft">必须先补，再改 Case E 资产装成目标合同</div>
-      <div class="field"><span class="fname">函数等价<span class="ftype">Core</span></span><span class="fdesc">可调用体统一为函数；用返回类型区分。现网已：continuous 不强制 Query；InvokeGraph 可调 Query 并拷回名单。仍缺：图级入参表、字段改名、全面废 GraphKind 特权语义。</span></div>
-      <div class="field"><span class="fname">图级入参表<span class="ftype">作者面</span></span><span class="fdesc">与 outputs 对等的入参声明；调用方可见、可接线。禁止长期靠节点 imm 藏入参。</span></div>
-      <div class="field"><span class="fname">宿主调函数<span class="ftype">op</span></span><span class="fdesc">现网：InvokeGraph 可调 TriggerGraph 或 Query，名单拷回宿主。命名仍可演进为 InvokeFunc。</span></div>
-      <div class="field"><span class="fname">存活期调度<span class="ftype">whileActive</span></span><span class="fdesc">挂宿主图 id（box_hover_tick，TriggerGraph）；图内 InvokeGraph 纯函数子图后尾节点 WriteCollection 写预览集。</span></div>
+    <div class="kv">
+      不用框选了、插上手柄：新手势 = 一个新 context + 自己的命中图 + 自己的 <code>box_commit</code> 出口，照旧写同一张交接单 <code>selection.pending</code> 与修饰键黑扳，然后在 <code>onDeactivated</code> 里列出 <code>selection_commit</code>。
+      落定层（读交接单、写 selected、消费交接单）<strong>零改动</strong>；清场层 <code>box_hover_clear</code> 各手势按需换自己的预览 key。
     </div>
   </div>
 
   <!-- 09 -->
-  <h2><span class="no">09</span>汇总</h2>
-  <table class="summary">
-    <thead>
-      <tr><th>步骤</th><th>事件 / 过程</th><th>关键</th><th>配置 / 代码</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>01–02</td><td>出生挂战斗</td><td>templates / profile</td><td>配置+代码</td></tr>
-      <tr><td>03</td><td>边沿 + 存活期调函数</td><td>triggers[]；存活期函数 id</td><td>配置；调度代码</td></tr>
-      <tr><td>04</td><td>按下</td><td>起角 map var；ActivateContext</td><td>配置图体</td></tr>
-      <tr><td>03′</td><td>battle 存活</td><td>roster_sync → case_e.selectable</td><td>context triggers[]</td></tr>
-      <tr><td>05</td><td>拖拽每 tick</td><td>同一命中函数（候选+矩形→名单）</td><td>函数资产+调度</td></tr>
-      <tr><td>06</td><td>抬起</td><td>再调同一函数 → selected；Deactivate</td><td>配置图体（现网 InvokeGraph 已调 box_hit）</td></tr>
-      <tr><td>07</td><td>成员变化</td><td>presenter 两 key</td><td>配置</td></tr>
-    </tbody>
-  </table>
-
-  <h2><span class="no">10</span>相对现网：已做 / 还欠</h2>
+  <h2><span class="no">09</span>相对历史：D15 已落地 / 远景还欠</h2>
   <div class="grid2">
     <div class="box">
-      <h4>PR #1444 已改掉</h4>
+      <h4>D15 已落地（真实资产）</h4>
       <div class="kv">
-        · continuous 强制 kind=Query<br>
-        · GraphReturnWriter 代写 hover<br>
-        · commit/tap 手抄第二份命中链<br>
-        · 把「调用方统一回写」写成现网合同
+        · whileActive 四层删除；生命周期 = onActivated / onDeactivated 边界槽<br>
+        · 拖拽预览 = PointerMoved 输入边沿（输入域，无帧时钟）<br>
+        · 手势/落定解耦：交接单 + 通用 selection_commit（Script 函数体）<br>
+        · 落定/清场槽图 = Script 函数体；集合查询读面对齐 Script（修「能写不能读」不对称）<br>
+        · 死亡补发：destroy 边界跑 Deactivated 槽<br>
+        · 起角与修饰键黑扳随按下同批建立<br>
+        · 修复既有缺陷：未声明动作绑定别名到 index 0 槽（PlayerInputHandler.CompileBinding）
       </div>
     </div>
     <div class="box">
-      <h4>远景还欠（先出方案）</h4>
+      <h4>远景还欠（先出方案，见 graph-callable-function-vision）</h4>
       <div class="kv">
-        · 图顶层入参表<br>
-        · whileActive 已落地（废 continuousQuery）<br>
-        · 预览 S1 / S2 定一条<br>
-        · Invoke 命名和 FuncLib 划界<br>
-        · 和 #1084 / #1099 准纯说法对齐
+        · 图顶层入参表 inputs[]（出参表 outputs[] 已有）<br>
+        · InvokeGraph 命名演进（InvokeFunc）与 FuncLib 划界<br>
+        · 预览写入 S1（图内副作用）/ S2（纯返回再写入）二选一收口<br>
+        · Query 作者面与「函数等价」的长期对齐
       </div>
     </div>
   </div>
+
   <div class="callout" style="margin-top:12px">
-    Case E 交接（合同已纠偏、名单落账仍是蠢决定）：
-    <a href="./NEXT-AGENT-BRIEF.md"><code>docs/NEXT-AGENT-BRIEF.md</code></a>。
-    图当可调用函数方案正本：
-    <code>gitbook/architecture/graph-callable-function-vision.md</code>。
+    Case E 交接：<a href="./NEXT-AGENT-BRIEF.md"><code>docs/NEXT-AGENT-BRIEF.md</code></a>。
+    函数愿景正本：<code>gitbook/architecture/graph-callable-function-vision.md</code>。
+    图能力进度只看 <code>gitbook/architecture/graph-capability-status.md</code>。
   </div>
 
   <div class="callout" style="margin-top:16px">
-    <b>UAT（玩家话）</b>：按下拖，框跟着走，框里兵黄环；松手黄灭蓝留；加选/减选只动蓝环；敌人不进黄也不进蓝。换 scheme 只改函数或修饰映射，不配第二套命中。
+    <b>UAT（玩家话）</b>：按下拖，框跟着走，框里兵黄环；松手黄灭蓝留；加选/减选只动蓝环；敌人不进黄也不进蓝。中途把指挥官打死，框也不残留、不报错。换手柄只换手势，落定照旧。
   </div>
 
   <footer>
-    Case E · 配置结构 · 对照 case-e-config-report.html
+    Case E · 配置结构（D15 现行）· 历史对照 case-e-config-report.html
   </footer>
 </div>
 </body>
