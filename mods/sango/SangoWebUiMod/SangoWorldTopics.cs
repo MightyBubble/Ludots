@@ -173,7 +173,9 @@ public sealed class SangoWorldCitiesTopic : IWebUiTopicProducer
                 city.population,
                 city.gold,
                 city.food,
-                city.allPersons.Count));
+                city.allPersons.Count,
+                city.x,
+                city.y));
         });
         return rows.ToArray();
     }
@@ -918,7 +920,9 @@ public sealed record SangoCityRow(
     int Population,
     int Gold,
     int Food,
-    int PersonCount);
+    int PersonCount,
+    int X,
+    int Y);
 
 public sealed record SangoCitiesSnapshot(int Tick, int TurnCount, SangoCityRow[] Cities);
 
