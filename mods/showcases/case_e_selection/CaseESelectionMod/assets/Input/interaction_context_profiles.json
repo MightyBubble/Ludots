@@ -12,9 +12,6 @@
       ],
       "triggers": [
         {
-          "trigger": "graph.case_e.roster_sync"
-        },
-        {
           "trigger": "graph.case_e.box_begin"
         }
       ]

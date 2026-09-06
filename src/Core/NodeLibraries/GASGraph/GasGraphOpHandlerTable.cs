@@ -1537,10 +1537,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleWriteCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
+            // Optional source resolves the owner entity; absent, the writing rep (caster).
+            Entity owner = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
             s.Api.WriteCollection(
                 ins.Imm,
                 s.I[ins.B],
-                s.Caster,
+                owner,
                 s.Targets,
                 s.TargetList.Count);
         }

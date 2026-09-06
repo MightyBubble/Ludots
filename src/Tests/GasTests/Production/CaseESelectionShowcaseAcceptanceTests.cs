@@ -107,12 +107,16 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(HasScreenRect(screenOverlayBefore, x: -1200, y: -100, width: 900, height: 200), Is.False,
             "按下前 boxing context 未激活 → scope 无矩形（visibility 绑定=0）");
 
-        // ── 03b：battle context 挂载 roster_sync（MapHeartbeat）→ 开框前候选集已就位 ──
+        // ── 03b：battle context 挂载 roster_sync（EntitySpawned/EntityDied 事件驱动）→ 候选集已就位 ──
+        // 铺底：battle onActivated 首跑 roster_sync 全量重建；此后出生/死亡事件驱动刷新，零轮询。
         TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
         AssertNoTriggerErrors(engine);
         Assert.That(
-            engine.TriggerManager.HasMapEventSubscribers(new MapId(MapId), GameEvents.MapHeartbeat),
-            "battle roster_sync 应对 MapHeartbeat 有订阅");
+            engine.TriggerManager.HasMapEventSubscribers(new MapId(MapId), GameEvents.EntitySpawned),
+            "battle roster_sync 应对 EntitySpawned（出生驱动）有订阅");
+        Assert.That(
+            engine.TriggerManager.HasMapEventSubscribers(new MapId(MapId), GameEvents.EntityDied),
+            "battle roster_sync 应对 EntityDied（死亡驱动）有订阅");
         AssertCollection(engine, commander, SelectableKey, "候选集随 battle context 维护（敌我+模板过滤），框之前就有",
             marine1, marine2, marine3, marine4);
 
@@ -245,6 +249,43 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             "点选同样停用 boxing context");
         AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "点选命中单位高亮", marine4);
         AssertRingOff(engine, presenterRuntime, ringAttachmentDefId, "点选替换后其余单位取消高亮", marine1, marine2, marine3);
+    }
+
+    /// <summary>
+    /// 刀 1（本版本新增）：候选集从 MapHeartbeat 轮询改为 EntitySpawned/EntityDied 事件驱动。
+    /// 死亡时 roster_sync 重build图谱（QueryAllMapEntities → team/template 过滤 → replace），
+    /// 已销毁实体从 MapEntity 查询消失，故候选集自然剔除死者。验证：4 支建材中销毁一支 →
+    /// 候选集缩到 3，且死者不在其中（零轮询：EntityDied 触发才是刷新源）。
+    /// </summary>
+    [Test]
+    public void MarineDeath_RemovesFromSelectableRoster()
+    {
+        string repoRoot = FindRepoRoot();
+        var backend = new TestInputBackend();
+        using GameEngine engine = CreateEngine(repoRoot, backend);
+        engine.LoadMap(new MapLoadRequest(
+            new MapId(MapId),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.case_e") })));
+        TickUntil(engine, 40, () => engine.CurrentMapSession != null);
+        AssertNoTriggerErrors(engine);
+
+        Entity commander = Resolve(engine, "case-e-commander");
+        Entity marine1 = Resolve(engine, "case-e-marine-1");
+        Entity marine2 = Resolve(engine, "case-e-marine-2");
+        Entity marine3 = Resolve(engine, "case-e-marine-3");
+        Entity marine4 = Resolve(engine, "case-e-marine-4");
+
+        // 候选集就位（地图级 mount 收 EntitySpawned，铺底 + 出生事件刷新）
+        TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        AssertCollection(engine, commander, SelectableKey, "候选集四支就位", marine1, marine2, marine3, marine4);
+
+        // 销毁一支建材 → EntityDied 驱动 roster_sync 重建 → 候选集剔除死者
+        engine.World.Destroy(marine4);
+        TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 3);
+        AssertNoTriggerErrors(engine);
+        AssertCollection(engine, commander, SelectableKey, "销毁后候选集缩到 3，死者被剔除", marine1, marine2, marine3);
+        Assert.That(CollectionContains(engine, commander, SelectableKey, marine4), Is.False,
+            "已销毁实体不再出现在候选集（EntityDied 重建剔除）");
     }
 
     /// <summary>
