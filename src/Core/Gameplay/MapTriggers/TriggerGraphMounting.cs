@@ -12,6 +12,18 @@ using Ludots.Core.Systems;
 
 namespace Ludots.Core.Gameplay.MapTriggers
 {
+    /// <summary>
+    /// Entry-class filter for context trigger mounts (#1398 刀4): Interactive = input-action
+    /// bound entries, Passive = map/event-bound entries. The mount trigger and its resume
+    /// companion are always built together per entry, so a class filter never orphans one.
+    /// </summary>
+    public enum ContextMountEntryClass : byte
+    {
+        All = 0,
+        Interactive = 1,
+        Passive = 2,
+    }
+
     public static class TriggerGraphMounting
     {
         public static List<Trigger> BuildTriggers(
@@ -163,7 +175,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             CustomEventNameRegistry customEvents,
             Ludots.Core.Systems.MapLoadEntityIndex? entityIndex = null,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
-            System.Collections.Generic.IReadOnlySet<string>? regionIds = null)
+            System.Collections.Generic.IReadOnlySet<string>? regionIds = null,
+            ContextMountEntryClass entryClass = ContextMountEntryClass.All)
         {
             if (customEvents == null) throw new ArgumentNullException(nameof(customEvents));
 
@@ -185,7 +198,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 eventSchemas: eventSchemas,
                 regionIds: regionIds,
                 entryEventFilter: string.IsNullOrWhiteSpace(mount.Event) ? null : mount.Event,
-                contextMount: mount);
+                contextMount: mount,
+                entryClass: entryClass);
             return triggers;
         }
 
@@ -414,7 +428,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
             System.Collections.Generic.IReadOnlySet<string>? regionIds = null,
             string? entryEventFilter = null,
-            Ludots.Core.Input.Interaction.InteractionContextTriggerMount? contextMount = null)
+            Ludots.Core.Input.Interaction.InteractionContextTriggerMount? contextMount = null,
+            ContextMountEntryClass entryClass = ContextMountEntryClass.All)
         {
             IReadOnlyList<TriggerGraphEntry> entries = registration.TriggerGraphEntries;
             if (entries == null || entries.Count == 0)
@@ -474,6 +489,20 @@ namespace Ludots.Core.Gameplay.MapTriggers
             for (int e = 0; e < entries.Count; e++)
             {
                 TriggerGraphEntry entry = entries[e];
+
+                // Entry-class filter (#1398 刀4): when the mount asks for only interactive or
+                // only passive entries, skip the other class wholesale — the mount trigger and
+                // its resume companion are built together below, so neither gets orphaned.
+                if (entryClass == ContextMountEntryClass.Interactive && !entry.IsActionBound)
+                {
+                    continue;
+                }
+
+                if (entryClass == ContextMountEntryClass.Passive && entry.IsActionBound)
+                {
+                    continue;
+                }
+
                 if (entry.IsHookFragment)
                 {
                     // #1124: the body was woven into its target graph's anchor at compile

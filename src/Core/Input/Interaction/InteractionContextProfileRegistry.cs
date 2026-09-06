@@ -69,6 +69,7 @@ namespace Ludots.Core.Input.Interaction
         private int[] _filterProfileIds = new int[8];
         private int[] _commandIntentProfileIds = new int[8];
         private int[] _inputContextIdsByProfile = new int[8];
+        private bool[] _isForeground = new bool[8];
         private int[][] _onActivatedGraphIds = new int[8][];
         private int[][] _onDeactivatedGraphIds = new int[8][];
 
@@ -208,6 +209,15 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
+        /// Foreground declaration (#1398 刀4): true while this profile's active instance parks
+        /// the interactive (input-action bound) trigger mounts of its active ancestors.
+        /// </summary>
+        public bool IsForeground(int profileId)
+        {
+            return profileId > 0 && profileId < _isForeground.Length && _isForeground[profileId];
+        }
+
+        /// <summary>
         /// Steady-state routing anchor: the reserved default profile's resolved collection key
         /// and filter profile ids (the data-declared home of the retired engine default frame).
         /// Returns false when the default profile is not installed.
@@ -261,6 +271,7 @@ namespace Ludots.Core.Input.Interaction
                 Array.Resize(ref _filterProfileIds, next);
                 Array.Resize(ref _commandIntentProfileIds, next);
                 Array.Resize(ref _inputContextIdsByProfile, next);
+                Array.Resize(ref _isForeground, next);
                 Array.Resize(ref _onActivatedGraphIds, next);
                 Array.Resize(ref _onDeactivatedGraphIds, next);
             }
@@ -284,6 +295,7 @@ namespace Ludots.Core.Input.Interaction
                 : collectionKeyRegistry.Register(definition.ActiveCollectionKey.Trim());
             _filterProfileIds[profileId] = filterProfileId;
             _commandIntentProfileIds[profileId] = commandIntentProfileId;
+            _isForeground[profileId] = definition.Foreground;
             _inputContextIdsByProfile[profileId] = _inputContextIdsFor(profileId);
             _onActivatedGraphIds[profileId] = ResolveLifecycleGraphIds(
                 definition.OnActivated,

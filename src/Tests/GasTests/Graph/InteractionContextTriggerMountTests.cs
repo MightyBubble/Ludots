@@ -30,11 +30,15 @@ namespace Ludots.Tests.Gas.Graph
     {
         private const string MapIdValue = "map_context_gate_probe";
         private const string GraphName = "Graph.TriggerGraph.ContextGate";
+        private const string HybridGraphName = "Graph.TriggerGraph.ContextGateHybrid";
         private const string CounterGraph = "Graph.Script.ContextGate.DeactivatedCounter";
         private const string BattleProfile = "interaction.context.gate.battle";
         private const string BoxingProfile = "interaction.context.gate.boxing";
         private const string IdleProfile = "interaction.context.gate.idle";
         private const string CounterProfile = "interaction.context.gate.counter";
+        private const string ParentProfile = "interaction.context.gate.parent";
+        private const string ForegroundChildProfile = "interaction.context.gate.foreground";
+        private const string GateAction = "GateAction.TestPress";
         private const int CounterKeyId = 1007;
 
         private readonly MapId _mapId = new(MapIdValue);
@@ -213,6 +217,88 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(ReadCounter(world, subject), Is.EqualTo(2));
         }
 
+        /// <summary>
+        /// #1398 刀4: a foreground child parks its parent's interactive (action-bound) trigger
+        /// mounts while keeping map/passive (event-bound) mounts, does not touch scope
+        /// coexistence (non-stack), never runs the parent's Deactivated slot, and restores the
+        /// interactive mounts when it deactivates.
+        /// </summary>
+        [Test]
+        public void ForegroundChild_ParksParentInteractiveMounts_KeepsPassive_RestoresOnDeactivate()
+        {
+            using World world = NewWorld(out var gate, out var profiles, out var triggers);
+            var runtime = new InteractionContextInstanceRuntime(world, profiles, NewEvents());
+
+            Entity subject = world.Create(NewMapEntity());
+            var counter = new Ludots.Core.Gameplay.GAS.Components.BlackboardIntBuffer();
+            counter.Set(CounterKeyId, 0);
+            world.Add(subject, counter);
+            MountBaseContext(world, profiles, subject, ParentProfile);
+
+            int parentId = profiles.ProfileIdRegistry.GetId(ParentProfile);
+            int childId = profiles.ProfileIdRegistry.GetId(ForegroundChildProfile);
+            int parentKey = ConfigKeyRegistry.Register(ParentProfile);
+            int childKey = ConfigKeyRegistry.Register(ForegroundChildProfile);
+
+            // Parent window opens interactive: both the event-bound and the action-bound mount.
+            gate.Update(0.016f);
+            Assert.That(gate.TryGetMountedTriggers(subject, parentId, out IReadOnlyList<Trigger> parentMounts), Is.True);
+            Assert.That(parentMounts.Count, Is.EqualTo(2), "parent opens with event + action mounts");
+            Assert.That(HasActionMount(parentMounts, out _), Is.True, "parent's interactive mount registered");
+            Assert.That(triggers.HasMapEventSubscribers(_mapId, GameEvents.MapLoaded), Is.True);
+
+            // Foreground child activates → parent's interactive mount parks; event mount stays.
+            runtime.Activate(subject, childKey, parentKey);
+            gate.Update(0.016f);
+            Assert.That(
+                gate.TryGetMountedTriggers(subject, parentId, out IReadOnlyList<Trigger> parkedMounts) &&
+                parkedMounts.Count == 1,
+                "parent keeps exactly the event-bound mount while parked");
+            Assert.That(HasActionMount(parkedMounts, out _), Is.False, "（①）action-bound mount demoted while foreground child active");
+            Assert.That(
+                triggers.HasMapEventSubscribers(_mapId, GameEvents.MapLoaded),
+                Is.True,
+                "（②）map/passive event mount still listening");
+            Assert.That(ReadCounter(world, subject), Is.EqualTo(0),
+                "park is a regime change, not a window close — parent Deactivated slot must not run");
+            Assert.That(runtime.IsActive(subject, parentId) && runtime.IsActive(subject, childId),
+                "（③）parent + child scope coexist (non-stack)");
+
+            // Reconcile again under the same regime: parking is idempotent, no mount churn.
+            gate.Update(0.016f);
+            Assert.That(
+                gate.TryGetMountedTriggers(subject, parentId, out IReadOnlyList<Trigger> stillParked) &&
+                stillParked.Count == 1,
+                "parked diff is idempotent — second reconcile does not churn mounts");
+
+            // Child deactivates → parent interactive mount restored, still no slot.
+            runtime.Deactivate(subject, childKey);
+            gate.Update(0.016f);
+            Assert.That(
+                gate.TryGetMountedTriggers(subject, parentId, out IReadOnlyList<Trigger> restored) &&
+                restored.Count == 2,
+                "（④）child deactivates → parent interactive mount restored");
+            Assert.That(HasActionMount(restored, out _), Is.True);
+            Assert.That(ReadCounter(world, subject), Is.EqualTo(0),
+                "unpark is not a window close either — no Deactivated slot");
+        }
+
+        private static bool HasActionMount(IReadOnlyList<Trigger> mounts, out TriggerGraphMountTrigger actionMount)
+        {
+            for (int i = 0; i < mounts.Count; i++)
+            {
+                if (mounts[i] is TriggerGraphMountTrigger mount &&
+                    !string.IsNullOrWhiteSpace(mount.ActionId))
+                {
+                    actionMount = mount;
+                    return true;
+                }
+            }
+
+            actionMount = null!;
+            return false;
+        }
+
         private static int ReadCounter(World world, Entity subject)
         {
             ref var bb = ref world.Get<Ludots.Core.Gameplay.GAS.Components.BlackboardIntBuffer>(subject);
@@ -283,6 +369,24 @@ namespace Ludots.Tests.Gas.Graph
                             },
                             OnDeactivated = new List<string> { CounterGraph },
                         },
+                        // #1398 刀4: parent carries one event-bound + one action-bound mount so the
+                        // foreground-parking test can diff which class stays and which is demoted.
+                        new()
+                        {
+                            Id = ParentProfile,
+                            ActiveCollectionKey = "collection.gate.parent",
+                            Triggers = new List<InteractionContextTriggerMount>
+                            {
+                                new() { Trigger = HybridGraphName },
+                            },
+                            OnDeactivated = new List<string> { CounterGraph },
+                        },
+                        new()
+                        {
+                            Id = ForegroundChildProfile,
+                            ActiveCollectionKey = "collection.gate.foreground",
+                            Foreground = true,
+                        },
                     },
                 },
                 NewRegistry(),
@@ -348,6 +452,26 @@ namespace Ludots.Tests.Gas.Graph
             };
             int counterId = GraphIdRegistry.Register(CounterGraph);
             programs.Register(counterId, counter, GraphKind.Script, GraphInstructionSourceMap.Empty, null, null);
+
+            // Hybrid trigger graph: one event-bound entry + one action-bound entry, so the
+            // gate can mount both classes from a single profile trigger reference.
+            GraphInstruction[] hybrid = { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 } };
+            var hybridEntries = new[]
+            {
+                new TriggerGraphEntry("evt", GameEvents.MapLoaded.Value, 0, once: false),
+                new TriggerGraphEntry(
+                    "act",
+                    TriggerGraphEntry.InputActionSchemaEventName,
+                    0,
+                    once: false,
+                    default,
+                    TriggerGraphEntry.RefireRestart,
+                    priority: 0,
+                    isHookFragment: false,
+                    actionId: GateAction),
+            };
+            int hybridId = GraphIdRegistry.Register(HybridGraphName);
+            programs.Register(hybridId, hybrid, GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, null, hybridEntries);
         }
 
         private static StringIntRegistry NewRegistry()

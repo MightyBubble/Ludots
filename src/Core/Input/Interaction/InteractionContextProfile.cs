@@ -43,6 +43,16 @@ namespace Ludots.Core.Input.Interaction
         public string CommandIntentId { get; set; }
 
         /// <summary>
+        /// Foreground declaration (#1398 刀4): while this context is active, every active
+        /// ancestor's interactive (input-action bound) trigger mounts are parked — removed
+        /// from listening — while map/passive (event-bound) mounts stay. Scope and the
+        /// parent-child coexistence (non-stack) are unaffected; parking is a mount-regime
+        /// demotion, not a window close, so no lifecycle slot fires. Restored when the
+        /// foreground context deactivates. Pure data switch: the mount gate owns the diff.
+        /// </summary>
+        public bool Foreground { get; set; }
+
+        /// <summary>
         /// Semantic action ids (input config action space) that hold while this context is
         /// active. Validated against the installed input action catalog at registry install —
         /// an unknown action id fails fast. Data-declared contract only in this slice: routing

@@ -9,6 +9,14 @@ using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Gameplay.MapTriggers
 {
+    internal enum WindowMountState : byte
+    {
+        /// <summary>All declared triggers mounted (default, no foreground descendant active).</summary>
+        Interactive = 0,
+        /// <summary>Only map/passive (event-bound) triggers mounted; interactive ones parked.</summary>
+        Parked = 1,
+    }
+
     /// <summary>
     /// Context trigger gate (#1398 S2b + D15): every tick, diffs the world-side active
     /// interaction context set per entity — the mounted base
@@ -67,6 +75,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly List<int> _desiredProfileIds = new(4);
         private readonly List<KeyValuePair<TriggerMountOwner, List<Trigger>>> _ownedScratch = new();
         private readonly List<TriggerMountOwner> _deferredDeactivatedUnmounts = new(4);
+        private readonly List<int> _parkedScratch = new(4);
+        private readonly List<Trigger> _actionTriggerScratch = new(4);
+        private readonly List<Trigger> _mountScratch = new(8);
+        private readonly List<(Entity, int)> _staleOpenScratch = new(4);
+        private readonly Dictionary<(Entity, int), WindowMountState> _openWindows = new();
         private HashSet<Entity> _frameSubjects = new();
         private HashSet<Entity> _retiredSubjects = new();
 
@@ -189,6 +202,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
+                _openWindows.Remove((subject, _ownedScratch[i].Key.OwnerId));
                 _triggerManager.RemoveOwnedMounts(_ownedScratch[i].Key);
                 // Context window closed on this subject — run the Deactivated slot after
                 // its mounts are gone, so the slot sees a fully taken-down window.
@@ -197,39 +211,199 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// One pass per subject: unmount context mounts that are no longer desired, mount the
-        /// missing ones. The desired set is computed once per subject per frame (#1398 D12).
+        /// One pass per subject: unmount context mounts that are no longer desired, demote the
+        /// interactive mounts of profiles parked by an active foreground descendant, and mount
+        /// the missing ones. The desired set is computed once per subject per frame (#1398 D12);
+        /// window slots (onActivated/onDeactivated) run only on desired transitions, never on a
+        /// park/unpark regime change (#1398 刀4).
         /// </summary>
         private void ReconcileSubject(Entity subject)
         {
+            CollectParkedProfiles(subject, _parkedScratch);
+
+            // ── Unmount / demote pass ──
             _ownedScratch.Clear();
             _triggerManager.CollectOwnedMounts(subject, _ownedScratch);
             for (int i = 0; i < _ownedScratch.Count; i++)
             {
-                if (_ownedScratch[i].Key.Kind != TriggerMountOwnerKind.InteractionContext ||
-                    _desiredProfileIds.Contains(_ownedScratch[i].Key.OwnerId))
+                var owner = _ownedScratch[i].Key;
+                if (owner.Kind != TriggerMountOwnerKind.InteractionContext)
                 {
                     continue;
                 }
 
-                _triggerManager.RemoveOwnedMounts(_ownedScratch[i].Key);
-                // Window closing (profile no longer desired): Deactivated slot after unmount.
-                RunLifecycleSlot(subject, _ownedScratch[i].Key.OwnerId, InteractionContextLifecycleSlot.Deactivated);
+                int profileId = owner.OwnerId;
+                if (!_desiredProfileIds.Contains(profileId))
+                {
+                    // Window closed: Deactivated slot after full take-down (fallback path for
+                    // non-op removals; op-path windows are unmarked below after the flush).
+                    _openWindows.Remove((subject, profileId));
+                    _triggerManager.RemoveOwnedMounts(owner);
+                    RunLifecycleSlot(subject, profileId, InteractionContextLifecycleSlot.Deactivated);
+                    continue;
+                }
+
+                if (_parkedScratch.Contains(profileId) &&
+                    _openWindows.TryGetValue((subject, profileId), out WindowMountState state) &&
+                    state == WindowMountState.Interactive)
+                {
+                    // Foreground descendant active: park the interactive (action-bound) mounts
+                    // only — map/passive mounts stay, the window stays open, no Deactivated slot.
+                    RemoveActionTriggerMounts(subject, _ownedScratch[i].Value);
+                    _openWindows[(subject, profileId)] = WindowMountState.Parked;
+                }
             }
 
+            // Op-closed windows (knife 3 change point) can carry no mounts by the time this
+            // scan runs; unmark any window whose profile is no longer desired.
+            _staleOpenScratch.Clear();
+            foreach (KeyValuePair<(Entity, int), WindowMountState> entry in _openWindows)
+            {
+                if (entry.Key.Item1 == subject && !_desiredProfileIds.Contains(entry.Key.Item2))
+                {
+                    _staleOpenScratch.Add(entry.Key);
+                }
+            }
+
+            for (int i = 0; i < _staleOpenScratch.Count; i++)
+            {
+                _openWindows.Remove(_staleOpenScratch[i]);
+            }
+
+            // ── Open / restore pass ──
             for (int d = 0; d < _desiredProfileIds.Count; d++)
             {
                 int profileId = _desiredProfileIds[d];
+                bool parked = _parkedScratch.Contains(profileId);
                 TriggerMountOwner owner = new(TriggerMountOwnerKind.InteractionContext, subject, profileId);
-                if (_triggerManager.TryGetOwnedMounts(owner, out _))
+                if (!_openWindows.TryGetValue((subject, profileId), out WindowMountState state))
+                {
+                    // Window opening (newly desired profile): Activated slot runs before the
+                    // trigger mounts register — "onActivated 在 trigger 开启之前" by construction.
+                    state = parked ? WindowMountState.Parked : WindowMountState.Interactive;
+                    _openWindows[(subject, profileId)] = state;
+                    RunLifecycleSlot(subject, profileId, InteractionContextLifecycleSlot.Activated);
+                    TryMount(subject, profileId, state == WindowMountState.Parked ? ContextMountEntryClass.Passive : ContextMountEntryClass.All);
+                    continue;
+                }
+
+                if (state == WindowMountState.Parked && !parked)
+                {
+                    // Foreground descendant gone: restore the interactive mounts — the window
+                    // never closed, so no Activated slot (park/unpark is a regime change only).
+                    _openWindows[(subject, profileId)] = WindowMountState.Interactive;
+                    // A fully-stripped parked window (map reload) restores everything; a parked
+                    // window that kept its passive mounts restores only the interactive class.
+                    bool fullRestore = !_triggerManager.TryGetOwnedMounts(owner, out _);
+                    TryMount(
+                        subject,
+                        profileId,
+                        fullRestore ? ContextMountEntryClass.All : ContextMountEntryClass.Interactive);
+                    continue;
+                }
+
+                if (state == WindowMountState.Interactive && parked)
+                {
+                    // Fully-stripped interactive window (nothing owned when the demote pass ran,
+                    // e.g. all-action profile) now parks: record the regime, nothing to strip.
+                    _openWindows[(subject, profileId)] = WindowMountState.Parked;
+                    continue;
+                }
+
+                // Self-heal runs only for interactive windows: a parked window deliberately owns
+                // no interactive content, so rebuilding it would re-register the resume companions
+                // of its demoted mounts every frame (they do not create owned records and the
+                // ledger would never read as "present"). Interactive windows, whose entire content
+                // vanished (map reload, external removal), re-mount the full set without re-running
+                // the boundary slot.
+                if (state == WindowMountState.Interactive && !_triggerManager.TryGetOwnedMounts(owner, out _))
+                {
+                    TryMount(subject, profileId, ContextMountEntryClass.All);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Parked profile set for the subject (#1398 刀4): a profile is parked while any active
+        /// descendant (any depth, base mount or derived instance) declares <c>Foreground</c>.
+        /// Walk every foreground node up its <c>ParentContextId</c> chain and collect ancestors.
+        /// Siblings and the foreground profile itself are never parked — scope coexistence stays
+        /// a non-stack set.
+        /// </summary>
+        private void CollectParkedProfiles(Entity subject, List<int> parkedSink)
+        {
+            parkedSink.Clear();
+            if (_desiredProfileIds.Count == 0)
+            {
+                return;
+            }
+
+            bool hasBase = World.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance baseContext);
+            bool hasDerived = World.TryGet<InteractionContextInstances>(subject, out InteractionContextInstances derived);
+            int derivedOffset = hasBase ? 1 : 0;
+            for (int k = 0; k < _desiredProfileIds.Count; k++)
+            {
+                int nodeProfileId = _desiredProfileIds[k];
+                if (!_contextProfiles.IsForeground(nodeProfileId))
                 {
                     continue;
                 }
 
-                // Window opening (newly desired profile): Activated slot runs before the
-                // trigger mounts register — "onActivated 在 trigger 开启之前" by construction.
-                RunLifecycleSlot(subject, profileId, InteractionContextLifecycleSlot.Activated);
-                TryMount(subject, profileId, owner);
+                int parentProfileId = k < derivedOffset || !hasDerived
+                    ? 0
+                    : derived[k - derivedOffset].ParentContextId;
+                int ancestor = parentProfileId;
+                while (ancestor > 0)
+                {
+                    if (!parkedSink.Contains(ancestor))
+                    {
+                        parkedSink.Add(ancestor);
+                    }
+
+                    ancestor = FindParentProfileId(ancestor, hasBase, baseContext.ContextId, in derived);
+                }
+            }
+        }
+
+        private int FindParentProfileId(int profileId, bool hasBase, int baseProfileId, in InteractionContextInstances derived)
+        {
+            if (hasBase && baseProfileId == profileId)
+            {
+                return 0;
+            }
+
+            for (int i = 0; i < derived.Count; i++)
+            {
+                if (derived[i].ContextId == profileId)
+                {
+                    return derived[i].ParentContextId;
+                }
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Remove only the interactive (action-bound) triggers of one owned set, keeping the
+        /// map/passive mounts — the parked demotion. Called from the gate's own reconcile
+        /// (InputCollection, before any dispatch), so the ledger-mutation safety the deferred
+        /// flush guarantees for change points does not apply here.
+        /// </summary>
+        private void RemoveActionTriggerMounts(Entity subject, List<Trigger> owned)
+        {
+            _actionTriggerScratch.Clear();
+            for (int i = 0; i < owned.Count; i++)
+            {
+                if (owned[i] is TriggerGraphMountTrigger actionMount &&
+                    !string.IsNullOrWhiteSpace(actionMount.ActionId))
+                {
+                    _actionTriggerScratch.Add(owned[i]);
+                }
+            }
+
+            if (_actionTriggerScratch.Count > 0)
+            {
+                _triggerManager.RemoveMapTriggers(ResolveRequiredMapId(subject), _actionTriggerScratch);
             }
         }
 
@@ -356,6 +530,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 {
                     if (World.TryGet<InteractionContextInstance>(entity, out InteractionContextInstance baseContext))
                     {
+                        _openWindows.Remove((entity, baseContext.ContextId));
                         RunLifecycleSlot(entity, baseContext.ContextId, InteractionContextLifecycleSlot.Deactivated);
                     }
 
@@ -363,6 +538,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     {
                         for (int i = 0; i < instances.Count; i++)
                         {
+                            _openWindows.Remove((entity, instances[i].ContextId));
                             RunLifecycleSlot(entity, instances[i].ContextId, InteractionContextLifecycleSlot.Deactivated);
                         }
                     }
@@ -387,20 +563,31 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
         }
 
-        private bool TryMount(Entity subject, int profileId, TriggerMountOwner owner)
+        /// <summary>
+        /// Mount a profile's declared triggers on the subject, filtered by entry class (#1398 刀4):
+        /// <see cref="ContextMountEntryClass.All"/> for a normal window, <see cref="ContextMountEntryClass.Passive"/>
+        /// while parked (map/passive listeners stay live), <see cref="ContextMountEntryClass.Interactive"/>
+        /// when a parked window is restored. Class filtering happens inside the build
+        /// (TriggerGraphMounting) so each kept entry's mount trigger AND its resume companion
+        /// travel together — a post-build list filter would orphan the companions. Mounts are
+        /// stamped with the context owner before registration; duplicate-safe because callers
+        /// only mount a class the ledger lacks.
+        /// </summary>
+        private void TryMount(Entity subject, int profileId, ContextMountEntryClass mountClass)
         {
             if (!_contextProfiles.TryGetDefinition(profileId, out InteractionContextProfileDefinition definition) ||
                 definition.Triggers is not { Count: > 0 })
             {
-                return false;
+                return;
             }
 
             MapSession? session = ResolveSession(subject, profileId);
-            var triggers = new List<Trigger>();
             string ownerLabel = $"Interaction context '{_contextProfiles.ProfileIdRegistry.GetName(profileId)}' on entity {subject}";
+            _mountScratch.Clear();
+            TriggerMountOwner owner = new(TriggerMountOwnerKind.InteractionContext, subject, profileId);
             for (int i = 0; i < definition.Triggers.Count; i++)
             {
-                triggers.AddRange(TriggerGraphMounting.BuildContextMountTriggers(
+                _mountScratch.AddRange(TriggerGraphMounting.BuildContextMountTriggers(
                     _programs,
                     subject,
                     definition.Triggers[i],
@@ -408,30 +595,34 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     _customEvents,
                     session?.EntityIndex,
                     _eventSchemas ?? _triggerManager.EventSchemas,
-                    session == null ? null : TriggerGraphMounting.CollectRegionIds(session)));
+                    session == null ? null : TriggerGraphMounting.CollectRegionIds(session),
+                    mountClass));
             }
 
-            MapId mapId = session?.MapId ?? ResolveRequiredMapId(subject);
-            for (int i = 0; i < triggers.Count; i++)
+            if (_mountScratch.Count == 0)
             {
-                if (triggers[i] is TriggerGraphMountTrigger mount)
+                return;
+            }
+
+            for (int i = 0; i < _mountScratch.Count; i++)
+            {
+                if (_mountScratch[i] is TriggerGraphMountTrigger mount)
                 {
                     mount.Owner = owner;
                 }
             }
 
+            MapId mapId = session?.MapId ?? ResolveRequiredMapId(subject);
             if (_triggerManager.OwnsMapTriggers(mapId))
             {
-                _triggerManager.AddMapTriggers(mapId, triggers);
+                _triggerManager.AddMapTriggers(mapId, _mountScratch);
             }
             else
             {
                 // A map may legitimately own zero authored triggers; the gate's mounts then
                 // become the initial registration (later map-lifecycle mounts still append).
-                _triggerManager.RegisterMapTriggers(mapId, triggers);
+                _triggerManager.RegisterMapTriggers(mapId, _mountScratch);
             }
-
-            return true;
         }
 
         private MapSession? ResolveSession(Entity subject, int profileId)

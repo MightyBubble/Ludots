@@ -119,12 +119,13 @@
       <div class="ft">battle（常驻）</div>
       <div class="field"><span class="fname">inputContextId<span class="ftype">string</span></span><span class="fdesc">CaseE.Controls（键位随实体投影，多 seat 各投影各的）</span></div>
       <div class="field"><span class="fname">bindings<span class="ftype">string[]</span></span><span class="fdesc">按住即成立的语义动作（BoxSelectBegin/End + 修饰键）</span></div>
-      <div class="field"><span class="fname">triggers[]<span class="ftype">mount</span></span><span class="fdesc">roster_sync（MapHeartbeat）+ box_begin（CaseE.BoxSelectBegin）</span></div>
+      <div class="field"><span class="fname">triggers[]<span class="ftype">mount</span></span><span class="fdesc">roster_sync（EntitySpawned/EntityDied 事件驱动）+ box_begin（CaseE.BoxSelectBegin；boxing 前台激活时暂挂）</span></div>
     </div>
     <div class="form">
       <div class="ft">boxing（按下时激活的衍生 context）</div>
       <div class="field"><span class="fname">triggers[]<span class="ftype">mount</span></span><span class="fdesc">box_hover_tick（action=PointerMoved）+ box_commit（action=CaseE.BoxSelectEnd）——框选活着时听的输入边沿</span></div>
       <div class="field"><span class="fname">onActivated<span class="ftype">graph 数组</span></span><span class="fdesc">本用例留空；对称保留</span></div>
+      <div class="field"><span class="fname">foreground<span class="ftype">bool</span></span><span class="fdesc">true：前台接听——boxing 激活期间把父 battle 的互动类 trigger（box_begin）摘除监听，地图/被动类保留；scope 父子仍共存（非栈）；boxing 停用即恢复。由门控 reconcile 增量 diff 承担，配置驱动、引擎不写死。</span></div>
       <div class="field"><span class="fname">onDeactivated<span class="ftype">graph 数组</span></span><span class="fdesc">box_hover_clear + selection_commit（Script 函数体，框选结束时的清场与落定；全手势复用）</span></div>
     </div>
     <div class="callout ok">

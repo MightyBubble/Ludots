@@ -18,6 +18,7 @@
     },
     {
       "id": "interaction.context.case_e.boxing",
+      "foreground": true,
       "bindings": [
         "CaseE.BoxSelectEnd"
       ],
