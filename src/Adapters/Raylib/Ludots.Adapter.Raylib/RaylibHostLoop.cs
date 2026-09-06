@@ -55,8 +55,7 @@ namespace Ludots.Adapter.Raylib
         private static VertexMapTerrainChunkMeshSource? _terrainSource;
 
         private const uint FlagWindowResizable = 4;
-        private const float HostPrimitiveShadowTexelWorld = 0.04f;
-        private const float HostTerrainShadowTexelWorld = 0.08f;
+        private const float HostShadowTexelWorld = 0.08f;
         private static readonly float HostShadowSceneRadiusMeters =
             ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SHADOW_SCENE_RADIUS", 48f);
 
@@ -752,12 +751,11 @@ namespace Ludots.Adapter.Raylib
                             primitiveRenderer,
                             engine,
                             renderDebug.AcceptanceScaleMultiplier);
-                        float terrainShadowTexelWorld = HostTerrainShadowTexelWorld;
-                        float primitiveShadowTexelWorld = HostPrimitiveShadowTexelWorld;
-                        terrainRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, terrainShadowTexelWorld);
-                        continuousHeightmapRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, terrainShadowTexelWorld);
-                        primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position, directionalShadowMap, primitiveShadowTexelWorld);
-                        Restore3DDepthState(); (fix(raylib): 游戏宿主组帧接上方向光阴影图)
+                        float shadowTexelWorld = HostShadowTexelWorld;
+                        terrainRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld);
+                        continuousHeightmapRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld);
+                        primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position, directionalShadowMap, shadowTexelWorld);
+                        Restore3DDepthState();
 
                         bool waterOnContinuousHeightmap = waterPass.IsActive &&
                                                       drawTerrain &&
