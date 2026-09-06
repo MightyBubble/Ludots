@@ -17,9 +17,11 @@ namespace Ludots.Tests.GAS
 {
     /// <summary>
     /// #1398 S2b: derived interaction contexts (constitution §8.2/§8.3) — the entity-mounted
-    /// coexisting set, the activation/deactivation kernel (parent validation, scope band,
-    /// presenter scope destroy through the command pipeline, ContextActivated/Deactivated
-    /// presentation events), and the ActivateContext/DeactivateContext op dispatch.
+    /// coexisting set, the activation/deactivation kernel (parent validation, transitive
+    /// descendant removal, ContextActivated/Deactivated presentation events as plain
+    /// lifecycle notifications), and the ActivateContext/DeactivateContext op dispatch.
+    /// Presentation appearance driven by context is presenter-side binding/rules only —
+    /// interaction-context lifecycle never touches the presentation domain.
     /// </summary>
     [TestFixture]
     [NonParallelizable]
@@ -77,14 +79,13 @@ namespace Ludots.Tests.GAS
             Assert.That(derived[0].ContextId, Is.EqualTo(profiles.ProfileIdRegistry.GetId(AimProfile)));
             Assert.That(derived[0].ParentContextId, Is.EqualTo(0));
             Assert.That(derived[0].Source, Is.EqualTo(InteractionContextInstanceSource.ContextInstanceOp));
-            Assert.That(derived[0].ScopeTag, Is.EqualTo(InteractionContextInstanceRuntime.ContextScopeTag(subject, profiles.ProfileIdRegistry.GetId(AimProfile))));
 
             Assert.That(events.GetSpan().Length, Is.EqualTo(1));
             PresentationEvent evt = events.GetSpan()[0];
             Assert.That(evt.Kind, Is.EqualTo(PresentationEventKind.ContextActivated));
             Assert.That(evt.KeyId, Is.EqualTo(profiles.ProfileIdRegistry.GetId(AimProfile)));
             Assert.That(evt.Source, Is.EqualTo(subject));
-            Assert.That(evt.PayloadA, Is.EqualTo(derived[0].ScopeTag));
+            Assert.That(evt.PayloadB, Is.EqualTo(0), "parent profile id rides PayloadB");
         }
 
         [Test]
@@ -133,12 +134,11 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Deactivate_ClearsScopeViaPresenterCommandAndPublishesEvent()
+        public void Deactivate_RemovesInstancesAndPublishesEvent_NoPresenterCoupling()
         {
             using World world = NewWorld(out var runtime, out var profiles, out var events, out var commands);
             Entity subject = world.Create();
             runtime.Activate(subject, Key(AimProfile), 0);
-            int scopeTag = world.Get<InteractionContextInstances>(subject)[0].ScopeTag;
             events.Clear();
 
             runtime.Deactivate(subject, Key(AimProfile));
@@ -146,15 +146,12 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Has<InteractionContextInstances>(subject), Is.True);
             Assert.That(world.Get<InteractionContextInstances>(subject).Count, Is.EqualTo(0));
 
-            Assert.That(commands.Count, Is.EqualTo(1));
-            PresenterCommand command = commands.GetSpan()[0];
-            Assert.That(command.CommandKind, Is.EqualTo(PresenterCommandKind.DestroyPresenterScope));
-            Assert.That(command.RouteStrategy, Is.EqualTo(PresenterCommandRouteStrategy.DestroyScope));
-            Assert.That(command.ScopeTag, Is.EqualTo(scopeTag));
+            // No presentation-domain command: context lifecycle is pure state + event.
+            Assert.That(commands.Count, Is.EqualTo(0));
 
             Assert.That(events.GetSpan().Length, Is.EqualTo(1));
             Assert.That(events.GetSpan()[0].Kind, Is.EqualTo(PresentationEventKind.ContextDeactivated));
-            Assert.That(events.GetSpan()[0].PayloadA, Is.EqualTo(scopeTag));
+            Assert.That(events.GetSpan()[0].PayloadB, Is.EqualTo(0), "parent rides PayloadB");
         }
 
         [Test]
@@ -169,7 +166,7 @@ namespace Ludots.Tests.GAS
 
             InteractionContextInstances derived = world.Get<InteractionContextInstances>(subject);
             Assert.That(derived.Count, Is.EqualTo(0), "父停用自动清子");
-            Assert.That(commands.Count, Is.EqualTo(2), "each removed instance destroys its own scope");
+            Assert.That(commands.Count, Is.EqualTo(0), "pure state/event lifecycle — no presenter commands");
         }
 
         [Test]
@@ -190,19 +187,6 @@ namespace Ludots.Tests.GAS
                 "base mounts belong to their own lifecycles and are not op-poppable");
         }
 
-        [Test]
-        public void ScopeTags_AreDistinctPerSubjectAndContext()
-        {
-            using World world = NewWorld(out _, out var profiles, out _, out _);
-            Entity a = world.Create();
-            Entity b = world.Create();
-            int aimId = profiles.ProfileIdRegistry.GetId(AimProfile);
-            int boxingId = profiles.ProfileIdRegistry.GetId(BoxingProfile);
-
-            int aAim = InteractionContextInstanceRuntime.ContextScopeTag(a, aimId);
-            Assert.That(aAim, Is.Not.EqualTo(InteractionContextInstanceRuntime.ContextScopeTag(a, boxingId)));
-            Assert.That(aAim, Is.Not.EqualTo(InteractionContextInstanceRuntime.ContextScopeTag(b, aimId)));
-        }
 
         [Test]
         public void GraphApi_ActivateAndDeactivateContext_DispatchToKernel()
@@ -319,7 +303,7 @@ namespace Ludots.Tests.GAS
                 NewRegistry());
             events = new PresentationEventStream(capacity: 16);
             commands = new PresenterCommandBuffer(capacity: 16);
-            runtime = new InteractionContextInstanceRuntime(world, profiles, events, commands);
+            runtime = new InteractionContextInstanceRuntime(world, profiles, events);
             return world;
         }
 

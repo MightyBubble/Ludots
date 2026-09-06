@@ -85,7 +85,7 @@ namespace Ludots.Tests.Gas.Graph
         public void DerivedContext_TriggersFollowActivationAndDeactivation()
         {
             using World world = NewWorld(out var gate, out var profiles, out var triggers);
-            var runtime = new InteractionContextInstanceRuntime(world, profiles, NewEvents(), NewCommands());
+            var runtime = new InteractionContextInstanceRuntime(world, profiles, NewEvents());
             Entity subject = world.Create(NewMapEntity());
             MountBaseContext(world, profiles, subject, BattleProfile);
 
@@ -277,7 +277,5 @@ namespace Ludots.Tests.Gas.Graph
             => new(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
 
         private static Ludots.Core.Presentation.Events.PresentationEventStream NewEvents() => new(capacity: 8);
-
-        private static Ludots.Core.Presentation.Presenters.PresenterCommandBuffer NewCommands() => new(capacity: 8);
     }
 }

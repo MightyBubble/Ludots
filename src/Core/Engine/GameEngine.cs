@@ -1737,7 +1737,6 @@ namespace Ludots.Core.Engine
                 World,
                 interactionContextProfileRegistry,
                 presentationEventStream,
-                presenterCommandBuffer,
                 GameSession);
             SetService(CoreServiceKeys.InteractionContextInstances, interactionContextInstances);
             gasGraphApi.BindContextInstances(interactionContextInstances);

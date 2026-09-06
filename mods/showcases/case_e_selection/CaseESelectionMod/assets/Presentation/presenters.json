@@ -121,21 +121,17 @@
     "lifecycle": {
       "persistence": "Scoped"
     },
-    "rules": [
-      {
-        "event": {
-          "kind": "ContextActivated",
-          "key": "interaction.context.case_e.boxing"
-        },
-        "command": {
-          "kind": "CreatePresenter",
-          "definitionId": "presenter.case_e.boxing_marker",
-          "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
-        }
-      }
-    ],
     "behaviors": [
+      {
+        "slot": "contextState",
+        "kind": "InteractionContextBinding",
+        "activeByDefault": true,
+        "contextBinding": {
+          "contextProfileId": "interaction.context.case_e.boxing",
+          "targetParamKey": "case_e.boxing.active",
+          "invertLogic": false
+        }
+      },
       {
         "slot": "screenRect",
         "kind": "ScreenRect",
@@ -156,7 +152,8 @@
             0.55,
             1.0,
             1.0
-          ]
+          ],
+          "visibilityParamKey": "case_e.boxing.active"
         }
       }
     ],
@@ -164,22 +161,30 @@
       {
         "paramKey": "case_e.rect.pressX",
         "source": "ownerBlackboardFloat",
-        "sourceId": "case_e.press.px"
+        "sourceId": "case_e.press.px",
+        "optional": true
       },
       {
         "paramKey": "case_e.rect.pressY",
         "source": "ownerBlackboardFloat",
-        "sourceId": "case_e.press.py"
+        "sourceId": "case_e.press.py",
+        "optional": true
       },
       {
         "paramKey": "case_e.rect.pointerX",
-        "source": "pointerScreenX"
+        "source": "pointerScreenX",
+        "optional": true
       },
       {
         "paramKey": "case_e.rect.pointerY",
-        "source": "pointerScreenY"
+        "source": "pointerScreenY",
+        "optional": true
       }
-    ]
+    ],
+    "bindSpawn": {
+      "template": "case_e_commander",
+      "scopeSource": "EventPayloadA"
+    }
   },
   {
     "id": "presenter.case_e.ring.attachment",
