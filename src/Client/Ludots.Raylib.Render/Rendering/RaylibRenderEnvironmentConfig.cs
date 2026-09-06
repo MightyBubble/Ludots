@@ -233,13 +233,19 @@ namespace Ludots.Raylib.Render
         }
     }
 
-    public readonly record struct RaylibShadowConfig(int MapSize, float ReceiverBiasWorld)
+    public readonly record struct RaylibShadowConfig(
+        int MapSize,
+        float ReceiverBiasWorld,
+        float SceneRadiusMeters = 280f,
+        float ReceiverTexelWorld = 0.16f)
     {
         public static RaylibShadowConfig CreateDefault()
         {
             return new RaylibShadowConfig(
                 RaylibDirectionalShadowMap.DefaultMapSize,
-                RaylibDirectionalShadowMap.DefaultReceiverBiasWorld);
+                RaylibDirectionalShadowMap.DefaultReceiverBiasWorld,
+                SceneRadiusMeters: 280f,
+                ReceiverTexelWorld: 0.16f);
         }
 
         public RaylibShadowConfig Validate()
@@ -251,6 +257,10 @@ namespace Ludots.Raylib.Render
 
             RaylibRenderEnvironmentConfig.RequirePositive(ReceiverBiasWorld, nameof(ReceiverBiasWorld));
             RaylibRenderEnvironmentConfig.RequireRange(ReceiverBiasWorld, 0f, 1f, nameof(ReceiverBiasWorld));
+            RaylibRenderEnvironmentConfig.RequirePositive(SceneRadiusMeters, nameof(SceneRadiusMeters));
+            RaylibRenderEnvironmentConfig.RequireRange(SceneRadiusMeters, 8f, 4000f, nameof(SceneRadiusMeters));
+            RaylibRenderEnvironmentConfig.RequirePositive(ReceiverTexelWorld, nameof(ReceiverTexelWorld));
+            RaylibRenderEnvironmentConfig.RequireRange(ReceiverTexelWorld, 0.001f, 8f, nameof(ReceiverTexelWorld));
             return this;
         }
     }
