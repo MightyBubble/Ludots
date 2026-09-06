@@ -98,9 +98,10 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         int ringAttachmentDefId = presenterDefinitions.GetId(RingAttachmentPresenter);
         int ringPreviewDefId = presenterDefinitions.GetId(RingPreviewPresenter);
         TickUntil(engine, 40, () => presenterRuntime.GetActiveByDefinition(marineDefId).Count == 4);
-        // boxing 框指示是常驻 presenter（bindSpawn 到 commander），可见性由 InteractionContextBinding 驱动——按下前存在但隐藏。
-        Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(1),
-            "框指示 presenter 常驻 commander（非按下才创建）；InteractionContextBinding 驱动显隐");
+        // boxing 框指示由全局规则壳（collection_decoration）订阅 ContextActivated 创建，
+        // ContextDeactivated 销毁——按下前不存在。
+        Assert.That(CountPresentersOwnedBy(presenterRuntime, boxingMarkerDefId, commander, engine.World), Is.EqualTo(0),
+            "框指示 presenter 按下前不存在（全局规则建销，非常驻）");
         ScreenOverlayBuffer screenOverlayBefore = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) as ScreenOverlayBuffer
             ?? throw new InvalidOperationException("ScreenOverlayBuffer service is missing.");
         Assert.That(HasScreenRect(screenOverlayBefore, x: -1200, y: -100, width: 900, height: 200), Is.False,
@@ -137,9 +138,9 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             pressPy == -100f,
             "框起角 Y 同挂操作者 rep 黑板");
 
-        // ── 05①b：InteractionContextBinding——boxing 激活驱动框指示可见（常驻 marker，非事件创建）──
-        Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(1),
-            "框指示 presenter 常驻（不随 context 创建/销毁）");
+        // ── 05①b：全局规则——ContextActivated→创建 boxing 框指示（scope=想 subject stable id）──
+        Assert.That(CountPresentersOwnedBy(presenterRuntime, boxingMarkerDefId, commander, engine.World), Is.EqualTo(1),
+            "ContextActivated 事件被全局规则壳消费 → 创建框指示 presenter");
 
         // 拖拽中——门控系统在此 tick 挂上 boxing 的 triggers（抬起边沿 BoxSelectEnd）
         backend.SetMousePosition(new Vector2(-300f, 100f));
@@ -187,12 +188,12 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances cleared) ||
             cleared.Count == 0,
             "框结束 DeactivateContext 清空衍生 context 实例集");
-        Assert.That(presenterRuntime.GetActiveByDefinition(boxingMarkerDefId).Count, Is.EqualTo(1),
-            "框指示 presenter 常驻（不随 context 销毁）；InteractionContextBinding 使其隐藏");
+        Assert.That(CountPresentersOwnedBy(presenterRuntime, boxingMarkerDefId, commander, engine.World), Is.EqualTo(0),
+            "ContextDeactivated → 全局规则销毁框指示 presenter");
         int overlayCountAfterScopeDeath = screenOverlay.Count;
         Tick(engine, 6);
         Assert.That(screenOverlay.Count, Is.EqualTo(overlayCountAfterScopeDeath),
-            "框结束→boxing context 停用→可见性绑定=0→ScreenRect 停止产出新矩形（presenter 仍常驻）");
+            "框结束→boxing context 停用→框指示销毁→ScreenRect 不再产出新矩形");
         AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "负 X 象限单位命中高亮", marine1, marine2);
         AssertRingOff(engine, presenterRuntime, ringAttachmentDefId, "框外单位不高亮", marine3, marine4);
         Assert.That(CollectionContains(engine, commander, SelectedKey, marine2),

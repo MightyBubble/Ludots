@@ -123,16 +123,6 @@
     },
     "behaviors": [
       {
-        "slot": "contextState",
-        "kind": "InteractionContextBinding",
-        "activeByDefault": true,
-        "contextBinding": {
-          "contextProfileId": "interaction.context.case_e.boxing",
-          "targetParamKey": "case_e.boxing.active",
-          "invertLogic": false
-        }
-      },
-      {
         "slot": "screenRect",
         "kind": "ScreenRect",
         "activeByDefault": true,
@@ -152,8 +142,7 @@
             0.55,
             1.0,
             1.0
-          ],
-          "visibilityParamKey": "case_e.boxing.active"
+          ]
         }
       }
     ],
@@ -161,30 +150,22 @@
       {
         "paramKey": "case_e.rect.pressX",
         "source": "ownerBlackboardFloat",
-        "sourceId": "case_e.press.px",
-        "optional": true
+        "sourceId": "case_e.press.px"
       },
       {
         "paramKey": "case_e.rect.pressY",
         "source": "ownerBlackboardFloat",
-        "sourceId": "case_e.press.py",
-        "optional": true
+        "sourceId": "case_e.press.py"
       },
       {
         "paramKey": "case_e.rect.pointerX",
-        "source": "pointerScreenX",
-        "optional": true
+        "source": "pointerScreenX"
       },
       {
         "paramKey": "case_e.rect.pointerY",
-        "source": "pointerScreenY",
-        "optional": true
+        "source": "pointerScreenY"
       }
-    ],
-    "bindSpawn": {
-      "template": "case_e_commander",
-      "scopeSource": "EventPayloadA"
-    }
+    ]
   },
   {
     "id": "presenter.case_e.ring.attachment",
@@ -314,6 +295,30 @@
           "kind": "DestroyScopedPresenter",
           "definitionId": "presenter.case_e.ring.preview",
           "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "ContextActivated",
+          "key": "interaction.context.case_e.boxing"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "presenter.case_e.boxing_marker",
+          "scopeSource": "SourceStableId",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "ContextDeactivated",
+          "key": "interaction.context.case_e.boxing"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "presenter.case_e.boxing_marker",
+          "scopeSource": "SourceStableId",
           "ownerSource": "EventSource"
         }
       }
