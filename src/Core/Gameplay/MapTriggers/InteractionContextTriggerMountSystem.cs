@@ -66,6 +66,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private int _subjectCount;
         private readonly List<int> _desiredProfileIds = new(4);
         private readonly List<KeyValuePair<TriggerMountOwner, List<Trigger>>> _ownedScratch = new();
+        private readonly List<TriggerMountOwner> _deferredDeactivatedUnmounts = new(4);
         private HashSet<Entity> _frameSubjects = new();
         private HashSet<Entity> _retiredSubjects = new();
 
@@ -127,6 +128,16 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public override void Update(in float dt)
         {
+            // #1398 刀3: change-point deactivations (DeactivateContext op) run the profile's
+            // onDeactivated slot synchronously at the call site, but never mutate the trigger
+            // ledger mid-dispatch (the change point sits inside a context-owned TriggerGraph
+            // mount's own execution; inline UnregisterTrigger would break the action-binding
+            // index's live snapshot). The resulting unmounts are deferred here, flushed before
+            // this tick's reconcile — the same InputCollection window the retired reconcile
+            // used to unmount — so the scan below finds nothing left to unregister and never
+            // re-runs a slot the change point already executed.
+            FlushDeferredDeactivatedUnmounts();
+
             CollectSubjects();
 
             // Double-buffered subject sets: the retired buffer holds last frame's scan so
@@ -262,6 +273,45 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Change-point contract (#1398 刀3): runs a profile's <c>onDeactivated</c> slot
+        /// synchronously at the moment its context leaves the subject, so settlement
+        /// (<c>selection_commit</c>) and preview teardown complete in the same tick as the
+        /// <c>DeactivateContext</c> op instead of waiting for the next reconcile pass. Called
+        /// by <see cref="InteractionContextInstanceRuntime.Deactivate"/> after the context
+        /// component is committed away; the caller feeds every removed profile id (transitive
+        /// descendants included).
+        /// <para>
+        /// Trigger unmount is deferred to this system's next <see cref="Update"/> flush — the
+        /// change point can be inside a context-owned TriggerGraph mount's own dispatch, where
+        /// inline ledger mutation would corrupt the dispatcher's live lists. The slot runs once
+        /// here; the reconcile's Deactivated branch (which unmounts and runs the slot) degrades
+        /// to a pure fallback for non-op component removals and finds nothing to do for
+        /// op-path deactivations because the mounts are already gone.
+        /// </para>
+        /// </summary>
+        public void RunDeactivatedSlotNow(Entity subject, int profileId)
+        {
+            if (!World.IsAlive(subject))
+            {
+                // Owner-death boundary already ran the slot and reclaimed mounts.
+                return;
+            }
+
+            RunLifecycleSlot(subject, profileId, InteractionContextLifecycleSlot.Deactivated);
+            _deferredDeactivatedUnmounts.Add(new TriggerMountOwner(TriggerMountOwnerKind.InteractionContext, subject, profileId));
+        }
+
+        private void FlushDeferredDeactivatedUnmounts()
+        {
+            for (int i = 0; i < _deferredDeactivatedUnmounts.Count; i++)
+            {
+                _triggerManager.RemoveOwnedMounts(_deferredDeactivatedUnmounts[i]);
+            }
+
+            _deferredDeactivatedUnmounts.Clear();
         }
 
         /// <summary>

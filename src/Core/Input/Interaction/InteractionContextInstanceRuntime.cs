@@ -32,6 +32,7 @@ namespace Ludots.Core.Input.Interaction
         private readonly InteractionContextProfileRegistry _profiles;
         private readonly PresentationEventStream _events;
         private readonly GameSession? _session;
+        private Action<Entity, int>? _runDeactivatedSlotNow;
         private readonly List<int> _removalScratch = new(capacity: InteractionContextInstances.Capacity);
 
         public InteractionContextInstanceRuntime(
@@ -44,6 +45,18 @@ namespace Ludots.Core.Input.Interaction
             _profiles = profiles ?? throw new ArgumentNullException(nameof(profiles));
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _session = session;
+        }
+
+        /// <summary>
+        /// Late-bound change-point hook (#1398 刀3): the mount gate's
+        /// <c>RunDeactivatedSlotNow</c>, wired by the engine after both are built. When bound,
+        /// <see cref="Deactivate"/> runs each removed context's <c>onDeactivated</c> slot
+        /// synchronously on the same change point instead of leaving it to the gate's next
+        /// world scan — settlement completes in the deactivating tick.
+        /// </summary>
+        public void BindDeactivatedSlotRunner(Action<Entity, int>? runDeactivatedSlotNow)
+        {
+            _runDeactivatedSlotNow = runDeactivatedSlotNow;
         }
 
         /// <summary>True when the subject carries the context as its base mount or an active instance.</summary>
@@ -137,9 +150,12 @@ namespace Ludots.Core.Input.Interaction
             }
 
             CollectWithDescendants(instances, profileId, _removalScratch);
-            for (int i = 0; i < _removalScratch.Count; i++)
+            // Snapshot before removal: the Deactivated slots below run user graph bodies that
+            // may re-enter this runtime (nested Deactivate reuses the shared scratch).
+            int[] removed = _removalScratch.ToArray();
+            for (int i = 0; i < removed.Length; i++)
             {
-                int index = instances.IndexOf(_removalScratch[i]);
+                int index = instances.IndexOf(removed[i]);
                 InteractionContextInstance instance = instances[index];
                 instances.RemoveAt(index);
                 Publish(PresentationEventKind.ContextDeactivated, subject, instance);
@@ -147,6 +163,18 @@ namespace Ludots.Core.Input.Interaction
 
             _world.Set(subject, instances);
             _removalScratch.Clear();
+
+            // #1398 刀3: run the onDeactivated slot at the same change point that removed the
+            // context, so settlement/preview teardown finish in this tick — no 1-tick delay
+            // while waiting for the gate's next world scan. The gate unmounts the profile's
+            // triggers and skips re-running the slot on its reconcile pass.
+            if (_runDeactivatedSlotNow != null)
+            {
+                for (int i = 0; i < removed.Length; i++)
+                {
+                    _runDeactivatedSlotNow(subject, removed[i]);
+                }
+            }
         }
 
         private static void CollectWithDescendants(

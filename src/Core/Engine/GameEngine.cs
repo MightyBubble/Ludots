@@ -2237,6 +2237,11 @@ namespace Ludots.Core.Engine
                 gasGraphApi);
             _interactionContextTriggerGate = interactionContextTriggerGate;
             RegisterSystem(interactionContextTriggerGate, SystemGroup.InputCollection);
+            // #1398 刀3: bind the change-point Deactivated slot runner — DeactivateContext op
+            // executes the profile's onDeactivated slot synchronously where the context
+            // component is removed (same tick settlement), instead of the gate's next scan.
+            interactionContextInstances.BindDeactivatedSlotRunner(
+                (entity, contextId) => interactionContextTriggerGate.RunDeactivatedSlotNow(entity, contextId));
             // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,
             // DEC-15); enablement and parameters come from the active control scheme's axisMove
             // declaration (single source of truth, hot-switch aware).

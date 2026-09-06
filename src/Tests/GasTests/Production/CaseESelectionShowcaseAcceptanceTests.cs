@@ -252,6 +252,60 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     }
 
     /// <summary>
+    /// 刀 3（本版本新增）：DeactivateContext（图内 op）在移除 context 组件的同一变更点同步跑
+    /// onDeactivated 槽——框选结算不再隔一帧。release 当拍即写 selected（不再等门控下一 tick
+    /// 的世界扫描）；随后 reconcile 只做延迟卸载、不重复跑槽（selected 不变化、box_hover 不复活）。
+    /// </summary>
+    [Test]
+    public void BoxSelect_SettlesSelectedSameTickAsDeactivateContext_NoRepeat()
+    {
+        string repoRoot = FindRepoRoot();
+        var backend = new TestInputBackend();
+        using GameEngine engine = CreateEngine(repoRoot, backend);
+        engine.LoadMap(new MapLoadRequest(
+            new MapId(MapId),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.case_e") })));
+        TickUntil(engine, 40, () => engine.CurrentMapSession != null);
+        AssertNoTriggerErrors(engine);
+
+        Entity commander = Resolve(engine, "case-e-commander");
+        Entity marine1 = Resolve(engine, "case-e-marine-1");
+        Entity marine2 = Resolve(engine, "case-e-marine-2");
+        Entity marine3 = Resolve(engine, "case-e-marine-3");
+        Entity marine4 = Resolve(engine, "case-e-marine-4");
+
+        // 候选集就位（battle roster_sync：铺底 + 出生事件驱动）
+        TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        AssertNoTriggerErrors(engine);
+
+        // 按下 → 拖到命中 marine1/marine2（预览集就位）
+        PressAt(engine, backend, new Vector2(-1200f, -100f));
+        TickUntil(engine, 20, BoxingActive(engine, commander));
+        backend.SetMousePosition(new Vector2(-300f, 100f));
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
+        AssertCollection(engine, commander, BoxHoverKey, "拖拽预览命中就位", marine1, marine2);
+
+        // 抬起（firesOn=release）→ box_commit → DeactivateContext：onDeactivated 槽在同拍执行。
+        // BoxingCleared 只在 DeactivateContext 移除 boxing 实例的那一 tick 翻转——停在这里立刻断言，
+        // 不再多走一帧：selected 已写入、box_hover 已清空（旧语义要等下一帧扫描才结算）。
+        ReleaseAt(engine, backend);
+        TickUntil(engine, 30, BoxingCleared(engine, commander));
+        AssertCollection(engine, commander, SelectedKey, "DeactivateContext 当拍即结算（selected 不再等下一 tick）", marine1, marine2);
+        Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.LessThanOrEqualTo(0),
+            "box_hover_clear 也在同拍执行，预览集同拍清空");
+        AssertNoTriggerErrors(engine);
+
+        // 重复防跑：门控下一 tick 只做延迟卸载 + reconcile，槽不因世界扫描再跑一次。
+        int selectedCount = CollectionCount(engine, commander, SelectedKey);
+        Tick(engine, 4);
+        Assert.That(CollectionCount(engine, commander, SelectedKey), Is.EqualTo(selectedCount),
+            "reconcile 不再重复跑 onDeactivated 槽（selected 不因槽重跑而变化）");
+        Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.LessThanOrEqualTo(0),
+            "box_hover 不被重复写回");
+        AssertNoTriggerErrors(engine);
+    }
+
+    /// <summary>
     /// 刀 1（本版本新增）：候选集从 MapHeartbeat 轮询改为 EntitySpawned/EntityDied 事件驱动。
     /// 死亡时 roster_sync 重build图谱（QueryAllMapEntities → team/template 过滤 → replace），
     /// 已销毁实体从 MapEntity 查询消失，故候选集自然剔除死者。验证：4 支建材中销毁一支 →

@@ -201,9 +201,9 @@
   <div class="step">
     <div class="form">
       <div class="ft">三件事按结构保证，不靠约定</div>
-      <div class="field"><span class="fname">开启前 / 关闭后<span class="ftype">结构顺序</span></span><span class="fdesc">onActivated 在 boxing 的 triggers[] 注册之前跑；onDeactivated 在它们卸载之后跑。挂 / 拆是门控的唯一汇点，槽贴在这两侧——顺序是结构事实，不是两个系统之间的时序约定。</span></div>
+      <div class="field"><span class="fname">开启前 / 变更点<span class="ftype">结构顺序</span></span><span class="fdesc">onActivated 在 boxing 的 triggers[] 注册之前跑（门控挂载点）；onDeactivated 在 DeactivateContext 的同一变更点同步跑（刀3：同拍结算），trigger 卸载由门控下一拍 reconcile 回收。槽贴窗口两侧——执行点是结构事实，不是系统间的时序约定。</span></div>
       <div class="field"><span class="fname">死亡补发<span class="ftype">destroy 边界</span></span><span class="fdesc">主体带着 context 被销毁（拖拽半途被击杀、未走显式停用）时，门控在 destroy 回调里对携带的每个 context 跑 onDeactivated 槽——结算与清场不会因死亡漏掉。</span></div>
-      <div class="field"><span class="fname">结算延迟<span class="ftype">1 tick</span></span><span class="fdesc">selected 在「停用后的下一 tick」更新（帧 N 松手写交接单，帧 N+1 槽结算）。原因是槽执行点固定在门控拆监听之后，而门控每帧扫一次世界。玩家不可见（隔 1 tick）；对读 selected 的逻辑是契约窗口：停用后 1 tick 内读到的还是旧值。当前 selected 无并发读者；「同拍即时结算」需把槽挂到 DeactivateContext 同帧，会引入同帧嵌套执行，暂不采用。</span></div>
+      <div class="field"><span class="fname">结算时机<span class="ftype">同拍</span></span><span class="fdesc">selected 在 DeactivateContext 的同一变更点更新：帧 N 松手写交接单并 DeactivateContext，门控在变更点同步跑 onDeactivated 槽（box_hover_clear + selection_commit）→ 结算与清场同拍完成，不再等下一帧扫描。变更点只跑槽，不碰 trigger 账本（避免在自己的图派发中途改账本）；卸载延迟到门控下一拍 reconcile，mount 已拆 → 槽不会双跑。</span></div>
     </div>
   </div>
 
