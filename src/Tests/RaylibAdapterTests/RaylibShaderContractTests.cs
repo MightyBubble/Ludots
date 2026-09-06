@@ -39,6 +39,7 @@ public sealed class RaylibShaderContractTests
     public void TerrainLighting_UsesHemisphereSkyWithoutSquaringAlbedo()
     {
         string repoRoot = FindRepoRoot();
+        string rendererRoot = Path.Combine(repoRoot, "src", "Client", "Ludots.Raylib.Render", "Rendering");
         string terrain = File.ReadAllText(Path.Combine(repoRoot, "src", "Platforms", "Desktop", "terrain.fs"));
         string litModel = File.ReadAllText(Path.Combine(
             repoRoot,
@@ -47,6 +48,7 @@ public sealed class RaylibShaderContractTests
             "Ludots.Raylib.Render",
             "Rendering",
             "RaylibContinuousHeightmapRenderer.cs"));
+        string frameLighting = File.ReadAllText(Path.Combine(rendererRoot, "RaylibFrameLighting.cs"));
 
         Assert.That(terrain, Does.Contain("uniform vec3 uSkyZenith"));
         Assert.That(terrain, Does.Contain("uniform vec3 uSkyGround"));
@@ -54,10 +56,68 @@ public sealed class RaylibShaderContractTests
         Assert.That(terrain, Does.Contain("skyIrradiance + (uAmbient.rgb * uAmbient.a)"));
         Assert.That(terrain, Does.Contain("albedo * (ambient + direct)"));
         Assert.That(terrain, Does.Not.Contain("skyIrradiance * albedo"));
-        Assert.That(litModel, Does.Contain("SkyZenithColor"));
-        Assert.That(litModel, Does.Contain("SkyGroundColor"));
-        Assert.That(litModel, Does.Contain("uSkyZenith"));
-        Assert.That(litModel, Does.Contain("uSkyGround"));
+        Assert.That(frameLighting, Does.Contain("ApplySkyIrradiance"));
+
+        foreach (string consumer in new[] { "RaylibContinuousHeightmapRenderer.cs", "RaylibTerrainRenderer.cs" })
+        {
+            string source = File.ReadAllText(Path.Combine(rendererRoot, consumer));
+            Assert.That(source, Does.Contain("RequireUniform(_terrainShader, \"uSkyZenith\""), consumer);
+            Assert.That(source, Does.Contain("RequireUniform(_terrainShader, \"uSkyGround\""), consumer);
+            Assert.That(source, Does.Contain("ApplySkyIrradiance"), consumer);
+        }
+    }
+
+    [Test]
+    public void SkinningInstanced_SharesInstancingSkyIblContract()
+    {
+        string repoRoot = FindRepoRoot();
+        string shaderRoot = Path.Combine(repoRoot, "src", "Platforms", "Desktop");
+        string instancing = File.ReadAllText(Path.Combine(shaderRoot, "instancing.fs"));
+        string skinning = File.ReadAllText(Path.Combine(shaderRoot, "skinning_instanced.fs"));
+        string gpuSkinned = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Client",
+            "Ludots.Raylib.Render",
+            "Rendering",
+            "RaylibGpuSkinnedBatchRenderer.cs"));
+
+        Assert.That(skinning, Does.Contain("uniform vec3 uSkyZenith"));
+        Assert.That(skinning, Does.Contain("uniform vec3 uSkyGround"));
+        Assert.That(skinning, Does.Contain("uniform samplerCube uPrefilteredEnv"));
+        Assert.That(skinning, Does.Contain("uniform sampler2D uBrdfLut"));
+        Assert.That(skinning, Does.Contain("mix(uSkyGround, uSkyZenith, hemisphere)"));
+        Assert.That(skinning, Does.Contain("skyIrradiance * albedo * (1.0 - metallic)"));
+        Assert.That(instancing, Does.Contain("mix(uSkyGround, uSkyZenith, hemisphere)"));
+        Assert.That(gpuSkinned, Does.Contain("RequireUniform(_skinningShader, \"uSkyZenith\""));
+        Assert.That(gpuSkinned, Does.Contain("RequireUniform(_skinningShader, \"uPrefilteredEnv\""));
+        Assert.That(gpuSkinned, Does.Contain("ApplySkyIrradiance"));
+    }
+
+    [Test]
+    public void HostLoop_WiresDirectionalShadowMapToLitReceivers()
+    {
+        string repoRoot = FindRepoRoot();
+        string hostLoop = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Adapters",
+            "Raylib",
+            "Ludots.Adapter.Raylib",
+            "RaylibHostLoop.cs"));
+
+        Assert.That(hostLoop, Does.Contain("new RaylibDirectionalShadowMap"));
+        Assert.That(hostLoop, Does.Contain("CaptureDirectionalShadows"));
+        Assert.That(hostLoop, Does.Contain("BeginFrame"));
+        Assert.That(hostLoop, Does.Contain("EndFrame"));
+        Assert.That(hostLoop, Does.Contain("RenderShadow"));
+        Assert.That(hostLoop, Does.Contain("RenderTerrainShadow"));
+        Assert.That(hostLoop, Does.Contain("DrawShadow"));
+        Assert.That(hostLoop, Does.Contain("ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld)"));
+        Assert.That(hostLoop, Does.Contain("ApplyFrameLighting(frameLighting, activeCamera.position, directionalShadowMap, shadowTexelWorld)"));
+        Assert.That(hostLoop, Does.Not.Contain("terrainRenderer.ApplyFrameLighting(frameLighting);"));
+        Assert.That(hostLoop, Does.Not.Contain("visualHeightmapRenderer.ApplyFrameLighting(frameLighting);"));
+        Assert.That(hostLoop, Does.Not.Contain("primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position);"));
     }
 
     [Test]
@@ -289,9 +349,14 @@ public sealed class RaylibShaderContractTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new RaylibShadowConfig(MapSize: 2048, ReceiverBiasWorld: 0f).Validate());
         Assert.Throws<ArgumentOutOfRangeException>(() => new RaylibShadowConfig(MapSize: 2048, ReceiverBiasWorld: -0.1f).Validate());
 
+        Assert.Throws<ArgumentOutOfRangeException>(() => new RaylibShadowConfig(MapSize: 2048, ReceiverBiasWorld: 0.04f, SceneRadiusMeters: 0f).Validate());
+        Assert.Throws<ArgumentOutOfRangeException>(() => new RaylibShadowConfig(MapSize: 2048, ReceiverBiasWorld: 0.04f, ReceiverTexelWorld: 0f).Validate());
+
         RaylibShadowConfig defaults = RaylibShadowConfig.CreateDefault();
         Assert.DoesNotThrow(() => defaults.Validate());
         Assert.That(defaults.MapSize, Is.EqualTo(2048));
+        Assert.That(defaults.SceneRadiusMeters, Is.EqualTo(280f));
+        Assert.That(defaults.ReceiverTexelWorld, Is.EqualTo(0.16f));
     }
 
     [Test]
