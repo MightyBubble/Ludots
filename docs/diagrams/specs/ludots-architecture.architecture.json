@@ -1,0 +1,395 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Ludots Runtime Architecture",
+    "subtitle": "Launcher intent → graph-backed startup → Mod/ECS runtime → platform presentation",
+    "locale": "en",
+    "output": "docs/diagrams/ludots-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/MightyBubble/Ludots.git",
+      "revision": "6f5f32047b30b03ebd005dbf64c672a25737c1f9"
+    },
+    "views": [
+      {
+        "id": "startup",
+        "label": "Startup path",
+        "focus": [
+          "user",
+          "launcher",
+          "launcher-backend",
+          "launch-graph",
+          "bootstrapper",
+          "engine"
+        ],
+        "note": "Follow a product launch from selector intent to the running engine."
+      },
+      {
+        "id": "content-loading",
+        "label": "Content loading",
+        "focus": [
+          "mods",
+          "mod-loader",
+          "config-pipeline",
+          "engine"
+        ],
+        "note": "See how Mod content and merged configuration enter the runtime."
+      },
+      {
+        "id": "runtime-output",
+        "label": "Runtime output",
+        "focus": [
+          "engine",
+          "ecs-gas",
+          "presentation",
+          "adapters"
+        ],
+        "note": "Trace deterministic gameplay state into platform-neutral presentation output."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "Player / Developer",
+      "sublabel": "selector or preset",
+      "pos": [40, 270],
+      "size": [150, 64],
+      "sources": [
+        {
+          "path": "docs/architecture/startup_entrypoints.md",
+          "label": "entrypoints"
+        }
+      ]
+    },
+    {
+      "id": "launcher",
+      "type": "frontend",
+      "label": "Launcher UI / CLI",
+      "sublabel": "web launcher + cli",
+      "pos": [240, 270],
+      "size": [170, 64],
+      "sources": [
+        {
+          "path": "scripts/run-mod-launcher.ps1",
+          "label": "launcher wrapper"
+        },
+        {
+          "path": "src/Tools/Ludots.Launcher.Cli/Program.cs",
+          "label": "cli entry"
+        }
+      ]
+    },
+    {
+      "id": "launcher-backend",
+      "type": "backend",
+      "label": "Launcher Backend",
+      "sublabel": "resolve · build · launch",
+      "pos": [460, 270],
+      "size": [170, 64],
+      "tag": "shared backend",
+      "sources": [
+        {
+          "path": "src/Tools/Ludots.Launcher.Backend/LauncherService.cs",
+          "label": "plan orchestration"
+        },
+        {
+          "path": "docs/architecture/startup_entrypoints.md",
+          "label": "backend contract"
+        }
+      ]
+    },
+    {
+      "id": "launch-graph",
+      "type": "database",
+      "label": "Launch Graph",
+      "sublabel": "resolved plan artifact",
+      "pos": [680, 270],
+      "size": [170, 64],
+      "tag": "runtime authority",
+      "sources": [
+        {
+          "path": "src/Core/Hosting/LauncherGraphDocument.cs",
+          "label": "runtime DTO"
+        },
+        {
+          "path": "docs/architecture/startup_entrypoints.md",
+          "label": "graph artifact"
+        }
+      ]
+    },
+    {
+      "id": "bootstrapper",
+      "type": "backend",
+      "label": "GameBootstrapper",
+      "sublabel": "restore + validate plan",
+      "pos": [900, 270],
+      "size": [170, 64],
+      "sources": [
+        {
+          "path": "src/Core/Hosting/GameBootstrapper.cs",
+          "label": "bootstrap path"
+        },
+        {
+          "path": "docs/architecture/startup_entrypoints.md",
+          "label": "engine init"
+        }
+      ]
+    },
+    {
+      "id": "mods",
+      "type": "external",
+      "label": "Mods + VFS",
+      "sublabel": "content and assemblies",
+      "pos": [220, 90],
+      "size": [170, 64],
+      "sources": [
+        {
+          "path": "mods/CoreInputMod/mod.json",
+          "label": "mod root"
+        },
+        {
+          "path": "mods/LudotsCoreMod/mod.json",
+          "label": "core mod"
+        }
+      ]
+    },
+    {
+      "id": "mod-loader",
+      "type": "backend",
+      "label": "ModLoader",
+      "sublabel": "order · mount · load",
+      "pos": [460, 90],
+      "size": [170, 64],
+      "sources": [
+        {
+          "path": "src/Core/Modding/ModLoader.cs",
+          "label": "mod loading"
+        },
+        {
+          "path": "docs/architecture/mod_architecture.md",
+          "label": "mod contract"
+        }
+      ]
+    },
+    {
+      "id": "config-pipeline",
+      "type": "backend",
+      "label": "ConfigPipeline",
+      "sublabel": "merge + catalog",
+      "pos": [680, 90],
+      "size": [170, 64],
+      "sources": [
+        {
+          "path": "src/Core/Config/ConfigPipeline.cs",
+          "label": "config merge"
+        },
+        {
+          "path": "docs/architecture/config_pipeline.md",
+          "label": "config contract"
+        }
+      ]
+    },
+    {
+      "id": "engine",
+      "type": "backend",
+      "label": "GameEngine",
+      "sublabel": "world + system groups",
+      "pos": [1120, 270],
+      "size": [180, 68],
+      "tag": "composition root",
+      "sources": [
+        {
+          "path": "src/Core/Engine/GameEngine.cs",
+          "label": "initialization"
+        },
+        {
+          "path": "docs/architecture/startup_entrypoints.md",
+          "label": "startup overview"
+        }
+      ]
+    },
+    {
+      "id": "ecs-gas",
+      "type": "backend",
+      "label": "Arch ECS + GAS",
+      "sublabel": "fixed-step simulation",
+      "pos": [1120, 410],
+      "size": [180, 68],
+      "tag": "SoA · 0-GC hot paths",
+      "sources": [
+        {
+          "path": "src/Core/Gameplay/GAS/Systems/EffectProcessingLoopSystem.cs",
+          "label": "effect pipeline"
+        },
+        {
+          "path": "docs/architecture/gas_layered_architecture.md",
+          "label": "GAS phases"
+        }
+      ]
+    },
+    {
+      "id": "presentation",
+      "type": "backend",
+      "label": "Presentation Pipeline",
+      "sublabel": "presenters + draw buffers",
+      "pos": [1120, 550],
+      "size": [180, 68],
+      "sources": [
+        {
+          "path": "src/Core/Presentation/Systems/PresenterEmitSystem.cs",
+          "label": "emit output"
+        },
+        {
+          "path": "docs/architecture/presentation_presenter.md",
+          "label": "presentation contract"
+        }
+      ]
+    },
+    {
+      "id": "adapters",
+      "type": "frontend",
+      "label": "Platform Adapters",
+      "sublabel": "Raylib · Web · browser",
+      "pos": [1120, 690],
+      "size": [180, 68],
+      "sources": [
+        {
+          "path": "src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs",
+          "label": "raylib host loop"
+        },
+        {
+          "path": "src/Apps/Web/Ludots.App.Web/Program.cs",
+          "label": "web entrypoint"
+        },
+        {
+          "path": "docs/architecture/adapter_pattern.md",
+          "label": "adapter contract"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Core runtime",
+      "wraps": ["bootstrapper", "mod-loader", "config-pipeline", "engine", "ecs-gas", "presentation"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Platform-owned execution",
+      "wraps": ["adapters"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "user-to-launcher",
+      "from": "user",
+      "to": "launcher",
+      "label": "select target",
+      "variant": "emphasis",
+      "labelDy": -24
+    },
+    {
+      "id": "launcher-to-backend",
+      "from": "launcher",
+      "to": "launcher-backend",
+      "label": "resolve intent",
+      "variant": "emphasis",
+      "labelDy": -24
+    },
+    {
+      "id": "backend-to-graph",
+      "from": "launcher-backend",
+      "to": "launch-graph",
+      "label": "write plan",
+      "variant": "emphasis",
+      "labelDy": -24
+    },
+    {
+      "id": "graph-to-bootstrap",
+      "from": "launch-graph",
+      "to": "bootstrapper",
+      "label": "restore plan",
+      "variant": "emphasis",
+      "labelDy": -24
+    },
+    {
+      "id": "bootstrap-to-engine",
+      "from": "bootstrapper",
+      "to": "engine",
+      "label": "start runtime",
+      "variant": "emphasis",
+      "labelDy": -24
+    },
+    {
+      "id": "mods-to-loader",
+      "from": "mods",
+      "to": "mod-loader",
+      "label": "scan + mount",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "loader-to-config",
+      "from": "mod-loader",
+      "to": "config-pipeline",
+      "label": "mounted sources",
+      "variant": "dashed",
+      "labelDy": -28
+    },
+    {
+      "id": "config-to-engine",
+      "from": "config-pipeline",
+      "to": "engine",
+      "label": "merged config",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "top",
+      "labelDx": 90
+    },
+    {
+      "id": "loader-to-engine",
+      "from": "mod-loader",
+      "to": "engine",
+      "label": "load code Mods",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "top",
+      "labelDx": 90
+    },
+    {
+      "id": "engine-to-ecs",
+      "from": "engine",
+      "to": "ecs-gas",
+      "label": "run fixed phases",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [1330, 352]
+    },
+    {
+      "id": "ecs-to-presentation",
+      "from": "ecs-gas",
+      "to": "presentation",
+      "label": "semantic output",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [1330, 492]
+    },
+    {
+      "id": "presentation-to-adapters",
+      "from": "presentation",
+      "to": "adapters",
+      "label": "draw buffers",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [1330, 632]
+    }
+  ]
+}
