@@ -11,18 +11,25 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
-    /// Per-map think-wave pump: every active map accumulates one tick per fixed step and,
-    /// every HeartbeatIntervalTicks ticks, flushes a wave — firing map-scoped
-    /// MapHeartbeat / EntitySpawned / EntityDied / EntityAliveCountChanged events with
-    /// <see cref="MapTriggerEventPayloadKeys"/> payloads. Suspended maps do not accumulate.
-    /// Spawns are observed as a membership diff over the map's MapEntity entities (Arch is
-    /// compiled without EVENTS, so component-added subscriptions are inert here); deaths are
-    /// observed through World.SubscribeEntityDestroyed, which fires while components are
-    /// still readable so SourceTeamId is captured at destroy time.
+    /// Per-map entity-lifecycle observer (#1398 刀2). Replaces the retired
+    /// <see cref="MapHeartbeatClockSystem"/> think-wave pump: the 30-tick cadence and the
+    /// <see cref="GameEvents.MapHeartbeat"/> event are gone. Every fixed step each active
+    /// map's MapEntity membership is diffed — new members fire
+    /// <see cref="GameEvents.EntitySpawned"/> on the change tick, destroyed entities fire
+    /// <see cref="GameEvents.EntityDied"/> (team captured at destroy, components still
+    /// readable), and per-team alive counts publish
+    /// <see cref="GameEvents.EntityAliveCountChanged"/> only on a counted change edge.
+    ///
+    /// Net-diff semantics from the retired pump are preserved: an entity that spawns and is
+    /// destroyed within the same fixed step never fires EntitySpawned (membership is
+    /// netted), and deaths observed between diffs always fire (the destroy callback carries
+    /// the team the post-strip world can no longer read). This keeps roster/roster_remove,
+    /// night-raid wave-cleared, and alive-count consumers on the same event contract while
+    /// removing the unconditional per-interval broadcast: a map with no membership change
+    /// and no queued death fires nothing.
     /// </summary>
-    public sealed class MapHeartbeatClockSystem : ISystem<float>
+    public sealed class MapEntityLifecycleObserverSystem : ISystem<float>
     {
-        public const int DefaultIntervalTicks = 30;
         public const int LifecycleQueueCapacity = 1024;
         private const int DrainChunkSize = 64;
 
@@ -30,7 +37,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly World _world;
         private readonly TriggerManager _triggerManager;
         private readonly Func<ScriptContext> _contextFactory;
-        private readonly Dictionary<MapId, MapHeartbeatState> _states = new();
+        private readonly Dictionary<MapId, MapLifecycleState> _states = new();
         private readonly QueuedLifecycleEvent[] _drainScratch = new QueuedLifecycleEvent[DrainChunkSize];
         private readonly List<MapId> _pruneScratch = new();
         private readonly List<KeyValuePair<MapId, MapSession>> _sessionScratch = new();
@@ -38,7 +45,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private static readonly QueryDescription _mapEntityQuery =
             new QueryDescription().WithAll<MapEntity>();
 
-        public MapHeartbeatClockSystem(
+        public MapEntityLifecycleObserverSystem(
             Func<MapSessionManager?> sessions,
             World world,
             TriggerManager triggerManager,
@@ -57,7 +64,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             get
             {
                 int total = 0;
-                foreach (KeyValuePair<MapId, MapHeartbeatState> pair in _states)
+                foreach (KeyValuePair<MapId, MapLifecycleState> pair in _states)
                 {
                     total += pair.Value.DroppedLifecycleEvents;
                 }
@@ -68,7 +75,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public int GetDroppedLifecycleEvents(MapId mapId)
         {
-            return _states.TryGetValue(mapId, out MapHeartbeatState state) ? state.DroppedLifecycleEvents : 0;
+            return _states.TryGetValue(mapId, out MapLifecycleState state) ? state.DroppedLifecycleEvents : 0;
         }
 
         public void Initialize() { }
@@ -85,8 +92,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             PruneStatesForUnloadedMaps(sessions);
 
-            // Wave events dispatch synchronously into handlers that may load or unload maps;
-            // iterate a snapshot so the session map can be mutated mid-wave.
+            // Lifecycle events dispatch synchronously into handlers that may load or unload
+            // maps; iterate a snapshot so the session map can be mutated mid-diff.
             _sessionScratch.Clear();
             foreach (KeyValuePair<MapId, MapSession> pair in sessions.All)
             {
@@ -102,16 +109,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
-                MapHeartbeatState state = GetOrCreateState(pair.Key);
-                state.TicksAccumulated++;
-                int interval = ResolveIntervalTicks(session);
-                if (state.TicksAccumulated < interval)
-                {
-                    continue;
-                }
-
-                state.TicksAccumulated -= interval;
-                FlushWave(session, state);
+                DiffLifecycle(session, GetOrCreateState(pair.Key));
             }
         }
 
@@ -135,7 +133,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return;
             }
 
-            MapHeartbeatState state = GetOrCreateState(new MapId(mapIdValue));
+            MapLifecycleState state = GetOrCreateState(new MapId(mapIdValue));
             if (!state.Deaths.Enqueue(new QueuedLifecycleEvent(entity, ResolveTeamId(entity))))
             {
                 state.DroppedLifecycleEvents++;
@@ -147,11 +145,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
             return _world.Has<Team>(entity) ? _world.Get<Team>(entity).Id : 0;
         }
 
-        private MapHeartbeatState GetOrCreateState(MapId mapId)
+        private MapLifecycleState GetOrCreateState(MapId mapId)
         {
-            if (!_states.TryGetValue(mapId, out MapHeartbeatState state))
+            if (!_states.TryGetValue(mapId, out MapLifecycleState state))
             {
-                state = new MapHeartbeatState();
+                state = new MapLifecycleState();
                 _states[mapId] = state;
             }
 
@@ -166,7 +164,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             _pruneScratch.Clear();
-            foreach (KeyValuePair<MapId, MapHeartbeatState> pair in _states)
+            foreach (KeyValuePair<MapId, MapLifecycleState> pair in _states)
             {
                 // An unloaded map's queued death events die with it: its map-scoped
                 // triggers are already unregistered, so flushing would have no receiver.
@@ -182,30 +180,30 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
         }
 
-        private static int ResolveIntervalTicks(MapSession session)
+        /// <summary>
+        /// One fixed-step membership diff for an active map. Ordering matters:
+        /// 1. collect current members + alive counts,
+        /// 2. flush spawns (net diff against the previous step's snapshot),
+        /// 3. flush queued deaths (captured team at destroy),
+        /// 4. reconcile alive counts (fires only on a counted change edge).
+        /// Finally the current snapshot becomes the next step's baseline.
+        /// </summary>
+        private void DiffLifecycle(MapSession session, MapLifecycleState state)
         {
-            int interval = session.MapConfig?.HeartbeatIntervalTicks ?? DefaultIntervalTicks;
-            if (interval < 1)
-            {
-                throw new InvalidOperationException(
-                    $"Map '{session.MapId.Value}' HeartbeatIntervalTicks must be >= 1 (got {interval}).");
-            }
-
-            return interval;
-        }
-
-        private void FlushWave(MapSession session, MapHeartbeatState state)
-        {
-            state.HeartbeatIndex++;
             CollectCurrentMembers(session, state);
             FlushSpawnDiff(session, state);
             FlushLifecycleRing(session, state, state.Deaths, GameEvents.EntityDied);
             FlushAliveCounts(session, state);
-            Fire(session, GameEvents.MapHeartbeat, ctx =>
-                ctx.Set(MapTriggerEventPayloadKeys.HeartbeatIndex, state.HeartbeatIndex));
+
+            // Current snapshot becomes the baseline for the next step; swap the two
+            // hash-sets so steady state allocates nothing per tick.
+            HashSet<Entity> swapped = state.PreviousMembers;
+            state.PreviousMembers = state.CurrentMembers;
+            state.CurrentMembers = swapped;
+            state.CurrentMembers.Clear();
         }
 
-        private void CollectCurrentMembers(MapSession session, MapHeartbeatState state)
+        private void CollectCurrentMembers(MapSession session, MapLifecycleState state)
         {
             state.CurrentMembers.Clear();
             state.CurrentAliveCounts.Clear();
@@ -227,7 +225,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             });
         }
 
-        private void FlushSpawnDiff(MapSession session, MapHeartbeatState state)
+        private void FlushSpawnDiff(MapSession session, MapLifecycleState state)
         {
             state.SpawnScratch.Clear();
             foreach (Entity entity in state.CurrentMembers)
@@ -254,15 +252,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     ctx.Set(MapTriggerEventPayloadKeys.SourceTeamId, teamId);
                 });
             }
-
-            HashSet<Entity> swapped = state.PreviousMembers;
-            state.PreviousMembers = state.CurrentMembers;
-            state.CurrentMembers = swapped;
         }
 
         private void FlushLifecycleRing(
             MapSession session,
-            MapHeartbeatState state,
+            MapLifecycleState state,
             LifecycleRing ring,
             EventKey eventKey)
         {
@@ -281,7 +275,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
         }
 
-        private void FlushAliveCounts(MapSession session, MapHeartbeatState state)
+        private void FlushAliveCounts(MapSession session, MapLifecycleState state)
         {
             if (!state.HasAliveBaseline)
             {
@@ -365,10 +359,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             public int TeamId { get; }
         }
 
-        private sealed class MapHeartbeatState
+        private sealed class MapLifecycleState
         {
-            public int TicksAccumulated;
-            public int HeartbeatIndex;
             public int DroppedLifecycleEvents;
             public bool HasAliveBaseline;
             public readonly LifecycleRing Deaths = new();

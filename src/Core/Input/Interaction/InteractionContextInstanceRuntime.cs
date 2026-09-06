@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Presentation.Events;
-using Ludots.Core.Presentation.Presenters;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.Interaction
@@ -14,50 +13,50 @@ namespace Ludots.Core.Input.Interaction
     /// <list type="bullet">
     /// <item>Activation is idempotent-failure — activating a context the subject already
     /// carries (base mount or instance) fails fast by name, and a declared parent must be active.</item>
-    /// <item>Each instance owns a presenter scope tag (band arithmetic per subject × context,
-    /// disjoint from the ability-aim scope band); presenters created while the context is
-    /// active bind that scope, and deactivation clears the whole scope through the formal
-    /// <see cref="PresenterCommand"/>(<see cref="PresenterCommandKind.DestroyPresenterScope"/>)
-    /// binding point — no ad-hoc presenter runtime calls from graph land.</item>
     /// <item>Deactivating a parent removes its descendants transitively (父停用自动清子);
     /// deactivating an inactive context fails fast by name.</item>
     /// <item>Every activation/deactivation publishes
     /// <see cref="PresentationEventKind.ContextActivated"/> /
-    /// <see cref="PresentationEventKind.ContextDeactivated"/> (key = context profile id) so
-    /// presenter rules observe context lifecycle as plain event subscribers.</item>
+    /// <see cref="PresentationEventKind.ContextDeactivated"/> (KeyId = context profile id,
+    /// PayloadB = parent profile id) so observers — presenter rules, input projection,
+    /// anything else — subscribe to interaction context lifecycle as plain event subscribers.
+    /// This layer is interaction-domain only: it writes the entity-mounted context state and
+    /// publishes lifecycle events, and never touches the presentation domain (no presenter
+    /// commands, no scope tags, no presenter bookkeeping). Presentation appearance driven by
+    /// context is authored as presenter-side bindings/rules that read that state.</item>
     /// </list>
     /// </summary>
     public sealed class InteractionContextInstanceRuntime
     {
-        /// <summary>
-        /// Scope band base for interaction context instances inside the per-owner scope band
-        /// arithmetic (<c>owner.Id * 100000 + offset</c>): the ability-aim family occupies
-        /// 44000-44002, context instances start at 45000, leaving headroom for profile ids
-        /// below 55000. Scope ids stay opaque ints on the presenter side.
-        /// </summary>
-        public const int ScopeBandBase = 45000;
-
-        private const int OwnerBand = 100000;
-
         private readonly World _world;
         private readonly InteractionContextProfileRegistry _profiles;
         private readonly PresentationEventStream _events;
-        private readonly PresenterCommandBuffer _commands;
         private readonly GameSession? _session;
+        private Action<Entity, int>? _runDeactivatedSlotNow;
         private readonly List<int> _removalScratch = new(capacity: InteractionContextInstances.Capacity);
 
         public InteractionContextInstanceRuntime(
             World world,
             InteractionContextProfileRegistry profiles,
             PresentationEventStream events,
-            PresenterCommandBuffer commands,
             GameSession? session = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _profiles = profiles ?? throw new ArgumentNullException(nameof(profiles));
             _events = events ?? throw new ArgumentNullException(nameof(events));
-            _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             _session = session;
+        }
+
+        /// <summary>
+        /// Late-bound change-point hook (#1398 刀3): the mount gate's
+        /// <c>RunDeactivatedSlotNow</c>, wired by the engine after both are built. When bound,
+        /// <see cref="Deactivate"/> runs each removed context's <c>onDeactivated</c> slot
+        /// synchronously on the same change point instead of leaving it to the gate's next
+        /// world scan — settlement completes in the deactivating tick.
+        /// </summary>
+        public void BindDeactivatedSlotRunner(Action<Entity, int>? runDeactivatedSlotNow)
+        {
+            _runDeactivatedSlotNow = runDeactivatedSlotNow;
         }
 
         /// <summary>True when the subject carries the context as its base mount or an active instance.</summary>
@@ -76,26 +75,6 @@ namespace Ludots.Core.Input.Interaction
 
             return _world.TryGet<InteractionContextInstances>(subject, out InteractionContextInstances instances) &&
                 instances.IndexOf(profileId) >= 0;
-        }
-
-        /// <summary>Scope tag of an active instance; false when not active.</summary>
-        public bool TryGetScopeTag(Entity subject, int profileId, out int scopeTag)
-        {
-            scopeTag = 0;
-            if (!_world.IsAlive(subject) ||
-                !_world.TryGet<InteractionContextInstances>(subject, out InteractionContextInstances instances))
-            {
-                return false;
-            }
-
-            int index = instances.IndexOf(profileId);
-            if (index < 0)
-            {
-                return false;
-            }
-
-            scopeTag = instances[index].ScopeTag;
-            return true;
         }
 
         /// <summary>
@@ -137,7 +116,6 @@ namespace Ludots.Core.Input.Interaction
             }
 
             instance.ParentContextId = parentProfileId;
-            instance.ScopeTag = ContextScopeTag(subject, profileId);
 
             if (_world.TryGet<InteractionContextInstances>(subject, out InteractionContextInstances instances))
             {
@@ -172,26 +150,30 @@ namespace Ludots.Core.Input.Interaction
             }
 
             CollectWithDescendants(instances, profileId, _removalScratch);
-            for (int i = 0; i < _removalScratch.Count; i++)
+            // Snapshot before removal: the Deactivated slots below run user graph bodies that
+            // may re-enter this runtime (nested Deactivate reuses the shared scratch).
+            int[] removed = _removalScratch.ToArray();
+            for (int i = 0; i < removed.Length; i++)
             {
-                int index = instances.IndexOf(_removalScratch[i]);
+                int index = instances.IndexOf(removed[i]);
                 InteractionContextInstance instance = instances[index];
                 instances.RemoveAt(index);
-                EnqueueScopeDestroy(instance);
                 Publish(PresentationEventKind.ContextDeactivated, subject, instance);
             }
 
             _world.Set(subject, instances);
             _removalScratch.Clear();
-        }
 
-        /// <summary>Deterministic per-subject scope tag (band arithmetic, see <see cref="ScopeBandBase"/>).</summary>
-        public static int ContextScopeTag(Entity subject, int profileId)
-        {
-            unchecked
+            // #1398 刀3: run the onDeactivated slot at the same change point that removed the
+            // context, so settlement/preview teardown finish in this tick — no 1-tick delay
+            // while waiting for the gate's next world scan. The gate unmounts the profile's
+            // triggers and skips re-running the slot on its reconcile pass.
+            if (_runDeactivatedSlotNow != null)
             {
-                int scope = (subject.Id * OwnerBand) + ScopeBandBase + profileId;
-                return scope <= 0 ? ScopeBandBase + profileId : scope;
+                for (int i = 0; i < removed.Length; i++)
+                {
+                    _runDeactivatedSlotNow(subject, removed[i]);
+                }
             }
         }
 
@@ -218,23 +200,6 @@ namespace Ludots.Core.Input.Interaction
             }
         }
 
-        private void EnqueueScopeDestroy(in InteractionContextInstance instance)
-        {
-            var command = new PresenterCommand
-            {
-                CommandKind = PresenterCommandKind.DestroyPresenterScope,
-                RouteStrategy = PresenterCommandRouteStrategy.DestroyScope,
-                ScopeTag = instance.ScopeTag,
-                ScopeSource = PresenterCommandScopeSource.Fixed,
-            };
-
-            if (!_commands.TryAdd(in command))
-            {
-                throw new InvalidOperationException(
-                    "PresenterCommandBuffer overflowed while destroying an interaction context instance scope.");
-            }
-        }
-
         private void Publish(PresentationEventKind kind, Entity subject, in InteractionContextInstance instance)
         {
             var evt = new PresentationEvent
@@ -245,7 +210,6 @@ namespace Ludots.Core.Input.Interaction
                 Source = subject,
                 Target = subject,
                 Viewer = subject,
-                PayloadA = instance.ScopeTag,
                 PayloadB = instance.ParentContextId,
             };
 

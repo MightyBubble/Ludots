@@ -64,17 +64,21 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapHeartbeatEntry_FiresWithSelfScope()
+        public void MapTriggerResumeEntry_FiresWithSelfScope()
         {
             using EntityDomainFixture fixture = EntityDomainFixture.Create();
             using GameEngine engine = fixture.CreateEngine();
             engine.Start();
             engine.LoadMap(MapId);
             MapVariableStore variables = RequireVariables(engine);
-            Assert.That(variables.ReadInt("wave_ran"), Is.EqualTo(0), "No wave may fire the entry before the interval elapses.");
+            Assert.That(variables.ReadInt("wave_ran"), Is.EqualTo(0), "No pulse may fire the entry before the resume dispatch.");
 
-            TickUntil(engine, () => variables.ReadInt("wave_ran") == 1, HeartbeatIntervalTicks * 4,
-                () => $"MapHeartbeat entry never ran (wave_ran={variables.ReadInt("wave_ran")}).");
+            // #1398 刀2: the retired MapHeartbeat think-wave cadence is replaced by the
+            // gated map continuation pulse (MapTriggerResume). An unsuspended entry still
+            // dispatches when the pulse fires — same map-bus path, same self scope.
+            engine.TriggerManager.FireMapTriggerResume(new MapId(MapId), engine.CreateContext());
+            TickUntil(engine, () => variables.ReadInt("wave_ran") == 1, 40,
+                () => $"MapTriggerResume entry never ran (wave_ran={variables.ReadInt("wave_ran")}).");
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
         }
@@ -155,7 +159,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void EntityDestroy_RunsOwnEntityDiedEntryOnDestroyTick_ThenMountInertAndSwept()
+        public void EntityDestroy_RunsOwnEntityDiedEntryOnDestroyTick_ThenMountReclaimedOnDestroy()
         {
             using EntityDomainFixture fixture = EntityDomainFixture.Create();
             using GameEngine engine = fixture.CreateEngine();
@@ -183,15 +187,12 @@ namespace Ludots.Tests.Gas.Graph
             Assert.Multiple(() =>
             {
                 Assert.That(variables.ReadInt("wave_ran"), Is.EqualTo(waveRuns),
-                    "A dead entity's MapHeartbeat mount must stay inert.");
+                    "A dead entity's mounts are reclaimed on the destroy tick — nothing can fire into them.");
                 Assert.That(variables.ReadInt("died"), Is.EqualTo(1),
-                    "The wave-granularity EntityDied broadcast must not re-fire the entity-domain entry.");
+                    "The EntityDied broadcast must not re-fire the entity-domain entry.");
+                Assert.That(engine.EntityTriggerGraphMounts.GetDeadMountCount(new MapId(MapId)), Is.EqualTo(0),
+                    "Destroy-time reclamation closes the dead-mount ledger immediately (#1398 刀2).");
             });
-
-            TickUntil(engine,
-                () => engine.EntityTriggerGraphMounts.GetDeadMountCount(new MapId(MapId)) == 0,
-                HeartbeatIntervalTicks * 6,
-                () => "Dead entity mounts must be swept at think waves.");
         }
 
         [Test]
@@ -463,7 +464,7 @@ namespace Ludots.Tests.Gas.Graph
                         "kind": "TriggerGraph",
                         "entries": [
                           { "label": "on_spawn", "event": "EntitySpawned", "start": "spawn_begin", "once": true },
-                          { "label": "on_wave", "event": "MapHeartbeat", "start": "wave_begin" },
+                          { "label": "on_wave", "event": "MapTriggerResume", "start": "wave_begin" },
                           { "label": "on_death", "event": "EntityDied", "start": "death_begin", "once": true },
                           { "label": "on_subworld_pulse", "event": "{{SettlementPulseEvent}}", "start": "pulse_begin", "once": true }
                         ],

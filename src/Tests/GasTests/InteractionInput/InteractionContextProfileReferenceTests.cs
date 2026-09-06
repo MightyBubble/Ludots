@@ -157,99 +157,85 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Loader_RejectsBlankWhileActiveGraph()
+        public void Loader_RejectsBlankLifecycleSlotGraph()
         {
-            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = " " }));
+            var config = Config(Profile(OnActivated: new List<string> { " " }));
             Assert.That(
                 () => InteractionContextProfileConfigLoader.Validate(config, "test"),
-                Throws.InvalidOperationException.With.Message.Contains("whileActive.graph"));
+                Throws.InvalidOperationException.With.Message.Contains("onActivated[0]"));
         }
 
         [Test]
-        public void Install_WhileActive_NonQueryKind_WithDispatch_Succeeds()
+        public void Install_LifecycleSlots_ResolveGraphIds()
         {
             InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
             var programs = new GraphProgramRegistry();
-            const string scriptName = "Graph.Script.ContextPreview";
-            int graphId = GraphIdRegistry.Register(scriptName);
+            const string slotName = "Graph.Trigger.ContextSlot";
+            int graphId = GraphIdRegistry.Register(slotName);
             programs.Register(
                 graphId,
-                new[]
-                {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 0 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.WriteCollection, B = 0, Imm = 1 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
-                },
-                GraphKind.Script);
-            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = scriptName }));
+                HaltProgram(),
+                GraphKind.TriggerGraph,
+                GraphInstructionSourceMap.Empty,
+                null,
+                ProbeEntries());
+            var config = Config(Profile(
+                OnActivated: new List<string> { slotName },
+                OnDeactivated: new List<string> { slotName }));
 
             Assert.That(
                 () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs)),
                 Throws.Nothing);
 
             int profileId = registry.ProfileIdRegistry.GetId(ProfileId);
-            Assert.That(registry.TryGetWhileActiveGraphId(profileId, out int resolved), Is.True);
-            Assert.That(resolved, Is.EqualTo(graphId));
+            Assert.That(
+                registry.TryGetLifecycleGraphIds(profileId, InteractionContextLifecycleSlot.Activated, out ReadOnlySpan<int> activated),
+                Is.True);
+            Assert.That(activated.ToArray(), Is.EqualTo(new[] { graphId }));
+            Assert.That(
+                registry.TryGetLifecycleGraphIds(profileId, InteractionContextLifecycleSlot.Deactivated, out ReadOnlySpan<int> deactivated),
+                Is.True);
+            Assert.That(deactivated.ToArray(), Is.EqualTo(new[] { graphId }));
         }
 
         [Test]
-        public void Install_WhileActive_NonQueryKind_WithoutDispatch_FailsFast()
+        public void Install_LifecycleSlots_UnknownGraph_FailsFast()
         {
             InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
             var programs = new GraphProgramRegistry();
-            RegisterProgram(programs, OtherGraphName, GraphKind.TriggerGraph, HaltProgram(), ProbeEntries());
-            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = OtherGraphName }));
+            var config = Config(Profile(OnActivated: new List<string> { "Graph.Nope.Missing" }));
 
             Assert.That(
-                () => registry.Install(
-                    config,
-                    collectionKeys,
-                    filters,
-                    intents,
-                    Catalog(programs)),
-                Throws.InvalidOperationException.With.Message.Contains("WriteCollection"));
+                () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs)),
+                Throws.InvalidOperationException.With.Message.Contains("references unknown graph"));
         }
 
         [Test]
-        public void Install_WhileActive_ResolvesGraphId()
+        public void Install_LifecycleSlots_WithoutReferenceCatalog_FailsFast()
+        {
+            InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
+            var config = Config(Profile(OnDeactivated: new List<string> { "Graph.Nope" }));
+
+            Assert.That(
+                () => registry.Install(config, collectionKeys, filters, intents),
+                Throws.InvalidOperationException.With.Message.Contains("onDeactivated"));
+        }
+
+        [Test]
+        public void Install_WithoutLifecycleSlots_ResolvesEmpty()
         {
             InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
             var programs = new GraphProgramRegistry();
-            const string triggerName = "Graph.Trigger.ContextPreview";
-            int graphId = GraphIdRegistry.Register(triggerName);
-            programs.Register(
-                graphId,
-                new[]
-                {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 0 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.WriteCollection, B = 0, Imm = 1 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
-                },
-                GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, null, ProbeEntries());
-            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = triggerName }));
+            RegisterProgram(programs, GraphName, GraphKind.TriggerGraph, HaltProgram(), ProbeEntries());
+            var config = Config(Profile());
 
             Assert.That(
                 () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs)),
                 Throws.Nothing);
 
             int profileId = registry.ProfileIdRegistry.GetId(ProfileId);
-            Assert.That(registry.TryGetWhileActiveGraphId(profileId, out int resolved), Is.True);
-            Assert.That(resolved, Is.EqualTo(graphId));
-        }
-
-        [Test]
-        public void Install_WhileActive_WithoutWriteCollection_FailsFast()
-        {
-            InteractionContextProfileRegistry registry = NewRegistry(out var collectionKeys, out var filters, out var intents);
-            var programs = new GraphProgramRegistry();
-            const string noWriteName = "Graph.Trigger.NoWrite";
-            int graphId = GraphIdRegistry.Register(noWriteName);
-            programs.Register(graphId, HaltProgram(), GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, null, ProbeEntries());
-            var config = Config(Profile(WhileActive: new InteractionContextWhileActive { Graph = noWriteName }));
-
-            Assert.That(
-                () => registry.Install(config, collectionKeys, filters, intents, Catalog(programs)),
-                Throws.InvalidOperationException.With.Message.Contains("WriteCollection"));
+            Assert.That(registry.TryGetLifecycleGraphIds(profileId, InteractionContextLifecycleSlot.Activated, out _), Is.False);
+            Assert.That(registry.TryGetLifecycleGraphIds(profileId, InteractionContextLifecycleSlot.Deactivated, out _), Is.False);
         }
 
         private static InteractionContextProfileRegistry NewRegistry(
@@ -290,14 +276,16 @@ namespace Ludots.Tests.GAS
         private static InteractionContextProfileDefinition Profile(
             List<string>? Bindings = null,
             List<InteractionContextTriggerMount>? Triggers = null,
-            InteractionContextWhileActive? WhileActive = null)
+            List<string>? OnActivated = null,
+            List<string>? OnDeactivated = null)
             => new()
             {
                 Id = ProfileId,
                 ActiveCollectionKey = "test.context.collection",
                 Bindings = Bindings,
                 Triggers = Triggers,
-                WhileActive = WhileActive,
+                OnActivated = OnActivated,
+                OnDeactivated = OnDeactivated,
             };
 
         private static GraphInstruction[] HaltProgram()

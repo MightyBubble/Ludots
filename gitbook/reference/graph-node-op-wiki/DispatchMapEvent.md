@@ -1,6 +1,6 @@
-# 按事件账本派发心跳
+# 按事件账本派发地图事件
 
-载荷按 schema 组装成事件，地图上的监听者按账本收货。
+载荷组装成地图事件，监听者按账本收货。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_DispatchMapEvent/poster.png" src="artifacts/evidence/capability_standard_graph_op_DispatchMapEvent/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_DispatchMapEvent/play.mp4。
@@ -22,24 +22,26 @@
 真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/DispatchMapEvent.json`）：
 
 ```json
-{"id": "fire", "op": "DispatchMapEvent", "event": "MapHeartbeat"}
+{"id": "fire", "op": "DispatchMapEvent", "event": "EntityAliveCountChanged"}
 ```
 
 接线（值边把上一步的结果送进本节点端口）：
 
 ```json
-{"from": "beat", "fromPort": "value", "to": "fire", "toPort": "heartbeatIndex"}
+{"from": "team", "fromPort": "value", "to": "fire", "toPort": "sourceTeamId"}
+{"from": "beat", "fromPort": "value", "to": "fire", "toPort": "count"}
+{"from": "delta", "fromPort": "value", "to": "fire", "toPort": "delta"}
 ```
 
 ## 这场是怎么搭出来的
 
-上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/DispatchMapEvent.json`，共 3 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
+上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/DispatchMapEvent.json`，共 5 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
 
-ConstInt → **DispatchMapEvent**（本篇） → HaltReturnInt
+ConstInt → ConstInt → ConstInt → **DispatchMapEvent**（本篇） → HaltReturnInt
 
 图跑完，字幕报出结果：
 
-> 心跳事件派发 {fires} 次，心跳序号 {beat} 照账本送达。
+> 地图事件派发 {fires} 次，载荷值 {beat} 照账本送达。
 
 ## 边界与更多用法
 

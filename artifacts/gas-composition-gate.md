@@ -1,62 +1,78 @@
-## GAS Composition Gate — Self Review
+# GAS Composition Gate — Self Review
 
-- **Task / Issue**: #1398 Case E 纠偏——退役档案空壳键；起角落操作者 rep；ScreenRect 按 audience；删四张 Score 适配器
-- **Date**: 2026-09-03
-- **Agent / Author**: cloud agent
+- **Task / Issue**: #1398 D15 — context 生命周期全图化 + 通用落定 handler（框选手势/落定分层解耦）
+- **Date**: 2026-09-05
+- **Agent / Author**: pi (codex/1398-d15-lifecycle-graphs)
 
-### 1. Core judgment
+## 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: A（放宽既有 op 图种白名单 + 既有 ParamBinding/档案字段可选 + 组合既有黑板/指针/audience 读面）
+新变体主要交付物是（A/B/C/D）: **A**（已有 op 的编排/连线，零新 graph 节点）
 
 结论: PASS
 
-一句话理由: 不新增 profile enum/平行管线；Write/ReadBlackboardFloat 扩到 TriggerGraph/Query；ParamBinding 补 ownerBlackboardFloat + pointerScreen；档案空壳键改为可选。
+一句话理由: 交付物是可组合的图体（box_hit/box_commit/box_hover_tick/box_hover_clear/selection_commit，全部用现有 op 连线）挂在新的 context 生命周期边界槽上（onActivated/onDeactivated——图引用槽，与 triggers[] 同性质，不是行为开关/继承 mode）。行为 100% 在图层里，引擎只负责在边界调用命名图体，不执行任何行为。op 面零新增：交接消费用集合减法语义（pending \ M = ∅，M⊆pending），不新增清除类 op。
 
-### 2. Layer assignment
+## 2. Layer assignment
 
-| 步骤/能力 | Layer | 实现载体 |
-|-----------|-------|----------|
-| 档案 collection/view 键可选 | 0 小补丁 | InteractionContextProfileConfigLoader / Registry |
-| 起角写/读 rep 黑板 | 0 白名单 + 2 图连线 | Write/ReadBlackboardFloat + box_begin/box_hit |
-| ScreenRect 角点绑定 | 0 ParamBinding 源 | ownerBlackboardFloat / pointerScreen* |
-| 框可见性 | 0 小补丁 | PresenterScreenRectSystem × PresenterRelationContext.Viewer × sole local viewer |
-| 删 Score 适配器图 | 2 | Case E 资产 |
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 命中计算 | 2 | 图 `box_hit`（Query，复用） |
+| 手势出口 | 2 | 图 `box_commit`（LoadEntryPayload/WriteBlackboardInt/InvokeGraph/WriteCollection/DeactivateContext） |
+| 拖拽预览 | 2 | 图 `box_hover_tick`（action PointerMoved 输入边沿驱动） |
+| 预览清场 | 2 | 图 `box_hover_clear`（Script 图体，WriteCollection replace ∅） |
+| 通用落定 | 2 | 图 `selection_commit`（ReadBlackboardInt + QueryFromCollection + SwitchInt + WriteCollection；尾段用 Subtract 消费交接集 = ∅） |
+| 候选集维护 | 2 | 图 `roster_sync`（复用，MapHeartbeat） |
+| 边界图槽调度 | 0（机制） | 门控在"开启前/关闭后"执行命名图体；死亡走 destroy 边界同一槽 |
 
-### 3. Reuse list
+## 3. Reuse list
 
-- Handlers: WriteBlackboardFloat / ReadBlackboardFloat / LoadPointerScreen*
-- Systems: PresenterScreenRectSystem、InputContextProjectionSystem
-- Resolvers: KnowledgeProjectionConsumer.TryResolveSoleLocalSeatViewer（仅作本机 audience 身份，不当迷雾）
-- Registries: InteractionContextProfileRegistry、ConfigKeyRegistry（blackboardKey）
-- Graphs: box_begin / box_hit / box_commit / selection_handle
+- Queues / Systems: `TriggerManager` owner 索引、`InteractionContextTriggerMountSystem`（门控挂/拆 + 槽执行）、`GraphReturnWriter`（图体执行，原 whileActive 同款调用签名）、`TriggerGraphActionBindingSystem`（输入边沿派发，新增 PointerMoved 变化边）、`EntityTriggerGraphMounts`（死亡路径基础设施）
+- Registries: `InteractionContextProfileRegistry`（复用，扩展槽图解析）、`GraphProgramRegistry`
+- Existing graphs: `box_hit`（命中纯函数，两处复用：hover/commit）
+- Ops: 全部现有（Read/WriteBlackboardInt 304/301、QueryFromCollection 381、SwitchInt sugar、WriteCollection 477、InvokeGraph 450、DeactivateContext 475、ConstInt/Halt/LoadCaster）
 
-### 4. New Layer 0 ops
+## 4. New Layer 0 ops (if any)
 
-N/A（不新增 opcode；只扩既有 op 的 authorableKinds）
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| N/A | — | 交接消费用集合减法（WriteCollection op=2，M⊆pending ⇒ pending\ M = ∅），不做新清除 op；该替代语义即为"消费交接"，非 hack。 |
 
-### 5. Transaction boundary
+## 5. Transaction boundary
 
-无新事务壳；ActivateContext / DeactivateContext 既有生命周期不变
+无跨步骤 all-or-nothing 需求。Activate/Deactivate 沿用既有幂等失败（fail-fast）；落定为集合 replace/add/subtract，单步原子；死主体走统一心跳回收。context 生命周期槽图体失败与 triggers 图体同级 fail-fast，不做回滚。
 
-### 6. Config SSOT
+## 6. Config SSOT
 
-- `interaction_context_profiles.json`（去掉空壳键）
-- `Entities/templates.json`（BlackboardFloatBuffer）
-- `GAS/graphs/graph.case_e.*`、`Presentation/presenters.json`
-- 地图 Variables 去掉 press 角
+行为配置落在: graph assets（`assets/GAS/graphs/`）+ `interaction_context_profiles.json`（既有 schema 内字段集变更：删 `whileActive`，增 `onActivated`/`onDeactivated` 图引用数组）
 
-是否新增 JSON schema: NO（档案字段改为可省略；ParamBinding 新增合法 source 字符串，非新 profile DSL）
+是否新增 JSON schema: NO（新 schema 类型）——字段集变化作用于既有 interaction_context_profiles.json，行为全部在 graph 资产，槽字段与 `triggers[]` 同性质（图引用，非行为开关）。
 
-### 7. Red flag scan
+## 7. Red flag scan
 
 - [x] 未新增 profile inherit/placement enum
 - [x] 未新建与 spawn 平行的物化管线
 - [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加静默 fallback（缺黑板/缺指针 fail-fast；缺 Viewer 匹配则不画框）
-- [x] 不用 Knowledge/Fog 管交互 UI 框
+- [x] 未添加「说不清的」默认 fallback（图槽引用未知图 / 非 TriggerGraph → fail-fast）
+- [x] 未新增 graph op（入籍仪式成本高；现有 op 组合足够）
 
-### 8. Next variant test
+## 8. Next variant test
 
+<<<<<<< HEAD
+「下一个 Mod 变体」（手柄手势）将修改: **graph 连线 + profile 槽条目**（新 context + 新命中图 + `onDeactivated:[..., selection_commit]`），不改 Core enum、不改引擎、不改落定层。→ PASS
+
+## 关联删除清单（成品自检用）
+
+- `InteractionContextWhileActiveSystem.cs`（整个文件）
+- `InteractionContextWhileActive` 类 / `WhileActive` 属性（Profile）、`ValidateWhileActive`（Loader）、`TryGetWhileActiveGraphId`/`ResolveWhileActiveGraphId`/`_whileActiveGraphIds`（Registry）
+- GameEngine 对 WhileActiveSystem 的注册
+- mod `interaction_context_profiles.json` 的 `whileActive` 字段
+- `EntityCollectionRoleKind.AcquisitionPreview`：枚举保留（命令瞄准族其他消费者仍用），仅 whileActive 的该角色引用随系统删除
+
+## 下层缺陷修复（D15 暴露，一并合入）
+
+- `PlayerInputHandler.CompileBinding`：`Dictionary.TryGetValue` 失败时 out 参数写成 default(int)=0，未声明动作的绑定（引擎保留 id，如 PointerMoved）会别名到 index 0 动作槽并把指针值写进去。改为 TryGetValue 成功才赋值、失败编译为 -1 跳过（保留动作由引擎按 id 特判派发）。
+- `WriteBlackboardInt` 描述符补 `scriptPorts`（对齐 WriteBlackboardFloat，TriggerGraph 可作者）并在 GraphKindOperationPolicy 加入 Script/TriggerGraph 的 GasTransactional carve-out（box_commit 在 rep 黑板交接修饰键位图）。
+=======
 「下一个 Mod 变体」将修改: graph 连线 / ParamBinding sourceId（黑板键名），不动 Core enum
 
 
@@ -115,3 +131,4 @@ N/A（不新增 opcode；只扩既有 op 的 authorableKinds）
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: effect 步骤（保持 `EffectRequestQueue` 固定容量合同不变）
+>>>>>>> origin/main

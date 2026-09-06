@@ -15,18 +15,17 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
-    /// Evaluates data-declared map regions (map JSON "Regions") at think-wave granularity and fires
-    /// map-scoped <see cref="GameEvents.RegionEntered"/>/<see cref="GameEvents.RegionExited"/> events
+    /// Evaluates data-declared map regions (map JSON "Regions") at per-fixed-step
+    /// granularity and fires map-scoped <see cref="GameEvents.RegionEntered"/>/<see cref="GameEvents.RegionExited"/> events
     /// with the crossing entity and region id.
     ///
-    /// Semantics:
-    /// - Cadence: piggybacks on <see cref="MapHeartbeatClockSystem"/> — the clock fires the map-scoped
-    ///   <see cref="GameEvents.MapHeartbeat"/> event when a map's think-wave interval elapses,
-    ///   and this system evaluates that map's regions from a handler on that event. There is no
-    ///   second tick accumulator; the pump's interval resolution and suspend rules apply as-is.
-    /// - Map suspend: the clock never flushes waves for suspended sessions, so suspended maps are
-    ///   not evaluated. Inside-sets survive suspend/resume (suspended entities cannot move), so no
-    ///   spurious exit/enter pair fires.
+    /// Semantics (changed #1398 刀2 — the retired MapHeartbeat think-wave is gone):
+    /// - Cadence: evaluated once per fixed step in Update, not on a think-wave event.
+    ///   Enter/exit fires only when a region's inside-set actually changes; a map with no
+    ///   movement fires nothing.
+    /// - Map suspend: suspended sessions are not evaluated. Inside-sets survive
+    ///   suspend/resume (suspended entities cannot move), so no spurious exit/enter pair
+    ///   fires.
     /// - Eligible entity: MapEntity of the map + WorldPositionCm, not SuspendedTag, not
     ///   PresentationDestroyPending, and — when the region declares entityTags — carrying at
     ///   least one of the declared GameplayTags (any-of).
@@ -36,8 +35,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// - An entity that stops matching a region's tag filter (or loses MapEntity/WorldPositionCm)
     ///   while alive counts as an exit: it stops being region-tracked.
     /// - Fail-closed: a region referencing a tag name that TagRegistry cannot resolve throws,
-    ///   naming map, region, and tag, when the session's regions are first observed (first fixed
-    ///   tick after map load or the first think wave, whichever comes first).
+    ///   naming map, region, and tag, on the first fixed tick the session is observed.
     /// </summary>
     public sealed class RegionTriggerSystem : BaseSystem<World, float>
     {
@@ -68,7 +66,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public override void Initialize()
         {
-            _triggerManager.RegisterEventHandler(GameEvents.MapHeartbeat, OnMapHeartbeat);
         }
 
         public override void Update(in float t)
@@ -80,21 +77,25 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             SyncSessions(sessions);
-        }
 
-        private Task OnMapHeartbeat(ScriptContext context)
-        {
-            MapId mapId = context.Get<MapId>(CoreServiceKeys.MapId);
-            MapSessionManager? sessions = _sessions();
-            MapSession? session = sessions?.GetSession(mapId);
-            if (session == null || session.State != MapSessionState.Active)
+            // Per-fixed-step region evaluation: only maps that declared Regions and are
+            // Active are evaluated; enter/exit fires on inside-set change only.
+            foreach (KeyValuePair<MapId, MapSession> pair in sessions.All)
             {
-                return Task.CompletedTask;
-            }
+                if (pair.Value.State != MapSessionState.Active ||
+                    pair.Value.MapConfig?.Regions == null)
+                {
+                    continue;
+                }
 
-            MapRegionState state = GetOrBuildState(session);
-            EvaluateMap(state);
-            return Task.CompletedTask;
+                MapRegionState state = GetOrBuildState(pair.Value);
+                if (state.Regions.Count == 0)
+                {
+                    continue;
+                }
+
+                EvaluateMap(state);
+            }
         }
 
         private void SyncSessions(MapSessionManager sessions)

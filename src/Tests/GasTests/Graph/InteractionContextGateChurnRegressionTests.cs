@@ -68,10 +68,28 @@ public sealed class InteractionContextGateChurnRegressionTests
         Assert.That(BoxingActive(engine, commander)(), Is.True, "按下后衍生 boxing context 激活");
 
         // The boxing profile's mount lands one gate tick after activation; the hold window
-        // must start after that single mount so any later append is churn.
+        // must start after that single mount so any later append is churn. Baseline = the
+        // moment the log stops growing (every map-authored + context mount has landed), not a
+        // fixed tally of log rows — map-level authored TriggerGraphs add a legal loading-time
+        // "Registered" row (#1398 刀1) that must not shift the churn window edge.
         TickUntil(engine, 20, () => _log.Appends.Count >= 2);
         int appendsAtHoldStart = _log.Appends.Count;
-        Assert.That(_log.Appends.Count, Is.EqualTo(2), "按下窗口恰好一次注册 + 一次追加：" + string.Join(" | ", _log.Appends));
+        int stableTicks = 0;
+        while (stableTicks < 4 && _log.Appends.Count < 16)
+        {
+            int before = _log.Appends.Count;
+            engine.Tick(1f / 60f);
+            if (_log.Appends.Count == before)
+            {
+                stableTicks++;
+            }
+            else
+            {
+                stableTicks = 0;
+            }
+        }
+
+        appendsAtHoldStart = _log.Appends.Count;
 
         var handler = engine.GetService(CoreServiceKeys.InputHandler) as PlayerInputHandler
             ?? throw new InvalidOperationException("PlayerInputHandler service is missing.");

@@ -42,7 +42,7 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
-            RejectRetiredContinuousQueryField(mergedObject, relativePath);
+            RejectRetiredPeriodFields(mergedObject, relativePath);
 
             var config = mergedObject.Deserialize<InteractionContextProfilesConfig>(JsonOptions)
                 ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
@@ -51,10 +51,11 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// Case E retired <c>continuousQuery</c>; profiles must use <c>whileActive</c>.
-        /// Unknown properties are otherwise ignored by the deserializer — fail closed instead.
+        /// Case E retired <c>continuousQuery</c> / <c>whileActive</c>; profiles use
+        /// <c>onActivated</c> / <c>onDeactivated</c> graph slots instead. Unknown properties
+        /// are otherwise ignored by the deserializer — fail closed instead.
         /// </summary>
-        private static void RejectRetiredContinuousQueryField(JsonObject root, string relativePath)
+        private static void RejectRetiredPeriodFields(JsonObject root, string relativePath)
         {
             if (!root.TryGetPropertyValue("profiles", out JsonNode? profilesNode) ||
                 profilesNode is not JsonArray profiles)
@@ -74,7 +75,13 @@ namespace Ludots.Core.Input.Interaction
                     if (string.Equals(property.Key, "continuousQuery", StringComparison.OrdinalIgnoreCase))
                     {
                         throw new InvalidOperationException(
-                            $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; use whileActive (Case E §05: graph while context is active).");
+                            $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; use onActivated/onDeactivated graph slots.");
+                    }
+
+                    if (string.Equals(property.Key, "whileActive", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; use onActivated/onDeactivated graph slots (#1398 D15 — whileActive was a per-tick period field; the slots are instant window-boundary hooks).");
                     }
                 }
             }
@@ -114,7 +121,8 @@ namespace Ludots.Core.Input.Interaction
                 RequireTrimmedWhenPresent(profile.CommandIntentId, $"{path}.commandIntentId");
                 ValidateBindings(profile.Bindings, path);
                 ValidateTriggers(profile.Triggers, path);
-                ValidateWhileActive(profile.WhileActive, path);
+                ValidateLifecycleGraphSlots(profile.OnActivated, $"{path}.onActivated");
+                ValidateLifecycleGraphSlots(profile.OnDeactivated, $"{path}.onDeactivated");
             }
         }
 
@@ -159,14 +167,19 @@ namespace Ludots.Core.Input.Interaction
             }
         }
 
-        private static void ValidateWhileActive(InteractionContextWhileActive? whileActive, string path)
+        private static void ValidateLifecycleGraphSlots(List<string>? graphs, string path)
         {
-            if (whileActive == null)
+            if (graphs == null)
             {
                 return;
             }
 
-            RequireTrimmedNonEmpty(whileActive.Graph, $"{path}.whileActive.graph");
+            for (int i = 0; i < graphs.Count; i++)
+            {
+                string graph = graphs[i]
+                    ?? throw new InvalidOperationException($"{path}[{i}] must be a string.");
+                RequireTrimmedNonEmpty(graph, $"{path}[{i}]");
+            }
         }
 
         private static void RequireTrimmedWhenPresent(string value, string path)

@@ -139,6 +139,30 @@ namespace Ludots.Core.Scripting
             }
         }
 
+        /// <summary>
+        /// True when any map/entity-domain mount registered for the given map carries a
+        /// suspended run. The map resume clock uses this to gate its per-map pulse
+        /// (<see cref="GameEvents.MapTriggerResume"/>) — zero work and zero firing when no
+        /// map-domain run is parked (the retired MapHeartbeat fired unconditionally).
+        /// </summary>
+        public bool HasSuspendedMapTriggers(MapId mapId)
+        {
+            if (!_mapTriggers.TryGetValue(mapId, out List<Trigger>? triggers))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is ITriggerResumeProbe probe && probe.IsSuspended)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
 
         public void RegisterTrigger(Trigger trigger)
         {
@@ -895,6 +919,26 @@ namespace Ludots.Core.Scripting
             for (int i = 0; i < triggerList.Count; i++)
             {
                 FireTrigger(triggerList[i], GameEvents.ModTriggerResume, context);
+            }
+        }
+
+        /// <summary>
+        /// Resolve map/entity-domain suspended runs on the given map (#1398 刀2). Pure
+        /// dispatch to the map's MapTriggerResume subscribers; the clock gates the call on
+        /// <see cref="HasSuspendedMapTriggers"/> so an idle map fires nothing.
+        /// </summary>
+        public void FireMapTriggerResume(MapId mapId, ScriptContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            if (!_mapEventTriggers.TryGetValue(mapId, out Dictionary<EventKey, List<Trigger>>? eventTriggers) ||
+                !eventTriggers.TryGetValue(GameEvents.MapTriggerResume, out List<Trigger>? resumeTriggers))
+            {
+                return;
+            }
+
+            for (int i = 0; i < resumeTriggers.Count; i++)
+            {
+                FireTrigger(resumeTriggers[i], GameEvents.MapTriggerResume, context);
             }
         }
 

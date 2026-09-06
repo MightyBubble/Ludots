@@ -69,7 +69,9 @@ namespace Ludots.Core.Input.Interaction
         private int[] _filterProfileIds = new int[8];
         private int[] _commandIntentProfileIds = new int[8];
         private int[] _inputContextIdsByProfile = new int[8];
-        private int[] _whileActiveGraphIds = new int[8];
+        private bool[] _isForeground = new bool[8];
+        private int[][] _onActivatedGraphIds = new int[8][];
+        private int[][] _onDeactivatedGraphIds = new int[8][];
 
         public InteractionContextProfileRegistry(StringIntRegistry profileIdRegistry)
         {
@@ -183,19 +185,36 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// WhileActive graph id for the profile (#1398 Case E §05); 0 when the profile
-        /// declares no <c>whileActive</c>. Allocation free after install.
+        /// Graph-body ids for one lifecycle slot of the profile (#1398 D15); empty when the
+        /// profile declares no <c>onActivated</c> / <c>onDeactivated</c>. Allocation free
+        /// after install. The slot is ambiguity-free by construction: it belongs to the
+        /// profile, so no owner matching is ever required.
         /// </summary>
-        public bool TryGetWhileActiveGraphId(int profileId, out int graphId)
+        public bool TryGetLifecycleGraphIds(
+            int profileId,
+            InteractionContextLifecycleSlot slot,
+            out ReadOnlySpan<int> graphIds)
         {
             if (!IsInstalled(profileId))
             {
-                graphId = 0;
+                graphIds = default;
                 return false;
             }
 
-            graphId = _whileActiveGraphIds[profileId];
-            return graphId > 0;
+            int[]? ids = slot == InteractionContextLifecycleSlot.Activated
+                ? _onActivatedGraphIds[profileId]
+                : _onDeactivatedGraphIds[profileId];
+            graphIds = ids ?? Array.Empty<int>();
+            return graphIds.Length > 0;
+        }
+
+        /// <summary>
+        /// Foreground declaration (#1398 刀4): true while this profile's active instance parks
+        /// the interactive (input-action bound) trigger mounts of its active ancestors.
+        /// </summary>
+        public bool IsForeground(int profileId)
+        {
+            return profileId > 0 && profileId < _isForeground.Length && _isForeground[profileId];
         }
 
         /// <summary>
@@ -252,7 +271,9 @@ namespace Ludots.Core.Input.Interaction
                 Array.Resize(ref _filterProfileIds, next);
                 Array.Resize(ref _commandIntentProfileIds, next);
                 Array.Resize(ref _inputContextIdsByProfile, next);
-                Array.Resize(ref _whileActiveGraphIds, next);
+                Array.Resize(ref _isForeground, next);
+                Array.Resize(ref _onActivatedGraphIds, next);
+                Array.Resize(ref _onDeactivatedGraphIds, next);
             }
 
             int filterProfileId = ResolveDeclaredId(
@@ -274,70 +295,76 @@ namespace Ludots.Core.Input.Interaction
                 : collectionKeyRegistry.Register(definition.ActiveCollectionKey.Trim());
             _filterProfileIds[profileId] = filterProfileId;
             _commandIntentProfileIds[profileId] = commandIntentProfileId;
+            _isForeground[profileId] = definition.Foreground;
             _inputContextIdsByProfile[profileId] = _inputContextIdsFor(profileId);
-            _whileActiveGraphIds[profileId] = ResolveWhileActiveGraphId(definition, referenceCatalog);
+            _onActivatedGraphIds[profileId] = ResolveLifecycleGraphIds(
+                definition.OnActivated,
+                "onActivated",
+                definition.Id,
+                referenceCatalog);
+            _onDeactivatedGraphIds[profileId] = ResolveLifecycleGraphIds(
+                definition.OnDeactivated,
+                "onDeactivated",
+                definition.Id,
+                referenceCatalog);
             ValidateBindings(definition, referenceCatalog);
             ValidateTriggers(definition, referenceCatalog);
         }
 
-        private static int ResolveWhileActiveGraphId(
-            InteractionContextProfileDefinition definition,
+        private static int[] ResolveLifecycleGraphIds(
+            List<string>? graphNames,
+            string slotLabel,
+            string profileId,
             InteractionContextProfileReferenceCatalog? referenceCatalog)
         {
-            InteractionContextWhileActive? whileActive = definition.WhileActive;
-            if (whileActive == null)
+            if (graphNames is not { Count: > 0 })
             {
-                return 0;
+                return Array.Empty<int>();
             }
 
             if (referenceCatalog == null)
             {
                 throw new InvalidOperationException(
-                    $"Interaction context profile '{definition.Id}' declares whileActive but no reference catalog was provided at install; whileActive mounts require the graph program registry.");
+                    $"Interaction context profile '{profileId}' declares {slotLabel} but no reference catalog was provided at install; lifecycle graph slots require the graph program registry.");
             }
 
-            string graphName = whileActive.Graph;
-            int graphId = GraphIdRegistry.GetId(graphName);
-            if (graphId == GraphIdRegistry.InvalidId ||
-                !referenceCatalog.Programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
+            var ids = new int[graphNames.Count];
+            for (int i = 0; i < graphNames.Count; i++)
             {
-                throw new InvalidOperationException(
-                    $"Interaction context profile '{definition.Id}' whileActive.graph references unknown graph '{graphName}'.");
-            }
-
-            // Function-equivalence direction: continuous mount is host→function id, not a
-            // GraphKind.Query privilege. Any kind is allowed if the program writes its preview
-            // collection via WriteCollection (no GraphReturnWriter steal).
-            if (!referenceCatalog.Programs.TryGetKind(graphId, out GraphKind mountedKind))
-            {
-                throw new InvalidOperationException(
-                    $"Interaction context profile '{definition.Id}' whileActive.graph '{graphName}' has no registered kind.");
-            }
-
-            bool writesCollection = false;
-            for (int i = 0; i < program.Length; i++)
-            {
-                if (program[i].Op == (ushort)GraphNodeOp.WriteCollection)
+                string graphName = graphNames[i];
+                if (string.IsNullOrWhiteSpace(graphName))
                 {
-                    writesCollection = true;
-                    break;
+                    throw new InvalidOperationException(
+                        $"Interaction context profile '{profileId}' {slotLabel}[{i}] must be a non-empty graph id.");
                 }
+
+                int graphId = GraphIdRegistry.GetId(graphName);
+                if (graphId == GraphIdRegistry.InvalidId ||
+                    !referenceCatalog.Programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
+                {
+                    throw new InvalidOperationException(
+                        $"Interaction context profile '{profileId}' {slotLabel}[{i}] references unknown graph '{graphName}'.");
+                }
+
+                if (!referenceCatalog.Programs.TryGetKind(graphId, out GraphKind mountedKind))
+                {
+                    throw new InvalidOperationException(
+                        $"Interaction context profile '{profileId}' {slotLabel}[{i}] graph '{graphName}' has no registered kind.");
+                }
+
+                // A lifecycle slot is a plain graph body executed via GraphReturnWriter
+                // (settlement/clear graph bodies write collections themselves, akin to the
+                // retired whileActive contract — no GraphReturnWriter output steal).
+                GraphKindOperationPolicy.RequireAllowed(
+                    mountedKind,
+                    program,
+                    GasGraphOpHandlerTable.Instance,
+                    graphId,
+                    nameof(ResolveLifecycleGraphIds));
+                ids[i] = graphId;
             }
 
-            if (!writesCollection)
-            {
-                throw new InvalidOperationException(
-                    $"Interaction context profile '{definition.Id}' whileActive.graph '{graphName}' must WriteCollection to write its preview collection; GraphReturnWriter output materialization is not the whileActive write path.");
-            }
-
-            GraphKindOperationPolicy.RequireAllowed(
-                mountedKind,
-                program,
-                GasGraphOpHandlerTable.Instance,
-                graphId,
-                nameof(ResolveWhileActiveGraphId));
-
-            return graphId;
+            return ids;
         }
 
         private static void ValidateBindings(

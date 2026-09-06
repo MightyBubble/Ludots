@@ -158,7 +158,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.ReadBlackboardEntity, LinearAndScript, GraphValueType.Entity, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Entity, imm: GraphOperandRole.SymbolImm);
             // WriteBlackboardFloat includes TriggerGraph: Case E box_begin stores press corners on the operator rep.
             Add(rows, GraphNodeOp.WriteBlackboardFloat, EffectAndScript, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.WriteBlackboardInt, LinearEffect, GraphValueType.Void, portSourceValue, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.WriteBlackboardInt, EffectAndScript, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.WriteBlackboardEntity, LinearEffect, GraphValueType.Void, portSourceValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadConfigFloat, LinearAll, GraphValueType.Float, imm: GraphOperandRole.SymbolImm, listenerOwner: true);
             Add(rows, GraphNodeOp.LoadConfigInt, LinearAll, GraphValueType.Int, imm: GraphOperandRole.SymbolImm, listenerOwner: true);
@@ -177,8 +177,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.ActivateContext, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.DeactivateContext, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             // Host TriggerGraphs write collections themselves (pure Query callees leave the TargetList
-            // to the caller; GraphReturnWriter must not steal collection writes).
-            Add(rows, GraphNodeOp.WriteCollection, ScriptAndTriggerGraph, GraphValueType.Void, portValue, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            // to the caller; GraphReturnWriter must not steal collection writes). Optional source
+            // resolves the owner entity (defaults to caster) — map-domain observers writing another
+            // rep's collection declare it explicitly (#1398 刀1).
+            Add(rows, GraphNodeOp.WriteCollection, ScriptAndTriggerGraph, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.SetPanelAudience, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.ModifyAttributeSet, EffectAndTriggerGraph, GraphValueType.Void, portTargetValue, scriptPorts: portTargetValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.OfferActivity, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
@@ -211,8 +213,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.RelationshipAggSumMetric, QueryOnly, queryOut: GraphValueType.Int, queryPorts: portListSource, flags: GraphOperandRole.RelationshipTypeFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.RelationshipAggMaxMetric, QueryOnly, queryOut: GraphValueType.Int, queryPorts: portListSource, flags: GraphOperandRole.RelationshipTypeFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.RelationshipAggAverageMetric, QueryOnly, queryOut: GraphValueType.Int, queryPorts: portListSource, flags: GraphOperandRole.RelationshipTypeFlags, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.QueryAllMapEntities, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList);
-            Add(rows, GraphNodeOp.QueryFromCollection, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
+            // D15 治根：集合查询读面 = Query | Script | TriggerGraph。Script 与 TriggerGraph
+            // 共用同一线性（Script 镜像）编译路径；此前 Script 能写集合（WriteCollection 含
+            // Script）却读不回来，是 D2 按需放行时遗留的不对称。槽图（函数体）读交接集合
+            // 因此不需要伪装成 TriggerGraph。Query 纯函数禁写不变量不受影响（写操作不含 Query）。
+            Add(rows, GraphNodeOp.QueryAllMapEntities, ScriptTriggerQuery, queryOut: GraphValueType.TargetList);
+            Add(rows, GraphNodeOp.QueryFromCollection, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QueryCollectActiveEffects, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portSource);
             Add(rows, GraphNodeOp.QueryCollectEffectTemplates, QueryOnly, queryOut: GraphValueType.IntIdList);
             Add(rows, GraphNodeOp.QueryCollectAbilitySlots, QueryOnly, queryOut: GraphValueType.IntIdList, queryPorts: portSource);
@@ -234,11 +240,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.StickToDirection, QueryAndTriggerGraph, GraphValueType.Float, queryOut: GraphValueType.Float, queryPorts: portAB, scriptPorts: portAB, flags: GraphOperandRole.BoolScratchFlags);
             Add(rows, GraphNodeOp.LoadEffectTiming, LinearAndScript | QueryOnly, GraphValueType.Float, scriptOut: GraphValueType.Float, queryOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.LoadEffectStack, LinearAndScript | QueryOnly, GraphValueType.Float, scriptOut: GraphValueType.Float, queryOut: GraphValueType.Float);
-            Add(rows, GraphNodeOp.QueryFilterTeam, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portListTeamId, scriptPorts: portTeamId, flags: GraphOperandRole.TeamIdSourceFlags);
-            Add(rows, GraphNodeOp.QueryFilterTemplate, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.QueryFilterAttributeRange, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portListMinMax, scriptPorts: portMinMax, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.QueryFilterTagAny, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.QueryFilterTagNone, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.QueryFilterTeam, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portListTeamId, scriptPorts: portTeamId, flags: GraphOperandRole.TeamIdSourceFlags);
+            Add(rows, GraphNodeOp.QueryFilterTemplate, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.QueryFilterAttributeRange, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portListMinMax, scriptPorts: portMinMax, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.QueryFilterTagAny, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.QueryFilterTagNone, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QuerySortByAttribute, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portList, flags: GraphOperandRole.SortDescendingFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.AggSumAttribute, QueryOnly, queryOut: GraphValueType.Float, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.AggAverageAttribute, QueryOnly, queryOut: GraphValueType.Float, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
