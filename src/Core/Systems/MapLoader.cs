@@ -16,10 +16,13 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Systems
 {
@@ -37,6 +40,8 @@ namespace Ludots.Core.Systems
         private PresenterEntityRuntime _presenterRuntime;
         private PresenterDefinitionRegistry _presenterDefinitions;
         private CompiledPresenterBootstrapRegistry _presenterBootstrap;
+        private MeshAssetRegistry _meshAssets;
+        private InstancedBatchAssetRegistry _instancedBatchAssets;
         private readonly Entity[] _presenterBatchOwners = new Entity[TemplateBatchScratchCapacity];
         private readonly int[] _presenterBatchScopeIds = new int[TemplateBatchScratchCapacity];
         private readonly int[] _presenterBatchStableIds = new int[TemplateBatchScratchCapacity];
@@ -103,12 +108,16 @@ namespace Ludots.Core.Systems
             PresenterEntityRuntime presenterRuntime,
             PresenterDefinitionRegistry presenterDefinitions,
             ISpatialPartitionWorld spatialPartition,
-            WorldSizeSpec worldSizeSpec)
+            WorldSizeSpec worldSizeSpec,
+            MeshAssetRegistry meshAssets = null,
+            InstancedBatchAssetRegistry instancedBatchAssets = null)
         {
             _stableIds = stableIds;
             _presenterRuntime = presenterRuntime;
             _presenterDefinitions = presenterDefinitions;
             _presenterBootstrap = presenterDefinitions?.BootstrapRegistry;
+            _meshAssets = meshAssets;
+            _instancedBatchAssets = instancedBatchAssets;
             _templateBatchSpawner = new TemplateEntityBatchSpawner(
                 _world,
                 EntityTemplateKeys,
@@ -116,6 +125,258 @@ namespace Ludots.Core.Systems
                 spatialPartition,
                 worldSizeSpec,
                 TemplateBatchScratchCapacity);
+        }
+
+        /// <summary>
+        /// Builds the deterministic set of map-owned presentation assets before entities are
+        /// materialized. Only assets reachable from map templates, bootstrap presenter roots,
+        /// compiled presenter child plans, and authored asset-swap entries are included;
+        /// transient runtime VFX are intentionally outside this contract.
+        /// </summary>
+        public MapPresentationAssetManifest BuildPresentationAssetManifest(MapConfig mapConfig)
+        {
+            if (mapConfig == null)
+            {
+                throw new ArgumentNullException(nameof(mapConfig));
+            }
+
+            var manifest = new MapPresentationAssetManifest();
+            if (_meshAssets == null || _presenterDefinitions == null || _presenterBootstrap == null || mapConfig.Entities == null)
+            {
+                manifest.SealManifest();
+                return manifest;
+            }
+
+            var visitedTemplates = new HashSet<string>(StringComparer.Ordinal);
+            var visitedDefinitions = new HashSet<int>();
+            var reachableDefinitionIds = new List<int>();
+            var instanceAssetIds = new Dictionary<int, HashSet<int>>();
+
+            for (int i = 0; i < mapConfig.Entities.Count; i++)
+            {
+                EntitySpawnData? entity = mapConfig.Entities[i];
+                if (entity?.PresenterParamOverrides == null)
+                {
+                    continue;
+                }
+
+                for (int overrideIndex = 0; overrideIndex < entity.PresenterParamOverrides.Count; overrideIndex++)
+                {
+                    ParamOverrideData? item = entity.PresenterParamOverrides[overrideIndex];
+                    if (item == null || item.Lane != ParamLane.Int || string.IsNullOrWhiteSpace(item.ParamKey))
+                    {
+                        continue;
+                    }
+
+                    AddInstanceAssetOverride(PresenterParamKeyRegistry.Register(item.ParamKey), item.IntValue);
+                }
+            }
+
+            for (int i = 0; i < mapConfig.Entities.Count; i++)
+            {
+                EntitySpawnData? entity = mapConfig.Entities[i];
+                if (entity == null || string.IsNullOrWhiteSpace(entity.Template))
+                {
+                    continue;
+                }
+
+                AddTemplate(entity.Template);
+            }
+
+            for (int i = 0; i < reachableDefinitionIds.Count; i++)
+            {
+                int definitionId = reachableDefinitionIds[i];
+                if (!_presenterDefinitions.TryGet(definitionId, out PresenterDefinition definition))
+                {
+                    continue;
+                }
+
+                AddBehaviors(definition.Behaviors);
+                PresenterCreatePlan plan = _presenterDefinitions.GetOrCreateCreatePlan(definitionId);
+                PresenterCreatePlanNode[] nodes = plan.Nodes ?? Array.Empty<PresenterCreatePlanNode>();
+                for (int nodeIndex = 0; nodeIndex < nodes.Length; nodeIndex++)
+                {
+                    AddBehaviors(nodes[nodeIndex].InstanceOverride?.InstanceBehaviors);
+                }
+            }
+
+            manifest.SealManifest();
+            return manifest;
+
+            void AddTemplate(string templateId)
+            {
+                if (!visitedTemplates.Add(templateId))
+                {
+                    return;
+                }
+
+                EntityTemplate? template = TemplateRegistry.Get(templateId);
+                if (template == null)
+                {
+                    return;
+                }
+
+                int templateKeyId = EntityTemplateKeys.GetId(templateId);
+                if (templateKeyId > 0 &&
+                    _presenterBootstrap.TryGetEntitySpawnCreates(
+                        templateKeyId,
+                        out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules))
+                {
+                    for (int i = 0; i < rules.Length; i++)
+                    {
+                        CollectDefinition(rules[i].PresenterDefinitionId);
+                    }
+                }
+
+                if (template.Children == null)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < template.Children.Count; i++)
+                {
+                    EntityTemplateChild? child = template.Children[i];
+                    if (child != null && !string.IsNullOrWhiteSpace(child.Template))
+                    {
+                        AddTemplate(child.Template);
+                    }
+                }
+            }
+
+            void CollectDefinition(int definitionId)
+            {
+                if (definitionId <= 0 || !visitedDefinitions.Add(definitionId) ||
+                    !_presenterDefinitions.TryGet(definitionId, out PresenterDefinition definition))
+                {
+                    return;
+                }
+
+                reachableDefinitionIds.Add(definitionId);
+                PresenterCreatePlan plan = _presenterDefinitions.GetOrCreateCreatePlan(definitionId);
+                PresenterCreatePlanNode[] nodes = plan.Nodes ?? Array.Empty<PresenterCreatePlanNode>();
+                for (int i = 0; i < nodes.Length; i++)
+                {
+                    AddParamOverrides(nodes[i].ParamOverrides);
+                }
+
+                AddParamOverrides(definition.ParamDefaults);
+                for (int i = 0; i < nodes.Length; i++)
+                {
+                    CollectDefinition(nodes[i].DefinitionId);
+                }
+            }
+
+            void AddBehaviors(BehaviorSlot[]? behaviors)
+            {
+                if (behaviors == null)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < behaviors.Length; i++)
+                {
+                    ref readonly BehaviorSlot behavior = ref behaviors[i];
+                    if (behavior.Kind == BehaviorKind.AssetBinding)
+                    {
+                        AddAsset(in behavior.AssetBinding);
+                    }
+                    else if (behavior.Kind == BehaviorKind.InstancedBatch)
+                    {
+                        AddInstancedBatch(behavior.InstancedBatch.BatchAssetId);
+                    }
+                }
+            }
+
+            void AddParamOverrides(ParamDefault[]? overrides)
+            {
+                if (overrides == null)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < overrides.Length; i++)
+                {
+                    ref readonly ParamDefault item = ref overrides[i];
+                    if (item.Lane == ParamLane.Int)
+                    {
+                        AddInstanceAssetOverride(item.ParamKey, item.IntValue);
+                    }
+                }
+            }
+
+            void AddInstanceAssetOverride(int paramKey, int assetId)
+            {
+                if (paramKey < 0 || assetId <= 0)
+                {
+                    return;
+                }
+
+                if (!instanceAssetIds.TryGetValue(paramKey, out HashSet<int>? values))
+                {
+                    values = new HashSet<int>();
+                    instanceAssetIds.Add(paramKey, values);
+                }
+
+                values.Add(assetId);
+            }
+
+            void AddAsset(in AssetBindingConfig binding)
+            {
+                AddAssetId(binding.AssetKind, binding.AssetId, binding.RenderPath);
+                AssetSwapEntry[] swaps = binding.AssetSwapTable ?? Array.Empty<AssetSwapEntry>();
+                for (int i = 0; i < swaps.Length; i++)
+                {
+                    AddAssetId(binding.AssetKind, swaps[i].AssetId, binding.RenderPath);
+                }
+
+                if (binding.AssetIdParamKey >= 0 &&
+                    instanceAssetIds.TryGetValue(binding.AssetIdParamKey, out HashSet<int>? overrides))
+                {
+                    foreach (int assetId in overrides)
+                    {
+                        AddAssetId(binding.AssetKind, assetId, binding.RenderPath);
+                    }
+                }
+            }
+
+            void AddInstancedBatch(int batchAssetId)
+            {
+                if (batchAssetId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' reached an InstancedBatch presenter with an invalid batch asset id {batchAssetId}.");
+                }
+
+                if (_instancedBatchAssets == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' requires instanced batch asset id {batchAssetId}, but the InstancedBatchAssetRegistry is not installed.");
+                }
+
+                if (!_instancedBatchAssets.TryGet(batchAssetId, out InstancedBatchAsset batch))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' references unknown instanced batch asset id {batchAssetId}.");
+                }
+
+                InstancedBatchGroup[] groups = batch.Groups ?? Array.Empty<InstancedBatchGroup>();
+                for (int i = 0; i < groups.Length; i++)
+                {
+                    AddAssetId(AssetKind.Mesh, groups[i].MeshAssetId, batch.RenderPath);
+                }
+            }
+
+            void AddAssetId(AssetKind assetKind, int assetId, VisualRenderPath renderPath)
+            {
+                if (assetKind is not (AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Surface) ||
+                    assetId <= 0 || !_meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor) ||
+                    descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)
+                {
+                    return;
+                }
+
+                manifest.Add(MapPresentationAsset.Create(assetKind, assetId, renderPath, descriptor.SourceUris));
+            }
         }
 
         public void LoadTemplates(ConfigCatalog catalog, ConfigConflictReport report = null)

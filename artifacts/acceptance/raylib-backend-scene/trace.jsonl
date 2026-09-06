@@ -1,0 +1,11 @@
+{"seq":1,"event":"launch","mapId":"instanced_batch_demo","mods":["RaylibBackendSceneDemoMod","AgentBridgeMod"]}
+{"seq":2,"event":"health","pumpCount":49295,"ok":true}
+{"seq":3,"event":"map_load_deferred","mapId":"instanced_batch_demo","reason":"core_and_backend_presentation_assets_not_ready"}
+{"seq":4,"event":"backend_scene_asset_resident","uri":"RaylibPlatformMeshesMod:assets/Models/building_blacksmith_blue.gltf"}
+{"seq":5,"event":"map_loaded","mapId":"instanced_batch_demo","tick":405}
+{"seq":6,"event":"entity_query","totalMatched":1,"entityNames":["Instanced Batch Demo Anchor"]}
+{"seq":7,"event":"presenter_query","totalMatched":1,"backend_scene_entityCount":0}
+{"seq":8,"event":"instanced_batch_lane","residentLaneCount":1,"instanceCount":64}
+{"seq":9,"event":"health","pumpCount":54608,"ok":true}
+{"seq":10,"event":"visual_capture","path":"artifacts/agent-bridge/shots/issue-1403-backend-scene-final.png"}
+

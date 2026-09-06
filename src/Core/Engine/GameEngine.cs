@@ -1533,7 +1533,9 @@ namespace Ludots.Core.Engine
                 presenterRuntime,
                 presenterDefinitions,
                 _spatialPartition,
-                WorldSizeSpec);
+                WorldSizeSpec,
+                meshAssets,
+                instancedBatchAssets);
 
             System.Diagnostics.Debug.Assert(
                 meshAssets.TryGetDescriptor(meshAssets.GetId(WellKnownMeshKeys.Cube), out var _cubeDbg) && _cubeDbg.Type == MeshAssetType.Primitive,
