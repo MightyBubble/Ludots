@@ -299,27 +299,40 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// </summary>
         private void OnContextOwnerDestroyed(in Entity entity)
         {
-            if (!World.TryGet<MapEntity>(entity, out MapEntity mapEntity))
+            if (World.TryGet<MapEntity>(entity, out MapEntity mapEntity))
             {
-                return;
-            }
-
-            MapSession? session = _sessions()?.GetSession(mapEntity.MapId);
-            if (session == null || session.State != MapSessionState.Active)
-            {
-                return;
-            }
-
-            if (World.TryGet<InteractionContextInstance>(entity, out InteractionContextInstance baseContext))
-            {
-                RunLifecycleSlot(entity, baseContext.ContextId, InteractionContextLifecycleSlot.Deactivated);
-            }
-
-            if (World.TryGet<InteractionContextInstances>(entity, out InteractionContextInstances instances))
-            {
-                for (int i = 0; i < instances.Count; i++)
+                MapSession? session = _sessions()?.GetSession(mapEntity.MapId);
+                if (session != null && session.State == MapSessionState.Active)
                 {
-                    RunLifecycleSlot(entity, instances[i].ContextId, InteractionContextLifecycleSlot.Deactivated);
+                    if (World.TryGet<InteractionContextInstance>(entity, out InteractionContextInstance baseContext))
+                    {
+                        RunLifecycleSlot(entity, baseContext.ContextId, InteractionContextLifecycleSlot.Deactivated);
+                    }
+
+                    if (World.TryGet<InteractionContextInstances>(entity, out InteractionContextInstances instances))
+                    {
+                        for (int i = 0; i < instances.Count; i++)
+                        {
+                            RunLifecycleSlot(entity, instances[i].ContextId, InteractionContextLifecycleSlot.Deactivated);
+                        }
+                    }
+                }
+            }
+
+            // Destroy-time reclamation (#1398 刀2): the retired heartbeat sweep is gone, so
+            // the gate reclaims the dead subject's own context mounts right here — after the
+            // Deactivated slots, same-handler, no staged budget (naturally bounded by the dead
+            // subject's mount count). Entity-domain template mounts are reclaimed by
+            // EntityTriggerGraphMounts.OnEntityDestroyed on the same destroy. Ledger cleanup
+            // is session-independent (it touches only the owned-mount index), so it runs even
+            // when no active session is resolvable — exactly the mount-pipeline unload guard.
+            _ownedScratch.Clear();
+            _triggerManager.CollectOwnedMounts(entity, _ownedScratch);
+            for (int i = 0; i < _ownedScratch.Count; i++)
+            {
+                if (_ownedScratch[i].Key.Kind == TriggerMountOwnerKind.InteractionContext)
+                {
+                    _triggerManager.RemoveOwnedMounts(_ownedScratch[i].Key);
                 }
             }
         }

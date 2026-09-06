@@ -391,7 +391,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         private EventKey ResumeEventKey => _domain == TriggerGraphMountDomain.Mod
             ? GameEvents.ModTriggerResume
-            : GameEvents.MapHeartbeat;
+            : GameEvents.MapTriggerResume;
 
         /// <summary>
         /// Mount-pipeline dispatch for entity-domain lifecycle events. The lifecycle
@@ -777,7 +777,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
             EventKey = owner.Domain == TriggerGraphMountDomain.Mod
                 ? GameEvents.ModTriggerResume
-                : GameEvents.MapHeartbeat;
+                : GameEvents.MapTriggerResume;
             Priority = owner.Priority;
         }
 

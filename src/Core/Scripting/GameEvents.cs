@@ -41,6 +41,13 @@ namespace Ludots.Core.Scripting
         /// </summary>
         public static readonly EventKey ModTriggerResume = new EventKey("ModTriggerResume");
 
+        /// <summary>
+        /// Map-scoped continuation pulse for suspended map/entity-domain TriggerGraph
+        /// entries (replaces the retired MapHeartbeat think-wave as the resume cadence;
+        /// #1398 刀2). Fired per active map only while the map carries a suspended run.
+        /// </summary>
+        public static readonly EventKey MapTriggerResume = new EventKey("MapTriggerResume");
+
         public static readonly EventKey SimulationBudgetFused = new EventKey("SimulationBudgetFused");
 
         public static readonly EventKey Physics2DEnabled = new EventKey("Physics2DEnabled");
@@ -70,21 +77,16 @@ namespace Ludots.Core.Scripting
         public static readonly EventKey MapResumed = new EventKey("MapResumed");
 
         /// <summary>
-        /// Map-scoped: fired when a map's think-wave interval of fixed ticks elapses.
-        /// Payload: MapTriggerEventPayloadKeys.HeartbeatIndex.
-        /// </summary>
-        public static readonly EventKey MapHeartbeat = new EventKey("MapHeartbeat");
-
-        /// <summary>
-        /// Map-scoped: fired at think-wave granularity for entities that joined the map
-        /// during the wave. Payload: SourceEntity, SourceTeamId.
+        /// Map-scoped: fired when an entity carrying a MapEntity component joins the map
+        /// (entity lifecycle observer, change-driven since #1398 刀2). Payload: SourceEntity, SourceTeamId.
         /// </summary>
         public static readonly EventKey EntitySpawned = new EventKey("EntitySpawned");
 
         /// <summary>
-        /// Map-scoped: fired at think-wave granularity for entities destroyed during the
-        /// wave. The entity may already be recycled when the event fires; SourceTeamId was
-        /// captured at destroy time. Payload: SourceEntity, SourceTeamId.
+        /// Map-scoped: fired on the destroy tick for entities carrying a MapEntity component
+        /// (entity lifecycle observer, change-driven since #1398 刀2). The entity may already
+        /// be recycled when the event fires; SourceTeamId was captured at destroy time.
+        /// Payload: SourceEntity, SourceTeamId.
         /// </summary>
         public static readonly EventKey EntityDied = new EventKey("EntityDied");
 
@@ -97,8 +99,8 @@ namespace Ludots.Core.Scripting
         public static readonly EventKey InputAction = new EventKey("InputAction");
 
         /// <summary>
-        /// Map-scoped: fired at think-wave granularity when a team's alive-entity count
-        /// (entities with AttributeBuffer) differs from the previous wave.
+        /// Map-scoped: fired when a team's alive-entity count (entities with AttributeBuffer)
+        /// changes across a lifecycle-observer diff (change-driven since #1398 刀2).
         /// Payload: SourceTeamId, Count, Delta.
         /// </summary>
         public static readonly EventKey EntityAliveCountChanged = new EventKey("EntityAliveCountChanged");
@@ -142,7 +144,7 @@ namespace Ludots.Core.Scripting
                 eventName == MapUnloaded.Value ||
                 eventName == MapSuspended.Value ||
                 eventName == MapResumed.Value ||
-                eventName == MapHeartbeat.Value ||
+                eventName == MapTriggerResume.Value ||
                 eventName == EntitySpawned.Value ||
                 eventName == EntityDied.Value ||
                 eventName == EntityAliveCountChanged.Value ||

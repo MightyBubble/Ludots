@@ -525,7 +525,7 @@ namespace Ludots.Tests.GAS
                 GraphKind.TriggerGraph,
                 GraphInstructionSourceMap.Empty,
                 symbols: null,
-                triggerGraphEntries: new[] { new TriggerGraphEntry("boot", "MapHeartbeat", 0, once: false) });
+                triggerGraphEntries: new[] { new TriggerGraphEntry("boot", "MapTriggerResume", 0, once: false) });
             var writer = new GraphReturnWriter(
                 world,
                 programs,

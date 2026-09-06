@@ -105,7 +105,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void DeadSubject_IsInertThenReclaimedByHeartbeatSweep()
+        public void DeadSubject_MountsReclaimedOnDestroyTick()
         {
             using World world = NewWorld(out var gate, out var profiles, out var triggers);
             var entityMounts = new EntityTriggerGraphMounts(
@@ -124,20 +124,14 @@ namespace Ludots.Tests.Gas.Graph
             world.Destroy(subject);
             gate.Update(0.016f);
 
-            // New reclamation contract (#1398 D11): dead subjects go inert immediately —
-            // not counted, never dispatching — and the bounded heartbeat sweep reclaims
-            // the mounts, the same policy template mounts follow.
+            // Destroy-time contract (#1398 刀2): the retired heartbeat sweep is gone. The
+            // dead subject's own context mounts are reclaimed on the destroy handler — no
+            // staged budget, no wave — so the ledger gap closes immediately.
             Assert.That(gate.MountedSubjectCount, Is.EqualTo(0));
             Assert.That(
                 triggers.HasMapEventSubscribers(_mapId, GameEvents.MapLoaded),
-                Is.True,
-                "dead-subject mounts stay registered until the budgeted sweep reclaims them");
-
-            var heartbeat = new ScriptContext();
-            heartbeat.Set(CoreServiceKeys.MapId, _mapId);
-            triggers.FireMapEvent(_mapId, GameEvents.MapHeartbeat, heartbeat);
-
-            Assert.That(triggers.HasMapEventSubscribers(_mapId, GameEvents.MapLoaded), Is.False);
+                Is.False,
+                "dead-subject context mounts are reclaimed on the destroy tick");
             Assert.That(entityMounts.GetDeadMountCount(_mapId), Is.EqualTo(0));
         }
 

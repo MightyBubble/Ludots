@@ -9,8 +9,8 @@ namespace Ludots.Tests.Gas.Production;
 /// TriggerGraph-only #1116/#1115 per-op galleries: StoreArg* staging reaches the
 /// InvokeGraph callee through the named argument key (int return, float echoed into a
 /// map variable, entity physically moved by the callee), the InvokeGraph entry-label
-/// call selects the authored entry, and DispatchMapEvent fires a schema-checked
-/// MapHeartbeat that a map-scoped listener receives with the staged payload.
+/// call selects the authored entry, and DispatchMapEvent fires a declared custom
+/// map event that a map-scoped listener receives with the staged payload (#1398 刀2).
 /// </summary>
 [TestFixture]
 [NonParallelizable]
@@ -98,7 +98,7 @@ public sealed class GraphOpsNodeGalleryInvokeAcceptanceTests
     }
 
     [Test]
-    public void DispatchMapEvent_SchemaHeartbeat_ReachesMapListenerWithPayload()
+    public void DispatchMapEvent_SchemaProbe_ReachesMapListenerWithPayload()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();
         runtime.BindOp("DispatchMapEvent");
@@ -107,9 +107,9 @@ public sealed class GraphOpsNodeGalleryInvokeAcceptanceTests
         runtime.Tick(0.35f);
 
         Assert.That(runtime.Metrics.Detail, Does.Contain("1"),
-            "the map-scoped heartbeat probe must fire exactly once");
+            "the map-scoped dispatch probe must fire exactly once");
         Assert.That(runtime.Metrics.Detail, Does.Contain("5"),
-            "the staged heartbeatIndex payload must arrive at the listener");
+            "the staged count payload must arrive at the listener");
         Assert.That(runtime.Metrics.Detail, Does.Not.Contains("{"));
         foreach (string phrase in runtime.Vignette.AssertDetailContains)
         {

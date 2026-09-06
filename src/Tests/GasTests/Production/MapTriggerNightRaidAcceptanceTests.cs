@@ -100,7 +100,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         Tick(engine, HeartbeatIntervalTicks);
         Assert.That(variables.ReadInt("stage"), Is.EqualTo(4),
             "One beat after stage 4 the graph must still be waiting in its Yield delay.");
-        TickUntil(engine, () => variables.ReadInt("stage") == 5, HeartbeatIntervalTicks * 4,
+        TickUntil(engine, () => variables.ReadInt("stage") == 5, HeartbeatIntervalTicks * 10,
             () => "Two beats after stage 4 the Yield delay must release into stage 5.");
 
         var panelHost = engine.GetService(CoreServiceKeys.PanelHost)

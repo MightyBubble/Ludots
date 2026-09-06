@@ -39,8 +39,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// </summary>
     public sealed class EntityTriggerGraphMounts
     {
-        public const int SweepBudgetPerWave = 64;
-
         private readonly World _world;
         private readonly Func<MapSessionManager?> _sessions;
         private readonly TriggerManager _triggerManager;
@@ -50,7 +48,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Func<CustomEventNameRegistry?> _customEvents;
         private readonly List<MapLoadSpawn> _mapLoadBuffer = new();
         private readonly List<KeyValuePair<TriggerMountOwner, List<Trigger>>> _ownedScratch = new();
-        private readonly List<TriggerMountOwner> _reclaimScratch = new();
 
         public EntityTriggerGraphMounts(
             World world,
@@ -69,13 +66,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _programs = programs ?? throw new ArgumentNullException(nameof(programs));
             _customEvents = customEvents ?? throw new ArgumentNullException(nameof(customEvents));
             _world.SubscribeEntityDestroyed(OnEntityDestroyed);
-            _triggerManager.RegisterEventHandler(GameEvents.MapHeartbeat, OnMapHeartbeat);
         }
 
         /// <summary>
         /// Mount owners whose subject is dead but whose mounts are not yet reclaimed;
-        /// test observability. Counts template and context mounts alike — both follow the
-        /// same budgeted heartbeat sweep (#1398 D11).
+        /// test observability. Destroy-time reclamation makes this transient: with the
+        /// think-wave sweep retired (#1398 刀2), a destroy reclaims its subject's mounts
+        /// in the same handler, so the count is non-zero only mid-handler.
         /// </summary>
         public int GetDeadMountCount(MapId mapId)
         {
@@ -264,45 +261,31 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 {
                     DispatchLifecycle(session, entity, GameEvents.EntityDied, _ownedScratch[i].Value, destroyTick: true);
                 }
-            }
-
-            // Reclamation is not done here: the heartbeat sweep below reclaims dead-subject
-            // mounts of both kinds with a bounded budget (#1398 D11).
-        }
-
-        private Task OnMapHeartbeat(ScriptContext context)
-        {
-            MapId mapId = context.Get<MapId>(CoreServiceKeys.MapId);
-            if (mapId.Value != null)
-            {
-                SweepDeadSubjectMounts(mapId);
-            }
-
-            return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Reclaim owned mounts whose subject died — template and context mounts alike,
-        /// bounded by <see cref="SweepBudgetPerWave"/> per heartbeat wave (#1398 D11:
-        /// one reclamation policy for every entity-domain mount kind).
-        /// </summary>
-        private void SweepDeadSubjectMounts(MapId mapId)
-        {
-            _ownedScratch.Clear();
-            _triggerManager.CollectOwnedMounts(mapId, _ownedScratch);
-            _reclaimScratch.Clear();
-            for (int i = 0; i < _ownedScratch.Count && _reclaimScratch.Count < SweepBudgetPerWave; i++)
-            {
-                if (!_world.IsAlive(_ownedScratch[i].Key.Subject))
+                else
                 {
-                    _reclaimScratch.Add(_ownedScratch[i].Key);
+                    ReclaimMounts(_ownedScratch[i].Key);
                 }
             }
 
-            for (int i = 0; i < _reclaimScratch.Count; i++)
+            // The entity's own TemplateEntity mounts are reclaimed here too: no staged
+            // budget applies to a single destroy (it is naturally bounded by the dead
+            // subject's mount count) and the think-wave sweep is retired (#1398 刀2).
+            for (int i = 0; i < _ownedScratch.Count; i++)
             {
-                _triggerManager.RemoveOwnedMounts(_reclaimScratch[i]);
+                if (_ownedScratch[i].Key.Kind == TriggerMountOwnerKind.TemplateEntity)
+                {
+                    ReclaimMounts(_ownedScratch[i].Key);
+                }
             }
+        }
+
+        /// <summary>
+        /// Reclaim every mount a dead subject owns, immediately and completely (#1398 刀2:
+        /// destroy-time reclamation replaces the retired heartbeat budget sweep).
+        /// </summary>
+        private void ReclaimMounts(TriggerMountOwner owner)
+        {
+            _triggerManager.RemoveOwnedMounts(owner);
         }
 
         private void DispatchLifecycle(

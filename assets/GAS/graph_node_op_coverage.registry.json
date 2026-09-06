@@ -675,7 +675,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryInvokeAcceptanceTests.DispatchMapEvent_SchemaHeartbeat_ReachesMapListenerWithPayload"
+        "GraphOpsNodeGalleryInvokeAcceptanceTests.DispatchMapEvent_SchemaProbe_ReachesMapListenerWithPayload"
       ],
       "codegenStatus": "covered"
     },
