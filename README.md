@@ -89,6 +89,7 @@ The single official entry is the **[Ludots Documentation Portal](https://mightyb
 *   [Contributing & Development](gitbook/contributing/README.md) — coding standards, feature development workflow, AI-assisted development rules, environment setup
 *   Showcase & acceptance registry: `showcase.registry.json` (repo root)
 *   [In-repo deep materials](docs/README.md) — portal site source, ADR, audits, RFCs, and long-form design docs
+*   [pi 自动化编排工作流](docs/orchestration.md) — 维护者在 issue 上打 `pi:auto` 标签，conductor 在隔离 worktree 拉起 pi agent 实现并开 PR
 
 ## 🤝 Contributing
 
