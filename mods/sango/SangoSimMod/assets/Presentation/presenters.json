@@ -105,6 +105,16 @@
       1
      ]
     }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 1.5,
+     "updatePolicy": "Once"
+    }
    }
   ]
  },
@@ -140,6 +150,16 @@
       1
      ]
     }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 1.5,
+     "updatePolicy": "Once"
+    }
    }
   ]
  },
@@ -174,6 +194,16 @@
       1,
       1
      ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 1.5,
+     "updatePolicy": "Once"
     }
    }
   ]
@@ -211,6 +241,16 @@
       1
      ]
     }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 17.0,
+     "updatePolicy": "Once"
+    }
    }
   ]
  },
@@ -247,6 +287,16 @@
       1
      ]
     }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 9.7,
+     "updatePolicy": "Once"
+    }
    }
   ]
  },
@@ -281,6 +331,16 @@
       1,
       1
      ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 1.2,
+     "updatePolicy": "Once"
     }
    }
   ]
@@ -317,6 +377,16 @@
       1
      ]
     }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 0.0,
+     "updatePolicy": "Once"
+    }
    }
   ]
  },
@@ -351,6 +421,16 @@
       1,
       1
      ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 5.6,
+     "updatePolicy": "Once"
     }
    }
   ]
@@ -388,6 +468,16 @@
       1
      ]
     }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 18.7,
+     "updatePolicy": "Once"
+    }
    }
   ]
  },
@@ -413,7 +503,8 @@
       12.2,
       12.2
      ],
-     "scaleParamKey": "sango.city.marker.scale"
+     "scaleParamKey": "sango.city.marker.scale",
+     "colorParamKey": "sango.city.marker.color"
     },
     "style": {
      "color": [
@@ -617,7 +708,8 @@
       2.05,
       2.05
      ],
-     "scaleParamKey": "sango.city.marker.scale"
+     "scaleParamKey": "sango.city.marker.scale",
+     "colorParamKey": "sango.city.marker.color"
     },
     "style": {
      "color": [
@@ -749,7 +841,8 @@
       3.8,
       3.8
      ],
-     "scaleParamKey": "sango.city.marker.scale"
+     "scaleParamKey": "sango.city.marker.scale",
+     "colorParamKey": "sango.city.marker.color"
     },
     "style": {
      "color": [
