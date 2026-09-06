@@ -36,7 +36,6 @@ using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.Vision;
-using Ludots.Platform.Abstractions;
 using Ludots.Presentation.Skia;
 using Ludots.UI;
 using Ludots.UI.Browser;
@@ -56,6 +55,10 @@ namespace Ludots.Adapter.Raylib
         private static VertexMapTerrainChunkMeshSource? _terrainSource;
 
         private const uint FlagWindowResizable = 4;
+        private const float HostShadowTexelWorld = 0.08f;
+        private static readonly float HostShadowSceneRadiusMeters =
+            ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SHADOW_SCENE_RADIUS", 48f);
+
         private static readonly ServiceKey<IRaylibBenchmarkRenderer> RaylibBenchmarkRendererKey = new("Platform.RaylibBenchmarkRenderer");
         private static bool _uiPointerCaptured;
         private static PointerButton? _uiCapturedPointerButton;
@@ -329,6 +332,20 @@ namespace Ludots.Adapter.Raylib
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 RaylibPrimitiveRenderMode primitiveMode = ResolvePrimitiveRenderMode();
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(primitiveMode, engine.VFS, materials, Ludots.Core.Presentation.Assets.AnimationChannelRegistry.Register);
+                MeshAssetRegistry residencyMeshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
+                    ?? throw new InvalidOperationException("Raylib map residency requires PresentationMeshAssetRegistry.");
+                primitiveRenderer.BindResidencyMeshAssets(residencyMeshes);
+                using var mapLoadResidencyGate = new RenderAssetMapLoadCompletionGate((IRenderAssetResidency)primitiveRenderer);
+                using var backendSceneRuntime = new RaylibBackendSceneRuntime(primitiveRenderer);
+                backendSceneRuntime.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
+                    engine.ConfigCatalog,
+                    engine.ConfigPipeline,
+                    engine.ConfigConflictReport,
+                    RaylibBackendSceneCatalog.DefaultRelativePath));
+                using var mapLoadCompletionGate = new RaylibSceneMapLoadCompletionGate(
+                    mapLoadResidencyGate,
+                    backendSceneRuntime);
+                engine.SetService(CoreServiceKeys.MapLoadCompletionGate, (IMapLoadCompletionGate)mapLoadCompletionGate);
                 primitiveRenderer.BindReceiverMeshProjector(
                     new MapLaneReceiverMeshProjector(engine, continuousHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector));
                 primitiveRenderer.BindInstancedBatchLaneSource(setup.InstancedBatchLaneStore);
@@ -339,9 +356,19 @@ namespace Ludots.Adapter.Raylib
                             ?? throw new InvalidOperationException("Raylib host requires the Core PresentationSkinnedVisualBatchBuffer service."),
                         engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
                             ?? throw new InvalidOperationException("Raylib host requires the Core PresenterDefinitionRegistry service."),
-                        engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
-                            ?? throw new InvalidOperationException("Raylib host requires the Core PresentationMeshAssetRegistry service."),
-                        (meshAssetId, descriptor) => primitiveRenderer.GpuSkinnedModelCache.GetOrLoad(meshAssetId, in descriptor)));
+                        residencyMeshes,
+                        (meshAssetId, descriptor) => primitiveRenderer.GpuSkinnedModelCache.GetOrLoad(meshAssetId, in descriptor),
+                        (int meshAssetId, MeshAssetDescriptor descriptor, out RaylibGpuSkinnedModelCache.Entry entry, out string? status) =>
+                        {
+                            RaylibGpuSkinnedModelAcquireOutcome outcome = primitiveRenderer.GpuSkinnedModelCache.TryGetOrLoad(
+                                meshAssetId,
+                                in descriptor,
+                                out entry,
+                                out status);
+                            return outcome;
+                        }));
+                using var directionalShadowMap = new RaylibDirectionalShadowMap(renderEnvironmentConfig.Shadow);
+
                 using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS);
                 skyEnvironment.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
                     engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibSkyEnvironment.DefaultRelativePath));
@@ -580,6 +607,7 @@ namespace Ludots.Adapter.Raylib
                             cullingSystem);
 
                         engine.SetService(CoreServiceKeys.HostFrameIndex, frameIndex);
+                        primitiveRenderer.PumpAssetUploads();
                         engine.Tick(dt);
                         // Typed instanced batch requests live from tick end until the next tick's
                         // buffer clear; consuming them here hands resident lanes to this frame's draw.
@@ -710,9 +738,24 @@ namespace Ludots.Adapter.Raylib
                             frameLighting.Evaluate();
                         }
 
-                        terrainRenderer.ApplyFrameLighting(frameLighting);
-                        continuousHeightmapRenderer.ApplyFrameLighting(frameLighting);
-                        primitiveRenderer.DrawSurfaceWireBoxes = drawDebugDraw;
+                        CaptureDirectionalShadows(
+                            directionalShadowMap,
+                            frameLighting,
+                            in activeCamera,
+                            drawTerrain,
+                            drawContinuousHeightmap,
+                            hasContinuousHeightmap,
+                            drawPrimitives,
+                            terrainRenderer,
+                            continuousHeightmapRenderer,
+                            primitiveRenderer,
+                            engine,
+                            renderDebug.AcceptanceScaleMultiplier);
+                        float shadowTexelWorld = HostShadowTexelWorld;
+                        terrainRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld);
+                        continuousHeightmapRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld);
+                        primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position, directionalShadowMap, shadowTexelWorld);
+                        Restore3DDepthState();
 
                         bool waterOnContinuousHeightmap = waterPass.IsActive &&
                                                       drawTerrain &&
@@ -920,6 +963,11 @@ namespace Ludots.Adapter.Raylib
                             else
                             {
                                 presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
+                            }
+
+                            if (activeMapId != null)
+                            {
+                                _ = backendSceneRuntime.Draw(activeMapId);
                             }
 
                             if (drawNavMeshOverlay)
@@ -1141,6 +1189,7 @@ namespace Ludots.Adapter.Raylib
                         {
                             AppendRaylibDiagnostic(diagnosticPath, $"sample frame={frameIndex}");
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
+                            AppendRaylibDiagnostic(diagnosticPath, BuildAssetResidencyDiagnostic(engine, primitiveRenderer));
                         }
 
                         if (milestoneCaptureSequence != null &&
@@ -1193,6 +1242,7 @@ namespace Ludots.Adapter.Raylib
                                 diagnosticPath,
                                 $"screenshot frame={frameIndex} cameraPos=({activeCamera.position.X:F2},{activeCamera.position.Y:F2},{activeCamera.position.Z:F2}) cameraTarget=({activeCamera.target.X:F2},{activeCamera.target.Y:F2},{activeCamera.target.Z:F2})");
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
+                            AppendRaylibDiagnostic(diagnosticPath, BuildAssetResidencyDiagnostic(engine, primitiveRenderer));
                             AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildVisualKindDiagnosticSummary());
                             if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshesForDiagnostics))
                             {
@@ -1230,6 +1280,7 @@ namespace Ludots.Adapter.Raylib
                         {
                             AppendRaylibDiagnostic(diagnosticPath, $"auto-exit frame={frameIndex}");
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
+                            AppendRaylibDiagnostic(diagnosticPath, BuildAssetResidencyDiagnostic(engine, primitiveRenderer));
                             break;
                         }
                     }
@@ -1940,6 +1991,12 @@ namespace Ludots.Adapter.Raylib
             int rawDebugDrawCount = debugDraw == null ? 0 : debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count;
             string presenterDefs = presenters?.BuildActiveDefinitionSummary(8) ?? string.Empty;
             return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} presenterActive={presenters?.ActiveCount ?? 0} presenterDefs={presenterDefs} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} skinnedRaw={timing.SkinnedRawLastFrame} gpuSkinned={timing.GpuSkinnedInstancesLastFrame}/{timing.GpuSkinnedBatchesLastFrame} gpuSkinBuild={timing.LastGpuSkinnedMatrixBuildMs:F2} gpuSkinDraw={timing.LastGpuSkinnedMeshDrawMs:F2} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPresenterBehaviorMs:F2} behaviorBoot={timing.PresenterBootstrapCountLastFrame} behaviorOwner={timing.PresenterOwnerChangesLastFrame} behaviorAttr={timing.PresenterOwnerAttributeChangesLastFrame} behaviorTag={timing.PresenterOwnerTagChangesLastFrame} behaviorTick={timing.PresenterTickDrivenCountLastFrame} animator={timing.LastPresenterAnimatorMs:F2} transformSync={timing.LastPresenterEntityTransformSyncMs:F2} minimapCollect={timing.LastPresenterMinimapMarkerMs:F2} minimapMarkers={timing.PresenterMinimapMarkersLastFrame}/{timing.PresenterMinimapDroppedLastFrame} minimapProject={timing.LastMinimapProjectionMs:F2} minimapScreen={timing.MinimapScreenMarkersLastFrame}/{timing.MinimapScreenMarkersDroppedLastFrame} heightSync={timing.LastTerrainHeightSyncMs:F2} heightSamples={timing.TerrainHeightSamplesLastFrame} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPresenterBatchMs:F2}/{timing.LastRuntimeSpawnPresenterCreateMs:F2}/{timing.LastRuntimeSpawnPresenterBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPresenterCreateSetupMs:F2}/{timing.LastRuntimeSpawnPresenterWorldCreateMs:F2}/{timing.LastRuntimeSpawnPresenterComponentFillMs:F2}/{timing.LastRuntimeSpawnPresenterIndexWriteMs:F2}/{timing.LastRuntimeSpawnPresenterOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPresenterPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPresenterChildSetupMs:F2}/{timing.LastRuntimeSpawnPresenterChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPresenterChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPresenterChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPresenterChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPresenterSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} terrainChunks={timing.TerrainChunksDrawnLastFrame}/{timing.TerrainChunksBuiltLastFrame} field={timing.LastGlobalFieldRenderMs:F2} fieldCount={timing.GlobalFieldTexturesLastFrame} fieldDirty={timing.GlobalFieldDirtyUploadsLastFrame} fieldArea={timing.GlobalFieldDirtyUploadAreaLastFrame} fieldDraws={timing.GlobalFieldDrawsLastFrame} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastSplineRibbonRenderMs:F2} splineCount={timing.SplineRibbonsLastFrame} splineRaw={splineRibbon?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPresenterEmitMs:F2} emitDirty={timing.LastPresenterEmitDirtyProcessMs:F2} emitDirtyCount={timing.PresenterEmitDirtyCountLastFrame} emitRetained={timing.LastPresenterEmitRetainedProcessMs:F2} emitRetainedCount={timing.PresenterEmitRetainedCountLastFrame} emitRetainedDirectPath={timing.PresenterEmitRetainedDirectHitsLastFrame}/{timing.PresenterEmitRetainedFullPathLastFrame}/{timing.PresenterEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
+        }
+
+        private static string BuildAssetResidencyDiagnostic(GameEngine engine, RaylibPrimitiveRenderer renderer)
+        {
+            MapLoadStatus status = engine.GetService(CoreServiceKeys.MapLoadStatus);
+            return $"assetResidency mapRequired={status.RequiredAssetCount} mapResident={status.ResidentAssetCount} mapInFlight={status.InFlightAssetCount} mapFailed={status.FailedAssetCount} storeResident={renderer.ResidentAssetCount} storeInFlight={renderer.InFlightAssetCount} storeRetired={renderer.RetiredAssetCount}";
         }
 
         private static void ValidateRequiredContextBeforeLoop(GameEngine engine)
@@ -2813,6 +2870,56 @@ namespace Ludots.Adapter.Raylib
 
                 Rl.DrawLine3D(new Vector3(x, y, startZ), new Vector3(x, y, endZ), xCol);
                 Rl.DrawLine3D(new Vector3(startX, y, z), new Vector3(endX, y, z), zCol);
+            }
+        }
+
+
+        private static void CaptureDirectionalShadows(
+            RaylibDirectionalShadowMap shadowMap,
+            RaylibFrameLighting lighting,
+            in Camera3D camera,
+            bool drawTerrain,
+            bool drawContinuousHeightmap,
+            bool hasContinuousHeightmap,
+            bool drawPrimitives,
+            RaylibTerrainRenderer terrainRenderer,
+            RaylibContinuousHeightmapRenderer continuousHeightmapRenderer,
+            RaylibPrimitiveRenderer primitiveRenderer,
+            GameEngine engine,
+            float primitiveScaleMul)
+        {
+            shadowMap.BeginFrame(lighting.SunDirectionToward, camera.target, HostShadowSceneRadiusMeters);
+            try
+            {
+                if (drawContinuousHeightmap &&
+                    hasContinuousHeightmap &&
+                    engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? heightmapSource) &&
+                    heightmapSource is IContinuousHeightmapRenderSource heightmapCaster)
+                {
+                    continuousHeightmapRenderer.RenderShadow(heightmapCaster, camera, shadowMap);
+                }
+                else if (drawTerrain && engine.VertexMap != null)
+                {
+                    terrainRenderer.RenderTerrainShadow(TerrainSourceFor(engine.VertexMap), camera, shadowMap);
+                }
+
+                if (drawPrimitives &&
+                    engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer? draw) &&
+                    engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry? meshes))
+                {
+                    primitiveRenderer.DrawShadow(draw, shadowMap, meshes, camera, primitiveScaleMul);
+                }
+
+                SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
+                if (skinnedBatch != null &&
+                    engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry? skinMeshes))
+                {
+                    primitiveRenderer.DrawShadow(skinnedBatch, shadowMap, skinMeshes, primitiveScaleMul);
+                }
+            }
+            finally
+            {
+                shadowMap.EndFrame();
             }
         }
 

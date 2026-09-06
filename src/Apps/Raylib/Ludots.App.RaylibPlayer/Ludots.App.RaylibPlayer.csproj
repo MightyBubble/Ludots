@@ -9,6 +9,11 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
+  <!-- Shipping 构建（构建期裁剪）：dotnet publish -p:Shipping=true 出纯 ship 应用——无编辑器/gizmo/检视，无参直进场景。 -->
+  <PropertyGroup Condition="'$(Shipping)' == 'true'">
+    <DefineConstants>$(DefineConstants);LUDOTS_SHIPPING</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\..\Client\Ludots.Raylib.Render\Ludots.Raylib.Render.csproj" />
     <ProjectReference Include="..\..\..\Client\Ludots.Raylib.SceneKit\Ludots.Raylib.SceneKit.csproj" />

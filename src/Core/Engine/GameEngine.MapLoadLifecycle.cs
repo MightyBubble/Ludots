@@ -94,6 +94,12 @@ namespace Ludots.Core.Engine
 
         private void SetCurrentMapSession(MapSession session)
         {
+            if (CurrentMapSession != null && !ReferenceEquals(CurrentMapSession, session) &&
+                GetService(CoreServiceKeys.MapLoadCompletionGate) is IMapLoadCompletionGateLifetime gateLifetime)
+            {
+                gateLifetime.Release(CurrentMapSession);
+            }
+
             CurrentMapSession = session;
             if (session == null)
             {
@@ -309,7 +315,8 @@ namespace Ludots.Core.Engine
 
             try
             {
-                IPendingMapLoad pendingLoad = gate.BeginPendingLoad(new MapLoadCompletionRequest(this, session.MapId, mapConfig, session, isPush));
+                MapPresentationAssetManifest presentationAssets = MapLoader.BuildPresentationAssetManifest(mapConfig);
+                IPendingMapLoad pendingLoad = gate.BeginPendingLoad(new MapLoadCompletionRequest(this, session.MapId, mapConfig, session, isPush, presentationAssets));
                 if (pendingLoad == null)
                 {
                     return false;
@@ -319,7 +326,7 @@ namespace Ludots.Core.Engine
                 if (initialResult.State == MapLoadCompletionState.Pending)
                 {
                     _pendingMapLoads[session.MapId] = new PendingMapLoadState(session, mapConfig, pendingLoad);
-                    SetMapLoadStatus(session.MapId, MapLoadStatus.DeferredPending);
+                    SetMapLoadStatus(session.MapId, MapLoadStatus.FromCompletion(initialResult, isDeferred: true));
                     return true;
                 }
 
@@ -346,7 +353,8 @@ namespace Ludots.Core.Engine
 
             try
             {
-                IPendingMapLoad pendingLoad = gate.BeginPendingResume(new MapResumeCompletionRequest(this, session, closedSession));
+                MapPresentationAssetManifest presentationAssets = MapLoader.BuildPresentationAssetManifest(session.MapConfig);
+                IPendingMapLoad pendingLoad = gate.BeginPendingResume(new MapResumeCompletionRequest(this, session, closedSession, presentationAssets));
                 if (pendingLoad == null)
                 {
                     return false;
@@ -356,7 +364,7 @@ namespace Ludots.Core.Engine
                 if (initialResult.State == MapLoadCompletionState.Pending)
                 {
                     _pendingMapResumes[session.MapId] = new PendingMapResumeState(session, closedSession, pendingLoad);
-                    SetMapLoadStatus(session.MapId, MapLoadStatus.DeferredPending);
+                    SetMapLoadStatus(session.MapId, MapLoadStatus.FromCompletion(initialResult, isDeferred: true));
                     return true;
                 }
 
@@ -409,6 +417,7 @@ namespace Ludots.Core.Engine
 
                     if (result.State == MapLoadCompletionState.Pending)
                     {
+                        SetMapLoadStatus(pair.Key, MapLoadStatus.FromCompletion(result, isDeferred: true));
                         continue;
                     }
 
@@ -464,6 +473,7 @@ namespace Ludots.Core.Engine
 
                 if (result.State == MapLoadCompletionState.Pending)
                 {
+                    SetMapLoadStatus(pair.Key, MapLoadStatus.FromCompletion(result, isDeferred: true));
                     continue;
                 }
 

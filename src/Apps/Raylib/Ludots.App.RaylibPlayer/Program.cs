@@ -66,6 +66,23 @@ namespace Ludots.App.RaylibPlayer
                 return 2;
             }
 
+#if LUDOTS_SHIPPING
+            // 纯 ship 形态：无编辑器/检视/拾取器，--project 可选（唯一工程直进），--scene 可选（缺省第一个场景）。
+            string? shipProject = ParseOption(args, "--project");
+            if (shipProject == null)
+            {
+                List<(string Name, string Path)> found = DiscoverProjects();
+                if (found.Count == 0)
+                {
+                    Console.Error.WriteLine("No engine project found.");
+                    return 2;
+                }
+                shipProject = found[0].Path;
+            }
+            EngineProject shipOpened = EngineProject.Open(shipProject);
+            string shipScene = ParseOption(args, "--scene") ?? shipOpened.Ids[0];
+            return RunScene(shipOpened, shipOpened.Create(shipScene), ParseOption(args, "--screenshot"), ParseOption(args, "--json"), ParseFrames(args));
+#else
             string? sceneId = ParseOption(args, "--scene");
             string? screenshotPath = ParseOption(args, "--screenshot");
             string? jsonPath = ParseOption(args, "--json");
@@ -112,6 +129,7 @@ namespace Ludots.App.RaylibPlayer
             }
 
             return RunMenu(project, menuAuto, interactiveShot);
+#endif
         }
 
         /// <summary>发现身边的工程：当前目录/输出目录自身与其下 projects/ 各层里的 project.json。</summary>
@@ -356,11 +374,11 @@ namespace Ludots.App.RaylibPlayer
             GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, $"Ludots Player — {project.Name}/{scene.Title}");
             Rl.SetTargetFPS(60);
-            bool editing = startInEditor && editorScenePath != null;
+            PlayerMode mode = startInEditor && editorScenePath != null ? PlayerMode.Edit : PlayerMode.Preview;
             EngineOrbitCamera camera = CreateCamera(scene);
             scene.Load();
-            SceneEditorSession? editor = editing && editorScenePath != null
-                ? new SceneEditorSession(new EngineSceneEditorModel(editorScenePath))
+            SceneEditorSession? editor = mode == PlayerMode.Edit
+                ? new SceneEditorSession(new EngineSceneEditorModel(editorScenePath!))
                 : null;
 
             Camera3D cam = camera.Camera;
@@ -371,21 +389,30 @@ namespace Ludots.App.RaylibPlayer
                 float dt = Rl.GetFrameTime();
                 total += dt;
 
-                if (editor != null && Rl.IsKeyPressed(KeyboardKey.KEY_E))
+                PlayerMode previous = mode;
+                if (Rl.IsKeyPressed(KeyboardKey.KEY_E))
                 {
-                    editing = !editing;
-                    if (!editing)
+                    mode = mode == PlayerMode.Edit ? PlayerMode.Preview : PlayerMode.Edit;
+                }
+                else if (Rl.IsKeyPressed(KeyboardKey.KEY_TAB))
+                {
+                    mode = mode == PlayerMode.Preview ? PlayerMode.Inspect : PlayerMode.Preview;
+                }
+
+                if (mode != previous)
+                {
+                    if (previous == PlayerMode.Edit && editor != null)
                     {
                         editor.Dispose();
                         editor = null;
                     }
-                }
-                else if (editor == null && editorScenePath != null && Rl.IsKeyPressed(KeyboardKey.KEY_E) && File.Exists(editorScenePath))
-                {
-                    editor = new SceneEditorSession(new EngineSceneEditorModel(editorScenePath));
-                    editing = true;
+                    if (mode == PlayerMode.Edit && editorScenePath != null && File.Exists(editorScenePath))
+                    {
+                        editor = new SceneEditorSession(new EngineSceneEditorModel(editorScenePath));
+                    }
                 }
 
+                bool editing = mode == PlayerMode.Edit;
                 if (editing && editor != null)
                 {
                     editor.HandleInput(camera.Camera, WindowWidth, WindowHeight);
@@ -401,7 +428,7 @@ namespace Ludots.App.RaylibPlayer
                     camera.Update(dt);
                 }
 
-                cam = editing ? camera.Camera : camera.Camera;
+                cam = camera.Camera;
 
                 Rl.BeginDrawing();
                 Rl.ClearBackground(GalleryColors.Black);
@@ -414,9 +441,12 @@ namespace Ludots.App.RaylibPlayer
                     Rl.EndMode3D();
                 }
 
-                GalleryFont.Draw(editing
-                    ? "[E] 退出编辑   [Ctrl+S] 保存   左键拾取/拖轴   右键旋转（检视视图 · 游戏 3C 由 Ludots 接管）"
-                    : "[ESC] 返回菜单   [R] 复位检视视角   [E] 编辑场景（检视视图 · 游戏 3C 由 Ludots 接管）", 8, WindowHeight - 26, 15, GalleryColors.RayWhite);
+                GalleryFont.Draw(mode switch
+                {
+                    PlayerMode.Edit => "[E]→预览  [Ctrl+S]保存  左键拾取/拖轴  右键旋转（编辑态）",
+                    PlayerMode.Inspect => "[Tab]→预览  [E]→编辑  左键旋转  WASD 平移（检视视图·游戏3C归Ludots）",
+                    _ => "[E]→编辑  [Tab]→检视  左键旋转  WASD 平移（预览·runtime模拟）",
+                }, 8, WindowHeight - 26, 15, GalleryColors.RayWhite);
                 GalleryFont.Draw($"{scene.Title} — {scene.Summary}", 8, WindowHeight - 48, 18, new Color(220, 220, 230, 255));
                 GalleryFont.Flush();
 
@@ -616,6 +646,14 @@ namespace Ludots.App.RaylibPlayer
                 File.Delete(tempPath);
                 File.Delete(tempPath + ".bak");
             }
+        }
+
+        /// <summary>播放器三态：Edit（编辑器视口）/ Preview（runtime 模拟，从 scene.json 快照重建只读投影）/ Inspect（自由检视，检视视图·游戏 3C 归 Ludots 接管）。</summary>
+        private enum PlayerMode
+        {
+            Edit,
+            Preview,
+            Inspect,
         }
 
         private static bool HasFlag(string[] args, string name)

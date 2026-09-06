@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using Ludots.Platform.Abstractions;
 using Ludots.Raylib.Render;
 using NUnit.Framework;
@@ -177,5 +178,48 @@ public sealed class RaylibAssetStoreConsumerTests
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => cache.GetOrLoad(7, descriptor));
         Assert.That(error.Message, Does.Contain("mod:first.glb"), "聚合异常应列出首个 URI 的失败原因");
         Assert.That(error.Message, Does.Contain("mod:second.glb"), "链式回退应尝试并记录第二个 URI");
+    }
+
+    [Test]
+    public void SkinnedCache_ColdRequestReturnsInFlightWithoutAdvancingTheUriChain()
+    {
+        WriteAsset("mod:first.glb");
+        WriteAsset("mod:second.glb");
+        using var workerStarted = new ManualResetEventSlim(false);
+        using var releaseWorker = new ManualResetEventSlim(false);
+        int prepareCalls = 0;
+        using var modelStore = new RaylibAssetStore<Model>(
+            new FakeResolver(_root),
+            _ => default,
+            _ => { },
+            cpuPrepare: fullPath =>
+            {
+                Interlocked.Increment(ref prepareCalls);
+                workerStarted.Set();
+                releaseWorker.Wait();
+                return fullPath;
+            },
+            uploader: _ => default);
+        using var cache = new RaylibGpuSkinnedModelCache(new FakeResolver(_root), modelStore);
+        var descriptor = new MeshAssetDescriptor
+        {
+            Type = MeshAssetType.Model,
+            SourceUris = new[] { "mod:first.glb", "mod:second.glb" },
+        };
+
+        RaylibGpuSkinnedModelAcquireOutcome first = cache.TryGetOrLoad(7, descriptor, out _, out _);
+        Assert.That(first, Is.EqualTo(RaylibGpuSkinnedModelAcquireOutcome.InFlight));
+        Assert.That(workerStarted.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        RaylibGpuSkinnedModelAcquireOutcome second = cache.TryGetOrLoad(7, descriptor, out _, out _);
+        Assert.That(second, Is.EqualTo(RaylibGpuSkinnedModelAcquireOutcome.InFlight));
+        Assert.That(Volatile.Read(ref prepareCalls), Is.EqualTo(1), "同一候选仍在装载时不得并行启动后续 URI");
+
+        releaseWorker.Set();
+        Assert.That(SpinWait.SpinUntil(
+            () => modelStore.TryGetState("mod:first.glb", out RaylibAssetState state, out _, out _) &&
+                state == RaylibAssetState.CpuReady,
+            TimeSpan.FromSeconds(2)),
+            Is.True);
     }
 }

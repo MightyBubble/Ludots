@@ -4,6 +4,9 @@
   "targetFps": 0,
   "worldWidthInMacroTiles": 250,
   "worldHeightInMacroTiles": 250,
+  "gasRuntimeCapacity": {
+    "effectRequestQueueCapacity": 5000
+  },
   "commandSource": {
     "movePathPreviewOrderTypeKeys": [
       "massNavigationMove"

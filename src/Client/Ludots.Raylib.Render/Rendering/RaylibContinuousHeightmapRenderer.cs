@@ -370,7 +370,7 @@ namespace Ludots.Raylib.Render
             _frameShadowTexelWorld = shadowTexelWorld;
             if (_initialized)
             {
-                lighting.Apply(_terrainShader, in _terrainLightingLocs);
+                ApplySkyIrradianceUniforms();
                 ApplyTerrainShadow();
             }
         }
@@ -684,10 +684,7 @@ namespace Ludots.Raylib.Render
         private void ApplySkyIrradianceUniforms()
         {
             _frameLighting!.Apply(_terrainShader, in _terrainLightingLocs);
-            Vector3 zenith = _frameLighting.SkyZenithColor;
-            Vector3 ground = _frameLighting.SkyGroundColor;
-            Rl.SetShaderValue(_terrainShader, _locSkyZenith, &zenith, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-            Rl.SetShaderValue(_terrainShader, _locSkyGround, &ground, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            _frameLighting.ApplySkyIrradiance(_terrainShader, _locSkyZenith, _locSkyGround);
         }
 
         private void ApplyTerrainShadow()

@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant Host as Raylib host
+    participant Core as Core MapLoader
+    participant Scene as Raylib backend scene
+    participant Batch as Instanced batch lane
+    participant Bridge as AgentBridge
+
+    Host->>Host: Pump asset uploads
+    Host->>Core: engine.Tick
+    Core-->>Core: Create one map anchor entity
+    Core-->>Host: MapLoaded deferred
+    Host->>Scene: Poll backend scene residency
+    Scene-->>Scene: Load glTF and texture
+    Scene-->>Host: Resident
+    Host->>Core: engine.Tick
+    Core-->>Host: Combined gate ready
+    Host->>Scene: Mark map ready
+    Host->>Batch: Apply typed lane requests
+    Batch-->>Host: One resident lane, 64 instances
+    Host->>Scene: Draw backend model
+    Host->>Bridge: Query entities and presenters
+    Bridge-->>Host: 1 entity, 1 entity presenter, 0 scene entities
+
+    Note over Core,Scene: Failure guard: either side failing cancels the other and releases its lease

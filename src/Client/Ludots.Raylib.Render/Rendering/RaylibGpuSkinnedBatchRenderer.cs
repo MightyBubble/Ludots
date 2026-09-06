@@ -9,6 +9,13 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Raylib.Render
 {
+    public enum RaylibGpuSkinnedSubmitOutcome : byte
+    {
+        Unsupported = 0,
+        Submitted = 1,
+        InFlight = 2,
+    }
+
     internal sealed unsafe class RaylibGpuSkinnedBatchRenderer : IDisposable
     {
         private readonly RaylibGpuSkinnedModelCache _modelCache;
@@ -22,6 +29,9 @@ namespace Ludots.Raylib.Render
         private int _locSkinningMetallic;
         private int _locSkinningHasRoughnessMap;
         private int _locSkinningHasMetallicMap;
+        private int _locSkyZenith = -1;
+        private int _locSkyGround = -1;
+        private int _locEnvSpecular = -1;
         private RaylibPbrUniformLocations _skinningPbrLocs;
         private RaylibFrameLightingLocations _skinningLightingLocs;
         private RaylibShadowSamplingLocations _skinningShadowLocs;
@@ -80,9 +90,7 @@ namespace Ludots.Raylib.Render
             _frameShadowTexelWorld = shadowTexelWorld;
             if (_skinningShaderReady)
             {
-                lighting.Apply(_skinningShader, in _skinningLightingLocs);
-                lighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, viewPos);
-                _skinningShadowLocs.ApplyUniforms(_skinningShader, _frameShadow, _frameShadowTexelWorld);
+                ApplySkinningFrameLighting();
             }
         }
 
@@ -102,6 +110,16 @@ namespace Ludots.Raylib.Render
 
         public bool TrySubmit(in SkinnedVisualBatchItem item, IRenderMeshAssets meshes, float scaleMul)
         {
+            return TrySubmit(in item, meshes, scaleMul, out _);
+        }
+
+        public bool TrySubmit(
+            in SkinnedVisualBatchItem item,
+            IRenderMeshAssets meshes,
+            float scaleMul,
+            out RaylibGpuSkinnedSubmitOutcome outcome)
+        {
+            outcome = RaylibGpuSkinnedSubmitOutcome.Unsupported;
             if (item.RenderPath != VisualRenderPath.GpuSkinnedInstance ||
                 !meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor) ||
                 descriptor.Type != MeshAssetType.Model)
@@ -109,7 +127,23 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
-            RaylibGpuSkinnedModelCache.Entry entry = _modelCache.GetOrLoad(item.MeshAssetId, in descriptor);
+            RaylibGpuSkinnedModelAcquireOutcome acquire = _modelCache.TryGetOrLoad(
+                item.MeshAssetId,
+                in descriptor,
+                out RaylibGpuSkinnedModelCache.Entry entry,
+                out string? status);
+            if (acquire == RaylibGpuSkinnedModelAcquireOutcome.InFlight)
+            {
+                outcome = RaylibGpuSkinnedSubmitOutcome.InFlight;
+                return false;
+            }
+
+            if (acquire == RaylibGpuSkinnedModelAcquireOutcome.Failed)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} meshAssetId={item.MeshAssetId} failed to load GpuSkinnedInstance: {status}");
+            }
+
             AnimatorPackedState animator = item.Animator;
             RaylibSkinnedPlayback.ResolveFromAnimator(
                 in animator,
@@ -160,6 +194,7 @@ namespace Ludots.Raylib.Render
                 poseRow,
                 item.Color);
             LastMatrixBuildMs += (Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency;
+            outcome = RaylibGpuSkinnedSubmitOutcome.Submitted;
             return true;
         }
 
@@ -451,8 +486,16 @@ namespace Ludots.Raylib.Render
             }
 
             EnsureShaderInitialized();
-            _frameLighting.Apply(_skinningShader, in _skinningLightingLocs);
+            ApplySkinningFrameLighting();
+        }
+
+        private void ApplySkinningFrameLighting()
+        {
+            _frameLighting!.Apply(_skinningShader, in _skinningLightingLocs);
             _frameLighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, _frameViewPos);
+            _frameLighting.ApplySkyIrradiance(_skinningShader, _locSkyZenith, _locSkyGround);
+            float envSpecular = 1f;
+            Rl.SetShaderValue(_skinningShader, _locEnvSpecular, &envSpecular, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             _skinningShadowLocs.ApplyUniforms(_skinningShader, _frameShadow, _frameShadowTexelWorld);
         }
 
@@ -494,6 +537,9 @@ namespace Ludots.Raylib.Render
             int locVertexColor = Rl.GetShaderLocationAttrib(_skinningShader, "vertexColor");
             int locBoneIds = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneIds");
             int locBoneWeights = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneWeights");
+            _locSkyZenith = RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uSkyZenith", "skinning_instanced");
+            _locSkyGround = RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uSkyGround", "skinning_instanced");
+            _locEnvSpecular = RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uEnvSpecular", "skinning_instanced");
             _skinningLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_skinningShader, "skinning_instanced");
             _skinningShadowLocs = RaylibShadowSamplingLocations.ResolveOrThrow(
                 _skinningShader,
@@ -521,6 +567,10 @@ namespace Ludots.Raylib.Render
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_EMISSION] = _skinningShadowLocs.ShadowMap;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = _locBonePaletteSampler;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = _locInstanceTableSampler;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_CUBEMAP] =
+                RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uPrefilteredEnv", "skinning_instanced");
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_BRDF] =
+                RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uBrdfLut", "skinning_instanced");
 
             // 姿势纹理蒙皮（#1395）：boneMatrices uniform 不再存在，调色板走纹理
             if (_locBonePaletteSampler < 0) throw new InvalidOperationException("Skinning shader sampler 'uBonePalette' not found.");
@@ -546,13 +596,9 @@ namespace Ludots.Raylib.Render
 
             _skinningShaderReady = true;
             _skinningShadowLocs.ApplyUniforms(_skinningShader, _frameShadow, _frameShadowTexelWorld);
-            if (_frameLighting != null)
+            if (_frameLighting != null && _hasFrameViewPos)
             {
-                _frameLighting.Apply(_skinningShader, in _skinningLightingLocs);
-                if (_hasFrameViewPos)
-                {
-                    _frameLighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, _frameViewPos);
-                }
+                ApplySkinningFrameLighting();
             }
         }
 
