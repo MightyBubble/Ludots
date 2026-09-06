@@ -24,6 +24,11 @@ uniform float uRoughness;
 uniform float uMetallic;
 uniform int uHasRoughnessMap;
 uniform int uHasMetallicMap;
+uniform vec3 uSkyZenith;
+uniform vec3 uSkyGround;
+uniform samplerCube uPrefilteredEnv;
+uniform sampler2D uBrdfLut;
+uniform float uEnvSpecular;
 // ludo:include shadow_sampling.glsl.inc
 
 out vec4 finalColor;
@@ -120,10 +125,19 @@ void main()
     vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
     vec3 specular = (D * G * F) / max(4.0 * max(dot(N, V), 0.0) * NdotL, 1e-5);
 
+    // split-sum IBL：半球近似环境漫反射（天顶/地面按法线混合）+ 预滤波环境立方图
+    // （CPU 烘焙 GGX mip 链，roughness→lod=6 级）× BRDF LUT 环境镜面；与 model_lit / instancing 同合同。
+    float hemisphere = N.y * 0.5 + 0.5;
+    vec3 skyIrradiance = mix(uSkyGround, uSkyZenith, hemisphere);
+    vec3 ambientDiffuse = skyIrradiance * albedo * (1.0 - metallic);
+    vec3 prefilteredEnv = textureLod(uPrefilteredEnv, reflect(-V, N), roughness * 6.0).rgb;
+    vec2 brdf = texture(uBrdfLut, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec3 ambientSpecular = prefilteredEnv * (F0 * brdf.x + vec3(brdf.y)) * uEnvSpecular;
+    vec3 ambient = ambientDiffuse + ambientSpecular + uAmbient.rgb * uAmbient.a * albedo;
+
     vec3 kS = F;
     vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
     vec3 radiance = uLightColor * uLightIntensity;
-    vec3 ambient = uAmbient.rgb * uAmbient.a * albedo;
     float shadow = SampleShadow(fragPos, N);
     vec3 lit = ambient + (kD * albedo / PI + specular) * radiance * NdotL * shadow;
 

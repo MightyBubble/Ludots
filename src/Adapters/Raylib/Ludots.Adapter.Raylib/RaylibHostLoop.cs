@@ -55,6 +55,10 @@ namespace Ludots.Adapter.Raylib
         private static VertexMapTerrainChunkMeshSource? _terrainSource;
 
         private const uint FlagWindowResizable = 4;
+        private const float HostShadowTexelWorld = 0.08f;
+        private static readonly float HostShadowSceneRadiusMeters =
+            ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SHADOW_SCENE_RADIUS", 48f);
+
         private static readonly ServiceKey<IRaylibBenchmarkRenderer> RaylibBenchmarkRendererKey = new("Platform.RaylibBenchmarkRenderer");
         private static bool _uiPointerCaptured;
         private static PointerButton? _uiCapturedPointerButton;
@@ -363,6 +367,8 @@ namespace Ludots.Adapter.Raylib
                                 out status);
                             return outcome;
                         }));
+                using var directionalShadowMap = new RaylibDirectionalShadowMap(renderEnvironmentConfig.Shadow);
+
                 using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS);
                 skyEnvironment.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
                     engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibSkyEnvironment.DefaultRelativePath));
@@ -732,9 +738,24 @@ namespace Ludots.Adapter.Raylib
                             frameLighting.Evaluate();
                         }
 
-                        terrainRenderer.ApplyFrameLighting(frameLighting);
-                        continuousHeightmapRenderer.ApplyFrameLighting(frameLighting);
-                        primitiveRenderer.DrawSurfaceWireBoxes = drawDebugDraw;
+                        CaptureDirectionalShadows(
+                            directionalShadowMap,
+                            frameLighting,
+                            in activeCamera,
+                            drawTerrain,
+                            drawContinuousHeightmap,
+                            hasContinuousHeightmap,
+                            drawPrimitives,
+                            terrainRenderer,
+                            continuousHeightmapRenderer,
+                            primitiveRenderer,
+                            engine,
+                            renderDebug.AcceptanceScaleMultiplier);
+                        float shadowTexelWorld = HostShadowTexelWorld;
+                        terrainRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld);
+                        continuousHeightmapRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld);
+                        primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position, directionalShadowMap, shadowTexelWorld);
+                        Restore3DDepthState();
 
                         bool waterOnContinuousHeightmap = waterPass.IsActive &&
                                                       drawTerrain &&
@@ -2849,6 +2870,56 @@ namespace Ludots.Adapter.Raylib
 
                 Rl.DrawLine3D(new Vector3(x, y, startZ), new Vector3(x, y, endZ), xCol);
                 Rl.DrawLine3D(new Vector3(startX, y, z), new Vector3(endX, y, z), zCol);
+            }
+        }
+
+
+        private static void CaptureDirectionalShadows(
+            RaylibDirectionalShadowMap shadowMap,
+            RaylibFrameLighting lighting,
+            in Camera3D camera,
+            bool drawTerrain,
+            bool drawContinuousHeightmap,
+            bool hasContinuousHeightmap,
+            bool drawPrimitives,
+            RaylibTerrainRenderer terrainRenderer,
+            RaylibContinuousHeightmapRenderer continuousHeightmapRenderer,
+            RaylibPrimitiveRenderer primitiveRenderer,
+            GameEngine engine,
+            float primitiveScaleMul)
+        {
+            shadowMap.BeginFrame(lighting.SunDirectionToward, camera.target, HostShadowSceneRadiusMeters);
+            try
+            {
+                if (drawContinuousHeightmap &&
+                    hasContinuousHeightmap &&
+                    engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? heightmapSource) &&
+                    heightmapSource is IContinuousHeightmapRenderSource heightmapCaster)
+                {
+                    continuousHeightmapRenderer.RenderShadow(heightmapCaster, camera, shadowMap);
+                }
+                else if (drawTerrain && engine.VertexMap != null)
+                {
+                    terrainRenderer.RenderTerrainShadow(TerrainSourceFor(engine.VertexMap), camera, shadowMap);
+                }
+
+                if (drawPrimitives &&
+                    engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer? draw) &&
+                    engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry? meshes))
+                {
+                    primitiveRenderer.DrawShadow(draw, shadowMap, meshes, camera, primitiveScaleMul);
+                }
+
+                SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
+                if (skinnedBatch != null &&
+                    engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry? skinMeshes))
+                {
+                    primitiveRenderer.DrawShadow(skinnedBatch, shadowMap, skinMeshes, primitiveScaleMul);
+                }
+            }
+            finally
+            {
+                shadowMap.EndFrame();
             }
         }
 
