@@ -6,7 +6,7 @@
 
 ## 一、生产调用方与规模上限
 
-`EffectPhaseSideEffectTransaction` 由 `EffectLifetimeSystem` 每帧构造一次（`snapshotCapacity`），
+`EffectPhaseSideEffectTransaction` 由 `EffectLifetimeSystem` 构造一次并在每个 slice 之间复用，
 批内可承载整帧所有活动的持续效果实体。生产规模上限 = `EffectLifetimeSystem` snapshot capacity
 （10k showcase 用 ~16k）。因此「事务内参与实体数」可到 10k+，线性扫描逐实体累计即为 O(n²)。
 
@@ -46,9 +46,9 @@ PR 要求：优先复用仓库已有实体索引结构；用字典时预分配�
   但内嵌私有、容量 8 起，未抽象成可复用类型。
 - **结论**：仓库没有现成的「固定容量 + 完整实体身份 + 清空复用 + 稳定零分配」的事务内
   `Entity→下标` 索引类型可直接复用。采用 `Dictionary<Entity,int>`，构造时 `new(capacity)`、
-  `Begin()`/`End()` 时 `Clear()`（字典容量保留、不产生运行期扩容分配），键即完整 `Entity`
+  `Begin()`/`End()` 时 `Clear()`（字典容量结构保留，不缩容，不产生运行期扩容分配），键即完整 `Entity`
   （Arch Entity 的 GetHashCode/Equals 已含 Id+WorldId+Version，身份完整）。
-- 零分配约束：`Dictionary.Clear()` 不清 buckets、不缩容；预配容量 ≥ 数组容量即可保证
+- 零分配约束：`Dictionary.Clear()` 清除当前条目但保留容量结构；预配容量 ≥ 数组容量即可保证
   事务全生命周期零扩容分配。加载后第一个事务可能有一次 bucket 分配（构造函数参数容量
   精确 -> 初始化即到位，无后续扩容）。
 
