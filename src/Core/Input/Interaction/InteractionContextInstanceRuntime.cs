@@ -34,6 +34,7 @@ namespace Ludots.Core.Input.Interaction
         private readonly GameSession? _session;
         private Action<Entity, int>? _runDeactivatedSlotNow;
         private readonly List<int> _removalScratch = new(capacity: InteractionContextInstances.Capacity);
+        private readonly List<int> _deactivatedSlotProfiles = new(capacity: InteractionContextInstances.Capacity);
 
         public InteractionContextInstanceRuntime(
             World world,
@@ -150,12 +151,18 @@ namespace Ludots.Core.Input.Interaction
             }
 
             CollectWithDescendants(instances, profileId, _removalScratch);
-            // Snapshot before removal: the Deactivated slots below run user graph bodies that
-            // may re-enter this runtime (nested Deactivate reuses the shared scratch).
-            int[] removed = _removalScratch.ToArray();
-            for (int i = 0; i < removed.Length; i++)
+            // Snapshot into a reusable buffer (not ToArray): the Deactivated slots below run
+            // user graph bodies that may re-enter this runtime (a nested Deactivate reuses the
+            // shared removal scratch). Keeps Deactivate allocation-free.
+            _deactivatedSlotProfiles.Clear();
+            for (int i = 0; i < _removalScratch.Count; i++)
             {
-                int index = instances.IndexOf(removed[i]);
+                _deactivatedSlotProfiles.Add(_removalScratch[i]);
+            }
+
+            for (int i = 0; i < _deactivatedSlotProfiles.Count; i++)
+            {
+                int index = instances.IndexOf(_deactivatedSlotProfiles[i]);
                 InteractionContextInstance instance = instances[index];
                 instances.RemoveAt(index);
                 Publish(PresentationEventKind.ContextDeactivated, subject, instance);
@@ -170,9 +177,9 @@ namespace Ludots.Core.Input.Interaction
             // triggers and skips re-running the slot on its reconcile pass.
             if (_runDeactivatedSlotNow != null)
             {
-                for (int i = 0; i < removed.Length; i++)
+                for (int i = 0; i < _deactivatedSlotProfiles.Count; i++)
                 {
-                    _runDeactivatedSlotNow(subject, removed[i]);
+                    _runDeactivatedSlotNow(subject, _deactivatedSlotProfiles[i]);
                 }
             }
         }

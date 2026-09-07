@@ -78,8 +78,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly List<int> _parkedScratch = new(4);
         private readonly List<Trigger> _actionTriggerScratch = new(4);
         private readonly List<Trigger> _mountScratch = new(8);
-        private readonly List<(Entity, int)> _staleOpenScratch = new(4);
-        private readonly Dictionary<(Entity, int), WindowMountState> _openWindows = new();
+        private readonly List<int> _staleOpenScratch = new(4);
+        // Window lifecycle marks (#1398 刀4): per subject the currently-open profiles and
+        // their mount regime. Keyed subject-first so a reconcile only touches its own entry —
+        // never a whole-window scan (same bounded-scan discipline the retired heartbeat sweep
+        // enforced). A window opens (Activated ran, state recorded) / closes (Deactivated ran,
+        // state removed); park/unpark only flips the stored regime without a slot.
+        private readonly Dictionary<Entity, Dictionary<int, WindowMountState>> _openWindows = new();
         private HashSet<Entity> _frameSubjects = new();
         private HashSet<Entity> _retiredSubjects = new();
 
@@ -202,7 +207,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
-                _openWindows.Remove((subject, _ownedScratch[i].Key.OwnerId));
+                RemoveWindowState(subject, _ownedScratch[i].Key.OwnerId);
                 _triggerManager.RemoveOwnedMounts(_ownedScratch[i].Key);
                 // Context window closed on this subject — run the Deactivated slot after
                 // its mounts are gone, so the slot sees a fully taken-down window.
@@ -236,38 +241,47 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 if (!_desiredProfileIds.Contains(profileId))
                 {
                     // Window closed: Deactivated slot after full take-down (fallback path for
-                    // non-op removals; op-path windows are unmarked below after the flush).
-                    _openWindows.Remove((subject, profileId));
+                    // non-op removals; op-path windows are unmarked at their change point).
+                    RemoveWindowState(subject, profileId);
                     _triggerManager.RemoveOwnedMounts(owner);
                     RunLifecycleSlot(subject, profileId, InteractionContextLifecycleSlot.Deactivated);
                     continue;
                 }
 
                 if (_parkedScratch.Contains(profileId) &&
-                    _openWindows.TryGetValue((subject, profileId), out WindowMountState state) &&
+                    TryGetWindowState(subject, profileId, out WindowMountState state) &&
                     state == WindowMountState.Interactive)
                 {
                     // Foreground descendant active: park the interactive (action-bound) mounts
                     // only — map/passive mounts stay, the window stays open, no Deactivated slot.
                     RemoveActionTriggerMounts(subject, _ownedScratch[i].Value);
-                    _openWindows[(subject, profileId)] = WindowMountState.Parked;
+                    SetWindowState(subject, profileId, WindowMountState.Parked);
                 }
             }
 
-            // Op-closed windows (knife 3 change point) can carry no mounts by the time this
-            // scan runs; unmark any window whose profile is no longer desired.
-            _staleOpenScratch.Clear();
-            foreach (KeyValuePair<(Entity, int), WindowMountState> entry in _openWindows)
+            // Unmark windows whose profile is no longer desired but carried no mounts in this
+            // scan (op-path closes clear at their change point; this catches triggerless or
+            // fully-stripped external removals). Scan is bounded to this subject's own entries.
+            if (_openWindows.TryGetValue(subject, out Dictionary<int, WindowMountState>? subjectWindows))
             {
-                if (entry.Key.Item1 == subject && !_desiredProfileIds.Contains(entry.Key.Item2))
+                _staleOpenScratch.Clear();
+                foreach (KeyValuePair<int, WindowMountState> entry in subjectWindows)
                 {
-                    _staleOpenScratch.Add(entry.Key);
+                    if (!_desiredProfileIds.Contains(entry.Key))
+                    {
+                        _staleOpenScratch.Add(entry.Key);
+                    }
                 }
-            }
 
-            for (int i = 0; i < _staleOpenScratch.Count; i++)
-            {
-                _openWindows.Remove(_staleOpenScratch[i]);
+                for (int i = 0; i < _staleOpenScratch.Count; i++)
+                {
+                    subjectWindows.Remove(_staleOpenScratch[i]);
+                }
+
+                if (subjectWindows.Count == 0)
+                {
+                    _openWindows.Remove(subject);
+                }
             }
 
             // ── Open / restore pass ──
@@ -276,12 +290,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 int profileId = _desiredProfileIds[d];
                 bool parked = _parkedScratch.Contains(profileId);
                 TriggerMountOwner owner = new(TriggerMountOwnerKind.InteractionContext, subject, profileId);
-                if (!_openWindows.TryGetValue((subject, profileId), out WindowMountState state))
+                if (!TryGetWindowState(subject, profileId, out WindowMountState state))
                 {
                     // Window opening (newly desired profile): Activated slot runs before the
                     // trigger mounts register — "onActivated 在 trigger 开启之前" by construction.
                     state = parked ? WindowMountState.Parked : WindowMountState.Interactive;
-                    _openWindows[(subject, profileId)] = state;
+                    SetWindowState(subject, profileId, state);
                     RunLifecycleSlot(subject, profileId, InteractionContextLifecycleSlot.Activated);
                     TryMount(subject, profileId, state == WindowMountState.Parked ? ContextMountEntryClass.Passive : ContextMountEntryClass.All);
                     continue;
@@ -291,7 +305,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 {
                     // Foreground descendant gone: restore the interactive mounts — the window
                     // never closed, so no Activated slot (park/unpark is a regime change only).
-                    _openWindows[(subject, profileId)] = WindowMountState.Interactive;
+                    SetWindowState(subject, profileId, WindowMountState.Interactive);
                     // A fully-stripped parked window (map reload) restores everything; a parked
                     // window that kept its passive mounts restores only the interactive class.
                     bool fullRestore = !_triggerManager.TryGetOwnedMounts(owner, out _);
@@ -306,7 +320,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 {
                     // Fully-stripped interactive window (nothing owned when the demote pass ran,
                     // e.g. all-action profile) now parks: record the regime, nothing to strip.
-                    _openWindows[(subject, profileId)] = WindowMountState.Parked;
+                    SetWindowState(subject, profileId, WindowMountState.Parked);
                     continue;
                 }
 
@@ -340,7 +354,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             bool hasBase = World.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance baseContext);
             bool hasDerived = World.TryGet<InteractionContextInstances>(subject, out InteractionContextInstances derived);
-            int derivedOffset = hasBase ? 1 : 0;
             for (int k = 0; k < _desiredProfileIds.Count; k++)
             {
                 int nodeProfileId = _desiredProfileIds[k];
@@ -349,10 +362,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
-                int parentProfileId = k < derivedOffset || !hasDerived
-                    ? 0
-                    : derived[k - derivedOffset].ParentContextId;
-                int ancestor = parentProfileId;
+                // Walk the live ancestor chain. Parent lookup goes through the component set
+                // (base mount + instances), so no order/dedup assumption on the desired list.
+                int baseProfileId = hasBase ? baseContext.ContextId : 0;
+                int ancestor = FindParentProfileId(nodeProfileId, hasBase, baseProfileId, in derived);
                 while (ancestor > 0)
                 {
                     if (!parkedSink.Contains(ancestor))
@@ -360,14 +373,18 @@ namespace Ludots.Core.Gameplay.MapTriggers
                         parkedSink.Add(ancestor);
                     }
 
-                    ancestor = FindParentProfileId(ancestor, hasBase, baseContext.ContextId, in derived);
+                    ancestor = FindParentProfileId(ancestor, hasBase, baseProfileId, in derived);
                 }
             }
         }
 
+        /// <summary>
+        /// Parent of a profile in the subject's active set (base mount has none; instances
+        /// report via their <see cref="InteractionContextInstance.ParentContextId"/>).
+        /// </summary>
         private int FindParentProfileId(int profileId, bool hasBase, int baseProfileId, in InteractionContextInstances derived)
         {
-            if (hasBase && baseProfileId == profileId)
+            if (hasBase && profileId == baseProfileId)
             {
                 return 0;
             }
@@ -476,6 +493,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             RunLifecycleSlot(subject, profileId, InteractionContextLifecycleSlot.Deactivated);
             _deferredDeactivatedUnmounts.Add(new TriggerMountOwner(TriggerMountOwnerKind.InteractionContext, subject, profileId));
+            // The window is closed at this change point — unmark it here so a same-window
+            // re-activation before the next reconcile runs its Activated slot as a fresh open
+            // (the reconcile close-pass may find nothing to unmark: its mounts are the deferred
+            // flush, not yet removed).
+            RemoveWindowState(subject, profileId);
         }
 
         private void FlushDeferredDeactivatedUnmounts()
@@ -486,6 +508,36 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             _deferredDeactivatedUnmounts.Clear();
+        }
+
+        private bool TryGetWindowState(Entity subject, int profileId, out WindowMountState state)
+        {
+            state = default;
+            return _openWindows.TryGetValue(subject, out Dictionary<int, WindowMountState>? windows) &&
+                windows.TryGetValue(profileId, out state);
+        }
+
+        private void SetWindowState(Entity subject, int profileId, WindowMountState state)
+        {
+            if (!_openWindows.TryGetValue(subject, out Dictionary<int, WindowMountState>? windows))
+            {
+                windows = new Dictionary<int, WindowMountState>(4);
+                _openWindows[subject] = windows;
+            }
+
+            windows[profileId] = state;
+        }
+
+        private void RemoveWindowState(Entity subject, int profileId)
+        {
+            if (_openWindows.TryGetValue(subject, out Dictionary<int, WindowMountState>? windows))
+            {
+                windows.Remove(profileId);
+                if (windows.Count == 0)
+                {
+                    _openWindows.Remove(subject);
+                }
+            }
         }
 
         /// <summary>
@@ -530,7 +582,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 {
                     if (World.TryGet<InteractionContextInstance>(entity, out InteractionContextInstance baseContext))
                     {
-                        _openWindows.Remove((entity, baseContext.ContextId));
                         RunLifecycleSlot(entity, baseContext.ContextId, InteractionContextLifecycleSlot.Deactivated);
                     }
 
@@ -538,12 +589,14 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     {
                         for (int i = 0; i < instances.Count; i++)
                         {
-                            _openWindows.Remove((entity, instances[i].ContextId));
                             RunLifecycleSlot(entity, instances[i].ContextId, InteractionContextLifecycleSlot.Deactivated);
                         }
                     }
                 }
             }
+
+            // Window marks never outlive the subject (active-session or map teardown alike).
+            _openWindows.Remove(entity);
 
             // Destroy-time reclamation (#1398 刀2): the retired heartbeat sweep is gone, so
             // the gate reclaims the dead subject's own context mounts right here — after the
