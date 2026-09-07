@@ -3,6 +3,40 @@
   "description": "GraphNodeOp coverage SSOT. Each executable opcode must have status=covered, a per-op showcaseId, and unitTestRefs: Class.Method pairs measured to execute that op.",
   "entries": [
     {
+      "op": "BindQueryCollection",
+      "authorableKinds": [
+        "Script",
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_BindQueryCollection",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAcceptanceTests.DerivedQueryOps_ExecuteThroughGalleryRuntime"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryScreenRegionCollection",
+      "authorableKinds": [
+        "Query",
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryScreenRegionCollection",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAcceptanceTests.DerivedQueryOps_ExecuteThroughGalleryRuntime"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "AbsFloat",
       "authorableKinds": [
         "Derived",

@@ -183,6 +183,7 @@ namespace Ludots.Core.Systems
             }
 
             cellRef.State = SpatialMembershipState.Deactivated;
+            World.NotifyComponentChanged<SpatialCellRef>(entity);
         }
 
         public void Remove(Entity entity)

@@ -119,6 +119,8 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 
 ### 3.3.1 图相关还开着的（勿当新发现重审）
 
+Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现完整收集、派生集合绑定和空间框选；47 项定向测试通过，完整回归与真实运行取证未收口，债务保持开放。设计见 `artifacts/techdebt/2026-09-07-case-e-selection-query-design.md`，性能与边界见 `docs/benchmarks/case-e-query-completeness/REPORT.md`。本轮独立于 #1456，10k 可切换玩家 showcase 另行施工。
+
 | 项 | 状态 | 怎么开工 |
 |----|------|----------|
 | `#1107` 执行线无下一步须显式 Halt 合同 | 开着 | 单独改合同，别捆编辑器 |

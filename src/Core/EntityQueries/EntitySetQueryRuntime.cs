@@ -19,7 +19,7 @@ namespace Ludots.Core.EntityQueries
     /// Code-facing entity set query API used by both C# systems and graph ops.
     /// All hot methods operate on caller-owned spans and resolved ids.
     /// </summary>
-    public sealed class EntitySetQueryRuntime
+    public sealed partial class EntitySetQueryRuntime
     {
         private static readonly QueryDescription MapEntityQuery = new QueryDescription()
             .WithAll<MapEntity>();
@@ -50,7 +50,7 @@ namespace Ludots.Core.EntityQueries
                 {
                     if (written >= destination.Length)
                     {
-                        return written;
+                        throw new InvalidOperationException("ENTITY_QUERY.ERR.DestinationTooSmall");
                     }
 
                     destination[written++] = Unsafe.Add(ref first, index);

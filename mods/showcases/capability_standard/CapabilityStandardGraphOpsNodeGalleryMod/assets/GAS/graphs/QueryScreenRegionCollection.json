@@ -1,0 +1,27 @@
+[
+  {
+    "id": "showcase.graph_op.QueryScreenRegionCollection",
+    "kind": "Query",
+    "entry": "owner",
+    "nodes": [
+      { "id": "owner", "op": "LoadCaster" },
+      { "id": "min", "op": "ConstFloat", "floatValue": -1000 },
+      { "id": "maxX", "op": "ConstFloat", "floatValue": 0 },
+      { "id": "maxY", "op": "ConstFloat", "floatValue": 1000 },
+      { "id": "hits", "op": "QueryScreenRegionCollection", "collectionKey": "showcase.graph_op.snap" }
+    ],
+    "controlEdges": [
+      { "from": "owner", "fromPort": "next", "to": "min" },
+      { "from": "min", "fromPort": "next", "to": "maxX" },
+      { "from": "maxX", "fromPort": "next", "to": "maxY" },
+      { "from": "maxY", "fromPort": "next", "to": "hits" }
+    ],
+    "valueEdges": [
+      { "from": "owner", "fromPort": "value", "to": "hits", "toPort": "source" },
+      { "from": "min", "fromPort": "value", "to": "hits", "toPort": "a" },
+      { "from": "min", "fromPort": "value", "to": "hits", "toPort": "b" },
+      { "from": "maxX", "fromPort": "value", "to": "hits", "toPort": "c" },
+      { "from": "maxY", "fromPort": "value", "to": "hits", "toPort": "max" }
+    ]
+  }
+]

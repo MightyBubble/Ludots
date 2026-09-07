@@ -388,6 +388,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Pure float read; fail closed when the input snapshot is unavailable.
         /// </summary>
         LoadPointerScreenY = 480,
+        BindQueryCollection = 481,
+        QueryScreenRegionCollection = 482,
 
     }
 

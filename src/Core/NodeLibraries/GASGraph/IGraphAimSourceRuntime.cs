@@ -16,6 +16,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     /// </summary>
     public interface IGraphAimSourceRuntime
     {
+        ReadOnlySpan<Entity> QueryScreenRegion(Ludots.Core.EntityCollections.IEntityCollectionSource source, in ScreenRect rect, string? seatId) =>
+            throw new InvalidOperationException("SPATIAL.ERR.IndexedScreenQueryUnavailable");
         bool TryScreenPointToGround(float screenX, float screenY, string? seatId, out IntVector2 groundCm);
 
         Entity PickScreenPointEntity(

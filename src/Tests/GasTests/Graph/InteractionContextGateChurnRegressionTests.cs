@@ -172,6 +172,8 @@ public sealed class InteractionContextGateChurnRegressionTests
         engine.SetService(
             CoreServiceKeys.ScreenRayProvider,
             (Ludots.Platform.Abstractions.IScreenRayProvider)new WindowPointGroundRayProvider());
+        engine.SetService(CoreServiceKeys.ScreenProjector,
+            (Ludots.Platform.Abstractions.IScreenProjector)new WindowPointGroundRayProvider());
         engine.Start();
         return engine;
     }
@@ -202,8 +204,9 @@ public sealed class InteractionContextGateChurnRegressionTests
         throw new DirectoryNotFoundException("Failed to locate repository root from test output directory.");
     }
 
-    private sealed class WindowPointGroundRayProvider : Ludots.Platform.Abstractions.IScreenRayProvider
+    private sealed class WindowPointGroundRayProvider : Ludots.Platform.Abstractions.IScreenRayProvider, Ludots.Platform.Abstractions.IScreenProjector
     {
+        public Vector2 WorldToScreen(Vector3 position) => new(position.X * 100, position.Z * 100);
         public Ludots.Platform.Abstractions.ScreenRay GetRay(System.Numerics.Vector2 screenPosition)
         {
             return new Ludots.Platform.Abstractions.ScreenRay(

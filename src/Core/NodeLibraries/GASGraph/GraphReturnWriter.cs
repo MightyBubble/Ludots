@@ -53,18 +53,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 throw new InvalidOperationException("Graph return writer requires an owner or caster entity for materialized outputs.");
             }
 
-            GraphOutputSchema schema = _schemas.Get(graphId);
-            if (!schema.HasBindings)
-            {
-                throw new InvalidOperationException($"Graph program id {graphId} has no output schema.");
-            }
-
             if (!_programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
             {
                 throw new InvalidOperationException($"Graph return writer references unknown graph program id {graphId}.");
             }
 
             _programs.RequireKind(graphId, GraphKind.Query);
+            GraphOutputSchema schema = _schemas.Get(graphId);
+            if (!schema.HasBindings)
+            {
+                throw new InvalidOperationException($"Graph program id {graphId} has no output schema.");
+            }
+
             GraphKindOperationPolicy.RequireAllowed(
                 GraphKind.Query,
                 program,

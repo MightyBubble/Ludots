@@ -1488,6 +1488,43 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return RequireEntityQueries().CollectMapEntities(buffer);
         }
 
+        public Span<Entity> QueryMapEntities(GraphEntityQueryPlan? plan, MapId? map, scoped ReadOnlySpan<int> ints, scoped ReadOnlySpan<float> floats, int depth)
+        {
+            return RequireEntityQueries().QueryMap(plan, map, ints, floats, depth);
+        }
+
+        public Span<Entity> GetEntityQueryBuffer(int depth, int capacity) => RequireEntityQueries().GetQueryBuffer(depth, capacity);
+
+        public void BeginEntityQueryExecution() => _entityQueries?.BeginExecution();
+        public void EndEntityQueryExecution() => _entityQueries?.EndExecution();
+
+        public void BindQueryCollection(Entity owner, int collectionKeyId, int graphId, GraphProgramRegistry programs)
+        {
+            if (_entityCollections == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
+            if (!programs.TryGetRegistration(graphId, out var registration)) throw new InvalidOperationException("ENTITY_QUERY.ERR.QueryGraphUnknown");
+            RequireEntityQueries().BindCollection(_entityCollections, owner, collectionKeyId, registration,
+                () => programs.TryGetRegistration(graphId, out var current) && ReferenceEquals(current.Program, registration.Program));
+        }
+
+        public Span<Entity> QueryCollection(Entity owner, int collectionKeyId, int depth)
+        {
+            if (_entityCollections == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
+            if (!_entityCollections.TryGet(owner, collectionKeyId, out var handle)) return Span<Entity>.Empty;
+            if (!_entityCollections.TryGetView(handle, out var view)) throw new InvalidOperationException("GAS.GRAPH.ERR.CollectionInvalid");
+            Span<Entity> result = GetEntityQueryBuffer(depth, view.Count);
+            int count = _entityCollections.CopyEntities(handle, 0, result);
+            return result.Slice(0, count);
+        }
+
+        public Span<Entity> QueryScreenRegionCollection(Entity owner, int collectionKeyId, scoped in ScreenRect rect, string? seatId, int depth)
+        {
+            if (_entityCollections == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
+            ReadOnlySpan<Entity> hits = RequireAimSource().QueryScreenRegion(_entityCollections.RequireSource(owner, collectionKeyId), rect, seatId);
+            Span<Entity> result = GetEntityQueryBuffer(depth, hits.Length);
+            hits.CopyTo(result);
+            return result[..hits.Length];
+        }
+
         public int CopyEntityCollection(Entity owner, int collectionKeyId, Span<Entity> buffer)
         {
             if (_entityCollections == null)

@@ -778,6 +778,7 @@ namespace Ludots.Core.Engine
         private void WireUpPositionProvider()
         {
             var w = World;
+            ((SpatialQueryService)SpatialQueries).BindBoundsWorld(World);
             ((SpatialQueryService)SpatialQueries).SetPositionProvider(entity =>
             {
                 if (!w.IsAlive(entity) || !w.Has<WorldPositionCm>(entity))
@@ -2928,6 +2929,7 @@ namespace Ludots.Core.Engine
             bool wasFocused = focused != null && focused.MapId == mid;
 
             MapSessions.UnloadSession(mid, World);
+            GetService(CoreServiceKeys.EntitySetQueryRuntime)?.ReleaseMap(mid);
             _mapLoadStatuses.Remove(mid);
 
             if (wasFocused && MapSessions.FocusedSession != null)
@@ -4842,6 +4844,8 @@ namespace Ludots.Core.Engine
 
             if (World != null)
             {
+                GetService(CoreServiceKeys.EntitySetQueryRuntime)?.Dispose();
+                (SpatialQueries as SpatialQueryService)?.UnbindBoundsWorld();
                 World.Destroy(World);
                 World = null;
             }

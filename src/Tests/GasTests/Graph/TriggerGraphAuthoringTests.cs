@@ -706,6 +706,7 @@ namespace Ludots.Tests.Gas.Graph
                 GraphNodeOp.ScreenPointToGround,
                 GraphNodeOp.ScreenPointToEntity,
                 GraphNodeOp.ScreenRegionToEntities,
+                GraphNodeOp.QueryScreenRegionCollection,
                 GraphNodeOp.PointToDirection,
                 GraphNodeOp.StickToDirection,
                 GraphNodeOp.QueryAllMapEntities,

@@ -29,12 +29,23 @@ namespace Ludots.Core.GraphRuntime
         public int ReturnInt;
         public int InvokeDepth;
         public GraphExecutionStatus Status;
+        internal Arch.Core.Entity[]? TargetSnapshot;
+        internal int TargetCount;
+
+        internal void SaveTargets(System.ReadOnlySpan<Arch.Core.Entity> targets)
+        {
+            if (TargetSnapshot == null || TargetSnapshot.Length < targets.Length)
+                TargetSnapshot = new Arch.Core.Entity[System.Math.Max(256, targets.Length)];
+            targets.CopyTo(TargetSnapshot);
+            TargetCount = targets.Length;
+        }
 
         public bool IsSuspended =>
             Status is GraphExecutionStatus.Yielded or GraphExecutionStatus.BudgetSuspended;
 
         public void Reset()
         {
+            TargetCount = 0;
             Pc = 0;
             LastInstructionPc = -1;
             Steps = 0;

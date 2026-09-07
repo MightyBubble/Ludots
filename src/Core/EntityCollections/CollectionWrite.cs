@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Arch.Core;
 
 namespace Ludots.Core.EntityCollections
@@ -20,7 +21,12 @@ namespace Ludots.Core.EntityCollections
     /// </summary>
     public static class CollectionWrite
     {
-        private static readonly List<Entity> MergeScratch = new(capacity: 64);
+        internal sealed class Scratch
+        {
+            public readonly List<Entity> Members = new(256);
+            public readonly HashSet<Entity> Membership = new(256);
+            public Entity[] Current = new Entity[256];
+        }
 
         public static void Apply(
             EntityCollectionStore store,
@@ -53,32 +59,29 @@ namespace Ludots.Core.EntityCollections
                     return;
                 case CollectionWriteOp.Add:
                 case CollectionWriteOp.Subtract:
-                    MergeScratch.Clear();
-                    if (store.TryGet(owner, collectionKeyId, out EntityCollectionHandle handle) && handle.IsValid &&
+                    Scratch scratch = store.WriteScratch;
+                    scratch.Members.Clear();
+                    scratch.Membership.Clear();
+                    if (op == CollectionWriteOp.Subtract)
+                        foreach (Entity entity in entities) scratch.Membership.Add(entity);
+                    if (store.TryGet(owner, collectionKeyId, out EntityCollectionHandle handle) &&
                         store.TryGetView(handle, out EntityCollectionView view))
                     {
-                        if (view.Count > _currentScratch.Length)
+                        if (view.Count > scratch.Current.Length)
+                            Array.Resize(ref scratch.Current, checked(view.Count * 2));
+                        int currentCount = store.CopyEntities(handle, 0, scratch.Current);
+                        foreach (Entity entity in scratch.Current.AsSpan(0, currentCount))
                         {
-                            _currentScratch = new Entity[view.Count * 2];
-                        }
-
-                        int currentCount = store.CopyEntities(owner, collectionKeyId, _currentScratch);
-                        if (op == CollectionWriteOp.Add)
-                        {
-                            AppendDistinct(MergeScratch, _currentScratch, currentCount);
-                            AppendDistinct(MergeScratch, entities);
-                        }
-                        else
-                        {
-                            KeepNotInIncoming(MergeScratch, _currentScratch, currentCount, entities);
+                            if (op == CollectionWriteOp.Add
+                                ? scratch.Membership.Add(entity)
+                                : !scratch.Membership.Contains(entity))
+                                scratch.Members.Add(entity);
                         }
                     }
-                    else if (op == CollectionWriteOp.Add)
-                    {
-                        AppendDistinct(MergeScratch, entities);
-                    }
-
-                    Write(store, owner, collectionKeyId, MergeScratch.ToArray());
+                    if (op == CollectionWriteOp.Add)
+                        foreach (Entity entity in entities)
+                            if (scratch.Membership.Add(entity)) scratch.Members.Add(entity);
+                    Write(store, owner, collectionKeyId, CollectionsMarshal.AsSpan(scratch.Members));
                     return;
                 default:
                     throw new InvalidOperationException(
@@ -86,7 +89,6 @@ namespace Ludots.Core.EntityCollections
             }
         }
 
-        private static Entity[] _currentScratch = new Entity[64];
 
         private static void Write(
             EntityCollectionStore store,
@@ -104,42 +106,5 @@ namespace Ludots.Core.EntityCollections
             store.Replace(owner, collectionKeyId, in descriptor, entities, owner);
         }
 
-        private static void AppendDistinct(List<Entity> target, ReadOnlySpan<Entity> source)
-        {
-            for (int i = 0; i < source.Length; i++)
-            {
-                if (!target.Contains(source[i]))
-                {
-                    target.Add(source[i]);
-                }
-            }
-        }
-
-        private static void AppendDistinct(List<Entity> target, Entity[] source, int count)
-        {
-            AppendDistinct(target, source.AsSpan(0, count));
-        }
-
-        private static void KeepNotInIncoming(List<Entity> target, Entity[] current, int count, ReadOnlySpan<Entity> incoming)
-        {
-            for (int i = 0; i < count; i++)
-            {
-                Entity entity = current[i];
-                bool removed = false;
-                for (int r = 0; r < incoming.Length; r++)
-                {
-                    if (incoming[r] == entity)
-                    {
-                        removed = true;
-                        break;
-                    }
-                }
-
-                if (!removed)
-                {
-                    target.Add(entity);
-                }
-            }
-        }
     }
 }

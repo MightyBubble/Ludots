@@ -107,16 +107,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(HasScreenRect(screenOverlayBefore, x: -1200, y: -100, width: 900, height: 200), Is.False,
             "按下前 boxing context 未激活 → scope 无矩形（visibility 绑定=0）");
 
-        // ── 03b：battle context 挂载 roster_sync（EntitySpawned/EntityDied 事件驱动）→ 候选集已就位 ──
-        // 铺底：battle onActivated 首跑 roster_sync 全量重建；此后出生/死亡事件驱动刷新，零轮询。
         TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
         AssertNoTriggerErrors(engine);
-        Assert.That(
-            engine.TriggerManager.HasMapEventSubscribers(new MapId(MapId), GameEvents.EntitySpawned),
-            "battle roster_sync 应对 EntitySpawned（出生驱动）有订阅");
-        Assert.That(
-            engine.TriggerManager.HasMapEventSubscribers(new MapId(MapId), GameEvents.EntityDied),
-            "battle roster_sync 应对 EntityDied（死亡驱动）有订阅");
         AssertCollection(engine, commander, SelectableKey, "候选集随 battle context 维护（敌我+模板过滤），框之前就有",
             marine1, marine2, marine3, marine4);
 
@@ -516,6 +508,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
 
         // 候选集就位；marine 模板上环槽与规则早已删除（只留 body 资产）
         TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        TickUntil(engine, 40, () => presenterRuntime.GetActiveByDefinition(marineDefId).Count == 4);
         Assert.That(presenterRuntime.GetActiveByDefinition(marineDefId).Count, Is.EqualTo(4),
             "marine root presenter 照常出生（body）");
 

@@ -9850,6 +9850,60 @@
       "video": "artifacts/evidence/capability_standard_graph_op_LoadPointerScreenY/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_BindQueryCollection",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpBindQueryCollectionEntryMod",
+      "projectPath": "CapabilityStandardGraphOpBindQueryCollectionEntryMod.csproj",
+      "title": "换队后，名单跟着变",
+      "summary": "左侧士兵换队，点名圈随之摘下或补回。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "BindQueryCollection"
+      ],
+      "binding": "capability_standard_graph_op_BindQueryCollection",
+      "preset": "capability_standard_graph_op_BindQueryCollection_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/BindQueryCollection.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_BindQueryCollection",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_BindQueryCollection/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_BindQueryCollection/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_QueryScreenRegionCollection",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryScreenRegionCollectionEntryMod",
+      "projectPath": "CapabilityStandardGraphOpQueryScreenRegionCollectionEntryMod.csproj",
+      "title": "只点框内的敌军",
+      "summary": "左半场点名，友军与框外敌军留在圈外。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "QueryScreenRegionCollection"
+      ],
+      "binding": "capability_standard_graph_op_QueryScreenRegionCollection",
+      "preset": "capability_standard_graph_op_QueryScreenRegionCollection_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryScreenRegionCollection.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryScreenRegionCollection",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryScreenRegionCollection/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryScreenRegionCollection/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

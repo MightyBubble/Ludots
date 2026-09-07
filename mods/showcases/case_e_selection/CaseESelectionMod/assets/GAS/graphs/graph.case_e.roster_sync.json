@@ -4,48 +4,21 @@
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "on_marine_spawned",
-        "event": "EntitySpawned",
-        "start": "map_units",
-        "refire": "restart",
-        "filters": {
-          "team": 1
-        }
-      },
-      {
-        "label": "on_marine_died",
-        "event": "EntityDied",
-        "start": "map_units",
+        "label": "bind_roster",
+        "event": "MapLoaded",
+        "start": "owner",
         "refire": "restart"
       }
     ],
     "nodes": [
       {
-        "id": "map_units",
-        "op": "QueryAllMapEntities"
-      },
-      {
-        "id": "own_team",
-        "op": "QueryFilterTeam",
-        "teamId": 1
-      },
-      {
-        "id": "selectable_units",
-        "op": "QueryFilterTemplate",
-        "template": "case_e_marine"
-      },
-      {
         "id": "owner",
         "op": "LoadExplicitTarget"
       },
       {
-        "id": "roster_replace",
-        "op": "ConstInt",
-        "intValue": 0
-      },
-      {
-        "id": "refresh_roster",
-        "op": "WriteCollection",
+        "id": "bind",
+        "op": "BindQueryCollection",
+        "functionName": "graph.case_e.candidates",
         "collectionKey": "case_e.selectable"
       },
       {
@@ -60,32 +33,12 @@
     ],
     "controlEdges": [
       {
-        "from": "map_units",
-        "fromPort": "next",
-        "to": "own_team"
-      },
-      {
-        "from": "own_team",
-        "fromPort": "next",
-        "to": "selectable_units"
-      },
-      {
-        "from": "selectable_units",
-        "fromPort": "next",
-        "to": "owner"
-      },
-      {
         "from": "owner",
         "fromPort": "next",
-        "to": "roster_replace"
+        "to": "bind"
       },
       {
-        "from": "roster_replace",
-        "fromPort": "next",
-        "to": "refresh_roster"
-      },
-      {
-        "from": "refresh_roster",
+        "from": "bind",
         "fromPort": "next",
         "to": "ok"
       },
@@ -99,14 +52,8 @@
       {
         "from": "owner",
         "fromPort": "value",
-        "to": "refresh_roster",
+        "to": "bind",
         "toPort": "source"
-      },
-      {
-        "from": "roster_replace",
-        "fromPort": "value",
-        "to": "refresh_roster",
-        "toPort": "value"
       },
       {
         "from": "ok",

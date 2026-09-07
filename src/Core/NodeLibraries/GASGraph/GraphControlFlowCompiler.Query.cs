@@ -162,7 +162,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     }
 
                     break;
+                case GraphNodeOp.QueryScreenRegionCollection:
                 case GraphNodeOp.ScreenRegionToEntities:
+                    if (op.NodeOp == GraphNodeOp.QueryScreenRegionCollection)
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                        RequireNonEmpty(node.CollectionKey, "collectionKey", node, graphId, diagnostics);
+                    }
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.List)))
                     {
                         RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -514,7 +520,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Imm = InternOptional(symbolToIndex, symbols, node.Seat);
                     instruction.ImmF = node.PickRadiusPx;
                     break;
+                case GraphNodeOp.QueryScreenRegionCollection:
                 case GraphNodeOp.ScreenRegionToEntities:
+                    if (op.NodeOp == GraphNodeOp.QueryScreenRegionCollection)
+                    {
+                        instruction.Dst = ResolveValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                        instruction.ImmF = BitConverter.Int32BitsToSingle(RequireSymbol(node.CollectionKey, "collectionKey", node,
+                            symbolToIndex, symbols, graphId, diagnostics));
+                    }
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.A, GraphValueType.Float,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);

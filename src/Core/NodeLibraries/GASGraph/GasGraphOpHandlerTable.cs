@@ -253,6 +253,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.RelationshipAggAverageMetric or
                 GraphNodeOp.QueryAllMapEntities or
                 GraphNodeOp.QueryFromCollection or
+                GraphNodeOp.QueryScreenRegionCollection or
                 GraphNodeOp.QueryCollectActiveEffects or
                 GraphNodeOp.QueryCollectEffectTemplates or
                 GraphNodeOp.QueryCollectAbilitySlots or
@@ -346,7 +347,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.LoadPointerScreenY or
                 GraphNodeOp.ActivateContext or
                 GraphNodeOp.DeactivateContext or
-                GraphNodeOp.WriteCollection
+                GraphNodeOp.WriteCollection or GraphNodeOp.BindQueryCollection
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -809,6 +810,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.RelationshipAggMinEntityByMetric, HandleRelationshipAggMinEntityByMetric, "RelationshipAggMinEntityByMetric graph opcode.");
             Register(GraphNodeOp.QueryAllMapEntities, HandleQueryAllMapEntities, "QueryAllMapEntities graph opcode.");
             Register(GraphNodeOp.QueryFromCollection, HandleQueryFromCollection, "QueryFromCollection graph opcode.");
+            Register(GraphNodeOp.QueryScreenRegionCollection, HandleQueryScreenRegionCollection, "QueryScreenRegionCollection graph opcode.");
             Register(GraphNodeOp.QueryCollectActiveEffects, HandleQueryCollectActiveEffects, "QueryCollectActiveEffects graph opcode.");
             Register(GraphNodeOp.QueryCollectEffectTemplates, HandleQueryCollectEffectTemplates, "QueryCollectEffectTemplates graph opcode.");
             Register(GraphNodeOp.QueryCollectAbilitySlots, HandleQueryCollectAbilitySlots, "QueryCollectAbilitySlots graph opcode.");
@@ -914,6 +916,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
             Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
             Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
+            Register(GraphNodeOp.BindQueryCollection, HandleBindQueryCollection, "BindQueryCollection graph opcode.");
         Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
@@ -1340,8 +1343,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 int hitCount = child.TargetList.Count;
                 if (hitCount > s.Targets.Length)
                 {
-                    throw new InvalidOperationException(
-                        $"InvokeGraph target graph id {graphId} returned {hitCount} targets; host capacity is {s.Targets.Length}.");
+                    s.Targets = s.Api.GetEntityQueryBuffer(s.InvokeDepth, hitCount);
+                    s.TargetList = new GraphTargetList(s.Targets);
                 }
 
                 child.Targets.Slice(0, hitCount).CopyTo(s.Targets);
@@ -1545,6 +1548,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 owner,
                 s.Targets,
                 s.TargetList.Count);
+        }
+
+        private static void HandleBindQueryCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.BindQueryCollection(s.E[ins.A], BitConverter.SingleToInt32Bits(ins.ImmF), ins.Imm,
+                s.Programs ?? throw new InvalidOperationException("ENTITY_QUERY.ERR.ProgramRegistryMissing"));
         }
 
         private static void HandleSetPanelAudience(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -2037,12 +2046,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleQueryAllMapEntities(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.CollectMapEntities(s.Targets));
+            GraphEntityQueryPlan? plan = null;
+            if (s.Programs != null && s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration) &&
+                registration.EntityQueries.TryGetValue(s.CurrentInstructionPc, out GraphEntityQueryPlan? compiled))
+            {
+                plan = compiled;
+            }
+            Span<Entity> result = s.Api.QueryMapEntities(plan, s.MapScope, s.I, s.F, s.InvokeDepth);
+            SetQueryResult(ref s, result);
         }
 
         private static void HandleQueryFromCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.CopyEntityCollection(s.E[ins.A], ins.Imm, s.Targets));
+            Span<Entity> result = s.Api.QueryCollection(s.E[ins.A], ins.Imm, s.InvokeDepth);
+            SetQueryResult(ref s, result);
+        }
+
+        private static void SetQueryResult(ref GraphExecutionState s, Span<Entity> result)
+        {
+            if (result.Length > s.Targets.Length)
+                s.Targets = s.Api.GetEntityQueryBuffer(s.InvokeDepth, result.Length);
+            result.CopyTo(s.Targets);
+            s.TargetList = new GraphTargetList(s.Targets);
+            s.TargetList.SetCount(result.Length);
         }
 
         private static void HandleQueryCollectActiveEffects(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -2084,6 +2110,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 new System.Numerics.Vector2(s.F[ins.A], s.F[ins.B]),
                 new System.Numerics.Vector2(s.F[ins.C], s.F[ins.Flags]));
             s.TargetList.SetCount(s.Api.FilterScreenRegionEntities(s.Targets, s.TargetList.Count, in rect, seatId));
+        }
+
+        private static void HandleQueryScreenRegionCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string? seat = ResolveSeatSymbol(ins.Imm, nameof(GraphNodeOp.QueryScreenRegionCollection));
+            var rect = ScreenRect.FromPoints(new System.Numerics.Vector2(s.F[ins.A], s.F[ins.B]),
+                new System.Numerics.Vector2(s.F[ins.C], s.F[ins.Flags]));
+            SetQueryResult(ref s, s.Api.QueryScreenRegionCollection(s.E[ins.Dst], BitConverter.SingleToInt32Bits(ins.ImmF),
+                rect, seat, s.InvokeDepth));
         }
 
         private static string? ResolveSeatSymbol(int seatKeyId, string operation)

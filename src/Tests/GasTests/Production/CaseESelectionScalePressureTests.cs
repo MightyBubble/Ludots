@@ -12,21 +12,13 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Client;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 using Ludots.Tests;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production;
 
-/// <summary>
-/// Case E 框选链的规模化实测（100 名可选玩家单位 / 10k 实体地图）：
-/// 1) roster_sync 单次全量重扫（QueryAllMapEntities→FilterTeam→FilterTemplate→WriteCollection replace）
-///    在 10k 人口下的单事件延迟与 100 个出生事件的流式总代价；
-/// 2) 拖拽热径（按下→20 次指针移动每次重扫候选集做屏幕矩形命中→抬起提交）的单拍峰值与全程；
-/// 3) 命中正确性随规模成立（全幅框 = 全部可选单位，半幅框 = 左半可选单位）。
-/// 真实数字写入 docs/benchmarks/case-e-selection-scale/case-e-selection-scale.csv；断言是
-/// 防灾难回归的宽松围栏，真实度量以 CSV 为准。
-/// </summary>
 [NonParallelizable]
 [TestFixture]
 [Category("acceptance")]
@@ -39,13 +31,12 @@ public sealed class CaseESelectionScalePressureTests
     private const string SelectableKey = "case_e.selectable";
     private const string BoxHoverKey = "case_e.box_hover";
     private const string SelectedKey = "selected";
-    private const int SelectableCount = 100;
-    private const int FillerCount = 10_000 - SelectableCount - 6; // 6 authored 实体（commander+4 marine+1 raider）
-    private const string BenchDir = "docs/benchmarks/case-e-selection-scale";
+    private const string BenchDir = "docs/benchmarks/case-e-query-completeness";
     private readonly MapId _mapId = new(MapIdValue);
 
-    [Test]
-    public void BoxSelectionChain_At100PlayersAnd10kEntities_StaysWithinBudget()
+    [TestCase(100, true)]
+    [TestCase(1000, false)]
+    public void BoxSelectionChain_At10kEntities_SelectsEveryEligibleUnit(int selectableCount, bool enforceLatencyBudget)
     {
         string repoRoot = FindRepoRoot();
         var backend = new TestInputBackend();
@@ -61,39 +52,37 @@ public sealed class CaseESelectionScalePressureTests
         // ── 造 10k 人口：100 可选（team1 + marine 模板 + 可见横排）+ 9894 填充（team2）──
         int marineTemplateKey = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
             is EntityTemplateKeyRegistry keys ? keys.GetId("case_e_marine") : throw new InvalidOperationException("template key registry missing");
-        var selectable = CreateUnits(engine, teamId: 1, templateKey: marineTemplateKey, count: SelectableCount, xStepCm: 8, xStartCm: -400);
-        CreateUnits(engine, teamId: 2, templateKey: marineTemplateKey, count: FillerCount, xStepCm: 3, xStartCm: -15000);
+        var selectable = CreateUnits(engine, teamId: 1, templateKey: marineTemplateKey, count: selectableCount, xStepCm: Math.Max(1, 800 / selectableCount), xStartCm: -(selectableCount * Math.Max(1, 800 / selectableCount)) / 2);
+        CreateUnits(engine, teamId: 2, templateKey: marineTemplateKey, count: 10_000 - selectableCount - 7, xStepCm: 3, xStartCm: -15000);
 
-        // 手动 fire 一个 EntitySpawned（team1 源）→ roster_sync 全量重扫。关键量测：
-        // 世界有 104 支可选（4 授权 + 100 新增），但 QueryAllMapEntities 受 `GraphVmLimits.MaxTargets=256`
-        // 硬顶，只取前 256 个 MapEntity → 过滤后可选集被截断（当前首256 恰含 77 支）。
-        // 这是 10k 人口下候选集完整性的已知硬限制（见 CSVCapNote），本测试锚定该行为并测量成本。
         FireSpawn(engine, selectable[0]);
         TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectableKey) >= 1);
         int rosterCount = CollectionCount(engine, commander, SelectableKey);
         int worldAmount = CountEligibleMarines(engine);
-        Assert.That(worldAmount, Is.EqualTo(SelectableCount + 4), "世界构成：100 新增 + 4 授权全部在位");
-        Assert.That(rosterCount, Is.GreaterThanOrEqualTo(1), "候选集存在");
-        Assert.That(rosterCount, Is.LessThanOrEqualTo(256),
-            $"候选集 <= MaxTargets(256)（当前 {rosterCount}/{worldAmount}）——QueryAllMapEntities 全图查询的硬顶截断");
+        Assert.That(worldAmount, Is.EqualTo(selectableCount + 4), "世界构成：100 新增 + 4 授权全部在位");
+        Assert.That(rosterCount, Is.EqualTo(worldAmount), "全部符合条件的单位都必须可框选");
 
-        // ── 度量 1：单次 roster 全量重扫 @10k ──
+        // Include the requested collection snapshot in the change-to-read measurement.
         Stopwatch single = Stopwatch.StartNew();
-        FireSpawn(engine, selectable[1]);
+        engine.World.Set(selectable[1], new Team { Id = 2 });
+        CollectionCount(engine, commander, SelectableKey);
+        engine.World.Set(selectable[1], new Team { Id = 1 });
+        CollectionCount(engine, commander, SelectableKey);
         single.Stop();
         double rosterSingleMs = single.Elapsed.TotalMilliseconds;
         TickUntil(engine, 4, () => false); // 派发后留一拍收敛
 
-        // ── 度量 2：100 个出生事件流式总代价（每事件一次 O(N) 全量重扫）──
+        // Defer materialization until the end of the batch.
         Stopwatch stream = Stopwatch.StartNew();
         for (int i = 0; i < 100; i++)
         {
-            FireSpawn(engine, selectable[(i + 2) % selectable.Length]);
+            engine.World.Set(selectable[(i + 2) % selectable.Length], new Team { Id = 1 });
         }
+        CollectionCount(engine, commander, SelectableKey);
         stream.Stop();
         double rosterStreamMs = stream.Elapsed.TotalMilliseconds;
         double rosterPerEventMs = rosterStreamMs / 100.0;
-        TickUntil(engine, 6, () => CollectionCount(engine, commander, SelectableKey) >= SelectableCount + 4);
+        TickUntil(engine, 6, () => CollectionCount(engine, commander, SelectableKey) >= selectableCount + 4);
 
         // ── 度量 3+正确性：完整拖拽（按下→20 次扫框→抬起提交）──
         var press = new Vector2(-1200f, -120f);
@@ -130,12 +119,12 @@ public sealed class CaseESelectionScalePressureTests
 
         // 半幅框：指针 -10 → 盖住候选集中 x<0 的单位；矩形边缘的投影舍入容差 ±3，
         // 语义钉的是「命中数随几何收敛、并比全幅严格更少（成员资格双向成立）」
-        int expectedHalf = CountRosterWithXLessThan(engine, commander, 0);
+        int expectedHalf = CountEligibleScreenHits(engine, new ScreenRect(-1200, -120, -10, 120));
         backend.SetMousePosition(new Vector2(-10f, 120f));
         TickUntil(engine, 10, () => { int c = CollectionCount(engine, commander, BoxHoverKey); return c >= 0 && c < fullBandHover; });
         halfBandHover = CollectionCount(engine, commander, BoxHoverKey);
-        Assert.That(halfBandHover, Is.InRange(expectedHalf - 3, expectedHalf + 3),
-            $"半幅框命中 = 候选集中 x<0 的单位 ± 边缘投影舍入（期望 {expectedHalf}，实测 {halfBandHover}）");
+        Assert.That(halfBandHover, Is.EqualTo(expectedHalf),
+            $"半幅框必须包含框边以内的全部单位（期望 {expectedHalf}，实测 {halfBandHover}）");
         double dragMs = drag.Elapsed.TotalMilliseconds;
         drag.Stop();
 
@@ -151,7 +140,8 @@ public sealed class CaseESelectionScalePressureTests
         Assert.That(rosterPerEventMs, Is.LessThan(50.0), $"7.每事件平均 = {rosterPerEventMs:F2}ms 超围栏");
         Assert.That(rosterStreamMs, Is.LessThan(5000.0), $"8.100 事件流 = {rosterStreamMs:F2}ms 超围栏");
         Assert.That(dragMs, Is.LessThan(4000.0), $"9.完整拖拽 = {dragMs:F2}ms 超围栏");
-        Assert.That(maxTickMs, Is.LessThan(500.0), $"10.拖拽单拍峰值 = {maxTickMs:F2}ms 超围栏");
+        if (enforceLatencyBudget)
+            Assert.That(maxTickMs, Is.LessThan(500.0), $"10.拖拽单拍峰值 = {maxTickMs:F2}ms 超围栏");
 
         WriteBenchmark(repoRoot, population: 10_000, rosterSingleMs, rosterPerEventMs, rosterStreamMs, dragMs, maxTickMs,
             rosterCount, worldAmount, fullBandHover, halfBandHover);
@@ -197,30 +187,20 @@ public sealed class CaseESelectionScalePressureTests
         return count;
     }
 
-    /// <summary>候选集中世界位姿 x 小于阈值的成员数（半幅框命中期望，与图链同源）。</summary>
-    private static int CountRosterWithXLessThan(GameEngine engine, Entity owner, float thresholdX)
+    private static int CountEligibleScreenHits(GameEngine engine, ScreenRect rect)
     {
-        var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
-            ?? throw new InvalidOperationException("store missing");
-        int keyId = store.KeyRegistry.GetId(SelectableKey);
-        if (keyId <= 0 || !store.TryGet(owner, keyId, out EntityCollectionHandle handle) ||
-            !store.TryGetView(handle, out EntityCollectionView view))
-        {
-            return 0;
-        }
-
-        var buffer = new Entity[view.Count];
-        int n = store.CopyEntities(owner, keyId, buffer);
+        int template = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)!.GetId("case_e_marine");
+        var projector = (IScreenProjector)engine.GetService(CoreServiceKeys.ScreenProjector)!;
         int count = 0;
-        for (int i = 0; i < n; i++)
-        {
-            if (engine.World.TryGet<WorldPositionCm>(buffer[i], out WorldPositionCm pos) &&
-                pos.Value.X.ToFloat() < thresholdX)
+        foreach (ref var chunk in engine.World.Query(new QueryDescription().WithAll<MapEntity, Team, EntityTemplateKeyRef>()))
+            foreach (int row in chunk)
             {
-                count++;
+                Entity entity = chunk.Entity(row);
+                if (engine.World.Get<Team>(entity).Id == 1 &&
+                    engine.World.Get<EntityTemplateKeyRef>(entity).TemplateKeyId == template &&
+                    SpatialBoundsUtility.EntityIntersectsScreenRect(engine.World, entity, projector, rect))
+                    count++;
             }
-        }
-
         return count;
     }
 
@@ -254,32 +234,11 @@ public sealed class CaseESelectionScalePressureTests
         {
             if (!exists)
             {
-                w.WriteLine("utc,population,roster_single_ms,roster_per_event_ms,roster_stream100_ms,drag_total_ms,drag_max_tick_ms,roster_count,world_marines,hover_full,hover_half");
+                w.WriteLine("utc,population,two_transitions_and_reads_ms,batch_per_write_ms,batch100_and_read_ms,drag_total_ms,drag_max_tick_ms,roster_count,world_marines,hover_full,hover_half");
             }
 
             w.WriteLine($"{DateTime.UtcNow:O},{population},{rosterSingleMs:F3},{rosterPerEventMs:F3},{rosterStreamMs:F3},{dragMs:F3},{maxTickMs:F3},{rosterCount},{worldAmount},{hoverFull},{hoverHalf}");
         }
-
-        File.WriteAllText(
-            Path.Combine(dir, "RUNS.md"),
-            $"""
-             # Case E 框选链 · 10k 人口实测
-
-             数据行：`case-e-selection-scale.csv`（每次跑追加一行，utc 唯一）。
-
-             - 场景：`case_e_selection_field`，10k 世界实体（100 名 team1 marine 可选 + 9894 team2 填充 + 6 授权实体）。
-             - roster_sync 每出生事件做一次 **O(N) 全量重扫**（QueryAllMapEntities→team/template 过滤→replace）。
-             - 本趟：单次重扫 {rosterSingleMs:F2}ms；100 事件流合计 {rosterStreamMs:F2}ms（每事件 {rosterPerEventMs:F2}ms）；
-               完整拖拽 {dragMs:F2}ms（20 次扫框，单拍峰值 {maxTickMs:F2}ms）；全幅框 {hoverFull}、半幅 {hoverHalf}。
-             - 缩放契约：出生/死亡事件驱动（零轮询），但**每次事件 = O(N) 重扫**——10k 单波 burst 若在一拍涌入
-               N 个出生事件，则那拍退化为 O(N²)。这是当前事件驱动方案的已知成本面（增量维护是后续优化方向，
-               非本 PR 范围）。
-             - **发现（本次实测钉出）**：`QueryAllMapEntities` 受 `GraphVmLimits.MaxTargets=256` 硬顶，全图查询只取前
-               256 个 MapEntity → 10k 人口下候选集被截断（世界 {worldAmount} 支可选，roster 只进 {rosterCount} 支）。
-               10k/100 玩家目标需先解除该顶（分页 / 增量维护），否则候选集完整性不成立——本 PR 不越界去改 VM。
-
-             _生成：CaseESelectionScalePressureTests（headless 实测）。_
-             """);
 
         TestContext.WriteLine($"roster_single={rosterSingleMs:F2}ms roster_per_event={rosterPerEventMs:F2}ms " +
             $"roster_stream100={rosterStreamMs:F2}ms drag={dragMs:F2}ms max_tick={maxTickMs:F2}ms " +

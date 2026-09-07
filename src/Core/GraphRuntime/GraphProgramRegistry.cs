@@ -33,9 +33,11 @@ namespace Ludots.Core.GraphRuntime
             TriggerGraphEntry[]? triggerGraphEntries,
             GraphGeneratedExecute? generatedExecute,
             GraphGeneratedExecuteSlice? generatedExecuteSlice,
-            GraphExecutionBackend executionBackend)
+            GraphExecutionBackend executionBackend,
+            IReadOnlyDictionary<int, GraphEntityQueryPlan>? entityQueries = null)
         {
             Program = program ?? Array.Empty<GraphInstruction>();
+            EntityQueries = entityQueries ?? GraphEntityQueryPlan.Compile(Program);
             Kind = kind;
             Symbols = symbols ?? Array.Empty<string>();
             TriggerGraphEntries = triggerGraphEntries ?? Array.Empty<TriggerGraphEntry>();
@@ -46,6 +48,7 @@ namespace Ludots.Core.GraphRuntime
         }
 
         public GraphInstruction[] Program { get; }
+        public IReadOnlyDictionary<int, GraphEntityQueryPlan> EntityQueries { get; }
         public GraphKind Kind { get; }
         public string[] Symbols { get; }
         public IReadOnlyList<TriggerGraphEntry> TriggerGraphEntries { get; }
@@ -70,7 +73,8 @@ namespace Ludots.Core.GraphRuntime
                 entries,
                 execute,
                 executeSlice,
-                backend);
+                backend,
+                EntityQueries);
         }
 
         private static bool ProgramContainsYield(GraphInstruction[] program)
@@ -454,6 +458,12 @@ namespace Ludots.Core.GraphRuntime
 
             foreach (KeyValuePair<int, GraphProgramRegistration> pair in _programs)
             {
+                foreach (GraphInstruction instruction in pair.Value.Program)
+                {
+                    if (instruction.Op != (ushort)GraphNodeOp.BindQueryCollection) continue;
+                    if (!_programs.TryGetValue(instruction.Imm, out var query) || query.Kind != GraphKind.Query)
+                        throw new InvalidOperationException("ENTITY_QUERY.ERR.ExpectedQueryGraph");
+                }
                 ValidateProgramInvokeGraphTargets(
                     pair.Key,
                     pair.Value,

@@ -39,10 +39,8 @@ public partial class World
             {
                 <#= Indent(getComponents, 16) #>
                 <#= Indent(assignValues, 16) #>
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 <#= Indent(assignValuesEvents, 16) #>
-        #endif
             }
         }
     }

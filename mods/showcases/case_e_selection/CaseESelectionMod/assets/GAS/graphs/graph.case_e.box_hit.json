@@ -27,13 +27,9 @@
         "op": "LoadPointerScreenY"
       },
       {
-        "id": "roster",
-        "op": "QueryFromCollection",
-        "collectionKey": "case_e.selectable"
-      },
-      {
         "id": "rect_hits",
-        "op": "ScreenRegionToEntities"
+        "op": "QueryScreenRegionCollection",
+        "collectionKey": "case_e.selectable"
       },
       {
         "id": "halt",
@@ -65,11 +61,6 @@
       {
         "from": "pointer_y",
         "fromPort": "next",
-        "to": "roster"
-      },
-      {
-        "from": "roster",
-        "fromPort": "next",
         "to": "rect_hits"
       },
       {
@@ -82,7 +73,7 @@
       {
         "from": "rep",
         "fromPort": "value",
-        "to": "roster",
+        "to": "rect_hits",
         "toPort": "source"
       },
       {
