@@ -252,6 +252,107 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     }
 
     /// <summary>
+    /// <summary>
+    /// 候选在拖拽途中死亡（仍在框内）：roster EntityDied 事件刷新 selectable → 下次指针移动
+    /// 碰撞集box_hover 剔除死者 → 松手提交的 selected 也不含死者（提交时重扫最新候选集）。
+    /// </summary>
+    [Test]
+    public void CandidateDies_MidDrag_ExcludedFromHoverAndCommit()
+    {
+        string repoRoot = FindRepoRoot();
+        var backend = new TestInputBackend();
+        using GameEngine engine = CreateEngine(repoRoot, backend);
+        engine.LoadMap(new MapLoadRequest(
+            new MapId(MapId),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.case_e") })));
+        TickUntil(engine, 40, () => engine.CurrentMapSession != null);
+        AssertNoTriggerErrors(engine);
+
+        Entity commander = Resolve(engine, "case-e-commander");
+        Entity marine1 = Resolve(engine, "case-e-marine-1");
+        Entity marine2 = Resolve(engine, "case-e-marine-2");
+        Entity marine3 = Resolve(engine, "case-e-marine-3");
+        Entity marine4 = Resolve(engine, "case-e-marine-4");
+
+        // 候选集就位，按下拖到命中 marine1/marine2，预览集就绪
+        TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        PressAt(engine, backend, new Vector2(-1200f, -100f));
+        TickUntil(engine, 20, BoxingActive(engine, commander));
+        backend.SetMousePosition(new Vector2(-300f, 100f));
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
+        AssertCollection(engine, commander, BoxHoverKey, "拖拽中 marine1/2 命中预览", marine1, marine2);
+
+        // 候选 marine2 在框内被击杀 → 候选集 EntityDied 收缩；预览集要等下一次指针移动重扫
+        engine.World.Destroy(marine2);
+        TickUntil(engine, 30, () => CollectionCount(engine, commander, SelectableKey) == 3);
+        AssertCollection(engine, commander, SelectableKey, "死亡驱动 selectable 收缩（EntityDied）", marine1, marine3, marine4);
+        AssertCollection(engine, commander, BoxHoverKey, "预览集此时仍是死前命中集（下次移动才重扫）", marine1, marine2);
+
+        // 再动一次指针 → box_hover_tick 重扫最新候选集 → 死者出预览
+        backend.SetMousePosition(new Vector2(-200f, 100f));
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 1);
+        AssertCollection(engine, commander, BoxHoverKey, "死亡后的首次指针移动把死者剔出预览", marine1);
+
+        // 松手 → box_commit 重扫最新候选集 → selected 不含死者
+        ReleaseAt(engine, backend);
+        TickUntil(engine, 30, BoxingCleared(engine, commander));
+        Tick(engine, 4);
+        AssertCollection(engine, commander, SelectedKey, "提交时重查最新候选集，死者不入选", marine1);
+        Assert.That(CollectionContains(engine, commander, SelectedKey, marine2), Is.False,
+            "拖拽中死亡的候选永不被提交选中");
+        AssertNoTriggerErrors(engine);
+    }
+
+    /// <summary>
+    /// 指针离开后再次回到框内（入框→出框→再入框）：box_hover 是纯集合 diff，成员资格双向
+    /// 跟随；环实例 创建→销毁→再创建（实例生灭，非一次行为）。
+    /// </summary>
+    [Test]
+    public void CandidateReEntersBoxAfterLeaving_HoverFollowsMembershipBothDirections()
+    {
+        string repoRoot = FindRepoRoot();
+        var backend = new TestInputBackend();
+        using GameEngine engine = CreateEngine(repoRoot, backend);
+        engine.LoadMap(new MapLoadRequest(
+            new MapId(MapId),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.case_e") })));
+        TickUntil(engine, 40, () => engine.CurrentMapSession != null);
+        AssertNoTriggerErrors(engine);
+
+        Entity commander = Resolve(engine, "case-e-commander");
+        Entity marine1 = Resolve(engine, "case-e-marine-1");
+        Entity marine2 = Resolve(engine, "case-e-marine-2");
+
+        var presenterRuntime = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+            ?? throw new InvalidOperationException("PresenterEntityRuntime service is missing.");
+        var presenterDefinitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+            ?? throw new InvalidOperationException("PresenterDefinitionRegistry service is missing.");
+        int ringPreviewDefId = presenterDefinitions.GetId(RingPreviewPresenter);
+
+        TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        PressAt(engine, backend, new Vector2(-1200f, -100f));
+        TickUntil(engine, 20, BoxingActive(engine, commander));
+
+        // 入框：指针左区盖住 only marine1（press=-1200 → pointer=-850 的矩形含 x=-900）
+        backend.SetMousePosition(new Vector2(-850f, 0f));
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 1);
+        AssertCollection(engine, commander, BoxHoverKey, "入框第一段命中 marine1", marine1);
+        AssertPreviewOn(engine, presenterRuntime, ringPreviewDefId, "再入框后黄环重新创建", marine1);
+
+        // 出框：指针离开 marine1 → 0
+        backend.SetMousePosition(new Vector2(-1500f, -300f));
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 0);
+        Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.EqualTo(0), "出框预览清空");
+
+        // 再入框：指针回到 marine1/marine2 区 → 1/2
+        backend.SetMousePosition(new Vector2(-200f, 100f));
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
+        AssertCollection(engine, commander, BoxHoverKey, "再入框命中 marine1/2，成员资格重新建立", marine1, marine2);
+        AssertPreviewOn(engine, presenterRuntime, ringPreviewDefId, "成员资格重入 → 黄环实例再生", marine1, marine2);
+        AssertNoTriggerErrors(engine);
+    }
+
+    /// <summary>
     /// DeactivateContext（图内 op）在移除 context 组件的同一变更点同步跑
     /// onDeactivated 槽——框选结算不再隔一帧。release 当拍即写 selected（不再等门控下一 tick
     /// 的世界扫描）；随后 reconcile 只做延迟卸载、不重复跑槽（selected 不变化、box_hover 不复活）。
