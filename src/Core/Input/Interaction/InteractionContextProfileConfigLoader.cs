@@ -81,7 +81,7 @@ namespace Ludots.Core.Input.Interaction
                     if (string.Equals(property.Key, "whileActive", StringComparison.OrdinalIgnoreCase))
                     {
                         throw new InvalidOperationException(
-                            $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; use onActivated/onDeactivated graph slots (#1398 D15 — whileActive was a per-tick period field; the slots are instant window-boundary hooks).");
+                            $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; use onActivated/onDeactivated graph slots (whileActive was a per-tick period field; the slots are instant window-boundary hooks).");
                     }
                 }
             }

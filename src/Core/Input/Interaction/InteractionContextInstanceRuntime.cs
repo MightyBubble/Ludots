@@ -8,7 +8,7 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Derived interaction context kernel (#1398 S2b, constitution §8.2/§8.3). The
+    /// Derived interaction context kernel (constitution §8.2/§8.3). The
     /// <c>ActivateContext</c> / <c>DeactivateContext</c> graph ops land here:
     /// <list type="bullet">
     /// <item>Activation is idempotent-failure — activating a context the subject already
@@ -49,7 +49,7 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// Late-bound change-point hook (#1398 刀3): the mount gate's
+        /// Late-bound change-point hook: the mount gate's
         /// <c>RunDeactivatedSlotNow</c>, wired by the engine after both are built. When bound,
         /// <see cref="Deactivate"/> runs each removed context's <c>onDeactivated</c> slot
         /// synchronously on the same change point instead of leaving it to the gate's next
@@ -171,7 +171,7 @@ namespace Ludots.Core.Input.Interaction
             _world.Set(subject, instances);
             _removalScratch.Clear();
 
-            // #1398 刀3: run the onDeactivated slot at the same change point that removed the
+            // Run the onDeactivated slot at the same change point that removed the
             // context, so settlement/preview teardown finish in this tick — no 1-tick delay
             // while waiting for the gate's next world scan. The gate unmounts the profile's
             // triggers and skips re-running the slot on its reconcile pass.

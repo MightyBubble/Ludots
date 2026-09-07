@@ -13,7 +13,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// #1398 S2b: the profile <c>bindings[]</c> / <c>triggers[]</c> load chain — structural
+    /// The profile <c>bindings[]</c> / <c>triggers[]</c> load chain — structural
     /// validation in the config loader and reference resolution at registry install
     /// (unknown semantic action ids, trigger graph ids, and entry event names fail fast).
     /// </summary>

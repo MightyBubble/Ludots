@@ -71,7 +71,7 @@ public sealed class InteractionContextGateChurnRegressionTests
         // must start after that single mount so any later append is churn. Baseline = the
         // moment the log stops growing (every map-authored + context mount has landed), not a
         // fixed tally of log rows — map-level authored TriggerGraphs add a legal loading-time
-        // "Registered" row (#1398 刀1) that must not shift the churn window edge.
+        // "Registered" row that must not shift the churn window edge.
         TickUntil(engine, 20, () => _log.Appends.Count >= 2);
         int appendsAtHoldStart = _log.Appends.Count;
         int stableTicks = 0;

@@ -10,7 +10,7 @@ namespace Ludots.Tests.Gas.Production;
 /// InvokeGraph callee through the named argument key (int return, float echoed into a
 /// map variable, entity physically moved by the callee), the InvokeGraph entry-label
 /// call selects the authored entry, and DispatchMapEvent fires a declared custom
-/// map event that a map-scoped listener receives with the staged payload (#1398 刀2).
+/// map event that a map-scoped listener receives with the staged payload.
 /// </summary>
 [TestFixture]
 [NonParallelizable]

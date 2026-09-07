@@ -19,7 +19,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// granularity and fires map-scoped <see cref="GameEvents.RegionEntered"/>/<see cref="GameEvents.RegionExited"/> events
     /// with the crossing entity and region id.
     ///
-    /// Semantics (changed #1398 刀2 — the retired MapHeartbeat think-wave is gone):
+    /// Semantics (the retired MapHeartbeat think-wave is gone):
     /// - Cadence: evaluated once per fixed step in Update, not on a think-wave event.
     ///   Enter/exit fires only when a region's inside-set actually changes; a map with no
     ///   movement fires nothing.

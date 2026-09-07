@@ -43,8 +43,8 @@ namespace Ludots.Core.Scripting
 
         /// <summary>
         /// Map-scoped continuation pulse for suspended map/entity-domain TriggerGraph
-        /// entries (replaces the retired MapHeartbeat think-wave as the resume cadence;
-        /// #1398 刀2). Fired per active map only while the map carries a suspended run.
+        /// entries (replaces the retired MapHeartbeat think-wave as the resume cadence).
+        /// Fired per active map only while the map carries a suspended run.
         /// </summary>
         public static readonly EventKey MapTriggerResume = new EventKey("MapTriggerResume");
 
@@ -78,13 +78,13 @@ namespace Ludots.Core.Scripting
 
         /// <summary>
         /// Map-scoped: fired when an entity carrying a MapEntity component joins the map
-        /// (entity lifecycle observer, change-driven since #1398 刀2). Payload: SourceEntity, SourceTeamId.
+        /// (entity lifecycle observer, change-driven). Payload: SourceEntity, SourceTeamId.
         /// </summary>
         public static readonly EventKey EntitySpawned = new EventKey("EntitySpawned");
 
         /// <summary>
         /// Map-scoped: fired on the destroy tick for entities carrying a MapEntity component
-        /// (entity lifecycle observer, change-driven since #1398 刀2). The entity may already
+        /// (entity lifecycle observer, change-driven). The entity may already
         /// be recycled when the event fires; SourceTeamId was captured at destroy time.
         /// Payload: SourceEntity, SourceTeamId.
         /// </summary>
@@ -100,7 +100,7 @@ namespace Ludots.Core.Scripting
 
         /// <summary>
         /// Map-scoped: fired when a team's alive-entity count (entities with AttributeBuffer)
-        /// changes across a lifecycle-observer diff (change-driven since #1398 刀2).
+        /// changes across a lifecycle-observer diff (change-driven).
         /// Payload: SourceTeamId, Count, Delta.
         /// </summary>
         public static readonly EventKey EntityAliveCountChanged = new EventKey("EntityAliveCountChanged");

@@ -11,7 +11,7 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
-    /// Per-map entity-lifecycle observer (#1398 刀2). Replaces the retired
+    /// Per-map entity-lifecycle observer. Replaces the retired
     /// <see cref="MapHeartbeatClockSystem"/> think-wave pump: the 30-tick cadence and the
     /// <see cref="GameEvents.MapHeartbeat"/> event are gone. Every fixed step each active
     /// map's MapEntity membership is diffed — new members fire

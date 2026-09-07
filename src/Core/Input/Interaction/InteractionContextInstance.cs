@@ -19,8 +19,8 @@ namespace Ludots.Core.Input.Interaction
         CastCommitOp = 1,
 
         /// <summary>
-        /// Mounted at entity spawn by the template's <c>initialInteractionContext</c> field
-        /// (#1398 S2b); lives until the entity dies — no foreign lifecycle reclaims it.
+        /// Mounted at entity spawn by the template's <c>initialInteractionContext</c> field;
+        /// lives until the entity dies — no foreign lifecycle reclaims it.
         /// </summary>
         TemplateSpawn = 2,
 
@@ -50,7 +50,7 @@ namespace Ludots.Core.Input.Interaction
     /// <see cref="InteractionContextInstances"/> with ParentContextId filled —
     /// a set member with ParentContextId != 0 is a derived instance (a child of that parent
     /// context); members written by the mount chains are base instances. There is no third
-    /// kind (constitution §8.2, #1398 S2b).
+    /// kind (constitution §8.2).
     /// </para>
     /// <para>
     /// All int fields are registry ids resolved once at

@@ -8,7 +8,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
     /// Resumes suspended map/entity-domain TriggerGraphs on the fixed-step deferred
-    /// trigger phase (#1398 刀2). Replaces the retired MapHeartbeat think-wave as the
+    /// trigger phase. Replaces the retired MapHeartbeat think-wave as the
     /// map/entity-domain continuation cadence.
     ///
     /// Gating: a map's pulse fires only while that map carries a suspended run

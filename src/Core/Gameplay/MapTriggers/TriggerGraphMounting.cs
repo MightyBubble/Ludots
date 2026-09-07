@@ -13,7 +13,7 @@ using Ludots.Core.Systems;
 namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
-    /// Entry-class filter for context trigger mounts (#1398 刀4): Interactive = input-action
+    /// Entry-class filter for context trigger mounts: Interactive = input-action
     /// bound entries, Passive = map/event-bound entries. The mount trigger and its resume
     /// companion are always built together per entry, so a class filter never orphans one.
     /// </summary>
@@ -111,7 +111,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// Install-time fail-fast for one profile-declared context trigger mount (#1398 S2b):
+        /// Install-time fail-fast for one profile-declared context trigger mount:
         /// the graph must be registered with TriggerGraph kind, declare at least one dispatch
         /// entry, and — when the mount narrows by event name — carry a dispatch entry on that
         /// exact event. Called from <c>InteractionContextProfileRegistry</c> install so unknown
@@ -159,7 +159,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// Builds one context-gated entity-domain mount (#1398 S2b): the mounted profile's
+        /// Builds one context-gated entity-domain mount: the mounted profile's
         /// trigger reference materialized on the context subject while the context is active.
         /// Same mount chain as entity mounts (placed-instance validation, event vocabulary,
         /// tag resolution, subscription-scope routing); the mount's optional event narrows the
@@ -490,7 +490,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 TriggerGraphEntry entry = entries[e];
 
-                // Entry-class filter (#1398 刀4): when the mount asks for only interactive or
+                // Entry-class filter: when the mount asks for only interactive or
                 // only passive entries, skip the other class wholesale — the mount trigger and
                 // its resume companion are built together below, so neither gets orphaned.
                 if (entryClass == ContextMountEntryClass.Interactive && !entry.IsActionBound)
@@ -599,7 +599,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         /// <summary>
         /// Context mounts may override the selected entries' authored filters with the mount's
-        /// own filters block (#1398 S2b) — a reference-time replacement, not a merge. Parsing
+        /// own filters block — a reference-time replacement, not a merge. Parsing
         /// mirrors the entry filter compiler rules: trimmed non-empty strings, direction as
         /// cross_above/cross_below, threshold and direction declared together.
         /// </summary>

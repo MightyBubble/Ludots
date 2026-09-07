@@ -18,7 +18,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// #1398 S2b: the context trigger gate — entering a context mounts the profile's
+    /// The context trigger gate — entering a context mounts the profile's
     /// <c>triggers[]</c> listeners on the subject, leaving unmounts them, derived contexts
     /// gate their own triggers the same way, and dead subjects are swept. Graph execution
     /// through the mounted TriggerGraph triggers rides the same executor covered by
@@ -131,7 +131,7 @@ namespace Ludots.Tests.Gas.Graph
             world.Destroy(subject);
             gate.Update(0.016f);
 
-            // Destroy-time contract (#1398 刀2): the retired heartbeat sweep is gone. The
+            // Destroy-time contract: the retired heartbeat sweep is gone. The
             // dead subject's own context mounts are reclaimed on the destroy handler — no
             // staged budget, no wave — so the ledger gap closes immediately.
             Assert.That(gate.MountedSubjectCount, Is.EqualTo(0));
@@ -168,7 +168,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         /// <summary>
-        /// #1398 刀3: the change point (DeactivateContext) runs the profile's onDeactivated
+        /// The change point (DeactivateContext) runs the profile's onDeactivated
         /// slot synchronously — no 1-tick settlement delay, exactly once. The next gate update
         /// flushes the deferred unmount and its reconcile must NOT re-run the slot (mounts are
         /// already gone), and a later re-activation fires the slot again for the new window.
@@ -218,7 +218,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         /// <summary>
-        /// #1398 刀4: a foreground child parks its parent's interactive (action-bound) trigger
+        /// A foreground child parks its parent's interactive (action-bound) trigger
         /// mounts while keeping map/passive (event-bound) mounts, does not touch scope
         /// coexistence (non-stack), never runs the parent's Deactivated slot, and restores the
         /// interactive mounts when it deactivates.
@@ -369,7 +369,7 @@ namespace Ludots.Tests.Gas.Graph
                             },
                             OnDeactivated = new List<string> { CounterGraph },
                         },
-                        // #1398 刀4: parent carries one event-bound + one action-bound mount so the
+                        // Parent carries one event-bound + one action-bound mount so the
                         // foreground-parking test can diff which class stays and which is demoted.
                         new()
                         {

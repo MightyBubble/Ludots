@@ -10,7 +10,7 @@ namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
     /// Reference catalogs the profile install chain resolves <c>bindings[]</c>,
-    /// <c>triggers[]</c>, and <c>whileActive</c> against (#1398 S2b / Case E §05): the graph
+    /// <c>triggers[]</c>, and <c>whileActive</c> against: the graph
     /// program registry for trigger mounts and whileActive mounts (graphs that
     /// WriteCollection their preview collection), and the input action id space for
     /// semantic action bindings. A profile declaring any of those fields fails fast at install
@@ -185,7 +185,7 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// Graph-body ids for one lifecycle slot of the profile (#1398 D15); empty when the
+        /// Graph-body ids for one lifecycle slot of the profile; empty when the
         /// profile declares no <c>onActivated</c> / <c>onDeactivated</c>. Allocation free
         /// after install. The slot is ambiguity-free by construction: it belongs to the
         /// profile, so no owner matching is ever required.
@@ -209,7 +209,7 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// Foreground declaration (#1398 刀4): true while this profile's active instance parks
+        /// Foreground declaration: true while this profile's active instance parks
         /// the interactive (input-action bound) trigger mounts of its active ancestors.
         /// </summary>
         public bool IsForeground(int profileId)

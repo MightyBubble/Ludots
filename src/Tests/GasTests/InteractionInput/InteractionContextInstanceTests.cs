@@ -16,7 +16,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// #1398 S2b: derived interaction contexts (constitution §8.2/§8.3) — the entity-mounted
+    /// Derived interaction contexts (constitution §8.2/§8.3) — the entity-mounted
     /// coexisting set, the activation/deactivation kernel (parent validation, transitive
     /// descendant removal, ContextActivated/Deactivated presentation events as plain
     /// lifecycle notifications), and the ActivateContext/DeactivateContext op dispatch.

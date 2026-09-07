@@ -43,7 +43,7 @@ namespace Ludots.Core.Input.Interaction
         public string CommandIntentId { get; set; }
 
         /// <summary>
-        /// Foreground declaration (#1398 刀4): while this context is active, every active
+        /// Foreground declaration: while this context is active, every active
         /// ancestor's interactive (input-action bound) trigger mounts are parked — removed
         /// from listening — while map/passive (event-bound) mounts stay. Scope and the
         /// parent-child coexistence (non-stack) are unaffected; parking is a mount-regime
@@ -56,12 +56,12 @@ namespace Ludots.Core.Input.Interaction
         /// Semantic action ids (input config action space) that hold while this context is
         /// active. Validated against the installed input action catalog at registry install —
         /// an unknown action id fails fast. Data-declared contract only in this slice: routing
-        /// consumers land with the slot work (RFC #1398 S6).
+        /// consumers land with the slot work.
         /// </summary>
         public List<string>? Bindings { get; set; }
 
         /// <summary>
-        /// TriggerGraph mounts the context gates while it is active (#1398 S2b): each entry
+        /// TriggerGraph mounts the context gates while it is active: each entry
         /// activates one graph's dispatch entries on the context subject while the context is
         /// mounted and deactivates them on unmount. Graph id and entry event name resolve at
         /// registry install (fail fast on unknown ids); mount-time event vocabulary checks ride
@@ -72,14 +72,14 @@ namespace Ludots.Core.Input.Interaction
         /// <summary>
         /// Graph bodies (plain bodies, no entries) run once when this context's
         /// <c>triggers[]</c> window opens — before the trigger mounts are registered on the
-        /// subject (#1398 D15). Instant boundary hooks flanking the mounted window, never a
+        /// subject. Instant boundary hooks flanking the mounted window, never a
         /// per-tick clock (the retired <c>whileActive</c> was a period field; these are not).
         /// </summary>
         public List<string>? OnActivated { get; set; }
 
         /// <summary>
         /// Graph bodies run once when this context's <c>triggers[]</c> window closes — after
-        /// the trigger mounts are removed (explicit deactivation or owner death; #1398 D15).
+        /// the trigger mounts are removed (explicit deactivation or owner death).
         /// Settlement/cleanup graphs (selection_commit, preview clears) live here and are
         /// shared verbatim across every gesture context, because they only read the
         /// handoff collections/blackboard the exit graph wrote, never the gesture shape.

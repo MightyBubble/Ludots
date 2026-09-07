@@ -1465,8 +1465,8 @@ namespace Ludots.Core.Engine
                 presentationTimingDiagnostics,
                 presentationTargetGeneration);
             // Interaction context profile id space registers before presenter definition
-            // loading so presenter rules resolve ContextActivated/Deactivated keys (#1398
-            // S2b). The full install (row fill + bindings/triggers reference validation)
+            // loading so presenter rules resolve ContextActivated/Deactivated keys.
+            // The full install (row fill + bindings/triggers reference validation)
             // runs later in the input kernel where its graph/action catalogs exist; Register
             // is idempotent and both passes agree on ids by construction (Default first,
             // then config order).
@@ -2220,7 +2220,7 @@ namespace Ludots.Core.Engine
                         ? channel.Handler
                         : GetService(CoreServiceKeys.InputHandler)),
                 SystemGroup.InputCollection);
-            // #1398 S2b + D15: context trigger gate — the world-side active context set diff
+            // Context trigger gate — the world-side active context set diff
             // mounts/unmounts profile-declared triggers[] graphs on the context subject and
             // runs the onActivated/onDeactivated lifecycle slot bodies at the mount window
             // boundaries; simulation-side twin of the local IMC projection above (observers
@@ -2237,7 +2237,7 @@ namespace Ludots.Core.Engine
                 gasGraphApi);
             _interactionContextTriggerGate = interactionContextTriggerGate;
             RegisterSystem(interactionContextTriggerGate, SystemGroup.InputCollection);
-            // #1398 刀3: bind the change-point Deactivated slot runner — DeactivateContext op
+            // Bind the change-point Deactivated slot runner — DeactivateContext op
             // executes the profile's onDeactivated slot synchronously where the context
             // component is removed (same tick settlement), instead of the gate's next scan.
             interactionContextInstances.BindDeactivatedSlotRunner(

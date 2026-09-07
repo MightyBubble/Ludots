@@ -18,7 +18,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
     }
 
     /// <summary>
-    /// Context trigger gate (#1398 S2b + D15): every tick, diffs the world-side active
+    /// Context trigger gate: every tick, diffs the world-side active
     /// interaction context set per entity — the mounted base
     /// <see cref="InteractionContextInstance"/> plus every
     /// <see cref="InteractionContextInstances"/> instance — against the context-owned
@@ -31,7 +31,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// writer — exec reconciliation, cast ops, derived-context ops, and template spawns —
     /// without any of them knowing about triggers.
     /// <para>
-    /// D15 lifecycle slots: the same mount window is flanked by the profiles'
+    /// Lifecycle slots: the same mount window is flanked by the profiles'
     /// <c>onActivated</c>/<c>onDeactivated</c> graph bodies — Activated runs as the window
     /// opens (before the profile's triggers register), Deactivated as it closes (after they
     /// are removed, plus the owner-death path via the destroy boundary). Slots are instant
@@ -41,10 +41,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// </para>
     /// <para>
     /// Ledger: mounts are stamped with a <see cref="TriggerMountOwner"/> before registration
-    /// and this system keeps no parallel mount list (#1398 D10); the TriggerManager owner
+    /// and this system keeps no parallel mount list; the TriggerManager owner
     /// index answers "what is mounted for (subject, profile)" and removes by owner. Dead
     /// subjects are skipped here — their inert mounts are reclaimed by the unified
-    /// heartbeat sweep in <see cref="EntityTriggerGraphMounts"/> (#1398 D11), the same
+    /// heartbeat sweep in <see cref="EntityTriggerGraphMounts"/>, the same
     /// policy template mounts follow.
     /// </para>
     /// <para>
@@ -79,7 +79,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly List<Trigger> _actionTriggerScratch = new(4);
         private readonly List<Trigger> _mountScratch = new(8);
         private readonly List<int> _staleOpenScratch = new(4);
-        // Window lifecycle marks (#1398 刀4): per subject the currently-open profiles and
+        // Window lifecycle marks: per subject the currently-open profiles and
         // their mount regime. Keyed subject-first so a reconcile only touches its own entry —
         // never a whole-window scan (same bounded-scan discipline the retired heartbeat sweep
         // enforced). A window opens (Activated ran, state recorded) / closes (Deactivated ran,
@@ -108,7 +108,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
             _graphReturnWriter = graphReturnWriter ?? throw new ArgumentNullException(nameof(graphReturnWriter));
             _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
-            // #1398 D15: an owner destroyed while still carrying context components never
+            // An owner destroyed while still carrying context components never
             // went through an explicit deactivation — run each carried context's
             // onDeactivated slot at the destroy boundary so settlement/preview cleanup
             // still happen (the retired gate skipped dead subjects entirely).
@@ -146,7 +146,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public override void Update(in float dt)
         {
-            // #1398 刀3: change-point deactivations (DeactivateContext op) run the profile's
+            // Change-point deactivations (DeactivateContext op) run the profile's
             // onDeactivated slot synchronously at the call site, but never mutate the trigger
             // ledger mid-dispatch (the change point sits inside a context-owned TriggerGraph
             // mount's own execution; inline UnregisterTrigger would break the action-binding
@@ -160,7 +160,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             // Double-buffered subject sets: the retired buffer holds last frame's scan so
             // the catch-up below only reconciles subjects that actually left the scan this
-            // frame (O(delta)), never the whole mount index (#1398 D12).
+            // frame (O(delta)), never the whole mount index.
             HashSet<Entity> retired = _retiredSubjects;
             HashSet<Entity> current = _frameSubjects;
             current.Clear();
@@ -170,7 +170,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 if (!World.IsAlive(subject))
                 {
                     // Dead subjects keep their (inert) mounts until the unified heartbeat
-                    // sweep reclaims them — the same policy template mounts follow (#1398 D11).
+                    // sweep reclaims them, the same policy template mounts follow.
                     continue;
                 }
 
@@ -218,9 +218,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// <summary>
         /// One pass per subject: unmount context mounts that are no longer desired, demote the
         /// interactive mounts of profiles parked by an active foreground descendant, and mount
-        /// the missing ones. The desired set is computed once per subject per frame (#1398 D12);
+        /// the missing ones. The desired set is computed once per subject per frame;
         /// window slots (onActivated/onDeactivated) run only on desired transitions, never on a
-        /// park/unpark regime change (#1398 刀4).
+        /// park/unpark regime change.
         /// </summary>
         private void ReconcileSubject(Entity subject)
         {
@@ -338,7 +338,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// Parked profile set for the subject (#1398 刀4): a profile is parked while any active
+        /// Parked profile set for the subject: a profile is parked while any active
         /// descendant (any depth, base mount or derived instance) declares <c>Foreground</c>.
         /// Walk every foreground node up its <c>ParentContextId</c> chain and collect ancestors.
         /// Siblings and the foreground profile itself are never parked — scope coexistence stays
@@ -467,7 +467,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// Change-point contract (#1398 刀3): runs a profile's <c>onDeactivated</c> slot
+        /// Change-point contract: runs a profile's <c>onDeactivated</c> slot
         /// synchronously at the moment its context leaves the subject, so settlement
         /// (<c>selection_commit</c>) and preview teardown complete in the same tick as the
         /// <c>DeactivateContext</c> op instead of waiting for the next reconcile pass. Called
@@ -598,7 +598,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             // Window marks never outlive the subject (active-session or map teardown alike).
             _openWindows.Remove(entity);
 
-            // Destroy-time reclamation (#1398 刀2): the retired heartbeat sweep is gone, so
+            // Destroy-time reclamation: the retired heartbeat sweep is gone, so
             // the gate reclaims the dead subject's own context mounts right here — after the
             // Deactivated slots, same-handler, no staged budget (naturally bounded by the dead
             // subject's mount count). Entity-domain template mounts are reclaimed by
@@ -617,7 +617,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// Mount a profile's declared triggers on the subject, filtered by entry class (#1398 刀4):
+        /// Mount a profile's declared triggers on the subject, filtered by entry class:
         /// <see cref="ContextMountEntryClass.All"/> for a normal window, <see cref="ContextMountEntryClass.Passive"/>
         /// while parked (map/passive listeners stay live), <see cref="ContextMountEntryClass.Interactive"/>
         /// when a parked window is restored. Class filtering happens inside the build

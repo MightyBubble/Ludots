@@ -45,7 +45,7 @@ namespace Ludots.Core.Scripting
         private readonly Dictionary<MapId, List<Trigger>> _mapTriggers = new Dictionary<MapId, List<Trigger>>();
         // Owner-keyed view over the map tables (entity-domain mounts only). The map tables
         // stay the single ledger; this index only answers "which mounts did owner X create"
-        // so no feature keeps a parallel shadow list (#1398 D10).
+        // so no feature keeps a parallel shadow list.
         private readonly Dictionary<Entity, List<OwnedMountRecord>> _ownedMountsBySubject = new();
 
         // Map -> Event -> triggers, maintained in priority order at registration time so
@@ -295,7 +295,7 @@ namespace Ludots.Core.Scripting
 
         /// <summary>
         /// Remove exactly one owner's mounts from its map — the owner-scoped removal path
-        /// features use instead of tracking their own trigger lists (#1398 D10).
+        /// features use instead of tracking their own trigger lists.
         /// </summary>
         public void RemoveOwnedMounts(TriggerMountOwner owner)
         {
@@ -923,7 +923,7 @@ namespace Ludots.Core.Scripting
         }
 
         /// <summary>
-        /// Resolve map/entity-domain suspended runs on the given map (#1398 刀2). Pure
+        /// Resolve map/entity-domain suspended runs on the given map. Pure
         /// dispatch to the map's MapTriggerResume subscribers; the clock gates the call on
         /// <see cref="HasSuspendedMapTriggers"/> so an idle map fires nothing.
         /// </summary>

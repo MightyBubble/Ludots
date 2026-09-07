@@ -73,7 +73,7 @@ namespace Ludots.Tests.Gas.Graph
             MapVariableStore variables = RequireVariables(engine);
             Assert.That(variables.ReadInt("wave_ran"), Is.EqualTo(0), "No pulse may fire the entry before the resume dispatch.");
 
-            // #1398 刀2: the retired MapHeartbeat think-wave cadence is replaced by the
+            // The retired MapHeartbeat think-wave cadence is replaced by the
             // gated map continuation pulse (MapTriggerResume). An unsuspended entry still
             // dispatches when the pulse fires — same map-bus path, same self scope.
             engine.TriggerManager.FireMapTriggerResume(new MapId(MapId), engine.CreateContext());
@@ -191,7 +191,7 @@ namespace Ludots.Tests.Gas.Graph
                 Assert.That(variables.ReadInt("died"), Is.EqualTo(1),
                     "The EntityDied broadcast must not re-fire the entity-domain entry.");
                 Assert.That(engine.EntityTriggerGraphMounts.GetDeadMountCount(new MapId(MapId)), Is.EqualTo(0),
-                    "Destroy-time reclamation closes the dead-mount ledger immediately (#1398 刀2).");
+                    "Destroy-time reclamation closes the dead-mount ledger immediately.");
             });
         }
 

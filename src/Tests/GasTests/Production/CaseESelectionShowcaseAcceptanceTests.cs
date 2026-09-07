@@ -21,7 +21,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Production;
 
 /// <summary>
-/// Case E (#1398 D6/D8/§05) 框选全链 headless 验收（忠实形态），对照 case-e-config-report.html
+/// Case E 框选全链 headless 验收（忠实形态），对照 case-e-config-report.html
 /// 的七步：01 进图出生 / 02 模板 initialInteractionContext 挂 Instance / 03 Profile triggers 门控 /
 /// 04 语义动作直绑触发衍生 context（框起角落操作者 rep 黑板；候选集由 battle context 挂载的 roster_sync 维护）/
 /// 05 boxing context 持续过程：ScreenRect 框 + 存活期命中写 case_e.box_hover 预览集 →
@@ -252,7 +252,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     }
 
     /// <summary>
-    /// 刀 3（本版本新增）：DeactivateContext（图内 op）在移除 context 组件的同一变更点同步跑
+    /// DeactivateContext（图内 op）在移除 context 组件的同一变更点同步跑
     /// onDeactivated 槽——框选结算不再隔一帧。release 当拍即写 selected（不再等门控下一 tick
     /// 的世界扫描）；随后 reconcile 只做延迟卸载、不重复跑槽（selected 不变化、box_hover 不复活）。
     /// </summary>
@@ -306,7 +306,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     }
 
     /// <summary>
-    /// 刀 1（本版本新增）：候选集从 MapHeartbeat 轮询改为 EntitySpawned/EntityDied 事件驱动。
+    /// 候选集从 MapHeartbeat 轮询改为 EntitySpawned/EntityDied 事件驱动。
     /// 死亡时 roster_sync 重build图谱（QueryAllMapEntities → team/template 过滤 → replace），
     /// 已销毁实体从 MapEntity 查询消失，故候选集自然剔除死者。验证：4 支建材中销毁一支 →
     /// 候选集缩到 3，且死者不在其中（零轮询：EntityDied 触发才是刷新源）。
@@ -343,7 +343,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     }
 
     /// <summary>
-    /// 死亡补发合同（#1398 D15）：主体在拖拽途中被销毁，未走显式 Deactivate——destroy 边界
+    /// 死亡补发合同：主体在拖拽途中被销毁，未走显式 Deactivate——destroy 边界
     /// 必须补跑并激活的 onDeactivated 槽（box_hover_clear 清预览），且整链不得抛错。
     /// </summary>
     [Test]

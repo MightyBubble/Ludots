@@ -71,7 +71,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// <summary>
         /// Mount owners whose subject is dead but whose mounts are not yet reclaimed;
         /// test observability. Destroy-time reclamation makes this transient: with the
-        /// think-wave sweep retired (#1398 刀2), a destroy reclaims its subject's mounts
+        /// think-wave sweep retired, a destroy reclaims its subject's mounts
         /// in the same handler, so the count is non-zero only mid-handler.
         /// </summary>
         public int GetDeadMountCount(MapId mapId)
@@ -269,7 +269,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             // The entity's own TemplateEntity mounts are reclaimed here too: no staged
             // budget applies to a single destroy (it is naturally bounded by the dead
-            // subject's mount count) and the think-wave sweep is retired (#1398 刀2).
+            // subject's mount count) and the think-wave sweep is retired.
             for (int i = 0; i < _ownedScratch.Count; i++)
             {
                 if (_ownedScratch[i].Key.Kind == TriggerMountOwnerKind.TemplateEntity)
@@ -280,7 +280,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// Reclaim every mount a dead subject owns, immediately and completely (#1398 刀2:
+        /// Reclaim every mount a dead subject owns, immediately and completely:
         /// destroy-time reclamation replaces the retired heartbeat budget sweep).
         /// </summary>
         private void ReclaimMounts(TriggerMountOwner owner)
