@@ -115,3 +115,13 @@ N/A（不新增 opcode；只扩既有 op 的 authorableKinds）
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: effect 步骤（保持 `EffectRequestQueue` 固定容量合同不变）
+
+## GAS Composition Gate — Effect Transaction Scale Regression
+
+- **Task**: 修复持续效果事务在 10k 实体下的跨实体线性查找退化。
+- **Date**: 2026-09-07
+- **Core judgment**: PASS. 这是既有 GAS 生命周期和事务的实现修复，不新增 effect preset、profile enum、graph opcode 或平行管线。
+- **Reuse**: `EffectLifetimeSystem`、`EffectPhaseSideEffectTransaction`、现有固定容量数组、TagOps、事件缓冲和生命周期 graph bindings。
+- **Boundary**: 字典只做 Entity 到暂存数组行的定位；数组仍决定提交顺序、容量检查和回滚顺序。所有索引在 Begin/End 清空并复用。
+- **No fallback**: 查找不到实体仍按既有“未暂存”路径处理；容量不足、缺组件和缺服务继续显式抛错。
+- **Validation**: `EffectLifetimeScaleTests`、`EffectTransactionIndexTests` 和既有事务/挂接/分配回归测试；证据见 `docs/benchmarks/effect-transaction-pressure/`。

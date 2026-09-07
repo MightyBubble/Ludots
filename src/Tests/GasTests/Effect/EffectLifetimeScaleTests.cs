@@ -28,6 +28,7 @@ namespace Ludots.Tests.GAS
         private const int FanOutCapacity = 16 * 1024;
 
         private const int DurabilityId = 0;
+        private const int GrantedTagId = 91;
 
         private static readonly QueryDescription _effectQuery = new QueryDescription()
             .WithAll<GameplayEffect, EffectContext>();
@@ -85,6 +86,7 @@ namespace Ludots.Tests.GAS
             // 周期未到：效果全部保持有效，无副作用。
             That(world.CountEntities(in _effectQuery), Is.EqualTo(count));
             That(allocated, Is.LessThanOrEqualTo(64));
+            That(median, Is.LessThan(1000d / 60d), "A waiting effect pass must fit within the entire 60 Hz frame budget.");
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -93,7 +95,9 @@ namespace Ludots.Tests.GAS
         [TestCase(1000)]
         [TestCase(5000)]
         [TestCase(10000)]
-        public void PeriodReached_EachEffectTriggersExactlyOnce_AttributeCorrect(int count)
+        [TestCase(10000, 137, true)]
+        [TestCase(10000, 1, false)]
+        public void PeriodReached_EachEffectTriggersExactlyOnce_AttributeCorrect(int count, int sliceSize = int.MaxValue, bool abort = false)
         {
             using var world = World.Create();
             var clock = new DiscreteClock();
@@ -190,7 +194,19 @@ namespace Ludots.Tests.GAS
 
             // 一个周期 tick 后，每个效果恰好触发一次：属性 100 → 93。
             clock.Advance(ClockDomainId.FixedFrame, 1);
-            lifetime.Update(0.016f);
+            if (abort)
+            {
+                lifetime.MaxWorkUnitsPerSlice = count + count / 2;
+                That(lifetime.UpdateSlice(0.016f, int.MaxValue), Is.False);
+                lifetime.ResetSlice();
+                for (int i = 0; i < count; i++)
+                {
+                    That(world.Get<AttributeBuffer>(targets[i]).GetCurrent(DurabilityId), Is.EqualTo(100f));
+                    That(world.Get<GameplayEffect>(effects[i]).NextTickAtTick, Is.EqualTo(2));
+                }
+            }
+            lifetime.MaxWorkUnitsPerSlice = sliceSize;
+            while (!lifetime.UpdateSlice(0.016f, int.MaxValue)) { }
             aggregator.Update(0.016f);
             for (int i = 0; i < count; i++)
             {
@@ -217,7 +233,8 @@ namespace Ludots.Tests.GAS
         [TestCase(1000)]
         [TestCase(5000)]
         [TestCase(10000)]
-        public void BulkExpiry_AllExpiredTogether_CleanedUpFully(int count)
+        [TestCase(10000, true)]
+        public void BulkExpiry_AllExpiredTogether_CleanedUpFully(int count, bool grantTags = false)
         {
             const int removeGraphId = 1002;
             const int templateId = 1002;
@@ -241,7 +258,7 @@ namespace Ludots.Tests.GAS
             var perSampleAlloc = new List<long>(5);
             for (int round = 0; round < 5; round++)
             {
-                var session = BuildBulkExpirySession(count, templateId, removeGraphId, templates, programs, presetTypes, builtinHandlers);
+                var session = BuildBulkExpirySession(count, templateId, removeGraphId, templates, programs, presetTypes, builtinHandlers, grantTags);
                 using (session.World)
                 using (session.Lifetime)
                 {
@@ -266,6 +283,8 @@ namespace Ludots.Tests.GAS
                         That(session.World.IsAlive(session.Targets[i]), Is.True);
                         That(session.World.Get<ActiveEffectContainer>(session.Targets[i]).Count, Is.EqualTo(0), $"round {round} unit {i} container not cleaned");
                         That(session.World.Get<EffectPhaseListenerBuffer>(session.Targets[i]).Count, Is.EqualTo(0), $"round {round} unit {i} listeners not cleaned");
+                        That(session.World.Get<GameplayTagContainer>(session.Targets[i]).HasTag(GrantedTagId), Is.False);
+                        That(session.World.Get<TagCountContainer>(session.Targets[i]).GetCount(GrantedTagId), Is.Zero);
                     }
                 }
             }
@@ -275,7 +294,7 @@ namespace Ludots.Tests.GAS
             double p95 = samples[(int)(samples.Count * 0.95)];
             long allocated = perSampleAlloc.Sum();
             TestContext.Out.WriteLine(
-                $"bulk-expiry count={count} medianMs={median:F3} p95Ms={p95:F3} allocated={allocated} perAlloc=[{string.Join(",", perSampleAlloc)}] samples=[{string.Join(",", samples.Select(s => s.ToString("F2")))}]");
+                $"bulk-expiry count={count} tags={grantTags} medianMs={median:F3} p95Ms={p95:F3} allocated={allocated} perAlloc=[{string.Join(",", perSampleAlloc)}] samples=[{string.Join(",", samples.Select(s => s.ToString("F2")))}]");
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -285,37 +304,29 @@ namespace Ludots.Tests.GAS
         public void AbortMidProcessing_RestoresWorldAndExternalQueues()
         {
             const int count = 10_000;
-            using var world = World.Create();
-            var clock = new DiscreteClock();
-            var dirtyQueue = new DirtyEntityQueue(Math.Max(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, count * 2));
-            var tagOps = new TagOps(dirtyQueue, new TagRuleRegistry());
-            using var lifetime = new EffectLifetimeSystem(
-                world,
-                clock,
-                new GasConditionRegistry(),
-                snapshotCapacity: Math.Max(SnapshotCapacity, count),
-                fanOutCommandCapacity: FanOutCapacity,
-                tagOps: tagOps);
+            using var session = CreateExpirySession(count);
+            session.Lifetime.Update(0.016f);
+            session.Clock.Advance(ClockDomainId.FixedFrame, 1);
+            session.Lifetime.MaxWorkUnitsPerSlice = count * 3 + count / 2;
+            That(session.Lifetime.UpdateSlice(0.016f, int.MaxValue), Is.False);
+            That(session.Lifetime.LastSliceProcessed, Is.EqualTo(count * 3 + count / 2));
+            session.Lifetime.ResetSlice();
 
-            CreateOnePersistentEffectPerUnit(world, count, periodTicks: 100);
-
-            // 跑两 tick，让周期初始化推进。
-            clock.Advance(ClockDomainId.FixedFrame, 1);
-            lifetime.Update(0.016f);
-            clock.Advance(ClockDomainId.FixedFrame, 1);
-            lifetime.Update(0.016f);
-
-            // 未提交中止：ResetSlice 触发事务回滚，世界状态与外部队列不变。
-            lifetime.ResetSlice();
-
-            // 周期未到：效果全部仍在，状态未被破坏。
-            That(world.CountEntities(in _effectQuery), Is.EqualTo(count));
-            That(dirtyQueue.Count, Is.EqualTo(0));
-
-            // 中止后事务可复用：继续完整跑一拍，效果仍有效且状态一致。
-            clock.Advance(ClockDomainId.FixedFrame, 1);
-            lifetime.Update(0.016f);
-            That(world.CountEntities(in _effectQuery), Is.EqualTo(count));
+            That(session.World.CountEntities(in _effectQuery), Is.EqualTo(count));
+            That(session.PresentationEvents.Count, Is.Zero);
+            That(session.DirtyQueue.Count, Is.Zero);
+            foreach (Entity target in session.Targets)
+            {
+                That(session.World.Get<GameplayTagContainer>(target).HasTag(GrantedTagId), Is.True);
+                That(session.World.Get<TagCountContainer>(target).GetCount(GrantedTagId), Is.EqualTo(1));
+                That(session.World.Get<EffectPhaseListenerBuffer>(target).Count, Is.EqualTo(1));
+                ref var active = ref session.World.Get<ActiveEffectContainer>(target);
+                That(active.Count, Is.EqualTo(1));
+                That(session.World.Get<GameplayEffect>(active.GetEntity(0)).RemainingTicks, Is.EqualTo(1));
+            }
+            session.Lifetime.Update(0.016f);
+            That(session.World.CountEntities(in _effectQuery), Is.Zero);
+            That(session.PresentationEvents.Count, Is.EqualTo(count));
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -328,6 +339,53 @@ namespace Ludots.Tests.GAS
             RunSliceComparison(count, sliceSize: 2500);
             RunSliceComparison(count, sliceSize: 137);
             RunSliceComparison(count, sliceSize: 1);
+        }
+
+        [TestCase(2500)]
+        [TestCase(137)]
+        [TestCase(1)]
+        public void SlicedExpiry_MatchesSinglePassCleanupAndEventOrder(int sliceSize)
+        {
+            using var single = CreateExpirySession(10000);
+            using var sliced = CreateExpirySession(10000);
+            single.Lifetime.Update(0.016f);
+            sliced.Lifetime.Update(0.016f);
+            single.Clock.Advance(ClockDomainId.FixedFrame, 1);
+            sliced.Clock.Advance(ClockDomainId.FixedFrame, 1);
+            single.Lifetime.Update(0.016f);
+            sliced.Lifetime.MaxWorkUnitsPerSlice = sliceSize;
+            while (!sliced.Lifetime.UpdateSlice(0.016f, int.MaxValue)) { }
+
+            That(sliced.World.CountEntities(in _effectQuery), Is.Zero);
+            That(sliced.PresentationEvents.Count, Is.EqualTo(single.PresentationEvents.Count));
+            var singleTargets = single.Targets.Select((entity, index) => (entity, index)).ToDictionary(x => x.entity, x => x.index);
+            var slicedTargets = sliced.Targets.Select((entity, index) => (entity, index)).ToDictionary(x => x.entity, x => x.index);
+            for (int i = 0; i < single.PresentationEvents.Count; i++)
+            {
+                var expected = single.PresentationEvents.Events[i];
+                var actual = sliced.PresentationEvents.Events[i];
+                That(actual.Kind, Is.EqualTo(expected.Kind));
+                That(actual.EffectTemplateId, Is.EqualTo(expected.EffectTemplateId));
+                That(slicedTargets[actual.Target], Is.EqualTo(singleTargets[expected.Target]));
+                Entity target = actual.Target;
+                That(sliced.World.Get<ActiveEffectContainer>(target).Count, Is.Zero);
+                That(sliced.World.Get<EffectPhaseListenerBuffer>(target).Count, Is.Zero);
+                That(sliced.World.Get<GameplayTagContainer>(target).HasTag(GrantedTagId), Is.False);
+                That(sliced.World.Get<TagCountContainer>(target).GetCount(GrantedTagId), Is.Zero);
+            }
+        }
+
+        private static BulkExpirySession CreateExpirySession(int count)
+        {
+            var templates = new EffectTemplateRegistry();
+            var programs = new GraphProgramRegistry();
+            var presets = new PresetTypeRegistry();
+            var handlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(handlers);
+            BuildExpiryTemplate(templates, programs, 1002, 1002);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(templates, presets, handlers, programs,
+                "Test/EffectLifetimeScaleTests.Expiry.json");
+            return BuildBulkExpirySession(count, 1002, 1002, templates, programs, presets, handlers, true);
         }
 
         private static void RunSliceComparison(int count, int sliceSize)
@@ -447,9 +505,12 @@ namespace Ludots.Tests.GAS
             public required DiscreteClock Clock { get; init; }
             public required EffectLifetimeSystem Lifetime { get; init; }
             public required Entity[] Targets { get; init; }
+            public required GasPresentationEventBuffer PresentationEvents { get; init; }
+            public required DirtyEntityQueue DirtyQueue { get; init; }
 
             public void Dispose()
             {
+                Lifetime.Dispose();
                 World.Dispose();
             }
         }
@@ -462,13 +523,13 @@ namespace Ludots.Tests.GAS
             EffectTemplateRegistry templates,
             GraphProgramRegistry programs,
             PresetTypeRegistry presetTypes,
-            BuiltinHandlerRegistry builtinHandlers)
+            BuiltinHandlerRegistry builtinHandlers,
+            bool grantTags = false)
         {
             var world = World.Create();
             var clock = new DiscreteClock();
-            var tagOps = new TagOps(
-                new DirtyEntityQueue(Math.Max(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, count * 2)),
-                new TagRuleRegistry());
+            var dirtyQueue = new DirtyEntityQueue(Math.Max(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, count * 2));
+            var tagOps = new TagOps(dirtyQueue, new TagRuleRegistry());
             var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
             var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
             var presentationEvents = new GasPresentationEventBuffer(Math.Max(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, count * 2));
@@ -514,18 +575,30 @@ namespace Ludots.Tests.GAS
                 world.Get<GameplayEffect>(effect).State = EffectState.Committed;
                 world.Get<ActiveEffectContainer>(target).Add(effect);
 
+                if (grantTags)
+                {
+                    var grants = new EffectGrantedTags();
+                    That(grants.Add(new TagContribution { TagId = GrantedTagId, Formula = TagContributionFormula.Fixed, Amount = 1 }), Is.True);
+                    world.Add(effect, grants);
+                    EffectTagContributionHelper.GrantToEntity(world, target, in grants, 1, tagOps);
+                    world.Get<DirtyFlags>(target) = default;
+                }
+
                 // 预填充一个以该效果为 owner 的监听器；到期后应被清理。
                 ref var listeners = ref world.Get<EffectPhaseListenerBuffer>(target);
                 listeners.TryAdd(0, templateId, EffectPhaseId.OnApply, PhaseListenerScope.Target,
                     PhaseListenerActionFlags.ExecuteGraph, removeGraphId, 0, 50, ownerEffectId: effect.Id);
             }
 
+            while (dirtyQueue.TryDequeue(out _)) { }
             return new BulkExpirySession
             {
                 World = world,
                 Clock = clock,
                 Lifetime = lifetime,
                 Targets = targets,
+                PresentationEvents = presentationEvents,
+                DirtyQueue = dirtyQueue,
             };
         }
     }
