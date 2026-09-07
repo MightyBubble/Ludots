@@ -1,0 +1,36 @@
+Ludots Effect Transaction Scale Regression — RED BASELINE
+=========================================================
+commit : 81a1b5f543 (origin/main at branch creation, unmodified)
+build  : Release (net9.0 / x64)
+measure: warmup + repeated sampling via GC.GetAllocatedBytesForCurrentThread + Stopwatch
+report : median / P95 over per-frame samples, current-thread allocation
+runner : NUnit EffectLifetimeScaleTests via dotnet test --filter
+
+Scenario 1 — Waiting period (effects stay valid; one persistent effect per unit;
+period ticks far in the future; every frame rescans all effects):
+
+  count=1000  medianMs=0.486  p95Ms=0.630  allocated=0
+  count=5000  medianMs=11.147 p95Ms=12.951 allocated=0
+  count=10000 medianMs=42.672 p95Ms=43.326 allocated=0
+
+  Scaling: 5x count -> ~23x time; 2x count -> ~3.8x time. O(n^2) shape.
+  10k waiting frame ~42.7ms median vs 16.7ms 60Hz budget.
+
+Scenario 3 — Bulk expiry (all effects expire on the same tick; per-round rebuilt
+world; single expiry frame measured):
+
+  count=1000  medianMs=18.710 p95Ms=34.055 allocated=115776
+  count=5000  medianMs=117.495 p95Ms=193.468 allocated=651080
+  count=10000 medianMs=256.366 p95Ms=301.577 allocated=1306560
+
+  Scaling: superlinear; allocations grow linearly with effect count
+  (~26B/effect structural commit).
+
+Companion audit microbenchmark (EffectStateTransactionScaleTests, direct
+transaction API): GameplayEffect linear find dominated at 928.110 ms for 10k
+stage+read+commit before the _gameplayEffectIndex patch (see
+LudotsProd-raylib-audit-20260906 artifacts/perf-transaction-before.log).
+
+Note: WaitingPeriod scenario 4/5 (abort rollback, sliced==single) already pass
+semantically at 10k; they are included to lock transaction semantics during the
+index work.
