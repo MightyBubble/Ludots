@@ -10,7 +10,7 @@ namespace Ludots.Core.Gameplay.AI.Config
 {
     public sealed class GraphBehaviorDefinitionLoader
     {
-        private readonly ConfigPipeline _pipeline;
+        private readonly ConfigPipeline? _pipeline;
         private readonly GraphActionCatalog? _actions;
 
         public GraphBehaviorDefinitionLoader(ConfigPipeline pipeline, GraphActionCatalog? actions)
@@ -19,18 +19,43 @@ namespace Ludots.Core.Gameplay.AI.Config
             _actions = actions;
         }
 
+        private GraphBehaviorDefinitionLoader(GraphActionCatalog actions)
+        {
+            _actions = actions ?? throw new ArgumentNullException(nameof(actions));
+        }
+
+        public static void ValidateBehaviorTrees(JsonArray items, GraphActionCatalog actions)
+        {
+            ArgumentNullException.ThrowIfNull(items);
+            var compiler = new GraphBehaviorDefinitionLoader(actions);
+            var catalog = new GraphBehaviorCatalog();
+            ValidateItems(items, "AI/behavior_trees.json", (id, row) =>
+                catalog.RegisterTree(compiler.CompileTree(id, row)));
+        }
+
+        public static void ValidateHfsms(JsonArray items, GraphActionCatalog actions)
+        {
+            ArgumentNullException.ThrowIfNull(items);
+            var compiler = new GraphBehaviorDefinitionLoader(actions);
+            var catalog = new GraphBehaviorCatalog();
+            ValidateItems(items, "AI/hfsm.json", (id, row) =>
+                catalog.RegisterHfsm(compiler.CompileHfsm(id, row)));
+        }
+
         public GraphBehaviorCatalog Load(ConfigCatalog catalog, ConfigConflictReport? report = null)
         {
+            ConfigPipeline pipeline = _pipeline
+                ?? throw new InvalidOperationException("ConfigPipeline is required to load behavior definitions.");
             var result = new GraphBehaviorCatalog();
-            LoadTrees(catalog, report, result);
-            LoadHfsms(catalog, report, result);
+            LoadTrees(pipeline, catalog, report, result);
+            LoadHfsms(pipeline, catalog, report, result);
             return result;
         }
 
-        private void LoadTrees(ConfigCatalog catalog, ConfigConflictReport? report, GraphBehaviorCatalog result)
+        private void LoadTrees(ConfigPipeline pipeline, ConfigCatalog catalog, ConfigConflictReport? report, GraphBehaviorCatalog result)
         {
             var entry = GetEntry(catalog, "AI/behavior_trees.json");
-            var fragments = _pipeline.CollectFragmentsWithSources(entry.RelativePath);
+            var fragments = pipeline.CollectFragmentsWithSources(entry.RelativePath);
             if (fragments.Count == 0)
             {
                 return;
@@ -43,10 +68,10 @@ namespace Ludots.Core.Gameplay.AI.Config
             }
         }
 
-        private void LoadHfsms(ConfigCatalog catalog, ConfigConflictReport? report, GraphBehaviorCatalog result)
+        private void LoadHfsms(ConfigPipeline pipeline, ConfigCatalog catalog, ConfigConflictReport? report, GraphBehaviorCatalog result)
         {
             var entry = GetEntry(catalog, "AI/hfsm.json");
-            var fragments = _pipeline.CollectFragmentsWithSources(entry.RelativePath);
+            var fragments = pipeline.CollectFragmentsWithSources(entry.RelativePath);
             if (fragments.Count == 0)
             {
                 return;
@@ -490,6 +515,20 @@ namespace Ludots.Core.Gameplay.AI.Config
 
         private static InvalidOperationException Fail(string path, string message)
             => new($"[GraphBehaviorDefinitionLoader] {path}: {message}");
+
+        private static void ValidateItems(JsonArray items, string path, Action<string, JsonObject> validate)
+        {
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i] is not JsonObject row)
+                {
+                    throw Fail($"{path}[{i}]", "Expected an object.");
+                }
+
+                string id = RequireString(row, "id", $"{path}[{i}]");
+                validate(id, row);
+            }
+        }
 
         private readonly struct AuthoredTreeNode
         {

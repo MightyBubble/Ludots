@@ -226,6 +226,23 @@ namespace Ludots.Tests.Architecture.GraphRuntime
         }
 
         [Test]
+        public void BridgeAiTopologyWritePaths_UseProductionValidation()
+        {
+            string repoRoot = FindRepoRoot();
+            string bridgePath = Path.Combine(repoRoot, "src", "Tools", "Ludots.Editor.Bridge", "Program.cs");
+            string source = File.ReadAllText(bridgePath);
+
+            Assert.That(
+                Regex.Matches(source, @"GraphBehaviorDefinitionLoader\.ValidateBehaviorTrees\(items, actions\)").Count,
+                Is.EqualTo(1),
+                "The behavior-tree PUT path must reject data that the production loader cannot compile.");
+            Assert.That(
+                Regex.Matches(source, @"GraphBehaviorDefinitionLoader\.ValidateHfsms\(items, actions\)").Count,
+                Is.EqualTo(1),
+                "The HFSM PUT path must reject data that the production loader cannot compile.");
+        }
+
+        [Test]
         public void GraphDebugTrace_DoesNotEmitNodeExitInProducers()
         {
             string repoRoot = FindRepoRoot();

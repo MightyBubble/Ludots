@@ -17,6 +17,12 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { TopologyNodeView, type TopologyNodeData } from './ai-topology-editor/TopologyNode';
+import {
+  hfsmTransitionFromEdge,
+  hfsmTransitionToEdgeData,
+  type HfsmTransition,
+  type HfsmTransitionEdgeData,
+} from './ai-topology-editor/hfsmTransitions';
 import { computeTopologyTreeLayout } from './ai-topology-editor/topologyLayout';
 
 type TopologyKind = 'behavior-trees' | 'hfsm';
@@ -55,14 +61,6 @@ type HfsmState = {
   onExit?: string;
 };
 
-type HfsmTransition = {
-  from: string;
-  to: string;
-  predicate: string;
-  condition?: string;
-  priority?: number;
-};
-
 type HfsmMachine = {
   id: string;
   root: string;
@@ -74,6 +72,7 @@ type TopologyEdgeData = {
   kind: 'child' | 'transition';
   predicate?: string;
   condition?: string;
+  priority?: number;
 };
 
 const nodeTypes = { topology: TopologyNodeView };
@@ -193,7 +192,7 @@ function hfsmToFlow(machine: HfsmMachine): { nodes: Node<TopologyNodeData>[]; ed
       target: t.to,
       sourceHandle: 'out',
       targetHandle: 'in',
-      data: { kind: 'transition', predicate: t.predicate, condition: t.condition },
+      data: hfsmTransitionToEdgeData(t),
       style: { stroke: '#fbbf24', strokeWidth: 2.5 },
       animated: true,
       label: t.condition ? `${t.predicate} · ${t.condition}` : t.predicate,
@@ -249,12 +248,11 @@ function flowToHfsm(
 
   for (const edge of edges) {
     if (edge.data?.kind === 'transition') {
-      transitions.push({
-        from: edge.source,
-        to: edge.target,
-        predicate: edge.data.predicate || 'Always',
-        condition: edge.data.condition || undefined,
-      });
+      transitions.push(hfsmTransitionFromEdge(
+        edge.source,
+        edge.target,
+        edge.data as HfsmTransitionEdgeData,
+      ));
       continue;
     }
     const list = childMap.get(edge.source) ?? [];
@@ -553,9 +551,10 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
         if (e.id !== selectedEdgeId) return e;
         const predicate = patch.predicate ?? e.data?.predicate ?? 'Always';
         const condition = patch.condition !== undefined ? patch.condition : e.data?.condition;
+        const priority = patch.priority !== undefined ? patch.priority : e.data?.priority;
         return {
           ...e,
-          data: { kind: 'transition' as const, predicate, condition: condition || undefined },
+          data: { kind: 'transition' as const, predicate, condition: condition || undefined, priority },
           label: condition ? `${predicate} · ${condition}` : predicate,
         };
       });
@@ -949,6 +948,16 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                     <option key={a.name} value={a.name}>{a.name}</option>
                   ))}
                 </select>
+              </label>
+              <label className={labelClass}>
+                priority
+                <input
+                  className={fieldClass}
+                  type="number"
+                  step="1"
+                  value={selectedTransition.data?.priority ?? 0}
+                  onChange={(e) => updateSelectedTransition({ priority: Number.parseInt(e.target.value, 10) || 0 })}
+                />
               </label>
             </div>
           ) : null}

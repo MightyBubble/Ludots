@@ -1,4 +1,5 @@
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.UI.PanelHosting;
@@ -750,6 +751,17 @@ app.MapPut("/api/ai/behavior-trees", async (HttpRequest req, string? source) =>
         }
     }
 
+    if (!TryBuildAiTopologyActionCatalog(out GraphActionCatalog actions, out string? actionError))
+        return Results.BadRequest(new { ok = false, error = actionError });
+    try
+    {
+        GraphBehaviorDefinitionLoader.ValidateBehaviorTrees(items, actions);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
     Directory.CreateDirectory(Path.GetDirectoryName(path)!);
     WriteTextAtomically(path, items.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
     return Results.Ok(new { ok = true, source = resolvedSource, relativePath = "AI/behavior_trees.json", path });
@@ -781,6 +793,17 @@ app.MapPut("/api/ai/hfsm", async (HttpRequest req, string? source) =>
             if (items[i] is not JsonObject row || row[field] is null)
                 return Results.BadRequest(new { ok = false, error = $"items[{i}] must include '{field}'." });
         }
+    }
+
+    if (!TryBuildAiTopologyActionCatalog(out GraphActionCatalog actions, out string? actionError))
+        return Results.BadRequest(new { ok = false, error = actionError });
+    try
+    {
+        GraphBehaviorDefinitionLoader.ValidateHfsms(items, actions);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
     }
 
     Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -3719,6 +3742,48 @@ static bool TryParseAiTopologyItemsBody(string body, out JsonArray items, out st
     catch (JsonException ex)
     {
         error = $"Malformed JSON: {ex.Message}";
+        return false;
+    }
+}
+
+static bool TryBuildAiTopologyActionCatalog(out GraphActionCatalog catalog, out string? error)
+{
+    catalog = new GraphActionCatalog();
+    error = null;
+    string path = Path.Combine(FindAssetsRoot(), "assets", "GAS", "action_lib.json");
+    if (!TryReadJsonArrayFile(path, out JsonArray items, out error))
+    {
+        return false;
+    }
+
+    try
+    {
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i] is not JsonObject row)
+            {
+                throw new InvalidOperationException($"ActionLib '{path}' item {i} must be an object.");
+            }
+
+            string name = row["name"]?.GetValue<string>()?.Trim() ?? "";
+            string hostText = row["host"]?.GetValue<string>()?.Trim() ?? "";
+            if (name.Length == 0)
+            {
+                throw new InvalidOperationException($"ActionLib '{path}' item {i} requires a non-empty name.");
+            }
+            if (!GraphActionHostYieldPolicy.TryParse(hostText, out GraphActionHost host))
+            {
+                throw new InvalidOperationException($"ActionLib '{name}' host '{hostText}' is unsupported.");
+            }
+
+            catalog.Register(name, i + 1, GraphKind.Script, host);
+        }
+
+        return true;
+    }
+    catch (Exception ex)
+    {
+        error = ex.Message;
         return false;
     }
 }
