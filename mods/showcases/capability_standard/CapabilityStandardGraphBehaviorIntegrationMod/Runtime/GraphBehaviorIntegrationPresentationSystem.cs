@@ -48,8 +48,8 @@ internal sealed class GraphBehaviorIntegrationPresentationSystem : ISystem<float
 
         _debugDraw.Lines.Add(new DebugDrawLine2D
         {
-            A = new System.Numerics.Vector2(5.5f, -5.5f),
-            B = new System.Numerics.Vector2(5.5f, 5.5f),
+            A = new System.Numerics.Vector2(_runtime.SentryX[0], _runtime.SentryY[0]),
+            B = new System.Numerics.Vector2(_runtime.SentryX[^1], _runtime.SentryY[^1]),
             Thickness = 0.12f,
             Color = GraphShowcaseStagePresenter.PathColor
         });

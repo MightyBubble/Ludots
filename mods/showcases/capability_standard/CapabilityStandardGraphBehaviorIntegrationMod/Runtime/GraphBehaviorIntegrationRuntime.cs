@@ -32,7 +32,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
     private float[] _sy = Array.Empty<float>();
     private float _ex, _ey, _markerY = -10f;
     private bool _enemyAlive;
-    private int _seeId, _rangeId;
+    private int _seeId, _rangeId, _chaseId, _attackId;
     private bool _paused;
     private bool _l2Enabled = true;
     private bool _stimulusEnabled = true;
@@ -85,6 +85,8 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         int guards = 6, sentries = 6;
         _seeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
         _rangeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
+        _chaseId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.chase", GraphActionHost.BehaviorTree);
+        _attackId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.attack", GraphActionHost.BehaviorTree);
         _bt = new BehaviorTreeWorld(_behavior.RequireTree("bt.patrolChaseAttack"), guards);
         _hfsmHost = new GraphProgramHfsmHost(_programs);
         _hfsm = new HfsmWorld(_behavior.RequireHfsm("hfsm.sentry.scripted"), sentries);
@@ -107,7 +109,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         for (int i = 0; i < sentries; i++)
         {
             _hfsm.AddAgent(_hfsmHost);
-            _sx[i] = 6f;
+            _sx[i] = -LeftPatrol[1].X;
             _sy[i] = -4.5f + i * 1.6f;
         }
 
@@ -251,7 +253,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
     {
         _time += dt;
         if (_markerY < -7.5f) _markerY += 2f * dt;
-        if (_stimulusEnabled && !_enemyAlive && _time >= EnemyFirstWaveSeconds && _time < 20f)
+        if (_stimulusEnabled && !_enemyAlive && _time >= EnemyFirstWaveSeconds)
         {
             _enemyAlive = true;
             _ex = 0f;
@@ -293,8 +295,8 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
 
     public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)
     {
-        if (graphId != _seeId && graphId != _rangeId) return;
-        if (!_enemyAlive)
+        if (graphId != _seeId && graphId != _rangeId && graphId != _chaseId && graphId != _attackId) return;
+        if (!_enemyAlive || _target[agentIndex] < 0)
         {
             ints[0] = NoTargetDistanceCm;
             return;
@@ -302,7 +304,11 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
 
         float dx = _ex - _gx[agentIndex];
         float dy = _ey - _gy[agentIndex];
-        ints[0] = (int)MathF.Ceiling(MathF.Sqrt(dx * dx + dy * dy) * 100f);
+        int distanceCm = (int)MathF.Ceiling(MathF.Sqrt(dx * dx + dy * dy) * 100f);
+        // Visibility leaves read signed distance to the sight boundary; attack leaves read physical distance.
+        ints[0] = graphId == _seeId || graphId == _chaseId
+            ? distanceCm - (int)MathF.Round(_sensorRadius * 100f)
+            : distanceCm;
     }
 
     private void IntegrateGuards(float dt)

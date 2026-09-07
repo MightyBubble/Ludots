@@ -12,7 +12,7 @@ namespace CapabilityStandardBehaviorTreeArenaMod.Runtime;
 /// <summary>
 /// BT arena: featured band runs L2 topology from AI/behavior_trees.json
 /// (bt.patrolChaseAttack) via BehaviorTreeWorld; leaves are ActionLib Script graphs.
-/// Glue feeds distance into I[0] for seeEnemy / inAttackRange leaf graphs.
+/// Glue feeds signed sight margin or attack distance into I[0] for the corresponding leaf graphs.
 /// The 10k crowd band stays an explicitly labeled no-graph pressure baseline
 /// (bt.arenaCrowd, AlwaysSuccess, ScriptSlices==0).
 /// </summary>
@@ -32,6 +32,8 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     private float _time;
     private int _seeId;
     private int _rangeId;
+    private int _chaseId;
+    private int _attackId;
     private bool _paused;
     private bool _l2Enabled = true;
     private bool _stimulusEnabled = true;
@@ -90,6 +92,8 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
         _seeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
         _rangeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
+        _chaseId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.chase", GraphActionHost.BehaviorTree);
+        _attackId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.attack", GraphActionHost.BehaviorTree);
         int n = _config.FeaturedAgentCount;
         _tree = new BehaviorTreeWorld(_behavior.RequireTree("bt.patrolChaseAttack"), n);
         _gx = new float[n];
@@ -295,11 +299,13 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
                 : $"BT L2 tree steps={stats.ScriptSteps} last={Metrics.LastThinkMs:F3}ms";
     }
 
-    /// <summary>Glue feed: distance (cm) into I[0] for Condition leaf Scripts only.</summary>
     public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)
     {
-        if (graphId != _seeId && graphId != _rangeId) return;
-        ints[0] = DistanceToTargetCm(agentIndex);
+        if (graphId != _seeId && graphId != _rangeId && graphId != _chaseId && graphId != _attackId) return;
+        int distanceCm = DistanceToTargetCm(agentIndex);
+        ints[0] = graphId == _seeId || graphId == _chaseId
+            ? distanceCm - (int)MathF.Round(_sightRadius * 100f)
+            : distanceCm;
     }
 
     private int DistanceToTargetCm(int guard)

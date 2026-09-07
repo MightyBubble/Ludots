@@ -209,7 +209,7 @@
       {
         "id": "sightCm",
         "op": "ConstInt",
-        "intValue": 551
+        "intValue": 1
       },
       {
         "id": "withinSight",
@@ -431,7 +431,7 @@
       {
         "id": "sightCm",
         "op": "ConstInt",
-        "intValue": 551
+        "intValue": 1
       },
       {
         "id": "targetVisible",

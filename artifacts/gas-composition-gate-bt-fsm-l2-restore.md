@@ -54,3 +54,14 @@ N/A
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: graph 连线（叶子 Script）或 behavior_trees.json 拓扑节点
+
+### Sight control correction
+
+- Task: runtime sight controls must change L2 decisions in the playable arenas.
+- Judgment: A / PASS; existing MoveInt and CompareLtInt consume signed distance to the sight boundary in centimeters.
+- Layer: L2 topology remains unchanged; L1 SeeEnemy / Chase leaves compare the supplied margin with 1 cm (inclusive boundary).
+- Reuse: IBehaviorTreeSensorFeed, BehaviorTreeWorld, HfsmWorld, GraphActionCatalog and existing Script handlers.
+- New L0 operations: N/A. Transaction rollback: N/A. New schema: NO.
+- SSOT: assets/GAS/graphs.json owns the leaf comparison; the runtime sight control owns the radius. Attack inputs remain physical distance in centimeters.
+- Red flags: no enum, no spawn pipeline, no lifecycle placement logic, no fallback.
+- Next variant: change leaf graph composition or AI topology.

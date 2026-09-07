@@ -319,6 +319,63 @@ namespace Ludots.Tests.Gas.Production
             });
         }
 
+        [TestCase(0, 5.5f, true, 1)]
+        [TestCase(0, 5.51f, false, 0)]
+        [TestCase(-2, 3f, false, 0)]
+        [TestCase(1, 6f, true, 1)]
+        [TestCase(1, 1.25f, true, 2)]
+        [TestCase(1, 1.26f, true, 1)]
+        public void GraphBehaviorIntegration_SightControl_ChangesGuardDecision(int adjustments, float distance, bool seen, int expectedIntent)
+        {
+            var runtime = new GraphBehaviorIntegrationRuntime();
+            runtime.Bind(_programs, _actions, _behavior);
+            runtime.EnsureWorld();
+            runtime.Tick(0.6f);
+            runtime.TogglePaused();
+            for (int i = 0; i < Math.Abs(adjustments); i++)
+            {
+                if (adjustments > 0) runtime.IncreaseSensorRadius();
+                else runtime.DecreaseSensorRadius();
+            }
+
+            runtime.GuardX[0] = runtime.EnemyX - distance;
+            runtime.GuardY[0] = runtime.EnemyY - 2.2f * runtime.ThinkPeriodSeconds;
+            runtime.Step();
+
+            TestContext.Out.WriteLine($"sight={runtime.SensorRadius}m distance={distance}m target={runtime.TargetIndex[0]} intent={runtime.Intent[0]}");
+            Assert.Multiple(() =>
+            {
+                Assert.That(runtime.TargetIndex[0], Is.EqualTo(seen ? 0 : -1));
+                Assert.That(runtime.Intent[0], Is.EqualTo(expectedIntent),
+                    "The L2 tree must chase only when the intruder is inside the displayed sight radius.");
+            });
+        }
+
+        [Test]
+        public void GraphBehaviorIntegration_DefaultPatrol_BothTeamsKeepRespondingForOneMinute()
+        {
+            var runtime = new GraphBehaviorIntegrationRuntime();
+            runtime.Bind(_programs, _actions, _behavior);
+            runtime.EnsureWorld();
+            for (int period = 0; period < 3; period++)
+            {
+                bool btResponded = false, hfsmResponded = false;
+                for (int wave = 0; wave < 100; wave++)
+                {
+                    runtime.Tick(0.2f);
+                    btResponded |= runtime.Intent.Any(intent => intent == 1 || intent == 2);
+                    for (int i = 0; i < runtime.SentryCount; i++)
+                        hfsmResponded |= runtime.Hfsm!.GetLeafStateName(i) == "combat";
+                }
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(btResponded, Is.True, $"BT must respond during seconds {period * 20}-{(period + 1) * 20}.");
+                    Assert.That(hfsmResponded, Is.True, $"HFSM must enter combat during seconds {period * 20}-{(period + 1) * 20}.");
+                });
+            }
+        }
+
         private static void Warm(System.Action<float> tick, int waves = 5)
         {
             for (int i = 0; i < waves; i++) tick(0.2f);

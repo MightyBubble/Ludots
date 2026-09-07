@@ -63,6 +63,7 @@
 - **BT ≠ FSM ≠ Func Graph**：作者面、拓扑语义、宿主分派各走各的；共享的只是 L0 指令机。
 - **BT / FSM 不是 GraphKind**：它们是 L2 行为调度；Func Graph 才是 L1（今日为 Script）。
 - 叶子只用 ActionLib **名字**，不用硬编码 graphId。
+- 演武场的 `bt.seeEnemy` / `bt.chase` 叶子从 `I[0]` 读取到视野边界的有符号距离（厘米，目标距离减当前视野半径），小于 1 表示在范围内；`bt.inAttackRange` / `bt.attack` 读取真实目标距离（厘米）。每次运行叶子前由感知接口重新填入，不沿用上一片叶子的寄存器结果。
 - Graph Editor 不再以 `Graph.BT.Tree.*` / `Graph.FSM.*` 为作者外壳目录。
 - 一期边界：BT Parallel 不支持；子树跨图复用等归 BT-2，**不要和本轮 L2 身份恢复捆在一起**。
 
