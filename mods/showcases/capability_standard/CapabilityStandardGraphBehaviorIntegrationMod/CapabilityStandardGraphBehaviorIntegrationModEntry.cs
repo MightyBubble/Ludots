@@ -18,6 +18,17 @@ public sealed class CapabilityStandardGraphBehaviorIntegrationModEntry : IMod
     {
         context.Log("[CapabilityStandardGraphBehaviorIntegrationMod] Loaded (integration-only demo)");
         var runtime = new GraphBehaviorIntegrationRuntime();
+        var panel = new GraphShowcasePanelController(
+            runtime.BuildControlState,
+            runtime.TogglePaused,
+            runtime.Step,
+            runtime.ToggleL2,
+            runtime.ToggleStimulus,
+            runtime.IncreaseSensorRadius,
+            runtime.DecreaseSensorRadius,
+            runtime.IncreaseThinkPeriod,
+            runtime.DecreaseThinkPeriod,
+            runtime.ResetScenario);
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
             GameEngine? engine = ctx.GetEngine();
@@ -30,10 +41,15 @@ public sealed class CapabilityStandardGraphBehaviorIntegrationModEntry : IMod
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
             engine.RegisterSystem(new GraphBehaviorIntegrationSimulationSystem(engine, runtime), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new GraphBehaviorIntegrationPresentationSystem(runtime, debugDraw));
+            engine.RegisterPresentationSystem(new GraphBehaviorIntegrationPresentationSystem(engine, runtime, debugDraw, panel));
             return Task.CompletedTask;
         });
         context.OnEvent(GameEvents.MapLoaded, _ => { runtime.EnsureWorld(); return Task.CompletedTask; });
+        context.OnEvent(GameEvents.MapUnloaded, _ =>
+        {
+            panel.Clear();
+            return Task.CompletedTask;
+        });
     }
 
     public void OnUnload() { }

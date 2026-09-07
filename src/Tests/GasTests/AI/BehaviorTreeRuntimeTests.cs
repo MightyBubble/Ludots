@@ -220,9 +220,7 @@ namespace Ludots.Tests.Gas.AI
         }
 
         /// <summary>
-        /// Glue feeds the raw distance measurement (cm) into I[0]; the de-hollowed leaf graphs
-        /// own the sight (551) and attack-range (126) thresholds. 0 = on top of the enemy,
-        /// 300 = seen but out of attack range, 100000 = no target.
+        /// Visibility leaves consume signed sight margin; attack leaves consume distance in centimeters.
         /// </summary>
         private sealed class ScriptedSensors : IBehaviorTreeSensorFeed
         {
@@ -234,17 +232,21 @@ namespace Ludots.Tests.Gas.AI
             public int RangeDistanceCm;
             private readonly int _see;
             private readonly int _range;
+            private readonly int _chase;
+            private readonly int _attack;
 
             public ScriptedSensors(GraphActionCatalog actions)
             {
                 _see = GraphRegistryScriptResolver.RequireActionId(actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
                 _range = GraphRegistryScriptResolver.RequireActionId(actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
+                _chase = GraphRegistryScriptResolver.RequireActionId(actions, "bt.chase", GraphActionHost.BehaviorTree);
+                _attack = GraphRegistryScriptResolver.RequireActionId(actions, "bt.attack", GraphActionHost.BehaviorTree);
             }
 
             public void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools)
             {
-                if (graphId == _see) ints[0] = SeeDistanceCm;
-                else if (graphId == _range) ints[0] = RangeDistanceCm;
+                if (graphId == _see || graphId == _chase) ints[0] = SeeDistanceCm - 550;
+                else if (graphId == _range || graphId == _attack) ints[0] = RangeDistanceCm;
             }
         }
     }

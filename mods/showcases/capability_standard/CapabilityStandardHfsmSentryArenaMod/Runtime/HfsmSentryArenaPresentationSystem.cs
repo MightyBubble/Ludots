@@ -1,5 +1,6 @@
 using Arch.System;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Engine;
 using Ludots.Platform.Abstractions;
 
 namespace CapabilityStandardHfsmSentryArenaMod.Runtime;
@@ -8,12 +9,20 @@ internal sealed class HfsmSentryArenaPresentationSystem : ISystem<float>
 {
     private readonly HfsmSentryArenaRuntime _runtime;
     private readonly DebugDrawCommandBuffer _debugDraw;
+    private readonly GameEngine _engine;
+    private readonly GraphShowcasePanelController _panel;
     private readonly GraphShowcaseConfig _config = new();
 
-    public HfsmSentryArenaPresentationSystem(HfsmSentryArenaRuntime runtime, DebugDrawCommandBuffer debugDraw)
+    public HfsmSentryArenaPresentationSystem(
+        GameEngine engine,
+        HfsmSentryArenaRuntime runtime,
+        DebugDrawCommandBuffer debugDraw,
+        GraphShowcasePanelController panel)
     {
+        _engine = engine;
         _runtime = runtime;
         _debugDraw = debugDraw;
+        _panel = panel;
     }
 
     public void Initialize() { }
@@ -24,6 +33,16 @@ internal sealed class HfsmSentryArenaPresentationSystem : ISystem<float>
     public void Update(in float dt)
     {
         GraphShowcaseStagePresenter.Clear(_debugDraw);
+        if (_runtime.SentryCount > 0)
+        {
+            GraphShowcaseStagePresenter.DrawTriggerRing(
+                _debugDraw,
+                _runtime.SentryX[0],
+                _runtime.SentryY[0],
+                _runtime.AlertRadius,
+                _runtime.L2Enabled);
+        }
+
         // Gate line
         _debugDraw.Lines.Add(new DebugDrawLine2D
         {
@@ -42,7 +61,9 @@ internal sealed class HfsmSentryArenaPresentationSystem : ISystem<float>
         for (int i = 0; i < _runtime.SentryCount; i++)
         {
             string stateName = _runtime.GetSentryStateName(i);
-            DebugDrawColor color = stateName switch
+            DebugDrawColor color = !_runtime.L2Enabled
+                ? DebugDrawColor.Gray
+                : stateName switch
             {
                 "idle" => GraphShowcaseStagePresenter.SentryIdle,
                 "alert" => GraphShowcaseStagePresenter.SentryAlert,
@@ -64,5 +85,6 @@ internal sealed class HfsmSentryArenaPresentationSystem : ISystem<float>
         }
 
         GraphShowcaseStagePresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs, _config.ThinkBudgetMs);
+        _panel.MountOrRefresh(_engine);
     }
 }

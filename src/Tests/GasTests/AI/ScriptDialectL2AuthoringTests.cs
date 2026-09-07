@@ -207,7 +207,7 @@ namespace Ludots.Tests.Gas.AI
         }
 
         [Test]
-        public void ActionLib十一名是唯一清单()
+        public void ActionLib十名是唯一清单()
         {
             _ = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
             var names = new HashSet<string>(actions.Names, StringComparer.Ordinal);
@@ -218,7 +218,6 @@ namespace Ludots.Tests.Gas.AI
                 "bt.chase",
                 "bt.attack",
                 "bt.patrol",
-                "bt.tree.patrolChaseAttack",
                 "hfsm.cond.alwaysTrue",
                 "hfsm.combat.onEnter",
                 "hfsm.combat.onTick",

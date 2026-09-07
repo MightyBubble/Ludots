@@ -10,19 +10,14 @@ using Ludots.Core.GraphRuntime;
 namespace CapabilityStandardBehaviorTreeArenaMod.Runtime;
 
 /// <summary>
-/// Real-graph BT arena: the featured patrol/chase/attack tree is one compiled Script program
-/// (Graph.BT.Tree.PatrolChaseAttack, BtSequence/BtSelector sugar) driven per agent by
-/// GraphBehaviorTreeHost. Glue feeds the distance measurement into the ambient I[0]
-/// sensor slot; thresholds, branch structure, and the intent code (pinned I[3]) live in
-/// the graph. IntegrateMotion is a pure executor over the intent register.
-/// The 10k crowd band is an explicitly labeled no-graph pressure baseline: a C#
-/// BehaviorTreeWorld topology with zero Script participation (measured 2026-08-24:
-/// a 10k real-graph crowd costs 9.5-15.8ms per think wave on this box and breaks the
-/// 25ms CI envelope combined with the featured tree; the C# band stays under it).
+/// BT arena: featured band runs L2 topology from AI/behavior_trees.json
+/// (bt.patrolChaseAttack) via BehaviorTreeWorld; leaves are ActionLib Script graphs.
+/// Glue feeds signed sight margin or attack distance into I[0] for the corresponding leaf graphs.
+/// The 10k crowd band stays an explicitly labeled no-graph pressure baseline
+/// (bt.arenaCrowd, AlwaysSuccess, ScriptSlices==0).
 /// </summary>
 public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 {
-    private const int IntentPin = 3;
     private const int NoTargetDistanceCm = 100_000;
     private const int TreeThinkBudgetSteps = 128;
     private const int CrowdThinkBudgetSteps = 8;
@@ -31,10 +26,20 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     private GraphProgramRegistry? _programs;
     private GraphActionCatalog? _actions;
     private GraphBehaviorCatalog? _behavior;
-    private GraphBehaviorTreeHost? _host;
+    private BehaviorTreeWorld? _tree;
     private BehaviorTreeWorld? _crowd;
     private float _accum;
     private float _time;
+    private int _seeId;
+    private int _rangeId;
+    private int _chaseId;
+    private int _attackId;
+    private bool _paused;
+    private bool _l2Enabled = true;
+    private bool _stimulusEnabled = true;
+    private float _sightRadius = 5.5f;
+    private float _thinkPeriodSeconds = 0.2f;
+    private string _status = "巡逻已开始，等待入侵者进入视野。";
 
     private float[] _gx = Array.Empty<float>();
     private float[] _gy = Array.Empty<float>();
@@ -45,7 +50,6 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     private float[] _ex = Array.Empty<float>();
     private float[] _ey = Array.Empty<float>();
     private bool[] _eAlive = Array.Empty<bool>();
-    private int _treeGraphId;
 
     public static readonly Vector2[] PatrolPath =
     {
@@ -62,8 +66,13 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     public float[] EnemyY => _ey;
     public bool[] EnemyAlive => _eAlive;
     public int EnemyCount => _ex.Length;
-    public GraphBehaviorTreeHost? TreeHost => _host;
+    public BehaviorTreeWorld? TreeWorld => _tree;
     public BehaviorTreeWorld? CrowdWorld => _crowd;
+    public bool Paused => _paused;
+    public bool L2Enabled => _l2Enabled;
+    public bool StimulusEnabled => _stimulusEnabled;
+    public float SightRadius => _sightRadius;
+    public float ThinkPeriodSeconds => _thinkPeriodSeconds;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_behavior_tree_arena" };
 
     public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions, GraphBehaviorCatalog behavior)
@@ -75,15 +84,18 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
     public void EnsureWorld()
     {
-        if (_host != null) return;
+        if (_tree != null) return;
         if (_programs == null || _actions == null || _behavior == null)
         {
             throw new InvalidOperationException("Bind(Registry, ActionCatalog, BehaviorCatalog) required.");
         }
 
-        _treeGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.tree.patrolChaseAttack", GraphActionHost.BehaviorTree);
+        _seeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
+        _rangeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
+        _chaseId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.chase", GraphActionHost.BehaviorTree);
+        _attackId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.attack", GraphActionHost.BehaviorTree);
         int n = _config.FeaturedAgentCount;
-        _host = new GraphBehaviorTreeHost(_programs, _treeGraphId, n);
+        _tree = new BehaviorTreeWorld(_behavior.RequireTree("bt.patrolChaseAttack"), n);
         _gx = new float[n];
         _gy = new float[n];
         _wp = new int[n];
@@ -93,7 +105,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
         for (int i = 0; i < n; i++)
         {
-            _host.AddAgent();
+            _tree.AddAgent();
             float t = i / (float)n;
             int seg = (int)(t * PatrolPath.Length) % PatrolPath.Length;
             Vector2 a = PatrolPath[seg];
@@ -117,19 +129,138 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         }
 
         Metrics.AgentCount = n;
-        Metrics.Detail = "BT Script tree from ActionLib";
+        Metrics.Detail = "BT L2 tree bt.patrolChaseAttack + ActionLib leaf Scripts";
     }
 
     public void Tick(float dt)
     {
         EnsureWorld();
+        if (_paused) return;
+        Advance(dt, forceThink: false);
+    }
+
+    public void TogglePaused()
+    {
+        _paused = !_paused;
+        _status = _paused ? "已暂停；点“单步”观察下一次决策。" : "继续自动运行。";
+    }
+
+    public void Step()
+    {
+        if (!_paused)
+        {
+            _status = "单步只在暂停时可用；先点“暂停”。";
+            return;
+        }
+
+        Advance(_thinkPeriodSeconds, forceThink: true);
+        _status = _l2Enabled ? "已推进一次世界更新和一次 L2 决策。" : "世界已推进，但 L2 决策当前关闭。";
+    }
+
+    public void ToggleL2()
+    {
+        _l2Enabled = !_l2Enabled;
+        if (_tree != null)
+        {
+            for (int i = 0; i < _tree.Count; i++) _tree.ResetAgent(i);
+        }
+
+        if (!_l2Enabled) Array.Clear(_intent);
+        _status = _l2Enabled
+            ? "L2 行为树已恢复；守卫会按树做巡逻、追击和攻击决策。"
+            : "L2 行为树已关闭；同场只保留巡逻执行作对照。";
+    }
+
+    public void ToggleStimulus()
+    {
+        _stimulusEnabled = !_stimulusEnabled;
+        _time = 0f;
+        if (!_stimulusEnabled) Array.Clear(_eAlive);
+        _status = _stimulusEnabled ? "入侵者已重新进入场景。" : "入侵者已移除；守卫应回到巡逻。";
+    }
+
+    public void IncreaseSightRadius()
+    {
+        _sightRadius = MathF.Min(10f, _sightRadius + 1.5f);
+        _status = $"视野扩大到 {_sightRadius:0.0} 米。";
+    }
+
+    public void DecreaseSightRadius()
+    {
+        _sightRadius = MathF.Max(1.5f, _sightRadius - 1.5f);
+        _status = $"视野缩小到 {_sightRadius:0.0} 米。";
+    }
+
+    public void IncreaseThinkPeriod()
+    {
+        _thinkPeriodSeconds = MathF.Min(1f, _thinkPeriodSeconds * 1.5f);
+        _status = $"思考放慢到每 {_thinkPeriodSeconds:0.00} 秒一次。";
+    }
+
+    public void DecreaseThinkPeriod()
+    {
+        _thinkPeriodSeconds = MathF.Max(0.05f, _thinkPeriodSeconds / 1.5f);
+        _status = $"思考加快到每 {_thinkPeriodSeconds:0.00} 秒一次。";
+    }
+
+    public void ResetScenario()
+    {
+        _paused = false;
+        _l2Enabled = true;
+        _stimulusEnabled = true;
+        _sightRadius = _config.SightRadius;
+        _thinkPeriodSeconds = _config.ThinkPeriodSeconds;
+        _accum = 0f;
+        _time = 0f;
+        _tree = null;
+        _crowd = null;
+        Metrics.LastThinkMs = 0;
+        Metrics.MaxThinkMs = 0;
+        Metrics.ThinkWaves = 0;
+        EnsureWorld();
+        _status = "场景已重置；L2 行为树、入侵者和自动运行均已开启。";
+    }
+
+    public GraphShowcaseControlState BuildControlState()
+    {
+        int patrol = 0, chase = 0, attack = 0, aliveEnemies = 0;
+        for (int i = 0; i < _intent.Length; i++)
+        {
+            switch (_intent[i])
+            {
+                case 1: chase++; break;
+                case 2: attack++; break;
+                default: patrol++; break;
+            }
+        }
+
+        for (int i = 0; i < _eAlive.Length; i++) if (_eAlive[i]) aliveEnemies++;
+        string detail =
+            $"巡逻 {patrol} / 追击 {chase} / 攻击 {attack}；入侵者 {aliveEnemies}；" +
+            $"决策波 {Metrics.ThinkWaves}；本波 {Metrics.LastThinkMs:0.000}ms；万人段 ScriptSlices=0。";
+        return new GraphShowcaseControlState(
+            "行为树演武场",
+            "让入侵者穿过巡逻区，观察同一批守卫如何从巡逻切到追击和攻击。关闭 L2 可直接比较。",
+            _status,
+            detail,
+            "BehaviorTreeWorld 读取 bt.patrolChaseAttack，叶子来自 ActionLib。",
+            _paused,
+            _l2Enabled,
+            _stimulusEnabled,
+            _sightRadius,
+            _thinkPeriodSeconds,
+            GuardCount);
+    }
+
+    private void Advance(float dt, bool forceThink)
+    {
         _time += dt;
         UpdateEnemies();
         for (int i = 0; i < _flash.Length; i++) if (_flash[i] > 0) _flash[i]--;
         for (int i = 0; i < _gx.Length; i++) _target[i] = FindNearestEnemy(i);
 
         _accum += dt;
-        if (_accum >= _config.ThinkPeriodSeconds)
+        if (_l2Enabled && (forceThink || _accum >= _thinkPeriodSeconds))
         {
             _accum = 0f;
             ThinkWave();
@@ -140,10 +271,10 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
     private void ThinkWave()
     {
-        var host = _host!;
-        host.RestartFinishedAgents();
+        var tree = _tree!;
+        tree.RestartFinishedThinking();
         var sw = Stopwatch.StartNew();
-        GraphBehaviorTreeThinkStats stats = host.ThinkWave(TreeThinkBudgetSteps, sensors: this);
+        BehaviorTreeThinkStats stats = tree.TickAll(_programs, TreeThinkBudgetSteps, this);
         if (_crowd != null)
         {
             _crowd.RestartFinishedThinking();
@@ -152,11 +283,11 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
         sw.Stop();
         int yieldingAgents = 0;
-        for (int i = 0; i < host.Count; i++)
+        for (int i = 0; i < tree.Count; i++)
         {
-            _intent[i] = (byte)host.ReadInt(i, IntentPin);
+            _intent[i] = (byte)tree.LastScriptReturns[i];
             if (_intent[i] == 2) _flash[i] = 10;
-            if (host.StatusOf(i) == BehaviorTreeStatus.Running) yieldingAgents++;
+            if (tree.Statuses[i] == BehaviorTreeStatus.Running) yieldingAgents++;
         }
 
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
@@ -164,15 +295,17 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         Metrics.ThinkWaves++;
         Metrics.Detail =
             yieldingAgents > 0
-                ? $"BT Script graph tree patrol leaf yielding across think waves ({yieldingAgents} agents) steps={stats.Steps} last={Metrics.LastThinkMs:F3}ms"
-                : $"BT Script graph tree steps={stats.Steps} last={Metrics.LastThinkMs:F3}ms";
+                ? $"BT L2 tree leaf yielding across think waves ({yieldingAgents} agents) steps={stats.ScriptSteps} last={Metrics.LastThinkMs:F3}ms"
+                : $"BT L2 tree steps={stats.ScriptSteps} last={Metrics.LastThinkMs:F3}ms";
     }
 
-    /// <summary>Glue feed: the raw distance measurement (cm, ceiling) into the ambient I[0] slot; the graph owns the thresholds.</summary>
     public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)
     {
-        if (graphId != _treeGraphId) return;
-        ints[0] = DistanceToTargetCm(agentIndex);
+        if (graphId != _seeId && graphId != _rangeId && graphId != _chaseId && graphId != _attackId) return;
+        int distanceCm = DistanceToTargetCm(agentIndex);
+        ints[0] = graphId == _seeId || graphId == _chaseId
+            ? distanceCm - (int)MathF.Round(_sightRadius * 100f)
+            : distanceCm;
     }
 
     private int DistanceToTargetCm(int guard)
@@ -186,6 +319,12 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
     private void UpdateEnemies()
     {
+        if (!_stimulusEnabled)
+        {
+            Array.Clear(_eAlive);
+            return;
+        }
+
         float cycle = _time % 8f;
         if (cycle < 6f) { _eAlive[0] = true; _ex[0] = 12f - cycle * 3.5f; _ey[0] = MathF.Sin(cycle * 1.2f) * 2f; }
         else _eAlive[0] = false;
@@ -197,7 +336,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     private int FindNearestEnemy(int guard)
     {
         int best = -1;
-        float bestD = _config.SightRadius;
+        float bestD = _sightRadius;
         for (int e = 0; e < _eAlive.Length; e++)
         {
             if (!_eAlive[e]) continue;
@@ -210,7 +349,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         return best;
     }
 
-    /// <summary>Pure executor: consumes the graph's intent register; no chase/attack decision logic lives here.</summary>
+    /// <summary>Pure executor: consumes leaf Script intent returns; no chase/attack decisions here.</summary>
     private void IntegrateMotion(float dt)
     {
         for (int i = 0; i < _gx.Length; i++)

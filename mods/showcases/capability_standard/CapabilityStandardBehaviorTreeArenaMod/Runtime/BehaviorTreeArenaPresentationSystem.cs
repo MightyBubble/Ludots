@@ -1,5 +1,6 @@
 using Arch.System;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Engine;
 using Ludots.Platform.Abstractions;
 
 namespace CapabilityStandardBehaviorTreeArenaMod.Runtime;
@@ -8,12 +9,20 @@ internal sealed class BehaviorTreeArenaPresentationSystem : ISystem<float>
 {
     private readonly BehaviorTreeArenaRuntime _runtime;
     private readonly DebugDrawCommandBuffer _debugDraw;
+    private readonly GameEngine _engine;
+    private readonly GraphShowcasePanelController _panel;
     private readonly GraphShowcaseConfig _config = new();
 
-    public BehaviorTreeArenaPresentationSystem(BehaviorTreeArenaRuntime runtime, DebugDrawCommandBuffer debugDraw)
+    public BehaviorTreeArenaPresentationSystem(
+        GameEngine engine,
+        BehaviorTreeArenaRuntime runtime,
+        DebugDrawCommandBuffer debugDraw,
+        GraphShowcasePanelController panel)
     {
+        _engine = engine;
         _runtime = runtime;
         _debugDraw = debugDraw;
+        _panel = panel;
     }
 
     public void Initialize() { }
@@ -25,6 +34,15 @@ internal sealed class BehaviorTreeArenaPresentationSystem : ISystem<float>
     {
         GraphShowcaseStagePresenter.Clear(_debugDraw);
         GraphShowcaseStagePresenter.DrawPolyline(_debugDraw, BehaviorTreeArenaRuntime.PatrolPath, GraphShowcaseStagePresenter.PathColor);
+        if (_runtime.GuardCount > 0)
+        {
+            GraphShowcaseStagePresenter.DrawTriggerRing(
+                _debugDraw,
+                _runtime.GuardX[0],
+                _runtime.GuardY[0],
+                _runtime.SightRadius,
+                _runtime.L2Enabled);
+        }
 
         for (int e = 0; e < _runtime.EnemyCount; e++)
         {
@@ -35,7 +53,9 @@ internal sealed class BehaviorTreeArenaPresentationSystem : ISystem<float>
 
         for (int i = 0; i < _runtime.GuardCount; i++)
         {
-            var color = _runtime.Intent[i] switch
+            var color = !_runtime.L2Enabled
+                ? DebugDrawColor.Gray
+                : _runtime.Intent[i] switch
             {
                 1 => GraphShowcaseStagePresenter.SentryAlert,
                 2 => GraphShowcaseStagePresenter.SentryCombat,
@@ -57,5 +77,6 @@ internal sealed class BehaviorTreeArenaPresentationSystem : ISystem<float>
         }
 
         GraphShowcaseStagePresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs, _config.ThinkBudgetMs);
+        _panel.MountOrRefresh(_engine);
     }
 }

@@ -174,6 +174,11 @@ namespace Ludots.Tests.Architecture.GraphRuntime
                 GraphAuthoringSugar.BtSequence,
                 GraphAuthoringSugar.BtSelector,
                 GraphAuthoringSugar.BtDecorator,
+                GraphAuthoringSugar.BtLeaf,
+                GraphAuthoringSugar.BtAction,
+                GraphAuthoringSugar.BtCondition,
+                GraphAuthoringSugar.FsmAction,
+                "functionGraphPortal",
                 GraphAuthoringSugar.Wait,
                 GraphAuthoringSugar.While,
                 GraphAuthoringSugar.Until,
@@ -218,6 +223,23 @@ namespace Ludots.Tests.Architecture.GraphRuntime
                 Regex.Matches(source, @"TryValidateAnnotationTargets\(modRoot, graphId,").Count,
                 Is.GreaterThanOrEqualTo(2),
                 "Both the sidecar read and write paths must check annotation targets.");
+        }
+
+        [Test]
+        public void BridgeAiTopologyWritePaths_UseProductionValidation()
+        {
+            string repoRoot = FindRepoRoot();
+            string bridgePath = Path.Combine(repoRoot, "src", "Tools", "Ludots.Editor.Bridge", "Program.cs");
+            string source = File.ReadAllText(bridgePath);
+
+            Assert.That(
+                Regex.Matches(source, @"GraphBehaviorDefinitionLoader\.ValidateBehaviorTrees\(items, actions\)").Count,
+                Is.EqualTo(1),
+                "The behavior-tree PUT path must reject data that the production loader cannot compile.");
+            Assert.That(
+                Regex.Matches(source, @"GraphBehaviorDefinitionLoader\.ValidateHfsms\(items, actions\)").Count,
+                Is.EqualTo(1),
+                "The HFSM PUT path must reject data that the production loader cannot compile.");
         }
 
         [Test]
