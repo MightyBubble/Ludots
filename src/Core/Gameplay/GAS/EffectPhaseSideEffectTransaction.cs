@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Arch.Buffer;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -32,7 +31,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly GasPresentationEventBuffer? _presentationEvents;
     private readonly RootBudgetTable? _rootBudget;
     private readonly Entity[] _attributeEntities;
-    private readonly Dictionary<Entity, int> _attributeIndex;
+    private readonly TransactionEntityIndex _attributeIndex;
     private readonly AttributeBuffer[] _attributeOriginalValues;
     private readonly AttributeBuffer[] _attributeValues;
     private readonly ulong[] _attributeChangedMasks;
@@ -40,18 +39,18 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly GameplayAttributeChangedBits[] _attributeChangedValues;
     private readonly bool[] _attributeChangedExisted;
     private readonly Entity[] _dirtyEntities;
-    private readonly Dictionary<Entity, int> _dirtyIndex;
+    private readonly TransactionEntityIndex _dirtyIndex;
     private readonly DirtyFlags[] _dirtyOriginalValues;
     private readonly EffectRequest[] _stagedEffectRequests;
     private readonly RuntimeEntitySpawnRequest[] _stagedSpawnRequests;
     private readonly GasPresentationEvent[] _stagedPresentationEvents;
     private readonly GameplayEvent[] _stagedGameplayEvents;
     private readonly Entity[] _gameplayEffectEntities;
-    private readonly Dictionary<Entity, int> _gameplayEffectIndex;
+    private readonly TransactionEntityIndex _gameplayEffectIndex;
     private readonly GameplayEffect[] _gameplayEffectOriginalValues;
     private readonly GameplayEffect[] _gameplayEffectValues;
     private readonly Entity[] _tagEntities;
-    private readonly Dictionary<Entity, int> _tagIndex;
+    private readonly TransactionEntityIndex _tagIndex;
     private readonly GameplayTagContainer[] _tagOriginalValues;
     private readonly GameplayTagContainer[] _tagValues;
     private readonly TagCountContainer[] _tagCountOriginalValues;
@@ -59,46 +58,46 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly DirtyFlags[] _tagDirtyOriginalValues;
     private readonly DirtyFlags[] _tagDirtyValues;
     private readonly Entity[] _activeEffectEntities;
-    private readonly Dictionary<Entity, int> _activeEffectIndex;
+    private readonly TransactionEntityIndex _activeEffectIndex;
     private readonly ActiveEffectContainer[] _activeEffectOriginalValues;
     private readonly ActiveEffectContainer[] _activeEffectValues;
     private readonly Entity[] _destroyedEffects;
-    private readonly Dictionary<Entity, int> _destroyedEffectIndex;
+    private readonly TransactionEntityIndex _destroyedEffectIndex;
     private readonly Entity[] _blackboardFloatEntities;
-    private readonly Dictionary<Entity, int> _blackboardFloatIndex;
+    private readonly TransactionEntityIndex _blackboardFloatIndex;
     private readonly BlackboardFloatBuffer[] _blackboardFloatOriginalValues;
     private readonly BlackboardFloatBuffer[] _blackboardFloatValues;
     private readonly Entity[] _blackboardIntEntities;
-    private readonly Dictionary<Entity, int> _blackboardIntIndex;
+    private readonly TransactionEntityIndex _blackboardIntIndex;
     private readonly BlackboardIntBuffer[] _blackboardIntOriginalValues;
     private readonly BlackboardIntBuffer[] _blackboardIntValues;
     private readonly Entity[] _blackboardEntityEntities;
-    private readonly Dictionary<Entity, int> _blackboardEntityIndex;
+    private readonly TransactionEntityIndex _blackboardEntityIndex;
     private readonly BlackboardEntityBuffer[] _blackboardEntityOriginalValues;
     private readonly BlackboardEntityBuffer[] _blackboardEntityValues;
     private readonly Entity[] _cancelledEffects;
-    private readonly Dictionary<Entity, int> _cancelledEffectIndex;
+    private readonly TransactionEntityIndex _cancelledEffectIndex;
     private readonly bool[] _cancelledEffectOriginalValues;
     private readonly Entity[] _aggregateDirtyEntities;
-    private readonly Dictionary<Entity, int> _aggregateDirtyIndex;
+    private readonly TransactionEntityIndex _aggregateDirtyIndex;
     private readonly bool[] _aggregateDirtyExisted;
     private readonly ListenerRegistration[] _listenerRegistrations;
     private readonly ListenerRemoval[] _listenerRemovals;
     private readonly Entity[] _listenerEntities;
-    private readonly Dictionary<Entity, int> _listenerIndex;
-    private readonly Dictionary<Entity, int> _listenerRegistrationCounts;
-    private readonly Dictionary<(Entity Entity, int OwnerEffectId), int> _listenerRemovalIndex;
+    private readonly TransactionEntityIndex _listenerIndex;
+    private readonly TransactionEntityIndex _listenerRegistrationCounts;
+    private readonly TransactionEntityOwnerIndex _listenerRemovalIndex;
     private readonly EffectPhaseListenerBuffer[] _listenerOriginalValues;
     private readonly EffectPhaseListenerBuffer[] _listenerValues;
     private readonly bool[] _listenerExisted;
     private readonly Entity[] _relationParentEntities;
-    private readonly Dictionary<Entity, int> _relationParentIndex;
+    private readonly TransactionEntityIndex _relationParentIndex;
     private readonly ChildrenBuffer[] _relationParentOriginalValues;
     private readonly ChildrenBuffer[] _relationParentValues;
     private readonly bool[] _relationParentExisted;
     private readonly bool[] _relationParentShouldExist;
     private readonly Entity[] _relationChildEntities;
-    private readonly Dictionary<Entity, int> _relationChildIndex;
+    private readonly TransactionEntityIndex _relationChildIndex;
     private readonly ChildOf[] _relationChildOriginalValues;
     private readonly ChildOf[] _relationChildValues;
     private readonly bool[] _relationChildExisted;
@@ -195,7 +194,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _presentationEvents = presentationEvents;
         _rootBudget = rootBudget;
         _attributeEntities = new Entity[attributeEntityCapacity];
-        _attributeIndex = new Dictionary<Entity, int>(_attributeEntities.Length);
+        _attributeIndex = new TransactionEntityIndex(_attributeEntities.Length);
         _attributeOriginalValues = new AttributeBuffer[attributeEntityCapacity];
         _attributeValues = new AttributeBuffer[attributeEntityCapacity];
         _attributeChangedMasks = new ulong[attributeEntityCapacity];
@@ -203,18 +202,18 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _attributeChangedValues = new GameplayAttributeChangedBits[attributeEntityCapacity];
         _attributeChangedExisted = new bool[attributeEntityCapacity];
         _dirtyEntities = new Entity[attributeEntityCapacity + 1];
-        _dirtyIndex = new Dictionary<Entity, int>(_dirtyEntities.Length);
+        _dirtyIndex = new TransactionEntityIndex(_dirtyEntities.Length);
         _dirtyOriginalValues = new DirtyFlags[attributeEntityCapacity + 1];
         _stagedEffectRequests = new EffectRequest[effectRequests?.TotalCapacity ?? 1];
         _stagedSpawnRequests = new RuntimeEntitySpawnRequest[spawnRequests?.Capacity ?? 1];
         _stagedPresentationEvents = new GasPresentationEvent[presentationEvents?.Capacity ?? 1];
         _stagedGameplayEvents = new GameplayEvent[GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME];
         _gameplayEffectEntities = new Entity[attributeEntityCapacity];
-        _gameplayEffectIndex = new Dictionary<Entity, int>(_gameplayEffectEntities.Length);
+        _gameplayEffectIndex = new TransactionEntityIndex(_gameplayEffectEntities.Length);
         _gameplayEffectOriginalValues = new GameplayEffect[attributeEntityCapacity];
         _gameplayEffectValues = new GameplayEffect[attributeEntityCapacity];
         _tagEntities = new Entity[attributeEntityCapacity];
-        _tagIndex = new Dictionary<Entity, int>(_tagEntities.Length);
+        _tagIndex = new TransactionEntityIndex(_tagEntities.Length);
         _tagOriginalValues = new GameplayTagContainer[attributeEntityCapacity];
         _tagValues = new GameplayTagContainer[attributeEntityCapacity];
         _tagCountOriginalValues = new TagCountContainer[attributeEntityCapacity];
@@ -222,48 +221,48 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _tagDirtyOriginalValues = new DirtyFlags[attributeEntityCapacity];
         _tagDirtyValues = new DirtyFlags[attributeEntityCapacity];
         _activeEffectEntities = new Entity[attributeEntityCapacity];
-        _activeEffectIndex = new Dictionary<Entity, int>(_activeEffectEntities.Length);
+        _activeEffectIndex = new TransactionEntityIndex(_activeEffectEntities.Length);
         _activeEffectOriginalValues = new ActiveEffectContainer[attributeEntityCapacity];
         _activeEffectValues = new ActiveEffectContainer[attributeEntityCapacity];
         _destroyedEffects = new Entity[attributeEntityCapacity];
-        _destroyedEffectIndex = new Dictionary<Entity, int>(_destroyedEffects.Length);
+        _destroyedEffectIndex = new TransactionEntityIndex(_destroyedEffects.Length);
         _blackboardFloatEntities = new Entity[attributeEntityCapacity];
-        _blackboardFloatIndex = new Dictionary<Entity, int>(_blackboardFloatEntities.Length);
+        _blackboardFloatIndex = new TransactionEntityIndex(_blackboardFloatEntities.Length);
         _blackboardFloatOriginalValues = new BlackboardFloatBuffer[attributeEntityCapacity];
         _blackboardFloatValues = new BlackboardFloatBuffer[attributeEntityCapacity];
         _blackboardIntEntities = new Entity[attributeEntityCapacity];
-        _blackboardIntIndex = new Dictionary<Entity, int>(_blackboardIntEntities.Length);
+        _blackboardIntIndex = new TransactionEntityIndex(_blackboardIntEntities.Length);
         _blackboardIntOriginalValues = new BlackboardIntBuffer[attributeEntityCapacity];
         _blackboardIntValues = new BlackboardIntBuffer[attributeEntityCapacity];
         _blackboardEntityEntities = new Entity[attributeEntityCapacity];
-        _blackboardEntityIndex = new Dictionary<Entity, int>(_blackboardEntityEntities.Length);
+        _blackboardEntityIndex = new TransactionEntityIndex(_blackboardEntityEntities.Length);
         _blackboardEntityOriginalValues = new BlackboardEntityBuffer[attributeEntityCapacity];
         _blackboardEntityValues = new BlackboardEntityBuffer[attributeEntityCapacity];
         _cancelledEffects = new Entity[attributeEntityCapacity];
-        _cancelledEffectIndex = new Dictionary<Entity, int>(_cancelledEffects.Length);
+        _cancelledEffectIndex = new TransactionEntityIndex(_cancelledEffects.Length);
         _cancelledEffectOriginalValues = new bool[attributeEntityCapacity];
         _aggregateDirtyEntities = new Entity[attributeEntityCapacity];
-        _aggregateDirtyIndex = new Dictionary<Entity, int>(_aggregateDirtyEntities.Length);
+        _aggregateDirtyIndex = new TransactionEntityIndex(_aggregateDirtyEntities.Length);
         _aggregateDirtyExisted = new bool[attributeEntityCapacity];
         _listenerRegistrations = new ListenerRegistration[attributeEntityCapacity];
         int listenerEntityCapacity = checked(attributeEntityCapacity * 2);
         _listenerRemovals = new ListenerRemoval[listenerEntityCapacity];
-        _listenerRemovalIndex = new Dictionary<(Entity Entity, int OwnerEffectId), int>(listenerEntityCapacity);
-        _listenerRegistrationCounts = new Dictionary<Entity, int>(listenerEntityCapacity);
+        _listenerRemovalIndex = new TransactionEntityOwnerIndex(listenerEntityCapacity);
+        _listenerRegistrationCounts = new TransactionEntityIndex(listenerEntityCapacity);
         _listenerEntities = new Entity[listenerEntityCapacity];
-        _listenerIndex = new Dictionary<Entity, int>(_listenerEntities.Length);
+        _listenerIndex = new TransactionEntityIndex(_listenerEntities.Length);
         _listenerOriginalValues = new EffectPhaseListenerBuffer[listenerEntityCapacity];
         _listenerValues = new EffectPhaseListenerBuffer[listenerEntityCapacity];
         _listenerExisted = new bool[listenerEntityCapacity];
         int relationParentCapacity = checked(attributeEntityCapacity * 2);
         _relationParentEntities = new Entity[relationParentCapacity];
-        _relationParentIndex = new Dictionary<Entity, int>(_relationParentEntities.Length);
+        _relationParentIndex = new TransactionEntityIndex(_relationParentEntities.Length);
         _relationParentOriginalValues = new ChildrenBuffer[relationParentCapacity];
         _relationParentValues = new ChildrenBuffer[relationParentCapacity];
         _relationParentExisted = new bool[relationParentCapacity];
         _relationParentShouldExist = new bool[relationParentCapacity];
         _relationChildEntities = new Entity[attributeEntityCapacity];
-        _relationChildIndex = new Dictionary<Entity, int>(_relationChildEntities.Length);
+        _relationChildIndex = new TransactionEntityIndex(_relationChildEntities.Length);
         _relationChildOriginalValues = new ChildOf[attributeEntityCapacity];
         _relationChildValues = new ChildOf[attributeEntityCapacity];
         _relationChildExisted = new bool[attributeEntityCapacity];
@@ -1025,7 +1024,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public void StageEffectDestroy(Entity effect)
     {
         RequireActive();
-        if (!_world.IsAlive(effect) || _destroyedEffectIndex.ContainsKey(effect))
+        if (!_world.IsAlive(effect) || _destroyedEffectIndex.Contains(effect))
         {
             return;
         }
@@ -1115,7 +1114,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 !_world.Has<EffectTemplateRef>(effect) ||
                 !_world.Has<GameplayEffect>(effect) ||
                 _world.Get<EffectTemplateRef>(effect).TemplateId != templateId ||
-                _cancelledEffectIndex.ContainsKey(effect))
+                _cancelledEffectIndex.Contains(effect))
             {
                 continue;
             }
@@ -1146,7 +1145,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             throw new InvalidOperationException(
                 $"GAS.EFFECT_TRANSACTION.ERR.AggregateTargetInvalid: entity={target.Id}.");
         }
-        if (_aggregateDirtyIndex.ContainsKey(target))
+        if (_aggregateDirtyIndex.Contains(target))
         {
             return;
         }
@@ -1211,7 +1210,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         {
             return;
         }
-        if (_listenerRemovalIndex.ContainsKey((entity, ownerEffectId)))
+        if (_listenerRemovalIndex.Contains(entity, ownerEffectId))
         {
             return;
         }
@@ -1221,7 +1220,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 $"{CapacityExceededError}: destination=ListenerRemovals, staged={_listenerRemovalCount + 1}, capacity={_listenerRemovals.Length}.");
         }
 
-        _listenerRemovalIndex.Add((entity, ownerEffectId), _listenerRemovalCount);
+        _listenerRemovalIndex.Add(entity, ownerEffectId, _listenerRemovalCount);
         _listenerRemovals[_listenerRemovalCount++] = new ListenerRemoval
         {
             Entity = entity,
@@ -1237,7 +1236,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             throw new InvalidOperationException(TagOps.MissingDirtyFlagsError);
         }
 
-        if (_dirtyIndex.ContainsKey(entity))
+        if (_dirtyIndex.Contains(entity))
         {
             return;
         }
@@ -1828,7 +1827,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private unsafe void ValidateListenerRegistrations()
     {
-        _listenerRegistrationCounts.Clear();
+        _listenerRegistrationCounts.Reset();
         for (int registrationIndex = 0; registrationIndex < _listenerRegistrationCount; registrationIndex++)
         {
             ref ListenerRegistration registration = ref _listenerRegistrations[registrationIndex];
@@ -1837,8 +1836,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 Entity entity = registration.Setup.Scopes[setupIndex] == (byte)PhaseListenerScope.Target
                     ? registration.Context.Target
                     : registration.Context.Source;
-                _listenerRegistrationCounts.TryGetValue(entity, out int count);
-                _listenerRegistrationCounts[entity] = count + 1;
+                _listenerRegistrationCounts.TryGet(entity, out int count);
+                _listenerRegistrationCounts.Set(entity, count + 1);
             }
         }
 
@@ -1855,13 +1854,16 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                     throw new InvalidOperationException(
                         $"GAS.EFFECT_TRANSACTION.ERR.ListenerTargetInvalid: entity={entity.Id}.");
                 }
-                int stagedCount = _listenerRegistrationCounts[entity];
+                if (!_listenerRegistrationCounts.TryGet(entity, out int stagedCount))
+                {
+                    throw new InvalidOperationException("GAS.EFFECT_TRANSACTION.ERR.ListenerRegistrationIndexMissing");
+                }
                 if (stagedCount < 0)
                 {
                     continue;
                 }
 
-                _listenerRegistrationCounts[entity] = -1;
+                _listenerRegistrationCounts.Set(entity, -1);
                 int existingCount = _world.Has<EffectPhaseListenerBuffer>(entity)
                     ? _world.Get<EffectPhaseListenerBuffer>(entity).Count
                     : 0;
@@ -2888,29 +2890,29 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _structuralRollbackCommands.Dispose();
     }
 
-    private static int FindIndex(Dictionary<Entity, int> index, Entity entity)
+    private static int FindIndex(TransactionEntityIndex index, Entity entity)
     {
-        return index.TryGetValue(entity, out int row) ? row : -1;
+        return index.TryGet(entity, out int row) ? row : -1;
     }
 
     private void ClearIndexes()
     {
-        _attributeIndex.Clear();
-        _dirtyIndex.Clear();
-        _gameplayEffectIndex.Clear();
-        _tagIndex.Clear();
-        _activeEffectIndex.Clear();
-        _destroyedEffectIndex.Clear();
-        _blackboardFloatIndex.Clear();
-        _blackboardIntIndex.Clear();
-        _blackboardEntityIndex.Clear();
-        _cancelledEffectIndex.Clear();
-        _aggregateDirtyIndex.Clear();
-        _listenerIndex.Clear();
-        _relationParentIndex.Clear();
-        _relationChildIndex.Clear();
-        _listenerRemovalIndex.Clear();
-        _listenerRegistrationCounts.Clear();
+        _attributeIndex.Reset();
+        _dirtyIndex.Reset();
+        _gameplayEffectIndex.Reset();
+        _tagIndex.Reset();
+        _activeEffectIndex.Reset();
+        _destroyedEffectIndex.Reset();
+        _blackboardFloatIndex.Reset();
+        _blackboardIntIndex.Reset();
+        _blackboardEntityIndex.Reset();
+        _cancelledEffectIndex.Reset();
+        _aggregateDirtyIndex.Reset();
+        _listenerIndex.Reset();
+        _relationParentIndex.Reset();
+        _relationChildIndex.Reset();
+        _listenerRemovalIndex.Reset();
+        _listenerRegistrationCounts.Reset();
     }
 
     private struct ListenerRegistration
