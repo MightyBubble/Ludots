@@ -7,7 +7,7 @@
     "graph"
   ],
   "DefaultCamera": {
-    "VirtualCameraId": "Camera.Profile.Tactical",
+    "VirtualCameraId": "Camera.Profile.FixedArena",
     "TargetXCm": 0,
     "TargetYCm": 0,
     "DistanceCm": 2600,

@@ -116,6 +116,30 @@ namespace Ludots.Tests.Gas.Production
             Assert.That(runtime.Metrics.Detail, Does.Contain("BT L2"));
         }
 
+        [Test]
+        public void BehaviorTreeArena_PlayableControls_ChangeRuntimeState()
+        {
+            var runtime = new BehaviorTreeArenaRuntime();
+            runtime.Bind(_programs, _actions, _behavior);
+            runtime.EnsureWorld();
+
+            runtime.TogglePaused();
+            int wavesBeforeStep = runtime.Metrics.ThinkWaves;
+            runtime.Tick(1f);
+            Assert.That(runtime.Metrics.ThinkWaves, Is.EqualTo(wavesBeforeStep));
+            runtime.Step();
+            Assert.That(runtime.Metrics.ThinkWaves, Is.GreaterThan(wavesBeforeStep));
+
+            runtime.ToggleL2();
+            Assert.That(runtime.BuildControlState().L2Enabled, Is.False);
+            runtime.ToggleStimulus();
+            Assert.That(runtime.BuildControlState().StimulusEnabled, Is.False);
+            runtime.IncreaseSightRadius();
+            runtime.IncreaseThinkPeriod();
+            Assert.That(runtime.SightRadius, Is.EqualTo(7f).Within(0.001f));
+            Assert.That(runtime.ThinkPeriodSeconds, Is.EqualTo(0.3f).Within(0.001f));
+        }
+
         /// <summary>
         /// Crowd honesty gate: featured = L2 BehaviorTreeWorld (bt.patrolChaseAttack) with leaf Scripts;
         /// 10k crowd = no-graph AlwaysSuccess tree (ScriptSlices==0).
@@ -170,6 +194,30 @@ namespace Ludots.Tests.Gas.Production
 
             Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
+        }
+
+        [Test]
+        public void HfsmSentryArena_PlayableControls_ChangeRuntimeState()
+        {
+            var runtime = new HfsmSentryArenaRuntime();
+            runtime.Bind(_programs, _actions, _behavior);
+            runtime.EnsureWorld();
+
+            runtime.TogglePaused();
+            int wavesBeforeStep = runtime.Metrics.ThinkWaves;
+            runtime.Tick(1f);
+            Assert.That(runtime.Metrics.ThinkWaves, Is.EqualTo(wavesBeforeStep));
+            runtime.Step();
+            Assert.That(runtime.Metrics.ThinkWaves, Is.GreaterThan(wavesBeforeStep));
+
+            runtime.ToggleL2();
+            Assert.That(runtime.BuildControlState().L2Enabled, Is.False);
+            runtime.ToggleStimulus();
+            Assert.That(runtime.BuildControlState().StimulusEnabled, Is.False);
+            runtime.IncreaseAlertRadius();
+            runtime.IncreaseThinkPeriod();
+            Assert.That(runtime.AlertRadius, Is.EqualTo(6.5f).Within(0.001f));
+            Assert.That(runtime.ThinkPeriodSeconds, Is.EqualTo(0.3f).Within(0.001f));
         }
 
         /// <summary>
@@ -241,6 +289,34 @@ namespace Ludots.Tests.Gas.Production
             Assert.That(runtime.Hfsm, Is.Not.Null, "Integration runs HfsmWorld + leaf Scripts as L2 SSOT.");
             Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
+        }
+
+        [Test]
+        public void GraphBehaviorIntegration_PlayableControls_DriveBothL2Worlds()
+        {
+            var runtime = new GraphBehaviorIntegrationRuntime();
+            runtime.Bind(_programs, _actions, _behavior);
+            runtime.EnsureWorld();
+
+            runtime.TogglePaused();
+            int wavesBeforeStep = runtime.Metrics.ThinkWaves;
+            runtime.Step();
+            Assert.That(runtime.Metrics.ThinkWaves, Is.GreaterThan(wavesBeforeStep));
+
+            runtime.ToggleL2();
+            runtime.ToggleStimulus();
+            runtime.IncreaseSensorRadius();
+            runtime.DecreaseThinkPeriod();
+            GraphShowcaseControlState state = runtime.BuildControlState();
+            Assert.Multiple(() =>
+            {
+                Assert.That(state.L2Enabled, Is.False);
+                Assert.That(state.StimulusEnabled, Is.False);
+                Assert.That(state.SightRadius, Is.EqualTo(7f).Within(0.001f));
+                Assert.That(state.ThinkPeriod, Is.LessThan(0.2f));
+                Assert.That(state.Detail, Does.Contain("BT"));
+                Assert.That(state.Detail, Does.Contain("HFSM"));
+            });
         }
 
         private static void Warm(System.Action<float> tick, int waves = 5)

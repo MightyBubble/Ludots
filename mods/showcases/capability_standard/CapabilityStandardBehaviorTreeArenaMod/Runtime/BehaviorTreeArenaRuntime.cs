@@ -32,6 +32,12 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     private float _time;
     private int _seeId;
     private int _rangeId;
+    private bool _paused;
+    private bool _l2Enabled = true;
+    private bool _stimulusEnabled = true;
+    private float _sightRadius = 5.5f;
+    private float _thinkPeriodSeconds = 0.2f;
+    private string _status = "巡逻已开始，等待入侵者进入视野。";
 
     private float[] _gx = Array.Empty<float>();
     private float[] _gy = Array.Empty<float>();
@@ -60,6 +66,11 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     public int EnemyCount => _ex.Length;
     public BehaviorTreeWorld? TreeWorld => _tree;
     public BehaviorTreeWorld? CrowdWorld => _crowd;
+    public bool Paused => _paused;
+    public bool L2Enabled => _l2Enabled;
+    public bool StimulusEnabled => _stimulusEnabled;
+    public float SightRadius => _sightRadius;
+    public float ThinkPeriodSeconds => _thinkPeriodSeconds;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_behavior_tree_arena" };
 
     public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions, GraphBehaviorCatalog behavior)
@@ -120,13 +131,132 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     public void Tick(float dt)
     {
         EnsureWorld();
+        if (_paused) return;
+        Advance(dt, forceThink: false);
+    }
+
+    public void TogglePaused()
+    {
+        _paused = !_paused;
+        _status = _paused ? "已暂停；点“单步”观察下一次决策。" : "继续自动运行。";
+    }
+
+    public void Step()
+    {
+        if (!_paused)
+        {
+            _status = "单步只在暂停时可用；先点“暂停”。";
+            return;
+        }
+
+        Advance(_thinkPeriodSeconds, forceThink: true);
+        _status = _l2Enabled ? "已推进一次世界更新和一次 L2 决策。" : "世界已推进，但 L2 决策当前关闭。";
+    }
+
+    public void ToggleL2()
+    {
+        _l2Enabled = !_l2Enabled;
+        if (_tree != null)
+        {
+            for (int i = 0; i < _tree.Count; i++) _tree.ResetAgent(i);
+        }
+
+        if (!_l2Enabled) Array.Clear(_intent);
+        _status = _l2Enabled
+            ? "L2 行为树已恢复；守卫会按树做巡逻、追击和攻击决策。"
+            : "L2 行为树已关闭；同场只保留巡逻执行作对照。";
+    }
+
+    public void ToggleStimulus()
+    {
+        _stimulusEnabled = !_stimulusEnabled;
+        _time = 0f;
+        if (!_stimulusEnabled) Array.Clear(_eAlive);
+        _status = _stimulusEnabled ? "入侵者已重新进入场景。" : "入侵者已移除；守卫应回到巡逻。";
+    }
+
+    public void IncreaseSightRadius()
+    {
+        _sightRadius = MathF.Min(10f, _sightRadius + 1.5f);
+        _status = $"视野扩大到 {_sightRadius:0.0} 米。";
+    }
+
+    public void DecreaseSightRadius()
+    {
+        _sightRadius = MathF.Max(1.5f, _sightRadius - 1.5f);
+        _status = $"视野缩小到 {_sightRadius:0.0} 米。";
+    }
+
+    public void IncreaseThinkPeriod()
+    {
+        _thinkPeriodSeconds = MathF.Min(1f, _thinkPeriodSeconds * 1.5f);
+        _status = $"思考放慢到每 {_thinkPeriodSeconds:0.00} 秒一次。";
+    }
+
+    public void DecreaseThinkPeriod()
+    {
+        _thinkPeriodSeconds = MathF.Max(0.05f, _thinkPeriodSeconds / 1.5f);
+        _status = $"思考加快到每 {_thinkPeriodSeconds:0.00} 秒一次。";
+    }
+
+    public void ResetScenario()
+    {
+        _paused = false;
+        _l2Enabled = true;
+        _stimulusEnabled = true;
+        _sightRadius = _config.SightRadius;
+        _thinkPeriodSeconds = _config.ThinkPeriodSeconds;
+        _accum = 0f;
+        _time = 0f;
+        _tree = null;
+        _crowd = null;
+        Metrics.LastThinkMs = 0;
+        Metrics.MaxThinkMs = 0;
+        Metrics.ThinkWaves = 0;
+        EnsureWorld();
+        _status = "场景已重置；L2 行为树、入侵者和自动运行均已开启。";
+    }
+
+    public GraphShowcaseControlState BuildControlState()
+    {
+        int patrol = 0, chase = 0, attack = 0, aliveEnemies = 0;
+        for (int i = 0; i < _intent.Length; i++)
+        {
+            switch (_intent[i])
+            {
+                case 1: chase++; break;
+                case 2: attack++; break;
+                default: patrol++; break;
+            }
+        }
+
+        for (int i = 0; i < _eAlive.Length; i++) if (_eAlive[i]) aliveEnemies++;
+        string detail =
+            $"巡逻 {patrol} / 追击 {chase} / 攻击 {attack}；入侵者 {aliveEnemies}；" +
+            $"决策波 {Metrics.ThinkWaves}；本波 {Metrics.LastThinkMs:0.000}ms；万人段 ScriptSlices=0。";
+        return new GraphShowcaseControlState(
+            "行为树演武场",
+            "让入侵者穿过巡逻区，观察同一批守卫如何从巡逻切到追击和攻击。关闭 L2 可直接比较。",
+            _status,
+            detail,
+            "BehaviorTreeWorld 读取 bt.patrolChaseAttack，叶子来自 ActionLib。",
+            _paused,
+            _l2Enabled,
+            _stimulusEnabled,
+            _sightRadius,
+            _thinkPeriodSeconds,
+            GuardCount);
+    }
+
+    private void Advance(float dt, bool forceThink)
+    {
         _time += dt;
         UpdateEnemies();
         for (int i = 0; i < _flash.Length; i++) if (_flash[i] > 0) _flash[i]--;
         for (int i = 0; i < _gx.Length; i++) _target[i] = FindNearestEnemy(i);
 
         _accum += dt;
-        if (_accum >= _config.ThinkPeriodSeconds)
+        if (_l2Enabled && (forceThink || _accum >= _thinkPeriodSeconds))
         {
             _accum = 0f;
             ThinkWave();
@@ -183,6 +313,12 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
     private void UpdateEnemies()
     {
+        if (!_stimulusEnabled)
+        {
+            Array.Clear(_eAlive);
+            return;
+        }
+
         float cycle = _time % 8f;
         if (cycle < 6f) { _eAlive[0] = true; _ex[0] = 12f - cycle * 3.5f; _ey[0] = MathF.Sin(cycle * 1.2f) * 2f; }
         else _eAlive[0] = false;
@@ -194,7 +330,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     private int FindNearestEnemy(int guard)
     {
         int best = -1;
-        float bestD = _config.SightRadius;
+        float bestD = _sightRadius;
         for (int e = 0; e < _eAlive.Length; e++)
         {
             if (!_eAlive[e]) continue;

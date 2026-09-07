@@ -33,6 +33,12 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
     private float _ex, _ey, _markerY = -10f;
     private bool _enemyAlive;
     private int _seeId, _rangeId;
+    private bool _paused;
+    private bool _l2Enabled = true;
+    private bool _stimulusEnabled = true;
+    private float _sensorRadius = 5.5f;
+    private float _thinkPeriodSeconds = 0.2f;
+    private string _status = "两队已就位，等待同一名入侵者穿过防线。";
 
     public static readonly Vector2[] LeftPatrol =
     {
@@ -54,6 +60,11 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
     public bool EnemyAlive => _enemyAlive;
     public float MarkerX => 0f;
     public float MarkerY => _markerY;
+    public bool Paused => _paused;
+    public bool L2Enabled => _l2Enabled;
+    public bool StimulusEnabled => _stimulusEnabled;
+    public float SensorRadius => _sensorRadius;
+    public float ThinkPeriodSeconds => _thinkPeriodSeconds;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_behavior_integration" };
 
     public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions, GraphBehaviorCatalog behavior)
@@ -107,9 +118,140 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
     public void Tick(float dt)
     {
         EnsureWorld();
+        if (_paused) return;
+        Advance(dt, forceThink: false);
+    }
+
+    public void TogglePaused()
+    {
+        _paused = !_paused;
+        _status = _paused ? "已暂停；点“单步”比较两套 L2 决策的下一波结果。" : "继续自动运行。";
+    }
+
+    public void Step()
+    {
+        if (!_paused)
+        {
+            _status = "单步只在暂停时可用；先点“暂停”。";
+            return;
+        }
+
+        Advance(_thinkPeriodSeconds, forceThink: true);
+        _status = _l2Enabled ? "BT 与 HFSM 各推进了一次 L2 决策。" : "世界已推进，但两套 L2 决策当前关闭。";
+    }
+
+    public void ToggleL2()
+    {
+        _l2Enabled = !_l2Enabled;
+        if (!_l2Enabled) Array.Clear(_intent);
+        _status = _l2Enabled
+            ? "BT 与 HFSM 的 L2 决策都已恢复。"
+            : "两套 L2 决策都已关闭；入侵者继续穿场，守卫不再响应。";
+    }
+
+    public void ToggleStimulus()
+    {
+        _stimulusEnabled = !_stimulusEnabled;
+        _time = 0f;
+        if (!_stimulusEnabled) _enemyAlive = false;
+        _status = _stimulusEnabled ? "入侵者已重新进入场景。" : "入侵者已移除；两队不再收到新刺激。";
+    }
+
+    public void IncreaseSensorRadius()
+    {
+        _sensorRadius = MathF.Min(10f, _sensorRadius + 1.5f);
+        _status = $"两队感知半径扩大到 {_sensorRadius:0.0} 米。";
+    }
+
+    public void DecreaseSensorRadius()
+    {
+        _sensorRadius = MathF.Max(1.5f, _sensorRadius - 1.5f);
+        _status = $"两队感知半径缩小到 {_sensorRadius:0.0} 米。";
+    }
+
+    public void IncreaseThinkPeriod()
+    {
+        _thinkPeriodSeconds = MathF.Min(1f, _thinkPeriodSeconds * 1.5f);
+        _status = $"思考放慢到每 {_thinkPeriodSeconds:0.00} 秒一次。";
+    }
+
+    public void DecreaseThinkPeriod()
+    {
+        _thinkPeriodSeconds = MathF.Max(0.05f, _thinkPeriodSeconds / 1.5f);
+        _status = $"思考加快到每 {_thinkPeriodSeconds:0.00} 秒一次。";
+    }
+
+    public void ResetScenario()
+    {
+        _paused = false;
+        _l2Enabled = true;
+        _stimulusEnabled = true;
+        _sensorRadius = _config.SightRadius;
+        _thinkPeriodSeconds = _config.ThinkPeriodSeconds;
+        _accum = 0f;
+        _time = 0f;
+        _markerY = -10f;
+        _enemyAlive = false;
+        _bt = null;
+        _hfsm = null;
+        _hfsmHost = null;
+        Metrics.LastThinkMs = 0;
+        Metrics.MaxThinkMs = 0;
+        Metrics.ThinkWaves = 0;
+        EnsureWorld();
+        _status = "场景已重置；两套 L2 决策、入侵者和自动运行均已开启。";
+    }
+
+    public GraphShowcaseControlState BuildControlState()
+    {
+        int patrol = 0, chase = 0, attack = 0;
+        for (int i = 0; i < _intent.Length; i++)
+        {
+            switch (_intent[i])
+            {
+                case 1: chase++; break;
+                case 2: attack++; break;
+                default: patrol++; break;
+            }
+        }
+
+        int idle = 0, alert = 0, combat = 0, retreat = 0;
+        if (_hfsm != null)
+        {
+            for (int i = 0; i < _hfsm.Count; i++)
+            {
+                switch (_hfsm.GetLeafStateName(i))
+                {
+                    case "alert": alert++; break;
+                    case "combat": combat++; break;
+                    case "retreat": retreat++; break;
+                    default: idle++; break;
+                }
+            }
+        }
+
+        string detail =
+            $"BT 巡逻 {patrol}/追击 {chase}/攻击 {attack}；HFSM 待命 {idle}/警戒 {alert}/战斗 {combat}/撤退 {retreat}；" +
+            $"决策波 {Metrics.ThinkWaves}；本波 {Metrics.LastThinkMs:0.000}ms。";
+        return new GraphShowcaseControlState(
+            "BT + HFSM 联合演武场",
+            "同一名入侵者穿过两道防线：左边行为树追击，右边分层状态机切换状态。",
+            _status,
+            detail,
+            "左侧 BehaviorTreeWorld；右侧 HfsmWorld + GraphProgramHfsmHost。",
+            _paused,
+            _l2Enabled,
+            _stimulusEnabled,
+            _sensorRadius,
+            _thinkPeriodSeconds,
+            GuardCount + SentryCount);
+    }
+
+    private void Advance(float dt, bool forceThink)
+    {
         _time += dt;
         if (_markerY < -7.5f) _markerY += 2f * dt;
-        if (!_enemyAlive && _time >= EnemyFirstWaveSeconds && _time < 20f)
+        if (_stimulusEnabled && !_enemyAlive && _time >= EnemyFirstWaveSeconds && _time < 20f)
         {
             _enemyAlive = true;
             _ex = 0f;
@@ -123,15 +265,15 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         }
 
         for (int i = 0; i < _gx.Length; i++)
-            _target[i] = (_enemyAlive && Dist2(_gx[i], _gy[i], _ex, _ey) <= _config.SightRadius * _config.SightRadius) ? 0 : -1;
-        for (int i = 0; i < _sx.Length; i++)
+            _target[i] = (_enemyAlive && Dist2(_gx[i], _gy[i], _ex, _ey) <= _sensorRadius * _sensorRadius) ? 0 : -1;
+        for (int i = 0; _l2Enabled && i < _sx.Length; i++)
         {
-            if (_enemyAlive && Dist2(_sx[i], _sy[i], _ex, _ey) <= _config.AlertRadius * _config.AlertRadius)
+            if (_enemyAlive && Dist2(_sx[i], _sy[i], _ex, _ey) <= _sensorRadius * _sensorRadius)
                 _hfsm!.LatchStimulus(i);
         }
 
         _accum += dt;
-        if (_accum >= _config.ThinkPeriodSeconds)
+        if (_l2Enabled && (forceThink || _accum >= _thinkPeriodSeconds))
         {
             _accum = 0f;
             _bt!.RestartAllThinking();
