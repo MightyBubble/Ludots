@@ -35,12 +35,10 @@ namespace Ludots.Core.Presentation.Hud
         {
             int widthPx = Math.Max(1, (int)MathF.Round(width));
             int heightPx = Math.Max(1, (int)MathF.Round(height));
-            int fillPx = (int)MathF.Round(widthPx * Math.Clamp(value, 0f, 1f));
-            fillPx = Math.Clamp(fillPx, 0, widthPx);
             int hash = 23;
             hash = Mix(hash, widthPx);
             hash = Mix(hash, heightPx);
-            hash = Mix(hash, fillPx);
+            hash = Mix(hash, BitConverter.SingleToInt32Bits(value));
             hash = Mix(hash, background);
             hash = Mix(hash, foreground);
             return Finalize(hash);
@@ -80,12 +78,12 @@ namespace Ludots.Core.Presentation.Hud
             switch (mode)
             {
                 case WorldHudValueMode.AttributeCurrentOverBase:
-                    hash = Mix(hash, (int)value0);
-                    hash = Mix(hash, (int)value1);
+                    hash = Mix(hash, BitConverter.SingleToInt32Bits(value0));
+                    hash = Mix(hash, BitConverter.SingleToInt32Bits(value1));
                     return hash;
 
                 case WorldHudValueMode.AttributeCurrent:
-                    return Mix(hash, (int)value0);
+                    return Mix(hash, BitConverter.SingleToInt32Bits(value0));
 
                 case WorldHudValueMode.Constant:
                     return Mix(hash, BitConverter.SingleToInt32Bits(value0));
