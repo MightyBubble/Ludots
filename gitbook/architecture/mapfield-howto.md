@@ -69,6 +69,8 @@
 
 实体跟踪加 `FieldTrackedCm: { "layer": "<layerKey>" }`。过境事件：`FieldRegionEntered` / `FieldRegionExited`（TriggerGraph `filters.region` 用区域明文 key）。
 
+区域过境也可走统一发射合同（#1468）：`Fields/region_emissions.json` 按 region key 声明 `emit`（enter/exit 事件名 + 静态 payload，与 RegionVolume 同一份合同与校验），装载期 fail-closed；有声明的区域实体携带 `RegionVolumeEmissionCm`，过境改道自定义事件，未声明的继续走引擎默认事件。
+
 ### 3.1 运行时重划：`FieldRegionRedraw`
 
 玩法层运行时改写离散归属（重划县界、转移归属）走单一入口 `FieldRegionRedraw.ApplyDiscrete`：先注册批次内全部新区域 key（容量不足整批失败，不落半笔），再应用矩形笔画，随后补齐新区域实体、重算各区域占格、重建层级投影。驻留单位的成员关系由 chunk 变更戳在下一拍自动重估，进出事件照常走既有事件线。调试通道：`ludots.field.redraw`。
