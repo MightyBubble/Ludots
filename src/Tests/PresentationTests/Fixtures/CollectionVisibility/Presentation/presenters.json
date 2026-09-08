@@ -1,0 +1,68 @@
+[
+  {
+    "id": "selection.preview",
+    "lifecycle": { "persistence": "Scoped" },
+    "paramDefaults": [
+      { "paramKey": "selection.visible", "lane": "Int", "intValue": 0 }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh", "assetId": "ring", "materialId": "surface",
+          "renderPath": "StaticMesh", "mobility": "Static",
+          "visibilityParamKey": "selection.visible",
+          "localScale": [1, 1, 1]
+        },
+        "style": { "color": [1, 0.85, 0.25, 1] }
+      }
+    ]
+  },
+  {
+    "id": "selection.selected",
+    "extends": "selection.preview"
+  },
+  {
+    "id": "selection.rules",
+    "rules": [
+      {
+        "event": { "kind": "EntityDestroyed", "key": "*" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "preview" },
+        "command": {
+          "kind": "CreatePresenter", "definitionId": "selection.preview",
+          "scopeSource": "EventPayloadA", "ownerSource": "EventSource",
+          "paramKey": "selection.visible", "paramLane": "Int", "valueSource": "Fixed", "intValue": 1
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "preview" },
+        "command": {
+          "kind": "SetParam", "definitionId": "selection.preview",
+          "scopeSource": "EventPayloadA", "ownerSource": "EventSource",
+          "paramKey": "selection.visible", "paramLane": "Int", "valueSource": "Fixed", "intValue": 0
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "selected" },
+        "command": {
+          "kind": "CreatePresenter", "definitionId": "selection.selected",
+          "scopeSource": "EventPayloadA", "ownerSource": "EventSource",
+          "paramKey": "selection.visible", "paramLane": "Int", "valueSource": "Fixed", "intValue": 1
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "selected" },
+        "command": {
+          "kind": "SetParam", "definitionId": "selection.selected",
+          "scopeSource": "EventPayloadA", "ownerSource": "EventSource",
+          "paramKey": "selection.visible", "paramLane": "Int", "valueSource": "Fixed", "intValue": 0
+        }
+      }
+    ]
+  }
+]

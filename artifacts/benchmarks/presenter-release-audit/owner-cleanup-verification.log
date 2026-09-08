@@ -1,0 +1,88 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\wt-presenter-release-audit-20260908\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  SkiaSharp -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\SkiaSharp\SkiaSharp\bin\Release\net8.0\SkiaSharp.dll
+  ExCSS -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\ExCSS\bin\Release\net8.0\ExCSS.dll
+  Arch -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Ludots.UI -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Ludots.UI\bin\Release\net9.0\Ludots.UI.dll
+  Ludots.Contracts -> C:\001_AI\wt-presenter-release-audit-20260908\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  Raylib-cs -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Raylib-cs\bin\Release\net9.0\Raylib-cs.dll
+  ShimSkiaSharp -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Release\net8.0\ShimSkiaSharp.dll
+  Arch.System -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Ludots.UI.Browser -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Ludots.UI.Browser\bin\Release\net9.0\Ludots.UI.Browser.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\wt-presenter-release-audit-20260908\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Arch -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Svg.Generators -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Release\netstandard2.0\Svg.Generators.dll
+  Svg.Custom -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Svg.Skia\Svg.Custom\bin\Release\net8.0\Svg.Custom.dll
+  Ludots.Raylib.Render -> C:\001_AI\wt-presenter-release-audit-20260908\src\Client\Ludots.Raylib.Render\bin\Release\net9.0\Ludots.Raylib.Render.dll
+  Arch.Relationships -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Arch.Persistence -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Svg.Model -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Svg.Skia\Svg.Model\bin\Release\net8.0\Svg.Model.dll
+  DotRecast.Core -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  Svg.Skia -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Svg.Skia\Svg.Skia\bin\Release\net8.0\Svg.Skia.dll
+  DotRecast.Detour -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  Ludots.UI.Skia -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Ludots.UI.Skia\bin\Release\net9.0\Ludots.UI.Skia.dll
+  DotRecast.Recast -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  Ludots.Core -> C:\001_AI\wt-presenter-release-audit-20260908\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  RaylibVisualAtmosphereShowcaseMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\raylib_visual_atmosphere\RaylibVisualAtmosphereShowcaseMod\bin\net9.0\RaylibVisualAtmosphereShowcaseMod.dll
+  AnimationAcceptanceMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\fixtures\animation\AnimationAcceptanceMod\bin\net9.0\AnimationAcceptanceMod.dll
+  MassNavigationMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+  EntityInfoPanelsMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\capabilities\entityinfo\EntityInfoPanelsMod\bin\net9.0\EntityInfoPanelsMod.dll
+  CoreInputMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+  PresenterBlacksmithShowcaseMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\bin\net9.0\PresenterBlacksmithShowcaseMod.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Ludots.WebUI.DataPlane\bin\Release\net9.0\Ludots.WebUI.DataPlane.dll
+  CapabilityStandardPresenterCommandShowcaseMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\capability_standard\CapabilityStandardPresenterCommandShowcaseMod\bin\net9.0\CapabilityStandardPresenterCommandShowcaseMod.dll
+  Ludots.Client.Raylib -> C:\001_AI\wt-presenter-release-audit-20260908\src\Client\Ludots.Client.Raylib\bin\Release\net9.0\Ludots.Client.Raylib.dll
+  RaylibIsmBenchmarkShowcaseMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\raylib_ism_benchmark\RaylibIsmBenchmarkShowcaseMod\bin\net9.0\RaylibIsmBenchmarkShowcaseMod.dll
+  EntityCommandPanelMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\EntityCommandPanelMod\bin\net9.0\EntityCommandPanelMod.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Ludots.UI.HtmlEngine\bin\Release\net9.0\Ludots.UI.HtmlEngine.dll
+  LudotsCoreMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+  Ludots.Presentation.Skia -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Ludots.Presentation.Skia\bin\Release\net9.0\Ludots.Presentation.Skia.dll
+  CameraProfilesMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\capabilities\camera\CameraProfilesMod\bin\net9.0\CameraProfilesMod.dll
+  CameraAcceptanceMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\fixtures\camera\CameraAcceptanceMod\bin\net9.0\CameraAcceptanceMod.dll
+  RtsDemoMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\rts_demo\RtsDemoMod\bin\net9.0\RtsDemoMod.dll
+  FormationCapabilityShowcaseMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\formation_capability\FormationCapabilityShowcaseMod\bin\net9.0\FormationCapabilityShowcaseMod.dll
+  CapabilityStandardMassNavigationLargeWorld10kMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll
+  FourXDemoMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\fourx_demo\FourXDemoMod\bin\net9.0\FourXDemoMod.dll
+  Ludots.Physics.Broadphase -> C:\001_AI\wt-presenter-release-audit-20260908\src\Core\Ludots.Physics.Broadphase\bin\Release\net9.0\Ludots.Physics.Broadphase.dll
+  Ludots.Physics2D -> C:\001_AI\wt-presenter-release-audit-20260908\src\Core\Ludots.Physics2D\bin\Release\net9.0\Ludots.Physics2D.dll
+  VisualTerrainEditorMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\visual_terrain_editor\VisualTerrainEditorMod\bin\net9.0\VisualTerrainEditorMod.dll
+  InteractionShowcaseMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\interaction\InteractionShowcaseMod\bin\net9.0\InteractionShowcaseMod.dll
+  GenreInfoShowcaseMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\info_panels\GenreInfoShowcaseMod\bin\net9.0\GenreInfoShowcaseMod.dll
+  MobaDemoMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\moba_demo\MobaDemoMod\bin\net9.0\MobaDemoMod.dll
+  Ludots.UI.Panels -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Ludots.UI.Panels\bin\Release\net9.0\Ludots.UI.Panels.dll
+  Ludots.WebUI.Browser -> C:\001_AI\wt-presenter-release-audit-20260908\src\Libraries\Ludots.WebUI.Browser\bin\Release\net9.0\Ludots.WebUI.Browser.dll
+  Ludots.Movement.Physics2DBridge -> C:\001_AI\wt-presenter-release-audit-20260908\src\Core\Ludots.Movement.Physics2DBridge\bin\Release\net9.0\Ludots.Movement.Physics2DBridge.dll
+  CapabilityStandardCrowdPhysicsArenaMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\capability_standard\CapabilityStandardCrowdPhysicsArenaMod\bin\net9.0\CapabilityStandardCrowdPhysicsArenaMod.dll
+  EntityCommandPanelShowcaseMod -> C:\001_AI\wt-presenter-release-audit-20260908\mods\showcases\entity_command_panel\EntityCommandPanelShowcaseMod\bin\net9.0\EntityCommandPanelShowcaseMod.dll
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Core\PresentationFoundationTests.cs(36,7): warning CS0105: “Ludots.Platform.Abstractions”的 using 指令以前在此命名空间中出现过 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Core\PresentationRequestChannelTests.cs(14,7): warning CS0105: “Ludots.Platform.Abstractions”的 using 指令以前在此命名空间中出现过 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Core\PresentationRequestFlushIncrementalStaticTests.cs(12,7): warning CS0105: “Ludots.Platform.Abstractions”的 using 指令以前在此命名空间中出现过 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Presenter\BlacksmithPresenterUatTests.cs(29,7): warning CS0105: “Ludots.Platform.Abstractions”的 using 指令以前在此命名空间中出现过 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Presenter\PresenterBlacksmithShowcaseProductionPathTests.cs(13,7): warning CS0105: “Ludots.Raylib.Render”的 using 指令以前在此命名空间中出现过 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Presenter\PresenterBlacksmithShowcaseRuntimeTests.cs(25,7): warning CS0105: “Ludots.Platform.Abstractions”的 using 指令以前在此命名空间中出现过 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Presenter\PresenterBlacksmithShowcaseScatterBenchmarkTests.cs(18,7): warning CS0105: “Ludots.Platform.Abstractions”的 using 指令以前在此命名空间中出现过 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Rendering\StaticMeshAdapterSyncPlannerTests.cs(8,7): warning CS0105: “Ludots.Raylib.Render”的 using 指令以前在此命名空间中出现过 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Showcases\SoundShowcaseAcceptanceTests.cs(378,25): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Presenter\PresenterDurationChainTests.cs(124,44): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Presenter\PresenterDurationChainTests.cs(131,44): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Presenter\PresenterDurationChainTests.cs(150,44): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\Presenter\PresenterDurationChainTests.cs(656,41): warning CS8604: “PresenterDefinitionConfigLoader.PresenterDefinitionConfigLoader(ConfigPipeline configs, PresenterDefinitionRegistry registry, Func<string, int> resolveAttributeName = null, Func<string, int> resolveMeshId = null, Func<string, int> resolveTextTokenId = null, Func<string, int> resolveEntityTemplateKey = null, Func<string, int> resolveEffectTemplateId = null, Func<string, int> resolveMaterialId = null, Func<string, int> resolveAnimatorControllerId = null, Func<string, int> resolveAnimationProfileId = null, Func<AssetKind, string, int> resolveBehaviorAssetId = null, Func<string, int> resolveInstancedBatchAssetId = null, Func<string, int> resolveEntityCollectionKeyId = null, Func<string, int> resolveInteractionContextProfileId = null, PresenterCommandKindRegistry? commandKinds = null, PresenterBehaviorKindRegistry? behaviorKinds = null, Func<int, GraphKind>? resolveGraphProgramKind = null)”中的形参“resolveBehaviorAssetId”可能传入 null 引用实参。 [C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\PresentationTests.csproj]
+  PresentationTests -> C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+VSTest 版本 17.14.1 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll
+   NUnit3TestExecutor discovered 1 of 1 NUnit test cases using Current Discovery mode, Non-Explicit run
+NUnit Adapter 4.6.0.0: Test execution complete
+  已通过 DestroyedOwner_ReleasesHiddenAndVisibleMarkers [360 ms]
+
+测试运行成功。
+测试总数: 1
+     通过数: 1
+总时间: 1.2412 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

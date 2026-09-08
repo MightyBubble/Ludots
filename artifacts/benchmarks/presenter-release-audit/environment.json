@@ -1,0 +1,10 @@
+{
+  "TimestampUtc": "2026-09-08T06:05:28.3424102Z",
+  "Framework": ".NET 9.0.14",
+  "OS": "Microsoft Windows 10.0.26220",
+  "Architecture": "X64",
+  "ProcessorCount": 32,
+  "TieredCompilation": "0",
+  "SurvivorCount": 10000,
+  "Repeats": 3
+}
