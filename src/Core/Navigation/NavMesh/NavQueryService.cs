@@ -206,17 +206,15 @@ namespace Ludots.Core.Navigation.NavMesh
 
         private NavTileId LocateTile(int worldXcm, int worldZcm)
         {
-            int boardLocalXcm = worldXcm - _originXcm;
-            int boardLocalZcm = worldZcm - _originZcm;
-            var xFix = Fix64.FromInt(boardLocalXcm);
-            var zFix = Fix64.FromInt(boardLocalZcm);
-            int cx = (xFix / _tileWidthCm).ToInt();
-            int cz = (zFix / _tileHeightCm).ToInt();
-
-            if (xFix < Fix64.Zero && xFix % _tileWidthCm != Fix64.Zero) cx--;
-            if (zFix < Fix64.Zero && zFix % _tileHeightCm != Fix64.Zero) cz--;
-
-            return new NavTileId(cx, cz, _layer);
+            // Board-local, then floor-divide into tile coordinates. Fix64.ToInt() is an
+            // arithmetic right shift, so it already floors towards negative infinity; no
+            // extra truncation correction is allowed here.
+            var xFix = Fix64.FromInt(worldXcm - _originXcm);
+            var zFix = Fix64.FromInt(worldZcm - _originZcm);
+            return new NavTileId(
+                (xFix / _tileWidthCm).ToInt(),
+                (zFix / _tileHeightCm).ToInt(),
+                _layer);
         }
 
         private bool IsInsideBoardExtent(NavTileId id)

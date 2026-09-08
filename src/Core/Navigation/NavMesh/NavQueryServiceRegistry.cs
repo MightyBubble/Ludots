@@ -112,18 +112,17 @@ namespace Ludots.Core.Navigation.NavMesh
             if (fallbackWidthCm <= 0) throw new ArgumentOutOfRangeException(nameof(fallbackWidthCm));
             if (fallbackHeightCm <= 0) throw new ArgumentOutOfRangeException(nameof(fallbackHeightCm));
             _singleBoardGeometry = new NavBoardTileGeometry(fallbackWidthCm, fallbackHeightCm, 0, 0);
-            _usesSingleBoardGeometry = _boardGeometry.Count == 0;
 
-            if (_usesSingleBoardGeometry && _stores.Count > 0)
+            // Single-board addressing is defined by the store keys, not by whether the
+            // geometry map happens to be populated: a single-board map still passes its real
+            // declared geometry so its origin and extents are honoured.
+            _usesSingleBoardGeometry = true;
+            foreach (NavQueryServiceKey key in _stores.Keys)
             {
-                foreach (NavQueryServiceKey key in _stores.Keys)
+                if (key.BoardId.Length != 0)
                 {
-                    if (key.BoardId.Length != 0)
-                    {
-                        throw new InvalidOperationException(
-                            "A board-scoped nav query key requires per-board tile geometry; " +
-                            "pass the board geometry map instead of a single fallback tile size.");
-                    }
+                    _usesSingleBoardGeometry = false;
+                    break;
                 }
             }
         }
@@ -134,13 +133,15 @@ namespace Ludots.Core.Navigation.NavMesh
 
         public bool TryGetBoardGeometry(string boardId, out NavBoardTileGeometry geometry)
         {
+            if (_boardGeometry.TryGetValue(boardId ?? string.Empty, out geometry)) return true;
             if (_usesSingleBoardGeometry)
             {
                 geometry = _singleBoardGeometry;
                 return true;
             }
 
-            return _boardGeometry.TryGetValue(boardId ?? string.Empty, out geometry);
+            geometry = default;
+            return false;
         }
 
         public NavBoardTileGeometry RequireBoardGeometry(string boardId)
@@ -152,20 +153,14 @@ namespace Ludots.Core.Navigation.NavMesh
 
         public bool TryGetStore(int layer, int profile, out NavTileStore store)
         {
-            if (_stores.TryGetValue(new NavQueryServiceKey(layer, profile), out store)) return true;
-            if (_usesSingleBoardGeometry) return false;
-
-            foreach (KeyValuePair<NavQueryServiceKey, NavTileStore> pair in _stores)
+            if (!_usesSingleBoardGeometry)
             {
-                if (pair.Key.Layer == layer && pair.Key.Profile == profile)
-                {
-                    store = pair.Value;
-                    return true;
-                }
+                throw new InvalidOperationException(
+                    "This nav query registry is board-scoped; resolve stores by boardId. " +
+                    "Call TryGetStore(boardId, layer, profile) or TryCreateQuery(boardId, layer, profile, ...).");
             }
 
-            store = null;
-            return false;
+            return _stores.TryGetValue(new NavQueryServiceKey(layer, profile), out store);
         }
 
         public bool TryGetStore(string boardId, int layer, int profile, out NavTileStore store)
@@ -176,6 +171,13 @@ namespace Ludots.Core.Navigation.NavMesh
 
         public bool TryCreateQuery(int layer, int profile, NavAreaCostTable areaCosts, out NavQueryService service)
         {
+            if (!_usesSingleBoardGeometry)
+            {
+                throw new InvalidOperationException(
+                    "This nav query registry is board-scoped; create queries by boardId. " +
+                    "Call TryCreateQuery(boardId, layer, profile, areaCosts, out service).");
+            }
+
             return TryCreateQuery(string.Empty, layer, profile, areaCosts, out service);
         }
 

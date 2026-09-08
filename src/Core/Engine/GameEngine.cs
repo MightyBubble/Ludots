@@ -4092,38 +4092,42 @@ namespace Ludots.Core.Engine
 
             // Board-scoped addressing: when a map declares more than one navigable board,
             // each board owns its own tile geometry, stores and identity. A single-board
-            // map keeps the legacy un-scoped key so existing baked artifacts stay loadable.
+            // map keeps the legacy un-scoped key so existing baked artifacts stay loadable,
+            // but it still carries its real declared origin, tile extents and tile range.
+            // A board participates in nav addressing exactly when it declares an explicit
+            // NavTileGrid, matching the historical contract that every board of a navmesh
+            // map authors its grid. Multi-board maps additionally use those grids as board
+            // identity, so one board can no longer overwrite another's tiles.
             var navigableBoards = mapConfig.Boards
-                .Where((b, index) => tileGrids[index] != null && b.NavigationEnabled)
+                .Where((b, index) => tileGrids[index] != null)
                 .ToList();
+
             bool boardScopedAddressing = navigableBoards.Count > 1;
             var boardGeometry = new Dictionary<string, NavBoardTileGeometry>(navigableBoards.Count, StringComparer.Ordinal);
 
-            if (boardScopedAddressing)
+            foreach (BoardConfig board in navigableBoards)
             {
-                foreach (BoardConfig board in navigableBoards)
+                if (boardScopedAddressing && string.IsNullOrWhiteSpace(board.Name))
                 {
-                    if (string.IsNullOrWhiteSpace(board.Name))
-                    {
-                        throw new InvalidOperationException(
-                            $"Map '{mapId}' declares multiple navigable boards; every navigable board must have a name for nav addressing.");
-                    }
-
-                    if (boardGeometry.ContainsKey(board.Name))
-                    {
-                        throw new InvalidOperationException(
-                            $"Map '{mapId}' declares duplicate navigable board name '{board.Name}'; nav addressing keys must be unique.");
-                    }
-
-                    NavTileGridConfig grid = board.NavTileGrid!;
-                    boardGeometry[board.Name] = new NavBoardTileGeometry(
-                        grid.ChunkWidthCm,
-                        grid.ChunkHeightCm,
-                        grid.OriginXcm,
-                        grid.OriginZcm,
-                        grid.WidthChunks,
-                        grid.HeightChunks);
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' declares multiple navigable boards; every navigable board must have a name for nav addressing.");
                 }
+
+                string geometryKey = boardScopedAddressing ? board.Name : string.Empty;
+                if (boardGeometry.ContainsKey(geometryKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' declares duplicate navigable board name '{geometryKey}'; nav addressing keys must be unique.");
+                }
+
+                NavTileGridConfig grid = board.NavTileGrid!;
+                boardGeometry[geometryKey] = new NavBoardTileGeometry(
+                    grid.ChunkWidthCm,
+                    grid.ChunkHeightCm,
+                    grid.OriginXcm,
+                    grid.OriginZcm,
+                    grid.WidthChunks,
+                    grid.HeightChunks);
             }
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
@@ -4146,7 +4150,7 @@ namespace Ludots.Core.Engine
                             string profileId = profileRegistry.GetId(profileIndex);
                             string rel = NavAssetPaths.GetNavTileRelativePath(
                                 mapId,
-                                board == null ? null : board.Name,
+                                boardScopedAddressing ? boardId : null,
                                 layer,
                                 profileId,
                                 id.ChunkX,
@@ -4167,7 +4171,7 @@ namespace Ludots.Core.Engine
                         }
 
                         var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)));
-                        stores[new NavQueryServiceKey(boardId, layer, profileIndex)] = store;
+                        stores[new NavQueryServiceKey(boardScopedAddressing ? boardId : string.Empty, layer, profileIndex)] = store;
                     }
                 }
             }

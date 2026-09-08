@@ -45,17 +45,22 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void Registry_RequiresPerBoardGeometry_WhenBoardScopedKeysAreUsed()
+        public void BoardScopedRegistry_WithoutBoardGeometry_FailsClosedOnLookup()
         {
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>
             {
                 [new NavQueryServiceKey("mainland", 0, 0)] = CreateStore(CreateTile(0, 0))
             };
 
+            var registry = new NavQueryServiceRegistry(stores, TileSizeCm, TileSizeCm);
+
+            Assert.That(registry.TryGetBoardGeometry("mainland", out _), Is.False,
+                "a board-scoped store without declared geometry must not borrow a global tile size");
+            Assert.That(registry.TryCreateQuery("mainland", 0, 0, null!, out _), Is.False,
+                "query creation must fail closed rather than guess the board geometry");
             Assert.That(
-                () => new NavQueryServiceRegistry(stores, TileSizeCm, TileSizeCm),
-                Throws.InvalidOperationException.With.Message.Contains("board-scoped"),
-                "board-scoped keys must not silently fall back to one global tile size");
+                () => registry.RequireBoardGeometry("mainland"),
+                Throws.InvalidOperationException.With.Message.Contains("mainland"));
         }
 
         [Test]
@@ -102,7 +107,7 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void QueryOutsideDeclaredBoardExtent_FailsClosed()
         {
-            var store = CreateStore(CreateTile(0, 0));
+            var store = CreateStore(CreateTile(0, 0), CreateTile(1, 0));
             var registry = new NavQueryServiceRegistry(
                 new Dictionary<NavQueryServiceKey, NavTileStore>
                 {
@@ -206,6 +211,74 @@ namespace Ludots.Tests.Architecture
                 "already-baked single-board artifacts must stay loadable at their historical path");
         }
 
+        [Test]
+        public void NegativeBoardLocalCoordinate_LocatesExactlyTheFloorTile()
+        {
+            var store = CreateStore(CreateTile(-1, -1));
+            var registry = new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore>
+                {
+                    [new NavQueryServiceKey("mainland", 0, 0)] = store
+                },
+                new Dictionary<string, NavBoardTileGeometry>
+                {
+                    ["mainland"] = new NavBoardTileGeometry(TileSizeCm, TileSizeCm, 0, 0)
+                },
+                fallbackWidthCm: TileSizeCm,
+                fallbackHeightCm: TileSizeCm);
+
+            Assert.That(registry.TryCreateQuery("mainland", 0, 0, null!, out NavQueryService service), Is.True);
+            Assert.That(service.TryProject(-1000, -1000, out NavLocation loc), Is.True);
+
+            Assert.That(loc.TileId, Is.EqualTo(new NavTileId(-1, -1, 0)),
+                "-1000cm floors to tile -1; double-flooring would wrongly yield tile -2");
+            Assert.That(loc.LocalXcm, Is.EqualTo(TileSizeCm - 1000));
+            Assert.That(loc.LocalZcm, Is.EqualTo(TileSizeCm - 1000));
+        }
+
+        [Test]
+        public void UnscopedStoreLookup_OnBoardScopedRegistry_FailsClosed()
+        {
+            NavQueryServiceRegistry registry = CreateRegistry(
+                ("mainland", CreateStore(CreateTile(0, 0))),
+                ("harbor", CreateStore(CreateTile(0, 0))));
+
+            Assert.That(
+                () => registry.TryGetStore(0, 0, out _),
+                Throws.InvalidOperationException.With.Message.Contains("boardId"),
+                "a multi-board registry must not silently pick one board's store");
+        }
+
+        [Test]
+        public void SingleBoardRegistry_WithNonZeroOrigin_AppliesThatOrigin()
+        {
+            const int originXcm = -3_200_000;
+            const int originZcm = -1_800_000;
+            var store = CreateStore(CreateTile(7, 5));
+
+            var registry = new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore>
+                {
+                    [new NavQueryServiceKey(0, 0)] = store
+                },
+                new Dictionary<string, NavBoardTileGeometry>
+                {
+                    [string.Empty] = new NavBoardTileGeometry(TileSizeCm, TileSizeCm, originXcm, originZcm, 16, 16)
+                },
+                fallbackWidthCm: TileSizeCm,
+                fallbackHeightCm: TileSizeCm);
+
+            Assert.That(registry.TryCreateQuery(0, 0, null!, out NavQueryService service), Is.True);
+            Assert.That(service.OriginXcm, Is.EqualTo(originXcm),
+                "a single-board map with a non-zero origin must still use that origin");
+
+            int worldXcm = originXcm + 7 * TileSizeCm + 1000;
+            int worldZcm = originZcm + 5 * TileSizeCm + 1000;
+            Assert.That(service.TryProject(worldXcm, worldZcm, out NavLocation loc), Is.True);
+            Assert.That(loc.TileId, Is.EqualTo(new NavTileId(7, 5, 0)));
+            Assert.That(loc.LocalXcm, Is.EqualTo(1000));
+        }
+
         private static NavQueryServiceRegistry CreateRegistry(params (string BoardId, NavTileStore Store)[] boards)
         {
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>();
@@ -219,12 +292,21 @@ namespace Ludots.Tests.Architecture
             return new NavQueryServiceRegistry(stores, geometry, TileSizeCm, TileSizeCm);
         }
 
-        private static NavTileStore CreateStore(NavTile tile)
+        private static NavTileStore CreateStore(params NavTile[] tiles)
         {
-            using var ms = new MemoryStream();
-            NavTileBinary.Write(ms, tile);
-            byte[] blob = ms.ToArray();
-            return new NavTileStore(_ => new MemoryStream(blob, writable: false));
+            var blobs = new Dictionary<NavTileId, byte[]>();
+            foreach (NavTile tile in tiles)
+            {
+                using var ms = new MemoryStream();
+                NavTileBinary.Write(ms, tile);
+                blobs[tile.TileId] = ms.ToArray();
+            }
+
+            return new NavTileStore(id => new MemoryStream(
+                blobs.TryGetValue(id, out byte[]? blob)
+                    ? blob
+                    : throw new FileNotFoundException($"No nav tile baked for {id}."),
+                writable: false));
         }
 
         private static NavTile CreateTile(int chunkX, int chunkY)
