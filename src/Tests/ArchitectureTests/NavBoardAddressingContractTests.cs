@@ -383,6 +383,39 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void PrimaryQuery_OnSingleBoardRegistry_UsesEmptyBoardId()
+        {
+            var registry = new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore>
+                {
+                    [new NavQueryServiceKey(0, 0)] = CreateStore(CreateTile(0, 0))
+                },
+                TileSizeCm,
+                TileSizeCm);
+
+            Assert.That(registry.TryCreatePrimaryQuery(0, 0, null!, out NavQueryService service), Is.True,
+                "a single-board registry is addressed by the empty board id; primary resolution must not reject it");
+            Assert.That(service, Is.Not.Null);
+            Assert.That(registry.TryGetPrimaryStore(0, 0, out NavTileStore store), Is.True);
+            Assert.That(store, Is.Not.Null);
+        }
+
+        [Test]
+        public void PrimaryQuery_OnSingleBoardRegistry_MissingLayerFailsWithoutThrowing()
+        {
+            var registry = new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore>
+                {
+                    [new NavQueryServiceKey(0, 0)] = CreateStore(CreateTile(0, 0))
+                },
+                TileSizeCm,
+                TileSizeCm);
+
+            Assert.That(registry.TryCreatePrimaryQuery(7, 9, null!, out _), Is.False,
+                "an unknown layer/profile is a normal miss, not an exception");
+        }
+
+        [Test]
         public void IsBoardScoped_MatchesTheLoaderRule()
         {
             Assert.That(NavAssetPaths.IsBoardScoped(new[] { true }), Is.False);

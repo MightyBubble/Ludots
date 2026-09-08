@@ -193,13 +193,11 @@ namespace Ludots.Core.Navigation.NavMesh
         /// </summary>
         public bool TryGetPrimaryStore(int layer, int profile, out NavTileStore store)
         {
-            string boardId = _usesSingleBoardGeometry ? string.Empty : PrimaryBoardId ?? string.Empty;
-            if (boardId.Length != 0 || _usesSingleBoardGeometry)
-            {
-                return TryGetStore(boardId, layer, profile, out store);
-            }
+            string? boardId = _usesSingleBoardGeometry ? string.Empty : PrimaryBoardId;
+            if (boardId != null) return TryGetStore(boardId, layer, profile, out store);
 
-            throw new InvalidOperationException("Nav query registry has no board to resolve a primary store for.");
+            throw new InvalidOperationException(
+                "This nav query registry is board-scoped but declares no board, so a primary store cannot be resolved.");
         }
 
         public bool TryCreateQuery(int layer, int profile, NavAreaCostTable areaCosts, out NavQueryService service)
@@ -221,8 +219,16 @@ namespace Ludots.Core.Navigation.NavMesh
         /// </summary>
         public bool TryCreatePrimaryQuery(int layer, int profile, NavAreaCostTable areaCosts, out NavQueryService service)
         {
-            string boardId = _usesSingleBoardGeometry ? string.Empty : PrimaryBoardId ?? string.Empty;
-            if (boardId.Length == 0) throw new InvalidOperationException("Nav query registry has no board to resolve a primary query for.");
+            // A single-board registry is addressed by the empty board id, so an empty id is
+            // valid there; only a board-scoped registry that cannot name its primary board is
+            // an error.
+            string? boardId = _usesSingleBoardGeometry ? string.Empty : PrimaryBoardId;
+            if (boardId == null)
+            {
+                throw new InvalidOperationException(
+                    "This nav query registry is board-scoped but declares no board, so a primary query cannot be resolved.");
+            }
+
             return TryCreateQuery(boardId, layer, profile, areaCosts, out service);
         }
 
