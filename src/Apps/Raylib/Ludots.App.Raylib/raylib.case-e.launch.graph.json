@@ -4,6 +4,7 @@
   "orderedModIds": [
     "LudotsCoreMod",
     "CoreInputMod",
+    "SelectionInteractionMod",
     "CaseESelectionMod"
   ],
   "plannedMods": [
@@ -14,6 +15,10 @@
     {
       "id": "CoreInputMod",
       "rootPath": "../../../../../../../mods/CoreInputMod"
+    },
+    {
+      "id": "SelectionInteractionMod",
+      "rootPath": "../../../../../../../mods/capabilities/input/SelectionInteractionMod"
     },
     {
       "id": "CaseESelectionMod",

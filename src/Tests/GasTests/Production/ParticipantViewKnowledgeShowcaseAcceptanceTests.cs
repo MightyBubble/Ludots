@@ -38,6 +38,7 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
         "CoreInputMod",
         "CameraProfilesMod",
         "ParticipantViewCapabilityMod",
+        "SelectionInteractionMod",
         "MassNavigationMod",
         "CapabilityStandardParticipantViewsMod",
     };

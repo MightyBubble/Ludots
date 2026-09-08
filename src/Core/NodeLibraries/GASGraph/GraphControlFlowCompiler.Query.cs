@@ -54,6 +54,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.QueryLimit:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
+                case GraphNodeOp.QueryFilterControllable:
+                    RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
                 case GraphNodeOp.AggMinByDistance:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
@@ -479,6 +483,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
                 case GraphNodeOp.QueryFilterTemplate:
                     instruction.Imm = RequireSymbol(node.Template, "template", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.QueryFilterControllable:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QueryFilterTagAny:
                 case GraphNodeOp.QueryFilterTagNone:

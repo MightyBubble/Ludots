@@ -34,6 +34,7 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         "EastAsiaNavMeshDebugMod",
         "CoreInputMod",
         "CameraProfilesMod",
+        "SelectionInteractionMod",
         "MassNavigationMod",
         "EastAsiaBordersLandSeaDemoMod",
     };

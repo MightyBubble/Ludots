@@ -268,6 +268,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.LoadEffectTiming or
                 GraphNodeOp.LoadEffectStack or
                 GraphNodeOp.QueryFilterTeam or
+                GraphNodeOp.QueryFilterControllable or
                 GraphNodeOp.QueryFilterTemplate or
                 GraphNodeOp.QueryFilterAttributeRange or
                 GraphNodeOp.QueryFilterTagAny or
@@ -778,6 +779,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.QueryLine, HandleQueryLine, "QueryLine graph opcode.");
             Register(GraphNodeOp.QueryFilterNotEntity, HandleQueryFilterNotEntity, "QueryFilterNotEntity graph opcode.");
             Register(GraphNodeOp.QueryFilterLayer, HandleQueryFilterLayer, "QueryFilterLayer graph opcode.");
+            Register(GraphNodeOp.QueryFilterControllable, HandleQueryFilterControllable, "QueryFilterControllable graph opcode.");
             Register(GraphNodeOp.QueryFilterRelationship, HandleQueryFilterRelationship, "QueryFilterRelationship graph opcode.");
             Register(GraphNodeOp.AggCount, HandleAggCount, "AggCount graph opcode.");
             Register(GraphNodeOp.AggMinByDistance, HandleAggMinByDistance, "AggMinByDistance graph opcode.");
@@ -1746,6 +1748,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleQueryFilterLayer(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.TargetList.SetCount(s.Api.FilterLayer(s.Targets, s.TargetList.Count, unchecked((uint)ins.Imm)));
+        }
+
+        private static void HandleQueryFilterControllable(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.FilterControllable(s.Targets, s.TargetList.Count, s.E[ins.A]));
         }
 
         private static void HandleQueryFilterRelationship(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

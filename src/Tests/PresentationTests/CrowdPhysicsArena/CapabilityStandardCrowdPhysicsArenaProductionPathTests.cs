@@ -54,6 +54,7 @@ namespace Ludots.Tests.Presentation
         {
             "LudotsCoreMod",
             "CoreInputMod",
+            "SelectionInteractionMod",
             "MassNavigationMod",
             "CapabilityStandardCrowdPhysicsArenaMod"
         };

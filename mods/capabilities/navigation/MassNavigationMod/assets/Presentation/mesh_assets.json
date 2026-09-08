@@ -4,10 +4,6 @@
     "type": "Model"
   },
   {
-    "id": "mass_navigation.command.marker",
-    "type": "Model"
-  },
-  {
     "id": "mass_navigation.blocker.rock",
     "type": "Model"
   },
@@ -16,4 +12,3 @@
     "type": "Model"
   }
 ]
-

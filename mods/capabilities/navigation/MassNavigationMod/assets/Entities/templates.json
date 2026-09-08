@@ -9,6 +9,7 @@
   },
   {
     "id": "mass_navigation_local_player",
+    "initialInteractionContext": "interaction.context.case_e.battle",
     "components": {
       "Name": {
         "Value": "MassNavigation.LocalPlayer"
@@ -16,6 +17,10 @@
       "PlayerOwner": {
         "PlayerId": 1
       },
+      "BlackboardFloatBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
       "CommandSourceDragState": {}
     }
   },
@@ -49,7 +54,11 @@
           "Health": 82
         }
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [
@@ -94,7 +103,11 @@
           "Health": 236
         }
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [
@@ -139,7 +152,11 @@
           "Health": 82
         }
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [
@@ -184,7 +201,11 @@
           "Health": 236
         }
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [
@@ -229,7 +250,11 @@
           "Health": 82
         }
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [
@@ -274,7 +299,11 @@
           "Health": 236
         }
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [
@@ -319,7 +348,11 @@
           "Health": 82
         }
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [
@@ -364,7 +397,11 @@
           "Health": 236
         }
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [

@@ -11,6 +11,7 @@
     "orderTerminalResultCapacity": 16384
   },
   "commandSource": {
+    "acquisition": { "enabled": false },
     "targetFilter": {
       "relationFilter": "Friendly"
     },

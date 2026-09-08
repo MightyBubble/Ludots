@@ -2,8 +2,7 @@
   "mapId": "formation_capability_showcase",
   "presentation": {
     "requiredMeshAssetIds": [
-      "mass_navigation.agent.soldier",
-      "mass_navigation.command.marker"
+      "mass_navigation.agent.soldier"
     ],
     "blockerPresenterId": null,
     "hotspotPresenterId": null,

@@ -2243,6 +2243,7 @@ namespace Ludots.Tests.GAS
                 Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "navigation", "MassNavigationMod"),
+                Path.Combine(repoRoot, "mods", "capabilities", "input", "SelectionInteractionMod"),
                 Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod"),
             };
 

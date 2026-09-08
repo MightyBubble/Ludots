@@ -6,6 +6,7 @@ using System.Reflection;
 using Arch.Core;
 using Arch.System;
 using CapabilityStandardMassNavigationLargeWorld10kMod;
+using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -18,6 +19,8 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Orders;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.MassNavigation;
@@ -56,13 +59,14 @@ namespace Ludots.Tests.Presentation
         private const float MovementEpsilonCm = 1f;
         private const string MouseLeftButtonPath = "<Mouse>/LeftButton";
         private const string MouseRightButtonPath = "<Mouse>/RightButton";
-        private const string LightCommandMarkerPresenterId = "mass_navigation_agent_command_marker_light";
-        private const string HeavyCommandMarkerPresenterId = "mass_navigation_agent_command_marker_heavy";
+        private const string LightCommandMarkerPresenterId = "presenter.case_e.selection_marker";
+        private const string HeavyCommandMarkerPresenterId = "presenter.case_e.selection_marker";
 
         private static readonly string[] ShowcaseMods =
         {
             "LudotsCoreMod",
             "CoreInputMod",
+            "SelectionInteractionMod",
             "MassNavigationMod",
             "CapabilityStandardMassNavigationLargeWorld10kMod"
         };
@@ -279,9 +283,13 @@ namespace Ludots.Tests.Presentation
             Vector2[] positionsBefore = CaptureCommandActorWorldPositions(engine, simulation, commandActors);
             Vector2 commandScreenPoint = ResolveCommandTargetScreenPoint(engine, simulation, commandActors);
 
-            DriveRightClickCommandFrame(engine, hudProjection, backend, commandScreenPoint);
+            int appliedCommands = DriveRightClickCommandFrame(engine, hudProjection, backend, commandScreenPoint);
 
-            Assert.That(simulation.CommandCountFrame, Is.GreaterThan(0), commandSourceDiagnostics.ToString());
+            string orderDebug = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out object? order)
+                ? order?.ToString() ?? "<null>" : "<missing>";
+            string groundDebug = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out object? ground)
+                ? ground?.ToString() ?? "<null>" : "<missing>";
+            Assert.That(appliedCommands, Is.GreaterThan(0), commandSourceDiagnostics + $"; order={orderDebug}; ground={groundDebug}");
             Assert.That(simulation.LastOrderMemberCount, Is.EqualTo(commandActors.Length), commandSourceDiagnostics.ToString());
             Assert.That(CountActiveMoveOrders(engine, commandActors), Is.GreaterThan(activeOrdersBefore), commandSourceDiagnostics.ToString());
 
@@ -591,21 +599,46 @@ namespace Ludots.Tests.Presentation
             TickProjectionFrames(engine, hudProjection, 1);
         }
 
-        private static void DriveRightClickCommandFrame(
+        private static int DriveRightClickCommandFrame(
             GameEngine engine,
             WorldHudToScreenSystem hudProjection,
             MutableInputBackend backend,
             Vector2 position)
         {
+            Entity player = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            ref InteractionContextInstance context = ref engine.World.Get<InteractionContextInstance>(player);
+            var collections = RequireService(engine, CoreServiceKeys.EntityCollectionStore);
+            Assert.That(context.ContextEntity, Is.EqualTo(player));
+            Assert.That(context.ActiveCollectionKeyId, Is.EqualTo(collections.KeyRegistry.GetId("selected")));
+            Assert.That(context.CommandIntentProfileId, Is.GreaterThan(0));
             backend.SetMousePosition(position);
             backend.SetButton(MouseRightButtonPath, false);
             TickProjectionFrames(engine, hudProjection, 1);
 
             backend.SetButton(MouseRightButtonPath, true);
-            TickProjectionFrames(engine, hudProjection, 1);
+            int applied = 0;
+            TickProjectionFrames(engine, hudProjection, 2);
+            applied += RequireMassNavigationSimulation(engine).CommandCountFrame;
+            Assert.That(RequireService(engine, CoreServiceKeys.InputHandler).IsDown("Command"), Is.True);
+            var groups = (Dictionary<SystemGroup, List<ISystem<float>>>)typeof(GameEngine)
+                .GetField("_systemGroups", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(engine)!;
+            foreach (var systems in groups.Values)
+            foreach (var system in systems)
+            {
+                if (system.GetType().Name != "MassNavigationLargeWorldLocalOrderSourceSystem") continue;
+                var mapping = (InputOrderMappingSystem)system.GetType()
+                    .GetField("_mapping", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(system)!;
+                Assert.That(mapping.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted),
+                    $"Command routing: {mapping.LastActivationResult.State}, {mapping.LastActivationResult.Rejection}");
+            }
 
             backend.SetButton(MouseRightButtonPath, false);
-            TickProjectionFrames(engine, hudProjection, 2);
+            for (int frame = 0; frame < 4; frame++)
+            {
+                TickProjectionFrames(engine, hudProjection, 1);
+                applied += RequireMassNavigationSimulation(engine).CommandCountFrame;
+            }
+            return applied;
         }
 
         private static Vector2 ResolveCommandTargetScreenPoint(
@@ -1037,7 +1070,7 @@ namespace Ludots.Tests.Presentation
         private static Entity[] SnapshotCommandSource(GameEngine engine)
         {
             Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            return EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource);
+            return EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, "selected");
         }
 
         private static bool TryDescribeCommandSourceView(GameEngine engine, out EntityCollectionView view)
@@ -1049,14 +1082,14 @@ namespace Ludots.Tests.Presentation
                 return false;
             }
 
-            return EntityCollectionContextRuntime.TryDescribeView(collections, owner, EntityCollectionKeys.CommandSource, out view);
+            return EntityCollectionContextRuntime.TryDescribeView(collections, owner, "selected", out view);
         }
 
         private static void ReplaceCommandSource(GameEngine engine, Entity owner, ReadOnlySpan<Entity> members)
         {
             EntityCollectionStore collections = RequireService(engine, CoreServiceKeys.EntityCollectionStore);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "selected",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 owner,
@@ -1315,7 +1348,7 @@ namespace Ludots.Tests.Presentation
 
         private sealed class MutableInputBackend : IInputBackend
         {
-            private readonly HashSet<string> _pressedButtons = new(StringComparer.Ordinal);
+            private readonly HashSet<string> _pressedButtons = new(StringComparer.OrdinalIgnoreCase);
             private Vector2 _mousePosition;
 
             public float GetAxis(string devicePath) => 0f;

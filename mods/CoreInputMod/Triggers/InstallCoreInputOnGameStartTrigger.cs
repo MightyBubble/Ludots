@@ -59,18 +59,24 @@ namespace CoreInputMod.Triggers
             var commandSourceAcquisitionConfig = engine.GetService(CoreServiceKeys.CommandSourceAcquisitionConfig)
                 ?? throw new InvalidOperationException("CommandSourceAcquisitionConfig must be registered before CoreInputMod installs.");
 
-            var commandSourceAcquisition = new CommandSourceAcquisitionSystem(
-                engine.World,
-                engine.GlobalContext,
-                (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner));
-            commandSourceAcquisition.OnEntityAcquired = (worldCm, entity) =>
+            if (commandSourceAcquisitionConfig.Acquisition.Enabled)
             {
-                foreach (var cb in commandSourceAcquiredCallbacks) cb(worldCm, entity);
-            };
-            // Replicated clients execute only the LocalInput group; acquisition must run there,
-            // before AxisMoveOrderSystem consumes pointer edges (same relative order as the
-            // single-process InputCollection contract).
-            engine.InsertSystemBeforeRequired<AxisMoveOrderSystem>(commandSourceAcquisition, SystemGroup.LocalInput);
+                var commandSourceAcquisition = new CommandSourceAcquisitionSystem(
+                    engine.World,
+                    engine.GlobalContext,
+                    (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner));
+                commandSourceAcquisition.OnEntityAcquired = (worldCm, entity) =>
+                {
+                    foreach (var cb in commandSourceAcquiredCallbacks) cb(worldCm, entity);
+                };
+                // Replicated clients execute only LocalInput, before pointer edges are consumed.
+                engine.InsertSystemBeforeRequired<AxisMoveOrderSystem>(commandSourceAcquisition, SystemGroup.LocalInput);
+                engine.RegisterPresentationSystem(new CommandSourceDragOverlaySystem(
+                    engine.World,
+                    engine.GlobalContext,
+                    (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner),
+                    commandSourceAcquisitionConfig));
+            }
 
             engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
             engine.RegisterSystem(new AbilityExecAimSyncSystem(engine.World, new InputInteractionContextAccessor(engine.World, engine.GlobalContext)), SystemGroup.InputCollection);
@@ -78,11 +84,6 @@ namespace CoreInputMod.Triggers
                 engine.World,
                 engine.GlobalContext,
                 (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner)));
-            engine.RegisterPresentationSystem(new CommandSourceDragOverlaySystem(
-                engine.World,
-                engine.GlobalContext,
-                (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner),
-                commandSourceAcquisitionConfig));
             engine.InsertPresentationSystemBefore<EntityCollectionPresentationEventSystem>(new AbilityAimPresentationProjectionSystem(engine.World, engine.GlobalContext));
             engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new CommandActorMovePathPresentationSystem(
                 engine.World,
@@ -95,7 +96,7 @@ namespace CoreInputMod.Triggers
             RegisterLoadedModViewModes(engine);
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.LocalInput);
 
-            _ctx.Log("[CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered");
+            _ctx.Log($"[CoreInputMod] Acquisition enabled: {commandSourceAcquisitionConfig.Acquisition.Enabled}; input and presentation systems registered.");
             return Task.CompletedTask;
         }
 
@@ -115,8 +116,9 @@ namespace CoreInputMod.Triggers
 
         private static bool TryResolveMinimapFocusCollection(GameEngine engine, out Entity owner, out string collectionKey)
         {
-            collectionKey = EntityCollectionKeys.CommandSource;
-            return TryResolveLocalCommandSourceOwner(engine, out owner);
+            bool found = TryResolveLocalCommandSourceOwner(engine, out owner);
+            collectionKey = InputInteractionContextAccessor.RequireActiveActorCollectionKey(engine.World, engine.GlobalContext, owner);
+            return found;
         }
 
         private void RegisterLoadedModViewModes(GameEngine engine)

@@ -13,10 +13,5 @@
     "id": "case_e.raider_cube",
     "type": "Primitive",
     "primitiveKind": "Cube"
-  },
-  {
-    "id": "case_e.select_ring_slab",
-    "type": "Primitive",
-    "primitiveKind": "Cube"
   }
 ]

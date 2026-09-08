@@ -1,0 +1,246 @@
+[
+  {
+    "id": "presenter.case_e.box_select_rectangle",
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "behaviors": [
+      {
+        "slot": "screenRect",
+        "kind": "ScreenRect",
+        "activeByDefault": true,
+        "screenRect": {
+          "corner0XParamKey": "case_e.rect.pressX",
+          "corner0YParamKey": "case_e.rect.pressY",
+          "corner1XParamKey": "case_e.rect.pointerX",
+          "corner1YParamKey": "case_e.rect.pointerY",
+          "fill": [
+            0.25,
+            0.55,
+            1,
+            0.45
+          ],
+          "border": [
+            0.2,
+            0.55,
+            1,
+            1
+          ]
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "case_e.rect.pressX",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "case_e.press.px"
+      },
+      {
+        "paramKey": "case_e.rect.pressY",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "case_e.press.py"
+      },
+      {
+        "paramKey": "case_e.rect.pointerX",
+        "source": "pointerScreenX"
+      },
+      {
+        "paramKey": "case_e.rect.pointerY",
+        "source": "pointerScreenY"
+      }
+    ]
+  },
+  {
+    "id": "presenter.case_e.selection_marker",
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.2,
+        0
+      ]
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activationCondition": {
+          "inline": "TargetIsSolePossessedRep"
+        },
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "case_e.select_ring_slab",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.6,
+            0.12,
+            2.6
+          ],
+          "visibilityParamKey": "case_e.marker.visible"
+        },
+        "style": {
+          "color": [
+            0.3,
+            0.7,
+            1,
+            1
+          ]
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "case_e.marker.visible",
+        "lane": "Int",
+        "intValue": 0
+      }
+    ]
+  },
+  {
+    "id": "presenter.case_e.selection_preview_marker",
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.35,
+        0
+      ]
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activationCondition": {
+          "inline": "TargetIsSolePossessedRep"
+        },
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "case_e.select_ring_slab",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            3,
+            0.08,
+            3
+          ],
+          "visibilityParamKey": "case_e.marker.visible"
+        },
+        "style": {
+          "color": [
+            1,
+            0.85,
+            0.25,
+            0.95
+          ]
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "case_e.marker.visible",
+        "lane": "Int",
+        "intValue": 0
+      }
+    ]
+  },
+  {
+    "id": "presenter.case_e.selection_rules",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "selected"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "presenter.case_e.selection_marker",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource",
+          "paramKey": "case_e.marker.visible",
+          "paramLane": "Int",
+          "valueSource": "Fixed",
+          "intValue": 1
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "selected"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "presenter.case_e.selection_marker",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource",
+          "paramKey": "case_e.marker.visible",
+          "paramLane": "Int",
+          "valueSource": "Fixed",
+          "intValue": 0
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "case_e.selection_preview"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "presenter.case_e.selection_preview_marker",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource",
+          "paramKey": "case_e.marker.visible",
+          "paramLane": "Int",
+          "valueSource": "Fixed",
+          "intValue": 1
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "case_e.selection_preview"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "presenter.case_e.selection_preview_marker",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource",
+          "paramKey": "case_e.marker.visible",
+          "paramLane": "Int",
+          "valueSource": "Fixed",
+          "intValue": 0
+        }
+      },
+      {
+        "event": {
+          "kind": "ContextActivated",
+          "key": "interaction.context.case_e.boxing"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "presenter.case_e.box_select_rectangle",
+          "scopeSource": "SourceStableId",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "ContextDeactivated",
+          "key": "interaction.context.case_e.boxing"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "presenter.case_e.box_select_rectangle",
+          "scopeSource": "SourceStableId",
+          "ownerSource": "EventSource"
+        }
+      }
+    ]
+  }
+]

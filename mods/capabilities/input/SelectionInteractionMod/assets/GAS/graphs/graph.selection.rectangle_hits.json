@@ -1,6 +1,6 @@
 [
   {
-    "id": "graph.case_e.box_hit",
+    "id": "graph.selection.rectangle_hits",
     "kind": "Query",
     "entry": "rep",
     "nodes": [

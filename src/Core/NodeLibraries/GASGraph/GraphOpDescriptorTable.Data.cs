@@ -136,6 +136,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.QueryLine, LinearAll, GraphValueType.Void, portAB, flags: GraphOperandRole.SpatialCapacityFlags);
             Add(rows, GraphNodeOp.QueryFilterNotEntity, LinearAll, GraphValueType.Void, portSource);
             Add(rows, GraphNodeOp.QueryFilterLayer, LinearAll, GraphValueType.Void, imm: GraphOperandRole.Immediate);
+            Add(rows, GraphNodeOp.QueryFilterControllable, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portListSource, scriptPorts: portSource);
             Add(rows, GraphNodeOp.QueryFilterRelationship, LinearAll, GraphValueType.Void, portSource, imm: GraphOperandRole.Immediate);
             Add(rows, GraphNodeOp.AggCount, LinearQueryScript, GraphValueType.Int, queryOut: GraphValueType.Int, queryPorts: portList, scriptOut: GraphValueType.Int);
             Add(rows, GraphNodeOp.AggMinByDistance, LinearQueryScript, GraphValueType.Entity, queryOut: GraphValueType.Entity, queryPorts: portList, scriptOut: GraphValueType.Entity);

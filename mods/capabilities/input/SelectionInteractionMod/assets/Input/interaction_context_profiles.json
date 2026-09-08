@@ -2,6 +2,8 @@
   "profiles": [
     {
       "id": "interaction.context.case_e.battle",
+      "activeCollectionKey": "selected",
+      "commandIntentId": "intent.command.default",
       "inputContextId": "CaseE.Controls",
       "bindings": [
         "CaseE.BoxSelectBegin",
