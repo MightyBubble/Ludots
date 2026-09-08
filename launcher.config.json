@@ -2378,6 +2378,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryScreenRegionCollectionEntryMod",
         "projectPath": "CapabilityStandardGraphOpQueryScreenRegionCollectionEntryMod.csproj"
       }
+    },
+    {
+      "name": "region_volume_textbook",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/region_volume_textbook/RegionVolumeTextbookMod",
+        "projectPath": "RegionVolumeTextbookMod.csproj"
+      }
     }
   ],
   "adapters": {

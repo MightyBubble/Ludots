@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Mathematics.Shapes;
 
 namespace Ludots.Core.Physics2D
 {

@@ -9,6 +9,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
+using Ludots.Core.Mathematics.Shapes;
 
 namespace Ludots.Core.Physics2D.Navigation;
 
