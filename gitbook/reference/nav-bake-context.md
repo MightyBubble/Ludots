@@ -1,5 +1,7 @@
 # NavBakeContext And Unified Bake Service
 
+> **Canonical SSOT:** [NavMesh 导航体系 SSOT](../navmesh-ssot.md)。本页只保留当前实现的服务、配置和测试细节；目标产品边界、编辑器和 showcase 口径以 SSOT 为准。
+
 Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). Primary subissue: [NAV-5 #287](https://github.com/MightyBubble/Ludots/issues/287). Runtime incremental follow-up: [NAV-10 #304](https://github.com/MightyBubble/Ludots/issues/304). Related vocabulary: [NAV-0 #282](https://github.com/MightyBubble/Ludots/issues/282), [NAV-2 #284](https://github.com/MightyBubble/Ludots/issues/284), [NAV-3 #285](https://github.com/MightyBubble/Ludots/issues/285), [NAV-4 #286](https://github.com/MightyBubble/Ludots/issues/286). Bake planning: [Nav Bake Budget and Estimation](nav-bake-budget-and-estimation.md). Authoring toolchain: [Navmesh Authoring Bake Toolchain](navmesh-authoring-bake-toolchain.md).
 
 ## Background

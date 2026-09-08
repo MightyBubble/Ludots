@@ -1,5 +1,7 @@
 # Logic Terrain and Topology
 
+> **Canonical SSOT:** [NavMesh 导航体系 SSOT](../navmesh-ssot.md)。本页是 LogicTerrain 当前实现与历史拓扑材料；它不定义未来 NavBakeSource 及 LogicTerrain 退役后的产品合同。
+
 Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). Subissue: [NAV-4 #286](https://github.com/MightyBubble/Ludots/issues/286). Scale vocabulary: [NAV-0 #282](https://github.com/MightyBubble/Ludots/issues/282).
 
 ## Background
@@ -8,7 +10,7 @@ Before NAV-4, navmesh bake read logical terrain through `VertexMap` only. `WalkM
 
 Logical terrain and visual terrain remain separate:
 
-- Logical terrain is gameplay truth: height level, water, ramp, blocked, area id, and cost.
+- Terrain classification owns height, water, ramp, blocked and area keys. Per-agent traversal cost belongs to pathing (`agentTypes[].navMesh.areaCosts`), as specified by #372. The current `LogicTerrainCell.Cost` field is a remaining implementation debt, not the target authoring contract.
 - Visual terrain is rendering truth: continuous centimeter height, used by presentation and grounding.
 - Visual height never changes walkability unless a caller explicitly runs the projection adapter.
 

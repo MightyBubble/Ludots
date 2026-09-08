@@ -1,5 +1,7 @@
 # Runtime Incremental Navmesh Rebuild
 
+> **Canonical SSOT:** [NavMesh 导航体系 SSOT](../navmesh-ssot.md)。本页记录运行时重烤实现细节；运行时档位、快照、版本和 showcase 验收合同以 SSOT 为准。
+
 Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). Subissue: [NAV-10 #304](https://github.com/MightyBubble/Ludots/issues/304). Depends on [NAV-3 #285](https://github.com/MightyBubble/Ludots/issues/285) obstacle authoring and [NAV-5 #287](https://github.com/MightyBubble/Ludots/issues/287) unified bake service.
 
 ## Background

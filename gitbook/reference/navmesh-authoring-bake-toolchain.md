@@ -1,5 +1,7 @@
 # Navmesh Authoring Bake Toolchain
 
+> **Canonical SSOT:** [NavMesh 导航体系 SSOT](../navmesh-ssot.md)。本页是当前 CLI/Bridge 实现的操作材料，不单独定义 NavMesh 产品目标；目标形态、配置 owner、编辑器和 showcase 口径以 SSOT 为准。
+
 Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). Related follow-ups: [NAV-11 #369](https://github.com/MightyBubble/Ludots/issues/369), [NAV-14 #372](https://github.com/MightyBubble/Ludots/issues/372), [NAV-15 #373](https://github.com/MightyBubble/Ludots/issues/373). Scale SSOT: [Spatial Scale and Resolution SSOT](../architecture/spatial-scale-and-resolution-ssot.md). Budget model: [Nav Bake Budget and Estimation](nav-bake-budget-and-estimation.md).
 
 This page is the product and engineering contract for a real Ludots nav authoring toolchain. It is not a temporary editor branch, a private loader, or a script stub.
