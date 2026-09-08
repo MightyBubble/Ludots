@@ -30,18 +30,9 @@ public sealed partial class EntitySetQueryRuntime : IDisposable
     public Span<Entity> QueryMap(GraphEntityQueryPlan? plan, MapId? map, scoped ReadOnlySpan<int> ints,
         scoped ReadOnlySpan<float> floats, int frameDepth)
     {
-        int count = 0;
-        foreach (ref var chunk in _world.Query(in MapEntityQuery)) count += chunk.Count;
+        int count = _world.CountEntities(in MapEntityQuery);
         Span<Entity> result = GetQueryBuffer(frameDepth, count);
-        int written = 0;
-        foreach (ref var chunk in _world.Query(in MapEntityQuery))
-        {
-            foreach (int row in chunk)
-            {
-                Entity entity = chunk.Entity(row);
-                if (!map.HasValue || _world.Get<MapEntity>(entity).MapId == map.Value) result[written++] = entity;
-            }
-        }
+        int written = CopyMapEntities(result, map);
         return result.Slice(0, written);
     }
 

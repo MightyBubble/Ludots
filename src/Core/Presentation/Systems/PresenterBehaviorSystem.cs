@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Client;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Components;
@@ -57,6 +58,12 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         private readonly PresenterEntityRuntime _runtime;
+        private readonly Dictionary<string, object>? _globals;
+        private Entity _possessedRep = Entity.Null;
+        private bool _possessionInitialized;
+        private int _possessionStructureVersion = -1;
+        private int _possessionRelationVersion = -1;
+        private PresenterDefinition[] _possessionDefinitions = Array.Empty<PresenterDefinition>();
         private readonly PresenterDefinitionRegistry _definitions;
         private readonly PresentationEventStream _events;
         private readonly PresentationOwnerChangeBuffer _ownerChanges;
@@ -131,9 +138,10 @@ namespace Ludots.Core.Presentation.Systems
             PresenterBehaviorKindRegistry? extensionBehaviors = null,
             GraphProgramRegistry? graphPrograms = null,
             IGraphRuntimeApi? graphApi = null,
-            TrailMeshBuffer? trailMeshBuffer = null)
+            TrailMeshBuffer? trailMeshBuffer = null,
+            Dictionary<string, object>? globals = null)
             : this(world, runtime, definitions, events, ownerChanges, soundRequests,
-                () => heightmap, () => boneTransformProvider, timingDiagnostics, extensionBehaviors, graphPrograms, graphApi, trailMeshBuffer)
+                () => heightmap, () => boneTransformProvider, timingDiagnostics, extensionBehaviors, graphPrograms, graphApi, trailMeshBuffer, globals)
         {
         }
 
@@ -150,10 +158,12 @@ namespace Ludots.Core.Presentation.Systems
             PresenterBehaviorKindRegistry? extensionBehaviors = null,
             GraphProgramRegistry? graphPrograms = null,
             IGraphRuntimeApi? graphApi = null,
-            TrailMeshBuffer? trailMeshBuffer = null)
+            TrailMeshBuffer? trailMeshBuffer = null,
+            Dictionary<string, object>? globals = null)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _globals = globals;
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _ownerChanges = ownerChanges ?? throw new ArgumentNullException(nameof(ownerChanges));
@@ -180,6 +190,7 @@ namespace Ludots.Core.Presentation.Systems
             _runtime.BeginDeferredStructuralChanges(_commandBuffer);
             try
             {
+                RefreshPossessionActivation();
                 ProcessCreatedPresenters(dt);
                 ownerChanges = ProcessOwnerChanges();
                 PlaybackStructuralChanges();
@@ -228,10 +239,56 @@ namespace Ludots.Core.Presentation.Systems
 
         private void RefreshDefinitionIndexes()
         {
+            var possessionDefinitions = new List<PresenterDefinition>();
+            foreach (int id in _definitions.RegisteredIds)
+            {
+                if (_definitions.TryGet(id, out PresenterDefinition definition) && definition.PossessionActivationMask != 0)
+                    possessionDefinitions.Add(definition);
+            }
+            _possessionDefinitions = possessionDefinitions.ToArray();
+            _possessionInitialized = false;
             _ownerAttributeWorkIndex = BuildOwnerAttributeWorkIndex(_definitions);
             _ownerTagWorkIndex = BuildOwnerTagWorkIndex(_definitions);
             EnsureTrailMeshWiring(_definitions);
             _definitionVersion = _definitions.Version;
+        }
+
+        private void RefreshPossessionActivation()
+        {
+            if (_possessionDefinitions.Length == 0) return;
+            if (_globals == null)
+                throw new InvalidOperationException("Presenter possession activation requires the client local seat context.");
+
+            Entity possessed = ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity current) && World.IsAlive(current)
+                ? current : Entity.Null;
+            if (_possessionInitialized && possessed == _possessedRep &&
+                _possessionStructureVersion == _runtime.StructureVersion &&
+                _possessionRelationVersion == _runtime.RelationContextVersion) return;
+            _possessedRep = possessed;
+            _possessionInitialized = true;
+            _possessionStructureVersion = _runtime.StructureVersion;
+            _possessionRelationVersion = _runtime.RelationContextVersion;
+            foreach (PresenterDefinition definition in _possessionDefinitions)
+            {
+                IReadOnlyList<Entity> instances = _runtime.GetActiveByDefinition(definition.Id);
+                for (int i = 0; i < instances.Count; i++)
+                    ApplyPossessionActivation(instances[i], definition);
+            }
+        }
+
+        private void ApplyPossessionActivation(Entity entity, PresenterDefinition definition)
+        {
+            if (!World.IsAlive(entity)) return;
+            Entity owner = World.Get<PresenterState>(entity).OwnerEntity;
+            World.TryGet(entity, out PresenterRelationContext relation);
+            foreach (int index in definition.PossessionActivationBehaviorIndices)
+            {
+                ref readonly BehaviorSlot slot = ref definition.Behaviors[index];
+                Entity subject = slot.ActivationCondition.Inline == InlineConditionKind.SourceIsSolePossessedRep
+                    ? owner : relation.Target;
+                _runtime.SetBehaviorActive(entity, definition, slot.SlotIndex,
+                    _possessedRep != Entity.Null && World.IsAlive(_possessedRep) && subject == _possessedRep);
+            }
         }
 
         private void EnsureTrailMeshWiring(PresenterDefinitionRegistry definitions)

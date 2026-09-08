@@ -1,11 +1,11 @@
 {
-  "startupMapId": "case_e_selection_field",
-  "windowTitle": "Ludots - Case E 框选（纯数据链路）",
+  "startupMapId": "case_e_selection_10k_field",
+  "windowTitle": "Ludots - Case E 万人双玩家框选",
   "windowWidth": 1600,
   "windowHeight": 900,
   "windowResizable": true,
   "targetFps": 60,
-  "startupInputContexts": [],
+  "startupInputContexts": ["Default_Gameplay"],
   "startupLocalSeats": [
     {
       "seatId": "seat.0",

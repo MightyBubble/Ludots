@@ -34,6 +34,54 @@ public sealed class CaseESelectionScalePressureTests
     private const string BenchDir = "docs/benchmarks/case-e-query-completeness";
     private readonly MapId _mapId = new(MapIdValue);
 
+    [Test]
+    public void TenKShowcase_SpawnsIntoTheFinalTeamAndSupportsBothPlayers()
+    {
+        var backend = new TestInputBackend();
+        using GameEngine engine = CreateEngine(FindRepoRoot(), backend);
+        engine.LoadMap(new MapLoadRequest(new MapId("case_e_selection_10k_field"),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, SchemeId) })));
+        MapSession session = engine.CurrentMapSession!;
+        Entity first = session.PlayerEntityLookup.Get(1);
+        Entity second = session.PlayerEntityLookup.Get(2);
+        TickUntil(engine, 240, () => CollectionCount(engine, first, SelectableKey) == 5000 &&
+            CollectionCount(engine, second, SelectableKey) == 5000);
+        Assert.That(CollectionCount(engine, first, SelectableKey), Is.EqualTo(5000));
+        Assert.That(CollectionCount(engine, second, SelectableKey), Is.EqualTo(5000));
+        var query = new QueryDescription().WithAll<Team, PlayerOwner, EntityTemplateKeyRef>();
+        int marineKey = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)!.GetId("case_e_marine");
+        int count = 0;
+        foreach (ref var chunk in engine.World.Query(in query))
+        {
+            var teams = chunk.GetSpan<Team>();
+            var owners = chunk.GetSpan<PlayerOwner>();
+            var templates = chunk.GetSpan<EntityTemplateKeyRef>();
+            foreach (int row in chunk)
+            {
+                if (templates[row].TemplateKeyId != marineKey) continue;
+                Assert.That(teams[row].Id, Is.EqualTo(owners[row].PlayerId));
+                count++;
+            }
+        }
+        Assert.That(count, Is.EqualTo(10000));
+        var seats = ClientLocalSeatAccess.RequireRegistry(engine);
+        foreach (int player in new[] { 1, 2, 1 })
+        {
+            Entity rep = player == 1 ? first : second;
+            seats.SetPossession("seat.0", player, rep);
+            Tick(engine, 2);
+            PressAt(engine, backend, new Vector2(-20000, -20000));
+            Tick(engine, 2);
+            backend.SetMousePosition(new Vector2(20000, 20000));
+            Tick(engine, 2);
+            ReleaseAt(engine, backend);
+            Tick(engine, 4);
+            Assert.That(CollectionCount(engine, rep, SelectedKey), Is.EqualTo(5000));
+            Assert.That(CollectionCount(engine, rep, BoxHoverKey), Is.LessThanOrEqualTo(0));
+        }
+        AssertNoTriggerErrors(engine);
+    }
+
     [TestCase(100, true)]
     [TestCase(1000, false)]
     public void BoxSelectionChain_At10kEntities_SelectsEveryEligibleUnit(int selectableCount, bool enforceLatencyBudget)
@@ -95,7 +143,7 @@ public sealed class CaseESelectionScalePressureTests
         double maxTickMs = 0;
         // 全幅框：盖住全部已入候选集的单位（本带 x∈[-400,400] 全在矩形内）；等挂载+首拍 PointerMoved 落定
         backend.SetMousePosition(new Vector2(1200f, 120f));
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) >= 0);
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == rosterCount);
         double t0 = drag.Elapsed.TotalMilliseconds;
         if (t0 > maxTickMs) maxTickMs = t0;
         fullBandHover = CollectionCount(engine, commander, BoxHoverKey);
@@ -121,7 +169,7 @@ public sealed class CaseESelectionScalePressureTests
         // 语义钉的是「命中数随几何收敛、并比全幅严格更少（成员资格双向成立）」
         int expectedHalf = CountEligibleScreenHits(engine, new ScreenRect(-1200, -120, -10, 120));
         backend.SetMousePosition(new Vector2(-10f, 120f));
-        TickUntil(engine, 10, () => { int c = CollectionCount(engine, commander, BoxHoverKey); return c >= 0 && c < fullBandHover; });
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == expectedHalf);
         halfBandHover = CollectionCount(engine, commander, BoxHoverKey);
         Assert.That(halfBandHover, Is.EqualTo(expectedHalf),
             $"半幅框必须包含框边以内的全部单位（期望 {expectedHalf}，实测 {halfBandHover}）");

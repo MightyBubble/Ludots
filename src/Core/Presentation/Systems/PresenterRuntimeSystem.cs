@@ -786,11 +786,17 @@ namespace Ludots.Core.Presentation.Systems
 
             if (World.Has<PresenterRelationContext>(presenter))
             {
-                World.Set(presenter, context);
+                ref PresenterRelationContext previous = ref World.Get<PresenterRelationContext>(presenter);
+                if (previous.Viewer != context.Viewer || previous.Target != context.Target)
+                {
+                    previous = context;
+                    _runtime.NotifyRelationContextChanged();
+                }
             }
             else
             {
                 World.Add(presenter, context);
+                _runtime.NotifyRelationContextChanged();
             }
 
             if (!World.Has<PresenterChildren>(presenter))

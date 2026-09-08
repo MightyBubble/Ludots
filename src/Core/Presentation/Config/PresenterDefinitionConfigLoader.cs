@@ -1252,20 +1252,9 @@ namespace Ludots.Core.Presentation.Config
         }
 
         /// <summary>
-        /// Compiles each behavior slot's activationCondition into the canonical rule
-        /// pipeline: one unconditional DeactivateBehavior + conditional ActivateBehavior
-        /// pair on PresenterCreated (exact definition key), so the slot's active mask
-        /// converges to the condition result when the presenter instance is created.
-        /// Commands inside one event bucket execute in rule order, so the unconditional
-        /// Deactivate lands before the conditional Activate. Condition evaluation reuses
-        /// the existing PresenterRuleSystem ConditionRef path; no second condition
-        /// system is added. Runtime re-evaluation of tag/attribute-driven behavior stays
-        /// in authored keyed rules (TagEffectiveChanged + TagGained/TagLost), which is
-        /// the SSOT pattern; wildcard re-evaluation against unrelated events is
-        /// intentionally not compiled. activationCondition is a root-presenter
-        /// contract: child creation bypasses PresenterCreated, enforced by
-        /// ValidateChildGraph over children[] and
-        /// PresenterChildInstanceOverride.InstanceChildren payloads.
+        /// Creation conditions use ordered deactivate/activate rules. Possession predicates
+        /// are compiled into dependency work instead, so retained instances follow seat changes.
+        /// Tag and attribute changes remain driven by authored keyed rules.
         /// </summary>
         private static void AppendCompiledActivationConditionRules(PresenterDefinition def)
         {
@@ -1279,7 +1268,8 @@ namespace Ludots.Core.Presentation.Config
             for (int i = 0; i < behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (HasConditionalActivation(in slot.ActivationCondition))
+                if (HasConditionalActivation(in slot.ActivationCondition) &&
+                    !slot.ActivationCondition.DependsOnLocalPossession)
                 {
                     conditioned.Add(i);
                 }

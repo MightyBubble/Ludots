@@ -31,6 +31,7 @@
       "InstanceId": "case-e-marine-1",
       "Template": "case_e_marine",
       "Overrides": {
+        "Team": { "Id": 1 },
         "WorldPositionCm": {
           "Value": {
             "X": -900,
@@ -43,6 +44,7 @@
       "InstanceId": "case-e-marine-2",
       "Template": "case_e_marine",
       "Overrides": {
+        "Team": { "Id": 1 },
         "WorldPositionCm": {
           "Value": {
             "X": -300,
@@ -55,6 +57,7 @@
       "InstanceId": "case-e-marine-3",
       "Template": "case_e_marine",
       "Overrides": {
+        "Team": { "Id": 1 },
         "WorldPositionCm": {
           "Value": {
             "X": 300,
@@ -67,6 +70,7 @@
       "InstanceId": "case-e-marine-4",
       "Template": "case_e_marine",
       "Overrides": {
+        "Team": { "Id": 1 },
         "WorldPositionCm": {
           "Value": {
             "X": 900,

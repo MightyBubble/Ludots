@@ -63,6 +63,9 @@ namespace Ludots.Core.Presentation.Presenters
 
         public int ActiveCount => _activeCount;
         public int StructureVersion => _structureVersion;
+        public int RelationContextVersion { get; private set; }
+
+        public void NotifyRelationContextChanged() => RelationContextVersion++;
         public bool HasNonRootPresenters => _nonRootCount != 0;
         public bool HasDirtyStaticVisuals => _dirtyStaticVisualCount != 0;
         public bool HasDirtyRetainedPresentationRequests => _dirtyRetainedPresentationRequestCount != 0;
@@ -1440,6 +1443,8 @@ namespace Ludots.Core.Presentation.Presenters
 
         public void SyncTickBehaviorMarkers(Entity entity, PresenterDefinition definition, uint activeBehaviorMask)
         {
+            // Keep dependency-driven slots provisioned when their condition temporarily turns false.
+            activeBehaviorMask |= definition.PossessionActivationMask;
             if (!_world.IsAlive(entity))
             {
                 return;
@@ -1573,6 +1578,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         public void SyncEmitWorkMarkers(Entity entity, PresenterDefinition definition, uint activeBehaviorMask)
         {
+            activeBehaviorMask |= definition.PossessionActivationMask;
             if (!_world.IsAlive(entity))
             {
                 return;
@@ -1665,6 +1671,11 @@ namespace Ludots.Core.Presentation.Presenters
 
             state.BehaviorActiveMask = nextMask;
             state.Version++;
+            if ((definition.RetainedOutputActivationMask & bit) != 0)
+            {
+                MarkStaticDirty(entity);
+                return true;
+            }
             RefreshOwnerPayloadMarker(state.OwnerEntity);
             SyncTickBehaviorMarkers(entity, definition, nextMask);
             SyncEmitWorkMarkers(entity, definition, nextMask);

@@ -35,6 +35,40 @@ namespace Ludots.Tests.GAS
     {
         private string? _tempRoot;
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void QueryMap_At10kEntities_PreservesOrderAndAllocatesNothingAfterWarmup(bool restrictMap)
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            using EntitySetQueryRuntime queries = setup.EntityQueries;
+            var firstMap = new Ludots.Core.Map.MapId("first");
+            var otherMap = new Ludots.Core.Map.MapId("other");
+            for (int i = 0; i < 10000; i++)
+                world.Create(new MapEntity { MapId = i % 2 == 0 ? firstMap : otherMap });
+            var all = new Entity[10000];
+            Assert.That(queries.CollectMapEntities(all), Is.EqualTo(10000));
+            Ludots.Core.Map.MapId? map = restrictMap ? firstMap : null;
+            int expected = restrictMap ? 5000 : 10000;
+            for (int i = 0; i < 100; i++)
+                queries.QueryMap(null, map, default, default, 0);
+            long bytes = GC.GetAllocatedBytesForCurrentThread();
+            long start = Stopwatch.GetTimestamp();
+            int total = 0;
+            for (int i = 0; i < 2000; i++)
+                total += queries.QueryMap(null, map, default, default, 0).Length;
+            double elapsed = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+            bytes = GC.GetAllocatedBytesForCurrentThread() - bytes;
+            Assert.That(total, Is.EqualTo(expected * 2000));
+            Assert.That(bytes, Is.Zero);
+            ReadOnlySpan<Entity> result = queries.QueryMap(null, map, default, default, 0);
+            int cursor = 0;
+            foreach (Entity entity in all)
+                if (!restrictMap || world.Get<MapEntity>(entity).MapId == firstMap)
+                    Assert.That(result[cursor++], Is.EqualTo(entity));
+            TestContext.Out.WriteLine($"restrict_map={restrictMap}, population=10000, runs=2000, elapsed_ms={elapsed:F4}, bytes={bytes}");
+        }
+
         [SetUp]
         public void SetUp()
         {

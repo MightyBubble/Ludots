@@ -1408,7 +1408,8 @@ namespace Ludots.Core.Engine
                 extensionBehaviors: presenterBehaviorKinds,
                 graphPrograms: graphProgramRegistry,
                 graphApi: gasGraphApi,
-                trailMeshBuffer: trailMeshBuffer);
+                trailMeshBuffer: trailMeshBuffer,
+                globals: GlobalContext);
             var animatorRuntimeSystem = new AnimatorRuntimeSystem(
                 World,
                 animatorControllers,

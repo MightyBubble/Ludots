@@ -184,6 +184,7 @@
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
+        "activationCondition": { "inline": "TargetIsSolePossessedRep" },
         "assetBinding": {
           "assetKind": "Mesh",
           "assetId": "case_e.select_ring_slab",
@@ -232,6 +233,7 @@
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
+        "activationCondition": { "inline": "TargetIsSolePossessedRep" },
         "assetBinding": {
           "assetKind": "Mesh",
           "assetId": "case_e.select_ring_slab",

@@ -48,6 +48,34 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     private const string SelectableKey = "case_e.selectable";
     private const string BoxHoverKey = "case_e.box_hover";
 
+    [Test]
+    public void SwitchingPossession_DrivesOnlyTheCurrentPlayersSelection()
+    {
+        var backend = new TestInputBackend();
+        using GameEngine engine = CreateEngine(FindRepoRoot(), backend);
+        engine.LoadMap(new MapLoadRequest(new MapId(MapId),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.case_e") })));
+        Entity first = Resolve(engine, "case-e-commander");
+        Entity second = Resolve(engine, "case-e-raider-1");
+        engine.World.Add(second, engine.World.Get<InteractionContextInstance>(first));
+        engine.GetService(CoreServiceKeys.PlayerEntityLookup)!.Register(2, second);
+        Tick(engine, 4);
+
+        var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)!;
+        int candidateKey = collections.KeyRegistry.GetId(SelectableKey);
+        collections.BindSource(second, candidateKey, collections.RequireSource(first, candidateKey));
+        DragBox(engine, backend, first, new Vector2(-1200f, -100f), new Vector2(1200f, 100f));
+        Assert.That(CollectionCount(engine, first, SelectedKey), Is.EqualTo(4));
+        Assert.That(CollectionCount(engine, second, SelectedKey), Is.LessThanOrEqualTo(0));
+
+        ClientLocalSeatAccess.RequireRegistry(engine).SetPossession("seat.0", 2, second);
+        Tick(engine, 2);
+        DragBox(engine, backend, second, new Vector2(-1200f, -100f), new Vector2(-300f, 100f));
+        Assert.That(CollectionCount(engine, second, SelectedKey), Is.EqualTo(2));
+        Assert.That(CollectionCount(engine, first, SelectedKey), Is.EqualTo(4));
+        AssertNoTriggerErrors(engine);
+    }
+
     [TestCase(1, false)]
     [TestCase(2, false)]
     [TestCase(3, false)]

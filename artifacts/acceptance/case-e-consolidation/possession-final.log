@@ -1,0 +1,1115 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\wt-case-e-consolidation\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  SkiaSharp -> C:\001_AI\wt-case-e-consolidation\src\Libraries\SkiaSharp\SkiaSharp\bin\Release\net8.0\SkiaSharp.dll
+  ExCSS -> C:\001_AI\wt-case-e-consolidation\src\Libraries\ExCSS\bin\Release\net8.0\ExCSS.dll
+  Raylib-cs -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Raylib-cs\bin\Release\net9.0\Raylib-cs.dll
+  Ludots.Contracts -> C:\001_AI\wt-case-e-consolidation\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  Ludots.UI -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Ludots.UI\bin\Release\net9.0\Ludots.UI.dll
+  Arch -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  ShimSkiaSharp -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Release\net8.0\ShimSkiaSharp.dll
+  Svg.Generators -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Release\netstandard2.0\Svg.Generators.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\wt-case-e-consolidation\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Ludots.UI.Browser -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Ludots.UI.Browser\bin\Release\net9.0\Ludots.UI.Browser.dll
+  Ludots.Raylib.Render -> C:\001_AI\wt-case-e-consolidation\src\Client\Ludots.Raylib.Render\bin\Release\net9.0\Ludots.Raylib.Render.dll
+  Arch.System -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Svg.Custom -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Svg.Skia\Svg.Custom\bin\Release\net8.0\Svg.Custom.dll
+  Arch -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Persistence -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Svg.Model -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Svg.Skia\Svg.Model\bin\Release\net8.0\Svg.Model.dll
+  Arch.Relationships -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Svg.Skia -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Svg.Skia\Svg.Skia\bin\Release\net8.0\Svg.Skia.dll
+  Ludots.UI.Skia -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Ludots.UI.Skia\bin\Release\net9.0\Ludots.UI.Skia.dll
+  DotRecast.Core -> C:\001_AI\wt-case-e-consolidation\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  DotRecast.Detour -> C:\001_AI\wt-case-e-consolidation\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  DotRecast.Recast -> C:\001_AI\wt-case-e-consolidation\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  Ludots.Core -> C:\001_AI\wt-case-e-consolidation\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  Ludots.Physics.Broadphase -> C:\001_AI\wt-case-e-consolidation\src\Core\Ludots.Physics.Broadphase\bin\Release\net9.0\Ludots.Physics.Broadphase.dll
+  AnimationAcceptanceMod -> C:\001_AI\wt-case-e-consolidation\mods\fixtures\animation\AnimationAcceptanceMod\bin\net9.0\AnimationAcceptanceMod.dll
+  CoreInputMod -> C:\001_AI\wt-case-e-consolidation\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+  MassNavigationMod -> C:\001_AI\wt-case-e-consolidation\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+  Ludots.Client.Raylib -> C:\001_AI\wt-case-e-consolidation\src\Client\Ludots.Client.Raylib\bin\Release\net9.0\Ludots.Client.Raylib.dll
+  RaylibVisualAtmosphereShowcaseMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\raylib_visual_atmosphere\RaylibVisualAtmosphereShowcaseMod\bin\net9.0\RaylibVisualAtmosphereShowcaseMod.dll
+  RaylibIsmBenchmarkShowcaseMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\raylib_ism_benchmark\RaylibIsmBenchmarkShowcaseMod\bin\net9.0\RaylibIsmBenchmarkShowcaseMod.dll
+  CameraProfilesMod -> C:\001_AI\wt-case-e-consolidation\mods\capabilities\camera\CameraProfilesMod\bin\net9.0\CameraProfilesMod.dll
+  Ludots.Physics2D -> C:\001_AI\wt-case-e-consolidation\src\Core\Ludots.Physics2D\bin\Release\net9.0\Ludots.Physics2D.dll
+  CameraAcceptanceMod -> C:\001_AI\wt-case-e-consolidation\mods\fixtures\camera\CameraAcceptanceMod\bin\net9.0\CameraAcceptanceMod.dll
+  Ludots.Presentation.Skia -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Ludots.Presentation.Skia\bin\Release\net9.0\Ludots.Presentation.Skia.dll
+  FormationCapabilityShowcaseMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\formation_capability\FormationCapabilityShowcaseMod\bin\net9.0\FormationCapabilityShowcaseMod.dll
+  MobaDemoMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\moba_demo\MobaDemoMod\bin\net9.0\MobaDemoMod.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Ludots.WebUI.DataPlane\bin\Release\net9.0\Ludots.WebUI.DataPlane.dll
+  FourXDemoMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\fourx_demo\FourXDemoMod\bin\net9.0\FourXDemoMod.dll
+  EntityInfoPanelsMod -> C:\001_AI\wt-case-e-consolidation\mods\capabilities\entityinfo\EntityInfoPanelsMod\bin\net9.0\EntityInfoPanelsMod.dll
+  PresenterBlacksmithShowcaseMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\bin\net9.0\PresenterBlacksmithShowcaseMod.dll
+  CapabilityStandardPresenterCommandShowcaseMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\capability_standard\CapabilityStandardPresenterCommandShowcaseMod\bin\net9.0\CapabilityStandardPresenterCommandShowcaseMod.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Ludots.UI.HtmlEngine\bin\Release\net9.0\Ludots.UI.HtmlEngine.dll
+  CapabilityStandardMassNavigationLargeWorld10kMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll
+  EntityCommandPanelMod -> C:\001_AI\wt-case-e-consolidation\mods\EntityCommandPanelMod\bin\net9.0\EntityCommandPanelMod.dll
+  VisualTerrainEditorMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\visual_terrain_editor\VisualTerrainEditorMod\bin\net9.0\VisualTerrainEditorMod.dll
+  LudotsCoreMod -> C:\001_AI\wt-case-e-consolidation\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+  RtsDemoMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\rts_demo\RtsDemoMod\bin\net9.0\RtsDemoMod.dll
+  Ludots.Movement.Physics2DBridge -> C:\001_AI\wt-case-e-consolidation\src\Core\Ludots.Movement.Physics2DBridge\bin\Release\net9.0\Ludots.Movement.Physics2DBridge.dll
+  InteractionShowcaseMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\interaction\InteractionShowcaseMod\bin\net9.0\InteractionShowcaseMod.dll
+  GenreInfoShowcaseMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\info_panels\GenreInfoShowcaseMod\bin\net9.0\GenreInfoShowcaseMod.dll
+  Ludots.UI.Panels -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Ludots.UI.Panels\bin\Release\net9.0\Ludots.UI.Panels.dll
+  CapabilityStandardCrowdPhysicsArenaMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\capability_standard\CapabilityStandardCrowdPhysicsArenaMod\bin\net9.0\CapabilityStandardCrowdPhysicsArenaMod.dll
+  Ludots.WebUI.Browser -> C:\001_AI\wt-case-e-consolidation\src\Libraries\Ludots.WebUI.Browser\bin\Release\net9.0\Ludots.WebUI.Browser.dll
+  EntityCommandPanelShowcaseMod -> C:\001_AI\wt-case-e-consolidation\mods\showcases\entity_command_panel\EntityCommandPanelShowcaseMod\bin\net9.0\EntityCommandPanelShowcaseMod.dll
+  PresentationTests -> C:\001_AI\wt-case-e-consolidation\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll
+C:\001_AI\wt-case-e-consolidation\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+VSTest 版本 17.14.1 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in C:\001_AI\wt-case-e-consolidation\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll
+   NUnit3TestExecutor discovered 270 of 270 NUnit test cases using Current Discovery mode, Non-Explicit run
+  已通过 BlacksmithUat_DoesNotWirePrefabRegistryIntoPresenterRuntime [28 ms]
+  已通过 PresenterEmitSystem_AndTransientMarkers_PopulateSharedVisualProxyAndSkinnedBatchContracts [219 ms]
+  已通过 PresenterEmitSystem_InstanceScopedMarker_UsesAllocatedStableId [43 ms]
+  已通过 PresenterEmitSystem_MixedSkinnedAndSelectionMesh_UsesDirectSkinnedBatch [16 ms]
+  已通过 PresenterEmitSystem_SkinnedAsset_UsesAnimatorStateAndPerSlotStableId [7 ms]
+  已通过 PresenterEmitSystem_StableCache_RemovesVisual_WhenOwnerBecomesFrustumHidden [42 ms]
+  已通过 PresenterEmitSystem_StableVisual_DoesNotReemit_WhenInputsStayUnchanged [15 ms]
+  已通过 PresenterEmitSystem_StaticAsset_DoesNotCarryAnimatorPayload [13 ms]
+  已通过 PresenterEmitSystem_WorldBar_UsesRelationGrantedAttributeProjection [109 ms]
+# Scenario: presenter-1096-activation-condition
+
+## Header
+- scenario name: BehaviorSlot.activationCondition closed loop (config → compiled rule pair → RuleSystem → command → active mask → output)
+- build/version: local PresentationTests, real JSON config pipeline (PresenterDefinitionConfigLoader)
+- seed/map/clock: deterministic fixture / in-memory world / render dt 0.016s per step
+- execution timestamp: 2026-09-08T10:47:35.7666489+00:00
+
+## Timeline
+- [S001] 单位 A（VisualTransform=无）→ PresenterCreated
+- [S001] 单位 A → DeactivateBehavior（slot 6）
+- [S001] 单位 A → active mask=0x00000000，声音槽 不激活
+- [S001] 单位 A → 输出 不出现
+- [S002] 单位 B（VisualTransform=有）→ PresenterCreated
+- [S002] 单位 B → DeactivateBehavior（slot 6）
+- [S002] 单位 B → ActivateBehavior（slot 6）
+- [S002] 单位 B → active mask=0x00000040，声音槽 激活
+- [S002] 单位 B → 输出 出现（声音请求）
+
+## Outcome
+- success/failure decision: success
+- failed assertions: none
+- reason codes: condition_false_inactive, condition_true_active, flip_emits_deactivate_then_activate, mask_matches_condition
+
+## Summary Stats
+- DeactivateBehavior commands: 2 (unit A false + unit B reset)
+- ActivateBehavior commands: 1 (unit B true only)
+- slot under test: sound (index 6)
+
+
+  已通过 PresenterEmitSystem_WorldBar_UsesWorldHudPresentBehaviorProjection [9 ms]
+  已通过 PresenterEmitSystem_WritesVisibilityIdentityAndTransformToSnapshot_WithoutChangingDrawBufferFiltering [27 ms]
+  已通过 WorldToVisualSyncSystem_AndPresenterEmitSystem_SnapshotCarriesSyncedTransformRotationAndIdentity [48 ms]
+  已通过 PresenterDefinitionConfigLoader_ParsesAssetAndAttributeBindingBehaviors [133 ms]
+  已通过 PresenterDefinitionConfigLoader_ResolvesTextTokenBindings_ToStableIds [21 ms]
+  已通过 Acceptance_ConditionDrivenActivation_FlipsCommandsMaskAndOutput_WriteArtifacts [160 ms]
+  已通过 ConditionFalse_KeepsSlotInactive_AndEmitsDeactivateCommand [19 ms]
+  已通过 ConditionFalse_OverridesActiveByDefault_KeepsSlotInactive [6 ms]
+  已通过 ConditionFlip_FalseThenTrue_EmitsDeactivateThenActivateCommands [13 ms]
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=1
+[INF][ModLoader] Mod Load Order:
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\wt-case-e-consolidation\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=entry, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Loaded 4 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Engine] Unloading ModLoader contexts...
+[INF][Engine] Disposing JobScheduler...
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 ConditionFlip_TrueThenFalse_KeepsSiblingActive [13 ms]
+  已通过 ConditionTrue_ActivatesSlot_AndEmitsActivateCommand [14 ms]
+  已通过 EngineSchedule_OrdersRulesRuntimeBehavior_AndCreationStartsInactive [1 s]
+  已通过 GraphCondition_FalseProgram_KeepsSlotInactive [23 ms]
+  已通过 GraphCondition_TrueProgram_ActivatesSlot [12 ms]
+  已通过 GraphCondition_WithoutResolver_IsRejectedAtLoad [9 ms]
+  已通过 PossessionCondition_CompilesWithoutOneShotCreationCommands("SourceIsSolePossessedRep") [11 ms]
+  已通过 PossessionCondition_CompilesWithoutOneShotCreationCommands("TargetIsSolePossessedRep") [10 ms]
+  已通过 UnconditionalBehavior_IsUnchangedByCompiledRules [9 ms]
+[WRN][Presentation] Presenter grounding requested ContinuousHeightmap, but none is registered; one-shot grounding remains pending and every-frame grounding uses offset height.
+
+  已通过 Animator_ReadsBlackboardAndWritesRuntimeState [5 ms]
+  已通过 Attachment_TargetParent_ChildFollowsEntityAnchoredParentTransformSync [25 ms]
+  已通过 Attachment_TargetParent_ChildFollowsEntityAnchoredParentTransformSyncAndFreezesWhenDisabled [12 ms]
+  已通过 Attachment_TargetParent_DynamicScopedMarkerReemitsMovedMesh [18 ms]
+  已通过 Attachment_TargetParent_UsesParentTransformWithoutBoneProvider [5 ms]
+  已通过 Attachment_TargetParent_WorldHudChildUpdatesRetainedPositionWhenParentMoves [7 ms]
+  已通过 Attachment_TargetParent_WorldHudChildUsesOwnerPayloadTransformSync [33 ms]
+  已通过 Attachment_UsesBoneTransformProviderAndBoneSpaceOffset [9 ms]
+  已通过 AttributeBinding_MapsAttributeRatioAndThreshold [6 ms]
+  已通过 AttributeBindingAndParamBindings_ResolveAttributeEntityColorAndFacingIntoBlackboard [12 ms]
+  已通过 BehaviorKindContract_ArchitectureExposesCoreKinds [2 ms]
+  已通过 BehaviorKindContract_ArchitecturePreservesExplicitEnumValues [< 1 ms]
+  已通过 EntityAnchoredOwnerPayload_BehaviorEligibilityKeepsPayloadAndFastPathMarkerConsistent [6 ms]
+  已通过 EntityAnchoredOwnerPayload_OneToManyToOneRootsKeepTransformSyncMarkersConsistent [21 ms]
+  已通过 EntityAnchoredRootBatch_AppliesPerRootParamOverrides_BeforeChildrenResolveParentParams [4 ms]
+  已通过 EntityTransform_InheritsOwnerScaleAndKeepsAssetLocalScaleOutOfRoot [2 ms]
+  已通过 ExtensionBehavior_DispatchesRegisteredHandler [4 ms]
+  已通过 ExtensionBehavior_ProgrammaticDefinitionRejectsModIdWithoutExtensionKind [1 ms]
+  已通过 ExtensionCommand_DispatchesRegisteredHandler [3 ms]
+  已通过 ExtensionCommand_ProgrammaticDefinitionRejectsModIdWithoutExtensionKind [< 1 ms]
+  已通过 InheritParent_OwnerPayloadDescendantsFollowMovedRootAndRetainStableIdentity [9 ms]
+  已通过 InstanceBehaviors_OnlyTheDeclaringChildInstanceExecutesThem [4 ms]
+  已通过 InstanceBehaviors_SoundExecutesOnlyOnDeclaringInstance [2 ms]
+  已通过 InteractionContextBinding_SnapshotResolvesFromOwnerMountedInstances_AndTracksPerfMarker [10 ms]
+  已通过 Material_MapsSwapTableToMaterialParam [4 ms]
+  已通过 Material_ThrowsWhenSwapParamDoesNotResolve [1 ms]
+  已通过 Material_ThrowsWhenSwapParamHasNoMatchingTableEntry [2 ms]
+  已通过 OwnerAttributeChangeBuffer_OnlyUpdatesMatchingAttributeBindingBehaviors [6 ms]
+  已通过 OwnerSyncPathSelection_HandsOverBetweenSingleRootFastPathAndPerPresenterSync [6 ms]
+  已通过 OwnerTagChangeBuffer_OnlyUpdatesMatchingTagBinding [9 ms]
+  已通过 ParentDrivenTransformPropagation_DoesNotOverwriteIndependentTransformSources [7 ms]
+  已通过 ParentDrivenTransformPropagation_IsZeroAllocationAfterWarmup [4 ms]
+  已通过 Sound_EmitsPlayAndStopRequests [4 ms]
+  已通过 Spline_Patrol_AdvancesProgressAndSetsSplineDrivenTransform [7 ms]
+  已通过 TagBinding_HandlesTagOffAndInvertLogic [4 ms]
+  已通过 TickBehaviorMarkers_TrackActiveBehaviorMask [4 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+members,phase,elapsed_ms,allocated_bytes,presenters,visual_keys,visible
+5000,preview_first,16.163700,8207320,15000,15000,15000
+5000,commit_first,43.216700,9957672,20000,20000,15000
+5000,clear_first,2.925300,0,20000,20000,10000
+5000,preview_repeat_0,7.158400,0,20000,20000,15000
+5000,commit_repeat_0,6.507600,0,20000,20000,15000
+5000,clear_repeat_0,2.463100,0,20000,20000,10000
+5000,preview_repeat_1,3.371600,0,20000,20000,15000
+5000,commit_repeat_1,5.809500,0,20000,20000,15000
+5000,clear_repeat_1,2.179200,0,20000,20000,10000
+5000,preview_repeat_2,3.732700,0,20000,20000,15000
+5000,commit_repeat_2,6.342600,0,20000,20000,15000
+5000,clear_repeat_2,2.370900,0,20000,20000,10000
+5000,preview_repeat_3,3.256500,0,20000,20000,15000
+5000,commit_repeat_3,5.313800,0,20000,20000,15000
+5000,clear_repeat_3,1.962300,0,20000,20000,10000
+
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+members,phase,elapsed_ms,allocated_bytes,presenters,visual_keys,visible
+10000,preview_first,53.879700,20051904,20000,20000,20000
+10000,commit_first,37.336700,15403408,30000,30000,20000
+10000,clear_first,4.825800,0,30000,30000,10000
+10000,preview_repeat_0,6.437600,0,30000,30000,20000
+10000,commit_repeat_0,11.833400,0,30000,30000,20000
+10000,clear_repeat_0,4.742100,0,30000,30000,10000
+10000,preview_repeat_1,6.767600,0,30000,30000,20000
+10000,commit_repeat_1,14.303900,0,30000,30000,20000
+10000,clear_repeat_1,4.946700,0,30000,30000,10000
+10000,preview_repeat_2,6.864100,0,30000,30000,20000
+10000,commit_repeat_2,13.110700,0,30000,30000,20000
+10000,clear_repeat_2,4.858800,0,30000,30000,10000
+10000,preview_repeat_3,6.327300,0,30000,30000,20000
+10000,commit_repeat_3,11.862000,0,30000,30000,20000
+10000,clear_repeat_3,5.287700,0,30000,30000,10000
+
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+possession_switch members=1 hud=False retained=3 mean_ms=0.001275 allocated=0
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+possession_switch members=10000 hud=False retained=30000 mean_ms=4.122875 allocated=0
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+possession_switch members=10000 hud=True retained=30000 mean_ms=6.126780 allocated=0
+
+  已通过 CollectionVisibility_At10kOwners_ReusesInstancesAndWritesEvidence(5000) [168 ms]
+  已通过 CollectionVisibility_At10kOwners_ReusesInstancesAndWritesEvidence(10000) [236 ms]
+  已通过 DestroyedOwner_ReleasesHiddenAndVisibleMarkers [19 ms]
+  已通过 GlobalRules_HideAndRestoreSameIdentity_WithoutAffectingOtherScopes [5 ms]
+  已通过 ReusedPresenter_RelationChangeRefreshesActivationWithoutPossessionChange [10 ms]
+  已通过 SameOwner_DifferentScopes_RetainIndependentVisibility [10 ms]
+  已通过 SwitchingPlayer_HidesAndRestoresRetainedMarkersWithoutChangingMembership(1,False) [11 ms]
+  已通过 SwitchingPlayer_HidesAndRestoresRetainedMarkersWithoutChangingMembership(10000,False) [323 ms]
+  已通过 SwitchingPlayer_HidesAndRestoresRetainedMarkersWithoutChangingMembership(10000,True) [336 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_AcceptsLegalConfigAcrossAllEntryPoints [18 ms]
+  已通过 Load_AcceptsReservedAuthoringMetaFields [11 ms]
+  已通过 Load_BindSpawn_CoexistsWithHandWrittenRules [14 ms]
+  已通过 Load_BindSpawn_ExpandsIntoCanonicalCreateAndDestroyRules [22 ms]
+  已通过 Load_BindSpawn_InheritedThroughExtends_BindsInheritingDefinition [16 ms]
+  已通过 Load_BindSpawn_RejectsNonEntityTemplateEventKind [15 ms]
+  已通过 Load_BindSpawn_TemplateAlreadyBoundByHandWrittenRule_Throws [14 ms]
+  已通过 Load_BindSpawn_UnknownField_Throws [13 ms]
+  已通过 Load_BindSpawn_WithoutScopeSource_Throws [17 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_ChildOverrides_ParsesTransformAndParams_AndRejectsLegacyParamOverrides [33 ms]
+  已通过 Load_CompilesSemanticParamKeysAndBehaviorSlots [28 ms]
+  已通过 Load_CreatePresenterCommand_CanCarryInitialParamPayload [31 ms]
+  已通过 Load_ExpandsExtendsChain_AppendsRules_AndOverridesBehaviorsBySlot [42 ms]
+  已通过 Load_ExpandsExtendsChain_DeepMergesSameKindBehaviorBySlot [18 ms]
+  已通过 Load_ExpandsExtendsChain_ReplacesPayloadWhenChildRedeclaresBehaviorKind [17 ms]
+  已通过 Load_ExtensionBehaviorKind_ParsesRegisteredBehavior [19 ms]
+  已通过 Load_ExtensionCommandKind_ParsesRegisteredCommand [26 ms]
+  已通过 Load_FailureLeavesRegistryWithoutPresenterDefinitions [16 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_IncludesOwnerDefinitionKeyInRulesUnknownFieldContext [17 ms]
+  已通过 Load_InstancedBatchBehavior_ParsesIntoDefinitionBinding [17 ms]
+  已通过 Load_ParsesBehaviorActivationConditionAndCompilesCreationRulePlan [20 ms]
+  已通过 Load_ParsesChildInstanceBehaviorsWithoutTouchingSharedDefinition [18 ms]
+  已通过 Load_ParsesChildInstanceSubtreeOverrideWithoutTouchingSharedDefinition [16 ms]
+  已通过 Load_ParsesChildrenBehaviorsAndExtendsIntoSingleDefinition [29 ms]
+  已通过 Load_ParsesGraphProgramActivationConditionIntoCompiledPlan [17 ms]
+  已通过 Load_ParsesInstanceBehaviorsInsideInstanceChildren [15 ms]
+  已通过 Load_ParsesMinimapMarkerBehaviorAsAuthoredCoreSignal [20 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_ParsesMinimapMarkerPresenterForwardOrientationWithoutParamKey [25 ms]
+  已通过 Load_ParsesSurfaceAssetBindingRoutingAndMaterialCustomData [26 ms]
+  已通过 Load_PreservesChildrenAsDeclarativeHierarchy_WithoutSyntheticRules [15 ms]
+  已通过 Load_RejectsActivationConditionOnChildInstanceBehaviors [13 ms]
+  已通过 Load_RejectsActivationConditionOnChildReferencedDefinition [12 ms]
+  已通过 Load_RejectsActivationConditionOnDefinitionReferencedViaInstanceChildren [13 ms]
+  已通过 Load_RejectsActivationConditionOnDefinitionReferencedViaNestedInstanceChildren [13 ms]
+  已通过 Load_RejectsAmbiguousLifecycleAuthoring("{}","durationSeconds or persistence") [15 ms]
+  已通过 Load_RejectsAmbiguousLifecycleAuthoring("{ \"durationSeconds\": 0 }","durationSeconds must be > 0") [11 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsAmbiguousLifecycleAuthoring("{ \"durationSeconds\": -0.1 }","durationSeconds must be > 0") [11 ms]
+  已通过 Load_RejectsAmbiguousLifecycleAuthoring("{ \"persistence\": \"Persistent\" }","persistence must be 'Scoped'") [10 ms]
+  已通过 Load_RejectsAssetBindingImplicitOrDeadAssetFields("{\n  \"assetKind\": \"Mesh\",\n  \"renderPath\": \"StaticMesh\",\n  \"mobility\": \"Static\"\n}","Mesh assetId") [15 ms]
+  已通过 Load_RejectsAssetBindingImplicitOrDeadAssetFields("{\n  \"assetKind\": \"WorldText\",\n  \"renderPath\": \"None\",\n  \"mobility\": \"Movable\"\n}","WorldText assetId") [15 ms]
+  已通过 Load_RejectsAssetBindingImplicitOrDeadAssetFields("{\n  \"assetKind\": \"WorldHud\",\n  \"assetId\": \"unused.hud.asset\",\n  \"renderPath\": \"None\",\n  \"mobility\": \"Movable\"\n}","WorldHud AssetBinding must not declare assetId") [13 ms]
+  已通过 Load_RejectsAssetBindingImplicitOrDeadAssetFields("{\n  \"assetKind\": \"Mesh\",\n  \"assetId\": \"cube\",\n  \"assetSwapTable\": [\n    { \"paramValue\": 0, \"assetId\": \"cube\" }\n  ],\n  \"renderPath\": \"StaticMesh\",\n  \"mobility\": \"Static\"\n}","assetSwapTable requires explicit assetSwapParamKey") [15 ms]
+  已通过 Load_RejectsAssetBindingsMissingRequiredExplicitConfigFields("{\n  \"assetId\": \"cube\",\n  \"renderPath\": \"StaticMesh\",\n  \"mobility\": \"Static\"\n}","presenters.json[strict_asset_actor].behaviors[0].assetBinding.assetKind") [14 ms]
+  已通过 Load_RejectsAssetBindingsMissingRequiredExplicitConfigFields("{\n  \"assetKind\": \"Mesh\",\n  \"assetId\": \"cube\",\n  \"mobility\": \"Static\"\n}","presenters.json[strict_asset_actor].behaviors[0].assetBinding.renderPath") [8 ms]
+  已通过 Load_RejectsAssetBindingsMissingRequiredExplicitConfigFields("{\n  \"assetKind\": \"Mesh\",\n  \"assetId\": \"cube\",\n  \"renderPath\": \"StaticMesh\"\n}","presenters.json[strict_asset_actor].behaviors[0].assetBinding.mobility") [10 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsAttributeNameAliasInAttributeBindingBehavior [11 ms]
+  已通过 Load_RejectsAttributeSourcesInParamBindings [11 ms]
+  失败 Load_RejectsBindingsMissingRequiredSourcePayload("{ \"paramKey\": \"strict.binding\", \"source\": \"graph\" }","Presenter binding graph.sourceId") [35 ms]
+  错误消息:
+     Assert.That(ex.Message, Does.Contain(expectedContext))
+  Expected: String containing "Presenter binding graph.sourceId"
+  But was:  "presenters.json[strict_binding_actor].bindings[0] graph.sourceId must be a semantic string."
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresenterDefinitionConfigLoaderTests.Load_RejectsBindingsMissingRequiredSourcePayload(String bindingJson, String expectedContext) in C:\001_AI\wt-case-e-consolidation\src\Tests\PresentationTests\Presenter\PresenterDefinitionConfigLoaderTests.cs:line 621
+
+1)    at Ludots.Tests.Presentation.PresenterDefinitionConfigLoaderTests.Load_RejectsBindingsMissingRequiredSourcePayload(String bindingJson, String expectedContext) in C:\001_AI\wt-case-e-consolidation\src\Tests\PresentationTests\Presenter\PresenterDefinitionConfigLoaderTests.cs:line 621
+
+
+  标准输出消息:
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+
+  已通过 Load_RejectsBindingsMissingRequiredSourcePayload("{ \"paramKey\": \"strict.binding\", \"source\": \"entityColor\" }","Presenter binding entityColor.sourceId") [11 ms]
+  已通过 Load_RejectsBindingsMissingRequiredSourcePayload("{ \"paramKey\": \"strict.binding\", \"source\": \"constant\" }","Presenter binding constant.constantValue") [9 ms]
+  已通过 Load_RejectsCaseMismatchedCommandFieldAsUnknown [13 ms]
+  已通过 Load_RejectsChildInstanceCanonicalFieldsAtDefinitionLevel [10 ms]
+  已通过 Load_RejectsChildSnakeCaseTransformFieldsBeforeClosedSet [11 ms]
+  已通过 Load_RejectsCommandsMissingRequiredExplicitConfigFields("{ \"kind\": \"CreatePresenter\", \"definitionId\": \"strict_actor\", \"scopeTag\": \"strictScope\" }","rules[0].command.scopeSource") [11 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsCommandsMissingRequiredExplicitConfigFields("{ \"kind\": \"DestroyPresenterScope\", \"scopeTag\": \"strictScope\" }","rules[0].command.scopeSource") [8 ms]
+  已通过 Load_RejectsCommandsMissingRequiredExplicitConfigFields("{ \"kind\": \"DestroyScopedPresenter\", \"definitionId\": \"strict_actor\", \"scopeTag\": \"strictScope\" }","rules[0].command.scopeSource") [9 ms]
+  已通过 Load_RejectsCommandsMissingRequiredExplicitConfigFields("{ \"kind\": \"SetParam\", \"paramKey\": \"strict.param\", \"valueSource\": \"Fixed\", \"paramValue\": 1.0 }","rules[0].command.paramLane") [10 ms]
+  已通过 Load_RejectsCommandsMissingRequiredExplicitConfigFields("{ \"kind\": \"SetParam\", \"paramKey\": \"strict.param\", \"paramLane\": \"Float\", \"paramValue\": 1.0 }","rules[0].command.valueSource") [12 ms]
+  已通过 Load_RejectsDefinitionScopedKindOnInstanceBehaviors [12 ms]
+  已通过 Load_RejectsDefinitionUsingVisualKindAlias [12 ms]
+  已通过 Load_RejectsDefinitionWithInheritanceCycle [10 ms]
+  已通过 Load_RejectsDuplicateBehaviorSlots [14 ms]
+  已通过 Load_RejectsDurationAuthoredDefinitionViaInstanceChildren [12 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsEmptyBehaviorActivationCondition [12 ms]
+  已通过 Load_RejectsFailedDefinitionAndParentsThatReferenceThem [13 ms]
+  已通过 Load_RejectsFixedSetParamMissingLanePayload("{ \"kind\": \"SetParam\", \"paramKey\": \"strict.param\", \"paramLane\": \"Float\", \"valueSource\": \"Fixed\" }","rules[0].command.paramValue") [12 ms]
+  已通过 Load_RejectsFixedSetParamMissingLanePayload("{ \"kind\": \"SetParam\", \"paramKey\": \"strict.param\", \"paramLane\": \"Int\", \"valueSource\": \"Fixed\" }","rules[0].command.intValue") [11 ms]
+  已通过 Load_RejectsFixedSetParamMissingLanePayload("{ \"kind\": \"SetParam\", \"paramKey\": \"strict.param\", \"paramLane\": \"Vector\", \"valueSource\": \"Fixed\" }","rules[0].command.vectorValue") [13 ms]
+  已通过 Load_RejectsGroundingInsideAssetBinding [12 ms]
+  已通过 Load_RejectsGroundingMissingRequiredExplicitConfigFields("{ \"updatePolicy\": \"Once\" }","Grounding.mode") [12 ms]
+  已通过 Load_RejectsGroundingMissingRequiredExplicitConfigFields("{ \"mode\": \"SnapToGround\" }","Grounding.updatePolicy") [10 ms]
+  已通过 Load_RejectsImplicitEventWildcard_AndAcceptsExplicitWildcardKey [22 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsInstanceBehaviorSlotCollisionWithReferencedDefinition [13 ms]
+  已通过 Load_RejectsInstanceChildrenModeWithoutInstanceChildren [13 ms]
+  已通过 Load_RejectsInstanceChildrenReferencingUnknownDefinition [14 ms]
+  已通过 Load_RejectsInstanceChildrenUnderDefinitionMode [16 ms]
+  已通过 Load_RejectsInstanceChildrenWithoutExplicitMode [12 ms]
+  已通过 Load_RejectsInvalidMinimapMarkerOrientationWithoutDefaultingToAssetBinding [13 ms]
+  已通过 Load_RejectsInvalidMinimapMarkerShapeWithoutDefaultingToAssetBinding [14 ms]
+  已通过 Load_RejectsLegacyInvalidFields [16 ms]
+  已通过 Load_RejectsLegacyWorldTextModeField [14 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsMaterialSwapPartialConfig("{\n  \"baseMaterialId\": \"knight_base\",\n  \"swapTable\": [\n    { \"paramValue\": 0, \"materialId\": \"knight_armor\" }\n  ]\n}","swapTable requires explicit materialSwapParamKey") [14 ms]
+  已通过 Load_RejectsMaterialSwapPartialConfig("{\n  \"baseMaterialId\": \"knight_base\",\n  \"materialSwapParamKey\": \"test.material.state\"\n}","materialSwapParamKey requires a non-empty swapTable") [11 ms]
+  已通过 Load_RejectsMisconfiguredMaterialCustomData("{\n  \"assetKind\": \"WorldHud\",\n  \"renderPath\": \"None\",\n  \"mobility\": \"Movable\",\n  \"materialCustomData\": [\n    { \"slot\": 0, \"lane\": \"Float\", \"defaultFloatValue\": 1.0 }\n  ]\n}","not supported by renderPath 'None'") [15 ms]
+  已通过 Load_RejectsMisconfiguredMaterialCustomData("{\n  \"assetKind\": \"Mesh\",\n  \"assetId\": \"cube\",\n  \"renderPath\": \"StaticMesh\",\n  \"mobility\": \"Static\",\n  \"materialCustomData\": [\n    { \"slot\": 1, \"lane\": \"Float\", \"defaultFloatValue\": 1.0 }\n  ]\n}","contiguous starting at 0") [13 ms]
+  已通过 Load_RejectsMisconfiguredMaterialCustomData("{\n  \"assetKind\": \"Mesh\",\n  \"assetId\": \"cube\",\n  \"renderPath\": \"StaticMesh\",\n  \"mobility\": \"Static\",\n  \"materialCustomData\": [\n    { \"slot\": 0, \"lane\": \"Float\", \"defaultFloatValue\": 1.0 },\n    { \"slot\": 1, \"lane\": \"Float\", \"defaultFloatValue\": 1.0 },\n    { \"slot\": 2, \"lane\": \"Float\", \"defaultFloatValue\": 1.0 },\n    { \"slot\": 3, \"lane\": \"Float\", \"defaultFloatValue\": 1.0 },\n    { \"slot\": 4, \"lane\": \"Float\", \"defaultFloatValue\": 1.0 }\n  ]\n}","supports at most 4 slots") [12 ms]
+  已通过 Load_RejectsMisconfiguredSurfaceAssetBinding("{\n  \"assetKind\": \"Surface\",\n  \"assetId\": \"surface.projector\",\n  \"renderPath\": \"StaticMesh\",\n  \"mobility\": \"Static\",\n  \"surfaceLayerKey\": \"terrain.rvt\"\n}","requires renderPath 'Surface'") [16 ms]
+  已通过 Load_RejectsMisconfiguredSurfaceAssetBinding("{\n  \"assetKind\": \"Surface\",\n  \"assetId\": \"surface.projector\",\n  \"renderPath\": \"Surface\",\n  \"mobility\": \"Static\"\n}","requires non-empty surfaceLayerKey") [14 ms]
+  已通过 Load_RejectsMisconfiguredSurfaceAssetBinding("{\n  \"assetKind\": \"Mesh\",\n  \"assetId\": \"cube\",\n  \"renderPath\": \"StaticMesh\",\n  \"mobility\": \"Static\",\n  \"surfaceLayerKey\": \"terrain.rvt\"\n}","surfaceLayerKey is only valid for Surface assets") [12 ms]
+  已通过 Load_RejectsMisconfiguredSurfaceAssetBinding("{\n  \"assetKind\": \"Mesh\",\n  \"assetId\": \"cube\",\n  \"renderPath\": \"StaticMesh\",\n  \"mobility\": \"Static\",\n  \"sortId\": 3\n}","sortId is only valid for Surface assets") [10 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsNonAttributeModeInAttributeBindingBehavior [15 ms]
+  已通过 Load_RejectsNonCanonicalBehaviorKind("\"\"","semantic string") [14 ms]
+  已通过 Load_RejectsNonCanonicalBehaviorKind("\"   \"","semantic string") [13 ms]
+  已通过 Load_RejectsNonCanonicalBehaviorKind("\"AssetBinding \"","whitespace") [11 ms]
+  已通过 Load_RejectsNonCanonicalBehaviorKind("\"assetBinding\"","invalid value") [10 ms]
+  已通过 Load_RejectsNonCanonicalBehaviorSlotAliases [12 ms]
+  已通过 Load_RejectsNonCanonicalDefinitionId("\" bad_id\"","entry id") [17 ms]
+  已通过 Load_RejectsNonCanonicalDefinitionId("\"bad_id \"","entry id") [14 ms]
+  已通过 Load_RejectsNonCanonicalDefinitionId("\"\"","entry id") [9 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsNonCanonicalExtendsWhenFieldExists("\"\"","non-empty") [17 ms]
+  已通过 Load_RejectsNonCanonicalExtendsWhenFieldExists("\"   \"","non-empty") [14 ms]
+  已通过 Load_RejectsNonCanonicalExtendsWhenFieldExists("\"base_unit \"","whitespace") [12 ms]
+  已通过 Load_RejectsNonCanonicalExtendsWhenFieldExists("\" base_unit\"","whitespace") [11 ms]
+  已通过 Load_RejectsNonCanonicalWorldTextBehaviorModeWhenFieldExists("\"\"","non-empty") [15 ms]
+  已通过 Load_RejectsNonCanonicalWorldTextBehaviorModeWhenFieldExists("\"   \"","non-empty") [12 ms]
+  已通过 Load_RejectsNonCanonicalWorldTextBehaviorModeWhenFieldExists("\"AttributeCurrent \"","invalid value") [10 ms]
+  已通过 Load_RejectsNonCanonicalWorldTextBehaviorModeWhenFieldExists("\"attributeCurrent\"","invalid value") [11 ms]
+  已通过 Load_RejectsNonPositiveGraphProgramActivationCondition [13 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsNonValidationGraphKindActivationConditionAtLoad [16 ms]
+  已通过 Load_RejectsNumericBehaviorSlotAuthoring [14 ms]
+  已通过 Load_RejectsNumericDefinitionIdScopeTagAndEventKeyAuthoring [33 ms]
+  已通过 Load_RejectsNumericParamKeyAuthoring [14 ms]
+  已通过 Load_RejectsParamDefaultValueAlias [12 ms]
+  已通过 Load_RejectsParamDefaultValueAliasEvenWhenCanonicalFieldExists [12 ms]
+  已通过 Load_RejectsRemovedDefaultTextIdField [15 ms]
+  已通过 Load_RejectsRemovedMaxVisibilityDistanceField [13 ms]
+  已通过 Load_RejectsRemovedTopLevelPresenterAuthoringFields("defaultFontSize","18") [14 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsRemovedTopLevelPresenterAuthoringFields("worldTextMode","\"AttributeCurrent\"") [13 ms]
+  已通过 Load_RejectsRemovedTopLevelPresenterAuthoringFields("defaultLifetime","1.2") [14 ms]
+  已通过 Load_RejectsRemovedTopLevelPresenterAuthoringFields("positionOffset","[0, 1, 0]") [12 ms]
+  已通过 Load_RejectsRemovedTopLevelPresenterAuthoringFields("defaultColor","[1, 1, 1, 1]") [11 ms]
+  已通过 Load_RejectsRemovedTopLevelPresenterAuthoringFields("instancedBatches","[]") [11 ms]
+  已通过 Load_RejectsRemovedTopLevelPresenterAuthoringFields("surface","{}") [11 ms]
+  已通过 Load_RejectsRemovedTopLevelPresenterAuthoringFields("requiredAttributes","[]") [11 ms]
+  已通过 Load_RejectsRulesWithoutExplicitExecutableEventAndCommandKinds("{ \"command\": { \"kind\": \"SetParam\", \"paramKey\": \"test.value\" } }","rules[0].event requires an object with explicit field 'kind'.") [13 ms]
+  已通过 Load_RejectsRulesWithoutExplicitExecutableEventAndCommandKinds("{ \"event\": {}, \"command\": { \"kind\": \"SetParam\", \"paramKey\": \"test.value\" } }","rules[0].event.kind requires a non-empty enum string.") [12 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsRulesWithoutExplicitExecutableEventAndCommandKinds("{ \"event\": { \"kind\": \"\" }, \"command\": { \"kind\": \"SetParam\", \"paramKey\": \"test.value\" } }","rules[0].event.kind requires a non-empty enum string.") [10 ms]
+  已通过 Load_RejectsRulesWithoutExplicitExecutableEventAndCommandKinds("{ \"event\": { \"kind\": \"GameplaySignal\" }, \"command\": { \"kind\": \"SetParam\", \"paramKey\": \"test.value\" } }","rules[0].event.kind has invalid value 'GameplaySignal'.") [9 ms]
+  已通过 Load_RejectsRulesWithoutExplicitExecutableEventAndCommandKinds("{ \"event\": { \"kind\": \"50\" }, \"command\": { \"kind\": \"SetParam\", \"paramKey\": \"test.value\" } }","rules[0].event.kind has invalid value '50'.") [10 ms]
+  已通过 Load_RejectsRulesWithoutExplicitExecutableEventAndCommandKinds("{ \"event\": { \"kind\": \"GameplayEvent\", \"keyId\": \"Event.Strict\" }, \"command\": { \"kind\": \"50\" } }","rules[0].command.kind has invalid value '50'.") [24 ms]
+  已通过 Load_RejectsRulesWithoutExplicitExecutableEventAndCommandKinds("{ \"event\": { \"kind\": \"GameplayEvent\", \"keyId\": \"Event.Strict\" } }","rules[0].command requires an object with explicit field 'kind'.") [10 ms]
+  已通过 Load_RejectsRulesWithoutExplicitExecutableEventAndCommandKinds("{ \"event\": { \"kind\": \"GameplayEvent\", \"keyId\": \"Event.Strict\" }, \"command\": {} }","rules[0].command.kind must be a semantic string.") [12 ms]
+  已通过 Load_RejectsRulesWithoutExplicitExecutableEventAndCommandKinds("{ \"event\": { \"kind\": \"GameplayEvent\", \"keyId\": \"Event.Strict\" }, \"command\": { \"kind\": \"\" } }","rules[0].command.kind must be a semantic string.") [11 ms]
+  已通过 Load_RejectsRulesWithoutExplicitExecutableEventAndCommandKinds("{ \"event\": { \"kind\": \"GameplayEvent\", \"keyId\": \"Event.Strict\" }, \"command\": { \"kind\": \"FireAndForget\" } }","rules[0].command.kind has invalid value 'FireAndForget'.") [14 ms]
+  已通过 Load_RejectsRulesWithoutExplicitExecutableEventAndCommandKinds("{ \"event\": { \"kind\": \"None\" }, \"command\": { \"kind\": \"SetParam\", \"paramKey\": \"test.value\" } }","rules[0].event.kind must not be 'None'.") [13 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsRulesWithoutExplicitExecutableEventAndCommandKinds("{ \"event\": { \"kind\": \"GameplayEvent\", \"keyId\": \"Event.Strict\" }, \"command\": { \"kind\": \"None\" } }","rules[0].command.kind must not be 'None'.") [13 ms]
+  已通过 Load_RejectsSnakeCaseChildInstanceFieldsAtDefinitionLevel [23 ms]
+  已通过 Load_RejectsSnakeCaseChildrenModeOnChildEntry [14 ms]
+  已通过 Load_RejectsSnakeCaseRuntimeBehaviorsOnChildEntry [12 ms]
+  已通过 Load_RejectsStaleChildReferenceAsAuthoringErrorNotKeyNotFound [24 ms]
+  已通过 Load_RejectsTagBindingTagAliasEvenWhenCanonicalFieldExists [16 ms]
+  已通过 Load_RejectsTextTokenSourceKeyAlias [14 ms]
+  已通过 Load_RejectsTextTokenSourceKeyAliasEvenWhenCanonicalFieldExists [13 ms]
+  已通过 Load_RejectsTopLevelVisibilityFieldWithMigrationError [14 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsUnknownAnchorFields("{ \"offet\": [0, 1, 0] }","offet") [11 ms]
+  已通过 Load_RejectsUnknownAnchorFields("{ \"offset\": [0, 1, 0], \"anchro\": true }","anchro") [10 ms]
+  已通过 Load_RejectsUnknownAssetBindingFields [14 ms]
+  已通过 Load_RejectsUnknownBehaviorSlotFields [12 ms]
+  已通过 Load_RejectsUnknownBindingFields("{ \"paramKey\": \"typo.binding\", \"source\": \"constant\", \"constantValu\": 1.0 }","presenters.json[typo_binding_actor].bindings[0]","constantValu") [13 ms]
+  已通过 Load_RejectsUnknownBindingFields("{ \"paramKey\": \"typo.binding\", \"sorce\": \"graph\" }","presenters.json[typo_binding_actor].bindings[0]","sorce") [10 ms]
+  已通过 Load_RejectsUnknownBindingFields("{ \"paramKey\": \"typo.binding\", \"source\": \"graph\", \"sourceId\": 5, \"textTken\": \"x\" }","presenters.json[typo_binding_actor].bindings[0]","textTken") [11 ms]
+  已通过 Load_RejectsUnknownChildFields [5 ms]
+  已通过 Load_RejectsUnknownChildOverrideKeys [13 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsUnknownConditionFields [12 ms]
+  已通过 Load_RejectsUnknownDefinitionFields [11 ms]
+  已通过 Load_RejectsUnknownFieldsInRealFixtureAndRegistersNothing [28 ms]
+  已通过 Load_RejectsUnknownGraphProgramActivationConditionAtLoad [11 ms]
+  已通过 Load_RejectsUnknownInlineKindActivationCondition [13 ms]
+  已通过 Load_RejectsUnknownInstanceBehaviorPayloadFields [14 ms]
+  已通过 Load_RejectsUnknownInstanceChildFields [12 ms]
+  已通过 Load_RejectsUnknownLifecycleFields("{ \"durationSeconds\": 1.0, \"persistenc\": \"Scoped\" }","persistenc") [13 ms]
+  已通过 Load_RejectsUnknownLifecycleFields("{ \"durationSecnds\": 1.0 }","durationSecnds") [14 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_RejectsUnknownParamDefaultFields("{ \"paramKey\": \"typo.default\", \"lane\": \"Float\", \"floatValu\": 1.0 }","presenters.json[typo_defaults_actor].paramDefaults[0]","floatValu") [14 ms]
+  已通过 Load_RejectsUnknownParamDefaultFields("{ \"paramKey\": \"typo.default\", \"lane\": \"Float\", \"floatValue\": 1.0, \"intValu\": 2 }","presenters.json[typo_defaults_actor].paramDefaults[0]","intValu") [12 ms]
+  已通过 Load_RejectsUnknownRuleEventAndCommandFields [23 ms]
+  已通过 Load_RejectsUnknownRuleFields [11 ms]
+  已通过 Load_RejectsVisibilityParamKeyWithoutIntProducer [13 ms]
+  已通过 Load_RemovesTransitiveParentsWhenReferencedDefinitionFailsLateValidation [13 ms]
+  已通过 Load_ReportsFirstUnknownFieldInDocumentOrder [13 ms]
+  已通过 Load_ResolvesEntityCollectionEventsThroughCollectionKeyResolver [12 ms]
+  已通过 Load_ResolvesGasSemanticEventKeysIntoPresenterRules [14 ms]
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json
+
+  已通过 Load_SurfaceSourceBehavior_ParsesIntoBehaviorSlotPayload [29 ms]
+  已通过 Load_TwoIndependentWorldTextSlots_KeepPerSlotStyleMotionAndWorldText [17 ms]
+  已通过 Load_ValidatesMergedEntryBeforeExtendsMerge [12 ms]
+  已通过 Load_WhenAssetBindingSoundIsAuthoredInConfig_Throws [13 ms]
+  已通过 Load_WhenPresenterDirectChildrenExceedCapacity_Throws [15 ms]
+  已通过 Load_WorldTextAssetId_ResolvesThroughTextTokenRegistry [12 ms]
+  已通过 PresenterHudStableIds_DifferByBehaviorSlot [1 ms]
+  已通过 CapacityExhaustion_DoesNotDamageOwnership_AndReleasedCapacityCanBeReused [2 ms]
+  已通过 MixedRemovalsAndReleases_MatchCompleteKeyReference [66 ms]
+  已通过 ReleasePresenter_HandlesWrappedCollisionCluster_AndKeepsOtherIdentities [3 ms]
+  已通过 RepeatedOwnershipRecycling_DoesNotAllocate [1 ms]
+  已通过 PresenterBehaviorSystem_AttributeTagMaterialAndSound_WriteBlackboardAndRequests [8 ms]
+  已通过 PresenterBehaviorSystem_OwnerCulled_StillUpdatesDirtySyncState [5 ms]
+  已通过 PresenterBehaviorSystem_SoundStop_EmitsWhenBehaviorBecomesInactive [4 ms]
+  已通过 PresenterBehaviorSystem_SoundStop_EmitsWhenPresenterDestroyed [2 ms]
+  已通过 PresenterBehaviorSystem_TagBinding_WritesZeroWhenTagMissing_AndInvertsWhenConfigured [2 ms]
+  已通过 PresenterEmitSystem_AssetBinding_EmitsDecalAndVfxAsVisualProxies [4 ms]
+  已通过 PresenterEmitSystem_AssetBinding_EmitsVisualSoundSplineHudAndText [12 ms]
+NUnit Adapter 4.6.0.0: Test execution complete
+  已通过 PresenterEmitSystem_OwnerCulled_DoesNotDestroyLifetimeInstances [3 ms]
+  已通过 PresenterEmitSystem_OwnerCulled_SkipsAssetProjection [3 ms]
+  已通过 PresenterRuleSystem_GlobalRegionChanged_BroadcastsToMatchingDefinitionInstances [2 ms]
+  已通过 PresenterRuleSystem_Throws_WhenCommandBufferOverflows [9 ms]
+  已通过 PresenterRuleSystem_ValueSourceEventKeyId_WritesFloatAndIntBlackboardLanes [5 ms]
+  已通过 PresenterRuntimeSystem_ActivateDeactivateAndSetParam_UpdateBehaviorMaskAndBlackboard [10 ms]
+  已通过 PresenterRuntimeSystem_CreateWithInactiveParent_Throws [8 ms]
+  已通过 PresenterRuntimeSystem_DestroyPresenterScope_RejectsNonPositiveScopeTags [8 ms]
+  已通过 PresenterRuntimeSystem_DestroyRoot_EmitsDestroyedForWholeSubtree [8 ms]
+
+测试总数: 270
+     通过数: 269
+     失败数: 1
+测试运行失败。
+总时间: 7.6937 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

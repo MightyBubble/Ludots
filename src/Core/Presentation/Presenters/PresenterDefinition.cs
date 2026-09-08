@@ -156,6 +156,9 @@ namespace Ludots.Core.Presentation.Presenters
         internal bool HasOutputMotionOrFade;
         internal int SurfaceSourceBehaviorIndex;
         internal bool RequiresBootstrapProcessing;
+        internal uint PossessionActivationMask;
+        internal uint RetainedOutputActivationMask;
+        internal int[] PossessionActivationBehaviorIndices = System.Array.Empty<int>();
         internal bool UsesStableVisualCache;
         internal bool UsesEventDrivenStaticEmit;
         internal bool UsesRetainedPresentationRequest;
@@ -370,6 +373,9 @@ namespace Ludots.Core.Presentation.Presenters
             HasOutputMotionOrFade = false;
             SurfaceSourceBehaviorIndex = -1;
             RequiresBootstrapProcessing = Bindings != null && Bindings.Length > 0;
+            PossessionActivationMask = 0;
+            RetainedOutputActivationMask = 0;
+            PossessionActivationBehaviorIndices = System.Array.Empty<int>();
             UsesStableVisualCache = false;
             UsesEventDrivenStaticEmit = false;
             UsesRetainedPresentationRequest = false;
@@ -481,6 +487,7 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             System.Collections.Generic.List<int>? assetBehaviorIndices = null;
+            System.Collections.Generic.List<int>? possessionActivationIndices = null;
             System.Collections.Generic.List<int>? cacheableAssetBehaviorIndices = null;
             System.Collections.Generic.List<int>? tickBehaviorIndices = null;
             System.Collections.Generic.List<int>? bootstrapGroundingBehaviorIndices = null;
@@ -509,6 +516,15 @@ namespace Ludots.Core.Presentation.Presenters
 
                 uint bit = 1u << slot.SlotIndex;
                 BehaviorPresenceMask |= bit;
+                if (slot.ActivationCondition.DependsOnLocalPossession)
+                {
+                    PossessionActivationMask |= bit;
+                    if (slot.Kind is BehaviorKind.AssetBinding or BehaviorKind.WorldText or
+                        BehaviorKind.MinimapMarker or BehaviorKind.ScreenRect)
+                        RetainedOutputActivationMask |= bit;
+                    (possessionActivationIndices ??= new()).Add(i);
+                    NeedsByDefinitionIndex = true;
+                }
                 int kindId = slot.KindId != 0 ? slot.KindId : (byte)slot.Kind;
                 ValidateBehaviorSlotKind(in slot, kindId);
                 if (slot.Motion.YDriftPerSecond != 0f ||
@@ -754,6 +770,7 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             AssetBehaviorIndices = assetBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
+            PossessionActivationBehaviorIndices = possessionActivationIndices?.ToArray() ?? System.Array.Empty<int>();
             CacheableAssetBehaviorIndices = cacheableAssetBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             TickBehaviorIndices = tickBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             BootstrapGroundingBehaviorIndices = bootstrapGroundingBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();

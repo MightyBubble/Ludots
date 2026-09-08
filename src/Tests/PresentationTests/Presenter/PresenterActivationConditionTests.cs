@@ -38,6 +38,17 @@ namespace Ludots.Tests.Presentation
     {
         private string _root = string.Empty;
 
+        [TestCase("SourceIsSolePossessedRep")]
+        [TestCase("TargetIsSolePossessedRep")]
+        public void PossessionCondition_CompilesWithoutOneShotCreationCommands(string condition)
+        {
+            using var fixture = CreateConfigFixture(ConditionedDefinitionJson.Replace("SourceHasVisualTransform", condition));
+            PresenterDefinition definition = fixture.Definitions.Get(fixture.Definitions.GetId("accept.activation.beacon"));
+            Assert.That(definition.Rules, Is.Empty);
+            Assert.That(definition.Behaviors[0].ActiveByDefault, Is.False);
+            Assert.That(definition.Behaviors[0].ActivationCondition.DependsOnLocalPossession, Is.True);
+        }
+
         [SetUp]
         public void SetUp()
         {
