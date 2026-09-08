@@ -864,6 +864,10 @@ namespace Ludots.Core.Presentation.Hud
                 {
                     _bars[write] = _bars[read];
                     _barProjectedBuildStamps[write] = _barProjectedBuildStamps[read];
+                    if (HasPositionOnlyBarRange)
+                    {
+                        TrackPositionOnlyBarRange(write);
+                    }
                     _flattenedDirty = true;
                 }
 
@@ -923,6 +927,10 @@ namespace Ludots.Core.Presentation.Hud
                 {
                     _texts[write] = _texts[read];
                     _textProjectedBuildStamps[write] = _textProjectedBuildStamps[read];
+                    if (HasPositionOnlyTextRange)
+                    {
+                        TrackPositionOnlyTextRange(write);
+                    }
                     _flattenedDirty = true;
                 }
 
