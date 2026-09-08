@@ -86,6 +86,10 @@ Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 St
 
 Live debug 记录实际执行节点归因、Yield/预算挂起、Halt、游标、引脚和黑板变化；嵌套 `InvokeScript` 继承固定容量 trace 并携带子图 id。编辑器侧按 Flow Canvas 方式点亮节点/控制边并贴 pin 芯片，`drain` 事件带 `controlPort`；当前不伪造 `NodeExit` 生命周期事件。黑板 buffer 缺失仍在运行时明确失败；实体能力在 authoring 阶段的声明和编译校验仍是下一条合同切片，不能把运行时隐式安装路径写成已完成。
 
+Epic #1464 的 A1 在 PR #1466 中交付两段，尚未合入：trace 记录区按需分配（验收见 `artifacts/acceptance/triggergraph-trace-memory/`）；寄存器、目标、调用栈、入口载荷与调用参数集中到固定容量执行槽。开始运行领槽，Yield/回调等待保留，完成、错误和注销归还。同步嵌套事件使用独立槽，结束后恢复外层；嵌套运行跨帧等待明确失败。`assets/game.json` 的 `triggerGraphExecutionCapacity` 默认 1024，约束同时活动的运行数，Mod 经原配置管线覆盖；0 或负数启动失败，耗尽报 `GRAPH.EXECUTION.ERR.CapacityExceeded`。`ludots.graph.debug list` 返回 `executionSlots.capacity/inUseCount/highWaterMark`，逐挂载仍有 trace 的 `capacity/allocatedCapacity`。
+
+执行槽定向测试 47/47；10,000 个完整挂载及恢复伴随触发器的发布版批次，在预热后开始和恢复新增分配为 0，槽占用 10,000 → 0。此次单跑开始/恢复分别为 17.978/31.320 ms，未计入事件总线、实体过滤、完整引擎帧和渲染，不是万人帧率验收。BT/HFSM 单独验收 20/20，合波 p95=4.844 ms；与编译并行时曾出现 p95=17.014 ms 的超限，保留在输出中。扩大回归还有两项在干净 main 同样复现的断言失败（旧命名检查、GraphReturnWriter 错误文案），不列为本轮新发现。最终夜袭真机有 9 个挂载，活动槽在事件前后均为 0、峰值 1；调试开关和 18 条轨迹通过。证据见 `artifacts/acceptance/triggergraph-execution-slots/`。A1 总项仍待完整万人场景帧时间及交互展示验收，A2–A9 其余工具链任务继续由 #1464 跟踪。
+
 底栏用人话讲这一趟，数据是 mod 自己的：`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graph_editor.json` 的 `annotations`（节点分组每图声明一次 + 按入口写抬头），Bridge 读写都对着 `graphs.json` 核对分组节点与入口标签，改名失败关闭并点名。底栏按执行到达顺序列出走过的每一组，和画布热度同一个 TTL 一起冷掉。编辑器源码里不得出现具体图 / mod / 节点 id，`ReactEditor_MustNotNameShowcaseGraphsOrMods` 扫全前端目录守这条。入口起因是「等事件」或「等输入动作」的单选，运行时 `event` / `action` 恰有其一；动作 id 从 `/api/graph/input-actions/{modId}` 合并目录下拉，保存路径跑 `RequireTriggerGraphEntryShape`。编辑器前端已进 CI（`graph-editor-frontend`：tsc + 图编辑器目录 lint + 断言脚本）。
 
 trace 记录只有序号和步数，没有时间或帧号：一拍跑完的链是齐亮齐灭，不是逐步流动。要真做流动，先给记录补时间或帧号，别在文档里先许诺。
@@ -97,7 +101,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 **图 Codegen 产品化（CG-0…CG-6 + 运行时装载已落地）。**  
 正式程序集 `Ludots.Graph.Codegen`：F0–F3 特化发射（允许回边），其余家族 HandlerForward；coverage 全量 `covered`；Bridge 预览/对拍/覆盖；编辑器 Codegen 面板。运行时：`game.json` 键 `graphExecutionBackend`（`interpret` / `codegen` / `codegen-prefer`）在装图后绑定生成入口；`GraphExecutor` 优先走生成码；`ludots.graph.debug` 与 Live Debug 标题报 `executionBackend`。夜袭旗舰 `graphExecutionBackend=codegen`。合同正本 [图 Codegen 产品化](graph-codegen-productization.md)；自审 `artifacts/gas-composition-gate-graph-codegen-impl.md`。未知 op / 绑定失败在 `codegen` 模式失败关闭。
 
-作者面还开着的债，不要当成新发现再审：执行线没下一步就该结束，但先改“必须显式停下”的合同 https://github.com/MightyBubble/Ludots/issues/1107 。蓝图变量面板 MapVariable 作者面已随 Narrative PR #1222 / Bridge 进主干，#1109 已关单。#1108 要对齐的是「地图上具体 InstanceId（单位/区域）当变量拖取」——单实体 `LoadPlacedEntity` + 区域 `LoadPlacedRegion` + 锚点 `LoadPlacedAnchor`（InstanceId 含 `anchor`）+ Placed 栏 / Bridge `kind` 已落地；不是数组/映射集合类型。事件入口露出本次载荷（#1106）、放置实体读、地图变量变更事件（#1113）、图互调/跨图派发/全局订阅与 hook（#1115/#1116/#1123/#1124）、纯数据枚举（#1125）、图↔代码 AwaitCallback 续跑（#1126）已随 night-raid 大包进主干（PR #1239）；对应票（#1106/#1113/#1115/#1116/#1123/#1124/#1125/#1126，连同随 #1222 落地的 #1109、随 TriggerGraph core 线落地的 #1114）已于 2026-08-28 做关单卫生关闭，不要再派实现票。#1126 落地范围：`AwaitCallback=455` + `GraphCallbackService` + `SystemGroup.Continuation` 按注册序 Drain；TriggerGraph 挂载可直接挂起；嵌套 `InvokeScript`/`InvokeGraph` 仍禁 Yield/AwaitCallback（同步函数）。可等待复用走编译期糖 `InlineGraph`（`TriggerGraphInlineWeaver`，虚幻 Macro 风格，Await 落在宿主程序）。Dialogue 宿主 Completer 已接线：玩家确认选项/推进台词时 `TryCompleteByCallbackType(DialogConfirm)`，不另造第二套等待。进图开聊的正式入口已落地：`StartDialogue=462`（PR #1289，对话作者关口入门包）——`MapLoaded` TriggerGraph 起聊，`dialogue_author_kit` 展厅纯配置可玩；per-op 画廊真机证据（poster/play.mp4）已补录。未完成前，编辑器不得画出保存后引擎不认的假针脚或假集合。
+作者面状态：执行线结束合同票 https://github.com/MightyBubble/Ludots/issues/1107 已关闭，不再列为开放任务；当前显式 Halt 合同以编译器和回归为准。蓝图变量面板 MapVariable 作者面已随 Narrative PR #1222 / Bridge 进主干，#1109 已关单。#1108 要对齐的是「地图上具体 InstanceId（单位/区域）当变量拖取」——单实体 `LoadPlacedEntity` + 区域 `LoadPlacedRegion` + 锚点 `LoadPlacedAnchor`（InstanceId 含 `anchor`）+ Placed 栏 / Bridge `kind` 已落地；不是数组/映射集合类型。事件入口露出本次载荷（#1106）、放置实体读、地图变量变更事件（#1113）、图互调/跨图派发/全局订阅与 hook（#1115/#1116/#1123/#1124）、纯数据枚举（#1125）、图↔代码 AwaitCallback 续跑（#1126）已随 night-raid 大包进主干（PR #1239）；对应票（#1106/#1113/#1115/#1116/#1123/#1124/#1125/#1126，连同随 #1222 落地的 #1109、随 TriggerGraph core 线落地的 #1114）已于 2026-08-28 做关单卫生关闭，不要再派实现票。#1126 落地范围：`AwaitCallback=455` + `GraphCallbackService` + `SystemGroup.Continuation` 按注册序 Drain；TriggerGraph 挂载可直接挂起；嵌套 `InvokeScript`/`InvokeGraph` 仍禁 Yield/AwaitCallback（同步函数）。可等待复用走编译期糖 `InlineGraph`（`TriggerGraphInlineWeaver`，虚幻 Macro 风格，Await 落在宿主程序）。Dialogue 宿主 Completer 已接线：玩家确认选项/推进台词时 `TryCompleteByCallbackType(DialogConfirm)`，不另造第二套等待。进图开聊的正式入口已落地：`StartDialogue=462`（PR #1289，对话作者关口入门包）——`MapLoaded` TriggerGraph 起聊，`dialogue_author_kit` 展厅纯配置可玩；per-op 画廊真机证据（poster/play.mp4）已补录。未完成前，编辑器不得画出保存后引擎不认的假针脚或假集合。
 
 **分层：架子有了，墙没有。**  
 工程里多了两份薄的契约，核心工程还是一大坨。展厅大多还能一把抓住整台引擎。把空间、输入、画面、结算真正拆开，以及不许再抓整台引擎，这两步没做。要做就单独开活，对照 `docs/audits/s14_layering_physicalization_design.md`，别和修演示、修构建捆在一起。没拆完之前，总规矩继续写「修复中」。
@@ -124,7 +128,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 
 | 项 | 状态 | 怎么开工 |
 |----|------|----------|
-| `#1107` 执行线无下一步须显式 Halt 合同 | 开着 | 单独改合同，别捆编辑器 |
+| `#1107` 执行线结束合同 | 已关闭 | 不再派实现票；当前合同见编译器与回归 |
 | `#915` 每节点可写可测可看 | 总账开着 | 旁路已合，别当实现票重做 |
 | `#861` 作者只走一条边 | 总账开着 | 同上 |
 | 分层物理化 | 架子有、墙没有 | 对照 `docs/audits/s14_layering_physicalization_design.md`，另开活 |
@@ -136,7 +140,6 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 | 外层 L2 拓扑 SSOT 恢复（AI JSON + 拓扑编辑器） | **已落地** | 见 [BT/FSM 独立编辑器](graph-bt-fsm-nested-func.md)；糖宿主仅回归 |
 
 | trace 记录没有时间 / 帧号 | **合同缺口** | 想要真的逐步流动就给 `GraphDebugTraceRecord` 补时间源；在那之前只许说齐亮齐灭 |
-| `GraphDebugTool` 无自动化测试 | 债 | 编辑器和游戏之间唯一通道；`GraphDebugTraceTests` 只测环形缓冲 |
 | 编辑器前端 lint 只门到图编辑器目录 | 债 | `StoryAuthoringPage.tsx`（10 处 `no-explicit-any`）与 `ui-panel-authoring/model.ts`（1 处未用变量）先欠着，清完再放宽 `graph-editor-frontend` 的 lint 范围 |
 | `npm run check` 末步 `validate-panel-templates` 本来就挂 | 债（非本轮） | 报 `Unsupported schema 'ludots.ui.panel_template'`，main 上同样挂；`graph-editor-frontend` 不跑这步，属面板线 |
 | `TriggerGraphRenameMigrationTests` 误伤合法 payloadKey | 债（非本轮） | 夜袭 `graphs.json` 的 `MapTrigger.PointerScreenX/Y`（随 #1398 入口直绑 action 落地）被「不得出现退役方言名」的子串检查判红；该守卫要改成只查 `kind` / `mount` 字段而不是裸子串 |

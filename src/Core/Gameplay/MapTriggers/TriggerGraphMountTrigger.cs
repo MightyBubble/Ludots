@@ -81,23 +81,30 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly TriggerGraphRefirePolicy _refirePolicy;
         private readonly EventScope _subscriptionScope;
         private readonly bool _entryIsResumeEvent;
-        private readonly int[] _vmIntRegisters = new int[GraphVmLimits.MaxIntRegisters];
-        private readonly int[] _previousIntRegisters = new int[GraphVmLimits.MaxIntRegisters];
-        private readonly byte[] _vmBoolRegisters = new byte[GraphVmLimits.MaxBoolRegisters];
-        private readonly byte[] _previousBoolRegisters = new byte[GraphVmLimits.MaxBoolRegisters];
-        private readonly float[] _vmFloatRegisters = new float[GraphVmLimits.MaxFloatRegisters];
-        private readonly float[] _previousFloatRegisters = new float[GraphVmLimits.MaxFloatRegisters];
-        private readonly Entity[] _vmEntityRegisters = new Entity[GraphVmLimits.MaxEntityRegisters];
-        private readonly Entity[] _previousEntityRegisters = new Entity[GraphVmLimits.MaxEntityRegisters];
-        private readonly Entity[] _vmTargetRegisters = new Entity[GraphVmLimits.MaxTargets];
-        private readonly int[] _vmCallStack = new int[GraphVmLimits.MaxCallStackDepth];
+        private TriggerGraphExecutionSlotStore? _executionSlots;
+        private TriggerGraphExecutionSlotStore.Handle _slot;
+        private bool _hasSlot;
+        private bool _unregistered;
+        private bool _executing;
+        private int _nestedRunDepth;
+        private GraphCallbackService? _callbacks;
+        private Span<int> _vmIntRegisters => _executionSlots!.Ints(_slot);
+        private Span<int> _previousIntRegisters => _executionSlots!.PreviousInts(_slot);
+        private Span<byte> _vmBoolRegisters => _executionSlots!.Bools(_slot);
+        private Span<byte> _previousBoolRegisters => _executionSlots!.PreviousBools(_slot);
+        private Span<float> _vmFloatRegisters => _executionSlots!.Floats(_slot);
+        private Span<float> _previousFloatRegisters => _executionSlots!.PreviousFloats(_slot);
+        private Span<Entity> _vmEntityRegisters => _executionSlots!.Entities(_slot);
+        private Span<Entity> _previousEntityRegisters => _executionSlots!.PreviousEntities(_slot);
+        private Span<Entity> _vmTargetRegisters => _executionSlots!.Targets(_slot);
+        private Span<int> _vmCallStack => _executionSlots!.CallStack(_slot);
         private readonly GraphDebugTrace _debugTrace = new();
         private GraphExecutionCursor _cursor;
         private Entity _runCaster;
         private MapId? _mapScope;
         private bool _mapScopeResolved;
-        private readonly GraphEntryPayloadTable _entryPayload = new();
-        private readonly GraphEntryPayloadTable _invokeArgs = new();
+        private GraphEntryPayloadTable _entryPayload => _executionSlots!.EntryPayload(_slot);
+        private GraphEntryPayloadTable _invokeArgs => _executionSlots!.InvokeArgs(_slot);
         private bool _runActive;
         private bool _ranToHaltOnce;
         private bool _lifecycleDispatch;
@@ -256,6 +263,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public override bool CheckConditions(ScriptContext context)
         {
+            if (_unregistered)
+                throw new InvalidOperationException($"GRAPH.EXECUTION.ERR.UnregisteredMount: {Name} cannot execute after unregistration.");
+
             if (_entry.Once && _ranToHaltOnce)
             {
                 return false;
@@ -370,6 +380,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return Task.CompletedTask;
             }
 
+            if (_executing)
+            {
+                ExecuteNestedRun(context);
+                return Task.CompletedTask;
+            }
+
             if (_runActive)
             {
                 if (_entryIsResumeEvent)
@@ -474,18 +490,90 @@ namespace Ludots.Core.Gameplay.MapTriggers
             return engine != null && engine.World.IsAlive(_scope);
         }
 
+        private void ExecuteNestedRun(ScriptContext context)
+        {
+            if (_nestedRunDepth >= GraphVmLimits.MaxInvokeDepth)
+                throw new InvalidOperationException($"GRAPH.EXECUTION.ERR.NestedRunDepthExceeded: {Name} exceeded {GraphVmLimits.MaxInvokeDepth} nested runs.");
+
+            var outer = (_slot, _hasSlot, _cursor, _runCaster, _runActive, _awaitingCallback,
+                _parkedContext, _callbacks, LastSliceResult);
+            _hasSlot = false;
+            _runActive = false;
+            _awaitingCallback = false;
+            _parkedContext = null;
+            _callbacks = null;
+            _executing = false;
+            _nestedRunDepth++;
+            try
+            {
+                StartRun(context);
+                if (_runActive)
+                    throw new InvalidOperationException($"GRAPH.EXECUTION.ERR.NestedRunSuspended: {Name} cannot park a nested run while its caller is executing.");
+            }
+            finally
+            {
+                ReleaseRun(failed: true);
+                (_slot, _hasSlot, _cursor, _runCaster, _runActive, _awaitingCallback,
+                    _parkedContext, _callbacks, LastSliceResult) = outer;
+                _executing = true;
+                _nestedRunDepth--;
+            }
+        }
+
         private void StartRun(ScriptContext context)
         {
-            ResetExecutionState();
-            _cursor = new GraphExecutionCursor(_entry.StartPc);
-            _runCaster = ResolveRunCaster(context);
-            SeedEntryRegisters(context);
-            CaptureEntryPayload(context, ResolveDependencies(context).EventSchemas);
-            _invokeArgs.Clear();
-            RunSlice(context);
+            try
+            {
+                TriggerGraphTriggerDependencies dependencies = ResolveDependencies(context);
+                _executionSlots ??= dependencies.Engine.GetService(CoreServiceKeys.TriggerGraphExecutionSlots)
+                    ?? throw new InvalidOperationException("TriggerGraph requires execution slot storage.");
+                if (_hasSlot)
+                {
+                    _callbacks?.InvalidateTarget(this);
+                    ResetExecutionState();
+                }
+                else
+                {
+                    _slot = _executionSlots.Rent();
+                    _hasSlot = true;
+                }
+                _runActive = false;
+                _awaitingCallback = false;
+                _cursor = new GraphExecutionCursor(_entry.StartPc);
+                _runCaster = ResolveRunCaster(context);
+                SeedEntryRegisters(context);
+                CaptureEntryPayload(context, dependencies.EventSchemas);
+                RunSlice(context);
+            }
+            catch
+            {
+                ReleaseRun(failed: true);
+                throw;
+            }
         }
 
         private void RunSlice(ScriptContext context)
+        {
+            if (_executing)
+                throw new InvalidOperationException($"GRAPH.EXECUTION.ERR.ReentrantMount: {Name} is already executing a slice.");
+            _executing = true;
+            try
+            {
+                ExecuteSlice(context);
+            }
+            catch
+            {
+                ReleaseRun(failed: true);
+                throw;
+            }
+            finally
+            {
+                _executing = false;
+                if (_unregistered) ReleaseRun(failed: true);
+            }
+        }
+
+        private void ExecuteSlice(ScriptContext context)
         {
             TriggerGraphTriggerDependencies dependencies = ResolveDependencies(context);
             GraphInstruction[] program = dependencies.Programs.RequireProgramArray(
@@ -495,6 +583,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             MapId? mapScope = ResolveMapScopeOnce(dependencies);
             GraphCallbackService? callbacks = dependencies.Engine.GetService(CoreServiceKeys.GraphCallbackService);
+            _callbacks = callbacks;
             _parkedContext = context;
             if (callbacks != null)
             {
@@ -541,9 +630,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             if (result.Halted)
             {
-                _runActive = false;
                 _ranToHaltOnce = true;
-                _awaitingCallback = false;
+                ReleaseRun();
                 return;
             }
 
@@ -555,6 +643,29 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     $"TriggerGraph '{_graphName}' entry '{_entry.Label}' exceeded the per-run instruction cap "
                     + $"{nameof(GraphVmLimits.MaxInstructionsPerExecution)} ({GraphVmLimits.MaxInstructionsPerExecution} steps across resumes) without halting.");
             }
+        }
+
+        internal void Unregister()
+        {
+            _unregistered = true;
+            // A dispatched event may unregister its caller while the VM still holds spans.
+            if (!_executing) ReleaseRun();
+            _debugTrace.Configure(GraphDebugTraceMode.Disabled);
+        }
+
+        private void ReleaseRun(bool failed = false)
+        {
+            if (_awaitingCallback || failed) _callbacks?.InvalidateTarget(this);
+            if (_hasSlot)
+            {
+                _executionSlots!.Return(_slot);
+                _hasSlot = false;
+            }
+            _runActive = false;
+            _awaitingCallback = false;
+            _parkedContext = null;
+            _callbacks = null;
+            _runCaster = _scope;
         }
 
         private void RecordDebugTrace(GraphSliceResult result)
@@ -740,16 +851,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         private void ResetExecutionState()
         {
-            Array.Clear(_vmIntRegisters, 0, _vmIntRegisters.Length);
-            Array.Clear(_previousIntRegisters, 0, _previousIntRegisters.Length);
-            Array.Clear(_vmBoolRegisters, 0, _vmBoolRegisters.Length);
-            Array.Clear(_previousBoolRegisters, 0, _previousBoolRegisters.Length);
-            Array.Clear(_vmFloatRegisters, 0, _vmFloatRegisters.Length);
-            Array.Clear(_previousFloatRegisters, 0, _previousFloatRegisters.Length);
-            Array.Clear(_vmEntityRegisters, 0, _vmEntityRegisters.Length);
-            Array.Clear(_previousEntityRegisters, 0, _previousEntityRegisters.Length);
-            Array.Clear(_vmTargetRegisters, 0, _vmTargetRegisters.Length);
-            Array.Clear(_vmCallStack, 0, _vmCallStack.Length);
+            _executionSlots!.Reset(_slot);
             _runCaster = _scope;
         }
 

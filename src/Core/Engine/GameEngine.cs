@@ -841,6 +841,8 @@ namespace Ludots.Core.Engine
             var gasRuntimeCapacity = config.GasRuntimeCapacity
                 ?? throw new InvalidOperationException("GameConfig.gasRuntimeCapacity is required.");
             gasRuntimeCapacity.Validate();
+            SetService(CoreServiceKeys.TriggerGraphExecutionSlots,
+                new TriggerGraphExecutionSlotStore(config.TriggerGraphExecutionCapacity));
             var orderTerminalResults = new OrderTerminalResultBuffer(
                 gasRuntimeCapacity.OrderTerminalResultCapacity);
             var orderTypeRegistry = new OrderTypeRegistry(orderTerminalResults);

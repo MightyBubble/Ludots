@@ -5083,7 +5083,7 @@
       "readmePath": null,
       "acceptanceTest": "MapTriggerNightRaidAcceptanceTests",
       "artifactDir": "artifacts/evidence/map_trigger_night_raid",
-      "screenshot": null,
+      "screenshot": "artifacts/acceptance/triggergraph-execution-slots/night-raid-live.png",
       "status": "active",
       "notes": "波次 raider 不再预置于地图；RegionEntered 触发 wave1，EntityAliveCountChanged(team 2, cross_below 0) 触发 wave2，累计 kill_threshold=5 后由 SpawnTemplate 图 op（op 447）在 boss_camp 锚点生成 Boss；阶段链与胜利面板全数据驱动。"
     },

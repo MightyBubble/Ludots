@@ -23,18 +23,54 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Float = 3,
         }
 
-        private readonly string?[] _keys = new string?[Capacity];
-        private readonly SlotType[] _types = new SlotType[Capacity];
-        private readonly Entity[] _entities = new Entity[Capacity];
-        private readonly int[] _ints = new int[Capacity];
-        private readonly float[] _floats = new float[Capacity];
+        private readonly Memory<string?> _keys;
+        private readonly Memory<SlotType> _types;
+        private readonly Memory<Entity> _entities;
+        private readonly Memory<int> _ints;
+        private readonly Memory<float> _floats;
+
+        public GraphEntryPayloadTable()
+            : this(new string?[Capacity], new SlotType[Capacity], new Entity[Capacity], new int[Capacity], new float[Capacity])
+        {
+        }
+
+        private GraphEntryPayloadTable(Memory<string?> keys, Memory<SlotType> types,
+            Memory<Entity> entities, Memory<int> ints, Memory<float> floats)
+        {
+            _keys = keys;
+            _types = types;
+            _entities = entities;
+            _ints = ints;
+            _floats = floats;
+        }
+
+        internal static GraphEntryPayloadTable[] CreateBatch(int count)
+        {
+            int length = checked(count * Capacity);
+            var keys = new string?[length];
+            var types = new SlotType[length];
+            var entities = new Entity[length];
+            var ints = new int[length];
+            var floats = new float[length];
+            var tables = new GraphEntryPayloadTable[count];
+            for (int i = 0; i < count; i++)
+            {
+                int offset = i * Capacity;
+                tables[i] = new GraphEntryPayloadTable(keys.AsMemory(offset, Capacity), types.AsMemory(offset, Capacity),
+                    entities.AsMemory(offset, Capacity), ints.AsMemory(offset, Capacity), floats.AsMemory(offset, Capacity));
+            }
+            return tables;
+        }
 
         public int Count { get; private set; }
 
         public void Clear()
         {
-            Array.Clear(_keys, 0, _keys.Length);
-            Array.Clear(_types, 0, _types.Length);
+            _keys.Span.Clear();
+            _types.Span.Clear();
+            _entities.Span.Clear();
+            _ints.Span.Clear();
+            _floats.Span.Clear();
             Count = 0;
         }
 
@@ -55,18 +91,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             for (int i = 0; i < Count; i++)
             {
-                if (string.Equals(_keys[i], key, StringComparison.Ordinal))
+                if (string.Equals(_keys.Span[i], key, StringComparison.Ordinal))
                 {
-                    if (_types[i] != type)
+                    if (_types.Span[i] != type)
                     {
                         throw new InvalidOperationException(
-                            $"GAS.GRAPH.ERR.EntryPayloadTypeMismatch: payload key '{key}' was staged as {_types[i]} but re-staged as {type}.");
+                            $"GAS.GRAPH.ERR.EntryPayloadTypeMismatch: payload key '{key}' was staged as {_types.Span[i]} but re-staged as {type}.");
                     }
 
-                    _types[i] = type;
-                    _entities[i] = entity;
-                    _ints[i] = intValue;
-                    _floats[i] = floatValue;
+                    _types.Span[i] = type;
+                    _entities.Span[i] = entity;
+                    _ints.Span[i] = intValue;
+                    _floats.Span[i] = floatValue;
                     return;
                 }
             }
@@ -82,7 +118,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return false;
             }
 
-            value = _entities[slot];
+            value = _entities.Span[slot];
             return true;
         }
 
@@ -94,7 +130,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return false;
             }
 
-            value = _ints[slot];
+            value = _ints.Span[slot];
             return true;
         }
 
@@ -106,7 +142,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return false;
             }
 
-            value = _floats[slot];
+            value = _floats.Span[slot];
             return true;
         }
 
@@ -118,11 +154,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"Entry payload capture exceeded its {Capacity}-slot capacity (key '{key}').");
             }
 
-            _keys[Count] = key;
-            _types[Count] = type;
-            _entities[Count] = entity;
-            _ints[Count] = intValue;
-            _floats[Count] = floatValue;
+            _keys.Span[Count] = key;
+            _types.Span[Count] = type;
+            _entities.Span[Count] = entity;
+            _ints.Span[Count] = intValue;
+            _floats.Span[Count] = floatValue;
             Count++;
         }
 
@@ -130,15 +166,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             for (int i = 0; i < Count; i++)
             {
-                if (!string.Equals(_keys[i], key, StringComparison.Ordinal))
+                if (!string.Equals(_keys.Span[i], key, StringComparison.Ordinal))
                 {
                     continue;
                 }
 
-                if (_types[i] != expected)
+                if (_types.Span[i] != expected)
                 {
                     throw new InvalidOperationException(
-                        $"GAS.GRAPH.ERR.EntryPayloadTypeMismatch: payload key '{key}' was captured as {_types[i]} but read as {expected}.");
+                        $"GAS.GRAPH.ERR.EntryPayloadTypeMismatch: payload key '{key}' was captured as {_types.Span[i]} but read as {expected}.");
                 }
 
                 slot = i;

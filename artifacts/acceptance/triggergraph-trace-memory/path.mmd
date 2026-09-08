@@ -1,0 +1,11 @@
+flowchart TD
+    A[启动夜袭三波与 AgentBridge] --> B[玩家看到 STAGE 2 和三名袭击者]
+    B --> C[list 返回 9 个挂载点]
+    C --> D[全部 allocatedCapacity 为 0]
+    D --> E[只给 on_kill_tool 打开 NodeAndPins]
+    E --> F[该入口 allocatedCapacity 变为 2048]
+    F --> G[触发 NightRaid.KillTool.Used]
+    G --> H[drain 读到 18 条节点和引脚记录]
+    H --> I[关闭该入口 trace]
+    I --> J[allocatedCapacity 回到 0 且旧记录清空]
+    J --> K[pumpCount 持续增长，夜袭继续运行]

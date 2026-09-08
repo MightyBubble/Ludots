@@ -64,7 +64,8 @@ namespace Ludots.Core.GraphRuntime
 
     /// <summary>
     /// Fixed-capacity, opt-in execution trace for one mounted graph entry.
-    /// The producer never allocates or formats data; consumers drain by sequence.
+    /// Backing storage exists only while tracing is enabled. The producer never
+    /// allocates or formats data while recording; consumers drain by sequence.
     /// Nested InvokeScript shares the ring and attributes each record with its graph id.
     /// NodeExit is reserved and not emitted by the current producer contract.
     /// </summary>
@@ -72,7 +73,8 @@ namespace Ludots.Core.GraphRuntime
     {
         public const int DefaultCapacity = 2048;
 
-        private readonly GraphDebugTraceRecord[] _records;
+        private readonly int _capacity;
+        private GraphDebugTraceRecord[]? _records;
         private int _head;
         private int _count;
         private long _nextSequence;
@@ -85,13 +87,14 @@ namespace Ludots.Core.GraphRuntime
                 throw new ArgumentOutOfRangeException(nameof(capacity));
             }
 
-            _records = new GraphDebugTraceRecord[capacity];
+            _capacity = capacity;
         }
 
         public GraphDebugTraceMode Mode { get; private set; }
         public long DroppedCount => _dropped;
         public long LatestSequence => _nextSequence;
-        public int Capacity => _records.Length;
+        public int Capacity => _capacity;
+        public int AllocatedCapacity => _records?.Length ?? 0;
 
         public void Configure(GraphDebugTraceMode mode)
         {
@@ -100,6 +103,15 @@ namespace Ludots.Core.GraphRuntime
                 throw new ArgumentOutOfRangeException(nameof(mode));
             }
 
+            if (mode == GraphDebugTraceMode.Disabled)
+            {
+                Mode = mode;
+                _records = null;
+                Clear();
+                return;
+            }
+
+            _records ??= new GraphDebugTraceRecord[_capacity];
             Mode = mode;
         }
 
@@ -181,11 +193,17 @@ namespace Ludots.Core.GraphRuntime
 
         public int ReadSince(long since, Span<GraphDebugTraceRecord> destination, out long oldestSequence)
         {
-            oldestSequence = _count == 0 ? _nextSequence + 1 : _records[_head].Sequence;
+            GraphDebugTraceRecord[]? records = _records;
+            oldestSequence = _count == 0 ? _nextSequence + 1 : records![_head].Sequence;
+            if (records == null)
+            {
+                return 0;
+            }
+
             int copied = 0;
             for (int i = 0; i < _count && copied < destination.Length; i++)
             {
-                GraphDebugTraceRecord record = _records[(_head + i) % _records.Length];
+                GraphDebugTraceRecord record = records[(_head + i) % records.Length];
                 if (record.Sequence <= since)
                 {
                     continue;
@@ -208,21 +226,23 @@ namespace Ludots.Core.GraphRuntime
             float floatValue,
             Entity entityValue)
         {
+            GraphDebugTraceRecord[] records = _records
+                ?? throw new InvalidOperationException("Graph debug trace storage is unavailable while tracing is disabled.");
             long sequence = ++_nextSequence;
             int index;
-            if (_count < _records.Length)
+            if (_count < records.Length)
             {
-                index = (_head + _count) % _records.Length;
+                index = (_head + _count) % records.Length;
                 _count++;
             }
             else
             {
                 index = _head;
-                _head = (_head + 1) % _records.Length;
+                _head = (_head + 1) % records.Length;
                 _dropped++;
             }
 
-            _records[index] = new GraphDebugTraceRecord(
+            records[index] = new GraphDebugTraceRecord(
                 sequence,
                 graphId,
                 eventKind,

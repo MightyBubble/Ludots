@@ -20,7 +20,7 @@ namespace Ludots.Tests.Gas.Graph
 {
     [TestFixture]
     [NonParallelizable]
-    public sealed class TriggerGraphResumeTests
+    public sealed partial class TriggerGraphResumeTests
     {
         private const string MapId = "map_trigger_resume_probe";
         private const string GraphName = "Graph.TriggerGraph.ResumeProbe";

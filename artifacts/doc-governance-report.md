@@ -1,3 +1,30 @@
+# Documentation Governance Report — TriggerGraph 执行槽
+
+Date: 2026-09-08
+Scope: 本次修改的能力页、夜袭注册项与 `artifacts/acceptance/triggergraph-execution-slots/`。
+Ruleset: `scripts/validate-docs.ps1`、ludots-doc-governance、shuorenhua。
+
+## Summary
+
+- 进度继续只认 `gitbook/architecture/graph-capability-status.md`；A1 总项保持未完成。
+- 已区分执行批次、完整游戏帧与 L2 万人基线；保留并行编译时的合波失败及独立复测结果。
+- 夜袭注册项截图指向最终代码的真实进程截图，验收记录含请求、响应与测试摘录。
+- #1107 已查询远端确认为关闭，能力页不再把它列成开放工作。
+
+## Findings
+
+本次范围未发现新增路径或 SSOT 问题；路径检查结果见提交前的 validate-docs 输出。
+
+## Fix Order
+
+无需追加文档修正。
+
+## Residual Risks
+
+A1 的完整万人场景帧时间及交互展示尚未完成；保留在能力页与 Epic #1464。
+
+---
+
 # Documentation Governance Report — Raylib 引擎画廊对齐 Graph 节点画廊
 
 Date: 2026-08-23（第二轮：对齐最新 main `6daa88a45d` 后按用户四点缺口补全）
