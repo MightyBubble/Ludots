@@ -1242,7 +1242,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void BehaviorSystem_DoesNotSkipOwnerBackedSnapToGround_WhenOwnerSampleStateUnresolved()
+        public void BehaviorSystem_DoesNotRetainOwnerBackedGroundingTick_WhenOwnerSampleStateIsPending()
         {
             using var world = World.Create();
             var runtime = new PresenterEntityRuntime(world);
@@ -1294,8 +1294,8 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(
                 world.Has<PerfHasGrounding>(presenter),
-                Is.True,
-                "Owner ContinuousHeightmapSampleState with Sampled=0 is not resolved provenance; presenter must still ground.");
+                Is.False,
+                "Entity-backed continuous grounding must remain owned by TerrainHeightSyncSystem while the first sample is pending.");
 
             using var system = new PresenterBehaviorSystem(
                 world,
