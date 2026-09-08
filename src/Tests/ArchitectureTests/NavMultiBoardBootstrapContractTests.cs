@@ -34,7 +34,7 @@ namespace Ludots.Tests.Architecture
             string tempRoot = CreateTempAssetsRoot(repoRoot);
             try
             {
-                GameEngine engine = CreateEngine(repoRoot, tempRoot);
+                using GameEngine engine = CreateEngine(repoRoot, tempRoot);
                 var terrain = new FlatGridLogicTerrainField(
                     ChunkSizeCells * 2,
                     ChunkSizeCells * 2,
@@ -86,7 +86,7 @@ namespace Ludots.Tests.Architecture
             string tempRoot = CreateTempAssetsRoot(repoRoot);
             try
             {
-                GameEngine engine = CreateEngine(repoRoot, tempRoot);
+                using GameEngine engine = CreateEngine(repoRoot, tempRoot);
                 var terrain = new FlatGridLogicTerrainField(
                     ChunkSizeCells * 2,
                     ChunkSizeCells * 2,
@@ -143,7 +143,7 @@ namespace Ludots.Tests.Architecture
             string tempRoot = CreateTempAssetsRoot(repoRoot);
             try
             {
-                GameEngine engine = CreateEngine(repoRoot, tempRoot);
+                using GameEngine engine = CreateEngine(repoRoot, tempRoot);
                 var terrain = new FlatGridLogicTerrainField(
                     ChunkSizeCells,
                     ChunkSizeCells,

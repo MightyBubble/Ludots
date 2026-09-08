@@ -28,8 +28,33 @@ namespace Ludots.Core.Navigation.NavMesh
             string safe = SanitizePathSegment(profileId);
             string boardSegment = string.IsNullOrWhiteSpace(boardId)
                 ? string.Empty
-                : $"board_{SanitizePathSegment(boardId)}/";
+                : $"board_{GetBoardPathSegment(boardId)}/";
             return $"assets/Data/Nav/{mapId}/{boardSegment}layer{layer}/profile_{safe}/{xDir}/navtile_{chunkX}_{chunkY}.ntil";
+        }
+
+        /// <summary>
+        /// Path segment for a board id. Sanitising alone is not injective ("a.b" and "a_b"
+        /// both become "a_b"), which would let two boards overwrite each other's tiles, so an
+        /// escaping suffix is appended whenever sanitising actually changed the input.
+        /// </summary>
+        public static string GetBoardPathSegment(string boardId)
+        {
+            if (string.IsNullOrWhiteSpace(boardId)) return string.Empty;
+            string sanitized = SanitizePathSegment(boardId);
+            if (string.Equals(sanitized, boardId, StringComparison.Ordinal)) return sanitized;
+            return $"{sanitized}~{StableSuffix(boardId)}";
+        }
+
+        private static string StableSuffix(string raw)
+        {
+            uint hash = 2166136261u;
+            for (int i = 0; i < raw.Length; i++)
+            {
+                hash ^= raw[i];
+                hash *= 16777619u;
+            }
+
+            return hash.ToString("x8", CultureInfo.InvariantCulture);
         }
 
         /// <summary>

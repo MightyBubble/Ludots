@@ -366,6 +366,23 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void BoardPathSegment_CannotCollideAcrossDistinctBoardNames()
+        {
+            string dotted = NavAssetPaths.GetNavTileRelativePath("coastline", "board.1", 0, "infantry", 0, 0);
+            string underscored = NavAssetPaths.GetNavTileRelativePath("coastline", "board_1", 0, "infantry", 0, 0);
+
+            Assert.That(dotted, Is.Not.EqualTo(underscored),
+                "sanitising alone is not injective; two distinct boards must not share an artifact path");
+        }
+
+        [Test]
+        public void BoardPathSegment_KeepsSafeNamesUnchanged()
+        {
+            Assert.That(NavAssetPaths.GetBoardPathSegment("mainland"), Is.EqualTo("mainland"));
+            Assert.That(NavAssetPaths.GetBoardPathSegment("board_2"), Is.EqualTo("board_2"));
+        }
+
+        [Test]
         public void IsBoardScoped_MatchesTheLoaderRule()
         {
             Assert.That(NavAssetPaths.IsBoardScoped(new[] { true }), Is.False);
