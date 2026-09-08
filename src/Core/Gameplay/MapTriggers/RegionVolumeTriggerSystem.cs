@@ -147,7 +147,14 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
                     Entity entity = Unsafe.Add(ref entityFirst, index);
                     bool hasTags = World.TryGet<GameplayTagContainer>(entity, out GameplayTagContainer tags);
-                    _trackedBuffer.Add(new TrackedEntity(entity, positions[index].Value, tags, hasTags));
+                    bool hasPrevious = World.TryGet(entity, out PreviousWorldPositionCm previous);
+                    _trackedBuffer.Add(new TrackedEntity(
+                        entity,
+                        positions[index].Value,
+                        previous.Value,
+                        hasPrevious,
+                        tags,
+                        hasTags));
                 }
             }
         }
@@ -165,6 +172,17 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
                 if (!volume.Shape.Contains(tracked.Position, volume.Anchor))
                 {
+                    // Swept crossing (#1475): a mover whose travel segment passed
+                    // through the volume between waves still reports the crossing as
+                    // an enter+exit pair, without joining the occupancy inside-set.
+                    if (tracked.HasPreviousPosition &&
+                        !volume.Inside.Contains(tracked.Entity) &&
+                        volume.Shape.IntersectsPath(tracked.PreviousPosition, tracked.Position, volume.Anchor))
+                    {
+                        FireVolumeEvent(session, volume, entering: true, tracked.Entity);
+                        FireVolumeEvent(session, volume, entering: false, tracked.Entity);
+                    }
+
                     continue;
                 }
 
@@ -309,13 +327,23 @@ namespace Ludots.Core.Gameplay.MapTriggers
         {
             public readonly Entity Entity;
             public readonly Fix64Vec2 Position;
+            public readonly Fix64Vec2 PreviousPosition;
+            public readonly bool HasPreviousPosition;
             public readonly GameplayTagContainer Tags;
             public readonly bool HasTags;
 
-            public TrackedEntity(Entity entity, Fix64Vec2 position, GameplayTagContainer tags, bool hasTags)
+            public TrackedEntity(
+                Entity entity,
+                Fix64Vec2 position,
+                Fix64Vec2 previousPosition,
+                bool hasPreviousPosition,
+                GameplayTagContainer tags,
+                bool hasTags)
             {
                 Entity = entity;
                 Position = position;
+                PreviousPosition = previousPosition;
+                HasPreviousPosition = hasPreviousPosition;
                 Tags = tags;
                 HasTags = hasTags;
             }
