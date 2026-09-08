@@ -71,8 +71,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             baseContext.ContextId == battleProfileId &&
             baseContext.Source == InteractionContextInstanceSource.TemplateSpawn,
             "指挥官 rep 出生即携带战斗 context Instance（模板 initialInteractionContext）");
-        Assert.That(engine.MergedConfig.StartupInputContexts, Is.Empty,
-            "Case E 不得靠 startupInputContexts 开机硬推键位；CaseE.Controls（含 PointerPos）由实体投影");
+        Assert.That(engine.MergedConfig.StartupInputContexts, Does.Not.Contain("CaseE.Controls"),
+            "框选键位必须由实体投影，默认镜头键位可以在启动时启用");
         int caseEControlsId = profiles.InputContextIdRegistry.GetId("CaseE.Controls");
         Assert.That(baseContext.InputContextId, Is.EqualTo(caseEControlsId),
             "battle 档案 inputContextId=CaseE.Controls 应写入挂载实例");
@@ -473,16 +473,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             "主体死亡补发 onDeactivated → box_hover_clear 清空预览（死亡路径槽执行）");
     }
 
-    /// <summary>
-    /// 全局集合装饰合同（D15+）：环不再是 marine 模板上的行为槽，而是全局规则
-    /// presenter.case_e.collection_decoration 观察集合成员增减、在成员实体上动态
-    /// Create/Destroy 的独立 Scoped 实例。验证三点：
-    ///   1. 成员入 box_hover → 成员实体上出现 ring.preview（owner=成员，跟随其 transform）；
-    ///   2. 指针离开命中 → 集合成员移除 → 环实例随之销毁（实例生灭，非行为开关）；
-    ///   3. 整个机制零引擎改动，纯配置（marine_root 只剩 body 资产）。
-    /// </summary>
     [Test]
-    public void GlobalCollectionDecoration_RingsLiveAndDieWithCollectionMembership()
+    public void GlobalCollectionDecoration_RingsShowAndHideWithCollectionMembership()
     {
         string repoRoot = FindRepoRoot();
         var backend = new TestInputBackend();
@@ -523,10 +515,10 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId, "未命中成员无环实例", marine3);
         AssertRingOff(engine, presenterRuntime, ringAttachmentDefId, "预览阶段不连蓝环", marine1, marine2, marine3);
 
-        // 指针离开命中 → 集合成员移除 → 环实例随成员资格销毁（实例生灭，不是行为开关）
         backend.SetMousePosition(new Vector2(-900f, 0f));
         TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 1);
-        AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId, "成员离开预览集→环实例销毁", marine2);
+        AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId, "成员离开预览集后隐藏黄环", marine2);
+        Assert.That(CountPresentersOwnedBy(presenterRuntime, ringPreviewDefId, marine2, engine.World), Is.EqualTo(1));
         AssertPreviewOn(engine, presenterRuntime, ringPreviewDefId, "仍在命中集者保留黄环", marine1);
 
         // 抬起落定 → selected 集合落定（蓝环挂到成员），boxing 停用清空预览集
@@ -537,7 +529,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.LessThanOrEqualTo(0),
             "停用 boxing → onDeactivated 槽清空预览集");
         AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId,
-            "预览集清空→所有黄环实例销毁", marine1, marine2, marine3);
+            "预览集清空后所有黄环隐藏", marine1, marine2, marine3);
         AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "selected 落定→蓝环实例挂到成员", marine1);
         AssertNoTriggerErrors(engine);
     }
@@ -728,8 +720,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     {
         foreach (Entity unit in units)
         {
-            Assert.That(CountPresentersOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(1),
-                $"{message}：{unit} 应有一个选择环 presenter 实例（蓝环）");
+            Assert.That(CountVisibleRingsOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(1),
+                $"{message}：{unit} 应显示一个蓝环");
         }
     }
 
@@ -742,8 +734,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     {
         foreach (Entity unit in units)
         {
-            Assert.That(CountPresentersOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(0),
-                $"{message}：{unit} 不应有选择环 presenter 实例");
+            Assert.That(CountVisibleRingsOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(0),
+                $"{message}：{unit} 不应显示蓝环");
         }
     }
 
@@ -756,8 +748,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     {
         foreach (Entity unit in units)
         {
-            Assert.That(CountPresentersOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(1),
-                $"{message}：{unit} 应有一个预览环 presenter 实例（黄环）");
+            Assert.That(CountVisibleRingsOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(1),
+                $"{message}：{unit} 应显示一个黄环");
         }
     }
 
@@ -770,9 +762,25 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     {
         foreach (Entity unit in units)
         {
-            Assert.That(CountPresentersOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(0),
-                $"{message}：{unit} 不应有预览环 presenter 实例");
+            Assert.That(CountVisibleRingsOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(0),
+                $"{message}：{unit} 不应显示黄环");
         }
+    }
+
+    private static int CountVisibleRingsOwnedBy(PresenterEntityRuntime runtime, int defId, Entity owner, World world)
+    {
+        if (!runtime.TryGetActiveByOwner(owner, out var bucket)) return 0;
+        Assert.That(PresenterParamKeyRegistry.TryGetId("case_e.ring.visible", out int visibleKey), Is.True);
+        int count = 0;
+        for (int i = 0; i < bucket.Count; i++)
+        {
+            Entity candidate = bucket[i];
+            if (!world.IsAlive(candidate) || !world.Has<PresenterState>(candidate) ||
+                world.Get<PresenterState>(candidate).DefId != defId) continue;
+            Assert.That(runtime.TryResolveInt(candidate, visibleKey, out int visible), Is.True);
+            if (visible != 0) count++;
+        }
+        return count;
     }
 
     private static int CountPresentersOwnedBy(PresenterEntityRuntime runtime, int defId, Entity owner, World world)

@@ -194,7 +194,8 @@
             2.6,
             0.12,
             2.6
-          ]
+          ],
+          "visibilityParamKey": "case_e.ring.visible"
         },
         "style": {
           "color": [
@@ -204,6 +205,13 @@
             1
           ]
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "case_e.ring.visible",
+        "lane": "Int",
+        "intValue": 0
       }
     ]
   },
@@ -234,7 +242,8 @@
             3.0,
             0.08,
             3.0
-          ]
+          ],
+          "visibilityParamKey": "case_e.ring.visible"
         },
         "style": {
           "color": [
@@ -244,6 +253,13 @@
             0.95
           ]
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "case_e.ring.visible",
+        "lane": "Int",
+        "intValue": 0
       }
     ]
   },
@@ -259,7 +275,11 @@
           "kind": "CreatePresenter",
           "definitionId": "presenter.case_e.ring.attachment",
           "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
+          "ownerSource": "EventSource",
+          "paramKey": "case_e.ring.visible",
+          "paramLane": "Int",
+          "valueSource": "Fixed",
+          "intValue": 1
         }
       },
       {
@@ -268,10 +288,14 @@
           "key": "selected"
         },
         "command": {
-          "kind": "DestroyScopedPresenter",
+          "kind": "SetParam",
           "definitionId": "presenter.case_e.ring.attachment",
           "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
+          "ownerSource": "EventSource",
+          "paramKey": "case_e.ring.visible",
+          "paramLane": "Int",
+          "valueSource": "Fixed",
+          "intValue": 0
         }
       },
       {
@@ -283,7 +307,11 @@
           "kind": "CreatePresenter",
           "definitionId": "presenter.case_e.ring.preview",
           "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
+          "ownerSource": "EventSource",
+          "paramKey": "case_e.ring.visible",
+          "paramLane": "Int",
+          "valueSource": "Fixed",
+          "intValue": 1
         }
       },
       {
@@ -292,10 +320,14 @@
           "key": "case_e.box_hover"
         },
         "command": {
-          "kind": "DestroyScopedPresenter",
+          "kind": "SetParam",
           "definitionId": "presenter.case_e.ring.preview",
           "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
+          "ownerSource": "EventSource",
+          "paramKey": "case_e.ring.visible",
+          "paramLane": "Int",
+          "valueSource": "Fixed",
+          "intValue": 0
         }
       },
       {
