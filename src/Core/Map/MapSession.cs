@@ -70,6 +70,13 @@ namespace Ludots.Core.Map
         /// </summary>
         public IReadOnlySet<string>? RegionVolumeKeys { get; internal set; }
 
+        /// <summary>
+        /// Field region emission contracts keyed by region key, loaded from
+        /// Fields/region_emissions.json at map load (#1468); region entities carry
+        /// the matching RegionVolumeEmissionCm. Null after Cleanup/Dispose.
+        /// </summary>
+        public IReadOnlyDictionary<string, Ludots.Core.Gameplay.MapTriggers.RegionVolumeEmissionCm>? FieldRegionEmissions { get; internal set; }
+
         private readonly Dictionary<string, IBoard> _boards = new Dictionary<string, IBoard>(StringComparer.OrdinalIgnoreCase);
         private readonly List<Trigger> _triggers = new List<Trigger>();
 
@@ -193,6 +200,7 @@ namespace Ludots.Core.Map
             RegionIndex = null;
             RegionGroups = null;
             RegionVolumeKeys = null;
+            FieldRegionEmissions = null;
 
             State = MapSessionState.Disposed;
         }
@@ -211,6 +219,7 @@ namespace Ludots.Core.Map
                 RegionIndex = null;
                 RegionGroups = null;
                 RegionVolumeKeys = null;
+                FieldRegionEmissions = null;
                 State = MapSessionState.Disposed;
             }
         }
