@@ -9855,7 +9855,7 @@
       "id": "region_volume_textbook",
       "path": "mods/showcases/region_volume_textbook/RegionVolumeTextbookMod",
       "title": "Region Volume 教科书",
-      "summary": "区域触发教科书（#1461）：实体模板声明 polygon 体积 + entityTags 部队过滤，地图 Entities[] 以 PositionXCm 兜底锚点摆放，TriggerGraph 监听 RegionEntered + filters.region，图体 map-variable 链表达一次性刷怪（入口 once 字段刻意不用）；全程零 showcase 代码。",
+      "summary": "区域触发教科书（#1461）：实体模板声明 polygon 体积 + entityTags 部队过滤，地图 Entities[] 以 PositionXCm 兜底锚点摆放，TriggerGraph 监听 RegionEntered + filters.region，图体 map-variable 链表达一次性刷怪（入口 once 字段刻意不用）；全程零 showcase 代码。 部队可选可下令（右键移动进圈），AgentBridge 预设随行。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -9863,8 +9863,8 @@
         "trigger-graph",
         "textbook"
       ],
-      "binding": null,
-      "preset": null,
+      "binding": "region_volume_textbook",
+      "preset": "region_volume_textbook_raylib",
       "docsPath": "gitbook/architecture/region-volume-textbook.md",
       "readmePath": null,
       "acceptanceTest": "RegionVolumeTextbookAcceptanceTests",

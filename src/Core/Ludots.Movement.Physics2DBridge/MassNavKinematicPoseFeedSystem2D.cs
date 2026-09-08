@@ -7,6 +7,7 @@ using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Mathematics.Shapes;
 
 namespace Ludots.Core.Movement.Physics2DBridge
 {

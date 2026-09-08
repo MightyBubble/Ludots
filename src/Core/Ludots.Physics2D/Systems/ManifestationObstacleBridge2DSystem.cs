@@ -8,6 +8,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Platform.Abstractions;
+using Ludots.Core.Mathematics.Shapes;
 
 namespace Ludots.Core.Physics2D.Systems
 {
