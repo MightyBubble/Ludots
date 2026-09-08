@@ -58,6 +58,16 @@ namespace Ludots.Core.Navigation.NavMesh
         }
 
         /// <summary>
+        /// Manifest path for a map's nav tiles. It sits next to the map's nav artifact root so a
+        /// cold start can validate identity and format before reading any .ntil file.
+        /// </summary>
+        public static string GetNavTileManifestRelativePath(string mapId)
+        {
+            if (string.IsNullOrWhiteSpace(mapId)) throw new ArgumentException("mapId is required.", nameof(mapId));
+            return $"assets/Data/Nav/{mapId}/navtiles.manifest.json";
+        }
+
+        /// <summary>
         /// Whether a map's nav artifacts are addressed per board. Both the bake writers and
         /// the runtime loader must agree, otherwise one writes under a board segment the other
         /// never reads. A map is board-scoped exactly when it declares more than one board

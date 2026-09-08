@@ -4136,6 +4136,12 @@ namespace Ludots.Core.Engine
                     grid.HeightChunks);
             }
 
+            // Cold start must prove which artifact set it is about to serve before any tile is
+            // read. When a manifest is present it is binding: identity and format mismatches
+            // fail closed instead of silently serving another map's or version's geometry.
+            // Maps baked before manifests existed simply have no manifest to validate.
+            ValidateNavTileManifest(mapId, boardScopedAddressing ? navigableBoards[0].Name : null);
+
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
                 int layer = bakeConfig.Layers[li].Layer;
@@ -4505,6 +4511,39 @@ namespace Ludots.Core.Engine
             var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
                 ?? throw new InvalidOperationException("NavMeshBakeConfig requires AgentProfiles.");
             return new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
+        }
+
+        private void ValidateNavTileManifest(string mapId, string? boardId)
+        {
+            string rel = NavAssetPaths.GetNavTileManifestRelativePath(mapId);
+            if (!TryResolveSingleExistingUri(rel, out string manifestUri)) return;
+            if (!VFS.TryResolveFullPath(manifestUri, out string manifestPath) || !File.Exists(manifestPath)) return;
+
+            NavTileManifest manifest;
+            try
+            {
+                manifest = NavTileManifestSerializer.Read(manifestPath);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has an unusable nav tile manifest at '{rel}': {ex.Message} Re-bake the map's nav tiles.", ex);
+            }
+
+            if (!string.Equals(manifest.MapId, mapId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Nav tile manifest at '{rel}' declares mapId '{manifest.MapId}' but the loading map is '{mapId}'. Re-bake this map.");
+            }
+
+            string expectedBoard = boardId ?? string.Empty;
+            if (!string.Equals(manifest.BoardId ?? string.Empty, expectedBoard, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Nav tile manifest at '{rel}' declares boardId '{manifest.BoardId}' but the runtime addresses board '{expectedBoard}'. Re-bake this map.");
+            }
+
+            SetService(CoreServiceKeys.NavTileManifest, manifest);
         }
 
         private string ResolveSingleExistingUri(string relPath)

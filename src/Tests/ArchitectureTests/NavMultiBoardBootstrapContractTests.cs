@@ -191,7 +191,7 @@ namespace Ludots.Tests.Architecture
         private static void WriteBoardTileFiles(
             string assetsRoot,
             string mapId,
-            string boardId,
+            string? boardId,
             int originXcm,
             int originZcm)
         {
@@ -253,6 +253,150 @@ namespace Ludots.Tests.Architecture
             {
                 File.Copy(file, file.Replace(source, target), overwrite: true);
             }
+        }
+
+        [Test]
+        public void LoadNavForMap_ValidManifest_IsPublishedForColdStart()
+        {
+            string repoRoot = FindRepoRoot();
+            string tempRoot = CreateTempAssetsRoot(repoRoot);
+            try
+            {
+                using GameEngine engine = CreateEngine(repoRoot, tempRoot);
+                var terrain = new FlatGridLogicTerrainField(ChunkSizeCells * 2, ChunkSizeCells * 2, chunkSizeCells: ChunkSizeCells);
+                const string mapId = "manifest_cold_start";
+
+                var mapConfig = new MapConfig
+                {
+                    Id = mapId,
+                    Tags = new List<string> { MapTags.FeatureNavMeshOn.Name },
+                    Boards = new List<BoardConfig> { CreateBoard("default", 0, 0) }
+                };
+
+                WriteBoardTileFiles(tempRoot, mapId, null, 0, 0);
+                WriteManifest(tempRoot, mapId, boardId: string.Empty);
+
+                SetLogicTerrain(engine, terrain);
+                engine.LoadNavForMapForTests(mapId, mapConfig);
+
+                Assert.That(engine.TryGetService(CoreServiceKeys.NavTileManifest, out NavTileManifest manifest), Is.True);
+                Assert.That(manifest!.MapId, Is.EqualTo(mapId));
+                Assert.That(manifest.BuildHash, Does.StartWith("fnv1a64:"));
+            }
+            finally
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+
+        [Test]
+        public void LoadNavForMap_ManifestForAnotherMap_FailsClosed()
+        {
+            string repoRoot = FindRepoRoot();
+            string tempRoot = CreateTempAssetsRoot(repoRoot);
+            try
+            {
+                using GameEngine engine = CreateEngine(repoRoot, tempRoot);
+                var terrain = new FlatGridLogicTerrainField(ChunkSizeCells * 2, ChunkSizeCells * 2, chunkSizeCells: ChunkSizeCells);
+                const string mapId = "manifest_foreign";
+
+                var mapConfig = new MapConfig
+                {
+                    Id = mapId,
+                    Tags = new List<string> { MapTags.FeatureNavMeshOn.Name },
+                    Boards = new List<BoardConfig> { CreateBoard("default", 0, 0) }
+                };
+
+                WriteBoardTileFiles(tempRoot, mapId, null, 0, 0);
+                // Same path, but the manifest claims a different map: geometry from one map
+                // must never be served for another.
+                WriteManifest(tempRoot, mapId, boardId: string.Empty, declaredMapId: "some_other_map");
+
+                SetLogicTerrain(engine, terrain);
+                Assert.That(
+                    () => engine.LoadNavForMapForTests(mapId, mapConfig),
+                    Throws.InvalidOperationException.With.Message.Contains("some_other_map"));
+            }
+            finally
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+
+        [Test]
+        public void LoadNavForMap_CorruptManifest_FailsClosedWithRebakeAction()
+        {
+            string repoRoot = FindRepoRoot();
+            string tempRoot = CreateTempAssetsRoot(repoRoot);
+            try
+            {
+                using GameEngine engine = CreateEngine(repoRoot, tempRoot);
+                var terrain = new FlatGridLogicTerrainField(ChunkSizeCells * 2, ChunkSizeCells * 2, chunkSizeCells: ChunkSizeCells);
+                const string mapId = "manifest_corrupt";
+
+                var mapConfig = new MapConfig
+                {
+                    Id = mapId,
+                    Tags = new List<string> { MapTags.FeatureNavMeshOn.Name },
+                    Boards = new List<BoardConfig> { CreateBoard("default", 0, 0) }
+                };
+
+                WriteBoardTileFiles(tempRoot, mapId, null, 0, 0);
+                string rel = NavAssetPaths.GetNavTileManifestRelativePath(mapId);
+                string path = Path.Combine(tempRoot, rel.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, "{ not json");
+
+                SetLogicTerrain(engine, terrain);
+                Assert.That(
+                    () => engine.LoadNavForMapForTests(mapId, mapConfig),
+                    Throws.InvalidOperationException.With.Message.Contains("Re-bake"));
+            }
+            finally
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+
+        private static void WriteManifest(
+            string assetsRoot,
+            string mapId,
+            string boardId,
+            string? declaredMapId = null)
+        {
+            var entries = new List<NavTileManifestEntry>();
+            foreach (string profileId in Profiles)
+            {
+                for (int chunkY = 0; chunkY < 2; chunkY++)
+                {
+                    for (int chunkX = 0; chunkX < 2; chunkX++)
+                    {
+                        entries.Add(new NavTileManifestEntry
+                        {
+                            Layer = 0,
+                            ProfileId = profileId,
+                            ChunkX = chunkX,
+                            ChunkY = chunkY,
+                            TileVersion = 1,
+                            TileChecksum = "fnv1a64:0000000000000000"
+                        });
+                    }
+                }
+            }
+
+            var manifest = new NavTileManifest
+            {
+                MapId = declaredMapId ?? mapId,
+                BoardId = boardId,
+                SourceRevision = "file:fnv1a64:deadbeef:0",
+                Algorithm = "Recast",
+                Mode = "Offline",
+                TileVersion = 1,
+                Tiles = entries.ToArray()
+            };
+
+            string rel = NavAssetPaths.GetNavTileManifestRelativePath(mapId);
+            NavTileManifestSerializer.Write(Path.Combine(assetsRoot, rel.Replace('/', Path.DirectorySeparatorChar)), manifest);
         }
 
         private static void SetLogicTerrain(GameEngine engine, LogicTerrainField terrain)

@@ -457,6 +457,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<AgentProfileRegistry> AgentProfiles = new("AgentProfiles");
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");
         public static readonly ServiceKey<NavMeshProfileRegistry> NavMeshProfiles = new("NavMeshProfiles");
+        public static readonly ServiceKey<NavTileManifest> NavTileManifest = new("NavTileManifest");
         public static readonly ServiceKey<NavQueryServiceRegistry> NavQueryServices = new("NavQueryServices");
         public static readonly ServiceKey<INavObstacleAuthoringProvider> NavObstacleAuthoringProvider = new("NavObstacleAuthoringProvider");
         public static readonly ServiceKey<NavObstacleSet> RuntimeNavMeshAuthoredObstacles = new("RuntimeNavMeshAuthoredObstacles");
