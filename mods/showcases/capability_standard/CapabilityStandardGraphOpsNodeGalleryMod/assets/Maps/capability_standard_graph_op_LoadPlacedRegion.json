@@ -38,12 +38,6 @@
       }
     },
     {
-      "InstanceId": "yard_region",
-      "Template": "GraphOps.RegionYard",
-      "PositionXCm": 400,
-      "PositionYCm": 0
-    },
-    {
       "InstanceId": "marker",
       "Template": "GraphOps.Target",
       "Overrides": {
@@ -60,6 +54,19 @@
           "base": {
             "Health": 100
           }
+        }
+      }
+    },
+    {
+      "InstanceId": "yard_region",
+      "Template": "GraphOps.RegionVolumeAnchor",
+      "PositionXCm": 400,
+      "PositionYCm": 0,
+      "Overrides": {
+        "RegionVolumeCm": {
+          "volumeKey": "yard",
+          "shape": "circle",
+          "radiusCm": 200
         }
       }
     }

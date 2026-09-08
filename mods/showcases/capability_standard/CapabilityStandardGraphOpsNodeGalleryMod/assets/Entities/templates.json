@@ -79,12 +79,10 @@
     }
   },
   {
-    "id": "GraphOps.RegionYard",
+    "id": "GraphOps.RegionVolumeAnchor",
     "components": {
-      "RegionVolumeCm": {
-        "volumeKey": "yard",
-        "shape": "circle",
-        "radiusCm": 200
+      "Name": {
+        "Value": "RegionVolumeAnchor"
       }
     }
   }

@@ -708,15 +708,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         internal static IReadOnlySet<string> CollectRegionIds(MapSession session)
         {
-            List<MapRegionDefinition> regions = MapRegionDefinition.ParseList(
-                session.MapConfig?.Regions, session.MapId.Value);
-            var ids = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < regions.Count; i++)
-            {
-                ids.Add(regions[i].Id);
-            }
-
-            return ids;
+            return session.RegionVolumeKeys ?? new HashSet<string>(StringComparer.Ordinal);
         }
     }
 }
