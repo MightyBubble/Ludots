@@ -1955,7 +1955,6 @@ namespace Ludots.Core.Presentation.Presenters
                 !_world.IsAlive(state.OwnerEntity) ||
                 !_world.Has<VisualTransform>(state.OwnerEntity) ||
                 !_world.Has<ContinuousHeightmapSampleState>(state.OwnerEntity) ||
-                _world.Get<ContinuousHeightmapSampleState>(state.OwnerEntity).Sampled == 0 ||
                 !_world.Has<PresenterTransformSource>(presenter) ||
                 _world.Get<PresenterTransformSource>(presenter).Value != TransformSource.EntityTransform)
             {
