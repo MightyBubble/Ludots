@@ -1804,13 +1804,29 @@ export const Toolbar: React.FC = () => {
                 <div className="mr-1 min-w-36">
                     <div className="text-sm font-semibold text-white">Ludots Editor</div>
                     <div className="text-[10px] text-slate-500">Navigation authoring</div>
-                    <Link
-                        to="/gas-graphs"
-                        className="pointer-events-auto mt-1 inline-block text-[10px] text-sky-300 underline hover:text-sky-200"
-                        title="Open GAS Query graph editor"
-                    >
-                        GAS Graphs
-                    </Link>
+                    <div className="pointer-events-auto mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
+                        <Link
+                            to="/gas-graphs"
+                            className="text-[10px] text-sky-300 underline hover:text-sky-200"
+                            title="Open Func / Event Graph editor"
+                        >
+                            Graph
+                        </Link>
+                        <Link
+                            to="/bt-editor"
+                            className="text-[10px] text-violet-300 underline hover:text-violet-200"
+                            title="Open Behavior Tree editor"
+                        >
+                            BT
+                        </Link>
+                        <Link
+                            to="/fsm-editor"
+                            className="text-[10px] text-fuchsia-300 underline hover:text-fuchsia-200"
+                            title="Open FSM editor"
+                        >
+                            FSM
+                        </Link>
+                    </div>
                 </div>
                 <select
                     value={selectedModId ?? ''}

@@ -41,7 +41,7 @@ namespace Ludots.Tests.Gas.Production
             runtime.EnsureWorld();
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
-            Assert.That(runtime.Metrics.Detail, Does.Contain("BT Script"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("BT L2"));
             Assert.That(runtime.GuardCount, Is.GreaterThanOrEqualTo(8));
             Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
@@ -57,7 +57,7 @@ namespace Ludots.Tests.Gas.Production
             for (int i = 0; i < 12; i++)
             {
                 runtime.Tick(0.2f);
-                if (runtime.Metrics.Detail.Contains("patrol leaf yielding", StringComparison.Ordinal))
+                if (runtime.Metrics.Detail.Contains("leaf yielding", StringComparison.Ordinal))
                 {
                     sawYield = true;
                     break;
@@ -67,28 +67,28 @@ namespace Ludots.Tests.Gas.Production
             Assert.That(sawYield, Is.True, "Expected patrol ActionLib leaf to yield and resume across think waves.");
         }
 
-        /// <summary>Judge: the arena main tree really is one compiled Script program — structure in instructions.</summary>
+        /// <summary>Judge: L2 tree topology + leaf Scripts — not a whole-tree Script sugar shell.</summary>
         [Test]
-        public void BehaviorTreeArena_MainTree_CompiledStructureInInstructions()
+        public void BehaviorTreeArena_MainTree_IsL2TopologyWithLeafScripts()
         {
-            int treeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.tree.patrolChaseAttack", GraphActionHost.BehaviorTree);
-            Assert.That(_programs.TryGetProgram(treeId, out ReadOnlySpan<GraphInstruction> program), Is.True);
-            Assert.That(program.Length, Is.GreaterThan(0));
+            BehaviorTreeDefinition tree = _behavior.RequireTree("bt.patrolChaseAttack");
+            Assert.That(tree.Nodes.Length, Is.GreaterThan(0));
 
+            int patrolId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.patrol", GraphActionHost.BehaviorTree);
+            Assert.That(_programs.TryGetProgram(patrolId, out ReadOnlySpan<GraphInstruction> patrol), Is.True);
             var ops = new HashSet<ushort>();
-            foreach (ref readonly GraphInstruction instruction in program) ops.Add(instruction.Op);
-
-            Assert.That(ops, Does.Contain((ushort)GraphNodeOp.Call), "Composite bodies must lower to Call.");
-            Assert.That(ops, Does.Contain((ushort)GraphNodeOp.Return));
-            Assert.That(ops, Does.Contain((ushort)GraphNodeOp.CompareEqInt), "Status short-circuits must lower to CompareEqInt.");
-            Assert.That(ops, Does.Contain((ushort)GraphNodeOp.JumpIfFalse));
-            Assert.That(ops, Does.Contain((ushort)GraphNodeOp.CompareLtInt), "Leaf thresholds must be in-graph comparisons.");
-            Assert.That(ops, Does.Contain((ushort)GraphNodeOp.MoveInt), "Leaves must re-publish the ambient I[0] distance.");
-            Assert.That(ops, Does.Contain((ushort)GraphNodeOp.Yield), "The patrol leaf must yield across think waves.");
+            foreach (ref readonly GraphInstruction instruction in patrol) ops.Add(instruction.Op);
+            Assert.That(ops, Does.Contain((ushort)GraphNodeOp.Yield), "The patrol leaf Script must yield across think waves.");
             Assert.That(ops, Does.Contain((ushort)GraphNodeOp.HaltReturnInt));
+
+            int seeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
+            Assert.That(_programs.TryGetProgram(seeId, out ReadOnlySpan<GraphInstruction> see), Is.True);
+            var seeOps = new HashSet<ushort>();
+            foreach (ref readonly GraphInstruction instruction in see) seeOps.Add(instruction.Op);
+            Assert.That(seeOps, Does.Contain((ushort)GraphNodeOp.CompareLtInt), "seeEnemy leaf thresholds live in the leaf Script.");
         }
 
-        /// <summary>Regression: the real-graph tree keeps the old intent sequence (patrol → chase → attack).</summary>
+        /// <summary>Regression: L2 tree + leaf Scripts keep patrol → chase → attack intents.</summary>
         [Test]
         public void BehaviorTreeArena_RealGraphTree_IntentSequenceMatchesOldBehavior()
         {
@@ -111,19 +111,38 @@ namespace Ludots.Tests.Gas.Production
             }
 
             Assert.That(sawPatrol, Is.True, "Guards must patrol when no enemy is within sight.");
-            Assert.That(sawChase, Is.True, "Guards must chase when the graph's see-enemy leaf succeeds.");
-            Assert.That(sawAttack, Is.True, "Guards must attack when the graph's in-range leaf succeeds.");
-            Assert.That(runtime.Metrics.Detail, Does.Contain("BT Script"));
+            Assert.That(sawChase, Is.True, "Guards must chase when the see-enemy leaf succeeds.");
+            Assert.That(sawAttack, Is.True, "Guards must attack when the in-range leaf succeeds.");
+            Assert.That(runtime.Metrics.Detail, Does.Contain("BT L2"));
+        }
+
+        [Test]
+        public void BehaviorTreeArena_PlayableControls_ChangeRuntimeState()
+        {
+            var runtime = new BehaviorTreeArenaRuntime();
+            runtime.Bind(_programs, _actions, _behavior);
+            runtime.EnsureWorld();
+
+            runtime.TogglePaused();
+            int wavesBeforeStep = runtime.Metrics.ThinkWaves;
+            runtime.Tick(1f);
+            Assert.That(runtime.Metrics.ThinkWaves, Is.EqualTo(wavesBeforeStep));
+            runtime.Step();
+            Assert.That(runtime.Metrics.ThinkWaves, Is.GreaterThan(wavesBeforeStep));
+
+            runtime.ToggleL2();
+            Assert.That(runtime.BuildControlState().L2Enabled, Is.False);
+            runtime.ToggleStimulus();
+            Assert.That(runtime.BuildControlState().StimulusEnabled, Is.False);
+            runtime.IncreaseSightRadius();
+            runtime.IncreaseThinkPeriod();
+            Assert.That(runtime.SightRadius, Is.EqualTo(7f).Within(0.001f));
+            Assert.That(runtime.ThinkPeriodSeconds, Is.EqualTo(0.3f).Within(0.001f));
         }
 
         /// <summary>
-        /// Crowd honesty gate: the 10k crowd band is a labeled no-graph pressure baseline
-        /// (C# BehaviorTreeWorld, zero Script slices) while the featured segment runs the
-        /// real graph tree. Measured 2026-08-24 on this box: a 10k real-graph crowd costs
-        /// 9.5-15.8ms per think wave and breaks the 25ms CI envelope combined with the
-        /// featured tree, so the pressure band stays on the C# topology by decision, not by
-        /// omission. This test locks the split so the band cannot silently regain a graph
-        /// claim, and prints both segments' numbers on every run.
+        /// Crowd honesty gate: featured = L2 BehaviorTreeWorld (bt.patrolChaseAttack) with leaf Scripts;
+        /// 10k crowd = no-graph AlwaysSuccess tree (ScriptSlices==0).
         /// </summary>
         [Test]
         public void BehaviorTreeArena_CrowdBand_NoGraphPressureBaseline_Labeled()
@@ -134,8 +153,8 @@ namespace Ludots.Tests.Gas.Production
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
 
-            Assert.That(runtime.TreeHost, Is.Not.Null, "The featured segment must run the real graph tree host.");
-            Assert.That(runtime.TreeHost!.Count, Is.GreaterThanOrEqualTo(8));
+            Assert.That(runtime.TreeWorld, Is.Not.Null, "The featured segment must run L2 BehaviorTreeWorld.");
+            Assert.That(runtime.TreeWorld!.Count, Is.GreaterThanOrEqualTo(8));
 
             BehaviorTreeWorld? crowd = runtime.CrowdWorld;
             Assert.That(crowd, Is.Not.Null, "The crowd pressure band must exist.");
@@ -157,33 +176,53 @@ namespace Ludots.Tests.Gas.Production
             var runtime = new HfsmSentryArenaRuntime();
             runtime.Bind(_programs, _actions, _behavior);
             runtime.EnsureWorld();
-            Assert.That(runtime.FeaturedUsesGraphFsmHost, Is.True,
-                "Featured sentry band must run GraphFsmHost / Graph.FSM.Sentry (FSM-1a), not the legacy interpreter.");
+            Assert.That(runtime.FeaturedUsesHfsmWorld, Is.True,
+                "Featured sentry band must run HfsmWorld / hfsm.sentry.scripted + leaf Scripts.");
             Assert.That(runtime.GetSentryStateName(0), Is.EqualTo("idle"));
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
-            Assert.That(runtime.FsmHost, Is.Not.Null, "Featured sentries must run GraphFsmHost (FsmState sugar).");
-            Assert.That(runtime.Metrics.Detail, Does.Contain("HFSM"));
-            Assert.That(runtime.Metrics.Detail, Does.Contain("FSM"));
+            Assert.That(runtime.FeaturedWorld, Is.Not.Null, "Featured sentries must run HfsmWorld.");
+            Assert.That(runtime.Metrics.Detail, Does.Contain("HFSM L2"));
             Assert.That(runtime.Metrics.Detail, Does.Contain("crowdLifecycleRuns=0"));
             Assert.That(runtime.SentryCount, Is.GreaterThanOrEqualTo(8));
             Assert.That(runtime.GetSentryStateName(0), Is.Not.EqualTo("unknown"));
             if (runtime.CrowdUsesNoGraphHfsmWorld)
             {
                 Assert.That(runtime.CrowdAgentCount, Is.GreaterThan(0),
-                    "Crowd band exists as no-graph HfsmWorld pressure; do not claim it as GraphFsmHost.");
+                    "Crowd band exists as no-graph HfsmWorld pressure.");
             }
 
             Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
         }
 
+        [Test]
+        public void HfsmSentryArena_PlayableControls_ChangeRuntimeState()
+        {
+            var runtime = new HfsmSentryArenaRuntime();
+            runtime.Bind(_programs, _actions, _behavior);
+            runtime.EnsureWorld();
+
+            runtime.TogglePaused();
+            int wavesBeforeStep = runtime.Metrics.ThinkWaves;
+            runtime.Tick(1f);
+            Assert.That(runtime.Metrics.ThinkWaves, Is.EqualTo(wavesBeforeStep));
+            runtime.Step();
+            Assert.That(runtime.Metrics.ThinkWaves, Is.GreaterThan(wavesBeforeStep));
+
+            runtime.ToggleL2();
+            Assert.That(runtime.BuildControlState().L2Enabled, Is.False);
+            runtime.ToggleStimulus();
+            Assert.That(runtime.BuildControlState().StimulusEnabled, Is.False);
+            runtime.IncreaseAlertRadius();
+            runtime.IncreaseThinkPeriod();
+            Assert.That(runtime.AlertRadius, Is.EqualTo(6.5f).Within(0.001f));
+            Assert.That(runtime.ThinkPeriodSeconds, Is.EqualTo(0.3f).Within(0.001f));
+        }
+
         /// <summary>
-        /// Crowd honesty gate (FSM-1): featured band = GraphFsmHost + Graph.FSM.Sentry;
-        /// 10k crowd = HfsmWorld(hfsm.sentry) with zero lifecycle Script hosts
-        /// (LifecycleRuns == 0). Same decision class as BT arena: true-graph 10k exceeds
-        /// the CI envelope, so the pressure band must stay labeled no-graph — never a
-        /// silent second graph claim.
+        /// Crowd honesty gate: featured = HfsmWorld(hfsm.sentry.scripted) + leaf Scripts;
+        /// 10k crowd = HfsmWorld(hfsm.sentry) with LifecycleRuns == 0.
         /// </summary>
         [Test]
         public void HfsmSentryArena_CrowdBand_NoGraphPressureBaseline_Labeled()
@@ -194,8 +233,8 @@ namespace Ludots.Tests.Gas.Production
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
 
-            Assert.That(runtime.FsmHost, Is.Not.Null, "The featured segment must run GraphFsmHost.");
-            Assert.That(runtime.FsmHost!.Count, Is.GreaterThanOrEqualTo(8));
+            Assert.That(runtime.FeaturedWorld, Is.Not.Null, "The featured segment must run HfsmWorld.");
+            Assert.That(runtime.FeaturedWorld!.Count, Is.GreaterThanOrEqualTo(8));
             Assert.That(runtime.GetSentryStateName(0), Is.AnyOf("idle", "alert", "combat", "retreat"));
 
             HfsmWorld? crowd = runtime.CrowdWorld;
@@ -244,12 +283,97 @@ namespace Ludots.Tests.Gas.Production
             runtime.EnsureWorld();
             Warm(runtime.Tick, waves: 10);
             Drive(runtime.Tick, runtime.Metrics);
-            Assert.That(runtime.Metrics.Detail, Does.Contain("old-path"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("Integration L2"));
             Assert.That(runtime.GuardCount, Is.EqualTo(6));
             Assert.That(runtime.SentryCount, Is.EqualTo(6));
-            Assert.That(runtime.Hfsm, Is.Not.Null, "Integration keeps the labeled old HfsmWorld path until it migrates.");
+            Assert.That(runtime.Hfsm, Is.Not.Null, "Integration runs HfsmWorld + leaf Scripts as L2 SSOT.");
             Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
+        }
+
+        [Test]
+        public void GraphBehaviorIntegration_PlayableControls_DriveBothL2Worlds()
+        {
+            var runtime = new GraphBehaviorIntegrationRuntime();
+            runtime.Bind(_programs, _actions, _behavior);
+            runtime.EnsureWorld();
+
+            runtime.TogglePaused();
+            int wavesBeforeStep = runtime.Metrics.ThinkWaves;
+            runtime.Step();
+            Assert.That(runtime.Metrics.ThinkWaves, Is.GreaterThan(wavesBeforeStep));
+
+            runtime.ToggleL2();
+            runtime.ToggleStimulus();
+            runtime.IncreaseSensorRadius();
+            runtime.DecreaseThinkPeriod();
+            GraphShowcaseControlState state = runtime.BuildControlState();
+            Assert.Multiple(() =>
+            {
+                Assert.That(state.L2Enabled, Is.False);
+                Assert.That(state.StimulusEnabled, Is.False);
+                Assert.That(state.SightRadius, Is.EqualTo(7f).Within(0.001f));
+                Assert.That(state.ThinkPeriod, Is.LessThan(0.2f));
+                Assert.That(state.Detail, Does.Contain("BT"));
+                Assert.That(state.Detail, Does.Contain("HFSM"));
+            });
+        }
+
+        [TestCase(0, 5.5f, true, 1)]
+        [TestCase(0, 5.51f, false, 0)]
+        [TestCase(-2, 3f, false, 0)]
+        [TestCase(1, 6f, true, 1)]
+        [TestCase(1, 1.25f, true, 2)]
+        [TestCase(1, 1.26f, true, 1)]
+        public void GraphBehaviorIntegration_SightControl_ChangesGuardDecision(int adjustments, float distance, bool seen, int expectedIntent)
+        {
+            var runtime = new GraphBehaviorIntegrationRuntime();
+            runtime.Bind(_programs, _actions, _behavior);
+            runtime.EnsureWorld();
+            runtime.Tick(0.6f);
+            runtime.TogglePaused();
+            for (int i = 0; i < Math.Abs(adjustments); i++)
+            {
+                if (adjustments > 0) runtime.IncreaseSensorRadius();
+                else runtime.DecreaseSensorRadius();
+            }
+
+            runtime.GuardX[0] = runtime.EnemyX - distance;
+            runtime.GuardY[0] = runtime.EnemyY - 2.2f * runtime.ThinkPeriodSeconds;
+            runtime.Step();
+
+            TestContext.Out.WriteLine($"sight={runtime.SensorRadius}m distance={distance}m target={runtime.TargetIndex[0]} intent={runtime.Intent[0]}");
+            Assert.Multiple(() =>
+            {
+                Assert.That(runtime.TargetIndex[0], Is.EqualTo(seen ? 0 : -1));
+                Assert.That(runtime.Intent[0], Is.EqualTo(expectedIntent),
+                    "The L2 tree must chase only when the intruder is inside the displayed sight radius.");
+            });
+        }
+
+        [Test]
+        public void GraphBehaviorIntegration_DefaultPatrol_BothTeamsKeepRespondingForOneMinute()
+        {
+            var runtime = new GraphBehaviorIntegrationRuntime();
+            runtime.Bind(_programs, _actions, _behavior);
+            runtime.EnsureWorld();
+            for (int period = 0; period < 3; period++)
+            {
+                bool btResponded = false, hfsmResponded = false;
+                for (int wave = 0; wave < 100; wave++)
+                {
+                    runtime.Tick(0.2f);
+                    btResponded |= runtime.Intent.Any(intent => intent == 1 || intent == 2);
+                    for (int i = 0; i < runtime.SentryCount; i++)
+                        hfsmResponded |= runtime.Hfsm!.GetLeafStateName(i) == "combat";
+                }
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(btResponded, Is.True, $"BT must respond during seconds {period * 20}-{(period + 1) * 20}.");
+                    Assert.That(hfsmResponded, Is.True, $"HFSM must enter combat during seconds {period * 20}-{(period + 1) * 20}.");
+                });
+            }
         }
 
         private static void Warm(System.Action<float> tick, int waves = 5)

@@ -111,12 +111,15 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 进度与计划只认两张票：地图域线 https://github.com/MightyBubble/Ludots/issues/1030 ；域扩展线（实体域挂载、GAS 事件桥、技能/效果时刻桥、presenter 时序合同）https://github.com/MightyBubble/Ludots/issues/1031 ——两张票顶部各有进度快照与剩余切片清单，新活从快照开工，别重做已落地的。
 方言/挂载、事件词典（MapHeartbeat 地图心跳/实体死生/区域）、地图变量存储、时间线续跑、实体域挂载、GAS 桥、「夜袭三波」全数据旗舰与旧 LevelDirector 试验线退役，都已落地；2026-08-24 又补上技能域 `abilities.json.triggerGraphs`、Mod 域 `mod.json.triggerGraphs` 和显式 `route: global` 跨地图路由，统一复用现有 TriggerManager/TriggerGraph VM。2026-08-26 night-raid 大包（rebase 最新 main，PR #1239）继续把事件 Schema SSOT、全局订阅表/`FireGlobalEvent`/`FireCrossMapEvent`、图互调与放置实体读、Enum 目录、图编辑器作者面 hardening 收进同一条线；真正的跨图派发走 `FireGlobalEvent`，不再靠 FireMapEvent 扇出旧表。区域触发源 2026-09-07 起改为实体 SSOT（#1461）：作者面走既有摆放流水线——实体模板 `components` 声明 `RegionVolumeCm`（circle/rect/凸 polygon/segment 四种形状）+ 可选 tag 过滤与 `RegionVolumeEmissionCm` 发射合同（自定义事件 + 静态 payload），地图 `Entities[]` 摆放、`Overrides` 整组件替换改形；摆放后 bake pass 做 emit 语义校验（对 CustomEventNameRegistry/EventSchemaRegistry fail-closed）并派生 VolumeKey 目录，`RegionVolumeTriggerSystem` 在心跳节拍做差分进出求值，默认事件键与 payload 合同不变。地图 JSON `Regions` 数组、MapRegionDefinition/RegionTriggerSystem 字典版、`PlacedInstanceKinds.Region` 特例全部退役；夜袭与 LoadPlacedRegion 画廊已迁移到模板+摆放（摆放 `PositionXCm/PositionYCm` 兜底落 WorldPositionCm 是引擎级新能力）。FieldRegion 事件族合并与物理 sensor 收敛是后续票（#1468/#1469）。图体一次性控制流补齐 UE 同款 DoOnce 编译期糖（#1467）：var 闩锁 0→1、true/false 双臂、Reset≡WriteMapVarInt(var,0)，降级为 Read/Compare/JumpIfFalse/Write 链零新 opcode；入口级 once 保留为关卡导演糖（17 个生产图在用），两者分工已写进 #1467。剩余收口是 S4 时序合同全文对齐与 S5 实体/技能真实可玩 showcase、画廊和 AgentBridge 运行证据，不能把 headless 基建测试写成 showcase 完成。图侧 spawn 动词已经落地：SpawnTemplate（GraphNodeOp 447）在 TriggerGraph 与 Script 都能用，「夜袭三波」旗舰的 stage3 就用它在图内生成 boss（`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graphs.json` 的 `spawn_boss` 节点）。合不合、什么时候合，看 #1031 的最新进度快照。
 
-又开了一条线：行为树「真图化」（BT-1）与 HFSM「真图化」（FSM-1）。设计冻结本在 `artifacts/showcases/graph-fsm-bt-refactor-design.md`。
+又开了一条线：行为树「真图化」（BT-1）与 HFSM「真图化」（FSM-1）。设计冻结本在 `artifacts/showcases/graph-fsm-bt-refactor-design.md`（L2 身份已纠偏，见下）。
 
-**BT 侧已落地：** `BtSequence` / `BtSelector` / `BtDecorator` 三个 Script-only 作者糖把整棵树内联成单个 Script 程序（`Call`/`Return` + `CompareEqInt` + `JumpIfFalse`，零新 opcode，状态寄存器 0/1/2）；`GraphBehaviorTreeHost` 做 per-agent 帧与 think wave 驱动，Yield 叶跨波恢复，嵌套深度对齐 `MaxCallStackDepth`。真实性判据锁在 `GraphBehaviorTreeSugarTests` / `GraphBehaviorTreeHostTests`。Bridge / React 已投影三糖（`childArms`、Decorator 固定 `child:0` + `decoratorKind`），与 FSM 的编辑器面齐平。旧 `BehaviorTreeWorld`（C# JSON 树解释器）保留为旧数据路径与无图压测，图路径不碰它的遍历。BT-B 已落地：arena 主树 `bt.patrolChaseAttack` 重写为糖图并由 `GraphBehaviorTreeHost` 逐波执行；10k crowd 段实测真图超预算，保留无图压测拓扑并在注册表 summary 显式标注。还开着的（**另开活，本轮别捆**）：Parallel（一期显式不支持）、子树复用/异步叶（BT-2）。
+**BT / FSM 作者合同（已纠偏）：** 外层是 L2 拓扑，不是 Script 糖文档。BT SSOT = `AI/behavior_trees.json` → `BehaviorTreeWorld`；FSM SSOT = `AI/hfsm.json` → `HfsmWorld` + `GraphProgramHfsmHost`；叶子 = `action_lib.json` + `GAS/graphs.json` Script。编辑器正门：`/bt-editor` / `/fsm-editor` 写 AI JSON（Bridge `GET/PUT /api/ai/behavior-trees|hfsm`），双击叶子进 `/gas-graphs`。合同正本 [BT/FSM 独立编辑器与函数图叶子](graph-bt-fsm-nested-func.md)。
 
-**FSM-1a 已收口：** `FsmState` 糖（ReadMapVarInt + SwitchInt 式臂链，零新 opcode）+ `GraphFsmHost`（每 agent 相位 map 变量、每波一次 halt 分派）。哨兵演武场 featured 走 `Graph.FSM.Sentry`；万人 crowd 诚实走无图 `HfsmWorld(hfsm.sentry)`（`LifecycleRuns==0`），注册表 summary/notes 与验收 `HfsmSentryArena_CrowdBand_NoGraphPressureBaseline_Labeled` 锁死。Bridge / React 投影 `FsmState`（enumType、stateVar、case 臂）。`HfsmWorld` **不删 Core**：退役的是静默双轨——旗舰真图声称必须走 `GraphFsmHost`；crowd/压测/旧 `hfsm.json` 绑定可留，但必须标注；整合演示显式 old-path（`GraphProgramHfsmHost`），不得顶 FSM-1。删除 Core `HfsmWorld` 的触发条件见冻结本 §3.3。
+**糖 / 降级宿主（回归，非作者 SSOT）：** `BtSequence` / `BtSelector` / `BtDecorator` / `FsmState` 与 `GraphBehaviorTreeHost` / `GraphFsmHost` 仍保留作编译降级与单元回归；**禁止**再把整树 / 整机 Script 糖当作演武场或编辑器正门。生产资产已删除 `Graph.BT.Tree.PatrolChaseAttack` / `Graph.FSM.Sentry` 外壳。
 
+**演武场：** BT arena featured = `bt.patrolChaseAttack` + ActionLib 叶子；crowd = 无图 `bt.arenaCrowd`（`ScriptSlices==0`）。哨兵 arena featured = `hfsm.sentry.scripted` + 叶子 Script；crowd = 无图 `hfsm.sentry`（`LifecycleRuns==0`）。整合演示同走 L2 拓扑宿主（不再标成「不得顶旗舰」的旁路）。
+
+还开着的（**另开活，本轮别捆**）：Parallel（一期显式不支持）、子树复用/异步叶（BT-2）。
 ### 3.3.1 图相关还开着的（勿当新发现重审）
 
 | 项 | 状态 | 怎么开工 |
@@ -130,6 +133,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 | `FormatTextKey` / ActiveLocale / 生产 Dialogue drain | TextKey 后续 | 见 graph-textkey.md |
 | 实体能力 authoring 声明与编译校验 | 编辑器下一切片 | 不得把运行时隐式安装写成已完成 |
 | `LoadEntryPayloadText`（事件 String 载荷进 Text 寄存器） | **合同缺口** | FormalText 已落地，但入口捕获表尚无 String 槽；编辑器对 String 针脚返回空 |
+| 外层 L2 拓扑 SSOT 恢复（AI JSON + 拓扑编辑器） | **已落地** | 见 [BT/FSM 独立编辑器](graph-bt-fsm-nested-func.md)；糖宿主仅回归 |
 
 | trace 记录没有时间 / 帧号 | **合同缺口** | 想要真的逐步流动就给 `GraphDebugTraceRecord` 补时间源；在那之前只许说齐亮齐灭 |
 | `GraphDebugTool` 无自动化测试 | 债 | 编辑器和游戏之间唯一通道；`GraphDebugTraceTests` 只测环形缓冲 |

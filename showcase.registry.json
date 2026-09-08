@@ -463,7 +463,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod",
       "projectPath": "CapabilityStandardBehaviorTreeArenaMod.csproj",
       "title": "行为树演武场",
-      "summary": "独立 BT 演示：旗舰走真图宿主；万人段是无图压测基线（不含 HFSM/关卡/技能）。",
+      "summary": "可点击的行为树演武场：暂停/单步、入侵者、视野、思考频率和 L2 消融均可在运行时操作；前排走 BehaviorTreeWorld（bt.patrolChaseAttack）+ ActionLib 叶子。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -473,12 +473,12 @@
       "binding": "capability_standard_behavior_tree_arena",
       "preset": "capability_standard_behavior_tree_arena_raylib",
       "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
-      "readmePath": null,
+      "readmePath": "mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod/README.md",
       "acceptanceTest": "BehaviorTreeArenaShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_behavior_tree_arena",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_behavior_tree_arena/poster.png",
       "status": "active",
-      "notes": "Featured = GraphBehaviorTreeHost；crowd = BehaviorTreeWorld 无图压测（ScriptSlices==0）。Headless think-wave acceptance first; visual captures follow."
+      "notes": "Featured = BehaviorTreeWorld（AI/behavior_trees.json · bt.patrolChaseAttack）+ ActionLib 叶子；crowd = 无图压测（ScriptSlices==0）；运行时控制台提供主循环、消融对照与参数旋钮。"
     },
     {
       "id": "capability_standard_config_shards_showcase",
@@ -557,7 +557,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod",
       "projectPath": "CapabilityStandardGraphBehaviorIntegrationMod.csproj",
       "title": "图行为整合演示",
-      "summary": "单独的整合演示：BT+HFSM+Level 合波（old-path：BehaviorTreeWorld + HfsmWorld/GraphProgramHfsmHost，不是四个单秀的大杂烩合并）。",
+      "summary": "可点击的 BT+HFSM 联合演武场：同一入侵者穿过两道防线，可暂停单步、调整感知与频率，并一键关闭 L2 做同场对照。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -567,12 +567,12 @@
       "binding": "capability_standard_graph_behavior_integration",
       "preset": "capability_standard_graph_behavior_integration_raylib",
       "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
-      "readmePath": null,
+      "readmePath": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod/README.md",
       "acceptanceTest": "GraphBehaviorIntegrationShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_behavior_integration",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_behavior_integration/poster.png",
       "status": "active",
-      "notes": "Metrics Detail 含 old-path；不得顶 GraphFsmHost/GraphBehaviorTreeHost 旗舰语义。Headless think-wave acceptance first; visual captures follow."
+      "notes": "整合演示走 BehaviorTreeWorld + HfsmWorld/GraphProgramHfsmHost（L2 拓扑 + 叶子 Script）；运行时控制台同时驱动两侧。"
     },
     {
       "id": "capability_standard_graph_op_AbsFloat",
@@ -3814,7 +3814,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod",
       "projectPath": "CapabilityStandardHfsmSentryArenaMod.csproj",
       "title": "HFSM 岗哨演武场",
-      "summary": "独立分层状态机演示：旗舰走 GraphFsmHost；万人段是无图 HfsmWorld 压测基线（不含 BT/关卡/技能）。",
+      "summary": "可点击的 HFSM 岗哨演武场：暂停/单步、入侵者、警戒半径、思考频率和 L2 消融均可在运行时操作；前排走 HfsmWorld（hfsm.sentry.scripted）。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3824,12 +3824,12 @@
       "binding": "capability_standard_hfsm_sentry_arena",
       "preset": "capability_standard_hfsm_sentry_arena_raylib",
       "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
-      "readmePath": null,
+      "readmePath": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod/README.md",
       "acceptanceTest": "HfsmSentryArenaShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_hfsm_sentry_arena",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_hfsm_sentry_arena/poster.png",
       "status": "active",
-      "notes": "Featured = GraphFsmHost；crowd = HfsmWorld 无图（LifecycleRuns==0）。Headless think-wave acceptance first; visual captures follow."
+      "notes": "Featured = HfsmWorld + GraphProgramHfsmHost；crowd = HfsmWorld 无图（LifecycleRuns==0）；运行时控制台提供主循环、消融对照与参数旋钮。"
     },
     {
       "id": "capability_standard_live_skill_workbench",
