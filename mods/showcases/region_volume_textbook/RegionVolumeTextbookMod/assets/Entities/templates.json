@@ -23,7 +23,12 @@
         "base": {
           "Health": 100
         }
-      }
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "OrderBuffer": {}
     }
   },
   {

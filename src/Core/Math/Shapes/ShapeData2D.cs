@@ -1,6 +1,6 @@
 using Ludots.Core.Mathematics.FixedPoint;
 
-namespace Ludots.Core.Physics2D.Components
+namespace Ludots.Core.Mathematics.Shapes
 {
     /// <summary>
     /// 圆形碰撞体数据（定点数厘米）。

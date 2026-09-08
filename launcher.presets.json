@@ -3258,6 +3258,16 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "region_volume_textbook_raylib",
+      "name": "Region Volume Textbook Raylib",
+      "selectors": [
+        "$region_volume_textbook",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
