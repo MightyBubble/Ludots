@@ -184,6 +184,28 @@ namespace Ludots.Tests.Architecture
             Assert.That(loc.TileId, Is.EqualTo(new NavTileId(7, 5, 0)));
         }
 
+        [Test]
+        public void ArtifactPath_BoardScoped_IsolatesSameLocalTileCoordinate()
+        {
+            string mainland = NavAssetPaths.GetNavTileRelativePath("coastline", "mainland", 0, "infantry", 0, 0);
+            string harbor = NavAssetPaths.GetNavTileRelativePath("coastline", "harbor", 0, "infantry", 0, 0);
+
+            Assert.That(mainland, Is.Not.EqualTo(harbor));
+            Assert.That(mainland, Is.EqualTo("assets/Data/Nav/coastline/board_mainland/layer0/profile_infantry/x00/navtile_0_0.ntil"));
+            Assert.That(harbor, Is.EqualTo("assets/Data/Nav/coastline/board_harbor/layer0/profile_infantry/x00/navtile_0_0.ntil"));
+        }
+
+        [Test]
+        public void ArtifactPath_SingleBoard_KeepsHistoricalShape()
+        {
+            string path = NavAssetPaths.GetNavTileRelativePath("navmesh_debug_grid", 0, "Large", 0, 1);
+
+            Assert.That(
+                path,
+                Is.EqualTo("assets/Data/Nav/navmesh_debug_grid/layer0/profile_Large/x00/navtile_0_1.ntil"),
+                "already-baked single-board artifacts must stay loadable at their historical path");
+        }
+
         private static NavQueryServiceRegistry CreateRegistry(params (string BoardId, NavTileStore Store)[] boards)
         {
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>();

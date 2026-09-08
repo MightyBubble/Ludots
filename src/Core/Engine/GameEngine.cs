@@ -4137,7 +4137,6 @@ namespace Ludots.Core.Engine
                         : new BoardConfig?[] { null })
                     {
                         string boardId = board?.Name ?? string.Empty;
-                        string? boardMapId = board == null ? null : mapId + "/" + board.Name;
                         var uriCache = new Dictionary<NavTileId, string>(256);
 
                         string ResolveTileUri(NavTileId id)
@@ -4145,9 +4144,13 @@ namespace Ludots.Core.Engine
                             if (id.Layer != layer) throw new InvalidOperationException($"NavTileId.Layer mismatch. Expected={layer}, actual={id.Layer}.");
                             if (uriCache.TryGetValue(id, out var cached)) return cached;
                             string profileId = profileRegistry.GetId(profileIndex);
-                            string rel = boardMapId == null
-                                ? NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, id.ChunkX, id.ChunkY)
-                                : NavAssetPaths.GetNavTileRelativePath(boardMapId, layer, profileId, id.ChunkX, id.ChunkY);
+                            string rel = NavAssetPaths.GetNavTileRelativePath(
+                                mapId,
+                                board == null ? null : board.Name,
+                                layer,
+                                profileId,
+                                id.ChunkX,
+                                id.ChunkY);
                             string uri = ResolveSingleExistingUri(rel);
                             uriCache[id] = uri;
                             return uri;
