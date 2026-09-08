@@ -224,3 +224,42 @@ grid 板 + hex 板同时加载，修改一块不影响另一块。当前 `NavTil
 - hex 多板的真实非等比瓦片：`NavTileGridConfig.ChunkWidthCm == ChunkHeightCm` 恒等，
   表达式上喂不出 hex 的 44340×38400。`NavBoardTileGeometry` 支持两轴，但 config 表达不了。
 - 跨 board 连接交 board graph；编辑器面板的板选择属作者面。
+
+---
+
+## 6. M2 推进记录（产物清单与冷启动）
+
+| 提交 | 内容 | 验证 |
+|---|---|---|
+| `095397b865` | `NavTileManifest`（身份 + 源指纹 + 确定性 buildHash）+ Tool 写入 + 加载前校验 | 新增 9 项 |
+| `110927acd0` | store 加载时按清单校验 checksum 与 tile 版本 | 新增 3 项 |
+
+### 设计要点
+
+- **确定性 buildHash**：`writtenUtc` 明确排除，瓦片枚举顺序归一化，
+  所以相同输入必然得到相同值。测试锁住"写入时间不影响"与"顺序不影响"。
+- **fail-closed**：schema 不兼容、formatVersion 不匹配、buildHash 与自身内容不符、
+  瓦片不在清单、checksum 不符、tile 版本冲突——全部拒载并给出重新烘焙动作。
+- **冷启动语义**：`GameEngine` 在建立 `NavTileStore` 之前校验 mapId/boardId，
+  通过后作为 `CoreServiceKeys.NavTileManifest` 发布。
+
+### 修掉的一个真实陷阱
+
+`NavTileBinary.Write` 会对**序列化后的 payload** 重新计算 checksum，
+而 `DefaultGridNavTileFactory` 造出的内存瓦片 `Checksum` 恒为 0。
+写入端最初把内存值写进清单，会让**每个瓦片**加载时校验失败。
+改为写盘后回读真实 checksum 再记录。
+
+### 两个被仓库规则拦下的违规（已改）
+
+- `NavigationSpatialScaleMagicNumberContractTests`：Tool 里的 `64 * 1024` 缓冲区
+  被判为内联空间尺度魔数。改为具名常量。
+- `ArchitectureGuardTests.Codebase_MustNotContainCompatibilityOrFallbackMarkers`：
+  注释里写了 "backward compatibility"。仓库明令禁止该表述。
+  实际设计意图不是兼容旧格式，而是"清单存在即绑定"，已改成如实描述。
+
+### M2 剩余
+
+- 编辑器 Artifact 面板读取清单并显示拒载原因（作者面）
+- 五节点冷启动证据（写入前 / 写入后 / 退出 / 重读 / 继续操作）——属 M5 验收
+- `.ntil` 与 `detourBase64` 双 payload 收敛（#404）未动
