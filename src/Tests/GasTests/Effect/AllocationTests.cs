@@ -327,7 +327,7 @@ namespace Ludots.Tests.GAS
             var requests = new EffectRequestQueue();
             var dirtyQueue = new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME);
             var tagOps = new TagOps(dirtyQueue, new TagRuleRegistry());
-            var triggerQueue = new DeferredTriggerQueue();
+            var triggerQueue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             var conditions = new GasConditionRegistry();
             var templates = new EffectTemplateRegistry();
             var presetTypes = new PresetTypeRegistry();

@@ -1033,7 +1033,7 @@ namespace Ludots.Tests.GAS
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             Assert.That(tagOps.AddTag(ref heroTags, ref heroCounts, heroTag, ref dirty), Is.True);
 
-            var triggerQueue = new DeferredTriggerQueue();
+            var triggerQueue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             var collectionSystem = new DeferredTriggerCollectionSystem(world, triggerQueue, tagOps);
             collectionSystem.Update(0f);
             Assert.That(world.Has<GameplayTagEffectiveChangedBits>(hero), Is.True);
@@ -1140,7 +1140,7 @@ namespace Ludots.Tests.GAS
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             Assert.That(tagOps.AddTag(ref cityTags, ref cityCounts, fortifiedTag, ref dirty), Is.True);
 
-            var triggerQueue = new DeferredTriggerQueue();
+            var triggerQueue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             var collectionSystem = new DeferredTriggerCollectionSystem(world, triggerQueue, tagOps);
             collectionSystem.Update(0f);
             Assert.That(world.Has<GameplayTagEffectiveChangedBits>(city), Is.True);

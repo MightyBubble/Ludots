@@ -18,7 +18,7 @@ namespace Ludots.Tests.GAS
         {
             _world = World.Create();
             _entity = _world.Create();
-            _queue = new DeferredTriggerQueue();
+            _queue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
         }
         
         [TearDown]

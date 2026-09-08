@@ -16,7 +16,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var bus = new GameplayEventBus();
-            var queue = new DeferredTriggerQueue();
+            var queue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
 
             int healthId = AttributeRegistry.Register("Health");
             int evtTagId = TagRegistry.Register("Event.Attribute.Health.Changed");
@@ -47,7 +47,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var bus = new GameplayEventBus();
-            var queue = new DeferredTriggerQueue();
+            var queue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
 
             int energyId = AttributeRegistry.Register("Energy");
             var target = world.Create();
@@ -67,4 +67,3 @@ namespace Ludots.Tests.GAS
         }
     }
 }
-

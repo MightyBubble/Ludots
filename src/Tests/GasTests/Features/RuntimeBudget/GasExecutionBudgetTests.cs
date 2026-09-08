@@ -1074,6 +1074,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 OrderAdmissionRejectionCapacity = 64,
                 OrderTerminalResultCapacity = 64,
                 DeferredTriggerActiveEntityCapacity = 64,
+                DeferredTriggerEventCapacity = 64,
                 ProjectileCollisionCandidateCapacity = 64,
                 ProjectileRuntimeEntityCapacity = 64,
                 EffectPhaseGraphProgramScratchCapacity = 64,

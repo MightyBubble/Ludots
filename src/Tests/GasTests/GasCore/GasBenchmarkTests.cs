@@ -268,7 +268,7 @@ namespace Ludots.Tests.GAS
         public void Benchmark_DeferredTriggerQueue_Enqueue()
         {
             // Arrange
-            var queue = new DeferredTriggerQueue();
+            var queue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             int fillCount = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME;
             var attributeTriggers = new AttributeChangedTrigger[fillCount];
             for (int i = 0; i < fillCount; i++)
@@ -325,7 +325,7 @@ namespace Ludots.Tests.GAS
         public void Benchmark_DeferredTriggerCollectionSystem_SparseDirtyTags()
         {
             const int entityCount = 1000;
-            var queue = new DeferredTriggerQueue();
+            var queue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             var system = new DeferredTriggerCollectionSystem(_world, queue, _tagOps);
 
             for (int i = 0; i < entityCount; i++)

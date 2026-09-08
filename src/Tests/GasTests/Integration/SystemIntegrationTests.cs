@@ -206,7 +206,7 @@ namespace Ludots.Tests.GAS
             _world.Add(entity, new ActiveEffectContainer());
             _world.Add(entity, new DirtyFlags());
             
-            var triggerQueue = new DeferredTriggerQueue();
+            var triggerQueue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             var collectionSystem = new DeferredTriggerCollectionSystem(_world, triggerQueue, _tagOps);
             var processSystem = new DeferredTriggerProcessSystem(_world, triggerQueue, new GameplayEventBus());
             

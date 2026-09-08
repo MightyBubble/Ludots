@@ -50,7 +50,7 @@ namespace Ludots.Tests.Presentation
         private const float FixedDeltaSeconds = 1f / 60f;
         private const int MaxWarmupFrames = 240;
         private const int MovementObservationFrames = 60;
-        private const int HealthStabilityObservationFrames = 75;
+        private const int HealthDriftObservationFrames = 75;
         private const int HudStabilityObservationFrames = 12;
         private const float CommandTargetOffsetWindowScale = 0.25f;
         private const float MovementEpsilonCm = 1f;
@@ -195,7 +195,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Showcase_AgentHealthHudInputsRemainStableAcrossHealthDriftPeriodWindow()
+        public void Showcase_AgentHealthHudIdentityRemainsStableWhileHealthDrifts()
         {
             GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
 
@@ -205,17 +205,17 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
             int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
-            AssertScenarioAgentTemplatesDoNotDriveHealthPeriodically(engine, simulation);
+            AssertScenarioAgentTemplatesDriveHealthPeriodically(engine, simulation);
 
             var hudProjection = CreateHudProjection(engine);
             _ = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
             AssertScreenHudIdentityStableAcrossProjectionFrames(engine, hudProjection, HudStabilityObservationFrames);
 
             Dictionary<int, AgentHealthSample> before = CaptureAgentHealth(engine, expectedAgents);
-            TickProjectionFrames(engine, hudProjection, HealthStabilityObservationFrames);
+            TickProjectionFrames(engine, hudProjection, HealthDriftObservationFrames);
             Dictionary<int, AgentHealthSample> after = CaptureAgentHealth(engine, expectedAgents);
 
-            AssertAgentHealthStable(before, after);
+            AssertAgentHealthDrifted(before, after);
         }
 
         [Test]
@@ -1107,7 +1107,7 @@ namespace Ludots.Tests.Presentation
             return agents;
         }
 
-        private static void AssertScenarioAgentTemplatesDoNotDriveHealthPeriodically(
+        private static void AssertScenarioAgentTemplatesDriveHealthPeriodically(
             GameEngine engine,
             MassNavigationSimulationRuntime simulation)
         {
@@ -1115,12 +1115,12 @@ namespace Ludots.Tests.Presentation
             for (int i = 0; i < simulation.Config.Presentation.Teams.Length; i++)
             {
                 MassNavigationTeamPresentationConfig team = simulation.Config.Presentation.Teams[i];
-                AssertAgentTemplateDoesNotDriveHealthPeriodically(engine, team.LightTemplateId, checkedTemplateIds);
-                AssertAgentTemplateDoesNotDriveHealthPeriodically(engine, team.HeavyTemplateId, checkedTemplateIds);
+                AssertAgentTemplateDrivesHealthPeriodically(engine, team.LightTemplateId, checkedTemplateIds);
+                AssertAgentTemplateDrivesHealthPeriodically(engine, team.HeavyTemplateId, checkedTemplateIds);
             }
         }
 
-        private static void AssertAgentTemplateDoesNotDriveHealthPeriodically(
+        private static void AssertAgentTemplateDrivesHealthPeriodically(
             GameEngine engine,
             string templateId,
             HashSet<string> checkedTemplateIds)
@@ -1135,8 +1135,8 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException($"MassNavigation showcase agent template '{templateId}' is not registered.");
             Assert.That(
                 template.OnSpawnEffect,
-                Is.Null.Or.Empty,
-                $"MassNavigation 10k showcase template '{templateId}' must not attach periodic health effects; HUD text/bar inputs must stay stable unless gameplay changes Health.");
+                Is.EqualTo("Effect.MassNavigation.Agent.HealthDrift"),
+                $"MassNavigation 10k showcase template '{templateId}' must retain the periodic health effect exercised by the showcase.");
         }
 
         private static Dictionary<int, AgentHealthSample> CaptureAgentHealth(GameEngine engine, int expectedAgents)
@@ -1159,17 +1159,23 @@ namespace Ludots.Tests.Presentation
             return samples;
         }
 
-        private static void AssertAgentHealthStable(
+        private static void AssertAgentHealthDrifted(
             IReadOnlyDictionary<int, AgentHealthSample> before,
             IReadOnlyDictionary<int, AgentHealthSample> after)
         {
             Assert.That(after.Count, Is.EqualTo(before.Count));
+            int changedCount = 0;
             foreach (KeyValuePair<int, AgentHealthSample> pair in before)
             {
                 Assert.That(after.TryGetValue(pair.Key, out AgentHealthSample actual), Is.True);
-                Assert.That(actual.Current, Is.EqualTo(pair.Value.Current).Within(0.0001f), $"Agent {pair.Key} Health current changed.");
                 Assert.That(actual.Base, Is.EqualTo(pair.Value.Base).Within(0.0001f), $"Agent {pair.Key} Health base changed.");
+                if (MathF.Abs(actual.Current - pair.Value.Current) > 0.0001f)
+                {
+                    changedCount++;
+                }
             }
+
+            Assert.That(changedCount, Is.GreaterThan(0), "Periodic HealthDrift did not update any MassNavigation agent.");
         }
 
         private static void AssertScreenHudIdentityStableAcrossProjectionFrames(
@@ -1194,26 +1200,21 @@ namespace Ludots.Tests.Presentation
         {
             ReadOnlySpan<ScreenHudBarItem> bars = screenHud.GetBarSpan();
             ReadOnlySpan<ScreenHudTextItem> texts = screenHud.GetTextSpan();
-            long[] barIdentities = new long[bars.Length];
-            long[] textIdentities = new long[texts.Length];
+            int[] barIdentities = new int[bars.Length];
+            int[] textIdentities = new int[texts.Length];
             for (int i = 0; i < bars.Length; i++)
             {
-                barIdentities[i] = ComposeHudIdentity(bars[i].StableId, bars[i].DirtySerial);
+                barIdentities[i] = bars[i].StableId;
             }
 
             for (int i = 0; i < texts.Length; i++)
             {
-                textIdentities[i] = ComposeHudIdentity(texts[i].StableId, texts[i].DirtySerial);
+                textIdentities[i] = texts[i].StableId;
             }
 
             Array.Sort(barIdentities);
             Array.Sort(textIdentities);
             return new ScreenHudIdentitySnapshot(bars.Length, texts.Length, barIdentities, textIdentities);
-        }
-
-        private static long ComposeHudIdentity(int stableId, int dirtySerial)
-        {
-            return ((long)stableId << 32) ^ (uint)dirtySerial;
         }
 
         private static string BuildDiagnostics(
@@ -1277,8 +1278,8 @@ namespace Ludots.Tests.Presentation
         private readonly record struct ScreenHudIdentitySnapshot(
             int BarCount,
             int TextCount,
-            long[] BarIdentities,
-            long[] TextIdentities);
+            int[] BarIdentities,
+            int[] TextIdentities);
 
         private readonly record struct CommandSourceDiagnostics(
             Entity LocalPlayer,

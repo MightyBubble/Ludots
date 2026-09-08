@@ -13,24 +13,25 @@ namespace Ludots.Tests.GAS
         [Test]
         public void DeferredTriggerQueue_Overflow_DefersToNextFrame()
         {
-            var queue = new DeferredTriggerQueue();
-            for (int i = 0; i < GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME + 1; i++)
+            const int configuredCapacity = 2;
+            var queue = new DeferredTriggerQueue(configuredCapacity);
+            for (int i = 0; i < configuredCapacity + 1; i++)
             {
                 queue.EnqueueAttributeChanged(new AttributeChangedTrigger { AttributeId = i });
             }
 
-            That(queue.AttributeTriggerCount, Is.EqualTo(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME));
+            That(queue.AttributeTriggerCount, Is.EqualTo(configuredCapacity));
 
             queue.Clear();
 
             That(queue.AttributeTriggerCount, Is.EqualTo(1));
-            That(queue.GetAttributeTrigger(0).AttributeId, Is.EqualTo(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME));
+            That(queue.GetAttributeTrigger(0).AttributeId, Is.EqualTo(configuredCapacity));
         }
 
         [Test]
         public void DeferredTriggerQueue_WhenMainAndOverflowAreFull_ThrowsNamingCapacityAndSource()
         {
-            var queue = new DeferredTriggerQueue();
+            var queue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             int totalCapacity = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME * 2;
             for (int i = 0; i < totalCapacity; i++)
             {
@@ -50,7 +51,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void DeferredTriggerQueue_TagChanged_WhenMainAndOverflowAreFull_ThrowsNamingSource()
         {
-            var queue = new DeferredTriggerQueue();
+            var queue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             int totalCapacity = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME * 2;
             for (int i = 0; i < totalCapacity; i++)
             {
@@ -69,7 +70,7 @@ namespace Ludots.Tests.GAS
         public void DeferredTrigger_AttributeChanged_UsesSnapshotOldValue()
         {
             using var world = World.Create();
-            var queue = new DeferredTriggerQueue();
+            var queue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var e = world.Create();
@@ -102,7 +103,7 @@ namespace Ludots.Tests.GAS
         public void DeferredTrigger_TagChanged_UsesSnapshotWasPresent()
         {
             using var world = World.Create();
-            var queue = new DeferredTriggerQueue();
+            var queue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var e = world.Create();
@@ -130,7 +131,7 @@ namespace Ludots.Tests.GAS
         public void DeferredTrigger_TagCountChanged_UsesSnapshotOldCount()
         {
             using var world = World.Create();
-            var queue = new DeferredTriggerQueue();
+            var queue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var e = world.Create();
@@ -162,7 +163,7 @@ namespace Ludots.Tests.GAS
         public void DeferredTriggerCollection_VisitsOnlyActiveDirtyEntitiesAfterBootstrap()
         {
             using var world = World.Create();
-            var triggers = new DeferredTriggerQueue();
+            var triggers = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             var active = new DirtyEntityQueue(32);
             var tagOps = new TagOps(active, new TagRuleRegistry());
             var system = new DeferredTriggerCollectionSystem(world, triggers, tagOps, active);
@@ -266,7 +267,7 @@ namespace Ludots.Tests.GAS
         public void DeferredTriggerActivePath_AfterWarmup_AllocatesZero()
         {
             using var world = World.Create();
-            var triggers = new DeferredTriggerQueue();
+            var triggers = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
             var active = new DirtyEntityQueue(4);
             var tagOps = new TagOps(active, new TagRuleRegistry());
             var system = new DeferredTriggerCollectionSystem(world, triggers, tagOps, active);

@@ -67,7 +67,7 @@ namespace Ludots.Tests.GAS
                 counts.AddCount(tag, 1);
                 dirty.MarkTagDirty(tag);
 
-                var queue = new DeferredTriggerQueue();
+                var queue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
                 var active = new DirtyEntityQueue(4);
                 var tagOps = new TagOps(active, new TagRuleRegistry());
                 active.Track(world, entity);
@@ -167,7 +167,7 @@ namespace Ludots.Tests.GAS
                 tags.AddTag(tagA);
                 dirty.MarkTagDirty(tagA);
 
-                var queue = new DeferredTriggerQueue();
+                var queue = new DeferredTriggerQueue(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME);
                 var active = _tagOps.DirtyEntities;
                 active.Track(world, entity);
                 var collect = new DeferredTriggerCollectionSystem(world, queue, _tagOps, active);
