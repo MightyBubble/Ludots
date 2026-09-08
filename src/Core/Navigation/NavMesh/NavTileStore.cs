@@ -9,11 +9,33 @@ namespace Ludots.Core.Navigation.NavMesh
         private readonly Func<NavTileId, Stream> _openStream;
         private readonly object _gate = new object();
         private readonly Dictionary<NavTileId, NavTile> _loaded = new Dictionary<NavTileId, NavTile>(256);
+        private readonly Dictionary<NavTileId, NavTileManifestEntry>? _manifestEntries;
+        private readonly string _manifestBuildHash = string.Empty;
         private uint _revision;
 
         public NavTileStore(Func<NavTileId, Stream> openStream)
+            : this(openStream, manifest: null)
+        {
+        }
+
+        /// <summary>
+        /// Creates a store that validates every artifact against its declared manifest entry
+        /// on load. A tile whose checksum or tile version disagrees with the manifest is
+        /// rejected instead of being served as if it matched the recorded build.
+        /// </summary>
+        public NavTileStore(Func<NavTileId, Stream> openStream, NavTileManifest? manifest)
         {
             _openStream = openStream ?? throw new ArgumentNullException(nameof(openStream));
+            if (manifest != null)
+            {
+                _manifestBuildHash = manifest.BuildHash;
+                _manifestEntries = new Dictionary<NavTileId, NavTileManifestEntry>(manifest.Tiles.Length);
+                for (int i = 0; i < manifest.Tiles.Length; i++)
+                {
+                    NavTileManifestEntry entry = manifest.Tiles[i];
+                    _manifestEntries[new NavTileId(entry.ChunkX, entry.ChunkY, entry.Layer)] = entry;
+                }
+            }
         }
 
         public uint Revision
@@ -97,6 +119,7 @@ namespace Ludots.Core.Navigation.NavMesh
 
             using var s = _openStream(id);
             NavTile tile = NavTileBinary.Read(s);
+            ValidateAgainstManifest(id, tile);
             lock (_gate)
             {
                 if (_loaded.TryGetValue(id, out var loaded)) return loaded;
@@ -110,6 +133,7 @@ namespace Ludots.Core.Navigation.NavMesh
         {
             using var s = _openStream(id);
             var tile = NavTileBinary.Read(s);
+            ValidateAgainstManifest(id, tile);
             lock (_gate)
             {
                 _loaded[id] = tile;
@@ -117,6 +141,30 @@ namespace Ludots.Core.Navigation.NavMesh
             }
 
             return tile;
+        }
+
+        private void ValidateAgainstManifest(NavTileId id, NavTile tile)
+        {
+            if (_manifestEntries == null) return;
+
+            if (!_manifestEntries.TryGetValue(id, out NavTileManifestEntry? entry))
+            {
+                throw new InvalidDataException(
+                    $"Nav tile {id} is not listed in the map's manifest (buildHash {_manifestBuildHash}); the artifact set is incomplete. Re-bake the map.");
+            }
+
+            string expectedChecksum = "fnv1a64:" + tile.Checksum.ToString("x16");
+            if (!string.Equals(entry.TileChecksum, expectedChecksum, StringComparison.Ordinal))
+            {
+                throw new InvalidDataException(
+                    $"Nav tile {id} checksum {expectedChecksum} does not match the manifest entry '{entry.TileChecksum}' (buildHash {_manifestBuildHash}). Re-bake the map.");
+            }
+
+            if (entry.TileVersion != tile.TileVersion)
+            {
+                throw new InvalidDataException(
+                    $"Nav tile {id} declares tile version {tile.TileVersion} but the manifest records {entry.TileVersion}. Re-bake the map.");
+            }
         }
 
         public uint Replace(NavTile tile)

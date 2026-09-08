@@ -153,6 +153,92 @@ namespace Ludots.Tests.Architecture
                 Is.EqualTo("assets/Data/Nav/coastline/navtiles.manifest.json"));
         }
 
+        [Test]
+        public void StoreWithManifest_RejectsTileWhoseChecksumDiffers()
+        {
+            var tile = DefaultGridNavTileFactory.CreateFlatTile(0, 0, layer: 0, tileVersion: 1, chunkSizeCells: 64, cellSizeCm: 250);
+            using var ms = new MemoryStream();
+            NavTileBinary.Write(ms, tile);
+            byte[] blob = ms.ToArray();
+
+            var manifest = new NavTileManifest
+            {
+                MapId = "m",
+                Tiles = new[]
+                {
+                    new NavTileManifestEntry
+                    {
+                        Layer = 0,
+                        ProfileId = "p",
+                        ChunkX = 0,
+                        ChunkY = 0,
+                        TileVersion = 1,
+                        TileChecksum = "fnv1a64:0000000000000000"
+                    }
+                }
+            };
+            manifest.BuildHash = manifest.ComputeBuildHash();
+
+            var store = new NavTileStore(_ => new MemoryStream(blob, writable: false), manifest);
+
+            Assert.That(
+                () => store.GetOrLoad(new NavTileId(0, 0, 0)),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("does not match the manifest"));
+        }
+
+        [Test]
+        public void StoreWithManifest_RejectsTileMissingFromManifest()
+        {
+            var tile = DefaultGridNavTileFactory.CreateFlatTile(0, 0, layer: 0, tileVersion: 1, chunkSizeCells: 64, cellSizeCm: 250);
+            using var ms = new MemoryStream();
+            NavTileBinary.Write(ms, tile);
+            byte[] blob = ms.ToArray();
+
+            var manifest = new NavTileManifest { MapId = "m", Tiles = Array.Empty<NavTileManifestEntry>() };
+            manifest.BuildHash = manifest.ComputeBuildHash();
+            var store = new NavTileStore(_ => new MemoryStream(blob, writable: false), manifest);
+
+            Assert.That(
+                () => store.GetOrLoad(new NavTileId(0, 0, 0)),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("not listed in the map's manifest"));
+        }
+
+        [Test]
+        public void StoreWithMatchingManifest_LoadsNormally()
+        {
+            var tile = DefaultGridNavTileFactory.CreateFlatTile(0, 0, layer: 0, tileVersion: 7, chunkSizeCells: 64, cellSizeCm: 250);
+            using var ms = new MemoryStream();
+            NavTileBinary.Write(ms, tile);
+            byte[] blob = ms.ToArray();
+
+            var manifest = new NavTileManifest
+            {
+                MapId = "m",
+                Tiles = new[]
+                {
+                    new NavTileManifestEntry
+                    {
+                        Layer = 0,
+                        ProfileId = "p",
+                        ChunkX = 0,
+                        ChunkY = 0,
+                        TileVersion = 7,
+                        TileChecksum = "fnv1a64:" + PersistedChecksum(blob).ToString("x16")
+                    }
+                }
+            };
+            manifest.BuildHash = manifest.ComputeBuildHash();
+            var store = new NavTileStore(_ => new MemoryStream(blob, writable: false), manifest);
+
+            Assert.That(store.GetOrLoad(new NavTileId(0, 0, 0)).TileId, Is.EqualTo(new NavTileId(0, 0, 0)));
+        }
+
+        private static ulong PersistedChecksum(byte[] blob)
+        {
+            using var ms = new MemoryStream(blob, writable: false);
+            return NavTileBinary.Read(ms).Checksum;
+        }
+
         private static NavTileManifest CreateManifest()
             => new()
             {

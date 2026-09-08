@@ -4140,7 +4140,7 @@ namespace Ludots.Core.Engine
             // read. When a manifest is present it is binding: identity and format mismatches
             // fail closed instead of silently serving another map's or version's geometry.
             // Maps baked before manifests existed simply have no manifest to validate.
-            ValidateNavTileManifest(mapId, boardScopedAddressing ? navigableBoards[0].Name : null);
+            NavTileManifest? manifest = ValidateNavTileManifest(mapId, boardScopedAddressing ? navigableBoards[0].Name : null);
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
@@ -4182,7 +4182,7 @@ namespace Ludots.Core.Engine
                             }
                         }
 
-                        var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)));
+                        var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)), manifest);
                         stores[new NavQueryServiceKey(boardScopedAddressing ? boardId : string.Empty, layer, profileIndex)] = store;
                     }
                 }
@@ -4513,11 +4513,11 @@ namespace Ludots.Core.Engine
             return new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
         }
 
-        private void ValidateNavTileManifest(string mapId, string? boardId)
+        private NavTileManifest? ValidateNavTileManifest(string mapId, string? boardId)
         {
             string rel = NavAssetPaths.GetNavTileManifestRelativePath(mapId);
-            if (!TryResolveSingleExistingUri(rel, out string manifestUri)) return;
-            if (!VFS.TryResolveFullPath(manifestUri, out string manifestPath) || !File.Exists(manifestPath)) return;
+            if (!TryResolveSingleExistingUri(rel, out string manifestUri)) return null;
+            if (!VFS.TryResolveFullPath(manifestUri, out string manifestPath) || !File.Exists(manifestPath)) return null;
 
             NavTileManifest manifest;
             try
@@ -4544,6 +4544,7 @@ namespace Ludots.Core.Engine
             }
 
             SetService(CoreServiceKeys.NavTileManifest, manifest);
+            return manifest;
         }
 
         private string ResolveSingleExistingUri(string relPath)

@@ -1451,9 +1451,13 @@ namespace {modId}
                 string rel = NavAssetPaths.GetNavTileRelativePath(mapId, artifactBoardId, entry.Layer, entry.ProfileId, entry.Target.ChunkX, entry.Target.ChunkY);
                 string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
                 Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
+                ulong persistedChecksum;
                 using (var fs = File.Create(outFile))
                 {
                     NavTileBinary.Write(fs, entry.Tile);
+                    // NavTileBinary.Write computes the checksum over the serialized payload, so
+                    // the manifest must record that value rather than the in-memory tile's.
+                    persistedChecksum = ReadPersistedChecksum(outFile);
                 }
 
                 manifestEntries.Add(new NavTileManifestEntry
@@ -1463,7 +1467,7 @@ namespace {modId}
                     ChunkX = entry.Target.ChunkX,
                     ChunkY = entry.Target.ChunkY,
                     TileVersion = entry.Tile.TileVersion,
-                    TileChecksum = "fnv1a64:" + entry.Tile.Checksum.ToString("x16")
+                    TileChecksum = "fnv1a64:" + persistedChecksum.ToString("x16")
                 });
 
                 if (writeArtifact)
@@ -1477,6 +1481,12 @@ namespace {modId}
             }
 
             WriteNavTileManifest(repoRoot, mapId, artifactBoardId, context, manifestEntries);
+        }
+
+        static ulong ReadPersistedChecksum(string path)
+        {
+            using var fs = File.OpenRead(path);
+            return NavTileBinary.Read(fs).Checksum;
         }
 
         static void WriteNavTileManifest(
