@@ -21,6 +21,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private static readonly QueryDescription VolumeQuery = new QueryDescription()
             .WithAll<MapEntity, RegionVolumeCm>();
 
+        private static readonly QueryDescription StandaloneEmissionQuery = new QueryDescription()
+            .WithAll<MapEntity, RegionVolumeEmissionCm>()
+            .WithNone<RegionVolumeCm>();
+
         public static IReadOnlySet<string> Bake(
             World world,
             MapSession session,
@@ -68,7 +72,38 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 }
             }
 
+            ValidateStandaloneEmissions(world, session, customEvents, schemas);
             return keys;
+        }
+
+        /// <summary>
+        /// Load-time semantic validation for emission contracts on entities that are
+        /// not region volumes — contact sensor emitters (#1469). Runtime-spawned
+        /// emitters skip this and rely on fire-time ValidateFirePayload.
+        /// </summary>
+        private static void ValidateStandaloneEmissions(
+            World world,
+            MapSession session,
+            CustomEventNameRegistry customEvents,
+            EventSchemaRegistry schemas)
+        {
+            foreach (ref var chunk in world.Query(in StandaloneEmissionQuery))
+            {
+                var mapEntities = chunk.GetSpan<MapEntity>();
+                ref var entityFirst = ref chunk.Entity(0);
+                foreach (var index in chunk)
+                {
+                    if (mapEntities[index].MapId != session.MapId)
+                    {
+                        continue;
+                    }
+
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    RegionVolumeEmissionCm emission = world.Get<RegionVolumeEmissionCm>(entity);
+                    world.Set(entity, ValidateAndCanonicalizeEmission(
+                        emission, $"entity {entity.Id}", session.MapId.Value, customEvents, schemas));
+                }
+            }
         }
 
         /// <summary>
