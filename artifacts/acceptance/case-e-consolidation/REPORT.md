@@ -6,6 +6,8 @@
 
 提交前再次同步远端 main `daf70a5b48` 的区域扫掠更新，合并提交 `a733064881`；同步后 Case E、区域与教学场景回归 65/65，通过日志为 `main-sync.log`。
 
+命名复审后再同步 main `09705ec204`，合并提交 `93f2f8b780`；双方新增的启动器入口均保留。最终 Release GAS 门禁、Case E 与区域回归 **808/808**，摘要见 [main-final-summary.txt](naming/main-final-summary.txt)。
+
 发现并处理了重复输入派发、重复全图收集、出生后回执改队、面板自带文本/图片替代实现。派生名单索引、空间索引、Presenter 销毁索引继续保留。
 
 ## 2. 结构
@@ -93,6 +95,8 @@ PI Opus 5 与 PI DeepSeek v4 Flash 分别审阅，再交换意见复议。双方
 本轮 Release 复测：一万单位、三万保留实例，20 次切换均值 Mesh **4.791765 ms**、HUD **6.047280 ms**，均为 **0 B**；重复提交四次均值 **13.101725 ms**，清除 **5.339725 ms**，均为 **0 B**。首次提交仍为 **50.7281 ms / 15,407,856 B**。这次修改名称没有新增性能路径，耗时差异不能作为优化收益。原始结果：[Presenter 测试](naming/presenter-tests.log)、[万人 CSV](naming/presenter-10000.csv)。
 
 ## 4. 场景与证据
+
+- 本轮命名更新：Presenter 专项 26/26，最终主线整合回归 808/808。首次扩展测试的三项地形失败来自本地子模块未初始化；按锁定提交补齐后重跑及最终整轮均通过。文档校验通过，注册表错误 0、既有完备性警告 30；图节点生成器无漂移。命名后未重录实机画面，下列截图保留此前验收时间与范围。
 
 - 目标回归：147/147，日志 `delivery-final.log`；Presenter 扩展回归与切换耗时见 `possession-final.log`。原有 9 项复用测试包含在扩展回归中。
 - Presenter 扩展回归 270 项：269 通过，1 项旧错误文字断言失败。`Load_RejectsBindingsMissingRequiredSourcePayload` 的 graph 用例期待 `Presenter binding graph.sourceId`，实际错误包含更具体的配置路径；原性能分支 `fb07451339` 的已有 Release 测试产物也复现同一失败。此次变更的 26 项专项全部通过。基线复现见 `loader-baseline.txt`。

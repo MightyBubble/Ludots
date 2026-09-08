@@ -332,14 +332,19 @@ FAMILY_USE_CASES = {
 }
 
 
-def scene_section(op: str, doc: dict, detail: str, graph_path: Path) -> str:
+def scene_section(op: str, doc: dict, detail: str, graph_path: Path, has_media: bool) -> str:
     seq = node_sequence(doc, op)
     chain = " → ".join(
         (f"**{o}**（本篇）" if star else o) for o, star in seq
     )
+    introduction = (
+        f"上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/{op}.json`，共 {len(seq)} 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果："
+        if has_media else
+        f"这场演示使用画廊里的作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/{op}.json`，共 {len(seq)} 个节点。下列调用顺序可供编写自己的图时参考："
+    )
     return f"""## 这场是怎么搭出来的
 
-这场演示使用画廊里的作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/{op}.json`，共 {len(seq)} 个节点。下列调用顺序可供编写自己的图时参考：
+{introduction}
 
 {chain}
 
@@ -434,18 +439,19 @@ def evidence_dir(op: str) -> str:
     return f"{EVIDENCE_REL}/{PREFIX}{op}"
 
 
+def media_present(repo: Path, op: str) -> bool:
+    directory = repo / evidence_dir(op)
+    return all(
+        (directory / name).is_file() and (directory / name).stat().st_size >= minimum
+        for name, minimum in (("play.mp4", 20_000), ("poster.png", 1_000))
+    )
+
+
 def require_media(repo: Path, op: str) -> None:
-    play = repo / evidence_dir(op) / "play.mp4"
-    poster = repo / evidence_dir(op) / "poster.png"
-    if not play.is_file() or play.stat().st_size < 20_000:
+    if not media_present(repo, op):
         raise SystemExit(
-            f"Missing tracked player video for {op}: {play}. "
+            f"Missing or incomplete recording for {op}: {repo / evidence_dir(op)}. "
             "Run scripts/record-graph-op-node-galleries.py first."
-        )
-    if not poster.is_file() or poster.stat().st_size < 1_000:
-        raise SystemExit(
-            f"Missing tracked gallery poster for {op}: {poster}. "
-            "Record script must write poster.png next to play.mp4."
         )
 
 
@@ -551,12 +557,12 @@ def main() -> int:
         driver = vignette.get("driver", "sandbox")
         graph_path = repo / GALLERY_REL / "assets" / "GAS" / "graphs" / f"{op}.json"
         doc = find_op_doc(graph_path, op)
+        has_media = media_present(repo, op)
         sections = [
             author_section(repo, op, driver, descs[op], doc).rstrip("\n"),
-            scene_section(op, doc, vignette.get("detailTemplate", vignette["beat"]), graph_path).rstrip("\n"),
+            scene_section(op, doc, vignette.get("detailTemplate", vignette["beat"]), graph_path, has_media).rstrip("\n"),
             boundary_section(op, driver, descs[op]).rstrip("\n"),
         ]
-        has_media = all((repo / evidence_dir(op) / name).is_file() for name in ("play.mp4", "poster.png"))
         write_op_page(wiki_dir / f"{op}.md", vignette, sections, has_media)
         by_driver[driver].append(vignette)
 

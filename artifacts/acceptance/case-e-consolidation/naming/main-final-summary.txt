@@ -1,0 +1,10 @@
+  已通过 VisionResolver_RelationshipGatedScopesRequireRelationshipRuntime [2 ms]
+  已通过 VisionSystem_DrivesFogResolveAndKnowledgeProjectionFromEcsComponents [3 ms]
+  已通过 VisionSystem_OwnedEmitterWithoutFormalPlayerRepresentative_FailsExplicitly [4 ms]
+
+测试运行成功。
+测试总数: 808
+     通过数: 808
+总时间: 41.1586 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
