@@ -1,6 +1,10 @@
 # 接触发射合同（传感器桥）
 
-> 状态：**可玩交付（headless 真机）**——引擎能力（`ContactEmissionTap`，#1469）+ 物理体模板授权与 `contact_sensor_textbook` 教科书（#1480）：压力板/滚球全数据建体，滚球压板经真实物理管线（宽相 sensor 配对→窄相→边沿→路由 tap→发射合同→图→地图变量）触发自定义事件；验收 `ContactSensorTextbookAcceptanceTests`。启动：`scripts/run-mod-launcher.cmd cli launch $contact_sensor_textbook $agent_bridge --adapter raylib`。
+> 状态：**可玩交付（headless 真机）**——引擎能力（`ContactEmissionTap`，#1469）+ 物理体模板授权与 `contact_sensor_textbook` 教科书（#1480）：压力板/滚球全数据建体，滚球压板经真实物理管线（宽相 sensor 配对→窄相→边沿→路由 tap→发射合同→图→地图变量）触发自定义事件；验收 `ContactSensorTextbookAcceptanceTests`。启动：
+
+```text
+.\scriptsun-mod-launcher.cmd cli launch $contact_sensor_textbook $agent_bridge --adapter raylib
+```
 
 ## 是什么
 
