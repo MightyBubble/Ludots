@@ -53,6 +53,8 @@ namespace Ludots.Raylib.Render
         private int _locInstanceTableSampler = -1;
         private int _locInstanceBase = -1;
         private int _locBoneBase = -1;
+        private int _locPaletteSlotsPerRow = -1;
+        private int _locPaletteSlotRows = -1;
 
         public RaylibGpuSkinnedBatchRenderer(
             RaylibGpuSkinnedModelCache modelCache,
@@ -68,6 +70,11 @@ namespace Ludots.Raylib.Render
         public int LastBatches { get; private set; }
         public double LastMatrixBuildMs { get; private set; }
         public double LastMeshDrawMs { get; private set; }
+        public double LastPoseBuildCpuMs { get; private set; }
+        public double LastTextureUploadCpuMs { get; private set; }
+        public double LastShadowSubmitCpuMs { get; private set; }
+        public int LastUniquePoses { get; private set; }
+        public long LastTextureUploadBytes { get; private set; }
 
         public bool BatchesPreparedForShadow => _gpuSkinnedBatchesPreparedForShadow;
 
@@ -79,6 +86,11 @@ namespace Ludots.Raylib.Render
             LastBatches = 0;
             LastMatrixBuildMs = 0d;
             LastMeshDrawMs = 0d;
+            LastPoseBuildCpuMs = 0d;
+            LastTextureUploadCpuMs = 0d;
+            LastShadowSubmitCpuMs = 0d;
+            LastUniquePoses = 0;
+            LastTextureUploadBytes = 0;
         }
 
         public void ApplyFrameLighting(RaylibFrameLighting lighting, Vector3 viewPos, RaylibDirectionalShadowMap? shadow, float shadowTexelWorld)
@@ -236,6 +248,9 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
+            long buildStart = Stopwatch.GetTimestamp();
+            LastUniquePoses = _dirtyPoseRows.Count;
+
             // 0. 容量前置（一次定型）：扩容会重建纹理、丢弃已上传行，因此必须发生在本帧
             // 任何行写入/上传之前，禁止在逐行循环中途触发（#1395 codex 复审结论）。
             int maxBoneSlots = 0;
@@ -291,7 +306,10 @@ namespace Ludots.Raylib.Render
                     boneBase += mesh.boneCount;
                 }
 
+                long uploadStart = Stopwatch.GetTimestamp();
                 _posePalette.FlushPaletteRow(poseRow);
+                LastTextureUploadCpuMs += (Stopwatch.GetTimestamp() - uploadStart) * 1000d / Stopwatch.Frequency;
+                LastTextureUploadBytes += (long)_posePalette.PaletteWidthTexels * _posePalette.SlotRowsPerPose * 4 * sizeof(float);
             }
 
             // 2. 实例表：每实例 (poseRow + RGBA tint) 写入 staging 并上传，同时锁定批次实例基址
@@ -320,11 +338,15 @@ namespace Ludots.Raylib.Render
                 int rows = (totalInstances + RaylibPoseTexturePalette.InstancesPerRow - 1) / RaylibPoseTexturePalette.InstancesPerRow;
                 if (rows > 0)
                 {
+                    long uploadStart = Stopwatch.GetTimestamp();
                     _posePalette.FlushInstanceRows(0, rows);
+                    LastTextureUploadCpuMs += (Stopwatch.GetTimestamp() - uploadStart) * 1000d / Stopwatch.Frequency;
+                    LastTextureUploadBytes += (long)rows * RaylibPoseTexturePalette.InstanceTableWidth * 4 * sizeof(float);
                 }
             }
 
             _poseTexturesBuiltForFrame = true;
+            LastPoseBuildCpuMs = (Stopwatch.GetTimestamp() - buildStart) * 1000d / Stopwatch.Frequency - LastTextureUploadCpuMs;
         }
 
         public void FlushShadow(RaylibDirectionalShadowMap shadow)
@@ -337,6 +359,7 @@ namespace Ludots.Raylib.Render
             // 阴影 pass 先于主 pass：姿势纹理必须先于阴影绘制构建（与主 pass 幂等同一次）
             BuildAndUploadPoseTextures();
 
+            long shadowStart = Stopwatch.GetTimestamp();
             for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
             {
                 GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
@@ -349,6 +372,7 @@ namespace Ludots.Raylib.Render
             }
 
             _gpuSkinnedBatchesPreparedForShadow = true;
+            LastShadowSubmitCpuMs += (Stopwatch.GetTimestamp() - shadowStart) * 1000d / Stopwatch.Frequency;
         }
 
         public void Dispose()
@@ -405,6 +429,7 @@ namespace Ludots.Raylib.Render
 
                             // 姿势纹理蒙皮：骨骼矩阵已在调色板纹理中，无需 uniform 上传
                             BindPoseTextures(ref material);
+                            SetPaletteStrideUniforms();
                             SetBoneBaseUniform(boneBase);
                             for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
                             {
@@ -462,7 +487,9 @@ namespace Ludots.Raylib.Render
                                 _posePalette.BonePalette,
                                 _posePalette.InstanceTable,
                                 batch.GlobalInstanceBase + offset,
-                                boneBase);
+                                boneBase,
+                                RaylibPoseTexturePalette.BoneSlotsPerRow,
+                                _posePalette.SlotRowsPerPose);
                         }
                     }
 
@@ -521,6 +548,8 @@ namespace Ludots.Raylib.Render
             _locInstanceTableSampler = Rl.GetShaderLocation(_skinningShader, "uInstanceTable");
             _locInstanceBase = Rl.GetShaderLocation(_skinningShader, "uInstanceBase");
             _locBoneBase = Rl.GetShaderLocation(_skinningShader, "uBoneBase");
+            _locPaletteSlotsPerRow = Rl.GetShaderLocation(_skinningShader, "uPaletteSlotsPerRow");
+            _locPaletteSlotRows = Rl.GetShaderLocation(_skinningShader, "uPaletteSlotRows");
             _locSkinningColDiffuse = Rl.GetShaderLocation(_skinningShader, "colDiffuse");
             _locSkinningRoughness = Rl.GetShaderLocation(_skinningShader, "uRoughness");
             _locSkinningMetallic = Rl.GetShaderLocation(_skinningShader, "uMetallic");
@@ -577,6 +606,8 @@ namespace Ludots.Raylib.Render
             if (_locInstanceTableSampler < 0) throw new InvalidOperationException("Skinning shader sampler 'uInstanceTable' not found.");
             if (_locInstanceBase < 0) throw new InvalidOperationException("Skinning shader uniform 'uInstanceBase' not found.");
             if (_locBoneBase < 0) throw new InvalidOperationException("Skinning shader uniform 'uBoneBase' not found.");
+            if (_locPaletteSlotsPerRow < 0) throw new InvalidOperationException("Skinning shader uniform 'uPaletteSlotsPerRow' not found.");
+            if (_locPaletteSlotRows < 0) throw new InvalidOperationException("Skinning shader uniform 'uPaletteSlotRows' not found.");
             if (locMvp < 0) throw new InvalidOperationException("Skinning shader uniform 'mvp' not found.");
             if (locInstance < 0) throw new InvalidOperationException("Skinning shader attrib 'instanceTransform' not found.");
             if (locVertexPosition < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexPosition' not found.");
@@ -635,6 +666,15 @@ namespace Ludots.Raylib.Render
 
             float value = boneBase;
             Rl.SetShaderValue(_skinningShader, _locBoneBase, &value, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+        }
+
+        private unsafe void SetPaletteStrideUniforms()
+        {
+            var palette = _posePalette ?? throw new InvalidOperationException("Skinning draw requires a pose palette.");
+            float slotsPerRow = RaylibPoseTexturePalette.BoneSlotsPerRow;
+            float slotRows = palette.SlotRowsPerPose;
+            Rl.SetShaderValue(_skinningShader, _locPaletteSlotsPerRow, &slotsPerRow, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_skinningShader, _locPaletteSlotRows, &slotRows, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
         }
 
         private readonly record struct GpuSkinnedInstanceBatchKey(

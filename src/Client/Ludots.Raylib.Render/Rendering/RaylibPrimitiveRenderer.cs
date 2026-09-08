@@ -117,6 +117,11 @@ namespace Ludots.Raylib.Render
         public int LastGpuSkinnedBatches { get; private set; }
         public double LastGpuSkinnedMatrixBuildMs { get; private set; }
         public double LastGpuSkinnedMeshDrawMs { get; private set; }
+        public double LastGpuSkinnedPoseBuildCpuMs => _gpuSkinned.LastPoseBuildCpuMs;
+        public double LastGpuSkinnedTextureUploadCpuMs => _gpuSkinned.LastTextureUploadCpuMs;
+        public double LastGpuSkinnedShadowSubmitCpuMs => _gpuSkinned.LastShadowSubmitCpuMs;
+        public int LastGpuSkinnedUniquePoses => _gpuSkinned.LastUniquePoses;
+        public long LastGpuSkinnedTextureUploadBytes => _gpuSkinned.LastTextureUploadBytes;
         public int LastMeshVisualCount { get; private set; }
         public int LastDecalVisualCount { get; private set; }
         public int LastVfxVisualCount { get; private set; }
@@ -644,7 +649,10 @@ namespace Ludots.Raylib.Render
             LastGpuSkinnedBatches = 0;
             LastGpuSkinnedMatrixBuildMs = 0d;
             LastGpuSkinnedMeshDrawMs = 0d;
-            _gpuSkinned.ResetStats();
+            if (!_gpuSkinned.BatchesPreparedForShadow)
+            {
+                _gpuSkinned.ResetStats();
+            }
             LastMeshVisualCount = 0;
             LastDecalVisualCount = 0;
             LastVfxVisualCount = 0;
@@ -747,6 +755,7 @@ namespace Ludots.Raylib.Render
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
             var span = skinnedBatch.GetSpan();
+            _gpuSkinned.ResetStats();
             _gpuSkinned.Prepare();
             for (int i = 0; i < span.Length; i++)
             {

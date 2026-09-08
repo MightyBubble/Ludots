@@ -14,14 +14,21 @@ uniform sampler2D uBonePalette;
 uniform sampler2D uInstanceTable;
 uniform float uInstanceBase;
 uniform float uBoneBase;
+uniform float uPaletteSlotsPerRow;
+uniform float uPaletteSlotRows;
 
 mat4 FetchBoneMatrix(int poseRow, int boneSlot)
 {
-    int baseX = boneSlot * 4;
-    vec4 c0 = texelFetch(uBonePalette, ivec2(baseX + 0, poseRow), 0);
-    vec4 c1 = texelFetch(uBonePalette, ivec2(baseX + 1, poseRow), 0);
-    vec4 c2 = texelFetch(uBonePalette, ivec2(baseX + 2, poseRow), 0);
-    vec4 c3 = texelFetch(uBonePalette, ivec2(baseX + 3, poseRow), 0);
+    int slotsPerRow = int(uPaletteSlotsPerRow + 0.5);
+    int slotRows = int(uPaletteSlotRows + 0.5);
+    int slabRow = boneSlot / slotsPerRow;
+    int slotInRow = boneSlot - slabRow * slotsPerRow;
+    int baseX = slotInRow * 4;
+    int y = poseRow * slotRows + slabRow;
+    vec4 c0 = texelFetch(uBonePalette, ivec2(baseX + 0, y), 0);
+    vec4 c1 = texelFetch(uBonePalette, ivec2(baseX + 1, y), 0);
+    vec4 c2 = texelFetch(uBonePalette, ivec2(baseX + 2, y), 0);
+    vec4 c3 = texelFetch(uBonePalette, ivec2(baseX + 3, y), 0);
     return mat4(c0, c1, c2, c3);
 }
 

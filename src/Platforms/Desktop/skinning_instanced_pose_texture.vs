@@ -25,6 +25,8 @@ uniform sampler2D uBonePalette;
 uniform sampler2D uInstanceTable;
 uniform float uInstanceBase;     // 本 draw 首实例在实例表中的全局序号（texel 对编号）
 uniform float uBoneBase;         // 本 mesh 首骨骼在调色板槽位中的全局序号
+uniform float uPaletteSlotsPerRow; // 调色板每槽行骨位数（RaylibPoseTexturePalette.BoneSlotsPerRow）
+uniform float uPaletteSlotRows;    // 每个姿势行占用的槽行数（=ceil(boneSlotCapacity/BoneSlotsPerRow)）
 
 out vec2 fragTexCoord;
 out vec4 fragColor;
@@ -33,11 +35,16 @@ out vec3 fragPos;
 
 mat4 FetchBoneMatrix(int poseRow, int boneSlot)
 {
-    int baseX = boneSlot * 4;
-    vec4 c0 = texelFetch(uBonePalette, ivec2(baseX + 0, poseRow), 0);
-    vec4 c1 = texelFetch(uBonePalette, ivec2(baseX + 1, poseRow), 0);
-    vec4 c2 = texelFetch(uBonePalette, ivec2(baseX + 2, poseRow), 0);
-    vec4 c3 = texelFetch(uBonePalette, ivec2(baseX + 3, poseRow), 0);
+    int slotsPerRow = int(uPaletteSlotsPerRow + 0.5);
+    int slotRows = int(uPaletteSlotRows + 0.5);
+    int slabRow = boneSlot / slotsPerRow;
+    int slotInRow = boneSlot - slabRow * slotsPerRow;
+    int baseX = slotInRow * 4;
+    int y = poseRow * slotRows + slabRow;
+    vec4 c0 = texelFetch(uBonePalette, ivec2(baseX + 0, y), 0);
+    vec4 c1 = texelFetch(uBonePalette, ivec2(baseX + 1, y), 0);
+    vec4 c2 = texelFetch(uBonePalette, ivec2(baseX + 2, y), 0);
+    vec4 c3 = texelFetch(uBonePalette, ivec2(baseX + 3, y), 0);
     return mat4(c0, c1, c2, c3);
 }
 
