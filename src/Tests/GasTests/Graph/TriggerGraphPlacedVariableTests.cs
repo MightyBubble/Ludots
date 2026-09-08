@@ -372,22 +372,36 @@ namespace Ludots.Tests.Gas.Graph
         {
             var config = new MapConfig { Id = MapId };
             config.TriggerGraphs = JsonNode.Parse($$"""[ { "graph": "{{GraphName}}" } ]""");
-            if (regionIds != null && regionIds.Length > 0)
-            {
-                var regions = new JsonArray();
-                for (int i = 0; i < regionIds.Length; i++)
-                {
-                    regions.Add(JsonNode.Parse($$"""{ "id": "{{regionIds[i]}}", "shape": "circle", "x": 0, "y": 0, "radiusCm": 100 }"""));
-                }
-
-                config.Regions = regions;
-            }
-
             var session = new MapSession(new MapId(MapId), config);
             var index = new MapLoadEntityIndex();
             for (int i = 0; i < registeredInstances.Length; i++)
             {
                 index.Register(MapId, registeredInstances[i], world.Create());
+            }
+
+            if (regionIds != null && regionIds.Length > 0)
+            {
+                for (int i = 0; i < regionIds.Length; i++)
+                {
+                    world.Create(
+                        new Ludots.Core.Components.MapEntity { MapId = new MapId(MapId) },
+                        new Ludots.Core.Components.WorldPositionCm { Value = Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.Zero },
+                        new Ludots.Core.Gameplay.MapTriggers.RegionVolumeCm
+                        {
+                            VolumeKey = regionIds[i],
+                            Shape = new Ludots.Core.Gameplay.MapTriggers.RegionVolumeShape
+                            {
+                                Kind = Ludots.Core.Gameplay.MapTriggers.RegionVolumeShapeKind.Circle,
+                                Radius = Ludots.Core.Mathematics.FixedPoint.Fix64.FromFloat(100f),
+                            },
+                        });
+                }
+
+                session.RegionVolumeKeys = Ludots.Core.Gameplay.MapTriggers.RegionVolumeBakePass.Bake(
+                    world,
+                    session,
+                    new Ludots.Core.Gameplay.MapTriggers.CustomEventNameRegistry(),
+                    new Ludots.Core.Scripting.EventSchemaRegistry());
             }
 
             session.EntityIndex = index;

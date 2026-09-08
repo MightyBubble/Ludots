@@ -38,6 +38,12 @@
       }
     },
     {
+      "InstanceId": "yard_region",
+      "Template": "GraphOps.RegionYard",
+      "PositionXCm": 400,
+      "PositionYCm": 0
+    },
+    {
       "InstanceId": "marker",
       "Template": "GraphOps.Target",
       "Overrides": {
@@ -68,15 +74,6 @@
       "name": "gallery.region_ghost",
       "type": "int",
       "initial": -1
-    }
-  ],
-  "Regions": [
-    {
-      "id": "yard",
-      "shape": "circle",
-      "x": 400,
-      "y": 0,
-      "radiusCm": 200
     }
   ],
   "Teams": [

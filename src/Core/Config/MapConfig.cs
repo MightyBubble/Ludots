@@ -70,12 +70,6 @@ namespace Ludots.Core.Config
         public int? HeartbeatIntervalTicks { get; set; }
 
         /// <summary>
-        /// Data-declared trigger regions for this map. Raw authoring nodes;
-        /// strict parsing happens at region-mount time (Ludots.Core.Gameplay.MapTriggers).
-        /// </summary>
-        public JsonNode Regions { get; set; }
-
-        /// <summary>
         /// Map-scoped variable declarations. The JSON field is strict-parsed at map-config
         /// load (MapManager); the per-session store is built by MapSession (Ludots.Core.Gameplay.MapTriggers).
         /// </summary>
@@ -150,7 +144,14 @@ namespace Ludots.Core.Config
     {
         public string InstanceId { get; set; }
         public string Template { get; set; }
-        public IntVector2 Position { get; set; }
+
+        /// <summary>
+        /// Placement anchor of last resort (cm): lands as WorldPositionCm only when
+        /// neither the template nor an explicit override supplies one. Both axes must
+        /// be authored together.
+        /// </summary>
+        public int? PositionXCm { get; set; }
+        public int? PositionYCm { get; set; }
         public Dictionary<string, JsonNode> Overrides { get; set; }
         public List<ParamOverrideData> PresenterParamOverrides { get; set; } = new List<ParamOverrideData>();
     }

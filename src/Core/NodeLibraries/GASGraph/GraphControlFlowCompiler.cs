@@ -73,11 +73,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private readonly struct SugarScratch
         {
-            public SugarScratch(byte intReg, byte boolReg)
+            public SugarScratch(byte intReg, byte boolReg, byte? stateReg = null)
             {
                 IntReg = intReg;
                 BoolReg = boolReg;
+                StateReg = stateReg;
             }
+
+            /// <summary>Optional second int cell (DoOnce state latch); null for single-int sugars.</summary>
+            public byte? StateReg { get; }
 
             public byte IntReg { get; }
             public byte BoolReg { get; }
@@ -210,7 +214,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             BtSelector = 6,
             BtDecorator = 7,
             SelectByEnum = 8,
-            FsmState = 9
+            FsmState = 9,
+            DoOnce = 10
         }
 
         private readonly struct AuthoredOp
@@ -1038,6 +1043,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
+                if (string.Equals(node.Op, GraphAuthoringSugar.DoOnce, StringComparison.Ordinal))
+                {
+                    if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"{GraphAuthoringSugar.DoOnce} is Script/TriggerGraph compile-time sugar only.", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.DoOnce, GraphNodeOp.None);
+                    continue;
+                }
+
                 if (string.Equals(node.Op, GraphAuthoringSugar.Break, StringComparison.Ordinal))
                 {
                     if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
@@ -1382,7 +1401,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             if (op.Kind is AuthoredOpKind.BranchBool or AuthoredOpKind.SwitchInt
                 or AuthoredOpKind.While or AuthoredOpKind.Until
-                or AuthoredOpKind.BtSequence or AuthoredOpKind.BtSelector or AuthoredOpKind.BtDecorator)
+                or AuthoredOpKind.BtSequence or AuthoredOpKind.BtSelector or AuthoredOpKind.BtDecorator
+                or AuthoredOpKind.DoOnce)
             {
                 return GraphValueType.Void;
             }
@@ -1565,6 +1585,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
+                if (op.Kind == AuthoredOpKind.DoOnce)
+                {
+                    RequireControlEdge(node, GraphControlFlowPorts.True, controlEdges, graphId, diagnostics);
+                    RequireControlEdge(node, GraphControlFlowPorts.False, controlEdges, graphId, diagnostics);
+                    continue;
+                }
+
                 if (op.Kind is AuthoredOpKind.While or AuthoredOpKind.Until)
                 {
                     RequireControlEdge(node, GraphControlFlowPorts.Body, controlEdges, graphId, diagnostics);
@@ -1728,6 +1755,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
+            {
+                return port is GraphControlFlowPorts.True or GraphControlFlowPorts.False;
+            }
+
+            if (op.Kind == AuthoredOpKind.DoOnce)
             {
                 return port is GraphControlFlowPorts.True or GraphControlFlowPorts.False;
             }
@@ -1994,6 +2026,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return 2; // JumpIfFalse + Jump(arm)
             }
 
+            if (op.Kind == AuthoredOpKind.DoOnce)
+            {
+                // ReadMapVarInt + ConstInt(0) + CompareEqInt + JumpIfFalse(false arm)
+                // + ConstInt(1) + WriteMapVarInt(latch) + Jump(true arm)
+                return 7;
+            }
+
             if (op.Kind == AuthoredOpKind.SwitchInt)
             {
                 int cases = CountSwitchCaseArms(node.Id, controlEdges);
@@ -2198,6 +2237,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     graphId,
                     diagnostics,
                     enumCases);
+                return;
+            }
+
+            if (op.Kind == AuthoredOpKind.DoOnce)
+            {
+                CompileDoOnce(
+                    document,
+                    node,
+                    sugarScratches[nodeIndex],
+                    controlEdges,
+                    nodeIndices,
+                    layouts,
+                    program,
+                    sources,
+                    outputRegisters,
+                    definedInts,
+                    symbolToIndex,
+                    symbols,
+                    graphId,
+                    diagnostics);
                 return;
             }
 
@@ -2546,6 +2605,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             for (int i = 0; i < nodes.Count; i++)
             {
+                if (ops[i].Kind is AuthoredOpKind.DoOnce)
+                {
+                    // State latch (read result) + compare const cell + compare bool cell;
+                    // the Void node's output slot is the shared 0 register and must not
+                    // hold sugar state.
+                    byte doOnceState = registers.AllocScratch(GraphValueType.Int, graphId, nodes[i].Id, diagnostics);
+                    byte doOnceConst = registers.AllocScratch(GraphValueType.Int, graphId, nodes[i].Id, diagnostics);
+                    byte doOnceBool = registers.AllocScratch(GraphValueType.Bool, graphId, nodes[i].Id, diagnostics);
+                    sugarScratches[i] = new SugarScratch(doOnceConst, doOnceBool, doOnceState);
+                    continue;
+                }
+
                 if (ops[i].Kind is not (AuthoredOpKind.SwitchInt or AuthoredOpKind.SelectByEnum or AuthoredOpKind.FsmState))
                 {
                     continue;

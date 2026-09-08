@@ -43,15 +43,6 @@
       "initial": 0
     }
   ],
-  "Regions": [
-    {
-      "id": "raid_circle",
-      "shape": "circle",
-      "x": 0,
-      "y": 0,
-      "radiusCm": 250
-    }
-  ],
   "TriggerGraphs": [
     {
       "graph": "Graph.NightRaid.Flow",

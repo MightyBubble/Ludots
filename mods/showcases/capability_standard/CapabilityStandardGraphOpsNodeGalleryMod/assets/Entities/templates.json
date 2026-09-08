@@ -77,5 +77,15 @@
       },
       "GameplayTagContainer": {}
     }
+  },
+  {
+    "id": "GraphOps.RegionYard",
+    "components": {
+      "RegionVolumeCm": {
+        "volumeKey": "yard",
+        "shape": "circle",
+        "radiusCm": 200
+      }
+    }
   }
 ]

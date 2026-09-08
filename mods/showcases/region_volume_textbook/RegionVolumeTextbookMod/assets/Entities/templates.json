@@ -1,0 +1,122 @@
+[
+  {
+    "id": "textbook.army",
+    "components": {
+      "Name": {
+        "Value": "TextbookArmy"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Army"
+        ]
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        }
+      }
+    }
+  },
+  {
+    "id": "textbook.scout",
+    "components": {
+      "Name": {
+        "Value": "TextbookScout"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 200
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 50
+        }
+      }
+    }
+  },
+  {
+    "id": "textbook.goblin",
+    "components": {
+      "Name": {
+        "Value": "TextbookGoblin"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 60
+        }
+      }
+    }
+  },
+  {
+    "id": "textbook.region_xx_city",
+    "components": {
+      "RegionVolumeCm": {
+        "volumeKey": "xx_city",
+        "shape": "polygon",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            1600,
+            0
+          ],
+          [
+            1600,
+            1200
+          ],
+          [
+            0,
+            1200
+          ]
+        ]
+      },
+      "RegionVolumeTagFilterCm": {
+        "tags": [
+          "Unit.Army"
+        ]
+      }
+    }
+  },
+  {
+    "id": "textbook.goblin_camp",
+    "components": {
+      "Name": {
+        "Value": "GoblinCamp"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 4200,
+          "Y": 2600
+        }
+      }
+    }
+  }
+]

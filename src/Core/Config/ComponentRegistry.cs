@@ -18,6 +18,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Progression.Components;
 using Ludots.Core.Gameplay.Progression.Registry;
@@ -95,6 +96,9 @@ namespace Ludots.Core.Config
             Register("VisionEmitterCm", SetVisionEmitterCm, null, Component<VisionEmitterCm>.ComponentType);
             Register("FogOccupantCm", SetFogOccupantCm, null, Component<FogOccupantCm>.ComponentType);
             Register("FieldTrackedCm", SetFieldTrackedCm, null, Component<FieldTrackedCm>.ComponentType);
+            Register("RegionVolumeCm", SetRegionVolumeCm, null, Component<RegionVolumeCm>.ComponentType);
+            Register("RegionVolumeEmissionCm", SetRegionVolumeEmissionCm, null, Component<RegionVolumeEmissionCm>.ComponentType);
+            Register("RegionVolumeTagFilterCm", SetRegionVolumeTagFilterCm, null, Component<RegionVolumeTagFilterCm>.ComponentType);
             Register("SpatialBounds", SetSpatialBounds);
             Register("SpatialBox3D", SetSpatialBox3D);
             Register("SpatialFootprint2D", SetSpatialFootprint2D);
@@ -622,6 +626,43 @@ namespace Ludots.Core.Config
                 AltitudeBand = ReadOptionalIntProperty(obj, "altitudeBand"),
                 StealthLevel = ReadOptionalByteProperty(obj, "stealthLevel", "FogOccupantCm.stealthLevel"),
             });
+        }
+
+        private static void SetRegionVolumeCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("RegionVolumeCm requires an object payload.");
+            }
+
+            const string componentContext = "RegionVolumeCm";
+            string volumeKey = RegionVolumeComponentAuthoring.ParseVolumeKey(obj, componentContext);
+            RegionVolumeShape shape = RegionVolumeComponentAuthoring.ParseShape(obj, componentContext);
+            SetOrAdd(entity, new RegionVolumeCm { VolumeKey = volumeKey, Shape = shape });
+        }
+
+        private static void SetRegionVolumeEmissionCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("RegionVolumeEmissionCm requires an object payload.");
+            }
+
+            RegionVolumeEmissionCm emission = RegionVolumeComponentAuthoring.ParseEmission(obj, "RegionVolumeEmissionCm");
+            SetOrAdd(entity, emission);
+        }
+
+        private static void SetRegionVolumeTagFilterCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("RegionVolumeTagFilterCm requires an object payload.");
+            }
+
+            ValidateProperties(obj, "RegionVolumeTagFilterCm", "tags");
+            JsonArray tags = RequireArrayProperty(obj, "tags", "RegionVolumeTagFilterCm");
+            GameplayTagContainer filter = RegionVolumeComponentAuthoring.ParseTagFilter(tags, "RegionVolumeTagFilterCm");
+            SetOrAdd(entity, new RegionVolumeTagFilterCm { Filter = filter });
         }
 
         private static void SetFieldTrackedCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
