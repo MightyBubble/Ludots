@@ -279,6 +279,43 @@ namespace Ludots.Tests.Architecture
             Assert.That(loc.LocalXcm, Is.EqualTo(1000));
         }
 
+        [Test]
+        public void NonZeroOriginBoard_FindsPathInWorldCoordinates()
+        {
+            const int originXcm = -3_200_000;
+            const int originZcm = -1_800_000;
+            var store = CreateStore(CreateTile(0, 0), CreateTile(1, 0));
+
+            var registry = new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore>
+                {
+                    [new NavQueryServiceKey("mainland", 0, 0)] = store
+                },
+                new Dictionary<string, NavBoardTileGeometry>
+                {
+                    ["mainland"] = new NavBoardTileGeometry(TileSizeCm, TileSizeCm, originXcm, originZcm, 4, 4)
+                },
+                fallbackWidthCm: TileSizeCm,
+                fallbackHeightCm: TileSizeCm);
+
+            Assert.That(registry.TryCreateQuery("mainland", 0, 0, null!, out NavQueryService service), Is.True);
+
+            int startX = originXcm + 1000;
+            int startZ = originZcm + 1000;
+            int goalX = originXcm + TileSizeCm + 1000;
+            int goalZ = originZcm + 1000;
+
+            NavPathResult result = service.TryFindPath(startX, startZ, goalX, goalZ);
+
+            Assert.That(result.Status, Is.EqualTo(NavPathStatus.Ok),
+                "a board-rooted query must translate endpoints into board-local space before the Detour search");
+            Assert.That(result.PathXcm[0], Is.EqualTo(startX),
+                "result waypoints must be translated back to world coordinates");
+            Assert.That(result.PathZcm[0], Is.EqualTo(startZ));
+            Assert.That(result.PathXcm[result.PathXcm.Length - 1], Is.EqualTo(goalX));
+            Assert.That(result.PathZcm[result.PathZcm.Length - 1], Is.EqualTo(goalZ));
+        }
+
         private static NavQueryServiceRegistry CreateRegistry(params (string BoardId, NavTileStore Store)[] boards)
         {
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>();

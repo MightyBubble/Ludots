@@ -172,6 +172,13 @@ namespace Ludots.Core.Navigation.NavMesh
         {
             try
             {
+                // Tiles carry board-local geometry, so Detour must receive board-local
+                // endpoints; callers speak world centimetres.
+                int localStartXcm = startXcm - _originXcm;
+                int localStartZcm = startZcm - _originZcm;
+                int localGoalXcm = goalXcm - _originXcm;
+                int localGoalZcm = goalZcm - _originZcm;
+
                 NavTileId startTile = LocateTile(startXcm, startZcm);
                 NavTileId goalTile = LocateTile(goalXcm, goalZcm);
                 if (!IsInsideBoardExtent(startTile) || !IsInsideBoardExtent(goalTile))
@@ -182,17 +189,19 @@ namespace Ludots.Core.Navigation.NavMesh
                 _store.GetOrLoad(startTile);
                 _store.GetOrLoad(goalTile);
 
-                return DetourNavQueryEngine.FindPath(
+                NavPathResult local = DetourNavQueryEngine.FindPath(
                     _store.SnapshotLoadedTiles(),
                     _layer,
                     _areaCosts,
                     _tileWidthCm.RoundToInt(),
                     _tileHeightCm.RoundToInt(),
-                    startXcm,
-                    startZcm,
-                    goalXcm,
-                    goalZcm,
+                    localStartXcm,
+                    localStartZcm,
+                    localGoalXcm,
+                    localGoalZcm,
                     maxPortals);
+
+                return TranslateToWorld(local);
             }
             catch (InvalidOperationException)
             {
@@ -202,6 +211,22 @@ namespace Ludots.Core.Navigation.NavMesh
             {
                 return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
             }
+        }
+
+        private NavPathResult TranslateToWorld(in NavPathResult local)
+        {
+            if (_originXcm == 0 && _originZcm == 0) return local;
+            if (local.Status != NavPathStatus.Ok || local.PathXcm.Length == 0) return local;
+
+            int[] worldXcm = new int[local.PathXcm.Length];
+            int[] worldZcm = new int[local.PathZcm.Length];
+            for (int i = 0; i < worldXcm.Length; i++)
+            {
+                worldXcm[i] = local.PathXcm[i] + _originXcm;
+                worldZcm[i] = local.PathZcm[i] + _originZcm;
+            }
+
+            return new NavPathResult(local.Status, worldXcm, worldZcm, local.TravelCost);
         }
 
         private NavTileId LocateTile(int worldXcm, int worldZcm)
