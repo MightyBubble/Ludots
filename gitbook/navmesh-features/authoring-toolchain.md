@@ -124,7 +124,7 @@ Feature: 作者用一条命令生成可查询 NavMesh
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 CLI、Editor Bridge 和 Core bake 已有共用部分；统一 `nav bake --map`、manifest 写入、Artifact 版本收口、冷启动检查和旧入口退役仍未完成。`codex/nav-authoring-showcase` 与 `codex/nav-bake-visualization` 只能提取适配层，不能整体合入。
 

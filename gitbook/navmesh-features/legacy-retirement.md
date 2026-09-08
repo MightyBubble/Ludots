@@ -118,7 +118,7 @@ Feature: 旧导航资产不会静默进入生产运行时
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 资产命名迁移和部分旧 CDT 清理已进入 main；旧 LogicTerrain 持久化旁路、重复 bake/query 入口和历史 showcase 仍需在所有消费方迁移并回归后退役。
 

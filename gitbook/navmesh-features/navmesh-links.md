@@ -126,7 +126,7 @@ Feature: NavMesh Link 提供非连续连接
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 尚未实现，不可玩。主线仅有相邻瓦片 NavBorderPortal；本页 authored Link 的配置、持久化、查询段和动作执行尚未连通。
 

@@ -128,7 +128,7 @@ Feature: 查询失败原因可操作
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 主线已有 `NavQueryService`、PathTypes 和 Detour 基础；失败码细分、容量合同、结构化修复动作和 UI 诊断面仍需收口。
 

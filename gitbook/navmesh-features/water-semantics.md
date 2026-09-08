@@ -112,7 +112,7 @@ Feature: 水面语义约束船只路径
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 主线已有 layer/profile 基础、部分水域阻挡和走性导出；完整水深 source、吃水/船宽参与烘焙和陆海真实 UAT 尚未收口。字段存在不等于吃水导航已经实现。
 

@@ -199,7 +199,7 @@ Feature: 区域分类与 Agent 通行代价正交
 
 ## 7. 现状与 TODO
 
-基线：2026-09-08，`origin/main 9231f05fcf`。
+基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 | 位置 | 核实结果 | 接收动作 |
 |---|---|---|

@@ -429,7 +429,7 @@ UAT 证据至少包括：启动 preset、Agent Bridge `/health` 两次且 `pumpC
 
 ### 现状
 
-截至最新 `origin/main` `9231f05fcf`：
+截至最新 `origin/main` `63afc7626f419acedcc4bd2f1ade33c8f6cd941f`：
 
 - `NavBakeContext`、`NavBakeService`、配置严格校验、Recast 烘焙和 Editor Bridge/CLI 共用链路已经存在。
 - `.height/.grid/.hex` 资产命名、连续高度图命名和 CHTM/HEXM magic 已完成迁移。

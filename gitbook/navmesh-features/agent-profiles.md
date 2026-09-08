@@ -116,7 +116,7 @@ Feature: Agent Profile 决定体型可行性
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 主线已有 agent/profile registry、字段校验和按 Id 关联。AgentProfile 管体型、bake profile 管算法几何约束、Pathing AgentType 管区域代价，这种分工已经是现有合同，不是待合并的重复来源。剩余为编辑器影响分析、明确重绑定及各生产入口的请求身份接线与验收。
 

@@ -115,7 +115,7 @@ Feature: 调试显示与查询使用同一份 NavTile
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 主线已有 presentation buffer、Raylib renderer、N 开关和 overlay 合同测试；按 tile 拾取、过期显示和 Web/Raylib 同源预览仍需收口。
 

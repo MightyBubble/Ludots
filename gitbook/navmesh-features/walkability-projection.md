@@ -114,7 +114,7 @@ Feature: 可行性贴图反映真实 NavMesh
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 走性 PNG 导出、NavTile overlay 和生产帧 NavMesh presentation 已在 main。编辑器统一入口、`.ntil` 单 payload 和冷启动后显示/查询一致性仍需完成。
 

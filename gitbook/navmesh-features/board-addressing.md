@@ -118,7 +118,7 @@ Feature: 多板地图保持独立寻址
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 `NavTileGrid` 声明已进入 main；完整 board registry、manifest 路径、非零 origin 的真实加载和混板 UAT 仍未收口。#1402 的 origin 修复只能作为局部候选，不能替代本页合同。
 

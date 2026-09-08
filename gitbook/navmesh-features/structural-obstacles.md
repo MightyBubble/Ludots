@@ -115,7 +115,7 @@ Feature: 只有结构障碍改变导航连通性
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 主线已有障碍 authoring adapter、dirty system 和合同测试；结构对象的稳定资产模型、足迹预览和移动障碍 UAT 仍需产品化。不能把任意碰撞模型自动当成 NavMesh 障碍。
 

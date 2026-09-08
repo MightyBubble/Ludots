@@ -117,7 +117,7 @@ Feature: 单位只能在允许的导航层行走
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 主线已有 layer/profile 配置和基础路由；water sidecar、桥上下表面模型、跨层 Link 和陆海完整 UAT 仍未收口。层配置不能代替三维表面连接。
 

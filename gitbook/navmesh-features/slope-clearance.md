@@ -122,7 +122,7 @@ Feature: 几何约束决定路径是否可行
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 主线已有坡度、爬高和基础 profile 字段；完整净高源、编辑器几何诊断和三段几何 showcase 尚未收口。不能把单层高度图的结果写成净高能力已通过。
 

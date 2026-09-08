@@ -119,7 +119,7 @@ Feature: 新玩家看懂 NavMesh 的动态更新
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 `navmesh_runtime_gate_showcase` 和 debug showcase 已登记，NavGate 的主循环已有实现；仓库已有部分截图和验收文件；当前仍缺同一目标会话的完整 Agent Bridge 观察→驱动→验证记录、HUD 完整性和所有子场景 UAT。状态只能写“已实现，待运行验收”。
 

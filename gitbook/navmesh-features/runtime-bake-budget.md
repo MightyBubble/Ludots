@@ -117,7 +117,7 @@ Feature: Runtime 重烤遵守显式预算
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 主线有单后台 worker、障碍拷贝和主线程发布；地形/配置/profile 仍依赖队列存活期间不可变的约定。`origin/codex/nav-perf-query-cache-rebake-workers` / PR #1164 提供 worker、generation 和缓存实现，但仍是 open draft，未进入 main。runtime tier、预算报告和完整固定 tick 验收仍需收口。
 

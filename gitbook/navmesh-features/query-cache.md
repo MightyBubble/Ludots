@@ -112,7 +112,7 @@ Feature: 查询缓存服从瓦片版本
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 当前 main 没有完整 `DetourQueryMeshCache`。PR #1164 的 `codex/nav-perf-query-cache-rebake-workers` 分支已实现缓存、LoadedVersion、单飞和 worker，但仍是 open draft，需按当前 `NavTileStore` 合同重整后再合入，并补零分配回归。
 

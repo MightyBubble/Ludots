@@ -115,7 +115,7 @@ Feature: NavTile 产物支持冷启动
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 主线已有 `.ntil`、NavTileStore 和路径加载基础；Manifest 完整字段、冷启动查询、旧格式拒载和编辑器 Artifact 面板仍需收口。
 

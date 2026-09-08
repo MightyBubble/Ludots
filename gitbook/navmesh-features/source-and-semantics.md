@@ -116,7 +116,7 @@ Feature: 所有入口消费同一烘焙源
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 命名迁移、连续高度图和严格 `NavBakeContext` 已在 main；独立 `NavBakeSource`、grid/hex adapter、完整 snapshot 和 policy 仍未收口。`codex/nav-bake-policy` 只能提取实现片段，不能整支合入。
 

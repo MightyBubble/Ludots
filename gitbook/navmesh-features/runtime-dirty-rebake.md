@@ -127,7 +127,7 @@ Feature: 结构变化触发局部重烤
 
 ## 7. 现状与 TODO
 
-核对基线：2026-09-08，`origin/main 9231f05fcf`。
+核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
 主线已有后台队列、脏区收集、主线程发布和 NavGate；运行时完整到达验收、source snapshot、budget/generation 合同和 #1164 的缓存/worker 仍未在 main 收口。状态只能写“已实现，待运行验收”。
 
