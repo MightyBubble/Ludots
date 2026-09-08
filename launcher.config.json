@@ -2386,6 +2386,14 @@
         "value": "mods/showcases/region_volume_textbook/RegionVolumeTextbookMod",
         "projectPath": "RegionVolumeTextbookMod.csproj"
       }
+    },
+    {
+      "name": "contact_sensor_textbook",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/contact_sensor_textbook/ContactSensorTextbookMod",
+        "projectPath": "ContactSensorTextbookMod.csproj"
+      }
     }
   ],
   "adapters": {

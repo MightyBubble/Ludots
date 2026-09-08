@@ -9925,6 +9925,28 @@
       "video": "artifacts/evidence/capability_standard_graph_op_QueryScreenRegionCollection/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "contact_sensor_textbook",
+      "path": "mods/showcases/contact_sensor_textbook/ContactSensorTextbookMod",
+      "title": "Contact Sensor 教科书",
+      "summary": "接触触发教科书（#1480/#1469）：压力板与滚球全部模板数据建体（Position2D/Collider2D/Mass2D/静态体/发射器授权），接触 Begin/End 经 RegionVolumeEmissionCm 发射合同进触发线，图监听自定义事件计数；零 showcase 代码。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "contact",
+        "physics2d",
+        "trigger-graph",
+        "textbook"
+      ],
+      "binding": "contact_sensor_textbook",
+      "preset": "contact_sensor_textbook_raylib",
+      "docsPath": "gitbook/architecture/contact-emission.md",
+      "readmePath": null,
+      "acceptanceTest": "ContactSensorTextbookAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
     }
   ],
   "pathExemptions": [

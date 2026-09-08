@@ -1,0 +1,35 @@
+[
+  {
+    "id": "contact.textbook.plate",
+    "components": {
+      "Name": { "Value": "TextbookPlate" },
+      "EntityLayer": {
+        "category": [ "contact.textbook.plate" ],
+        "mask": [ "contact.textbook.ball", "contact.textbook.plate" ]
+      },
+      "Position2D": { "xCm": 600, "yCm": 0 },
+      "Collider2D": { "shape": "box", "halfWidthCm": 150, "halfHeightCm": 150 },
+      "Mass2D": { "bodyType": "static" },
+      "Physics2DStaticBodyState": {},
+      "ContactEventEmitter2D": {},
+      "RegionVolumeEmissionCm": {
+        "enter": "demo.plate.pressed",
+        "exit": "demo.plate.released",
+        "payload": { "plate.zone": "gate" }
+      }
+    }
+  },
+  {
+    "id": "contact.textbook.ball",
+    "components": {
+      "Name": { "Value": "TextbookBall" },
+      "EntityLayer": {
+        "category": [ "contact.textbook.ball" ],
+        "mask": [ "contact.textbook.plate" ]
+      },
+      "Position2D": { "xCm": 0, "yCm": 0 },
+      "Collider2D": { "shape": "circle", "radiusCm": 40 },
+      "Mass2D": { "bodyType": "kinematic" }
+    }
+  }
+]
