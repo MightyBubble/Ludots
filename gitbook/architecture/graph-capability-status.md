@@ -126,7 +126,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 还开着的（**另开活，本轮别捆**）：Parallel（一期显式不支持）、子树复用/异步叶（BT-2）。
 ### 3.3.1 图相关还开着的（勿当新发现重审）
 
-Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现完整收集、派生集合绑定和空间框选；47 项定向测试通过，完整回归与真实运行取证未收口，债务保持开放。设计见 `artifacts/techdebt/2026-09-07-case-e-selection-query-design.md`，性能与边界见 `docs/benchmarks/case-e-query-completeness/REPORT.md`。本轮独立于 #1456，10k 可切换玩家 showcase 另行施工。
+Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现完整收集、派生集合绑定和空间框选。后续整合进入 PR #1473：万人场景提供玩家切换、独立选择名单及蓝环/黄环动态隐藏，相关行为回归 147 项通过；同步 main `daf70a5b48` 后 Case E 与区域回归 65 项通过。Presenter 扩展回归 269/270，剩余 1 项为原性能分支同样失败的错误文字断言。设计见 `artifacts/techdebt/2026-09-07-case-e-selection-query-design.md`，最新配置、实机证据、性能与边界见 [Case E 整合报告](../../artifacts/acceptance/case-e-consolidation/REPORT.md)。任意谓词、完整 ECS 查询编译、集合重新物化和首次万人表现创建仍有边界，债务保持开放。本轮独立于 #1456。
 
 | 项 | 状态 | 怎么开工 |
 |----|------|----------|
