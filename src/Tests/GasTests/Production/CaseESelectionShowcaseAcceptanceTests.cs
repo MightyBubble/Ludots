@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
@@ -46,6 +47,121 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     private const string SelectedKey = "selected";
     private const string SelectableKey = "case_e.selectable";
     private const string BoxHoverKey = "case_e.box_hover";
+
+    [TestCase(1, false)]
+    [TestCase(2, false)]
+    [TestCase(3, false)]
+    [TestCase(6, false)]
+    [TestCase(1, true)]
+    [TestCase(2, true)]
+    [TestCase(3, true)]
+    [TestCase(6, true)]
+    public void FastBoxRelease_ClearsGestureAndPreview(int heldFrames, bool moveOnRelease)
+    {
+        var backend = new TestInputBackend();
+        using GameEngine engine = CreateEngine(FindRepoRoot(), backend);
+        engine.LoadMap(new MapLoadRequest(new MapId(MapId),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.case_e") })));
+        Entity commander = Resolve(engine, "case-e-commander");
+        TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        Tick(engine, 4);
+        var runtime = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)!;
+        var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)!;
+        int marker = definitions.GetId(BoxingMarkerPresenter);
+        int preview = definitions.GetId(RingPreviewPresenter);
+        Entity[] marines = { Resolve(engine, "case-e-marine-1"), Resolve(engine, "case-e-marine-2"),
+            Resolve(engine, "case-e-marine-3"), Resolve(engine, "case-e-marine-4") };
+        var trace = new List<string>();
+
+        for (int gesture = 0; gesture < 4; gesture++)
+        {
+            PressAt(engine, backend, new Vector2(-1200f, -100f));
+            Tick(engine, 1);
+            backend.SetMousePosition(new Vector2(-300f, 100f));
+            Tick(engine, heldFrames - 1);
+            if (moveOnRelease) backend.SetMousePosition(new Vector2(400f, 100f));
+            ReleaseAt(engine, backend);
+            Tick(engine, 8);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(BoxingCleared(engine, commander)(), Is.True, $"Gesture {gesture}: released gesture remains active");
+                Assert.That(CollectionCount(engine, commander, SelectedKey), Is.EqualTo(moveOnRelease ? 3 : 2), $"Gesture {gesture}: release must commit the final rectangle");
+                Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.LessThanOrEqualTo(0), $"Gesture {gesture}: preview collection remains populated");
+                Assert.That(CountPresentersOwnedBy(runtime, marker, commander, engine.World), Is.Zero, $"Gesture {gesture}: rectangle remains alive");
+                foreach (Entity marine in marines)
+                    Assert.That(CountVisibleRingsOwnedBy(runtime, preview, marine, engine.World), Is.Zero, $"Gesture {gesture}: yellow marker remains visible");
+            });
+            AssertNoTriggerErrors(engine);
+            int yellowCount = 0;
+            foreach (Entity marine in marines)
+                yellowCount += CountVisibleRingsOwnedBy(runtime, preview, marine, engine.World);
+            trace.Add(JsonSerializer.Serialize(new { gesture, heldFrames, moveOnRelease,
+                boxingActive = BoxingActive(engine, commander)(), previewCount = CollectionCount(engine, commander, BoxHoverKey),
+                rectangleCount = CountPresentersOwnedBy(runtime, marker, commander, engine.World), yellowCount,
+                selectedCount = CollectionCount(engine, commander, SelectedKey) }));
+        }
+        WriteFastGestureEvidence($"release-{heldFrames}-{moveOnRelease}", trace);
+    }
+
+    [TestCase(1, 1, false)]
+    [TestCase(1, 2, false)]
+    [TestCase(2, 1, false)]
+    [TestCase(3, 1, false)]
+    [TestCase(2, 1, true)]
+    [TestCase(3, 1, true)]
+    public void RepeatedFastGestures_EndWithNoResiduals(int heldFrames, int releasedFrames, bool restartHeld)
+    {
+        var backend = new TestInputBackend();
+        using GameEngine engine = CreateEngine(FindRepoRoot(), backend);
+        engine.LoadMap(new MapLoadRequest(new MapId(MapId),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.case_e") })));
+        Entity commander = Resolve(engine, "case-e-commander");
+        TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+        Tick(engine, 4);
+        for (int gesture = 0; gesture < 20; gesture++)
+        {
+            PressAt(engine, backend, new Vector2(-1200f, -100f));
+            Tick(engine, heldFrames);
+            backend.SetMousePosition(new Vector2(gesture % 2 == 0 ? -300f : 400f, 100f));
+            ReleaseAt(engine, backend);
+            Tick(engine, releasedFrames);
+        }
+        if (restartHeld)
+        {
+            PressAt(engine, backend, new Vector2(-1200f, -100f));
+            Tick(engine, 8);
+            Assert.That(BoxingActive(engine, commander)(), Is.True, "The previous release must not close the new held gesture.");
+            backend.SetMousePosition(new Vector2(400f, 100f));
+            Tick(engine, 4);
+            Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.EqualTo(3));
+            ReleaseAt(engine, backend);
+        }
+        Tick(engine, 8);
+        var runtime = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)!;
+        var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)!;
+        Assert.That(BoxingCleared(engine, commander)(), Is.True);
+        Assert.That(CollectionCount(engine, commander, SelectedKey), Is.EqualTo(3));
+        Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.LessThanOrEqualTo(0));
+        int rectangleCount = CountPresentersOwnedBy(runtime, definitions.GetId(BoxingMarkerPresenter), commander, engine.World);
+        Assert.That(rectangleCount, Is.Zero);
+        int yellowCount = 0;
+        foreach (string id in new[] { "case-e-marine-1", "case-e-marine-2", "case-e-marine-3", "case-e-marine-4" })
+            yellowCount += CountVisibleRingsOwnedBy(runtime, definitions.GetId(RingPreviewPresenter), Resolve(engine, id), engine.World);
+        Assert.That(yellowCount, Is.Zero);
+        AssertNoTriggerErrors(engine);
+        WriteFastGestureEvidence($"repeat-{heldFrames}-{releasedFrames}-{restartHeld}", new[] { JsonSerializer.Serialize(new {
+            gestures = restartHeld ? 21 : 20, heldFrames, releasedFrames, restartHeld, boxingActive = BoxingActive(engine, commander)(),
+            previewCount = CollectionCount(engine, commander, BoxHoverKey), rectangleCount, yellowCount,
+            selectedCount = CollectionCount(engine, commander, SelectedKey) }) });
+    }
+
+    private static void WriteFastGestureEvidence(string name, IEnumerable<string> rows)
+    {
+        string directory = Path.Combine(FindRepoRoot(), "artifacts", "acceptance", "case-e-fast-release");
+        Directory.CreateDirectory(directory);
+        File.WriteAllLines(Path.Combine(directory, $"{name}.jsonl"), rows);
+    }
 
     [Test]
     public void BoxSelectFullChain_SpawnContextTriggerPresenterRectHitRosterAndModifierSemantics()
