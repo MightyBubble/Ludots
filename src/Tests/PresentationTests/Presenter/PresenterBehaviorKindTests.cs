@@ -1087,6 +1087,33 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(worldHud.TryGetByStableId(stableId, out WorldHudItem moved), Is.True);
             Assert.That(moved.WorldPosition, Is.EqualTo(new Vector3(30f, 2f, 40f)));
+
+            instances.SetParam(hud, 100, ParamLane.Float, 0.5f, 0, default);
+            world.Get<PresenterWorldPosition>(parent).Value = new Vector3(40f, 0f, 50f);
+            behavior.Update(0.016f);
+            emit.Update(0.016f);
+            Assert.That(worldHud.TryGetByStableId(stableId, out WorldHudItem changed), Is.True);
+            Assert.That(changed.WorldPosition, Is.EqualTo(new Vector3(40f, 2f, 50f)));
+            Assert.That(changed.Value0, Is.EqualTo(0.5f));
+
+            world.Get<PresenterWorldScale>(hud).Value = new Vector3(2f, 2f, 1f);
+            instances.MarkTransformDrivenEmitDirty(hud);
+            emit.Update(0.016f);
+            Assert.That(worldHud.TryGetByStableId(stableId, out WorldHudItem resized), Is.True);
+            Assert.That(resized.Width, Is.EqualTo(changed.Width * 2f));
+            Assert.That(resized.Height, Is.EqualTo(changed.Height * 2f));
+
+            world.Get<CullState>(owner).IsVisible = false;
+            instances.MarkTransformDrivenEmitDirty(hud);
+            emit.Update(0.016f);
+            Assert.That(worldHud.Count, Is.Zero);
+
+            world.Get<CullState>(owner).IsVisible = true;
+            instances.MarkTransformDrivenEmitDirty(hud);
+            emit.Update(0.016f);
+            Assert.That(worldHud.TryGetByStableId(stableId, out WorldHudItem restored), Is.True);
+            Assert.That(restored.Value0, Is.EqualTo(0.5f));
+            Assert.That(restored.Width, Is.EqualTo(resized.Width));
         }
 
         [Test]

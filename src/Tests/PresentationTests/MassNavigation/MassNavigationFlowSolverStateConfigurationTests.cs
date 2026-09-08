@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
@@ -311,6 +312,138 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void HardResolveCandidateGating_CoversLowerIndexDisplacedAgentWithoutFallbackProbe()
+        {
+            var flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            flow.PreallocateDisplacedAgentCapacity(1);
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            flow.ResetAuthoredAgents(new[]
+            {
+                CreateSeed(localX: 1_000f, localY: 1_000f, layer),
+                CreateSeed(localX: 1_030f, localY: 1_000f, layer),
+            });
+            flow.MarkAgentDisplaced(0);
+            TeamManager.LoadConfig(new TeamConfig
+            {
+                DefaultRelationship = "Friendly",
+                Relationships = new List<RelationshipEntry>(),
+            });
+
+            using var world = World.Create();
+            flow.Step(
+                dt: 0f,
+                world,
+                CreateNavGroupRuntime(agentCapacity: 2),
+                runHardResolve: true,
+                hardResolveCandidateThresholdAgents: 1);
+
+            Assert.That(flow.LastHardResolvePenetratingPairCount, Is.EqualTo(1));
+            Assert.That(flow.LastHardResolveFallbackProbeAgentCount, Is.Zero,
+                "Candidate generation must cover a lower-index externally displaced pair before hard resolve.");
+            Assert.That(flow.GetPositionX(0), Is.EqualTo(1_000f).Within(0.001f),
+                "Hard resolve must preserve the externally owned displaced pose.");
+            Assert.That(flow.GetPositionX(1), Is.GreaterThanOrEqualTo(1_040f - 0.001f),
+                "The nav-owned neighbor must take the full penetration correction.");
+        }
+
+        [TestCase(1_000)]
+        [TestCase(5_000)]
+        [TestCase(10_000)]
+        public void HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(int agentCount)
+        {
+            var flow = CreateSparseConfiguredFlow();
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new MassNavigationAgentSeed[agentCount];
+            const int columns = 100;
+            const float spacingCm = 180f;
+            for (int i = 0; i < agentCount; i++)
+            {
+                seeds[i] = CreateSeed(
+                    localX: 500f + ((i % columns) * spacingCm),
+                    localY: 500f + ((i / columns) * spacingCm),
+                    layer);
+            }
+
+            flow.ResetAuthoredAgents(seeds);
+            TeamManager.LoadConfig(new TeamConfig
+            {
+                DefaultRelationship = "Friendly",
+                Relationships = new List<RelationshipEntry>(),
+            });
+            for (int i = 0; i < agentCount; i++)
+            {
+                flow.SetUnitTarget(i, flow.GetPositionX(i), flow.GetPositionY(i), resetRecovery: true);
+            }
+
+            using var world = World.Create();
+            var navGroups = CreateNavGroupRuntime(agentCount);
+            flow.Step(0f, world, navGroups, runHardResolve: true, hardResolveCandidateThresholdAgents: 1);
+
+            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+            long started = Stopwatch.GetTimestamp();
+            flow.Step(0f, world, navGroups, runHardResolve: true, hardResolveCandidateThresholdAgents: 1);
+            double elapsedMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+
+            TestContext.WriteLine(
+                $"agents={agentCount} elapsedMs={elapsedMs:F3} candidates={flow.LastHardResolveCandidateAgentCount} " +
+                $"fallbackAgents={flow.LastHardResolveFallbackProbeAgentCount} fallbackPairs={flow.LastHardResolveFallbackPairCheckCount} " +
+                $"pairs={flow.LastHardResolvePairCheckCount} allocated={allocated}");
+            Assert.That(flow.LastHardResolveCandidateAgentCount, Is.Zero);
+            Assert.That(flow.LastHardResolveFallbackProbeAgentCount, Is.Zero,
+                "Sparse settled agents must retain the candidate gate instead of probing every agent neighborhood.");
+            Assert.That(flow.LastHardResolveFallbackPairCheckCount, Is.Zero);
+            Assert.That(allocated, Is.Zero);
+        }
+
+        [TestCase(1_000)]
+        [TestCase(5_000)]
+        [TestCase(10_000)]
+        public void HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(int agentCount)
+        {
+            const int teamCount = 4;
+            Assert.That(agentCount % teamCount, Is.Zero);
+
+            var flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            flow.Reset(
+                new[] { 1, 2, 3, 4 },
+                unitsPerTeam: agentCount / teamCount,
+                CreateProfileSet(),
+                layer,
+                CreateSpawnLayout(randomSeed: 12_648_430));
+            TeamManager.LoadConfig(new TeamConfig
+            {
+                DefaultRelationship = "Friendly",
+                Relationships = new List<RelationshipEntry>(),
+            });
+
+            using var world = World.Create();
+            var navGroups = CreateNavGroupRuntime(agentCount);
+            double hardResolveMs = 0d;
+            Action<double> observeHardResolve = sample => hardResolveMs = sample;
+
+            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+            flow.Step(
+                dt: 1f / 15f,
+                world,
+                navGroups,
+                runHardResolve: true,
+                hardResolveCandidateThresholdAgents: 1,
+                observeHardResolve: observeHardResolve);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+
+            TestContext.WriteLine(
+                $"agents={agentCount} hardResolveMs={hardResolveMs:F3} candidates={flow.LastHardResolveCandidateAgentCount} " +
+                $"pairs={flow.LastHardResolvePairCheckCount} penetrating={flow.LastHardResolvePenetratingPairCount} allocated={allocated}");
+            Assert.That(flow.LastHardResolveCandidateAgentCount, Is.GreaterThan(agentCount * 0.9));
+            Assert.That(flow.LastHardResolvePairCheckCount, Is.LessThan(agentCount * 12L),
+                "Hard resolution must scan the actual collision radius, not the wider candidate-warning radius.");
+            Assert.That(flow.LastHardResolvePenetratingPairCount, Is.GreaterThan(0));
+            Assert.That(allocated, Is.Zero);
+        }
+
+        [Test]
         public void SpawnJitter_UsesConfiguredSeedDeterministically()
         {
             var first = CreateSpawnedFlow(randomSeed: 1234);
@@ -543,6 +676,48 @@ namespace Ludots.Tests.Presentation
             flow.AvoidanceTuning.CopyFrom(config.Avoidance);
             flow.Semantics.CopyFrom(config.Semantics);
             return flow;
+        }
+
+        private static MassNavigationFlowSolverState CreateSparseConfiguredFlow()
+        {
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
+            var flow = new MassNavigationFlowSolverState(new MassNavigationFlowSolverConfig
+            {
+                FieldWidthCm = 20_000,
+                FieldHeightCm = 20_000,
+                FlowCellSizeCm = 100,
+                MaxObstacleCount = 1,
+                ParallelWorkerCount = 1,
+                SeparationHashCellSizeCm = 100,
+                SeparationHashMinSearchRadiusCells = 2,
+                HardResolveHashCellSizeCm = 50,
+                HardResolveHashMinSearchRadiusCells = 1,
+                PlayAreaMinXCm = 50f,
+                PlayAreaMaxXCm = 19_950f,
+                PlayAreaMinYCm = 50f,
+                PlayAreaMaxYCm = 19_950f,
+            });
+            flow.ArrivalTuning.CopyFrom(config.Arrival);
+            flow.AvoidanceTuning.CopyFrom(config.Avoidance);
+            flow.Semantics.CopyFrom(config.Semantics);
+            return flow;
+        }
+
+        private static MassNavigationAgentSeed CreateSeed(
+            float localX,
+            float localY,
+            MassNavigationAgentLayer layer)
+        {
+            return new MassNavigationAgentSeed(
+                teamId: 1,
+                localPositionXCm: localX,
+                localPositionYCm: localY,
+                heavy: false,
+                navMass: 1f,
+                visualScale: 1f,
+                bodyRadiusCm: 20f,
+                speedCmPerSecond: 800f,
+                layer);
         }
 
         private static float StepUnitTargetAndMeasureXDelta(float dt)

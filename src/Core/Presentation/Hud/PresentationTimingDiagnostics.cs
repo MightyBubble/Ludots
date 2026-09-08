@@ -144,6 +144,16 @@ namespace Ludots.Core.Presentation.Hud
         public int PresenterEmitRetainedDirectHitsLastFrame { get; private set; }
         public int PresenterEmitRetainedFullPathLastFrame { get; private set; }
         public int PresenterEmitRetainedDirectMissesLastFrame { get; private set; }
+        public int PresenterRetainedHudPositionUpdatesLastFrame { get; private set; }
+        public int PresenterRetainedHudProjectionReusesLastFrame { get; private set; }
+        public float LastMassNavigationTargetMs { get; private set; }
+        public float LastMassNavigationFlowMs { get; private set; }
+        public float LastMassNavigationPrepMs { get; private set; }
+        public float LastMassNavigationSteeringMs { get; private set; }
+        public float LastMassNavigationStepMs { get; private set; }
+        public float LastMassNavigationHardResolveMs { get; private set; }
+        public float LastMassNavigationEntitySyncMs { get; private set; }
+        public int LastMassNavigationPendingEntitySync { get; private set; }
         public float PresentationRequestFlushMs { get; private set; }
         public float LastPresentationRequestFlushMs { get; private set; }
         public float TerrainRenderMs { get; private set; }
@@ -528,6 +538,36 @@ namespace Ludots.Core.Presentation.Hud
             PresenterEmitRetainedDirectHitsLastFrame = directHits;
             PresenterEmitRetainedFullPathLastFrame = fullPathCount;
             PresenterEmitRetainedDirectMissesLastFrame = directMisses;
+        }
+
+        public void ObservePresenterRetainedHudPositionUpdates(int count)
+        {
+            PresenterRetainedHudPositionUpdatesLastFrame = count;
+        }
+
+        public void ObservePresenterRetainedHudProjectionReuses(int count)
+        {
+            PresenterRetainedHudProjectionReusesLastFrame = count;
+        }
+
+        public void ObserveMassNavigation(
+            float targetMs,
+            float flowMs,
+            float prepMs,
+            float steeringMs,
+            float stepMs,
+            float hardResolveMs,
+            float entitySyncMs,
+            int pendingEntitySync)
+        {
+            LastMassNavigationTargetMs = targetMs;
+            LastMassNavigationFlowMs = flowMs;
+            LastMassNavigationPrepMs = prepMs;
+            LastMassNavigationSteeringMs = steeringMs;
+            LastMassNavigationStepMs = stepMs;
+            LastMassNavigationHardResolveMs = hardResolveMs;
+            LastMassNavigationEntitySyncMs = entitySyncMs;
+            LastMassNavigationPendingEntitySync = pendingEntitySync;
         }
 
         public void ObservePresentationRequestFlush(double sampleMs)

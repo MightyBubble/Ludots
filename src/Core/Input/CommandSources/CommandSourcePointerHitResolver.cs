@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -62,10 +63,34 @@ namespace Ludots.Core.Input.CommandSources
             ScreenRect bestBounds = default;
             bool hasBestBounds = false;
 
-            world.Query(in SelectableQuery, (Entity entity, ref CommandSourceSelectableTag selectable) =>
+            foreach (ref var chunk in world.Query(in SelectableQuery))
             {
-                ConsiderCandidate(world, globals, owner, projector, pointer, radiusPixels, entity, ref best, ref bestBounds, ref hasBestBounds);
-            });
+                Span<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
+                bool hasSpatialBounds = chunk.Has<SpatialBounds>();
+                foreach (int index in chunk)
+                {
+                    Entity entity = chunk.Entity(index);
+                    if (hasSpatialBounds)
+                    {
+                        ConsiderCandidate(world, globals, owner, projector, pointer, radiusPixels, entity, ref best, ref bestBounds, ref hasBestBounds);
+                    }
+                    else
+                    {
+                        ConsiderPointCandidate(
+                            world,
+                            globals,
+                            owner,
+                            projector,
+                            pointer,
+                            radiusPixels,
+                            entity,
+                            in positions[index],
+                            ref best,
+                            ref bestBounds,
+                            ref hasBestBounds);
+                    }
+                }
+            }
 
             return best;
         }
@@ -123,12 +148,12 @@ namespace Ludots.Core.Input.CommandSources
             ref ScreenRect bestBounds,
             ref bool hasBestBounds)
         {
-            if (!CommandSourceEligibility.CanInspectLive(world, globals, owner, entity))
+            if (!SpatialBoundsUtility.PointerHitsEntity(world, entity, projector, pointer, radiusPixels))
             {
                 return;
             }
 
-            if (!SpatialBoundsUtility.PointerHitsEntity(world, entity, projector, pointer, radiusPixels))
+            if (!CommandSourceEligibility.CanInspectLive(world, globals, owner, entity))
             {
                 return;
             }
@@ -138,6 +163,49 @@ namespace Ludots.Core.Input.CommandSources
                 return;
             }
 
+            SelectBetterCandidate(entity, in candidateBounds, pointer, ref best, ref bestBounds, ref hasBestBounds);
+        }
+
+        private static void ConsiderPointCandidate(
+            World world,
+            Dictionary<string, object> globals,
+            Entity owner,
+            IScreenProjector projector,
+            Vector2 pointer,
+            float radiusPixels,
+            Entity entity,
+            in WorldPositionCm position,
+            ref Entity best,
+            ref ScreenRect bestBounds,
+            ref bool hasBestBounds)
+        {
+            Vector3 worldPoint = WorldPlane2D.LogicCmToVisualMeters(in position.Value);
+            Vector2 projected = projector.WorldToScreen(worldPoint);
+            if (!float.IsFinite(projected.X) || !float.IsFinite(projected.Y))
+            {
+                return;
+            }
+
+            float dx = projected.X - pointer.X;
+            float dy = projected.Y - pointer.Y;
+            if ((dx * dx) + (dy * dy) > radiusPixels * radiusPixels ||
+                !CommandSourceEligibility.CanInspectLive(world, globals, owner, entity))
+            {
+                return;
+            }
+
+            var candidateBounds = new ScreenRect(projected.X, projected.Y, projected.X, projected.Y);
+            SelectBetterCandidate(entity, in candidateBounds, pointer, ref best, ref bestBounds, ref hasBestBounds);
+        }
+
+        private static void SelectBetterCandidate(
+            Entity entity,
+            in ScreenRect candidateBounds,
+            Vector2 pointer,
+            ref Entity best,
+            ref ScreenRect bestBounds,
+            ref bool hasBestBounds)
+        {
             if (!hasBestBounds)
             {
                 best = entity;

@@ -3,6 +3,8 @@ using System.Diagnostics;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Scripting;
 
 namespace Ludots.Core.MassNavigation.Systems;
 
@@ -14,10 +16,12 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
     private Action<double>? _observeLocalSteering;
     private Action<double>? _observeHardResolve;
     private Action<double>? _observeFlowFieldRebuild;
+    private readonly PresentationTimingDiagnostics? _timingDiagnostics;
 
     public MassNavigationSimulationStepSystem(GameEngine engine)
     {
         _engine = engine;
+        _timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
     }
 
     public void Initialize() { }
@@ -87,6 +91,16 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
                 simulation.ObserveEntitySync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
             }
         }
+
+        _timingDiagnostics?.ObserveMassNavigation(
+            simulation.LastGroupTargetUpdateMs,
+            simulation.LastFlowFieldRebuildMs,
+            simulation.LastStepPrepMs,
+            simulation.LastLocalSteeringMs,
+            simulation.LastSimStepMs,
+            simulation.LastHardResolveMs,
+            simulation.LastEntitySyncMs,
+            simulation.MassNavigationFlow.PendingEntitySyncCount);
     }
 
     private void EnsureObserverCache(MassNavigationSimulationRuntime simulation)
