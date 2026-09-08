@@ -1,0 +1,246 @@
+[
+  {
+    "id": "Graph.Textbook.Ambush",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_army_enters_xx_city",
+        "event": "RegionEntered",
+        "start": "load_scope",
+        "filters": {
+          "region": "xx_city"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "load_scope",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.SourceEntity"
+      },
+      {
+        "id": "gate",
+        "op": "DoOnce",
+        "var": "ambush.fired"
+      },
+      {
+        "id": "read_blocked",
+        "op": "ReadMapVarInt",
+        "var": "ambush.blocked"
+      },
+      {
+        "id": "const_one_b",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "add_blocked",
+        "op": "AddInt"
+      },
+      {
+        "id": "write_blocked",
+        "op": "WriteMapVarInt",
+        "var": "ambush.blocked"
+      },
+      {
+        "id": "halt_blocked",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "spawn_x1",
+        "op": "ConstFloat",
+        "floatValue": 3200.0
+      },
+      {
+        "id": "spawn_y1",
+        "op": "ConstFloat",
+        "floatValue": 1800.0
+      },
+      {
+        "id": "spawn_raider_1",
+        "op": "SpawnTemplate",
+        "template": "textbook.goblin"
+      },
+      {
+        "id": "spawn_x2",
+        "op": "ConstFloat",
+        "floatValue": 3400.0
+      },
+      {
+        "id": "spawn_y2",
+        "op": "ConstFloat",
+        "floatValue": 1900.0
+      },
+      {
+        "id": "spawn_raider_2",
+        "op": "SpawnTemplate",
+        "template": "textbook.goblin"
+      },
+      {
+        "id": "const_spawned",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "write_raiders",
+        "op": "WriteMapVarInt",
+        "var": "ambush.raiders"
+      },
+      {
+        "id": "halt_done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "load_scope",
+        "fromPort": "next",
+        "to": "gate"
+      },
+      {
+        "from": "gate",
+        "fromPort": "true",
+        "to": "spawn_x1"
+      },
+      {
+        "from": "gate",
+        "fromPort": "false",
+        "to": "read_blocked"
+      },
+      {
+        "from": "read_blocked",
+        "fromPort": "next",
+        "to": "const_one_b"
+      },
+      {
+        "from": "const_one_b",
+        "fromPort": "next",
+        "to": "add_blocked"
+      },
+      {
+        "from": "add_blocked",
+        "fromPort": "next",
+        "to": "write_blocked"
+      },
+      {
+        "from": "write_blocked",
+        "fromPort": "next",
+        "to": "halt_blocked"
+      },
+      {
+        "from": "spawn_x1",
+        "fromPort": "next",
+        "to": "spawn_y1"
+      },
+      {
+        "from": "spawn_y1",
+        "fromPort": "next",
+        "to": "spawn_raider_1"
+      },
+      {
+        "from": "spawn_raider_1",
+        "fromPort": "next",
+        "to": "spawn_x2"
+      },
+      {
+        "from": "spawn_x2",
+        "fromPort": "next",
+        "to": "spawn_y2"
+      },
+      {
+        "from": "spawn_y2",
+        "fromPort": "next",
+        "to": "spawn_raider_2"
+      },
+      {
+        "from": "spawn_raider_2",
+        "fromPort": "next",
+        "to": "const_spawned"
+      },
+      {
+        "from": "const_spawned",
+        "fromPort": "next",
+        "to": "write_raiders"
+      },
+      {
+        "from": "write_raiders",
+        "fromPort": "next",
+        "to": "halt_done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "read_blocked",
+        "fromPort": "value",
+        "to": "add_blocked",
+        "toPort": "a"
+      },
+      {
+        "from": "const_one_b",
+        "fromPort": "value",
+        "to": "add_blocked",
+        "toPort": "b"
+      },
+      {
+        "from": "add_blocked",
+        "fromPort": "value",
+        "to": "write_blocked",
+        "toPort": "value"
+      },
+      {
+        "from": "add_blocked",
+        "fromPort": "value",
+        "to": "halt_blocked",
+        "toPort": "value"
+      },
+      {
+        "from": "load_scope",
+        "fromPort": "value",
+        "to": "spawn_raider_1",
+        "toPort": "source"
+      },
+      {
+        "from": "spawn_x1",
+        "fromPort": "value",
+        "to": "spawn_raider_1",
+        "toPort": "a"
+      },
+      {
+        "from": "spawn_y1",
+        "fromPort": "value",
+        "to": "spawn_raider_1",
+        "toPort": "b"
+      },
+      {
+        "from": "load_scope",
+        "fromPort": "value",
+        "to": "spawn_raider_2",
+        "toPort": "source"
+      },
+      {
+        "from": "spawn_x2",
+        "fromPort": "value",
+        "to": "spawn_raider_2",
+        "toPort": "a"
+      },
+      {
+        "from": "spawn_y2",
+        "fromPort": "value",
+        "to": "spawn_raider_2",
+        "toPort": "b"
+      },
+      {
+        "from": "const_spawned",
+        "fromPort": "value",
+        "to": "write_raiders",
+        "toPort": "value"
+      },
+      {
+        "from": "const_spawned",
+        "fromPort": "value",
+        "to": "halt_done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

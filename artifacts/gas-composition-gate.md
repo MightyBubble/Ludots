@@ -115,3 +115,36 @@ N/A（不新增 opcode；只扩既有 op 的 authorableKinds）
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: effect 步骤（保持 `EffectRequestQueue` 固定容量合同不变）
+
+---
+
+## GAS Composition Gate — DoOnce 图体流量控制糖（#1467）
+
+- **Date**: 2026-09-07
+- **Agent / Author**: ZCode (main session)
+
+### 判断标准结论：通过
+
+新变体是**编译期作者糖新增节点**（`GraphAuthoringSugar.DoOnce`），降级为既有 op 组合（ReadMapVarInt + ConstInt + CompareEqInt + JumpIfFalse + WriteMapVarInt + Jump），**零新 GraphNodeOp、零新 VM 指令、零 profile/enum 开关**——正是 composition gate 鼓励的方向。对照反例（被拒绝的形态）：在 TriggerGraph 入口上扩展 once 类声明式开关——入口 once 已存在（17 mod 在用，保留为关卡导演糖），本票补的是图体组合能力。
+
+### 自审清单
+
+1. 变体是 op 组合还是新开关？——组合（降级链七条指令全为既有 op）。
+2. 状态存哪？——int map variable（作者命名 `var`），与 FsmState 的 stateVar 同一持久化机制；Reset ≡ WriteMapVarInt(var, 0)，不加 Reset 端口（零新端口机器）。
+3. Void 节点的输出槽是共享 0 号寄存器——糖状态一律走 `AllocScratch` 专用寄存器（本票踩过这个坑后修正：state/const/bool 三格独立分配）。
+4. 端口合同——true/false 双臂必填，对齐 BranchBool 校验；无值输入输出。
+5. 图种门槛——Script/TriggerGraph，Query/Effect fail-closed（对齐 While/Until）。
+
+### 复用/新增清单
+
+| 类型 | 项 |
+|------|-----|
+| 复用 | GraphNodeOp 既有集、SugarScratch（扩展可选第三格）、EmitRelativeJump/ResolveControlTarget/RequireSymbol、FsmState 展开先例、BranchBool 端口合同 |
+| 新增 Layer 0 | 无 |
+| 新增 Layer 1 | 无 |
+| 新增 Layer 2 | `GraphAuthoringSugar.DoOnce` 糖 + `GraphControlFlowCompiler.DoOnce.cs` 展开 + Bridge 投影一条 |
+| 禁止项 | 无触碰（无 profile DSL、无平行加载器、无 enum 开关） |
+
+### 验证
+
+`GraphDoOnceSugarTests` 4/4（降级形态断言 + Query 拒绝 + 缺臂拒绝 + 缺 var 拒绝）；行为真机验证：`RegionVolumeTextbookAcceptanceTests`（教科书 ambush 图已改用糖——首过 true 臂刷怪、二过 false 臂计数）通过。

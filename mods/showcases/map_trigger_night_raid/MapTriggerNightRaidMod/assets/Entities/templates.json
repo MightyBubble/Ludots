@@ -47,6 +47,11 @@
       "ContinuousHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0.0
+      },
+      "RegionVolumeCm": {
+        "volumeKey": "raid_circle",
+        "shape": "circle",
+        "radiusCm": 250
       }
     }
   },

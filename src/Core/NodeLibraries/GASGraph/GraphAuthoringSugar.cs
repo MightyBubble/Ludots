@@ -61,8 +61,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         public const string InlineGraph = "InlineGraph";
         /// <summary>
-        /// Formal-text authoring sugar: template in <c>text</c> with <c>{0}</c>/<c>{name}</c>
-        /// holes becomes ConstText + ConcatText (brace ports are Text). Never a GraphNodeOp.
+        /// <summary>
+        /// One-shot flow gate (UE DoOnce analogue): the int map variable named by
+        /// <c>var</c> (0 = not yet fired) latches to 1 on the first pass. Control port
+        /// <c>true</c> continues only on that first pass; <c>false</c> receives every
+        /// later activation. Reset is graph-body composition: WriteMapVarInt(var, 0).
+        /// Lowers to ReadMapVarInt + ConstInt/CompareEqInt/JumpIfFalse + ConstInt +
+        /// WriteMapVarInt + Jump; never becomes a GraphNodeOp.
+        /// </summary>
+        public const string DoOnce = "DoOnce";
+        /// <summary>
+        /// Formal-text authoring sugar: template in <c>text</c> with <c>{0}</c>/<c>{name}</c> holes
+        /// becomes ConstText + ConcatText (brace ports are Text). Never becomes a GraphNodeOp.
         /// </summary>
         public const string FormatText = "FormatText";
 
@@ -80,6 +90,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                    string.Equals(opName, While, StringComparison.Ordinal) ||
                    string.Equals(opName, Until, StringComparison.Ordinal) ||
                    string.Equals(opName, Break, StringComparison.Ordinal) ||
+                   string.Equals(opName, DoOnce, StringComparison.Ordinal) ||
                    IsFsmSugar(opName);
         }
 
@@ -122,7 +133,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             => string.Equals(opName, FsmAction, StringComparison.Ordinal);
 
         public static string DescribeScriptOnlySugar()
-            => $"{BranchBool}, {SwitchInt}, {SelectByEnum}, {Wait}, {While}, {Until}, {Break}, {FsmState}, {FsmAction}";
+            => $"{BranchBool}, {SwitchInt}, {SelectByEnum}, {Wait}, {While}, {Until}, {Break}, {DoOnce}, {FsmState}, {FsmAction}";
 
         public static string DescribeBtSugar()
             => $"{BtSequence}, {BtSelector}, {BtDecorator}, {BtLeaf}, {BtAction}, {BtCondition}";

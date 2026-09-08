@@ -2204,6 +2204,14 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
         });
         authoringSugars.Add(new
         {
+            op = GraphAuthoringSugar.DoOnce,
+            controlOutputPorts = new[] { GraphControlFlowPorts.True, GraphControlFlowPorts.False },
+            valueInputPorts = Array.Empty<string>(),
+            outputType = GraphValueType.Void.ToString(),
+            lowersTo = GraphNodeOp.ReadMapVarInt.ToString(),
+        });
+        authoringSugars.Add(new
+        {
             op = GraphAuthoringSugar.Wait,
             controlOutputPorts = new[] { GraphControlFlowPorts.Next },
             valueInputPorts = Array.Empty<string>(),
@@ -2702,20 +2710,16 @@ app.MapGet("/api/mods/{modId}/maps/{mapId}/instances", (string modId, string map
                 }
             }
 
-            if (obj["Regions"] is JsonArray regions)
-            {
-                for (int r = 0; r < regions.Count; r++)
-                {
-                    if (regions[r] is not JsonObject region ||
-                        region["id"]?.GetValue<string>() is not { } regionId ||
-                        string.IsNullOrWhiteSpace(regionId))
-                    {
-                        continue;
-                    }
+        }
 
-                    string trimmed = regionId.Trim();
-                    seen[trimmed] = (string.Empty, Ludots.Core.Systems.PlacedInstanceKinds.Region);
-                }
+        // Region volumes are placed entities whose template declares RegionVolumeCm;
+        // classify them by resolving placement templates against mod template files.
+        var volumeTemplates = EditorRepo.CollectRegionVolumeTemplateIds(ctx);
+        foreach (var kvp in seen.ToList())
+        {
+            if (kvp.Value.Template.Length > 0 && volumeTemplates.Contains(kvp.Value.Template))
+            {
+                seen[kvp.Key] = (kvp.Value.Template, "region");
             }
         }
 
@@ -4746,6 +4750,49 @@ static class EditorRepo
         }
 
         return paths;
+    }
+
+    public static HashSet<string> CollectRegionVolumeTemplateIds(ModContext ctx)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        void AddFile(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return;
+            }
+
+            try
+            {
+                JsonNode? root = JsonNode.Parse(File.ReadAllText(path));
+                if (root is not JsonObject obj || obj["templates"] is not JsonArray templates)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < templates.Count; i++)
+                {
+                    if (templates[i] is JsonObject template &&
+                        template["id"]?.GetValue<string>() is { } id &&
+                        template["components"] is JsonObject components &&
+                        components.ContainsKey("RegionVolumeCm"))
+                    {
+                        ids.Add(id);
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        AddFile(Path.Combine(ctx.RepoRoot, "assets", "Entities", "templates.json"));
+        for (int i = 0; i < ctx.LoadOrder.Count; i++)
+        {
+            AddFile(Path.Combine(ctx.ModsById[ctx.LoadOrder[i]].RootPath, "assets", "Entities", "templates.json"));
+        }
+
+        return ids;
     }
 
     public static IReadOnlyList<MapVariableAuthoringDto> ProjectMapVariables(IReadOnlyList<MapVariableDeclaration>? declarations)

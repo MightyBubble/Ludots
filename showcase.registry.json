@@ -9850,6 +9850,27 @@
       "video": "artifacts/evidence/capability_standard_graph_op_LoadPointerScreenY/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "region_volume_textbook",
+      "path": "mods/showcases/region_volume_textbook/RegionVolumeTextbookMod",
+      "title": "Region Volume 教科书",
+      "summary": "区域触发教科书（#1461）：实体模板声明 polygon 体积 + entityTags 部队过滤，地图 Entities[] 以 PositionXCm 兜底锚点摆放，TriggerGraph 监听 RegionEntered + filters.region，图体 map-variable 链表达一次性刷怪（入口 once 字段刻意不用）；全程零 showcase 代码。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "region-volume",
+        "trigger-graph",
+        "textbook"
+      ],
+      "binding": null,
+      "preset": null,
+      "docsPath": "gitbook/architecture/region-volume-textbook.md",
+      "readmePath": null,
+      "acceptanceTest": "RegionVolumeTextbookAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
     }
   ],
   "pathExemptions": [

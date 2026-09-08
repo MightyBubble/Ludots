@@ -63,6 +63,13 @@ namespace Ludots.Core.Map
         /// </summary>
         public Ludots.Core.Gameplay.FieldRegions.RegionHierarchyRuntime? RegionGroups { get; internal set; }
 
+        /// <summary>
+        /// Region volume keys materialized from map JSON "Regions" at map load; backs
+        /// placed-region addressing (LoadPlacedRegion) and TriggerGraph mount
+        /// validation. Null after Cleanup/Dispose.
+        /// </summary>
+        public IReadOnlySet<string>? RegionVolumeKeys { get; internal set; }
+
         private readonly Dictionary<string, IBoard> _boards = new Dictionary<string, IBoard>(StringComparer.OrdinalIgnoreCase);
         private readonly List<Trigger> _triggers = new List<Trigger>();
 
@@ -185,6 +192,7 @@ namespace Ludots.Core.Map
             Fields = null;
             RegionIndex = null;
             RegionGroups = null;
+            RegionVolumeKeys = null;
 
             State = MapSessionState.Disposed;
         }
@@ -202,6 +210,7 @@ namespace Ludots.Core.Map
                 Fields = null;
                 RegionIndex = null;
                 RegionGroups = null;
+                RegionVolumeKeys = null;
                 State = MapSessionState.Disposed;
             }
         }

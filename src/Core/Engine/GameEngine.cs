@@ -1153,25 +1153,7 @@ namespace Ludots.Core.Engine
             gasGraphApi.BindPresentationTextCatalog(presentationTextCatalog);
             gasGraphApi.BindMapVariableStoreResolver(mapId => MapSessions?.GetSession(mapId)?.Variables);
             gasGraphApi.BindPlacedInstanceIndexResolver(mapId => MapSessions?.GetSession(mapId)?.EntityIndex);
-            gasGraphApi.BindRegionCatalogResolver(mapId =>
-            {
-                MapSession? session = MapSessions?.GetSession(mapId);
-                if (session?.MapConfig == null)
-                {
-                    return null;
-                }
-
-                List<Ludots.Core.Gameplay.MapTriggers.MapRegionDefinition> regions =
-                    Ludots.Core.Gameplay.MapTriggers.MapRegionDefinition.ParseList(
-                        session.MapConfig.Regions, session.MapId.Value);
-                var ids = new HashSet<string>(StringComparer.Ordinal);
-                for (int i = 0; i < regions.Count; i++)
-                {
-                    ids.Add(regions[i].Id);
-                }
-
-                return ids;
-            });
+            gasGraphApi.BindRegionCatalogResolver(mapId => MapSessions?.GetSession(mapId)?.RegionVolumeKeys);
             var progressionEvaluator = new ProgressionRequirementEvaluator(
                 World,
                 progressionRequirements,
@@ -2429,7 +2411,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new MapHeartbeatClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new ModTriggerResumeClockSystem(TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
-            RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new RegionVolumeTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new Ludots.Core.Gameplay.FieldRegions.FieldRegionMembershipSystem(World, () => MapSessions, entityCollectionStore, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
             RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
@@ -2872,6 +2854,7 @@ namespace Ludots.Core.Engine
                 Diagnostics.Log.Info(in LogChannels.Engine, "Creating Entities from MapConfig...");
                 var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
                 session.EntityIndex = entityIndex;
+                BakeRegionVolumesForSession(session);
                 SetSessionParticipants(
                     session,
                     ParticipantBindingResolver.Resolve(
@@ -3043,6 +3026,7 @@ namespace Ludots.Core.Engine
 
             var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
             session.EntityIndex = entityIndex;
+            BakeRegionVolumesForSession(session);
             SetSessionParticipants(
                 session,
                 ParticipantBindingResolver.Resolve(
@@ -3372,6 +3356,19 @@ namespace Ludots.Core.Engine
             var rosters = new Ludots.Core.Fields.Config.FieldHierarchyConfigLoader(ConfigPipeline)
                 .Load(ConfigCatalog, ConfigConflictReport);
             session.RegionGroups = Ludots.Core.Gameplay.FieldRegions.RegionHierarchyBuilder.Build(World, session, rosters);
+        }
+
+        private void BakeRegionVolumesForSession(MapSession session)
+        {
+            var customEvents = GetService(CoreServiceKeys.CustomEventNameRegistry)
+                as Ludots.Core.Gameplay.MapTriggers.CustomEventNameRegistry
+                ?? throw new InvalidOperationException("Region volume bake pass requires CustomEventNameRegistry.");
+            session.RegionVolumeKeys = Ludots.Core.Gameplay.MapTriggers.RegionVolumeBakePass.Bake(
+                World,
+                session,
+                customEvents,
+                TriggerManager.EventSchemas
+                    ?? throw new InvalidOperationException("Region volume bake pass requires the event schema registry."));
         }
 
         private void SetMapEntitiesSuspended(MapId mapId, bool suspended)

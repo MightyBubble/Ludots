@@ -14,15 +14,6 @@
     { "graph": "Graph.Narrative.Wire.AwaitDialogConfirm", "scopeInstanceId": "narrative_arcweaver" },
     { "graph": "Graph.Narrative.Open.Choices", "scopeInstanceId": "narrative_arcweaver" }
   ],
-  "Regions": [
-    {
-      "id": "narrative_shrine_zone",
-      "shape": "circle",
-      "x": 1740,
-      "y": 960,
-      "radiusCm": 220
-    }
-  ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",
     "TargetXCm": 1520,

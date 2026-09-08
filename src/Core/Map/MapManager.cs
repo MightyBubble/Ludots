@@ -327,22 +327,6 @@ namespace Ludots.Core.Map
                 }
             }
 
-            // Merge Regions (append region objects)
-            if (source.Regions != null)
-            {
-                if (target.Regions is JsonArray targetRegionArray && source.Regions is JsonArray sourceRegionArray)
-                {
-                    for (int i = 0; i < sourceRegionArray.Count; i++)
-                    {
-                        targetRegionArray.Add(sourceRegionArray[i]?.DeepClone());
-                    }
-                }
-                else
-                {
-                    target.Regions = source.Regions.DeepClone();
-                }
-            }
-
             // Merge DefaultCamera (source wins)
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
 

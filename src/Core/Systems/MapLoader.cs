@@ -729,7 +729,32 @@ namespace Ludots.Core.Systems
                         builder.WithOverride(kvp.Key, kvp.Value);
                     }
                 }
-                
+
+                // Placement position is the anchor of last resort: it lands only when
+                // neither the template nor an explicit override supplies WorldPositionCm.
+                if (entityData.PositionXCm.HasValue != entityData.PositionYCm.HasValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' entity '{ResolveMapEntityContextId(entityData)}' authors PositionXCm/PositionYCm partially; set both or neither.");
+                }
+
+                bool hasAuthoredWorldPosition =
+                    templates[entityData.Template].Components.ContainsKey("WorldPositionCm") ||
+                    (entityData.Overrides != null && entityData.Overrides.ContainsKey("WorldPositionCm"));
+                if (entityData.PositionXCm.HasValue && !hasAuthoredWorldPosition)
+                {
+                    builder.WithOverride(
+                        "WorldPositionCm",
+                        new JsonObject
+                        {
+                            ["Value"] = new JsonObject
+                            {
+                                ["X"] = entityData.PositionXCm.Value,
+                                ["Y"] = entityData.PositionYCm.Value,
+                            },
+                        });
+                }
+
                 var entity = builder.Build();
                 TryApplyTemplateKey(entity, entityData.Template);
                 _world.Add(entity, mapEntityTag);
