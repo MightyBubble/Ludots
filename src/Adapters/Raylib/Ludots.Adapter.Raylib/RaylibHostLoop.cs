@@ -520,6 +520,10 @@ namespace Ludots.Adapter.Raylib
                         float dt = Rl.GetFrameTime();
                         presentationTiming?.ObserveFrame(dt * 1000d);
                         var renderDebug = ResolveRenderDebugState(engine);
+                        if (Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DRAW_SHADOWS") is string drawShadows)
+                        {
+                            renderDebug.DrawShadows = bool.Parse(drawShadows);
+                        }
                         bool activeMapRequestsDeepBackground = ActiveMapHasTag(engine, MapTags.RaylibDeepBackground);
                         bool activeMapHidesDebugGuides = ActiveMapHasTag(engine, MapTags.RaylibHideDebugGuides);
                         IBenchmarkSceneController? benchmarkController = engine.GetService(CoreServiceKeys.BenchmarkSceneController);
@@ -738,7 +742,9 @@ namespace Ludots.Adapter.Raylib
                             frameLighting.Evaluate();
                         }
 
-                        CaptureDirectionalShadows(
+                        if (renderDebug.DrawShadows)
+                        {
+                            CaptureDirectionalShadows(
                             directionalShadowMap,
                             frameLighting,
                             in activeCamera,
@@ -750,11 +756,13 @@ namespace Ludots.Adapter.Raylib
                             continuousHeightmapRenderer,
                             primitiveRenderer,
                             engine,
-                            renderDebug.AcceptanceScaleMultiplier);
+                                renderDebug.AcceptanceScaleMultiplier);
+                        }
+                        RaylibDirectionalShadowMap? frameShadow = renderDebug.DrawShadows ? directionalShadowMap : null;
                         float shadowTexelWorld = HostShadowTexelWorld;
-                        terrainRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld);
-                        continuousHeightmapRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld);
-                        primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position, directionalShadowMap, shadowTexelWorld);
+                        terrainRenderer.ApplyFrameLighting(frameLighting, frameShadow, shadowTexelWorld);
+                        continuousHeightmapRenderer.ApplyFrameLighting(frameLighting, frameShadow, shadowTexelWorld);
+                        primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position, frameShadow, shadowTexelWorld);
                         Restore3DDepthState();
 
                         bool waterOnContinuousHeightmap = waterPass.IsActive &&
@@ -1068,7 +1076,11 @@ namespace Ludots.Adapter.Raylib
                                     primitiveRenderer.LastGpuSkinnedInstances,
                                     primitiveRenderer.LastGpuSkinnedBatches,
                                     primitiveRenderer.LastGpuSkinnedMatrixBuildMs,
-                                    primitiveRenderer.LastGpuSkinnedMeshDrawMs);
+                                    primitiveRenderer.LastGpuSkinnedMeshDrawMs,
+                                    primitiveRenderer.LastGpuSkinnedPoseBuildCpuMs,
+                                    primitiveRenderer.LastGpuSkinnedTextureUploadCpuMs,
+                                    primitiveRenderer.LastGpuSkinnedUniquePoses,
+                                    primitiveRenderer.LastGpuSkinnedTextureUploadBytes);
                             }
                             else
                             {
@@ -1188,6 +1200,8 @@ namespace Ludots.Adapter.Raylib
                         if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
                         {
                             AppendRaylibDiagnostic(diagnosticPath, $"sample frame={frameIndex}");
+                            AppendRaylibDiagnostic(diagnosticPath,
+                                $"skinning-cpu poses={primitiveRenderer.LastGpuSkinnedUniquePoses} poseBuildMs={primitiveRenderer.LastGpuSkinnedPoseBuildCpuMs:F4} textureUploadMs={primitiveRenderer.LastGpuSkinnedTextureUploadCpuMs:F4} textureUploadBytes={primitiveRenderer.LastGpuSkinnedTextureUploadBytes} shadowSubmitMs={primitiveRenderer.LastGpuSkinnedShadowSubmitCpuMs:F4}");
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                             AppendRaylibDiagnostic(diagnosticPath, BuildAssetResidencyDiagnostic(engine, primitiveRenderer));
                         }
