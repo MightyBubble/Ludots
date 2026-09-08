@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.GraphRuntime;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
@@ -111,7 +112,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Activates an interaction context instance (#1398 S2b) on the subject: context and
+        /// Activates an interaction context instance on the subject: context and
         /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). Idempotent-failure
         /// on an already-active context; fail-closed on dead subjects, unknown key ids, and
         /// declared parents that are not active. Default rejects — the engine binds a context
@@ -224,6 +225,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
+
+        Span<Entity> QueryMapEntities(GraphEntityQueryPlan? plan, MapId? map, scoped ReadOnlySpan<int> ints, scoped ReadOnlySpan<float> floats, int depth)
+        {
+            throw new InvalidOperationException("Graph complete entity query runtime is not available.");
+        }
+
+        Span<Entity> QueryCollection(Entity owner, int collectionKeyId, int depth) =>
+            throw new InvalidOperationException("Graph complete collection query runtime is not available.");
+
+        Span<Entity> QueryScreenRegionCollection(Entity owner, int collectionKeyId, scoped in ScreenRect rect, string? seatId, int depth) =>
+            throw new InvalidOperationException("Graph indexed screen query runtime is not available.");
+
+        void BeginEntityQueryExecution() { }
+        void EndEntityQueryExecution() { }
+
+        Span<Entity> GetEntityQueryBuffer(int depth, int capacity) =>
+            throw new InvalidOperationException("Graph entity query buffer is not available.");
+
+        void BindQueryCollection(Entity owner, int collectionKeyId, int graphId, GraphProgramRegistry programs) =>
+            throw new InvalidOperationException("Graph derived collection runtime is not available.");
 
         int CopyEntityCollection(Entity owner, int collectionKeyId, Span<Entity> buffer)
         {

@@ -10,6 +10,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Components;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Presentation.Commands;
@@ -85,7 +86,7 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<PresenterState, PresenterBootstrapPending>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterWorldPosition, PresenterWorldPlanePosition>()
-            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasGraphParamBinding, PerfHasLiveParamBinding, PerfHasExtensionBehavior, PerfHasTrailMesh>()
+            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasGraphParamBinding, PerfHasLiveParamBinding, PerfHasInteractionContextBinding, PerfHasExtensionBehavior, PerfHasTrailMesh>()
             .WithNone<PresenterBootstrapPending>();
         private readonly QueryDescription _materialDirtyQuery = new QueryDescription()
             .WithAll<PresenterState, PerfMaterialDirty>()
@@ -631,7 +632,8 @@ namespace Ludots.Core.Presentation.Systems
                     chunkDefinition!.TickBehaviorsAreGroundingOnly &&
                     !chunkDefinition.HasOwnerFacingBindingWork &&
                     !chunkDefinition.HasGraphParamBindingWork &&
-                    !chunkDefinition.HasLiveParamBindingWork)
+                    !chunkDefinition.HasLiveParamBindingWork &&
+                    !chunkDefinition.HasOwnerInteractionContextBindingWork)
                 {
                     if (TrySkipOwnerBackedSnapToGroundBatch(
                             states,
@@ -674,6 +676,7 @@ namespace Ludots.Core.Presentation.Systems
                     !chunkDefinition.HasOwnerFacingBindingWork &&
                     !chunkDefinition.HasGraphParamBindingWork &&
                     !chunkDefinition.HasLiveParamBindingWork &&
+                    !chunkDefinition.HasOwnerInteractionContextBindingWork &&
                     TryResolveParentAttachmentOnly(chunkDefinition, out AttachmentConfig attachmentConfig, out int attachmentSlot))
                 {
                     Span<PresenterParent> parents = chunk.GetSpan<PresenterParent>();
@@ -884,11 +887,13 @@ namespace Ludots.Core.Presentation.Systems
             }
             else if (definition.HasOwnerFacingBindingWork ||
                      definition.HasGraphParamBindingWork ||
-                     definition.HasLiveParamBindingWork)
+                     definition.HasLiveParamBindingWork ||
+                     definition.HasOwnerInteractionContextBindingWork)
             {
                 ApplyOwnerFacingBindings(entity, owner, definition);
                 ApplyLiveParamBindings(entity, owner, definition);
                 ApplyGraphParamBindings(entity, owner, definition);
+                ApplyOwnerInteractionContextWork(entity, owner, definition, state.BehaviorActiveMask);
             }
 
             bool hasSoundBehavior = definition.HasSoundBehavior || (hasInstanceBehaviors && instanceBehaviors.HasSound);
@@ -1235,7 +1240,7 @@ namespace Ludots.Core.Presentation.Systems
                         SetParam(entity, binding.ParamKey, ParamLane.Float, value.ConstantValue, 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.OwnerBlackboardFloat:
-                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveOwnerBlackboardFloat(owner, value.SourceId, definition.Key, binding.ParamKey), 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveOwnerBlackboardFloat(owner, value.SourceId, definition.Key, binding.ParamKey, value.Optional), 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.PointerScreenX:
                         SetParam(entity, binding.ParamKey, ParamLane.Float, ResolvePointerScreenAxis(axisX: true, definition.Key, binding.ParamKey), 0, Vector4.Zero);
@@ -1250,12 +1255,20 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private float ResolveOwnerBlackboardFloat(Entity owner, int blackboardKeyId, string definitionKey, int paramKey)
+        private float ResolveOwnerBlackboardFloat(Entity owner, int blackboardKeyId, string definitionKey, int paramKey, bool optional = false)
         {
             if (!World.IsAlive(owner) ||
                 !World.TryGet<BlackboardFloatBuffer>(owner, out BlackboardFloatBuffer buffer) ||
                 !buffer.TryGet(blackboardKeyId, out float value))
             {
+                if (optional)
+                {
+                    // Explicit fallback (author wrote optional: true): a transiently absent
+                    // source — e.g. an interaction-context blackboard written only while the
+                    // gesture is live — projects 0 so a hidden presenter never throws.
+                    return 0f;
+                }
+
                 throw new InvalidOperationException(
                     $"Presenter '{definitionKey}' binding paramKey={paramKey} source=ownerBlackboardFloat keyId={blackboardKeyId} " +
                     $"requires a readable BlackboardFloatBuffer value on owner {owner.Id}.");
@@ -1288,7 +1301,7 @@ namespace Ludots.Core.Presentation.Systems
                 switch (value.Source)
                 {
                     case ValueSourceKind.OwnerBlackboardFloat:
-                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveOwnerBlackboardFloat(owner, value.SourceId, definition.Key, binding.ParamKey), 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveOwnerBlackboardFloat(owner, value.SourceId, definition.Key, binding.ParamKey, value.Optional), 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.PointerScreenX:
                         SetParam(entity, binding.ParamKey, ParamLane.Float, ResolvePointerScreenAxis(axisX: true, definition.Key, binding.ParamKey), 0, Vector4.Zero);
@@ -1515,6 +1528,16 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
+            // Interaction context bindings are snapshot-resolved: the owner's mounted
+            // InteractionContextInstances component is the single source of truth (save
+            // round-trips preserve it), so bindings are resolved from that component here
+            // on every pass — context transitions are low-frequency and SetParam no-ops on
+            // unchanged values, so no dirty channel is needed (unlike attribute/tag work).
+            if (definition.HasOwnerInteractionContextBindingWork && World.IsAlive(owner))
+            {
+                ApplyOwnerInteractionContextWork(entity, owner, definition, activeMask);
+            }
+
             bool ownerAlive = World.IsAlive(owner);
             bool hasAttributes = applyAttributes && ownerAlive && World.Has<AttributeBuffer>(owner);
             bool hasTags = applyTags && ownerAlive && World.Has<GameplayTagContainer>(owner);
@@ -1635,6 +1658,43 @@ namespace Ludots.Core.Presentation.Systems
         private void ApplyCompiledTagBinding(Entity entity, in CompiledBinding binding, bool tagActive)
         {
             SetParam(entity, binding.TargetParamKey, ParamLane.Int, 0f, binding.ResolveTagInt(tagActive), Vector4.Zero);
+        }
+
+        /// <summary>
+        /// Snapshot-resolves every interaction-context binding of a definition from the
+        /// owner's mounted <see cref="InteractionContextInstances"/> component. Runs on the
+        /// main presentation pass; SetParam no-ops when the value is unchanged, so context
+        /// transitions (low-frequency) never cost a dirty write when the state holds.
+        /// </summary>
+        private void ApplyOwnerInteractionContextWork(
+            Entity entity,
+            Entity owner,
+            PresenterDefinition definition,
+            uint activeMask)
+        {
+            CompiledBinding[] compiled = definition.CompiledBindings;
+            bool ownerHasContext = World.TryGet<InteractionContextInstances>(owner, out InteractionContextInstances instances) &&
+                                   instances.Count > 0;
+            bool ownerBase = World.TryGet<InteractionContextInstance>(owner, out InteractionContextInstance baseContext) &&
+                             baseContext.ContextId > 0;
+
+            for (int i = 0; i < compiled.Length; i++)
+            {
+                ref readonly CompiledBinding binding = ref compiled[i];
+                if (!binding.IsInteractionContextBound ||
+                    !IsBehaviorActive(activeMask, binding.SlotIndex))
+                {
+                    continue;
+                }
+
+                bool active = ownerHasContext && instances.IndexOf(binding.SourceInteractionContextProfileId) >= 0;
+                if (!active && ownerBase && baseContext.ContextId == binding.SourceInteractionContextProfileId)
+                {
+                    active = true;
+                }
+
+                SetParam(entity, binding.TargetParamKey, ParamLane.Int, 0f, binding.ResolveInteractionContextInt(active), Vector4.Zero);
+            }
         }
 
         private void ApplyMaterialBinding(Entity entity, in MaterialConfig config)

@@ -73,7 +73,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, frameTimesMs,
                 () => callbacks.TryGetOldestLiveHandleByCallbackType(GraphCallbackTypes.DialogConfirm, out _),
                 maxFrames: 120,
-                "MapHeartbeat once must park AwaitCallback(DialogConfirm) via InlineGraph wire.");
+                "EntitySpawned once must park AwaitCallback(DialogConfirm) via InlineGraph wire.");
 
             dialogue.StartDialogue("Dialogue.Narrative.Briefing");
             Assert.That(dialogue.HasActiveDialogue, Is.True);

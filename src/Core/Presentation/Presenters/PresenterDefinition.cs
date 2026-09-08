@@ -70,6 +70,18 @@ namespace Ludots.Core.Presentation.Presenters
             }
         }
 
+        internal readonly struct OwnerInteractionContextWorkItem
+        {
+            public readonly int InteractionContextProfileId;
+            public readonly int[] CompiledBindingIndices;
+
+            public OwnerInteractionContextWorkItem(int interactionContextProfileId, int[] compiledBindingIndices)
+            {
+                InteractionContextProfileId = interactionContextProfileId;
+                CompiledBindingIndices = compiledBindingIndices ?? System.Array.Empty<int>();
+            }
+        }
+
         internal readonly struct ExtensionOwnerAttributeWorkItem
         {
             public readonly int AttributeId;
@@ -152,6 +164,7 @@ namespace Ludots.Core.Presentation.Presenters
         internal bool NeedsByOwnerDefinitionIndex;
         internal bool HasOwnerAttributeBindingWork;
         internal bool HasOwnerTagBindingWork;
+        internal bool HasOwnerInteractionContextBindingWork;
         internal bool HasOwnerFacingBindingWork;
         internal bool HasGraphParamBindingWork;
         internal bool HasLiveParamBindingWork;
@@ -161,6 +174,7 @@ namespace Ludots.Core.Presentation.Presenters
         internal bool SupportsVisualProxyFastEmit;
         internal OwnerAttributeWorkItem[] OwnerAttributeWork = System.Array.Empty<OwnerAttributeWorkItem>();
         internal OwnerTagWorkItem[] OwnerTagWork = System.Array.Empty<OwnerTagWorkItem>();
+        internal OwnerInteractionContextWorkItem[] OwnerInteractionContextWork = System.Array.Empty<OwnerInteractionContextWorkItem>();
         internal int[] OwnerFacingParamBindingIndices = System.Array.Empty<int>();
         internal int[] GraphParamBindingIndices = System.Array.Empty<int>();
         internal int[] LiveParamBindingIndices = System.Array.Empty<int>();
@@ -363,6 +377,7 @@ namespace Ludots.Core.Presentation.Presenters
             NeedsByOwnerDefinitionIndex = NeedsByDefinitionIndex;
             HasOwnerAttributeBindingWork = false;
             HasOwnerTagBindingWork = false;
+            HasOwnerInteractionContextBindingWork = false;
             HasOwnerFacingBindingWork = false;
             HasGraphParamBindingWork = false;
             HasLiveParamBindingWork = false;
@@ -402,6 +417,7 @@ namespace Ludots.Core.Presentation.Presenters
             SingleAnimatorFastBehaviorIndex = -1;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? attributeCompiledMap = null;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? tagCompiledMap = null;
+            System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? interactionContextCompiledMap = null;
             System.Collections.Generic.List<CompiledBinding>? compiledBindings = null;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? extensionAttributeBehaviorMap = null;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? extensionTagBehaviorMap = null;
@@ -456,6 +472,7 @@ namespace Ludots.Core.Presentation.Presenters
             {
                 OwnerAttributeWork = BuildOwnerAttributeWork(attributeCompiledMap);
                 OwnerTagWork = BuildOwnerTagWork(tagCompiledMap);
+                OwnerInteractionContextWork = BuildOwnerInteractionContextWork(interactionContextCompiledMap);
                 UsesRetainedPresentationRequest =
                     HasSurfaceAuthoring &&
                     DefaultLifetime <= 0f;
@@ -607,6 +624,15 @@ namespace Ludots.Core.Presentation.Presenters
                         AddIndex(tagCompiledMap, slot.TagBinding.TagId, compiledBindings.Count);
                         compiledBindings.Add(CompiledBinding.FromTag(slot.SlotIndex, in slot.TagBinding));
                         break;
+                    case BehaviorKind.InteractionContextBinding:
+                        HasOwnerInteractionContextBindingWork = true;
+                        RequiresBootstrapProcessing = true;
+                        NeedsByOwnerDefinitionIndex = true;
+                        compiledBindings ??= new System.Collections.Generic.List<CompiledBinding>(4);
+                        interactionContextCompiledMap ??= new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
+                        AddIndex(interactionContextCompiledMap, slot.InteractionContextBinding.InteractionContextProfileId, compiledBindings.Count);
+                        compiledBindings.Add(CompiledBinding.FromInteractionContext(slot.SlotIndex, in slot.InteractionContextBinding));
+                        break;
                     case BehaviorKind.Attachment:
                         tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
                         tickBehaviorIndices.Add(i);
@@ -750,6 +776,7 @@ namespace Ludots.Core.Presentation.Presenters
             CompiledBindings = compiledBindings?.ToArray() ?? System.Array.Empty<CompiledBinding>();
             OwnerAttributeWork = BuildOwnerAttributeWork(attributeCompiledMap);
             OwnerTagWork = BuildOwnerTagWork(tagCompiledMap);
+            OwnerInteractionContextWork = BuildOwnerInteractionContextWork(interactionContextCompiledMap);
             UsesStableVisualCache =
                 hasCacheableVisual &&
                 !hasDynamicVisualLane &&
@@ -1177,6 +1204,35 @@ namespace Ludots.Core.Presentation.Presenters
             return false;
         }
 
+        internal bool TryGetOwnerInteractionContextWork(int interactionContextProfileId, out OwnerInteractionContextWorkItem work)
+        {
+            OwnerInteractionContextWorkItem[] entries = OwnerInteractionContextWork;
+            int lo = 0;
+            int hi = entries.Length - 1;
+            while (lo <= hi)
+            {
+                int mid = lo + ((hi - lo) >> 1);
+                ref readonly OwnerInteractionContextWorkItem candidate = ref entries[mid];
+                if (candidate.InteractionContextProfileId == interactionContextProfileId)
+                {
+                    work = candidate;
+                    return true;
+                }
+
+                if (candidate.InteractionContextProfileId < interactionContextProfileId)
+                {
+                    lo = mid + 1;
+                }
+                else
+                {
+                    hi = mid - 1;
+                }
+            }
+
+            work = default;
+            return false;
+        }
+
         internal bool TryGetExtensionOwnerAttributeWork(int attributeId, out ExtensionOwnerAttributeWorkItem work)
         {
             ExtensionOwnerAttributeWorkItem[] entries = ExtensionOwnerAttributeWork;
@@ -1297,6 +1353,28 @@ namespace Ludots.Core.Presentation.Presenters
             {
                 int key = sortedKeys[i];
                 items[i] = new OwnerTagWorkItem(key, behaviorMap[key].ToArray());
+            }
+
+            return items;
+        }
+
+        private static OwnerInteractionContextWorkItem[] BuildOwnerInteractionContextWork(
+            System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? behaviorMap)
+        {
+            if (behaviorMap == null || behaviorMap.Count == 0)
+            {
+                return System.Array.Empty<OwnerInteractionContextWorkItem>();
+            }
+
+            int[] sortedKeys = new int[behaviorMap.Count];
+            behaviorMap.Keys.CopyTo(sortedKeys, 0);
+            System.Array.Sort(sortedKeys);
+
+            var items = new OwnerInteractionContextWorkItem[sortedKeys.Length];
+            for (int i = 0; i < sortedKeys.Length; i++)
+            {
+                int key = sortedKeys[i];
+                items[i] = new OwnerInteractionContextWorkItem(key, behaviorMap[key].ToArray());
             }
 
             return items;

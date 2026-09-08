@@ -1,11 +1,11 @@
 {
   "op": "DispatchMapEvent",
   "driver": "invokeGraph",
-  "title": "按事件账本派发心跳",
-  "beat": "载荷按 schema 组装成事件，地图上的监听者按账本收货。",
-  "detailTemplate": "心跳事件派发 {fires} 次，心跳序号 {beat} 照账本送达。",
+  "title": "按事件账本派发地图事件",
+  "beat": "载荷组装成地图事件，监听者按账本收货。",
+  "detailTemplate": "地图事件派发 {fires} 次，载荷值 {beat} 照账本送达。",
   "assertDetailContains": [
-    "心跳",
+    "事件",
     "派发"
   ],
   "featuredNodeId": "fire",

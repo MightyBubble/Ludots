@@ -6,6 +6,7 @@ using Ludots.Tests.TestCommon;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Rendering;
@@ -31,7 +32,7 @@ namespace Ludots.Tests.Presentation
         public void BehaviorKindContract_ArchitectureExposesCoreKinds()
         {
             BehaviorKind[] values = (BehaviorKind[])Enum.GetValues(typeof(BehaviorKind));
-            Assert.That(values.Length, Is.EqualTo(17), "BehaviorKind SSOT is the architecture enum.");
+            Assert.That(values.Length, Is.EqualTo(18), "BehaviorKind SSOT is the architecture enum.");
             Assert.That(values, Does.Contain(BehaviorKind.None));
             Assert.That(values, Does.Contain(BehaviorKind.AssetBinding));
             Assert.That(values, Does.Contain(BehaviorKind.AttributeBinding));
@@ -48,6 +49,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(values, Does.Contain(BehaviorKind.InstancedBatch));
             Assert.That(values, Does.Contain(BehaviorKind.TrailMesh));
             Assert.That(values, Does.Contain(BehaviorKind.ScreenRect));
+            Assert.That(values, Does.Contain(BehaviorKind.InteractionContextBinding));
             Assert.That(values, Does.Contain(BehaviorKind.Extension));
         }
 
@@ -70,6 +72,7 @@ namespace Ludots.Tests.Presentation
             Assert.That((byte)BehaviorKind.InstancedBatch, Is.EqualTo(13));
             Assert.That((byte)BehaviorKind.TrailMesh, Is.EqualTo(14));
             Assert.That((byte)BehaviorKind.ScreenRect, Is.EqualTo(15));
+            Assert.That((byte)BehaviorKind.InteractionContextBinding, Is.EqualTo(16));
             Assert.That((byte)BehaviorKind.Extension, Is.EqualTo(255));
         }
 
@@ -590,6 +593,86 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(instances.ResolveInt(presenter, 310), Is.EqualTo(0));
             Assert.That(instances.ResolveInt(presenter, 311), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void InteractionContextBinding_SnapshotResolvesFromOwnerMountedInstances_AndTracksPerfMarker()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+
+            int aimProfileId = 4201;
+            int defId = definitions.Register("behavior.interaction-context.binding", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.InteractionContextBinding,
+                        ActiveByDefault = true,
+                        InteractionContextBinding = new InteractionContextBindingConfig
+                        {
+                            InteractionContextProfileId = aimProfileId,
+                            TargetParamKey = 2101,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.InteractionContextBinding,
+                        ActiveByDefault = true,
+                        InteractionContextBinding = new InteractionContextBindingConfig
+                        {
+                            InteractionContextProfileId = aimProfileId,
+                            TargetParamKey = 2102,
+                            InvertLogic = true,
+                        },
+                    },
+                ],
+            });
+
+            instances.BindDefinitions(definitions);
+            Entity presenter = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 9211, Entity.Null, default);
+            world.Add(presenter, new PresenterBootstrapPending());
+            world.Get<PresenterState>(presenter).BehaviorActiveMask = 0b11u;
+
+            // Interaction context binding advertises per-frame snapshot resolution via the
+            // Perf marker (low-frequency transitions make a dirty channel unnecessary).
+            Assert.That(world.Has<PerfHasInteractionContextBinding>(presenter), Is.True,
+                "context binding presenter must carry the per-frame resolution marker");
+
+            var ownerChanges = new PresentationOwnerChangeBuffer(8);
+            using var system = new PresenterBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                ownerChanges,
+                new SoundRequestBuffer());
+
+            // No context mounted → binding resolves inactive (0 / inverted 1).
+            system.Update(0.016f);
+            Assert.That(instances.ResolveInt(presenter, 2101), Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(presenter, 2102), Is.EqualTo(1));
+
+            // Mount the context on the owner (persistent component = the single source of
+            // truth; snapshot resolution recovers from save/restore without events).
+            var instancesOnOwner = new InteractionContextInstances();
+            instancesOnOwner.Add(new InteractionContextInstance { ContextId = aimProfileId, ParentContextId = 0 });
+            world.Add(owner, instancesOnOwner);
+
+            // No presentation event, no owner change: the per-frame pass resolves the new value.
+            system.Update(0.016f);
+            Assert.That(instances.ResolveInt(presenter, 2101), Is.EqualTo(1), "mounted context flips the binding to active");
+            Assert.That(instances.ResolveInt(presenter, 2102), Is.EqualTo(0), "invertLogic flips with it");
+
+            // Removing the context instance restores the inactive projection — pure state, no event.
+            world.Set(owner, new InteractionContextInstances());
+            system.Update(0.016f);
+            Assert.That(instances.ResolveInt(presenter, 2101), Is.EqualTo(0));
         }
 
         [Test]

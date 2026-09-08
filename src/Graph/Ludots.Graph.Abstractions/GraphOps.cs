@@ -351,7 +351,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         StickToDirection = 473,
 
-        // ── Derived interaction context ops (#1398 S2b, constitution §8.2/§8.3). The
+        // ── Derived interaction context ops (constitution §8.2/§8.3). The
         // entity-mounted context set is world state; these ops are its only derived-context
         // writers. Scope lifecycle (presenter Create/DestroyScope) rides the presenter
         // command pipeline; activation/deactivation publish ContextActivated/Deactivated
@@ -388,6 +388,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Pure float read; fail closed when the input snapshot is unavailable.
         /// </summary>
         LoadPointerScreenY = 480,
+        BindQueryCollection = 481,
+        QueryScreenRegionCollection = 482,
 
     }
 

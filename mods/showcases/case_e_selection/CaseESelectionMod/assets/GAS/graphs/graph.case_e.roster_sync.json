@@ -4,35 +4,21 @@
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "on_battle_think",
-        "event": "MapHeartbeat",
-        "start": "map_units",
+        "label": "bind_roster",
+        "event": "MapLoaded",
+        "start": "owner",
         "refire": "restart"
       }
     ],
     "nodes": [
       {
-        "id": "map_units",
-        "op": "QueryAllMapEntities"
+        "id": "owner",
+        "op": "LoadExplicitTarget"
       },
       {
-        "id": "own_team",
-        "op": "QueryFilterTeam",
-        "teamId": 1
-      },
-      {
-        "id": "selectable_units",
-        "op": "QueryFilterTemplate",
-        "template": "case_e_marine"
-      },
-      {
-        "id": "roster_replace",
-        "op": "ConstInt",
-        "intValue": 0
-      },
-      {
-        "id": "refresh_roster",
-        "op": "WriteCollection",
+        "id": "bind",
+        "op": "BindQueryCollection",
+        "functionName": "graph.case_e.candidates",
         "collectionKey": "case_e.selectable"
       },
       {
@@ -47,27 +33,12 @@
     ],
     "controlEdges": [
       {
-        "from": "map_units",
+        "from": "owner",
         "fromPort": "next",
-        "to": "own_team"
+        "to": "bind"
       },
       {
-        "from": "own_team",
-        "fromPort": "next",
-        "to": "selectable_units"
-      },
-      {
-        "from": "selectable_units",
-        "fromPort": "next",
-        "to": "roster_replace"
-      },
-      {
-        "from": "roster_replace",
-        "fromPort": "next",
-        "to": "refresh_roster"
-      },
-      {
-        "from": "refresh_roster",
+        "from": "bind",
         "fromPort": "next",
         "to": "ok"
       },
@@ -79,10 +50,10 @@
     ],
     "valueEdges": [
       {
-        "from": "roster_replace",
+        "from": "owner",
         "fromPort": "value",
-        "to": "refresh_roster",
-        "toPort": "value"
+        "to": "bind",
+        "toPort": "source"
       },
       {
         "from": "ok",

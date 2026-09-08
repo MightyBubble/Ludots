@@ -126,6 +126,8 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 还开着的（**另开活，本轮别捆**）：Parallel（一期显式不支持）、子树复用/异步叶（BT-2）。
 ### 3.3.1 图相关还开着的（勿当新发现重审）
 
+Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现完整收集、派生集合绑定和空间框选；47 项定向测试通过，完整回归与真实运行取证未收口，债务保持开放。设计见 `artifacts/techdebt/2026-09-07-case-e-selection-query-design.md`，性能与边界见 `docs/benchmarks/case-e-query-completeness/REPORT.md`。本轮独立于 #1456，10k 可切换玩家 showcase 另行施工。
+
 | 项 | 状态 | 怎么开工 |
 |----|------|----------|
 | `#1107` 执行线结束合同 | 已关闭 | 不再派实现票；当前合同见编译器与回归 |
@@ -143,6 +145,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 | 编辑器前端 lint 只门到图编辑器目录 | 债 | `StoryAuthoringPage.tsx`（10 处 `no-explicit-any`）与 `ui-panel-authoring/model.ts`（1 处未用变量）先欠着，清完再放宽 `graph-editor-frontend` 的 lint 范围 |
 | `npm run check` 末步 `validate-panel-templates` 本来就挂 | 债（非本轮） | 报 `Unsupported schema 'ludots.ui.panel_template'`，main 上同样挂；`graph-editor-frontend` 不跑这步，属面板线 |
 | `TriggerGraphRenameMigrationTests` 误伤合法 payloadKey | 债（非本轮） | 夜袭 `graphs.json` 的 `MapTrigger.PointerScreenX/Y`（随 #1398 入口直绑 action 落地）被「不得出现退役方言名」的子串检查判红；该守卫要改成只查 `kind` / `mount` 字段而不是裸子串 |
+| `QueryAllMapEntities` 定长 TargetList（`MaxTargets=256`）全图查询截断 + roster 候选集「全量重建式」无增量维护原语 | **P1 债 · 做法要变** | 债务正本 `artifacts/techdebt/2026-09-07-case-e-selection-query-cap.md`；可复现/观测 `CaseESelectionScalePressureTests` + `docs/benchmarks/case-e-selection-scale/`。两条线：①解除 256 顶（分页/流式收集，图 VM 寄存器模型重新设计——query graph 专属编译管线适配 ECS 流式查询的裂缝）；②候选集从「事件驱动全量重建」迁到「增量成员 + 过滤条件 diff」（并为 team/模板/状态突变补刷新源）。**另开活，别捆本 PR** |
 | 可调用函数远景（Case E：入参表、whileActive（已替 continuousQuery）、预览 S1/S2、Invoke 与 FuncLib） | **开着 · 先出方案** | 正本 [可调用函数远景](graph-callable-function-vision.md)；Case E 短任务条 `mods/showcases/case_e_selection/CaseESelectionMod/docs/NEXT-AGENT-BRIEF.md`。PR #1444 是台阶。评审前不大改 Core。 |
 
 

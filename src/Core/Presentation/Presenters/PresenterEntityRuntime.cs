@@ -1468,6 +1468,7 @@ namespace Ludots.Core.Presentation.Presenters
             bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
             bool hasGraphParamBinding = definition.HasGraphParamBindingWork;
             bool hasLiveParamBinding = definition.HasLiveParamBindingWork;
+            bool hasInteractionContextBinding = definition.HasOwnerInteractionContextBindingWork;
             bool hasMinimapMarker = false;
             bool hasScreenRect = false;
             bool hasExtensionBehavior = false;
@@ -1557,6 +1558,7 @@ namespace Ludots.Core.Presentation.Presenters
             SyncTickBehaviorMarker<PerfHasOwnerFacingBinding>(entity, hasOwnerFacingBinding);
             SyncTickBehaviorMarker<PerfHasGraphParamBinding>(entity, hasGraphParamBinding);
             SyncTickBehaviorMarker<PerfHasLiveParamBinding>(entity, hasLiveParamBinding);
+            SyncTickBehaviorMarker<PerfHasInteractionContextBinding>(entity, hasInteractionContextBinding);
             SyncTickBehaviorMarker<PerfHasMinimapMarker>(entity, hasMinimapMarker);
             SyncTickBehaviorMarker<PerfHasScreenRect>(entity, hasScreenRect);
             SyncTickBehaviorMarker<PerfHasExtensionBehavior>(entity, hasExtensionBehavior);
@@ -1742,6 +1744,11 @@ namespace Ludots.Core.Presentation.Presenters
             if (_world.Has<PerfHasLiveParamBinding>(entity))
             {
                 RemoveMarker<PerfHasLiveParamBinding>(entity);
+            }
+
+            if (_world.Has<PerfHasInteractionContextBinding>(entity))
+            {
+                RemoveMarker<PerfHasInteractionContextBinding>(entity);
             }
 
             if (_world.Has<PerfHasMinimapMarker>(entity))

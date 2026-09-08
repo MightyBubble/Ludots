@@ -28,6 +28,18 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Dictionary<string, string> _firesOnByAction;
         private readonly Func<ClientLocalSeatRegistry?> _seats;
         private readonly Func<ClientLocalSeatInputRuntime?> _seatInput;
+        private readonly Action<Entity> _reconcileContext;
+        private readonly List<string> _actionSnapshot = new(32);
+        private readonly List<TriggerGraphMountTrigger> _mountSnapshot = new(16);
+
+        /// <summary>"No pointer sample dispatched yet" sentinel (NaN X marks it).</summary>
+        private static readonly System.Numerics.Vector2 InvalidPointer =
+            new System.Numerics.Vector2(float.NaN, float.NaN);
+
+        // Last dispatched live-pointer position, per reader domain: one for the global
+        // (single-seat) reader, one per seat id when routing per-seat.
+        private System.Numerics.Vector2 _lastDispatchedPointer = InvalidPointer;
+        private readonly Dictionary<string, System.Numerics.Vector2> _lastDispatchedPointerBySeat = new();
 
         public TriggerGraphActionBindingSystem(
             Func<MapSession?> currentSession,
@@ -38,7 +50,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             TriggerGraphActionBindingIndex bindings,
             InputConfigRoot inputConfig,
             Func<ClientLocalSeatRegistry?> seats,
-            Func<ClientLocalSeatInputRuntime?> seatInput)
+            Func<ClientLocalSeatInputRuntime?> seatInput,
+            Action<Entity> reconcileContext)
         {
             _currentSession = currentSession ?? throw new ArgumentNullException(nameof(currentSession));
             _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
@@ -48,6 +61,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
             _seats = seats ?? throw new ArgumentNullException(nameof(seats));
             _seatInput = seatInput ?? throw new ArgumentNullException(nameof(seatInput));
+            _reconcileContext = reconcileContext ?? throw new ArgumentNullException(nameof(reconcileContext));
             _firesOnByAction = BuildFiresOnLookup(inputConfig);
         }
 
@@ -62,6 +76,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 return;
             }
+
+            _bindings.CopyKnownActionIds(_actionSnapshot);
 
             MapSession? session = _currentSession();
             if (session == null)
@@ -83,8 +99,26 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return;
             }
 
-            foreach (string actionId in _bindings.MountedActionIds)
+            // A held button with both edges ended on a new press: close the previous
+            // gesture before opening the new one. Motion follows reconciled transitions.
+            for (int phase = 0; phase < 4; phase++)
+            foreach (string actionId in _actionSnapshot)
             {
+                if (!_bindings.TryGetMounts(actionId, out _)) continue;
+                if (DispatchPhase(input, actionId) != phase) continue;
+                // Pointer-motion is an input-domain edge, not a button contract: the
+                // reserved action bypasses firesOn/IsRelease and dispatches on position
+                // change against the live pointer (see ReservedInputActionIds.PointerMoved).
+                if (actionId == ReservedInputActionIds.PointerMoved)
+                {
+                    if (_bindings.TryGetMounts(actionId, out IReadOnlyList<TriggerGraphMountTrigger> pointerMounts))
+                    {
+                        DispatchPointerMoved(session, input, actionId, pointerMounts, ref _lastDispatchedPointer);
+                    }
+
+                    continue;
+                }
+
                 if (!FiredThisTick(input, actionId))
                 {
                     continue;
@@ -101,9 +135,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 }
 
                 int modifiers = ReadHeldModifiers(input);
-                for (int i = 0; i < mounts.Count; i++)
+                CopyMounts(mounts);
+                for (int i = 0; i < _mountSnapshot.Count; i++)
                 {
-                    TriggerGraphMountTrigger mount = mounts[i];
+                    TriggerGraphMountTrigger mount = _mountSnapshot[i];
+                    if (!mount.IsActionRegistered) continue;
                     Entity rep = mount.Scope;
                     if (rep == Entity.Null || rep == default)
                     {
@@ -132,8 +168,17 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
                 IInputActionReader input = channel.Reader;
                 Entity rep = seat.PossessedRep;
-                foreach (string actionId in _bindings.MountedActionIds)
+                for (int phase = 0; phase < 4; phase++)
+                foreach (string actionId in _actionSnapshot)
                 {
+                    if (!_bindings.TryGetMounts(actionId, out _)) continue;
+                    if (DispatchPhase(input, actionId) != phase) continue;
+                    if (actionId == ReservedInputActionIds.PointerMoved)
+                    {
+                        DispatchPointerMovedPerSeat(session, input, actionId, rep, seat.SeatId);
+                        continue;
+                    }
+
                     if (!FiredThisTick(input, actionId))
                     {
                         continue;
@@ -150,9 +195,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     }
 
                     int modifiers = ReadHeldModifiers(input);
-                    for (int i = 0; i < mounts.Count; i++)
+                    CopyMounts(mounts);
+                    for (int i = 0; i < _mountSnapshot.Count; i++)
                     {
-                        TriggerGraphMountTrigger mount = mounts[i];
+                        TriggerGraphMountTrigger mount = _mountSnapshot[i];
+                        if (!mount.IsActionRegistered) continue;
                         if (mount.Scope != rep)
                         {
                             continue;
@@ -162,6 +209,97 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Pointer-motion edge over the global (single-seat) reader: dispatch the action's
+        /// mounts once when the live pointer position differs from the last dispatched
+        /// sample, stamping the shared InputAction payload with the current pointer.
+        /// The first sample after mounting always dispatches (NaN sentinel).
+        /// </summary>
+        private void DispatchPointerMoved(
+            MapSession session,
+            IInputActionReader input,
+            string actionId,
+            IReadOnlyList<TriggerGraphMountTrigger> mounts,
+            ref System.Numerics.Vector2 lastDispatched)
+        {
+            if (!TryReadLivePointer(input, out System.Numerics.Vector2 pointer) ||
+                !PointerMovedSince(lastDispatched, pointer))
+            {
+                return;
+            }
+
+            lastDispatched = pointer;
+            int modifiers = ReadHeldModifiers(input);
+            CopyMounts(mounts);
+            for (int i = 0; i < _mountSnapshot.Count; i++)
+            {
+                TriggerGraphMountTrigger mount = _mountSnapshot[i];
+                if (!mount.IsActionRegistered) continue;
+                Entity rep = mount.Scope;
+                if (rep == Entity.Null || rep == default)
+                {
+                    continue;
+                }
+
+                Dispatch(session, mount, actionId, rep, pointer, modifiers);
+            }
+        }
+
+        /// <summary>Pointer-motion edge over one seat's reader (multi-seat path).</summary>
+        private void DispatchPointerMovedPerSeat(
+            MapSession session,
+            IInputActionReader input,
+            string actionId,
+            Entity rep,
+            string seatId)
+        {
+            if (!_bindings.TryGetMounts(actionId, out IReadOnlyList<TriggerGraphMountTrigger> mounts) ||
+                !TryReadLivePointer(input, out System.Numerics.Vector2 pointer))
+            {
+                return;
+            }
+
+            if (!_lastDispatchedPointerBySeat.TryGetValue(seatId, out System.Numerics.Vector2 last))
+            {
+                last = InvalidPointer;
+            }
+
+            if (!PointerMovedSince(last, pointer))
+            {
+                return;
+            }
+
+            _lastDispatchedPointerBySeat[seatId] = pointer;
+            int modifiers = ReadHeldModifiers(input);
+            CopyMounts(mounts);
+            for (int i = 0; i < _mountSnapshot.Count; i++)
+            {
+                TriggerGraphMountTrigger mount = _mountSnapshot[i];
+                if (!mount.IsActionRegistered) continue;
+                if (mount.Scope != rep)
+                {
+                    continue;
+                }
+
+                Dispatch(session, mount, actionId, rep, pointer, modifiers);
+            }
+        }
+
+        /// <summary>Reads the authoritative live pointer position (PointerPos reserved action).</summary>
+        private static bool TryReadLivePointer(IInputActionReader input, out System.Numerics.Vector2 pointer)
+        {
+            pointer = input.ReadAction<System.Numerics.Vector2>(ReservedInputActionIds.PointerPos);
+            return true;
+        }
+
+        /// <summary>True when the pointer position changed since the last dispatched sample.</summary>
+        private static bool PointerMovedSince(System.Numerics.Vector2 last, System.Numerics.Vector2 current)
+        {
+            // NaN sentinel = "no sample dispatched yet" → the first read always dispatches
+            // (one initial hover write on mount, which is idempotent and correct).
+            return float.IsNaN(last.X) || last.X != current.X || last.Y != current.Y;
         }
 
         private void Dispatch(
@@ -181,6 +319,20 @@ namespace Ludots.Core.Gameplay.MapTriggers
             context.Set(MapTriggerEventPayloadKeys.PointerScreenY, pointer.Y);
             context.Set(MapTriggerEventPayloadKeys.Modifiers, modifiers);
             _triggerManager.DispatchMountedTrigger(mount, context);
+            _reconcileContext(rep);
+        }
+
+        private int DispatchPhase(IInputActionReader input, string actionId)
+        {
+            if (actionId == ReservedInputActionIds.PointerMoved) return 3;
+            if (!IsRelease(actionId)) return 1;
+            return input.IsDown(actionId) && input.PressedThisFrame(actionId) ? 0 : 2;
+        }
+
+        private void CopyMounts(IReadOnlyList<TriggerGraphMountTrigger> mounts)
+        {
+            _mountSnapshot.Clear();
+            for (int i = 0; i < mounts.Count; i++) _mountSnapshot.Add(mounts[i]);
         }
 
         private bool FiredThisTick(IInputActionReader input, string actionId)

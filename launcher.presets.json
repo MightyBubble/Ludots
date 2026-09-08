@@ -3258,6 +3258,24 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_BindQueryCollection_raylib",
+      "name": "Graph Op BindQueryCollection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_BindQueryCollection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryScreenRegionCollection_raylib",
+      "name": "Graph Op QueryScreenRegionCollection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryScreenRegionCollection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

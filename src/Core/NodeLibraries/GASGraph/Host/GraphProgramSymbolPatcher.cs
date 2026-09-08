@@ -149,6 +149,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.QueryFromCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.QueryScreenRegionCollection:
+                        ins.ImmF = BitConverter.Int32BitsToSingle(ResolveEntityCollectionKey(entityCollections,
+                            ResolveSymbol(symbols, BitConverter.SingleToInt32Bits(ins.ImmF))));
+                        ins.Imm = ins.Imm >= 0 ? ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)) : 0;
+                        break;
+                    case GraphNodeOp.BindQueryCollection:
+                        ins.Imm = GraphIdRegistry.GetId(ResolveSymbol(symbols, ins.Imm));
+                        if (ins.Imm <= 0) throw new InvalidOperationException("ENTITY_QUERY.ERR.QueryGraphUnknown");
+                        ins.ImmF = BitConverter.Int32BitsToSingle(ResolveEntityCollectionKey(entityCollections,
+                            ResolveSymbol(symbols, BitConverter.SingleToInt32Bits(ins.ImmF))));
+                        break;
                     case GraphNodeOp.ScreenPointToEntity:
                         if (ins.Imm >= 0)
                         {

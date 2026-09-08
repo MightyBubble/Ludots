@@ -55,6 +55,8 @@ public static class GraphOpsNodeGraphCompiler
         }
 
         GraphProgramPackage package = compiled.Package.Value;
+        if (GraphIdRegistry.GetId(GraphOpsNodeIds.GraphId(nameof(GraphNodeOp.QueryFilterTeam))) <= 0)
+            _ = GraphIdRegistry.Register(GraphOpsNodeIds.GraphId(nameof(GraphNodeOp.QueryFilterTeam)));
         IGraphSymbolResolver resolver = symbolResolver ?? GraphOpsNodeGallerySymbolResolver.CreateStandalone(assetsRoot);
         var builtinHandlers = new Ludots.Core.Gameplay.GAS.BuiltinHandlerRegistry();
         Ludots.Core.Gameplay.GAS.BuiltinHandlers.RegisterAll(builtinHandlers);

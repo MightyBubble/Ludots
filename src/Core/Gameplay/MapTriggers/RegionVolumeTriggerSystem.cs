@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -14,14 +13,13 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
-    /// Evaluates region volume entities at think-wave granularity and fires the
+    /// Evaluates region volume entities each fixed step and fires the
     /// volume's enter/exit events (engine <see cref="GameEvents.RegionEntered"/>/
     /// <see cref="GameEvents.RegionExited"/> by default, an authored emission
     /// contract when the volume carries <see cref="RegionVolumeEmissionCm"/>).
     ///
     /// Semantics carried over from the retired dictionary-based region system:
-    /// - Cadence: the map heartbeat fires this system's handler for that map; there
-    ///   is no second tick accumulator and suspended maps never evaluate.
+    /// - Cadence: active maps evaluate once per fixed step; suspended maps never evaluate.
     /// - Inside-sets survive suspend/resume (suspended entities cannot move), so no
     ///   spurious exit/enter pair fires.
     /// - Eligible mover: MapEntity + WorldPositionCm, not SuspendedTag, not
@@ -67,37 +65,35 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public override void Initialize()
         {
-            _triggerManager.RegisterEventHandler(GameEvents.MapHeartbeat, OnMapHeartbeat);
             World.SubscribeEntityDestroyed(OnVolumeEntityDestroyed);
         }
 
         public override void Update(in float t)
         {
             FlushOrphanedVolumes();
-        }
-
-        private Task OnMapHeartbeat(ScriptContext context)
-        {
-            MapId mapId = context.Get<MapId>(CoreServiceKeys.MapId);
             MapSessionManager? sessions = _sessions();
-            MapSession? session = sessions?.GetSession(mapId);
-            if (session == null || session.State != MapSessionState.Active)
+            if (sessions == null)
             {
-                return Task.CompletedTask;
+                return;
             }
 
-            SyncVolumeStates(session);
-            CollectTrackedEntities(mapId);
-
-            foreach (KeyValuePair<Entity, VolumeRuntimeState> pair in _states)
+            foreach (KeyValuePair<MapId, MapSession> sessionPair in sessions.All)
             {
-                if (pair.Value.MapId == mapId && !pair.Value.Orphaned)
+                MapSession session = sessionPair.Value;
+                if (session.State != MapSessionState.Active) continue;
+                SyncVolumeStates(session);
+                bool collected = false;
+                foreach (KeyValuePair<Entity, VolumeRuntimeState> pair in _states)
                 {
+                    if (pair.Value.MapId != session.MapId || pair.Value.Orphaned) continue;
+                    if (!collected)
+                    {
+                        CollectTrackedEntities(session.MapId);
+                        collected = true;
+                    }
                     EvaluateVolume(session, pair.Value);
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         private void SyncVolumeStates(MapSession session)

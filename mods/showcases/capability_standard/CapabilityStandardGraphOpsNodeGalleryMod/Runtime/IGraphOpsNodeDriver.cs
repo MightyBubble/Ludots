@@ -46,6 +46,7 @@ public sealed class GraphOpsNodeDriverContext
     public OwnershipResolver? Ownership { get; set; }
     public KnowledgeProjectionStore? Knowledge { get; set; }
     public ISpatialCoordinateConverter? Coords { get; set; }
+    public ISpatialQueryService? SpatialQueries { get; set; }
     public BuiltinHandlerRegistry? BuiltinHandlers { get; set; }
     public EffectTemplateRegistry? EffectTemplates { get; set; }
     public ItemDefinitionRegistry? ItemDefinitions { get; set; }

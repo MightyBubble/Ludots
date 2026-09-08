@@ -24,6 +24,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly TransientMarkerBuffer _markers;
         private readonly PresentationRequestBuffer _requests;
         private readonly PresenterEntityRuntime _runtime;
+        private readonly Action<Entity, PresenterState> _onDestroyed;
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly PresenterDefinitionRegistry _definitions;
         private readonly PresenterAnimatorStateBuffer? _animatorStates;
@@ -62,6 +63,7 @@ namespace Ludots.Core.Presentation.Systems
             _markers = markers ?? throw new ArgumentNullException(nameof(markers));
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _onDestroyed = EmitDestroyedEvent;
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _animatorStates = animatorStates;
@@ -92,7 +94,7 @@ namespace Ludots.Core.Presentation.Systems
             bool hasEvents = _events.Count != 0;
             bool hasMarkers = _markers.Count != 0;
             ReleaseDestroyedOwnerAnchors();
-            int releasedDeadOwners = hasCommands ? _runtime.ReleaseDeadOwners(EmitDestroyedEvent) : 0;
+            int releasedDeadOwners = hasCommands ? _runtime.ReleaseDeadOwners(_onDestroyed) : 0;
             bool needsCullSync = _lastCullSyncStructureVersion != _runtime.StructureVersion;
             if (!hasCommands && !hasEvents && !hasMarkers && !needsCullSync && releasedDeadOwners == 0)
             {
@@ -110,7 +112,7 @@ namespace Ludots.Core.Presentation.Systems
                         break;
 
                     case PresenterCommandKind.DestroyPresenter:
-                        _runtime.Destroy(cmd.PresenterEntity, EmitDestroyedEvent);
+                        _runtime.Destroy(cmd.PresenterEntity, _onDestroyed);
                         break;
 
                     case PresenterCommandKind.DestroyPresenterScope:
@@ -119,7 +121,7 @@ namespace Ludots.Core.Presentation.Systems
                             throw new InvalidOperationException(
                                 $"DestroyPresenterScope requires a positive scopeTag, got {cmd.ScopeTag}.");
                         }
-                        _runtime.DestroyScope(cmd.ScopeTag, EmitDestroyedEvent);
+                        _runtime.DestroyScope(cmd.ScopeTag, _onDestroyed);
                         break;
 
                     case PresenterCommandKind.DestroyScopedPresenter:
@@ -213,7 +215,7 @@ namespace Ludots.Core.Presentation.Systems
                             int durationNameId = PresenterTimerNameRegistry.GetId(PresenterTimerNameRegistry.DurationTimerName);
                             if (durationNameId > 0 && table.Contains(timerOwner.StableId, durationNameId))
                             {
-                                _runtime.Destroy(cmd.PresenterEntity, EmitDestroyedEvent);
+                                _runtime.Destroy(cmd.PresenterEntity, _onDestroyed);
                                 break;
                             }
 
@@ -588,7 +590,7 @@ namespace Ludots.Core.Presentation.Systems
             {
                 if (World.IsAlive(single) && World.Has<PresenterState>(single))
                 {
-                    _runtime.Destroy(single, EmitDestroyedEvent);
+                    _runtime.Destroy(single, _onDestroyed);
                 }
 
                 return;
@@ -612,7 +614,7 @@ namespace Ludots.Core.Presentation.Systems
                 _ownerDestroyScratch[i] = Entity.Null;
                 if (World.IsAlive(presenter) && World.Has<PresenterState>(presenter))
                 {
-                    _runtime.Destroy(presenter, EmitDestroyedEvent);
+                    _runtime.Destroy(presenter, _onDestroyed);
                 }
             }
         }
@@ -679,7 +681,7 @@ namespace Ludots.Core.Presentation.Systems
 
             if (found)
             {
-                _runtime.Destroy(presenter, EmitDestroyedEvent);
+                _runtime.Destroy(presenter, _onDestroyed);
             }
         }
 
@@ -831,7 +833,7 @@ namespace Ludots.Core.Presentation.Systems
                 return true;
             }
 
-            _runtime.Destroy(existing, EmitDestroyedEvent);
+            _runtime.Destroy(existing, _onDestroyed);
             return false;
         }
 
