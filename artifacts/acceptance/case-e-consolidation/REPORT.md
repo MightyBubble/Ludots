@@ -8,6 +8,8 @@
 
 命名复审后再同步 main `09705ec204`，合并提交 `93f2f8b780`；双方新增的启动器入口均保留。最终 Release GAS 门禁、Case E 与区域回归 **808/808**，摘要见 [main-final-summary.txt](naming/main-final-summary.txt)。
 
+远端检查期间 main 合入场图层过境事件后，再同步 `11a841fb40`，合并提交 `00912f4077`。加上场区域成员用例的整轮回归为 **822/822**，见 [field-main-final-summary.txt](naming/field-main-final-summary.txt)。现有固定步区域更新与主线统一事件出口共同保留。
+
 发现并处理了重复输入派发、重复全图收集、出生后回执改队、面板自带文本/图片替代实现。派生名单索引、空间索引、Presenter 销毁索引继续保留。
 
 ## 2. 结构
