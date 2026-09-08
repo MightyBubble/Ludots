@@ -94,9 +94,9 @@
       <span class="k">02 挂默认</span><span class="v">initialInteractionContext → 战斗 context（battle）</span><br>
       <span class="k">03 宿主</span><span class="v">battle.triggers[]：roster_sync（心跳维护候选）+ box_begin（按下）</span><br>
       <span class="k">04 按下</span><span class="v">box_begin：写起角黑扳 + 预写修饰键黑扳(=0) + 激活 boxing</span><br>
-      <span class="k">05 拖拽</span><span class="v">指针移动 → PointerMoved 输入边沿 → box_hover_tick 调同一张命中函数 → 写预览集（黄环）</span><br>
+      <span class="k">05 拖拽</span><span class="v">指针移动 → PointerMoved 输入边沿 → selection_preview_tick 调同一张命中函数 → 写预览集（黄环）</span><br>
       <span class="k">06 松手</span><span class="v">box_commit（出口图）：写修饰键黑扳 → 终局命中 → 写交接单 selection.pending → DeactivateContext</span><br>
-      <span class="k">06′ 结算</span><span class="v">onDeactivated 槽（下一 tick）：box_hover_clear 清预览；selection_commit 读黑扳+交接单 → 写 selected → 交接单消费成空（蓝环）</span><br>
+      <span class="k">06′ 结算</span><span class="v">onDeactivated 槽（下一 tick）：selection_preview_clear 清预览；selection_commit 读黑扳+交接单 → 写 selected → 交接单消费成空（蓝环）</span><br>
       <span class="k">07 高亮</span><span class="v">预览 / 已选中都走集合成员变化；presenter 只换订阅 key</span>
     </div>
   </div>
@@ -105,7 +105,7 @@
     <h4>四个名词（先对齐）</h4>
     <div class="form" style="margin-top:8px">
       <div class="field"><span class="fname">候选<span class="ftype">集合</span></span><span class="fdesc">case_e.selectable——能被框的人。battle 挂载的 roster_sync 图随 MapHeartbeat 维护，开框前就位。</span></div>
-      <div class="field"><span class="fname">预览<span class="ftype">集合</span></span><span class="fdesc">case_e.box_hover——拖拽时框里是谁，黄环。</span></div>
+      <div class="field"><span class="fname">预览<span class="ftype">集合</span></span><span class="fdesc">case_e.selection_preview——拖拽时框里是谁，黄环。</span></div>
       <div class="field"><span class="fname">交接单<span class="ftype">集合</span></span><span class="fdesc">selection.pending——松手时手势出口写的「待结算名单」，是手势与落定之间的唯一通道。</span></div>
       <div class="field"><span class="fname">已选中<span class="ftype">集合</span></span><span class="fdesc">selected——正式结果，蓝环；replace / add / subtract。</span></div>
     </div>
@@ -123,10 +123,10 @@
     </div>
     <div class="form">
       <div class="ft">boxing（按下时激活的衍生 context）</div>
-      <div class="field"><span class="fname">triggers[]<span class="ftype">mount</span></span><span class="fdesc">box_hover_tick（action=PointerMoved）+ box_commit（action=CaseE.BoxSelectEnd）——框选活着时听的输入边沿</span></div>
+      <div class="field"><span class="fname">triggers[]<span class="ftype">mount</span></span><span class="fdesc">selection_preview_tick（action=PointerMoved）+ box_commit（action=CaseE.BoxSelectEnd）——框选活着时听的输入边沿</span></div>
       <div class="field"><span class="fname">onActivated<span class="ftype">graph 数组</span></span><span class="fdesc">本用例留空；对称保留</span></div>
       <div class="field"><span class="fname">foreground<span class="ftype">bool</span></span><span class="fdesc">true：前台接听——boxing 激活期间把父 battle 的互动类 trigger（box_begin）摘除监听，地图/被动类保留；scope 父子仍共存（非栈）；boxing 停用即恢复。由门控 reconcile 增量 diff 承担，配置驱动、引擎不写死。</span></div>
-      <div class="field"><span class="fname">onDeactivated<span class="ftype">graph 数组</span></span><span class="fdesc">box_hover_clear + selection_commit（Script 函数体，框选结束时的清场与落定；全手势复用）</span></div>
+      <div class="field"><span class="fname">onDeactivated<span class="ftype">graph 数组</span></span><span class="fdesc">selection_preview_clear + selection_commit（Script 函数体，框选结束时的清场与落定；全手势复用）</span></div>
     </div>
     <div class="callout ok">
       <b>为什么是槽不是周期</b>：旧 <code>whileActive</code> 是「存活期每帧空耗周期」的野鸡字段，承载不了其他监听、还占帧。D15 把生命周期改成<strong>两个瞬间边界钩子</strong>——<code>onActivated</code> 跑在 boxing 的 triggers[] 开启之前，<code>onDeactivated</code> 跑在它们关闭之后（显式停用或主体死亡都走这里）。引擎只在边界调用命名图体，不做任何清理动作。
@@ -166,8 +166,8 @@
     <div class="box" style="margin-top:14px">
       <h4>拖拽中：PointerMoved 输入边沿，不是帧时钟</h4>
       <div class="kv">
-        boxing 活着时挂 <code>box_hover_tick</code>（TriggerGraph，条目 <code>action: PointerMoved</code>）。
-        指针位置一变，输入绑定系统按 seat 派发一次；图中 <code>InvokeGraph(box_hit)</code> → 尾节点 <code>WriteCollection(case_e.box_hover, replace)</code>。
+        boxing 活着时挂 <code>selection_preview_tick</code>（TriggerGraph，条目 <code>action: PointerMoved</code>）。
+        指针位置一变，输入绑定系统按 seat 派发一次；图中 <code>InvokeGraph(box_hit)</code> → 尾节点 <code>WriteCollection(case_e.selection_preview, replace)</code>。
         指针不动就不派发、不重算。<br>
         <span class="dim">曾考虑 MapTick 每帧事件——那是把「输入更新」错当成模拟时钟，无人订阅时还空转；不用。</span>
       </div>
@@ -189,7 +189,7 @@
     <h3 style="margin-top:18px">onDeactivated 槽：清场 + 落定（Script 函数体） <span class="tag cfg">图体</span></h3>
     <div class="form">
       <div class="ft">两张槽图（都在 boxing 的 onDeactivated 里，顺序执行）</div>
-      <div class="field"><span class="fname">box_hover_clear<span class="ftype">Script</span></span><span class="fdesc">WriteCollection(case_e.box_hover, replace 空)——黄环灭</span></div>
+      <div class="field"><span class="fname">selection_preview_clear<span class="ftype">Script</span></span><span class="fdesc">WriteCollection(case_e.selection_preview, replace 空)——黄环灭</span></div>
       <div class="field"><span class="fname">selection_commit<span class="ftype">Script</span></span><span class="fdesc">读黑扳修饰 → 读交接单 selection.pending → SwitchInt（无/Precision→replace，Queue→add，Subtract→subtract）→ WriteCollection(selected) → 交接单集合减法消费成空</span></div>
     </div>
     <div class="callout ok">
@@ -204,7 +204,7 @@
       <div class="ft">三件事按结构保证，不靠约定</div>
       <div class="field"><span class="fname">开启前 / 变更点<span class="ftype">结构顺序</span></span><span class="fdesc">onActivated 在 boxing 的 triggers[] 注册之前跑（门控挂载点）；onDeactivated 在 DeactivateContext 的同一变更点同步跑（刀3：同拍结算），trigger 卸载由门控下一拍 reconcile 回收。槽贴窗口两侧——执行点是结构事实，不是系统间的时序约定。</span></div>
       <div class="field"><span class="fname">死亡补发<span class="ftype">destroy 边界</span></span><span class="fdesc">主体带着 context 被销毁（拖拽半途被击杀、未走显式停用）时，门控在 destroy 回调里对携带的每个 context 跑 onDeactivated 槽——结算与清场不会因死亡漏掉。</span></div>
-      <div class="field"><span class="fname">结算时机<span class="ftype">同拍</span></span><span class="fdesc">selected 在 DeactivateContext 的同一变更点更新：帧 N 松手写交接单并 DeactivateContext，门控在变更点同步跑 onDeactivated 槽（box_hover_clear + selection_commit）→ 结算与清场同拍完成，不再等下一帧扫描。变更点只跑槽，不碰 trigger 账本（避免在自己的图派发中途改账本）；卸载延迟到门控下一拍 reconcile，mount 已拆 → 槽不会双跑。</span></div>
+      <div class="field"><span class="fname">结算时机<span class="ftype">同拍</span></span><span class="fdesc">selected 在 DeactivateContext 的同一变更点更新：帧 N 松手写交接单并 DeactivateContext，门控在变更点同步跑 onDeactivated 槽（selection_preview_clear + selection_commit）→ 结算与清场同拍完成，不再等下一帧扫描。变更点只跑槽，不碰 trigger 账本（避免在自己的图派发中途改账本）；卸载延迟到门控下一拍 reconcile，mount 已拆 → 槽不会双跑。</span></div>
     </div>
   </div>
 
@@ -215,7 +215,7 @@
     <div class="form">
       <div class="ft">marine rules</div>
       <div class="field"><span class="fname">selected<span class="ftype">Added/Removed</span></span><span class="fdesc">蓝环 attachment</span></div>
-      <div class="field"><span class="fname">case_e.box_hover<span class="ftype">Added/Removed</span></span><span class="fdesc">黄环 preview</span></div>
+      <div class="field"><span class="fname">case_e.selection_preview<span class="ftype">Added/Removed</span></span><span class="fdesc">黄环 preview</span></div>
     </div>
   </div>
 
@@ -224,7 +224,7 @@
   <div class="step">
     <div class="kv">
       不用框选了、插上手柄：新手势 = 一个新 context + 自己的命中图 + 自己的 <code>box_commit</code> 出口，照旧写同一张交接单 <code>selection.pending</code> 与修饰键黑扳，然后在 <code>onDeactivated</code> 里列出 <code>selection_commit</code>。
-      落定层（读交接单、写 selected、消费交接单）<strong>零改动</strong>；清场层 <code>box_hover_clear</code> 各手势按需换自己的预览 key。
+      落定层（读交接单、写 selected、消费交接单）<strong>零改动</strong>；清场层 <code>selection_preview_clear</code> 各手势按需换自己的预览 key。
     </div>
   </div>
 

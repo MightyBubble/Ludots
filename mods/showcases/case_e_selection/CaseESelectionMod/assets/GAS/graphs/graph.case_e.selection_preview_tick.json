@@ -1,6 +1,6 @@
 [
   {
-    "id": "graph.case_e.box_hover_tick",
+    "id": "graph.case_e.selection_preview_tick",
     "kind": "TriggerGraph",
     "entries": [
       {
@@ -24,7 +24,7 @@
       {
         "id": "write_hover",
         "op": "WriteCollection",
-        "collectionKey": "case_e.box_hover"
+        "collectionKey": "case_e.selection_preview"
       },
       {
         "id": "ok",

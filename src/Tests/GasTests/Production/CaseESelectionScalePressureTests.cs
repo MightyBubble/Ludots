@@ -29,7 +29,7 @@ public sealed class CaseESelectionScalePressureTests
     private const string MapIdValue = "case_e_selection_field";
     private const string SchemeId = "scheme.case_e";
     private const string SelectableKey = "case_e.selectable";
-    private const string BoxHoverKey = "case_e.box_hover";
+    private const string SelectionPreviewKey = "case_e.selection_preview";
     private const string SelectedKey = "selected";
     private const string BenchDir = "docs/benchmarks/case-e-query-completeness";
     private readonly MapId _mapId = new(MapIdValue);
@@ -77,7 +77,7 @@ public sealed class CaseESelectionScalePressureTests
             ReleaseAt(engine, backend);
             Tick(engine, 4);
             Assert.That(CollectionCount(engine, rep, SelectedKey), Is.EqualTo(5000));
-            Assert.That(CollectionCount(engine, rep, BoxHoverKey), Is.LessThanOrEqualTo(0));
+            Assert.That(CollectionCount(engine, rep, SelectionPreviewKey), Is.LessThanOrEqualTo(0));
         }
         AssertNoTriggerErrors(engine);
     }
@@ -137,17 +137,17 @@ public sealed class CaseESelectionScalePressureTests
         PressAt(engine, backend, press);
         TickUntil(engine, 20, BoxingActive(engine, commander));
 
-        int fullBandHover = 0;
-        int halfBandHover = 0;
+        int fullBandPreview = 0;
+        int halfBandPreview = 0;
         var drag = Stopwatch.StartNew();
         double maxTickMs = 0;
         // 全幅框：盖住全部已入候选集的单位（本带 x∈[-400,400] 全在矩形内）；等挂载+首拍 PointerMoved 落定
         backend.SetMousePosition(new Vector2(1200f, 120f));
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == rosterCount);
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == rosterCount);
         double t0 = drag.Elapsed.TotalMilliseconds;
         if (t0 > maxTickMs) maxTickMs = t0;
-        fullBandHover = CollectionCount(engine, commander, BoxHoverKey);
-        Assert.That(fullBandHover, Is.EqualTo(rosterCount),
+        fullBandPreview = CollectionCount(engine, commander, SelectionPreviewKey);
+        Assert.That(fullBandPreview, Is.EqualTo(rosterCount),
             "全幅框命中全部已入候选集的单位（候选集=当前 {rosterCount} 支）");
         AssertNoTriggerErrors(engine);
 
@@ -162,24 +162,24 @@ public sealed class CaseESelectionScalePressureTests
             if (step > maxTickMs) maxTickMs = step;
             t0 = now;
         }
-        Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.GreaterThan(0),
+        Assert.That(CollectionCount(engine, commander, SelectionPreviewKey), Is.GreaterThan(0),
             "扫框末次仍保持命中（成员资格实时跟随指针）");
 
         // 半幅框：指针 -10 → 盖住候选集中 x<0 的单位；矩形边缘的投影舍入容差 ±3，
         // 语义钉的是「命中数随几何收敛、并比全幅严格更少（成员资格双向成立）」
         int expectedHalf = CountEligibleScreenHits(engine, new ScreenRect(-1200, -120, -10, 120));
         backend.SetMousePosition(new Vector2(-10f, 120f));
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == expectedHalf);
-        halfBandHover = CollectionCount(engine, commander, BoxHoverKey);
-        Assert.That(halfBandHover, Is.EqualTo(expectedHalf),
-            $"半幅框必须包含框边以内的全部单位（期望 {expectedHalf}，实测 {halfBandHover}）");
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == expectedHalf);
+        halfBandPreview = CollectionCount(engine, commander, SelectionPreviewKey);
+        Assert.That(halfBandPreview, Is.EqualTo(expectedHalf),
+            $"半幅框必须包含框边以内的全部单位（期望 {expectedHalf}，实测 {halfBandPreview}）");
         double dragMs = drag.Elapsed.TotalMilliseconds;
         drag.Stop();
 
         ReleaseAt(engine, backend);
         TickUntil(engine, 30, BoxingCleared(engine, commander));
         Tick(engine, 2);
-        Assert.That(CollectionCount(engine, commander, SelectedKey), Is.EqualTo(halfBandHover),
+        Assert.That(CollectionCount(engine, commander, SelectedKey), Is.EqualTo(halfBandPreview),
             "提交语义随规模成立：半幅框落定 = 半幅命中");
         AssertNoTriggerErrors(engine);
 
@@ -192,7 +192,7 @@ public sealed class CaseESelectionScalePressureTests
             Assert.That(maxTickMs, Is.LessThan(500.0), $"10.拖拽单拍峰值 = {maxTickMs:F2}ms 超围栏");
 
         WriteBenchmark(repoRoot, population: 10_000, rosterSingleMs, rosterPerEventMs, rosterStreamMs, dragMs, maxTickMs,
-            rosterCount, worldAmount, fullBandHover, halfBandHover);
+            rosterCount, worldAmount, fullBandPreview, halfBandPreview);
     }
 
     private static Entity[] CreateUnits(GameEngine engine, int teamId, int templateKey, int count, int xStepCm, int xStartCm)

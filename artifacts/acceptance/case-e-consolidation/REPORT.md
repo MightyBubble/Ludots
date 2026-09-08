@@ -34,7 +34,7 @@
 
 ### 配置结构
 
-蓝环、黄环的行为槽使用同一形状，集合增减仍由原有全局规则写 `case_e.ring.visible`：
+蓝环、黄环的行为槽使用同一形状，集合增减仍由原有全局规则写 `case_e.marker.visible`：
 
 ```json
 {
@@ -47,7 +47,7 @@
     "materialId": "default_surface",
     "renderPath": "StaticMesh",
     "mobility": "Static",
-    "visibilityParamKey": "case_e.ring.visible"
+    "visibilityParamKey": "case_e.marker.visible"
   }
 }
 ```
@@ -73,6 +73,25 @@ Release、`DOTNET_TieredCompilation=0`，同机分开运行。查询前后使用
 
 压力夹具原先用“预览数量 >= 0”作为等待条件，会在输入尚未推进时直接结束。修正前两个基线用例均失败；修正同一驱动后，前后版本均验证 104/104 和 1,004/1,004 的候选及完整预览。较大地图另测两名玩家各 5,000 的完整选择。以上不等于客户端万人同时选中的 FPS 测量。
 
+### 命名复审与配置阅读版
+
+PI Opus 5 与 PI DeepSeek v4 Flash 分别审阅，再交换意见复议。双方接受以下命名，完整配置逐行解释见 [presenters.annotated.jsonc](presenters.annotated.jsonc)；该阅读版去掉注释后与运行 JSON 相同。
+
+| 配置标识 | 表达的用途 |
+| --- | --- |
+| `presenter.case_e.selection_marker` | 正式选中单位的标记 |
+| `presenter.case_e.selection_preview_marker` | 拖拽中暂时命中的单位标记 |
+| `presenter.case_e.box_select_rectangle` | 鼠标拖动的屏幕矩形 |
+| `presenter.case_e.selection_rules` | 响应集合和框选上下文事件的全局规则 |
+| `case_e.selection_preview` | 预览名单；对应图为 `selection_preview_tick`、`selection_preview_clear` |
+| `case_e.marker.visible` | 各标记实例的输出开关，0 隐藏，非 0 允许输出 |
+
+原 `attachment` 容易与骨骼挂载行为混淆，`collection_decoration` 没有说清它承载规则，`box_hover` 又容易被理解为鼠标悬停。这些名称连同生产者、消费者、图文件及测试一起更新。
+
+复议后保留跨系统已有的 `SolePossessedRep` 术语，以及定义内统一的主资产槽 `body`。可见参数采用 `marker.visible`：它同时用于正式标记和预览标记，叫 `selection.is_member` 会把参数误解为正式选择的成员资格。两个标记槽只声明激活条件，删除会被加载器覆盖的 `activeByDefault: true`。复议原文：[Opus](naming/opus-discussion.md)、[DeepSeek](naming/deepseek-discussion.md)。
+
+本轮 Release 复测：一万单位、三万保留实例，20 次切换均值 Mesh **4.791765 ms**、HUD **6.047280 ms**，均为 **0 B**；重复提交四次均值 **13.101725 ms**，清除 **5.339725 ms**，均为 **0 B**。首次提交仍为 **50.7281 ms / 15,407,856 B**。这次修改名称没有新增性能路径，耗时差异不能作为优化收益。原始结果：[Presenter 测试](naming/presenter-tests.log)、[万人 CSV](naming/presenter-10000.csv)。
+
 ## 4. 场景与证据
 
 - 目标回归：147/147，日志 `delivery-final.log`；Presenter 扩展回归与切换耗时见 `possession-final.log`。原有 9 项复用测试包含在扩展回归中。
@@ -91,6 +110,7 @@ Release、`DOTNET_TieredCompilation=0`，同机分开运行。查询前后使用
 4. **索引重求值不等于整链 O(1)。** 单实体修改只重求值一次，但集合源成员变化后 `SynchronizeSource` 仍物化整份集合。引用方式写组件必须发出变更通知；不能承诺任意裸引用写入都自动刷新。
 5. **两份玩家查询图暂时保留。** 现有绑定器不能直接把当前玩家作为受跟踪动态参数，并处理该参数变化。直接拼接一套参数 DSL 会重复建设；本次不以隐藏约定替代它。
 6. 本次完成单座位切换玩家的表现隔离；首次万人提交性能仍未达标，未跑全仓测试。
+7. **配置名称与存档。** 集合键参与 `SaveContextHashes` 的注册表指纹；使用旧名称的开发版存档会被 `SaveContextValidator` 拒绝。此次名称更新不提供别名。历史测试日志及 CSV 列名保持原记录，当前配置阅读版随生产配置更新。
 
 ## 6. UAT
 

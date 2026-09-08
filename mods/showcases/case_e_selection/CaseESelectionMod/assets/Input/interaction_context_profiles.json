@@ -24,7 +24,7 @@
       ],
       "triggers": [
         {
-          "trigger": "graph.case_e.box_hover_tick"
+          "trigger": "graph.case_e.selection_preview_tick"
         },
         {
           "trigger": "graph.case_e.box_commit"
@@ -32,7 +32,7 @@
       ],
       "onActivated": [],
       "onDeactivated": [
-        "graph.case_e.box_hover_clear",
+        "graph.case_e.selection_preview_clear",
         "graph.case_e.selection_commit"
       ]
     }

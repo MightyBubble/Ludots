@@ -25,7 +25,7 @@ namespace Ludots.Tests.GAS.Production;
 /// Case E 框选全链 headless 验收（忠实形态），对照 case-e-config-report.html
 /// 的七步：01 进图出生 / 02 模板 initialInteractionContext 挂 Instance / 03 Profile triggers 门控 /
 /// 04 语义动作直绑触发衍生 context（框起角落操作者 rep 黑板；候选集由 battle context 挂载的 roster_sync 维护）/
-/// 05 boxing context 持续过程：ScreenRect 框 + 存活期命中写 case_e.box_hover 预览集 →
+/// 05 boxing context 持续过程：ScreenRect 框 + 存活期命中写 case_e.selection_preview 预览集 →
 /// presenter 观察成员变化高亮 / 06 抬起（BoxSelectEnd）对「可框选单位」候选集做屏幕矩形命中
 /// + 修饰键语义透传事件 key 写 selected 集合（与候选、预览三套集合分离）。
 /// 输入合同：按下=BoxSelectBegin、抬起=BoxSelectEnd（firesOn=release），无 Tap/Drag 判定器。
@@ -41,12 +41,12 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     private const string BattleProfile = "interaction.context.case_e.battle";
     private const string BoxingProfile = "interaction.context.case_e.boxing";
     private const string MarinePresenter = "presenter.case_e.marine_root";
-    private const string BoxingMarkerPresenter = "presenter.case_e.boxing_marker";
-    private const string RingAttachmentPresenter = "presenter.case_e.ring.attachment";
-    private const string RingPreviewPresenter = "presenter.case_e.ring.preview";
+    private const string BoxSelectRectanglePresenter = "presenter.case_e.box_select_rectangle";
+    private const string SelectionMarkerPresenter = "presenter.case_e.selection_marker";
+    private const string SelectionPreviewMarkerPresenter = "presenter.case_e.selection_preview_marker";
     private const string SelectedKey = "selected";
     private const string SelectableKey = "case_e.selectable";
-    private const string BoxHoverKey = "case_e.box_hover";
+    private const string SelectionPreviewKey = "case_e.selection_preview";
 
     [Test]
     public void SwitchingPossession_DrivesOnlyTheCurrentPlayersSelection()
@@ -95,8 +95,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Tick(engine, 4);
         var runtime = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)!;
         var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)!;
-        int marker = definitions.GetId(BoxingMarkerPresenter);
-        int preview = definitions.GetId(RingPreviewPresenter);
+        int marker = definitions.GetId(BoxSelectRectanglePresenter);
+        int preview = definitions.GetId(SelectionPreviewMarkerPresenter);
         Entity[] marines = { Resolve(engine, "case-e-marine-1"), Resolve(engine, "case-e-marine-2"),
             Resolve(engine, "case-e-marine-3"), Resolve(engine, "case-e-marine-4") };
         var trace = new List<string>();
@@ -115,17 +115,17 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             {
                 Assert.That(BoxingCleared(engine, commander)(), Is.True, $"Gesture {gesture}: released gesture remains active");
                 Assert.That(CollectionCount(engine, commander, SelectedKey), Is.EqualTo(moveOnRelease ? 3 : 2), $"Gesture {gesture}: release must commit the final rectangle");
-                Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.LessThanOrEqualTo(0), $"Gesture {gesture}: preview collection remains populated");
+                Assert.That(CollectionCount(engine, commander, SelectionPreviewKey), Is.LessThanOrEqualTo(0), $"Gesture {gesture}: preview collection remains populated");
                 Assert.That(CountPresentersOwnedBy(runtime, marker, commander, engine.World), Is.Zero, $"Gesture {gesture}: rectangle remains alive");
                 foreach (Entity marine in marines)
-                    Assert.That(CountVisibleRingsOwnedBy(runtime, preview, marine, engine.World), Is.Zero, $"Gesture {gesture}: yellow marker remains visible");
+                    Assert.That(CountVisibleMarkersOwnedBy(runtime, preview, marine, engine.World), Is.Zero, $"Gesture {gesture}: yellow marker remains visible");
             });
             AssertNoTriggerErrors(engine);
             int yellowCount = 0;
             foreach (Entity marine in marines)
-                yellowCount += CountVisibleRingsOwnedBy(runtime, preview, marine, engine.World);
+                yellowCount += CountVisibleMarkersOwnedBy(runtime, preview, marine, engine.World);
             trace.Add(JsonSerializer.Serialize(new { gesture, heldFrames, moveOnRelease,
-                boxingActive = BoxingActive(engine, commander)(), previewCount = CollectionCount(engine, commander, BoxHoverKey),
+                boxingActive = BoxingActive(engine, commander)(), previewCount = CollectionCount(engine, commander, SelectionPreviewKey),
                 rectangleCount = CountPresentersOwnedBy(runtime, marker, commander, engine.World), yellowCount,
                 selectedCount = CollectionCount(engine, commander, SelectedKey) }));
         }
@@ -162,7 +162,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             Assert.That(BoxingActive(engine, commander)(), Is.True, "The previous release must not close the new held gesture.");
             backend.SetMousePosition(new Vector2(400f, 100f));
             Tick(engine, 4);
-            Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.EqualTo(3));
+            Assert.That(CollectionCount(engine, commander, SelectionPreviewKey), Is.EqualTo(3));
             ReleaseAt(engine, backend);
         }
         Tick(engine, 8);
@@ -170,17 +170,17 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)!;
         Assert.That(BoxingCleared(engine, commander)(), Is.True);
         Assert.That(CollectionCount(engine, commander, SelectedKey), Is.EqualTo(3));
-        Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.LessThanOrEqualTo(0));
-        int rectangleCount = CountPresentersOwnedBy(runtime, definitions.GetId(BoxingMarkerPresenter), commander, engine.World);
+        Assert.That(CollectionCount(engine, commander, SelectionPreviewKey), Is.LessThanOrEqualTo(0));
+        int rectangleCount = CountPresentersOwnedBy(runtime, definitions.GetId(BoxSelectRectanglePresenter), commander, engine.World);
         Assert.That(rectangleCount, Is.Zero);
         int yellowCount = 0;
         foreach (string id in new[] { "case-e-marine-1", "case-e-marine-2", "case-e-marine-3", "case-e-marine-4" })
-            yellowCount += CountVisibleRingsOwnedBy(runtime, definitions.GetId(RingPreviewPresenter), Resolve(engine, id), engine.World);
+            yellowCount += CountVisibleMarkersOwnedBy(runtime, definitions.GetId(SelectionPreviewMarkerPresenter), Resolve(engine, id), engine.World);
         Assert.That(yellowCount, Is.Zero);
         AssertNoTriggerErrors(engine);
         WriteFastGestureEvidence($"repeat-{heldFrames}-{releasedFrames}-{restartHeld}", new[] { JsonSerializer.Serialize(new {
             gestures = restartHeld ? 21 : 20, heldFrames, releasedFrames, restartHeld, boxingActive = BoxingActive(engine, commander)(),
-            previewCount = CollectionCount(engine, commander, BoxHoverKey), rectangleCount, yellowCount,
+            previewCount = CollectionCount(engine, commander, SelectionPreviewKey), rectangleCount, yellowCount,
             selectedCount = CollectionCount(engine, commander, SelectedKey) }) });
     }
 
@@ -238,13 +238,13 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         var presenterDefinitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
             ?? throw new InvalidOperationException("PresenterDefinitionRegistry service is missing.");
         int marineDefId = presenterDefinitions.GetId(MarinePresenter);
-        int boxingMarkerDefId = presenterDefinitions.GetId(BoxingMarkerPresenter);
-        int ringAttachmentDefId = presenterDefinitions.GetId(RingAttachmentPresenter);
-        int ringPreviewDefId = presenterDefinitions.GetId(RingPreviewPresenter);
+        int boxSelectRectangleDefId = presenterDefinitions.GetId(BoxSelectRectanglePresenter);
+        int selectionMarkerDefId = presenterDefinitions.GetId(SelectionMarkerPresenter);
+        int selectionPreviewMarkerDefId = presenterDefinitions.GetId(SelectionPreviewMarkerPresenter);
         TickUntil(engine, 40, () => presenterRuntime.GetActiveByDefinition(marineDefId).Count == 4);
-        // boxing 框指示由全局规则壳（collection_decoration）订阅 ContextActivated 创建，
+        // 框选矩形由全局选择规则订阅 ContextActivated 创建，
         // ContextDeactivated 销毁——按下前不存在。
-        Assert.That(CountPresentersOwnedBy(presenterRuntime, boxingMarkerDefId, commander, engine.World), Is.EqualTo(0),
+        Assert.That(CountPresentersOwnedBy(presenterRuntime, boxSelectRectangleDefId, commander, engine.World), Is.EqualTo(0),
             "框指示 presenter 按下前不存在（全局规则建销，非常驻）");
         ScreenOverlayBuffer screenOverlayBefore = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) as ScreenOverlayBuffer
             ?? throw new InvalidOperationException("ScreenOverlayBuffer service is missing.");
@@ -279,7 +279,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             "框起角 Y 同挂操作者 rep 黑板");
 
         // ── 05①b：全局规则——ContextActivated→创建 boxing 框指示（scope=想 subject stable id）──
-        Assert.That(CountPresentersOwnedBy(presenterRuntime, boxingMarkerDefId, commander, engine.World), Is.EqualTo(1),
+        Assert.That(CountPresentersOwnedBy(presenterRuntime, boxSelectRectangleDefId, commander, engine.World), Is.EqualTo(1),
             "ContextActivated 事件被全局规则壳消费 → 创建框指示 presenter");
 
         // 拖拽中——门控系统在此 tick 挂上 boxing 的 triggers（抬起边沿 BoxSelectEnd）
@@ -298,18 +298,18 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             HasScreenRect(screenOverlay, x: -1200, y: -100, width: 1200, height: 300),
             "指针继续移动，矩形框随之扩大（跟随当前拖拽数据）");
 
-        // ── 05③：PointerMoved 输入边沿命中 → case_e.box_hover（预览集 ≠ selected）──
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
-        AssertCollection(engine, commander, BoxHoverKey, "拖拽中预览命中=当前矩形覆盖的可框选单位",
+        // ── 05③：PointerMoved 输入边沿命中 → case_e.selection_preview（预览集 ≠ selected）──
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == 2);
+        AssertCollection(engine, commander, SelectionPreviewKey, "拖拽中预览命中=当前矩形覆盖的可框选单位",
             marine1, marine2);
         Assert.That(CollectionCount(engine, commander, SelectedKey), Is.LessThanOrEqualTo(0),
             "拖拽中不得写入已选中集合（候选/预览/已选中三套分离）");
-        AssertPreviewOn(engine, presenterRuntime, ringPreviewDefId, "预览环跟命中集", marine1, marine2);
-        AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId, "框外单位无预览环", marine3, marine4);
+        AssertPreviewOn(engine, presenterRuntime, selectionPreviewMarkerDefId, "预览环跟命中集", marine1, marine2);
+        AssertPreviewOff(engine, presenterRuntime, selectionPreviewMarkerDefId, "框外单位无预览环", marine3, marine4);
 
         backend.SetMousePosition(new Vector2(-300f, 100f));
         Tick(engine, 2);
-        AssertCollection(engine, commander, BoxHoverKey, "指针回缩后预览集随之收缩", marine1, marine2);
+        AssertCollection(engine, commander, SelectionPreviewKey, "指针回缩后预览集随之收缩", marine1, marine2);
 
         // ── 06：抬起（BoxSelectEnd / firesOn=release）→ 矩形 [press,release] 命中 + replace 语义 → selected ──
         ReleaseAt(engine, backend);
@@ -321,21 +321,21 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
 
         AssertCollection(engine, commander, SelectedKey, "无修饰 → replace 语义", marine1, marine2);
         Assert.That(
-            CollectionCount(engine, commander, BoxHoverKey) <= 0,
-            "框结束停用 boxing → onDeactivated 槽 box_hover_clear 清空预览集");
-        AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId, "预览环随预览集清空", marine1, marine2, marine3, marine4);
+            CollectionCount(engine, commander, SelectionPreviewKey) <= 0,
+            "框结束停用 boxing → onDeactivated 槽 selection_preview_clear 清空预览集");
+        AssertPreviewOff(engine, presenterRuntime, selectionPreviewMarkerDefId, "预览环随预览集清空", marine1, marine2, marine3, marine4);
         Assert.That(
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances cleared) ||
             cleared.Count == 0,
             "框结束 DeactivateContext 清空衍生 context 实例集");
-        Assert.That(CountPresentersOwnedBy(presenterRuntime, boxingMarkerDefId, commander, engine.World), Is.EqualTo(0),
+        Assert.That(CountPresentersOwnedBy(presenterRuntime, boxSelectRectangleDefId, commander, engine.World), Is.EqualTo(0),
             "ContextDeactivated → 全局规则销毁框指示 presenter");
         int overlayCountAfterScopeDeath = screenOverlay.Count;
         Tick(engine, 6);
         Assert.That(screenOverlay.Count, Is.EqualTo(overlayCountAfterScopeDeath),
             "框结束→boxing context 停用→框指示销毁→ScreenRect 不再产出新矩形");
-        AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "负 X 象限单位命中高亮", marine1, marine2);
-        AssertRingOff(engine, presenterRuntime, ringAttachmentDefId, "框外单位不高亮", marine3, marine4);
+        AssertMarkerVisible(engine, presenterRuntime, selectionMarkerDefId, "负 X 象限单位命中高亮", marine1, marine2);
+        AssertMarkerHidden(engine, presenterRuntime, selectionMarkerDefId, "框外单位不高亮", marine3, marine4);
         Assert.That(CollectionContains(engine, commander, SelectedKey, marine2),
             "边界归属：单位屏幕包围盒与框边相交（ScreenRect.Intersects 含端）→ 归属框内");
 
@@ -348,7 +348,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             new Vector2(400f, 100f),
             "QueueModifier");
         AssertCollection(engine, commander, SelectedKey, "QueueModifier → add 语义并集", marine1, marine2, marine3);
-        AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "加选后新命中单位高亮", marine1, marine2, marine3);
+        AssertMarkerVisible(engine, presenterRuntime, selectionMarkerDefId, "加选后新命中单位高亮", marine1, marine2, marine3);
 
         // ── 06 减选：ModifierSubtract → subtract 语义（框到 marine1 差集）──
         DragBox(
@@ -359,8 +359,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             new Vector2(-600f, 100f),
             "ModifierSubtract");
         AssertCollection(engine, commander, SelectedKey, "ModifierSubtract → subtract 语义差集", marine2, marine3);
-        AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "减选后仅剩命中单位保持高亮", marine2, marine3);
-        AssertRingOff(engine, presenterRuntime, ringAttachmentDefId, "被减去的单位取消高亮", marine1);
+        AssertMarkerVisible(engine, presenterRuntime, selectionMarkerDefId, "减选后仅剩命中单位保持高亮", marine2, marine3);
+        AssertMarkerHidden(engine, presenterRuntime, selectionMarkerDefId, "被减去的单位取消高亮", marine1);
 
         // ── 06 敌我过滤：矩形盖住全图（含敌方 raiders 屏幕位置）→ 命中仍只有己方可框选单位 ──
         DragBox(
@@ -383,17 +383,12 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             !engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances afterTap) ||
             afterTap.Count == 0,
             "点选同样停用 boxing context");
-        AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "点选命中单位高亮", marine4);
-        AssertRingOff(engine, presenterRuntime, ringAttachmentDefId, "点选替换后其余单位取消高亮", marine1, marine2, marine3);
+        AssertMarkerVisible(engine, presenterRuntime, selectionMarkerDefId, "点选命中单位高亮", marine4);
+        AssertMarkerHidden(engine, presenterRuntime, selectionMarkerDefId, "点选替换后其余单位取消高亮", marine1, marine2, marine3);
     }
 
-    /// <summary>
-    /// <summary>
-    /// 候选在拖拽途中死亡（仍在框内）：roster EntityDied 事件刷新 selectable → 下次指针移动
-    /// 碰撞集box_hover 剔除死者 → 松手提交的 selected 也不含死者（提交时重扫最新候选集）。
-    /// </summary>
     [Test]
-    public void CandidateDies_MidDrag_ExcludedFromHoverAndCommit()
+    public void CandidateDies_MidDrag_ExcludedFromPreviewAndCommit()
     {
         string repoRoot = FindRepoRoot();
         var backend = new TestInputBackend();
@@ -415,19 +410,19 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         PressAt(engine, backend, new Vector2(-1200f, -100f));
         TickUntil(engine, 20, BoxingActive(engine, commander));
         backend.SetMousePosition(new Vector2(-300f, 100f));
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
-        AssertCollection(engine, commander, BoxHoverKey, "拖拽中 marine1/2 命中预览", marine1, marine2);
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == 2);
+        AssertCollection(engine, commander, SelectionPreviewKey, "拖拽中 marine1/2 命中预览", marine1, marine2);
 
         // 候选 marine2 在框内被击杀 → 候选集 EntityDied 收缩；预览集要等下一次指针移动重扫
         engine.World.Destroy(marine2);
         TickUntil(engine, 30, () => CollectionCount(engine, commander, SelectableKey) == 3);
         AssertCollection(engine, commander, SelectableKey, "死亡驱动 selectable 收缩（EntityDied）", marine1, marine3, marine4);
-        AssertCollection(engine, commander, BoxHoverKey, "预览集此时仍是死前命中集（下次移动才重扫）", marine1, marine2);
+        AssertCollection(engine, commander, SelectionPreviewKey, "预览集此时仍是死前命中集（下次移动才重扫）", marine1, marine2);
 
-        // 再动一次指针 → box_hover_tick 重扫最新候选集 → 死者出预览
+        // 再动一次指针 → selection_preview_tick 重扫最新候选集 → 死者出预览
         backend.SetMousePosition(new Vector2(-200f, 100f));
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 1);
-        AssertCollection(engine, commander, BoxHoverKey, "死亡后的首次指针移动把死者剔出预览", marine1);
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == 1);
+        AssertCollection(engine, commander, SelectionPreviewKey, "死亡后的首次指针移动把死者剔出预览", marine1);
 
         // 松手 → box_commit 重扫最新候选集 → selected 不含死者
         ReleaseAt(engine, backend);
@@ -440,11 +435,11 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     }
 
     /// <summary>
-    /// 指针离开后再次回到框内（入框→出框→再入框）：box_hover 是纯集合 diff，成员资格双向
+    /// 指针离开后再次回到框内（入框→出框→再入框）：selection_preview 是纯集合 diff，成员资格双向
     /// 跟随；环实例 创建→销毁→再创建（实例生灭，非一次行为）。
     /// </summary>
     [Test]
-    public void CandidateReEntersBoxAfterLeaving_HoverFollowsMembershipBothDirections()
+    public void CandidateReEntersBoxAfterLeaving_PreviewFollowsMembershipBothDirections()
     {
         string repoRoot = FindRepoRoot();
         var backend = new TestInputBackend();
@@ -463,7 +458,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             ?? throw new InvalidOperationException("PresenterEntityRuntime service is missing.");
         var presenterDefinitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
             ?? throw new InvalidOperationException("PresenterDefinitionRegistry service is missing.");
-        int ringPreviewDefId = presenterDefinitions.GetId(RingPreviewPresenter);
+        int selectionPreviewMarkerDefId = presenterDefinitions.GetId(SelectionPreviewMarkerPresenter);
 
         TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
         PressAt(engine, backend, new Vector2(-1200f, -100f));
@@ -471,27 +466,27 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
 
         // 入框：指针左区盖住 only marine1（press=-1200 → pointer=-850 的矩形含 x=-900）
         backend.SetMousePosition(new Vector2(-850f, 0f));
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 1);
-        AssertCollection(engine, commander, BoxHoverKey, "入框第一段命中 marine1", marine1);
-        AssertPreviewOn(engine, presenterRuntime, ringPreviewDefId, "再入框后黄环重新创建", marine1);
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == 1);
+        AssertCollection(engine, commander, SelectionPreviewKey, "入框第一段命中 marine1", marine1);
+        AssertPreviewOn(engine, presenterRuntime, selectionPreviewMarkerDefId, "再入框后黄环重新创建", marine1);
 
         // 出框：指针离开 marine1 → 0
         backend.SetMousePosition(new Vector2(-1500f, -300f));
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 0);
-        Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.EqualTo(0), "出框预览清空");
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == 0);
+        Assert.That(CollectionCount(engine, commander, SelectionPreviewKey), Is.EqualTo(0), "出框预览清空");
 
         // 再入框：指针回到 marine1/marine2 区 → 1/2
         backend.SetMousePosition(new Vector2(-200f, 100f));
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
-        AssertCollection(engine, commander, BoxHoverKey, "再入框命中 marine1/2，成员资格重新建立", marine1, marine2);
-        AssertPreviewOn(engine, presenterRuntime, ringPreviewDefId, "成员资格重入 → 黄环实例再生", marine1, marine2);
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == 2);
+        AssertCollection(engine, commander, SelectionPreviewKey, "再入框命中 marine1/2，成员资格重新建立", marine1, marine2);
+        AssertPreviewOn(engine, presenterRuntime, selectionPreviewMarkerDefId, "成员资格重入 → 黄环实例再生", marine1, marine2);
         AssertNoTriggerErrors(engine);
     }
 
     /// <summary>
     /// DeactivateContext（图内 op）在移除 context 组件的同一变更点同步跑
     /// onDeactivated 槽——框选结算不再隔一帧。release 当拍即写 selected（不再等门控下一 tick
-    /// 的世界扫描）；随后 reconcile 只做延迟卸载、不重复跑槽（selected 不变化、box_hover 不复活）。
+    /// 的世界扫描）；随后 reconcile 只做延迟卸载、不重复跑槽（selected 不变化、selection_preview 不复活）。
     /// </summary>
     [Test]
     public void BoxSelect_SettlesSelectedSameTickAsDeactivateContext_NoRepeat()
@@ -519,17 +514,17 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         PressAt(engine, backend, new Vector2(-1200f, -100f));
         TickUntil(engine, 20, BoxingActive(engine, commander));
         backend.SetMousePosition(new Vector2(-300f, 100f));
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
-        AssertCollection(engine, commander, BoxHoverKey, "拖拽预览命中就位", marine1, marine2);
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == 2);
+        AssertCollection(engine, commander, SelectionPreviewKey, "拖拽预览命中就位", marine1, marine2);
 
         // 抬起（firesOn=release）→ box_commit → DeactivateContext：onDeactivated 槽在同拍执行。
         // BoxingCleared 只在 DeactivateContext 移除 boxing 实例的那一 tick 翻转——停在这里立刻断言，
-        // 不再多走一帧：selected 已写入、box_hover 已清空（旧语义要等下一帧扫描才结算）。
+        // 不再多走一帧：selected 已写入、selection_preview 已清空（旧语义要等下一帧扫描才结算）。
         ReleaseAt(engine, backend);
         TickUntil(engine, 30, BoxingCleared(engine, commander));
         AssertCollection(engine, commander, SelectedKey, "DeactivateContext 当拍即结算（selected 不再等下一 tick）", marine1, marine2);
-        Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.LessThanOrEqualTo(0),
-            "box_hover_clear 也在同拍执行，预览集同拍清空");
+        Assert.That(CollectionCount(engine, commander, SelectionPreviewKey), Is.LessThanOrEqualTo(0),
+            "selection_preview_clear 也在同拍执行，预览集同拍清空");
         AssertNoTriggerErrors(engine);
 
         // 重复防跑：门控下一 tick 只做延迟卸载 + reconcile，槽不因世界扫描再跑一次。
@@ -537,8 +532,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Tick(engine, 4);
         Assert.That(CollectionCount(engine, commander, SelectedKey), Is.EqualTo(selectedCount),
             "reconcile 不再重复跑 onDeactivated 槽（selected 不因槽重跑而变化）");
-        Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.LessThanOrEqualTo(0),
-            "box_hover 不被重复写回");
+        Assert.That(CollectionCount(engine, commander, SelectionPreviewKey), Is.LessThanOrEqualTo(0),
+            "selection_preview 不被重复写回");
         AssertNoTriggerErrors(engine);
     }
 
@@ -581,7 +576,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
 
     /// <summary>
     /// 死亡补发合同：主体在拖拽途中被销毁，未走显式 Deactivate——destroy 边界
-    /// 必须补跑并激活的 onDeactivated 槽（box_hover_clear 清预览），且整链不得抛错。
+    /// 必须补跑并激活的 onDeactivated 槽（selection_preview_clear 清预览），且整链不得抛错。
     /// </summary>
     [Test]
     public void CommanderDeath_MidGesture_PerformsDeactivatedSlotCleanup()
@@ -606,15 +601,15 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances boxingNow) &&
             boxingNow.Count == 1);
         backend.SetMousePosition(new Vector2(-300f, 100f));
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
-        AssertCollection(engine, commander, BoxHoverKey, "死亡前拖拽预览已就位", marine1, marine2);
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == 2);
+        AssertCollection(engine, commander, SelectionPreviewKey, "死亡前拖拽预览已就位", marine1, marine2);
 
         // 拖拽途中主体销毁：未显式停用 → destroy 边界补跑 onDeactivated（清预览），不得抛错
         engine.World.Destroy(commander);
         Tick(engine, 2);
         AssertNoTriggerErrors(engine);
-        Assert.That(CollectionCount(engine, commander, BoxHoverKey) <= 0,
-            "主体死亡补发 onDeactivated → box_hover_clear 清空预览（死亡路径槽执行）");
+        Assert.That(CollectionCount(engine, commander, SelectionPreviewKey) <= 0,
+            "主体死亡补发 onDeactivated → selection_preview_clear 清空预览（死亡路径槽执行）");
     }
 
     [Test]
@@ -638,8 +633,8 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             ?? throw new InvalidOperationException("PresenterEntityRuntime service is missing.");
         var presenterDefinitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
             ?? throw new InvalidOperationException("PresenterDefinitionRegistry service is missing.");
-        int ringPreviewDefId = presenterDefinitions.GetId(RingPreviewPresenter);
-        int ringAttachmentDefId = presenterDefinitions.GetId(RingAttachmentPresenter);
+        int selectionPreviewMarkerDefId = presenterDefinitions.GetId(SelectionPreviewMarkerPresenter);
+        int selectionMarkerDefId = presenterDefinitions.GetId(SelectionMarkerPresenter);
         int marineDefId = presenterDefinitions.GetId(MarinePresenter);
 
         // 候选集就位；marine 模板上环槽与规则早已删除（只留 body 资产）
@@ -654,27 +649,27 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances boxingNow) &&
             boxingNow.Count == 1);
         backend.SetMousePosition(new Vector2(-300f, 100f));
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 2);
-        AssertPreviewOn(engine, presenterRuntime, ringPreviewDefId, "成员入预览集→黄环实例挂到成员", marine1, marine2);
-        AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId, "未命中成员无环实例", marine3);
-        AssertRingOff(engine, presenterRuntime, ringAttachmentDefId, "预览阶段不连蓝环", marine1, marine2, marine3);
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == 2);
+        AssertPreviewOn(engine, presenterRuntime, selectionPreviewMarkerDefId, "成员入预览集→黄环实例挂到成员", marine1, marine2);
+        AssertPreviewOff(engine, presenterRuntime, selectionPreviewMarkerDefId, "未命中成员无环实例", marine3);
+        AssertMarkerHidden(engine, presenterRuntime, selectionMarkerDefId, "预览阶段不连蓝环", marine1, marine2, marine3);
 
         backend.SetMousePosition(new Vector2(-900f, 0f));
-        TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) == 1);
-        AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId, "成员离开预览集后隐藏黄环", marine2);
-        Assert.That(CountPresentersOwnedBy(presenterRuntime, ringPreviewDefId, marine2, engine.World), Is.EqualTo(1));
-        AssertPreviewOn(engine, presenterRuntime, ringPreviewDefId, "仍在命中集者保留黄环", marine1);
+        TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == 1);
+        AssertPreviewOff(engine, presenterRuntime, selectionPreviewMarkerDefId, "成员离开预览集后隐藏黄环", marine2);
+        Assert.That(CountPresentersOwnedBy(presenterRuntime, selectionPreviewMarkerDefId, marine2, engine.World), Is.EqualTo(1));
+        AssertPreviewOn(engine, presenterRuntime, selectionPreviewMarkerDefId, "仍在命中集者保留黄环", marine1);
 
         // 抬起落定 → selected 集合落定（蓝环挂到成员），boxing 停用清空预览集
         ReleaseAt(engine, backend);
         TickUntil(engine, 30, BoxingCleared(engine, commander));
         Tick(engine, 2);
         TickUntil(engine, 20, () => CollectionCount(engine, commander, SelectedKey) >= 1);
-        Assert.That(CollectionCount(engine, commander, BoxHoverKey), Is.LessThanOrEqualTo(0),
+        Assert.That(CollectionCount(engine, commander, SelectionPreviewKey), Is.LessThanOrEqualTo(0),
             "停用 boxing → onDeactivated 槽清空预览集");
-        AssertPreviewOff(engine, presenterRuntime, ringPreviewDefId,
+        AssertPreviewOff(engine, presenterRuntime, selectionPreviewMarkerDefId,
             "预览集清空后所有黄环隐藏", marine1, marine2, marine3);
-        AssertRingOn(engine, presenterRuntime, ringAttachmentDefId, "selected 落定→蓝环实例挂到成员", marine1);
+        AssertMarkerVisible(engine, presenterRuntime, selectionMarkerDefId, "selected 落定→蓝环实例挂到成员", marine1);
         AssertNoTriggerErrors(engine);
     }
 
@@ -855,30 +850,30 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(actual, Is.EqualTo(sorted), message);
     }
 
-    private static void AssertRingOn(
+    private static void AssertMarkerVisible(
         GameEngine engine,
         PresenterEntityRuntime runtime,
-        int ringDefId,
+        int markerDefId,
         string message,
         params Entity[] units)
     {
         foreach (Entity unit in units)
         {
-            Assert.That(CountVisibleRingsOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(1),
+            Assert.That(CountVisibleMarkersOwnedBy(runtime, markerDefId, unit, engine.World), Is.EqualTo(1),
                 $"{message}：{unit} 应显示一个蓝环");
         }
     }
 
-    private static void AssertRingOff(
+    private static void AssertMarkerHidden(
         GameEngine engine,
         PresenterEntityRuntime runtime,
-        int ringDefId,
+        int markerDefId,
         string message,
         params Entity[] units)
     {
         foreach (Entity unit in units)
         {
-            Assert.That(CountVisibleRingsOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(0),
+            Assert.That(CountVisibleMarkersOwnedBy(runtime, markerDefId, unit, engine.World), Is.EqualTo(0),
                 $"{message}：{unit} 不应显示蓝环");
         }
     }
@@ -886,13 +881,13 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     private static void AssertPreviewOn(
         GameEngine engine,
         PresenterEntityRuntime runtime,
-        int ringDefId,
+        int markerDefId,
         string message,
         params Entity[] units)
     {
         foreach (Entity unit in units)
         {
-            Assert.That(CountVisibleRingsOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(1),
+            Assert.That(CountVisibleMarkersOwnedBy(runtime, markerDefId, unit, engine.World), Is.EqualTo(1),
                 $"{message}：{unit} 应显示一个黄环");
         }
     }
@@ -900,21 +895,21 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     private static void AssertPreviewOff(
         GameEngine engine,
         PresenterEntityRuntime runtime,
-        int ringDefId,
+        int markerDefId,
         string message,
         params Entity[] units)
     {
         foreach (Entity unit in units)
         {
-            Assert.That(CountVisibleRingsOwnedBy(runtime, ringDefId, unit, engine.World), Is.EqualTo(0),
+            Assert.That(CountVisibleMarkersOwnedBy(runtime, markerDefId, unit, engine.World), Is.EqualTo(0),
                 $"{message}：{unit} 不应显示黄环");
         }
     }
 
-    private static int CountVisibleRingsOwnedBy(PresenterEntityRuntime runtime, int defId, Entity owner, World world)
+    private static int CountVisibleMarkersOwnedBy(PresenterEntityRuntime runtime, int defId, Entity owner, World world)
     {
         if (!runtime.TryGetActiveByOwner(owner, out var bucket)) return 0;
-        Assert.That(PresenterParamKeyRegistry.TryGetId("case_e.ring.visible", out int visibleKey), Is.True);
+        Assert.That(PresenterParamKeyRegistry.TryGetId("case_e.marker.visible", out int visibleKey), Is.True);
         int count = 0;
         for (int i = 0; i < bucket.Count; i++)
         {

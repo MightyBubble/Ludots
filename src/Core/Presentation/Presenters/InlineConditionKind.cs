@@ -11,10 +11,10 @@ namespace Ludots.Core.Presentation.Presenters
         /// <summary>Always true (no condition).</summary>
         None = 0,
 
-        /// <summary>True when the event Source entity is the sole possessed rep.</summary>
+        /// <summary>True when Source is the representative possessed by the sole local seat; false without a sole possessed representative.</summary>
         SourceIsSolePossessedRep = 1,
 
-        /// <summary>True when the event Target entity is the sole possessed rep.</summary>
+        /// <summary>True when Target is the representative possessed by the sole local seat; false without a sole possessed representative.</summary>
         TargetIsSolePossessedRep = 2,
 
         /// <summary>True when the event Source entity is alive in the ECS world.</summary>

@@ -1,6 +1,6 @@
 [
   {
-    "id": "graph.case_e.box_hover_clear",
+    "id": "graph.case_e.selection_preview_clear",
     "kind": "Script",
     "entry": "op_replace",
     "nodes": [
@@ -12,7 +12,7 @@
       {
         "id": "write_clear",
         "op": "WriteCollection",
-        "collectionKey": "case_e.box_hover"
+        "collectionKey": "case_e.selection_preview"
       },
       {
         "id": "halt",
