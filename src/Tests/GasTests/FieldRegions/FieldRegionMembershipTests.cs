@@ -73,6 +73,67 @@ namespace Ludots.Tests.GAS.FieldRegions
         }
 
         [Test]
+        public void AuthoredEmission_RedirectsCrossingsToCustomEventsWithPayload()
+        {
+            // #1468: a field region carrying RegionVolumeEmissionCm fires the
+            // declared events with authored payload instead of the engine defaults.
+            var customEvents = new Ludots.Core.Gameplay.MapTriggers.CustomEventNameRegistry();
+            customEvents.Register("field.zone.entered");
+            var schemas = new EventSchemaRegistry();
+            schemas.RegisterCustom(new EventSchema(
+                "field.zone.entered",
+                EventScope.Map,
+                new EventParamSchema[] { new("zone", EventParamType.String, "zone.name") }));
+            _triggers.EventSchemas = schemas;
+
+            var emission = new Ludots.Core.Gameplay.MapTriggers.RegionVolumeEmissionCm
+            {
+                EnterEvent = new EventKey("field.zone.entered"),
+                ExitEvent = new EventKey("field.zone.exited"),
+                Payload = new[] { new Ludots.Core.Gameplay.MapTriggers.RegionVolumePayloadEntry
+                {
+                    Key = "zone.name", Type = Ludots.Core.Gameplay.MapTriggers.RegionVolumePayloadValueType.String, StringValue = "jing",
+                } },
+            };
+            _session.FieldRegionEmissions = new System.Collections.Generic.Dictionary<string, Ludots.Core.Gameplay.MapTriggers.RegionVolumeEmissionCm>
+            {
+                ["r1"] = emission,
+            };
+            // Re-materialize with the emission table so the r1 region entity carries it.
+            _index = FieldRegionMaterializer.Materialize(_world, _session, _session.FieldRegionEmissions);
+            _session.RegionIndex = _index;
+
+            var zoneEvents = new List<(EventKey Key, string Zone, Arch.Core.Entity Entity)>();
+            _triggers.RegisterEventHandler(new EventKey("field.zone.entered"), ctx =>
+            {
+                zoneEvents.Add((new EventKey("field.zone.entered"), ctx.Get<string>("zone.name"), ctx.Get<Arch.Core.Entity>(MapTriggerEventPayloadKeys.SourceEntity)));
+                return System.Threading.Tasks.Task.CompletedTask;
+            });
+            _triggers.RegisterEventHandler(new EventKey("field.zone.exited"), ctx =>
+            {
+                zoneEvents.Add((new EventKey("field.zone.exited"), ctx.Get<string>("zone.name"), ctx.Get<Arch.Core.Entity>(MapTriggerEventPayloadKeys.SourceEntity)));
+                return System.Threading.Tasks.Task.CompletedTask;
+            });
+
+            Entity unit = _world.Create(
+                new Ludots.Core.Components.MapEntity { MapId = new MapId(MapIdValue) },
+                new Ludots.Core.Components.FieldTrackedCm { LayerId = _layer.LayerId },
+                new WorldPositionCm { Value = Fix64Vec2.FromInt(50, 50) });   // cell (0,0) → r1
+            _system.Update(1 / 60f);
+
+            Assert.That(_events.Count, Is.EqualTo(0), "The r1 crossing is fully redirected; the engine default stays silent for authored regions.");
+            Assert.That(zoneEvents.Count, Is.EqualTo(1), "Crossing r1 must fire the declared custom enter.");
+            Assert.That(zoneEvents[0].Zone, Is.EqualTo("jing"), "Authored payload rides the custom event.");
+            Assert.That(zoneEvents[0].Entity, Is.EqualTo(unit), "Crossing entity rides MapTrigger.SourceEntity.");
+
+            MoveTo(unit, 450, 50);                                            // → r2 (no emission: engine default)
+            _system.Update(1 / 60f);
+            Assert.That(zoneEvents.Count, Is.EqualTo(2), "Leaving r1 fires the declared custom exit.");
+            Assert.That(_events.Count, Is.EqualTo(1), "Entering r2 (no authored emission) fires the engine default.");
+            Assert.That(zoneEvents[1].Key.Value, Is.EqualTo("field.zone.exited"));
+        }
+
+        [Test]
         public void Materialize_CreatesOneEntityPerRegion_WithFootprintCounts()
         {
             Assert.That(_index.Count, Is.EqualTo(2));

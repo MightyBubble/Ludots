@@ -280,43 +280,17 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         private void FireVolumeEvent(MapSession session, VolumeRuntimeState volume, bool entering, Entity entity)
         {
-            EventKey eventKey = entering ? volume.EnterEvent : volume.ExitEvent;
-            EventSchema? schema = entering ? volume.EnterSchema : volume.ExitSchema;
-            ScriptContext context = _contextFactory();
-            context.Set(CoreServiceKeys.MapId, session.MapId);
-            context.Set(CoreServiceKeys.MapSession, session);
-            context.Set(CoreServiceKeys.MapTags, session.MapConfig?.Tags ?? EmptyTags);
-            // The crossing entity is transport metadata (legal on any fire, read through
-            // the MapTrigger.SourceEntity key); the volume key rides only on the engine
-            // region events whose schemas declare it — custom schemas cannot declare
-            // MapTrigger.* params, and volume identity travels in the authored payload.
-            context.Set(MapTriggerEventPayloadKeys.SourceEntity, entity);
-            if (schema == null || schema.DeclaresPayloadKey(MapTriggerEventPayloadKeys.RegionId))
-            {
-                context.Set(MapTriggerEventPayloadKeys.RegionId, volume.VolumeKey);
-            }
-
-            if (volume.Payload != null)
-            {
-                for (int i = 0; i < volume.Payload.Length; i++)
-                {
-                    RegionVolumePayloadEntry entry = volume.Payload[i];
-                    switch (entry.Type)
-                    {
-                        case RegionVolumePayloadValueType.Int:
-                            context.Set(entry.Key, entry.IntValue);
-                            break;
-                        case RegionVolumePayloadValueType.Float:
-                            context.Set(entry.Key, entry.FloatValue);
-                            break;
-                        case RegionVolumePayloadValueType.String:
-                            context.Set(entry.Key, entry.StringValue ?? string.Empty);
-                            break;
-                    }
-                }
-            }
-
-            _triggerManager.FireMapEvent(session.MapId, eventKey, context);
+            // Shared outlet with the field membership line (#1468); semantics
+            // documented on RegionEmissionFiring.
+            RegionEmissionFiring.Fire(
+                _triggerManager,
+                _contextFactory,
+                session,
+                entering ? volume.EnterEvent : volume.ExitEvent,
+                volume.VolumeKey,
+                entity,
+                entering ? volume.EnterSchema : volume.ExitSchema,
+                volume.Payload);
         }
 
         private readonly struct TrackedEntity

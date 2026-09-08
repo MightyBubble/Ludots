@@ -71,7 +71,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
             return keys;
         }
 
-        private static RegionVolumeEmissionCm ValidateAndCanonicalizeEmission(
+        /// <summary>
+        /// Shared semantic validation for emission contracts (#1468): used by the
+        /// volume bake pass and by the field region emission loader alike.
+        /// </summary>
+        internal static RegionVolumeEmissionCm ValidateAndCanonicalizeEmission(
             RegionVolumeEmissionCm emission,
             string volumeKey,
             string mapId,
