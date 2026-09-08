@@ -15,7 +15,7 @@ namespace Ludots.Raylib.Render
     public sealed unsafe class RaylibPoseTexturePalette : IDisposable
     {
         public const int MaxBoneCount = RaylibGpuSkinnedModelCache.MaxBones; // 单 mesh 骨骼上限 128
-        public const int MaxBoneSlotCapacity = 512;                          // 全模型累计槽位硬上限
+        public const int MaxBoneSlotCapacity = 1024;                         // 全模型累计槽位硬上限（多 mesh 模型按各 mesh boneCount 求和；8 倍单 mesh 上限覆盖常规角色）
         public const int InstanceTableWidth = 1024;
         public const int TexelsPerInstance = 2;
         public const int InstancesPerRow = InstanceTableWidth / TexelsPerInstance; // 512
