@@ -35,6 +35,7 @@ DRIVER_LABELS = {
     "script": "脚本控制流",
     "spatial": "空间圈人",
     "query": "名单筛选与汇总",
+    "derivedQuery": "派生名单与框选",
     "aimsource": "瞄准源",
     "rel": "关系与好感",
     "blackboard": "黑板与配置",
@@ -53,6 +54,7 @@ HANDBOOK_BY_DRIVER = {
     "script": ("gr-op-14-control-flow.md", "脚本控制流 · gr-op-14"),
     "spatial": ("gr-op-06-spatial.md", "空间圈人 · gr-op-06"),
     "query": ("gr-op-07-entityset.md", "名单筛选与汇总 · gr-op-07"),
+    "derivedQuery": ("gr-op-07-entityset.md", "名单筛选与汇总 · gr-op-07"),
     "rel": ("gr-op-08-relationship.md", "关系与好感 · gr-op-08"),
     "blackboard": ("gr-op-05-blackboard.md", "黑板与配置 · gr-op-05"),
     "event": ("gr-op-01-context.md", "事件与情境 · gr-op-01"),
@@ -337,7 +339,7 @@ def scene_section(op: str, doc: dict, detail: str, graph_path: Path) -> str:
     )
     return f"""## 这场是怎么搭出来的
 
-上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/{op}.json`，共 {len(seq)} 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
+这场演示使用画廊里的作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/{op}.json`，共 {len(seq)} 个节点。下列调用顺序可供编写自己的图时参考：
 
 {chain}
 
@@ -447,21 +449,24 @@ def require_media(repo: Path, op: str) -> None:
         )
 
 
-def write_op_page(path: Path, vignette: dict, sections: list[str]) -> None:
+def write_op_page(path: Path, vignette: dict, sections: list[str], has_media: bool) -> None:
     title = vignette["title"]
     beat = vignette["beat"]
     op = vignette["op"]
     media = evidence_dir(op)
     sid = PREFIX + op
     launch = f"scripts/run-mod-launcher.cmd cli launch ${sid} --adapter raylib"
+    media_section = (
+        f'<video controls playsinline preload="metadata" poster="{media}/poster.png" src="{media}/play.mp4">\n'
+        f"你的浏览器打不开这段录像。请从仓库打开 {media}/play.mp4。\n</video>"
+        if has_media else "本页演示录像尚未录制，可用下方启动命令运行场景。"
+    )
 
     body = f"""# {title}
 
 {beat}
 
-<video controls playsinline preload="metadata" poster="{media}/poster.png" src="{media}/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 {media}/play.mp4。
-</video>
+{media_section}
 
 """ + (chr(10) * 2).join(sections) + f"""
 ## 怎么进
@@ -551,7 +556,8 @@ def main() -> int:
             scene_section(op, doc, vignette.get("detailTemplate", vignette["beat"]), graph_path).rstrip("\n"),
             boundary_section(op, driver, descs[op]).rstrip("\n"),
         ]
-        write_op_page(wiki_dir / f"{op}.md", vignette, sections)
+        has_media = all((repo / evidence_dir(op) / name).is_file() for name in ("play.mp4", "poster.png"))
+        write_op_page(wiki_dir / f"{op}.md", vignette, sections, has_media)
         by_driver[driver].append(vignette)
 
     # Drop stale pages for removed ops.

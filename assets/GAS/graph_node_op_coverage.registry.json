@@ -5,8 +5,8 @@
     {
       "op": "BindQueryCollection",
       "authorableKinds": [
-        "Script",
-        "TriggerGraph"
+        "TriggerGraph",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_BindQueryCollection",
       "status": "covered",
@@ -22,8 +22,8 @@
     {
       "op": "QueryScreenRegionCollection",
       "authorableKinds": [
-        "Query",
-        "TriggerGraph"
+        "TriggerGraph",
+        "Query"
       ],
       "showcaseId": "capability_standard_graph_op_QueryScreenRegionCollection",
       "status": "covered",
