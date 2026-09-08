@@ -19,6 +19,8 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.MapTriggers;
+using Ludots.Core.Physics2D;
+using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Progression.Components;
 using Ludots.Core.Gameplay.Progression.Registry;
@@ -70,6 +72,9 @@ namespace Ludots.Core.Config
             Register<Ludots.Core.Gameplay.Components.TeamEntityRef>("TeamEntityRef");
             Register<Ludots.Core.Gameplay.Components.EntityTriggerGraphAggregateRoot>("EntityTriggerGraphAggregateRoot");
             Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
+            Register("Position2D", SetPosition2D, null, Component<Position2D>.ComponentType);
+            Register("Mass2D", SetMass2D, null, Component<Mass2D>.ComponentType);
+            Register("ContactEventEmitter2D", SetContactEventEmitter2D, null, Component<ContactEventEmitter2D>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);
             Register("EntityLocalClock", SetEntityLocalClock, null, Component<EntityLocalClock>.ComponentType);
             Register("AttributeDerivedGraphBinding", SetAttributeDerivedGraphBinding, null, Component<AttributeDerivedGraphBinding>.ComponentType);
@@ -193,6 +198,18 @@ namespace Ludots.Core.Config
         public static void Register<T>(string name, ComponentSetter setter, string modId = null)
         {
             Register(name, setter, modId, Component<T>.ComponentType);
+        }
+
+        /// <summary>
+        /// Public authoring registration for downstream assemblies (#1480): the
+        /// physics project registers its own component setters this way at install
+        /// time (same delegate shape as the built-ins).
+        /// </summary>
+        public static void RegisterAuthoring<T>(
+            string name,
+            ComponentSetterWithContext setter)
+        {
+            Register(name, setter, null, Component<T>.ComponentType);
         }
 
         private static void Register(string name, ComponentSetter setter, string modId, ComponentType? componentType)
@@ -1119,6 +1136,113 @@ namespace Ludots.Core.Config
                 Charges = ReadOptionalIntProperty(obj, "charges"),
                 Durability = ReadOptionalIntProperty(obj, "durability"),
             });
+        }
+
+
+        private static void SetPosition2D(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("Position2D requires an object payload.");
+            }
+
+            ValidateProperties(obj, "Position2D", "xCm", "yCm");
+            SetOrAdd(entity, Position2D.FromCm(
+                ReadIntProperty(obj, "xCm", "Position2D.xCm"),
+                ReadIntProperty(obj, "yCm", "Position2D.yCm")));
+        }
+
+private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("Mass2D requires an object payload.");
+            }
+
+            ValidateProperties(obj, "Mass2D", "bodyType", "inverseMass", "inverseInertia");
+            string bodyType = RequireStringProperty(obj, "bodyType", "Mass2D");
+            Mass2D mass;
+            switch (bodyType)
+            {
+                case "static":
+                    mass = Mass2D.Static;
+                    break;
+                case "kinematic":
+                    mass = Mass2D.Kinematic;
+                    break;
+                case "dynamic":
+                {
+                    if (!obj.TryGetPropertyValue("inverseMass", out _))
+                    {
+                        throw new InvalidOperationException(
+                            "Mass2D.bodyType 'dynamic' requires 'inverseMass' and 'inverseInertia' (1/mass, 1/inertia).");
+                    }
+
+                    mass = Mass2D.FromFloat(
+                        ReadFloatProperty(obj, "inverseMass", "Mass2D.inverseMass"),
+                        ReadFloatProperty(obj, "inverseInertia", "Mass2D.inverseInertia"));
+                    break;
+                }
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Mass2D.bodyType '{bodyType}' is not one of 'static', 'kinematic', 'dynamic'.");
+            }
+
+            SetOrAdd(entity, mass);
+        }
+
+        /// <summary>
+        /// Static body authoring also stamps the initial cache-dirty marker so the
+        /// static broadphase layer picks the body up on the first physics build.
+        /// </summary>
+        private static void SetContactEventEmitter2D(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject)
+            {
+                throw new InvalidOperationException("ContactEventEmitter2D requires an object payload.");
+            }
+
+            SetOrAdd(entity, new ContactEventEmitter2D());
+        }
+
+        private static Fix64Vec2 ReadOptionalLocalCenter(JsonObject obj)
+        {
+            bool hasX = obj.TryGetPropertyValue("localCenterXCm", out _);
+            bool hasY = obj.TryGetPropertyValue("localCenterYCm", out _);
+            if (hasX != hasY)
+            {
+                throw new InvalidOperationException("Collider2D local center requires both localCenterXCm and localCenterYCm.");
+            }
+
+            return hasX
+                ? new Fix64Vec2(
+                    Fix64.FromFloat(ReadFloatProperty(obj, "localCenterXCm", "Collider2D.localCenterXCm")),
+                    Fix64.FromFloat(ReadFloatProperty(obj, "localCenterYCm", "Collider2D.localCenterYCm")))
+                : Fix64Vec2.Zero;
+        }
+
+        private static Fix64 RequirePositiveFloatProperty(JsonObject obj, string field, string context)
+        {
+            Fix64 value = Fix64.FromFloat(ReadFloatProperty(obj, field, context));
+            if (value <= Fix64.Zero)
+            {
+                throw new InvalidOperationException($"{context}.{field} must be a positive number.");
+            }
+
+            return value;
+        }
+
+        private static float ReadFiniteFloatNode(JsonNode? node, string context)
+        {
+            if (node is not JsonValue value ||
+                !value.TryGetValue<float>(out float raw) ||
+                !float.IsFinite(raw))
+            {
+                throw new InvalidOperationException($"{context} requires a finite number.");
+            }
+
+            return raw;
         }
 
         private static void SetEntityLayer(Entity entity, JsonNode data)

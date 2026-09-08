@@ -2670,6 +2670,14 @@ namespace Ludots.Core.Engine
             GlobalContext["Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem"] = physics2dSystem;
             GlobalContext["Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem"] = worldSyncSystem;
 
+            // Downstream physics component authoring (#1480): Collider2D/static-state
+            // setters live in the physics assembly, below Core — register them through
+            // the same optional-assembly seam the simulation system itself uses.
+            physics2dSystemType.Assembly
+                .GetType("Ludots.Core.Physics2D.Systems.Physics2DComponentAuthoring")
+                ?.GetMethod("Register", Type.EmptyTypes)
+                ?.Invoke(null, null);
+
             InstallMovementPhysics2DBridge();
         }
 

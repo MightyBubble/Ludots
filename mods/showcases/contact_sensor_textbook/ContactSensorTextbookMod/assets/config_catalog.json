@@ -1,0 +1,3 @@
+[
+  { "Path": "Events/custom_events.json", "Policy": "ArrayById", "IdField": "id" }
+]

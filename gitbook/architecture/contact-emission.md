@@ -1,6 +1,10 @@
 # 接触发射合同（传感器桥）
 
-> 状态：**引擎能力已落地**（`ContactEmissionTap`，#1469）；纯数据物理 showcase 待物理体模板授权（见后续票）。
+> 状态：**可玩交付（headless 真机）**——引擎能力（`ContactEmissionTap`，#1469）+ 物理体模板授权与 `contact_sensor_textbook` 教科书（#1480）：压力板/滚球全数据建体，滚球压板经真实物理管线（宽相 sensor 配对→窄相→边沿→路由 tap→发射合同→图→地图变量）触发自定义事件；验收 `ContactSensorTextbookAcceptanceTests`。启动：
+
+```text
+.\scriptsun-mod-launcher.cmd cli launch $contact_sensor_textbook $agent_bridge --adapter raylib
+```
 
 ## 是什么
 
@@ -30,4 +34,4 @@
 
 - 无 `RegionVolumeEmissionCm` 的接触方零成本（一次组件 TryGet）。
 - 层消费者（`IContactEventConsumer2D`）通道保留——宿主集成的代码路径，与发射合同并行不悖。
-- 纯数据物理 showcase 依赖"物理体模板授权"（Position2D/Collider2D/Mass2D 的 ComponentRegistry setter），该能力未落地前，物理实体由代码建（CrowdPhysicsArena 模式）。
+- 物理体模板授权已落地（#1480）：`Position2D`/`Mass2D`/`ContactEventEmitter2D` setter 在 Core 注册表，`Collider2D`/`Physics2DStaticBodyState` 在物理工程经 `RegisterAuthoring` 自注册（下游程序集经既有反射缝装配）。CrowdPhysicsArena 的代码建体路径保留为宿主集成先例。

@@ -49,7 +49,7 @@ namespace Ludots.Core.Movement.Physics2DBridge
         public void RegisterConsumer(string layerName, IContactEventConsumer2D consumer)
         {
             ArgumentNullException.ThrowIfNull(consumer);
-            int layerIndex = LayerRegistry.GetIndex(layerName);
+            int layerIndex = LayerRegistry.GetIndexOrRegister(layerName);
             if (_consumersByLayerIndex[layerIndex] != null)
             {
                 throw new InvalidOperationException(
