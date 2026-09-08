@@ -79,7 +79,7 @@ namespace Ludots.Core.Systems
 
         /// <summary>
         /// Binds the installed interaction context profiles so map-load spawns mount their
-        /// template's initialInteractionContext (#1398 S2b); unbound registries fail the
+        /// template's initialInteractionContext; unbound registries fail the
         /// first template declaring one.
         /// </summary>
         public void SetInitialInteractionContexts(Ludots.Core.Input.Interaction.InteractionContextProfileRegistry profiles)

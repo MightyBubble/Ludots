@@ -1,0 +1,38 @@
+{
+  "Id": "case_e_selection_10k_field",
+  "Tags": ["showcase", "input", "interaction", "case-e", "10k"],
+  "HeartbeatIntervalTicks": 6,
+  "ContinuousHeightmapAsset": "assets/terrain/case_e_selection_flat.height",
+  "TriggerGraphs": [
+    { "graph": "graph.case_e.roster_sync", "scopeInstanceId": "case-e-10k-player-1" },
+    { "graph": "graph.case_e.roster_sync_player2", "scopeInstanceId": "case-e-10k-player-2" }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 0,
+    "Pitch": 58,
+    "DistanceCm": 16000,
+    "FovYDeg": 48
+  },
+  "Entities": [
+    {
+      "InstanceId": "case-e-10k-player-1",
+      "Template": "case_e_commander",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -18000, "Y": -19500 } } }
+    },
+    {
+      "InstanceId": "case-e-10k-player-2",
+      "Template": "case_e_commander",
+      "Overrides": { "Team": { "Id": 2 }, "WorldPositionCm": { "Value": { "X": 18000, "Y": 19500 } } }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "case-e-10k-player-1" },
+    { "TeamId": 2, "RepresentativeInstanceId": "case-e-10k-player-2" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "case-e-10k-player-1" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "case-e-10k-player-2" }
+  ]
+}

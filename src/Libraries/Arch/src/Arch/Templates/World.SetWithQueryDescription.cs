@@ -26,12 +26,10 @@ public partial class World
                 t0Component = t0ComponentValue;
                 t1Component = t1ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
                 
-        #endif
             }
         }
     }
@@ -56,13 +54,11 @@ public partial class World
                 t1Component = t1ComponentValue;
                 t2Component = t2ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
                 OnComponentSet<T2>(entity);
                 
-        #endif
             }
         }
     }
@@ -90,14 +86,12 @@ public partial class World
                 t2Component = t2ComponentValue;
                 t3Component = t3ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
                 OnComponentSet<T2>(entity);
                 OnComponentSet<T3>(entity);
                 
-        #endif
             }
         }
     }
@@ -128,7 +122,6 @@ public partial class World
                 t3Component = t3ComponentValue;
                 t4Component = t4ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -136,7 +129,6 @@ public partial class World
                 OnComponentSet<T3>(entity);
                 OnComponentSet<T4>(entity);
                 
-        #endif
             }
         }
     }
@@ -170,7 +162,6 @@ public partial class World
                 t4Component = t4ComponentValue;
                 t5Component = t5ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -179,7 +170,6 @@ public partial class World
                 OnComponentSet<T4>(entity);
                 OnComponentSet<T5>(entity);
                 
-        #endif
             }
         }
     }
@@ -216,7 +206,6 @@ public partial class World
                 t5Component = t5ComponentValue;
                 t6Component = t6ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -226,7 +215,6 @@ public partial class World
                 OnComponentSet<T5>(entity);
                 OnComponentSet<T6>(entity);
                 
-        #endif
             }
         }
     }
@@ -266,7 +254,6 @@ public partial class World
                 t6Component = t6ComponentValue;
                 t7Component = t7ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -277,7 +264,6 @@ public partial class World
                 OnComponentSet<T6>(entity);
                 OnComponentSet<T7>(entity);
                 
-        #endif
             }
         }
     }
@@ -320,7 +306,6 @@ public partial class World
                 t7Component = t7ComponentValue;
                 t8Component = t8ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -332,7 +317,6 @@ public partial class World
                 OnComponentSet<T7>(entity);
                 OnComponentSet<T8>(entity);
                 
-        #endif
             }
         }
     }
@@ -378,7 +362,6 @@ public partial class World
                 t8Component = t8ComponentValue;
                 t9Component = t9ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -391,7 +374,6 @@ public partial class World
                 OnComponentSet<T8>(entity);
                 OnComponentSet<T9>(entity);
                 
-        #endif
             }
         }
     }
@@ -440,7 +422,6 @@ public partial class World
                 t9Component = t9ComponentValue;
                 t10Component = t10ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -454,7 +435,6 @@ public partial class World
                 OnComponentSet<T9>(entity);
                 OnComponentSet<T10>(entity);
                 
-        #endif
             }
         }
     }
@@ -506,7 +486,6 @@ public partial class World
                 t10Component = t10ComponentValue;
                 t11Component = t11ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -521,7 +500,6 @@ public partial class World
                 OnComponentSet<T10>(entity);
                 OnComponentSet<T11>(entity);
                 
-        #endif
             }
         }
     }
@@ -576,7 +554,6 @@ public partial class World
                 t11Component = t11ComponentValue;
                 t12Component = t12ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -592,7 +569,6 @@ public partial class World
                 OnComponentSet<T11>(entity);
                 OnComponentSet<T12>(entity);
                 
-        #endif
             }
         }
     }
@@ -650,7 +626,6 @@ public partial class World
                 t12Component = t12ComponentValue;
                 t13Component = t13ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -667,7 +642,6 @@ public partial class World
                 OnComponentSet<T12>(entity);
                 OnComponentSet<T13>(entity);
                 
-        #endif
             }
         }
     }
@@ -728,7 +702,6 @@ public partial class World
                 t13Component = t13ComponentValue;
                 t14Component = t14ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -746,7 +719,6 @@ public partial class World
                 OnComponentSet<T13>(entity);
                 OnComponentSet<T14>(entity);
                 
-        #endif
             }
         }
     }
@@ -810,7 +782,6 @@ public partial class World
                 t14Component = t14ComponentValue;
                 t15Component = t15ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -829,7 +800,6 @@ public partial class World
                 OnComponentSet<T14>(entity);
                 OnComponentSet<T15>(entity);
                 
-        #endif
             }
         }
     }
@@ -896,7 +866,6 @@ public partial class World
                 t15Component = t15ComponentValue;
                 t16Component = t16ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -916,7 +885,6 @@ public partial class World
                 OnComponentSet<T15>(entity);
                 OnComponentSet<T16>(entity);
                 
-        #endif
             }
         }
     }
@@ -986,7 +954,6 @@ public partial class World
                 t16Component = t16ComponentValue;
                 t17Component = t17ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -1007,7 +974,6 @@ public partial class World
                 OnComponentSet<T16>(entity);
                 OnComponentSet<T17>(entity);
                 
-        #endif
             }
         }
     }
@@ -1080,7 +1046,6 @@ public partial class World
                 t17Component = t17ComponentValue;
                 t18Component = t18ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -1102,7 +1067,6 @@ public partial class World
                 OnComponentSet<T17>(entity);
                 OnComponentSet<T18>(entity);
                 
-        #endif
             }
         }
     }
@@ -1178,7 +1142,6 @@ public partial class World
                 t18Component = t18ComponentValue;
                 t19Component = t19ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -1201,7 +1164,6 @@ public partial class World
                 OnComponentSet<T18>(entity);
                 OnComponentSet<T19>(entity);
                 
-        #endif
             }
         }
     }
@@ -1280,7 +1242,6 @@ public partial class World
                 t19Component = t19ComponentValue;
                 t20Component = t20ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -1304,7 +1265,6 @@ public partial class World
                 OnComponentSet<T19>(entity);
                 OnComponentSet<T20>(entity);
                 
-        #endif
             }
         }
     }
@@ -1386,7 +1346,6 @@ public partial class World
                 t20Component = t20ComponentValue;
                 t21Component = t21ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -1411,7 +1370,6 @@ public partial class World
                 OnComponentSet<T20>(entity);
                 OnComponentSet<T21>(entity);
                 
-        #endif
             }
         }
     }
@@ -1496,7 +1454,6 @@ public partial class World
                 t21Component = t21ComponentValue;
                 t22Component = t22ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -1522,7 +1479,6 @@ public partial class World
                 OnComponentSet<T21>(entity);
                 OnComponentSet<T22>(entity);
                 
-        #endif
             }
         }
     }
@@ -1610,7 +1566,6 @@ public partial class World
                 t22Component = t22ComponentValue;
                 t23Component = t23ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -1637,7 +1592,6 @@ public partial class World
                 OnComponentSet<T22>(entity);
                 OnComponentSet<T23>(entity);
                 
-        #endif
             }
         }
     }
@@ -1728,7 +1682,6 @@ public partial class World
                 t23Component = t23ComponentValue;
                 t24Component = t24ComponentValue;
                 
-        #if EVENTS
                 var entity = chunk.Entity(entityIndex);
                 OnComponentSet<T0>(entity);
                 OnComponentSet<T1>(entity);
@@ -1756,9 +1709,7 @@ public partial class World
                 OnComponentSet<T23>(entity);
                 OnComponentSet<T24>(entity);
                 
-        #endif
             }
         }
     }
     }
-

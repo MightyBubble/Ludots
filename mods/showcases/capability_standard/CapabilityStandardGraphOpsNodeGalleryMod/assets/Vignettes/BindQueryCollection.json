@@ -1,0 +1,11 @@
+{
+  "op": "BindQueryCollection",
+  "driver": "derivedQuery",
+  "title": "换队后，名单跟着变",
+  "beat": "左侧士兵换队，点名圈随之摘下或补回。",
+  "detailTemplate": "当前敌军{count}人，换队者的点名圈已更新。",
+  "assertDetailContains": ["敌军"],
+  "featuredNodeId": "bind",
+  "graphKind": "Script",
+  "field": "query"
+}

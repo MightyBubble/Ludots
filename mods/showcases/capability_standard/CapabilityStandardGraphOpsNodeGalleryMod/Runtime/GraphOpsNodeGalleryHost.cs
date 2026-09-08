@@ -181,6 +181,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             Ownership = Ownership,
             Knowledge = Knowledge,
             Coords = Coords,
+            SpatialQueries = SpatialQueries,
             RelationshipTypes = RelationshipTypes,
             RelationshipMetrics = RelationshipMetrics,
             RelationshipFlags = RelationshipFlags,
@@ -338,7 +339,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             {
                 if (World.Has<Team>(entity))
                 {
-                    World.Get<Team>(entity).Id = actor.Team;
+                    World.Set(entity, new Team { Id = actor.Team });
                 }
                 else
                 {

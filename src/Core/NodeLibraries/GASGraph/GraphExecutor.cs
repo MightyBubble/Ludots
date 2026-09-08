@@ -154,14 +154,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             GraphExecutionState state = frame.CreateState();
-            if (TryExecuteGenerated(ref frame, ref state))
+            frame.Api?.BeginEntityQueryExecution();
+            try
             {
+                if (!TryExecuteGenerated(ref frame, ref state))
+                    GasGraphOpHandlerTable.Execute(ref state, program, table);
                 frame.CopyBackExecutionState(ref state, copyCursor: true);
-                return;
             }
-
-            GasGraphOpHandlerTable.Execute(ref state, program, table);
-            frame.CopyBackExecutionState(ref state, copyCursor: true);
+            finally { frame.Api?.EndEntityQueryExecution(); }
         }
 
         public static GraphSliceResult ExecuteSlice(
@@ -186,20 +186,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             GraphExecutionState state = frame.CreateState();
-            if (TryExecuteGeneratedSlice(ref frame, ref state, budgetSteps, out GraphSliceResult generated))
+            frame.Api?.BeginEntityQueryExecution();
+            try
             {
+                GraphSliceResult result;
+                if (TryExecuteGeneratedSlice(ref frame, ref state, budgetSteps, out GraphSliceResult generated))
+                    result = generated;
+                else
+                    result = GasGraphOpHandlerTable.ExecuteSlice(
+                        ref state, program, GasGraphOpHandlerTable.Instance, ref frame.Cursor, budgetSteps);
                 frame.CopyBackExecutionState(ref state, copyCursor: false);
-                return generated;
+                if (result.Yielded || result.BudgetSuspended)
+                    frame.Cursor.SaveTargets(state.TargetList.Span);
+                else
+                    frame.Cursor.TargetCount = 0;
+                return result;
             }
-
-            GraphSliceResult result = GasGraphOpHandlerTable.ExecuteSlice(
-                ref state,
-                program,
-                GasGraphOpHandlerTable.Instance,
-                ref frame.Cursor,
-                budgetSteps);
-            frame.CopyBackExecutionState(ref state, copyCursor: false);
-            return result;
+            finally { frame.Api?.EndEntityQueryExecution(); }
         }
 
         private static bool TryExecuteGenerated(ref GraphFrame frame, ref GraphExecutionState state)

@@ -1,0 +1,15 @@
+{"phase":"preview_first","members":10000,"elapsedMs":53.8797,"allocatedBytes":20051904,"visible":20000}
+{"phase":"commit_first","members":10000,"elapsedMs":37.3367,"allocatedBytes":15403408,"visible":20000}
+{"phase":"clear_first","members":10000,"elapsedMs":4.8258,"allocatedBytes":0,"visible":10000}
+{"phase":"preview_repeat_0","members":10000,"elapsedMs":6.4376,"allocatedBytes":0,"visible":20000}
+{"phase":"commit_repeat_0","members":10000,"elapsedMs":11.8334,"allocatedBytes":0,"visible":20000}
+{"phase":"clear_repeat_0","members":10000,"elapsedMs":4.7421,"allocatedBytes":0,"visible":10000}
+{"phase":"preview_repeat_1","members":10000,"elapsedMs":6.7676,"allocatedBytes":0,"visible":20000}
+{"phase":"commit_repeat_1","members":10000,"elapsedMs":14.3039,"allocatedBytes":0,"visible":20000}
+{"phase":"clear_repeat_1","members":10000,"elapsedMs":4.9467,"allocatedBytes":0,"visible":10000}
+{"phase":"preview_repeat_2","members":10000,"elapsedMs":6.8641,"allocatedBytes":0,"visible":20000}
+{"phase":"commit_repeat_2","members":10000,"elapsedMs":13.1107,"allocatedBytes":0,"visible":20000}
+{"phase":"clear_repeat_2","members":10000,"elapsedMs":4.8588,"allocatedBytes":0,"visible":10000}
+{"phase":"preview_repeat_3","members":10000,"elapsedMs":6.3273,"allocatedBytes":0,"visible":20000}
+{"phase":"commit_repeat_3","members":10000,"elapsedMs":11.862,"allocatedBytes":0,"visible":20000}
+{"phase":"clear_repeat_3","members":10000,"elapsedMs":5.2877,"allocatedBytes":0,"visible":10000}

@@ -36,6 +36,7 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<PresenterState, PresenterCullState, PresenterEmitCache, PerfRetainedPresentationRequest, PerfRetainedPresentationRequestLifecycleTick>();
 
         private readonly PresenterEntityRuntime _runtime;
+        private readonly Action<Entity, PresenterState> _onDestroyed;
         private readonly PresenterDefinitionRegistry _definitions;
         private readonly PresentationRequestBuffer _requests;
         private readonly Dictionary<string, object> _globals;
@@ -65,6 +66,7 @@ namespace Ludots.Core.Presentation.Systems
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _onDestroyed = ReleaseDestroyedPresenterVisualStableIds;
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _globals = globals ?? new Dictionary<string, object>();
@@ -158,7 +160,7 @@ namespace Ludots.Core.Presentation.Systems
                 Entity presenter = _pendingDestroy[i];
                 if (World.IsAlive(presenter))
                 {
-                    _runtime.Destroy(presenter, ReleaseDestroyedPresenterVisualStableIds);
+                    _runtime.Destroy(presenter, _onDestroyed);
                 }
             }
 

@@ -45,7 +45,7 @@ namespace Ludots.Core.Scripting
         private readonly Dictionary<MapId, List<Trigger>> _mapTriggers = new Dictionary<MapId, List<Trigger>>();
         // Owner-keyed view over the map tables (entity-domain mounts only). The map tables
         // stay the single ledger; this index only answers "which mounts did owner X create"
-        // so no feature keeps a parallel shadow list (#1398 D10).
+        // so no feature keeps a parallel shadow list.
         private readonly Dictionary<Entity, List<OwnedMountRecord>> _ownedMountsBySubject = new();
 
         // Map -> Event -> triggers, maintained in priority order at registration time so
@@ -137,6 +137,30 @@ namespace Ludots.Core.Scripting
 
                 return false;
             }
+        }
+
+        /// <summary>
+        /// True when any map/entity-domain mount registered for the given map carries a
+        /// suspended run. The map resume clock uses this to gate its per-map pulse
+        /// (<see cref="GameEvents.MapTriggerResume"/>) — zero work and zero firing when no
+        /// map-domain run is parked (the retired MapHeartbeat fired unconditionally).
+        /// </summary>
+        public bool HasSuspendedMapTriggers(MapId mapId)
+        {
+            if (!_mapTriggers.TryGetValue(mapId, out List<Trigger>? triggers))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is ITriggerResumeProbe probe && probe.IsSuspended)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
 
@@ -273,7 +297,7 @@ namespace Ludots.Core.Scripting
 
         /// <summary>
         /// Remove exactly one owner's mounts from its map — the owner-scoped removal path
-        /// features use instead of tracking their own trigger lists (#1398 D10).
+        /// features use instead of tracking their own trigger lists.
         /// </summary>
         public void RemoveOwnedMounts(TriggerMountOwner owner)
         {
@@ -898,6 +922,26 @@ namespace Ludots.Core.Scripting
             for (int i = 0; i < triggerList.Count; i++)
             {
                 FireTrigger(triggerList[i], GameEvents.ModTriggerResume, context);
+            }
+        }
+
+        /// <summary>
+        /// Resolve map/entity-domain suspended runs on the given map. Pure
+        /// dispatch to the map's MapTriggerResume subscribers; the clock gates the call on
+        /// <see cref="HasSuspendedMapTriggers"/> so an idle map fires nothing.
+        /// </summary>
+        public void FireMapTriggerResume(MapId mapId, ScriptContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            if (!_mapEventTriggers.TryGetValue(mapId, out Dictionary<EventKey, List<Trigger>>? eventTriggers) ||
+                !eventTriggers.TryGetValue(GameEvents.MapTriggerResume, out List<Trigger>? resumeTriggers))
+            {
+                return;
+            }
+
+            for (int i = 0; i < resumeTriggers.Count; i++)
+            {
+                FireTrigger(resumeTriggers[i], GameEvents.MapTriggerResume, context);
             }
         }
 

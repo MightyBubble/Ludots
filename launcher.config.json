@@ -2364,6 +2364,22 @@
       }
     },
     {
+      "name": "capability_standard_graph_op_BindQueryCollection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpBindQueryCollectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpBindQueryCollectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryScreenRegionCollection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryScreenRegionCollectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryScreenRegionCollectionEntryMod.csproj"
+      }
+    },
+    {
       "name": "region_volume_textbook",
       "target": {
         "type": "path",

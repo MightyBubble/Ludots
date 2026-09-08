@@ -1,0 +1,61 @@
+C:\001_AI\wt-case-e-consolidation\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+VSTest 版本 17.14.1 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in C:\001_AI\wt-case-e-consolidation\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll
+   NUnit3TestExecutor discovered 9 of 9 NUnit test cases using Current Discovery mode, Non-Explicit run
+members,phase,elapsed_ms,allocated_bytes,presenters,visual_keys,visible
+5000,preview_first,58.425400,8207560,15000,15000,15000
+5000,commit_first,21.518800,9952048,20000,20000,15000
+5000,clear_first,2.961100,0,20000,20000,10000
+5000,preview_repeat_0,6.662300,0,20000,20000,15000
+5000,commit_repeat_0,6.620700,0,20000,20000,15000
+5000,clear_repeat_0,2.608800,0,20000,20000,10000
+5000,preview_repeat_1,3.473100,0,20000,20000,15000
+5000,commit_repeat_1,6.211900,0,20000,20000,15000
+5000,clear_repeat_1,2.448800,0,20000,20000,10000
+5000,preview_repeat_2,3.440200,0,20000,20000,15000
+5000,commit_repeat_2,5.948900,0,20000,20000,15000
+5000,clear_repeat_2,2.396800,0,20000,20000,10000
+5000,preview_repeat_3,3.432300,0,20000,20000,15000
+5000,commit_repeat_3,6.543300,0,20000,20000,15000
+5000,clear_repeat_3,2.587700,0,20000,20000,10000
+
+
+members,phase,elapsed_ms,allocated_bytes,presenters,visual_keys,visible
+10000,preview_first,30.152600,20047640,20000,20000,20000
+10000,commit_first,48.974200,15407248,30000,30000,20000
+10000,clear_first,5.396200,0,30000,30000,10000
+10000,preview_repeat_0,7.344100,0,30000,30000,20000
+10000,commit_repeat_0,13.541800,0,30000,30000,20000
+10000,clear_repeat_0,5.582800,0,30000,30000,10000
+10000,preview_repeat_1,7.390900,0,30000,30000,20000
+10000,commit_repeat_1,13.337500,0,30000,30000,20000
+10000,clear_repeat_1,5.734500,0,30000,30000,10000
+10000,preview_repeat_2,6.860400,0,30000,30000,20000
+10000,commit_repeat_2,13.139000,0,30000,30000,20000
+10000,clear_repeat_2,5.247300,0,30000,30000,10000
+10000,preview_repeat_3,7.472100,0,30000,30000,20000
+10000,commit_repeat_3,13.585200,0,30000,30000,20000
+10000,clear_repeat_3,5.648100,0,30000,30000,10000
+
+
+NUnit Adapter 4.6.0.0: Test execution complete
+  已通过 CollectionVisibility_At10kOwners_ReusesInstancesAndWritesEvidence(5000) [505 ms]
+  已通过 CollectionVisibility_At10kOwners_ReusesInstancesAndWritesEvidence(10000) [240 ms]
+  已通过 DestroyedOwner_ReleasesHiddenAndVisibleMarkers [19 ms]
+  已通过 GlobalRules_HideAndRestoreSameIdentity_WithoutAffectingOtherScopes [10 ms]
+  已通过 SameOwner_DifferentScopes_RetainIndependentVisibility [3 ms]
+  已通过 CapacityExhaustion_DoesNotDamageOwnership_AndReleasedCapacityCanBeReused [6 ms]
+  已通过 MixedRemovalsAndReleases_MatchCompleteKeyReference [33 ms]
+  已通过 ReleasePresenter_HandlesWrappedCollisionCluster_AndKeepsOtherIdentities [2 ms]
+  已通过 RepeatedOwnershipRecycling_DoesNotAllocate [1 ms]
+
+测试运行成功。
+测试总数: 9
+     通过数: 9
+总时间: 1.7344 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

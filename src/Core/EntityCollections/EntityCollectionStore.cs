@@ -7,6 +7,68 @@ namespace Ludots.Core.EntityCollections
 {
     public sealed class EntityCollectionStore
     {
+        internal readonly CollectionWrite.Scratch WriteScratch = new();
+        public IEntityCollectionSource RequireSource(Entity owner, int keyId) =>
+            _sources.TryGetValue((owner, keyId), out SourceBinding? binding) ? binding.Source :
+                throw new InvalidOperationException("COLLECTION.ERR.DerivedSourceRequired");
+        private readonly System.Collections.Generic.Dictionary<(Entity, int), SourceBinding> _sources = new();
+
+        public void RemoveSource(IEntityCollectionSource source)
+        {
+            while (true)
+            {
+                (Entity Owner, int Key)? found = null;
+                foreach (var pair in _sources)
+                {
+                    if (!ReferenceEquals(pair.Value.Source, source)) continue;
+                    found = pair.Key;
+                    break;
+                }
+                if (!found.HasValue) return;
+                Remove(found.Value.Owner, found.Value.Key);
+            }
+        }
+
+        public void RemoveOwner(Entity owner)
+        {
+            for (int slot = 0; slot < _active.Length; slot++)
+            {
+                if (_active[slot] && _owners[slot] == owner &&
+                    _collections.TryGetSlot(slot, out _, out EntityCollectionPayload payload, out _) &&
+                    _sources.ContainsKey((owner, payload.KeyId)))
+                    Remove(owner, payload.KeyId);
+            }
+        }
+
+        public void BindSource(Entity owner, int keyId, IEntityCollectionSource source)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            if (_sources.TryGetValue((owner, keyId), out SourceBinding? current))
+            {
+                if (!ReferenceEquals(current.Source, source)) throw new InvalidOperationException("COLLECTION.ERR.SourceAlreadyBound");
+                return;
+            }
+            string key = _keyRegistry.GetName(keyId) ?? throw new InvalidOperationException("COLLECTION.ERR.UnknownKey");
+            _sources.Add((owner, keyId), new SourceBinding(source,
+                EntityCollectionDescriptor.Create(key, EntityCollectionSourceKind.CollectionView, EntityCollectionRoleKind.CommandSource)));
+            SynchronizeSource(owner, keyId);
+        }
+
+        private void SynchronizeSource(Entity owner, int keyId)
+        {
+            if (!_sources.TryGetValue((owner, keyId), out SourceBinding? binding)) return;
+            ReadOnlySpan<Entity> members = binding.Source.Read();
+            if (binding.Revision == binding.Source.Revision) return;
+            ReplaceCore(owner, keyId, binding.Descriptor, members, default, default, owner);
+            binding.Revision = binding.Source.Revision;
+        }
+
+        private sealed class SourceBinding(IEntityCollectionSource source, EntityCollectionDescriptor descriptor)
+        {
+            public readonly IEntityCollectionSource Source = source;
+            public readonly EntityCollectionDescriptor Descriptor = descriptor;
+            public uint Revision;
+        }
         private readonly StringIntRegistry _keyRegistry;
         private readonly EntityKeyedSoaTable<EntityCollectionPayload> _collections;
 
@@ -76,6 +138,7 @@ namespace Ludots.Core.EntityCollections
 
         public int CopyActiveHandles(Span<EntityCollectionHandle> destination)
         {
+            foreach (var key in _sources.Keys) SynchronizeSource(key.Item1, key.Item2);
             if (destination.IsEmpty)
             {
                 return 0;
@@ -145,7 +208,7 @@ namespace Ludots.Core.EntityCollections
             }
 
             ValidateRowSpans(entities, rowRoleIds, rowFlags);
-            return ReplaceCore(owner, _keyRegistry.Register(descriptor.Key), in descriptor, entities, rowRoleIds, rowFlags, writerDomain);
+            return Replace(owner, _keyRegistry.Register(descriptor.Key), in descriptor, entities, rowRoleIds, rowFlags, writerDomain);
         }
 
         /// <summary>Per-frame entry: <paramref name="keyId"/> must be registered in <see cref="KeyRegistry"/>; the descriptor key is authoring metadata and is not looked up.</summary>
@@ -202,6 +265,7 @@ namespace Ludots.Core.EntityCollections
             }
 
             ValidateRowSpans(entities, rowRoleIds, rowFlags);
+            if (_sources.ContainsKey((owner, keyId))) throw new InvalidOperationException("COLLECTION.ERR.DerivedSourceIsReadOnly");
             return ReplaceCore(owner, keyId, in descriptor, entities, rowRoleIds, rowFlags, writerDomain);
         }
 
@@ -307,6 +371,7 @@ namespace Ludots.Core.EntityCollections
 
         public bool Remove(Entity owner, int keyId)
         {
+            _sources.Remove((owner, keyId));
             if (owner == Entity.Null ||
                 keyId <= 0 ||
                 !TryFindSlot(owner, keyId, out int slot))
@@ -336,6 +401,7 @@ namespace Ludots.Core.EntityCollections
 
         public bool TryGet(Entity owner, int keyId, out EntityCollectionHandle handle)
         {
+            SynchronizeSource(owner, keyId);
             handle = EntityCollectionHandle.Invalid;
             if (owner == Entity.Null ||
                 keyId <= 0 ||
@@ -584,7 +650,10 @@ namespace Ludots.Core.EntityCollections
 
         private bool TryValidateSlot(int slot)
         {
-            return (uint)slot < (uint)_active.Length && _active[slot];
+            if ((uint)slot >= (uint)_active.Length || !_active[slot]) return false;
+            if (_sources.Count != 0 && _collections.TryGetSlot(slot, out _, out EntityCollectionPayload payload, out _))
+                SynchronizeSource(_owners[slot], payload.KeyId);
+            return true;
         }
 
         private void EnsureSlotCapacity(int required)

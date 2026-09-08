@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Map;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 
@@ -19,7 +20,7 @@ namespace Ludots.Core.EntityQueries
     /// Code-facing entity set query API used by both C# systems and graph ops.
     /// All hot methods operate on caller-owned spans and resolved ids.
     /// </summary>
-    public sealed class EntitySetQueryRuntime
+    public sealed partial class EntitySetQueryRuntime
     {
         private static readonly QueryDescription MapEntityQuery = new QueryDescription()
             .WithAll<MapEntity>();
@@ -36,6 +37,9 @@ namespace Ludots.Core.EntityQueries
         }
 
         public int CollectMapEntities(Span<Entity> destination)
+            => CopyMapEntities(destination, map: null);
+
+        private int CopyMapEntities(Span<Entity> destination, MapId? map)
         {
             if (destination.IsEmpty)
             {
@@ -45,12 +49,25 @@ namespace Ludots.Core.EntityQueries
             int written = 0;
             foreach (ref var chunk in _world.Query(in MapEntityQuery))
             {
+                if (!map.HasValue)
+                {
+                    if (chunk.Count > destination.Length - written)
+                        throw new InvalidOperationException("ENTITY_QUERY.ERR.DestinationTooSmall");
+                    chunk.Entities.AsSpan(0, chunk.Count).CopyTo(destination.Slice(written));
+                    // Arch's row enumerator visits occupied rows in descending order.
+                    destination.Slice(written, chunk.Count).Reverse();
+                    written += chunk.Count;
+                    continue;
+                }
+
                 ref Entity first = ref chunk.Entity(0);
+                Span<MapEntity> maps = chunk.GetSpan<MapEntity>();
                 foreach (int index in chunk)
                 {
+                    if (maps[index].MapId != map.Value) continue;
                     if (written >= destination.Length)
                     {
-                        return written;
+                        throw new InvalidOperationException("ENTITY_QUERY.ERR.DestinationTooSmall");
                     }
 
                     destination[written++] = Unsafe.Add(ref first, index);

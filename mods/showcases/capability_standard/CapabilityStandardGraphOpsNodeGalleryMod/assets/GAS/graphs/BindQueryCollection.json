@@ -1,0 +1,17 @@
+[
+  {
+    "id": "showcase.graph_op.BindQueryCollection",
+    "kind": "Script",
+    "entry": "owner",
+    "nodes": [
+      { "id": "owner", "op": "LoadCaster" },
+      { "id": "bind", "op": "BindQueryCollection", "functionName": "showcase.graph_op.QueryFilterTeam", "collectionKey": "showcase.graph_op.snap" },
+      { "id": "halt", "op": "HaltReturnInt", "intValue": 1 }
+    ],
+    "controlEdges": [
+      { "from": "owner", "fromPort": "next", "to": "bind" },
+      { "from": "bind", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [ { "from": "owner", "fromPort": "value", "to": "bind", "toPort": "source" } ]
+  }
+]

@@ -10,6 +10,7 @@
 - 命令意图联动：仲裁器读实体挂载交互状态（DEC-14）：挂载上下文的显式意图优先，其次玩家默认（InteractionPref），挂载且零意图不路由不冒泡；无挂载（steady state）用玩家默认。
 - 输入上下文联动：`InputContextProjectionSystem` 每 tick 把 possessed representative 挂载上下文的 `inputContextId` 需求并入对应座位的 (seatId, contextId, op) diff 命令流；上下文回收后下一 tick 弹出。这是唯一的帧→IMC 翻译点，代码不得绕过。
 - 集合路由：`ContextBoundCollectionWriter` 读挂载上下文的过滤档案与集合键；steady state 读数据声明的保留默认档案（`interaction.context.default`，引擎安装，永不挂载，缺席的挂载组件即 steady state）路由到 `collection.command.source`。命令意图路由的 steady state 集合锚与 cast dispatch cycle 的 group key 同样从实体侧派生（挂载上下文 → 载体实体；steady state → 保留 0）。
+- 与表现层（presenter）的边界：interaction context 是纯交互域状态，**永不触碰 presentation 域**——不建/不收 presenter scope、不发 presenter 命令、不给 presenter 分配任何标识。表现层观察 context 有两条通道，按装饰的持续性二选一：(1) **一次性瞬态装饰**（如框选进行中的框指示）由 presenter **全局规则壳**订阅 `ContextActivated/ContextDeactivated` 事件（事件只携带 context profile id 与 parent profile id，规则用 presenter 侧 `SourceStableId` 做创建/销毁配对，不依赖 context 任何标识）——帧内出现、停用即毁；(2) **持续性/可存盘的装饰**用 presenter 侧 `InteractionContextBinding` 行为（作者在 presenter 定义声明 `contextProfileId`，运行时按 owner 实体挂载的 `InteractionContextInstances` 快照消解写 param，消费方如 ScreenRect 的 `visibilityParamKey` 决定显隐）——恢复 / 热插拔后从实体状态自然正确，不依赖事件广播。
 - 根资产 `assets/Input/interaction_context_profiles.json` 现为空表（`profiles: []`）；保留默认档案由 GameEngine 程序化安装（mod 的 DeepObject 合并会整体替换 profiles 数组，保留档案不能走根资产）。
 
 ## 2. 代码锚点

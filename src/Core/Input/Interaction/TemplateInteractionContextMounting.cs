@@ -4,8 +4,8 @@ using Arch.Core;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Spawn-time mounting of a template's <c>initialInteractionContext</c> (#1398 S2b,
-    /// Case E 01/02): the entity birth chain (map-load lane and runtime spawn queue) mounts
+    /// Spawn-time mounting of a template's <c>initialInteractionContext</c>:
+    /// the entity birth chain (map-load lane and runtime spawn queue) mounts
     /// the declared profile as the entity's base
     /// <see cref="InteractionContextInstance"/> — the mechanism is code, which context a
     /// template mounts is configuration. Unknown profile ids fail fast at engine init

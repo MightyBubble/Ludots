@@ -437,23 +437,16 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void Enter_WaitsForHeartbeatBoundary_DefaultInterval30()
+        public void Enter_EvaluatesOnFirstFixedStep()
         {
             using var harness = RegionHarness.Create(
                 VolumeAt(100, 100, """{ "volumeKey": "ring", "shape": "circle", "radiusCm": 50 }"""),
-                thinkWaveIntervalTicks: MapHeartbeatClockSystem.DefaultIntervalTicks);
+                thinkWaveIntervalTicks: 30);
             harness.SpawnPositioned(100, 100);
-
-            for (int i = 0; i < MapHeartbeatClockSystem.DefaultIntervalTicks - 1; i++)
-            {
-                harness.Tick();
-            }
-
-            Assert.That(harness.Entered.Count, Is.EqualTo(0), "No evaluation before the think-wave boundary.");
 
             harness.Tick();
 
-            Assert.That(harness.Entered.Count, Is.EqualTo(1), "Evaluation happens on the 30th tick.");
+            Assert.That(harness.Entered.Count, Is.EqualTo(1));
         }
 
         [Test]
@@ -461,7 +454,7 @@ namespace Ludots.Tests.Gas.Graph
         {
             using var harness = RegionHarness.Create(
                 VolumeAt(100, 100, """{ "volumeKey": "ring", "shape": "circle", "radiusCm": 50 }"""),
-                thinkWaveIntervalTicks: MapHeartbeatClockSystem.DefaultIntervalTicks);
+                thinkWaveIntervalTicks: 30);
             Entity entity = harness.SpawnPositioned(100, 100);
             harness.Session.State = MapSessionState.Suspended;
 
@@ -473,14 +466,6 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(harness.Entered.Count, Is.EqualTo(0), "Suspended maps must not evaluate regions.");
 
             harness.Session.State = MapSessionState.Active;
-            const int interval = MapHeartbeatClockSystem.DefaultIntervalTicks;
-            for (int i = 0; i < interval - 1; i++)
-            {
-                harness.Tick();
-            }
-
-            Assert.That(harness.Entered.Count, Is.EqualTo(0), "Resume must restart accumulation, not fire a stale wave.");
-
             harness.Tick();
             Assert.That(harness.Entered.Count, Is.EqualTo(1));
             Assert.That(harness.Entered[0].Entity, Is.EqualTo(entity));
@@ -702,7 +687,6 @@ namespace Ludots.Tests.Gas.Graph
                 World world,
                 MapSession session,
                 TriggerManager triggers,
-                MapHeartbeatClockSystem pump,
                 RegionVolumeTriggerSystem system,
                 List<RegionEvent> entered,
                 List<RegionEvent> exited,
@@ -712,7 +696,6 @@ namespace Ludots.Tests.Gas.Graph
                 World = world;
                 Session = session;
                 Triggers = triggers;
-                Pump = pump;
                 System = system;
                 Entered = entered;
                 Exited = exited;
@@ -723,7 +706,6 @@ namespace Ludots.Tests.Gas.Graph
             public World World { get; }
             public MapSession Session { get; }
             public TriggerManager Triggers { get; }
-            public MapHeartbeatClockSystem Pump { get; }
             public RegionVolumeTriggerSystem System { get; }
             public List<RegionEvent> Entered { get; }
             public List<RegionEvent> Exited { get; }
@@ -811,10 +793,9 @@ namespace Ludots.Tests.Gas.Graph
                 }
 
                 session.RegionVolumeKeys = RegionVolumeBakePass.Bake(world, session, customEvents, schemas);
-                var pump = new MapHeartbeatClockSystem(() => sessions, world, triggers, () => new ScriptContext());
                 var system = new RegionVolumeTriggerSystem(world, () => sessions, triggers, () => new ScriptContext());
                 system.Initialize();
-                return new RegionHarness(world, session, triggers, pump, system, entered, exited, poisonEntered, poisonExited);
+                return new RegionHarness(world, session, triggers, system, entered, exited, poisonEntered, poisonExited);
             }
 
             public Entity SpawnPositioned(int xCm, int yCm)
@@ -899,7 +880,6 @@ namespace Ludots.Tests.Gas.Graph
 
             public void Tick()
             {
-                Pump.Update(1 / 60f);
                 System.Update(1 / 60f);
             }
 

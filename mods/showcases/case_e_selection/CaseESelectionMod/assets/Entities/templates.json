@@ -17,7 +17,7 @@
       },
       "PresentationStaticTransform": {},
       "FacingDirection": {
-        "AngleRad": 0.0
+        "AngleRad": 0
       },
       "AttributeBuffer": {
         "base": {
@@ -39,7 +39,7 @@
         "Value": "可框选单位"
       },
       "Team": {
-        "Id": 1
+        "Id": 0
       },
       "WorldPositionCm": {
         "Value": {
@@ -47,17 +47,25 @@
           "Y": 0
         }
       },
-      "PresentationStaticTransform": {},
       "FacingDirection": {
-        "AngleRad": 0.0
+        "AngleRad": 0
       },
       "AttributeBuffer": {
         "base": {
           "Health": 60
         }
       },
-      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 120, "localCenterZCm": 0 },
-      "SpatialBox3D": { "halfSizeXCm": 90, "halfSizeYCm": 120, "halfSizeZCm": 90 },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 120,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 90,
+        "halfSizeYCm": 120,
+        "halfSizeZCm": 90
+      },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
@@ -82,7 +90,7 @@
       },
       "PresentationStaticTransform": {},
       "FacingDirection": {
-        "AngleRad": 0.0
+        "AngleRad": 0
       },
       "AttributeBuffer": {
         "base": {

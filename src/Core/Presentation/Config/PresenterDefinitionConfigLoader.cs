@@ -944,7 +944,7 @@ namespace Ludots.Core.Presentation.Config
         {
             "kind", "slot", "activeByDefault", "activationCondition", "execution",
             "style", "motion",
-            "assetBinding", "attributeBinding", "tagBinding", "animator",
+            "assetBinding", "attributeBinding", "tagBinding", "contextBinding", "animator",
             "attachment", "sound", "material", "spline", "grounding",
             "minimapMarker", "worldText", "surfaceSource", "instancedBatch",
             "trailMesh", "screenRect",
@@ -1008,7 +1008,7 @@ namespace Ludots.Core.Presentation.Config
 
         private static readonly string[] BindingFields =
         {
-            "paramKey", "source", "constantValue", "sourceId", "textToken", "attributeId",
+            "paramKey", "source", "constantValue", "sourceId", "textToken", "attributeId", "optional",
         };
 
         private static readonly string[] ParamDefaultFields =
@@ -1055,6 +1055,11 @@ namespace Ludots.Core.Presentation.Config
         private static readonly string[] TagBindingFields =
         {
             "tagId", "tag", "targetParamKey", "invertLogic",
+        };
+
+        private static readonly string[] InteractionContextBindingFields =
+        {
+            "contextProfileId", "targetParamKey", "invertLogic",
         };
 
         private static readonly string[] AnimatorFields =
@@ -1247,20 +1252,9 @@ namespace Ludots.Core.Presentation.Config
         }
 
         /// <summary>
-        /// Compiles each behavior slot's activationCondition into the canonical rule
-        /// pipeline: one unconditional DeactivateBehavior + conditional ActivateBehavior
-        /// pair on PresenterCreated (exact definition key), so the slot's active mask
-        /// converges to the condition result when the presenter instance is created.
-        /// Commands inside one event bucket execute in rule order, so the unconditional
-        /// Deactivate lands before the conditional Activate. Condition evaluation reuses
-        /// the existing PresenterRuleSystem ConditionRef path; no second condition
-        /// system is added. Runtime re-evaluation of tag/attribute-driven behavior stays
-        /// in authored keyed rules (TagEffectiveChanged + TagGained/TagLost), which is
-        /// the SSOT pattern; wildcard re-evaluation against unrelated events is
-        /// intentionally not compiled. activationCondition is a root-presenter
-        /// contract: child creation bypasses PresenterCreated, enforced by
-        /// ValidateChildGraph over children[] and
-        /// PresenterChildInstanceOverride.InstanceChildren payloads.
+        /// Creation conditions use ordered deactivate/activate rules. Possession predicates
+        /// are compiled into dependency work instead, so retained instances follow seat changes.
+        /// Tag and attribute changes remain driven by authored keyed rules.
         /// </summary>
         private static void AppendCompiledActivationConditionRules(PresenterDefinition def)
         {
@@ -1274,7 +1268,8 @@ namespace Ludots.Core.Presentation.Config
             for (int i = 0; i < behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (HasConditionalActivation(in slot.ActivationCondition))
+                if (HasConditionalActivation(in slot.ActivationCondition) &&
+                    !slot.ActivationCondition.DependsOnLocalPossession)
                 {
                     conditioned.Add(i);
                 }
@@ -2201,7 +2196,8 @@ namespace Ludots.Core.Presentation.Config
         {
             RejectRemovedBindingFields(node, context);
             string source = node["source"]?.GetValue<string>();
-            return source switch
+            bool optional = node["optional"]?.GetValue<bool>() ?? false;
+            ValueRef value = source switch
             {
                 "attribute" or "attributeRatio" or "attributeBase" => throw new InvalidOperationException(
                     $"{context} source '{source}' duplicates AttributeBinding behavior. Use an AttributeBinding behavior with attributeBinding.targetParamKey instead."),
@@ -2219,6 +2215,8 @@ namespace Ludots.Core.Presentation.Config
                 null or "" => throw new InvalidOperationException("Presenter binding must declare explicit source."),
                 _ => throw new InvalidOperationException($"Presenter binding source has invalid value '{source}'."),
             };
+            value.Optional = optional;
+            return value;
         }
 
         private static int ResolveBlackboardKeyId(JsonNode? node, string context)
@@ -2975,6 +2973,10 @@ namespace Ludots.Core.Presentation.Config
                         RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.TagBinding = ParseTagBinding(obj["tagBinding"], $"{behaviorPath}.tagBinding");
                         break;
+                    case BehaviorKind.InteractionContextBinding:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
+                        slot.InteractionContextBinding = ParseInteractionContextBinding(obj["contextBinding"], $"{behaviorPath}.contextBinding");
+                        break;
                     case BehaviorKind.Animator:
                         RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
                         slot.Animator = ParseAnimator(obj["animator"], $"{behaviorPath}.animator");
@@ -3471,6 +3473,26 @@ namespace Ludots.Core.Presentation.Config
             {
                 TagId = tagId,
                 TargetParamKey = ParseRequiredParamKey(obj["targetParamKey"], "TagBinding.targetParamKey"),
+                InvertLogic = obj["invertLogic"]?.GetValue<bool>() ?? false,
+            };
+        }
+
+        private InteractionContextBindingConfig ParseInteractionContextBinding(JsonNode? node, string path)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException("InteractionContextBinding behavior requires object field 'contextBinding'.");
+            }
+
+            RejectUnknownFields(obj, path, InteractionContextBindingFields);
+
+            string contextProfileId = ParseRequiredSemanticString(obj["contextProfileId"], $"{path}.contextProfileId");
+            int profileId = ResolveRequired(_resolveInteractionContextProfileId(contextProfileId), PresentationEventKind.ContextActivated, "interaction context profile", contextProfileId);
+
+            return new InteractionContextBindingConfig
+            {
+                InteractionContextProfileId = profileId,
+                TargetParamKey = ParseRequiredParamKey(obj["targetParamKey"], "InteractionContextBinding.targetParamKey"),
                 InvertLogic = obj["invertLogic"]?.GetValue<bool>() ?? false,
             };
         }
@@ -4092,6 +4114,7 @@ namespace Ludots.Core.Presentation.Config
                 ["trail"] = 17,
                 ["screenRect"] = 18,
                 ["preview"] = 19,
+                ["contextState"] = 20,
             };
 
             public static int Register(string key)

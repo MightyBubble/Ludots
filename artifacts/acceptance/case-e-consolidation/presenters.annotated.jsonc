@@ -1,0 +1,289 @@
+// 当前 Case E presenters.json 的完整阅读版，字段和值与运行配置一致。
+// 注释用于解释；运行配置仍是 Mod 内的原始 JSON 文件。
+// 集合事件：Source=集合中的单位，Target=名单拥有者，Viewer=该拥有者的观看者。
+// PayloadA=引擎根据集合键、名单拥有者、成员实体身份生成的作用域编号。
+[
+  {
+    "id": "presenter.case_e.commander_root", // 指挥官主体外观的定义标识。
+    "bindSpawn": { // 模板实体出生时自动创建这份表现。
+      "template": "case_e_commander", // 匹配指挥官模板；不是匹配玩家编号。
+      "scopeSource": "EventPayloadA" // 从出生事件的 PayloadA 取得实例作用域。
+    },
+    "behaviors": [ // 该表现包含的行为槽。
+      {
+        "slot": "body", // 槽位名称，供编译和行为命令定位。
+        "kind": "AssetBinding", // 把已注册的资产绑定为可输出的表现。
+        "activeByDefault": true, // 没有附加激活条件，创建后默认启用。
+        "assetBinding": { // 资产及输出方式。
+          "assetKind": "Mesh", // 使用网格资产。
+          "assetId": "case_e.commander_cube", // 引用资产注册表中的指挥官方块。
+          "materialId": "default_surface", // 引用已注册的材质。
+          "renderPath": "StaticMesh", // 使用静态网格渲染路径。
+          "mobility": "Static", // 使用静态缓存分类；变化由正式更新链刷新。
+          "localOffset": [0, 1.5, 0], // 资产相对表现锚点的 X/Y/Z 偏移。
+          "localScale": [2.6, 3.0, 2.6] // 资产在 X/Y/Z 三轴的缩放倍率。
+        },
+        "style": { // 该行为槽的样式。
+          "color": [1.0, 0.85, 0.2, 1] // RGBA，分量为 0..1：黄色，不透明。
+        }
+      }
+    ]
+  },
+  {
+    "id": "presenter.case_e.marine_root", // 士兵主体外观的定义标识。
+    "bindSpawn": { // 士兵出生时创建主体表现。
+      "template": "case_e_marine", // 匹配士兵模板，所有玩家复用该模板。
+      "scopeSource": "EventPayloadA" // 使用出生事件提供的作用域。
+    },
+    "behaviors": [ // 士兵主体的行为槽列表。
+      {
+        "slot": "body", // 主体槽。
+        "kind": "AssetBinding", // 输出绑定的资产。
+        "activeByDefault": true, // 默认启用主体。
+        "assetBinding": { // 主体网格的配置。
+          "assetKind": "Mesh", // 网格资产。
+          "assetId": "case_e.marine_cube", // 士兵模型资产键。
+          "materialId": "default_surface", // 材质键。
+          "renderPath": "StaticMesh", // 静态网格渲染路径。
+          "mobility": "Static", // 静态缓存分类。
+          "localOffset": [0, 1.2, 0], // 主体向上偏移 1.2 个表现坐标单位。
+          "localScale": [1.8, 2.4, 1.8] // 三轴缩放。
+        },
+        "style": { // 主体样式。
+          "color": [0.2, 0.9, 0.4, 1] // RGBA：绿色，不透明；这里没有按玩家改颜色。
+        }
+      }
+    ]
+  },
+  {
+    "id": "presenter.case_e.raider_root", // 小场景中的袭击者外观定义。
+    "bindSpawn": { // 袭击者出生时创建主体表现。
+      "template": "case_e_raider", // 匹配袭击者模板。
+      "scopeSource": "EventPayloadA" // 使用出生事件提供的作用域。
+    },
+    "behaviors": [ // 外观行为列表。
+      {
+        "slot": "body", // 主体槽。
+        "kind": "AssetBinding", // 输出资产。
+        "activeByDefault": true, // 默认启用。
+        "assetBinding": { // 主体资产配置。
+          "assetKind": "Mesh", // 网格资产。
+          "assetId": "case_e.raider_cube", // 袭击者模型资产键。
+          "materialId": "default_surface", // 材质键。
+          "renderPath": "StaticMesh", // 静态网格路径。
+          "mobility": "Static", // 静态缓存分类。
+          "localOffset": [0, 1.2, 0], // 相对锚点的三轴偏移。
+          "localScale": [1.8, 2.4, 1.8] // 三轴缩放。
+        },
+        "style": { // 主体样式。
+          "color": [1.0, 0.25, 0.25, 1] // RGBA：红色，不透明。
+        }
+      }
+    ]
+  },
+  {
+    "id": "presenter.case_e.box_select_rectangle", // 鼠标拖拽时的屏幕矩形定义。
+    "lifecycle": { // 实例生命周期。
+      "persistence": "Scoped" // 按作用域持有；结束拖拽时由下方规则显式销毁。
+    },
+    "behaviors": [ // 矩形的行为列表。
+      {
+        "slot": "screenRect", // 屏幕矩形槽。
+        "kind": "ScreenRect", // 使用现有屏幕矩形表现基建。
+        "activeByDefault": true, // 实例存在时默认启用。
+        "screenRect": { // 从参数读取两个角，输出矩形。
+          "corner0XParamKey": "case_e.rect.pressX", // 按下鼠标时的屏幕 X。
+          "corner0YParamKey": "case_e.rect.pressY", // 按下鼠标时的屏幕 Y。
+          "corner1XParamKey": "case_e.rect.pointerX", // 当前鼠标的屏幕 X。
+          "corner1YParamKey": "case_e.rect.pointerY", // 当前鼠标的屏幕 Y。
+          "fill": [0.25, 0.55, 1.0, 0.45], // 填充 RGBA：半透明蓝色。
+          "border": [0.2, 0.55, 1.0, 1.0] // 边框 RGBA：不透明蓝色。
+        }
+      }
+    ],
+    "bindings": [ // 参数的数据来源，由 Presenter 绑定系统更新。
+      {
+        "paramKey": "case_e.rect.pressX", // 写入这个表现参数。
+        "source": "ownerBlackboardFloat", // 从表现拥有者的浮点黑板读取。
+        "sourceId": "case_e.press.px" // 黑板键；按下时由交互图写入。
+      },
+      {
+        "paramKey": "case_e.rect.pressY", // 矩形起点 Y 参数。
+        "source": "ownerBlackboardFloat", // 同样读取拥有者黑板。
+        "sourceId": "case_e.press.py" // 按下时记录的 Y 坐标键。
+      },
+      {
+        "paramKey": "case_e.rect.pointerX", // 矩形终点 X 参数。
+        "source": "pointerScreenX" // 读取正式输入快照中的当前鼠标 X。
+      },
+      {
+        "paramKey": "case_e.rect.pointerY", // 矩形终点 Y 参数。
+        "source": "pointerScreenY" // 读取正式输入快照中的当前鼠标 Y。
+      }
+    ]
+    // ScreenRect 目前沿用已有系统的本地观看者筛选；这里没有配置下面蓝环的激活条件。
+  },
+  {
+    "id": "presenter.case_e.selection_marker", // 正式选中的蓝环定义。
+    "lifecycle": { // 蓝环实例如何存续。
+      "persistence": "Scoped" // 保留作用域实例；这不是池容量或预热数量配置。
+    },
+    "anchor": { // 表现锚点设置。
+      "offset": [0, 0.2, 0] // 锚点向上偏移，减少与地面重叠。
+    },
+    "behaviors": [ // 蓝环所包含的行为槽。
+      {
+        "slot": "body", // 蓝环资产的槽位。
+        "kind": "AssetBinding", // 使用通用资产绑定行为。
+        "activationCondition": { "inline": "TargetIsSolePossessedRep" }, // Target 必须是唯一座位当前操控的代表实体；当前编译器会跟踪玩家切换。
+        "assetBinding": { // 蓝环的可视输出。
+          "assetKind": "Mesh", // 输出网格。
+          "assetId": "case_e.select_ring_slab", // 引用选中标记网格；名字不参与观看者判断。
+          "materialId": "default_surface", // 材质键。
+          "renderPath": "StaticMesh", // 静态网格渲染路径。
+          "mobility": "Static", // 使用静态缓存；可见性变化通过缓存失效链刷新。
+          "localScale": [2.6, 0.12, 2.6], // 标记的 X/Y/Z 缩放，Y 方向较薄。
+          "visibilityParamKey": "case_e.marker.visible" // 再读取该整数参数：0 隐藏，非 0 允许输出。
+        },
+        "style": { // 蓝环样式。
+          "color": [0.3, 0.7, 1.0, 1] // RGBA：蓝色，不透明。
+        }
+      }
+    ],
+    "paramDefaults": [ // 每个实例的参数默认值。
+      {
+        "paramKey": "case_e.marker.visible", // 与上面的可见性参数键相同。
+        "lane": "Int", // 该值存在整数参数通道。
+        "intValue": 0 // 初始隐藏，成员加入规则会把它设为 1。
+      }
+    ]
+  },
+  {
+    "id": "presenter.case_e.selection_preview_marker", // 正在框选的黄色预览标记定义。
+    "lifecycle": { // 预览标记实例生命周期。
+      "persistence": "Scoped" // 预览离开后隐藏，保留实例供后续复用。
+    },
+    "anchor": { // 预览标记的锚点。
+      "offset": [0, 0.35, 0] // 高于正式选中标记，减少同时存在时的重叠。
+    },
+    "behaviors": [ // 预览标记的行为槽。
+      {
+        "slot": "body", // 标记资产槽。
+        "kind": "AssetBinding", // 通用资产绑定行为。
+        "activationCondition": { "inline": "TargetIsSolePossessedRep" }, // 只为当前操控玩家启用；切换玩家会重新判断。
+        "assetBinding": { // 黄色预览标记的可视输出。
+          "assetKind": "Mesh", // 网格资产。
+          "assetId": "case_e.select_ring_slab", // 与蓝环复用同一个网格。
+          "materialId": "default_surface", // 复用同一个材质。
+          "renderPath": "StaticMesh", // 静态网格路径。
+          "mobility": "Static", // 静态缓存分类。
+          "localScale": [3.0, 0.08, 3.0], // 比蓝环稍宽、更薄。
+          "visibilityParamKey": "case_e.marker.visible" // 同名参数存在各自实例内，不是全局共享开关。
+        },
+        "style": { // 预览样式。
+          "color": [1.0, 0.85, 0.25, 0.95] // RGBA：黄色，透明度参数 0.95。
+        }
+      }
+    ],
+    "paramDefaults": [ // 预览实例的初始参数。
+      {
+        "paramKey": "case_e.marker.visible", // 可见性参数键。
+        "lane": "Int", // 整数通道。
+        "intValue": 0 // 默认隐藏，进入预览名单时设为 1。
+      }
+    ]
+  },
+  {
+    "id": "presenter.case_e.selection_rules", // 全局规则定义；不需要给每个单位复制一套规则。
+    "rules": [ // 事件到 Presenter 命令的映射。
+      {
+        "event": { // 正式选中名单的成员加入事件。
+          "kind": "EntityCollectionMemberAdded", // 某个单位进入集合。
+          "key": "selected" // 只匹配正式选中集合。
+        },
+        "command": { // 创建或复用该单位在本名单下的蓝环，同时写入可见参数。
+          "kind": "CreatePresenter", // 已有同定义、拥有者、作用域的持久实例时复用。
+          "definitionId": "presenter.case_e.selection_marker", // 使用蓝环定义。
+          "scopeSource": "EventPayloadA", // 取集合事件提供的作用域，区分名单拥有者和成员。
+          "ownerSource": "EventSource", // 蓝环的拥有者是被选中的单位，锚点跟随该单位。
+          "paramKey": "case_e.marker.visible", // 创建或复用时要写入的参数键。
+          "paramLane": "Int", // 写整数通道。
+          "valueSource": "Fixed", // 使用下面配置的固定值。
+          "intValue": 1 // 标记该单位仍属于选中名单；是否输出还受当前玩家条件限制。
+        }
+      },
+      {
+        "event": { // 正式选中名单的成员移除事件。
+          "kind": "EntityCollectionMemberRemoved", // 某个单位离开集合。
+          "key": "selected" // 只处理正式选中集合。
+        },
+        "command": { // 定位已有蓝环，修改参数。
+          "kind": "SetParam", // 只改参数；此处没有销毁命令。
+          "definitionId": "presenter.case_e.selection_marker", // 定位蓝环定义。
+          "scopeSource": "EventPayloadA", // 使用与加入事件对应的作用域。
+          "ownerSource": "EventSource", // 定位属于这个单位的蓝环。
+          "paramKey": "case_e.marker.visible", // 修改可见性参数。
+          "paramLane": "Int", // 整数通道。
+          "valueSource": "Fixed", // 使用配置固定值。
+          "intValue": 0 // 隐藏，保留实例及其身份供下次选择复用。
+        }
+      },
+      {
+        "event": { // 预览名单的成员加入事件。
+          "kind": "EntityCollectionMemberAdded", // 某个单位进入预览集合。
+          "key": "case_e.selection_preview" // 只匹配框内预览集合。
+        },
+        "command": { // 创建或复用黄色标记。
+          "kind": "CreatePresenter", // 复用规则与蓝环相同。
+          "definitionId": "presenter.case_e.selection_preview_marker", // 使用黄色预览定义。
+          "scopeSource": "EventPayloadA", // 从集合事件获取本次成员作用域。
+          "ownerSource": "EventSource", // 黄色标记的拥有者是预览命中的单位。
+          "paramKey": "case_e.marker.visible", // 写这个黄色实例的可见参数。
+          "paramLane": "Int", // 整数通道。
+          "valueSource": "Fixed", // 固定值。
+          "intValue": 1 // 允许显示；当前玩家条件仍必须满足。
+        }
+      },
+      {
+        "event": { // 预览名单的成员移除事件。
+          "kind": "EntityCollectionMemberRemoved", // 单位离开预览，或预览被清空。
+          "key": "case_e.selection_preview" // 匹配预览集合。
+        },
+        "command": { // 隐藏该黄色实例。
+          "kind": "SetParam", // 修改参数，保留实例。
+          "definitionId": "presenter.case_e.selection_preview_marker", // 定位黄色预览定义。
+          "scopeSource": "EventPayloadA", // 使用相同成员作用域。
+          "ownerSource": "EventSource", // 定位该单位的预览标记。
+          "paramKey": "case_e.marker.visible", // 可见参数键。
+          "paramLane": "Int", // 整数通道。
+          "valueSource": "Fixed", // 固定值。
+          "intValue": 0 // 隐藏；之后切回玩家也不会因条件变真而重新显示。
+        }
+      },
+      {
+        "event": { // 玩家进入框选交互状态。
+          "kind": "ContextActivated", // 交互上下文激活事件。
+          "key": "interaction.context.case_e.boxing" // 只匹配 Case E 框选上下文。
+        },
+        "command": { // 创建屏幕拖拽矩形。
+          "kind": "CreatePresenter", // 创建表现实例。
+          "definitionId": "presenter.case_e.box_select_rectangle", // 使用屏幕矩形定义。
+          "scopeSource": "SourceStableId", // 用上下文拥有者的稳定标识作为作用域。
+          "ownerSource": "EventSource" // 矩形拥有者是玩家代表，因此起点坐标读取他的黑板。
+        }
+      },
+      {
+        "event": { // 框选交互状态结束。
+          "kind": "ContextDeactivated", // 交互上下文停用事件。
+          "key": "interaction.context.case_e.boxing" // 只匹配同一个框选上下文。
+        },
+        "command": { // 回收该次拖拽的矩形。
+          "kind": "DestroyScopedPresenter", // 这里是真销毁矩形实例，和蓝环/黄环写 0 隐藏不同。
+          "definitionId": "presenter.case_e.box_select_rectangle", // 指定矩形定义。
+          "scopeSource": "SourceStableId", // 与创建时的作用域一致。
+          "ownerSource": "EventSource" // 与创建时的玩家代表一致。
+        }
+      }
+    ]
+  }
+]

@@ -15,6 +15,26 @@ namespace Ludots.Tests.Gas.Production;
 public sealed class GraphOpsNodeGalleryAcceptanceTests
 {
     [Test]
+    public void DerivedQueryOps_ExecuteThroughGalleryRuntime()
+    {
+        using (var bind = new GraphOpsNodeGalleryRuntime())
+        {
+            bind.BindOp("BindQueryCollection");
+            bind.EnsureWorld();
+            bind.Tick(0.35f);
+            Assert.That(bind.Metrics.Detail, Does.Contain("敌军"));
+        }
+
+        using (var screen = new GraphOpsNodeGalleryRuntime())
+        {
+            screen.BindOp("QueryScreenRegionCollection");
+            screen.EnsureWorld();
+            screen.Tick(0.35f);
+            Assert.That(screen.Metrics.Detail, Does.Contain("敌军"));
+        }
+    }
+
+    [Test]
     public void ConstFloat_SettlesAuthoredConstantThroughGraphTail()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();

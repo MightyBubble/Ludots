@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production;
 
 /// <summary>
-/// #1398 S2b per-op gallery acceptance: ActivateContext/DeactivateContext settle real
+/// Per-op gallery acceptance: ActivateContext/DeactivateContext settle real
 /// damage through their graph tails while the target carries (or no longer carries) the
 /// gallery aim context instance; WriteCollection lands the final set through the
 /// event-keyed writer into the EntityCollectionStore.

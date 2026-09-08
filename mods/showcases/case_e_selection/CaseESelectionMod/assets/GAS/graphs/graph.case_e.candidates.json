@@ -1,0 +1,59 @@
+[
+  {
+    "id": "graph.case_e.candidates",
+    "kind": "Query",
+    "entry": "map",
+    "nodes": [
+      {
+        "id": "map",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "team",
+        "op": "QueryFilterTeam",
+        "teamId": 1
+      },
+      {
+        "id": "template",
+        "op": "QueryFilterTemplate",
+        "template": "case_e_marine"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "map",
+        "fromPort": "next",
+        "to": "team"
+      },
+      {
+        "from": "team",
+        "fromPort": "next",
+        "to": "template"
+      },
+      {
+        "from": "template",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "map",
+        "fromPort": "list",
+        "to": "team",
+        "toPort": "list"
+      },
+      {
+        "from": "team",
+        "fromPort": "list",
+        "to": "template",
+        "toPort": "list"
+      }
+    ]
+  }
+]

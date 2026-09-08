@@ -778,6 +778,7 @@ namespace Ludots.Core.Engine
         private void WireUpPositionProvider()
         {
             var w = World;
+            ((SpatialQueryService)SpatialQueries).BindBoundsWorld(World);
             ((SpatialQueryService)SpatialQueries).SetPositionProvider(entity =>
             {
                 if (!w.IsAlive(entity) || !w.Has<WorldPositionCm>(entity))
@@ -1407,7 +1408,8 @@ namespace Ludots.Core.Engine
                 extensionBehaviors: presenterBehaviorKinds,
                 graphPrograms: graphProgramRegistry,
                 graphApi: gasGraphApi,
-                trailMeshBuffer: trailMeshBuffer);
+                trailMeshBuffer: trailMeshBuffer,
+                globals: GlobalContext);
             var animatorRuntimeSystem = new AnimatorRuntimeSystem(
                 World,
                 animatorControllers,
@@ -1449,8 +1451,8 @@ namespace Ludots.Core.Engine
                 presentationTimingDiagnostics,
                 presentationTargetGeneration);
             // Interaction context profile id space registers before presenter definition
-            // loading so presenter rules resolve ContextActivated/Deactivated keys (#1398
-            // S2b). The full install (row fill + bindings/triggers reference validation)
+            // loading so presenter rules resolve ContextActivated/Deactivated keys.
+            // The full install (row fill + bindings/triggers reference validation)
             // runs later in the input kernel where its graph/action catalogs exist; Register
             // is idempotent and both passes agree on ids by construction (Default first,
             // then config order).
@@ -1723,7 +1725,6 @@ namespace Ludots.Core.Engine
                 World,
                 interactionContextProfileRegistry,
                 presentationEventStream,
-                presenterCommandBuffer,
                 GameSession);
             SetService(CoreServiceKeys.InteractionContextInstances, interactionContextInstances);
             gasGraphApi.BindContextInstances(interactionContextInstances);
@@ -2205,14 +2206,11 @@ namespace Ludots.Core.Engine
                         ? channel.Handler
                         : GetService(CoreServiceKeys.InputHandler)),
                 SystemGroup.InputCollection);
-            // #1398 S2b: context trigger gate — the world-side active context set diff
-            // mounts/unmounts profile-declared triggers[] graphs on the context subject;
-            // simulation-side twin of the local IMC projection above (observers and all
-            // context writers included, not only local seats).
-            // #1398 S2b: context trigger gate — the world-side active context set diff
-            // mounts/unmounts profile-declared triggers[] graphs on the context subject;
-            // simulation-side twin of the local IMC projection above (observers and all
-            // context writers included, not only local seats).
+            // Context trigger gate — the world-side active context set diff
+            // mounts/unmounts profile-declared triggers[] graphs on the context subject and
+            // runs the onActivated/onDeactivated lifecycle slot bodies at the mount window
+            // boundaries; simulation-side twin of the local IMC projection above (observers
+            // and all context writers included, not only local seats).
             var interactionContextTriggerGate = new Gameplay.MapTriggers.InteractionContextTriggerMountSystem(
                 World,
                 TriggerManager,
@@ -2220,9 +2218,16 @@ namespace Ludots.Core.Engine
                 graphProgramRegistry,
                 customEventCatalog.Names,
                 customEventCatalog.Schemas,
-                () => MapSessions);
+                () => MapSessions,
+                graphReturnWriter,
+                gasGraphApi);
             _interactionContextTriggerGate = interactionContextTriggerGate;
             RegisterSystem(interactionContextTriggerGate, SystemGroup.InputCollection);
+            // Bind the change-point Deactivated slot runner — DeactivateContext op
+            // executes the profile's onDeactivated slot synchronously where the context
+            // component is removed (same tick settlement), instead of the gate's next scan.
+            interactionContextInstances.BindDeactivatedSlotRunner(
+                (entity, contextId) => interactionContextTriggerGate.RunDeactivatedSlotNow(entity, contextId));
             // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,
             // DEC-15); enablement and parameters come from the active control scheme's axisMove
             // declaration (single source of truth, hot-switch aware).
@@ -2230,17 +2235,6 @@ namespace Ludots.Core.Engine
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.LocalInput);
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
-            // #1398 Case E §05: whileActive graph ticks after pointer attrs are live.
-            RegisterSystem(
-                new InteractionContextWhileActiveSystem(
-                    World,
-                    interactionContextProfileRegistry,
-                    graphReturnWriter,
-                    graphProgramRegistry,
-                    entityCollectionStore,
-                    gasGraphApi,
-                    interactionContextTriggerGate),
-                SystemGroup.InputCollection);
             RegisterSystem(new StoryRuntimeSystem(this, dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
@@ -2409,8 +2403,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);
             RegisterSystem(deferredTriggerCollectionSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
-            RegisterSystem(new MapHeartbeatClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new MapEntityLifecycleObserverSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new ModTriggerResumeClockSystem(TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new MapTriggerResumeClockSystem(() => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new RegionVolumeTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new Ludots.Core.Gameplay.FieldRegions.FieldRegionMembershipSystem(World, () => MapSessions, entityCollectionStore, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
@@ -2429,7 +2424,8 @@ namespace Ludots.Core.Engine
                     triggerGraphActionBindings,
                     inputConfigRoot,
                     () => GetService(CoreServiceKeys.ClientLocalSeatRegistry),
-                    () => GetService(CoreServiceKeys.ClientLocalSeatInputRuntime)),
+                    () => GetService(CoreServiceKeys.ClientLocalSeatInputRuntime),
+                    interactionContextTriggerGate.ReconcileAfterInputAction),
                 SystemGroup.DeferredTriggerCollection);
 
             // Phase 5.5: Continuation (AwaitCallback drain — registration order)
@@ -2920,6 +2916,7 @@ namespace Ludots.Core.Engine
             bool wasFocused = focused != null && focused.MapId == mid;
 
             MapSessions.UnloadSession(mid, World);
+            GetService(CoreServiceKeys.EntitySetQueryRuntime)?.ReleaseMap(mid);
             _mapLoadStatuses.Remove(mid);
 
             if (wasFocused && MapSessions.FocusedSession != null)
@@ -4848,6 +4845,8 @@ namespace Ludots.Core.Engine
 
             if (World != null)
             {
+                GetService(CoreServiceKeys.EntitySetQueryRuntime)?.Dispose();
+                (SpatialQueries as SpatialQueryService)?.UnbindBoundsWorld();
                 World.Destroy(World);
                 World = null;
             }

@@ -8,6 +8,13 @@ namespace Arch.Core;
 
 public partial class World
 {
+    /// <summary>Invalidates derived data after writes. Ref writers must call NotifyComponentChanged.</summary>
+    public event Action<Entity, ComponentType>? ComponentChanged;
+    public event Action<Entity>? EntityMaterialized;
+
+    public void NotifyComponentChanged<T>(Entity entity) =>
+        ComponentChanged?.Invoke(entity, Component<T>.ComponentType);
+
     // A note on multithreading:
     // This area is the trickiest part of World in terms of thread-safety.
     // It is currently thread-safe, but it relies on an important fact: No list of handlers can ever shrink or be disposed.
@@ -65,6 +72,20 @@ public partial class World
             var next = new EntityDestroyedHandler[current.Length + 1];
             Array.Copy(current, next, current.Length);
             next[current.Length] = handler;
+            Volatile.Write(ref _entityDestroyedHandlers, next);
+        }
+    }
+
+    public void UnsubscribeEntityDestroyed(EntityDestroyedHandler handler)
+    {
+        lock (_entityDestroyedHandlersWriteLock)
+        {
+            EntityDestroyedHandler[] current = Volatile.Read(ref _entityDestroyedHandlers);
+            int index = Array.IndexOf(current, handler);
+            if (index < 0) return;
+            var next = new EntityDestroyedHandler[current.Length - 1];
+            Array.Copy(current, 0, next, 0, index);
+            Array.Copy(current, index + 1, next, index, current.Length - index - 1);
             Volatile.Write(ref _entityDestroyedHandlers, next);
         }
     }
@@ -154,6 +175,7 @@ public partial class World
 
     public void OnEntityCreated(Entity entity)
     {
+        EntityMaterialized?.Invoke(entity);
 #if EVENTS
         int count;
         lock (_entityCreatedHandlers)
@@ -202,6 +224,7 @@ public partial class World
 
     public void OnComponentAdded<T>(Entity entity)
     {
+        NotifyComponentChanged<T>(entity);
 #if EVENTS
         ref readonly var events = ref GetEvents<T>();
         ref var added = ref Get<T>(entity);
@@ -233,6 +256,7 @@ public partial class World
 
     public void OnComponentSet<T>(Entity entity)
     {
+        NotifyComponentChanged<T>(entity);
 #if EVENTS
         ref readonly var events = ref GetEvents<T>();
         ref var set = ref Get<T>(entity);
@@ -264,6 +288,7 @@ public partial class World
 
     public void OnComponentRemoved<T>(Entity entity)
     {
+        NotifyComponentChanged<T>(entity);
 #if EVENTS
         ref readonly var events = ref GetEvents<T>();
         ref var removed = ref Get<T>(entity);
@@ -295,6 +320,7 @@ public partial class World
 
     public void OnComponentAdded(Entity entity, ComponentType compType)
     {
+        ComponentChanged?.Invoke(entity, compType);
 #if EVENTS
         var events = GetEvents(compType);
         if (events == null)
@@ -329,6 +355,7 @@ public partial class World
 
     public void OnComponentSet(Entity entity, ComponentType compType)
     {
+        ComponentChanged?.Invoke(entity, compType);
 #if EVENTS
         var events = GetEvents(compType);
         if (events == null)
@@ -363,6 +390,7 @@ public partial class World
 
     public void OnComponentRemoved(Entity entity, ComponentType compType)
     {
+        ComponentChanged?.Invoke(entity, compType);
 #if EVENTS
         var events = GetEvents(compType);
         if (events == null)
@@ -397,7 +425,9 @@ public partial class World
 
     internal void OnComponentAdded<T>(Archetype archetype)
     {
-#if EVENTS
+#if !EVENTS
+        if (ComponentChanged == null) return;
+#endif
         // Set the added component, start from the last slot and move down
         foreach (ref var chunk in archetype)
         {
@@ -408,7 +438,6 @@ public partial class World
                 OnComponentAdded<T>(entity);
             }
         }
-#endif
     }
 
     /// <summary>
@@ -419,7 +448,9 @@ public partial class World
 
     internal void OnComponentRemoved<T>(Archetype archetype)
     {
-#if EVENTS
+#if !EVENTS
+        if (ComponentChanged == null) return;
+#endif
         // Set the added component, start from the last slot and move down
         foreach (ref var chunk in archetype)
         {
@@ -430,7 +461,6 @@ public partial class World
                 OnComponentRemoved<T>(entity);
             }
         }
-#endif
     }
 
     /// <summary>
