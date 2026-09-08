@@ -97,8 +97,71 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// <summary>Capsule containment: squared point-to-segment distance vs half-thickness.</summary>
         private bool ContainsSegment(Fix64Vec2 local)
         {
-            Fix64Vec2 ab = SegmentB - SegmentA;
-            Fix64Vec2 ap = local - SegmentA;
+            return PointSegmentDistanceSq(local, SegmentA, SegmentB) <= HalfThickness * HalfThickness;
+        }
+
+        /// <summary>
+        /// Swept crossing (#1475): does the travel segment [from, to] (world coords)
+        /// pass through the volume? Closes the think-wave sampling gap for fast
+        /// movers and teleports; boundary-inclusive like containment.
+        /// </summary>
+        public bool IntersectsPath(Fix64Vec2 from, Fix64Vec2 to, Fix64Vec2 anchor)
+        {
+            Fix64Vec2 a = from - anchor;
+            Fix64Vec2 b = to - anchor;
+            switch (Kind)
+            {
+                case RegionVolumeShapeKind.Circle:
+                    return PointSegmentDistanceSq(Fix64Vec2.Zero, a, b) <= Radius * Radius;
+
+                case RegionVolumeShapeKind.Rect:
+                    return SegmentTouchesQuadEdges(a, b, HalfWidth, HalfHeight);
+
+                case RegionVolumeShapeKind.Polygon:
+                    return SegmentTouchesConvexEdges(a, b, PolygonPoints!);
+
+                case RegionVolumeShapeKind.Segment:
+                    return SegmentSegmentDistanceSq(a, b, SegmentA, SegmentB)
+                        <= HalfThickness * HalfThickness;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool SegmentTouchesQuadEdges(Fix64Vec2 a, Fix64Vec2 b, Fix64 halfWidth, Fix64 halfHeight)
+        {
+            Fix64 w = halfWidth;
+            Fix64 h = halfHeight;
+            return SegmentsTouch(a, b, new Fix64Vec2(-w, -h), new Fix64Vec2(w, -h)) ||
+                   SegmentsTouch(a, b, new Fix64Vec2(w, -h), new Fix64Vec2(w, h)) ||
+                   SegmentsTouch(a, b, new Fix64Vec2(w, h), new Fix64Vec2(-w, h)) ||
+                   SegmentsTouch(a, b, new Fix64Vec2(-w, h), new Fix64Vec2(-w, -h));
+        }
+
+        private static bool SegmentTouchesConvexEdges(Fix64Vec2 a, Fix64Vec2 b, Fix64Vec2[] points)
+        {
+            for (int i = 0; i < points.Length; i++)
+            {
+                if (SegmentsTouch(a, b, points[i], points[(i + 1) % points.Length]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>Touching counts (boundary-inclusive), matching containment semantics.</summary>
+        private static bool SegmentsTouch(Fix64Vec2 a1, Fix64Vec2 a2, Fix64Vec2 b1, Fix64Vec2 b2)
+        {
+            return SegmentSegmentDistanceSq(a1, a2, b1, b2) == Fix64.Zero;
+        }
+
+        private static Fix64 PointSegmentDistanceSq(Fix64Vec2 p, Fix64Vec2 a, Fix64Vec2 b)
+        {
+            Fix64Vec2 ab = b - a;
+            Fix64Vec2 ap = p - a;
             Fix64 denominator = ab.X * ab.X + ab.Y * ab.Y;
             Fix64 t = Fix64.Zero;
             if (denominator > Fix64.Zero)
@@ -114,9 +177,89 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 }
             }
 
-            Fix64Vec2 closest = SegmentA + t * ab;
-            Fix64Vec2 delta = local - closest;
-            return delta.X * delta.X + delta.Y * delta.Y <= HalfThickness * HalfThickness;
+            Fix64Vec2 closest = a + t * ab;
+            Fix64Vec2 delta = p - closest;
+            return delta.X * delta.X + delta.Y * delta.Y;
+        }
+
+        /// <summary>
+        /// Squared distance between two segments, exact and overflow-safe: a
+        /// straddle-test decides intersection with bounded cross products (the naive
+        /// clamped-parametrization denominator is a product of length-squares and
+        /// overflows Q32.32 at ordinary map scale), and for non-intersecting 2D
+        /// segments the closest point always lies on an endpoint of one of them.
+        /// Touching segments yield exactly zero.
+        /// </summary>
+        private static Fix64 SegmentSegmentDistanceSq(Fix64Vec2 a1, Fix64Vec2 a2, Fix64Vec2 b1, Fix64Vec2 b2)
+        {
+            if (SegmentsIntersect(a1, a2, b1, b2))
+            {
+                return Fix64.Zero;
+            }
+
+            Fix64 best = PointSegmentDistanceSq(a1, b1, b2);
+            Fix64 tail = PointSegmentDistanceSq(a2, b1, b2);
+            if (tail < best)
+            {
+                best = tail;
+            }
+
+            Fix64 fromB1 = PointSegmentDistanceSq(b1, a1, a2);
+            if (fromB1 < best)
+            {
+                best = fromB1;
+            }
+
+            Fix64 fromB2 = PointSegmentDistanceSq(b2, a1, a2);
+            if (fromB2 < best)
+            {
+                best = fromB2;
+            }
+
+            return best;
+        }
+
+        private static bool SegmentsIntersect(Fix64Vec2 a1, Fix64Vec2 a2, Fix64Vec2 b1, Fix64Vec2 b2)
+        {
+            Fix64 d1 = Cross(a1, a2, b1);
+            Fix64 d2 = Cross(a1, a2, b2);
+            Fix64 d3 = Cross(b1, b2, a1);
+            Fix64 d4 = Cross(b1, b2, a2);
+
+            if (((d1 > Fix64.Zero && d2 < Fix64.Zero) || (d1 < Fix64.Zero && d2 > Fix64.Zero)) &&
+                ((d3 > Fix64.Zero && d4 < Fix64.Zero) || (d3 < Fix64.Zero && d4 > Fix64.Zero)))
+            {
+                return true;
+            }
+
+            if (d1 == Fix64.Zero && OnSegment(a1, b1, a2))
+            {
+                return true;
+            }
+
+            if (d2 == Fix64.Zero && OnSegment(a1, b2, a2))
+            {
+                return true;
+            }
+
+            if (d3 == Fix64.Zero && OnSegment(b1, a1, b2))
+            {
+                return true;
+            }
+
+            return d4 == Fix64.Zero && OnSegment(b1, a2, b2);
+        }
+
+        private static Fix64 Cross(Fix64Vec2 o, Fix64Vec2 a, Fix64Vec2 b)
+        {
+            return (a.X - o.X) * (b.Y - o.Y) - (a.Y - o.Y) * (b.X - o.X);
+        }
+
+        /// <summary>Collinear containment: q between inclusive p and r.</summary>
+        private static bool OnSegment(Fix64Vec2 p, Fix64Vec2 q, Fix64Vec2 r)
+        {
+            return q.X >= Fix64.Min(p.X, r.X) && q.X <= Fix64.Max(p.X, r.X) &&
+                   q.Y >= Fix64.Min(p.Y, r.Y) && q.Y <= Fix64.Max(p.Y, r.Y);
         }
     }
 
