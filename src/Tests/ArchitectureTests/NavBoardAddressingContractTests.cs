@@ -316,6 +316,65 @@ namespace Ludots.Tests.Architecture
             Assert.That(result.PathZcm[result.PathZcm.Length - 1], Is.EqualTo(goalZ));
         }
 
+        [Test]
+        public void PrimaryBoard_IsDefaultNamedBoard_OtherwiseFirstRegistered()
+        {
+            NavQueryServiceRegistry withDefault = CreateRegistry(
+                ("mainland", CreateStore(CreateTile(0, 0))),
+                ("default", CreateStore(CreateTile(0, 0))));
+            Assert.That(withDefault.PrimaryBoardId, Is.EqualTo("default"));
+
+            NavQueryServiceRegistry withoutDefault = CreateRegistry(
+                ("mainland", CreateStore(CreateTile(0, 0))),
+                ("harbor", CreateStore(CreateTile(0, 0))));
+            Assert.That(withoutDefault.PrimaryBoardId, Is.Not.Null.And.Not.Empty);
+
+            NavQueryServiceRegistry single = new(
+                new Dictionary<NavQueryServiceKey, NavTileStore>
+                {
+                    [new NavQueryServiceKey(0, 0)] = CreateStore(CreateTile(0, 0))
+                },
+                TileSizeCm,
+                TileSizeCm);
+            Assert.That(single.PrimaryBoardId, Is.Null,
+                "a single-board registry has no ambiguity and needs no primary board");
+        }
+
+        [Test]
+        public void PrimaryQuery_OnBoardScopedRegistry_ResolvesThePrimaryBoard()
+        {
+            var mainland = CreateStore(CreateTile(0, 0));
+            var defaultBoard = CreateStore(CreateTile(0, 0));
+            var registry = new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore>
+                {
+                    [new NavQueryServiceKey("mainland", 0, 0)] = mainland,
+                    [new NavQueryServiceKey("default", 0, 0)] = defaultBoard
+                },
+                new Dictionary<string, NavBoardTileGeometry>
+                {
+                    ["mainland"] = new NavBoardTileGeometry(TileSizeCm, TileSizeCm, 0, 0),
+                    ["default"] = new NavBoardTileGeometry(TileSizeCm, TileSizeCm, 0, 0)
+                },
+                fallbackWidthCm: TileSizeCm,
+                fallbackHeightCm: TileSizeCm);
+
+            Assert.That(registry.TryCreatePrimaryQuery(0, 0, null!, out NavQueryService service), Is.True);
+            Assert.That(registry.TryGetPrimaryStore(0, 0, out NavTileStore store), Is.True);
+            Assert.That(store, Is.SameAs(defaultBoard),
+                "boardless callers must land on the 'default' board, not an arbitrary one");
+        }
+
+        [Test]
+        public void IsBoardScoped_MatchesTheLoaderRule()
+        {
+            Assert.That(NavAssetPaths.IsBoardScoped(new[] { true }), Is.False);
+            Assert.That(NavAssetPaths.IsBoardScoped(new[] { true, false }), Is.False);
+            Assert.That(NavAssetPaths.IsBoardScoped(new[] { true, true }), Is.True,
+                "two boards with grids must both be addressed by board id");
+            Assert.That(NavAssetPaths.IsBoardScoped(new[] { false, false }), Is.False);
+        }
+
         private static NavQueryServiceRegistry CreateRegistry(params (string BoardId, NavTileStore Store)[] boards)
         {
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>();

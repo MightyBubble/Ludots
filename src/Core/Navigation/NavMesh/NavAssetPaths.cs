@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace Ludots.Core.Navigation.NavMesh
@@ -29,6 +30,24 @@ namespace Ludots.Core.Navigation.NavMesh
                 ? string.Empty
                 : $"board_{SanitizePathSegment(boardId)}/";
             return $"assets/Data/Nav/{mapId}/{boardSegment}layer{layer}/profile_{safe}/{xDir}/navtile_{chunkX}_{chunkY}.ntil";
+        }
+
+        /// <summary>
+        /// Whether a map's nav artifacts are addressed per board. Both the bake writers and
+        /// the runtime loader must agree, otherwise one writes under a board segment the other
+        /// never reads. A map is board-scoped exactly when it declares more than one board
+        /// that carries a NavTileGrid declaration.
+        /// </summary>
+        public static bool IsBoardScoped(IReadOnlyList<bool> boardHasNavTileGrid)
+        {
+            if (boardHasNavTileGrid == null) throw new ArgumentNullException(nameof(boardHasNavTileGrid));
+            int count = 0;
+            for (int i = 0; i < boardHasNavTileGrid.Count; i++)
+            {
+                if (boardHasNavTileGrid[i] && ++count > 1) return true;
+            }
+
+            return false;
         }
 
         private static string SanitizePathSegment(string raw)

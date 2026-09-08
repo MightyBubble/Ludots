@@ -879,7 +879,7 @@ namespace {modId}
                 }
 
                 string navOutputRoot = ResolveNavOutputRoot(repoRoot, modId, outputRoot);
-                WriteNavBakeResultToRepository(navOutputRoot, mapId, result, writeArtifact, "BakeNavHeightmap");
+                WriteNavBakeResultToRepository(navOutputRoot, mapId, ResolveNavArtifactBoardId(repoRoot, mapId, modId), result, writeArtifact, "BakeNavHeightmap");
                 Console.WriteLine($"BakeNavHeightmap done. ok={result.SuccessCount} empty={emptyTileCount} fail={result.FailureCount} outputRoot={Path.GetFullPath(navOutputRoot)}");
                 return result.FailureCount == 0 ? 0 : 1;
             }
@@ -1083,7 +1083,7 @@ namespace {modId}
                     return 1;
                 }
 
-                WriteNavBakeResultToRepository(repoRoot, mapId, result, writeArtifact, "BakeNavRecastReact");
+                WriteNavBakeResultToRepository(repoRoot, mapId, ResolveNavArtifactBoardId(repoRoot, mapId, modId), result, writeArtifact, "BakeNavRecastReact");
                 Console.WriteLine($"BakeNavRecastReact done. ok={result.SuccessCount} fail={result.FailureCount} repoRoot={Path.GetFullPath(repoRoot)}");
                 return result.FailureCount == 0 ? 0 : 1;
             }
@@ -1405,7 +1405,29 @@ namespace {modId}
             return resolved;
         }
 
-        static void WriteNavBakeResultToRepository(string repoRoot, string mapId, NavBakeResult result, bool writeArtifact, string logPrefix)
+        /// <summary>
+        /// Resolves the board id that nav artifacts must be written under, or null when the
+        /// map is single-board and keeps the historical unscoped path. Uses the same primary
+        /// navigation board the runtime loader walks.
+        /// </summary>
+        static string? ResolveNavArtifactBoardId(string repoRoot, string mapId, string? modId)
+        {
+            MapConfig mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+            if (!NavAssetPaths.IsBoardScoped(mapConfig.Boards.Select(b => b?.NavTileGrid != null).ToList()))
+            {
+                return null;
+            }
+
+            return ToolMapConfigResolver.ResolvePrimaryNavigationBoard(mapConfig).Name;
+        }
+
+        static void WriteNavBakeResultToRepository(
+            string repoRoot,
+            string mapId,
+            string? artifactBoardId,
+            NavBakeResult result,
+            bool writeArtifact,
+            string logPrefix)
         {
             if (result.FailureCount > 0)
             {
@@ -1422,7 +1444,7 @@ namespace {modId}
                     continue;
                 }
 
-                string rel = NavAssetPaths.GetNavTileRelativePath(mapId, entry.Layer, entry.ProfileId, entry.Target.ChunkX, entry.Target.ChunkY);
+                string rel = NavAssetPaths.GetNavTileRelativePath(mapId, artifactBoardId, entry.Layer, entry.ProfileId, entry.Target.ChunkX, entry.Target.ChunkY);
                 string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
                 Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
                 using (var fs = File.Create(outFile))

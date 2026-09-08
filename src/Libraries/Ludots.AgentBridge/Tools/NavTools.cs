@@ -62,7 +62,7 @@ namespace Ludots.AgentBridge.Tools
             int layer = AgentToolContext.OptionalInt(args, "layer", 0);
             int profile = AgentToolContext.OptionalInt(args, "profile", 0);
             var registry = context.RequireService(CoreServiceKeys.NavQueryServices);
-            if (!registry.TryCreateQuery(layer, profile, null!, out NavQueryService service))
+            if (!registry.TryCreatePrimaryQuery(layer, profile, null!, out NavQueryService service))
             {
                 throw new AgentToolException(
                     AgentBridgeErrorCodes.ServiceUnavailable,

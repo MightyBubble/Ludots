@@ -4094,15 +4094,21 @@ namespace Ludots.Core.Engine
             // each board owns its own tile geometry, stores and identity. A single-board
             // map keeps the legacy un-scoped key so existing baked artifacts stay loadable,
             // but it still carries its real declared origin, tile extents and tile range.
-            // A board participates in nav addressing exactly when it declares an explicit
-            // NavTileGrid, matching the historical contract that every board of a navmesh
-            // map authors its grid. Multi-board maps additionally use those grids as board
-            // identity, so one board can no longer overwrite another's tiles.
+            // A board participates in nav addressing when it is navigation-enabled and declares
+            // an explicit NavTileGrid, matching ToolMapConfigResolver.ResolvePrimaryNavigationBoard.
+            // Multi-board maps use those grids as board identity, so one board can no longer
+            // overwrite another's tiles.
             var navigableBoards = mapConfig.Boards
-                .Where((b, index) => tileGrids[index] != null)
+                .Where((b, index) => tileGrids[index] != null && b.NavigationEnabled)
                 .ToList();
+            if (navigableBoards.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' enables navmesh but declares no navigation-enabled board with a NavTileGrid.");
+            }
 
-            bool boardScopedAddressing = navigableBoards.Count > 1;
+            bool boardScopedAddressing = NavAssetPaths.IsBoardScoped(
+                navigableBoards.Select(b => b.NavTileGrid != null).ToList());
             var boardGeometry = new Dictionary<string, NavBoardTileGeometry>(navigableBoards.Count, StringComparer.Ordinal);
 
             foreach (BoardConfig board in navigableBoards)
@@ -4450,7 +4456,7 @@ namespace Ludots.Core.Engine
 
             AgentProfileConfig agentProfile = agentProfiles.Require(agent.ProfileId, $"PathingConfig default agent '{agent.Id}'");
             var areaCosts = BuildPathNavAreaCosts(agent.NavMesh);
-            if (!navRegistry.TryCreateQuery(agentProfile.Layer, profileIndex, areaCosts, out var query))
+            if (!navRegistry.TryCreatePrimaryQuery(agentProfile.Layer, profileIndex, areaCosts, out var query))
             {
                 throw new InvalidOperationException(
                     $"PathingConfig default agent '{agent.Id}' cannot create navmesh query for layer {agentProfile.Layer}, profile '{agent.ProfileId}'.");

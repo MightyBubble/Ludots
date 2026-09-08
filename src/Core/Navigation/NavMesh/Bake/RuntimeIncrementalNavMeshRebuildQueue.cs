@@ -307,7 +307,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                             $"Runtime navmesh rebuild produced profile '{entry.ProfileId}' that is not registered.");
                     }
 
-                    if (!_queryServices.TryGetStore(entry.Layer, profileIndex, out NavTileStore store))
+                    if (!_queryServices.TryGetPrimaryStore(entry.Layer, profileIndex, out NavTileStore store))
                     {
                         throw new InvalidOperationException(
                             $"Runtime navmesh rebuild cannot publish layer {entry.Layer}, profile '{entry.ProfileId}' because no NavTileStore is registered.");

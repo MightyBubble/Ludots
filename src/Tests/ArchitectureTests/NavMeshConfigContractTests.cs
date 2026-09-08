@@ -379,6 +379,7 @@ namespace Ludots.Tests.Architecture
                         new BoardConfig
                         {
                             Name = "default",
+                            NavigationEnabled = true,
                             // The declared grid must match the tile geometry written by
                             // WriteAllChunkTileFiles: 64-cell chunks at 250 cm per cell.
                             NavTileGrid = new NavTileGridConfig

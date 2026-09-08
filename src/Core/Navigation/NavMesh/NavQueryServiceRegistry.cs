@@ -151,6 +151,23 @@ namespace Ludots.Core.Navigation.NavMesh
                 $"Nav query registry has no tile geometry for board '{boardId}'. Author the board's NavTileGrid and bake it before querying.");
         }
 
+        /// <summary>
+        /// Board used for requests that carry no explicit board identity, mirroring
+        /// ToolMapConfigResolver.ResolvePrimaryNavigationBoard: the board named "default",
+        /// otherwise the first registered board. Returns null for a single-board registry,
+        /// where addressing is already unambiguous.
+        /// </summary>
+        public string? PrimaryBoardId
+        {
+            get
+            {
+                if (_usesSingleBoardGeometry) return null;
+                if (_boardGeometry.ContainsKey("default")) return "default";
+                foreach (string boardId in _boardGeometry.Keys) return boardId;
+                return null;
+            }
+        }
+
         public bool TryGetStore(int layer, int profile, out NavTileStore store)
         {
             if (!_usesSingleBoardGeometry)
@@ -169,6 +186,22 @@ namespace Ludots.Core.Navigation.NavMesh
             return _usesSingleBoardGeometry && TryGetStore(layer, profile, out store);
         }
 
+        /// <summary>
+        /// Store for a caller that speaks no board identity (presentation overlay, runtime
+        /// rebuild publication). Resolves the primary board on a board-scoped registry rather
+        /// than picking an arbitrary one.
+        /// </summary>
+        public bool TryGetPrimaryStore(int layer, int profile, out NavTileStore store)
+        {
+            string boardId = _usesSingleBoardGeometry ? string.Empty : PrimaryBoardId ?? string.Empty;
+            if (boardId.Length != 0 || _usesSingleBoardGeometry)
+            {
+                return TryGetStore(boardId, layer, profile, out store);
+            }
+
+            throw new InvalidOperationException("Nav query registry has no board to resolve a primary store for.");
+        }
+
         public bool TryCreateQuery(int layer, int profile, NavAreaCostTable areaCosts, out NavQueryService service)
         {
             if (!_usesSingleBoardGeometry)
@@ -179,6 +212,18 @@ namespace Ludots.Core.Navigation.NavMesh
             }
 
             return TryCreateQuery(string.Empty, layer, profile, areaCosts, out service);
+        }
+
+        /// <summary>
+        /// Creates a query for a caller that speaks no board identity (agents, Agent Bridge
+        /// probes, presentation). On a board-scoped registry this resolves the primary board
+        /// instead of guessing an arbitrary one, and fails closed when that board has no store.
+        /// </summary>
+        public bool TryCreatePrimaryQuery(int layer, int profile, NavAreaCostTable areaCosts, out NavQueryService service)
+        {
+            string boardId = _usesSingleBoardGeometry ? string.Empty : PrimaryBoardId ?? string.Empty;
+            if (boardId.Length == 0) throw new InvalidOperationException("Nav query registry has no board to resolve a primary query for.");
+            return TryCreateQuery(boardId, layer, profile, areaCosts, out service);
         }
 
         public bool TryCreateQuery(string boardId, int layer, int profile, NavAreaCostTable areaCosts, out NavQueryService service)
