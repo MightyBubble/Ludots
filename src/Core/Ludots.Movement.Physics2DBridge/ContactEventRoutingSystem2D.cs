@@ -12,11 +12,21 @@ namespace Ludots.Core.Movement.Physics2DBridge
     {
         private readonly ContactEventQueue2D _queue;
         private readonly ContactEventRouter2D _router;
+        private readonly ContactEmissionTap? _emissionTap;
 
         public ContactEventRoutingSystem2D(ContactEventQueue2D queue, ContactEventRouter2D router)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
             _router = router ?? throw new ArgumentNullException(nameof(router));
+        }
+
+        public ContactEventRoutingSystem2D(
+            ContactEventQueue2D queue,
+            ContactEventRouter2D router,
+            ContactEmissionTap emissionTap)
+            : this(queue, router)
+        {
+            _emissionTap = emissionTap ?? throw new ArgumentNullException(nameof(emissionTap));
         }
 
         public void Initialize()
@@ -29,7 +39,9 @@ namespace Ludots.Core.Movement.Physics2DBridge
 
         public void Update(in float deltaTime)
         {
-            _router.Dispatch(_queue.DrainEvents());
+            ReadOnlySpan<ContactEvent2D> events = _queue.DrainEvents();
+            _router.Dispatch(events);
+            _emissionTap?.Process(events);
         }
 
         public void AfterUpdate(in float deltaTime)
