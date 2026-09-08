@@ -81,6 +81,8 @@ namespace Ludots.Core.Config
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
 
+        public int TriggerGraphExecutionCapacity { get; set; }
+
         public GasRuntimeCapacityConfig GasRuntimeCapacity { get; set; } = null!;
 
         public int GridCellSizeCm { get; set; } = 100;

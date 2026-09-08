@@ -36,7 +36,12 @@ public sealed class GraphDebugToolTests
         var tool = new GraphDebugTool();
         var context = new AgentToolContext(engine);
 
-        JsonObject disabled = FindMount(Execute(tool, context, "list"));
+        JsonObject listed = Execute(tool, context, "list");
+        var slots = engine.GetService(CoreServiceKeys.TriggerGraphExecutionSlots);
+        Assert.That((int)listed["executionSlots"]!["capacity"]!, Is.EqualTo(slots.Capacity));
+        Assert.That((int)listed["executionSlots"]!["inUseCount"]!, Is.EqualTo(slots.InUseCount));
+        Assert.That((int)listed["executionSlots"]!["highWaterMark"]!, Is.EqualTo(slots.HighWaterMark));
+        JsonObject disabled = FindMount(listed);
         AssertMount(disabled, GraphDebugTraceMode.Disabled, allocatedCapacity: 0);
 
         JsonObject enabled = Configure(tool, context, "node");

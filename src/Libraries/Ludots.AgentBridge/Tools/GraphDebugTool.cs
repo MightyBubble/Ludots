@@ -75,7 +75,19 @@ namespace Ludots.AgentBridge.Tools
                 entries.Add(MountSnapshot(mounts[i], programs));
             }
 
-            return new JsonObject { ["mounts"] = entries, ["count"] = mounts.Count };
+            TriggerGraphExecutionSlotStore slots = context.Engine.GetService(CoreServiceKeys.TriggerGraphExecutionSlots)
+                ?? throw new AgentToolException(AgentBridgeErrorCodes.ServiceUnavailable, "TriggerGraph execution slots are unavailable.");
+            return new JsonObject
+            {
+                ["mounts"] = entries,
+                ["count"] = mounts.Count,
+                ["executionSlots"] = new JsonObject
+                {
+                    ["capacity"] = slots.Capacity,
+                    ["inUseCount"] = slots.InUseCount,
+                    ["highWaterMark"] = slots.HighWaterMark,
+                },
+            };
         }
 
         private static JsonObject Configure(JsonObject? args, IReadOnlyList<TriggerGraphMountTrigger> mounts, AgentToolContext context)

@@ -8,6 +8,7 @@
   "targetFps": 0,
   "simulationBudgetMsPerFrame": 4,
   "simulationMaxSlicesPerLogicFrame": 120,
+  "triggerGraphExecutionCapacity": 1024,
   "gasRuntimeCapacity": {
     "abilityExecSnapshotCapacity": 16384,
     "effectLifetimeSnapshotCapacity": 16384,

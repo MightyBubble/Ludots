@@ -186,6 +186,8 @@ namespace Ludots.Core.Scripting
         public void RegisterMapTriggers(MapId mapId, IReadOnlyList<Trigger> triggers)
         {
             if (triggers == null || triggers.Count == 0) return;
+            if (_mapTriggers.TryGetValue(mapId, out List<Trigger>? previous) && previous.Count > 0)
+                RemoveMapTriggers(mapId, previous.ToArray());
 
             var list = new List<Trigger>(triggers.Count);
             _mapTriggers[mapId] = list;
@@ -566,6 +568,7 @@ namespace Ludots.Core.Scripting
             for (int i = 0; i < owned.Count; i++)
             {
                 RemoveGlobalEventTrigger(owned[i]);
+                if (owned[i] is TriggerGraphMountTrigger mount) mount.Unregister();
             }
 
             _mapGlobalTriggers.Remove(mapId);
@@ -1139,6 +1142,7 @@ private async Task ObserveTriggerExecutionAsync(Trigger trigger, EventKey eventK
         public void UnregisterTrigger(Trigger trigger)
         {
              if (trigger == null) return;
+             if (trigger is TriggerGraphMountTrigger mount) mount.Unregister();
              if (!string.IsNullOrEmpty(trigger.EventKey.Value) && _triggers.TryGetValue(trigger.EventKey, out var list))
              {
                  list.Remove(trigger);
