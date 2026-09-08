@@ -86,6 +86,8 @@ Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 St
 
 Live debug 记录实际执行节点归因、Yield/预算挂起、Halt、游标、引脚和黑板变化；嵌套 `InvokeScript` 继承固定容量 trace 并携带子图 id。编辑器侧按 Flow Canvas 方式点亮节点/控制边并贴 pin 芯片，`drain` 事件带 `controlPort`；当前不伪造 `NodeExit` 生命周期事件。黑板 buffer 缺失仍在运行时明确失败；实体能力在 authoring 阶段的声明和编译校验仍是下一条合同切片，不能把运行时隐式安装路径写成已完成。
 
+Epic #1464 的 A1 已完成第一段：关闭 trace 时，挂载点只保留容量上限，不再预分配 2048 条记录区；打开 `Node` / `NodeAndPins` 才分配，关闭后释放并清掉旧序号和丢弃数。`ludots.graph.debug` 同时返回 `capacity` 和 `allocatedCapacity`，编辑器能分清“允许记录多少”和“现在实际占了多少”。夜袭真机中 9 个关闭的挂载点均为 `allocatedCapacity=0`；只打开 `on_kill_tool` 后为 2048，触发事件读到 18 条记录，关闭后回到 0 且旧记录不可再读。验收见 `artifacts/acceptance/triggergraph-trace-memory/`。这段尚不代表 execution slots 已完成 SoA，也不代表完整的万人 TriggerGraph 挂载压测已经通过。
+
 底栏用人话讲这一趟，数据是 mod 自己的：`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graph_editor.json` 的 `annotations`（节点分组每图声明一次 + 按入口写抬头），Bridge 读写都对着 `graphs.json` 核对分组节点与入口标签，改名失败关闭并点名。底栏按执行到达顺序列出走过的每一组，和画布热度同一个 TTL 一起冷掉。编辑器源码里不得出现具体图 / mod / 节点 id，`ReactEditor_MustNotNameShowcaseGraphsOrMods` 扫全前端目录守这条。入口起因是「等事件」或「等输入动作」的单选，运行时 `event` / `action` 恰有其一；动作 id 从 `/api/graph/input-actions/{modId}` 合并目录下拉，保存路径跑 `RequireTriggerGraphEntryShape`。编辑器前端已进 CI（`graph-editor-frontend`：tsc + 图编辑器目录 lint + 断言脚本）。
 
 trace 记录只有序号和步数，没有时间或帧号：一拍跑完的链是齐亮齐灭，不是逐步流动。要真做流动，先给记录补时间或帧号，别在文档里先许诺。
@@ -136,7 +138,6 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 | 外层 L2 拓扑 SSOT 恢复（AI JSON + 拓扑编辑器） | **已落地** | 见 [BT/FSM 独立编辑器](graph-bt-fsm-nested-func.md)；糖宿主仅回归 |
 
 | trace 记录没有时间 / 帧号 | **合同缺口** | 想要真的逐步流动就给 `GraphDebugTraceRecord` 补时间源；在那之前只许说齐亮齐灭 |
-| `GraphDebugTool` 无自动化测试 | 债 | 编辑器和游戏之间唯一通道；`GraphDebugTraceTests` 只测环形缓冲 |
 | 编辑器前端 lint 只门到图编辑器目录 | 债 | `StoryAuthoringPage.tsx`（10 处 `no-explicit-any`）与 `ui-panel-authoring/model.ts`（1 处未用变量）先欠着，清完再放宽 `graph-editor-frontend` 的 lint 范围 |
 | `npm run check` 末步 `validate-panel-templates` 本来就挂 | 债（非本轮） | 报 `Unsupported schema 'ludots.ui.panel_template'`，main 上同样挂；`graph-editor-frontend` 不跑这步，属面板线 |
 | `TriggerGraphRenameMigrationTests` 误伤合法 payloadKey | 债（非本轮） | 夜袭 `graphs.json` 的 `MapTrigger.PointerScreenX/Y`（随 #1398 入口直绑 action 落地）被「不得出现退役方言名」的子串检查判红；该守卫要改成只查 `kind` / `mount` 字段而不是裸子串 |

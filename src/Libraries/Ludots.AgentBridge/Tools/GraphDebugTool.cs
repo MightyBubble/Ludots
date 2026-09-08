@@ -174,6 +174,7 @@ namespace Ludots.AgentBridge.Tools
                 ["executionBackend"] = executionBackend,
                 ["mode"] = mount.DebugTrace.Mode.ToString(),
                 ["capacity"] = mount.DebugTrace.Capacity,
+                ["allocatedCapacity"] = mount.DebugTrace.AllocatedCapacity,
                 ["latestSequence"] = mount.DebugTrace.LatestSequence,
                 ["droppedCount"] = mount.DebugTrace.DroppedCount,
                 ["cursor"] = new JsonObject

@@ -1,0 +1,12 @@
+{"step":"health-before","mapId":"night_raid","pid":72544,"port":47931,"pumpCount":2084,"ok":true}
+{"step":"session","mapId":"night_raid","tick":895,"mods":["LudotsCoreMod","CoreInputMod","MapTriggerNightRaidMod","NightRaidShowcaseMod","AgentBridgeMod"],"toolCount":38}
+{"step":"list-disabled","mountCount":9,"graphName":"Graph.NightRaid.Flow","allCapacity":2048,"allAllocatedCapacity":0,"executionBackend":"Codegen"}
+{"step":"showcase","mapId":"night_raid","stage":2,"heroEntityId":6,"visibleRaiders":3,"screenshot":"night-raid-live.png"}
+{"step":"health-after-observe","mapId":"night_raid","pumpCount":3931,"ok":true}
+{"step":"configure-on","graphName":"Graph.NightRaid.Flow","entryLabel":"on_kill_tool","mode":"NodeAndPins","capacity":2048,"allocatedCapacity":2048,"latestSequence":0}
+{"step":"fire","event":"NightRaid.KillTool.Used","fired":true,"triggerErrors":0}
+{"step":"drain","graphName":"Graph.NightRaid.Flow","entryLabel":"on_kill_tool","eventCount":18,"oldestSequence":1,"latestSequence":18,"droppedCount":0,"gap":false,"first":{"nodeId":"kt_scope","op":"LoadExplicitTarget"},"last":{"nodeId":"kt_done","event":"PinEntity","value":6}}
+{"step":"configure-off","graphName":"Graph.NightRaid.Flow","entryLabel":"on_kill_tool","mode":"Disabled","capacity":2048,"allocatedCapacity":0,"latestSequence":0,"droppedCount":0}
+{"step":"drain-after-off","eventCount":0,"events":[],"oldestSequence":1,"latestSequence":0,"droppedCount":0,"gap":false}
+{"step":"health-final","mapId":"night_raid","pumpCount":15259,"ok":true}
+{"step":"tests","filter":"GraphDebugTraceTests|GraphDebugToolTests","passed":5,"failed":0,"skipped":0}
