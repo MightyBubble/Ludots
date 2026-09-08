@@ -4090,40 +4090,88 @@ namespace Ludots.Core.Engine
             int widthChunks = tileGrids.Max(g => g!.WidthChunks);
             int heightChunks = tileGrids.Max(g => g!.HeightChunks);
 
+            // Board-scoped addressing: when a map declares more than one navigable board,
+            // each board owns its own tile geometry, stores and identity. A single-board
+            // map keeps the legacy un-scoped key so existing baked artifacts stay loadable.
+            var navigableBoards = mapConfig.Boards
+                .Where((b, index) => tileGrids[index] != null && b.NavigationEnabled)
+                .ToList();
+            bool boardScopedAddressing = navigableBoards.Count > 1;
+            var boardGeometry = new Dictionary<string, NavBoardTileGeometry>(navigableBoards.Count, StringComparer.Ordinal);
+
+            if (boardScopedAddressing)
+            {
+                foreach (BoardConfig board in navigableBoards)
+                {
+                    if (string.IsNullOrWhiteSpace(board.Name))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{mapId}' declares multiple navigable boards; every navigable board must have a name for nav addressing.");
+                    }
+
+                    if (boardGeometry.ContainsKey(board.Name))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{mapId}' declares duplicate navigable board name '{board.Name}'; nav addressing keys must be unique.");
+                    }
+
+                    NavTileGridConfig grid = board.NavTileGrid!;
+                    boardGeometry[board.Name] = new NavBoardTileGeometry(
+                        grid.ChunkWidthCm,
+                        grid.ChunkHeightCm,
+                        grid.OriginXcm,
+                        grid.OriginZcm,
+                        grid.WidthChunks,
+                        grid.HeightChunks);
+                }
+            }
+
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
                 int layer = bakeConfig.Layers[li].Layer;
                 for (int pi = 0; pi < profileRegistry.Count; pi++)
                 {
                     int profileIndex = pi;
-                    var uriCache = new Dictionary<NavTileId, string>(256);
-
-                    string ResolveTileUri(NavTileId id)
+                    foreach (BoardConfig? board in boardScopedAddressing
+                        ? navigableBoards.Cast<BoardConfig?>()
+                        : new BoardConfig?[] { null })
                     {
-                        if (id.Layer != layer) throw new InvalidOperationException($"NavTileId.Layer mismatch. Expected={layer}, actual={id.Layer}.");
-                        if (uriCache.TryGetValue(id, out var cached)) return cached;
-                        string profileId = profileRegistry.GetId(profileIndex);
-                        string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, id.ChunkX, id.ChunkY);
-                        string uri = ResolveSingleExistingUri(rel);
-                        uriCache[id] = uri;
-                        return uri;
-                    }
+                        string boardId = board?.Name ?? string.Empty;
+                        string? boardMapId = board == null ? null : mapId + "/" + board.Name;
+                        var uriCache = new Dictionary<NavTileId, string>(256);
 
-                    for (int cy = 0; cy < heightChunks; cy++)
-                    {
-                        for (int cx = 0; cx < widthChunks; cx++)
+                        string ResolveTileUri(NavTileId id)
                         {
-                            _ = ResolveTileUri(new NavTileId(cx, cy, layer));
+                            if (id.Layer != layer) throw new InvalidOperationException($"NavTileId.Layer mismatch. Expected={layer}, actual={id.Layer}.");
+                            if (uriCache.TryGetValue(id, out var cached)) return cached;
+                            string profileId = profileRegistry.GetId(profileIndex);
+                            string rel = boardMapId == null
+                                ? NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, id.ChunkX, id.ChunkY)
+                                : NavAssetPaths.GetNavTileRelativePath(boardMapId, layer, profileId, id.ChunkX, id.ChunkY);
+                            string uri = ResolveSingleExistingUri(rel);
+                            uriCache[id] = uri;
+                            return uri;
                         }
-                    }
 
-                    var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)));
-                    stores[new NavQueryServiceKey(layer, profileIndex)] = store;
+                        int boardWidthChunks = board?.NavTileGrid?.WidthChunks ?? widthChunks;
+                        int boardHeightChunks = board?.NavTileGrid?.HeightChunks ?? heightChunks;
+                        for (int cy = 0; cy < boardHeightChunks; cy++)
+                        {
+                            for (int cx = 0; cx < boardWidthChunks; cx++)
+                            {
+                                _ = ResolveTileUri(new NavTileId(cx, cy, layer));
+                            }
+                        }
+
+                        var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)));
+                        stores[new NavQueryServiceKey(boardId, layer, profileIndex)] = store;
+                    }
                 }
             }
 
-            var chunkWidthCm = tileGrids.Max(g => g!.ChunkWidthCm);
-            var navRegistry = new NavQueryServiceRegistry(stores, chunkWidthCm, chunkWidthCm);
+            int chunkWidthCm = tileGrids.Max(g => g!.ChunkWidthCm);
+            int chunkHeightCm = tileGrids.Max(g => g!.ChunkHeightCm);
+            var navRegistry = new NavQueryServiceRegistry(stores, boardGeometry, chunkWidthCm, chunkHeightCm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {

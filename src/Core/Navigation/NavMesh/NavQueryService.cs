@@ -54,30 +54,88 @@ namespace Ludots.Core.Navigation.NavMesh
         private readonly NavAreaCostTable _areaCosts;
         private readonly Fix64 _tileWidthCm;
         private readonly Fix64 _tileHeightCm;
+        private readonly int _originXcm;
+        private readonly int _originZcm;
+        private readonly int _widthChunks;
+        private readonly int _heightChunks;
 
         public NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, int tileWidthCm, int tileHeightCm)
+            : this(store, layer, areaCosts, tileWidthCm, tileHeightCm, 0, 0)
+        {
+        }
+
+        public NavQueryService(
+            NavTileStore store,
+            int layer,
+            NavAreaCostTable areaCosts,
+            int tileWidthCm,
+            int tileHeightCm,
+            int originXcm,
+            int originZcm)
             : this(
                 store,
                 layer,
                 areaCosts,
                 Fix64.FromInt(RequirePositive(tileWidthCm, nameof(tileWidthCm))),
-                Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))))
+                Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))),
+                originXcm,
+                originZcm,
+                0,
+                0)
         {
         }
 
-        private NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, Fix64 tileWidthCm, Fix64 tileHeightCm)
+        public NavQueryService(
+            NavTileStore store,
+            int layer,
+            NavAreaCostTable areaCosts,
+            NavBoardTileGeometry geometry)
+            : this(
+                store,
+                layer,
+                areaCosts,
+                Fix64.FromInt(geometry.TileWidthCm),
+                Fix64.FromInt(geometry.TileHeightCm),
+                geometry.OriginXcm,
+                geometry.OriginZcm,
+                geometry.WidthChunks,
+                geometry.HeightChunks)
+        {
+        }
+
+        private NavQueryService(
+            NavTileStore store,
+            int layer,
+            NavAreaCostTable areaCosts,
+            Fix64 tileWidthCm,
+            Fix64 tileHeightCm,
+            int originXcm,
+            int originZcm,
+            int widthChunks,
+            int heightChunks)
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _layer = layer;
             _areaCosts = areaCosts ?? NavAreaCostTable.CreateDefault();
             _tileWidthCm = tileWidthCm;
             _tileHeightCm = tileHeightCm;
+            _originXcm = originXcm;
+            _originZcm = originZcm;
+            _widthChunks = widthChunks;
+            _heightChunks = heightChunks;
         }
+
+        public int OriginXcm => _originXcm;
+
+        public int OriginZcm => _originZcm;
+
+        private bool HasDeclaredExtent => _widthChunks > 0 && _heightChunks > 0;
 
         public bool TryProject(int worldXcm, int worldZcm, out NavLocation loc)
         {
             loc = default;
             var tileId = LocateTile(worldXcm, worldZcm);
+            if (!IsInsideBoardExtent(tileId)) return false;
             NavTile tile;
             try
             {
@@ -88,12 +146,12 @@ namespace Ludots.Core.Navigation.NavMesh
                 return false;
             }
 
-            int localXcm = worldXcm - tile.OriginXcm;
-            int localZcm = worldZcm - tile.OriginZcm;
-            int triId = FindNearestTriangle(tile, localXcm, localZcm);
+            int boardLocalXcm = worldXcm - _originXcm - tile.OriginXcm;
+            int boardLocalZcm = worldZcm - _originZcm - tile.OriginZcm;
+            int triId = FindNearestTriangle(tile, boardLocalXcm, boardLocalZcm);
             if (triId < 0) return false;
 
-            loc = new NavLocation(tile.TileId, tile.TileVersion, triId, localXcm, localZcm);
+            loc = new NavLocation(tile.TileId, tile.TileVersion, triId, boardLocalXcm, boardLocalZcm);
             return true;
         }
 
@@ -114,8 +172,15 @@ namespace Ludots.Core.Navigation.NavMesh
         {
             try
             {
-                _store.GetOrLoad(LocateTile(startXcm, startZcm));
-                _store.GetOrLoad(LocateTile(goalXcm, goalZcm));
+                NavTileId startTile = LocateTile(startXcm, startZcm);
+                NavTileId goalTile = LocateTile(goalXcm, goalZcm);
+                if (!IsInsideBoardExtent(startTile) || !IsInsideBoardExtent(goalTile))
+                {
+                    return new NavPathResult(NavPathStatus.InvalidInput, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
+                }
+
+                _store.GetOrLoad(startTile);
+                _store.GetOrLoad(goalTile);
 
                 return DetourNavQueryEngine.FindPath(
                     _store.SnapshotLoadedTiles(),
@@ -141,17 +206,23 @@ namespace Ludots.Core.Navigation.NavMesh
 
         private NavTileId LocateTile(int worldXcm, int worldZcm)
         {
-            var xFix = Fix64.FromInt(worldXcm);
-            var zFix = Fix64.FromInt(worldZcm);
+            int boardLocalXcm = worldXcm - _originXcm;
+            int boardLocalZcm = worldZcm - _originZcm;
+            var xFix = Fix64.FromInt(boardLocalXcm);
+            var zFix = Fix64.FromInt(boardLocalZcm);
             int cx = (xFix / _tileWidthCm).ToInt();
             int cz = (zFix / _tileHeightCm).ToInt();
 
             if (xFix < Fix64.Zero && xFix % _tileWidthCm != Fix64.Zero) cx--;
             if (zFix < Fix64.Zero && zFix % _tileHeightCm != Fix64.Zero) cz--;
-            if (cx < 0) cx = 0;
-            if (cz < 0) cz = 0;
 
             return new NavTileId(cx, cz, _layer);
+        }
+
+        private bool IsInsideBoardExtent(NavTileId id)
+        {
+            if (!HasDeclaredExtent) return true;
+            return id.ChunkX >= 0 && id.ChunkX < _widthChunks && id.ChunkY >= 0 && id.ChunkY < _heightChunks;
         }
 
         private static int RequirePositive(int value, string name)
