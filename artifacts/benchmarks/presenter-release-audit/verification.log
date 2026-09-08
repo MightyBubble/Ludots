@@ -1,0 +1,151 @@
+C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+VSTest 版本 17.14.1 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in C:\001_AI\wt-presenter-release-audit-20260908\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll
+   NUnit3TestExecutor discovered 69 of 69 NUnit test cases using Current Discovery mode, Non-Explicit run
+  已通过 AssetBinding_GroundOverlay_EmitsGroundOverlayRequest [168 ms]
+  已通过 AssetBinding_GroundOverlay_RejectsUnknownShapeId [15 ms]
+  已通过 AssetBinding_Sound_EmitsSoundRequest [5 ms]
+  已通过 AssetBinding_Spline_EmitsSplineRibbonRequest [34 ms]
+  已通过 AssetBinding_Surface_EmitsVisualProxyWithSurfaceRoutingAndCustomData [16 ms]
+  已通过 AssetBinding_VisualKinds_EmitVisualProxy(Mesh,1001,2001,StaticMesh) [11 ms]
+  已通过 AssetBinding_VisualKinds_EmitVisualProxy(SkinnedMesh,1002,2002,SkinnedMesh) [1 ms]
+  已通过 AssetBinding_VisualKinds_EmitVisualProxy(Decal,1003,2003,StaticMesh) [< 1 ms]
+  已通过 AssetBinding_VisualKinds_EmitVisualProxy(VFX,1004,2004,StaticMesh) [< 1 ms]
+  已通过 AssetBinding_WorldHud_EmitsHudBarRequest [43 ms]
+  已通过 AssetBinding_WorldText_EmitsHudTextRequest [5 ms]
+  已通过 AssetKindContract_ArchitectureExposesNineKinds [1 ms]
+  已通过 AssetKindContract_ArchitecturePreservesExplicitEnumValues [< 1 ms]
+  已通过 AttributeBindingThreshold_PropagatesAssetSwapParamToAffectedStaticVisualChildren [104 ms]
+  已通过 ChildVisual_UsesGameplayOwnerIdentity_NotRootOrChildPerformerIdentity [8 ms]
+  已通过 MaterialBinding_SourceParamChange_RecomputesMaterialBeforeStaticEmit [28 ms]
+  已通过 MovableInstancedMesh_RemainsTransientAndReemitsMovedPosition [14 ms]
+  已通过 PresenterVisualStableIdTable_AllocatesDistinctHandles_ForLegacyHashCollision [1 ms]
+  已通过 RetainedPresentationRequest_StaticSubtype_EmitsOnlyWhenDirty(Spline,SplineRibbon) [5 ms]
+  已通过 RetainedPresentationRequest_StaticSubtype_EmitsOnlyWhenDirty(WorldHud,WorldHud) [9 ms]
+  已通过 RetainedPresentationRequest_StaticSubtype_EmitsOnlyWhenDirty(WorldText,WorldHud) [1 ms]
+  已通过 RetainedPresentationRequest_StaticSubtype_EmitsOnlyWhenDirty(GroundOverlay,GroundOverlay) [7 ms]
+  已通过 RetainedPresentationRequest_StaticSubtype_RemovesExplicitlyWhenOwnerDies(WorldHud,RemoveWorldHud) [16 ms]
+  已通过 RetainedPresentationRequest_StaticSubtype_RemovesExplicitlyWhenOwnerDies(WorldText,RemoveWorldHud) [1 ms]
+  已通过 RetainedPresentationRequest_StaticSubtype_RemovesExplicitlyWhenOwnerDies(Spline,RemoveSplineRibbon) [4 ms]
+  已通过 RetainedPresentationRequest_StaticSubtype_RemovesExplicitlyWhenOwnerDies(GroundOverlay,RemoveGroundOverlay) [9 ms]
+  已通过 RuntimeDestroy_RetainedPresentationSubtype_QueuesAdapterRemovalInProductionOrder(WorldHud,RemoveWorldHud) [7 ms]
+  已通过 RuntimeDestroy_RetainedPresentationSubtype_QueuesAdapterRemovalInProductionOrder(WorldText,RemoveWorldHud) [3 ms]
+  已通过 RuntimeDestroy_RetainedPresentationSubtype_QueuesAdapterRemovalInProductionOrder(Spline,RemoveSplineRibbon) [1 ms]
+  已通过 RuntimeDestroy_RetainedPresentationSubtype_QueuesAdapterRemovalInProductionOrder(GroundOverlay,RemoveGroundOverlay) [2 ms]
+  已通过 RuntimeDestroy_SurfaceSource_QueuesRemovalInProductionOrder [13 ms]
+  已通过 SetParam_PropagatesOnlyToAffectedStaticVisualChildren [3 ms]
+  已通过 SkinnedMesh_WithAnimator_RemainsDynamicAndCarriesUpdatedOverlay [6 ms]
+  已通过 StaticStableVisual_CacheableSubtype_EmitsOnlyWhenDirty_AndRemovesWhenDeactivated(Mesh) [13 ms]
+  已通过 StaticStableVisual_CacheableSubtype_EmitsOnlyWhenDirty_AndRemovesWhenDeactivated(SkinnedMesh) [1 ms]
+  已通过 StaticStableVisual_CacheableSubtype_EmitsOnlyWhenDirty_AndRemovesWhenDeactivated(Decal) [1 ms]
+members,phase,elapsed_ms,allocated_bytes,presenters,visual_keys,visible
+5000,preview_first,26.080000,8207368,15000,15000,15000
+5000,commit_first,25.412300,9952048,20000,20000,15000
+5000,clear_first,3.503000,0,20000,20000,10000
+5000,preview_repeat_0,7.145400,0,20000,20000,15000
+5000,commit_repeat_0,7.457300,0,20000,20000,15000
+5000,clear_repeat_0,3.549300,0,20000,20000,10000
+5000,preview_repeat_1,3.546900,0,20000,20000,15000
+5000,commit_repeat_1,6.974000,0,20000,20000,15000
+5000,clear_repeat_1,3.283800,0,20000,20000,10000
+5000,preview_repeat_2,3.609400,0,20000,20000,15000
+5000,commit_repeat_2,6.900100,0,20000,20000,15000
+5000,clear_repeat_2,3.093400,0,20000,20000,10000
+5000,preview_repeat_3,3.770700,0,20000,20000,15000
+5000,commit_repeat_3,7.153200,0,20000,20000,15000
+5000,clear_repeat_3,2.792300,0,20000,20000,10000
+
+
+members,phase,elapsed_ms,allocated_bytes,presenters,visual_keys,visible
+10000,preview_first,32.332600,20047664,20000,20000,20000
+10000,commit_first,47.252700,15404984,30000,30000,20000
+10000,clear_first,7.115400,0,30000,30000,10000
+10000,preview_repeat_0,7.582200,0,30000,30000,20000
+10000,commit_repeat_0,15.135700,0,30000,30000,20000
+10000,clear_repeat_0,6.951500,0,30000,30000,10000
+10000,preview_repeat_1,7.453300,0,30000,30000,20000
+10000,commit_repeat_1,15.113500,0,30000,30000,20000
+10000,clear_repeat_1,7.077400,0,30000,30000,10000
+10000,preview_repeat_2,7.846700,0,30000,30000,20000
+10000,commit_repeat_2,15.983800,0,30000,30000,20000
+10000,clear_repeat_2,7.050000,0,30000,30000,10000
+10000,preview_repeat_3,7.853200,0,30000,30000,20000
+10000,commit_repeat_3,17.151700,0,30000,30000,20000
+10000,clear_repeat_3,8.010700,0,30000,30000,10000
+
+
+  已通过 StaticStableVisual_CacheableSubtype_EmitsOnlyWhenDirty_AndRemovesWhenDeactivated(VFX) [10 ms]
+  已通过 StaticStableVisual_MultiSlot_DeactivateAttachmentRemovesOnlyThatCacheEntry [4 ms]
+  已通过 StaticStableVisual_ProductionPath_AllocatesDistinctHandles_WhenLegacyProjectionCollides [7 ms]
+  已通过 SurfaceOnlyDefinition_AttributeBindingUpdatesParamsThroughProductionBehaviorPath [7 ms]
+  已通过 SurfaceSource_RetainedEmitter_EmitsOnlyWhenDirty_AndRemovesExplicitly [10 ms]
+  已通过 TwoIndependentOutputSlots_EmitPerSlotStyleAndMotion [7 ms]
+  已通过 VisualRenderPathContract_ExposesSurfaceLane [< 1 ms]
+  已通过 CollectionVisibility_At10kOwners_ReusesInstancesAndWritesEvidence(5000) [322 ms]
+  已通过 CollectionVisibility_At10kOwners_ReusesInstancesAndWritesEvidence(10000) [251 ms]
+# Presenter duration → Timer/Rule/Destroy 链路验收
+
+## Header
+- scenario: lifecycle.durationSeconds 编译为 TimerSet 计划，唯一销毁链路 TimerSet → TimerExpired → Rule → DestroyPresenter
+- build: local PresentationTests, 真实 JSON 配置管线（PresenterDefinitionConfigLoader）
+- clock: headless fixture, 生产系统序 Timer → Rules → Runtime, dt=0.125s/拍
+- execution timestamp: 2026-09-08T08:04:36.8782367+00:00
+
+## Timeline
+- [T+002] command TimerSet: timer='presenter.duration' duration=0.5s instance=1
+- [T+006] event TimerExpired: timer='presenter.duration' instance=1
+- [T+006] command DestroyPresenter: instance=1
+- [T+006] event PresenterDestroyed: instance=1
+- [T+008] command TimerSet: timer='presenter.duration' duration=5.0s instance=1
+- [T+008] event PresenterDestroyed: instance=1
+- [T+008] action TimerKill: cancel duration timer -> immediate destroy funnel
+- [T+009] command DestroyPresenter: instance=1
+- [T+009] assert chain: TimerSet → TimerExpired → Rule → DestroyPresenter 逐拍成立
+
+## Outcome
+- success/failure decision: success
+- failed assertions: none
+- reason codes: compiled_timerset, rule_destroy_only_entry, timerkill_immediate_destroy, repeat_destroy_idempotent
+
+## Summary Stats
+- TimerExpired events: 1 (unit only; victim cancelled)
+- PresenterDestroyed events: 2
+- final timer table: 0 (no leak)
+
+
+  已通过 DestroyedOwner_ReleasesHiddenAndVisibleMarkers [11 ms]
+  已通过 GlobalRules_HideAndRestoreSameIdentity_WithoutAffectingOtherScopes [6 ms]
+  已通过 SameOwner_DifferentScopes_RetainIndependentVisibility [3 ms]
+  已通过 Acceptance_DurationChain_HappyKillAndRepeatDestroy_WriteArtifacts [41 ms]
+  已通过 AuthoredChain_TimerExpiredRuleToDestroyPresenter [38 ms]
+  已通过 BatchCreate_DurationDefinition_Throws [5 ms]
+  已通过 Chain_DurationPresenter_ExpiresThroughTimerRuleDestroy [19 ms]
+  已通过 Chain_EmitSystemHasNoLifetimeDestroyBranch [4 ms]
+  已通过 Chain_MultipleInstancesSameOwner_ExpireIndependently [14 ms]
+  已通过 Chain_RepeatedDestroyPresenter_IsIdempotent [23 ms]
+  已通过 Chain_TimerKillCancelsDuration_DestroysImmediatelyWithoutExpiry [16 ms]
+  已通过 Chain_TimerKillWildcard_AlsoDestroysDurationPresenter [14 ms]
+  已通过 Chain_TransientInstancesAreExcludedFromScopedReuse [13 ms]
+  已通过 ConfigLoader_AuthoredReservedTimerName_Throws [17 ms]
+  已通过 ConfigLoader_Duration_CompilesToTimerSetAndDestroyRules [18 ms]
+  已通过 ConfigLoader_DurationPresenterAsChild_Throws [15 ms]
+  已通过 ConfigLoader_DurationWithoutRules_StillCompilesChain [12 ms]
+  已通过 ConfigLoader_NonPositiveDuration_Throws(0) [10 ms]
+NUnit Adapter 4.6.0.0: Test execution complete
+  已通过 ConfigLoader_NonPositiveDuration_Throws(-0.5d) [10 ms]
+  已通过 FadeOverLifetime_StillReadsAuthoredDurationFromDefinition [9 ms]
+  已通过 CapacityExhaustion_DoesNotDamageOwnership_AndReleasedCapacityCanBeReused [1 ms]
+  已通过 MixedRemovalsAndReleases_MatchCompleteKeyReference [31 ms]
+  已通过 ReleasePresenter_HandlesWrappedCollisionCluster_AndKeepsOtherIdentities [2 ms]
+  已通过 RepeatedOwnershipRecycling_DoesNotAllocate [1 ms]
+
+测试运行成功。
+测试总数: 69
+     通过数: 69
+总时间: 2.4569 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

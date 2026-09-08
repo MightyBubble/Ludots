@@ -1,0 +1,9 @@
+flowchart LR
+    A[10000 world units] --> B[Preview 5000 or 10000 members]
+    B --> C[Commit: preview hidden, selected visible]
+    C --> D[Clear: only world units visible]
+    D --> E[Repeat four times]
+    E --> F[Same instances and visual identities; zero warmed allocation]
+    G[One owner, two scopes] --> H[Hide each independently]
+    H --> I[Restore original instance]
+    J[Destroy owner through lifecycle rule] --> K[Hidden and visible children released]

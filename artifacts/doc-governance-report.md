@@ -92,3 +92,11 @@ Ruleset: `scripts/validate-docs.ps1`（链接/反引号路径/命名规则）+ `
 - 帧统计表摘自当前验收工件（`engine_gallery_all/*.json` 等），证据重跑后数值会变化；页面已标注工件路径供对账。
 - 侧栏 Playwright 自动化点击在粘性滚动容器内偶发超时（人工路径不受影响；哈希路由 `#scene/<id>` 等价可达，实测正常）。
 - 本次操作事故记录：在他人工作树 `.worktrees/audit-raylib-main` 做 stash 验证时，因多工作树共享 stash 栈弹入了他人 stash 造成冲突残留；已 `git reset --hard` 恢复至该分支干净 HEAD（`a4b594a118`），他人 stash（wip-nr）完好保留。教训：不在共享仓库的他人工作树执行 stash/pop。
+
+### Presenter Release Audit (2026-09-08)
+
+- Scope: `gitbook/architecture/presenter-quickstart.md`, `artifacts/benchmarks/presenter-release-audit/README.md`, `implementation-report.md`, `implementation-plan.md`, linked benchmark sources and acceptance evidence.
+- Rules: ludots-doc-governance, repository AI development rules, shuorenhua.
+- Document findings: P0 0, P1 0, P2 0, P3 0. All scoped links and repository code paths resolve locally; no documentation repair required.
+- This is audit evidence, not a new architecture SSOT. Production findings and remediation order are in the scoped report.
+- Residual limits: CPU measurements exclude game-frame/GPU timing; first-use creation and arbitrary behavior suspension remain outside the delivered visibility configuration. Unrelated documentation was not re-audited.
