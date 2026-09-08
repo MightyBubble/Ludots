@@ -568,6 +568,79 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(harness.Exited[0].Entity, Is.EqualTo(entity));
         }
 
+        [Test]
+        public void FastCrossing_ThroughCircle_FiresEnterExitPairWithoutOccupancy()
+        {
+            using var harness = RegionHarness.Create(
+                VolumeAt(500, 0, """{ "volumeKey": "ring", "shape": "circle", "radiusCm": 50 }"""));
+            Entity mover = harness.SpawnPositioned(0, 0);
+            harness.Tick();
+            Assert.That(harness.Entered.Count, Is.EqualTo(0), "Precondition: outside.");
+
+            harness.SweepTo(mover, 1000, 0);
+            harness.Tick();
+
+            Assert.That(harness.Entered.Count, Is.EqualTo(1),
+                "A travel segment crossing the volume between waves must fire enter even though the mover is outside at sample time.");
+            Assert.That(harness.Entered[0].Entity, Is.EqualTo(mover));
+            Assert.That(harness.Exited.Count, Is.EqualTo(1),
+                "The transient crossing pairs its enter with an exit in the same wave.");
+            Assert.That(harness.Exited[0].Entity, Is.EqualTo(mover));
+
+            harness.SweepTo(mover, 2000, 0);
+            harness.Tick();
+            Assert.That(harness.Entered.Count, Is.EqualTo(1),
+                "A path that never crossed the volume fires nothing further.");
+        }
+
+        [Test]
+        public void FastCrossing_ThroughThinSegment_FiresEnterExitPair()
+        {
+            using var harness = RegionHarness.Create(
+                VolumeAt(0, 0, """{ "volumeKey": "tripwire", "shape": "segment", "ax": -400, "ay": 0, "bx": 400, "by": 0, "halfThicknessCm": 5 }"""));
+            Entity mover = harness.SpawnPositioned(0, -600);
+            harness.Tick();
+
+            harness.SweepTo(mover, 0, 600);
+            harness.Tick();
+
+            Assert.That(harness.Entered.Count, Is.EqualTo(1),
+                "A thin tripwire must catch a sweep straight through it.");
+            Assert.That(harness.Exited.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Teleport_WithoutPreviousPosition_StaysPointSampled()
+        {
+            using var harness = RegionHarness.Create(
+                VolumeAt(500, 0, """{ "volumeKey": "ring", "shape": "circle", "radiusCm": 50 }"""));
+            Entity mover = harness.SpawnPositioned(0, 0);
+            harness.Tick();
+
+            harness.MoveTo(mover, 1000, 0);
+            harness.Tick();
+
+            Assert.That(harness.Entered.Count, Is.EqualTo(0),
+                "Without PreviousWorldPositionCm the legacy point-sampling contract holds: a same-wave crossing is invisible.");
+        }
+
+        [Test]
+        public void LeavingOccupant_SweepDoesNotDoubleFire()
+        {
+            using var harness = RegionHarness.Create(
+                VolumeAt(500, 0, """{ "volumeKey": "ring", "shape": "circle", "radiusCm": 50 }"""));
+            Entity mover = harness.SpawnPositioned(500, 0);
+            harness.Tick();
+            Assert.That(harness.Entered.Count, Is.EqualTo(1), "Precondition: occupied.");
+
+            harness.SweepTo(mover, 1000, 0);
+            harness.Tick();
+
+            Assert.That(harness.Exited.Count, Is.EqualTo(1),
+                "An occupant leaving fires exactly one exit; the swept path out must not add an enter+exit pair.");
+            Assert.That(harness.Entered.Count, Is.EqualTo(1));
+        }
+
         /// <summary>
         /// Builds the template components JSON with the volume anchored at
         /// (x, y) through a WorldPositionCm component, optionally appending extra
@@ -771,6 +844,25 @@ namespace Ludots.Tests.Gas.Graph
 
             public void MoveTo(Entity entity, int xCm, int yCm)
             {
+                World.Set(entity, new WorldPositionCm { Value = Fix64Vec2.FromInt(xCm, yCm) });
+            }
+
+            /// <summary>
+            /// Teleport with a recorded previous position, mirroring how the movement
+            /// pipeline maintains PreviousWorldPositionCm each tick (#1475).
+            /// </summary>
+            public void SweepTo(Entity entity, int xCm, int yCm)
+            {
+                Fix64Vec2 current = World.Get<WorldPositionCm>(entity).Value;
+                if (World.Has<PreviousWorldPositionCm>(entity))
+                {
+                    World.Set(entity, new PreviousWorldPositionCm { Value = current });
+                }
+                else
+                {
+                    World.Add(entity, new PreviousWorldPositionCm { Value = current });
+                }
+
                 World.Set(entity, new WorldPositionCm { Value = Fix64Vec2.FromInt(xCm, yCm) });
             }
 
