@@ -1327,11 +1327,33 @@ namespace Ludots.Raylib.Render
 
         internal static float ResolveAbsoluteDisplayHeightCm(float heightCm, float seaLevelCm, float absolutePeakSpanCm)
         {
-            float peakSpanCm = MathF.Max(1f, absolutePeakSpanCm);
-            float relative = (heightCm - seaLevelCm) / peakSpanCm;
-            // Absolute tint treats open water (below sea) and overshoot sentinels as a flat sea plane.
-            // Continental DisplayHeightScale would otherwise excavate multi-kilometer ocean pits.
-            return relative <= 0f || relative > 1f ? seaLevelCm : heightCm;
+            // Below-sea bathymetry flattens onto the sea plane so continental scale does not dig ocean pits.
+            if (heightCm <= seaLevelCm)
+            {
+                return seaLevelCm;
+            }
+
+            // Void/ocean fills in continental assets use values at the raw sample ceiling; tint and
+            // geometry both treat those as open water. Authored relief that merely exceeds the tint
+            // peak span keeps its real elevation — flattening it would desync terrain presentation
+            // from grounding, which samples this same heightmap.
+            if (IsOvershootSentinel(heightCm))
+            {
+                return seaLevelCm;
+            }
+
+            return heightCm;
+        }
+
+        /// <summary>
+        /// Raw UInt16 heightmap storage tops out at <see cref="ushort.MaxValue"/> before sample scaling,
+        /// so continental void/ocean fills land within a few percent of that ceiling. Everything below
+        /// it is authored relief.
+        /// </summary>
+        private static bool IsOvershootSentinel(float heightCm)
+        {
+            const float SentinelFractionOfSampleCeiling = 0.88f;
+            return heightCm >= ushort.MaxValue * SentinelFractionOfSampleCeiling;
         }
 
         private static void ResolveAbsoluteIslandTerrainColor(float heightBand, float slope, out byte red, out byte green, out byte blue)
