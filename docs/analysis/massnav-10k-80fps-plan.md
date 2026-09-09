@@ -318,3 +318,34 @@
 | 2 | **低模 LOD mesh**（30K × 2,410 tri = 72M tri/帧 是几何量瓶颈，与分辨率无关） | 直接砍几何 | §8/§9 320×180 实验 |
 | 3 | 独立轻量 shader program 按 LOD 选（不是 runtime 分支） | 省片元 | §10.2 |
 | 4 | skinned 顶点取骨降权（远处 2 权重） | 省顶点 | §9.2 |
+
+---
+
+## 11. 本轮落地清单（按提交顺序）与最终实测
+
+| 提交 | 内容 | 实测 |
+|---|---|---|
+| `283c6afdad` | 30K mod 在 main 上渲染不出来（三层契约缺口） | `visibleEntities` 0 → 30000 |
+| `6b136c79db` | culling 空间候选 HashSet → entity-id 帧戳数组 | 每帧省一次 65K 哈希表 |
+| `f9b73dea3d` | massnav 硬解析探测/分离合并 + 分离调参外提 | 求解器 step −22%~−33% |
+| `da4078076e` | **每帧 rebind 抹掉静态 cull 缓存**（真 bug） | `cullStatic` 5.0–8.7ms → **0.00ms**，`tick` 6.6–15.4 → 1.6–2.1ms |
+| `7c366ab0f2` | 阴影投影体外的 caster 裁剪 + 恢复 10K 窗口 1600×900 | 10K 每帧裁掉 2.4K–4.2K skinned caster |
+| `c407bd7d93` | **flow 避障从「每格扫 9×9」改为「稀疏阻塞格索引」** | flow 重建 11.5ms → **1.15ms** |
+
+### 最终实测（Release，1600×900，同一台机）
+
+| 场景/指标 | 本轮开始 | 本轮结束 |
+|---|---|---|
+| 10K massnav 最好帧 | ~35 FPS | **56.1 FPS** |
+| 10K `cullStatic` | 5.0–8.7ms | **0.00–0.01ms** |
+| 10K flow 重建 | 9.0–11.5ms | **0–1.15ms** |
+| 10K 求解器基准（dense-orbit 10K） | 2.94ms | **2.50ms** |
+| 30K mod 可见实体 | 0（一片黑） | **30000** |
+| 30K `cullStatic` | 5.0–8.7ms | **0.00ms** |
+
+### 当前剩余瓶颈（已定位、未动）
+
+1. **`MassNavigationSimulationStepSystem` steering 4–8.7ms + hard 0–4.4ms**：密度决定（100cm 网格里约 1 agent/格，每 agent 扫 5×5 格 ≈ 25 邻居）。且 `hardPenetrating` 长期占 18K–31K/88K–145K 对 → **分离不收敛是仿真质量问题，不只是性能**。
+2. **`CameraCullingSystem` 2.4–4.8ms**：动态实体每帧全量 `ProcessEntity`。
+3. **`MinimapPresentationSystem` 2.3–4.3ms**：每帧对 10K marker 做 knowledge 解析（viewer 已注册，缓存按 owner 命中不了，因每 marker 一个 owner）。
+4. **30K 场景是纯 GPU 绑（85%+）**：30K × 2,410 tri = 7,200 万三角面/帧；除非换低模，否则是硬地板。
