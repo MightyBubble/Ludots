@@ -16,6 +16,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Core.Client;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Systems
@@ -240,6 +241,18 @@ namespace Ludots.Core.Systems
         {
             ArgumentNullException.ThrowIfNull(cameraManager);
             ArgumentNullException.ThrowIfNull(presentSurface);
+
+            // Hosts call this through RebindPipeline on every present-binding drive. An equivalent
+            // single binding must stay a no-op, otherwise the static camera cache is wiped each frame
+            // and every static entity is re-culled in full (measured 5-8ms per frame on 30K).
+            if (_presentBindingArmed &&
+                _presentBindingPasses.Count == 1 &&
+                ReferenceEquals(_presentBindingPasses[0].Camera, cameraManager) &&
+                SurfaceMatches(_presentBindingPasses[0].Surface, presentSurface))
+            {
+                return;
+            }
+
             _presentBindingPasses.Clear();
             _presentBindingPasses.Add(new PresentBindingCullPass(null, cameraManager, presentSurface));
             _presentBindingArmed = true;
@@ -259,6 +272,14 @@ namespace Ludots.Core.Systems
                 throw new ArgumentException("At least one present binding cull pass is required.", nameof(passes));
             }
 
+            // Hosts re-arm every frame before the tick. Clearing the static caches here would make the
+            // static entities look "never culled" forever and force a full 30K+ re-cull each frame, so
+            // an equivalent pass set must be a no-op.
+            if (_presentBindingArmed && PassSetMatches(passes))
+            {
+                return;
+            }
+
             _presentBindingPasses.Clear();
             for (int i = 0; i < passes.Count; i++)
             {
@@ -267,6 +288,50 @@ namespace Ludots.Core.Systems
 
             _presentBindingArmed = true;
             ResetPassStaticCaches();
+        }
+
+        private bool PassSetMatches(IReadOnlyList<PresentBindingCullPass> passes)
+        {
+            if (_presentBindingPasses.Count != passes.Count)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < passes.Count; i++)
+            {
+                PresentBindingCullPass current = _presentBindingPasses[i];
+                PresentBindingCullPass next = passes[i];
+                // SeatId is descriptive only: the single-binding rebind carries null while the
+                // plural arming carries the seat id, and both drive the same camera+surface.
+                if (!ReferenceEquals(current.Camera, next.Camera) ||
+                    !SurfaceMatches(current.Surface, next.Surface))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// The host rebuilds a <see cref="PresentBindingSurface"/> wrapper every frame
+        /// (<c>CollectCullPasses</c>), so reference equality would never match. Compare the
+        /// binding identity plus the sampled fov instead — that is the only state the wrapper adds.
+        /// </summary>
+        private static bool SurfaceMatches(IViewController current, IViewController next)
+        {
+            if (ReferenceEquals(current, next))
+            {
+                return true;
+            }
+
+            if (current is not PresentBindingSurface currentSurface || next is not PresentBindingSurface nextSurface)
+            {
+                return false;
+            }
+
+            return currentSurface.Binding.Equals(nextSurface.Binding) &&
+                   currentSurface.Fov.Equals(nextSurface.Fov);
         }
 
         private void ResetPassStaticCaches()
