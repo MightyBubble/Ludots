@@ -370,6 +370,47 @@ public sealed class PresenterAttachmentContractTests
         Assert.That(error!.Message, Does.Contain("TransformConflict"));
     }
 
+    [Test]
+    public void ParameterSubscriptions_FullFanoutCanOverrideReactivateAndReuseReleasedTrees()
+    {
+        JsonArray config = BuildConfig(1, false, true);
+        config[1]!["paramDefaults"] = config[0]!["paramDefaults"]!.DeepClone();
+        config[0]!.AsObject().Remove("paramDefaults");
+        JsonArray children = config[1]!["children"]!.AsArray();
+        JsonNode childConfig = children[0]!.DeepClone();
+        for (int i = 1; i < PresenterChildren.MAX_CHILDREN; i++) children.Add(childConfig.DeepClone());
+        var definitions = Load(config.ToJsonString());
+        using var world = World.Create();
+        var runtime = new PresenterEntityRuntime(world);
+        runtime.BindDefinitions(definitions);
+        using var behavior = CreateBehavior(world, runtime, definitions);
+        int key = PresenterParamKeyRegistry.Register("contract.position");
+        for (int cycle = 0; cycle < 3; cycle++)
+        {
+            Entity root = CreateRoot(world, runtime, definitions, CreateOwner(world));
+            behavior.Update(1f / 60f);
+            Entity child = world.Get<PresenterChildren>(root).Get(15);
+            PresenterDefinition definition = definitions.Get(definitions.GetId("child"));
+            int slot = world.Get<PresenterInstanceBehaviors>(child).Slots[0].SlotIndex;
+            runtime.SetParam(child, key, ParamLane.Vector, 0, 0, new Vector4(8, 0, 0, 0));
+            runtime.SetBehaviorActive(child, definition, slot, false);
+            runtime.ClearParam(child, key, ParamLane.Vector);
+            long visits = runtime.ParamDependencyVisitCount;
+            runtime.SetParam(root, key, ParamLane.Vector, 0, 0, new Vector4(6, 0, 0, 0));
+            Assert.That(runtime.ParamDependencyVisitCount - visits, Is.EqualTo(PresenterChildren.MAX_CHILDREN - 1));
+            runtime.SetBehaviorActive(child, definition, slot, true);
+            behavior.Update(1f / 60f);
+            visits = runtime.ParamDependencyVisitCount;
+            runtime.SetParam(root, key, ParamLane.Vector, 0, 0, new Vector4(7, 0, 0, 0));
+            Assert.That(runtime.ParamDependencyVisitCount - visits, Is.EqualTo(PresenterChildren.MAX_CHILDREN));
+            for (int i = 0; i < PresenterChildren.MAX_CHILDREN; i++)
+                Assert.That(world.Get<PresenterWorldPosition>(world.Get<PresenterChildren>(root).Get(i)).Value,
+                    Is.EqualTo(new Vector3(17, 0, 20)));
+            runtime.Destroy(root);
+            Assert.That(runtime.ParamDependencyCount, Is.Zero);
+        }
+    }
+
     private static JsonArray BuildConfig(int mask, bool once, bool instance)
     {
         var inherit = new JsonArray();
