@@ -880,7 +880,7 @@ namespace {modId}
                 }
 
                 string navOutputRoot = ResolveNavOutputRoot(repoRoot, modId, outputRoot);
-                WriteNavBakeResultToRepository(navOutputRoot, mapId, ResolveNavArtifactBoardId(repoRoot, mapId, modId), result, context, writeArtifact, "BakeNavHeightmap");
+                WriteNavBakeResultToRepository(navOutputRoot, mapId, ResolveNavArtifactBoardId(repoRoot, mapId, modId), result, context, writeArtifact, "BakeNavHeightmap", mergeExistingManifest: !string.IsNullOrWhiteSpace(dirtyChunksPath));
                 Console.WriteLine($"BakeNavHeightmap done. ok={result.SuccessCount} empty={emptyTileCount} fail={result.FailureCount} outputRoot={Path.GetFullPath(navOutputRoot)}");
                 return result.FailureCount == 0 ? 0 : 1;
             }
@@ -1084,7 +1084,7 @@ namespace {modId}
                     return 1;
                 }
 
-                WriteNavBakeResultToRepository(repoRoot, mapId, ResolveNavArtifactBoardId(repoRoot, mapId, modId), result, context, writeArtifact, "BakeNavRecastReact");
+                WriteNavBakeResultToRepository(repoRoot, mapId, ResolveNavArtifactBoardId(repoRoot, mapId, modId), result, context, writeArtifact, "BakeNavRecastReact", mergeExistingManifest: !string.IsNullOrWhiteSpace(dirtyChunksPath));
                 Console.WriteLine($"BakeNavRecastReact done. ok={result.SuccessCount} fail={result.FailureCount} repoRoot={Path.GetFullPath(repoRoot)}");
                 return result.FailureCount == 0 ? 0 : 1;
             }
@@ -1423,13 +1423,14 @@ namespace {modId}
         }
 
         static void WriteNavBakeResultToRepository(
-            string repoRoot,
+            string outputRoot,
             string mapId,
             string? artifactBoardId,
             NavBakeResult result,
             NavBakeContext context,
             bool writeArtifact,
-            string logPrefix)
+            string logPrefix,
+            bool mergeExistingManifest)
         {
             if (result.FailureCount > 0)
             {
@@ -1437,8 +1438,10 @@ namespace {modId}
                 throw new InvalidOperationException($"{logPrefix} refuses to publish partial NavTile output when any bake entry failed.");
             }
 
-            var manifestEntries = new List<NavTileManifestEntry>(result.Entries.Count);
-
+            // Authoritative publish: one shared publisher stages every tile, reads the checksum
+            // back from the staged file on disk, validates the whole batch, then atomically
+            // publishes tiles + manifest with rollback. Paths derive from the context identity.
+            var publishEntries = new List<NavArtifactPublishEntry>(result.Entries.Count);
             for (int i = 0; i < result.Entries.Count; i++)
             {
                 NavBakeResultEntry entry = result.Entries[i];
@@ -1448,99 +1451,42 @@ namespace {modId}
                     continue;
                 }
 
-                string rel = NavAssetPaths.GetNavTileRelativePath(mapId, artifactBoardId, entry.Layer, entry.ProfileId, entry.Target.ChunkX, entry.Target.ChunkY);
-                string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
-                Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
-                using (var fs = File.Create(outFile))
+                publishEntries.Add(new NavArtifactPublishEntry
                 {
-                    NavTileBinary.Write(fs, entry.Tile);
-                }
-
-                // NavTileBinary.Write computes the checksum over the serialized payload, so the
-                // manifest must record the persisted value rather than the in-memory tile's
-                // producer-supplied checksum (frequently zero on freshly baked tiles).
-                ulong persistedChecksum = NavTileBinary.ComputePersistedChecksum(entry.Tile);
-
-                manifestEntries.Add(new NavTileManifestEntry
-                {
+                    Tile = entry.Tile,
                     Layer = entry.Layer,
                     ProfileId = entry.ProfileId,
                     ChunkX = entry.Target.ChunkX,
-                    ChunkY = entry.Target.ChunkY,
-                    TileVersion = entry.Tile.TileVersion,
-                    TileChecksum = "fnv1a64:" + persistedChecksum.ToString("x16")
+                    ChunkY = entry.Target.ChunkY
                 });
 
                 if (writeArtifact)
                 {
+                    string rel = NavAssetPaths.GetNavTileRelativePath(mapId, artifactBoardId, entry.Layer, entry.ProfileId, entry.Target.ChunkX, entry.Target.ChunkY);
                     string artRel = rel.Replace("navtile_", "artifact_").Replace(".ntil", ".json");
-                    string artFile = Path.Combine(repoRoot, artRel.Replace('/', Path.DirectorySeparatorChar));
+                    string artFile = Path.Combine(outputRoot, artRel.Replace('/', Path.DirectorySeparatorChar));
                     Directory.CreateDirectory(Path.GetDirectoryName(artFile)!);
                     var json = JsonSerializer.Serialize(entry.Artifact, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true });
                     File.WriteAllText(artFile, json);
                 }
             }
 
-            WriteNavTileManifest(repoRoot, mapId, artifactBoardId, context, manifestEntries);
-        }
-
-        static void WriteNavTileManifest(
-            string repoRoot,
-            string mapId,
-            string? artifactBoardId,
-            NavBakeContext context,
-            IReadOnlyList<NavTileManifestEntry> entries)
-        {
-            var manifest = new NavTileManifest
-            {
-                MapId = mapId,
-                BoardId = artifactBoardId ?? string.Empty,
-                SourceRevision = ComputeSourceRevision(repoRoot, context.SourceUri),
-                Algorithm = context.Algorithm.ToString(),
-                Mode = context.Mode.ToString(),
-                TileVersion = context.TileVersion,
-                Tiles = entries.ToArray(),
-                WrittenUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)
-            };
-
-            string manifestRel = NavAssetPaths.GetNavTileManifestRelativePath(mapId, artifactBoardId);
-            string manifestPath = Path.Combine(repoRoot, manifestRel.Replace('/', Path.DirectorySeparatorChar));
-            NavTileManifestSerializer.Write(manifestPath, manifest);
-            Console.WriteLine($"Nav manifest written: {manifestRel} buildHash={manifest.BuildHash} tiles={manifest.Tiles.Length}");
-        }
-
-        /// <summary>Streaming read size for the source fingerprint; not a spatial scale.</summary>
-        const int SourceFingerprintBufferBytes = 65536;
-
-        /// <summary>
-        /// Content fingerprint of the bake source. Falls back to the declared URI when the
-        /// source is not a readable repo file so the manifest still records what was used.
-        /// </summary>
-        static string ComputeSourceRevision(string repoRoot, string sourceUri)
-        {
-            if (string.IsNullOrWhiteSpace(sourceUri)) return "unknown";
-            const string prefix = "Core:";
-            if (!sourceUri.StartsWith(prefix, StringComparison.Ordinal)) return "uri:" + sourceUri;
-
-            string relPath = sourceUri[prefix.Length..];
-            string absPath = Path.Combine(repoRoot, relPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(absPath)) absPath = Path.Combine(repoRoot, "mods", "LudotsCoreMod", relPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(absPath)) return "uri:" + sourceUri;
-
-            using var stream = File.OpenRead(absPath);
-            ulong h = 1469598103934665603UL;
-            byte[] buffer = new byte[SourceFingerprintBufferBytes];
-            int read;
-            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                for (int i = 0; i < read; i++)
+            NavTileManifest manifest = NavArtifactPublisher.Publish(
+                new NavArtifactPublisher.Context
                 {
-                    h ^= buffer[i];
-                    h *= 1099511628211UL;
-                }
-            }
+                    RootDir = outputRoot,
+                    MapId = mapId,
+                    BoardId = artifactBoardId ?? string.Empty,
+                    SourceRevision = NavBakeSnapshotFingerprint.Compute(context),
+                    Algorithm = context.Algorithm.ToString(),
+                    Mode = context.Mode.ToString(),
+                    TileVersion = context.TileVersion,
+                    WrittenUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)
+                },
+                publishEntries,
+                replaceWholeManifest: !mergeExistingManifest);
 
-            return $"file:fnv1a64:{h:x16}:{stream.Length}";
+            Console.WriteLine($"Nav artifacts published: ok={result.SuccessCount} manifestTiles={manifest.Tiles.Length} buildHash={manifest.BuildHash}");
         }
 
         static void PrintNavBakeFailures(NavBakeResult result, string logPrefix)
