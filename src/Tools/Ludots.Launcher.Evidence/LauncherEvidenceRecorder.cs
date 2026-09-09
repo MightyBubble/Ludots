@@ -396,7 +396,14 @@ public static class LauncherEvidenceRecorder
         }
 
         var worldHudStrings = engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
-        return new WorldHudToScreenSystem(engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud);
+        return new WorldHudToScreenSystem(
+            engine.World,
+            worldHud,
+            worldHudStrings,
+            screenProjector,
+            viewController,
+            screenHud,
+            heightmapProvider: () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
     }
 
     private static void PushStartupInputContexts(GameConfig config, PlayerInputHandler inputHandler)

@@ -24,6 +24,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly ScreenHudBatchBuffer _screenHud;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly CameraCullingDebugState? _cullingDebug;
+        private readonly Func<IContinuousHeightmap?>? _heightmapProvider;
         private int _lastWorldHudRevision = -1;
         private int _lastWorldHudProjectionRevision = -1;
         private int _lastProjectionRevision = -1;
@@ -35,6 +36,8 @@ namespace Ludots.Core.Presentation.Systems
         private OwnerProjectionCacheEntry[] _ownerProjectionCache = Array.Empty<OwnerProjectionCacheEntry>();
         private int _frameCacheStamp;
         private bool _retainedProjectedBuild;
+        private int _lastHeightmapRevision = -1;
+        private IContinuousHeightmap? _lastHeightmap;
 
         public WorldHudToScreenSystem(
             World world,
@@ -44,7 +47,8 @@ namespace Ludots.Core.Presentation.Systems
             IViewController view,
             ScreenHudBatchBuffer screenHud,
             PresentationTimingDiagnostics? timingDiagnostics = null,
-            CameraCullingDebugState? cullingDebug = null)
+            CameraCullingDebugState? cullingDebug = null,
+            Func<IContinuousHeightmap?>? heightmapProvider = null)
             : base(world)
         {
             _worldHud = worldHud ?? throw new System.ArgumentNullException(nameof(worldHud));
@@ -54,6 +58,7 @@ namespace Ludots.Core.Presentation.Systems
             _screenHud = screenHud ?? throw new System.ArgumentNullException(nameof(screenHud));
             _timingDiagnostics = timingDiagnostics;
             _cullingDebug = cullingDebug;
+            _heightmapProvider = heightmapProvider;
         }
 
         public override void Update(in float dt)
@@ -64,11 +69,19 @@ namespace Ludots.Core.Presentation.Systems
             int projectionRevision = _projector is IProjectionRevisionProvider revisionProvider
                 ? revisionProvider.ProjectionRevision
                 : -1;
+            IContinuousHeightmap? heightmap = _heightmapProvider?.Invoke();
+            int heightmapRevision = heightmap is IContinuousHeightmapRenderSource renderSource
+                ? renderSource.Revision
+                : heightmap == null ? -1 : 0;
+            bool terrainUnchanged = ReferenceEquals(heightmap, _lastHeightmap) &&
+                heightmapRevision == _lastHeightmapRevision &&
+                (heightmap == null || heightmap is IContinuousHeightmapRenderSource);
             int cullVisibilityRevision = _cullingDebug?.VisibilityRevision ?? -1;
             bool projectionUnchanged = projectionRevision >= 0 &&
                                        worldHudProjectionRevision == _lastWorldHudProjectionRevision &&
                                        projectionRevision == _lastProjectionRevision &&
-                                       cullVisibilityRevision == _lastCullVisibilityRevision;
+                                       cullVisibilityRevision == _lastCullVisibilityRevision &&
+                                       terrainUnchanged;
             if (projectionUnchanged && worldHudRevision != _lastWorldHudRevision)
             {
                 ReadOnlySpan<WorldHudItem> dirtyContent = _worldHud.GetDirtyContentSpan();
@@ -85,7 +98,7 @@ namespace Ludots.Core.Presentation.Systems
             if (projectionRevision >= 0 &&
                 worldHudRevision == _lastWorldHudRevision &&
                 projectionRevision == _lastProjectionRevision &&
-                cullVisibilityRevision == _lastCullVisibilityRevision)
+                cullVisibilityRevision == _lastCullVisibilityRevision && terrainUnchanged)
             {
                 _timingDiagnostics?.ObserveWorldHudProjection(
                     (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
@@ -104,6 +117,12 @@ namespace Ludots.Core.Presentation.Systems
             ProjectionSnapshot projectionSnapshot = default;
             bool hasProjectionSnapshot = _projector is IProjectionSnapshotProvider snapshotProvider &&
                                          snapshotProvider.TryGetProjectionSnapshot(out projectionSnapshot);
+            System.Numerics.Matrix4x4 inverseProjection = default;
+            if (heightmap != null && (!hasProjectionSnapshot ||
+                !System.Numerics.Matrix4x4.Invert(projectionSnapshot.ViewProjection, out inverseProjection)))
+            {
+                throw new InvalidOperationException("Terrain HUD occlusion requires an invertible presentation projection snapshot.");
+            }
             System.Numerics.Matrix4x4 viewProjection = hasProjectionSnapshot
                 ? projectionSnapshot.ViewProjection
                 : default;
@@ -152,6 +171,10 @@ namespace Ludots.Core.Presentation.Systems
                         !float.IsInfinity(screen.X) &&
                         !float.IsInfinity(screen.Y))
                     {
+                        if (!IsTerrainVisible(first.WorldPosition, heightmap, screen, in projectionSnapshot, in inverseProjection))
+                        {
+                            screen = new System.Numerics.Vector2(float.NaN);
+                        }
                         CacheOwnerFrameProjection(first.Owner, first.WorldPosition, screen);
                     }
                 }
@@ -185,6 +208,8 @@ namespace Ludots.Core.Presentation.Systems
             _lastWorldHudProjectionRevision = worldHudProjectionRevision;
             _lastProjectionRevision = projectionRevision;
             _lastCullVisibilityRevision = cullVisibilityRevision;
+            _lastHeightmapRevision = heightmapRevision;
+            _lastHeightmap = heightmap;
             _worldHud.ClearContentDeltas();
         }
 
@@ -420,6 +445,48 @@ namespace Ludots.Core.Presentation.Systems
 
             _ownerVisibilityCache[ownerKey] = new OwnerVisibilityCacheEntry(_frameCacheStamp, ownerVersion, visible);
         }
+
+        private static bool IsTerrainVisible(
+            System.Numerics.Vector3 worldPosition,
+            IContinuousHeightmap? heightmap,
+            System.Numerics.Vector2 screen,
+            in ProjectionSnapshot projectionSnapshot,
+            in System.Numerics.Matrix4x4 inverseProjection)
+        {
+            if (heightmap == null)
+            {
+                return true;
+            }
+
+            var nearClip = new System.Numerics.Vector4(
+                screen.X * 2f / projectionSnapshot.Resolution.X - 1f,
+                1f - screen.Y * 2f / projectionSnapshot.Resolution.Y, 0f, 1f);
+            var nearWorld = System.Numerics.Vector4.Transform(nearClip, inverseProjection);
+            var origin = new System.Numerics.Vector3(nearWorld.X, nearWorld.Y, nearWorld.Z) / nearWorld.W;
+            System.Numerics.Vector3 delta = worldPosition - origin;
+            float targetDistance = delta.Length();
+            if (!float.IsFinite(targetDistance))
+            {
+                throw new InvalidOperationException("Terrain HUD occlusion produced a non-finite projection ray.");
+            }
+            if (targetDistance <= TerrainOcclusionEpsilonMeters)
+            {
+                return true;
+            }
+
+            ScreenRay ray = new ScreenRay(origin, delta / targetDistance);
+            if (!heightmap.TryRaycastGround(in ray, out VisualGroundHit hit))
+            {
+                return true;
+            }
+            if (!float.IsFinite(hit.DistanceMeters) || hit.DistanceMeters < 0f)
+            {
+                throw new InvalidOperationException("Terrain HUD occlusion received an invalid ground hit distance.");
+            }
+            return hit.DistanceMeters + TerrainOcclusionEpsilonMeters >= targetDistance;
+        }
+
+        private const float TerrainOcclusionEpsilonMeters = 0.005f;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TryGetOwnerFrameProjection(

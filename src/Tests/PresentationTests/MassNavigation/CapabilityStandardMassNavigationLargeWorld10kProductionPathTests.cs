@@ -152,6 +152,39 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Showcase_TerrainHudProjectionCost()
+        {
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            var simulation = RequireMassNavigationSimulation(engine);
+            var projection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, projection, simulation, ExpectedAgentCount);
+            var hud = RequireService(engine, CoreServiceKeys.PresentationWorldHudBuffer);
+            var screen = RequireService(engine, CoreServiceKeys.PresentationScreenHudBuffer);
+            WorldHudItem item = hud.GetSpan()[0];
+            for (int i = 0; i < 100; i++)
+            {
+                item.WorldPosition.X += i % 2 == 0 ? .001f : -.001f;
+                hud.TryAdd(item);
+                projection.Update(0);
+            }
+            var samples = new double[31];
+            long allocated = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < samples.Length; i++)
+            {
+                item.WorldPosition.X += i % 2 == 0 ? .001f : -.001f;
+                hud.TryAdd(item);
+                long start = System.Diagnostics.Stopwatch.GetTimestamp();
+                projection.Update(0);
+                samples[i] = System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+            }
+            allocated = GC.GetAllocatedBytesForCurrentThread() - allocated;
+            Array.Sort(samples);
+            TestContext.Out.WriteLine($"MassNav terrain: world_items={hud.Count}, screen_items={screen.Count}, median_ms={samples[15]:F4}, p95_ms={samples[29]:F4}, bytes={allocated}");
+            Assert.That(allocated, Is.Zero);
+        }
+
+        [Test]
         public void Showcase_UnchangedRelationshipRevisionDoesNotRepeat10kDomainResolution()
         {
             GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
@@ -467,7 +500,8 @@ namespace Ludots.Tests.Presentation
                 RequireService(engine, CoreServiceKeys.ViewController),
                 RequireService(engine, CoreServiceKeys.PresentationScreenHudBuffer),
                 engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics),
-                engine.GetService(CoreServiceKeys.CameraCullingDebugState));
+                engine.GetService(CoreServiceKeys.CameraCullingDebugState),
+                () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
         }
 
         private static ProjectionSample WaitForProductionProjection(
