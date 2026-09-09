@@ -132,6 +132,30 @@ namespace Ludots.Core.Navigation.NavMesh
             => $"{entry.Layer}\u001F{entry.ProfileId}\u001F{entry.ChunkX}\u001F{entry.ChunkY}";
 
         /// <summary>
+        /// Whether this manifest lists an artifact for the given full tile identity.
+        /// The board identity is the manifest's own board, so callers only supply the
+        /// layer/profile/coordinate part.
+        /// </summary>
+        public bool HasEntryFor(int layer, string profileId, int chunkX, int chunkY)
+        {
+            NavTileManifestEntry[]? tiles = Tiles;
+            if (tiles == null) return false;
+            for (int i = 0; i < tiles.Length; i++)
+            {
+                NavTileManifestEntry e = tiles[i];
+                if (e.Layer == layer &&
+                    string.Equals(e.ProfileId, profileId, StringComparison.Ordinal) &&
+                    e.ChunkX == chunkX &&
+                    e.ChunkY == chunkY)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Deterministic content hash over the identity-bearing fields. Excludes writtenUtc and
         /// any tile list ordering, so a rebuild of unchanged inputs yields the same value.
         /// </summary>

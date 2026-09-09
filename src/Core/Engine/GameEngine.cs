@@ -4206,6 +4206,13 @@ namespace Ludots.Core.Engine
                             boardScopedAddressing ? boardId : string.Empty,
                             layer,
                             profileRegistry.GetId(profileIndex));
+                        EnsureManifestCoversStore(
+                            storeManifest,
+                            boardScopedAddressing ? boardId : string.Empty,
+                            profileRegistry.GetId(profileIndex),
+                            layer,
+                            boardWidthChunks,
+                            boardHeightChunks);
                         var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)), storeManifest, storeScope);
                         stores[new NavQueryServiceKey(boardScopedAddressing ? boardId : string.Empty, layer, profileIndex)] = store;
                     }
@@ -4537,11 +4544,41 @@ namespace Ludots.Core.Engine
             return new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
         }
 
+        private static void EnsureManifestCoversStore(
+            NavTileManifest? manifest,
+            string boardId,
+            string profileId,
+            int layer,
+            int widthChunks,
+            int heightChunks)
+        {
+            if (manifest == null) return;
+            for (int cy = 0; cy < heightChunks; cy++)
+            {
+                for (int cx = 0; cx < widthChunks; cx++)
+                {
+                    if (!manifest.HasEntryFor(layer, profileId, cx, cy))
+                    {
+                        throw new InvalidOperationException(
+                            $"Nav tile manifest for map '{manifest.MapId}' board '{boardId}' does not list " +
+                            $"({cx},{cy}) layer {layer} profile '{profileId}', which the declared nav tile grid requires. " +
+                            $"Re-bake the map so the manifest and tiles cover the whole grid.");
+                    }
+                }
+            }
+        }
+
         private NavTileManifest? ValidateNavTileManifest(string mapId, string? boardId)
         {
             string rel = NavAssetPaths.GetNavTileManifestRelativePath(mapId, boardId);
-            if (!TryResolveSingleExistingUri(rel, out string manifestUri)) return null;
-            if (!VFS.TryResolveFullPath(manifestUri, out string manifestPath) || !File.Exists(manifestPath)) return null;
+            if (!TryResolveSingleExistingUri(rel, out string manifestUri) ||
+                !VFS.TryResolveFullPath(manifestUri, out string manifestPath) ||
+                !File.Exists(manifestPath))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{(string.IsNullOrEmpty(boardId) ? "(default)" : boardId)}' enables navmesh but has no nav tile manifest at '{rel}'. " +
+                    $"Re-run the nav bake so the manifest is written next to the .ntil files; the runtime refuses to serve un-validated artifact sets.");
+            }
 
             NavTileManifest manifest;
             try

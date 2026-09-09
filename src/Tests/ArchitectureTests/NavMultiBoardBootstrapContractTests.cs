@@ -195,6 +195,7 @@ namespace Ludots.Tests.Architecture
             int originXcm,
             int originZcm)
         {
+            var entries = new List<NavTileManifestEntry>();
             foreach (string profileId in Profiles)
             {
                 for (int chunkY = 0; chunkY < 2; chunkY++)
@@ -216,8 +217,39 @@ namespace Ludots.Tests.Architecture
                         using var ms = new MemoryStream();
                         NavTileBinary.Write(ms, flat);
                         File.WriteAllBytes(path, ms.ToArray());
+
+                        entries.Add(new NavTileManifestEntry
+                        {
+                            Layer = 0,
+                            ProfileId = profileId,
+                            ChunkX = chunkX,
+                            ChunkY = chunkY,
+                            TileVersion = flat.TileVersion,
+                            TileChecksum = "fnv1a64:" + NavTileBinary.ComputePersistedChecksum(flat).ToString("x16")
+                        });
                     }
                 }
+            }
+
+            if (!string.IsNullOrEmpty(boardId))
+            {
+                // A board-scoped map must carry its own manifest next to its tiles; the engine
+                // resolves the manifest per board and refuses to serve one board without it.
+                var manifest = new NavTileManifest
+                {
+                    MapId = mapId,
+                    BoardId = boardId,
+                    SourceRevision = "test-fixture:" + mapId + ":" + boardId,
+                    Algorithm = "Recast",
+                    Mode = "Offline",
+                    TileVersion = 1,
+                    Tiles = entries.ToArray()
+                };
+
+                string manifestRel = NavAssetPaths.GetNavTileManifestRelativePath(mapId, boardId);
+                NavTileManifestSerializer.Write(
+                    Path.Combine(assetsRoot, manifestRel.Replace('/', Path.DirectorySeparatorChar)),
+                    manifest);
             }
         }
 
@@ -351,6 +383,39 @@ namespace Ludots.Tests.Architecture
                 Assert.That(
                     () => engine.LoadNavForMapForTests(mapId, mapConfig),
                     Throws.InvalidOperationException.With.Message.Contains("Re-bake"));
+            }
+            finally
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+
+        [Test]
+        public void LoadNavForMap_WithoutManifest_FailsClosed()
+        {
+            string repoRoot = FindRepoRoot();
+            string tempRoot = CreateTempAssetsRoot(repoRoot);
+            try
+            {
+                using GameEngine engine = CreateEngine(repoRoot, tempRoot);
+                var terrain = new FlatGridLogicTerrainField(ChunkSizeCells * 2, ChunkSizeCells * 2, chunkSizeCells: ChunkSizeCells);
+                const string mapId = "missing_manifest";
+
+                var mapConfig = new MapConfig
+                {
+                    Id = mapId,
+                    Tags = new List<string> { MapTags.FeatureNavMeshOn.Name },
+                    Boards = new List<BoardConfig> { CreateBoard("default", 0, 0) }
+                };
+
+                // Tiles exist but no manifest was ever written: a nav-enabled map must refuse
+                // to serve an un-validated artifact set instead of silently querying it.
+                WriteBoardTileFiles(tempRoot, mapId, null, 0, 0);
+
+                SetLogicTerrain(engine, terrain);
+                Assert.That(
+                    () => engine.LoadNavForMapForTests(mapId, mapConfig),
+                    Throws.InvalidOperationException.With.Message.Contains("no nav tile manifest"));
             }
             finally
             {

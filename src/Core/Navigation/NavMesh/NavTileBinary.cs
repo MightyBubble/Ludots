@@ -164,6 +164,21 @@ namespace Ludots.Core.Navigation.NavMesh
             return new NavTile(new NavTileId(chunkX, chunkY, layer), tileVersion, buildHash, checksum, originXcm, originZcm, vx, vy, vz, ta, tb, tc, n0, n1, n2, triAreas, portals);
         }
 
+        /// <summary>
+        /// The checksum that lands on disk when this tile is persisted. The in-memory
+        /// <see cref="NavTile.Checksum"/> is producer-supplied and is frequently zero for
+        /// freshly baked tiles; only the serialized payload carries the authoritative checksum,
+        /// so manifest writers and loaders must agree on this single computation.
+        /// </summary>
+        public static ulong ComputePersistedChecksum(NavTile tile)
+        {
+            if (tile == null) throw new ArgumentNullException(nameof(tile));
+            using var ms = new MemoryStream();
+            Write(ms, tile);
+            ms.Position = 0;
+            return Read(ms).Checksum;
+        }
+
         private static ulong Fnv1a64(byte[] data, int checksumOffset, int checksumLength)
         {
             ulong h = 1469598103934665603UL;

@@ -491,6 +491,20 @@ namespace Ludots.Tool
                 ctx.ExitCode = EstimateNavFromReactRecast(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, parallel, maxDegree, tileVersion);
             });
             navCommand.AddCommand(estimateRecastReactNavCommand);
+
+            var writeManifestCommand = new Command("write-manifest", "Write nav tile manifests for already-baked .ntil sets (cold-start validation data)");
+            writeManifestCommand.AddOption(mapIdOption);
+            writeManifestCommand.AddOption(navModIdOption);
+            var manifestRepoRootOption = new Option<string?>("--repoRoot", () => null, "Repository root (default: current directory)");
+            writeManifestCommand.AddOption(manifestRepoRootOption);
+            writeManifestCommand.SetHandler((InvocationContext ctx) =>
+            {
+                string? mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
+                string? modId = ctx.ParseResult.GetValueForOption(navModIdOption);
+                string? repoRoot = ctx.ParseResult.GetValueForOption(manifestRepoRootOption);
+                ctx.ExitCode = NavManifestBackfill.Run(repoRoot ?? Directory.GetCurrentDirectory(), mapId, modId);
+            });
+            navCommand.AddCommand(writeManifestCommand);
             rootCommand.AddCommand(navCommand);
 
             return await rootCommand.InvokeAsync(args);
@@ -1451,14 +1465,15 @@ namespace {modId}
                 string rel = NavAssetPaths.GetNavTileRelativePath(mapId, artifactBoardId, entry.Layer, entry.ProfileId, entry.Target.ChunkX, entry.Target.ChunkY);
                 string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
                 Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
-                ulong persistedChecksum;
                 using (var fs = File.Create(outFile))
                 {
                     NavTileBinary.Write(fs, entry.Tile);
-                    // NavTileBinary.Write computes the checksum over the serialized payload, so
-                    // the manifest must record that value rather than the in-memory tile's.
-                    persistedChecksum = ReadPersistedChecksum(outFile);
                 }
+
+                // NavTileBinary.Write computes the checksum over the serialized payload, so the
+                // manifest must record the persisted value rather than the in-memory tile's
+                // producer-supplied checksum (frequently zero on freshly baked tiles).
+                ulong persistedChecksum = NavTileBinary.ComputePersistedChecksum(entry.Tile);
 
                 manifestEntries.Add(new NavTileManifestEntry
                 {
@@ -1483,12 +1498,6 @@ namespace {modId}
             WriteNavTileManifest(repoRoot, mapId, artifactBoardId, context, manifestEntries);
         }
 
-        static ulong ReadPersistedChecksum(string path)
-        {
-            using var fs = File.OpenRead(path);
-            return NavTileBinary.Read(fs).Checksum;
-        }
-
         static void WriteNavTileManifest(
             string repoRoot,
             string mapId,
@@ -1508,7 +1517,7 @@ namespace {modId}
                 WrittenUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)
             };
 
-            string manifestRel = NavAssetPaths.GetNavTileManifestRelativePath(mapId);
+            string manifestRel = NavAssetPaths.GetNavTileManifestRelativePath(mapId, artifactBoardId);
             string manifestPath = Path.Combine(repoRoot, manifestRel.Replace('/', Path.DirectorySeparatorChar));
             NavTileManifestSerializer.Write(manifestPath, manifest);
             Console.WriteLine($"Nav manifest written: {manifestRel} buildHash={manifest.BuildHash} tiles={manifest.Tiles.Length}");
