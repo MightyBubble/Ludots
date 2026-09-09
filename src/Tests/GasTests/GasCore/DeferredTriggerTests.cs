@@ -28,6 +28,36 @@ namespace Ludots.Tests.GAS
         }
         
         [Test]
+        public void ConfiguredCapacityPreservesAllTriggerKindsAndExplicitOverflow()
+        {
+            const int capacity = 3;
+            var queue = new DeferredTriggerQueue(capacity);
+            for (int i = 0; i < capacity * 2; i++)
+            {
+                queue.EnqueueAttributeChanged(new AttributeChangedTrigger { Target = _entity, AttributeId = i });
+                queue.EnqueueTagChanged(new TagChangedTrigger { Target = _entity, TagId = i });
+                queue.EnqueueTagCountChanged(new TagCountChangedTrigger { Target = _entity, TagId = i });
+            }
+            That(queue.Capacity, Is.EqualTo(capacity));
+            That(() => queue.EnqueueAttributeChanged(default), Throws.TypeOf<System.InvalidOperationException>());
+            That(() => queue.EnqueueTagChanged(default), Throws.TypeOf<System.InvalidOperationException>());
+            That(() => queue.EnqueueTagCountChanged(default), Throws.TypeOf<System.InvalidOperationException>());
+            queue.Clear();
+            That(queue.AttributeTriggerCount, Is.EqualTo(capacity));
+            That(queue.TagTriggerCount, Is.EqualTo(capacity));
+            That(queue.TagCountTriggerCount, Is.EqualTo(capacity));
+            for (int i = 0; i < capacity; i++)
+            {
+                That(queue.GetAttributeTrigger(i).AttributeId, Is.EqualTo(i + capacity));
+                That(queue.GetTagTrigger(i).TagId, Is.EqualTo(i + capacity));
+                That(queue.GetTagCountTrigger(i).TagId, Is.EqualTo(i + capacity));
+            }
+            queue.Clear();
+            That(queue.AttributeTriggerCount + queue.TagTriggerCount + queue.TagCountTriggerCount, Is.Zero);
+            That(() => new DeferredTriggerQueue(0), Throws.TypeOf<System.ArgumentOutOfRangeException>());
+        }
+
+        [Test]
         public void TestDeferredTriggerQueue_AttributeChanged()
         {
             // Arrange

@@ -5,6 +5,7 @@
   "worldWidthInMacroTiles": 250,
   "worldHeightInMacroTiles": 250,
   "gasRuntimeCapacity": {
+    "deferredTriggerPerFrameCapacity": 16384,
     "orderQueueCapacity": 16384,
     "orderAdmissionResultCapacity": 32768,
     "orderAdmissionRejectionCapacity": 16384,

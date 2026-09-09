@@ -6,14 +6,26 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public const string CapacityExceededError = "GAS.DEFERRED_TRIGGER.ERR.CapacityExceeded";
 
-        private static readonly int Capacity = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME;
+        public int Capacity { get; }
 
-        private AttributeChangedTrigger[] _attributeTriggers = new AttributeChangedTrigger[Capacity];
-        private AttributeChangedTrigger[] _attributeOverflow = new AttributeChangedTrigger[Capacity];
-        private TagChangedTrigger[] _tagTriggers = new TagChangedTrigger[Capacity];
-        private TagChangedTrigger[] _tagOverflow = new TagChangedTrigger[Capacity];
-        private TagCountChangedTrigger[] _tagCountTriggers = new TagCountChangedTrigger[Capacity];
-        private TagCountChangedTrigger[] _tagCountOverflow = new TagCountChangedTrigger[Capacity];
+        private readonly AttributeChangedTrigger[] _attributeTriggers;
+        private readonly AttributeChangedTrigger[] _attributeOverflow;
+        private readonly TagChangedTrigger[] _tagTriggers;
+        private readonly TagChangedTrigger[] _tagOverflow;
+        private readonly TagCountChangedTrigger[] _tagCountTriggers;
+        private readonly TagCountChangedTrigger[] _tagCountOverflow;
+
+        public DeferredTriggerQueue(int capacity = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME)
+        {
+            if (capacity <= 0) throw new System.ArgumentOutOfRangeException(nameof(capacity));
+            Capacity = capacity;
+            _attributeTriggers = new AttributeChangedTrigger[capacity];
+            _attributeOverflow = new AttributeChangedTrigger[capacity];
+            _tagTriggers = new TagChangedTrigger[capacity];
+            _tagOverflow = new TagChangedTrigger[capacity];
+            _tagCountTriggers = new TagCountChangedTrigger[capacity];
+            _tagCountOverflow = new TagCountChangedTrigger[capacity];
+        }
 
         private int _attributeCount = 0;
         private int _tagCount = 0;

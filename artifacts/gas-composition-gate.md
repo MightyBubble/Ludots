@@ -150,6 +150,26 @@ N/A（不新增 opcode；只扩既有 op 的 authorableKinds）
 `GraphDoOnceSugarTests` 4/4（降级形态断言 + Query 拒绝 + 缺臂拒绝 + 缺 var 拒绝）；行为真机验证：`RegionVolumeTextbookAcceptanceTests`（教科书 ambush 图已改用糖——首过 true 臂刷怪、二过 false 臂计数）通过。
 ---
 
+## GAS Composition Gate - MassNavigation Periodic Health Restoration
+
+- Task / Date / Author: Restore the 10k showcase's authored health effect; 2026-09-09; Codex.
+- Core judgment: A, PASS. Remove the showcase override so the existing spawn effect and graph are used.
+- Layer assignment: Layer 2 entity template composition; existing Layer 0 attribute op and Layer 1 transaction are reused.
+- Handlers: existing ModifyAttributeAdd graph operation.
+- Queues / Systems: existing EffectRequestQueue, EffectLifetimeSystem, PresenterBehaviorSystem and HUD projection.
+- Registries: existing EntityTemplateRegistry and EffectTemplateRegistry.
+- Existing graph: Graph.MassNavigation.Agent.HealthDrift.
+- New Layer 0 ops: N/A.
+- Transaction boundary: existing effect phase transaction remains responsible for attribute changes and rollback.
+- Config SSOT: mods/capabilities/navigation/MassNavigationMod/assets/Entities/templates.json and assets/GAS/effects.json, graphs.json.
+- New JSON schema: NO.
+- [x] No profile inherit/placement enum.
+- [x] No parallel materialization pipeline.
+- [x] No placement validation added to lifecycle operations.
+- [x] No fallback or silent failure.
+- Next variant: change effect steps or graph wiring in Mod assets.
+- Validation: production-path test checks active effects, changing health, corresponding bars/numbers and retained HUD identities across two period windows.
+
 ## GAS Composition Gate — Effect Transaction Scale Regression
 
 - **Task**: 修复持续效果事务在 10k 实体下的跨实体线性查找退化。
