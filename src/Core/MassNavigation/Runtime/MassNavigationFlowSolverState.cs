@@ -77,6 +77,8 @@ public sealed partial class MassNavigationFlowSolverState
     private byte[] _hardResolveCandidates = Array.Empty<byte>();
     private byte[] _heavyProfileFlags = Array.Empty<byte>();
     private float _activeSpawnGridSpacingCm;
+    private bool _quadrantSpreadSpawnActive;
+    private bool _quadrantSpreadTargetsPlanted;
     private byte[] _entitySyncDirtyFlags = Array.Empty<byte>();
     private byte[] _unitSettledFlags = Array.Empty<byte>();
     private byte[] _arrivalEventEmittedFlags = Array.Empty<byte>();
@@ -133,6 +135,23 @@ public sealed partial class MassNavigationFlowSolverState
     public double LastHardResolveBuildHashMs { get; private set; }
     public double LastHardResolvePairLoopMs { get; private set; }
     public double LastHardResolveTotalMs { get; private set; }
+    internal bool QuadrantSpreadSpawnActive => _quadrantSpreadSpawnActive;
+    internal int UnitTargetCount
+    {
+        get
+        {
+            int count = 0;
+            if (_hasUnitTarget != null)
+            {
+                for (int i = 0; i < UnitCount; i++)
+                {
+                    count += _hasUnitTarget[i];
+                }
+            }
+
+            return count;
+        }
+    }
     public MassNavigationFlowArrivalTuning ArrivalTuning { get; } = new();
     public MassNavigationFlowAvoidanceTuning AvoidanceTuning { get; } = new();
     public MassNavigationCrowdSemantics Semantics { get; } = new();
@@ -950,6 +969,11 @@ public sealed partial class MassNavigationFlowSolverState
             return;
         }
 
+        if (_quadrantSpreadSpawnActive && !_quadrantSpreadTargetsPlanted)
+        {
+            PlantQuadrantSpreadUnitTargets();
+        }
+
         long prepStart = System.Diagnostics.Stopwatch.GetTimestamp();
         RefreshTeamRelationshipMatrixIfStale();
 
@@ -1186,6 +1210,7 @@ public sealed partial class MassNavigationFlowSolverState
         _teamStates.Clear();
         _flowStates.Clear();
         _teamStateIndexById.Clear();
+        _quadrantSpreadSpawnActive = false;
         if (teamIds.Length <= 0)
         {
             throw new InvalidOperationException("MassNavigationFlowSolverState requires at least one team id for scenario team initialization.");
@@ -1193,6 +1218,7 @@ public sealed partial class MassNavigationFlowSolverState
 
         if (spawnLayout.ParsedKind == MassNavigationScenarioSpawnLayoutKind.QuadrantSpread)
         {
+            _quadrantSpreadSpawnActive = true;
             InitializeTeamsQuadrantSpread(teamIds, unitsPerTeam, spawnLayout);
             PrepareTeamRelationshipMatrixForTeamCount(_teamStates.Count);
             return;
@@ -2520,6 +2546,26 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         SettledUnitCount = settled;
+    }
+
+    /// <summary>
+    /// QuadrantSpread 的逐单位散点目标：把每个单位的可到达目标设为
+    /// "当前出生位关于场心的镜像点"，到站后整个对侧象限满铺、不汇向单一
+    /// 队目标点。只在第一步播种一次（不依赖实体绑定/预分配的初始化顺序）。
+    /// </summary>
+    private void PlantQuadrantSpreadUnitTargets()
+    {
+        float unitTargetStopThresholdCm = Semantics.Group.UnitTargetStopThresholdCm;
+        for (int i = 0; i < UnitCount; i++)
+        {
+            int i2 = i << 1;
+            _unitTargetsCm[i2] = _fieldWidthCm - _positionsCm[i2];
+            _unitTargetsCm[i2 + 1] = _fieldHeightCm - _positionsCm[i2 + 1];
+            _unitTargetStopThresholdsCm[i] = unitTargetStopThresholdCm;
+            _hasUnitTarget[i] = 1;
+        }
+
+        _quadrantSpreadTargetsPlanted = true;
     }
 
     private void ResolveHardPenetration()
