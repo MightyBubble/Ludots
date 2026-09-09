@@ -327,12 +327,15 @@
         "attachment": {
           "type": "object",
           "additionalProperties": false,
+          "required": ["target", "updatePolicy", "inherit", "localPositionParamKey", "localRotationParamKey", "localScaleParamKey"],
           "properties": {
-            "target": { "enum": ["Parent"] },
-            "boneId": { "type": ["string", "integer"] },
-            "offset": { "$ref": "#/$defs/vec3" },
-            "rotationOffset": { "$ref": "#/$defs/vec3" },
-            "inheritScale": { "type": "boolean" }
+            "target": { "enum": ["Parent", "Bone"] },
+            "boneId": { "type": "integer", "minimum": 1 },
+            "updatePolicy": { "enum": ["Once", "Continuous"] },
+            "inherit": { "type": "array", "uniqueItems": true, "items": { "enum": ["Position", "Rotation", "Scale"] } },
+            "localPositionParamKey": { "type": "string", "minLength": 1 },
+            "localRotationParamKey": { "type": "string", "minLength": 1 },
+            "localScaleParamKey": { "type": "string", "minLength": 1 }
           }
         },
         "sound": {

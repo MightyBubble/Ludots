@@ -19,7 +19,7 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Presenters
 {
-    public sealed class PresenterEntityRuntime
+    public sealed partial class PresenterEntityRuntime
     {
         private static readonly QueryDescription _presenterCullQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterCullState>();
@@ -39,6 +39,7 @@ namespace Ludots.Core.Presentation.Presenters
         private int _dirtyRetainedPresentationRequestCount;
         private PresenterAnimatorStateBuffer? _animatorStates;
         private readonly Dictionary<int, List<Entity>> _byDefinition = new();
+        private readonly Dictionary<Entity, PresenterChildren> _attachmentDependents = new();
         private readonly Dictionary<OwnerKey, OwnerPresenterBucket> _byOwner = new();
         private readonly Dictionary<OwnerDefinitionKey, OwnerPresenterBucket> _byOwnerDefinition = new();
         private readonly Dictionary<int, EntityBucket> _byScope = new();
@@ -62,6 +63,7 @@ namespace Ludots.Core.Presentation.Presenters
         private bool _suppressOwnerPayloadMarkerWrites;
 
         public int ActiveCount => _activeCount;
+        public long AttachmentDependentVisitCount { get; private set; }
         public int StructureVersion => _structureVersion;
         public int RelationContextVersion { get; private set; }
 
@@ -304,7 +306,7 @@ namespace Ludots.Core.Presentation.Presenters
             };
 
             var transformSource = parent != Entity.Null
-                ? TransformSource.InheritParent
+                ? TransformSource.WorldFixed
                 : anchorKind == PresentationAnchorKind.Entity
                     ? TransformSource.EntityTransform
                     : TransformSource.WorldFixed;
@@ -332,6 +334,14 @@ namespace Ludots.Core.Presentation.Presenters
                 new PresenterVectorDefaults(),
                 new PresenterEmitCache());
 
+            foreach (ref readonly BehaviorSlot behavior in definition.Behaviors.AsSpan())
+            {
+                if (behavior.Kind == BehaviorKind.Attachment)
+                {
+                    _world.Add(entity, new PresenterAttachmentState());
+                    break;
+                }
+            }
             InitializeAnimatorSlotIfPresent(entity, definition);
             AddIndexes(entity, in state, definition);
             AddBehaviorMarkers(entity, definition, state.BehaviorActiveMask);
@@ -345,6 +355,11 @@ namespace Ludots.Core.Presentation.Presenters
                     _nonRootCount++;
                 }
             }
+            SetParamDefault(definition, entity);
+            RegisterParamDependencies(entity, definition);
+            RefreshAttachmentDependency(entity, definition);
+            if (_world.Has<PresenterAttachmentState>(entity) && !_world.Has<PresenterBootstrapPending>(entity))
+                AddMarker<PresenterBootstrapPending>(entity);
 
             _activeCount++;
             _structureVersion++;
@@ -427,6 +442,12 @@ namespace Ludots.Core.Presentation.Presenters
 
             ResetLastRootBatchTiming();
             long setupStart = Stopwatch.GetTimestamp();
+            PresenterCreatePlan createPlan = definitions.GetOrCreateCreatePlan(defId);
+            PresenterParamCapacity.Validate(definition.ParamDefaults, definition.Key);
+            for (int i = 0; i < rootParamOverrides.Length; i++)
+            {
+                PresenterParamCapacity.Validate(rootParamOverrides[i], definition.Key);
+            }
             ReserveBatchIndexCapacity(owners.Length, definition);
             uint defaultBehaviorMask = BuildDefaultBehaviorMask(definition);
             bool includeTransformSyncTick = BatchRequiresTransformSyncTick(definition, defaultBehaviorMask, owners);
@@ -524,12 +545,15 @@ namespace Ludots.Core.Presentation.Presenters
                 }
             }
 
+            for (int i = 0; i < owners.Length; i++)
+                RegisterParamDependencies(created[i], definition);
+
             if (hasChildren)
             {
                 CreateChildrenBatch(
                     definitions,
                     definition,
-                    definitions.GetOrCreateCreatePlan(defId),
+                    createPlan,
                     created.Slice(0, owners.Length),
                     owners,
                     scopeIds,
@@ -702,7 +726,7 @@ namespace Ludots.Core.Presentation.Presenters
         public void SetParam(Entity presenter, int paramKey, ParamLane lane,
             float floatValue, int intValue, in Vector4 vectorValue)
         {
-            SetParamInternal(presenter, paramKey, lane, floatValue, intValue, in vectorValue, propagateToChildren: false);
+            SetParamInternal(presenter, paramKey, lane, floatValue, intValue, in vectorValue, propagateToChildren: true);
         }
 
         public void SetParamAndPropagateToAffectedChildren(Entity presenter, int paramKey, ParamLane lane,
@@ -713,8 +737,7 @@ namespace Ludots.Core.Presentation.Presenters
                 return;
             }
 
-            SetParamInternal(presenter, paramKey, lane, floatValue, intValue, in vectorValue, propagateToChildren: false);
-            PropagateParamToAffectedChildren(presenter, paramKey, lane, floatValue, intValue, in vectorValue);
+            SetParam(presenter, paramKey, lane, floatValue, intValue, in vectorValue);
         }
 
         private bool SetParamInternal(Entity presenter, int paramKey, ParamLane lane,
@@ -722,6 +745,22 @@ namespace Ludots.Core.Presentation.Presenters
         {
             if (!_world.IsAlive(presenter)) return false;
 
+            bool unchangedOverride = lane switch
+            {
+                ParamLane.Float => _world.Get<PresenterFloatParams>(presenter).TryGet(paramKey, out float f) && f == floatValue,
+                ParamLane.Int => _world.Get<PresenterIntParams>(presenter).TryGet(paramKey, out int i) && i == intValue,
+                ParamLane.Vector => _world.Get<PresenterVectorParams>(presenter).TryGet(paramKey, out Vector4 v) && v == vectorValue,
+                _ => throw new ArgumentOutOfRangeException(nameof(lane)),
+            };
+            if (unchangedOverride) return false;
+            bool sameResolvedValue = _paramDependencies.ContainsKey(new(presenter, paramKey, lane)) && lane switch
+            {
+                ParamLane.Float => TryResolveFloat(presenter, paramKey, out float f) && f == floatValue,
+                ParamLane.Int => TryResolveInt(presenter, paramKey, out int i) && i == intValue,
+                ParamLane.Vector => TryResolveVector(presenter, paramKey, out Vector4 v) && v == vectorValue,
+                _ => false,
+            };
+            ValidateAttachmentParamMutation(presenter, new(presenter, paramKey, lane, vectorValue, false));
             bool changed = false;
             switch (lane)
             {
@@ -752,10 +791,9 @@ namespace Ludots.Core.Presentation.Presenters
             ref var state = ref _world.Get<PresenterState>(presenter);
             state.Version++;
             MarkStaticDirtyIfVisualParamChanged(presenter, in state, paramKey, lane);
-            if (propagateToChildren)
-            {
-                PropagateParamToAffectedChildren(presenter, paramKey, lane, floatValue, intValue, in vectorValue);
-            }
+            if (!sameResolvedValue) RefreshAttachmentParameter(presenter, paramKey, lane);
+            RefreshParamSubscription(presenter, paramKey, lane);
+            if (propagateToChildren && !sameResolvedValue) NotifyParamConsumers(presenter, paramKey, lane);
 
             return true;
         }
@@ -768,25 +806,36 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             ParamDefault[] defaults = definition.ParamDefaults;
+            if (defaults.Length == 0)
+            {
+                return;
+            }
+
+            var floatDefaults = _world.Get<PresenterFloatDefaults>(presenter);
+            var intDefaults = _world.Get<PresenterIntDefaults>(presenter);
+            var vectorDefaults = _world.Get<PresenterVectorDefaults>(presenter);
             for (int i = 0; i < defaults.Length; i++)
             {
                 ref readonly ParamDefault entry = ref defaults[i];
                 switch (entry.Lane)
                 {
                     case ParamLane.Float:
-                        ref var fd = ref _world.Get<PresenterFloatDefaults>(presenter);
-                        fd.Set(entry.ParamKey, entry.FloatValue);
+                        floatDefaults.Set(entry.ParamKey, entry.FloatValue);
                         break;
                     case ParamLane.Int:
-                        ref var id = ref _world.Get<PresenterIntDefaults>(presenter);
-                        id.Set(entry.ParamKey, entry.IntValue);
+                        intDefaults.Set(entry.ParamKey, entry.IntValue);
                         break;
                     case ParamLane.Vector:
-                        ref var vd = ref _world.Get<PresenterVectorDefaults>(presenter);
-                        vd.Set(entry.ParamKey, entry.VectorValue);
+                        vectorDefaults.Set(entry.ParamKey, entry.VectorValue);
                         break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(entry.Lane), entry.Lane, "Unknown presenter parameter lane.");
                 }
             }
+
+            _world.Get<PresenterFloatDefaults>(presenter) = floatDefaults;
+            _world.Get<PresenterIntDefaults>(presenter) = intDefaults;
+            _world.Get<PresenterVectorDefaults>(presenter) = vectorDefaults;
         }
 
         public float ResolveFloat(Entity presenter, int paramKey, float defaultValue = 0f)
@@ -821,7 +870,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         public void ClearParam(Entity presenter, int paramKey, ParamLane lane)
         {
-            ClearParamInternal(presenter, paramKey, lane, propagateToChildren: false);
+            ClearParamInternal(presenter, paramKey, lane, propagateToChildren: true);
         }
 
         public void ClearParamAndPropagateToAffectedChildren(Entity presenter, int paramKey, ParamLane lane)
@@ -836,6 +885,7 @@ namespace Ludots.Core.Presentation.Presenters
                 return false;
             }
 
+            ValidateAttachmentParamMutation(presenter, new(presenter, paramKey, lane, default, true));
             bool changed = false;
             switch (lane)
             {
@@ -866,11 +916,6 @@ namespace Ludots.Core.Presentation.Presenters
 
             if (!changed)
             {
-                if (propagateToChildren)
-                {
-                    PropagateClearParamToAffectedChildren(presenter, paramKey, lane);
-                }
-
                 return false;
             }
 
@@ -882,10 +927,9 @@ namespace Ludots.Core.Presentation.Presenters
             ref PresenterState state = ref _world.Get<PresenterState>(presenter);
             state.Version++;
             MarkStaticDirtyIfVisualParamChanged(presenter, in state, paramKey, lane);
-            if (propagateToChildren)
-            {
-                PropagateClearParamToAffectedChildren(presenter, paramKey, lane);
-            }
+            RefreshAttachmentParameter(presenter, paramKey, lane);
+            RefreshParamSubscription(presenter, paramKey, lane);
+            if (propagateToChildren) NotifyParamConsumers(presenter, paramKey, lane);
 
             return true;
         }
@@ -1436,6 +1480,9 @@ namespace Ludots.Core.Presentation.Presenters
             _createTraceHead = 0;
             _createTraceCount = 0;
             _byDefinition.Clear();
+            _attachmentDependents.Clear();
+            _paramDependencies.Clear();
+            _entityParamDependencies.Clear();
             _byOwner.Clear();
             _byOwnerDefinition.Clear();
             _byScope.Clear();
@@ -1539,7 +1586,8 @@ namespace Ludots.Core.Presentation.Presenters
                             break;
                         case BehaviorKind.Attachment:
                             hasAttachment = true;
-                            hasAttachmentTick = true;
+                            hasAttachmentTick |= slot.Attachment.Target == AttachmentTarget.Bone &&
+                                slot.Attachment.UpdatePolicy == AttachmentUpdatePolicy.Continuous;
                             break;
                         case BehaviorKind.Extension:
                             hasExtensionBehavior |=
@@ -1676,7 +1724,32 @@ namespace Ludots.Core.Presentation.Presenters
                 return false;
             }
 
+            PresenterAttachmentTransform.ValidateActiveDrivers(definition.Behaviors,
+                _world.Has<PresenterInstanceBehaviors>(entity) ? _world.Get<PresenterInstanceBehaviors>(entity).Slots : default,
+                nextMask, definition.Key);
+            bool attachmentSlot = false;
+            foreach (ref readonly BehaviorSlot slot in definition.Behaviors.AsSpan())
+            {
+                attachmentSlot |= slot.SlotIndex == slotIndex && slot.Kind == BehaviorKind.Attachment;
+            }
+            if (_world.Has<PresenterInstanceBehaviors>(entity))
+            {
+                foreach (ref readonly BehaviorSlot slot in _world.Get<PresenterInstanceBehaviors>(entity).Slots.AsSpan())
+                {
+                    attachmentSlot |= slot.SlotIndex == slotIndex && slot.Kind == BehaviorKind.Attachment;
+                }
+            }
+            if (attachmentSlot)
+            {
+                TryGetActiveAttachment(entity, definition, nextMask, out _);
+                if (active)
+                    ValidateAttachmentActivation(entity, definition, nextMask);
+                _world.Get<PresenterAttachmentState>(entity) = default;
+                _world.Get<PresenterTransformSource>(entity).Value = TransformSource.WorldFixed;
+            }
+
             state.BehaviorActiveMask = nextMask;
+            RefreshParamDependencyActivation(entity);
             state.Version++;
             if ((definition.RetainedOutputActivationMask & bit) != 0)
             {
@@ -1686,8 +1759,13 @@ namespace Ludots.Core.Presentation.Presenters
             RefreshOwnerPayloadMarker(state.OwnerEntity);
             SyncTickBehaviorMarkers(entity, definition, nextMask);
             SyncEmitWorkMarkers(entity, definition, nextMask);
+            RefreshAttachmentDependency(entity, definition);
             RefreshOwnerPayloadMarker(entity);
             MarkStaticDirty(entity);
+            if (attachmentSlot && active && !_world.Has<PresenterBootstrapPending>(entity))
+            {
+                AddMarker<PresenterBootstrapPending>(entity);
+            }
             return true;
         }
 
@@ -1868,6 +1946,10 @@ namespace Ludots.Core.Presentation.Presenters
 
         private bool AttachmentRequiresTick(Entity entity, PresenterDefinition definition, in AttachmentConfig config)
         {
+            if (config.UpdatePolicy == AttachmentUpdatePolicy.Once || config.Target == AttachmentTarget.Parent)
+            {
+                return false;
+            }
             if (config.Target == AttachmentTarget.Bone)
             {
                 return true;
@@ -1984,8 +2066,7 @@ namespace Ludots.Core.Presentation.Presenters
         {
             return definition.HasAssetBindingBehavior ||
                    definition.HasSurfaceAuthoring ||
-                   definition.UsesRetainedPresentationRequest ||
-                   (definition.Children != null && definition.Children.Length != 0);
+                   definition.UsesRetainedPresentationRequest;
         }
 
         private bool BatchRequiresTransformSyncTick(
@@ -2404,11 +2485,13 @@ namespace Ludots.Core.Presentation.Presenters
             SyncEmitWorkMarkers(childEntity, childDefinition, childState.BehaviorActiveMask);
             SetParamDefault(childDefinition, childEntity);
             ApplyParamOverrides(childEntity, node.ParamOverrides);
+            RegisterParamDependencies(childEntity, childDefinition);
             if (node.TransformOverride.HasOverride)
             {
                 _world.Add(childEntity, node.TransformOverride);
             }
             InitializeTransform(childEntity, childDefinition);
+            RefreshAttachmentDependency(childEntity, childDefinition);
             if (childDefinition.RequiresBootstrapProcessing && !_world.Has<PresenterBootstrapPending>(childEntity))
             {
                 AddMarker<PresenterBootstrapPending>(childEntity);
@@ -2471,6 +2554,13 @@ namespace Ludots.Core.Presentation.Presenters
             PresenterInstanceBehaviors compiled = PresenterInstanceBehaviors.Compile(instanceBehaviors);
             childState.BehaviorActiveMask |= compiled.DefaultActiveMask;
             _world.Add(childEntity, compiled);
+            foreach (ref readonly BehaviorSlot behavior in instanceBehaviors.AsSpan())
+            {
+                if (behavior.Kind == BehaviorKind.Attachment && !_world.Has<PresenterAttachmentState>(childEntity))
+                {
+                    _world.Add(childEntity, new PresenterAttachmentState());
+                }
+            }
             if (!_world.Has<PresenterBootstrapPending>(childEntity))
             {
                 AddMarker<PresenterBootstrapPending>(childEntity);
@@ -2619,6 +2709,15 @@ namespace Ludots.Core.Presentation.Presenters
 
                 for (int i = 0; i < childScopeCount; i++)
                 {
+                    Entity child = _childBatchCreated[i];
+                    Entity parent = parentEntities[i];
+                    RegisterParamDependencies(child, childDefinition);
+                    RefreshAttachmentDependency(child, childDefinition);
+                    ApplyParentAttachmentTransform(child, in _world.Get<PresenterState>(child), childDefinition,
+                        in _world.Get<PresenterWorldPosition>(parent).Value,
+                        in _world.Get<PresenterWorldRotation>(parent).Value,
+                        in _world.Get<PresenterWorldFacing>(parent),
+                        in _world.Get<PresenterWorldScale>(parent).Value);
                     AppendCreateTrace(new PresenterCreateTraceEntry(
                         parentDefinition.Id, parentStableIds[i], nodeIndex, node.Path,
                         node.DefinitionId, _childBatchScopeIds[i], _childBatchStableIds[i], parentEntities[i], _childBatchCreated[i]));
@@ -2802,6 +2901,14 @@ namespace Ludots.Core.Presentation.Presenters
             BehaviorSlot[] behaviors = definition.Behaviors;
             if (behaviors != null)
             {
+                foreach (ref readonly BehaviorSlot slot in behaviors.AsSpan())
+                {
+                    if (slot.Kind == BehaviorKind.Attachment)
+                    {
+                        signature += Component<PresenterAttachmentState>.Signature;
+                        break;
+                    }
+                }
                 bool hasSound = false;
                 bool hasSpline = false;
                 bool hasAttachment = false;
@@ -2838,6 +2945,8 @@ namespace Ludots.Core.Presentation.Presenters
                         case BehaviorKind.Attachment:
                             hasAttachment = true;
                             hasAttachmentTick |= includeAttachmentTick &&
+                                                 slot.Attachment.Target == AttachmentTarget.Bone &&
+                                                 slot.Attachment.UpdatePolicy == AttachmentUpdatePolicy.Continuous &&
                                                  DefinitionHasAttachmentTransformConsumers(definition);
                             break;
                         case BehaviorKind.MinimapMarker: hasMinimapMarker = true; break;
@@ -3373,10 +3482,6 @@ namespace Ludots.Core.Presentation.Presenters
             PresentationAnchorKind anchorKind,
             out double indexWriteMs)
         {
-            bool hasInlineParentAttachment = TryGetInlineParentAttachment(
-                definition,
-                defaultBehaviorMask,
-                out AttachmentConfig parentAttachment);
             bool hasInlineParamBindings = definition.Bindings.Length != 0 && CanInlineInitialParamBindings(definition);
             bool hasInlineAttributeBehaviors = definition.HasOwnerAttributeBindingWork && CanInlineInitialAttributeBehaviors(definition);
             Entity first = created[0];
@@ -3437,28 +3542,6 @@ namespace Ludots.Core.Presentation.Presenters
                     Vector3 position = ownerTransform.Position + definition.PositionOffset;
                     Quaternion rotation = ownerTransform.Rotation;
                     Vector3 scale = ownerTransform.Scale;
-                    if (hasInlineParentAttachment &&
-                        parent != Entity.Null &&
-                        _world.IsAlive(parent))
-                    {
-                        Vector3 parentPosition = _world.Has<PresenterWorldPosition>(parent)
-                            ? _world.Get<PresenterWorldPosition>(parent).Value
-                            : Vector3.Zero;
-                        Quaternion parentRotation = _world.Has<PresenterWorldRotation>(parent)
-                            ? _world.Get<PresenterWorldRotation>(parent).Value
-                            : Quaternion.Identity;
-                        Vector3 parentScale = _world.Has<PresenterWorldScale>(parent)
-                            ? _world.Get<PresenterWorldScale>(parent).Value
-                            : Vector3.One;
-                        Quaternion normalizedParentRotation = VisualMath.NormalizeOrIdentity(parentRotation);
-                        Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
-                        Vector3 scaledOffset = parentAttachment.InheritScale
-                            ? normalizedParentScale * parentAttachment.Offset
-                            : parentAttachment.Offset;
-                        position = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
-                        rotation = VisualMath.NormalizeOrIdentity(normalizedParentRotation * VisualMath.NormalizeOrIdentity(parentAttachment.RotationOffset));
-                        scale = parentAttachment.InheritScale ? normalizedParentScale : Vector3.One;
-                    }
 
                     states[componentIndex] = state;
                     positions[componentIndex] = new PresenterWorldPosition { Value = position };
@@ -3467,23 +3550,18 @@ namespace Ludots.Core.Presentation.Presenters
                         ValueCm = WorldPlane2D.VisualMetersToLogicCm(in position),
                     };
                     rotations[componentIndex] = new PresenterWorldRotation { Value = rotation };
-                    facings[componentIndex] = hasInlineParentAttachment &&
-                        parent != Entity.Null &&
-                        _world.IsAlive(parent) &&
-                        _world.Has<PresenterWorldFacing>(parent)
-                            ? _world.Get<PresenterWorldFacing>(parent)
-                            : ResolvePresenterWorldFacing(owner);
+                    facings[componentIndex] = ResolvePresenterWorldFacing(owner);
                     scales[componentIndex] = new PresenterWorldScale { Value = scale };
                     transformSources[componentIndex] = new PresenterTransformSource
                     {
-                        Value = hasInlineParentAttachment && parent != Entity.Null
-                            ? TransformSource.AttachedToParent
-                            : parent != Entity.Null
-                                ? TransformSource.InheritParent
+                        Value = parent != Entity.Null
+                                ? TransformSource.WorldFixed
                                 : TransformSource.EntityTransform,
                     };
                     parentComponents[componentIndex] = new PresenterParent { Parent = parent };
                     children[componentIndex] = default;
+                    if (chunk.Has<PresenterAttachmentState>())
+                        chunk.GetSpan<PresenterAttachmentState>()[componentIndex] = default;
                     culls[componentIndex] = new PresenterCullState
                     {
                         OwnerCullVisible = ownerCull.IsVisible,
@@ -3815,6 +3893,11 @@ namespace Ludots.Core.Presentation.Presenters
                 return;
             }
 
+            PresenterParamCapacity.Validate(overrides, nameof(ApplyParamOverrides),
+                _world.Get<PresenterFloatParams>(presenter),
+                _world.Get<PresenterIntParams>(presenter),
+                _world.Get<PresenterVectorParams>(presenter));
+
             for (int i = 0; i < overrides.Length; i++)
             {
                 ref readonly ParamDefault entry = ref overrides[i];
@@ -3955,6 +4038,9 @@ namespace Ludots.Core.Presentation.Presenters
 
         private void RemoveIndexes(Entity presenter, in PresenterState state)
         {
+            RemoveAttachmentDependency(presenter);
+            RemoveParamDependencies(presenter);
+            _attachmentDependents.Remove(presenter);
             RemoveFromIndex(_byDefinition, state.DefId, presenter);
             RemoveFromOwnerIndex(state.OwnerEntity, presenter);
             RemoveFromOwnerDefinitionIndex(state.OwnerEntity, state.DefId, presenter);
@@ -4553,79 +4639,13 @@ namespace Ludots.Core.Presentation.Presenters
             }
         }
 
-        private void PropagateParamToAffectedChildren(Entity presenter, int paramKey, ParamLane lane,
-            float floatValue, int intValue, in Vector4 vectorValue)
+        private bool HasLocalParam(Entity entity, int key, ParamLane lane) => lane switch
         {
-            if (!_world.IsAlive(presenter) ||
-                !_world.Has<PresenterChildren>(presenter) ||
-                _definitions == null)
-            {
-                return;
-            }
-
-            ref PresenterChildren children = ref _world.Get<PresenterChildren>(presenter);
-            for (int i = 0; i < children.Count; i++)
-            {
-                PropagateParamToAffectedChild(children.Get(i), paramKey, lane, floatValue, intValue, in vectorValue);
-            }
-        }
-
-        private void PropagateParamToAffectedChild(Entity child, int paramKey, ParamLane lane,
-            float floatValue, int intValue, in Vector4 vectorValue)
-        {
-            if (!_world.IsAlive(child) ||
-                !_world.Has<PresenterState>(child) ||
-                _definitions == null)
-            {
-                return;
-            }
-
-            ref PresenterState childState = ref _world.Get<PresenterState>(child);
-            if (_definitions.TryGet(childState.DefId, out PresenterDefinition childDefinition) &&
-                (childDefinition.AffectsStaticVisualParam(paramKey, lane) ||
-                 childDefinition.AffectsMaterialSourceParam(paramKey, lane)))
-            {
-                SetParamInternal(child, paramKey, lane, floatValue, intValue, in vectorValue, propagateToChildren: false);
-            }
-
-            PropagateParamToAffectedChildren(child, paramKey, lane, floatValue, intValue, in vectorValue);
-        }
-
-        private void PropagateClearParamToAffectedChildren(Entity presenter, int paramKey, ParamLane lane)
-        {
-            if (!_world.IsAlive(presenter) ||
-                !_world.Has<PresenterChildren>(presenter) ||
-                _definitions == null)
-            {
-                return;
-            }
-
-            ref PresenterChildren children = ref _world.Get<PresenterChildren>(presenter);
-            for (int i = 0; i < children.Count; i++)
-            {
-                PropagateClearParamToAffectedChild(children.Get(i), paramKey, lane);
-            }
-        }
-
-        private void PropagateClearParamToAffectedChild(Entity child, int paramKey, ParamLane lane)
-        {
-            if (!_world.IsAlive(child) ||
-                !_world.Has<PresenterState>(child) ||
-                _definitions == null)
-            {
-                return;
-            }
-
-            ref PresenterState childState = ref _world.Get<PresenterState>(child);
-            if (_definitions.TryGet(childState.DefId, out PresenterDefinition childDefinition) &&
-                (childDefinition.AffectsStaticVisualParam(paramKey, lane) ||
-                 childDefinition.AffectsMaterialSourceParam(paramKey, lane)))
-            {
-                ClearParamInternal(child, paramKey, lane, propagateToChildren: false);
-            }
-
-            PropagateClearParamToAffectedChildren(child, paramKey, lane);
-        }
+            ParamLane.Float => _world.Get<PresenterFloatParams>(entity).TryGet(key, out _) || _world.Get<PresenterFloatDefaults>(entity).TryGet(key, out _),
+            ParamLane.Int => _world.Get<PresenterIntParams>(entity).TryGet(key, out _) || _world.Get<PresenterIntDefaults>(entity).TryGet(key, out _),
+            ParamLane.Vector => _world.Get<PresenterVectorParams>(entity).TryGet(key, out _) || _world.Get<PresenterVectorDefaults>(entity).TryGet(key, out _),
+            _ => throw new ArgumentOutOfRangeException(nameof(lane)),
+        };
 
         public void ClearStaticDirty(Entity presenter)
         {
@@ -4852,8 +4872,7 @@ namespace Ludots.Core.Presentation.Presenters
         {
             if (parent == Entity.Null ||
                 !_world.IsAlive(parent) ||
-                !_world.Has<PresenterChildren>(parent) ||
-                _world.Get<PresenterChildren>(parent).Count == 0)
+                !_attachmentDependents.ContainsKey(parent))
             {
                 return;
             }
@@ -4873,6 +4892,79 @@ namespace Ludots.Core.Presentation.Presenters
                 _world.Get<PresenterWorldScale>(parent).Value);
         }
 
+        private bool TryGetActiveAttachment(Entity entity, PresenterDefinition definition, uint mask, out AttachmentConfig config)
+        {
+            if (definition.SupportsFastParentAttachmentTick && !_world.Has<PresenterInstanceBehaviors>(entity))
+            {
+                ref readonly BehaviorSlot slot = ref definition.Behaviors[definition.FastParentAttachmentBehaviorIndex];
+                config = slot.Attachment;
+                return (mask & (1u << slot.SlotIndex)) != 0;
+            }
+            config = default;
+            bool found = false;
+            CollectActiveAttachment(definition.Behaviors, mask, ref found, ref config);
+            if (_world.Has<PresenterInstanceBehaviors>(entity))
+                CollectActiveAttachment(_world.Get<PresenterInstanceBehaviors>(entity).Slots, mask, ref found, ref config);
+            return found;
+        }
+
+        private static void CollectActiveAttachment(BehaviorSlot[] slots, uint mask, ref bool found, ref AttachmentConfig config)
+        {
+            foreach (ref readonly BehaviorSlot slot in slots.AsSpan())
+            {
+                if (slot.Kind != BehaviorKind.Attachment || slot.SlotIndex is < 0 or >= 32 ||
+                    (mask & (1u << slot.SlotIndex)) == 0) continue;
+                if (found)
+                    throw new InvalidOperationException("PRESENTATION.ATTACHMENT.ERR.Conflict: only one Attachment may be active on a presenter.");
+                found = true;
+                config = slot.Attachment;
+            }
+        }
+
+        private void RefreshAttachmentDependency(Entity child, PresenterDefinition definition)
+        {
+            RemoveAttachmentDependency(child);
+            Entity parent = _world.Get<PresenterParent>(child).Parent;
+            if (parent == Entity.Null || !TryGetActiveAttachment(child, definition,
+                    _world.Get<PresenterState>(child).BehaviorActiveMask, out AttachmentConfig config) ||
+                config.Target != AttachmentTarget.Parent || config.UpdatePolicy != AttachmentUpdatePolicy.Continuous ||
+                config.Inherit == AttachmentInheritance.None) return;
+            _attachmentDependents.TryGetValue(parent, out PresenterChildren dependents);
+            if (!dependents.Add(child))
+                throw new InvalidOperationException($"PRESENTATION.ATTACHMENT.ERR.Capacity: parent={parent.Id}, capacity={PresenterChildren.MAX_CHILDREN}.");
+            _attachmentDependents[parent] = dependents;
+        }
+
+        private void RemoveAttachmentDependency(Entity child)
+        {
+            if (!_world.Has<PresenterParent>(child)) return;
+            Entity parent = _world.Get<PresenterParent>(child).Parent;
+            if (!_attachmentDependents.TryGetValue(parent, out PresenterChildren dependents)) return;
+            if (dependents.Remove(child)) _attachmentDependents[parent] = dependents;
+        }
+
+        private void RefreshAttachmentParameter(Entity entity, int key, ParamLane lane)
+        {
+            if (lane != ParamLane.Vector || !_world.Has<PresenterAttachmentState>(entity) ||
+                !_world.Get<PresenterAttachmentState>(entity).Initialized || _definitions == null) return;
+            ref readonly PresenterState state = ref _world.Get<PresenterState>(entity);
+            PresenterDefinition definition = _definitions.Get(state.DefId);
+            if (!TryGetActiveAttachment(entity, definition, state.BehaviorActiveMask, out AttachmentConfig config) ||
+                config.UpdatePolicy == AttachmentUpdatePolicy.Once ||
+                (config.LocalPositionParamKey != key && config.LocalRotationParamKey != key && config.LocalScaleParamKey != key)) return;
+            ref PresenterAttachmentState attachment = ref _world.Get<PresenterAttachmentState>(entity);
+            PresenterAttachmentTransform.ResolveChangedParameter(_world, entity, in config, ref attachment, key);
+            if (config.Target != AttachmentTarget.Parent) return;
+            Entity parent = _world.Get<PresenterParent>(entity).Parent;
+            RequireWorldTransform(parent);
+            if (ApplyParentAttachmentTransform(entity, in state, definition,
+                    in _world.Get<PresenterWorldPosition>(parent).Value,
+                    in _world.Get<PresenterWorldRotation>(parent).Value,
+                    in _world.Get<PresenterWorldFacing>(parent),
+                    in _world.Get<PresenterWorldScale>(parent).Value))
+                PropagateParentDrivenTransforms(entity);
+        }
+
         private void PropagateParentDrivenTransforms(
             Entity parent,
             in Vector3 parentPosition,
@@ -4880,10 +4972,13 @@ namespace Ludots.Core.Presentation.Presenters
             in PresenterWorldFacing parentFacing,
             in Vector3 parentScale)
         {
-            ref PresenterChildren children = ref _world.Get<PresenterChildren>(parent);
+            ref PresenterChildren children = ref CollectionsMarshal.GetValueRefOrNullRef(_attachmentDependents, parent);
+            if (Unsafe.IsNullRef(ref children)) return;
             for (int i = 0; i < children.Count; i++)
             {
                 Entity child = children.Get(i);
+                if (_world.IsAlive(child) && !_world.Get<PresenterAttachmentState>(child).Initialized) continue;
+                AttachmentDependentVisitCount++;
                 if (!_world.IsAlive(child) ||
                     !_world.Has<PresenterParent>(child) ||
                     _world.Get<PresenterParent>(child).Parent != parent)
@@ -4906,44 +5001,14 @@ namespace Ludots.Core.Presentation.Presenters
                         $"Performer child definition id={state.DefId} is not registered during parent transform propagation.");
                 }
 
-                TransformSource source = _world.Get<PresenterTransformSource>(child).Value;
-                bool hasFastParentAttachment =
-                    (_world.Has<PerfOwnerPayloadAttachedTransformSync>(child) ||
-                     _world.Has<PerfHasAttachmentTick>(child)) &&
-                    definition.SupportsFastParentAttachmentTick &&
-                    (uint)definition.FastParentAttachmentBehaviorIndex < (uint)definition.Behaviors.Length &&
-                    definition.Behaviors[definition.FastParentAttachmentBehaviorIndex].SlotIndex is >= 0 and < 32 &&
-                    (state.BehaviorActiveMask &
-                     (1u << definition.Behaviors[definition.FastParentAttachmentBehaviorIndex].SlotIndex)) != 0;
-                bool changed = hasFastParentAttachment
-                    ? ApplyParentAttachmentTransform(
+                bool changed = ApplyParentAttachmentTransform(
                         child,
                         in state,
                         definition,
                         in parentPosition,
                         in parentRotation,
                         in parentFacing,
-                        in parentScale)
-                    : source switch
-                    {
-                        TransformSource.InheritParent => ApplyInheritedParentTransform(
-                            child,
-                            in state,
-                            definition,
-                            in parentPosition,
-                            in parentRotation,
-                            in parentFacing,
-                            in parentScale),
-                        TransformSource.AttachedToParent => ApplyParentAttachmentTransform(
-                            child,
-                            in state,
-                            definition,
-                            in parentPosition,
-                            in parentRotation,
-                            in parentFacing,
-                            in parentScale),
-                        _ => false,
-                    };
+                        in parentScale);
 
                 if (!changed ||
                     !_world.Has<PresenterChildren>(child) ||
@@ -4961,52 +5026,6 @@ namespace Ludots.Core.Presentation.Presenters
             }
         }
 
-        private bool ApplyInheritedParentTransform(
-            Entity child,
-            in PresenterState state,
-            PresenterDefinition definition,
-            in Vector3 parentPosition,
-            in Quaternion parentRotation,
-            in PresenterWorldFacing parentFacing,
-            in Vector3 parentScale)
-        {
-            ref PresenterWorldPosition position = ref _world.Get<PresenterWorldPosition>(child);
-            ref PresenterWorldPlanePosition planePosition = ref _world.Get<PresenterWorldPlanePosition>(child);
-            ref PresenterWorldRotation rotation = ref _world.Get<PresenterWorldRotation>(child);
-            ref PresenterWorldFacing facing = ref _world.Get<PresenterWorldFacing>(child);
-            ref PresenterWorldScale scale = ref _world.Get<PresenterWorldScale>(child);
-            PresenterTransformSnapshot performerSnapshot = new PresenterTransformSnapshot
-            {
-                WorldPosition = position.Value,
-                WorldRotation = rotation.Value,
-                WorldScale = scale.Value,
-                WorldFacing = facing,
-                TransformSource = TransformSource.InheritParent,
-            };
-            PresenterTransformSnapshot parentSnapshot = new PresenterTransformSnapshot
-            {
-                WorldPosition = parentPosition,
-                WorldRotation = parentRotation,
-                WorldScale = parentScale,
-                WorldFacing = parentFacing,
-            };
-            PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
-                performerSnapshot,
-                parentSnapshot,
-                true,
-                default,
-                false,
-                default);
-            return ApplyResolvedTransform(
-                child,
-                ref position,
-                ref planePosition,
-                ref rotation,
-                ref facing,
-                ref scale,
-                in resolved);
-        }
-
         private bool ApplyParentAttachmentTransform(
             Entity child,
             in PresenterState state,
@@ -5016,25 +5035,24 @@ namespace Ludots.Core.Presentation.Presenters
             in PresenterWorldFacing parentFacing,
             in Vector3 parentScale)
         {
-            if (!TryGetInlineParentAttachment(definition, state.BehaviorActiveMask, out AttachmentConfig config))
+            if (!TryGetActiveAttachment(child, definition, state.BehaviorActiveMask, out AttachmentConfig config) ||
+                config.Target != AttachmentTarget.Parent)
             {
                 return false;
             }
 
-            Quaternion normalizedParentRotation = VisualMath.NormalizeOrIdentity(parentRotation);
-            Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
-            Vector3 scaledOffset = config.InheritScale
-                ? normalizedParentScale * config.Offset
-                : config.Offset;
-            Vector3 nextPosition = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
-            PresenterResolvedTransform resolved = new PresenterResolvedTransform
+            if (!PresenterAttachmentTransform.TryResolve(
+                    _world,
+                    child,
+                    in config,
+                    in parentPosition,
+                    in parentRotation,
+                    in parentScale,
+                    in parentFacing,
+                    out PresenterResolvedTransform resolved))
             {
-                Position = nextPosition,
-                Rotation = VisualMath.NormalizeOrIdentity(
-                    normalizedParentRotation * VisualMath.NormalizeOrIdentity(config.RotationOffset)),
-                Facing = parentFacing,
-                Scale = config.InheritScale ? normalizedParentScale : Vector3.One,
-            };
+                return false;
+            }
             ref PresenterWorldPosition position = ref _world.Get<PresenterWorldPosition>(child);
             ref PresenterWorldPlanePosition planePosition = ref _world.Get<PresenterWorldPlanePosition>(child);
             ref PresenterWorldRotation rotation = ref _world.Get<PresenterWorldRotation>(child);

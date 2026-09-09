@@ -24,10 +24,6 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<PresenterState, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale, PresenterTransformSource, PresenterEmitCache, PerfTransformSyncTick, PerfEntityAnchorRootTransformSync>()
             .WithNone<PresenterBootstrapPending, PerfStaticStableVisual, PerfOwnerPayloadTransformSync>();
 
-        private static readonly QueryDescription OwnerPayloadAttachedTransformSyncQuery = new QueryDescription()
-            .WithAll<PresenterState, PresenterParent, PresenterTransformSource, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale, PresenterEmitCache, PerfOwnerPayloadAttachedTransformSync>()
-            .WithNone<PresenterBootstrapPending>();
-
         private static readonly QueryDescription DebugSyncPathQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterTransformSource, PresenterWorldPosition, PerfTransformSyncTick>()
             .WithNone<PresenterBootstrapPending, PerfStaticStableVisual>();
@@ -58,7 +54,7 @@ namespace Ludots.Core.Presentation.Systems
         {
             long start = _timingDiagnostics != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
 
-            bool ownerPayloadTransformsChanged = SyncSingleRootOwnerPayloads();
+            SyncSingleRootOwnerPayloads();
 
             foreach (ref var chunk in World.Query(in EntityAnchoredQuery))
             {
@@ -103,24 +99,15 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     }
 
-                    bool positionOnly = scales[index].Value == newScale;
                     positions[index].Value = newPosition;
                     planePositions[index].ValueCm = newPlanePosition;
                     rotations[index].Value = newRotation;
                     facings[index] = newFacing;
                     scales[index].Value = newScale;
                     Entity presenter = Unsafe.Add(ref entityFirst, index);
-                    MarkEmitDirty(presenter, positionOnly);
-                    if (SyncFastAttachedChildren(presenter, in newPosition, in newRotation, in newFacing, in newScale))
-                    {
-                        PropagateInheritedChildTransforms(presenter);
-                    }
+                    MarkEmitDirty(presenter);
+                    _runtime.PropagateParentDrivenTransforms(presenter);
                 }
-            }
-
-            if (ownerPayloadTransformsChanged)
-            {
-                SyncOwnerPayloadAttachedChildren();
             }
 
             RunDebugSyncPathAssertions();
@@ -189,9 +176,8 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private bool SyncSingleRootOwnerPayloads()
+        private void SyncSingleRootOwnerPayloads()
         {
-            bool anyChanged = false;
             foreach (ref var chunk in World.Query(in OwnerPayloadTransformSyncQuery))
             {
                 Span<WorldPositionCm> worldPositions = chunk.GetSpan<WorldPositionCm>();
@@ -253,294 +239,15 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     }
 
-                    anyChanged = true;
-                    bool positionOnly = scale.Value == newScale;
                     position.Value = newPosition;
                     planePosition.ValueCm = newPlanePosition;
                     rotation.Value = newRotation;
                     facing = newFacing;
                     scale.Value = newScale;
-                    MarkEmitDirty(payload.SingleRootPresenter, positionOnly);
-                    if (SyncFastAttachedChildren(payload.SingleRootPresenter, in newPosition, in newRotation, in newFacing, in newScale))
-                    {
-                        PropagateInheritedChildTransforms(payload.SingleRootPresenter);
-                    }
+                    MarkEmitDirty(payload.SingleRootPresenter);
+                    _runtime.PropagateParentDrivenTransforms(payload.SingleRootPresenter);
                 }
             }
-
-            return anyChanged;
-        }
-
-        private void SyncOwnerPayloadAttachedChildren()
-        {
-            int cachedDefinitionId = -1;
-            PresenterDefinition? cachedDefinition = null;
-            foreach (ref var chunk in World.Query(in OwnerPayloadAttachedTransformSyncQuery))
-            {
-                ref Entity entityFirst = ref chunk.Entity(0);
-                Span<PresenterState> states = chunk.GetSpan<PresenterState>();
-                Span<PresenterParent> parents = chunk.GetSpan<PresenterParent>();
-                Span<PresenterTransformSource> sources = chunk.GetSpan<PresenterTransformSource>();
-                Span<PresenterWorldPosition> positions = chunk.GetSpan<PresenterWorldPosition>();
-                Span<PresenterWorldPlanePosition> planePositions = chunk.GetSpan<PresenterWorldPlanePosition>();
-                Span<PresenterWorldRotation> rotations = chunk.GetSpan<PresenterWorldRotation>();
-                Span<PresenterWorldFacing> facings = chunk.GetSpan<PresenterWorldFacing>();
-                Span<PresenterWorldScale> scales = chunk.GetSpan<PresenterWorldScale>();
-                Span<PresenterEmitCache> emitCaches = chunk.GetSpan<PresenterEmitCache>();
-                bool hasStaticStableVisual = chunk.Has<PerfStaticStableVisual>();
-                bool hasRetainedPresentationRequest = chunk.Has<PerfRetainedPresentationRequest>();
-
-                foreach (int index in chunk)
-                {
-                    Entity parent = parents[index].Parent;
-                    if (parent == Entity.Null || !World.IsAlive(parent))
-                    {
-                        continue;
-                    }
-
-                    ref PresenterState state = ref states[index];
-                    if (state.DefId != cachedDefinitionId)
-                    {
-                        cachedDefinitionId = state.DefId;
-                        cachedDefinition = _definitions != null && _definitions.TryGet(state.DefId, out PresenterDefinition definition)
-                            ? definition
-                            : null;
-                    }
-
-                    if (cachedDefinition == null ||
-                        !cachedDefinition.SupportsFastParentAttachmentTick ||
-                        (uint)cachedDefinition.FastParentAttachmentBehaviorIndex >= (uint)cachedDefinition.Behaviors.Length)
-                    {
-                        throw new InvalidOperationException(
-                            $"Presenter {Unsafe.Add(ref entityFirst, index).Id} has the owner-payload attachment marker without a compiled fast attachment definition.");
-                    }
-
-                    ref readonly BehaviorSlot slot = ref cachedDefinition.Behaviors[cachedDefinition.FastParentAttachmentBehaviorIndex];
-                    if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
-                    {
-                        continue;
-                    }
-
-                    var parentTransform = World.Get<PresenterWorldPosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale>(parent);
-                    Entity child = Unsafe.Add(ref entityFirst, index);
-                    ApplyFastParentAttachment(
-                        child,
-                        in slot.Attachment,
-                        in parentTransform.t0.Value,
-                        in parentTransform.t1.Value,
-                        in parentTransform.t2,
-                        in parentTransform.t3.Value,
-                        ref sources[index],
-                        ref positions[index],
-                        ref planePositions[index],
-                        ref rotations[index],
-                        ref facings[index],
-                        ref scales[index],
-                        ref emitCaches[index],
-                        hasStaticStableVisual,
-                        hasRetainedPresentationRequest);
-                }
-            }
-        }
-
-        private bool SyncFastAttachedChildren(
-            Entity parent,
-            in Vector3 parentPosition,
-            in Quaternion parentRotation,
-            in PresenterWorldFacing parentFacing,
-            in Vector3 parentScale)
-        {
-            if (_definitions == null ||
-                parent == Entity.Null ||
-                !World.IsAlive(parent) ||
-                !World.Has<PresenterChildren>(parent))
-            {
-                return false;
-            }
-
-            ref PresenterChildren children = ref World.Get<PresenterChildren>(parent);
-            bool requiresInheritedPropagation = false;
-            for (int i = 0; i < children.Count; i++)
-            {
-                Entity child = children.Get(i);
-                if (!World.IsAlive(child))
-                {
-                    continue;
-                }
-
-                if (World.Has<PerfOwnerPayloadAttachedTransformSync>(child))
-                {
-                    continue;
-                }
-
-                if (!World.Has<PresenterState>(child) ||
-                    !World.Has<PresenterParent>(child) ||
-                    World.Get<PresenterParent>(child).Parent != parent)
-                {
-                    continue;
-                }
-
-                if (!World.Has<PerfHasAttachmentTick>(child))
-                {
-                    requiresInheritedPropagation = true;
-                    continue;
-                }
-
-                ref PresenterState state = ref World.Get<PresenterState>(child);
-                if (!_definitions.TryGet(state.DefId, out PresenterDefinition definition) ||
-                    !definition.SupportsFastParentAttachmentTick ||
-                    (uint)definition.FastParentAttachmentBehaviorIndex >= (uint)definition.Behaviors.Length)
-                {
-                    continue;
-                }
-
-                ref readonly BehaviorSlot slot = ref definition.Behaviors[definition.FastParentAttachmentBehaviorIndex];
-                if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
-                {
-                    continue;
-                }
-
-                ApplyFastParentAttachment(
-                    child,
-                    in slot.Attachment,
-                    in parentPosition,
-                    in parentRotation,
-                    in parentFacing,
-                    in parentScale);
-            }
-
-            return requiresInheritedPropagation;
-        }
-
-        // 无 Attachment 行为、未挂快速标记的 InheritParent 子级只能经完整传播跟随父级；
-        // 缺这一步时它们的稳定可视层会冻结在创建时的变换上。
-        private void PropagateInheritedChildTransforms(Entity parent)
-        {
-            if (_definitions == null ||
-                parent == Entity.Null ||
-                !World.IsAlive(parent) ||
-                !World.Has<PresenterChildren>(parent))
-            {
-                return;
-            }
-
-            ref PresenterChildren children = ref World.Get<PresenterChildren>(parent);
-            for (int i = 0; i < children.Count; i++)
-            {
-                Entity child = children.Get(i);
-                if (!World.IsAlive(child) ||
-                    World.Has<PerfOwnerPayloadAttachedTransformSync>(child) ||
-                    World.Has<PerfHasAttachmentTick>(child) ||
-                    !World.Has<PresenterState>(child) ||
-                    !World.Has<PresenterTransformSource>(child) ||
-                    !World.Has<PresenterParent>(child) ||
-                    World.Get<PresenterParent>(child).Parent != parent)
-                {
-                    continue;
-                }
-
-                TransformSource source = World.Get<PresenterTransformSource>(child).Value;
-                if (source != TransformSource.InheritParent && source != TransformSource.AttachedToParent)
-                {
-                    continue;
-                }
-
-                _runtime.PropagateParentDrivenTransforms(parent);
-                return;
-            }
-        }
-
-        private void ApplyFastParentAttachment(
-            Entity child,
-            in AttachmentConfig config,
-            in Vector3 parentPosition,
-            in Quaternion parentRotation,
-            in PresenterWorldFacing parentFacing,
-            in Vector3 parentScale)
-        {
-            if (!World.Has<PresenterTransformSource>(child) ||
-                !World.Has<PresenterWorldPosition>(child) ||
-                !World.Has<PresenterWorldPlanePosition>(child) ||
-                !World.Has<PresenterWorldRotation>(child) ||
-                !World.Has<PresenterWorldFacing>(child) ||
-                !World.Has<PresenterWorldScale>(child) ||
-                !World.Has<PresenterEmitCache>(child))
-            {
-                return;
-            }
-
-            var components = World.Get<PresenterTransformSource, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale, PresenterEmitCache>(child);
-            ApplyFastParentAttachment(
-                child,
-                in config,
-                in parentPosition,
-                in parentRotation,
-                in parentFacing,
-                in parentScale,
-                ref components.t0,
-                ref components.t1,
-                ref components.t2,
-                ref components.t3,
-                ref components.t4,
-                ref components.t5,
-                ref components.t6,
-                World.Has<PerfStaticStableVisual>(child),
-                World.Has<PerfRetainedPresentationRequest>(child));
-        }
-
-        private void ApplyFastParentAttachment(
-            Entity child,
-            in AttachmentConfig config,
-            in Vector3 parentPosition,
-            in Quaternion parentRotation,
-            in PresenterWorldFacing parentFacing,
-            in Vector3 parentScale,
-            ref PresenterTransformSource source,
-            ref PresenterWorldPosition position,
-            ref PresenterWorldPlanePosition planePosition,
-            ref PresenterWorldRotation rotation,
-            ref PresenterWorldFacing facing,
-            ref PresenterWorldScale scale,
-            ref PresenterEmitCache emitCache,
-            bool hasStaticStableVisual,
-            bool hasRetainedPresentationRequest)
-        {
-            Quaternion normalizedParentRotation = VisualMath.NormalizeOrIdentity(parentRotation);
-            Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
-            Vector3 scaledOffset = config.InheritScale
-                ? normalizedParentScale * config.Offset
-                : config.Offset;
-            Vector3 nextPosition = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
-            Vector2 nextPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in nextPosition);
-            Quaternion nextRotation = VisualMath.NormalizeOrIdentity(
-                normalizedParentRotation * VisualMath.NormalizeOrIdentity(config.RotationOffset));
-            Vector3 nextScale = config.InheritScale ? normalizedParentScale : Vector3.One;
-            bool changed =
-                source.Value != TransformSource.AttachedToParent ||
-                position.Value != nextPosition ||
-                planePosition.ValueCm != nextPlanePosition ||
-                rotation.Value != nextRotation ||
-                facing.AngleRad != parentFacing.AngleRad ||
-                facing.HasValue != parentFacing.HasValue ||
-                scale.Value != nextScale;
-            if (!changed)
-            {
-                return;
-            }
-
-            bool positionOnly = scale.Value == nextScale;
-            source.Value = TransformSource.AttachedToParent;
-            position.Value = nextPosition;
-            planePosition.ValueCm = nextPlanePosition;
-            rotation.Value = nextRotation;
-            facing = parentFacing;
-            scale.Value = nextScale;
-            _runtime.MarkCompiledTransformDrivenEmitDirty(
-                child,
-                ref emitCache,
-                hasStaticStableVisual,
-                hasRetainedPresentationRequest,
-                positionOnly);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private PresenterWorldFacing ResolveOwnerFacing(Entity owner)
@@ -560,14 +267,8 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void MarkEmitDirty(Entity presenter, bool positionOnly = false)
+        private void MarkEmitDirty(Entity presenter)
         {
-            if (positionOnly)
-            {
-                _runtime.MarkTransformPositionDrivenEmitDirty(presenter);
-                return;
-            }
-
             _runtime.MarkTransformDrivenEmitDirty(presenter);
         }
 

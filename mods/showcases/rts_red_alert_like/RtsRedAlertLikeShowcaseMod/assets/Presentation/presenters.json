@@ -387,19 +387,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.18,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.conyard.base.attachment.position",
+          "localRotationParamKey": "rts.ra.conyard.base.attachment.rotation",
+          "localScaleParamKey": "rts.ra.conyard.base.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.conyard.base.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.18,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.conyard.base.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.conyard.base.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -442,19 +470,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            -0.35,
-            0.65,
-            0.15
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.conyard.deck.attachment.position",
+          "localRotationParamKey": "rts.ra.conyard.deck.attachment.rotation",
+          "localScaleParamKey": "rts.ra.conyard.deck.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.conyard.deck.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          -0.35,
+          0.65,
+          0.15,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.conyard.deck.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.conyard.deck.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -497,19 +553,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0.9,
-            1.35,
-            -0.75
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.conyard.tower.attachment.position",
+          "localRotationParamKey": "rts.ra.conyard.tower.attachment.rotation",
+          "localScaleParamKey": "rts.ra.conyard.tower.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.conyard.tower.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0.9,
+          1.35,
+          -0.75,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.conyard.tower.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.conyard.tower.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -552,19 +636,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0.15,
-            2.25,
-            -0.75
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.conyard.crane.attachment.position",
+          "localRotationParamKey": "rts.ra.conyard.crane.attachment.rotation",
+          "localScaleParamKey": "rts.ra.conyard.crane.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.conyard.crane.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0.15,
+          2.25,
+          -0.75,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.conyard.crane.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.conyard.crane.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -607,19 +719,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            1.18,
-            2.38,
-            -0.75
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.conyard.beacon.attachment.position",
+          "localRotationParamKey": "rts.ra.conyard.beacon.attachment.rotation",
+          "localScaleParamKey": "rts.ra.conyard.beacon.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.conyard.beacon.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          1.18,
+          2.38,
+          -0.75,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.conyard.beacon.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.conyard.beacon.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -662,19 +802,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.16,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.power.base.attachment.position",
+          "localRotationParamKey": "rts.ra.power.base.attachment.rotation",
+          "localScaleParamKey": "rts.ra.power.base.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.power.base.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.16,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.power.base.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.power.base.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -717,19 +885,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            -0.35,
-            0.82,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.power.core.attachment.position",
+          "localRotationParamKey": "rts.ra.power.core.attachment.rotation",
+          "localScaleParamKey": "rts.ra.power.core.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.power.core.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          -0.35,
+          0.82,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.power.core.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.power.core.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -772,19 +968,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0.68,
-            1.25,
-            -0.48
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.power.stack.left.attachment.position",
+          "localRotationParamKey": "rts.ra.power.stack.left.attachment.rotation",
+          "localScaleParamKey": "rts.ra.power.stack.left.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.power.stack.left.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0.68,
+          1.25,
+          -0.48,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.power.stack.left.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.power.stack.left.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -827,19 +1051,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0.68,
-            1.25,
-            0.48
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.power.stack.right.attachment.position",
+          "localRotationParamKey": "rts.ra.power.stack.right.attachment.rotation",
+          "localScaleParamKey": "rts.ra.power.stack.right.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.power.stack.right.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0.68,
+          1.25,
+          0.48,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.power.stack.right.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.power.stack.right.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -882,19 +1134,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0.68,
-            2.33,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.power.cap.attachment.position",
+          "localRotationParamKey": "rts.ra.power.cap.attachment.rotation",
+          "localScaleParamKey": "rts.ra.power.cap.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.power.cap.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0.68,
+          2.33,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.power.cap.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.power.cap.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -937,19 +1217,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.18,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.refinery.base.attachment.position",
+          "localRotationParamKey": "rts.ra.refinery.base.attachment.rotation",
+          "localScaleParamKey": "rts.ra.refinery.base.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.refinery.base.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.18,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.refinery.base.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.refinery.base.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -992,19 +1300,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            -0.55,
-            0.78,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.refinery.processor.attachment.position",
+          "localRotationParamKey": "rts.ra.refinery.processor.attachment.rotation",
+          "localScaleParamKey": "rts.ra.refinery.processor.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.refinery.processor.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          -0.55,
+          0.78,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.refinery.processor.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.refinery.processor.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1047,19 +1383,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0.92,
-            1.08,
-            -0.55
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.refinery.silo.attachment.position",
+          "localRotationParamKey": "rts.ra.refinery.silo.attachment.rotation",
+          "localScaleParamKey": "rts.ra.refinery.silo.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.refinery.silo.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0.92,
+          1.08,
+          -0.55,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.refinery.silo.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.refinery.silo.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1102,19 +1466,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0.78,
-            0.72,
-            0.65
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.refinery.hopper.attachment.position",
+          "localRotationParamKey": "rts.ra.refinery.hopper.attachment.rotation",
+          "localScaleParamKey": "rts.ra.refinery.hopper.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.refinery.hopper.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0.78,
+          0.72,
+          0.65,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.refinery.hopper.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.refinery.hopper.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1157,19 +1549,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0.15,
-            1.2,
-            0.8
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.refinery.pipe.attachment.position",
+          "localRotationParamKey": "rts.ra.refinery.pipe.attachment.rotation",
+          "localScaleParamKey": "rts.ra.refinery.pipe.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.refinery.pipe.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0.15,
+          1.2,
+          0.8,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.refinery.pipe.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.refinery.pipe.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1212,19 +1632,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.17,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.factory.floor.attachment.position",
+          "localRotationParamKey": "rts.ra.factory.floor.attachment.rotation",
+          "localScaleParamKey": "rts.ra.factory.floor.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.factory.floor.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.17,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.factory.floor.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.factory.floor.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1267,19 +1715,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            -0.15,
-            0.85,
-            -0.2
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.factory.hall.attachment.position",
+          "localRotationParamKey": "rts.ra.factory.hall.attachment.rotation",
+          "localScaleParamKey": "rts.ra.factory.hall.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.factory.hall.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          -0.15,
+          0.85,
+          -0.2,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.factory.hall.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.factory.hall.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1322,19 +1798,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            -0.15,
-            1.42,
-            -0.2
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.factory.roof.attachment.position",
+          "localRotationParamKey": "rts.ra.factory.roof.attachment.rotation",
+          "localScaleParamKey": "rts.ra.factory.roof.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.factory.roof.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          -0.15,
+          1.42,
+          -0.2,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.factory.roof.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.factory.roof.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1377,19 +1881,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.55,
-            1.1
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.factory.door.attachment.position",
+          "localRotationParamKey": "rts.ra.factory.door.attachment.rotation",
+          "localScaleParamKey": "rts.ra.factory.door.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.factory.door.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.55,
+          1.1,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.factory.door.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.factory.door.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1432,19 +1964,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            1.05,
-            1.82,
-            -0.65
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.factory.vent.attachment.position",
+          "localRotationParamKey": "rts.ra.factory.vent.attachment.rotation",
+          "localScaleParamKey": "rts.ra.factory.vent.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.factory.vent.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          1.05,
+          1.82,
+          -0.65,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.factory.vent.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.factory.vent.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1487,19 +2047,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.35,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.mcv.chassis.attachment.position",
+          "localRotationParamKey": "rts.ra.mcv.chassis.attachment.rotation",
+          "localScaleParamKey": "rts.ra.mcv.chassis.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.mcv.chassis.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.35,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.mcv.chassis.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.mcv.chassis.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1542,19 +2130,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.9,
-            0.55
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.mcv.cab.attachment.position",
+          "localRotationParamKey": "rts.ra.mcv.cab.attachment.rotation",
+          "localScaleParamKey": "rts.ra.mcv.cab.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.mcv.cab.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.9,
+          0.55,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.mcv.cab.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.mcv.cab.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1597,19 +2213,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.86,
-            -0.65
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.mcv.rear.attachment.position",
+          "localRotationParamKey": "rts.ra.mcv.rear.attachment.rotation",
+          "localScaleParamKey": "rts.ra.mcv.rear.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.mcv.rear.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.86,
+          -0.65,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.mcv.rear.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.mcv.rear.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1652,19 +2296,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0.42,
-            1.52,
-            -0.9
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.mcv.antenna.attachment.position",
+          "localRotationParamKey": "rts.ra.mcv.antenna.attachment.rotation",
+          "localScaleParamKey": "rts.ra.mcv.antenna.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.mcv.antenna.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0.42,
+          1.52,
+          -0.9,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.mcv.antenna.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.mcv.antenna.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1707,19 +2379,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.32,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.harvester.chassis.attachment.position",
+          "localRotationParamKey": "rts.ra.harvester.chassis.attachment.rotation",
+          "localScaleParamKey": "rts.ra.harvester.chassis.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.harvester.chassis.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.32,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.harvester.chassis.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.harvester.chassis.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1762,19 +2462,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.78,
-            -0.25
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.harvester.bin.attachment.position",
+          "localRotationParamKey": "rts.ra.harvester.bin.attachment.rotation",
+          "localScaleParamKey": "rts.ra.harvester.bin.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.harvester.bin.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.78,
+          -0.25,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.harvester.bin.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.harvester.bin.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1817,19 +2545,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.28,
-            1.18
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.harvester.scoop.attachment.position",
+          "localRotationParamKey": "rts.ra.harvester.scoop.attachment.rotation",
+          "localScaleParamKey": "rts.ra.harvester.scoop.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.harvester.scoop.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.28,
+          1.18,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.harvester.scoop.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.harvester.scoop.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1872,19 +2628,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.82,
-            0.72
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.harvester.cab.attachment.position",
+          "localRotationParamKey": "rts.ra.harvester.cab.attachment.rotation",
+          "localScaleParamKey": "rts.ra.harvester.cab.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.harvester.cab.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.82,
+          0.72,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.harvester.cab.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.harvester.cab.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1927,19 +2711,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.34,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.rhino.hull.attachment.position",
+          "localRotationParamKey": "rts.ra.rhino.hull.attachment.rotation",
+          "localScaleParamKey": "rts.ra.rhino.hull.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.rhino.hull.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.34,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.rhino.hull.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.rhino.hull.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1982,19 +2794,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.82,
-            -0.15
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.rhino.turret.attachment.position",
+          "localRotationParamKey": "rts.ra.rhino.turret.attachment.rotation",
+          "localScaleParamKey": "rts.ra.rhino.turret.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.rhino.turret.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.82,
+          -0.15,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.rhino.turret.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.rhino.turret.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -2037,19 +2877,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.88,
-            0.82
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.rhino.barrel.attachment.position",
+          "localRotationParamKey": "rts.ra.rhino.barrel.attachment.rotation",
+          "localScaleParamKey": "rts.ra.rhino.barrel.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.rhino.barrel.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.88,
+          0.82,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.rhino.barrel.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.rhino.barrel.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -2092,19 +2960,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            -0.62,
-            0.23,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.rhino.track.left.attachment.position",
+          "localRotationParamKey": "rts.ra.rhino.track.left.attachment.rotation",
+          "localScaleParamKey": "rts.ra.rhino.track.left.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.rhino.track.left.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          -0.62,
+          0.23,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.rhino.track.left.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.rhino.track.left.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -2147,19 +3043,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0.62,
-            0.23,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "rts.ra.rhino.track.right.attachment.position",
+          "localRotationParamKey": "rts.ra.rhino.track.right.attachment.rotation",
+          "localScaleParamKey": "rts.ra.rhino.track.right.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "rts.ra.rhino.track.right.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0.62,
+          0.23,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "rts.ra.rhino.track.right.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "rts.ra.rhino.track.right.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   }
