@@ -46,7 +46,10 @@ namespace Ludots.Core.Presentation.Presenters
                     vz[i] = value.Z; vw[i] = value.W;
                     return;
                 }
-                if (Count >= MAX_ENTRIES) return;
+                if (Count >= MAX_ENTRIES)
+                {
+                    throw PresenterParamCapacity.Exceeded(ParamLane.Vector, false, MAX_ENTRIES, key);
+                }
                 keys[Count] = key;
                 vx[Count] = value.X; vy[Count] = value.Y;
                 vz[Count] = value.Z; vw[Count] = value.W;
@@ -122,7 +125,10 @@ namespace Ludots.Core.Presentation.Presenters
                     vz[i] = value.Z; vw[i] = value.W;
                     return;
                 }
-                if (Count >= MAX_ENTRIES) return;
+                if (Count >= MAX_ENTRIES)
+                {
+                    throw PresenterParamCapacity.Exceeded(ParamLane.Vector, true, MAX_ENTRIES, key);
+                }
                 keys[Count] = key;
                 vx[Count] = value.X; vy[Count] = value.Y;
                 vz[Count] = value.Z; vw[Count] = value.W;

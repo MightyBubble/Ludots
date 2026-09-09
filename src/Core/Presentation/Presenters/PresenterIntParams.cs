@@ -38,7 +38,10 @@ namespace Ludots.Core.Presentation.Presenters
                     values[i] = value;
                     return;
                 }
-                if (Count >= MAX_ENTRIES) return;
+                if (Count >= MAX_ENTRIES)
+                {
+                    throw PresenterParamCapacity.Exceeded(ParamLane.Int, false, MAX_ENTRIES, key);
+                }
                 keys[Count] = key;
                 values[Count] = value;
                 Count++;
@@ -105,7 +108,10 @@ namespace Ludots.Core.Presentation.Presenters
                     values[i] = value;
                     return;
                 }
-                if (Count >= MAX_ENTRIES) return;
+                if (Count >= MAX_ENTRIES)
+                {
+                    throw PresenterParamCapacity.Exceeded(ParamLane.Int, true, MAX_ENTRIES, key);
+                }
                 keys[Count] = key;
                 values[Count] = value;
                 Count++;

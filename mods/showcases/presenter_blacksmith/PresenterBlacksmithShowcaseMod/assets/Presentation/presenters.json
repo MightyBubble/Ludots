@@ -375,19 +375,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.65,
-            -0.35
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "blacksmith_dynamic_worker_tool_attachment.attachment.position",
+          "localRotationParamKey": "blacksmith_dynamic_worker_tool_attachment.attachment.rotation",
+          "localScaleParamKey": "blacksmith_dynamic_worker_tool_attachment.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith_dynamic_worker_tool_attachment.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.65,
+          -0.35,
+          0
+        ]
+      },
+      {
+        "paramKey": "blacksmith_dynamic_worker_tool_attachment.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "blacksmith_dynamic_worker_tool_attachment.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -688,19 +716,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            2,
-            0,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "blacksmith_workshop_left_mesh.attachment.position",
+          "localRotationParamKey": "blacksmith_workshop_left_mesh.attachment.rotation",
+          "localScaleParamKey": "blacksmith_workshop_left_mesh.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith_workshop_left_mesh.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          2,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "blacksmith_workshop_left_mesh.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "blacksmith_workshop_left_mesh.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -712,6 +768,36 @@
         "paramKey": "blacksmith.workshop.assetState",
         "lane": "Int",
         "intValue": 1
+      },
+      {
+        "paramKey": "blacksmith_workshop_right_mesh.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          -2,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "blacksmith_workshop_right_mesh.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "blacksmith_workshop_right_mesh.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ],
     "behaviors": [
@@ -752,18 +838,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            -2,
-            0,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "blacksmith_workshop_right_mesh.attachment.position",
+          "localRotationParamKey": "blacksmith_workshop_right_mesh.attachment.rotation",
+          "localScaleParamKey": "blacksmith_workshop_right_mesh.attachment.scale"
         }
       }
     ]
@@ -795,18 +877,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0,
-            3
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "blacksmith_chimney_mesh.attachment.position",
+          "localRotationParamKey": "blacksmith_chimney_mesh.attachment.rotation",
+          "localScaleParamKey": "blacksmith_chimney_mesh.attachment.scale"
         }
       },
       {
@@ -818,6 +896,38 @@
           "offset": 0,
           "updatePolicy": "Once"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith_chimney_mesh.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          3,
+          0
+        ]
+      },
+      {
+        "paramKey": "blacksmith_chimney_mesh.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "blacksmith_chimney_mesh.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -874,19 +984,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            5,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "blacksmith_chimney_smoke_vfx.attachment.position",
+          "localRotationParamKey": "blacksmith_chimney_smoke_vfx.attachment.rotation",
+          "localScaleParamKey": "blacksmith_chimney_smoke_vfx.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith_chimney_smoke_vfx.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          5,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "blacksmith_chimney_smoke_vfx.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "blacksmith_chimney_smoke_vfx.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -923,19 +1061,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.05,
-            -1.8
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "blacksmith_worker_route_spline.attachment.position",
+          "localRotationParamKey": "blacksmith_worker_route_spline.attachment.rotation",
+          "localScaleParamKey": "blacksmith_worker_route_spline.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith_worker_route_spline.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.05,
+          -1.8,
+          0
+        ]
+      },
+      {
+        "paramKey": "blacksmith_worker_route_spline.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "blacksmith_worker_route_spline.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -972,18 +1138,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0,
-            1.4
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "blacksmith_forge_decal.attachment.position",
+          "localRotationParamKey": "blacksmith_forge_decal.attachment.rotation",
+          "localScaleParamKey": "blacksmith_forge_decal.attachment.scale"
         }
       },
       {
@@ -995,6 +1157,38 @@
           "offset": 0.02,
           "updatePolicy": "Once"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith_forge_decal.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          1.4,
+          0
+        ]
+      },
+      {
+        "paramKey": "blacksmith_forge_decal.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "blacksmith_forge_decal.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1220,18 +1414,14 @@
         "activeByDefault": false,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0,
-            -2
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "blacksmith_worker_actor.attachment.position",
+          "localRotationParamKey": "blacksmith_worker_actor.attachment.rotation",
+          "localScaleParamKey": "blacksmith_worker_actor.attachment.scale"
         }
       }
     ],
@@ -1245,6 +1435,36 @@
         "paramKey": "blacksmith.worker.route.progress",
         "lane": "Float",
         "floatValue": 0
+      },
+      {
+        "paramKey": "blacksmith_worker_actor.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          -2,
+          0
+        ]
+      },
+      {
+        "paramKey": "blacksmith_worker_actor.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "blacksmith_worker_actor.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1281,18 +1501,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.55,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "blacksmith_durability_hud_bar.attachment.position",
+          "localRotationParamKey": "blacksmith_durability_hud_bar.attachment.rotation",
+          "localScaleParamKey": "blacksmith_durability_hud_bar.attachment.scale"
         }
       },
       {
@@ -1304,6 +1520,38 @@
           "targetParamKey": "blacksmith.durability.hud.ratio",
           "mode": "AttributeRatio"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith_durability_hud_bar.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.55,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "blacksmith_durability_hud_bar.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "blacksmith_durability_hud_bar.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1340,18 +1588,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.55,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "blacksmith_durability_hud_bar_benchmark.attachment.position",
+          "localRotationParamKey": "blacksmith_durability_hud_bar_benchmark.attachment.rotation",
+          "localScaleParamKey": "blacksmith_durability_hud_bar_benchmark.attachment.scale"
         }
       },
       {
@@ -1363,6 +1607,38 @@
           "targetParamKey": "blacksmith.durability.hud.ratio",
           "mode": "AttributeRatio"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith_durability_hud_bar_benchmark.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.55,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "blacksmith_durability_hud_bar_benchmark.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "blacksmith_durability_hud_bar_benchmark.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1395,18 +1671,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.85,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "blacksmith_durability_hud_text.attachment.position",
+          "localRotationParamKey": "blacksmith_durability_hud_text.attachment.rotation",
+          "localScaleParamKey": "blacksmith_durability_hud_text.attachment.scale"
         }
       },
       {
@@ -1428,6 +1700,38 @@
           "targetParamKey": "blacksmith.durability.base",
           "mode": "AttributeBase"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith_durability_hud_text.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.85,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "blacksmith_durability_hud_text.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "blacksmith_durability_hud_text.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1460,18 +1764,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.85,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "blacksmith_durability_hud_text_benchmark.attachment.position",
+          "localRotationParamKey": "blacksmith_durability_hud_text_benchmark.attachment.rotation",
+          "localScaleParamKey": "blacksmith_durability_hud_text_benchmark.attachment.scale"
         }
       },
       {
@@ -1493,6 +1793,38 @@
           "targetParamKey": "blacksmith.durability.base",
           "mode": "AttributeBase"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith_durability_hud_text_benchmark.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.85,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "blacksmith_durability_hud_text_benchmark.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "blacksmith_durability_hud_text_benchmark.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1547,8 +1879,16 @@
         "scopeTag": "structure",
         "overrides": {
           "transform": {
-            "localPosition": [-4.8, 0.35, 0],
-            "localScale": [0.45, 0.45, 0.45]
+            "localPosition": [
+              -4.8,
+              0.35,
+              0
+            ],
+            "localScale": [
+              0.45,
+              0.45,
+              0.45
+            ]
           }
         }
       },
@@ -1557,8 +1897,16 @@
         "scopeTag": "structure",
         "overrides": {
           "transform": {
-            "localPosition": [4.8, 0.35, 0],
-            "localScale": [1.35, 1.35, 1.35]
+            "localPosition": [
+              4.8,
+              0.35,
+              0
+            ],
+            "localScale": [
+              1.35,
+              1.35,
+              1.35
+            ]
           }
         }
       },

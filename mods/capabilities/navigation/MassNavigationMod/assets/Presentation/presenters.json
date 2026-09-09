@@ -291,6 +291,30 @@
   },
   {
     "id": "mass_navigation_agent_light",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.command.source"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "mass_navigation_agent_command_marker_light",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.command.source"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "mass_navigation_agent_command_marker_light",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ],
     "children": [
       {
         "definitionId": "mass_navigation_agent_health_hud_light",
@@ -381,6 +405,30 @@
   },
   {
     "id": "mass_navigation_agent_heavy",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.command.source"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "mass_navigation_agent_command_marker_heavy",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.command.source"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "mass_navigation_agent_command_marker_heavy",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ],
     "children": [
       {
         "definitionId": "mass_navigation_agent_health_hud_heavy",
@@ -470,6 +518,155 @@
     ]
   },
   {
+    "id": "mass_navigation_agent_command_marker_light",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "mass_navigation.command.marker",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.55,
+            0.05,
+            0.55
+          ]
+        },
+        "style": {
+          "color": [
+            0.72,
+            0.92,
+            1,
+            0.95
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
+          ],
+          "localPositionParamKey": "mass_navigation_agent_command_marker_light.attachment.position",
+          "localRotationParamKey": "mass_navigation_agent_command_marker_light.attachment.rotation",
+          "localScaleParamKey": "mass_navigation_agent_command_marker_light.attachment.scale"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "mass_navigation_agent_command_marker_light.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.035,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_command_marker_light.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_command_marker_light.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_command_marker_heavy",
+    "extends": "mass_navigation_agent_command_marker_light",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "mass_navigation.command.marker",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.78,
+            0.06,
+            0.78
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
+          ],
+          "localPositionParamKey": "mass_navigation_agent_command_marker_heavy.attachment.position",
+          "localRotationParamKey": "mass_navigation_agent_command_marker_heavy.attachment.rotation",
+          "localScaleParamKey": "mass_navigation_agent_command_marker_heavy.attachment.scale"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "mass_navigation_agent_command_marker_heavy.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.04,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_command_marker_heavy.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_command_marker_heavy.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
+      }
+    ]
+  },
+  {
     "id": "mass_navigation_agent_health_hud_light",
     "behaviors": [
       {
@@ -502,18 +699,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.25,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "mass_navigation_agent_health_hud_light.attachment.position",
+          "localRotationParamKey": "mass_navigation_agent_health_hud_light.attachment.rotation",
+          "localScaleParamKey": "mass_navigation_agent_health_hud_light.attachment.scale"
         }
       },
       {
@@ -532,6 +725,36 @@
         "paramKey": "massNavigation.agent.health.ratio",
         "lane": "Float",
         "floatValue": 1
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_hud_light.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.25,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_hud_light.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_hud_light.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -561,19 +784,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.55,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "mass_navigation_agent_health_hud_heavy.attachment.position",
+          "localRotationParamKey": "mass_navigation_agent_health_hud_heavy.attachment.rotation",
+          "localScaleParamKey": "mass_navigation_agent_health_hud_heavy.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "mass_navigation_agent_health_hud_heavy.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.55,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_hud_heavy.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_hud_heavy.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -606,18 +857,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.42,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "mass_navigation_agent_health_text_light.attachment.position",
+          "localRotationParamKey": "mass_navigation_agent_health_text_light.attachment.rotation",
+          "localScaleParamKey": "mass_navigation_agent_health_text_light.attachment.scale"
         }
       },
       {
@@ -651,6 +898,36 @@
         "paramKey": "massNavigation.agent.health.base",
         "lane": "Float",
         "floatValue": 100
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_text_light.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.42,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_text_light.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_text_light.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -676,18 +953,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.76,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "mass_navigation_agent_health_text_heavy.attachment.position",
+          "localRotationParamKey": "mass_navigation_agent_health_text_heavy.attachment.rotation",
+          "localScaleParamKey": "mass_navigation_agent_health_text_heavy.attachment.scale"
         }
       }
     ],
@@ -701,6 +974,36 @@
         "paramKey": "massNavigation.agent.health.base",
         "lane": "Float",
         "floatValue": 260
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_text_heavy.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.76,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_text_heavy.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_text_heavy.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },

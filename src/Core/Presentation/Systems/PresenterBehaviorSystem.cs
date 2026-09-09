@@ -114,9 +114,6 @@ namespace Ludots.Core.Presentation.Systems
         private bool[] _groundingResolved = Array.Empty<bool>();
         private bool _warnedMissingGroundingHeightmap;
         private bool _warnedGroundingSampleFailure;
-        private readonly HashSet<int> _warnedBoneAttachmentProviderMissing = new();
-        private readonly HashSet<int> _warnedBoneAttachmentInvalidBone = new();
-        private readonly HashSet<int> _warnedBoneAttachmentResolveFailed = new();
 
         private struct SoundTrackingState
         {
@@ -2028,22 +2025,24 @@ namespace Ludots.Core.Presentation.Systems
 
         private void ApplyAttachment(Entity entity, in AttachmentConfig config)
         {
+            if (config.UpdatePolicy == AttachmentUpdatePolicy.Once && World.Get<PresenterAttachmentState>(entity).Initialized)
+                return;
             Entity parentEntity = World.Get<PresenterParent>(entity).Parent;
-            if (parentEntity == Entity.Null || !World.IsAlive(parentEntity)) return;
+            if (parentEntity == Entity.Null || !World.IsAlive(parentEntity))
+                throw new InvalidOperationException($"PRESENTATION.ATTACHMENT.ERR.TargetMissing: presenter={entity.Id}.");
             switch (config.Target)
             {
                 case AttachmentTarget.Parent:
-                    Vector3 parentPos = World.Has<PresenterWorldPosition>(parentEntity) ? World.Get<PresenterWorldPosition>(parentEntity).Value : Vector3.Zero;
-                    Quaternion parentRot = World.Has<PresenterWorldRotation>(parentEntity) ? World.Get<PresenterWorldRotation>(parentEntity).Value : Quaternion.Identity;
-                    PresenterWorldFacing parentFacing = World.Has<PresenterWorldFacing>(parentEntity) ? World.Get<PresenterWorldFacing>(parentEntity) : default;
-                    Vector3 parentScale = World.Has<PresenterWorldScale>(parentEntity) ? World.Get<PresenterWorldScale>(parentEntity).Value : Vector3.One;
+                    Vector3 parentPos = World.Get<PresenterWorldPosition>(parentEntity).Value;
+                    Quaternion parentRot = World.Get<PresenterWorldRotation>(parentEntity).Value;
+                    PresenterWorldFacing parentFacing = World.Get<PresenterWorldFacing>(parentEntity);
+                    Vector3 parentScale = World.Get<PresenterWorldScale>(parentEntity).Value;
                     ApplyParentAttachment(entity, parentPos, parentRot, parentFacing, parentScale, config);
                     return;
                 case AttachmentTarget.Bone:
                     if (!World.Has<PresenterState>(parentEntity))
                     {
-                        WarnBoneAttachment(entity, _warnedBoneAttachmentResolveFailed, "parent presenter state is missing");
-                        return;
+                        throw new InvalidOperationException($"PRESENTATION.ATTACHMENT.ERR.TargetMissing: presenter={entity.Id}, parent state is missing.");
                     }
 
                     ApplyBoneAttachment(entity, World.Get<PresenterState>(parentEntity).StableId, config);
@@ -2059,14 +2058,11 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 parentScale,
             in AttachmentConfig config)
         {
-            Quaternion normalizedParentRot = VisualMath.NormalizeOrIdentity(parentRot);
-            Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
-            Vector3 scaledOffset = config.InheritScale ? normalizedParentScale * config.Offset : config.Offset;
+            if (!PresenterAttachmentTransform.TryResolve(World, entity, in config,
+                    in parentPos, in parentRot, in parentScale, in parentFacing, out PresenterResolvedTransform result))
+                return;
             SetTransform(entity, TransformSource.AttachedToParent,
-                parentPos + Vector3.Transform(scaledOffset, normalizedParentRot),
-                VisualMath.NormalizeOrIdentity(normalizedParentRot * VisualMath.NormalizeOrIdentity(config.RotationOffset)),
-                config.InheritScale ? normalizedParentScale : Vector3.One,
-                parentFacing);
+                result.Position, result.Rotation, result.Scale, result.Facing);
         }
 
         private void ApplyBoneAttachment(Entity entity, int parentStableId, in AttachmentConfig config)
@@ -2074,41 +2070,26 @@ namespace Ludots.Core.Presentation.Systems
             IBoneTransformProvider? boneTransformProvider = _boneTransformProvider();
             if (boneTransformProvider == null)
             {
-                WarnBoneAttachment(entity, _warnedBoneAttachmentProviderMissing, $"bone provider is not registered for parentStableId={parentStableId}, boneId={config.BoneId}");
-                return;
+                throw new InvalidOperationException($"PRESENTATION.ATTACHMENT.ERR.BoneProviderMissing: presenter={entity.Id}, parentStableId={parentStableId}, boneId={config.BoneId}.");
             }
 
             if (config.BoneId <= 0)
             {
-                WarnBoneAttachment(entity, _warnedBoneAttachmentInvalidBone, $"invalid boneId={config.BoneId} for parentStableId={parentStableId}");
-                return;
+                throw new InvalidOperationException($"PRESENTATION.ATTACHMENT.ERR.BoneId: presenter={entity.Id}, boneId={config.BoneId}.");
             }
 
             if (!boneTransformProvider.TryGetBoneWorldTransform(parentStableId, config.BoneId,
                     out Vector3 bonePosition, out Quaternion boneRotation, out Vector3 boneScale))
             {
-                WarnBoneAttachment(entity, _warnedBoneAttachmentResolveFailed, $"bone transform could not be resolved for parentStableId={parentStableId}, boneId={config.BoneId}");
-                return;
+                throw new InvalidOperationException($"PRESENTATION.ATTACHMENT.ERR.BoneMissing: presenter={entity.Id}, parentStableId={parentStableId}, boneId={config.BoneId}.");
             }
 
-            Quaternion normalizedBoneRotation = VisualMath.NormalizeOrIdentity(boneRotation);
+            PresenterWorldFacing facing = World.Get<PresenterWorldFacing>(entity);
+            if (!PresenterAttachmentTransform.TryResolve(World, entity, in config,
+                    in bonePosition, in boneRotation, in boneScale, in facing, out PresenterResolvedTransform result))
+                return;
             SetTransform(entity, TransformSource.BoneAttached,
-                bonePosition + Vector3.Transform(config.Offset, normalizedBoneRotation),
-                VisualMath.NormalizeOrIdentity(normalizedBoneRotation * VisualMath.NormalizeOrIdentity(config.RotationOffset)),
-                config.InheritScale ? VisualMath.NormalizeScale(boneScale) : Vector3.One,
-                World.Has<PresenterWorldFacing>(entity) ? World.Get<PresenterWorldFacing>(entity) : default);
-        }
-
-        private static void WarnBoneAttachment(Entity entity, HashSet<int> once, string reason)
-        {
-            if (!once.Add(entity.Id))
-            {
-                return;
-            }
-
-            Log.Warn(
-                in LogChannels.Presentation,
-                $"Presenter bone attachment skipped for presenterEntityId={entity.Id}: {reason}. Parent-position substitution is not applied.");
+                result.Position, result.Rotation, result.Scale, result.Facing);
         }
 
         private void ApplyGrounding(Entity entity, in GroundingConfig config)
@@ -2720,19 +2701,19 @@ namespace Ludots.Core.Presentation.Systems
                         out Quaternion parentRot,
                         out Vector3 parentScale))
                 {
-                    continue;
+                    throw new InvalidOperationException($"PRESENTATION.ATTACHMENT.ERR.TargetMissing: presenter={Unsafe.Add(ref entityFirst, index).Id}.");
                 }
 
-                Quaternion normalizedParentRot = VisualMath.NormalizeOrIdentity(parentRot);
-                Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
-                Vector3 scaledOffset = config.InheritScale ? normalizedParentScale * config.Offset : config.Offset;
-                Vector3 resolvedPosition = parentPos + Vector3.Transform(scaledOffset, normalizedParentRot);
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                PresenterWorldFacing parentFacing = World.Get<PresenterWorldFacing>(parentEntity);
+                if (!PresenterAttachmentTransform.TryResolve(World, entity, in config,
+                        in parentPos, in parentRot, in parentScale, in parentFacing, out PresenterResolvedTransform result))
+                    continue;
+                Vector3 resolvedPosition = result.Position;
                 Vector2 resolvedPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in resolvedPosition);
-                Quaternion resolvedRotation = VisualMath.NormalizeOrIdentity(normalizedParentRot * VisualMath.NormalizeOrIdentity(config.RotationOffset));
-                PresenterWorldFacing resolvedFacing = World.Has<PresenterWorldFacing>(parentEntity)
-                    ? World.Get<PresenterWorldFacing>(parentEntity)
-                    : default;
-                Vector3 resolvedScale = config.InheritScale ? normalizedParentScale : Vector3.One;
+                Quaternion resolvedRotation = result.Rotation;
+                PresenterWorldFacing resolvedFacing = result.Facing;
+                Vector3 resolvedScale = result.Scale;
                 bool changed =
                     sources[index].Value != TransformSource.AttachedToParent ||
                     positions[index].Value != resolvedPosition ||
@@ -2752,7 +2733,6 @@ namespace Ludots.Core.Presentation.Systems
                 rotations[index].Value = resolvedRotation;
                 facings[index] = resolvedFacing;
                 scales[index].Value = resolvedScale;
-                Entity entity = Unsafe.Add(ref entityFirst, index);
                 _runtime.MarkTransformDrivenEmitDirty(entity);
                 _runtime.PropagateParentDrivenTransforms(entity);
             }
@@ -2818,7 +2798,7 @@ namespace Ludots.Core.Presentation.Systems
 
                 Entity parentEntity = parents[index].Parent;
                 source.Value = parentEntity != Entity.Null && World.IsAlive(parentEntity)
-                    ? TransformSource.InheritParent
+                    ? TransformSource.WorldFixed
                     : states[index].AnchorKind == PresentationAnchorKind.Entity
                         ? TransformSource.EntityTransform
                         : TransformSource.WorldFixed;
@@ -2932,7 +2912,8 @@ namespace Ludots.Core.Presentation.Systems
                     case BehaviorKind.Animator:
                         break;
                     case BehaviorKind.Attachment:
-                        if (slot.Attachment.Target != AttachmentTarget.Parent)
+                        if (slot.Attachment.Target != AttachmentTarget.Parent ||
+                            !TryResolveParentAttachmentOnly(definition, out _, out _))
                         {
                             return false;
                         }
@@ -2977,6 +2958,17 @@ namespace Ludots.Core.Presentation.Systems
             config = default;
             slotIndex = -1;
             int[] tickBehaviorIndices = definition.TickBehaviorIndices;
+            if (tickBehaviorIndices.Length == 0)
+            {
+                foreach (ref readonly BehaviorSlot candidate in definition.Behaviors.AsSpan())
+                {
+                    if (candidate.Kind != BehaviorKind.Attachment) continue;
+                    if (candidate.Attachment.Target != AttachmentTarget.Parent || slotIndex >= 0) return false;
+                    config = candidate.Attachment;
+                    slotIndex = candidate.SlotIndex;
+                }
+                return slotIndex >= 0;
+            }
             if (tickBehaviorIndices.Length != 1)
             {
                 return false;
@@ -3192,7 +3184,7 @@ namespace Ludots.Core.Presentation.Systems
             Entity parentEntity = World.Has<PresenterParent>(entity) ? World.Get<PresenterParent>(entity).Parent : Entity.Null;
             if (parentEntity != Entity.Null && World.IsAlive(parentEntity))
             {
-                ts.Value = TransformSource.InheritParent;
+                ts.Value = TransformSource.WorldFixed;
                 return;
             }
             ts.Value = state.AnchorKind == PresentationAnchorKind.Entity

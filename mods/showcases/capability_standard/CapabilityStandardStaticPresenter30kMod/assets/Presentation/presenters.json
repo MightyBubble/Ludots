@@ -368,19 +368,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.65,
-            -0.35
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "capability_static_presenter_dynamic_worker_tool_attachment.attachment.position",
+          "localRotationParamKey": "capability_static_presenter_dynamic_worker_tool_attachment.attachment.rotation",
+          "localScaleParamKey": "capability_static_presenter_dynamic_worker_tool_attachment.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "capability_static_presenter_dynamic_worker_tool_attachment.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.65,
+          -0.35,
+          0
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_dynamic_worker_tool_attachment.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_dynamic_worker_tool_attachment.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -681,19 +709,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            2,
-            0,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "capability_static_presenter_workshop_left_mesh.attachment.position",
+          "localRotationParamKey": "capability_static_presenter_workshop_left_mesh.attachment.rotation",
+          "localScaleParamKey": "capability_static_presenter_workshop_left_mesh.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "capability_static_presenter_workshop_left_mesh.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          2,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_workshop_left_mesh.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_workshop_left_mesh.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -705,6 +761,36 @@
         "paramKey": "capability_static_presenter.workshop.assetState",
         "lane": "Int",
         "intValue": 1
+      },
+      {
+        "paramKey": "capability_static_presenter_workshop_right_mesh.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          -2,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_workshop_right_mesh.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_workshop_right_mesh.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ],
     "behaviors": [
@@ -745,18 +831,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            -2,
-            0,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "capability_static_presenter_workshop_right_mesh.attachment.position",
+          "localRotationParamKey": "capability_static_presenter_workshop_right_mesh.attachment.rotation",
+          "localScaleParamKey": "capability_static_presenter_workshop_right_mesh.attachment.scale"
         }
       }
     ]
@@ -788,18 +870,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0,
-            3
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "capability_static_presenter_chimney_mesh.attachment.position",
+          "localRotationParamKey": "capability_static_presenter_chimney_mesh.attachment.rotation",
+          "localScaleParamKey": "capability_static_presenter_chimney_mesh.attachment.scale"
         }
       },
       {
@@ -811,6 +889,38 @@
           "offset": 0,
           "updatePolicy": "Once"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "capability_static_presenter_chimney_mesh.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          3,
+          0
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_chimney_mesh.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_chimney_mesh.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -867,19 +977,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            5,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "capability_static_presenter_chimney_smoke_vfx.attachment.position",
+          "localRotationParamKey": "capability_static_presenter_chimney_smoke_vfx.attachment.rotation",
+          "localScaleParamKey": "capability_static_presenter_chimney_smoke_vfx.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "capability_static_presenter_chimney_smoke_vfx.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          5,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_chimney_smoke_vfx.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_chimney_smoke_vfx.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -916,19 +1054,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.05,
-            -1.8
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "capability_static_presenter_worker_route_spline.attachment.position",
+          "localRotationParamKey": "capability_static_presenter_worker_route_spline.attachment.rotation",
+          "localScaleParamKey": "capability_static_presenter_worker_route_spline.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "capability_static_presenter_worker_route_spline.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.05,
+          -1.8,
+          0
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_worker_route_spline.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_worker_route_spline.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -965,18 +1131,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0,
-            1.4
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "capability_static_presenter_forge_decal.attachment.position",
+          "localRotationParamKey": "capability_static_presenter_forge_decal.attachment.rotation",
+          "localScaleParamKey": "capability_static_presenter_forge_decal.attachment.scale"
         }
       },
       {
@@ -988,6 +1150,38 @@
           "offset": 0.02,
           "updatePolicy": "Once"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "capability_static_presenter_forge_decal.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          1.4,
+          0
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_forge_decal.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_forge_decal.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1213,18 +1407,14 @@
         "activeByDefault": false,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0,
-            -2
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "capability_static_presenter_worker_actor.attachment.position",
+          "localRotationParamKey": "capability_static_presenter_worker_actor.attachment.rotation",
+          "localScaleParamKey": "capability_static_presenter_worker_actor.attachment.scale"
         }
       }
     ],
@@ -1238,6 +1428,36 @@
         "paramKey": "capability_static_presenter.worker.route.progress",
         "lane": "Float",
         "floatValue": 0
+      },
+      {
+        "paramKey": "capability_static_presenter_worker_actor.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          -2,
+          0
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_worker_actor.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_worker_actor.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1274,18 +1494,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.55,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "capability_static_presenter_durability_hud_bar.attachment.position",
+          "localRotationParamKey": "capability_static_presenter_durability_hud_bar.attachment.rotation",
+          "localScaleParamKey": "capability_static_presenter_durability_hud_bar.attachment.scale"
         }
       },
       {
@@ -1297,6 +1513,38 @@
           "targetParamKey": "capability_static_presenter.durability.hud.ratio",
           "mode": "AttributeRatio"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "capability_static_presenter_durability_hud_bar.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.55,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_durability_hud_bar.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_durability_hud_bar.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1333,18 +1581,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.55,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "capability_static_presenter_durability_hud_bar_benchmark.attachment.position",
+          "localRotationParamKey": "capability_static_presenter_durability_hud_bar_benchmark.attachment.rotation",
+          "localScaleParamKey": "capability_static_presenter_durability_hud_bar_benchmark.attachment.scale"
         }
       },
       {
@@ -1356,6 +1600,38 @@
           "targetParamKey": "capability_static_presenter.durability.hud.ratio",
           "mode": "AttributeRatio"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "capability_static_presenter_durability_hud_bar_benchmark.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.55,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_durability_hud_bar_benchmark.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_durability_hud_bar_benchmark.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1388,18 +1664,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.85,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "capability_static_presenter_durability_hud_text.attachment.position",
+          "localRotationParamKey": "capability_static_presenter_durability_hud_text.attachment.rotation",
+          "localScaleParamKey": "capability_static_presenter_durability_hud_text.attachment.scale"
         }
       },
       {
@@ -1421,6 +1693,38 @@
           "targetParamKey": "capability_static_presenter.durability.base",
           "mode": "AttributeBase"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "capability_static_presenter_durability_hud_text.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.85,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_durability_hud_text.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_durability_hud_text.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -1453,18 +1757,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.85,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "capability_static_presenter_durability_hud_text_benchmark.attachment.position",
+          "localRotationParamKey": "capability_static_presenter_durability_hud_text_benchmark.attachment.rotation",
+          "localScaleParamKey": "capability_static_presenter_durability_hud_text_benchmark.attachment.scale"
         }
       },
       {
@@ -1486,6 +1786,38 @@
           "targetParamKey": "capability_static_presenter.durability.base",
           "mode": "AttributeBase"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "capability_static_presenter_durability_hud_text_benchmark.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.85,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_durability_hud_text_benchmark.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "capability_static_presenter_durability_hud_text_benchmark.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },

@@ -69,19 +69,15 @@ namespace Ludots.Core.Presentation.Presenters
 
                 case TransformSource.BoneAttached:
                 case TransformSource.AttachedToParent:
-                    basePosition = presenter.WorldPosition;
-                    baseRotation = VisualMath.NormalizeOrIdentity(presenter.WorldRotation);
-                    baseScale = VisualMath.NormalizeScale(presenter.WorldScale);
-                    baseFacing = presenter.WorldFacing;
-                    return ApplyInstanceOverride(
-                        basePosition,
-                        baseRotation,
-                        baseScale,
-                        baseFacing,
-                        instanceOverride,
-                        inheritScale: true);
+                    if (instanceOverride.HasOverride)
+                        throw new InvalidOperationException("PRESENTATION.ATTACHMENT.ERR.TransformOverride: Attachment local transforms must be supplied through its parameter references.");
+                    return CreateResolvedTransform(presenter.WorldPosition, presenter.WorldRotation,
+                        presenter.WorldScale, presenter.WorldFacing);
 
                 case TransformSource.WorldFixed:
+                    if (!instanceOverride.HasOverride)
+                        return CreateResolvedTransform(presenter.WorldPosition, presenter.WorldRotation,
+                            presenter.WorldScale, presenter.WorldFacing);
                     ComposeInstanceOverride(instanceOverride, out Vector3 fixedOffset, out Quaternion fixedRotation, out Vector3 fixedScale);
                     Quaternion worldRotation = WorldPlane2D.ComposeVisualRotation(
                         VisualMath.NormalizeOrIdentity(presenter.WorldRotation),
