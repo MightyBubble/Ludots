@@ -103,6 +103,37 @@ public sealed class PresenterCollectionVisibilityTests
     }
 
     [Test]
+    public void SwitchingPlayer_SharedUnitEmitsOnlyTheCurrentPlayersScopedMarkerEachFrame()
+    {
+        using var fixture = new Fixture(1, possessionConditions: true);
+        fixture.Member(0, false, true, scope: 11, player: 1);
+        fixture.Member(0, false, true, scope: 22, player: 2);
+        fixture.Advance();
+        Entity first = fixture.Instance(0, false, scope: 11);
+        Entity second = fixture.Instance(0, false, scope: 22);
+        int structure = fixture.Runtime.StructureVersion;
+
+        for (int round = 0; round < 6; round++)
+        {
+            int player = round % 2 + 1;
+            fixture.SetPlayer(player);
+            for (int frame = 0; frame < 3; frame++)
+            {
+                fixture.Advance();
+                Assert.Multiple(() =>
+                {
+                    Assert.That(fixture.World.Get<PresenterState>(first).BehaviorActiveMask,
+                        Is.EqualTo(player == 1 ? 1u : 0u), $"player={player}, frame={frame}, first marker");
+                    Assert.That(fixture.World.Get<PresenterState>(second).BehaviorActiveMask,
+                        Is.EqualTo(player == 2 ? 1u : 0u), $"player={player}, frame={frame}, second marker");
+                    Assert.That(fixture.Snapshot.Count, Is.EqualTo(2));
+                    Assert.That(fixture.Runtime.StructureVersion, Is.EqualTo(structure));
+                });
+            }
+        }
+    }
+
+    [Test]
     public void ReusedPresenter_RelationChangeRefreshesActivationWithoutPossessionChange()
     {
         using var fixture = new Fixture(1, possessionConditions: true);
