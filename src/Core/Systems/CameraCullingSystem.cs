@@ -154,7 +154,8 @@ namespace Ludots.Core.Systems
         private bool _presentBindingArmed;
         private readonly List<Entity> _changedOwners = new List<Entity>(32768);
         private Entity[] _spatialQueryBuffer = new Entity[65536];
-        private readonly HashSet<Entity> _spatialCandidates = new(65536);
+        private int[] _spatialCandidateStamps = Array.Empty<int>();
+        private int _spatialCandidateStamp;
         private readonly CommandBuffer _commandBuffer = new();
         private int _lastPresenterCullSyncStructureVersion = -1;
         private bool _ownerCullChangedThisFrame;
@@ -414,10 +415,6 @@ namespace Ludots.Core.Systems
                 RefreshSpatialCandidates(in queryBounds);
                 spatialQueryMs += ElapsedMs(spatialQueryStart);
             }
-            else if (_spatialCandidates.Count != 0)
-            {
-                _spatialCandidates.Clear();
-            }
 
             float tx = target.X;
             float ty = target.Y;
@@ -642,14 +639,19 @@ namespace Ludots.Core.Systems
 
         private void RefreshSpatialCandidates(in WorldAabbCm queryBounds)
         {
-            _spatialCandidates.Clear();
+            _spatialCandidateStamp++;
+            if (_spatialCandidateStamp == int.MaxValue)
+            {
+                Array.Clear(_spatialCandidateStamps);
+                _spatialCandidateStamp = 1;
+            }
 
             while (true)
             {
                 SpatialQueryResult result = _spatial.QueryAabb(in queryBounds, _spatialQueryBuffer);
                 for (int i = 0; i < result.Count; i++)
                 {
-                    _spatialCandidates.Add(_spatialQueryBuffer[i]);
+                    MarkSpatialCandidate(_spatialQueryBuffer[i]);
                 }
 
                 if (!result.Overflowed)
@@ -661,8 +663,39 @@ namespace Ludots.Core.Systems
                     ? 1024
                     : _spatialQueryBuffer.Length * 2;
                 _spatialQueryBuffer = new Entity[nextCapacity];
-                _spatialCandidates.Clear();
+                _spatialCandidateStamp++;
+                if (_spatialCandidateStamp == int.MaxValue)
+                {
+                    Array.Clear(_spatialCandidateStamps);
+                    _spatialCandidateStamp = 1;
+                }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void MarkSpatialCandidate(Entity entity)
+        {
+            int key = entity.Id + 1;
+            if ((uint)key >= (uint)_spatialCandidateStamps.Length)
+            {
+                int next = _spatialCandidateStamps.Length == 0 ? 65536 : _spatialCandidateStamps.Length;
+                while (next <= key)
+                {
+                    next *= 2;
+                }
+
+                Array.Resize(ref _spatialCandidateStamps, next);
+            }
+
+            _spatialCandidateStamps[key] = _spatialCandidateStamp;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsSpatialCandidate(Entity entity)
+        {
+            int key = entity.Id + 1;
+            return (uint)key < (uint)_spatialCandidateStamps.Length &&
+                   _spatialCandidateStamps[key] == _spatialCandidateStamp;
         }
 
         private int ProcessStaticEntitiesDirty(
@@ -1906,7 +1939,7 @@ namespace Ludots.Core.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool PassesSpatialCandidateGate(Entity entity)
         {
-            return _spatialCandidates.Contains(entity);
+            return IsSpatialCandidate(entity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
