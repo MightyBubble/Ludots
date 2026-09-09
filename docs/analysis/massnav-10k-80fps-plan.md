@@ -263,3 +263,44 @@
 
 > 先做 1（尤其 FS 质量档），因为它同时覆盖 ISM 与 skinned 的片元成本，
 > 且不动数据契约；skinned 的顶点取骨降级作为第二期，需要单独验收不许劣化骨骼姿态。
+
+---
+
+## 10. 实测修正：30K 静态场景是「GPU 顶点 + CPU cull」共同限住，不是单纯片元
+
+§8 判断「片元填充」不完整。装上片元质量档后做了三次判别实验：
+
+### 10.1 片元质量档本身有效，但不能单独救帧
+
+新增 `instancing.fs` / `skinning_instanced.fs` 的 `uQualityTier`（0=unlit 级，1=无 IBL，2=完整 PBR），
+C# 侧 `RaylibPrimitiveRenderer.InstancedQualityTier` 下发，环境开关
+`LUDOTS_RAYLIB_INSTANCED_QUALITY_TIER` 用于 A/B。
+
+| 30K 场景 | GPU 3D 利用率 | FPS |
+|---|---|---|
+| tier=2（旧行为） | **82.8%** | 28–34 |
+| tier=0（unlit 级） | **49.5%** | 24–30 |
+
+**GPU 占比掉了一半，FPS 基本不动** ⇒ 帧率由 CPU 侧的 `tick` 兜底：
+tier=0 那一帧 `frame=41.7ms = tick 15.2（cull 6.7） + mode3D 3.0 + 其余 ~23ms 在 present/wait`。
+
+### 10.2 阴影是第二个 GPU 开销
+
+tier=0 下：`SHADOW=1` → 57.1% GPU，`SHADOW=0` → 39% GPU。
+**阴影 pass 把 30K 实例又画了一遍**（`primBatches=2`）。
+
+### 10.3 几何量：30K × 2,410 tri = 7,200 万三角面/帧（+ 阴影再来一遍）
+
+`building_blacksmith_blue.gltf` 单模型 **2,410 三角形**。
+`320×180` 窗口实测帧率不变 ⇒ **不是填充率，是顶点/几何量**。
+
+### 10.4 更新后的修复优先级
+
+| # | 动作 | 影响面 | 风险 |
+|---|---|---|---|
+| 1 | 把 `uQualityTier` 接到 `CullState.LOD`（按 LOD 分桶 draw） | 省 ~30 点 GPU | 低（shader 已就绪，改分桶 key） |
+| 2 | **阴影距离裁剪**：只对相机附近 N 米内的实例画阴影（现在全画） | 省 ~18 点 GPU | 中（需要阴影候选半径） |
+| 3 | **静态 cull 增量**：相机移动但 `cullStatic` 结果不变时跳过（§7.2） | 省 2–6ms CPU | 中 |
+| 4 | 远处实例换成低模/LOD mesh（需要美术给 low-poly） | 省几何量 | 高（资产依赖） |
+
+> tier 开关先留着（默认 2，不改变画面），等第 2 项落地后再决定是否按 LOD 自动降档。

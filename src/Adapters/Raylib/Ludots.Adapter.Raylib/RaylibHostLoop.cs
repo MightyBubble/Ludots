@@ -496,6 +496,12 @@ namespace Ludots.Adapter.Raylib
                 float autoOrbitDegPerSecond = float.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC"), out float parsedAutoOrbitDegPerSecond)
                     ? parsedAutoOrbitDegPerSecond
                     : 0f;
+                // 实例化/蒙皮车道的片元质量档（-1 = 用渲染器默认 2，即不覆盖）。
+                int instancedQualityTier = int.TryParse(
+                    Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_INSTANCED_QUALITY_TIER"),
+                    out int parsedInstancedQualityTier)
+                    ? Math.Clamp(parsedInstancedQualityTier, 0, 2)
+                    : -1;
                 SyntheticUiPlayback syntheticUiPlayback = ReadSyntheticUiPlayback();
                 var presentFrames = new List<ViewportDrawFrame>(4);
                 int frameIndex = 0;
@@ -775,6 +781,11 @@ namespace Ludots.Adapter.Raylib
                         }
                         RaylibDirectionalShadowMap? frameShadow = renderDebug.DrawShadows ? directionalShadowMap : null;
                         float shadowTexelWorld = HostShadowTexelWorld;
+                        if (instancedQualityTier >= 0)
+                        {
+                            primitiveRenderer.InstancedQualityTier = instancedQualityTier;
+                        }
+
                         terrainRenderer.ApplyFrameLighting(frameLighting, frameShadow, shadowTexelWorld);
                         continuousHeightmapRenderer.ApplyFrameLighting(frameLighting, frameShadow, shadowTexelWorld);
                         primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position, frameShadow, shadowTexelWorld);

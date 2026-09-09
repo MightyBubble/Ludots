@@ -45,6 +45,28 @@ namespace Ludots.Raylib.Render
         private Shader _shader;
         private Material _material;
         private RaylibLaneShader _instancingLane = null!;
+        private int _instancingQualityTier = 2;
+
+        /// <summary>
+        /// 实例化车道与蒙皮车道的片元质量档（0 = unlit 级，1 = 无 IBL 的 lit，2 = 完整 PBR + split-sum IBL）。
+        /// 目前是中档开关；后续由 CullState.LOD 按批次下发布。
+        /// </summary>
+        public int InstancedQualityTier
+        {
+            get => _instancingQualityTier;
+            set
+            {
+                _instancingQualityTier = Math.Clamp(value, 0, 2);
+                _gpuSkinned.QualityTier = _instancingQualityTier;
+                if (_initialized)
+                {
+                    foreach (RaylibLaneShader lane in _shaderCatalog.InstancingShaders)
+                    {
+                        lane.SetQualityTier(_instancingQualityTier);
+                    }
+                }
+            }
+        }
         private readonly RaylibShaderCatalog _shaderCatalog = new();
         private Material _vfxMaterial;
         private bool _vfxMaterialLoaded;
@@ -185,6 +207,7 @@ namespace Ludots.Raylib.Render
             {
                 lane.ApplyFrameLighting(lighting, viewPos);
                 lane.ApplySkyUniforms(lighting, envSpecular: 1f);
+                lane.SetQualityTier(_instancingQualityTier);
             }
 
             Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP, _skyIbl.EnvCubemap);

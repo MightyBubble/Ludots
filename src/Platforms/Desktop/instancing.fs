@@ -26,6 +26,9 @@ uniform vec3 uSkyGround;
 uniform samplerCube uPrefilteredEnv;
 uniform sampler2D uBrdfLut;
 uniform float uEnvSpecular;
+// 0 = unlit-quality (albedo × 方向光/环境 diffuse)，1 = 无 IBL 的 lit，2 = 完整 PBR + split-sum IBL。
+// 由 C# 侧按 CullState.LOD 每 draw 设置；缺省 2 保持旧行为（未声明时 GLSL 默认 0，所以接线期必须写入）。
+uniform int uQualityTier;
 // ludo:include shadow_sampling.glsl.inc
 
 const float PI = 3.14159265359;
@@ -108,6 +111,19 @@ void main()
     vec3 H = normalize(V + L);
 
     float NdotL = max(dot(N, L), 0.0);
+    vec3 radiance = uLightColor * uLightIntensity;
+
+    // 质量档：远处实例跳过 IBL / 完整 BRDF，只保留可辨识的漫反射明暗。
+    if (uQualityTier < 2)
+    {
+        float hemisphereLow = N.y * 0.5 + 0.5;
+        vec3 ambientLow = mix(uSkyGround, uSkyZenith, hemisphereLow) + (uAmbient.rgb * uAmbient.a);
+        vec3 litLow = ambientLow * albedo + albedo * radiance * NdotL;
+        float fogLow = DistanceFogAmount(length(fragPos - uViewPos));
+        finalColor = vec4(clamp(mix(litLow, uFogColor, fogLow), 0.0, 1.0), albedoSample.a);
+        return;
+    }
+
     vec3 F0 = mix(vec3(0.04), albedo, metallic);
     float D = DistributionGGX(N, H, roughness);
     float G = GeometrySmith(N, V, L, roughness);
@@ -126,7 +142,6 @@ void main()
 
     vec3 kS = F;
     vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
-    vec3 radiance = uLightColor * uLightIntensity;
     float shadow = SampleShadow(fragPos, N);
     vec3 lit = ambient + (kD * albedo / PI + specular) * radiance * NdotL * shadow;
 

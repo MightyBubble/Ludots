@@ -21,7 +21,8 @@ namespace Ludots.Raylib.Render
             RaylibShadowSamplingLocations shadowLocs,
             int locSkyZenith,
             int locSkyGround,
-            int locEnvSpecular)
+            int locEnvSpecular,
+            int locQualityTier)
         {
             Shader = shader;
             LocTint = locTint;
@@ -32,6 +33,7 @@ namespace Ludots.Raylib.Render
             LocSkyZenith = locSkyZenith;
             LocSkyGround = locSkyGround;
             LocEnvSpecular = locEnvSpecular;
+            LocQualityTier = locQualityTier;
         }
 
         public readonly Shader Shader;
@@ -43,6 +45,7 @@ namespace Ludots.Raylib.Render
         internal readonly int LocSkyZenith;
         internal readonly int LocSkyGround;
         internal readonly int LocEnvSpecular;
+        internal readonly int LocQualityTier;
 
         public static RaylibLaneShader LoadInstancing(string baseDir, string vsName, string fsName, string label)
         {
@@ -62,6 +65,8 @@ namespace Ludots.Raylib.Render
             int locSkyZenith = RaylibShaderBindingGuard.RequireUniform(shader, "uSkyZenith", label);
             int locSkyGround = RaylibShaderBindingGuard.RequireUniform(shader, "uSkyGround", label);
             int locEnvSpecular = RaylibShaderBindingGuard.RequireUniform(shader, "uEnvSpecular", label);
+            // 质量档必须在接线期写入：GLSL int 缺省 0 会掉到 unlit 档，未写入即静默降画质。
+            int locQualityTier = RaylibShaderBindingGuard.RequireUniform(shader, "uQualityTier", label);
             int locMapAlbedo = Rl.GetShaderLocation(shader, "texture0");
             int locMapMetalness = Rl.GetShaderLocation(shader, "texture1");
             int locMapRoughness = Rl.GetShaderLocation(shader, "texture3");
@@ -131,7 +136,8 @@ namespace Ludots.Raylib.Render
                 shadowLocs,
                 locSkyZenith,
                 locSkyGround,
-                locEnvSpecular);
+                locEnvSpecular,
+                locQualityTier);
         }
 
         internal void ApplyFrameLighting(RaylibFrameLighting lighting, Vector3 viewPos)
@@ -159,6 +165,11 @@ namespace Ludots.Raylib.Render
         internal void SetColDiffuse(Vector4 diffuse)
         {
             Rl.SetShaderValue(Shader, LocColDiffuse, &diffuse, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+        }
+
+        internal void SetQualityTier(int tier)
+        {
+            Rl.SetShaderValue(Shader, LocQualityTier, &tier, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
         }
     }
 }
