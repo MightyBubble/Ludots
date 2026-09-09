@@ -11,10 +11,21 @@
           "assetKind": "WorldHud",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [90, 12, 1],
+          "localScale": [
+            90,
+            12,
+            1
+          ],
           "materialParamKey": "worldBar.fillRatio"
         },
-        "style": { "color": [0.12, 0.92, 0.28, 1] }
+        "style": {
+          "color": [
+            0.12,
+            0.92,
+            0.28,
+            1
+          ]
+        }
       },
       {
         "slot": "attachment",
@@ -22,13 +33,56 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0, 2.35, 0],
-          "rotationOffset": [0, 0, 0, 1],
-          "inheritScale": false
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
+          ],
+          "localPositionParamKey": "graphops.hud.health_bar.attachment.position",
+          "localRotationParamKey": "graphops.hud.health_bar.attachment.rotation",
+          "localScaleParamKey": "graphops.hud.health_bar.attachment.scale"
         }
       }
     ],
-    "anchor": { "offset": [0, 0, 0] }
+    "anchor": {
+      "offset": [
+        0,
+        0,
+        0
+      ]
+    },
+    "paramDefaults": [
+      {
+        "paramKey": "graphops.hud.health_bar.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          2.35,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "graphops.hud.health_bar.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "graphops.hud.health_bar.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
+      }
+    ]
   },
   {
     "id": "graphops.hud.health_text",
@@ -45,16 +99,35 @@
           "valueParamKey": "worldText.value0",
           "secondaryValueParamKey": "worldText.value1"
         },
-        "style": { "color": [1, 0.98, 0.94, 1] }
+        "style": {
+          "color": [
+            1,
+            0.98,
+            0.94,
+            1
+          ]
+        }
       }
     ],
-    "anchor": { "offset": [0, 2.65, 0] }
+    "anchor": {
+      "offset": [
+        0,
+        2.65,
+        0
+      ]
+    }
   },
   {
     "id": "graphops.visual.caster",
     "children": [
-      { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
-      { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
+      {
+        "definitionId": "graphops.hud.health_bar",
+        "scopeTag": "hud"
+      },
+      {
+        "definitionId": "graphops.hud.health_text",
+        "scopeTag": "hud-text"
+      }
     ],
     "behaviors": [
       {
@@ -67,28 +140,60 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localScale": [1.05, 2.2, 1.05]
+          "localScale": [
+            1.05,
+            2.2,
+            1.05
+          ]
         },
-        "style": { "color": [1, 0.82, 0.2, 1] }
+        "style": {
+          "color": [
+            1,
+            0.82,
+            0.2,
+            1
+          ]
+        }
       }
     ],
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "GraphOps.Caster" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.caster" }
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "GraphOps.Caster"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "graphops.visual.caster"
+        }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "GraphOps.Caster" },
-        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "GraphOps.Caster"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
       }
     ]
   },
   {
     "id": "graphops.visual.ally",
     "children": [
-      { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
-      { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
+      {
+        "definitionId": "graphops.hud.health_bar",
+        "scopeTag": "hud"
+      },
+      {
+        "definitionId": "graphops.hud.health_text",
+        "scopeTag": "hud-text"
+      }
     ],
     "behaviors": [
       {
@@ -101,28 +206,60 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localScale": [0.85, 1.9, 0.85]
+          "localScale": [
+            0.85,
+            1.9,
+            0.85
+          ]
         },
-        "style": { "color": [0.28, 0.72, 1, 1] }
+        "style": {
+          "color": [
+            0.28,
+            0.72,
+            1,
+            1
+          ]
+        }
       }
     ],
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "GraphOps.Ally" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.ally" }
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "GraphOps.Ally"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "graphops.visual.ally"
+        }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "GraphOps.Ally" },
-        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "GraphOps.Ally"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
       }
     ]
   },
   {
     "id": "graphops.visual.enemy",
     "children": [
-      { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
-      { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
+      {
+        "definitionId": "graphops.hud.health_bar",
+        "scopeTag": "hud"
+      },
+      {
+        "definitionId": "graphops.hud.health_text",
+        "scopeTag": "hud-text"
+      }
     ],
     "behaviors": [
       {
@@ -135,37 +272,84 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localScale": [0.9, 1.95, 0.9]
+          "localScale": [
+            0.9,
+            1.95,
+            0.9
+          ]
         },
-        "style": { "color": [0.95, 0.28, 0.24, 1] }
+        "style": {
+          "color": [
+            0.95,
+            0.28,
+            0.24,
+            1
+          ]
+        }
       }
     ],
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "GraphOps.Target" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.enemy" }
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "GraphOps.Target"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "graphops.visual.enemy"
+        }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "GraphOps.Target" },
-        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "GraphOps.Target"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
       },
       {
-        "event": { "kind": "EntitySpawned", "key": "Unit.Soldier" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.enemy" }
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "Unit.Soldier"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "graphops.visual.enemy"
+        }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "Unit.Soldier" },
-        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "Unit.Soldier"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
       }
     ]
   },
   {
     "id": "graphops.visual.scout",
     "children": [
-      { "definitionId": "graphops.hud.health_bar", "scopeTag": "hud" },
-      { "definitionId": "graphops.hud.health_text", "scopeTag": "hud-text" }
+      {
+        "definitionId": "graphops.hud.health_bar",
+        "scopeTag": "hud"
+      },
+      {
+        "definitionId": "graphops.hud.health_text",
+        "scopeTag": "hud-text"
+      }
     ],
     "behaviors": [
       {
@@ -178,20 +362,46 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localScale": [0.7, 1.65, 0.7]
+          "localScale": [
+            0.7,
+            1.65,
+            0.7
+          ]
         },
-        "style": { "color": [0.35, 0.9, 0.72, 1] }
+        "style": {
+          "color": [
+            0.35,
+            0.9,
+            0.72,
+            1
+          ]
+        }
       }
     ],
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "Unit.Scout" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.scout" }
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "Unit.Scout"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "graphops.visual.scout"
+        }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "Unit.Scout" },
-        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "Unit.Scout"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
       }
     ]
   }

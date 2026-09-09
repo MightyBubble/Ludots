@@ -42,6 +42,7 @@ namespace Ludots.Core.Presentation.Presenters
         /// </summary>
         public int Register(string key, PresenterDefinition definition)
         {
+            PresenterParamCapacity.Validate(definition.ParamDefaults, key);
             int id = _ids.Register(key);
             EnsureCapacity(id);
             definition.Id = id;

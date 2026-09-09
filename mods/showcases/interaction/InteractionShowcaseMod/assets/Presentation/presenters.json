@@ -135,19 +135,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.07,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "interaction.blink.dispatch_marker.attachment.position",
+          "localRotationParamKey": "interaction.blink.dispatch_marker.attachment.rotation",
+          "localScaleParamKey": "interaction.blink.dispatch_marker.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "interaction.blink.dispatch_marker.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.07,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "interaction.blink.dispatch_marker.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "interaction.blink.dispatch_marker.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -216,19 +244,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.1,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "interaction.hover.evidence_marker.attachment.position",
+          "localRotationParamKey": "interaction.hover.evidence_marker.attachment.rotation",
+          "localScaleParamKey": "interaction.hover.evidence_marker.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "interaction.hover.evidence_marker.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.1,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "interaction.hover.evidence_marker.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "interaction.hover.evidence_marker.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },

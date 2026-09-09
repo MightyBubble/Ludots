@@ -1621,7 +1621,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void SetParam_PropagatesOnlyToAffectedStaticVisualChildren()
+        public void SetParam_PreservesChildDefaultAndDoesNotMaterializeOverrides()
         {
             using var world = World.Create();
             Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
@@ -1716,8 +1716,8 @@ namespace Ludots.Tests.Presentation
 
             instances.SetParamAndPropagateToAffectedChildren(root, swapParamKey, ParamLane.Int, 0f, 1, Vector4.Zero);
 
-            Assert.That(world.Get<PresenterIntParams>(affected).TryGet(swapParamKey, out int affectedLocal), Is.True);
-            Assert.That(affectedLocal, Is.EqualTo(1));
+            Assert.That(world.Get<PresenterIntParams>(affected).TryGet(swapParamKey, out _), Is.False);
+            Assert.That(instances.ResolveInt(affected, swapParamKey), Is.EqualTo(0));
             Assert.That(world.Get<PresenterIntParams>(unaffected).TryGet(swapParamKey, out _), Is.False);
         }
 
@@ -1831,8 +1831,8 @@ namespace Ludots.Tests.Presentation
             system.Update(0.016f);
 
             Entity child = world.Get<PresenterChildren>(root).Get(0);
-            Assert.That(world.Get<PresenterIntParams>(child).TryGet(swapParamKey, out int localSwap), Is.True);
-            Assert.That(localSwap, Is.EqualTo(2));
+            Assert.That(world.Get<PresenterIntParams>(child).TryGet(swapParamKey, out _), Is.False);
+            Assert.That(instances.ResolveInt(child, swapParamKey), Is.EqualTo(2));
         }
 
         [Test]

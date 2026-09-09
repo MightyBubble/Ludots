@@ -104,19 +104,16 @@
         "kind": "Attachment",
         "activeByDefault": true,
         "attachment": {
-          "boneId": 1,
-          "offset": [
-            0,
-            0.5,
-            0
+          "target": "Parent",
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation",
+            "Scale"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": true
+          "localPositionParamKey": "ref_base_definition.attachment.position",
+          "localRotationParamKey": "ref_base_definition.attachment.rotation",
+          "localScaleParamKey": "ref_base_definition.attachment.scale"
         }
       },
       {
@@ -196,6 +193,36 @@
         "paramKey": "presenter_schema_reference.animator.speed",
         "lane": "Float",
         "floatValue": 1
+      },
+      {
+        "paramKey": "ref_base_definition.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.5,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "ref_base_definition.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "ref_base_definition.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ],
     "bindings": [
@@ -526,8 +553,7 @@
         "floatValue": 0
       }
     ]
-  }
-,
+  },
   {
     "id": "ref_anchor_offset_definition",
     "behaviors": [
@@ -540,9 +566,22 @@
           "assetId": "ref_mesh_cube",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localOffset": [0, 0, 0],
-          "localRotation": [0, 0, 0, 1],
-          "localScale": [1, 1, 1]
+          "localOffset": [
+            0,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ]
         }
       }
     ],
@@ -550,7 +589,11 @@
       "durationSeconds": 5
     },
     "anchor": {
-      "offset": [0, 1.5, 0]
+      "offset": [
+        0,
+        1.5,
+        0
+      ]
     }
   }
 ]

@@ -360,6 +360,10 @@ namespace Ludots.Core.Presentation.Presenters
 
         internal void BuildBehaviorMetadata()
         {
+            uint defaultMask = 0;
+            foreach (ref readonly BehaviorSlot slot in Behaviors.AsSpan())
+                if (slot.ActiveByDefault) defaultMask |= 1u << slot.SlotIndex;
+            PresenterAttachmentTransform.ValidateActiveDrivers(Behaviors, default, defaultMask, Key);
             AssetBindingSlotMask = 0u;
             AnimatorSlotMask = 0u;
             HasAssetBindingBehavior = false;
@@ -650,8 +654,13 @@ namespace Ludots.Core.Presentation.Presenters
                         compiledBindings.Add(CompiledBinding.FromInteractionContext(slot.SlotIndex, in slot.InteractionContextBinding));
                         break;
                     case BehaviorKind.Attachment:
-                        tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
-                        tickBehaviorIndices.Add(i);
+                        PresenterAttachmentTransform.Validate(in slot.Attachment, $"Presenter '{Key}', slot={slot.SlotIndex}");
+                        RequiresBootstrapProcessing = true;
+                        if (slot.Attachment.UpdatePolicy == AttachmentUpdatePolicy.Continuous)
+                        {
+                            tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
+                            tickBehaviorIndices.Add(i);
+                        }
                         if (slot.Attachment.Target != AttachmentTarget.Parent)
                         {
                             blocksEventDrivenStaticEmit = true;

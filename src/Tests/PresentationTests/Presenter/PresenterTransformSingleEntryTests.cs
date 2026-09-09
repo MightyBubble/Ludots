@@ -285,6 +285,11 @@ namespace Ludots.Tests.Presentation
             int parentDefId = definitions.Register("single.entry.parent", new PresenterDefinition());
             int childDefId = definitions.Register("single.entry.attached.child", new PresenterDefinition
             {
+                ParamDefaults = [
+                    new ParamDefault { ParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.position"), Lane = ParamLane.Vector, VectorValue = new Vector4(new Vector3(0f, 3f, 0f), 0f) },
+                    new ParamDefault { ParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.rotation"), Lane = ParamLane.Vector, VectorValue = new Vector4((Quaternion.Identity).X, (Quaternion.Identity).Y, (Quaternion.Identity).Z, (Quaternion.Identity).W) },
+                    new ParamDefault { ParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.scale"), Lane = ParamLane.Vector, VectorValue = new Vector4(1f, 1f, 1f, 0f) }
+                ],
                 Behaviors =
                 [
                     new BehaviorSlot
@@ -292,13 +297,7 @@ namespace Ludots.Tests.Presentation
                         SlotIndex = 0,
                         Kind = BehaviorKind.Attachment,
                         ActiveByDefault = true,
-                        Attachment = new AttachmentConfig
-                        {
-                            Target = AttachmentTarget.Parent,
-                            Offset = new Vector3(0f, 3f, 0f),
-                            RotationOffset = Quaternion.Identity,
-                            InheritScale = false,
-                        },
+                        Attachment = new AttachmentConfig { Target = AttachmentTarget.Parent, BoneId = 0, UpdatePolicy = AttachmentUpdatePolicy.Continuous, Inherit = AttachmentInheritance.Position | AttachmentInheritance.Rotation, LocalPositionParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.position"), LocalRotationParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.rotation"), LocalScaleParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.scale") },
                     },
                     new BehaviorSlot
                     {
@@ -575,9 +574,11 @@ namespace Ludots.Tests.Presentation
                         "activeByDefault": true,
                         "attachment": {
                           "target": "Parent",
-                          "offset": [0, 0.5, 0],
-                          "rotationOffset": [0, 0, 0, 1],
-                          "inheritScale": true
+                          "updatePolicy": "Continuous",
+                          "inherit": ["Position", "Rotation", "Scale"],
+                          "localPositionParamKey": "test.position",
+                          "localRotationParamKey": "test.rotation",
+                          "localScaleParamKey": "test.scale"
                         }
                       }
                     ]
@@ -647,9 +648,11 @@ namespace Ludots.Tests.Presentation
                         "activeByDefault": true,
                         "attachment": {
                           "target": "Parent",
-                          "offset": [0, 0.5, 0],
-                          "rotationOffset": [0, 0, 0, 1],
-                          "inheritScale": true
+                          "updatePolicy": "Continuous",
+                          "inherit": ["Position", "Rotation", "Scale"],
+                          "localPositionParamKey": "test.position",
+                          "localRotationParamKey": "test.rotation",
+                          "localScaleParamKey": "test.scale"
                         }
                       }
                     ]
