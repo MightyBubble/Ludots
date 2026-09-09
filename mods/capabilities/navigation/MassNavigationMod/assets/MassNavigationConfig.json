@@ -54,6 +54,7 @@
     "separationHashMinSearchRadiusCells": 2,
     "hardResolveHashCellSizeCm": 50,
     "hardResolveHashMinSearchRadiusCells": 1,
+    "hardResolveMaxSeparatesPerAgentPass": 2,
     "playAreaMinXCm": 50,
     "playAreaMaxXCm": 9950,
     "playAreaMinYCm": 50,
@@ -125,7 +126,7 @@
       }
     ],
     "spawnLayout": {
-      "kind": "OrbitOpposedTargets",
+      "kind": "QuadrantSpread",
       "orbitRadiusCm": 3650,
       "randomSeed": 12648430
     }
