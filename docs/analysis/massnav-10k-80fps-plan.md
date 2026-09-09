@@ -208,3 +208,58 @@
    （预期省掉立方图 `textureLod` + BRDF LUT 两次采样）。
 3. **不要用 `maxLod` 削 HUD**（上一轮的误判）：本场景 HUD 是 0，砍 HUD 无用；
    真正要砍的是**远处实例的片元着色质量**，不是 HUD 条目。
+
+---
+
+## 9. 两条渲染路径都吃同一套 PBR shader —— skinned 也受影响，但瓶颈不同
+
+用户问「skinned mesh instance 是不是也受影响」。**是**，但两条路是**不同的瓶颈**，
+用 320×180 窗口（1/25 像素）做了判别性实验：
+
+| 场景 | 1600×900 | 320×180 | 判别 |
+|---|---|---|---|
+| 30K 静态 ISM（建筑） | 20–30 FPS | ~30 FPS（同） | 与分辨率无关 ⇒ **片元/填充**（重叠建筑）|
+| 10K massnav skinned（士兵） | 18–25 FPS | 18–25 FPS（**几乎不变**） | **与分辨率无关** ⇒ **顶点/几何** |
+
+### 9.1 片元侧：两个 FS 的照明代码逐字节相同
+
+`diff <(instancing.fs) <(skinning_instanced.fs)`（去空白）只差 tint/fragColor 的接线，
+照明段完全一致。每片元固定成本：
+
+- `texture0` 反照率 + 可选 `texture3` 粗糙度 + 可选 `texture1` 金属度
+- **`SampleShadow` = 3×3 共 9 次 shadow map 采样**（`shadow_sampling.glsl.inc`，由 `uShadowEnabled` 动态分支门控）
+- `textureLod(uPrefilteredEnv, …)` 立方图 1 次 + `uBrdfLut` 1 次
+- Cook-Torrance D/G/F + split-sum IBL + 距离雾
+
+⇒ 最坏每片元 **14 次纹理采样**。JUN16 的 `instancing.fs` 是 **1 次**。
+
+### 9.2 顶点侧：skinned VS 每顶点最多 18 次取骨
+
+`skinning_instanced_pose_texture.vs` 每顶点：
+- 实例表 `texelFetch` × 2（poseRow + tint/alpha）
+- 最多 4 个权重分支，每个 `FetchBoneMatrix` 内部 **4 次 `texelFetch`** ⇒ 最多 **16 次**
+
+士兵模型 `mass_navigation_agent_soldier.glb` = **6,952 tri / 15 mesh part**
+（与 `Knight.glb` 同模型，md5 一致）。10K 实例 = **≈6,950 万三角面/帧** × 每顶点 ≤18 次
+纹理取骨 ⇒ 每帧上亿次 texel fetch。**这与分辨率无关**，正是 320×180 不掉帧的原因。
+
+### 9.3 LOD 已经算出来了，但渲染器根本没用
+
+`CameraCullingSystem` 每帧算出 `CullState.LOD ∈ {High, Medium, Low}` 并经
+`presentation.cameraCulling` 配了阈值（30K 场景 20000/70000/180000cm），
+但 `RaylibPrimitiveRenderer` / `RaylibFrameRenderer` **没有任何读取 LOD 选 shader 或材质的代码**。
+⇒ 远近一视同仁，全走完整 PBR/IBL。
+
+### 9.4 修复方案（按风险从低到高）
+
+1. **给 FS 加质量档 uniform（最小改动、可回退）**
+   两个 FS 各加 `uniform int uQualityTier`：`2`=全量，`1`=跳过 IBL（省立方图 + BRDF LUT 2 次采样），
+   `0`=退化为 `albedo × (环境漫反射 + NdotL × 光)`（省掉 Cook-Torrance / 9 次 PCF）。
+   由 C# 侧按 `CullState.LOD` 直接设。同一 shader、同一个 draw call，只多一次 uniform 写。
+2. **把 LOD 接通到渲染器**：`SkinnedVisualBatchItem` / ISM bucket 需要携带 LOD，
+   或按 LOD 分桶（`primBatches` 从 1 变 3，可接受）。
+3. **skinned 侧另加顶点降级**：远处改成 2 权重（`skin` 只取 2 个 bone），或
+   按 LOD 用不同 mesh（若模型有 low-poly 变体）。这一条改动最大，放到第二期。
+
+> 先做 1（尤其 FS 质量档），因为它同时覆盖 ISM 与 skinned 的片元成本，
+> 且不动数据契约；skinned 的顶点取骨降级作为第二期，需要单独验收不许劣化骨骼姿态。
