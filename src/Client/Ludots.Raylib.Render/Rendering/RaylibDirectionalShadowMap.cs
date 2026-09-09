@@ -102,6 +102,26 @@ namespace Ludots.Raylib.Render
 
         public float DepthRange => _depthRange;
 
+        /// <summary>
+        /// World-space ortho box the current frame's shadow map covers. Depth casters outside it
+        /// cannot contribute a visible shadow, so callers may skip them.
+        /// </summary>
+        public Vector3 CasterVolumeCenter { get; private set; }
+        public float CasterVolumeRadius { get; private set; }
+        public bool HasCasterVolume { get; private set; }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool ContainsCaster(Vector3 worldPosition, float casterRadius)
+        {
+            if (!HasCasterVolume)
+            {
+                return true;
+            }
+
+            float reach = CasterVolumeRadius + MathF.Max(0f, casterRadius);
+            return Vector3.DistanceSquared(worldPosition, CasterVolumeCenter) <= reach * reach;
+        }
+
         public void BeginFrame(Vector3 lightDirectionToward, Vector3 sceneCenter, float sceneRadius)
         {
             if (_disposed)
@@ -127,6 +147,10 @@ namespace Ludots.Raylib.Render
             Vector3 eye = sceneCenter + (forward * eyeDistance);
 
             _lightView = BuildLookAt(eye, sceneCenter, upHint);
+
+            CasterVolumeCenter = sceneCenter;
+            CasterVolumeRadius = MathF.Max(sceneRadius, 1f);
+            HasCasterVolume = true;
 
             float halfExtent = MathF.Max(sceneRadius * 1.35f, 4f);
             float farPlane = eyeDistance + (sceneRadius * 2.2f);
