@@ -1216,7 +1216,7 @@ namespace Ludots.Adapter.Raylib
                         {
                             AppendRaylibDiagnostic(diagnosticPath, $"sample frame={frameIndex}");
                             AppendRaylibDiagnostic(diagnosticPath,
-                                $"skinning-cpu poses={primitiveRenderer.LastGpuSkinnedUniquePoses} poseBuildMs={primitiveRenderer.LastGpuSkinnedPoseBuildCpuMs:F4} textureUploadMs={primitiveRenderer.LastGpuSkinnedTextureUploadCpuMs:F4} textureUploadBytes={primitiveRenderer.LastGpuSkinnedTextureUploadBytes} shadowSubmitMs={primitiveRenderer.LastGpuSkinnedShadowSubmitCpuMs:F4}");
+                                $"skinning-cpu poses={primitiveRenderer.LastGpuSkinnedUniquePoses} shadowCulled={primitiveRenderer.LastInstancedShadowCastersCulled} poseBuildMs={primitiveRenderer.LastGpuSkinnedPoseBuildCpuMs:F4} textureUploadMs={primitiveRenderer.LastGpuSkinnedTextureUploadCpuMs:F4} textureUploadBytes={primitiveRenderer.LastGpuSkinnedTextureUploadBytes} shadowSubmitMs={primitiveRenderer.LastGpuSkinnedShadowSubmitCpuMs:F4}");
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                             if (MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out MassNavigationSimulationRuntime massNavigation))
                             {
