@@ -491,20 +491,6 @@ namespace Ludots.Tool
                 ctx.ExitCode = EstimateNavFromReactRecast(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, parallel, maxDegree, tileVersion);
             });
             navCommand.AddCommand(estimateRecastReactNavCommand);
-
-            var writeManifestCommand = new Command("write-manifest", "Write nav tile manifests for already-baked .ntil sets (cold-start validation data)");
-            writeManifestCommand.AddOption(mapIdOption);
-            writeManifestCommand.AddOption(navModIdOption);
-            var manifestRepoRootOption = new Option<string?>("--repoRoot", () => null, "Repository root (default: current directory)");
-            writeManifestCommand.AddOption(manifestRepoRootOption);
-            writeManifestCommand.SetHandler((InvocationContext ctx) =>
-            {
-                string? mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
-                string? modId = ctx.ParseResult.GetValueForOption(navModIdOption);
-                string? repoRoot = ctx.ParseResult.GetValueForOption(manifestRepoRootOption);
-                ctx.ExitCode = NavManifestBackfill.Run(repoRoot ?? Directory.GetCurrentDirectory(), mapId, modId);
-            });
-            navCommand.AddCommand(writeManifestCommand);
             rootCommand.AddCommand(navCommand);
 
             return await rootCommand.InvokeAsync(args);
