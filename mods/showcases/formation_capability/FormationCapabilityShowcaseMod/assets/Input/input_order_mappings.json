@@ -3,7 +3,7 @@
   "mappings": [
     {
       "actionId": "Command",
-      "actorCollectionKey": "collection.command.source",
+      "actorCollectionKey": "selected",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "massNavigationMove",
       "argsTemplate": {},

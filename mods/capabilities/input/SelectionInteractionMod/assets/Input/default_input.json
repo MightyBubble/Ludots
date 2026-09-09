@@ -10,6 +10,11 @@
       "name": "CaseE_BoxSelectEnd",
       "type": "Button",
       "firesOn": "release"
+    },
+    {
+      "id": "Command",
+      "name": "Gameplay_Command",
+      "type": "Button"
     }
   ],
   "contexts": [
@@ -33,6 +38,10 @@
         {
           "actionId": "PointerMoved",
           "path": "<Mouse>/Pos"
+        },
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/rightButton"
         },
         {
           "actionId": "QueueModifier",

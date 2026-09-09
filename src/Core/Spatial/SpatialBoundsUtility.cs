@@ -3,6 +3,8 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Presentation.Components;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Spatial
@@ -39,8 +41,19 @@ namespace Ludots.Core.Spatial
             IScreenProjector projector,
             out ScreenRect bounds)
         {
+            ScreenProjectionPoseContext context = ScreenProjectionPoseContext.CurrentSimulation;
+            return TryProjectScreenBounds(world, entity, projector, out bounds, in context);
+        }
+
+        public static bool TryProjectScreenBounds(
+            World world,
+            Entity entity,
+            IScreenProjector projector,
+            out ScreenRect bounds,
+            in ScreenProjectionPoseContext context)
+        {
             bounds = default;
-            if (!TryGetSimulationPose(world, entity, out SimPose pose))
+            if (!TryGetSimulationPose(world, entity, in context, out SimPose pose))
             {
                 return false;
             }
@@ -91,8 +104,22 @@ namespace Ludots.Core.Spatial
             Span<Vector2> destination,
             out int count)
         {
+            ScreenProjectionPoseContext context = ScreenProjectionPoseContext.CurrentSimulation;
+            return TryProjectFootprintScreenPolygon(
+                world, entity, projector, polygonIndex, destination, out count, in context);
+        }
+
+        public static bool TryProjectFootprintScreenPolygon(
+            World world,
+            Entity entity,
+            IScreenProjector projector,
+            int polygonIndex,
+            Span<Vector2> destination,
+            out int count,
+            in ScreenProjectionPoseContext context)
+        {
             count = 0;
-            if (!TryGetSimulationPose(world, entity, out SimPose pose) ||
+            if (!TryGetSimulationPose(world, entity, in context, out SimPose pose) ||
                 !world.Has<SpatialBounds>(entity) ||
                 !world.Has<SpatialFootprint2D>(entity))
             {
@@ -122,7 +149,19 @@ namespace Ludots.Core.Spatial
             Vector2 pointer,
             float pointPickRadiusPixels)
         {
-            if (!TryGetSimulationPose(world, entity, out SimPose pose))
+            ScreenProjectionPoseContext context = ScreenProjectionPoseContext.CurrentSimulation;
+            return PointerHitsEntity(world, entity, projector, pointer, pointPickRadiusPixels, in context);
+        }
+
+        public static bool PointerHitsEntity(
+            World world,
+            Entity entity,
+            IScreenProjector projector,
+            Vector2 pointer,
+            float pointPickRadiusPixels,
+            in ScreenProjectionPoseContext context)
+        {
+            if (!TryGetSimulationPose(world, entity, in context, out SimPose pose))
             {
                 return false;
             }
@@ -148,7 +187,18 @@ namespace Ludots.Core.Spatial
             IScreenProjector projector,
             in ScreenRect marquee)
         {
-            if (!TryGetSimulationPose(world, entity, out SimPose pose))
+            ScreenProjectionPoseContext context = ScreenProjectionPoseContext.CurrentSimulation;
+            return EntityIntersectsScreenRect(world, entity, projector, in marquee, in context);
+        }
+
+        public static bool EntityIntersectsScreenRect(
+            World world,
+            Entity entity,
+            IScreenProjector projector,
+            in ScreenRect marquee,
+            in ScreenProjectionPoseContext context)
+        {
+            if (!TryGetSimulationPose(world, entity, in context, out SimPose pose))
             {
                 return false;
             }
@@ -414,7 +464,11 @@ namespace Ludots.Core.Spatial
             return pose.Position + Vector3.Transform(local, pose.Rotation);
         }
 
-        private static bool TryGetSimulationPose(World world, Entity entity, out SimPose pose)
+        private static bool TryGetSimulationPose(
+            World world,
+            Entity entity,
+            in ScreenProjectionPoseContext context,
+            out SimPose pose)
         {
             pose = default;
             if (!world.IsAlive(entity) || !world.Has<WorldPositionCm>(entity))
@@ -423,13 +477,37 @@ namespace Ludots.Core.Spatial
             }
 
             WorldPositionCm worldPosition = world.Get<WorldPositionCm>(entity);
+            Fix64Vec2 projectedPosition = worldPosition.Value;
+            if (world.TryGet(entity, out PreviousWorldPositionCm previousPosition))
+            {
+                projectedPosition = Fix64Vec2.Lerp(
+                    previousPosition.Value,
+                    worldPosition.Value,
+                    Fix64.FromFloat(context.InterpolationAlpha));
+            }
+
             Quaternion rotation = Quaternion.Identity;
             if (world.Has<FacingDirection>(entity))
             {
                 rotation = WorldPlane2D.FacingRadToVisualYRotation(world.Get<FacingDirection>(entity).AngleRad);
             }
 
-            pose = new SimPose(WorldPlane2D.LogicCmToVisualMeters(in worldPosition.Value), rotation);
+            float heightMeters = 0f;
+            IContinuousHeightmap? groundHeightmap = context.GroundHeightmap;
+            if (groundHeightmap != null && world.Has<ContinuousHeightmapSampleState>(entity))
+            {
+                float xCm = projectedPosition.X.ToFloat();
+                float yCm = projectedPosition.Y.ToFloat();
+                if (!groundHeightmap.TrySampleHeightCm(xCm, yCm, out float heightCm) || !float.IsFinite(heightCm))
+                {
+                    throw new InvalidOperationException(
+                        $"SPATIAL.ERR.GroundHeightSampleFailed: entity={entity.Id}, xCm={xCm}, yCm={yCm}");
+                }
+
+                heightMeters = heightCm / 100f;
+            }
+
+            pose = new SimPose(WorldPlane2D.LogicCmToVisualMeters(in projectedPosition, heightMeters), rotation);
             return true;
         }
 

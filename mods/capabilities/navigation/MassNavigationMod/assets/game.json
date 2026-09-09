@@ -8,6 +8,7 @@
     "effectRequestQueueCapacity": 5000
   },
   "commandSource": {
+    "acquisition": { "enabled": false },
     "movePathPreviewOrderTypeKeys": [
       "massNavigationMove"
     ]

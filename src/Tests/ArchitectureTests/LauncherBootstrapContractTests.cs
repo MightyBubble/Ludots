@@ -1381,10 +1381,11 @@ namespace Ludots.Tests.Architecture
                     {
                         "LudotsCoreMod",
                         "CoreInputMod",
+                        "SelectionInteractionMod",
                         "MassNavigationMod",
                         "CapabilityStandardMassNavigationLargeWorld10kMod"
                     },
-                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "MassNavigationMod" });
+                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "SelectionInteractionMod", "MassNavigationMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -1398,10 +1399,11 @@ namespace Ludots.Tests.Architecture
                         "LudotsCoreMod",
                         "CoreInputMod",
                         "CameraProfilesMod",
+                        "SelectionInteractionMod",
                         "MassNavigationMod",
                         "FormationCapabilityShowcaseMod"
                     },
-                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "MassNavigationMod" });
+                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "SelectionInteractionMod", "MassNavigationMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(

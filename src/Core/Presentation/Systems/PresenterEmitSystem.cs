@@ -49,6 +49,14 @@ namespace Ludots.Core.Presentation.Systems
         private readonly List<Entity> _pendingDestroy = new(256);
         private readonly Dictionary<Entity, PresentationRequestReplay> _singleRequestReplayCache = new();
         private readonly WorldHudPresentBehavior _worldHudBehavior = new();
+        private int _retainedHudPositionUpdates;
+        private Entity _retainedHudProjectionOwner;
+        private int[] _retainedHudProjectionRequiredAttributes = Array.Empty<int>();
+        private LODLevel _retainedHudProjectionLod;
+        private bool _retainedHudProjectionAllowsVisibleTransientText;
+        private bool _retainedHudProjectionResolved;
+        private PresentPhaseResult _retainedHudProjectionResult;
+        private int _retainedHudProjectionReuses;
 
         public PresenterEmitSystem(
             World world,
@@ -82,6 +90,11 @@ namespace Ludots.Core.Presentation.Systems
 
         public override void Update(in float dt)
         {
+            _retainedHudPositionUpdates = 0;
+            _retainedHudProjectionOwner = Entity.Null;
+            _retainedHudProjectionRequiredAttributes = Array.Empty<int>();
+            _retainedHudProjectionResolved = false;
+            _retainedHudProjectionReuses = 0;
             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
             float deltaTime = dt;
             _pendingDestroy.Clear();
@@ -166,6 +179,8 @@ namespace Ludots.Core.Presentation.Systems
 
             if (_timingDiagnostics != null)
             {
+                _timingDiagnostics.ObservePresenterRetainedHudPositionUpdates(_retainedHudPositionUpdates);
+                _timingDiagnostics.ObservePresenterRetainedHudProjectionReuses(_retainedHudProjectionReuses);
                 _timingDiagnostics.ObservePresenterEmit((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
             }
         }
@@ -322,6 +337,13 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
+                if (TryUpdateRetainedWorldHudPositionOnly(entity, ref emitCache))
+                {
+                    dirtyCount++;
+                    directHits++;
+                    continue;
+                }
+
                 ref PresenterState state = ref World.Get<PresenterState>(entity);
                 if (state.DefId != cachedDefId)
                 {
@@ -374,6 +396,29 @@ namespace Ludots.Core.Presentation.Systems
             return dirtyCount;
         }
 
+        private bool TryUpdateRetainedWorldHudPositionOnly(Entity entity, ref PresenterEmitCache emitCache)
+        {
+            if (emitCache.RetainedPositionOnlyDirty == 0 ||
+                emitCache.RetainedRequestPresent == 0 ||
+                emitCache.RetainedWorldHudStableId <= 0)
+            {
+                return false;
+            }
+
+            if (_worldHudBuffer == null || !World.Has<PresenterWorldPosition>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"Retained world HUD presenter {entity.Id} cannot apply a position update because its buffer or position component is missing.");
+            }
+
+            ref readonly PresenterWorldPosition position = ref World.Get<PresenterWorldPosition>(entity);
+            _worldHudBuffer.UpdatePosition(emitCache.RetainedWorldHudStableId, in position.Value);
+            emitCache.LastEmitPosition = position.Value;
+            _retainedHudPositionUpdates++;
+            _runtime.ClearStaticDirty(entity);
+            return true;
+        }
+
         private bool TryUpdateRetainedWorldHudDirect(
             Entity entity,
             ref PresenterState state,
@@ -418,14 +463,37 @@ namespace Ludots.Core.Presentation.Systems
 
             int stableId = HudItemIdentity.ComposePresenterStableId(state.StableId, kind, state.DefId, slot.SlotIndex);
 
-            bool hasProjection = _worldHudBehavior.TryResolveProjection(
-                World,
-                _globals,
-                state.OwnerEntity,
-                cull.LOD,
-                kind,
-                definition.RequiredAttributeIds,
-                out PresentPhaseResult phaseResult);
+            bool allowsVisibleTransientText = kind == WorldHudItemKind.Text && definition.RequiredAttributeIds.Length == 0;
+            bool canReuseProjection =
+                state.OwnerEntity == _retainedHudProjectionOwner &&
+                cull.LOD == _retainedHudProjectionLod &&
+                allowsVisibleTransientText == _retainedHudProjectionAllowsVisibleTransientText &&
+                definition.RequiredAttributeIds.AsSpan().SequenceEqual(_retainedHudProjectionRequiredAttributes);
+            bool hasProjection;
+            PresentPhaseResult phaseResult;
+            if (canReuseProjection)
+            {
+                hasProjection = _retainedHudProjectionResolved;
+                phaseResult = _retainedHudProjectionResult;
+                _retainedHudProjectionReuses++;
+            }
+            else
+            {
+                hasProjection = _worldHudBehavior.TryResolveProjection(
+                    World,
+                    _globals,
+                    state.OwnerEntity,
+                    cull.LOD,
+                    kind,
+                    definition.RequiredAttributeIds,
+                    out phaseResult);
+                _retainedHudProjectionOwner = state.OwnerEntity;
+                _retainedHudProjectionRequiredAttributes = definition.RequiredAttributeIds;
+                _retainedHudProjectionLod = cull.LOD;
+                _retainedHudProjectionAllowsVisibleTransientText = allowsVisibleTransientText;
+                _retainedHudProjectionResolved = hasProjection;
+                _retainedHudProjectionResult = phaseResult;
+            }
             bool visible = cull.OwnerCullVisible &&
                            hasProjection &&
                            IsWithinMaxLod(cull.LOD, in asset) &&
@@ -434,21 +502,34 @@ namespace Ludots.Core.Presentation.Systems
             if (!visible)
             {
                 _worldHudBuffer.Remove(stableId);
+                emitCache.RetainedWorldHudStableId = 0;
                 UpdateEmitCache(ref emitCache, state.Version, position.Value, cull.OwnerCullVisible, cull.LOD, emitCache.StableVisualPresent, retainedRequestPresent: 0);
                 _runtime.ClearStaticDirty(entity);
                 return true;
             }
 
-            WorldHudItem next = kind == WorldHudItemKind.Bar
-                ? BuildWorldHudBarItemDirect(entity, in state, in definition, in slot, in asset, stableId, position.Value, in scale)
-                : BuildWorldHudTextItemDirect(entity, in state, in definition, in slot, in asset, stableId, position.Value);
-
-            if (!_worldHudBuffer.TryAdd(in next))
+            if (emitCache.RetainedRequestPresent != 0 &&
+                emitCache.CachedVersion == state.Version &&
+                emitCache.LastRetainedHudScale == scale.Value)
             {
-                throw new InvalidOperationException(
-                    $"WorldHudBatchBuffer overflowed while directly updating retained presenter HUD stableId={stableId}.");
+                _worldHudBuffer.UpdatePosition(stableId, in position.Value);
+                _retainedHudPositionUpdates++;
+            }
+            else
+            {
+                WorldHudItem next = kind == WorldHudItemKind.Bar
+                    ? BuildWorldHudBarItemDirect(entity, in state, in definition, in slot, in asset, stableId, position.Value, in scale)
+                    : BuildWorldHudTextItemDirect(entity, in state, in definition, in slot, in asset, stableId, position.Value);
+
+                if (!_worldHudBuffer.TryAdd(in next))
+                {
+                    throw new InvalidOperationException(
+                        $"WorldHudBatchBuffer overflowed while directly updating retained presenter HUD stableId={stableId}.");
+                }
             }
 
+            emitCache.LastRetainedHudScale = scale.Value;
+            emitCache.RetainedWorldHudStableId = stableId;
             UpdateEmitCache(ref emitCache, state.Version, position.Value, cull.OwnerCullVisible, cull.LOD, emitCache.StableVisualPresent, retainedRequestPresent: 1);
             _runtime.ClearStaticDirty(entity);
             return true;

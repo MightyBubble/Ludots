@@ -4,7 +4,9 @@
   "orderedModIds": [
     "LudotsCoreMod",
     "CoreInputMod",
-    "CaseESelectionMod"
+    "SelectionInteractionMod",
+    "CaseESelectionMod",
+    "AgentBridgeMod"
   ],
   "plannedMods": [
     {
@@ -16,8 +18,16 @@
       "rootPath": "../../../../../../../mods/CoreInputMod"
     },
     {
+      "id": "SelectionInteractionMod",
+      "rootPath": "../../../../../../../mods/capabilities/input/SelectionInteractionMod"
+    },
+    {
       "id": "CaseESelectionMod",
       "rootPath": "../../../../../../../mods/showcases/case_e_selection/CaseESelectionMod"
+    },
+    {
+      "id": "AgentBridgeMod",
+      "rootPath": "../../../../../../../mods/AgentBridgeMod"
     }
   ]
 }

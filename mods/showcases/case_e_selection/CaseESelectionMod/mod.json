@@ -4,7 +4,8 @@
       "description": "Case E (#1398) 框选纯数据 showcase：候选集 case_e.selectable（battle context 挂载 roster_sync 维护）、拖拽预览集 case_e.selection_preview、已选中 selected 三套分离；按下开框 / 抬起落定（无 Tap/Drag）；boxing 存活期命中 + ScreenRect 框 + 松手写 selected。",
   "priority": 0,
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0"
+    "LudotsCoreMod": "^1.0.0",
+    "SelectionInteractionMod": "^1.0.0"
   },
   "main": "bin/net9.0/CaseESelectionMod.dll",
   "author": "Ludots Team",

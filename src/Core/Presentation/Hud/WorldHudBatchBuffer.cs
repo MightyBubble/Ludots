@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace Ludots.Core.Presentation.Hud
 {
@@ -84,6 +85,24 @@ namespace Ludots.Core.Presentation.Hud
             ContentRevision++;
             ProjectionRevision++;
             return true;
+        }
+
+        public void UpdatePosition(int stableId, in Vector3 position)
+        {
+            if (stableId <= 0 || !_retainedIndexByStableId.TryGetValue(stableId, out int index))
+            {
+                throw new InvalidOperationException($"Retained world HUD item {stableId} is not present.");
+            }
+
+            ref WorldHudItem item = ref _buffer[index];
+            if (item.WorldPosition == position)
+            {
+                return;
+            }
+
+            item.WorldPosition = position;
+            ContentRevision++;
+            ProjectionRevision++;
         }
 
         public void Remove(int stableId)

@@ -1825,6 +1825,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return RequireEntityQueries().FilterLayer(entities, count, requiredMask);
         }
 
+        public int FilterControllable(Span<Entity> entities, int count, Entity controller)
+        {
+            if ((uint)count > (uint)entities.Length) throw new ArgumentOutOfRangeException(nameof(count));
+            ControlDomainQuery domains = RequireControlDomains();
+            int written = 0;
+            for (int i = 0; i < count; i++)
+            {
+                Entity candidate = entities[i];
+                if (domains.IsControllableBy(controller, candidate))
+                    entities[written++] = candidate;
+            }
+            return written;
+        }
+
         public int FilterNotEntity(Span<Entity> entities, int count, Entity exclude)
         {
             return RequireEntityQueries().FilterNotEntity(entities, count, exclude);

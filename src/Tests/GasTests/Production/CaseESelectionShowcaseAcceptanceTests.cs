@@ -953,7 +953,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
     {
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CaseESelectionMod" }),
+            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "SelectionInteractionMod", "CaseESelectionMod" }),
             Path.Combine(repoRoot, "assets"));
         var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);

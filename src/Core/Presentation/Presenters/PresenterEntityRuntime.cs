@@ -1955,7 +1955,6 @@ namespace Ludots.Core.Presentation.Presenters
                 !_world.IsAlive(state.OwnerEntity) ||
                 !_world.Has<VisualTransform>(state.OwnerEntity) ||
                 !_world.Has<ContinuousHeightmapSampleState>(state.OwnerEntity) ||
-                _world.Get<ContinuousHeightmapSampleState>(state.OwnerEntity).Sampled == 0 ||
                 !_world.Has<PresenterTransformSource>(presenter) ||
                 _world.Get<PresenterTransformSource>(presenter).Value != TransformSource.EntityTransform)
             {
@@ -4642,6 +4641,7 @@ namespace Ludots.Core.Presentation.Presenters
             if (emitCache.RetainedDirty != 0)
             {
                 emitCache.RetainedDirty = 0;
+                emitCache.RetainedPositionOnlyDirty = 0;
                 if (_dirtyRetainedPresentationRequestCount > 0)
                 {
                     _dirtyRetainedPresentationRequestCount--;
@@ -4783,6 +4783,53 @@ namespace Ludots.Core.Presentation.Presenters
             if (_world.Has<PresenterState>(presenter))
             {
                 EnsureRequestBackedEmitWorkScheduled(presenter);
+            }
+        }
+
+        public void MarkTransformPositionDrivenEmitDirty(Entity presenter)
+        {
+            if (!_world.IsAlive(presenter) ||
+                !_world.Has<PresenterEmitCache>(presenter))
+            {
+                return;
+            }
+
+            ref PresenterEmitCache emitCache = ref _world.Get<PresenterEmitCache>(presenter);
+            if (_world.Has<PerfStaticStableVisual>(presenter))
+            {
+                MarkStaticDirty(ref emitCache);
+            }
+
+            if (_world.Has<PerfRetainedPresentationRequest>(presenter) &&
+                MarkRetainedPresentationRequestPositionDirty(ref emitCache))
+            {
+                AppendRetainedPresentationDirtyEntity(presenter);
+            }
+
+            if (_world.Has<PresenterState>(presenter))
+            {
+                EnsureRequestBackedEmitWorkScheduled(presenter);
+            }
+        }
+
+        internal void MarkCompiledTransformDrivenEmitDirty(
+            Entity presenter,
+            ref PresenterEmitCache emitCache,
+            bool hasStaticStableVisual,
+            bool hasRetainedPresentationRequest,
+            bool positionOnly)
+        {
+            if (hasStaticStableVisual)
+            {
+                MarkStaticDirty(ref emitCache);
+            }
+
+            if (hasRetainedPresentationRequest &&
+                (positionOnly
+                    ? MarkRetainedPresentationRequestPositionDirty(ref emitCache)
+                    : MarkRetainedPresentationRequestDirty(ref emitCache)))
+            {
+                AppendRetainedPresentationDirtyEntity(presenter);
             }
         }
 
@@ -5108,10 +5155,25 @@ namespace Ludots.Core.Presentation.Presenters
         {
             if (emitCache.RetainedDirty != 0)
             {
+                emitCache.RetainedPositionOnlyDirty = 0;
                 return false;
             }
 
             emitCache.RetainedDirty = 1;
+            emitCache.RetainedPositionOnlyDirty = 0;
+            _dirtyRetainedPresentationRequestCount++;
+            return true;
+        }
+
+        private bool MarkRetainedPresentationRequestPositionDirty(ref PresenterEmitCache emitCache)
+        {
+            if (emitCache.RetainedDirty != 0)
+            {
+                return false;
+            }
+
+            emitCache.RetainedDirty = 1;
+            emitCache.RetainedPositionOnlyDirty = 1;
             _dirtyRetainedPresentationRequestCount++;
             return true;
         }

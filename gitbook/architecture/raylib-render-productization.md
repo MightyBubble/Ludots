@@ -43,6 +43,14 @@ Raylib 只消费 flush 后的 VFX 项与粒子 runtime snapshot。它不拥有�
 
 正式 Showcase 地形路径包含天空、光照/雾、水面、后处理与大地图远景。地图可通过 `ContinuousHeightmapRenderProfile` 声明海平面、水体开关、高度夸张和颜色对比度。超大 chunk 必须降采样，避免索引上限；截图证据必须做完整 PNG 校验，不允许“有文件就算过”。
 
+地形几何与 grounding 采样同一张高度图，因此**几何高度是地形真值，颜色档位只影响着色**：
+
+- 低于 `SeaLevelCm` 的水深样本压到海平面（避免大陆级资产挖出公里级海底坑）。
+- 落在原始采样上限附近的虚空/海洋哨兵值同样压到海平面。
+- **超出 `AbsoluteColorPeakSpanCm` 的真实起伏保留原始高度**：该档位只决定色带着色，不是几何裁剪阈值。把真实山地判成哨兵会让地形画成平面，而 grounding 仍在采样真实海拔，单位就会悬空。
+
+地图若使用数十米以上量级的落差，必须显式声明与自身海拔匹配的 `AbsoluteColorPeakSpanCm`；默认值按小落差场景调校。
+
 大地图远景实拍（引擎画廊 `terrain_heightmap` 场景：绝对海拔色带 + 水下陆架 + 超密降采样）：
 
 <img src="artifacts/acceptance/engine_gallery_all/terrain_heightmap.png" alt="视觉高度图验收截图" width="880">

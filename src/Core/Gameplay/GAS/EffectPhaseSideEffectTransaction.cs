@@ -31,6 +31,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly GasPresentationEventBuffer? _presentationEvents;
     private readonly RootBudgetTable? _rootBudget;
     private readonly Entity[] _attributeEntities;
+    private readonly TransactionEntityIndex _attributeIndex;
     private readonly AttributeBuffer[] _attributeOriginalValues;
     private readonly AttributeBuffer[] _attributeValues;
     private readonly ulong[] _attributeChangedMasks;
@@ -38,15 +39,18 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly GameplayAttributeChangedBits[] _attributeChangedValues;
     private readonly bool[] _attributeChangedExisted;
     private readonly Entity[] _dirtyEntities;
+    private readonly TransactionEntityIndex _dirtyIndex;
     private readonly DirtyFlags[] _dirtyOriginalValues;
     private readonly EffectRequest[] _stagedEffectRequests;
     private readonly RuntimeEntitySpawnRequest[] _stagedSpawnRequests;
     private readonly GasPresentationEvent[] _stagedPresentationEvents;
     private readonly GameplayEvent[] _stagedGameplayEvents;
     private readonly Entity[] _gameplayEffectEntities;
+    private readonly TransactionEntityIndex _gameplayEffectIndex;
     private readonly GameplayEffect[] _gameplayEffectOriginalValues;
     private readonly GameplayEffect[] _gameplayEffectValues;
     private readonly Entity[] _tagEntities;
+    private readonly TransactionEntityIndex _tagIndex;
     private readonly GameplayTagContainer[] _tagOriginalValues;
     private readonly GameplayTagContainer[] _tagValues;
     private readonly TagCountContainer[] _tagCountOriginalValues;
@@ -54,34 +58,46 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly DirtyFlags[] _tagDirtyOriginalValues;
     private readonly DirtyFlags[] _tagDirtyValues;
     private readonly Entity[] _activeEffectEntities;
+    private readonly TransactionEntityIndex _activeEffectIndex;
     private readonly ActiveEffectContainer[] _activeEffectOriginalValues;
     private readonly ActiveEffectContainer[] _activeEffectValues;
     private readonly Entity[] _destroyedEffects;
+    private readonly TransactionEntityIndex _destroyedEffectIndex;
     private readonly Entity[] _blackboardFloatEntities;
+    private readonly TransactionEntityIndex _blackboardFloatIndex;
     private readonly BlackboardFloatBuffer[] _blackboardFloatOriginalValues;
     private readonly BlackboardFloatBuffer[] _blackboardFloatValues;
     private readonly Entity[] _blackboardIntEntities;
+    private readonly TransactionEntityIndex _blackboardIntIndex;
     private readonly BlackboardIntBuffer[] _blackboardIntOriginalValues;
     private readonly BlackboardIntBuffer[] _blackboardIntValues;
     private readonly Entity[] _blackboardEntityEntities;
+    private readonly TransactionEntityIndex _blackboardEntityIndex;
     private readonly BlackboardEntityBuffer[] _blackboardEntityOriginalValues;
     private readonly BlackboardEntityBuffer[] _blackboardEntityValues;
     private readonly Entity[] _cancelledEffects;
+    private readonly TransactionEntityIndex _cancelledEffectIndex;
     private readonly bool[] _cancelledEffectOriginalValues;
     private readonly Entity[] _aggregateDirtyEntities;
+    private readonly TransactionEntityIndex _aggregateDirtyIndex;
     private readonly bool[] _aggregateDirtyExisted;
     private readonly ListenerRegistration[] _listenerRegistrations;
     private readonly ListenerRemoval[] _listenerRemovals;
     private readonly Entity[] _listenerEntities;
+    private readonly TransactionEntityIndex _listenerIndex;
+    private readonly TransactionEntityIndex _listenerRegistrationCounts;
+    private readonly TransactionEntityOwnerIndex _listenerRemovalIndex;
     private readonly EffectPhaseListenerBuffer[] _listenerOriginalValues;
     private readonly EffectPhaseListenerBuffer[] _listenerValues;
     private readonly bool[] _listenerExisted;
     private readonly Entity[] _relationParentEntities;
+    private readonly TransactionEntityIndex _relationParentIndex;
     private readonly ChildrenBuffer[] _relationParentOriginalValues;
     private readonly ChildrenBuffer[] _relationParentValues;
     private readonly bool[] _relationParentExisted;
     private readonly bool[] _relationParentShouldExist;
     private readonly Entity[] _relationChildEntities;
+    private readonly TransactionEntityIndex _relationChildIndex;
     private readonly ChildOf[] _relationChildOriginalValues;
     private readonly ChildOf[] _relationChildValues;
     private readonly bool[] _relationChildExisted;
@@ -178,6 +194,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _presentationEvents = presentationEvents;
         _rootBudget = rootBudget;
         _attributeEntities = new Entity[attributeEntityCapacity];
+        _attributeIndex = new TransactionEntityIndex(_attributeEntities.Length);
         _attributeOriginalValues = new AttributeBuffer[attributeEntityCapacity];
         _attributeValues = new AttributeBuffer[attributeEntityCapacity];
         _attributeChangedMasks = new ulong[attributeEntityCapacity];
@@ -185,15 +202,18 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _attributeChangedValues = new GameplayAttributeChangedBits[attributeEntityCapacity];
         _attributeChangedExisted = new bool[attributeEntityCapacity];
         _dirtyEntities = new Entity[attributeEntityCapacity + 1];
+        _dirtyIndex = new TransactionEntityIndex(_dirtyEntities.Length);
         _dirtyOriginalValues = new DirtyFlags[attributeEntityCapacity + 1];
         _stagedEffectRequests = new EffectRequest[effectRequests?.TotalCapacity ?? 1];
         _stagedSpawnRequests = new RuntimeEntitySpawnRequest[spawnRequests?.Capacity ?? 1];
         _stagedPresentationEvents = new GasPresentationEvent[presentationEvents?.Capacity ?? 1];
         _stagedGameplayEvents = new GameplayEvent[GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME];
         _gameplayEffectEntities = new Entity[attributeEntityCapacity];
+        _gameplayEffectIndex = new TransactionEntityIndex(_gameplayEffectEntities.Length);
         _gameplayEffectOriginalValues = new GameplayEffect[attributeEntityCapacity];
         _gameplayEffectValues = new GameplayEffect[attributeEntityCapacity];
         _tagEntities = new Entity[attributeEntityCapacity];
+        _tagIndex = new TransactionEntityIndex(_tagEntities.Length);
         _tagOriginalValues = new GameplayTagContainer[attributeEntityCapacity];
         _tagValues = new GameplayTagContainer[attributeEntityCapacity];
         _tagCountOriginalValues = new TagCountContainer[attributeEntityCapacity];
@@ -201,36 +221,48 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _tagDirtyOriginalValues = new DirtyFlags[attributeEntityCapacity];
         _tagDirtyValues = new DirtyFlags[attributeEntityCapacity];
         _activeEffectEntities = new Entity[attributeEntityCapacity];
+        _activeEffectIndex = new TransactionEntityIndex(_activeEffectEntities.Length);
         _activeEffectOriginalValues = new ActiveEffectContainer[attributeEntityCapacity];
         _activeEffectValues = new ActiveEffectContainer[attributeEntityCapacity];
         _destroyedEffects = new Entity[attributeEntityCapacity];
+        _destroyedEffectIndex = new TransactionEntityIndex(_destroyedEffects.Length);
         _blackboardFloatEntities = new Entity[attributeEntityCapacity];
+        _blackboardFloatIndex = new TransactionEntityIndex(_blackboardFloatEntities.Length);
         _blackboardFloatOriginalValues = new BlackboardFloatBuffer[attributeEntityCapacity];
         _blackboardFloatValues = new BlackboardFloatBuffer[attributeEntityCapacity];
         _blackboardIntEntities = new Entity[attributeEntityCapacity];
+        _blackboardIntIndex = new TransactionEntityIndex(_blackboardIntEntities.Length);
         _blackboardIntOriginalValues = new BlackboardIntBuffer[attributeEntityCapacity];
         _blackboardIntValues = new BlackboardIntBuffer[attributeEntityCapacity];
         _blackboardEntityEntities = new Entity[attributeEntityCapacity];
+        _blackboardEntityIndex = new TransactionEntityIndex(_blackboardEntityEntities.Length);
         _blackboardEntityOriginalValues = new BlackboardEntityBuffer[attributeEntityCapacity];
         _blackboardEntityValues = new BlackboardEntityBuffer[attributeEntityCapacity];
         _cancelledEffects = new Entity[attributeEntityCapacity];
+        _cancelledEffectIndex = new TransactionEntityIndex(_cancelledEffects.Length);
         _cancelledEffectOriginalValues = new bool[attributeEntityCapacity];
         _aggregateDirtyEntities = new Entity[attributeEntityCapacity];
+        _aggregateDirtyIndex = new TransactionEntityIndex(_aggregateDirtyEntities.Length);
         _aggregateDirtyExisted = new bool[attributeEntityCapacity];
         _listenerRegistrations = new ListenerRegistration[attributeEntityCapacity];
         int listenerEntityCapacity = checked(attributeEntityCapacity * 2);
         _listenerRemovals = new ListenerRemoval[listenerEntityCapacity];
+        _listenerRemovalIndex = new TransactionEntityOwnerIndex(listenerEntityCapacity);
+        _listenerRegistrationCounts = new TransactionEntityIndex(listenerEntityCapacity);
         _listenerEntities = new Entity[listenerEntityCapacity];
+        _listenerIndex = new TransactionEntityIndex(_listenerEntities.Length);
         _listenerOriginalValues = new EffectPhaseListenerBuffer[listenerEntityCapacity];
         _listenerValues = new EffectPhaseListenerBuffer[listenerEntityCapacity];
         _listenerExisted = new bool[listenerEntityCapacity];
         int relationParentCapacity = checked(attributeEntityCapacity * 2);
         _relationParentEntities = new Entity[relationParentCapacity];
+        _relationParentIndex = new TransactionEntityIndex(_relationParentEntities.Length);
         _relationParentOriginalValues = new ChildrenBuffer[relationParentCapacity];
         _relationParentValues = new ChildrenBuffer[relationParentCapacity];
         _relationParentExisted = new bool[relationParentCapacity];
         _relationParentShouldExist = new bool[relationParentCapacity];
         _relationChildEntities = new Entity[attributeEntityCapacity];
+        _relationChildIndex = new TransactionEntityIndex(_relationChildEntities.Length);
         _relationChildOriginalValues = new ChildOf[attributeEntityCapacity];
         _relationChildValues = new ChildOf[attributeEntityCapacity];
         _relationChildExisted = new bool[attributeEntityCapacity];
@@ -286,6 +318,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             throw new InvalidOperationException(ScopeAlreadyActiveError);
         }
 
+        ClearIndexes();
         _attributeCount = 0;
         _dirtyEntityCount = 0;
         _effectRequestCount = 0;
@@ -677,7 +710,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private Entity FindStagedChildParent(Entity entity)
     {
-        int index = FindEntity(_relationChildEntities, _relationChildCount, entity);
+        int index = FindIndex(_relationChildIndex, entity);
         if (index >= 0)
         {
             return _relationDetachRequested[index] ? Entity.Null : _relationChildValues[index].Parent;
@@ -855,7 +888,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     public bool TryGetGameplayEffectState(Entity entity, out GameplayEffect effect)
     {
-        int index = FindEntity(_gameplayEffectEntities, _gameplayEffectCount, entity);
+        int index = FindIndex(_gameplayEffectIndex, entity);
         if (index >= 0)
         {
             effect = _gameplayEffectValues[index];
@@ -868,7 +901,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     public bool TryHasTag(Entity entity, int tagId, out bool hasTag)
     {
-        int index = FindEntity(_tagEntities, _tagEntityCount, entity);
+        int index = FindIndex(_tagIndex, entity);
         if (index < 0)
         {
             hasTag = false;
@@ -972,7 +1005,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     public bool TryGetActiveEffectContainer(Entity target, out ActiveEffectContainer container)
     {
-        int index = FindEntity(_activeEffectEntities, _activeEffectCount, target);
+        int index = FindIndex(_activeEffectIndex, target);
         if (index >= 0)
         {
             container = _activeEffectValues[index];
@@ -991,7 +1024,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public void StageEffectDestroy(Entity effect)
     {
         RequireActive();
-        if (!_world.IsAlive(effect) || Contains(_destroyedEffects, _destroyedEffectCount, effect))
+        if (!_world.IsAlive(effect) || _destroyedEffectIndex.Contains(effect))
         {
             return;
         }
@@ -1001,12 +1034,14 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 $"{CapacityExceededError}: destination=DestroyedEffects, staged={_destroyedEffectCount + 1}, capacity={_destroyedEffects.Length}.");
         }
 
+        _destroyedEffectIndex.Add(effect, _destroyedEffectCount);
+
         _destroyedEffects[_destroyedEffectCount++] = effect;
     }
 
     public bool TryReadBlackboardFloat(Entity entity, int keyId, out float value)
     {
-        int index = FindEntity(_blackboardFloatEntities, _blackboardFloatCount, entity);
+        int index = FindIndex(_blackboardFloatIndex, entity);
         if (index >= 0) return _blackboardFloatValues[index].TryGet(keyId, out value);
         value = default;
         return false;
@@ -1014,7 +1049,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     public bool TryReadBlackboardInt(Entity entity, int keyId, out int value)
     {
-        int index = FindEntity(_blackboardIntEntities, _blackboardIntCount, entity);
+        int index = FindIndex(_blackboardIntIndex, entity);
         if (index >= 0) return _blackboardIntValues[index].TryGet(keyId, out value);
         value = default;
         return false;
@@ -1022,7 +1057,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     public bool TryReadBlackboardEntity(Entity entity, int keyId, out Entity value)
     {
-        int index = FindEntity(_blackboardEntityEntities, _blackboardEntityCount, entity);
+        int index = FindIndex(_blackboardEntityIndex, entity);
         if (index >= 0) return _blackboardEntityValues[index].TryGet(keyId, out value);
         value = default;
         return false;
@@ -1079,7 +1114,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 !_world.Has<EffectTemplateRef>(effect) ||
                 !_world.Has<GameplayEffect>(effect) ||
                 _world.Get<EffectTemplateRef>(effect).TemplateId != templateId ||
-                Contains(_cancelledEffects, _cancelledEffectCount, effect))
+                _cancelledEffectIndex.Contains(effect))
             {
                 continue;
             }
@@ -1088,6 +1123,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 throw new InvalidOperationException(
                     $"{CapacityExceededError}: destination=EffectCancellations, staged={_cancelledEffectCount + 1}, capacity={_cancelledEffects.Length}.");
             }
+
+            _cancelledEffectIndex.Add(effect, _cancelledEffectCount);
 
             _cancelledEffects[_cancelledEffectCount++] = effect;
             GameplayEffect gameplayEffect = TryGetGameplayEffectState(effect, out GameplayEffect stagedEffect)
@@ -1108,7 +1145,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             throw new InvalidOperationException(
                 $"GAS.EFFECT_TRANSACTION.ERR.AggregateTargetInvalid: entity={target.Id}.");
         }
-        if (Contains(_aggregateDirtyEntities, _aggregateDirtyCount, target))
+        if (_aggregateDirtyIndex.Contains(target))
         {
             return;
         }
@@ -1117,6 +1154,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             throw new InvalidOperationException(
                 $"{CapacityExceededError}: destination=AggregateDirtyTargets, staged={_aggregateDirtyCount + 1}, capacity={_aggregateDirtyEntities.Length}.");
         }
+        _aggregateDirtyIndex.Add(target, _aggregateDirtyCount);
         _aggregateDirtyEntities[_aggregateDirtyCount++] = target;
     }
 
@@ -1172,13 +1210,9 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         {
             return;
         }
-        for (int i = 0; i < _listenerRemovalCount; i++)
+        if (_listenerRemovalIndex.Contains(entity, ownerEffectId))
         {
-            if (_listenerRemovals[i].Entity == entity &&
-                _listenerRemovals[i].OwnerEffectId == ownerEffectId)
-            {
-                return;
-            }
+            return;
         }
         if (_listenerRemovalCount >= _listenerRemovals.Length)
         {
@@ -1186,6 +1220,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 $"{CapacityExceededError}: destination=ListenerRemovals, staged={_listenerRemovalCount + 1}, capacity={_listenerRemovals.Length}.");
         }
 
+        _listenerRemovalIndex.Add(entity, ownerEffectId, _listenerRemovalCount);
         _listenerRemovals[_listenerRemovalCount++] = new ListenerRemoval
         {
             Entity = entity,
@@ -1201,12 +1236,9 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             throw new InvalidOperationException(TagOps.MissingDirtyFlagsError);
         }
 
-        for (int i = 0; i < _dirtyEntityCount; i++)
+        if (_dirtyIndex.Contains(entity))
         {
-            if (_dirtyEntities[i] == entity)
-            {
-                return;
-            }
+            return;
         }
 
         if (_dirtyEntityCount >= _dirtyEntities.Length)
@@ -1214,6 +1246,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             throw new InvalidOperationException(
                 $"{CapacityExceededError}: destination=DirtyEntityQueue, staged={_dirtyEntityCount + 1}, capacity={_dirtyEntities.Length}.");
         }
+
+        _dirtyIndex.Add(entity, _dirtyEntityCount);
 
         _dirtyEntities[_dirtyEntityCount++] = entity;
     }
@@ -1460,6 +1494,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         int index = _attributeCount++;
         _attributeEntities[index] = entity;
+        _attributeIndex.Add(entity, index);
         _attributeOriginalValues[index] = _world.Get<AttributeBuffer>(entity);
         _attributeValues[index] = _attributeOriginalValues[index];
         _attributeChangedMasks[index] = 0UL;
@@ -1470,7 +1505,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private int GetOrAddGameplayEffectEntity(Entity entity)
     {
         RequireActive();
-        int existing = FindEntity(_gameplayEffectEntities, _gameplayEffectCount, entity);
+        int existing = FindIndex(_gameplayEffectIndex, entity);
         if (existing >= 0)
         {
             return existing;
@@ -1488,6 +1523,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         int index = _gameplayEffectCount++;
         _gameplayEffectEntities[index] = entity;
+        _gameplayEffectIndex.Add(entity, index);
         _gameplayEffectOriginalValues[index] = _world.Get<GameplayEffect>(entity);
         _gameplayEffectValues[index] = _gameplayEffectOriginalValues[index];
         return index;
@@ -1496,7 +1532,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private int GetOrAddTagEntity(Entity entity)
     {
         RequireActive();
-        int existing = FindEntity(_tagEntities, _tagEntityCount, entity);
+        int existing = FindIndex(_tagIndex, entity);
         if (existing >= 0)
         {
             return existing;
@@ -1516,6 +1552,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         int index = _tagEntityCount++;
         _tagEntities[index] = entity;
+        _tagIndex.Add(entity, index);
         _tagOriginalValues[index] = _world.Get<GameplayTagContainer>(entity);
         _tagValues[index] = _tagOriginalValues[index];
         _tagCountOriginalValues[index] = _world.Get<TagCountContainer>(entity);
@@ -1528,7 +1565,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private int GetOrAddActiveEffectEntity(Entity entity)
     {
         RequireActive();
-        int existing = FindEntity(_activeEffectEntities, _activeEffectCount, entity);
+        int existing = FindIndex(_activeEffectIndex, entity);
         if (existing >= 0)
         {
             return existing;
@@ -1546,6 +1583,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         int index = _activeEffectCount++;
         _activeEffectEntities[index] = entity;
+        _activeEffectIndex.Add(entity, index);
         _activeEffectOriginalValues[index] = _world.Get<ActiveEffectContainer>(entity);
         _activeEffectValues[index] = _activeEffectOriginalValues[index];
         return index;
@@ -1554,12 +1592,13 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private int GetOrAddBlackboardFloatEntity(Entity entity)
     {
         RequireActive();
-        int index = FindEntity(_blackboardFloatEntities, _blackboardFloatCount, entity);
+        int index = FindIndex(_blackboardFloatIndex, entity);
         if (index >= 0) return index;
         ValidateBlackboardEntity<BlackboardFloatBuffer>(entity);
         if (_blackboardFloatCount >= _blackboardFloatEntities.Length) throw StagingCapacityExceeded(nameof(BlackboardFloatBuffer));
         index = _blackboardFloatCount++;
         _blackboardFloatEntities[index] = entity;
+        _blackboardFloatIndex.Add(entity, index);
         _blackboardFloatOriginalValues[index] = _world.Get<BlackboardFloatBuffer>(entity);
         _blackboardFloatValues[index] = _blackboardFloatOriginalValues[index];
         return index;
@@ -1568,12 +1607,13 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private int GetOrAddBlackboardIntEntity(Entity entity)
     {
         RequireActive();
-        int index = FindEntity(_blackboardIntEntities, _blackboardIntCount, entity);
+        int index = FindIndex(_blackboardIntIndex, entity);
         if (index >= 0) return index;
         ValidateBlackboardEntity<BlackboardIntBuffer>(entity);
         if (_blackboardIntCount >= _blackboardIntEntities.Length) throw StagingCapacityExceeded(nameof(BlackboardIntBuffer));
         index = _blackboardIntCount++;
         _blackboardIntEntities[index] = entity;
+        _blackboardIntIndex.Add(entity, index);
         _blackboardIntOriginalValues[index] = _world.Get<BlackboardIntBuffer>(entity);
         _blackboardIntValues[index] = _blackboardIntOriginalValues[index];
         return index;
@@ -1582,12 +1622,13 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private int GetOrAddBlackboardEntityEntity(Entity entity)
     {
         RequireActive();
-        int index = FindEntity(_blackboardEntityEntities, _blackboardEntityCount, entity);
+        int index = FindIndex(_blackboardEntityIndex, entity);
         if (index >= 0) return index;
         ValidateBlackboardEntity<BlackboardEntityBuffer>(entity);
         if (_blackboardEntityCount >= _blackboardEntityEntities.Length) throw StagingCapacityExceeded(nameof(BlackboardEntityBuffer));
         index = _blackboardEntityCount++;
         _blackboardEntityEntities[index] = entity;
+        _blackboardEntityIndex.Add(entity, index);
         _blackboardEntityOriginalValues[index] = _world.Get<BlackboardEntityBuffer>(entity);
         _blackboardEntityValues[index] = _blackboardEntityOriginalValues[index];
         return index;
@@ -1614,17 +1655,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             $"{CapacityExceededError}: destination={destination}, entity={entity.Id}, keyId={keyId}.");
     }
 
-    private int FindAttributeEntity(Entity entity)
-    {
-        for (int i = 0; i < _attributeCount; i++)
-        {
-            if (_attributeEntities[i] == entity)
-            {
-                return i;
-            }
-        }
-        return -1;
-    }
+    private int FindAttributeEntity(Entity entity) => FindIndex(_attributeIndex, entity);
 
     private void RefreshAttributeChanged(int index, int attributeId)
     {
@@ -1796,6 +1827,20 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private unsafe void ValidateListenerRegistrations()
     {
+        _listenerRegistrationCounts.Reset();
+        for (int registrationIndex = 0; registrationIndex < _listenerRegistrationCount; registrationIndex++)
+        {
+            ref ListenerRegistration registration = ref _listenerRegistrations[registrationIndex];
+            for (int setupIndex = 0; setupIndex < registration.Setup.Count; setupIndex++)
+            {
+                Entity entity = registration.Setup.Scopes[setupIndex] == (byte)PhaseListenerScope.Target
+                    ? registration.Context.Target
+                    : registration.Context.Source;
+                _listenerRegistrationCounts.TryGet(entity, out int count);
+                _listenerRegistrationCounts.Set(entity, count + 1);
+            }
+        }
+
         for (int registrationIndex = 0; registrationIndex < _listenerRegistrationCount; registrationIndex++)
         {
             ref ListenerRegistration registration = ref _listenerRegistrations[registrationIndex];
@@ -1809,12 +1854,16 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                     throw new InvalidOperationException(
                         $"GAS.EFFECT_TRANSACTION.ERR.ListenerTargetInvalid: entity={entity.Id}.");
                 }
-                if (HasEarlierListenerEntity(registrationIndex, setupIndex, entity))
+                if (!_listenerRegistrationCounts.TryGet(entity, out int stagedCount))
+                {
+                    throw new InvalidOperationException("GAS.EFFECT_TRANSACTION.ERR.ListenerRegistrationIndexMissing");
+                }
+                if (stagedCount < 0)
                 {
                     continue;
                 }
 
-                int stagedCount = CountListenerEntriesForEntity(entity);
+                _listenerRegistrationCounts.Set(entity, -1);
                 int existingCount = _world.Has<EffectPhaseListenerBuffer>(entity)
                     ? _world.Get<EffectPhaseListenerBuffer>(entity).Count
                     : 0;
@@ -2118,7 +2167,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 Entity entity = scope == PhaseListenerScope.Target
                     ? registration.Context.Target
                     : registration.Context.Source;
-                int listenerEntityIndex = FindEntity(_listenerEntities, _listenerEntityCount, entity);
+                int listenerEntityIndex = FindIndex(_listenerIndex, entity);
                 if (listenerEntityIndex < 0)
                 {
                     if (_listenerEntityCount >= _listenerEntities.Length)
@@ -2129,6 +2178,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
                     listenerEntityIndex = _listenerEntityCount++;
                     _listenerEntities[listenerEntityIndex] = entity;
+                    _listenerIndex.Add(entity, listenerEntityIndex);
                     bool existed = _world.Has<EffectPhaseListenerBuffer>(entity);
                     _listenerExisted[listenerEntityIndex] = existed;
                     _listenerOriginalValues[listenerEntityIndex] = existed
@@ -2164,7 +2214,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private int GetOrAddExistingListenerEntity(Entity entity)
     {
-        int index = FindEntity(_listenerEntities, _listenerEntityCount, entity);
+        int index = FindIndex(_listenerIndex, entity);
         if (index >= 0)
         {
             return index;
@@ -2177,6 +2227,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         index = _listenerEntityCount++;
         _listenerEntities[index] = entity;
+        _listenerIndex.Add(entity, index);
         _listenerExisted[index] = true;
         _listenerOriginalValues[index] = _world.Get<EffectPhaseListenerBuffer>(entity);
         _listenerValues[index] = _listenerOriginalValues[index];
@@ -2539,43 +2590,9 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
     }
 
-    private unsafe bool HasEarlierListenerEntity(int registrationIndex, int setupIndex, Entity entity)
-    {
-        for (int previousRegistration = 0; previousRegistration <= registrationIndex; previousRegistration++)
-        {
-            ref ListenerRegistration registration = ref _listenerRegistrations[previousRegistration];
-            int limit = previousRegistration == registrationIndex ? setupIndex : registration.Setup.Count;
-            for (int previousSetup = 0; previousSetup < limit; previousSetup++)
-            {
-                Entity previousEntity = registration.Setup.Scopes[previousSetup] == (byte)PhaseListenerScope.Target
-                    ? registration.Context.Target
-                    : registration.Context.Source;
-                if (previousEntity == entity) return true;
-            }
-        }
-        return false;
-    }
-
-    private unsafe int CountListenerEntriesForEntity(Entity entity)
-    {
-        int count = 0;
-        for (int registrationIndex = 0; registrationIndex < _listenerRegistrationCount; registrationIndex++)
-        {
-            ref ListenerRegistration registration = ref _listenerRegistrations[registrationIndex];
-            for (int setupIndex = 0; setupIndex < registration.Setup.Count; setupIndex++)
-            {
-                Entity candidate = registration.Setup.Scopes[setupIndex] == (byte)PhaseListenerScope.Target
-                    ? registration.Context.Target
-                    : registration.Context.Source;
-                if (candidate == entity) count++;
-            }
-        }
-        return count;
-    }
-
     private int GetOrAddRelationParent(Entity parent)
     {
-        int index = FindEntity(_relationParentEntities, _relationParentCount, parent);
+        int index = FindIndex(_relationParentIndex, parent);
         if (index >= 0)
         {
             return index;
@@ -2588,6 +2605,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         index = _relationParentCount++;
         _relationParentEntities[index] = parent;
+        _relationParentIndex.Add(parent, index);
         bool existed = _world.Has<ChildrenBuffer>(parent);
         _relationParentExisted[index] = existed;
         _relationParentShouldExist[index] = false;
@@ -2602,7 +2620,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private int GetOrAddRelationChild(Entity subject)
     {
-        int index = FindEntity(_relationChildEntities, _relationChildCount, subject);
+        int index = FindIndex(_relationChildIndex, subject);
         if (index >= 0)
         {
             return index;
@@ -2615,6 +2633,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         index = _relationChildCount++;
         _relationChildEntities[index] = subject;
+        _relationChildIndex.Add(subject, index);
         bool childOfExisted = _world.Has<ChildOf>(subject);
         _relationChildExisted[index] = childOfExisted;
         _relationChildOriginalValues[index] = childOfExisted
@@ -2738,7 +2757,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private bool TryReadRelationWorldPosition(Entity entity, out WorldPositionCm position)
     {
-        int index = FindEntity(_relationChildEntities, _relationChildCount, entity);
+        int index = FindIndex(_relationChildIndex, entity);
         if (index >= 0 && _relationSnapPositions[index])
         {
             position = _relationWorldPositionValues[index];
@@ -2761,7 +2780,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     /// </summary>
     private bool TryReadRelationFacing(Entity entity, out float facingRad)
     {
-        int index = FindEntity(_relationChildEntities, _relationChildCount, entity);
+        int index = FindIndex(_relationChildIndex, entity);
         if (index >= 0 && _relationFacingWrite[index])
         {
             facingRad = _relationFacingValues[index].AngleRad;
@@ -2779,7 +2798,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private bool TryReadRelationPreviousPosition(Entity entity, out PreviousWorldPositionCm position)
     {
-        int index = FindEntity(_relationChildEntities, _relationChildCount, entity);
+        int index = FindIndex(_relationChildIndex, entity);
         if (index >= 0 && _relationSnapPositions[index])
         {
             position = _relationPreviousPositionValues[index];
@@ -2827,6 +2846,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private void End()
     {
+        ClearIndexes();
         _attributeCount = 0;
         _dirtyEntityCount = 0;
         _effectRequestCount = 0;
@@ -2870,18 +2890,29 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _structuralRollbackCommands.Dispose();
     }
 
-    private static int FindEntity(Entity[] entities, int count, Entity entity)
+    private static int FindIndex(TransactionEntityIndex index, Entity entity)
     {
-        for (int i = 0; i < count; i++)
-        {
-            if (entities[i] == entity) return i;
-        }
-        return -1;
+        return index.TryGet(entity, out int row) ? row : -1;
     }
 
-    private static bool Contains(Entity[] entities, int count, Entity entity)
+    private void ClearIndexes()
     {
-        return FindEntity(entities, count, entity) >= 0;
+        _attributeIndex.Reset();
+        _dirtyIndex.Reset();
+        _gameplayEffectIndex.Reset();
+        _tagIndex.Reset();
+        _activeEffectIndex.Reset();
+        _destroyedEffectIndex.Reset();
+        _blackboardFloatIndex.Reset();
+        _blackboardIntIndex.Reset();
+        _blackboardEntityIndex.Reset();
+        _cancelledEffectIndex.Reset();
+        _aggregateDirtyIndex.Reset();
+        _listenerIndex.Reset();
+        _relationParentIndex.Reset();
+        _relationChildIndex.Reset();
+        _listenerRemovalIndex.Reset();
+        _listenerRegistrationCounts.Reset();
     }
 
     private struct ListenerRegistration

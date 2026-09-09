@@ -345,6 +345,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
 
+        int FilterControllable(Span<Entity> entities, int count, Entity controller)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
         int FilterNotEntity(Span<Entity> entities, int count, Entity exclude)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");

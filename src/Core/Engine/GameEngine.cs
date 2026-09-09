@@ -1241,7 +1241,7 @@ namespace Ludots.Core.Engine
 
             var orderTypeIds = config.Constants.OrderTypeIds;
             var responseChainOrderTypeIds = config.Constants.ResponseChainOrderTypeIds;
-            var deferredTriggerQueue = new DeferredTriggerQueue();
+            var deferredTriggerQueue = new DeferredTriggerQueue(gasRuntimeCapacity.DeferredTriggerPerFrameCapacity);
             var deferredTriggerCollectionSystem = new DeferredTriggerCollectionSystem(World, deferredTriggerQueue, tagOps, dirtyEntities);
             var deferredTriggerProcessSystem = new DeferredTriggerProcessSystem(World, deferredTriggerQueue, EventBus);
             var clearPresentationFlagsSystem = new ClearPresentationFlagsSystem(World);

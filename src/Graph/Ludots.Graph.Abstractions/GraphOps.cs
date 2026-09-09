@@ -390,6 +390,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         LoadPointerScreenY = 480,
         BindQueryCollection = 481,
         QueryScreenRegionCollection = 482,
+        QueryFilterControllable = 483,
 
     }
 

@@ -1,5 +1,8 @@
 {
   "Id": "formation_capability_showcase",
+  "TriggerGraphs": [
+    { "graph": "graph.mass_navigation.selection_roster", "scopeInstanceId": "formation.local_player" }
+  ],
   "ContinuousHeightmapAsset": "assets/terrain/formation_capability_showcase_relief.height",
   "Tags": [
     "mass_navigation",

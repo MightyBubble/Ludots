@@ -1,0 +1,7 @@
+{"id":"effect-perf-001","tick":0,"phase":"setup","action":"create_entities","count":10000,"result":"committed"}
+{"id":"effect-perf-002","tick":1,"phase":"scan","action":"process_waiting_effects","medianMs":0.239,"p95Ms":0.244,"allocatedBytes":0,"result":"pass"}
+{"id":"effect-perf-003","tick":2,"phase":"transaction","action":"stage_read_commit_gameplay_state","medianMs":1.826,"p95Ms":1.876,"allocatedBytes":0,"result":"pass"}
+{"id":"effect-perf-004","tick":3,"phase":"rollback","action":"abort_unfinished_expiry_slice","result":"world_and_external_queues_restored"}
+{"id":"effect-perf-005","tick":4,"phase":"sliced_execution","action":"complete_expiry_in_slices","sliceSizes":[2500,137,1],"result":"same_cleanup_and_event_order"}
+{"id":"effect-perf-006","tick":5,"phase":"guard","action":"validate_capacity_and_entity_identity","result":"explicit_errors_preserved"}
+

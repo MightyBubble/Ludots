@@ -19,6 +19,7 @@
     "orderAdmissionRejectionCapacity": 4096,
     "orderTerminalResultCapacity": 4096,
     "deferredTriggerActiveEntityCapacity": 16384,
+    "deferredTriggerPerFrameCapacity": 1024,
     "projectileCollisionCandidateCapacity": 16384,
     "projectileRuntimeEntityCapacity": 16384,
     "effectPhaseGraphProgramScratchCapacity": 16384,

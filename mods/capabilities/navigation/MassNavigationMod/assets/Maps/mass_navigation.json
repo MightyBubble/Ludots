@@ -1,6 +1,20 @@
 {
   "Id": "mass_navigation",
-  "ContinuousHeightmapAsset": "assets/terrain/mass_navigation_large_world_relief.height",
+  "TriggerGraphs": [
+    { "graph": "graph.mass_navigation.selection_roster", "scopeInstanceId": "local_player" }
+  ],
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/mass_navigation_large_world_relief.height",
+    "RenderProfile": {
+      "OverviewSwitchChunkSpans": 2.5,
+      "OverviewVertexLimit": 65536,
+      "ChunkLodErrorPx": 240,
+      "DisableDistanceFog": true,
+      "DisplayHeightScale": 1.0,
+      "SeaLevelCm": 0.0,
+      "AbsoluteColorPeakSpanCm": 42000.0
+    }
+  },
   "Tags": [
     "mass_navigation"
   ],

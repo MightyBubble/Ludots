@@ -219,13 +219,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     bool stageEffectState = false;
                     if (World.Has<EffectPeriodicTick>(entity))
                     {
-                        ProcessPeriod(entity, ref effect, ref context);
-                        stageEffectState = true;
+                        stageEffectState |= ProcessPeriod(entity, ref effect, ref context);
                     }
                     if (World.Has<EffectExpirationCheck>(entity))
                     {
-                        ProcessExpiration(entity, ref effect, ref context);
-                        stageEffectState = true;
+                        stageEffectState |= ProcessExpiration(entity, ref effect, ref context);
                     }
                     if (stageEffectState)
                     {
@@ -431,8 +429,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.EffectSideEffects = null;
         }
 
-        private void ProcessPeriod(Entity entity, ref GameplayEffect effect, ref EffectContext context)
+        private bool ProcessPeriod(Entity entity, ref GameplayEffect effect, ref EffectContext context)
         {
+            int previousNextTick = effect.NextTickAtTick;
             var job = new LifetimeTickJob
             {
                 World = World,
@@ -441,10 +440,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 PeriodPhaseGraphs = _periodPhaseGraphs,
             };
             job.Update(entity, ref effect, ref context);
+            return effect.NextTickAtTick != previousNextTick;
         }
 
-        private void ProcessExpiration(Entity entity, ref GameplayEffect effect, ref EffectContext context)
+        private bool ProcessExpiration(Entity entity, ref GameplayEffect effect, ref EffectContext context)
         {
+            int previousExpiresAt = effect.ExpiresAtTick;
+            int previousRemaining = effect.RemainingTicks;
             var job = new LifetimeCleanupJob
             {
                 World = World,
@@ -458,6 +460,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 SideEffects = _phaseTransaction,
             };
             job.Update(entity, ref effect, ref context);
+            return effect.ExpiresAtTick != previousExpiresAt || effect.RemainingTicks != previousRemaining;
         }
 
         private bool ProcessPhaseStage(

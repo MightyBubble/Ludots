@@ -109,33 +109,37 @@ namespace CoreInputMod.Systems
 
         public Entity GetControlledActor(int playerId)
         {
-            if (playerId <= 0)
-            {
-                return default;
-            }
-
-            Entity commandOwner = TryGetCommandSourceOwner(out Entity resolvedOwner)
-                ? resolvedOwner
+            return TryGetSolePossessedPlayerId(out int possessedPlayerId) &&
+                   possessedPlayerId == playerId
+                ? GetSolePossessedRepOrNull()
                 : Entity.Null;
-            if (commandOwner != Entity.Null &&
-                TryGetCommandSourcePrimary(commandOwner, out var commandSourcePrimary) &&
-                _world.IsAlive(commandSourcePrimary) &&
-                _world.TryGet(commandSourcePrimary, out PlayerOwner owner) &&
-                owner.PlayerId == playerId)
+        }
+
+        internal static string RequireActiveActorCollectionKey(World world, Dictionary<string, object> globals, Entity owner)
+        {
+            if (!globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var storeValue) ||
+                storeValue is not EntityCollectionStore collections)
             {
-                return commandSourcePrimary;
+                throw new InvalidOperationException("Active actor collection requires EntityCollectionStore.");
             }
 
-            if (commandOwner != Entity.Null &&
-                TryGetCollectionPrimary(commandOwner, EntityCollectionKeys.CommandSource, out var collectionPrimary) &&
-                _world.IsAlive(collectionPrimary) &&
-                _world.TryGet(collectionPrimary, out PlayerOwner collectionOwner) &&
-                collectionOwner.PlayerId == playerId)
+            int keyId;
+            if (world.IsAlive(owner) && world.TryGet(owner, out InteractionContextInstance context))
             {
-                return collectionPrimary;
+                keyId = context.ActiveCollectionKeyId;
+            }
+            else
+            {
+                if (!globals.TryGetValue(CoreServiceKeys.InteractionContextProfileRegistry.Name, out var profilesValue) ||
+                    profilesValue is not InteractionContextProfileRegistry profiles ||
+                    !profiles.TryGetSteadyStateRouting(out keyId, out _))
+                {
+                    throw new InvalidOperationException("Active actor collection requires steady-state interaction routing.");
+                }
             }
 
-            return default;
+            return collections.KeyRegistry.GetName(keyId)
+                ?? throw new InvalidOperationException($"Active actor collection key {keyId} is not registered.");
         }
 
         public Entity GetSolePossessedRepOrNull()
