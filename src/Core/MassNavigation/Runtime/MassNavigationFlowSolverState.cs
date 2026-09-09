@@ -122,6 +122,11 @@ public sealed partial class MassNavigationFlowSolverState
     public int PendingEntitySyncCount => _entitySyncDirtyCount;
     public int PendingArrivalEventCount => _arrivalEventCount;
     public float LastFlowFieldRebuildMs { get; private set; }
+    public int LastHardResolveCandidateAgentCount { get; private set; }
+    public int LastHardResolveFallbackProbeAgentCount { get; private set; }
+    public long LastHardResolveFallbackPairCheckCount { get; private set; }
+    public long LastHardResolvePairCheckCount { get; private set; }
+    public int LastHardResolvePenetratingPairCount { get; private set; }
     public MassNavigationFlowArrivalTuning ArrivalTuning { get; } = new();
     public MassNavigationFlowAvoidanceTuning AvoidanceTuning { get; } = new();
     public MassNavigationCrowdSemantics Semantics { get; } = new();
@@ -951,6 +956,10 @@ public sealed partial class MassNavigationFlowSolverState
         if (_useCandidateGating)
         {
             Array.Clear(_hardResolveCandidates, 0, UnitCount);
+            for (int displacedIndex = 0; displacedIndex < _displacedAgentCount; displacedIndex++)
+            {
+                _hardResolveCandidates[_displacedAgents[displacedIndex]] = 1;
+            }
         }
 
         float sepRadiusCm = Semantics.Steering.SeparationRadiusCm;
@@ -2315,8 +2324,8 @@ public sealed partial class MassNavigationFlowSolverState
 
     private int ResolveHardResolveHashSearchRadiusCells(int selfUnitIndex)
     {
-        float maxCandidateDistanceCm = _bodyRadiiCm[selfUnitIndex] + ResolveMaxInteractingBodyRadiusCm(selfUnitIndex) + Semantics.Obstacle.HardResolveCandidateDistanceCm;
-        return Math.Max(_hardResolveHashMinSearchRadiusCells, (int)MathF.Ceiling(maxCandidateDistanceCm / _hardResolveHashCellSizeCm));
+        float maxPenetrationDistanceCm = _bodyRadiiCm[selfUnitIndex] + ResolveMaxInteractingBodyRadiusCm(selfUnitIndex);
+        return Math.Max(_hardResolveHashMinSearchRadiusCells, (int)MathF.Ceiling(maxPenetrationDistanceCm / _hardResolveHashCellSizeCm));
     }
 
     private MassNavigationFlowPairAvoidancePolicy ResolvePolicy(bool cooperative, float selfMass, float otherMass)
@@ -2435,6 +2444,12 @@ public sealed partial class MassNavigationFlowSolverState
 
     private void ResolveHardPenetration()
     {
+        LastHardResolveCandidateAgentCount = 0;
+        LastHardResolveFallbackProbeAgentCount = 0;
+        LastHardResolveFallbackPairCheckCount = 0;
+        LastHardResolvePairCheckCount = 0;
+        LastHardResolvePenetratingPairCount = 0;
+
         if (UnitCount <= 1)
         {
             ResolveObstaclePenetration();
@@ -2446,6 +2461,14 @@ public sealed partial class MassNavigationFlowSolverState
         float invHashCell = 1f / _hardResolveHashCellSizeCm;
         int hwm1 = _hardResolveHashWidth - 1;
         int hhm1 = _hardResolveHashHeight - 1;
+
+        if (_useCandidateGating)
+        {
+            for (int i = 0; i < UnitCount; i++)
+            {
+                LastHardResolveCandidateAgentCount += _hardResolveCandidates[i];
+            }
+        }
 
         for (int i = 0; i < UnitCount; i++)
         {
@@ -2468,9 +2491,7 @@ public sealed partial class MassNavigationFlowSolverState
             int minX = Math.Max(0, cellX - hardResolveSearchRadius);
             int maxX = Math.Min(hwm1, cellX + hardResolveSearchRadius);
 
-            if (_useCandidateGating &&
-                _hardResolveCandidates[i] == 0 &&
-                !HasHardResolveAgentPenetrationCandidate(i, minX, maxX, minY, maxY))
+            if (_useCandidateGating && _hardResolveCandidates[i] == 0)
             {
                 continue;
             }
@@ -2488,11 +2509,13 @@ public sealed partial class MassNavigationFlowSolverState
                         int j = _hardResolveAgents[hashIndex];
                         if (j > i)
                         {
+                            LastHardResolvePairCheckCount++;
                             if (!CanAgentsInteract(i, j) || !AreAgentsPenetrating(i, j))
                             {
                                 continue;
                             }
 
+                            LastHardResolvePenetratingPairCount++;
                             SeparateAgents(i, j);
                         }
                     }
@@ -2501,35 +2524,6 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         ResolveObstaclePenetration();
-    }
-
-    private bool HasHardResolveAgentPenetrationCandidate(int i, int minX, int maxX, int minY, int maxY)
-    {
-        for (int neighborY = minY; neighborY <= maxY; neighborY++)
-        {
-            int rowBase = neighborY * _hardResolveHashWidth;
-            for (int neighborX = minX; neighborX <= maxX; neighborX++)
-            {
-                int cell = rowBase + neighborX;
-                int start = _hardResolveCellOffsets[cell];
-                int end = start + _hardResolveCellCounts[cell];
-                for (int hashIndex = start; hashIndex < end; hashIndex++)
-                {
-                    int j = _hardResolveAgents[hashIndex];
-                    if (j <= i || !CanAgentsInteract(i, j))
-                    {
-                        continue;
-                    }
-
-                    if (AreAgentsPenetrating(i, j))
-                    {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return false;
     }
 
     private bool AreAgentsPenetrating(int i, int j)

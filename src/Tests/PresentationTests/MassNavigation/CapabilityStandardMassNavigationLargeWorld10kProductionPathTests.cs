@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using System.Reflection;
@@ -270,6 +271,87 @@ namespace Ludots.Tests.Presentation
             }
         }
 
+        [TestCase(1_000)]
+        [TestCase(5_000)]
+        [TestCase(10_000)]
+        public void Showcase_MovingAgentsKeepBothHudItemsWithoutAllocating(int movingAgents)
+        {
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            var simulation = RequireMassNavigationSimulation(engine);
+            var projection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, projection, simulation, ExpectedAgentCount);
+            var agents = CollectMassNavigationAgents(engine, ExpectedAgentCount);
+            var hud = RequireService(engine, CoreServiceKeys.PresentationWorldHudBuffer);
+            var timing = RequireService(engine, CoreServiceKeys.PresentationTimingDiagnostics);
+            var sync = RequirePresentationSystem<PresenterEntityTransformSyncSystem>(engine);
+            var emit = RequirePresentationSystem<PresenterEmitSystem>(engine);
+            var before = hud.GetSpan().ToArray();
+            var movedOwners = new HashSet<Entity>(agents.AsSpan(0, movingAgents).ToArray());
+            int movedHudPresenterCount = 0;
+            var retainedQuery = new QueryDescription().WithAll<PresenterState, PresenterEmitCache, PerfRetainedPresentationRequest>();
+            foreach (ref var chunk in engine.World.Query(in retainedQuery))
+            {
+                var states = chunk.GetSpan<PresenterState>();
+                foreach (int index in chunk)
+                {
+                    if (movedOwners.Contains(states[index].OwnerEntity)) movedHudPresenterCount++;
+                }
+            }
+            Assert.That(movedHudPresenterCount, Is.EqualTo(movingAgents * 2));
+            const int warmup = 16;
+            const int samples = 17;
+            var syncMs = new double[samples];
+            var emitMs = new double[samples];
+            long allocatedBytes = 0;
+            for (int frame = 0; frame < warmup + samples; frame++)
+            {
+                hud.ClearContentDeltas();
+                for (int i = 0; i < movingAgents; i++)
+                {
+                    engine.World.Get<VisualTransform>(agents[i]).Position.X += 1f;
+                }
+
+                long beforeAllocation = GC.GetAllocatedBytesForCurrentThread();
+                long start = Stopwatch.GetTimestamp();
+                sync.Update(FixedDeltaSeconds);
+                long afterSync = Stopwatch.GetTimestamp();
+                emit.Update(FixedDeltaSeconds);
+                long afterEmit = Stopwatch.GetTimestamp();
+                long frameAllocation = GC.GetAllocatedBytesForCurrentThread() - beforeAllocation;
+                if (frame >= warmup)
+                {
+                    int sample = frame - warmup;
+                    syncMs[sample] = (afterSync - start) * 1000d / Stopwatch.Frequency;
+                    emitMs[sample] = (afterEmit - afterSync) * 1000d / Stopwatch.Frequency;
+                    allocatedBytes += frameAllocation;
+                    Assert.That(timing.PresenterEmitRetainedCountLastFrame, Is.EqualTo(movingAgents * 2));
+                    Assert.That(timing.PresenterRetainedHudPositionUpdatesLastFrame, Is.EqualTo(movingAgents * 2));
+                    Assert.That(timing.PresenterRetainedHudProjectionReusesLastFrame, Is.Zero);
+                }
+            }
+
+            int checkedItems = 0;
+            foreach (var item in before)
+            {
+                if (!movedOwners.Contains(item.Owner)) continue;
+                Assert.That(hud.TryGetByStableId(item.StableId, out var after), Is.True);
+                Assert.That(after.WorldPosition.X, Is.EqualTo(item.WorldPosition.X + warmup + samples).Within(0.001f));
+                Assert.That(after.Owner, Is.EqualTo(item.Owner));
+                Assert.That(after.Kind, Is.EqualTo(item.Kind));
+                Assert.That(after.Value0, Is.EqualTo(item.Value0));
+                checkedItems++;
+            }
+
+            Assert.That(checkedItems, Is.EqualTo(movingAgents * 2));
+            Assert.That(hud.Count, Is.EqualTo(before.Length));
+            Assert.That(hud.DroppedTotal, Is.Zero);
+            Array.Sort(syncMs);
+            Array.Sort(emitMs);
+            TestContext.Out.WriteLine($"Moving agents={movingAgents} sync median={syncMs[samples / 2]:F3}ms p95={syncMs[^1]:F3}ms; emit median={emitMs[samples / 2]:F3}ms p95={emitMs[^1]:F3}ms; allocated={allocatedBytes / samples} B/frame");
+            Assert.That(allocatedBytes, Is.Zero);
+        }
+
         [Test]
         public void Showcase_MouseBoxAcquisition_AcquiresVisibleMassNavigationAgents()
         {
@@ -459,6 +541,20 @@ namespace Ludots.Tests.Presentation
             }
 
             throw new InvalidOperationException($"System {typeof(TSystem).Name} is not registered in group {group}.");
+        }
+
+        private static TSystem RequirePresentationSystem<TSystem>(GameEngine engine)
+            where TSystem : class, ISystem<float>
+        {
+            FieldInfo field = typeof(GameEngine).GetField("_presentationSystems", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("GameEngine presentation systems field is unavailable.");
+            var systems = (List<ISystem<float>>)field.GetValue(engine)!;
+            foreach (var system in systems)
+            {
+                if (system is TSystem result) return result;
+            }
+
+            throw new InvalidOperationException($"Presentation system {typeof(TSystem).Name} is not registered.");
         }
 
         private static void ApplyHostAssets(GameEngine engine)
