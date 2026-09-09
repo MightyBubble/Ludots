@@ -138,7 +138,7 @@
 ]
 ```
 
-配套的候选池（`assets/Rng/distributions.json`）：
+配套的候选池（`<mod>/assets/Rng/distributions.json`）：
 
 ```json
 [
@@ -408,15 +408,17 @@
 ### 3. 跨文件关联（一份完整内容要动哪些文件）
 
 ```
-assets/config_catalog.json           声明 Activities/activities.json（不声明 = 永远不加载）
-assets/Activities/activities.json    活动定义（本文档主角）
-assets/Tasks/tasks.json              选项效果 task.create 指向的任务定义
-assets/Rng/distributions.json        pooled 的候选池：id ↔ pool_key，entries[].id ↔ 候选活动 id
-assets/GAS/graphs.json               触发轨：事件 → OfferActivity{activityId}（scope 用 LoadPlacedEntity 取）
-assets/Events/custom_events.json     触发轨用的自定义地图事件声明
-assets/Maps/<map>.json               放置 scope 实体（供 LoadPlacedEntity）
-Assets/PanelKit/panel_manifest.json  事件面板绑定（panelType activity，topic/profile）
+<mod>/assets/config_catalog.json          声明 Activities/activities.json（不声明 = 永远不加载）
+<mod>/assets/Activities/activities.json   活动定义（本文档主角）
+<mod>/assets/Tasks/tasks.json             选项效果 task.create 指向的任务定义
+<mod>/assets/Rng/distributions.json       pooled 的候选池：id ↔ pool_key，entries[].id ↔ 候选活动 id
+<mod>/assets/GAS/graphs.json              触发轨：事件 → OfferActivity{activityId}（scope 用 LoadPlacedEntity 取）
+<mod>/assets/Events/custom_events.json    触发轨用的自定义地图事件声明
+<mod>/assets/Maps/<map>.json              放置 scope 实体（供 LoadPlacedEntity）
+<mod>/assets/PanelKit/panel_manifest.json 事件面板绑定（panelType activity，topic/profile）
 ```
+
+可照抄的完整实例：`mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod/Assets/`。
 
 面板命令：`activity.confirm {instanceId, optionId}`（确认选项）。呈现 cue 五种：`Presented` / `OptionBlocked` / `Resolved` / `AutomaticSettled` / `AdmissionRejected`（带原因码），面板"审计侧"和 UAT 都消费它。
 
@@ -426,10 +428,10 @@ Assets/PanelKit/panel_manifest.json  事件面板绑定（panelType activity，t
 
 | 项 | 值 |
 |---|---|
-| 可玩 showcase | `activity_dispatch`（registry），启动 preset `activity_dispatch_cef_raylib` |
+| 可玩 showcase | `activity_dispatch`（registry），启动 preset `activity_dispatch_raylib` |
 | 可抄完整内容 | `mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod/Assets/` |
 | headless 验收 | `ActivityDispatchShowcaseAcceptanceTests`（三路径端到端 / 池抽确定性 / 呈现排水） |
-| 单元与桥接测试 | `src/Tests/GasTests/Integration/Activity*.cs`（61 项） |
+| 单元与桥接测试 | `src/Tests/GasTests/Integration/` 下 `ActivityRuntimeTests` / `ActivitySignalIntakeTests` / `ActivityPooledDispatchTests` / `ActivityTaskPersistenceTests` / `ActivityBridgeProviderTests` |
 | 证据目录 | `artifacts/acceptance/activity_dispatch/` |
 
 ## 边界与已知缺口

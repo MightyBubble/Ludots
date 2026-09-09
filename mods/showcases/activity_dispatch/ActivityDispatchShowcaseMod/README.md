@@ -39,4 +39,4 @@ fact source）；本 showcase 的触发走 graph 派发轨，不走信号订阅�
 
 ## 入口
 
-launcher preset `activity_dispatch_cef_raylib`（CEF 浏览器运行时，依赖 `LudotsCoreMod`）。
+launcher preset `activity_dispatch_raylib`（raylib adapter，依赖 `LudotsCoreMod`）。
