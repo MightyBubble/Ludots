@@ -21,7 +21,7 @@ namespace Ludots.Core.Presentation.Systems
             .WithNone<PresentationStaticTransform>();
 
         private static readonly QueryDescription EntityAnchoredQuery = new QueryDescription()
-            .WithAll<PresenterState, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale, PresenterTransformSource, PresenterEmitCache, PerfTransformSyncTick>()
+            .WithAll<PresenterState, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale, PresenterTransformSource, PresenterEmitCache, PerfTransformSyncTick, PerfEntityAnchorRootTransformSync>()
             .WithNone<PresenterBootstrapPending, PerfStaticStableVisual, PerfOwnerPayloadTransformSync>();
 
         private static readonly QueryDescription DebugSyncPathQuery = new QueryDescription()
