@@ -1,0 +1,675 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="ab141468-9249-43e0-9fbd-f33c8b6d6140" name="sietg@CODESEAL 2026-09-09 18:46:40" runUser="CODESEAL\sietg" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-09T18:46:40.5441481+08:00" queuing="2026-09-09T18:46:40.5441491+08:00" start="2026-09-09T18:46:34.4528430+08:00" finish="2026-09-09T18:46:42.7191522+08:00" />
+  <TestSettings name="default" id="0ddb524f-a711-4b0c-89d7-680d56193b7a">
+    <Deployment runDeploymentRoot="sietg_CODESEAL_2026-09-09_18_46_40" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="8e00a307-cc63-4fa4-acb4-ebdbacb0df93" testId="ea699019-cf02-8e05-627a-233248220f1b" testName="BlacksmithShowcase_GlobalRegionChanged_SwapsWorkshopMeshes" computerName="CODESEAL" duration="00:00:04.1970360" startTime="2026-09-09T18:46:36.2292868+08:00" endTime="2026-09-09T18:46:40.4259790+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8e00a307-cc63-4fa4-acb4-ebdbacb0df93">
+      <Output>
+        <StdOut>[INF][Engine] Initializing with ConfigPipeline...&#xD;
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=3&#xD;
+[INF][ModLoader] Mod Load Order:&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - CoreInputMod (P:0)&#xD;
+[INF][ModLoader] - PresenterBlacksmithShowcaseMod (P:0)&#xD;
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - CoreInputMod (P:0)&#xD;
+[INF][ModLoader] - PresenterBlacksmithShowcaseMod (P:0)&#xD;
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...&#xD;
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized&#xD;
+[INF][ModLoader] LudotsCoreMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded LudotsCoreMod&#xD;
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll&#xD;
+[INF][ModLoader] Scanning 33 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input&#xD;
+[INF][ModLoader] CoreInputMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded CoreInputMod&#xD;
+[INF][ModLoader] Reusing preloaded assembly for PresenterBlacksmithShowcaseMod: C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresenterBlacksmithShowcaseMod.dll&#xD;
+[INF][ModLoader] Scanning 31 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for PresenterBlacksmithShowcaseMod. Calling OnLoad...&#xD;
+[INF][Mod.PresenterBlacksmithShowcaseMod] [PresenterBlacksmithShowcaseMod] Loaded&#xD;
+[INF][ModLoader] PresenterBlacksmithShowcaseMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded PresenterBlacksmithShowcaseMod&#xD;
+[INF][Config] Merged fragment from: Core:game.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json&#xD;
+[INF][Engine] Merged GameConfig: StartupMapId=presenter_blacksmith_showcase, DefaultCoreMod=LudotsCoreMod&#xD;
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3&#xD;
+[INF][Engine] Initializing JobScheduler...&#xD;
+[INF][Config] Loading DataRegistry&lt;EntityTemplate&gt; from Entities/templates.json...&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Entities/templates.json&#xD;
+[INF][Config] Loaded 10 DataRegistry&lt;EntityTemplate&gt; items.&#xD;
+[INF][Engine] Initializing Core GAS Systems...&#xD;
+[INF][Config] Merged fragment from: Core:Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: Core:Enums/enums.json&#xD;
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json&#xD;
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/scopes.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/progressions.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/requirements.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/shapes.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/layouts.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/definitions.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/hfsm.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json&#xD;
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/lines.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/speakers.json&#xD;
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json&#xD;
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json&#xD;
+[INF][ModLoader] No registration conflicts detected.&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json&#xD;
+[INF][Engine] Firing GameStart event...&#xD;
+[LudotsCoreMod] Core systems installed&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] Acquisition enabled: True; input and presentation systems registered.&#xD;
+[INF][Engine] Loading Map: presenter_blacksmith_showcase&#xD;
+[INF][Map] Loading Map: presenter_blacksmith_showcase&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Maps/presenter_blacksmith_showcase.json&#xD;
+[INF][Map] Map 'presenter_blacksmith_showcase' loaded.&#xD;
+[INF][Map] Creating GridBoard 'default' (1x1 macroTiles, cell=100cm)&#xD;
+[INF][Engine] Created Board 'default' (type=Grid) for map 'presenter_blacksmith_showcase'&#xD;
+[INF][Map] Map 'presenter_blacksmith_showcase' pushed to focus (stack depth=1).&#xD;
+[INF][Engine] Projected ContinuousHeightmap to grid LogicTerrainField 256x256 cells for board 'default'&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json&#xD;
+[INF][Engine] Pathing bootstrap skipped for map 'presenter_blacksmith_showcase': no node-graph board or navmesh query service is loaded.&#xD;
+[INF][Engine] Creating Entities from MapConfig...&#xD;
+[INF][Engine] Applied DefaultCamera: yaw=180 pitch=45 dist=5000cm fov=60&#xD;
+[INF][Engine] Firing MapLoaded event for presenter_blacksmith_showcase...&#xD;
+[INF][Engine] Unloading ModLoader contexts...&#xD;
+[INF][Engine] Disposing JobScheduler...</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="67ccccb1-1f54-4c45-a983-77514a29dd0b" testId="a334d9f8-ad44-bd32-2995-b5d5c8e54272" testName="Load_RejectsBindingsMissingRequiredSourcePayload(&quot;{ \&quot;paramKey\&quot;: \&quot;strict.binding\&quot;, \&quot;source\&quot;: \&quot;constant\&quot; }&quot;,&quot;Presenter binding constant.constantValue&quot;)" computerName="CODESEAL" duration="00:00:00.0079670" startTime="2026-09-09T18:46:42.4854801+08:00" endTime="2026-09-09T18:46:42.4934465+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="67ccccb1-1f54-4c45-a983-77514a29dd0b">
+      <Output>
+        <StdOut>[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="191a3415-c726-472f-9852-d617d9ea6671" testId="a8da15f1-56df-30f3-8ba3-4719d6ddbf3f" testName="Load_RejectsBindingsMissingRequiredSourcePayload(&quot;{ \&quot;paramKey\&quot;: \&quot;strict.binding\&quot;, \&quot;source\&quot;: \&quot;entityColor\&quot; }&quot;,&quot;Presenter binding entityColor.sourceId&quot;)" computerName="CODESEAL" duration="00:00:00.0221960" startTime="2026-09-09T18:46:42.4631722+08:00" endTime="2026-09-09T18:46:42.4853665+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="191a3415-c726-472f-9852-d617d9ea6671">
+      <Output>
+        <StdOut>[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="2b7f25e7-a428-4d41-9f23-b082c6eb7693" testId="934e7343-8ca6-9df4-9e1b-afefd0edc9b4" testName="Load_RejectsBindingsMissingRequiredSourcePayload(&quot;{ \&quot;paramKey\&quot;: \&quot;strict.binding\&quot;, \&quot;source\&quot;: \&quot;graph\&quot; }&quot;,&quot;presenters.json[strict_binding_actor].bindings[0] graph.sourceId&quot;,&quot;must be a semantic string&quot;)" computerName="CODESEAL" duration="00:00:00.0472879" startTime="2026-09-09T18:46:42.4157473+08:00" endTime="2026-09-09T18:46:42.4630310+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2b7f25e7-a428-4d41-9f23-b082c6eb7693">
+      <Output>
+        <StdOut>[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="a17675f4-d83b-4860-8ab7-d46ab9a42b38" testId="c82f99b1-abf9-f9bc-66a2-0611baff8cb9" testName="BlacksmithShowcase_WorkingTag_TogglesSmokeWorkerAndSoundBehavior" computerName="CODESEAL" duration="00:00:01.9807120" startTime="2026-09-09T18:46:40.4287821+08:00" endTime="2026-09-09T18:46:42.4094071+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a17675f4-d83b-4860-8ab7-d46ab9a42b38">
+      <Output>
+        <StdOut>[INF][Engine] Initializing with ConfigPipeline...&#xD;
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=3&#xD;
+[INF][ModLoader] Mod Load Order:&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - CoreInputMod (P:0)&#xD;
+[INF][ModLoader] - PresenterBlacksmithShowcaseMod (P:0)&#xD;
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - CoreInputMod (P:0)&#xD;
+[INF][ModLoader] - PresenterBlacksmithShowcaseMod (P:0)&#xD;
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...&#xD;
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized&#xD;
+[INF][ModLoader] LudotsCoreMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded LudotsCoreMod&#xD;
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll&#xD;
+[INF][ModLoader] Scanning 33 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input&#xD;
+[INF][ModLoader] CoreInputMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded CoreInputMod&#xD;
+[INF][ModLoader] Reusing preloaded assembly for PresenterBlacksmithShowcaseMod: C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresenterBlacksmithShowcaseMod.dll&#xD;
+[INF][ModLoader] Scanning 31 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for PresenterBlacksmithShowcaseMod. Calling OnLoad...&#xD;
+[INF][Mod.PresenterBlacksmithShowcaseMod] [PresenterBlacksmithShowcaseMod] Loaded&#xD;
+[INF][ModLoader] PresenterBlacksmithShowcaseMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded PresenterBlacksmithShowcaseMod&#xD;
+[INF][Config] Merged fragment from: Core:game.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json&#xD;
+[INF][Engine] Merged GameConfig: StartupMapId=presenter_blacksmith_showcase, DefaultCoreMod=LudotsCoreMod&#xD;
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3&#xD;
+[INF][Engine] Initializing JobScheduler...&#xD;
+[INF][Config] Loading DataRegistry&lt;EntityTemplate&gt; from Entities/templates.json...&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Entities/templates.json&#xD;
+[INF][Config] Loaded 10 DataRegistry&lt;EntityTemplate&gt; items.&#xD;
+[INF][Engine] Initializing Core GAS Systems...&#xD;
+[INF][Config] Merged fragment from: Core:Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: Core:Enums/enums.json&#xD;
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json&#xD;
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/scopes.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/progressions.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/requirements.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/shapes.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/layouts.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/definitions.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/hfsm.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json&#xD;
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/lines.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/speakers.json&#xD;
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json&#xD;
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json&#xD;
+[INF][ModLoader] No registration conflicts detected.&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json&#xD;
+[INF][Engine] Firing GameStart event...&#xD;
+[LudotsCoreMod] Core systems installed&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] Acquisition enabled: True; input and presentation systems registered.&#xD;
+[INF][Engine] Loading Map: presenter_blacksmith_showcase&#xD;
+[INF][Map] Loading Map: presenter_blacksmith_showcase&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Maps/presenter_blacksmith_showcase.json&#xD;
+[INF][Map] Map 'presenter_blacksmith_showcase' loaded.&#xD;
+[INF][Map] Creating GridBoard 'default' (1x1 macroTiles, cell=100cm)&#xD;
+[INF][Engine] Created Board 'default' (type=Grid) for map 'presenter_blacksmith_showcase'&#xD;
+[INF][Map] Map 'presenter_blacksmith_showcase' pushed to focus (stack depth=1).&#xD;
+[INF][Engine] Projected ContinuousHeightmap to grid LogicTerrainField 256x256 cells for board 'default'&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json&#xD;
+[INF][Engine] Pathing bootstrap skipped for map 'presenter_blacksmith_showcase': no node-graph board or navmesh query service is loaded.&#xD;
+[INF][Engine] Creating Entities from MapConfig...&#xD;
+[INF][Engine] Applied DefaultCamera: yaw=180 pitch=45 dist=5000cm fov=60&#xD;
+[INF][Engine] Firing MapLoaded event for presenter_blacksmith_showcase...&#xD;
+[INF][Engine] Unloading ModLoader contexts...&#xD;
+[INF][Engine] Disposing JobScheduler...</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="394375ef-2d77-4729-a839-8d35b070d5cf" testId="921a176b-4e53-cd7e-0479-9ef204df9471" testName="Loader_RejectsCircularChildReference" computerName="CODESEAL" duration="00:00:00.0097500" startTime="2026-09-09T18:46:42.4940895+08:00" endTime="2026-09-09T18:46:42.5038383+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="394375ef-2d77-4729-a839-8d35b070d5cf">
+      <Output>
+        <StdOut>[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json</StdOut>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Loader_RejectsCircularChildReference" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="921a176b-4e53-cd7e-0479-9ef204df9471">
+      <Execution id="394375ef-2d77-4729-a839-8d35b070d5cf" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterTreeLifecycleTests" name="Loader_RejectsCircularChildReference" />
+    </UnitTest>
+    <UnitTest name="BlacksmithShowcase_GlobalRegionChanged_SwapsWorkshopMeshes" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="ea699019-cf02-8e05-627a-233248220f1b">
+      <Execution id="8e00a307-cc63-4fa4-acb4-ebdbacb0df93" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterBlacksmithShowcaseRuntimeTests" name="BlacksmithShowcase_GlobalRegionChanged_SwapsWorkshopMeshes" />
+    </UnitTest>
+    <UnitTest name="Load_RejectsBindingsMissingRequiredSourcePayload(&quot;{ \&quot;paramKey\&quot;: \&quot;strict.binding\&quot;, \&quot;source\&quot;: \&quot;entityColor\&quot; }&quot;,&quot;Presenter binding entityColor.sourceId&quot;)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="a8da15f1-56df-30f3-8ba3-4719d6ddbf3f">
+      <Execution id="191a3415-c726-472f-9852-d617d9ea6671" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterDefinitionConfigLoaderTests" name="Load_RejectsBindingsMissingRequiredSourcePayload(&quot;{ \&quot;paramKey\&quot;: \&quot;strict.binding\&quot;, \&quot;source\&quot;: \&quot;entityColor\&quot; }&quot;,&quot;Presenter binding entityColor.sourceId&quot;)" />
+    </UnitTest>
+    <UnitTest name="Load_RejectsBindingsMissingRequiredSourcePayload(&quot;{ \&quot;paramKey\&quot;: \&quot;strict.binding\&quot;, \&quot;source\&quot;: \&quot;graph\&quot; }&quot;,&quot;presenters.json[strict_binding_actor].bindings[0] graph.sourceId&quot;,&quot;must be a semantic string&quot;)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="934e7343-8ca6-9df4-9e1b-afefd0edc9b4">
+      <Execution id="2b7f25e7-a428-4d41-9f23-b082c6eb7693" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterDefinitionConfigLoaderTests" name="Load_RejectsBindingsMissingRequiredSourcePayload(&quot;{ \&quot;paramKey\&quot;: \&quot;strict.binding\&quot;, \&quot;source\&quot;: \&quot;graph\&quot; }&quot;,&quot;presenters.json[strict_binding_actor].bindings[0] graph.sourceId&quot;,&quot;must be a semantic string&quot;)" />
+    </UnitTest>
+    <UnitTest name="BlacksmithShowcase_WorkingTag_TogglesSmokeWorkerAndSoundBehavior" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="c82f99b1-abf9-f9bc-66a2-0611baff8cb9">
+      <Execution id="a17675f4-d83b-4860-8ab7-d46ab9a42b38" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterBlacksmithShowcaseRuntimeTests" name="BlacksmithShowcase_WorkingTag_TogglesSmokeWorkerAndSoundBehavior" />
+    </UnitTest>
+    <UnitTest name="Load_RejectsBindingsMissingRequiredSourcePayload(&quot;{ \&quot;paramKey\&quot;: \&quot;strict.binding\&quot;, \&quot;source\&quot;: \&quot;constant\&quot; }&quot;,&quot;Presenter binding constant.constantValue&quot;)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="a334d9f8-ad44-bd32-2995-b5d5c8e54272">
+      <Execution id="67ccccb1-1f54-4c45-a983-77514a29dd0b" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterDefinitionConfigLoaderTests" name="Load_RejectsBindingsMissingRequiredSourcePayload(&quot;{ \&quot;paramKey\&quot;: \&quot;strict.binding\&quot;, \&quot;source\&quot;: \&quot;constant\&quot; }&quot;,&quot;Presenter binding constant.constantValue&quot;)" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="ea699019-cf02-8e05-627a-233248220f1b" executionId="8e00a307-cc63-4fa4-acb4-ebdbacb0df93" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a334d9f8-ad44-bd32-2995-b5d5c8e54272" executionId="67ccccb1-1f54-4c45-a983-77514a29dd0b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a8da15f1-56df-30f3-8ba3-4719d6ddbf3f" executionId="191a3415-c726-472f-9852-d617d9ea6671" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="934e7343-8ca6-9df4-9e1b-afefd0edc9b4" executionId="2b7f25e7-a428-4d41-9f23-b082c6eb7693" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c82f99b1-abf9-f9bc-66a2-0611baff8cb9" executionId="a17675f4-d83b-4860-8ab7-d46ab9a42b38" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="921a176b-4e53-cd7e-0479-9ef204df9471" executionId="394375ef-2d77-4729-a839-8d35b070d5cf" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="6" executed="6" passed="6" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll&#xD;
+   NUnit3TestExecutor discovered 6 of 6 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+[INF][Engine] Initializing with ConfigPipeline...&#xD;
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=3&#xD;
+[INF][ModLoader] Mod Load Order:&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - CoreInputMod (P:0)&#xD;
+[INF][ModLoader] - PresenterBlacksmithShowcaseMod (P:0)&#xD;
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - CoreInputMod (P:0)&#xD;
+[INF][ModLoader] - PresenterBlacksmithShowcaseMod (P:0)&#xD;
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...&#xD;
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized&#xD;
+[INF][ModLoader] LudotsCoreMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded LudotsCoreMod&#xD;
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll&#xD;
+[INF][ModLoader] Scanning 33 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input&#xD;
+[INF][ModLoader] CoreInputMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded CoreInputMod&#xD;
+[INF][ModLoader] Reusing preloaded assembly for PresenterBlacksmithShowcaseMod: C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresenterBlacksmithShowcaseMod.dll&#xD;
+[INF][ModLoader] Scanning 31 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for PresenterBlacksmithShowcaseMod. Calling OnLoad...&#xD;
+[INF][Mod.PresenterBlacksmithShowcaseMod] [PresenterBlacksmithShowcaseMod] Loaded&#xD;
+[INF][ModLoader] PresenterBlacksmithShowcaseMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded PresenterBlacksmithShowcaseMod&#xD;
+[INF][Config] Merged fragment from: Core:game.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json&#xD;
+[INF][Engine] Merged GameConfig: StartupMapId=presenter_blacksmith_showcase, DefaultCoreMod=LudotsCoreMod&#xD;
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3&#xD;
+[INF][Engine] Initializing JobScheduler...&#xD;
+[INF][Config] Loading DataRegistry&lt;EntityTemplate&gt; from Entities/templates.json...&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Entities/templates.json&#xD;
+[INF][Config] Loaded 10 DataRegistry&lt;EntityTemplate&gt; items.&#xD;
+[INF][Engine] Initializing Core GAS Systems...&#xD;
+[INF][Config] Merged fragment from: Core:Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: Core:Enums/enums.json&#xD;
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json&#xD;
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/scopes.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/progressions.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/requirements.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/shapes.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/layouts.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/definitions.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/hfsm.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json&#xD;
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/lines.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/speakers.json&#xD;
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json&#xD;
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json&#xD;
+[INF][ModLoader] No registration conflicts detected.&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json&#xD;
+[INF][Engine] Firing GameStart event...&#xD;
+[LudotsCoreMod] Core systems installed&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] Acquisition enabled: True; input and presentation systems registered.&#xD;
+[INF][Engine] Loading Map: presenter_blacksmith_showcase&#xD;
+[INF][Map] Loading Map: presenter_blacksmith_showcase&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Maps/presenter_blacksmith_showcase.json&#xD;
+[INF][Map] Map 'presenter_blacksmith_showcase' loaded.&#xD;
+[INF][Map] Creating GridBoard 'default' (1x1 macroTiles, cell=100cm)&#xD;
+[INF][Engine] Created Board 'default' (type=Grid) for map 'presenter_blacksmith_showcase'&#xD;
+[INF][Map] Map 'presenter_blacksmith_showcase' pushed to focus (stack depth=1).&#xD;
+[INF][Engine] Projected ContinuousHeightmap to grid LogicTerrainField 256x256 cells for board 'default'&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json&#xD;
+[INF][Engine] Pathing bootstrap skipped for map 'presenter_blacksmith_showcase': no node-graph board or navmesh query service is loaded.&#xD;
+[INF][Engine] Creating Entities from MapConfig...&#xD;
+[INF][Engine] Applied DefaultCamera: yaw=180 pitch=45 dist=5000cm fov=60&#xD;
+[INF][Engine] Firing MapLoaded event for presenter_blacksmith_showcase...&#xD;
+[INF][Engine] Unloading ModLoader contexts...&#xD;
+[INF][Engine] Disposing JobScheduler...&#xD;
+&#xD;
+[INF][Engine] Initializing with ConfigPipeline...&#xD;
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=3&#xD;
+[INF][ModLoader] Mod Load Order:&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - CoreInputMod (P:0)&#xD;
+[INF][ModLoader] - PresenterBlacksmithShowcaseMod (P:0)&#xD;
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - CoreInputMod (P:0)&#xD;
+[INF][ModLoader] - PresenterBlacksmithShowcaseMod (P:0)&#xD;
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...&#xD;
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized&#xD;
+[INF][ModLoader] LudotsCoreMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded LudotsCoreMod&#xD;
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll&#xD;
+[INF][ModLoader] Scanning 33 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input&#xD;
+[INF][ModLoader] CoreInputMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded CoreInputMod&#xD;
+[INF][ModLoader] Reusing preloaded assembly for PresenterBlacksmithShowcaseMod: C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresenterBlacksmithShowcaseMod.dll&#xD;
+[INF][ModLoader] Scanning 31 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for PresenterBlacksmithShowcaseMod. Calling OnLoad...&#xD;
+[INF][Mod.PresenterBlacksmithShowcaseMod] [PresenterBlacksmithShowcaseMod] Loaded&#xD;
+[INF][ModLoader] PresenterBlacksmithShowcaseMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded PresenterBlacksmithShowcaseMod&#xD;
+[INF][Config] Merged fragment from: Core:game.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json&#xD;
+[INF][Engine] Merged GameConfig: StartupMapId=presenter_blacksmith_showcase, DefaultCoreMod=LudotsCoreMod&#xD;
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3&#xD;
+[INF][Engine] Initializing JobScheduler...&#xD;
+[INF][Config] Loading DataRegistry&lt;EntityTemplate&gt; from Entities/templates.json...&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Entities/templates.json&#xD;
+[INF][Config] Loaded 10 DataRegistry&lt;EntityTemplate&gt; items.&#xD;
+[INF][Engine] Initializing Core GAS Systems...&#xD;
+[INF][Config] Merged fragment from: Core:Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: Core:Enums/enums.json&#xD;
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json&#xD;
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/scopes.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/progressions.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/requirements.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/shapes.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/layouts.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/definitions.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/hfsm.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json&#xD;
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/lines.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/speakers.json&#xD;
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json&#xD;
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json&#xD;
+[INF][ModLoader] No registration conflicts detected.&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json&#xD;
+[INF][Engine] Firing GameStart event...&#xD;
+[LudotsCoreMod] Core systems installed&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.&#xD;
+[INF][Mod.CoreInputMod] [CoreInputMod] Acquisition enabled: True; input and presentation systems registered.&#xD;
+[INF][Engine] Loading Map: presenter_blacksmith_showcase&#xD;
+[INF][Map] Loading Map: presenter_blacksmith_showcase&#xD;
+[INF][Config] Merged fragment from: PresenterBlacksmithShowcaseMod:assets/Maps/presenter_blacksmith_showcase.json&#xD;
+[INF][Map] Map 'presenter_blacksmith_showcase' loaded.&#xD;
+[INF][Map] Creating GridBoard 'default' (1x1 macroTiles, cell=100cm)&#xD;
+[INF][Engine] Created Board 'default' (type=Grid) for map 'presenter_blacksmith_showcase'&#xD;
+[INF][Map] Map 'presenter_blacksmith_showcase' pushed to focus (stack depth=1).&#xD;
+[INF][Engine] Projected ContinuousHeightmap to grid LogicTerrainField 256x256 cells for board 'default'&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json&#xD;
+[INF][Engine] Pathing bootstrap skipped for map 'presenter_blacksmith_showcase': no node-graph board or navmesh query service is loaded.&#xD;
+[INF][Engine] Creating Entities from MapConfig...&#xD;
+[INF][Engine] Applied DefaultCamera: yaw=180 pitch=45 dist=5000cm fov=60&#xD;
+[INF][Engine] Firing MapLoaded event for presenter_blacksmith_showcase...&#xD;
+[INF][Engine] Unloading ModLoader contexts...&#xD;
+[INF][Engine] Disposing JobScheduler...&#xD;
+&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json&#xD;
+&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json&#xD;
+&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json&#xD;
+&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/presenters.json&#xD;
+&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
