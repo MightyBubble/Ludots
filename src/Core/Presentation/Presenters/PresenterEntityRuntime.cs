@@ -1885,6 +1885,11 @@ namespace Ludots.Core.Presentation.Presenters
                 RemoveMarker<PerfOwnerPayloadAttachedTransformSync>(entity);
             }
 
+            if (_world.Has<PerfEntityAnchorRootTransformSync>(entity))
+            {
+                RemoveMarker<PerfEntityAnchorRootTransformSync>(entity);
+            }
+
             if (_world.Has<PerfHasAnimator>(entity))
             {
                 RemoveMarker<PerfHasAnimator>(entity);
