@@ -760,6 +760,34 @@ namespace Ludots.Core.Scripting
         /// Triggers are sorted by Priority (lower values execute first).
         /// Also invokes matching EventHandlers.
         /// </summary>
+        /// <summary>
+        /// 廉价判断某 eventKey 是否存在任何消费者（mod 回调/地图触发器/全局触发器）。
+        /// 无消费者时调用方可完全跳过分发（不建 ScriptContext、不拼字符串）。
+        /// </summary>
+        public bool HasDispatchTarget(MapId mapId, string eventKeyValue)
+        {
+            var key = new EventKey(eventKeyValue);
+            if (_eventHandlers.ContainsKey(key))
+            {
+                return true;
+            }
+
+            if (_globalEventTriggers.TryGetValue(key, out List<Trigger>? global) && global != null && global.Count > 0)
+            {
+                return true;
+            }
+
+            if (_mapEventTriggers.TryGetValue(mapId, out Dictionary<EventKey, List<Trigger>>? mapTriggers) &&
+                mapTriggers.TryGetValue(key, out List<Trigger>? matching) &&
+                matching != null &&
+                matching.Count > 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         public void FireMapEvent(MapId mapId, EventKey eventKey, ScriptContext context)
         {
             EventSchemas?.ValidateFirePayload(eventKey, context);
