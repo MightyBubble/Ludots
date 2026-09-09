@@ -1,0 +1,2 @@
+roots,children,attached,moving,sync_median_ms,sync_p95_ms,behavior_median_ms,behavior_p95_ms,allocated_bytes_per_frame
+5000,3,False,5000,0.628900,0.832600,0.000700,0.002900,0
