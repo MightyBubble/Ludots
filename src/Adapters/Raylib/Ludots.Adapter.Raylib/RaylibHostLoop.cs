@@ -323,7 +323,11 @@ namespace Ludots.Adapter.Raylib
                         screenHud,
                         presentationTiming,
                         cullingDebug,
-                        () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
+                        () => engine.GetService(CoreServiceKeys.ContinuousHeightmap),
+                        new TerrainHudOcclusionConfig(
+                            engine.MergedConfig.Presentation.WorldHudTerrainOcclusionCacheCapacity,
+                            engine.MergedConfig.Presentation.WorldHudTerrainOcclusionCellDivisor,
+                            engine.MergedConfig.Presentation.WorldHudTerrainOcclusionHeightBucketCm));
                     overlaySceneBuilder = new PresentationOverlaySceneBuilder(screenHud, worldHudStrings, textCatalog, localeSelection, screenOverlayBuffer, minimapScreenMarkers);
                     overlayScene = new PresentationOverlayScene(screenHud.Capacity + ScreenOverlayBuffer.MaxItems + (minimapScreenMarkers?.Capacity ?? 0));
                 }

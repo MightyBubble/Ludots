@@ -30,6 +30,9 @@ namespace Ludots.Core.Presentation
         private int? _splineRibbonCapacity;
         private int? _worldHudCapacity;
         private int? _screenHudCapacity;
+        private int? _worldHudTerrainOcclusionCacheCapacity;
+        private int? _worldHudTerrainOcclusionCellDivisor;
+        private int? _worldHudTerrainOcclusionHeightBucketCm;
         private int? _minimapMarkerCapacity;
         private int? _navMeshTileCapacity;
         private int? _trailMeshCapacity;
@@ -61,6 +64,15 @@ namespace Ludots.Core.Presentation
         public int SplineRibbonCapacity { get => _splineRibbonCapacity ?? 0; set => _splineRibbonCapacity = value; }
         public int WorldHudCapacity { get => _worldHudCapacity ?? 0; set => _worldHudCapacity = value; }
         public int ScreenHudCapacity { get => _screenHudCapacity ?? 0; set => _screenHudCapacity = value; }
+
+        /// <summary>世界 HUD 地形遮挡跨帧缓存容量；0 = 关闭缓存（逐项精确 raycast）。</summary>
+        public int WorldHudTerrainOcclusionCacheCapacity { get => _worldHudTerrainOcclusionCacheCapacity ?? 8192; set => _worldHudTerrainOcclusionCacheCapacity = value; }
+
+        /// <summary>遮挡锚点格 = 地形采样格宽 / 该除数（>=1，格越细越精确、命中越低）。</summary>
+        public int WorldHudTerrainOcclusionCellDivisor { get => _worldHudTerrainOcclusionCellDivisor ?? 8; set => _worldHudTerrainOcclusionCellDivisor = value; }
+
+        /// <summary>遮挡锚点高度桶（cm），控制高度方向复用粒度。</summary>
+        public int WorldHudTerrainOcclusionHeightBucketCm { get => _worldHudTerrainOcclusionHeightBucketCm ?? 100; set => _worldHudTerrainOcclusionHeightBucketCm = value; }
         public int MinimapMarkerCapacity { get => _minimapMarkerCapacity ?? 0; set => _minimapMarkerCapacity = value; }
         public int NavMeshTileCapacity { get => _navMeshTileCapacity ?? 4096; set => _navMeshTileCapacity = value; }
         public int TrailMeshCapacity { get => _trailMeshCapacity ?? 0; set => _trailMeshCapacity = value; }

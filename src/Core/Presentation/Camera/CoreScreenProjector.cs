@@ -77,7 +77,7 @@ namespace Ludots.Core.Presentation.Camera
                 return false;
             }
 
-            snapshot = new ProjectionSnapshot(_viewProjection, _cachedResolution);
+            snapshot = new ProjectionSnapshot(_viewProjection, _cachedResolution, ResolveCamera().Position);
             return true;
         }
 
