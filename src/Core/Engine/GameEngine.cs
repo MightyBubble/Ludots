@@ -4140,7 +4140,21 @@ namespace Ludots.Core.Engine
             // read. When a manifest is present it is binding: identity and format mismatches
             // fail closed instead of silently serving another map's or version's geometry.
             // Maps baked before manifests existed simply have no manifest to validate.
-            NavTileManifest? manifest = ValidateNavTileManifest(mapId, boardScopedAddressing ? navigableBoards[0].Name : null);
+            var boardManifests = new Dictionary<string, NavTileManifest?>(navigableBoards.Count, StringComparer.Ordinal);
+            foreach (BoardConfig board in navigableBoards)
+            {
+                string manifestKey = boardScopedAddressing ? board.Name : string.Empty;
+                NavTileManifest? boardManifest = ValidateNavTileManifest(
+                    mapId,
+                    boardScopedAddressing ? board.Name : null);
+                boardManifests[manifestKey] = boardManifest;
+                if (boardManifest != null && !boardScopedAddressing)
+                {
+                    // Single-board maps expose one authoritative manifest to diagnostics;
+                    // board-scoped maps keep manifests per store, not under one global key.
+                    SetService(CoreServiceKeys.NavTileManifest, boardManifest);
+                }
+            }
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
@@ -4153,6 +4167,11 @@ namespace Ludots.Core.Engine
                         : new BoardConfig?[] { null })
                     {
                         string boardId = board?.Name ?? string.Empty;
+                        NavTileManifest? storeManifest = boardManifests.TryGetValue(
+                            boardScopedAddressing ? boardId : string.Empty,
+                            out NavTileManifest? resolved)
+                                ? resolved
+                                : null;
                         var uriCache = new Dictionary<NavTileId, string>(256);
 
                         string ResolveTileUri(NavTileId id)
@@ -4182,7 +4201,12 @@ namespace Ludots.Core.Engine
                             }
                         }
 
-                        var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)), manifest);
+                        var storeScope = new NavTileStoreScope(
+                            mapId,
+                            boardScopedAddressing ? boardId : string.Empty,
+                            layer,
+                            profileRegistry.GetId(profileIndex));
+                        var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)), storeManifest, storeScope);
                         stores[new NavQueryServiceKey(boardScopedAddressing ? boardId : string.Empty, layer, profileIndex)] = store;
                     }
                 }
@@ -4515,7 +4539,7 @@ namespace Ludots.Core.Engine
 
         private NavTileManifest? ValidateNavTileManifest(string mapId, string? boardId)
         {
-            string rel = NavAssetPaths.GetNavTileManifestRelativePath(mapId);
+            string rel = NavAssetPaths.GetNavTileManifestRelativePath(mapId, boardId);
             if (!TryResolveSingleExistingUri(rel, out string manifestUri)) return null;
             if (!VFS.TryResolveFullPath(manifestUri, out string manifestPath) || !File.Exists(manifestPath)) return null;
 

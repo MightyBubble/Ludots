@@ -239,6 +239,92 @@ namespace Ludots.Tests.Architecture
             return NavTileBinary.Read(ms).Checksum;
         }
 
+        [Test]
+        public void Write_DuplicateFullIdentity_FailsFast()
+        {
+            string path = Path.Combine(_tempRoot, "dup.json");
+            NavTileManifest manifest = CreateManifest();
+            manifest.Tiles = new[]
+            {
+                manifest.Tiles[0],
+                manifest.Tiles[0] // same layer+profile+coord, listed twice
+            };
+
+            Assert.That(
+                () => NavTileManifestSerializer.Write(path, manifest),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("more than once"));
+        }
+
+        [Test]
+        public void Write_NullTileList_FailsFast()
+        {
+            NavTileManifest manifest = CreateManifest();
+            manifest.Tiles = null;
+
+            Assert.That(
+                () => NavTileManifestSerializer.Write(Path.Combine(_tempRoot, "null.json"), manifest),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("null tile list"));
+        }
+
+        [Test]
+        public void Write_EmptyTileList_FailsFast()
+        {
+            NavTileManifest manifest = CreateManifest();
+            manifest.Tiles = Array.Empty<NavTileManifestEntry>();
+
+            Assert.That(
+                () => NavTileManifestSerializer.Write(Path.Combine(_tempRoot, "empty.json"), manifest),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("zero tiles"));
+        }
+
+        [Test]
+        public void Write_BlankProfileId_FailsFast()
+        {
+            NavTileManifest manifest = CreateManifest();
+            manifest.Tiles = new[]
+            {
+                new NavTileManifestEntry
+                {
+                    Layer = 0,
+                    ProfileId = string.Empty,
+                    ChunkX = 0,
+                    ChunkY = 0,
+                    TileVersion = 1,
+                    TileChecksum = "fnv1a64:1111111111111111"
+                }
+            };
+
+            Assert.That(
+                () => NavTileManifestSerializer.Write(Path.Combine(_tempRoot, "blank.json"), manifest),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("no profileId"));
+        }
+
+        [Test]
+        public void Read_NullTilesInJson_FailsFast()
+        {
+            string path = Path.Combine(_tempRoot, "nulltiles.json");
+            NavTileManifestSerializer.Write(path, CreateManifest());
+
+            var doc = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+            doc["tiles"] = null;
+            File.WriteAllText(path, doc.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+
+            Assert.That(
+                () => NavTileManifestSerializer.Read(path),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("null"));
+        }
+
+        [Test]
+        public void ManifestPath_BoardScoped_KeepsPerBoardSegments()
+        {
+            string mainland = NavAssetPaths.GetNavTileManifestRelativePath("coastline", "mainland");
+            string harbor = NavAssetPaths.GetNavTileManifestRelativePath("coastline", "harbor");
+
+            Assert.That(mainland, Is.EqualTo("assets/Data/Nav/coastline/board_mainland/navtiles.manifest.json"));
+            Assert.That(harbor, Is.EqualTo("assets/Data/Nav/coastline/board_harbor/navtiles.manifest.json"));
+            Assert.That(mainland, Is.Not.EqualTo(harbor));
+        }
+
         private static NavTileManifest CreateManifest()
             => new()
             {

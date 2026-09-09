@@ -4,17 +4,50 @@ using System.IO;
 
 namespace Ludots.Core.Navigation.NavMesh
 {
+    /// <summary>
+    /// The full identity a nav tile store is bound to. Tiles are spatial payloads keyed by
+    /// (chunkX, chunkY, layer); the board and profile are properties of the store that loads
+    /// them, not of the tile payload, so the store must carry them to validate that a loaded
+    /// or replaced tile belongs to the artifact set this board/profile was baked for.
+    /// </summary>
+    public readonly struct NavTileStoreScope : IEquatable<NavTileStoreScope>
+    {
+        public readonly string MapId;
+        public readonly string BoardId;
+        public readonly int Layer;
+        public readonly string ProfileId;
+
+        public NavTileStoreScope(string mapId, string boardId, int layer, string profileId)
+        {
+            MapId = mapId ?? string.Empty;
+            BoardId = boardId ?? string.Empty;
+            Layer = layer;
+            ProfileId = profileId ?? string.Empty;
+        }
+
+        public bool Equals(NavTileStoreScope other) =>
+            string.Equals(MapId, other.MapId, StringComparison.Ordinal) &&
+            string.Equals(BoardId, other.BoardId, StringComparison.Ordinal) &&
+            Layer == other.Layer &&
+            string.Equals(ProfileId, other.ProfileId, StringComparison.Ordinal);
+
+        public override bool Equals(object obj) => obj is NavTileStoreScope other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(MapId, BoardId, Layer, ProfileId);
+        public override string ToString() => $"{MapId}/{BoardId}/layer{Layer}/profile_{ProfileId}";
+    }
+
     public sealed class NavTileStore
     {
         private readonly Func<NavTileId, Stream> _openStream;
         private readonly object _gate = new object();
         private readonly Dictionary<NavTileId, NavTile> _loaded = new Dictionary<NavTileId, NavTile>(256);
         private readonly Dictionary<NavTileId, NavTileManifestEntry>? _manifestEntries;
+        private readonly NavTileStoreScope? _scope;
         private readonly string _manifestBuildHash = string.Empty;
         private uint _revision;
 
         public NavTileStore(Func<NavTileId, Stream> openStream)
-            : this(openStream, manifest: null)
+            : this(openStream, manifest: null, scope: null)
         {
         }
 
@@ -24,8 +57,19 @@ namespace Ludots.Core.Navigation.NavMesh
         /// rejected instead of being served as if it matched the recorded build.
         /// </summary>
         public NavTileStore(Func<NavTileId, Stream> openStream, NavTileManifest? manifest)
+            : this(openStream, manifest, scope: null)
+        {
+        }
+
+        /// <summary>
+        /// Creates a store bound to one (map, board, layer, profile) identity. Load and
+        /// replace validate against the manifest entry for this exact scope: a tile listed for
+        /// another profile or another board is never loadable through this store.
+        /// </summary>
+        public NavTileStore(Func<NavTileId, Stream> openStream, NavTileManifest? manifest, NavTileStoreScope? scope)
         {
             _openStream = openStream ?? throw new ArgumentNullException(nameof(openStream));
+            _scope = scope;
             if (manifest != null)
             {
                 _manifestBuildHash = manifest.BuildHash;
@@ -33,6 +77,15 @@ namespace Ludots.Core.Navigation.NavMesh
                 for (int i = 0; i < manifest.Tiles.Length; i++)
                 {
                     NavTileManifestEntry entry = manifest.Tiles[i];
+                    if (scope != null &&
+                        (entry.Layer != scope.Value.Layer ||
+                         !string.Equals(entry.ProfileId, scope.Value.ProfileId, StringComparison.Ordinal)))
+                    {
+                        // The manifest may cover other layers/profiles of the same board; this
+                        // store only serves its own (layer, profile) slice.
+                        continue;
+                    }
+
                     _manifestEntries[new NavTileId(entry.ChunkX, entry.ChunkY, entry.Layer)] = entry;
                 }
             }
@@ -112,6 +165,7 @@ namespace Ludots.Core.Navigation.NavMesh
 
         public NavTile GetOrLoad(NavTileId id)
         {
+            AssertScopeLayer(id);
             lock (_gate)
             {
                 if (_loaded.TryGetValue(id, out var loaded)) return loaded;
@@ -131,6 +185,7 @@ namespace Ludots.Core.Navigation.NavMesh
 
         public NavTile Reload(NavTileId id)
         {
+            AssertScopeLayer(id);
             using var s = _openStream(id);
             var tile = NavTileBinary.Read(s);
             ValidateAgainstManifest(id, tile);
@@ -141,6 +196,15 @@ namespace Ludots.Core.Navigation.NavMesh
             }
 
             return tile;
+        }
+
+        private void AssertScopeLayer(NavTileId id)
+        {
+            if (_scope != null && id.Layer != _scope.Value.Layer)
+            {
+                throw new InvalidDataException(
+                    $"Nav tile {id} layer does not match the store scope {_scope.Value} (layer {_scope.Value.Layer}).");
+            }
         }
 
         private void ValidateAgainstManifest(NavTileId id, NavTile tile)

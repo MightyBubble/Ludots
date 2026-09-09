@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -6,10 +7,13 @@ using System.Text.Json.Serialization;
 namespace Ludots.Core.Navigation.NavMesh
 {
     /// <summary>
-    /// Sidecar manifest for a map's nav tile artifacts. It records which inputs and which
-    /// build capability produced the .ntil files so the loader can reject stale or foreign
+    /// Sidecar manifest for one (map, board) nav tile artifact set. It records which inputs and
+    /// which build capability produced the .ntil files so the loader can reject stale or foreign
     /// artifacts instead of querying geometry that no longer matches its source.
     /// Write time is recorded for humans only and never enters the content hash.
+    /// Full tile identity is mapId + boardId + layer + profileId + tileCoord: the map and board
+    /// come from the manifest itself (one manifest per nav board), layer/profile/coord come from
+    /// each <see cref="NavTileManifestEntry"/>. Duplicate full identities are a write error.
     /// </summary>
     public sealed class NavTileManifest
     {
@@ -21,7 +25,7 @@ namespace Ludots.Core.Navigation.NavMesh
         [JsonPropertyName("mapId")]
         public string MapId { get; set; } = string.Empty;
 
-        /// <summary>Board id when the map is board-scoped; empty for single-board maps.</summary>
+        /// <summary>Board id when the map is board-scoped; empty for a single-board map.</summary>
         [JsonPropertyName("boardId")]
         public string BoardId { get; set; } = string.Empty;
 
@@ -51,11 +55,81 @@ namespace Ludots.Core.Navigation.NavMesh
         public uint TileVersion { get; set; }
 
         [JsonPropertyName("tiles")]
-        public NavTileManifestEntry[] Tiles { get; set; } = Array.Empty<NavTileManifestEntry>();
+        public NavTileManifestEntry[]? Tiles { get; set; } = Array.Empty<NavTileManifestEntry>();
 
         /// <summary>Recorded for humans; excluded from <see cref="BuildHash"/>.</summary>
         [JsonPropertyName("writtenUtc")]
         public string WrittenUtc { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Rejects malformed manifests before they are written or served:
+        /// null/empty tile list, blank identity fields, and duplicate full identities
+        /// (same layer + profile + tile coordinate within this board) all fail fast.
+        /// </summary>
+        public void ValidateStructure()
+        {
+            if (string.IsNullOrWhiteSpace(MapId))
+            {
+                throw new InvalidDataException("Nav tile manifest must declare a mapId.");
+            }
+
+            if (BoardId == null)
+            {
+                throw new InvalidDataException($"Nav tile manifest for map '{MapId}' must declare a boardId (empty string for a single-board map, never null).");
+            }
+
+            if (FormatVersion <= 0)
+            {
+                throw new InvalidDataException($"Nav tile manifest for map '{MapId}' declares an invalid formatVersion {FormatVersion}.");
+            }
+
+            if (string.IsNullOrWhiteSpace(SourceRevision))
+            {
+                throw new InvalidDataException($"Nav tile manifest for map '{MapId}' must record the sourceRevision the tiles were baked from.");
+            }
+
+            if (string.IsNullOrWhiteSpace(Algorithm) || string.IsNullOrWhiteSpace(Mode))
+            {
+                throw new InvalidDataException($"Nav tile manifest for map '{MapId}' must record algorithm and mode.");
+            }
+
+            NavTileManifestEntry[]? tiles = Tiles;
+            if (tiles == null)
+            {
+                throw new InvalidDataException($"Nav tile manifest for map '{MapId}' has a null tile list; the manifest is incomplete.");
+            }
+
+            if (tiles.Length == 0)
+            {
+                throw new InvalidDataException(
+                    $"Nav tile manifest for map '{MapId}' board '{BoardId}' declares zero tiles; an empty bake must not be published as if it were a valid artifact set.");
+            }
+
+            var seen = new HashSet<string>(tiles.Length, StringComparer.Ordinal);
+            for (int i = 0; i < tiles.Length; i++)
+            {
+                NavTileManifestEntry entry = tiles[i];
+                if (entry == null)
+                {
+                    throw new InvalidDataException($"Nav tile manifest for map '{MapId}' contains a null entry at index {i}.");
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.ProfileId))
+                {
+                    throw new InvalidDataException($"Nav tile manifest for map '{MapId}' contains an entry with no profileId (index {i}).");
+                }
+
+                string key = ManifestEntryKey(entry);
+                if (!seen.Add(key))
+                {
+                    throw new InvalidDataException(
+                        $"Nav tile manifest for map '{MapId}' board '{BoardId}' declares tile identity '{key}' more than once; tile identities must be unique.");
+                }
+            }
+        }
+
+        internal static string ManifestEntryKey(NavTileManifestEntry entry)
+            => $"{entry.Layer}\u001F{entry.ProfileId}\u001F{entry.ChunkX}\u001F{entry.ChunkY}";
 
         /// <summary>
         /// Deterministic content hash over the identity-bearing fields. Excludes writtenUtc and
@@ -95,10 +169,12 @@ namespace Ludots.Core.Navigation.NavMesh
             MixInt(TileVersion);
 
             // Tiles are mixed in a canonical order so writer ordering cannot change the hash.
-            string[] keys = new string[Tiles.Length];
-            for (int i = 0; i < Tiles.Length; i++)
+            NavTileManifestEntry[] tiles = Tiles ?? Array.Empty<NavTileManifestEntry>();
+            string[] keys = new string[tiles.Length];
+            for (int i = 0; i < tiles.Length; i++)
             {
-                keys[i] = $"{Tiles[i].Layer}\u001F{Tiles[i].ProfileId}\u001F{Tiles[i].ChunkX}\u001F{Tiles[i].ChunkY}\u001F{Tiles[i].TileChecksum}";
+                NavTileManifestEntry entry = tiles[i];
+                keys[i] = $"{ManifestEntryKey(entry)}\u001F{entry.TileChecksum}\u001F{entry.TileVersion}";
             }
 
             Array.Sort(keys, StringComparer.Ordinal);
@@ -146,6 +222,7 @@ namespace Ludots.Core.Navigation.NavMesh
             if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("path is required.", nameof(path));
             if (manifest == null) throw new ArgumentNullException(nameof(manifest));
 
+            manifest.ValidateStructure();
             manifest.SchemaVersion = NavTileManifest.CurrentSchemaVersion;
             manifest.BuildHash = manifest.ComputeBuildHash();
             string? dir = Path.GetDirectoryName(path);
@@ -174,6 +251,11 @@ namespace Ludots.Core.Navigation.NavMesh
             }
 
             if (manifest == null) throw new InvalidDataException($"Nav tile manifest at '{path}' deserialized to null.");
+
+            // Read must enforce the same structural rules the writer enforces, so a hand-edited
+            // or foreign manifest cannot introduce null tiles / blank identities / duplicate keys.
+            manifest.ValidateStructure();
+
             if (manifest.SchemaVersion != NavTileManifest.CurrentSchemaVersion)
             {
                 throw new InvalidDataException(

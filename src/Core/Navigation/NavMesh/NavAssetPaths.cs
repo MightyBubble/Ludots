@@ -58,13 +58,21 @@ namespace Ludots.Core.Navigation.NavMesh
         }
 
         /// <summary>
-        /// Manifest path for a map's nav tiles. It sits next to the map's nav artifact root so a
-        /// cold start can validate identity and format before reading any .ntil file.
+        /// Manifest path for a map's nav tiles. It sits next to the board's nav artifact root so a
+        /// cold start can validate identity and format before reading any .ntil file. A
+        /// single-board map keeps the historical unscoped path; a board-scoped map keeps its
+        /// manifest inside the board segment so two boards cannot clobber each other's manifests.
         /// </summary>
         public static string GetNavTileManifestRelativePath(string mapId)
+            => GetNavTileManifestRelativePath(mapId, boardId: null);
+
+        public static string GetNavTileManifestRelativePath(string mapId, string? boardId)
         {
             if (string.IsNullOrWhiteSpace(mapId)) throw new ArgumentException("mapId is required.", nameof(mapId));
-            return $"assets/Data/Nav/{mapId}/navtiles.manifest.json";
+            string boardSegment = string.IsNullOrWhiteSpace(boardId)
+                ? string.Empty
+                : $"board_{GetBoardPathSegment(boardId)}/";
+            return $"assets/Data/Nav/{mapId}/{boardSegment}navtiles.manifest.json";
         }
 
         /// <summary>
