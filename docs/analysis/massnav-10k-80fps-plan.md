@@ -111,3 +111,53 @@
 | #1484 `codex/navmesh-board-addressing-m1` | OPEN | navmesh 每板寻址 | 与本目标无关 |
 | `codex/nav-perf-query-cache-rebake-workers` | 本地远端分支 | 烘焙并行 + Detour mesh 共享 | 与本目标无关（烘焙期，非每帧） |
 | `cursor/massnav-drop-visual-scale-77d9` (#1287) | OPEN | 去掉 solver 里的 visualScale | 语义清理，非帧率 |
+
+---
+
+## 7. 30K 静态 presenter 场景横向对比（用户点名的「六月 60 FPS」）
+
+用户的判断成立。同一台机、同一个 `CapabilityStandardStaticPresenter30kMod`、同一个
+`capability_standard_static_presenter_30k_scatter_hudtext_benchmark` 地图
+（30K presenter + 30K 血条 + 30K 文本，`scatterInitialTarget=30000`）：
+
+| 指标 | JUN16 (`2f6a8afb1f`) | 当前 main（修复配置后） |
+|---|---|---|
+| frame | **9.81–11.46ms（87–102 FPS）** | 28.3–32.3ms（31–35 FPS） |
+| tick | 2.85–3.23ms | 4.9–7.2ms |
+| **`cullStatic`** | **0.00–0.02ms** | **2.1–5.4ms** |
+| `overlayPaint` | 4.4–6.2ms | 0.00ms |
+| `worldHud` | **60000** | **0（未发射）** |
+
+### 7.1 修复：30K mod 在 main 上完全渲染不出来（已修）
+
+在修之前，`CapabilityStandardStaticPresenter30kMod` 在 main 上 `visibleEntities=0`、
+`primitiveRaw=0` —— **一片黑**。三个叠加的契约缺口：
+
+1. **缺 `startupLocalSeats`** → 无 PresentBinding → `RaylibHostLoop` 调用的
+   `DisarmPresentBindingCulling()` 永不被 `TryArmPresentBindingCullingPasses` 反向解除
+   → `CameraCullingSystem.Update` 直接 return → 所有实体 `CullState.IsVisible` 保持 false。
+2. **缺 `Players` / `Teams` / 代表实体**：光加 `startupLocalSeats` 会在
+   `ParticipantBindingResolver.ResolveLocalSeats` 抛
+   `playerId 1 references an unbound player`。参考基座 `MassNavigationMod` 的
+   `mass_navigation` 地图，需要 `Players[].RepresentativeInstanceId` +
+   `Teams[].RepresentativeInstanceId` + 两个代表实体。
+3. **缺 `gasRuntimeCapacity.effectFanOutCommandCapacity`**：30K 出生瞬间
+   `EffectApplicationSystem` 的 `PendingEffects` 固定容量溢出并 fail-closed 抛
+   `GAS.EFFECT_APPLICATION.ERR.FixedListCapacityExceeded: list=PendingEffects, capacity=16384`
+   （该容量由 `effectFanOutCommandCapacity` 驱动，与 `effectRequestQueueCapacity` 无关）。
+
+修复落在 30K mod 的数据层：`templates.json` 补两个代表模板；八个地图各补
+`Entities` 代表 + `Teams` + `Players`；`game.json` 补 `effectFanOutCommandCapacity=131072`
+与 `startupLocalSeats`。修复后 `visibleEntities=30000` / `primitiveRaw=30000`。
+
+### 7.2 仍开着的两个 30K 回归
+
+- **`cullStatic` 2–5ms/帧**：相机每帧变化时 `runFullStatic=true`，对 30K 静态实体做
+  全量 `ProcessStaticEntitiesFull`（AABB + 视口 + LOD）。JUN16 同场景 `cullStatic=0.00ms`
+  —— 六月在相机动时才重算，且当时这条路径几乎没有成本。需要按「相机位移后仍是同一 LOD/
+  可见集」做增量，或把静态实体的 AABB/LOD 预算缓存到块级。
+- **`worldHud=0`**：`capability_static_presenter_mesh_benchmark_hudtext` 的 WorldHud
+  行为在 main 上不发射（JUN16 是 60000 条）。这是独立于容量的第二处表现层回归。
+
+> 说明：本轮没有改这两个（前者要动 culling 算法与语义，后者根因未定位到具体契约），
+> 只把它登记为下一步的确定目标，避免在没定位到根因前瞎改。
