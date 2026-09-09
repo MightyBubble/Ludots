@@ -589,7 +589,7 @@ namespace Ludots.Tests.Presentation
             """
             { "paramKey": "strict.binding", "source": "graph" }
             """,
-            "Presenter binding graph.sourceId")]
+            "presenters.json[strict_binding_actor].bindings[0] graph.sourceId", "must be a semantic string")]
         [TestCase(
             """
             { "paramKey": "strict.binding", "source": "entityColor" }
@@ -600,7 +600,8 @@ namespace Ludots.Tests.Presentation
             { "paramKey": "strict.binding", "source": "constant" }
             """,
             "Presenter binding constant.constantValue")]
-        public void Load_RejectsBindingsMissingRequiredSourcePayload(string bindingJson, string expectedContext)
+        public void Load_RejectsBindingsMissingRequiredSourcePayload(string bindingJson, string expectedContext,
+            string expectedReason = "requires an explicit")
         {
             WriteCatalog();
             WritePresenters($$"""
@@ -620,7 +621,7 @@ namespace Ludots.Tests.Presentation
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
             Assert.That(ex.Message, Does.Contain(expectedContext));
-            Assert.That(ex.Message, Does.Contain("requires an explicit"));
+            Assert.That(ex.Message, Does.Contain(expectedReason));
         }
 
         [Test]

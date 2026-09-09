@@ -673,6 +673,20 @@
         "lane": "Int",
         "intValue": 0
       }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "GlobalRegionChanged",
+          "key": "*"
+        },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "blacksmith.workshop.assetState",
+          "paramLane": "Int",
+          "valueSource": "EventKeyId"
+        }
+      }
     ]
   },
   {
@@ -1204,137 +1218,7 @@
           "inline": "TagGained"
         },
         "command": {
-          "kind": "ActivateBehavior",
-          "targetBehaviorSlot": "body"
-        }
-      },
-      {
-        "event": {
-          "kind": "TagEffectiveChanged",
-          "key": "working"
-        },
-        "condition": {
-          "inline": "TagLost"
-        },
-        "command": {
           "kind": "DeactivateBehavior",
-          "targetBehaviorSlot": "body"
-        }
-      },
-      {
-        "event": {
-          "kind": "TagEffectiveChanged",
-          "key": "working"
-        },
-        "condition": {
-          "inline": "TagGained"
-        },
-        "command": {
-          "kind": "ActivateBehavior",
-          "targetBehaviorSlot": "animator"
-        }
-      },
-      {
-        "event": {
-          "kind": "TagEffectiveChanged",
-          "key": "working"
-        },
-        "condition": {
-          "inline": "TagLost"
-        },
-        "command": {
-          "kind": "DeactivateBehavior",
-          "targetBehaviorSlot": "animator"
-        }
-      },
-      {
-        "event": {
-          "kind": "TagEffectiveChanged",
-          "key": "working"
-        },
-        "condition": {
-          "inline": "TagGained"
-        },
-        "command": {
-          "kind": "ActivateBehavior",
-          "targetBehaviorSlot": "sound"
-        }
-      },
-      {
-        "event": {
-          "kind": "TagEffectiveChanged",
-          "key": "working"
-        },
-        "condition": {
-          "inline": "TagLost"
-        },
-        "command": {
-          "kind": "DeactivateBehavior",
-          "targetBehaviorSlot": "sound"
-        }
-      },
-      {
-        "event": {
-          "kind": "TagEffectiveChanged",
-          "key": "working"
-        },
-        "condition": {
-          "inline": "TagGained"
-        },
-        "command": {
-          "kind": "ActivateBehavior",
-          "targetBehaviorSlot": "spline"
-        }
-      },
-      {
-        "event": {
-          "kind": "TagEffectiveChanged",
-          "key": "working"
-        },
-        "condition": {
-          "inline": "TagLost"
-        },
-        "command": {
-          "kind": "DeactivateBehavior",
-          "targetBehaviorSlot": "spline"
-        }
-      },
-      {
-        "event": {
-          "kind": "TagEffectiveChanged",
-          "key": "working"
-        },
-        "condition": {
-          "inline": "TagGained"
-        },
-        "command": {
-          "kind": "ActivateBehavior",
-          "targetBehaviorSlot": "grounding"
-        }
-      },
-      {
-        "event": {
-          "kind": "TagEffectiveChanged",
-          "key": "working"
-        },
-        "condition": {
-          "inline": "TagLost"
-        },
-        "command": {
-          "kind": "DeactivateBehavior",
-          "targetBehaviorSlot": "grounding"
-        }
-      },
-      {
-        "event": {
-          "kind": "TagEffectiveChanged",
-          "key": "working"
-        },
-        "condition": {
-          "inline": "TagGained"
-        },
-        "command": {
-          "kind": "ActivateBehavior",
           "targetBehaviorSlot": "attachment"
         }
       },
@@ -1344,10 +1228,140 @@
           "key": "working"
         },
         "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "body"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
           "inline": "TagLost"
         },
         "command": {
           "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "body"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "animator"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "animator"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "spline"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "spline"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "grounding"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "grounding"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
           "targetBehaviorSlot": "attachment"
         }
       }
@@ -1411,7 +1425,7 @@
       {
         "slot": "attachment",
         "kind": "Attachment",
-        "activeByDefault": false,
+        "activeByDefault": true,
         "attachment": {
           "target": "Parent",
           "updatePolicy": "Continuous",
@@ -1999,18 +2013,6 @@
           "kind": "SetParam",
           "paramKey": "blacksmith.region",
           "paramLane": "Float",
-          "valueSource": "EventKeyId"
-        }
-      },
-      {
-        "event": {
-          "kind": "GlobalRegionChanged",
-          "key": "*"
-        },
-        "command": {
-          "kind": "SetParam",
-          "paramKey": "blacksmith.workshop.assetState",
-          "paramLane": "Int",
           "valueSource": "EventKeyId"
         }
       }
