@@ -9255,8 +9255,8 @@
       "id": "capability_standard_graph_op_OfferActivity",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpOfferActivityEntryMod",
       "projectPath": "CapabilityStandardGraphOpOfferActivityEntryMod.csproj",
-      "title": "点名派发待办活动",
-      "summary": "图节点点名活动 id；跑完，活动已上桌，字幕报「活动已派发」。",
+      "title": "点名即派发：待办活动应声上桌",
+      "summary": "军需官每点名一次，案头就添一件待办活动；件件单层拍板，绝不嵌套。",
       "tier": "T2",
       "category": "capability",
       "tags": [
