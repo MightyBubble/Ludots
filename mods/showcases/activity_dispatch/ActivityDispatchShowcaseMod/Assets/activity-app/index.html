@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Activity Dispatch Showcase</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="stage">
+    <header class="hud">
+      <h1>活动派发台 · 三条路径</h1>
+      <p class="coach">
+        forced：弹层拍板，选项有「基础 / 可执行 / 可见但锁定（写明原因）/ 根本不出现」四种形态。
+        pooled：确定性候选池抽取，同一流状态必得同一候选。automatic：无弹层，直接归档为通报。
+      </p>
+      <div class="rails">
+        <button id="trigger-forced" class="rail rail-forced">触发 forced 活动</button>
+        <button id="trigger-pooled" class="rail rail-pooled">触发 pooled 抽取</button>
+        <button id="trigger-automatic" class="rail rail-automatic">触发 automatic 通报</button>
+        <button id="knob-attribute" class="rail rail-knob">切换议事会余力（锁定↔可执行）</button>
+      </div>
+      <div id="status" class="status">DataPlane：连接中…</div>
+    </header>
+
+    <section class="panels">
+      <div class="panel panel-active">
+        <h2>等待拍板</h2>
+        <div id="activities" class="activity-list"></div>
+      </div>
+      <div class="panel panel-history">
+        <h2>历史（已结算）</h2>
+        <div id="history" class="history-list"></div>
+      </div>
+    </section>
+
+    <footer class="cues">
+      <h2>审计侧 · 派发与准入反馈</h2>
+      <div id="cues" class="cue-list"></div>
+    </footer>
+  </main>
+  <script src="main.js"></script>
+</body>
+</html>

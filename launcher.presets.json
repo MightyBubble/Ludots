@@ -3296,6 +3296,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "activity_dispatch_raylib",
+      "name": "Activity Dispatch Raylib",
+      "selectors": [
+        "$activity_dispatch"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

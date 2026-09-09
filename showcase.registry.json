@@ -9947,6 +9947,29 @@
       "artifactDir": null,
       "screenshot": null,
       "status": "active"
+    },
+    {
+      "id": "activity_dispatch",
+      "path": "mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod",
+      "projectPath": null,
+      "title": "活动派发：三条路都上桌",
+      "summary": "纯配置：forced / pooled / automatic 三条 Activity 派发路径，配一套通用事件面板；内容只改 JSON。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "activity_dispatch",
+      "preset": "activity_dispatch_raylib",
+      "docsPath": "gitbook/reference/narrative-runtime-wiki/activity.md",
+      "readmePath": "mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod/README.md",
+      "acceptanceTest": "ActivityDispatchShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/activity_dispatch",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "activity",
+        "panel-kit",
+        "dispatch",
+        "author-kit"
+      ]
     }
   ],
   "pathExemptions": [
