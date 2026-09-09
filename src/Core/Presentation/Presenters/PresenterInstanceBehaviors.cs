@@ -46,6 +46,10 @@ namespace Ludots.Core.Presentation.Presenters
                 }
 
                 hasSound |= slot.Kind == BehaviorKind.Sound;
+                if (slot.Kind == BehaviorKind.Attachment)
+                {
+                    PresenterAttachmentTransform.Validate(in slot.Attachment, $"Instance behavior slot={slot.SlotIndex}");
+                }
                 if (slot.Kind == BehaviorKind.Extension)
                 {
                     switch (slot.ExtensionLane)

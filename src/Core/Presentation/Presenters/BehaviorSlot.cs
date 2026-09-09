@@ -387,11 +387,35 @@ namespace Ludots.Core.Presentation.Presenters
 
     public struct AttachmentConfig
     {
+        public AttachmentConfig()
+        {
+            LocalPositionParamKey = PresenterParamKeyRegistry.UnsetParamKey;
+            LocalRotationParamKey = PresenterParamKeyRegistry.UnsetParamKey;
+            LocalScaleParamKey = PresenterParamKeyRegistry.UnsetParamKey;
+        }
+
         public AttachmentTarget Target;
         public int BoneId;
-        public Vector3 Offset;
-        public Quaternion RotationOffset;
-        public bool InheritScale;
+        public AttachmentUpdatePolicy UpdatePolicy;
+        public AttachmentInheritance Inherit;
+        public int LocalPositionParamKey;
+        public int LocalRotationParamKey;
+        public int LocalScaleParamKey;
+    }
+
+    public enum AttachmentUpdatePolicy : byte
+    {
+        Once = 1,
+        Continuous = 2,
+    }
+
+    [Flags]
+    public enum AttachmentInheritance : byte
+    {
+        None = 0,
+        Position = 1,
+        Rotation = 2,
+        Scale = 4,
     }
 
     public enum AttachmentTarget : byte
