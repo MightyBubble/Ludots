@@ -161,3 +161,50 @@
 
 > 说明：本轮没有改这两个（前者要动 culling 算法与语义，后者根因未定位到具体契约），
 > 只把它登记为下一步的确定目标，避免在没定位到根因前瞎改。
+
+---
+
+## 8. 30K 静态场景的瓶颈：ISM 片元着色器（用户「不画 HUD 也卡」的确切答案）
+
+### 8.1 先排除的几项
+
+| 假设 | 实测 | 结论 |
+|---|---|---|
+| ISM 没走上、退化成逐实例 draw | `primInstances=30000`、`primBatches=1..2`、`primCache=1/0` | **ISM 正常**，30K 在 1 个 chunk 里（`DefaultMaxModelInstancesPerDraw=32768`） |
+| HUD / Skia overlay 太重 | `worldHud=0`、`overlayItems=0`、`overlay=0.16ms` | 本场景 HUD 根本没画 |
+| 分辨率 / fill 面积 | 320×180 窗口下 frame 仍 ~30ms | **不是屏幕填充率**（不是窗口大小） |
+| 阴影 pass | `LUDOTS_RAYLIB_SHADOW=0`：26.5 vs 27.4 FPS | 阴影不是主因 |
+| CPU 绑 | `dotnet-trace`：主线程 97% 在等，`RaylibHostLoop.Run` CPU inclusive 仅 2.64%；`endDraw` 常态 0.1ms、偶发 20–100ms | **GPU 绑**（`GPU Engine 3D` 实测 76% 利用率） |
+
+### 8.2 真正的根因：`instancing.fs` 从 13 行变 137 行
+
+同一份 building mesh（`building_blacksmith_blue.bin` md5 与六月一致，`1f14c394…`），
+但 ISM 的片元着色器被 PBR 化：
+
+| | JUN16 | 当前 main |
+|---|---|---|
+| `src/Platforms/Desktop/instancing.fs` | **13 行**（unlit `texture()` × 1） | **137 行** |
+| 每片元采样 | 1 | albedo + roughness + metallic 3 张 + `SampleShadow` PCF 5 次 + `textureLod(uPrefilteredEnv, …)` 立方图 + `uBrdfLut` 2 分量 |
+| 每片元算术 | 乘一下 | Cook-Torrance D/G/F + split-sum IBL + 雾 |
+
+规模线性验证（同一场景，只改 `AUTO_SCATTER_TOTAL`）：
+
+| instances | FPS |
+|---|---|
+| 3,000 | 187–242 |
+| 10,000 | 68–100 |
+| 30,000 | **20–30** |
+
+**随实例数线性下降**，且与窗口尺寸无关 ⇒ **重叠建筑把 PBR/IBL 片元成本乘了 30K 遍**。
+这就是「不画 HUD 也卡」和「ISM 像没用上」的实际成因：ISM 提交没问题，
+**是每个实例的片元成本从 unlit 变成了完整 PBR**。
+
+### 8.3 修复方向（未实施，需产品拍板）
+
+1. **按 LOD 档切 shader**：`cameraCulling` 已有 High/Medium/Low（本场景 20000/70000/180000cm）。
+   让 Low 档走回 unlit/简化 lit 着色器，或在 `instancing.fs` 里按 `uQualityTier` 提前 `return`
+   掉 IBL/PCF 分支（片元级分支，比统一砍画质更安全）。
+2. **IBL 全关了再测**：`uEnvSpecular` 已经是 1.0 常量，可以做成配置/环境开关先验证收益上限
+   （预期省掉立方图 `textureLod` + BRDF LUT 两次采样）。
+3. **不要用 `maxLod` 削 HUD**（上一轮的误判）：本场景 HUD 是 0，砍 HUD 无用；
+   真正要砍的是**远处实例的片元着色质量**，不是 HUD 条目。

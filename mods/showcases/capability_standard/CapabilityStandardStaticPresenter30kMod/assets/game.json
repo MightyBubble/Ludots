@@ -1,5 +1,5 @@
 {
-  "startupMapId": "capability_standard_static_presenter_30k_showcase",
+  "startupMapId": "capability_standard_static_presenter_30k_scatter_hudtext_benchmark",
   "targetFps": 0,
   "gasRuntimeCapacity": {
     "effectLifetimeSnapshotCapacity": 32768,
