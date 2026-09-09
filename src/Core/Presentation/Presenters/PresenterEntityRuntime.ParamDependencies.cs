@@ -1,29 +1,46 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 
 namespace Ludots.Core.Presentation.Presenters
 {
     public sealed partial class PresenterEntityRuntime
     {
-        private readonly Dictionary<ParamDependencyKey, ParamDependency> _paramDependencies = new();
-        private readonly Dictionary<Entity, ParamDependency> _entityParamDependencies = new();
+        private readonly Dictionary<ParamDependencyKey, int> _paramDependencies = new();
+        private readonly Dictionary<Entity, int> _entityParamDependencies = new();
+        private ParamDependencyKey[] _paramDependencyKeys = Array.Empty<ParamDependencyKey>();
+        private ParamDependencyLinks[] _paramDependencyLinks = Array.Empty<ParamDependencyLinks>();
+        private ParamDependencyConsumer[] _paramDependencyConsumers = Array.Empty<ParamDependencyConsumer>();
+        private int _paramDependencyUsed;
+        private int _paramDependencyFree;
 
         public long ParamDependencyVisitCount { get; private set; }
         public int ParamDependencyCount => _paramDependencies.Count;
+        public long ParamDependencyStorageBytes =>
+            (long)_paramDependencyKeys.Length * Unsafe.SizeOf<ParamDependencyKey>() +
+            (long)_paramDependencyLinks.Length * Unsafe.SizeOf<ParamDependencyLinks>() +
+            (long)_paramDependencyConsumers.Length * Unsafe.SizeOf<ParamDependencyConsumer>();
 
         private readonly record struct ParamDependencyKey(Entity Entity, int Key, ParamLane Lane);
 
-        private sealed class ParamDependency
+        private struct ParamDependencyLinks
         {
-            public required ParamDependencyKey Key;
-            public ParamDependency? Next;
-            public PresenterChildren Children;
-            public bool Subscribed;
-            public bool VisualConsumer;
+            public int NextForEntity;
+            public int Parent;
+            public int FirstChild;
+            public int LastChild;
+            public int PreviousSibling;
+            public int NextSibling;
+            public int ChildCount;
+        }
+
+        private struct ParamDependencyConsumer
+        {
             public uint AttachmentMask;
+            public bool Subscribed;
+            public bool Visual;
             public bool ActiveAttachment;
-            public bool Active => VisualConsumer || ActiveAttachment || Children.Count != 0;
         }
 
         private void RegisterParamDependencies(Entity entity, PresenterDefinition definition)
@@ -42,8 +59,8 @@ namespace Ludots.Core.Presentation.Presenters
         {
             foreach (int key in keys)
             {
-                ParamDependency node = ReserveParamDependency(new(entity, key, lane));
-                node.VisualConsumer = true;
+                int node = ReserveParamDependency(new(entity, key, lane));
+                _paramDependencyConsumers[node].Visual = true;
                 RefreshParamSubscription(node);
             }
         }
@@ -55,97 +72,151 @@ namespace Ludots.Core.Presentation.Presenters
                 if (slot.Kind != BehaviorKind.Attachment || slot.Attachment.UpdatePolicy != AttachmentUpdatePolicy.Continuous)
                     continue;
                 uint bit = 1u << slot.SlotIndex;
-                ReserveParamDependency(new(entity, slot.Attachment.LocalPositionParamKey, ParamLane.Vector)).AttachmentMask |= bit;
-                ReserveParamDependency(new(entity, slot.Attachment.LocalRotationParamKey, ParamLane.Vector)).AttachmentMask |= bit;
-                ReserveParamDependency(new(entity, slot.Attachment.LocalScaleParamKey, ParamLane.Vector)).AttachmentMask |= bit;
+                int position = ReserveParamDependency(new(entity, slot.Attachment.LocalPositionParamKey, ParamLane.Vector));
+                int rotation = ReserveParamDependency(new(entity, slot.Attachment.LocalRotationParamKey, ParamLane.Vector));
+                int scale = ReserveParamDependency(new(entity, slot.Attachment.LocalScaleParamKey, ParamLane.Vector));
+                _paramDependencyConsumers[position].AttachmentMask |= bit;
+                _paramDependencyConsumers[rotation].AttachmentMask |= bit;
+                _paramDependencyConsumers[scale].AttachmentMask |= bit;
             }
         }
 
-        private ParamDependency ReserveParamDependency(ParamDependencyKey key)
+        private int ReserveParamDependency(ParamDependencyKey key)
         {
-            if (_paramDependencies.TryGetValue(key, out ParamDependency? existing)) return existing;
-            _entityParamDependencies.TryGetValue(key.Entity, out ParamDependency? first);
-            var node = new ParamDependency { Key = key, Next = first };
+            if (_paramDependencies.TryGetValue(key, out int existing)) return existing;
+            Entity parent = _world.Get<PresenterParent>(key.Entity).Parent;
+            int parentNode = parent == Entity.Null ? 0 : ReserveParamDependency(new(parent, key.Key, key.Lane));
+            int node;
+            if (_paramDependencyFree != 0)
+            {
+                node = _paramDependencyFree;
+                _paramDependencyFree = _paramDependencyLinks[node].NextForEntity;
+            }
+            else
+            {
+                node = checked(_paramDependencyUsed + 1);
+                if (node >= _paramDependencyKeys.Length)
+                {
+                    int capacity = Math.Max(checked(node + 1), checked(_paramDependencyKeys.Length * 2));
+                    Array.Resize(ref _paramDependencyKeys, capacity);
+                    Array.Resize(ref _paramDependencyLinks, capacity);
+                    Array.Resize(ref _paramDependencyConsumers, capacity);
+                }
+                _paramDependencyUsed = node;
+            }
+            _entityParamDependencies.TryGetValue(key.Entity, out int first);
+            _paramDependencyKeys[node] = key;
+            _paramDependencyLinks[node] = new ParamDependencyLinks { NextForEntity = first, Parent = parentNode };
+            _paramDependencyConsumers[node] = default;
             _paramDependencies.Add(key, node);
             _entityParamDependencies[key.Entity] = node;
-            Entity parent = _world.Get<PresenterParent>(key.Entity).Parent;
-            if (parent != Entity.Null)
-                ReserveParamDependency(new(parent, key.Key, key.Lane));
             return node;
         }
 
         private void RefreshParamDependencyActivation(Entity entity)
         {
-            if (!_entityParamDependencies.TryGetValue(entity, out ParamDependency? node)) return;
+            if (!_entityParamDependencies.TryGetValue(entity, out int node)) return;
             uint mask = _world.Get<PresenterState>(entity).BehaviorActiveMask;
-            for (; node != null; node = node.Next)
+            for (; node != 0; node = _paramDependencyLinks[node].NextForEntity)
             {
-                node.ActiveAttachment = (node.AttachmentMask & mask) != 0;
+                ref ParamDependencyConsumer consumer = ref _paramDependencyConsumers[node];
+                consumer.ActiveAttachment = (consumer.AttachmentMask & mask) != 0;
                 RefreshParamSubscription(node);
             }
         }
 
-        private void RefreshParamSubscription(ParamDependency node)
+        private void RefreshParamSubscription(int node)
         {
-            Entity parent = _world.Get<PresenterParent>(node.Key.Entity).Parent;
-            bool subscribed = parent != Entity.Null && node.Active &&
-                !HasLocalParam(node.Key.Entity, node.Key.Key, node.Key.Lane);
-            if (node.Subscribed == subscribed) return;
-            ParamDependency parentNode = _paramDependencies[new(parent, node.Key.Key, node.Key.Lane)];
+            ref readonly ParamDependencyKey key = ref _paramDependencyKeys[node];
+            ref ParamDependencyLinks links = ref _paramDependencyLinks[node];
+            ref ParamDependencyConsumer consumer = ref _paramDependencyConsumers[node];
+            bool subscribed = links.Parent != 0 &&
+                (consumer.Visual || consumer.ActiveAttachment || links.ChildCount != 0) &&
+                !HasLocalParam(key.Entity, key.Key, key.Lane);
+            if (consumer.Subscribed == subscribed) return;
+            ref ParamDependencyLinks parent = ref _paramDependencyLinks[links.Parent];
             if (subscribed)
             {
-                if (!parentNode.Children.Add(node.Key.Entity))
-                    throw new InvalidOperationException($"PRESENTATION.PARAM.ERR.DependencyCapacity: entity={parent.Id}, key={node.Key.Key}, capacity={PresenterChildren.MAX_CHILDREN}.");
+                if (parent.ChildCount >= PresenterChildren.MAX_CHILDREN)
+                    throw new InvalidOperationException($"PRESENTATION.PARAM.ERR.DependencyCapacity: entity={_paramDependencyKeys[links.Parent].Entity.Id}, key={key.Key}, capacity={PresenterChildren.MAX_CHILDREN}.");
+                links.PreviousSibling = parent.LastChild;
+                links.NextSibling = 0;
+                if (parent.LastChild == 0) parent.FirstChild = node;
+                else _paramDependencyLinks[parent.LastChild].NextSibling = node;
+                parent.LastChild = node;
+                parent.ChildCount++;
             }
-            else if (!parentNode.Children.Remove(node.Key.Entity))
-                throw new InvalidOperationException($"PRESENTATION.PARAM.ERR.DependencyMissing: entity={node.Key.Entity.Id}, key={node.Key.Key}.");
-            node.Subscribed = subscribed;
-            RefreshParamSubscription(parentNode);
+            else
+            {
+                if (links.PreviousSibling == 0) parent.FirstChild = links.NextSibling;
+                else _paramDependencyLinks[links.PreviousSibling].NextSibling = links.NextSibling;
+                if (links.NextSibling == 0) parent.LastChild = links.PreviousSibling;
+                else _paramDependencyLinks[links.NextSibling].PreviousSibling = links.PreviousSibling;
+                links.PreviousSibling = 0;
+                links.NextSibling = 0;
+                parent.ChildCount--;
+            }
+            consumer.Subscribed = subscribed;
+            RefreshParamSubscription(links.Parent);
         }
 
         private void RefreshParamSubscription(Entity entity, int key, ParamLane lane)
         {
-            if (_paramDependencies.TryGetValue(new(entity, key, lane), out ParamDependency? node))
+            if (_paramDependencies.TryGetValue(new(entity, key, lane), out int node))
                 RefreshParamSubscription(node);
         }
 
         private void NotifyParamConsumers(Entity entity, int key, ParamLane lane)
         {
-            if (!_paramDependencies.TryGetValue(new(entity, key, lane), out ParamDependency? node)) return;
-            for (int i = 0; i < node.Children.Count; i++)
+            if (_paramDependencies.TryGetValue(new(entity, key, lane), out int node))
+                NotifyParamConsumers(node);
+        }
+
+        private void NotifyParamConsumers(int node)
+        {
+            for (int child = _paramDependencyLinks[node].FirstChild; child != 0;
+                 child = _paramDependencyLinks[child].NextSibling)
             {
-                Entity child = node.Children.Get(i);
-                ParamDependency childNode = _paramDependencies[new(child, key, lane)];
+                ref readonly ParamDependencyKey key = ref _paramDependencyKeys[child];
+                ref readonly ParamDependencyConsumer consumer = ref _paramDependencyConsumers[child];
                 ParamDependencyVisitCount++;
-                if (childNode.ActiveAttachment) RefreshAttachmentParameter(child, key, lane);
-                if (childNode.VisualConsumer)
+                if (consumer.ActiveAttachment) RefreshAttachmentParameter(key.Entity, key.Key, key.Lane);
+                if (consumer.Visual)
                 {
-                    ref PresenterState state = ref _world.Get<PresenterState>(child);
+                    ref PresenterState state = ref _world.Get<PresenterState>(key.Entity);
                     state.Version++;
-                    MarkStaticDirtyIfVisualParamChanged(child, in state, key, lane);
+                    MarkStaticDirtyIfVisualParamChanged(key.Entity, in state, key.Key, key.Lane);
                 }
-                NotifyParamConsumers(child, key, lane);
+                NotifyParamConsumers(child);
             }
         }
 
         private void ValidateAttachmentParamMutation(Entity entity, in PresenterParamMutation mutation)
         {
-            if (_world.Has<PresenterAttachmentState>(entity) &&
-                _world.Get<PresenterAttachmentState>(entity).Initialized && _definitions != null)
+            ValidateLocalAttachmentParamMutation(entity, in mutation);
+            if (_paramDependencies.TryGetValue(new(entity, mutation.Key, ParamLane.Vector), out int node))
+                ValidateDescendantAttachmentParamMutation(node, in mutation);
+        }
+
+        private void ValidateDescendantAttachmentParamMutation(int node, in PresenterParamMutation mutation)
+        {
+            for (int child = _paramDependencyLinks[node].FirstChild; child != 0;
+                 child = _paramDependencyLinks[child].NextSibling)
             {
-                ref readonly PresenterState state = ref _world.Get<PresenterState>(entity);
-                PresenterDefinition definition = _definitions.Get(state.DefId);
-                if (TryGetActiveAttachment(entity, definition, state.BehaviorActiveMask, out AttachmentConfig config) &&
-                    config.UpdatePolicy == AttachmentUpdatePolicy.Continuous &&
-                    (config.LocalPositionParamKey == mutation.Key || config.LocalRotationParamKey == mutation.Key || config.LocalScaleParamKey == mutation.Key))
-                {
-                    PresenterAttachmentState attachment = _world.Get<PresenterAttachmentState>(entity);
-                    PresenterAttachmentTransform.ResolveChangedParameter(_world, entity, in config, ref attachment, mutation.Key, in mutation);
-                }
+                if (_paramDependencyConsumers[child].ActiveAttachment)
+                    ValidateLocalAttachmentParamMutation(_paramDependencyKeys[child].Entity, in mutation);
+                ValidateDescendantAttachmentParamMutation(child, in mutation);
             }
-            if (!_paramDependencies.TryGetValue(new(entity, mutation.Key, ParamLane.Vector), out ParamDependency? node)) return;
-            for (int i = 0; i < node.Children.Count; i++)
-                ValidateAttachmentParamMutation(node.Children.Get(i), in mutation);
+        }
+
+        private void ValidateLocalAttachmentParamMutation(Entity entity, in PresenterParamMutation mutation)
+        {
+            if (!_world.Has<PresenterAttachmentState>(entity)) return;
+            PresenterAttachmentState attachment = _world.Get<PresenterAttachmentState>(entity);
+            ref readonly AttachmentConfig config = ref attachment.ActiveConfig;
+            if (attachment.Initialized && attachment.Active && config.UpdatePolicy == AttachmentUpdatePolicy.Continuous &&
+                (config.LocalPositionParamKey == mutation.Key || config.LocalRotationParamKey == mutation.Key || config.LocalScaleParamKey == mutation.Key))
+                PresenterAttachmentTransform.ResolveChangedParameter(_world, entity, in config, ref attachment, mutation.Key, in mutation);
         }
 
         private void ValidateAttachmentActivation(Entity entity, PresenterDefinition definition, uint nextMask)
@@ -162,15 +233,23 @@ namespace Ludots.Core.Presentation.Presenters
 
         private void RemoveParamDependencies(Entity entity)
         {
-            if (!_entityParamDependencies.Remove(entity, out ParamDependency? node)) return;
-            for (; node != null; node = node.Next)
+            if (!_entityParamDependencies.Remove(entity, out int node)) return;
+            while (node != 0)
             {
-                if (node.Children.Count != 0)
-                    throw new InvalidOperationException($"PRESENTATION.PARAM.ERR.DependentsAlive: entity={entity.Id}, key={node.Key.Key}.");
-                node.VisualConsumer = false;
-                node.ActiveAttachment = false;
+                ref ParamDependencyLinks links = ref _paramDependencyLinks[node];
+                ParamDependencyKey key = _paramDependencyKeys[node];
+                if (links.ChildCount != 0)
+                    throw new InvalidOperationException($"PRESENTATION.PARAM.ERR.DependentsAlive: entity={entity.Id}, key={key.Key}.");
+                _paramDependencyConsumers[node].Visual = false;
+                _paramDependencyConsumers[node].ActiveAttachment = false;
                 RefreshParamSubscription(node);
-                _paramDependencies.Remove(node.Key);
+                _paramDependencies.Remove(key);
+                int next = links.NextForEntity;
+                links = new ParamDependencyLinks { NextForEntity = _paramDependencyFree };
+                _paramDependencyKeys[node] = default;
+                _paramDependencyConsumers[node] = default;
+                _paramDependencyFree = node;
+                node = next;
             }
         }
     }

@@ -202,9 +202,9 @@ public sealed class PresenterAttachmentScaleTests
         Array.Sort(timings);
         Directory.CreateDirectory(directory);
         string name = $"params-{roots}-once-{once}-instance-{instance}-relevant-{relevant}.csv";
-        string output = FormattableString.Invariant($"{roots},{once},{instance},{relevant},{timings[samples / 2]:F6},{timings[(int)Math.Ceiling(samples * .95) - 1]:F6},{allocated / samples},{visits / samples},{runtime.ParamDependencyCount}");
+        string output = FormattableString.Invariant($"{roots},{once},{instance},{relevant},{timings[samples / 2]:F6},{timings[(int)Math.Ceiling(samples * .95) - 1]:F6},{allocated / samples},{visits / samples},{runtime.ParamDependencyCount},{runtime.ParamDependencyStorageBytes}");
         File.WriteAllText(Path.Combine(directory, name),
-            "roots,once,instance,relevant,median_ms,p95_ms,allocated_bytes,dependency_visits,dependency_count\n" + output + "\n");
+            "roots,once,instance,relevant,median_ms,p95_ms,allocated_bytes,dependency_visits,dependency_count,dependency_storage_bytes\n" + output + "\n");
         TestContext.Out.WriteLine(output);
     }
 
