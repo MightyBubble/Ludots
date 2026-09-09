@@ -4,6 +4,7 @@
   "orderedModIds": [
     "LudotsCoreMod",
     "CoreInputMod",
+    "SelectionInteractionMod",
     "MassNavigationMod",
     "CapabilityStandardMassNavigationLargeWorld10kMod",
     "AgentBridgeMod"
@@ -16,6 +17,10 @@
     {
       "id": "CoreInputMod",
       "rootPath": "../../../../../../../mods/CoreInputMod"
+    },
+    {
+      "id": "SelectionInteractionMod",
+      "rootPath": "../../../../../../../mods/capabilities/input/SelectionInteractionMod"
     },
     {
       "id": "MassNavigationMod",

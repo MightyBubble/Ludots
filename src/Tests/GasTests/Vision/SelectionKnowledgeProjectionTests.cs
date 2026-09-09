@@ -352,6 +352,9 @@ public sealed class SelectionKnowledgeProjectionTests
         Dictionary<string, object> globals,
         Entity owner)
     {
+        world.Create(
+            new PresentationFrameState { Enabled = true, InterpolationAlpha = 1f },
+            new PresentationFrameStateTag());
         return new CommandSourceAcquisitionSystem(
             world,
             globals,

@@ -657,6 +657,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
             };
+            CreatePresentationFrameState(world);
 
             Entity hit = CommandSourcePointerHitResolver.FindNearestInspectableEntity(
                 world,
@@ -1482,6 +1483,7 @@ namespace Ludots.Tests.GAS
             Dictionary<string, object> globals,
             Entity owner)
         {
+            CreatePresentationFrameState(world);
             return new CommandSourceAcquisitionSystem(
                 world,
                 globals,
@@ -1490,6 +1492,13 @@ namespace Ludots.Tests.GAS
                     resolvedOwner = owner;
                     return owner != Entity.Null && world.IsAlive(owner);
                 });
+        }
+
+        private static void CreatePresentationFrameState(World world)
+        {
+            world.Create(
+                new PresentationFrameState { Enabled = true, InterpolationAlpha = 1f },
+                new PresentationFrameStateTag());
         }
 
         private static void DragSelect(CommandSourceAcquisitionSystem system, Dictionary<string, object> globals, PlayerInputHandler input, Vector2 from, Vector2 to)

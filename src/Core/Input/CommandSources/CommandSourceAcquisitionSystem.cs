@@ -285,6 +285,7 @@ namespace Ludots.Core.Input.CommandSources
             }
 
             ScreenRect marquee = ScreenRect.FromPoints(drag.StartScreen, drag.CurrentScreen);
+            ScreenProjectionPoseContext projectionPose = ScreenProjectionGrounding.Resolve(_world, _globals);
             int nextCount = 0;
             _world.Query(in SelectableQuery, (Entity entity, ref CommandSourceSelectableTag selectable) =>
             {
@@ -293,7 +294,7 @@ namespace Ludots.Core.Input.CommandSources
                     return;
                 }
 
-                if (!SpatialBoundsUtility.EntityIntersectsScreenRect(_world, entity, projector, in marquee))
+                if (!SpatialBoundsUtility.EntityIntersectsScreenRect(_world, entity, projector, in marquee, in projectionPose))
                 {
                     return;
                 }

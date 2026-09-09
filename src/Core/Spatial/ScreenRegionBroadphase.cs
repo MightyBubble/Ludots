@@ -7,8 +7,15 @@ namespace Ludots.Core.Spatial;
 public static class ScreenRegionBroadphase
 {
     public static bool TryGetBounds(IScreenRayProvider rays, in ScreenRect rect, in WorldAabbCm worldBounds,
-        float radiusCm, out WorldAabbCm bounds)
+        float radiusCm, out WorldAabbCm bounds, float minHeightMeters = 0f, float maxHeightMeters = 0f)
     {
+        if (!float.IsFinite(minHeightMeters) ||
+            !float.IsFinite(maxHeightMeters) ||
+            maxHeightMeters < minHeightMeters)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxHeightMeters), "SPATIAL.ERR.InvalidHeightRange");
+        }
+
         Span<ScreenRay> corners = stackalloc ScreenRay[4];
         float right = MathF.Max(rect.MaxX, rect.MinX + 0.001f);
         float bottom = MathF.Max(rect.MaxY, rect.MinY + 0.001f);
@@ -38,12 +45,13 @@ public static class ScreenRegionBroadphase
             // An intersecting projected bound has at least one vertex inside each side plane.
             // Expanding every plane by the bounding radius conservatively retains its origin.
             offset += (radiusCm + 1) / 100;
+            float heightContribution = MathF.Max(normal.Y * minHeightMeters, normal.Y * maxHeightMeters);
             int written = 0;
             for (int i = 0; i < count; i++)
             {
                 Vector2 p = polygon[i], q = polygon[(i + 1) % count];
-                float dp = normal.X * p.X + normal.Z * p.Y + offset;
-                float dq = normal.X * q.X + normal.Z * q.Y + offset;
+                float dp = normal.X * p.X + normal.Z * p.Y + offset + heightContribution;
+                float dq = normal.X * q.X + normal.Z * q.Y + offset + heightContribution;
                 if (dp >= 0) output[written++] = p;
                 if ((dp >= 0) != (dq >= 0)) output[written++] = Vector2.Lerp(p, q, dp / (dp - dq));
             }

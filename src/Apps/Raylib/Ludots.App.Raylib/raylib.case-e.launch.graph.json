@@ -5,7 +5,8 @@
     "LudotsCoreMod",
     "CoreInputMod",
     "SelectionInteractionMod",
-    "CaseESelectionMod"
+    "CaseESelectionMod",
+    "AgentBridgeMod"
   ],
   "plannedMods": [
     {
@@ -23,6 +24,10 @@
     {
       "id": "CaseESelectionMod",
       "rootPath": "../../../../../../../mods/showcases/case_e_selection/CaseESelectionMod"
+    },
+    {
+      "id": "AgentBridgeMod",
+      "rootPath": "../../../../../../../mods/AgentBridgeMod"
     }
   ]
 }
