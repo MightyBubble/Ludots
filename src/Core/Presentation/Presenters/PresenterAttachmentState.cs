@@ -4,6 +4,8 @@ namespace Ludots.Core.Presentation.Presenters
 {
     public struct PresenterAttachmentState
     {
+        internal AttachmentConfig ActiveConfig;
+        internal bool Active;
         public bool Initialized;
         public bool ParametersValid;
         public Vector3 LocalPosition;

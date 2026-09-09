@@ -1090,8 +1090,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(worldHud.TryGetByStableId(stableId, out WorldHudItem first), Is.True);
             Assert.That(first.WorldPosition, Is.EqualTo(new Vector3(10f, 2f, 20f)));
 
-            world.Get<PresenterWorldPosition>(parent).Value = new Vector3(30f, 0f, 40f);
-            instances.PropagateParentDrivenTransforms(parent);
+            instances.UpdateWorldPosition(parent, new Vector3(30f, 0f, 40f));
             behavior.Update(0.016f);
             emit.Update(0.016f);
 
@@ -1099,7 +1098,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(moved.WorldPosition, Is.EqualTo(new Vector3(30f, 2f, 40f)));
 
             instances.SetParam(hud, 100, ParamLane.Float, 0.5f, 0, default);
-            world.Get<PresenterWorldPosition>(parent).Value = new Vector3(40f, 0f, 50f);
+            instances.UpdateWorldPosition(parent, new Vector3(40f, 0f, 50f));
             behavior.Update(0.016f);
             emit.Update(0.016f);
             Assert.That(worldHud.TryGetByStableId(stableId, out WorldHudItem changed), Is.True);
