@@ -15,10 +15,14 @@ import {
 } from './dataplane/client.js';
 import './styles.css';
 
-// HUD 七区布局(U4 重构,用户规格):
-//   左上=时间,左中=选中实体详情,左下=事件 log,右上=小地图,
-//   右中=实体列表(可按势力过滤),右下=回合推进,中下=实体指令面板(RTS/MoBA 式)。
-// 地图本体是引擎 3D 画布,HUD 以 grid 覆盖;空格 pointer-events 穿透。
+// 命令名与窗口术语:招揽=人事/登庸武将,探索=人事/探索人才,训练=军事/训练,奖励=人事/褒赏
+// (sango-src Game/System/City 各 CityXxx 系统的 customMenuName)。
+const CITY_COMMAND_LABELS = {
+  train: '训练',
+  search: '探索',
+  reward: '奖励',
+  recruit: '招揽'
+};
 
 const PERSON_STATE_NAMES = {
   1: '君主',
@@ -65,30 +69,58 @@ const EMPTY_TECHNIQUES = {
   techniques: []
 };
 
-// 内核格坐标范围(地图 256×256,格距 GridSize 米)。
-const MAP_CELLS = 256;
+// 外交面板的行动术语(原版 CityDiplomacy* 系统的 customMenuName)。
+const DIPLOMACY_COMMAND_LABELS = {
+  sendGift: '送礼',
+  alliance: '结盟',
+  discardAlliance: '摒弃同盟'
+};
+const ALLIANCE_TYPE_LABELS = {
+  Alliance: '同盟',
+  Truce: '停战协议',
+  Trade: '通商协议'
+};
 
-// 势力色板(按势力 id 稳定取色;经典三国志色系近似,自创不抄原图)。
-const FORCE_COLORS = [
-  '#e25822', '#3f7fbf', '#4f9e4f', '#c2b04c', '#8c5fbf', '#bf5f8f',
-  '#4fb3a8', '#c97f4f', '#7f8fbf', '#a84f4f', '#5fae5f', '#bf9f4f',
-  '#8f4fbf', '#4f8fbf', '#bf5f5f', '#5fbf8f', '#bf8f5f', '#6f6fbf',
-  '#bf4f8f', '#4fbfbf', '#9fbf4f', '#bf4f4f', '#4f5fbf', '#bfbf5f',
-  '#7fbf4f', '#bf6f9f', '#4fbf7f', '#bf7f7f', '#7f4fbf', '#4fbf5f'
-];
+// 科技系名(Techniques.json 的 kind 分组,窗口 tabColor 分栏的同源数据)。
+const TECHNIQUE_KIND_LABELS = {
+  1: '枪兵系',
+  2: '戟兵系',
+  3: '弩兵系',
+  4: '骑兵系',
+  5: '军制系',
+  6: '兵器系',
+  7: '设施系',
+  8: '火器系',
+  9: '政略系'
+};
 
-function forceColor(forceId) {
-  return FORCE_COLORS[(forceId - 1) % FORCE_COLORS.length] ?? '#999999';
-}
+// 战报卡终局/事件型标签(SangoCombatAnnals 的 result/event kind 中文投影)。
+const BATTLE_RESULT_LABELS = {
+  ongoing: '进行中',
+  'defender-destroyed': '守方溃灭',
+  'attacker-destroyed': '攻方溃灭',
+  'city-fallen': '城陷',
+  'force-fallen': '势力灭亡'
+};
+const BATTLE_EVENT_LABELS = {
+  strike: '打击',
+  counter: '反击',
+  'siege-garrison': '守军杀伤',
+  'siege-durability': '城防破坏',
+  'troop-destroyed': '溃灭',
+  'city-fall': '城陷',
+  'force-fall': '灭亡'
+};
+const PARTICIPANT_KIND_LABELS = { troop: '部队', city: '城池', building: '据点' };
 
-const CITY_COMMANDS = [
-  { type: 'train', label: '训练', hint: '提升城市士气(消耗资金)', executors: true },
-  { type: 'search', label: '探索', hint: '下回合结算,可能发现人才或资金', executors: true },
-  { type: 'reward', label: '奖励', hint: '消耗资金提升忠诚(+10)', mode: 'reward' },
-  { type: 'recruit', label: '招揽', hint: '1 名执行武将招揽 1 名在野人才', mode: 'recruit' },
-  { type: 'expedition', label: '出征', hint: '编成部队出征(兵力/金/粮与行动力)', mode: 'expedition' }
-];
+// map-first 布局的折叠记忆键:抽屉/底部条/活动页签跨会话保留(M3.b)。
+const STORAGE_KEYS = {
+  drawerOpen: 'sango.ui.drawerOpen',
+  bottomOpen: 'sango.ui.bottomOpen',
+  tab: 'sango.ui.tab'
+};
 
+// 折叠状态记忆:localStorage 不可用(隐私模式/桥接异常)时静默退化为会话内状态。
 function usePersistentState(key, initial) {
   const [value, setValue] = useState(() => {
     try {
@@ -112,24 +144,36 @@ function usePersistentState(key, initial) {
 
 function App() {
   const { clientRef, data, connection, command } = useSangoSession();
-  const [listTab, setListTab] = usePersistentState('sango.ui.listTab', 'cities');
+  const [activeTab, setActiveTab] = usePersistentState(STORAGE_KEYS.tab, 'cities');
+  const [drawerOpen, setDrawerOpen] = usePersistentState(STORAGE_KEYS.drawerOpen, false);
+  const [bottomOpen, setBottomOpen] = usePersistentState(STORAGE_KEYS.bottomOpen, false);
   const [forceFilter, setForceFilter] = useState(0);
-  // 选中实体:城/部队统一槽位;详情(左中)与指令(中下)都从它派生。
-  const [selection, setSelection] = useState(null);
+  // 浮动卡片槽:城市详情与部队详情共用右侧卡片位,一次只显示一张(M3.b map-first)。
+  const [detailCard, setDetailCard] = useState(null);
   const [commandCount, setCommandCount] = useState(0);
   const [lastOrder, setLastOrder] = useState({ text: '尚无指令', tone: 'idle' });
   const [selectDismissed, setSelectDismissed] = useState(false);
 
-  const selectedCityId = selection?.kind === 'city' ? selection.id : 0;
-  const selectedTroopId = selection?.kind === 'troop' ? selection.id : 0;
+  const selectedCityId = detailCard?.kind === 'city' ? detailCard.id : 0;
   const detailRevision = `${data.turn.turnCount}:${commandCount}`;
-  const cityDetail = useCityDetail(clientRef, selectedCityId, detailRevision);
-  const selectedTroop = data.troops.troops.find((troop) => troop.id === selectedTroopId) ?? null;
-  const selectedCityRow = data.cities.cities.find((city) => city.id === selectedCityId) ?? null;
+  const detail = useCityDetail(clientRef, selectedCityId, detailRevision);
 
+  // 开局势力选择(M3.a):第 0 回合且未选玩家时覆盖一层选势力面板;旁观模式可关闭。
+  const showForceSelect = !selectDismissed && data.turn.turnCount === 0 && data.turn.playerForceId === 0;
   const playerForceId = data.turn.playerForceId ?? 0;
   const awaitingPlayer = data.turn.awaitingPlayer ?? false;
-  const showForceSelect = !selectDismissed && data.turn.turnCount === 0 && playerForceId === 0;
+
+  const visibleCities = useMemo(() => {
+    if (forceFilter === 0) {
+      return data.cities.cities;
+    }
+
+    return data.cities.cities.filter((city) => city.forceId === forceFilter);
+  }, [data.cities.cities, forceFilter]);
+
+  const openCityCard = useCallback((cityId) => {
+    setDetailCard({ kind: 'city', id: cityId });
+  }, []);
 
   const selectPlayerForce = useCallback(async (forceId) => {
     setLastOrder({ text: '势力选择:以所选势力重整开局……', tone: 'pending' });
@@ -140,38 +184,66 @@ function App() {
     return result;
   }, [command]);
 
-  const issueCityCommand = useCallback(async (type, payload, label) => {
-    setLastOrder({ text: `${label ?? type}:下达中……`, tone: 'pending' });
+  const issueCommand = useCallback(async (type, payload) => {
+    setLastOrder({ text: `${CITY_COMMAND_LABELS[type] ?? type}:下达中……`, tone: 'pending' });
     const result = await command('sango.cityCommand', { type, ...payload });
     if (result.ok) {
       setCommandCount((count) => count + 1);
-      setLastOrder({ text: `${label ?? type}:已受理,下轮话题刷新后可见变化`, tone: 'ok' });
+      setLastOrder({ text: `${CITY_COMMAND_LABELS[type] ?? type}:已受理,下一轮话题刷新后可见变化`, tone: 'ok' });
     } else {
-      setLastOrder({ text: `${label ?? type} 被拒绝:${result.message}`, tone: 'error' });
+      setLastOrder({ text: `${CITY_COMMAND_LABELS[type] ?? type} 被拒绝:${result.message}`, tone: 'error' });
     }
+
     return result;
   }, [command]);
 
-  const rawCommand = useCallback(async (label, name, payload, okText) => {
+  const troopCommand = useCallback(async (label, name, payload) => {
     setLastOrder({ text: `${label}:下达中……`, tone: 'pending' });
     const result = await command(name, payload);
     if (result.ok) {
       setCommandCount((count) => count + 1);
-      setLastOrder({ text: okText ?? `${label}:已受理`, tone: 'ok' });
+      setLastOrder({ text: `${label}:已受理,部队面板与地图标记随后刷新`, tone: 'ok' });
     } else {
       setLastOrder({ text: `${label} 被拒绝:${result.message}`, tone: 'error' });
     }
+
     return result;
   }, [command]);
 
   const diplomacyCommand = useCallback(async (type, payload) => {
-    const labels = { sendGift: '送礼', alliance: '结盟', discardAlliance: '摒弃同盟' };
-    return rawCommand(labels[type] ?? type, 'sango.diplomacyCommand', { type, ...payload }, '使者已出发,结果见事件 log');
-  }, [rawCommand]);
+    const label = DIPLOMACY_COMMAND_LABELS[type] ?? type;
+    setLastOrder({ text: `${label}:派遣使者中……`, tone: 'pending' });
+    const result = await command('sango.diplomacyCommand', { type, ...payload });
+    if (result.ok) {
+      setCommandCount((count) => count + 1);
+      setLastOrder({
+        text: `${label}:使者已出发(按路程逐日赶赴对方君主城,结果见消息流)`,
+        tone: 'ok'
+      });
+    } else {
+      setLastOrder({ text: `${label} 被拒绝:${result.message}`, tone: 'error' });
+    }
 
+    return result;
+  }, [command]);
+
+  // 玩家研究命令(M3.e,原版「都市/研究技巧」链):城内下令,扣城金/技巧点,
+  // 研究跨回合推进,完成后效果对全军兵种生效(见消息流/科技面板)。
   const researchCommand = useCallback(async (payload) => {
-    return rawCommand('研究', 'sango.researchCommand', payload, '研究已立项,完成时事件 log 刷新');
-  }, [rawCommand]);
+    setLastOrder({ text: '研究:军师正在核算成本……', tone: 'pending' });
+    const result = await command('sango.researchCommand', payload);
+    if (result.ok) {
+      setCommandCount((count) => count + 1);
+      setLastOrder({
+        text: '研究:已立项(执行武将入研究任务,跨回合推进,完成时消息流与科技面板刷新)',
+        tone: 'ok'
+      });
+    } else {
+      setLastOrder({ text: `研究被拒绝:${result.message}`, tone: 'error' });
+    }
+
+    return result;
+  }, [command]);
 
   const endTurn = useCallback(async () => {
     setLastOrder({ text: '结束回合:等待时钟推进……', tone: 'pending' });
@@ -182,6 +254,7 @@ function App() {
   }, [command]);
 
   const saveGame = useCallback(async () => {
+    setLastOrder({ text: '存档:写入引擎存档槽……', tone: 'pending' });
     const result = await command('sango.save', {});
     setLastOrder(result.ok
       ? { text: '存档:已写入存档槽(世界态 + 随机流)', tone: 'ok' }
@@ -189,79 +262,192 @@ function App() {
   }, [command]);
 
   const loadGame = useCallback(async () => {
+    setLastOrder({ text: '读档:回灌最近存档……', tone: 'pending' });
     const result = await command('sango.load', {});
     setLastOrder(result.ok
-      ? { text: '读档:已回灌最近存档', tone: 'ok' }
+      ? { text: '读档:已回灌最近存档,话题下一轮刷新', tone: 'ok' }
       : { text: `读档失败:${result.message}`, tone: 'error' });
   }, [command]);
 
   return (
-    <main className="app hud">
-      {/* 3 左上:时间 */}
-      <TimeDock turn={data.turn} connection={connection} />
-      {/* 1 左中:选中实体详情 */}
-      <DetailDock
-        selection={selection}
-        cityRow={selectedCityRow}
-        cityDetail={cityDetail}
-        troop={selectedTroop}
-        forces={data.forces.forces}
-        onClose={() => setSelection(null)}
-      />
-      {/* 2 左下:事件 log */}
-      <EventLogDock messages={data.messages.messages} lastOrder={lastOrder} />
-      {/* 4 右上:小地图 */}
-      <MinimapDock
-        cities={data.cities.cities}
-        troops={data.troops.troops}
-        playerForceId={playerForceId}
-        selection={selection}
-        onSelect={(kind, id) => setSelection({ kind, id })}
-      />
-      {/* 5 右中:实体列表(可过滤势力) */}
-      <EntityListDock
-        activeTab={listTab}
-        onTab={setListTab}
-        cities={data.cities.cities}
-        troops={data.troops.troops}
-        forces={data.forces.forces}
-        battles={data.battles.battles}
-        diplomacy={data.diplomacy}
-        techniques={data.techniques}
+    <main className="app">
+      <TopBar
         turn={data.turn}
-        forceFilter={forceFilter}
-        onForceFilter={setForceFilter}
-        selection={selection}
-        onSelect={(kind, id) => setSelection({ kind, id })}
-        clientRef={clientRef}
-        commandRevision={detailRevision}
-        playerGate={{ playerForceId, awaitingPlayer }}
-        onDiplomacyCommand={diplomacyCommand}
-        onResearchCommand={researchCommand}
-      />
-      {/* 6 右下:回合推进 */}
-      <TurnDock
-        turn={data.turn}
+        connection={connection}
         onEndTurn={endTurn}
         onSave={saveGame}
         onLoad={loadGame}
-        connection={connection}
       />
-      {/* 7 中下:实体指令面板(RTS/MoBA 式) */}
-      <CommandDock
-        selection={selection}
-        cityRow={selectedCityRow}
-        cityDetail={cityDetail}
-        troop={selectedTroop}
-        playerGate={{ playerForceId, awaitingPlayer }}
-        onCityCommand={issueCityCommand}
-        onTroopMove={(payload) => rawCommand('移动', 'sango.moveTroop', payload, '移动已受理:范围内即时落地,范围外转委任行军')}
-        onExpedition={(payload) => rawCommand('出征', 'sango.createTroop', payload, '出征已受理:部队已在城外列队')}
+      <LeftDrawer
+        open={drawerOpen}
+        onToggle={() => setDrawerOpen((open) => !open)}
+        activeTab={activeTab}
+        onTab={setActiveTab}
+      >
+        {activeTab === 'forces'
+          ? <ForceOverview forces={data.forces.forces} />
+          : activeTab === 'troops'
+          ? (
+            <TroopListPanel
+              troops={data.troops.troops}
+              forces={data.forces.forces}
+              forceFilter={forceFilter}
+              onForceFilter={setForceFilter}
+              selectedTroopId={detailCard?.kind === 'troop' ? detailCard.id : 0}
+              onSelect={(troopId) => setDetailCard({ kind: 'troop', id: troopId })}
+            />
+            )
+          : activeTab === 'battles'
+          ? <BattlePanel battles={data.battles.battles} />
+          : activeTab === 'diplomacy'
+          ? (
+            <DiplomacyPanel
+              diplomacy={data.diplomacy}
+              forces={data.forces.forces}
+              cities={data.cities.cities}
+              turn={data.turn}
+              clientRef={clientRef}
+              commandRevision={detailRevision}
+              playerGate={{ playerForceId, awaitingPlayer }}
+              onCommand={diplomacyCommand}
+            />
+            )
+          : activeTab === 'techniques'
+          ? (
+            <TechniquePanel
+              techniques={data.techniques}
+              cities={data.cities.cities}
+              turn={data.turn}
+              clientRef={clientRef}
+              commandRevision={detailRevision}
+              playerGate={{ playerForceId, awaitingPlayer }}
+              onCommand={researchCommand}
+            />
+            )
+          : (
+            <CityListPanel
+              cities={visibleCities}
+              forces={data.forces.forces}
+              forceFilter={forceFilter}
+              onForceFilter={setForceFilter}
+              selectedCityId={selectedCityId}
+              onSelect={openCityCard}
+            />
+            )}
+      </LeftDrawer>
+      {detailCard?.kind === 'city' && detail
+        ? (
+          <CityDetailCard
+            detail={detail}
+            onClose={() => setDetailCard(null)}
+            playerGate={{ playerForceId, awaitingPlayer }}
+            onCommand={issueCommand}
+            onExpedition={(payload) => troopCommand('出征', 'sango.createTroop', payload)}
+          />
+          )
+        : null}
+      {detailCard?.kind === 'troop'
+        ? (
+          <TroopDetailCard
+            troops={data.troops.troops}
+            troopId={detailCard.id}
+            onClose={() => setDetailCard(null)}
+            playerGate={{ playerForceId, awaitingPlayer }}
+            onMove={(payload) => troopCommand('移动', 'sango.moveTroop', payload)}
+          />
+          )
+        : null}
+      <BottomStrip
+        open={bottomOpen}
+        onToggle={() => setBottomOpen((open) => !open)}
+        messages={data.messages.messages}
+        lastOrder={lastOrder}
+        connection={connection}
+        counts={{
+          cities: data.cities.cities.length,
+          forces: data.forces.forces.length,
+          troops: data.troops.troops.length,
+          battles: data.battles.battles.length
+        }}
       />
       {showForceSelect
         ? <ForceSelectOverlay turn={data.turn} forces={data.forces.forces} cities={data.cities.cities} onSelect={selectPlayerForce} onDismiss={() => setSelectDismissed(true)} />
         : null}
     </main>
+  );
+}
+
+// 开局势力选择(M3.a,原版 window_scenario_force_select 的 Web 面):一次性开局动作,
+// 走 sango.selectPlayerForce 命令(原版 CheckPlayer 数据面)带玩家重装世界。
+// M3.b:自带「开局 · 日期 · 第 0 回合」标题,与地图渲染解耦,避免暗背景下误读顶栏。
+function ForceSelectOverlay({ turn, forces, cities, onSelect, onDismiss }) {
+  const [selected, setSelected] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const alive = forces.filter((force) => force.alive);
+  const cityCountByForce = useMemo(() => {
+    const counts = new Map();
+    cities.forEach((city) => {
+      if (city.forceId > 0) {
+        counts.set(city.forceId, (counts.get(city.forceId) ?? 0) + 1);
+      }
+    });
+    return counts;
+  }, [cities]);
+  const selectedForce = alive.find((force) => force.id === selected) ?? null;
+
+  const confirm = async () => {
+    if (!selectedForce || busy) {
+      return;
+    }
+    setBusy(true);
+    await onSelect(selectedForce.id);
+    setBusy(false);
+  };
+
+  return (
+    <div className="force-select-overlay">
+      <section className="panel force-select-panel">
+        <div className="panel-title">
+          <h2>选择开局势力</h2>
+          <span>{alive.length} 家 · 原版玩家接入(君主军团回合制,行动力约束生效)</span>
+        </div>
+        <p className="force-select-heading">开局 · {turn.dateText} · 第 {turn.turnCount} 回合</p>
+        <div className="force-select-list">
+          {alive.map((force) => (
+            <button
+              key={force.id}
+              type="button"
+              className={force.id === selected ? 'city-row selected' : 'city-row'}
+              onClick={() => setSelected(force.id)}
+            >
+              <strong>{force.name}</strong>
+              <span>君主 {force.governorName || '—'}</span>
+              <small>城市 {cityCountByForce.get(force.id) ?? 0} · 武将 {force.personCount}</small>
+            </button>
+          ))}
+        </div>
+        <div className="force-select-actions">
+          <button
+            type="button"
+            className="end-turn"
+            disabled={!selectedForce || busy}
+            title="以所选势力开局:世界按原版玩家路径重整(仅开局一次)"
+            onClick={confirm}
+          >
+            {busy ? '重整世界中……' : selectedForce ? `以${selectedForce.name}开局` : '选择一家势力'}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            title="保持全托管观察模式:不设玩家势力,回合自由推进"
+            onClick={onDismiss}
+          >
+            旁观模式(全托管)
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -409,385 +595,164 @@ function useCityDetail(clientRef, cityId, revision) {
   return detail;
 }
 
-// ── 3 左上:时间 ──────────────────────────────────────────────
-function TimeDock({ turn, connection }) {
+// map-first 细悬浮顶栏(M3.b):单行高度,半透明 + blur,不再横向铺满。
+function TopBar({ turn, connection, onEndTurn, onSave, onLoad }) {
   const playerForceId = turn.playerForceId ?? 0;
+  const awaitingPlayer = turn.awaitingPlayer ?? false;
   return (
-    <section className="dock dock-tl panel time-dock">
-      <div className="time-main">
+    <header className="top-bar">
+      <h1>三国 · 内政</h1>
+      <div className="date-block">
         <strong>{turn.dateText}</strong>
         <span>第 {turn.turnCount} 回合</span>
+        {playerForceId > 0
+          ? (
+            <span className={awaitingPlayer ? 'player-badge active' : 'player-badge'}>
+              玩家:{turn.playerForceName || `#${playerForceId}`}{awaitingPlayer ? ' · 待玩家行动' : ' · 结算中'}
+            </span>
+            )
+          : null}
       </div>
-      {playerForceId > 0
-        ? (
-          <span className={turn.awaitingPlayer ? 'player-badge active' : 'player-badge'}>
-            {turn.playerForceName || `#${playerForceId}`} · {turn.awaitingPlayer ? '待命' : '结算中'}
-          </span>
-          )
-        : <span className="player-badge">全托管观察</span>}
+      <div className="top-actions">
+        <button type="button" className="secondary" onClick={onSave}>存档</button>
+        <button type="button" className="secondary" onClick={onLoad}>读档</button>
+        <button
+          type="button"
+          className="end-turn"
+          onClick={onEndTurn}
+          title={playerForceId > 0 ? '结束玩家回合(原版「进行」):放行君主军团并推进世界' : '推进一个回合'}
+        >
+          {playerForceId > 0 ? (awaitingPlayer ? '结束回合(进行)' : '推进回合') : '结束回合'}
+        </button>
+      </div>
       {connection.error ? <span className="error-line">{connection.error}</span> : null}
-    </section>
+    </header>
   );
 }
 
-// ── 1 左中:选中实体详情 ──────────────────────────────────────
-function DetailDock({ selection, cityRow, cityDetail, troop, forces, onClose }) {
-  const forceName = (forceId) => forces.find((force) => force.id === forceId)?.name ?? '无主';
+// 左侧可折叠抽屉(M3.b):收起时只剩竖把手,城市/势力/部队/战报列表全部入住抽屉体。
+function LeftDrawer({ open, onToggle, activeTab, onTab, children }) {
   return (
-    <section className="dock dock-lc panel detail-dock">
-      <div className="panel-title">
-        <h2>
-          {selection?.kind === 'city'
-            ? (cityRow?.name ?? cityDetail?.name ?? '城池')
-            : selection?.kind === 'troop'
-              ? (troop?.name ?? '部队')
-              : '未选中实体'}
-        </h2>
-        {selection
-          ? (
-            <button type="button" className="detail-close" title="取消选中" onClick={onClose}>✕</button>
-            )
-          : null}
-      </div>
-      <div className="dock-scroll">
-        {selection?.kind === 'city' && cityDetail
-          ? <CityInfo detail={cityDetail} row={cityRow} />
-          : null}
-        {selection?.kind === 'city' && !cityDetail && cityRow
-          ? (
-            <div className="stats-grid">
-              <div><span>势力</span><strong>{forceName(cityRow.forceId)}</strong></div>
-              <div><span>人口</span><strong>{formatNumber(cityRow.population)}</strong></div>
-              <div><span>金</span><strong>{formatNumber(cityRow.gold)}</strong></div>
-              <div><span>粮</span><strong>{formatNumber(cityRow.food)}</strong></div>
-              <div><span>武将</span><strong>{cityRow.personCount}</strong></div>
-            </div>
-            )
-          : null}
-        {selection?.kind === 'troop' && troop
-          ? <TroopInfo troop={troop} />
-          : null}
-        {!selection
-          ? <p className="empty">在右侧列表点选城池或部队;指令在中下指令面板下达。</p>
-          : null}
-      </div>
-    </section>
-  );
-}
-
-function CityInfo({ detail }) {
-  return (
-    <>
-      <div className="panel-title sub">
-        <span>{detail.forceName || '无主'} · 行动力 {detail.actionPoint}</span>
-      </div>
-      <div className="stats-grid">
-        <div><span>人口</span><strong>{formatNumber(detail.population)}</strong></div>
-        <div><span>资金</span><strong>{formatNumber(detail.gold)}</strong></div>
-        <div><span>军粮</span><strong>{formatNumber(detail.food)}</strong></div>
-        <div><span>士气</span><strong>{detail.morale} / {detail.maxMorale}</strong></div>
-        <div><span>兵力</span><strong>{formatNumber(detail.troops)} / {formatNumber(detail.troopsLimit)}</strong></div>
-        <div><span>待命武将</span><strong>{detail.freePersonCount}</strong></div>
-      </div>
-      <div className="panel-title sub"><h3>武将({detail.persons.length})</h3></div>
-      <table className="person-table compact">
-        <thead>
-          <tr><th>姓名</th><th>身份</th><th>忠</th><th>统</th><th>武</th><th>智</th><th>政</th><th>魅</th></tr>
-        </thead>
-        <tbody>
-          {detail.persons.map((person) => (
-            <tr key={person.id} className={person.free ? 'free' : ''}>
-              <td><strong>{person.name}</strong></td>
-              <td>{PERSON_STATE_NAMES[person.state] ?? person.state}</td>
-              <td>{person.loyalty}</td>
-              <td>{person.command}</td>
-              <td>{person.strength}</td>
-              <td>{person.intelligence}</td>
-              <td>{person.politics}</td>
-              <td>{person.glamour}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {(detail.fieldTroops ?? []).length > 0
+    <aside className={open ? 'left-drawer open' : 'left-drawer'}>
+      <button
+        type="button"
+        className="drawer-handle"
+        title={open ? '收起面板,让地图全屏' : '展开面板(城市/势力/部队/战报)'}
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <span className="drawer-glyph" aria-hidden="true">{open ? '‹' : '›'}</span>
+        <span className="drawer-label">面板</span>
+      </button>
+      {open
         ? (
-          <>
-            <div className="panel-title sub"><h3>本城部队</h3></div>
-            <table className="force-table compact">
-              <tbody>
-                {detail.fieldTroops.map((troop) => (
-                  <tr key={troop.id}>
-                    <td><strong>{troop.name}</strong></td>
-                    <td>({troop.x},{troop.y})</td>
-                    <td>{formatNumber(troop.troops)}兵</td>
-                    <td>{troop.actionOver ? '已行动' : '待命'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
+          <div className="drawer-body panel">
+            <nav className="tab-bar">
+              <button
+                type="button"
+                className={activeTab === 'cities' ? 'tab active' : 'tab'}
+                onClick={() => onTab('cities')}
+              >
+                城市
+              </button>
+              <button
+                type="button"
+                className={activeTab === 'forces' ? 'tab active' : 'tab'}
+                onClick={() => onTab('forces')}
+              >
+                势力
+              </button>
+              <button
+                type="button"
+                className={activeTab === 'troops' ? 'tab active' : 'tab'}
+                onClick={() => onTab('troops')}
+              >
+                部队
+              </button>
+              <button
+                type="button"
+                className={activeTab === 'battles' ? 'tab active' : 'tab'}
+                onClick={() => onTab('battles')}
+              >
+                战报
+              </button>
+              <button
+                type="button"
+                className={activeTab === 'diplomacy' ? 'tab active' : 'tab'}
+                onClick={() => onTab('diplomacy')}
+              >
+                外交
+              </button>
+              <button
+                type="button"
+                className={activeTab === 'techniques' ? 'tab active' : 'tab'}
+                onClick={() => onTab('techniques')}
+              >
+                科技
+              </button>
+            </nav>
+            <div className="drawer-content">{children}</div>
+          </div>
           )
         : null}
-    </>
+    </aside>
   );
 }
 
-function TroopInfo({ troop }) {
-  return (
-    <>
-      <div className="panel-title sub">
-        <span>{troop.forceName} · {troop.landTroopTypeName} · 移动力 {troop.moveAbility}</span>
-      </div>
-      <div className="stats-grid">
-        <div><span>兵力</span><strong>{formatNumber(troop.troops)}</strong></div>
-        <div><span>携粮</span><strong>{formatNumber(troop.food)}</strong></div>
-        <div><span>士气</span><strong>{troop.morale}</strong></div>
-        <div><span>格坐标</span><strong>({troop.x}, {troop.y})</strong></div>
-        <div><span>军团</span><strong>#{troop.corpsId}</strong></div>
-        <div><span>状态</span><strong>{troop.actionOver ? '已行动' : '待命'}</strong></div>
-      </div>
-      <div className="mission-line">
-        {troop.missionType > 0
-          ? <span><strong>任务:</strong>{troop.missionLabel || `#${troop.missionType}`}</span>
-          : <span className="hint">无任务(自由行动)</span>}
-      </div>
-    </>
-  );
-}
-
-// ── 2 左下:事件 log ─────────────────────────────────────────
-function EventLogDock({ messages, lastOrder }) {
+// 底部可折叠窄条(M3.b):收起时一行(最新消息 + 指令回执 + 连接/计数),展开为消息流。
+function BottomStrip({ open, onToggle, messages, lastOrder, connection, counts }) {
   const rows = useMemo(() => [...messages].reverse(), [messages]);
-  const scrollRef = useRef(null);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0;
-    }
-  }, [rows.length]);
-
+  const latest = rows[0] ?? null;
   return (
-    <section className="dock dock-bl panel event-dock">
-      <div className="panel-title">
-        <h2>事件</h2>
-        <span>{rows.length} 条</span>
-      </div>
-      <div className={`strip-order ${lastOrder.tone}`}>{lastOrder.text}</div>
-      <div className="dock-scroll event-scroll" ref={scrollRef}>
-        <ul className="message-list">
-          {rows.length === 0 ? <li className="empty">等待回合摘要……</li> : null}
-          {rows.map((message) => (
-            <li key={message.seq}>
-              {message.date ? <small>{message.date}</small> : null}
-              <span>{message.text}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-// ── 4 右上:小地图 ───────────────────────────────────────────
-function MinimapDock({ cities, troops, playerForceId, selection, onSelect }) {
-  const canvasRef = useRef(null);
-  const size = 240;
-
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-
-    const ctx = canvas.getContext('2d');
-    const scale = size / MAP_CELLS;
-    ctx.clearRect(0, 0, size, size);
-    ctx.fillStyle = '#12151d';
-    ctx.fillRect(0, 0, size, size);
-
-    // 领地晕染:每城按势力色画半透明圆,重叠成势力范围感。
-    cities.forEach((city) => {
-      if (city.forceId <= 0) {
-        return;
-      }
-
-      ctx.beginPath();
-      ctx.fillStyle = forceColor(city.forceId);
-      ctx.globalAlpha = 0.16;
-      ctx.arc(city.x * scale, city.y * scale, 22, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    });
-
-    // 部队点。
-    troops.forEach((troop) => {
-      ctx.fillStyle = '#e8e2c8';
-      ctx.fillRect(troop.x * scale - 1.5, troop.y * scale - 1.5, 3, 3);
-    });
-
-    // 城点:势力色方块;玩家城加白框。
-    cities.forEach((city) => {
-      const color = city.forceId > 0 ? forceColor(city.forceId) : '#8a8f9c';
-      ctx.fillStyle = color;
-      ctx.fillRect(city.x * scale - 4, city.y * scale - 4, 8, 8);
-      if (playerForceId > 0 && city.forceId === playerForceId) {
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(city.x * scale - 6, city.y * scale - 6, 12, 12);
-      }
-      if (selection?.kind === 'city' && selection.id === city.id) {
-        ctx.strokeStyle = '#ffd75e';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(city.x * scale - 7, city.y * scale - 7, 14, 14);
-      }
-    });
-  }, [cities, troops, playerForceId, selection]);
-
-  useEffect(() => {
-    draw();
-  }, [draw]);
-
-  const pick = (event) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const cx = ((event.clientX - rect.left) / rect.width) * MAP_CELLS;
-    const cy = ((event.clientY - rect.top) / rect.height) * MAP_CELLS;
-    let best = null;
-    let bestDist = 12;
-    cities.forEach((city) => {
-      const dist = Math.hypot(city.x - cx, city.y - cy);
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = city;
-      }
-    });
-    if (best) {
-      onSelect('city', best.id);
-    }
-  };
-
-  return (
-    <section className="dock dock-tr panel minimap-dock">
-      <div className="panel-title">
-        <h2>地图</h2>
-        <span>{cities.length} 城 · {troops.length} 部队</span>
-      </div>
-      <canvas ref={canvasRef} width={size} height={size} onClick={pick} title="点城点选中(小地图 v1:势力色城点+领地晕染+部队点;不含地形)" />
-    </section>
-  );
-}
-
-// ── 5 右中:实体列表 ─────────────────────────────────────────
-function EntityListDock({
-  activeTab, onTab, cities, troops, forces, battles, diplomacy, techniques, turn,
-  forceFilter, onForceFilter, selection, onSelect, clientRef, commandRevision, playerGate,
-  onDiplomacyCommand, onResearchCommand
-}) {
-  const visibleCities = forceFilter === 0
-    ? cities
-    : cities.filter((city) => city.forceId === forceFilter);
-  const visibleTroops = forceFilter === 0
-    ? troops
-    : troops.filter((troop) => troop.forceId === forceFilter);
-
-  return (
-    <section className="dock dock-rc panel list-dock">
-      <nav className="tab-bar">
-        {[
-          ['cities', '城市'],
-          ['troops', '部队'],
-          ['forces', '势力'],
-          ['battles', '战报'],
-          ['diplomacy', '外交'],
-          ['techniques', '科技']
-        ].map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            className={activeTab === key ? 'tab active' : 'tab'}
-            onClick={() => onTab(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-      <div className="dock-scroll list-content">
-        {activeTab === 'cities'
+    <footer className={open ? 'bottom-strip open' : 'bottom-strip'}>
+      <div className="strip-head">
+        <button
+          type="button"
+          className="strip-toggle"
+          title={open ? '收起消息流' : '展开消息流'}
+          aria-expanded={open}
+          onClick={onToggle}
+        >
+          <span className="drawer-glyph" aria-hidden="true">{open ? '▾' : '▴'}</span>
+          消息 {rows.length}
+        </button>
+        <span className={`strip-order ${lastOrder.tone}`}>{lastOrder.text}</span>
+        {!open && latest
           ? (
-            <EntityList
-              rows={visibleCities.map((city) => ({
-                id: city.id,
-                kind: 'city',
-                title: city.name,
-                subtitle: city.forceName || '无主',
-                meta: `人口 ${formatNumber(city.population)} · 金 ${formatNumber(city.gold)} · 粮 ${formatNumber(city.food)} · 武将 ${city.personCount}`,
-                forceId: city.forceId
-              }))}
-              forces={forces}
-              forceFilter={forceFilter}
-              onForceFilter={onForceFilter}
-              selection={selection}
-              onSelect={onSelect}
-              emptyText="等待城市快照……"
-            />
+            <span className="strip-latest">
+              <small>{latest.date}</small>
+              {latest.text}
+            </span>
             )
-          : activeTab === 'troops'
-            ? (
-              <EntityList
-                rows={visibleTroops.map((troop) => ({
-                  id: troop.id,
-                  kind: 'troop',
-                  title: troop.name,
-                  subtitle: troop.forceName || '无主',
-                  meta: `(${troop.x},${troop.y}) · 兵 ${formatNumber(troop.troops)} · 士气 ${troop.morale}${troop.actionOver ? ' · 已行动' : ''}`,
-                  forceId: troop.forceId
-                }))}
-                forces={forces}
-                forceFilter={forceFilter}
-                onForceFilter={onForceFilter}
-                selection={selection}
-                onSelect={onSelect}
-                emptyText="暂无部队(城详情可出征编成)"
-              />
-              )
-            : activeTab === 'forces'
-              ? <ForceOverview forces={forces} />
-              : activeTab === 'battles'
-                ? <BattlePanel battles={battles} />
-                : activeTab === 'diplomacy'
-                  ? (
-                    <DiplomacyPanel
-                      diplomacy={diplomacy}
-                      forces={forces}
-                      cities={cities}
-                      turn={turn}
-                      clientRef={clientRef}
-                      commandRevision={commandRevision}
-                      playerGate={playerGate}
-                      onCommand={onDiplomacyCommand}
-                    />
-                    )
-                  : (
-                    <TechniquePanel
-                      techniques={techniques}
-                      cities={cities}
-                      turn={turn}
-                      clientRef={clientRef}
-                      commandRevision={commandRevision}
-                      playerGate={playerGate}
-                      onCommand={onResearchCommand}
-                    />
-                    )}
+          : null}
+        <span className="strip-meta">
+          {connection.phase} · {connection.transport} · 城市 {counts.cities} · 势力 {counts.forces} · 部队 {counts.troops} · 战报 {counts.battles}
+        </span>
       </div>
-    </section>
+      {open
+        ? (
+          <div className="strip-body">
+            <ul className="message-list">
+              {rows.length === 0 ? <li className="empty">等待回合摘要……</li> : null}
+              {rows.map((message) => (
+                <li key={message.seq}>
+                  {message.date ? <small>{message.date}</small> : null}
+                  <span>{message.text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          )
+        : null}
+    </footer>
   );
 }
 
-// 通用实体行列表:势力色条 + 标题 + 元信息;点选即选中。
-function EntityList({ rows, forces, forceFilter, onForceFilter, selection, onSelect, emptyText }) {
+function CityListPanel({ cities, forces, forceFilter, onForceFilter, selectedCityId, onSelect }) {
   return (
-    <section className="entity-list">
+    <section className="drawer-panel city-list-panel">
       <div className="panel-title">
-        <span>按势力过滤</span>
+        <h2>城市</h2>
         <select value={forceFilter} onChange={(event) => onForceFilter(Number(event.target.value))}>
           <option value={0}>全部势力</option>
           {forces.map((force) => (
@@ -796,66 +761,35 @@ function EntityList({ rows, forces, forceFilter, onForceFilter, selection, onSel
         </select>
       </div>
       <div className="city-rows">
-        {rows.length === 0 ? <p className="empty">{emptyText}</p> : null}
-        {rows.map((row) => {
-          const selected = selection?.kind === row.kind && selection.id === row.id;
-          return (
-            <button
-              key={`${row.kind}-${row.id}`}
-              type="button"
-              className={selected ? 'city-row selected' : 'city-row'}
-              onClick={() => onSelect(row.kind, row.id)}
-            >
-              <span
-                className="force-chip"
-                style={{ background: row.forceId > 0 ? forceColor(row.forceId) : '#6b7280' }}
-                aria-hidden="true"
-              />
-              <span className="row-body">
-                <strong>{row.title}</strong>
-                <span>{row.subtitle}</span>
-                <small>{row.meta}</small>
-              </span>
-            </button>
-          );
-        })}
+        {cities.length === 0 ? <p className="empty">等待城市快照……</p> : null}
+        {cities.map((city) => (
+          <button
+            key={city.id}
+            type="button"
+            className={city.id === selectedCityId ? 'city-row selected' : 'city-row'}
+            onClick={() => onSelect(city.id)}
+          >
+            <strong>{city.name}</strong>
+            <span>{city.forceName || '无主'}</span>
+            <small>
+              人口 {formatNumber(city.population)} · 金 {formatNumber(city.gold)} · 粮 {formatNumber(city.food)} · 武将 {city.personCount}
+            </small>
+          </button>
+        ))}
       </div>
     </section>
   );
 }
 
-// ── 6 右下:回合推进 ─────────────────────────────────────────
-function TurnDock({ turn, onEndTurn, onSave, onLoad, connection }) {
-  const playerForceId = turn.playerForceId ?? 0;
-  const awaitingPlayer = turn.awaitingPlayer ?? false;
+function CityDetailCard({ detail, onClose, playerGate, onCommand, onExpedition }) {
   return (
-    <section className="dock dock-br panel turn-dock">
-      <div className="turn-date">
-        <strong>{turn.dateText}</strong>
-        <span>第 {turn.turnCount} 回合</span>
-      </div>
-      <button
-        type="button"
-        className="end-turn"
-        onClick={onEndTurn}
-        title={playerForceId > 0 ? '结束玩家回合(原版「进行」):放行君主军团并推进世界' : '推进一个回合'}
-      >
-        {playerForceId > 0 ? (awaitingPlayer ? '结束回合(进行)' : '推进回合') : '结束回合'}
-      </button>
-      <div className="turn-minor">
-        <button type="button" className="secondary" onClick={onSave}>存档</button>
-        <button type="button" className="secondary" onClick={onLoad}>读档</button>
-        <span className={`conn ${connection.phase}`}>{connection.phase}</span>
-      </div>
+    <section className="detail-card panel">
+      <CityDetailPanel detail={detail} onClose={onClose} playerGate={playerGate} onCommand={onCommand} onExpedition={onExpedition} />
     </section>
   );
 }
 
-// ── 7 中下:实体指令面板(RTS/MoBA 式指令条) ─────────────────
-// 选中城池 = 指令按钮条(训练/探索/奖励/招揽/出征),点按展开参数行(执行武将 chips、
-// 目标、资源输入)+ 执行;选中部队 = 移动参数行。无选中 = 引导文案。
-function CommandDock({ selection, cityRow, cityDetail, troop, playerGate, onCityCommand, onTroopMove, onExpedition }) {
-  const [activeCommand, setActiveCommand] = useState('');
+function CityDetailPanel({ detail, onClose, playerGate, onCommand, onExpedition }) {
   const [executorIds, setExecutorIds] = useState([]);
   const [rewardIds, setRewardIds] = useState([]);
   const [recruitTargetId, setRecruitTargetId] = useState(0);
@@ -864,95 +798,33 @@ function CommandDock({ selection, cityRow, cityDetail, troop, playerGate, onCity
   const [expeditionTroops, setExpeditionTroops] = useState(3000);
   const [expeditionGold, setExpeditionGold] = useState(500);
   const [expeditionFood, setExpeditionFood] = useState(20000);
-  const [targetX, setTargetX] = useState(0);
-  const [targetY, setTargetY] = useState(0);
-  const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {
-    setActiveCommand('');
     setExecutorIds([]);
     setRewardIds([]);
     setRecruitTargetId(0);
     setExpeditionIds([]);
     setLandTypeId(0);
-  }, [selection?.kind, selection?.id]);
+  }, [detail.id]);
 
-  useEffect(() => {
-    setSeeded(false);
-  }, [selection?.id]);
-
-  useEffect(() => {
-    if (troop && !seeded) {
-      setTargetX(troop.x);
-      setTargetY(troop.y);
-      setSeeded(true);
-    }
-  }, [troop, seeded]);
-
-  if (!selection) {
-    return (
-      <section className="dock dock-bc panel command-dock">
-        <p className="empty">点右侧列表(或小地图城点)选中城池/部队,指令在此下达。</p>
-      </section>
-    );
-  }
-
-  if (selection.kind === 'troop') {
-    if (!troop) {
-      return (
-        <section className="dock dock-bc panel command-dock">
-          <p className="empty">部队已消散(溃灭/回城)。</p>
-        </section>
-      );
-    }
-
-    const moveAllowed = playerGate.playerForceId === 0 ||
-      (troop.forceId === playerGate.playerForceId && playerGate.awaitingPlayer);
-    return (
-      <section className="dock dock-bc panel command-dock">
-        <div className="command-title">
-          <strong>{troop.name}</strong>
-          <span>{troop.actionOver ? '已行动' : '待命'} · ({troop.x}, {troop.y})</span>
-        </div>
-        <div className="command-args">
-          <label>目标格 x(北)<input type="number" min={0} max={255} value={targetX} onChange={(e) => setTargetX(Math.max(0, Number(e.target.value)))} /></label>
-          <label>目标格 y(东)<input type="number" min={0} max={255} value={targetY} onChange={(e) => setTargetY(Math.max(0, Number(e.target.value)))} /></label>
-          <button
-            type="button"
-            className="execute"
-            disabled={troop.actionOver || !moveAllowed}
-            title="范围内即时落地;范围外转多回合委任行军"
-            onClick={() => onTroopMove({ troopId: troop.id, x: targetX, y: targetY })}
-          >
-            移动
-          </button>
-          {!moveAllowed ? <span className="hint">玩家局只在本势力回合开放移动</span> : null}
-        </div>
-      </section>
-    );
-  }
-
-  // ── 城池指令 ──
-  if (!cityDetail) {
-    return (
-      <section className="dock dock-bc panel command-dock">
-        <p className="empty">{cityRow ? `${cityRow.name}:详情加载中……` : '城池已易主或消失。'}</p>
-      </section>
-    );
-  }
-
+  // M3.a 玩家门(原版城菜单门):玩家局只对本势力且本回合的城开放命令。
   const playerForceId = playerGate?.playerForceId ?? 0;
-  const commandsAllowed = playerForceId === 0 || (cityDetail.forceId === playerForceId && playerGate.awaitingPlayer);
-  const freePersons = cityDetail.persons.filter((person) => person.free);
-  const rewardTargets = cityDetail.persons.filter(
+  const commandsAllowed = playerForceId === 0 || (detail.forceId === playerForceId && playerGate.awaitingPlayer);
+  const commandsHint = playerForceId === 0
+    ? null
+    : (detail.forceId === playerForceId
+        ? (playerGate.awaitingPlayer ? null : '当前非本势力回合,内政指令待玩家回合开放')
+        : '玩家局只对本势力城市开放内政指令');
+
+  const freePersons = detail.persons.filter((person) => person.free);
+  const rewardTargets = detail.persons.filter(
     (person) => person.state >= 2 && person.state <= 4 && person.loyalty < 100
   );
-  const wildPersons = cityDetail.wildPersons ?? [];
-  const recruitTarget = wildPersons.find((person) => person.id === recruitTargetId) ?? null;
-  const landTypes = (cityDetail.troopTypes ?? []).filter((type) => type.isLand);
-  const expeditionPersons = freePersons.filter((person) => expeditionIds.includes(person.id));
   const executors = freePersons.filter((person) => executorIds.includes(person.id));
   const rewardPersons = rewardTargets.filter((person) => rewardIds.includes(person.id));
+  const recruitTarget = detail.wildPersons.find((person) => person.id === recruitTargetId) ?? null;
+  const expeditionPersons = freePersons.filter((person) => expeditionIds.includes(person.id));
+  const landTypes = (detail.troopTypes ?? []).filter((type) => type.isLand);
 
   const toggle = (ids, setIds, personId, cap) => {
     if (ids.includes(personId)) {
@@ -962,156 +834,422 @@ function CommandDock({ selection, cityRow, cityDetail, troop, playerGate, onCity
     }
   };
 
-  const chips = (persons, ids, setIds, cap) => (
-    <div className="person-chips">
-      {persons.length === 0 ? <span className="hint">无候选</span> : null}
-      {persons.map((person) => (
-        <button
-          key={person.id}
-          type="button"
-          className={ids.includes(person.id) ? 'chip selected' : 'chip'}
-          title={`统${person.command} 武${person.strength} 智${person.intelligence} 政${person.politics}`}
-          onClick={() => toggle(ids, setIds, person.id, cap)}
-        >
-          {person.name}
-        </button>
-      ))}
-    </div>
-  );
-
-  const gateHint = playerForceId === 0
-    ? null
-    : (cityDetail.forceId === playerForceId
-        ? (playerGate.awaitingPlayer ? null : '非本势力回合,指令待玩家回合开放')
-        : '玩家局只对本势力城市开放内政指令');
+  const send = (type, payload) => onCommand(type, payload);
 
   return (
-    <section className="dock dock-bc panel command-dock">
-      <div className="command-title">
-        <strong>{cityDetail.name}</strong>
-        <span>行动力 {cityDetail.actionPoint} · 待命武将 {cityDetail.freePersonCount}</span>
-        {gateHint ? <span className="hint">{gateHint}</span> : null}
+    <>
+      <div className="panel-title">
+        <h2>{detail.name}</h2>
+        <span>{detail.forceName || '无主'} · 行动力 {detail.actionPoint}</span>
+        <button
+          type="button"
+          className="detail-close"
+          title="关闭城市详情,回到地图"
+          onClick={onClose}
+        >
+          ✕
+        </button>
       </div>
-      <div className="command-bar">
-        {CITY_COMMANDS.map((command) => (
+      <div className="detail-scroll">
+        <div className="stats-grid">
+          <div><span>人口</span><strong>{formatNumber(detail.population)}</strong></div>
+          <div><span>资金</span><strong>{formatNumber(detail.gold)}</strong></div>
+          <div><span>军粮</span><strong>{formatNumber(detail.food)}</strong></div>
+          <div><span>士气</span><strong>{detail.morale} / {detail.maxMorale}</strong></div>
+          <div><span>兵力</span><strong>{formatNumber(detail.troops)} / {formatNumber(detail.troopsLimit)}</strong></div>
+          <div><span>在城武将</span><strong>{detail.persons.length}({detail.freePersonCount} 待命)</strong></div>
+        </div>
+
+        <div className="command-bar">
+          {commandsHint ? <span className="hint">{commandsHint}</span> : null}
           <button
-            key={command.type}
             type="button"
-            className={activeCommand === command.type ? 'command-btn active' : 'command-btn'}
-            onClick={() => setActiveCommand(activeCommand === command.type ? '' : command.type)}
+            disabled={executors.length === 0 || !commandsAllowed}
+            title="军事/训练:提升城市士气(消耗资金)"
+            onClick={() => send('train', { cityId: detail.id, personIds: executors.map((p) => p.id) })}
           >
-            {command.label}
+            训练({executors.length})
+          </button>
+          <button
+            type="button"
+            disabled={executors.length === 0 || !commandsAllowed}
+            title="人事/探索人才:下回合结算,可能发现人才或资金"
+            onClick={() => send('search', { cityId: detail.id, personIds: executors.map((p) => p.id) })}
+          >
+            探索({executors.length})
+          </button>
+          <button
+            type="button"
+            disabled={rewardPersons.length === 0 || !commandsAllowed}
+            title="人事/褒赏:消耗资金提升忠诚(+10)"
+            onClick={() => send('reward', { cityId: detail.id, personIds: rewardPersons.map((p) => p.id) })}
+          >
+            奖励({rewardPersons.length})
+          </button>
+          <button
+            type="button"
+            disabled={executors.length !== 1 || !recruitTarget || !commandsAllowed}
+            title="人事/登庸武将:任命执行武将招揽在野人才"
+            onClick={() => send('recruit', {
+              cityId: detail.id,
+              personIds: executors.map((p) => p.id),
+              targetPersonId: recruitTarget?.id ?? 0
+            })}
+          >
+            招揽
+          </button>
+          {recruitTarget
+            ? <span className="hint">招揽目标:{recruitTarget.name}</span>
+            : <span className="hint">招揽需选 1 名执行武将 + 1 名在野人才</span>}
+        </div>
+
+        <div className="person-section">
+          <div className="panel-title">
+            <h3>武将</h3>
+            <span>勾「执」为执行武将(≤3),勾「赏」为奖励对象,勾「征」为出征编成(≤3)</span>
+          </div>
+          <table className="person-table">
+            <thead>
+              <tr>
+                <th>执</th>
+                <th>赏</th>
+                <th>征</th>
+                <th>姓名</th>
+                <th>身份</th>
+                <th>忠诚</th>
+                <th>统率</th>
+                <th>武力</th>
+                <th>智力</th>
+                <th>政治</th>
+                <th>魅力</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detail.persons.map((person) => (
+                <tr key={person.id} className={person.free ? 'free' : ''}>
+                  <td>
+                    {person.free
+                      ? (
+                        <input
+                          type="checkbox"
+                          checked={executorIds.includes(person.id)}
+                          onChange={() => toggle(executorIds, setExecutorIds, person.id, 3)}
+                        />
+                      )
+                      : null}
+                  </td>
+                  <td>
+                    {rewardTargets.some((target) => target.id === person.id)
+                      ? (
+                        <input
+                          type="checkbox"
+                          checked={rewardIds.includes(person.id)}
+                          onChange={() => toggle(rewardIds, setRewardIds, person.id, 10)}
+                        />
+                      )
+                      : null}
+                  </td>
+                  <td>
+                    {person.free
+                      ? (
+                        <input
+                          type="checkbox"
+                          checked={expeditionIds.includes(person.id)}
+                          onChange={() => toggle(expeditionIds, setExpeditionIds, person.id, 3)}
+                        />
+                      )
+                      : null}
+                  </td>
+                  <td><strong>{person.name}</strong></td>
+                  <td>{PERSON_STATE_NAMES[person.state] ?? person.state}{person.free ? '·待命' : ''}</td>
+                  <td>{person.loyalty}</td>
+                  <td>{person.command}</td>
+                  <td>{person.strength}</td>
+                  <td>{person.intelligence}</td>
+                  <td>{person.politics}</td>
+                  <td>{person.glamour}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {detail.wildPersons.length > 0
+          ? (
+            <div className="person-section">
+              <div className="panel-title">
+                <h3>在野人才(招揽目标)</h3>
+              </div>
+              <div className="wild-list">
+                {detail.wildPersons.map((person) => (
+                  <button
+                    key={person.id}
+                    type="button"
+                    className={person.id === recruitTargetId ? 'wild-row selected' : 'wild-row'}
+                    onClick={() => setRecruitTargetId(person.id === recruitTargetId ? 0 : person.id)}
+                  >
+                    <strong>{person.name}</strong>
+                    <small>统{person.command} 武{person.strength} 智{person.intelligence} 政{person.politics} 魅{person.glamour}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+            )
+          : null}
+
+        <div className="person-section">
+          <div className="panel-title">
+            <h3>出征(军事/出征)</h3>
+            <span>勾「征」选编成武将(≤3,首位为主将)</span>
+          </div>
+          <div className="expedition-form">
+            <label>
+              陆战兵种
+              <select
+                value={landTypeId}
+                onChange={(event) => setLandTypeId(Number(event.target.value))}
+              >
+                {landTypes.map((type) => (
+                  <option key={type.id} value={type.id}>{type.name}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              兵力
+              <input
+                type="number"
+                min={1}
+                max={detail.troops}
+                value={expeditionTroops}
+                onChange={(event) => setExpeditionTroops(Math.max(0, Number(event.target.value)))}
+              />
+            </label>
+            <label>
+              携金
+              <input
+                type="number"
+                min={0}
+                max={detail.gold}
+                value={expeditionGold}
+                onChange={(event) => setExpeditionGold(Math.max(0, Number(event.target.value)))}
+              />
+            </label>
+            <label>
+              携粮
+              <input
+                type="number"
+                min={0}
+                max={detail.food}
+                value={expeditionFood}
+                onChange={(event) => setExpeditionFood(Math.max(0, Number(event.target.value)))}
+              />
+            </label>
+            <button
+              type="button"
+              disabled={expeditionPersons.length === 0 || landTypes.length === 0 || !commandsAllowed}
+              title="军事/出征:按城内可组兵种编成部队(消耗兵力/金钱/军粮与军团行动力)"
+              onClick={() => onExpedition({
+                cityId: detail.id,
+                personIds: expeditionPersons.map((person) => person.id),
+                landTroopTypeId: landTypeId || landTypes[0]?.id,
+                troops: expeditionTroops,
+                gold: expeditionGold,
+                food: expeditionFood
+              })}
+            >
+              出征({expeditionPersons.length})
+            </button>
+          </div>
+        </div>
+
+        <div className="person-section">
+          <div className="panel-title">
+            <h3>本城部队</h3>
+            <span>{(detail.fieldTroops ?? []).length} 支</span>
+          </div>
+          {(detail.fieldTroops ?? []).length === 0
+            ? <p className="empty">本城暂无在外部队</p>
+            : (
+              <table className="force-table">
+                <thead>
+                  <tr><th>部队</th><th>格坐标</th><th>兵力</th><th>携粮</th><th>状态</th></tr>
+                </thead>
+                <tbody>
+                  {(detail.fieldTroops ?? []).map((troop) => (
+                    <tr key={troop.id}>
+                      <td><strong>{troop.name}</strong></td>
+                      <td>({troop.x}, {troop.y})</td>
+                      <td>{formatNumber(troop.troops)}</td>
+                      <td>{formatNumber(troop.food)}</td>
+                      <td>{troop.actionOver ? '已行动' : '待命'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// 部队列表(M2.b 拆半):势力过滤 + 选中即弹右侧浮动卡片;M3.a 玩家局移动门在卡片侧生效。
+function TroopListPanel({ troops, forces, forceFilter, onForceFilter, selectedTroopId, onSelect }) {
+  const visibleTroops = forceFilter === 0
+    ? troops
+    : troops.filter((troop) => troop.forceId === forceFilter);
+  return (
+    <section className="drawer-panel city-list-panel">
+      <div className="panel-title">
+        <h2>部队</h2>
+        <select value={forceFilter} onChange={(event) => onForceFilter(Number(event.target.value))}>
+          <option value={0}>全部势力</option>
+          {forces.map((force) => (
+            <option key={force.id} value={force.id}>{force.name}</option>
+          ))}
+        </select>
+      </div>
+      <div className="city-rows">
+        {visibleTroops.length === 0 ? <p className="empty">暂无部队(开局无人出征;城市详情可出征编成)</p> : null}
+        {visibleTroops.map((troop) => (
+          <button
+            key={troop.id}
+            type="button"
+            className={troop.id === selectedTroopId ? 'city-row selected' : 'city-row'}
+            onClick={() => onSelect(troop.id)}
+          >
+            <strong>{troop.name}</strong>
+            <span>{troop.forceName || '无主'}</span>
+            <small>
+              ({troop.x}, {troop.y}) · 兵 {formatNumber(troop.troops)} · 粮 {formatNumber(troop.food)} · 士气 {troop.morale}
+              {' '}{troop.actionOver ? '· 已行动' : ''}{troop.missionType > 0 ? ' · 委任中' : ''}
+            </small>
           </button>
         ))}
       </div>
-      {activeCommand
-        ? (
-          <div className="command-args">
-            {activeCommand === 'train' || activeCommand === 'search'
-              ? (
-                <>
-                  {chips(freePersons, executorIds, setExecutorIds, 3)}
-                  <button
-                    type="button"
-                    className="execute"
-                    disabled={executors.length === 0 || !commandsAllowed}
-                    title={CITY_COMMANDS.find((command) => command.type === activeCommand)?.hint}
-                    onClick={() => onCityCommand(activeCommand, { cityId: cityDetail.id, personIds: executors.map((p) => p.id) })}
-                  >
-                    执行({executors.length})
-                  </button>
-                </>
-                )
-              : null}
-            {activeCommand === 'reward'
-              ? (
-                <>
-                  {chips(rewardTargets, rewardIds, setRewardIds, 10)}
-                  <button
-                    type="button"
-                    className="execute"
-                    disabled={rewardPersons.length === 0 || !commandsAllowed}
-                    onClick={() => onCityCommand('reward', { cityId: cityDetail.id, personIds: rewardPersons.map((p) => p.id) })}
-                  >
-                    执行({rewardPersons.length})
-                  </button>
-                </>
-                )
-              : null}
-            {activeCommand === 'recruit'
-              ? (
-                <>
-                  <span className="hint">执行(1):</span>
-                  {chips(freePersons, executorIds, setExecutorIds, 1)}
-                  <span className="hint">在野目标(1):</span>
-                  <select value={recruitTargetId} onChange={(e) => setRecruitTargetId(Number(e.target.value))}>
-                    <option value={0}>选择在野人才</option>
-                    {wildPersons.map((person) => (
-                      <option key={person.id} value={person.id}>
-                        {person.name}(统{person.command} 智{person.intelligence})
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="execute"
-                    disabled={executors.length !== 1 || !recruitTarget || !commandsAllowed}
-                    onClick={() => onCityCommand('recruit', {
-                      cityId: cityDetail.id,
-                      personIds: executors.map((p) => p.id),
-                      targetPersonId: recruitTarget?.id ?? 0
-                    })}
-                  >
-                    执行
-                  </button>
-                </>
-                )
-              : null}
-            {activeCommand === 'expedition'
-              ? (
-                <>
-                  <span className="hint">编成(≤3):</span>
-                  {chips(freePersons, expeditionIds, setExpeditionIds, 3)}
-                  <label>
-                    兵种
-                    <select value={landTypeId} onChange={(e) => setLandTypeId(Number(e.target.value))}>
-                      {landTypes.map((type) => (
-                        <option key={type.id} value={type.id}>{type.name}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>兵力<input type="number" min={1} max={cityDetail.troops} value={expeditionTroops} onChange={(e) => setExpeditionTroops(Math.max(0, Number(e.target.value)))} /></label>
-                  <label>携金<input type="number" min={0} max={cityDetail.gold} value={expeditionGold} onChange={(e) => setExpeditionGold(Math.max(0, Number(e.target.value)))} /></label>
-                  <label>携粮<input type="number" min={0} max={cityDetail.food} value={expeditionFood} onChange={(e) => setExpeditionFood(Math.max(0, Number(e.target.value)))} /></label>
-                  <button
-                    type="button"
-                    className="execute"
-                    disabled={expeditionPersons.length === 0 || landTypes.length === 0 || !commandsAllowed}
-                    onClick={() => onExpedition({
-                      cityId: cityDetail.id,
-                      personIds: expeditionPersons.map((person) => person.id),
-                      landTroopTypeId: landTypeId || landTypes[0]?.id,
-                      troops: expeditionTroops,
-                      gold: expeditionGold,
-                      food: expeditionFood
-                    })}
-                  >
-                    出征({expeditionPersons.length})
-                  </button>
-                </>
-                )
-              : null}
-        </div>
-          )
-        : null}
     </section>
   );
 }
 
-// ── 以下为右列页签复用面板(战报/外交/科技/势力概览) ──
+// 部队详情浮动卡片(M3.b map-first):目标格是内核格坐标(x=北、y=东,范围 0..255);
+// 地图点击选格需要引擎侧 pick,接入前用坐标输入。M3.a:玩家局只对玩家势力且当前
+// 回合的部队开放移动(原版部队命令门)。
+function TroopDetailCard({ troops, troopId, onClose, playerGate, onMove }) {
+  const [targetX, setTargetX] = useState(0);
+  const [targetY, setTargetY] = useState(0);
+  const [seeded, setSeeded] = useState(false);
 
+  const selected = troops.find((troop) => troop.id === troopId) ?? null;
+
+  useEffect(() => {
+    if (selected && !seeded) {
+      setTargetX(selected.x);
+      setTargetY(selected.y);
+      setSeeded(true);
+    }
+  }, [selected, seeded]);
+
+  useEffect(() => {
+    setSeeded(false);
+  }, [troopId]);
+
+  if (!selected) {
+    return (
+      <section className="detail-card panel detail empty">
+        <button
+          type="button"
+          className="detail-close"
+          title="关闭部队详情"
+          onClick={onClose}
+        >
+          ✕
+        </button>
+        部队已消散(溃灭/回城),卡片可关闭
+      </section>
+    );
+  }
+
+  const playerForceId = playerGate?.playerForceId ?? 0;
+  const moveAllowed = playerForceId === 0 ||
+    (selected.forceId === playerForceId && playerGate.awaitingPlayer);
+
+  return (
+    <section className="detail-card panel detail">
+      <div className="panel-title">
+        <h2>{selected.name}</h2>
+        <span>{selected.forceName} · {selected.landTroopTypeName} · 移动力 {selected.moveAbility}</span>
+        <button
+          type="button"
+          className="detail-close"
+          title="关闭部队详情,回到地图"
+          onClick={onClose}
+        >
+          ✕
+        </button>
+      </div>
+      <div className="detail-scroll">
+        <div className="stats-grid">
+          <div><span>兵力</span><strong>{formatNumber(selected.troops)}</strong></div>
+          <div><span>携粮</span><strong>{formatNumber(selected.food)}</strong></div>
+          <div><span>士气</span><strong>{selected.morale}</strong></div>
+          <div><span>格坐标</span><strong>({selected.x}, {selected.y})</strong></div>
+          <div><span>军团</span><strong>#{selected.corpsId}</strong></div>
+          <div><span>状态</span><strong>{selected.actionOver ? '已行动' : '待命'}</strong></div>
+        </div>
+        <div className="mission-line">
+          {selected.missionType > 0
+            ? (
+              <span>
+                <strong>任务:</strong>{selected.missionLabel || `#${selected.missionType}`}
+                <small>(机会主义执行:占城任务沿途将顺势打击敌据点)</small>
+              </span>
+            )
+            : <span className="hint">无任务(自由行动;无任务部队下回合可能被回城吸收)</span>}
+        </div>
+        <div className="expedition-form">
+          <label>
+            目标格 x(北)
+            <input
+              type="number"
+              min={0}
+              max={255}
+              value={targetX}
+              onChange={(event) => setTargetX(Math.max(0, Number(event.target.value)))}
+            />
+          </label>
+          <label>
+            目标格 y(东)
+            <input
+              type="number"
+              min={0}
+              max={255}
+              value={targetY}
+              onChange={(event) => setTargetY(Math.max(0, Number(event.target.value)))}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={selected.actionOver || !moveAllowed}
+            title="选中部队移动到目标格(范围内即时落地;范围外可驻空格转为多回合委任移动,逐回合自动推进;玩家局限本势力回合)"
+            onClick={() => onMove({ troopId: selected.id, x: targetX, y: targetY })}
+          >
+            移动
+          </button>
+          <p className="hint expedition-hint">
+            范围外可驻空格 = 委任移动:授多回合行军任务,每回合按移动力推进,抵达后待命;
+            途中目标格被敌占则就近平驻等待。占位格(城/建筑/敌据点)仍按越程拒绝。
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// 战报面板(M2.d):SangoCombatAnnals 结构化 per-battle 卡(参战方/技能/伤害序列/结果/
+// 城池归属变化),按回合过滤在 UI 侧完成(卡自带回合区间)。M3.b 入住左侧抽屉。
 function BattlePanel({ battles }) {
   const [turnFilter, setTurnFilter] = useState(0);
+
   const turns = useMemo(() => {
     const set = new Set();
     battles.forEach((battle) => {
@@ -1128,41 +1266,25 @@ function BattlePanel({ battles }) {
   const cards = [...visible].reverse();
 
   return (
-    <section className="battle-panel">
+    <section className="drawer-panel battle-panel">
       <div className="panel-title">
         <h2>战报</h2>
-        <select value={turnFilter} onChange={(event) => setTurnFilter(Number(event.target.value))}>
-          <option value={0}>全部回合({battles.length} 战)</option>
-          {turns.map((turn) => (
-            <option key={turn} value={turn}>第 {turn} 回合</option>
-          ))}
-        </select>
+        <span>
+          <select value={turnFilter} onChange={(event) => setTurnFilter(Number(event.target.value))}>
+            <option value={0}>全部回合({battles.length} 战)</option>
+            {turns.map((turn) => (
+              <option key={turn} value={turn}>第 {turn} 回合</option>
+            ))}
+          </select>
+        </span>
       </div>
       <div className="battle-list">
-        {cards.length === 0 ? <p className="empty">尚无交战记录</p> : null}
+        {cards.length === 0 ? <p className="empty">尚无交战记录(播种部队并推进回合后,战斗在此聚合呈现)</p> : null}
         {cards.map((battle) => <BattleCard key={battle.seq} battle={battle} />)}
       </div>
     </section>
   );
 }
-
-const BATTLE_RESULT_LABELS = {
-  ongoing: '进行中',
-  'defender-destroyed': '守方溃灭',
-  'attacker-destroyed': '攻方溃灭',
-  'city-fallen': '城陷',
-  'force-fallen': '势力灭亡'
-};
-const BATTLE_EVENT_LABELS = {
-  strike: '打击',
-  counter: '反击',
-  'siege-garrison': '守军杀伤',
-  'siege-durability': '城防破坏',
-  'troop-destroyed': '溃灭',
-  'city-fall': '城陷',
-  'force-fall': '灭亡'
-};
-const PARTICIPANT_KIND_LABELS = { troop: '部队', city: '城池', building: '据点' };
 
 function BattleCard({ battle }) {
   return (
@@ -1171,27 +1293,54 @@ function BattleCard({ battle }) {
         <div className="battle-title">
           <span className="side">
             <strong>{battle.attacker.name}</strong>
-            <small>{battle.attacker.forceName}</small>
+            <small>{battle.attacker.forceName} · {PARTICIPANT_KIND_LABELS[battle.attacker.kind] ?? ''}</small>
           </span>
           <span className="vs">对战</span>
           <span className="side">
             <strong>{battle.defender.name}</strong>
-            <small>{battle.defender.forceName || '无主'}</small>
+            <small>{battle.defender.forceName || '无主'} · {PARTICIPANT_KIND_LABELS[battle.defender.kind] ?? ''}</small>
           </span>
         </div>
         <div className="battle-meta">
           <span className={`result-badge ${battle.result}`}>{BATTLE_RESULT_LABELS[battle.result] ?? battle.result}</span>
-          <span>第 {battle.turnStart}–{battle.turnLast} 回合</span>
+          <span>第 {battle.turnStart}{battle.turnLast > battle.turnStart ? `–${battle.turnLast}` : ''} 回合</span>
           <span>总杀伤 {formatNumber(battle.damageDealt)}</span>
         </div>
       </header>
+      {(battle.skills ?? []).length > 0
+        ? (
+          <div className="skill-chips">
+            {(battle.skills ?? []).map((skill) => <span key={skill} className="chip">{skill}</span>)}
+          </div>
+        )
+        : null}
+      {(battle.troopChanges ?? []).length > 0
+        ? (
+          <div className="troop-changes">
+            {(battle.troopChanges ?? []).map((change, index) => (
+              <span key={`${change.name}-${index}`} className={change.end < change.start ? 'loss' : ''}>
+                {change.name}({PARTICIPANT_KIND_LABELS[change.kind] ?? ''}) {formatNumber(change.start)} → {formatNumber(change.end)}
+              </span>
+            ))}
+          </div>
+        )
+        : null}
+      {battle.city
+        ? (
+          <div className="city-change">
+            城池易主:{battle.city.name} · {battle.city.oldForce} → <strong>{battle.city.newForce}</strong>
+          </div>
+        )
+        : null}
       <div className="event-rows">
         {(battle.events ?? []).map((event, index) => (
           <div key={index} className="event-row">
             <span className="turn">T{event.turn}</span>
             <span className="kind">{BATTLE_EVENT_LABELS[event.kind] ?? event.kind}</span>
             <span className="actors">{event.attacker} → {event.defender}</span>
+            {event.skill ? <span className="chip">{event.skill}</span> : null}
             {event.damage > 0 ? <span className="damage">伤 {formatNumber(event.damage)}</span> : null}
+            {event.targetTroopsAfter > 0 ? <span className="after">余 {formatNumber(event.targetTroopsAfter)}</span> : null}
           </div>
         ))}
       </div>
@@ -1199,12 +1348,10 @@ function BattleCard({ battle }) {
   );
 }
 
-const ALLIANCE_TYPE_LABELS = {
-  Alliance: '同盟',
-  Truce: '停战协议',
-  Trade: '通商协议'
-};
-
+// 外交面板(M3.d):势力关系表(真源 RelationMap)+ 同盟列表 + 使者派遣表单。
+// 可下达动作照原版活跃面:送礼(1000 金,关系必升)/ 结盟(金额滑条,成功率=基础+
+// 关系+使者+金额)/ 摒弃同盟;宣战/停战/通商/和亲等在原版是空桩,不在此发明。
+// 原版门槛:城 freePersons>0 && 军团行动力≥30 && 城金≥1000(不扣 AP,只扣金)。
 function DiplomacyPanel({ diplomacy, forces, cities, turn, clientRef, commandRevision, playerGate, onCommand }) {
   const [dispatchCityId, setDispatchCityId] = useState(0);
   const [diplomatId, setDiplomatId] = useState(0);
@@ -1218,6 +1365,7 @@ function DiplomacyPanel({ diplomacy, forces, cities, turn, clientRef, commandRev
     [cities, playerForceId]
   );
 
+  // 使者候选:派遣城的待命武将(单城详情话题按 cityId 订阅,与城市卡同一真源)。
   const dispatchCityDetail = useCityDetail(clientRef, dispatchCityId || 0, `diplomacy:${commandRevision}`);
   const freePersons = dispatchCityDetail?.persons?.filter((person) => person.free) ?? [];
 
@@ -1238,98 +1386,163 @@ function DiplomacyPanel({ diplomacy, forces, cities, turn, clientRef, commandRev
   }, [targetForceId, diplomacy.relations]);
 
   const dispatchCity = playerCities.find((city) => city.id === dispatchCityId) ?? null;
-  const gatesOk = Boolean(dispatchCity && freePersons.length > 0 && dispatchCity.gold >= 1000);
+  const gatesOk = Boolean(
+    dispatchCity && freePersons.length > 0 && dispatchCity.gold >= 1000
+  );
   const commandsAllowed = playerForceId === 0 || playerGate.awaitingPlayer;
   const canOrder = gatesOk && commandsAllowed && diplomatId > 0 && targetForceId > 0;
+
   const relationRows = [...diplomacy.relations].sort((a, b) => b.relation - a.relation);
 
+  const send = () => {
+    if (!canOrder) {
+      return;
+    }
+
+    onCommand(actionType, {
+      cityId: dispatchCityId,
+      personIds: [diplomatId],
+      targetForceId,
+      resourceValue: actionType === 'alliance' ? allianceGold : 0
+    });
+  };
+
   return (
-    <section className="diplomacy-panel">
+    <section className="drawer-panel diplomacy-panel">
       <div className="panel-title">
         <h2>外交</h2>
-        <span>{playerForceId > 0 ? `${diplomacy.playerForceName || `#${playerForceId}`} 的邦交面` : '全图邦交观察'}</span>
+        <span>
+          {playerForceId > 0
+            ? `${diplomacy.playerForceName || `#${playerForceId}`} 的邦交面 · 关系随月势演化`
+            : '全图邦交观察(无玩家局)'}
+        </span>
       </div>
-      <table className="force-table compact">
-        <thead>
-          <tr><th>势力</th><th>关系</th><th>协议</th></tr>
-        </thead>
-        <tbody>
-          {relationRows.map((relation) => (
-            <tr
-              key={relation.forceId}
-              className={relation.forceId === targetForceId ? 'selected' : ''}
-              onClick={() => setTargetForceId(relation.forceId)}
+
+      <div className="diplomacy-section">
+        <div className="panel-title">
+          <h3>势力关系</h3>
+          <span>{relationRows.length} 家</span>
+        </div>
+        <table className="force-table">
+          <thead>
+            <tr><th>势力</th><th>关系</th><th>协议</th></tr>
+          </thead>
+          <tbody>
+            {relationRows.map((relation) => (
+              <tr
+                key={relation.forceId}
+                className={relation.forceId === targetForceId ? 'selected' : ''}
+                onClick={() => setTargetForceId(relation.forceId)}
+              >
+                <td><strong>{relation.forceName}</strong></td>
+                <td className={relation.relation >= 0 ? 'relation-positive' : 'relation-negative'}>
+                  {relation.relation > 0 ? '+' : ''}{relation.relation}
+                </td>
+                <td>{relation.allied ? '同盟' : relation.hasAgreement ? '有协议' : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="hint">点选势力作为外交对象;关系门槛:结盟需 ≥2000,月度自然衰减中同盟缓升。</p>
+      </div>
+
+      {diplomacy.alliances.length > 0
+        ? (
+          <div className="diplomacy-section">
+            <div className="panel-title">
+              <h3>同盟与协议</h3>
+              <span>{diplomacy.alliances.length} 项</span>
+            </div>
+            <ul className="alliance-list">
+              {diplomacy.alliances.map((alliance) => (
+                <li key={alliance.id}>
+                  <strong>{ALLIANCE_TYPE_LABELS[alliance.type] ?? alliance.type}</strong>
+                  <span>{alliance.forceNames.join(' · ')}</span>
+                  <small>余 {alliance.leftCount} 旬</small>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+        : null}
+
+      <div className="diplomacy-section">
+        <div className="panel-title">
+          <h3>派遣使者</h3>
+          <span>原版活跃面:送礼 / 结盟 / 摒弃同盟</span>
+        </div>
+        <div className="expedition-form diplomacy-form">
+          <label>
+            派出城市
+            <select
+              value={dispatchCityId}
+              onChange={(event) => setDispatchCityId(Number(event.target.value))}
             >
-              <td><strong>{relation.forceName}</strong></td>
-              <td className={relation.relation >= 0 ? 'relation-positive' : 'relation-negative'}>
-                {relation.relation > 0 ? '+' : ''}{relation.relation}
-              </td>
-              <td>{relation.allied ? '同盟' : relation.hasAgreement ? '有协议' : '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="expedition-form diplomacy-form">
-        <label>
-          派出城市
-          <select value={dispatchCityId} onChange={(event) => setDispatchCityId(Number(event.target.value))}>
-            {playerCities.map((city) => (
-              <option key={city.id} value={city.id}>{city.name}(金 {formatNumber(city.gold)})</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          使者
-          <select value={diplomatId} onChange={(event) => setDiplomatId(Number(event.target.value))}>
-            <option value={0}>选择使者</option>
-            {freePersons.map((person) => (
-              <option key={person.id} value={person.id}>{person.name}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          行动
-          <select value={actionType} onChange={(event) => setActionType(event.target.value)}>
-            <option value="sendGift">送礼(1000 金)</option>
-            <option value="alliance">结盟</option>
-            <option value="discardAlliance">摒弃同盟</option>
-          </select>
-        </label>
-        {actionType === 'alliance'
-          ? (
-            <label>
-              结盟金
-              <input type="number" min={0} step={500} value={allianceGold} onChange={(event) => setAllianceGold(Math.max(0, Number(event.target.value)))} />
-            </label>
+              {playerCities.map((city) => (
+                <option key={city.id} value={city.id}>{city.name}(金 {formatNumber(city.gold)})</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            使者(待命武将)
+            <select
+              value={diplomatId}
+              onChange={(event) => setDiplomatId(Number(event.target.value))}
+            >
+              <option value={0}>选择使者</option>
+              {freePersons.map((person) => (
+                <option key={person.id} value={person.id}>
+                  {person.name}(政 {person.politics} 魅 {person.glamour})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            行动
+            <select value={actionType} onChange={(event) => setActionType(event.target.value)}>
+              <option value="sendGift">送礼(1000 金,关系必升)</option>
+              <option value="alliance">结盟(按关系与使者定成败)</option>
+              <option value="discardAlliance">摒弃同盟(即时生效)</option>
+            </select>
+          </label>
+          {actionType === 'alliance'
+            ? (
+              <label>
+                结盟金
+                <input
+                  type="number"
+                  min={0}
+                  step={500}
+                  value={allianceGold}
+                  onChange={(event) => setAllianceGold(Math.max(0, Number(event.target.value)))}
+                />
+              </label>
             )
-          : null}
-        <button type="button" disabled={!canOrder} onClick={() => onCommand(actionType, {
-          cityId: dispatchCityId,
-          personIds: [diplomatId],
-          targetForceId,
-          resourceValue: actionType === 'alliance' ? allianceGold : 0
-        })}>
-          派遣
-        </button>
+            : null}
+          <button type="button" disabled={!canOrder} onClick={send}>
+            派遣
+          </button>
+          <p className="hint expedition-hint">
+            {playerForceId === 0
+              ? '全托管局无玩家势力,外交为观察面。'
+              : !commandsAllowed
+                ? '外交与城内政同门:待玩家回合方可下令。'
+                : !gatesOk
+                  ? '门槛:城有待命武将且城金 ≥1000(行动力 ≥30)。'
+                  : '使者按路程逐日赶赴对方君主城;送达后结果行进消息流(送礼必成,结盟按成功率)。'}
+          </p>
+        </div>
       </div>
     </section>
   );
 }
 
-const TECHNIQUE_KIND_LABELS = {
-  1: '枪兵系',
-  2: '戟兵系',
-  3: '弩兵系',
-  4: '骑兵系',
-  5: '军制系',
-  6: '兵器系',
-  7: '设施系',
-  8: '火器系',
-  9: '政略系'
-};
-
+// 科技面板(M3.e,原版 window_technique 的 Web 面):按系(kind)分组的科技列表,
+// 状态三档 已拥有/可研究/未满足前置;进行中研究置顶;下令走 sango.researchCommand
+// (城金/技巧点/前置门槛照原版,执行武将默认军师自动推荐)。
 function TechniquePanel({ techniques, cities, turn, clientRef, commandRevision, playerGate, onCommand }) {
   const [dispatchCityId, setDispatchCityId] = useState(0);
+  const [researcherIds, setResearcherIds] = useState([]);
   const [expandedKind, setExpandedKind] = useState('');
 
   const playerForceId = playerGate?.playerForceId ?? techniques.forceId ?? 0;
@@ -1338,6 +1551,7 @@ function TechniquePanel({ techniques, cities, turn, clientRef, commandRevision, 
     [cities, playerForceId]
   );
 
+  // 研究执行人候选:派遣城待命武将(原版 PersonSelectSystem 最多 3 人;留空 = 军师推荐)。
   const dispatchCityDetail = useCityDetail(clientRef, dispatchCityId || 0, `technique:${commandRevision}`);
   const freePersons = dispatchCityDetail?.persons?.filter((person) => person.free) ?? [];
 
@@ -1347,10 +1561,35 @@ function TechniquePanel({ techniques, cities, turn, clientRef, commandRevision, 
     }
   }, [dispatchCityId, playerCities]);
 
+  useEffect(() => {
+    setResearcherIds([]);
+  }, [dispatchCityId]);
+
   const dispatchCity = playerCities.find((city) => city.id === dispatchCityId) ?? null;
   const commandsAllowed = playerForceId === 0 || playerGate.awaitingPlayer;
   const researching = techniques.researching ?? null;
 
+  const toggleResearcher = (personId) => {
+    setResearcherIds((ids) => (
+      ids.includes(personId)
+        ? ids.filter((id) => id !== personId)
+        : (ids.length < 3 ? [...ids, personId] : ids)
+    ));
+  };
+
+  const order = (technique) => {
+    if (!dispatchCity || !commandsAllowed) {
+      return;
+    }
+
+    onCommand({
+      cityId: dispatchCity.id,
+      techniqueId: technique.id,
+      personIds: researcherIds
+    });
+  };
+
+  // 分组:同系科技按 level 升序(原版科技树的列序);展开态单系。
   const groups = useMemo(() => {
     const map = new Map();
     (techniques.techniques ?? []).forEach((technique) => {
@@ -1365,65 +1604,134 @@ function TechniquePanel({ techniques, cities, turn, clientRef, commandRevision, 
   }, [techniques.techniques]);
 
   return (
-    <section className="technique-panel">
+    <section className="drawer-panel technique-panel">
       <div className="panel-title">
         <h2>科技</h2>
         <span>
           {techniques.forceName || '——'} · 技巧点 {formatNumber(techniques.techniquePoint)}
-          {researching ? ` · 研究中:${researching.name}(余 ${researching.leftCounter} 回合)` : ''}
+          {researching
+            ? ` · 研究中:${researching.name}(余 ${researching.leftCounter} 回合)`
+            : ' · 当前无研究'}
         </span>
       </div>
-      <div className="technique-groups">
-        {groups.map(([kind, rows]) => {
-          const ownedCount = rows.filter((row) => row.owned).length;
-          const open = expandedKind === String(kind);
-          return (
-            <div key={kind} className="technique-group">
-              <button
-                type="button"
-                className="technique-group-head"
-                onClick={() => setExpandedKind(open ? '' : String(kind))}
-              >
-                <strong>{TECHNIQUE_KIND_LABELS[kind] ?? `系 ${kind}`}</strong>
-                <span>{ownedCount} / {rows.length}</span>
-              </button>
-              {open
-                ? (
-                  <table className="force-table compact">
-                    <tbody>
-                      {rows.map((row) => (
-                        <tr key={row.id} className={row.owned ? 'owned' : ''}>
-                          <td>
-                            <strong>{row.name}</strong>
-                            <small className="technique-desc">{row.desc}</small>
-                          </td>
-                          <td>{row.owned ? '已拥有' : row.canResearch ? '可研究' : '前置未满足'}</td>
-                          <td>
-                            {row.owned || !commandsAllowed || researching
-                              ? null
-                              : (
-                                <button
-                                  type="button"
-                                  disabled={!row.canResearch || !dispatchCity}
-                                  onClick={() => onCommand({
-                                    cityId: dispatchCity.id,
-                                    techniqueId: row.id,
-                                    personIds: []
-                                  })}
-                                >
-                                  研究
-                                </button>
-                                )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  )
-                : null}
+
+      <div className="diplomacy-section">
+        <div className="panel-title">
+          <h3>下令研究</h3>
+          <span>原版「都市/研究技巧」:扣城金与技巧点,执行武将入研究任务</span>
+        </div>
+        <div className="expedition-form diplomacy-form">
+          <label>
+            研究城市
+            <select
+              value={dispatchCityId}
+              onChange={(event) => setDispatchCityId(Number(event.target.value))}
+            >
+              {playerCities.map((city) => (
+                <option key={city.id} value={city.id}>{city.name}(金 {formatNumber(city.gold)})</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            执行武将(留空 = 军师推荐,≤3)
+            <div className="researcher-chips">
+              {freePersons.map((person) => (
+                <button
+                  key={person.id}
+                  type="button"
+                  className={researcherIds.includes(person.id) ? 'chip selected' : 'chip'}
+                  onClick={() => toggleResearcher(person.id)}
+                >
+                  {person.name}
+                </button>
+              ))}
+              {freePersons.length === 0 ? <span className="hint">该城无待命武将</span> : null}
             </div>
-          );
-        })}
+          </label>
+          <p className="hint expedition-hint">
+            {playerForceId === 0
+              ? '全托管局无玩家势力,科技为观察面(各家 AI 也在研究)。'
+              : !commandsAllowed
+                ? '研究与其他城内政同门:待玩家回合方可下令。'
+                : researching
+                  ? '该势力已有进行中的研究,完成后才能立新项。'
+                  : '选中下方「可研究」科技即立项;成本随执行武将的对应属性降低耗时。'}
+          </p>
+        </div>
+      </div>
+
+      <div className="diplomacy-section">
+        <div className="panel-title">
+          <h3>科技树</h3>
+          <span>{(techniques.techniques ?? []).length} 项 · 点系名展开</span>
+        </div>
+        <div className="technique-groups">
+          {groups.map(([kind, rows]) => {
+            const ownedCount = rows.filter((row) => row.owned).length;
+            const open = expandedKind === String(kind);
+            return (
+              <div key={kind} className="technique-group">
+                <button
+                  type="button"
+                  className="technique-group-head"
+                  onClick={() => setExpandedKind(open ? '' : String(kind))}
+                >
+                  <strong>{TECHNIQUE_KIND_LABELS[kind] ?? `系 ${kind}`}</strong>
+                  <span>{ownedCount} / {rows.length}</span>
+                </button>
+                {open
+                  ? (
+                    <table className="force-table">
+                      <thead>
+                        <tr><th>科技</th><th>前置</th><th>金</th><th>技巧点</th><th>耗时</th><th>状态</th><th></th></tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row) => {
+                          const prereq = row.needTech > 0
+                            ? ((techniques.techniques ?? []).find((t) => t.id === row.needTech)?.name ?? `#${row.needTech}`)
+                            : '—';
+                          return (
+                            <tr key={row.id} className={row.owned ? 'owned' : ''}>
+                              <td>
+                                <strong>{row.name}</strong>
+                                <small className="technique-desc">{row.desc}</small>
+                              </td>
+                              <td>{prereq}</td>
+                              <td>{formatNumber(row.goldCost)}</td>
+                              <td>{formatNumber(row.techPointCost)}</td>
+                              <td>{row.counter} 回合起</td>
+                              <td>
+                                {row.owned
+                                  ? '已拥有'
+                                  : row.canResearch
+                                    ? '可研究'
+                                    : '前置未满足'}
+                              </td>
+                              <td>
+                                {row.owned || !commandsAllowed || researching
+                                  ? null
+                                  : (
+                                    <button
+                                      type="button"
+                                      disabled={!row.canResearch || !dispatchCity}
+                                      title="立项研究(扣城金与技巧点;执行武将留空则军师自动推荐)"
+                                      onClick={() => order(row)}
+                                    >
+                                      研究
+                                    </button>
+                                    )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    )
+                  : null}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
@@ -1431,8 +1739,9 @@ function TechniquePanel({ techniques, cities, turn, clientRef, commandRevision, 
 
 function ForceOverview({ forces }) {
   return (
-    <section className="force-overview">
-      <table className="force-table compact">
+    <section className="drawer-panel force-overview">
+      <div className="panel-title"><h2>势力概览</h2><span>{forces.length} 家</span></div>
+      <table className="force-table">
         <thead>
           <tr><th>名称</th><th>君主</th><th>城市</th><th>武将</th><th>状态</th></tr>
         </thead>
@@ -1449,83 +1758,6 @@ function ForceOverview({ forces }) {
         </tbody>
       </table>
     </section>
-  );
-}
-
-// 开局势力选择(保留原交互;走 sango.selectPlayerForce 原版玩家路径)。
-function ForceSelectOverlay({ turn, forces, cities, onSelect, onDismiss }) {
-  const [selected, setSelected] = useState(0);
-  const [busy, setBusy] = useState(false);
-  const alive = forces.filter((force) => force.alive);
-  const cityCountByForce = useMemo(() => {
-    const counts = new Map();
-    cities.forEach((city) => {
-      if (city.forceId > 0) {
-        counts.set(city.forceId, (counts.get(city.forceId) ?? 0) + 1);
-      }
-    });
-    return counts;
-  }, [cities]);
-  const selectedForce = alive.find((force) => force.id === selected) ?? null;
-
-  const confirm = async () => {
-    if (!selectedForce || busy) {
-      return;
-    }
-
-    setBusy(true);
-    await onSelect(selectedForce.id);
-    setBusy(false);
-  };
-
-  return (
-    <div className="force-select-overlay">
-      <section className="panel force-select-panel">
-        <div className="panel-title">
-          <h2>选择开局势力</h2>
-          <span>{alive.length} 家 · 原版玩家接入(君主军团回合制,行动力约束生效)</span>
-        </div>
-        <p className="force-select-heading">开局 · {turn.dateText} · 第 {turn.turnCount} 回合</p>
-        <div className="force-select-list">
-          {alive.map((force) => (
-            <button
-              key={force.id}
-              type="button"
-              className={force.id === selected ? 'city-row selected' : 'city-row'}
-              onClick={() => setSelected(force.id)}
-            >
-              <span
-                className="force-chip"
-                style={{ background: forceColor(force.id) }}
-                aria-hidden="true"
-              />
-              <strong>{force.name}</strong>
-              <span>君主 {force.governorName || '—'}</span>
-              <small>城市 {cityCountByForce.get(force.id) ?? 0} · 武将 {force.personCount}</small>
-            </button>
-          ))}
-        </div>
-        <div className="force-select-actions">
-          <button
-            type="button"
-            className="end-turn"
-            disabled={!selectedForce || busy}
-            onClick={confirm}
-          >
-            {busy ? '重整世界中……' : selectedForce ? `以${selectedForce.name}开局` : '选择一家势力'}
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            disabled={busy}
-            title="保持全托管观察模式:不设玩家势力,回合自由推进"
-            onClick={onDismiss}
-          >
-            旁观模式(全托管)
-          </button>
-        </div>
-      </section>
-    </div>
   );
 }
 
