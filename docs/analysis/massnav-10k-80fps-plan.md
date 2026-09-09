@@ -1,59 +1,113 @@
 # MassNavigation 10K → 80 FPS 目标分析（工作稿）
 
-基线：`origin/main` = `85dfe3529f`（已含 PR #1485 全量：`ffd11358f7` 合并点）。
+基线：`origin/main` = `85dfe3529f`（**已含 PR #1485 全量**，合并点 `ffd11358f7`）。
 工作树：`.worktrees/pi-1485-perf`，分支 `perf/massnav-10k-80fps`。
-载体：`launcher.mass-navigation-10k-hud.runtime.json`（10K agents + AgentBridgeMod）。
+载体：`launcher.mass-navigation-10k-hud.runtime.json`（10K agents + AgentBridgeMod，Release）。
 
-## 1. 现场数据（Release，900/600 帧，诊断日志）
+## 0. 结论先行
 
-Average FPS ≈ 23（main），最好帧 57 FPS，最坏帧 5 FPS。目标 80 FPS ⇒ 帧预算 12.5ms。
+- **PR #1485 已经合进 main**（2026-09-09），无需再合；它的地形/HUD/骨骼修复是后续一切测量的起点。
+- **PR #1463（GAS 效果事务）的实现、规模回归测试、评审文档全部已在 main**（`TransactionEntityIndex.cs` / `EffectPhaseSideEffectTransaction.cs` / `EffectLifetimeScaleTests.cs` / `EffectTransactionIndexTests.cs` 与 main 逐字节无差异，分支相对 main 只剩自己的旧基线和非 GAS 文件的滞后）——**它是完全重复的 PR，应关闭**。
+- 10K 整机帧率**不是 GPU 绑**：`gpuSkinBuild/gpuSkinDraw ≈ 0.4ms`，瓶颈是 CPU `tick`（14–20ms）里的 presentation + massnav sim。
+- 本轮已落两个确定性优化（见 §3），求解器 step 在隔离基准里 **-22%~-31%**。
+- 要稳定 80 FPS（12.5ms 帧预算）还需要 §4 的结构性动作；它们会改变展示语义，需要产品拍板。
 
-单帧预算拆分（中位）：
+## 1. 现场数据（Release，诊断日志）
 
-| 区间 | 现值 | 目标 |
+| 指标 | main 基线 | 本轮优化后 |
 |---|---|---|
-| `tick`（sim+presentation） | 20ms | ≤ 9ms |
-| `presentation` | 13–20ms | ≤ 5ms |
-| `sim` | 0.2–27ms（尖刺） | ≤ 4ms |
-| `post`/`begin`/`endDraw`/GPU | ~1.5ms | 不变 |
+| 最好帧 | 28.76ms（34.8 FPS） | 18.89ms（53 FPS） |
+| 典型 tick | 13–22ms | 10–16ms |
+| `presentation` | 13–20ms | 10–15ms |
+| `sim`（稳态） | 0.2–4ms + 峰值 27ms | 0.3ms + 峰值 2.6ms |
+| GPU 蒙皮 | 0.4ms | 0.4ms |
 
-## 2. 根因清单（按单帧时间排序）
+单帧 CPU 预算拆分（典型）：
 
-### P0-1 `MassNavigationSimulationStepSystem` steering 5–29ms + hard resolve 3–12ms
-- `steering`：10K agent × SonarSolver2D 全量求解，每帧。`_parallelWorkerCount=8` 已并行，但仍是 5–29ms。
-- `hard`：`hardPairs=78041..189728/帧`，`hardPenetrating=12026..41579/帧`——15–22% 配对每帧被判穿透并 `SeparateAgents`。
-  穿透率长期不收敛说明分离速度/顺序有缺陷，不只是计算量问题。
-- 证据：`massnav target=.. steering=.. step=.. hard=.. hardPenetrating=..` 诊断行。
+| 系统 | main | 优化后 |
+|---|---|---|
+| CameraCullingSystem | 3.6–6.2ms | 2.3–4.7ms |
+| MinimapPresentationSystem | 2.3–4.5ms | 2.2–4.5ms |
+| PresenterEntityTransformSyncSystem | 1.4–7.9ms | 1.8–7.5ms |
+| PresenterEmitSystem | 1.3–5.4ms | 1.0–4.8ms |
+| WorldHudToScreenSystem | 1.3–2.5ms | 1.3–2.5ms |
+| MassNavigationSimulationStepSystem | 0.3–37ms | 0.3–18.8ms |
 
-### P0-2 `CameraCullingSystem` 3.6–6.2ms/帧
-- 动态实体每帧全量 `ProcessEntity`：spatial gate + loaded chunk gate + `ComputeScreenCoverageAndViewportIntersection` + LOD。
-- 无「相机静止且实体未动 ⇒ 跳过」的 dirty 闸门（静态实体有 `PresentationStaticTransform`+`CullEpoch`，动态实体没有等价物）。
+## 2. 根因清单
 
-### P1-1 `MinimapPresentationSystem` 1.6–4.1ms/帧
-- `MinimapRuntime.Refresh` 每帧全量投影 10009 个 marker（`ProjectMarkers`），无 revision 闸门。
-- 视图未变（相机/缩放/标记未变）时本可复用上一帧结果。
+### P0-1 MassNav 求解器 steering + hard resolve（已优化，见 §3）
+- 硬解析每对候选**探测两次**（`AreAgentsPenetrating` 后又 `SeparateAgents` 重算 dx/dy/半径）。
+- 分离力每对穿透邻居都走 `ResolvePair*` 两次 + `ComputeSeparationResponse`（含 relation 矩阵查找、policy 分支、两处 `MathF.Max`、clamp）。
+- 热路径反复解引用 `Semantics.Solver` / `AvoidanceTuning` 类属性。
 
-### P1-2 `PresenterEntityTransformSyncSystem` 1.4–8.8ms/帧
-- 10K owner payload 全量同步；PR #1485 已加 `positionOnly`/`SyncOwnerPayloadAttachedChildren` 优化。
+### P0-2 CameraCullingSystem 每帧全量（已部分优化）
+- `cullSpatial` 1.1–3.6ms：每帧 `_spatial.QueryAabb` + **65K `HashSet<Entity>` 清空/回填/查成员**。
+- `cullDyn` 0.4–2.6ms：动态实体每帧全量 `ProcessEntity`（spatial gate + chunk gate + AABB/覆盖率 + LOD）。
+- 结构债：**40 个 `QueryDescription` + 20 个近乎复制的 `ProcessStatic*/ProcessVisual*`**；`ProcessNoVisual` 还逐实体 `World.TryGet` 取本可用 chunk span 的组件。
 
-### P1-3 `PresenterEmitSystem` 1.3–5.4ms/帧
-- PR #1485 已加 retained world HUD fast path + projection 复用。
+### P1-1 MinimapPresentationSystem 每帧全量重投影（未优化）
+- `MinimapRuntime.ProjectMarkers` 每帧遍历全部 10009 marker：投影 + orientation bucket + style key + `TryStageBucketKeyed`。
+- 小地图 field 只有 272–660px，10000 marker 在 272² 上是 **~7.4 个/像素**；渲染全部是纯冗余（视觉上不可分辨）。
+- 无 revision 闸门，也无像素级去重/密度上限。
 
-### P1-4 `hudProj`（WorldHudToScreenSystem）
-- main 的 `85dfe3529f` 已把地形遮挡缓存化（8–10ms → 1.3–2.5ms）。
+### P1-2 PresenterEmitSystem / TransformSync 每帧全量 30K presenter
+- `EmitQuery` 每帧迭代全部动态 presenter（约 20–30K），逐条 `ResolveCachedDefinition` + 快路径/慢路径。
+- `PerfHasEmitWork` 标记的增删是 **Arch 结构变更**（archetype 迁移），10K 可见性抖动时会连续触发。
 
-### P2 `worldHud=20000`（main 比 PR head 多）
-- `85dfe3529f` 之后 HUD 项从 4898/8246 涨到 20000，需确认是否有回归。
+### P2 main 上 `worldHud=20000`
+- 与 PR head 的 4898/8246 不同；实为运行时 agent 存活/在屏差异，不是回归（遮挡缓存不改变可见性结论）。
 
-## 3. 重复实现 / 结构债（用户点名的「傻逼代码」）
+## 3. 本轮已落改动
 
-- `CameraCullingSystem`：40 个 `QueryDescription` + 20+ 个近乎复制粘贴的 `ProcessStatic*`/`ProcessVisual*`。`ProcessNoVisual` 里 `World.TryGet` 逐实体取 bounds/lod（本可用于 chunk span）。
-- `WorldHudToScreenSystem`：owner 可见性缓存与 owner 投影缓存是两套平行 `Entity.Id+1` 数组 + 各自的 resize 逻辑，未复用。
-- `MinimapRuntime` / `MinimapScreenMarkerBuffer`：style bucket key 与 stableId 双重建模。
+### 3.1 `perf(massnav): fuse penetration probe and hoist separation tuning`（`f9b73dea3d`）
+`src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs`
+- 硬解析把「探测 + 分离」合成一次：dx/dy/d2/半径只算一次并传入 `SeparateAgents`。
+- 分离循环内联 `ComputeSeparationResponseInline`，把 tuning 标量、`minNavMass`、`bodyRadius`、`navMass`、teamCount 提到 per-agent 循环外；`MathF.Max/clamp` 改条件表达式。
+- 删除因此失效的 `ResolvePairBodyRadiusSumCm` / `ResolvePairSeparationRadiusCm` / `ResolvePairHardCandidateDistanceCm` / `AreAgentsPenetrating`。
 
-## 4. 计划
+隔离基准（`MassNavigationSolverBenchmark`，min-of-120，同机交替 A/B）：
 
-1. 先做可测量、低风险的闸门优化（cull 动态 dirty、minimap revision 复用）。
-2. 再做 MassNav steering/hard-resolve 的算法级优化（分离收敛、候选门控、邻域缓存）。
-3. 每步用同一载体 + `LUDOTS_RAYLIB_TIMING_LOG_INTERVAL_FRAMES` 采 21+ 样本，记录 before/after。
-4. 修掉 main 上 `worldHud=20000` 的疑似回归。
+| 布局 | before | after | Δ |
+|---|---|---|---|
+| dense-orbit 10K | 4.38ms | 2.94ms | **-33%** |
+| dense-orbit 20K | 8.88ms | 6.66ms | **-25%** |
+| opposed-march 10K | 6.63ms | 3.51ms | **-47%** |
+
+其中 steer 3.34→2.05ms、hard 0.94→0.82ms（10K dense）。
+
+### 3.2 `perf(culling): replace spatial-candidate HashSet with an entity-id stamp lane`（`6b136c79db`）
+`src/Core/Systems/CameraCullingSystem.cs`
+- `HashSet<Entity> _spatialCandidates` → `int[] _spatialCandidateStamps`（`entity.Id + 1` 索引 + 帧戳）。
+- 65K HashSet 的 Clear/Add/Contains 全部换成数组写读；每帧省一次大表哈希。
+
+### 3.3 验证
+- `ThreeCTests`：Culling 17/17 通过；全量 112/119，7 个失败为 main 基线既有的 `CameraShowcaseMod_*`（已 stash 对照确认）。
+- `PresentationTests` MassNavigation 123/125；2 个失败为 **flaky**（`Showcase_MouseBoxAcquisition_*`，main 上 3 次跑 2 次失败，PR #1485 正文亦声明基线失败）。
+- 隔离基准：`MassNavigationSolverBenchmark`（`[Explicit]`，不进 CI）。
+
+## 4. 未做 / 需产品拍板的动作（按预期收益排序）
+
+1. **Minimap 密度上限 / 像素去重**（预估省 2–4ms）：按 field 像素 cell 去重，每个 cell 至多一个代表 marker（+聚合计数）。改变视觉语义，需确认「小地图在满屏 10K 时是否允许聚合」。
+2. **Health HUD/Text 的 `maxLod`**（预估省 3–7ms）：配置已支持 `maxLod`（`PresenterDefinitionConfigLoader`），但全仓无人使用。给 `mass_navigation_agent_health_*` 设 `maxLod: Medium` 可让远处 80% 的血条/数字停止 emit。直接改变 showcase 视觉。
+3. **PresenterEmit 从「每帧全量迭代」改为真 dirty 驱动**（预估省 3–6ms）：现在靠 `PerfHasEmitWork` 结构标记 + 每帧全量扫；需把可见性抖动改成非结构写入（如帧戳 lane），否则结构变更本身更贵。
+4. **CameraCullingSystem 去重**（收益 1–3ms + 可维护性）：40 个 QueryDescription / 20 个复制方法收敛成带策略参数的少数循环；`ProcessNoVisual` 走 chunk span。
+5. **`MapEntityLifecycleObserverSystem` 每帧全量 diff**（0.6–1.5ms）：`CollectCurrentMembers` 全量重建 10K HashSet + `PreviousMembers.Contains` 逐项；可改为增量 spawn/death 事件驱动。
+
+## 5. 顺带发现的 main 基线问题
+
+- **`GasTests` 在干净 main 上编译失败**（8 个 CS0119，均在 `src/Tests/GasTests/GasCore/DeferredTriggerTests.cs:42-57`）：`using static NUnit.Framework.Assert` 让 `Throws.TypeOf<...>()` 被解释为 `Assert.Throws(...)` 方法组。这是基线断链，不是本轮引入；它会让任何依赖该项目的 PR 验证链路失真，建议单独修。
+- `ThreeCTests` 的 7 个 `CameraShowcaseMod_*` / `CameraAcceptanceMod_*` 失败在干净 main 上同样存在。
+- `Showcase_MouseBoxAcquisition_AcquiresVisibleMassNavigationAgents` **flaky**（main 上 3 次跑 2 次失败）；`RightClickIssuesOrders...` 稳定失败，与 PR #1485 正文声明一致（下单链另有缺陷）。
+
+## 6. 远端/本地待整合项盘点
+
+| 分支 / PR | 状态 | 与 10K 帧率的关系 | 建议 |
+|---|---|---|---|
+| #1485 `fix/hud-dirty-projection` | **已合入 main** | 地形/HUD/骨骼修复的起点 | 无需动作 |
+| #1463 `codex/effect-transaction-performance` | OPEN，但**实现 + 测试 + 文档全部已在 main** | `TransactionEntityIndex.cs` / `EffectPhaseSideEffectTransaction.cs` / `EffectLifetimeScaleTests.cs` / `EffectTransactionIndexTests.cs` 与 main 逐字节无差异 | **关闭（完全重复）** |
+| #1488 `codex/entity-attachment-motion-contract` | OPEN | 改的是 GAS `AttachmentPositionSyncSystem`，非 presenter 热路径 | 与本目标无关 |
+| #1486 `codex/presenter-attachment-contract-perf` | OPEN | presenter attachment 契约重构（+19.8K 行） | 风险大，建议独立评审 |
+| #1470 `codex/presenter-retained-visibility` | OPEN | presenter 可见性/清理 | 可独立评审，非本轮 |
+| #1484 `codex/navmesh-board-addressing-m1` | OPEN | navmesh 每板寻址 | 与本目标无关 |
+| `codex/nav-perf-query-cache-rebake-workers` | 本地远端分支 | 烘焙并行 + Detour mesh 共享 | 与本目标无关（烘焙期，非每帧） |
+| `cursor/massnav-drop-visual-scale-77d9` (#1287) | OPEN | 去掉 solver 里的 visualScale | 语义清理，非帧率 |
