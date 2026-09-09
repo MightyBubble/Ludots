@@ -39,6 +39,12 @@ public sealed partial class MassNavigationFlowSolverState
 
     private readonly float[] _staticCost;
     private readonly float[] _cost;
+
+    // Blocked cells (cost above the flow threshold) listed by row. The 9x9 obstacle-neighbour scan in
+    // ComputeFlow used to run for every grid cell even though obstacles are sparse, which dominated the
+    // flow rebuild; gathering only the listed blocked cells keeps the field identical while scanning far fewer.
+    private readonly int[] _blockedCells;
+    private readonly int[] _blockedRowStart;
     private readonly float[] _obsX;
     private readonly float[] _obsY;
     private readonly float[] _obsWorldX;
@@ -186,6 +192,8 @@ public sealed partial class MassNavigationFlowSolverState
         _playAreaMaxYCm = solver.PlayAreaMaxYCm;
 
         _staticCost = new float[_gridCellCount];
+        _blockedCells = new int[_gridCellCount];
+        _blockedRowStart = new int[_gridHeight + 1];
         _cost = new float[_gridCellCount];
         _obsX = new float[_maxObstacleCount];
         _obsY = new float[_maxObstacleCount];
@@ -1399,23 +1407,49 @@ public sealed partial class MassNavigationFlowSolverState
     private void RebuildFlowCostForState(FlowRuntimeState flowState, int crowdStampBudgetUnits)
     {
         Array.Copy(_staticCost, _cost, _staticCost.Length);
-        if (crowdStampBudgetUnits <= 0 || UnitCount <= 0)
+        if (crowdStampBudgetUnits > 0 && UnitCount > 0)
         {
-            return;
-        }
-
-        int budget = Math.Min(UnitCount, crowdStampBudgetUnits);
-        for (int sample = 0; sample < budget; sample++)
-        {
-            int unitIndex = (_crowdStampCursor + sample) % UnitCount;
-            if (!CanFlowStateObserveAgent(flowState, unitIndex))
+            int budget = Math.Min(UnitCount, crowdStampBudgetUnits);
+            for (int sample = 0; sample < budget; sample++)
             {
-                continue;
-            }
+                int unitIndex = (_crowdStampCursor + sample) % UnitCount;
+                if (!CanFlowStateObserveAgent(flowState, unitIndex))
+                {
+                    continue;
+                }
 
-            int offset = unitIndex << 1;
-            StampCrowdCost(_positionsCm[offset], _positionsCm[offset + 1]);
+                int offset = unitIndex << 1;
+                StampCrowdCost(_positionsCm[offset], _positionsCm[offset + 1]);
+            }
         }
+
+        RebuildBlockedCellIndex();
+    }
+
+    /// <summary>
+    /// Collects the cells above <c>flowBlockedCellThreshold</c> into a row-bucketed list so
+    /// <see cref="ComputeFlow"/> can scan only real blockers instead of every neighbour in the 9x9
+    /// window. Runs once per flow rebuild (O(grid)) and leaves the produced vector field unchanged.
+    /// </summary>
+    private void RebuildBlockedCellIndex()
+    {
+        float threshold = Semantics.Solver.FlowBlockedCellThreshold;
+        int[] rowStart = _blockedRowStart;
+        int count = 0;
+        for (int y = 0; y < _gridHeight; y++)
+        {
+            rowStart[y] = count;
+            int rowBase = y * _gridWidth;
+            for (int x = 0; x < _gridWidth; x++)
+            {
+                if (_cost[rowBase + x] > threshold)
+                {
+                    _blockedCells[count++] = x;
+                }
+            }
+        }
+
+        rowStart[_gridHeight] = count;
     }
 
     private bool CanFlowStateObserveAgent(FlowRuntimeState flowState, int agentIndex)
@@ -1572,35 +1606,49 @@ public sealed partial class MassNavigationFlowSolverState
                 float avoidX = 0f;
                 float avoidY = 0f;
                 int obstacleNeighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;
-                for (int offsetY = -obstacleNeighborRadiusCells; offsetY <= obstacleNeighborRadiusCells; offsetY++)
+                int minBlockedRow = y - obstacleNeighborRadiusCells;
+                if (minBlockedRow < 0)
                 {
-                    for (int offsetX = -obstacleNeighborRadiusCells; offsetX <= obstacleNeighborRadiusCells; offsetX++)
+                    minBlockedRow = 0;
+                }
+
+                int maxBlockedRow = y + obstacleNeighborRadiusCells;
+                if (maxBlockedRow >= _gridHeight)
+                {
+                    maxBlockedRow = _gridHeight - 1;
+                }
+
+                float normalizationEpsilonSq = Semantics.Solver.NormalizationEpsilonSq;
+                float neighborWeight = Semantics.Solver.FlowObstacleNeighborWeight;
+                for (int ny = minBlockedRow; ny <= maxBlockedRow; ny++)
+                {
+                    int offsetY = ny - y;
+                    int rowStart = _blockedRowStart[ny];
+                    int rowEnd = _blockedRowStart[ny + 1];
+                    for (int blockedIndex = rowStart; blockedIndex < rowEnd; blockedIndex++)
                     {
+                        int nx = _blockedCells[blockedIndex];
+                        int offsetX = nx - x;
+                        if (offsetX < -obstacleNeighborRadiusCells || offsetX > obstacleNeighborRadiusCells)
+                        {
+                            continue;
+                        }
+
                         if (offsetX == 0 && offsetY == 0)
                         {
                             continue;
                         }
 
-                        int nx = x + offsetX;
-                        int ny = y + offsetY;
-                        if ((uint)nx >= (uint)_gridWidth || (uint)ny >= (uint)_gridHeight)
+                        float ovx = -offsetX;
+                        float ovy = -offsetY;
+                        float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
+                        if (obstacleDistSq > normalizationEpsilonSq)
                         {
-                            continue;
-                        }
-
-                        if (_cost[(ny * _gridWidth) + nx] > Semantics.Solver.FlowBlockedCellThreshold)
-                        {
-                            float ovx = -offsetX;
-                            float ovy = -offsetY;
-                            float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
-                            if (obstacleDistSq > Semantics.Solver.NormalizationEpsilonSq)
-                            {
-                                float invObstacleDist = SafeInverseSqrt(obstacleDistSq);
-                                float obstacleDist = obstacleDistSq * invObstacleDist;
-                                float obstacleWeight = Semantics.Solver.FlowObstacleNeighborWeight / (obstacleDist * obstacleDist);
-                                avoidX += (ovx * invObstacleDist) * obstacleWeight;
-                                avoidY += (ovy * invObstacleDist) * obstacleWeight;
-                            }
+                            float invObstacleDist = SafeInverseSqrt(obstacleDistSq);
+                            float obstacleDist = obstacleDistSq * invObstacleDist;
+                            float obstacleWeight = neighborWeight / (obstacleDist * obstacleDist);
+                            avoidX += (ovx * invObstacleDist) * obstacleWeight;
+                            avoidY += (ovy * invObstacleDist) * obstacleWeight;
                         }
                     }
                 }
