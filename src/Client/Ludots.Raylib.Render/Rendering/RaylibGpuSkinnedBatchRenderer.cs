@@ -32,10 +32,6 @@ namespace Ludots.Raylib.Render
         private int _locSkyZenith = -1;
         private int _locSkyGround = -1;
         private int _locEnvSpecular = -1;
-        private int _locQualityTier = -1;
-
-        /// <summary>片元质量档；与实例化车道同一合同（0 = unlit 级，1 = 无 IBL，2 = 完整 PBR）。</summary>
-        public int QualityTier { get; set; } = 2;
         private RaylibPbrUniformLocations _skinningPbrLocs;
         private RaylibFrameLightingLocations _skinningLightingLocs;
         private RaylibShadowSamplingLocations _skinningShadowLocs;
@@ -527,8 +523,6 @@ namespace Ludots.Raylib.Render
             _frameLighting.ApplySkyIrradiance(_skinningShader, _locSkyZenith, _locSkyGround);
             float envSpecular = 1f;
             Rl.SetShaderValue(_skinningShader, _locEnvSpecular, &envSpecular, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-            int tier = QualityTier < 0 ? 0 : (QualityTier > 2 ? 2 : QualityTier);
-            Rl.SetShaderValue(_skinningShader, _locQualityTier, &tier, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
             _skinningShadowLocs.ApplyUniforms(_skinningShader, _frameShadow, _frameShadowTexelWorld);
         }
 
@@ -575,7 +569,6 @@ namespace Ludots.Raylib.Render
             _locSkyZenith = RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uSkyZenith", "skinning_instanced");
             _locSkyGround = RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uSkyGround", "skinning_instanced");
             _locEnvSpecular = RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uEnvSpecular", "skinning_instanced");
-            _locQualityTier = RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uQualityTier", "skinning_instanced");
             _skinningLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_skinningShader, "skinning_instanced");
             _skinningShadowLocs = RaylibShadowSamplingLocations.ResolveOrThrow(
                 _skinningShader,
