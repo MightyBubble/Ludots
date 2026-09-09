@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
@@ -16,9 +17,7 @@ namespace Ludots.Core.Gameplay.Attachment
     /// 运行在 PostMovement 组、WorldToGridSyncSystem 之前——父实体位姿已落定、网格派生链在其后。
     /// 深度序（父先子后）保证多层结构（底盘→炮塔→炮管）一步内一致；0 alloc（全部缓冲预分配复用）。
     /// 写权合同：sink 只写 PoseAuthority==Attached 或无 PoseAuthority 的子实体。
-    /// 恒重算（无 parent-moved 门）：位姿写者大量存在于本系统之后（PostMovement 后段的 nav 求解器、
-    /// AbilityActivation 的订单移动、EffectProcessing 的位移/投射物），Previous 比对在 sink 时点
-    /// 恒为"未移动"，门会让位置依赖子冻结；compose 只是几次 Fix64 运算，恒重算不构成热点。
+    /// 同步只消费明确的空间挂接边；拓扑不变时复用派生顺序，普通子集关系不参与排序。
     /// </summary>
     public sealed class AttachmentPositionSyncSystem : BaseSystem<World, float>
     {
@@ -26,6 +25,7 @@ namespace Ludots.Core.Gameplay.Attachment
         public const string CapacityExceededError = "GAS.ATTACH.SYNC.ERR.CapacityExceeded";
         public const string ParentPositionMissingError = "GAS.ATTACH.SYNC.ERR.ParentPositionMissing";
         public const string PoseAuthorityConflictError = "GAS.ATTACH.SYNC.ERR.PoseAuthorityConflict";
+        public const string CycleError = "GAS.ATTACH.SYNC.ERR.CycleDetected";
 
         private static readonly QueryDescription AttachedQuery = new QueryDescription()
             .WithAll<ChildOf, AttachedLocalPose>();
@@ -34,8 +34,16 @@ namespace Ludots.Core.Gameplay.Attachment
         private readonly ChildOf[] _childOf;
         private readonly AttachedLocalPose[] _localPose;
         private readonly int[] _depth;
+        private readonly int[] _firstChild;
+        private readonly int[] _lastChild;
+        private readonly int[] _nextSibling;
+        private readonly int[] _orderedIndices;
+        private readonly Dictionary<Entity, int> _snapshotIndices;
         private readonly int _scratchCapacity;
         private readonly PoseAuthorityArbiter? _poseAuthorityArbiter;
+        private int _snapshotCount;
+        private int _maxDepth;
+        private bool _topologyValid;
 
         public AttachmentPositionSyncSystem(
             World world,
@@ -56,6 +64,11 @@ namespace Ludots.Core.Gameplay.Attachment
             _childOf = new ChildOf[scratchCapacity];
             _localPose = new AttachedLocalPose[scratchCapacity];
             _depth = new int[scratchCapacity];
+            _firstChild = new int[scratchCapacity];
+            _lastChild = new int[scratchCapacity];
+            _nextSibling = new int[scratchCapacity];
+            _orderedIndices = new int[scratchCapacity];
+            _snapshotIndices = new Dictionary<Entity, int>(scratchCapacity);
         }
 
         /// <summary>本实例预分配挂接子缓冲容量（来自 gasRuntimeCapacity，禁止热路径扩容）。</summary>
@@ -70,6 +83,8 @@ namespace Ludots.Core.Gameplay.Attachment
         /// <summary>上一 Update 处理到的最大挂接深度（0 = 直接子）。</summary>
         public int LastMaxDepth { get; private set; }
 
+        public long TopologyBuildCount { get; private set; }
+
         public override void Update(in float dt)
         {
             LastAppliedCount = 0;
@@ -77,7 +92,6 @@ namespace Ludots.Core.Gameplay.Attachment
             LastMaxDepth = 0;
 
             int count = 0;
-            int maxDepth = 0;
             foreach (ref var chunk in World.Query(in AttachedQuery))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
@@ -87,40 +101,91 @@ namespace Ludots.Core.Gameplay.Attachment
                 {
                     if (count >= _scratchCapacity)
                     {
+                        _topologyValid = false;
                         throw new InvalidOperationException(
                             $"{CapacityExceededError}: staged={count + 1}, capacity={_scratchCapacity}.");
                     }
 
                     Entity entity = Unsafe.Add(ref entityFirst, index);
                     ChildOf childOf = childOfSpan[index];
+                    if (count >= _snapshotCount || _entities[count] != entity ||
+                        _childOf[count].Parent != childOf.Parent)
+                    {
+                        _topologyValid = false;
+                    }
+
                     _entities[count] = entity;
                     _childOf[count] = childOf;
                     _localPose[count] = localPoseSpan[index];
-                    int depth = ResolveAttachmentDepth(entity, childOf.Parent);
-                    _depth[count] = depth;
-                    if (depth > maxDepth)
-                    {
-                        maxDepth = depth;
-                    }
-
                     count++;
                 }
             }
 
-            LastMaxDepth = maxDepth;
-
-            // 深度序：同一固定步内父层先落定，子层读到的是本步父位姿。
-            for (int depth = 0; depth <= maxDepth; depth++)
+            if (count != _snapshotCount)
             {
-                for (int i = 0; i < count; i++)
-                {
-                    if (_depth[i] != depth)
-                    {
-                        continue;
-                    }
+                _topologyValid = false;
+            }
 
-                    ProcessChild(_entities[i], in _childOf[i], in _localPose[i]);
+            _snapshotCount = count;
+            if (!_topologyValid)
+            {
+                BuildDependencyOrder(count);
+                _topologyValid = true;
+                TopologyBuildCount++;
+            }
+
+            LastMaxDepth = _maxDepth;
+            for (int order = 0; order < count; order++)
+            {
+                int i = _orderedIndices[order];
+                ProcessChild(_entities[i], in _childOf[i], in _localPose[i]);
+            }
+        }
+
+        private void BuildDependencyOrder(int count)
+        {
+            _snapshotIndices.Clear();
+            _maxDepth = 0;
+            Array.Fill(_firstChild, -1, 0, count);
+            Array.Fill(_lastChild, -1, 0, count);
+            Array.Fill(_nextSibling, -1, 0, count);
+            for (int i = 0; i < count; i++)
+            {
+                _snapshotIndices.Add(_entities[i], i);
+            }
+
+            int orderedCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (_snapshotIndices.TryGetValue(_childOf[i].Parent, out int parentIndex))
+                {
+                    int last = _lastChild[parentIndex];
+                    if (last < 0) _firstChild[parentIndex] = i;
+                    else _nextSibling[last] = i;
+                    _lastChild[parentIndex] = i;
                 }
+                else
+                {
+                    _depth[i] = 0;
+                    _orderedIndices[orderedCount++] = i;
+                }
+            }
+
+            for (int order = 0; order < orderedCount; order++)
+            {
+                int parentIndex = _orderedIndices[order];
+                for (int child = _firstChild[parentIndex]; child >= 0; child = _nextSibling[child])
+                {
+                    int depth = _depth[parentIndex] + 1;
+                    _depth[child] = depth;
+                    _maxDepth = Math.Max(_maxDepth, depth);
+                    _orderedIndices[orderedCount++] = child;
+                }
+            }
+
+            if (orderedCount != count)
+            {
+                throw new InvalidOperationException($"{CycleError}: unresolved={count - orderedCount}.");
             }
         }
 
@@ -236,22 +301,5 @@ namespace Ludots.Core.Gameplay.Attachment
             LastOrphanCleanupCount++;
         }
 
-        private int ResolveAttachmentDepth(Entity child, Entity parent)
-        {
-            int depth = 0;
-            Entity current = parent;
-            while (World.IsAlive(current) && World.Has<ChildOf>(current))
-            {
-                depth++;
-                current = World.Get<ChildOf>(current).Parent;
-                if (depth > 1024)
-                {
-                    throw new InvalidOperationException(
-                        "GAS.ATTACH.SYNC.ERR.DepthWalkExceeded: the ChildOf graph invariant is broken.");
-                }
-            }
-
-            return depth;
-        }
     }
 }

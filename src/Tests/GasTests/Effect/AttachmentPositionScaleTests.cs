@@ -16,6 +16,67 @@ namespace Ludots.Tests.GAS;
 public sealed class AttachmentPositionScaleTests
 {
     [Test]
+    public void StableAttachments_ReuseOrderButConsumeChangedLocalPose()
+    {
+        using var world = World.Create();
+        Entity root = world.Create(WorldPositionCm.FromCm(10, 0));
+        Entity child = world.Create(WorldPositionCm.FromCm(0, 0));
+        AttachmentOps.Attach(world, null, child, root, Offset());
+        using var system = new AttachmentPositionSyncSystem(world);
+        system.Update(1f / 60f);
+        long builds = system.TopologyBuildCount;
+
+        world.Get<AttachedLocalPose>(child).OffsetCm = Fix64Vec2.FromInt(20, 0);
+        world.Get<WorldPositionCm>(root) = WorldPositionCm.FromCm(100, 0);
+        system.Update(1f / 60f);
+
+        Assert.That(system.TopologyBuildCount, Is.EqualTo(builds));
+        Assert.That(world.Get<WorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(120, 0)));
+    }
+
+    [Test]
+    public void CapacityFailureThenReplacement_RebuildsTheOrder()
+    {
+        using var world = World.Create();
+        Entity root = world.Create(WorldPositionCm.FromCm(10, 0));
+        Entity first = world.Create(WorldPositionCm.FromCm(0, 0));
+        Entity second = world.Create(WorldPositionCm.FromCm(0, 0));
+        AttachmentOps.Attach(world, null, first, root, Offset());
+        AttachmentOps.Attach(world, null, second, first, Offset());
+        using var system = new AttachmentPositionSyncSystem(world, scratchCapacity: 2);
+        system.Update(1f / 60f);
+        Entity overflow = world.Create(WorldPositionCm.FromCm(0, 0));
+        AttachmentOps.Attach(world, null, overflow, root, Offset());
+        Assert.Throws<InvalidOperationException>(() => system.Update(1f / 60f));
+
+        AttachmentOps.Detach(world, null, second, DetachPlacement.KeepWorldPose, 0);
+        AttachmentOps.Attach(world, null, first, overflow, Offset());
+        world.Get<WorldPositionCm>(root) = WorldPositionCm.FromCm(100, 0);
+        system.Update(1f / 60f);
+
+        Assert.That(world.Get<WorldPositionCm>(first).Value, Is.EqualTo(Fix64Vec2.FromInt(102, 0)));
+        Assert.That(system.LastAppliedCount, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void LogicalChildrenWithoutAttachment_DoNotEnterThePositionPass()
+    {
+        using var world = World.Create();
+        Entity root = world.Create(WorldPositionCm.FromCm(0, 0));
+        Entity child = world.Create(WorldPositionCm.FromCm(20, 0));
+        RelationOps.SetParent(world, child, root);
+        using var system = new AttachmentPositionSyncSystem(world);
+        system.Update(1f / 60f);
+        long builds = system.TopologyBuildCount;
+        world.Get<WorldPositionCm>(root) = WorldPositionCm.FromCm(100, 0);
+        system.Update(1f / 60f);
+
+        Assert.That(system.TopologyBuildCount, Is.EqualTo(builds));
+        Assert.That(system.LastAppliedCount, Is.Zero);
+        Assert.That(world.Get<WorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(20, 0)));
+    }
+
+    [Test]
     public void LogicalAncestors_DoNotBecomeSpatialDependencies()
     {
         using var world = World.Create();
