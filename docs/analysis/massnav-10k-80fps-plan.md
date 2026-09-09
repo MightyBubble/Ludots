@@ -45,10 +45,10 @@
 - `cullDyn` 0.4–2.6ms：动态实体每帧全量 `ProcessEntity`（spatial gate + chunk gate + AABB/覆盖率 + LOD）。
 - 结构债：**40 个 `QueryDescription` + 20 个近乎复制的 `ProcessStatic*/ProcessVisual*`**；`ProcessNoVisual` 还逐实体 `World.TryGet` 取本可用 chunk span 的组件。
 
-### P1-1 MinimapPresentationSystem 每帧全量重投影（未优化）
-- `MinimapRuntime.ProjectMarkers` 每帧遍历全部 10009 marker：投影 + orientation bucket + style key + `TryStageBucketKeyed`。
-- 小地图 field 只有 272–660px，10000 marker 在 272² 上是 **~7.4 个/像素**；渲染全部是纯冗余（视觉上不可分辨）。
-- 无 revision 闸门，也无像素级去重/密度上限。
+### P1-1 MinimapPresentationSystem 每帧全量重投影（未优化，需产品拍板）
+- `MinimapRuntime.ProjectMarkers` 每帧遍历全部 10009 marker：投影 + orientation bucket + style key + `TryStageBucketKeyed`（**`minimapProject` 2.5–3.4ms**）。
+- 小地图 field 只有 272–660px，10000 marker 在 272² 上是 **~7.4 个/像素**；屏幕绘制已由 `SkiaOverlayRenderer.DrawMinimapMarkersBatched` 按 bucket 批量化 + sprite 缓存（所以 `overlayPaint` 不是每 marker 成本，降 marker 数对它收益有限）。
+- 无 revision 闸门，也无像素级去重/密度上限。**按像素 cell 去重能省下 `minimapProject` 的绝大部分**，但它会改 `VisibleMarkerCount` 语义，而 `MinimapShowcaseAcceptanceTests` / `MinimapKnowledgeProjectionTests` 正在断言精确值（20/3/2/1）——属于产品级语义变更，本轮未动。
 
 ### P1-2 PresenterEmitSystem / TransformSync 每帧全量 30K presenter
 - `EmitQuery` 每帧迭代全部动态 presenter（约 20–30K），逐条 `ResolveCachedDefinition` + 快路径/慢路径。
@@ -87,7 +87,7 @@
 
 ## 4. 未做 / 需产品拍板的动作（按预期收益排序）
 
-1. **Minimap 密度上限 / 像素去重**（预估省 2–4ms）：按 field 像素 cell 去重，每个 cell 至多一个代表 marker（+聚合计数）。改变视觉语义，需确认「小地图在满屏 10K 时是否允许聚合」。
+1. **Minimap 按像素 cell 去重**（预估省 2–3ms，集中在 `minimapProject`）：每个 field 像素至多一个代表 marker。会改 `VisibleMarkerCount` 语义，`MinimapShowcaseAcceptanceTests`（断言 20）与 `MinimapKnowledgeProjectionTests`（断言 3/2/1）需同步改口径。屏幕绘制已批量，故对 `overlayPaint` 收益有限。
 2. **Health HUD/Text 的 `maxLod`**（预估省 3–7ms）：配置已支持 `maxLod`（`PresenterDefinitionConfigLoader`），但全仓无人使用。给 `mass_navigation_agent_health_*` 设 `maxLod: Medium` 可让远处 80% 的血条/数字停止 emit。直接改变 showcase 视觉。
 3. **PresenterEmit 从「每帧全量迭代」改为真 dirty 驱动**（预估省 3–6ms）：现在靠 `PerfHasEmitWork` 结构标记 + 每帧全量扫；需把可见性抖动改成非结构写入（如帧戳 lane），否则结构变更本身更贵。
 4. **CameraCullingSystem 去重**（收益 1–3ms + 可维护性）：40 个 QueryDescription / 20 个复制方法收敛成带策略参数的少数循环；`ProcessNoVisual` 走 chunk span。
