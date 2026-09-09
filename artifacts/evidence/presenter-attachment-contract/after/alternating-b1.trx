@@ -1,0 +1,639 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="2f434cfb-e265-46de-abe3-13f77bf287bd" name="sietg@CODESEAL 2026-09-09 18:51:41" runUser="CODESEAL\sietg" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-09T18:51:41.7468414+08:00" queuing="2026-09-09T18:51:41.7468418+08:00" start="2026-09-09T18:51:39.0256835+08:00" finish="2026-09-09T18:52:03.4103821+08:00" />
+  <TestSettings name="default" id="45e32e2d-271b-4584-84a2-91ca7c1c0235">
+    <Deployment runDeploymentRoot="sietg_CODESEAL_2026-09-09_18_51_41" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="7a4647a7-0fe3-4048-9205-9cfd3c64396f" testId="07413c48-a384-0834-9a90-de019a2df7d2" testName="SyncAndBehavior_Scale(10000,3,False,0)" computerName="CODESEAL" duration="00:00:00.3616050" startTime="2026-09-09T18:51:55.7269680+08:00" endTime="2026-09-09T18:51:56.0885551+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7a4647a7-0fe3-4048-9205-9cfd3c64396f">
+      <Output>
+        <StdOut>10000,3,False,0,1.126300,1.278300,0.001000,0.004000,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="8bdac1c0-695f-4fb0-8f58-be5687a6b780" testId="17ebb53f-395c-7ffa-81a2-e4c7321558df" testName="SyncAndBehavior_Scale(10000,3,True,-1)" computerName="CODESEAL" duration="00:00:03.2610000" startTime="2026-09-09T18:51:59.9452744+08:00" endTime="2026-09-09T18:52:03.2061316+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8bdac1c0-695f-4fb0-8f58-be5687a6b780">
+      <Output>
+        <StdOut>10000,3,True,10000,21.157100,27.156600,0.010500,0.019700,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="10503c63-8399-4550-a540-404b062de2ca" testId="50c070db-bbf0-8ba2-d86c-35c556b7a39a" testName="ParameterChanges_VisitOnlyActiveConsumers(10000,True,False,False)" computerName="CODESEAL" duration="00:00:00.7327090" startTime="2026-09-09T18:51:48.6495859+08:00" endTime="2026-09-09T18:51:49.3822605+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="10503c63-8399-4550-a540-404b062de2ca">
+      <Output>
+        <StdOut>10000,True,False,False,3.092300,3.909400,0,0,0,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="485e7f86-2355-45f4-9645-f2585a68853f" testId="3295b3c9-a688-47d4-1db7-69da2a464331" testName="ParameterChanges_VisitOnlyActiveConsumers(1000,True,False,True)" computerName="CODESEAL" duration="00:00:00.0224159" startTime="2026-09-09T18:51:41.6651369+08:00" endTime="2026-09-09T18:51:41.6875519+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="485e7f86-2355-45f4-9645-f2585a68853f">
+      <Output>
+        <StdOut>1000,True,False,True,0.099800,0.103600,0,0,0,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="50542728-fdfd-4ed6-8213-a7042d9da3b4" testId="5fbcce72-d72a-6289-bf1f-76204764091b" testName="ParameterChanges_VisitOnlyActiveConsumers(5000,False,False,True)" computerName="CODESEAL" duration="00:00:00.3342980" startTime="2026-09-09T18:51:41.9025242+08:00" endTime="2026-09-09T18:51:42.2368075+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="50542728-fdfd-4ed6-8213-a7042d9da3b4">
+      <Output>
+        <StdOut>5000,False,False,True,2.464900,5.089500,0,5000,30000,1835008</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="d300add0-4a14-43b4-b3dd-95d22452286f" testId="599fe81e-d9fd-4a03-1b98-995aa15a695a" testName="ParameterChanges_VisitOnlyActiveConsumers(10000,False,True,True)" computerName="CODESEAL" duration="00:00:02.4134450" startTime="2026-09-09T18:51:46.2362057+08:00" endTime="2026-09-09T18:51:48.6495447+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d300add0-4a14-43b4-b3dd-95d22452286f">
+      <Output>
+        <StdOut>10000,False,True,True,20.280700,44.436700,0,10000,60000,3670016</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="9ddf6eb6-13eb-4b6e-802b-f8b336076196" testId="1123a0a6-9a7a-324c-d2ca-d22aebd83e40" testName="SyncAndBehavior_Scale(5000,3,False,0)" computerName="CODESEAL" duration="00:00:00.1767120" startTime="2026-09-09T18:51:51.9454750+08:00" endTime="2026-09-09T18:51:52.1221779+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9ddf6eb6-13eb-4b6e-802b-f8b336076196">
+      <Output>
+        <StdOut>5000,3,False,0,0.562600,0.631100,0.001000,0.003000,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="ae65eda5-2bbd-443e-bfc0-8a5781e3666d" testId="8e5884b4-2050-c324-3161-fcd924aeffff" testName="SyncAndBehavior_Scale(5000,0,False,-1)" computerName="CODESEAL" duration="00:00:00.1992610" startTime="2026-09-09T18:51:51.7461278+08:00" endTime="2026-09-09T18:51:51.9453786+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ae65eda5-2bbd-443e-bfc0-8a5781e3666d">
+      <Output>
+        <StdOut>5000,0,False,5000,1.424700,1.593800,0.001400,0.004000,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6fbc36f2-d629-4fc6-aae2-a9a4bb1bb540" testId="82251c8e-c21e-cee1-7427-eca171684c9f" testName="SyncAndBehavior_Scale(5000,3,True,-1)" computerName="CODESEAL" duration="00:00:01.4088590" startTime="2026-09-09T18:51:53.6056089+08:00" endTime="2026-09-09T18:51:55.0144054+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6fbc36f2-d629-4fc6-aae2-a9a4bb1bb540">
+      <Output>
+        <StdOut>5000,3,True,5000,10.081200,15.359900,0.005800,0.022200,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="0b984492-bf8a-444b-88e6-41c8d1436513" testId="16b446ae-eace-4e46-de44-3a185e2f92ed" testName="SyncAndBehavior_Scale(5000,3,True,1)" computerName="CODESEAL" duration="00:00:00.5046940" startTime="2026-09-09T18:51:53.1008699+08:00" endTime="2026-09-09T18:51:53.6055407+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0b984492-bf8a-444b-88e6-41c8d1436513">
+      <Output>
+        <StdOut>5000,3,True,1,0.478000,0.581000,0.001100,0.004100,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6db21e6f-9fce-49e0-8017-e310409a45b2" testId="10d06f02-31de-cebf-26cf-ebb2b980e672" testName="SyncAndBehavior_Scale(5000,0,False,0)" computerName="CODESEAL" duration="00:00:00.0991590" startTime="2026-09-09T18:51:51.5713615+08:00" endTime="2026-09-09T18:51:51.6705146+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6db21e6f-9fce-49e0-8017-e310409a45b2">
+      <Output>
+        <StdOut>5000,0,False,0,0.469200,0.492600,0.000900,0.001400,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="e1d1fba9-276a-4fc3-b0b4-329fdb304389" testId="a8a035d7-67a7-1804-45e3-802d4a3efefd" testName="ParameterChanges_VisitOnlyActiveConsumers(5000,True,True,False)" computerName="CODESEAL" duration="00:00:00.1194020" startTime="2026-09-09T18:51:43.2996369+08:00" endTime="2026-09-09T18:51:43.4190334+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e1d1fba9-276a-4fc3-b0b4-329fdb304389">
+      <Output>
+        <StdOut>5000,True,True,False,0.423300,0.703700,0,0,0,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="316f8339-0160-4259-801a-578a10a488dc" testId="03130235-7215-fe03-455d-05e0f5a39ce9" testName="ParameterChanges_VisitOnlyActiveConsumers(5000,False,True,True)" computerName="CODESEAL" duration="00:00:00.5723950" startTime="2026-09-09T18:51:42.4285466+08:00" endTime="2026-09-09T18:51:43.0009163+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="316f8339-0160-4259-801a-578a10a488dc">
+      <Output>
+        <StdOut>5000,False,True,True,3.505400,4.752500,0,5000,30000,1835008</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="d06c99d0-13a9-4252-9bd2-e63c11d2dba6" testId="77289aca-54a3-5fda-b973-959e8ee17d67" testName="ParameterChanges_VisitOnlyActiveConsumers(10000,False,False,True)" computerName="CODESEAL" duration="00:00:01.7058930" startTime="2026-09-09T18:51:44.0264167+08:00" endTime="2026-09-09T18:51:45.7322349+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d06c99d0-13a9-4252-9bd2-e63c11d2dba6">
+      <Output>
+        <StdOut>10000,False,False,True,15.902400,21.285500,0,10000,60000,3670016</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f56ebfe3-5f33-400f-b18f-509808fcc7ad" testId="4e628128-5651-15b5-a8fe-9df0bc093cf2" testName="SyncAndBehavior_Scale(1000,3,False,-1)" computerName="CODESEAL" duration="00:00:00.0470920" startTime="2026-09-09T18:51:51.0806895+08:00" endTime="2026-09-09T18:51:51.1277775+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f56ebfe3-5f33-400f-b18f-509808fcc7ad">
+      <Output>
+        <StdOut>1000,3,False,1000,0.173300,0.196700,0.000400,0.000600,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="11f6f4ca-e37f-443e-86d2-502055941ace" testId="7f8cda25-ed15-29ae-b82f-85ec5e4a1d81" testName="ParameterChanges_VisitOnlyActiveConsumers(5000,True,True,True)" computerName="CODESEAL" duration="00:00:00.2777620" startTime="2026-09-09T18:51:43.4190698+08:00" endTime="2026-09-09T18:51:43.6968192+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="11f6f4ca-e37f-443e-86d2-502055941ace">
+      <Output>
+        <StdOut>5000,True,True,True,0.712900,1.236600,0,0,0,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="3dde1f4a-e9c4-44bb-8e68-08271568b0ca" testId="5bb3325f-db6f-a716-5661-0d08ce8c3919" testName="SyncAndBehavior_Scale(10000,3,True,0)" computerName="CODESEAL" duration="00:00:01.3367590" startTime="2026-09-09T18:51:57.0967329+08:00" endTime="2026-09-09T18:51:58.4334325+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3dde1f4a-e9c4-44bb-8e68-08271568b0ca">
+      <Output>
+        <StdOut>10000,3,True,0,1.113400,1.231900,0.001200,0.004400,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="883ba97c-d928-4ed1-8b3d-2922e73d10e2" testId="7214272f-dca0-92d1-960a-8e60216047b2" testName="SyncAndBehavior_Scale(5000,3,True,0)" computerName="CODESEAL" duration="00:00:00.4400030" startTime="2026-09-09T18:51:52.6608292+08:00" endTime="2026-09-09T18:51:53.1008115+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="883ba97c-d928-4ed1-8b3d-2922e73d10e2">
+      <Output>
+        <StdOut>5000,3,True,0,0.551300,0.580700,0.001000,0.002400,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="9e792423-603d-4b8d-a3bb-cec8a22cdca5" testId="f52c4223-5afd-02e3-5c06-acc21583df5b" testName="SyncAndBehavior_Scale(1000,0,False,0)" computerName="CODESEAL" duration="00:00:00.1132150" startTime="2026-09-09T18:51:50.8387227+08:00" endTime="2026-09-09T18:51:50.9519310+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9e792423-603d-4b8d-a3bb-cec8a22cdca5">
+      <Output>
+        <StdOut>1000,0,False,0,0.053800,0.060800,0.000300,0.000400,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6d870485-8616-4485-87bb-1e859872578f" testId="320d7f2e-e395-9074-3419-850ad3f41913" testName="ParameterChanges_VisitOnlyActiveConsumers(10000,False,True,False)" computerName="CODESEAL" duration="00:00:00.5038990" startTime="2026-09-09T18:51:45.7322795+08:00" endTime="2026-09-09T18:51:46.2361556+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6d870485-8616-4485-87bb-1e859872578f">
+      <Output>
+        <StdOut>10000,False,True,False,2.071700,2.824900,0,0,60000,3670016</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="531b81f9-f3cd-4ead-80af-2c55e42c846f" testId="afb5dec9-bf93-0c57-3fe7-1b78dedb83ca" testName="SyncAndBehavior_Scale(10000,0,False,1)" computerName="CODESEAL" duration="00:00:00.1308149" startTime="2026-09-09T18:51:55.1656040+08:00" endTime="2026-09-09T18:51:55.2964125+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="531b81f9-f3cd-4ead-80af-2c55e42c846f">
+      <Output>
+        <StdOut>10000,0,False,1,0.569200,0.943800,0.000700,0.003500,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="ceb9c3b9-e977-4083-9b56-aaa8937f1526" testId="d3f2dffa-2334-8d87-edba-dd8e144827d0" testName="SyncAndBehavior_Scale(1000,3,False,1)" computerName="CODESEAL" duration="00:00:00.0352760" startTime="2026-09-09T18:51:51.0453449+08:00" endTime="2026-09-09T18:51:51.0806186+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ceb9c3b9-e977-4083-9b56-aaa8937f1526">
+      <Output>
+        <StdOut>1000,3,False,1,0.062600,0.069600,0.000300,0.000400,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="b186191b-e9e5-49b8-bc2d-703fec2d931b" testId="92fada6a-a9c9-7bd0-deac-f7b5ee1ee7aa" testName="ParameterChanges_VisitOnlyActiveConsumers(10000,True,False,True)" computerName="CODESEAL" duration="00:00:00.7168740" startTime="2026-09-09T18:51:49.3823450+08:00" endTime="2026-09-09T18:51:50.0991867+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b186191b-e9e5-49b8-bc2d-703fec2d931b">
+      <Output>
+        <StdOut>10000,True,False,True,2.437500,3.146100,0,0,0,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="63182523-055c-4634-9ddb-49a5dbe14747" testId="b9d8693e-d6d4-1e44-af07-7d8888f57ae2" testName="ParameterChanges_VisitOnlyActiveConsumers(1000,False,False,True)" computerName="CODESEAL" duration="00:00:00.0820530" startTime="2026-09-09T18:51:41.3783450+08:00" endTime="2026-09-09T18:51:41.4603935+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="63182523-055c-4634-9ddb-49a5dbe14747">
+      <Output>
+        <StdOut>1000,False,False,True,0.517000,0.566500,0,1000,6000,458752</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="23fde71b-a3ae-498f-be2a-36f453b4750e" testId="2a9edada-7157-ad3b-e64c-57e90dc90880" testName="ParameterChanges_VisitOnlyActiveConsumers(5000,True,False,False)" computerName="CODESEAL" duration="00:00:00.1366989" startTime="2026-09-09T18:51:43.0009552+08:00" endTime="2026-09-09T18:51:43.1376476+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="23fde71b-a3ae-498f-be2a-36f453b4750e">
+      <Output>
+        <StdOut>5000,True,False,False,0.590400,0.722100,0,0,0,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="e5e3300d-48a0-4976-a2b9-f79d787bc341" testId="ee446543-05e9-4d30-c66d-6872d52cde90" testName="SyncAndBehavior_Scale(10000,3,False,-1)" computerName="CODESEAL" duration="00:00:00.5710070" startTime="2026-09-09T18:51:56.5256936+08:00" endTime="2026-09-09T18:51:57.0966742+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e5e3300d-48a0-4976-a2b9-f79d787bc341">
+      <Output>
+        <StdOut>10000,3,False,10000,3.269300,3.429300,0.001000,0.002800,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="941a632c-7235-497f-9a7e-1c27cf962f16" testId="4ddd7984-bd16-151d-aac5-3bb0a9fed6c6" testName="SyncAndBehavior_Scale(10000,3,False,1)" computerName="CODESEAL" duration="00:00:00.4369930" startTime="2026-09-09T18:51:56.0886392+08:00" endTime="2026-09-09T18:51:56.5256119+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="941a632c-7235-497f-9a7e-1c27cf962f16">
+      <Output>
+        <StdOut>10000,3,False,1,1.138800,1.261300,0.001200,0.004300,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="eab35756-1ef3-4721-8d2b-c763eedcd6c0" testId="7ed8fc48-b2d2-5acf-25b8-e09fc3e026fb" testName="SyncAndBehavior_Scale(1000,3,False,0)" computerName="CODESEAL" duration="00:00:00.0307930" startTime="2026-09-09T18:51:51.0144849+08:00" endTime="2026-09-09T18:51:51.0452750+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="eab35756-1ef3-4721-8d2b-c763eedcd6c0">
+      <Output>
+        <StdOut>1000,3,False,0,0.100300,0.114200,0.000600,0.000800,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="aae1785d-9898-4242-86b5-325f320e443a" testId="8c63e780-9edd-91a1-b031-3145a6a2a02b" testName="ParameterChanges_VisitOnlyActiveConsumers(5000,False,True,False)" computerName="CODESEAL" duration="00:00:00.1916700" startTime="2026-09-09T18:51:42.2368423+08:00" endTime="2026-09-09T18:51:42.4285029+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="aae1785d-9898-4242-86b5-325f320e443a">
+      <Output>
+        <StdOut>5000,False,True,False,0.709200,1.059800,0,0,30000,1835008</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="013ad88d-adbe-4b20-bc76-f9c5d4261c7e" testId="d89f4d76-065b-61f0-c382-a20a20b5e300" testName="SyncAndBehavior_Scale(10000,3,True,1)" computerName="CODESEAL" duration="00:00:01.5117870" startTime="2026-09-09T18:51:58.4334946+08:00" endTime="2026-09-09T18:51:59.9452156+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="013ad88d-adbe-4b20-bc76-f9c5d4261c7e">
+      <Output>
+        <StdOut>10000,3,True,1,1.131700,1.230700,0.001100,0.001600,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="9abc0d0f-b363-479f-8250-971997c13a7b" testId="5579ae99-17ce-6c50-c6e9-99c143261f15" testName="ParameterChanges_VisitOnlyActiveConsumers(10000,False,False,False)" computerName="CODESEAL" duration="00:00:00.3295240" startTime="2026-09-09T18:51:43.6968622+08:00" endTime="2026-09-09T18:51:44.0263716+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9abc0d0f-b363-479f-8250-971997c13a7b">
+      <Output>
+        <StdOut>10000,False,False,False,1.168600,1.787800,0,0,60000,3670016</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="2a90b94e-f003-4d28-af2d-81e86222791a" testId="960e77e7-65e6-3907-b3ad-340467cc8c0c" testName="ParameterChanges_VisitOnlyActiveConsumers(5000,False,False,False)" computerName="CODESEAL" duration="00:00:00.1538300" startTime="2026-09-09T18:51:41.7486647+08:00" endTime="2026-09-09T18:51:41.9024871+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2a90b94e-f003-4d28-af2d-81e86222791a">
+      <Output>
+        <StdOut>5000,False,False,False,0.564800,0.599100,0,0,30000,1835008</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="cc5eff9d-339a-4079-931a-9d0f306db312" testId="6a59e0fb-1869-903f-363b-00b16846c8e2" testName="ParameterChanges_VisitOnlyActiveConsumers(10000,True,True,False)" computerName="CODESEAL" duration="00:00:00.2962670" startTime="2026-09-09T18:51:50.0992295+08:00" endTime="2026-09-09T18:51:50.3954830+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cc5eff9d-339a-4079-931a-9d0f306db312">
+      <Output>
+        <StdOut>10000,True,True,False,1.014900,1.488100,0,0,0,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6fc474ef-0e67-4db6-945c-fb1239d5dda0" testId="3ace592b-3dc4-6f1c-d181-207fcac90b89" testName="ParameterChanges_VisitOnlyActiveConsumers(1000,True,True,True)" computerName="CODESEAL" duration="00:00:00.0238970" startTime="2026-09-09T18:51:41.7247385+08:00" endTime="2026-09-09T18:51:41.7486340+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6fc474ef-0e67-4db6-945c-fb1239d5dda0">
+      <Output>
+        <StdOut>1000,True,True,True,0.096000,0.099900,0,0,0,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="fb65682d-15de-4d58-b2a4-fb182b47676c" testId="6378b943-c315-bd61-1ae6-33b07c968e45" testName="ParameterChanges_VisitOnlyActiveConsumers(1000,True,True,False)" computerName="CODESEAL" duration="00:00:00.0371260" startTime="2026-09-09T18:51:41.6875812+08:00" endTime="2026-09-09T18:51:41.7247047+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fb65682d-15de-4d58-b2a4-fb182b47676c">
+      <Output>
+        <StdOut>1000,True,True,False,0.098600,0.104700,0,0,0,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="4f27fea3-84b1-414d-b118-2b2b66c94929" testId="9d156268-417d-4041-24d5-40e101d036ea" testName="ParameterChanges_VisitOnlyActiveConsumers(1000,False,True,False)" computerName="CODESEAL" duration="00:00:00.0744820" startTime="2026-09-09T18:51:41.4604403+08:00" endTime="2026-09-09T18:51:41.5349187+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4f27fea3-84b1-414d-b118-2b2b66c94929">
+      <Output>
+        <StdOut>1000,False,True,False,0.110900,0.124700,0,0,6000,458752</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="bedf8e0b-6601-4ec7-947d-e50beec496bc" testId="5d1d4a0e-b558-fb5d-694b-5be2552a077c" testName="SyncAndBehavior_Scale(10000,0,False,-1)" computerName="CODESEAL" duration="00:00:00.4304440" startTime="2026-09-09T18:51:55.2964747+08:00" endTime="2026-09-09T18:51:55.7268988+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bedf8e0b-6601-4ec7-947d-e50beec496bc">
+      <Output>
+        <StdOut>10000,0,False,10000,2.953400,3.382500,0.001400,0.005200,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="28df951b-81fc-4954-a834-4198439f6186" testId="30db5d66-5d75-b1a4-673d-2a2f5b239e61" testName="SyncAndBehavior_Scale(1000,3,True,1)" computerName="CODESEAL" duration="00:00:00.0973750" startTime="2026-09-09T18:51:51.2072848+08:00" endTime="2026-09-09T18:51:51.3046542+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="28df951b-81fc-4954-a834-4198439f6186">
+      <Output>
+        <StdOut>1000,3,True,1,0.112800,0.122600,0.000600,0.000700,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="0f25f785-2532-40e7-af05-3cc8aefc0a8c" testId="f09c9b74-16d2-55c7-f502-1f7b196911b1" testName="ParameterChanges_VisitOnlyActiveConsumers(5000,True,False,True)" computerName="CODESEAL" duration="00:00:00.1619220" startTime="2026-09-09T18:51:43.1376802+08:00" endTime="2026-09-09T18:51:43.2995942+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0f25f785-2532-40e7-af05-3cc8aefc0a8c">
+      <Output>
+        <StdOut>5000,True,False,True,0.664400,0.776000,0,0,0,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="62abeddc-6863-42a0-826d-be802e588323" testId="b76413e5-0eb7-210d-e41e-1ee01cfb01a6" testName="SyncAndBehavior_Scale(5000,0,False,1)" computerName="CODESEAL" duration="00:00:00.0754580" startTime="2026-09-09T18:51:51.6705737+08:00" endTime="2026-09-09T18:51:51.7460265+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="62abeddc-6863-42a0-826d-be802e588323">
+      <Output>
+        <StdOut>5000,0,False,1,0.529400,0.556900,0.000900,0.001800,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f3eed889-7a7a-4e29-adea-35cc77900203" testId="3a5851f1-e2cf-8bb4-f545-a1d1e908ed77" testName="SyncAndBehavior_Scale(1000,0,False,-1)" computerName="CODESEAL" duration="00:00:00.0439400" startTime="2026-09-09T18:51:50.9704986+08:00" endTime="2026-09-09T18:51:51.0144368+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f3eed889-7a7a-4e29-adea-35cc77900203">
+      <Output>
+        <StdOut>1000,0,False,1000,0.292400,0.314300,0.000500,0.000700,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="d8524c77-fd05-4d15-80c4-9c3c833ff4b2" testId="e40bcbed-67a6-9728-7c19-ffb22894f16a" testName="ParameterChanges_VisitOnlyActiveConsumers(10000,True,True,True)" computerName="CODESEAL" duration="00:00:00.4352310" startTime="2026-09-09T18:51:50.3955222+08:00" endTime="2026-09-09T18:51:50.8307332+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d8524c77-fd05-4d15-80c4-9c3c833ff4b2">
+      <Output>
+        <StdOut>10000,True,True,True,1.485300,3.042100,0,0,0,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="a725c527-409c-4324-bf60-971dd0c85b75" testId="6c91a9c2-4ab4-e245-f4d9-ee0f9192b324" testName="ParameterChanges_VisitOnlyActiveConsumers(1000,True,False,False)" computerName="CODESEAL" duration="00:00:00.0257640" startTime="2026-09-09T18:51:41.6393480+08:00" endTime="2026-09-09T18:51:41.6651102+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a725c527-409c-4324-bf60-971dd0c85b75">
+      <Output>
+        <StdOut>1000,True,False,False,0.105500,0.122900,0,0,0,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="286adaf4-84e8-4239-8965-f2e034ed1428" testId="c4f43b36-f033-690c-4fa5-4a80de3f9e5f" testName="SyncAndBehavior_Scale(1000,3,True,0)" computerName="CODESEAL" duration="00:00:00.0793539" startTime="2026-09-09T18:51:51.1278513+08:00" endTime="2026-09-09T18:51:51.2072003+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="286adaf4-84e8-4239-8965-f2e034ed1428">
+      <Output>
+        <StdOut>1000,3,True,0,0.062600,0.068100,0.000300,0.000400,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f8fa4315-e64c-4314-b4a4-7c82405a201f" testId="abf4272e-e822-b3c2-f8f2-e21c1f8f7e54" testName="SyncAndBehavior_Scale(1000,0,False,1)" computerName="CODESEAL" duration="00:00:00.0184290" startTime="2026-09-09T18:51:50.9520091+08:00" endTime="2026-09-09T18:51:50.9704363+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f8fa4315-e64c-4314-b4a4-7c82405a201f">
+      <Output>
+        <StdOut>1000,0,False,1,0.092100,0.098000,0.000600,0.000800,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="45f721dc-ac77-4543-86dc-80b6ddb7530f" testId="30f8ba4a-5004-3a3a-4c9e-1a8e3c69f20a" testName="SyncAndBehavior_Scale(10000,0,False,0)" computerName="CODESEAL" duration="00:00:00.1510920" startTime="2026-09-09T18:51:55.0144620+08:00" endTime="2026-09-09T18:51:55.1655464+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="45f721dc-ac77-4543-86dc-80b6ddb7530f">
+      <Output>
+        <StdOut>10000,0,False,0,0.962800,1.022000,0.001100,0.002200,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="4fef4cbd-9872-40a7-85d0-0abf0d7ece4b" testId="d3f086f3-390d-807d-5511-4f838de3e7af" testName="SyncAndBehavior_Scale(5000,3,False,-1)" computerName="CODESEAL" duration="00:00:00.3204030" startTime="2026-09-09T18:51:52.3403360+08:00" endTime="2026-09-09T18:51:52.6607231+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4fef4cbd-9872-40a7-85d0-0abf0d7ece4b">
+      <Output>
+        <StdOut>5000,3,False,5000,0.980000,1.692200,0.000800,0.005000,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="d0b6b139-0ad8-4981-9108-3d8fadc3febf" testId="eac2afb8-5fe1-4f56-d915-8c9c724a1dd5" testName="SyncAndBehavior_Scale(1000,3,True,-1)" computerName="CODESEAL" duration="00:00:00.2665840" startTime="2026-09-09T18:51:51.3047346+08:00" endTime="2026-09-09T18:51:51.5713060+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d0b6b139-0ad8-4981-9108-3d8fadc3febf">
+      <Output>
+        <StdOut>1000,3,True,1000,1.532300,2.040200,0.001200,0.005500,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="651ee493-2b5c-4125-9484-aed7c6ef5239" testId="dcc01cac-a5d6-aaa1-7526-eed252ff7b1b" testName="SyncAndBehavior_Scale(5000,3,False,1)" computerName="CODESEAL" duration="00:00:00.2179670" startTime="2026-09-09T18:51:52.1222619+08:00" endTime="2026-09-09T18:51:52.3402181+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="651ee493-2b5c-4125-9484-aed7c6ef5239">
+      <Output>
+        <StdOut>5000,3,False,1,0.415200,0.642000,0.000900,0.005500,0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="ca3f8845-3235-4361-b5bc-2796e736c0e0" testId="419ac476-91c1-e72c-c9b1-13c43d26533d" testName="ParameterChanges_VisitOnlyActiveConsumers(1000,False,False,False)" computerName="CODESEAL" duration="00:00:00.3879100" startTime="2026-09-09T18:51:40.9878793+08:00" endTime="2026-09-09T18:51:41.3756718+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ca3f8845-3235-4361-b5bc-2796e736c0e0">
+      <Output>
+        <StdOut>1000,False,False,False,0.096300,0.099800,0,0,6000,458752</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="d448507a-18e4-4666-9dac-2d41cebb2dc5" testId="e9fc44a7-5c54-273f-3ff0-11535d3fefd5" testName="ParameterChanges_VisitOnlyActiveConsumers(1000,False,True,True)" computerName="CODESEAL" duration="00:00:00.1043630" startTime="2026-09-09T18:51:41.5349562+08:00" endTime="2026-09-09T18:51:41.6393146+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d448507a-18e4-4666-9dac-2d41cebb2dc5">
+      <Output>
+        <StdOut>1000,False,True,True,0.704600,1.101900,0,1000,6000,458752</StdOut>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(1000,True,True,False)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="6378b943-c315-bd61-1ae6-33b07c968e45">
+      <Execution id="fb65682d-15de-4d58-b2a4-fb182b47676c" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(1000,True,True,False)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(1000,0,False,1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="abf4272e-e822-b3c2-f8f2-e21c1f8f7e54">
+      <Execution id="f8fa4315-e64c-4314-b4a4-7c82405a201f" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(1000,0,False,1)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(5000,0,False,1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="b76413e5-0eb7-210d-e41e-1ee01cfb01a6">
+      <Execution id="62abeddc-6863-42a0-826d-be802e588323" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(5000,0,False,1)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(5000,0,False,0)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="10d06f02-31de-cebf-26cf-ebb2b980e672">
+      <Execution id="6db21e6f-9fce-49e0-8017-e310409a45b2" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(5000,0,False,0)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(5000,False,True,True)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="03130235-7215-fe03-455d-05e0f5a39ce9">
+      <Execution id="316f8339-0160-4259-801a-578a10a488dc" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(5000,False,True,True)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(10000,3,False,0)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="07413c48-a384-0834-9a90-de019a2df7d2">
+      <Execution id="7a4647a7-0fe3-4048-9205-9cfd3c64396f" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(10000,3,False,0)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(5000,False,False,False)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="960e77e7-65e6-3907-b3ad-340467cc8c0c">
+      <Execution id="2a90b94e-f003-4d28-af2d-81e86222791a" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(5000,False,False,False)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(1000,True,True,True)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="3ace592b-3dc4-6f1c-d181-207fcac90b89">
+      <Execution id="6fc474ef-0e67-4db6-945c-fb1239d5dda0" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(1000,True,True,True)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(1000,True,False,False)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="6c91a9c2-4ab4-e245-f4d9-ee0f9192b324">
+      <Execution id="a725c527-409c-4324-bf60-971dd0c85b75" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(1000,True,False,False)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(1000,False,False,True)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="b9d8693e-d6d4-1e44-af07-7d8888f57ae2">
+      <Execution id="63182523-055c-4634-9ddb-49a5dbe14747" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(1000,False,False,True)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(5000,3,True,1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="16b446ae-eace-4e46-de44-3a185e2f92ed">
+      <Execution id="0b984492-bf8a-444b-88e6-41c8d1436513" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(5000,3,True,1)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(1000,3,True,0)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="c4f43b36-f033-690c-4fa5-4a80de3f9e5f">
+      <Execution id="286adaf4-84e8-4239-8965-f2e034ed1428" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(1000,3,True,0)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(1000,3,False,1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="d3f2dffa-2334-8d87-edba-dd8e144827d0">
+      <Execution id="ceb9c3b9-e977-4083-9b56-aaa8937f1526" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(1000,3,False,1)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(10000,True,True,True)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="e40bcbed-67a6-9728-7c19-ffb22894f16a">
+      <Execution id="d8524c77-fd05-4d15-80c4-9c3c833ff4b2" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(10000,True,True,True)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(10000,3,True,-1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="17ebb53f-395c-7ffa-81a2-e4c7321558df">
+      <Execution id="8bdac1c0-695f-4fb0-8f58-be5687a6b780" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(10000,3,True,-1)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(1000,3,False,0)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="7ed8fc48-b2d2-5acf-25b8-e09fc3e026fb">
+      <Execution id="eab35756-1ef3-4721-8d2b-c763eedcd6c0" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(1000,3,False,0)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(5000,False,True,False)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="8c63e780-9edd-91a1-b031-3145a6a2a02b">
+      <Execution id="aae1785d-9898-4242-86b5-325f320e443a" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(5000,False,True,False)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(5000,True,False,True)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="f09c9b74-16d2-55c7-f502-1f7b196911b1">
+      <Execution id="0f25f785-2532-40e7-af05-3cc8aefc0a8c" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(5000,True,False,True)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(1000,False,True,True)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="e9fc44a7-5c54-273f-3ff0-11535d3fefd5">
+      <Execution id="d448507a-18e4-4666-9dac-2d41cebb2dc5" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(1000,False,True,True)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(1000,0,False,0)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="f52c4223-5afd-02e3-5c06-acc21583df5b">
+      <Execution id="9e792423-603d-4b8d-a3bb-cec8a22cdca5" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(1000,0,False,0)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(5000,0,False,-1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="8e5884b4-2050-c324-3161-fcd924aeffff">
+      <Execution id="ae65eda5-2bbd-443e-bfc0-8a5781e3666d" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(5000,0,False,-1)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(5000,3,True,0)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="7214272f-dca0-92d1-960a-8e60216047b2">
+      <Execution id="883ba97c-d928-4ed1-8b3d-2922e73d10e2" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(5000,3,True,0)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(10000,3,True,1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="d89f4d76-065b-61f0-c382-a20a20b5e300">
+      <Execution id="013ad88d-adbe-4b20-bc76-f9c5d4261c7e" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(10000,3,True,1)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(10000,False,True,False)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="320d7f2e-e395-9074-3419-850ad3f41913">
+      <Execution id="6d870485-8616-4485-87bb-1e859872578f" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(10000,False,True,False)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(10000,3,False,-1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="ee446543-05e9-4d30-c66d-6872d52cde90">
+      <Execution id="e5e3300d-48a0-4976-a2b9-f79d787bc341" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(10000,3,False,-1)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(10000,0,False,-1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="5d1d4a0e-b558-fb5d-694b-5be2552a077c">
+      <Execution id="bedf8e0b-6601-4ec7-947d-e50beec496bc" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(10000,0,False,-1)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(1000,False,True,False)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="9d156268-417d-4041-24d5-40e101d036ea">
+      <Execution id="4f27fea3-84b1-414d-b118-2b2b66c94929" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(1000,False,True,False)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(10000,True,False,False)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="50c070db-bbf0-8ba2-d86c-35c556b7a39a">
+      <Execution id="10503c63-8399-4550-a540-404b062de2ca" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(10000,True,False,False)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(5000,3,False,1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="dcc01cac-a5d6-aaa1-7526-eed252ff7b1b">
+      <Execution id="651ee493-2b5c-4125-9484-aed7c6ef5239" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(5000,3,False,1)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(10000,3,True,0)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="5bb3325f-db6f-a716-5661-0d08ce8c3919">
+      <Execution id="3dde1f4a-e9c4-44bb-8e68-08271568b0ca" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(10000,3,True,0)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(10000,True,False,True)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="92fada6a-a9c9-7bd0-deac-f7b5ee1ee7aa">
+      <Execution id="b186191b-e9e5-49b8-bc2d-703fec2d931b" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(10000,True,False,True)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(10000,True,True,False)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="6a59e0fb-1869-903f-363b-00b16846c8e2">
+      <Execution id="cc5eff9d-339a-4079-931a-9d0f306db312" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(10000,True,True,False)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(1000,3,True,1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="30db5d66-5d75-b1a4-673d-2a2f5b239e61">
+      <Execution id="28df951b-81fc-4954-a834-4198439f6186" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(1000,3,True,1)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(10000,0,False,1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="afb5dec9-bf93-0c57-3fe7-1b78dedb83ca">
+      <Execution id="531b81f9-f3cd-4ead-80af-2c55e42c846f" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(10000,0,False,1)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(1000,3,False,-1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="4e628128-5651-15b5-a8fe-9df0bc093cf2">
+      <Execution id="f56ebfe3-5f33-400f-b18f-509808fcc7ad" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(1000,3,False,-1)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(5000,True,False,False)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="2a9edada-7157-ad3b-e64c-57e90dc90880">
+      <Execution id="23fde71b-a3ae-498f-be2a-36f453b4750e" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(5000,True,False,False)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(1000,0,False,-1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="3a5851f1-e2cf-8bb4-f545-a1d1e908ed77">
+      <Execution id="f3eed889-7a7a-4e29-adea-35cc77900203" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(1000,0,False,-1)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(5000,True,True,False)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="a8a035d7-67a7-1804-45e3-802d4a3efefd">
+      <Execution id="e1d1fba9-276a-4fc3-b0b4-329fdb304389" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(5000,True,True,False)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(5000,True,True,True)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="7f8cda25-ed15-29ae-b82f-85ec5e4a1d81">
+      <Execution id="11f6f4ca-e37f-443e-86d2-502055941ace" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(5000,True,True,True)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(10000,False,True,True)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="599fe81e-d9fd-4a03-1b98-995aa15a695a">
+      <Execution id="d300add0-4a14-43b4-b3dd-95d22452286f" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(10000,False,True,True)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(5000,3,False,-1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="d3f086f3-390d-807d-5511-4f838de3e7af">
+      <Execution id="4fef4cbd-9872-40a7-85d0-0abf0d7ece4b" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(5000,3,False,-1)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(10000,3,False,1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="4ddd7984-bd16-151d-aac5-3bb0a9fed6c6">
+      <Execution id="941a632c-7235-497f-9a7e-1c27cf962f16" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(10000,3,False,1)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(1000,3,True,-1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="eac2afb8-5fe1-4f56-d915-8c9c724a1dd5">
+      <Execution id="d0b6b139-0ad8-4981-9108-3d8fadc3febf" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(1000,3,True,-1)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(1000,True,False,True)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="3295b3c9-a688-47d4-1db7-69da2a464331">
+      <Execution id="485e7f86-2355-45f4-9645-f2585a68853f" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(1000,True,False,True)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(10000,0,False,0)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="30f8ba4a-5004-3a3a-4c9e-1a8e3c69f20a">
+      <Execution id="45f721dc-ac77-4543-86dc-80b6ddb7530f" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(10000,0,False,0)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(5000,3,False,0)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="1123a0a6-9a7a-324c-d2ca-d22aebd83e40">
+      <Execution id="9ddf6eb6-13eb-4b6e-802b-f8b336076196" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(5000,3,False,0)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(10000,False,False,True)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="77289aca-54a3-5fda-b973-959e8ee17d67">
+      <Execution id="d06c99d0-13a9-4252-9bd2-e63c11d2dba6" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(10000,False,False,True)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(1000,False,False,False)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="419ac476-91c1-e72c-c9b1-13c43d26533d">
+      <Execution id="ca3f8845-3235-4361-b5bc-2796e736c0e0" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(1000,False,False,False)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(5000,False,False,True)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="5fbcce72-d72a-6289-bf1f-76204764091b">
+      <Execution id="50542728-fdfd-4ed6-8213-a7042d9da3b4" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(5000,False,False,True)" />
+    </UnitTest>
+    <UnitTest name="SyncAndBehavior_Scale(5000,3,True,-1)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="82251c8e-c21e-cee1-7427-eca171684c9f">
+      <Execution id="6fbc36f2-d629-4fc6-aae2-a9a4bb1bb540" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="SyncAndBehavior_Scale(5000,3,True,-1)" />
+    </UnitTest>
+    <UnitTest name="ParameterChanges_VisitOnlyActiveConsumers(10000,False,False,False)" storage="c:\001_ai\ludots-presenter-attachment-contract-perf\src\tests\presentationtests\bin\release\net9.0\presentationtests.dll" id="5579ae99-17ce-6c50-c6e9-99c143261f15">
+      <Execution id="9abc0d0f-b363-479f-8250-971997c13a7b" />
+      <TestMethod codeBase="C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.PresenterAttachmentScaleTests" name="ParameterChanges_VisitOnlyActiveConsumers(10000,False,False,False)" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="07413c48-a384-0834-9a90-de019a2df7d2" executionId="7a4647a7-0fe3-4048-9205-9cfd3c64396f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="17ebb53f-395c-7ffa-81a2-e4c7321558df" executionId="8bdac1c0-695f-4fb0-8f58-be5687a6b780" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="50c070db-bbf0-8ba2-d86c-35c556b7a39a" executionId="10503c63-8399-4550-a540-404b062de2ca" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3295b3c9-a688-47d4-1db7-69da2a464331" executionId="485e7f86-2355-45f4-9645-f2585a68853f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5fbcce72-d72a-6289-bf1f-76204764091b" executionId="50542728-fdfd-4ed6-8213-a7042d9da3b4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="599fe81e-d9fd-4a03-1b98-995aa15a695a" executionId="d300add0-4a14-43b4-b3dd-95d22452286f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1123a0a6-9a7a-324c-d2ca-d22aebd83e40" executionId="9ddf6eb6-13eb-4b6e-802b-f8b336076196" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8e5884b4-2050-c324-3161-fcd924aeffff" executionId="ae65eda5-2bbd-443e-bfc0-8a5781e3666d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="82251c8e-c21e-cee1-7427-eca171684c9f" executionId="6fbc36f2-d629-4fc6-aae2-a9a4bb1bb540" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="16b446ae-eace-4e46-de44-3a185e2f92ed" executionId="0b984492-bf8a-444b-88e6-41c8d1436513" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="10d06f02-31de-cebf-26cf-ebb2b980e672" executionId="6db21e6f-9fce-49e0-8017-e310409a45b2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a8a035d7-67a7-1804-45e3-802d4a3efefd" executionId="e1d1fba9-276a-4fc3-b0b4-329fdb304389" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="03130235-7215-fe03-455d-05e0f5a39ce9" executionId="316f8339-0160-4259-801a-578a10a488dc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="77289aca-54a3-5fda-b973-959e8ee17d67" executionId="d06c99d0-13a9-4252-9bd2-e63c11d2dba6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4e628128-5651-15b5-a8fe-9df0bc093cf2" executionId="f56ebfe3-5f33-400f-b18f-509808fcc7ad" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7f8cda25-ed15-29ae-b82f-85ec5e4a1d81" executionId="11f6f4ca-e37f-443e-86d2-502055941ace" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5bb3325f-db6f-a716-5661-0d08ce8c3919" executionId="3dde1f4a-e9c4-44bb-8e68-08271568b0ca" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7214272f-dca0-92d1-960a-8e60216047b2" executionId="883ba97c-d928-4ed1-8b3d-2922e73d10e2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f52c4223-5afd-02e3-5c06-acc21583df5b" executionId="9e792423-603d-4b8d-a3bb-cec8a22cdca5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="320d7f2e-e395-9074-3419-850ad3f41913" executionId="6d870485-8616-4485-87bb-1e859872578f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="afb5dec9-bf93-0c57-3fe7-1b78dedb83ca" executionId="531b81f9-f3cd-4ead-80af-2c55e42c846f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d3f2dffa-2334-8d87-edba-dd8e144827d0" executionId="ceb9c3b9-e977-4083-9b56-aaa8937f1526" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="92fada6a-a9c9-7bd0-deac-f7b5ee1ee7aa" executionId="b186191b-e9e5-49b8-bc2d-703fec2d931b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b9d8693e-d6d4-1e44-af07-7d8888f57ae2" executionId="63182523-055c-4634-9ddb-49a5dbe14747" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2a9edada-7157-ad3b-e64c-57e90dc90880" executionId="23fde71b-a3ae-498f-be2a-36f453b4750e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ee446543-05e9-4d30-c66d-6872d52cde90" executionId="e5e3300d-48a0-4976-a2b9-f79d787bc341" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4ddd7984-bd16-151d-aac5-3bb0a9fed6c6" executionId="941a632c-7235-497f-9a7e-1c27cf962f16" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7ed8fc48-b2d2-5acf-25b8-e09fc3e026fb" executionId="eab35756-1ef3-4721-8d2b-c763eedcd6c0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8c63e780-9edd-91a1-b031-3145a6a2a02b" executionId="aae1785d-9898-4242-86b5-325f320e443a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d89f4d76-065b-61f0-c382-a20a20b5e300" executionId="013ad88d-adbe-4b20-bc76-f9c5d4261c7e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5579ae99-17ce-6c50-c6e9-99c143261f15" executionId="9abc0d0f-b363-479f-8250-971997c13a7b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="960e77e7-65e6-3907-b3ad-340467cc8c0c" executionId="2a90b94e-f003-4d28-af2d-81e86222791a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6a59e0fb-1869-903f-363b-00b16846c8e2" executionId="cc5eff9d-339a-4079-931a-9d0f306db312" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3ace592b-3dc4-6f1c-d181-207fcac90b89" executionId="6fc474ef-0e67-4db6-945c-fb1239d5dda0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6378b943-c315-bd61-1ae6-33b07c968e45" executionId="fb65682d-15de-4d58-b2a4-fb182b47676c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9d156268-417d-4041-24d5-40e101d036ea" executionId="4f27fea3-84b1-414d-b118-2b2b66c94929" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5d1d4a0e-b558-fb5d-694b-5be2552a077c" executionId="bedf8e0b-6601-4ec7-947d-e50beec496bc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="30db5d66-5d75-b1a4-673d-2a2f5b239e61" executionId="28df951b-81fc-4954-a834-4198439f6186" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f09c9b74-16d2-55c7-f502-1f7b196911b1" executionId="0f25f785-2532-40e7-af05-3cc8aefc0a8c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b76413e5-0eb7-210d-e41e-1ee01cfb01a6" executionId="62abeddc-6863-42a0-826d-be802e588323" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3a5851f1-e2cf-8bb4-f545-a1d1e908ed77" executionId="f3eed889-7a7a-4e29-adea-35cc77900203" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e40bcbed-67a6-9728-7c19-ffb22894f16a" executionId="d8524c77-fd05-4d15-80c4-9c3c833ff4b2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6c91a9c2-4ab4-e245-f4d9-ee0f9192b324" executionId="a725c527-409c-4324-bf60-971dd0c85b75" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c4f43b36-f033-690c-4fa5-4a80de3f9e5f" executionId="286adaf4-84e8-4239-8965-f2e034ed1428" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="abf4272e-e822-b3c2-f8f2-e21c1f8f7e54" executionId="f8fa4315-e64c-4314-b4a4-7c82405a201f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="30f8ba4a-5004-3a3a-4c9e-1a8e3c69f20a" executionId="45f721dc-ac77-4543-86dc-80b6ddb7530f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d3f086f3-390d-807d-5511-4f838de3e7af" executionId="4fef4cbd-9872-40a7-85d0-0abf0d7ece4b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="eac2afb8-5fe1-4f56-d915-8c9c724a1dd5" executionId="d0b6b139-0ad8-4981-9108-3d8fadc3febf" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dcc01cac-a5d6-aaa1-7526-eed252ff7b1b" executionId="651ee493-2b5c-4125-9484-aed7c6ef5239" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="419ac476-91c1-e72c-c9b1-13c43d26533d" executionId="ca3f8845-3235-4361-b5bc-2796e736c0e0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e9fc44a7-5c54-273f-3ff0-11535d3fefd5" executionId="d448507a-18e4-4666-9dac-2d41cebb2dc5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="51" executed="51" passed="51" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll&#xD;
+   NUnit3TestExecutor discovered 51 of 51 NUnit test cases using Current Discovery mode, Explicit run&#xD;
+1000,False,False,False,0.096300,0.099800,0,0,6000,458752&#xD;
+&#xD;
+1000,False,False,True,0.517000,0.566500,0,1000,6000,458752&#xD;
+&#xD;
+1000,False,True,False,0.110900,0.124700,0,0,6000,458752&#xD;
+&#xD;
+1000,False,True,True,0.704600,1.101900,0,1000,6000,458752&#xD;
+&#xD;
+1000,True,False,False,0.105500,0.122900,0,0,0,0&#xD;
+&#xD;
+1000,True,False,True,0.099800,0.103600,0,0,0,0&#xD;
+&#xD;
+1000,True,True,False,0.098600,0.104700,0,0,0,0&#xD;
+&#xD;
+1000,True,True,True,0.096000,0.099900,0,0,0,0&#xD;
+&#xD;
+5000,False,False,False,0.564800,0.599100,0,0,30000,1835008&#xD;
+&#xD;
+5000,False,False,True,2.464900,5.089500,0,5000,30000,1835008&#xD;
+&#xD;
+5000,False,True,False,0.709200,1.059800,0,0,30000,1835008&#xD;
+&#xD;
+5000,False,True,True,3.505400,4.752500,0,5000,30000,1835008&#xD;
+&#xD;
+5000,True,False,False,0.590400,0.722100,0,0,0,0&#xD;
+&#xD;
+5000,True,False,True,0.664400,0.776000,0,0,0,0&#xD;
+&#xD;
+5000,True,True,False,0.423300,0.703700,0,0,0,0&#xD;
+&#xD;
+5000,True,True,True,0.712900,1.236600,0,0,0,0&#xD;
+&#xD;
+10000,False,False,False,1.168600,1.787800,0,0,60000,3670016&#xD;
+&#xD;
+10000,False,False,True,15.902400,21.285500,0,10000,60000,3670016&#xD;
+&#xD;
+10000,False,True,False,2.071700,2.824900,0,0,60000,3670016&#xD;
+&#xD;
+10000,False,True,True,20.280700,44.436700,0,10000,60000,3670016&#xD;
+&#xD;
+10000,True,False,False,3.092300,3.909400,0,0,0,0&#xD;
+&#xD;
+10000,True,False,True,2.437500,3.146100,0,0,0,0&#xD;
+&#xD;
+10000,True,True,False,1.014900,1.488100,0,0,0,0&#xD;
+&#xD;
+10000,True,True,True,1.485300,3.042100,0,0,0,0&#xD;
+&#xD;
+1000,0,False,0,0.053800,0.060800,0.000300,0.000400,0&#xD;
+&#xD;
+1000,0,False,1,0.092100,0.098000,0.000600,0.000800,0&#xD;
+&#xD;
+1000,0,False,1000,0.292400,0.314300,0.000500,0.000700,0&#xD;
+&#xD;
+1000,3,False,0,0.100300,0.114200,0.000600,0.000800,0&#xD;
+&#xD;
+1000,3,False,1,0.062600,0.069600,0.000300,0.000400,0&#xD;
+&#xD;
+1000,3,False,1000,0.173300,0.196700,0.000400,0.000600,0&#xD;
+&#xD;
+1000,3,True,0,0.062600,0.068100,0.000300,0.000400,0&#xD;
+&#xD;
+1000,3,True,1,0.112800,0.122600,0.000600,0.000700,0&#xD;
+&#xD;
+1000,3,True,1000,1.532300,2.040200,0.001200,0.005500,0&#xD;
+&#xD;
+5000,0,False,0,0.469200,0.492600,0.000900,0.001400,0&#xD;
+&#xD;
+5000,0,False,1,0.529400,0.556900,0.000900,0.001800,0&#xD;
+&#xD;
+5000,0,False,5000,1.424700,1.593800,0.001400,0.004000,0&#xD;
+&#xD;
+5000,3,False,0,0.562600,0.631100,0.001000,0.003000,0&#xD;
+&#xD;
+5000,3,False,1,0.415200,0.642000,0.000900,0.005500,0&#xD;
+&#xD;
+5000,3,False,5000,0.980000,1.692200,0.000800,0.005000,0&#xD;
+&#xD;
+5000,3,True,0,0.551300,0.580700,0.001000,0.002400,0&#xD;
+&#xD;
+5000,3,True,1,0.478000,0.581000,0.001100,0.004100,0&#xD;
+&#xD;
+5000,3,True,5000,10.081200,15.359900,0.005800,0.022200,0&#xD;
+&#xD;
+10000,0,False,0,0.962800,1.022000,0.001100,0.002200,0&#xD;
+&#xD;
+10000,0,False,1,0.569200,0.943800,0.000700,0.003500,0&#xD;
+&#xD;
+10000,0,False,10000,2.953400,3.382500,0.001400,0.005200,0&#xD;
+&#xD;
+10000,3,False,0,1.126300,1.278300,0.001000,0.004000,0&#xD;
+&#xD;
+10000,3,False,1,1.138800,1.261300,0.001200,0.004300,0&#xD;
+&#xD;
+10000,3,False,10000,3.269300,3.429300,0.001000,0.002800,0&#xD;
+&#xD;
+10000,3,True,0,1.113400,1.231900,0.001200,0.004400,0&#xD;
+&#xD;
+10000,3,True,1,1.131700,1.230700,0.001100,0.001600,0&#xD;
+&#xD;
+10000,3,True,10000,21.157100,27.156600,0.010500,0.019700,0&#xD;
+&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
