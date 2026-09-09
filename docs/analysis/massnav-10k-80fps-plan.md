@@ -263,3 +263,58 @@
 
 > 先做 1（尤其 FS 质量档），因为它同时覆盖 ISM 与 skinned 的片元成本，
 > 且不动数据契约；skinned 的顶点取骨降级作为第二期，需要单独验收不许劣化骨骼姿态。
+
+---
+
+## 10. 实施记录：culling 修复落地，片元质量档试验后回退
+
+### 10.1 已落地：`fix(culling)` —— 每帧 rebind 抹掉静态 cull 缓存（`da4078076e`）
+
+**根因**：`RebindPipeline`（`PresentBindingPresentation.cs:506` → `RebindPresentBinding`）
+与 `TryArmPresentBindingCullingPasses`（→ `RebindPresentBindings`）
+**每帧 tick 前都调一次**，且每次都 `new PresentBindingSurface(binding, fov)`。
+两条路都无条件走 `ResetPassStaticCaches()` → `_passHasStaticCameraState` 被清空
+→ `runFullStatic = !hasStaticCullCameraState` **恒为真** → 每帧全量重扫所有静态实体。
+
+三处坑叠在一起才让它一直不收敛：
+1. `PresentBindingSurface` 是 host 每帧 new 的，`ReferenceEquals` 永不成立；
+2. `PresentBinding` 是 `readonly struct`，我第一版用 `ReferenceEquals(Binding, Binding)` 装箱比较，也永不成立；
+3. 单绑定路径 `SeatId=null`、复数路径 `SeatId=seat.0`，两个入口互相判不等，交替清缓存。
+
+**修法**：等价 pass 集直接 no-op —— camera 按引用、surface 按
+`Binding.Equals` + `Fov` 比较，`SeatId` 只作描述不作判据。
+
+**实测（30K 静态场景，同一台机）**：
+
+| 指标 | 修前 | 修后 |
+|---|---|---|
+| `cullStatic` | 5.0–8.7ms | **0.00ms** |
+| `tick` | 6.6–15.4ms | **1.6–2.1ms** |
+| `cull` | 4–8ms | **0.01–0.04ms** |
+| GPU 3D 利用率 | — | **85.8%（纯 GPU 绑）** |
+
+10K massnav 同修受益：最好帧从 ~35 → **54 FPS**，修后 GPU 94%（转为纯 GPU 绑）。
+
+### 10.2 已回退试验：FS 片元质量档 `uQualityTier`（`dc40e9f388` → revert `cd1b9c70dc`）
+
+试过在 `instancing.fs` / `skinning_instanced.fs` 加 `uniform int uQualityTier`
+（0=unlit 级 / 1=无 IBL / 2=完整 PBR）。**结论：这条路子不成立，已回退。**
+
+- ISM 侧：tier 0 确实把 GPU 3D 利用率从 ~83% 压到 ~49%，但 FPS 不动
+  —— 当时 CPU 还没修，`tick` 兜底。修完 cull 后再测，30K 仍卡在 11–30 FPS，
+  因为 **tier 0 依然要光栅化 7,200 万三角面**（`frame=89ms` 里 `endDraw=34.6ms` 是 present 等待）。
+- **skinned 侧：tier 0 反而更慢 3 倍**（28 → 9 FPS，`mode3D` 1.9 → 9.5ms）。
+  原因是运行时 `if (uQualityTier < 2) return;` **并没有把 tier-2 的代码从编译产物里去掉**，
+  寄存器压力反而升高、占用率下降；skinned 本身已经顶点很重，雪上加霜。
+
+⇒ 运行时分支的"质量档"是错工具。若要做，必须走**独立编译的轻量 program**
+（`instancing_unlit.fs` 等）按 LOD 选程序，而不是同一 program 加 uniform 分支。
+
+### 10.3 下一步（按实测优先级重排）
+
+| # | 动作 | 预期收益 | 依据 |
+|---|---|---|---|
+| 1 | **阴影距离裁剪**：现在 30K 全进阴影 pass（`primBatches=2`），实测 `SHADOW=1/0` GPU 57% vs 39% | ~18 点 GPU | §10.1 已确认纯 GPU 绑 |
+| 2 | **低模 LOD mesh**（30K × 2,410 tri = 72M tri/帧 是几何量瓶颈，与分辨率无关） | 直接砍几何 | §8/§9 320×180 实验 |
+| 3 | 独立轻量 shader program 按 LOD 选（不是 runtime 分支） | 省片元 | §10.2 |
+| 4 | skinned 顶点取骨降权（远处 2 权重） | 省顶点 | §9.2 |
