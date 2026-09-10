@@ -111,7 +111,9 @@ namespace Ludots.Core.Presentation.Presenters
                 && ownerOwner.HasValue
                 && audience.ViewerOwner.PlayerId == ownerOwner.Value.PlayerId;
             bool requiresAttributeProjection = !requiredAttributeIds.IsEmpty;
-            bool hasAttributeProjection = !requiresAttributeProjection || projection.CanReadAttributes(requiredAttributeIds);
+            bool hasAttributeProjection = audience.RevealHidden ||
+                                          !requiresAttributeProjection ||
+                                          projection.CanReadAttributes(requiredAttributeIds);
 
             return new PresentPhaseInput
             {
@@ -217,8 +219,8 @@ namespace Ludots.Core.Presentation.Presenters
                 || (input.HasTeamRelationship && input.TeamRelationship == TeamRelationship.Friendly);
             bool isHostile = input.HasTeamRelationship && input.TeamRelationship == TeamRelationship.Hostile;
             bool shouldPresent = isVisible && !isCulled;
-            // Knowledge projection is the sole readability authority for attribute HUD.
-            // Team/ownership remain styling facts only (see IsFriendly/IsHostile/IsOwnedByAudience).
+            // Attribute HUD is readable when knowledge authorizes the attributes, or the audience
+            // explicitly reveals hidden (full-map / benchmark showcases). Team/ownership stay styling facts.
             bool allowWorldHudProjection = shouldPresent && input.HasAttributeProjection;
 
             return new PresentPhaseResult

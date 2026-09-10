@@ -800,7 +800,8 @@ namespace Ludots.Core.Presentation.Minimap
             }
 
             bool captureDebugMarkers = _debugMarkerSampleCapacity > 0;
-            bool hasKnowledgeResolver = KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
+            bool revealHidden = KnowledgeProjectionConsumer.IsAudienceRevealHidden(engine.GlobalContext);
+            bool hasKnowledgeResolver = !revealHidden && KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
             bool hasKnowledgeViewer = false;
             Entity knowledgeViewer = Entity.Null;
             if (hasKnowledgeResolver &&

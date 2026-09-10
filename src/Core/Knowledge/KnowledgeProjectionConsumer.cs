@@ -18,6 +18,14 @@ namespace Ludots.Core.Knowledge
                    resolverObj is KnowledgeProjectionResolver;
         }
 
+        public static bool IsAudienceRevealHidden(Dictionary<string, object>? globals)
+        {
+            return globals != null &&
+                   globals.TryGetValue(CoreServiceKeys.PresentationAudienceRevealHidden.Name, out object? value) &&
+                   value is bool revealHidden &&
+                   revealHidden;
+        }
+
         public static bool TryResolve(
             World world,
             Dictionary<string, object> globals,
