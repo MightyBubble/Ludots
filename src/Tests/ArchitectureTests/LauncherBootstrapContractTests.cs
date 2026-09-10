@@ -1380,12 +1380,11 @@ namespace Ludots.Tests.Architecture
                     allowedModIds: new[]
                     {
                         "LudotsCoreMod",
-                        "CoreInputMod",
                         "SelectionInteractionMod",
                         "MassNavigationMod",
                         "CapabilityStandardMassNavigationLargeWorld10kMod"
                     },
-                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "SelectionInteractionMod", "MassNavigationMod" });
+                    requiredModIds: new[] { "LudotsCoreMod", "SelectionInteractionMod", "MassNavigationMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
