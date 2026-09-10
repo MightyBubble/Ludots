@@ -112,6 +112,29 @@ namespace Ludots.Core.Knowledge
                    projection.CanReadPosition(required);
         }
 
+        /// <summary>
+        /// Answers "can this viewer read this target's position at this access level, and what is the
+        /// strongest presence behind it" without building a <see cref="KnowledgeProjection"/>.
+        /// The projection carries three 256-bit masks; per-marker consumers that only need presence and
+        /// position (the minimap projects one marker per agent) should not pay for them.
+        /// </summary>
+        public bool TryResolveDisclosure(
+            Entity viewer,
+            Entity target,
+            int currentTick,
+            out KnowledgeDisclosureRecord record)
+        {
+            record = default;
+            if (viewer == Entity.Null || target == Entity.Null)
+            {
+                return false;
+            }
+
+            return _store.TryGet(viewer, target, currentTick, out record);
+        }
+
+
+
         public bool CanReadAttribute(Entity viewer, Entity target, int currentTick, int attributeId)
         {
             return TryResolve(viewer, target, currentTick, out KnowledgeProjection projection) &&

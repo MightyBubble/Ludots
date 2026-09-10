@@ -118,6 +118,30 @@ namespace Ludots.Core.Knowledge
                 out projection);
         }
 
+        /// <summary>
+        /// Per-marker consumers (the minimap projects one marker per agent) only need the raw disclosure
+        /// behind a viewer/target pair. This skips scope resolution, the accumulator merge and the
+        /// KnowledgeProjection construction, which is where thousands of per-frame resolutions spent
+        /// their time.
+        /// </summary>
+        public static bool TryResolveDisclosureForViewer(
+            World world,
+            Dictionary<string, object> globals,
+            Entity viewer,
+            Entity target,
+            out KnowledgeDisclosureRecord record)
+        {
+            record = default;
+            if (viewer == Entity.Null ||
+                !world.IsAlive(viewer) ||
+                !TryGetResolver(globals, out KnowledgeProjectionResolver resolver))
+            {
+                return false;
+            }
+
+            return resolver.TryResolveDisclosure(viewer, target, ResolveCurrentTick(globals), out record);
+        }
+
         public static bool CanReadPositionForViewer(
             World world,
             Dictionary<string, object> globals,
