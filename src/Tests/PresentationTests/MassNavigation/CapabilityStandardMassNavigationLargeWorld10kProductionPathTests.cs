@@ -726,6 +726,25 @@ namespace Ludots.Tests.Presentation
             }
         }
 
+        private static void AdvanceFixedClockUntil(
+            GameEngine engine,
+            WorldHudToScreenSystem hudProjection,
+            int maxFixedTicks,
+            Func<bool> condition,
+            Func<string> failure)
+        {
+            for (int tick = 0; tick < maxFixedTicks; tick++)
+            {
+                AdvanceFixedClock(engine, hudProjection, 1);
+                if (condition())
+                {
+                    return;
+                }
+            }
+
+            Assert.Fail(failure());
+        }
+
         private static void DriveCommandSourceBoxAcquisition(
             GameEngine engine,
             WorldHudToScreenSystem hudProjection,
@@ -736,23 +755,35 @@ namespace Ludots.Tests.Presentation
             var handler = RequireService(engine, CoreServiceKeys.InputHandler);
             Assert.That(handler.HasContext("CaseE.Controls"), Is.True,
                 "battle context must project CaseE.Controls before the marquee starts.");
+            Assert.That(
+                engine.World.TryGet(player, out InteractionContextInstance battle) && battle.ContextId > 0,
+                Is.True,
+                "local player must carry the battle interaction context before the marquee starts.");
 
             backend.SetMousePosition(gesture.Start);
             backend.SetButton(MouseLeftButtonPath, false);
-            TickProjectionFrames(engine, hudProjection, 1);
+            AdvanceFixedClock(engine, hudProjection, 1);
 
             backend.SetButton(MouseLeftButtonPath, true);
-            TickProjectionFrames(engine, hudProjection, BoxSelectPressFrames);
-            Assert.That(
-                engine.World.TryGet(player, out InteractionContextInstances boxing) && boxing.Count > 0,
-                Is.True,
-                "pressing must activate the boxing context (box_begin graph mount).");
+            AdvanceFixedClockUntil(
+                engine,
+                hudProjection,
+                BoxSelectPressFrames,
+                () => engine.World.TryGet(player, out InteractionContextInstances boxing) && boxing.Count > 0,
+                () => "pressing must activate the boxing context (box_begin graph mount). " +
+                      $"BoxSelectBegin down={handler.IsDown("CaseE.BoxSelectBegin")}.");
 
             backend.SetMousePosition(gesture.End);
-            TickProjectionFrames(engine, hudProjection, BoxSelectDragFrames);
+            AdvanceFixedClock(engine, hudProjection, BoxSelectDragFrames);
 
             backend.SetButton(MouseLeftButtonPath, false);
-            TickProjectionFrames(engine, hudProjection, BoxSelectReleaseFrames);
+            AdvanceFixedClockUntil(
+                engine,
+                hudProjection,
+                BoxSelectReleaseFrames,
+                () => SnapshotCommandSource(engine).Length > 0,
+                () => "releasing must commit rectangle hits into selected. " +
+                      CaptureCommandSourceDiagnostics(engine, gesture.Marquee));
         }
 
         private static int DriveRightClickCommandFrame(
@@ -769,18 +800,18 @@ namespace Ludots.Tests.Presentation
             Assert.That(context.CommandIntentProfileId, Is.GreaterThan(0));
             backend.SetMousePosition(position);
             backend.SetButton(MouseRightButtonPath, false);
-            TickProjectionFrames(engine, hudProjection, 1);
+            AdvanceFixedClock(engine, hudProjection, 1);
 
             backend.SetButton(MouseRightButtonPath, true);
             int applied = 0;
-            TickProjectionFrames(engine, hudProjection, 2);
+            AdvanceFixedClock(engine, hudProjection, 2);
             applied += RequireMassNavigationSimulation(engine).CommandCountFrame;
             Assert.That(RequireService(engine, CoreServiceKeys.InputHandler).IsDown("Command"), Is.True);
 
             backend.SetButton(MouseRightButtonPath, false);
             for (int frame = 0; frame < 4; frame++)
             {
-                TickProjectionFrames(engine, hudProjection, 1);
+                AdvanceFixedClock(engine, hudProjection, 1);
                 applied += RequireMassNavigationSimulation(engine).CommandCountFrame;
             }
             return applied;
