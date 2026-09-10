@@ -415,32 +415,38 @@
 结论：**不能整包合**。它自己也承认「旧隐式空间行为的完整迁移仍未完成」，且它的 10K 测量是
 「约 3 FPS、EndDrawing 265–278ms」（未区分 GPU 执行与窗口等待，未验证恢复 60 FPS）。
 
-### 13.2 唯一看起来有账可算的那条，实测不成立
+### 13.2 那条收窄：**第一次判断错了，复查后成立并已合入**（`f7c7c750d3`）
 
 该 PR 里最贴我热点的是 `4416820854 perf(presentation): restrict entity transform sync to compiled roots`
-—— 只 11 行，给 `EntityAnchoredQuery` 加一个 `PerfEntityAnchorRootTransformSync` 标记，
+—— 只 11 行，给 `EntityAnchoredQuery` 加 `PerfEntityAnchorRootTransformSync` 标记，
 把每帧变换同步从「全部 presenter」收窄到「entity-anchored 根」。
+它依赖的 `IsEntityAnchoredRootPresenter(Entity)` **在 main 上已存在**，所以我不依赖该 PR，
+在本分支原生实现了一遍。
 
-关键前提：它依赖的 `IsEntityAnchoredRootPresenter(Entity)` **在 main 上已经存在**（3 处引用），
-所以我按同样思路在本分支**原生实现了一遍**（marker + 两个 `SyncTickBehaviorMarker` 点 + 批量出生签名 +
-移除点 + 查询收窄），不依赖 PR 的其余部分。
+**第一次测量得出的「收窄会把挂接子对象同步漏掉」是错的** —— 那次测量时 PR #1486 的整包 merge
+还留在工作树里，而它带来的 `mass_navigation.command.marker` 资产缺失正在污染结果。
+清掉 merge 后重新做同条件 A/B：
 
-实测（10K massnav，1600×900）：
+仪器化先确认了一件事：10K massnav **根本不走**这条 entity-anchored 循环
+（`EntityAnchoredQuery` 每帧命中 0 个实体；日志 600 帧全是 `queried=0`）。
+根走的是 owner-payload 路径（`ownerChunks=102`、`ownerChanged` 在 0 / 9717 之间交替，
+即 15Hz 仿真 vs 60Hz 渲染的节奏）。所以这条收窄在**本场景是低风险的结构清理**，
+收益来自「少扫一遍带 `PerfTransformSyncTick` 的全部 presenter」。
+
+同条件 A/B（10K massnav，1600×900，各 31 样本）：
 
 | 指标 | 基线 | 收窄后 |
 |---|---|---|
-| `transformSync` | 1.4–2.2ms | **1.2–1.8ms**（确实略降） |
-| `visibleEntities` | **10006（稳定）** | 1179–8503（**抖动、不收敛**） |
-| `worldHud` | **20000** | 2358–17004 |
-| `hudProjected` | **20000** | 0–5258 |
+| `transformSync` 均值 | 2.66ms | **2.10ms** |
+| `transformSync` 峰值 | 8.04ms | **6.43ms** |
+| `visibleEntities` | 10006（稳定） | 10006（稳定） |
+| `worldHud` | 20000（稳定） | 20000（稳定） |
 
-⇒ **收窄把挂接子对象的同步漏掉了**：20K 血条/文本子 presenter 不再被每帧变换同步覆盖，
-可见性与 HUD 投影双双塌陷。也就是说，当前 `EntityAnchoredQuery` 同时承担了
-「根从 owner 取姿态」和「挂接子对象兜底同步」两个职责，**不能只按 anchorKind 收窄**。
+回归验证：`PresentationTests` 有/无该改动都是 **574 通过 / 10 预存在失败**，逐一致；
+`ThreeCTests` 112/119（7 个既有）。最终 26/26 样本稳定在 `10006` / `20000`。
 
-已回退（工作树回到基线：`visibleEntities=10006` / `worldHud=20000` / `cullStatic=0.01`）。
-这恰好对应 PR #1486 自己列的未完成项：「核对…嵌套挂接、贴地传播」「完成
-`TransformSource.InheritParent`、`PresenterInstanceTransformOverride` 旧路径迁移」。
+> 教训：**A/B 必须在干净基线上做**。中途留着一个尚未验证的第三方 merge（哪怕它编译通过），
+> 会把它的缺陷记到自己的改动账上。第一次结论因此完全反了。
 
 ### 13.3 建议
 
