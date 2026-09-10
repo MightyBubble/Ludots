@@ -166,3 +166,90 @@ public sealed class WorldHudTerrainOcclusionTests
         }
     }
 }
+
+public sealed class CachedBucketedOcclusionMatchesExactTests
+    {
+        [Test]
+        public void BucketCacheMatchesExactAcrossRidgeAndCameraPoses()
+        {
+            using var world = Arch.Core.World.Create();
+            var projOn = new CamProj(); var projOff = new CamProj();
+            projOn.LookFrom(new Vector3(0, 45, -60)); projOff.LookFrom(new Vector3(0, 45, -60));
+            var hudOn = new WorldHudBatchBuffer(4096); var hudOff = new WorldHudBatchBuffer(4096);
+            var screenOn = new ScreenHudBatchBuffer(4096); var screenOff = new ScreenHudBatchBuffer(4096);
+            var heightmap = new ContinuousHeightmapRuntime(ContinuousHeightmapAsset.CreateSingleLayer(
+                new WorldAabbCm(-4000, -4000, 8000, 8000), 17, 5, BuildRidge(), interpolationMode: ContinuousHeightmapInterpolationMode.TriangleHeightfield));
+            using var sysOn = new WorldHudToScreenSystem(world, hudOn, null, projOn, projOn, screenOn,
+                heightmapProvider: () => heightmap, occlusionConfig: new TerrainHudOcclusionConfig(8192, 8, 100));
+            using var sysOff = new WorldHudToScreenSystem(world, hudOff, null, projOff, projOff, screenOff,
+                heightmapProvider: () => heightmap, occlusionConfig: TerrainHudOcclusionConfig.Disabled);
+
+            var set = new HashSet<int>();
+            int id = 1;
+            for (int i = -20; i <= 20; i++, id++)
+            {
+                var pos = new Vector3(i * 12f, 2f, 0f);
+                var owner = world.Create(new CullState { IsVisible = true });
+                var item = new WorldHudItem { Owner = owner, StableId = id, Kind = WorldHudItemKind.Bar, WorldPosition = pos, Width = 40, Height = 6, DirtySerial = 1 };
+                hudOn.TryAdd(in item); hudOff.TryAdd(in item);
+                set.Add(id);
+            }
+
+            AssertCountsMatch(sysOn, sysOff, screenOn, screenOff, set, "high-cam");
+            // 低机位掠脊 + 锚点微移，考验跨帧/跨机位缓存沿用
+            projOn.LookFrom(new Vector3(0, 6, -40)); projOff.LookFrom(new Vector3(0, 6, -40));
+            var movedOn = hudOn.GetSpan()[0]; movedOn.WorldPosition.X += 0.05f;
+            hudOn.UpdatePosition(movedOn.StableId, in movedOn.WorldPosition);
+            var movedOff = hudOff.GetSpan()[0]; movedOff.WorldPosition.X += 0.05f;
+            hudOff.UpdatePosition(movedOff.StableId, in movedOff.WorldPosition);
+            AssertCountsMatch(sysOn, sysOff, screenOn, screenOff, set, "low-graze");
+        }
+
+        private static void AssertCountsMatch(WorldHudToScreenSystem on, WorldHudToScreenSystem off,
+            ScreenHudBatchBuffer sOn, ScreenHudBatchBuffer sOff, HashSet<int> set, string tag)
+        {
+            on.Update(0);
+            off.Update(0);
+            var a = new HashSet<int>(); var b = new HashSet<int>();
+            foreach (var bar in sOn.GetBarSpan()) a.Add(bar.StableId);
+            foreach (var bar in sOff.GetBarSpan()) b.Add(bar.StableId);
+            Assert.That(a, Is.EquivalentTo(b), $"{tag}: bucketed cache diverged from exact occlusion over {set.Count} anchors.");
+        }
+
+        private static short[] BuildRidge()
+        {
+            var h = new short[17 * 5];
+            for (int y = 0; y < 5; y++)
+                for (int x = 0; x < 17; x++)
+                    h[y * 17 + x] = (short)(x >= 7 && x <= 11 ? 600 : 0);
+            return h;
+        }
+
+        private sealed class CamProj : IScreenProjector, IProjectionSnapshotProvider, IViewController
+        {
+            private Matrix4x4 _matrix;
+            private Vector3 _camera;
+            public Vector2 Resolution => new(1600, 900);
+            public float Fov => 60f;
+            public float AspectRatio => 16f / 9f;
+            public void LookFrom(Vector3 p)
+            {
+                _camera = p;
+                _matrix = Matrix4x4.CreateLookAt(p, new Vector3(0, 2, 0), Vector3.UnitY)
+                    * Matrix4x4.CreatePerspectiveFieldOfView(MathF.PI / 3f, AspectRatio, 0.1f, 1000f);
+            }
+
+            public int ProjectionRevision => 1;
+            public bool TryGetProjectionSnapshot(out ProjectionSnapshot snapshot)
+            {
+                snapshot = new ProjectionSnapshot(_matrix, Resolution, _camera);
+                return true;
+            }
+
+            public Vector2 WorldToScreen(Vector3 position)
+            {
+                Vector4 clip = Vector4.Transform(new Vector4(position, 1), _matrix);
+                return new Vector2((clip.X / clip.W + 1) * Resolution.X / 2, (1 - clip.Y / clip.W) * Resolution.Y / 2);
+            }
+        }
+    }
