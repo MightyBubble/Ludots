@@ -2394,6 +2394,14 @@
         "value": "mods/showcases/contact_sensor_textbook/ContactSensorTextbookMod",
         "projectPath": "ContactSensorTextbookMod.csproj"
       }
+    },
+    {
+      "name": "activity_dispatch",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod",
+        "projectPath": "ActivityDispatchShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {

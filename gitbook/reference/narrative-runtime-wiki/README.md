@@ -8,6 +8,7 @@
 
 ### 拍板（一次决定，当场结算）
 
+- [Activity 活动](activity.md) —— 弹出待办、选项三分（Trigger / Gate / Execution）、单层拍板。三条派发路径：forced / automatic / pooled。
 
 ### 追踪（跨周期的持续目标）
 
@@ -30,7 +31,7 @@
 
 ## 总装与验收
 
-- 活动拍板台 showcase：`activity_dispatch`（三条派发路径可玩，内容纯 JSON），启动 `activity_dispatch_cef_raylib`
+- 活动拍板台 showcase：`activity_dispatch`（三条派发路径可玩，内容纯 JSON），启动 `activity_dispatch_raylib`
 - 叙事总装 showcase：`narrative` / `narrative_frontend`（Story/Dialogue/Sequencer/Task 串成一场戏）
 - 存档：三类内容的运行时状态都在通用存档系统里（domain `activities` / `task` / `dialogue` / `sequencer`），见[通用存档系统](../../architecture/save-system.md)
 

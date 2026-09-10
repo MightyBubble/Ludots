@@ -22,7 +22,7 @@
       "Template": "GraphOps.Caster",
       "Overrides": {
         "Name": {
-          "Value": "作者"
+          "Value": "军需官"
         },
         "WorldPositionCm": {
           "Value": {
@@ -36,6 +36,39 @@
           }
         }
       }
+    },
+    {
+      "InstanceId": "boss_camp",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "木桩大王"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 400,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    }
+  ],
+  "Variables": [
+    {
+      "name": "gallery.offer_count",
+      "type": "int",
+      "initial": 0
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "boss_camp"
     }
   ]
 }

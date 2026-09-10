@@ -1,0 +1,44 @@
+[
+  {
+    "id": "Graph.ActivityDispatch.Flow",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_forced_offer",
+        "event": "ActivityShowcase.Forced",
+        "start": "forced_scope",
+        "refire": "restart"
+      },
+      {
+        "label": "on_pooled_offer",
+        "event": "ActivityShowcase.Pooled",
+        "start": "pooled_scope",
+        "refire": "restart"
+      },
+      {
+        "label": "on_automatic_offer",
+        "event": "ActivityShowcase.Automatic",
+        "start": "automatic_scope",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      { "id": "forced_scope", "op": "LoadPlacedEntity", "instanceId": "council" },
+      { "id": "forced_offer", "op": "OfferActivity", "activityId": "showcase.forced_supply" },
+      { "id": "pooled_scope", "op": "LoadPlacedEntity", "instanceId": "council" },
+      { "id": "pooled_offer", "op": "OfferActivity", "activityId": "showcase.pool_dispatch" },
+      { "id": "automatic_scope", "op": "LoadPlacedEntity", "instanceId": "council" },
+      { "id": "automatic_offer", "op": "OfferActivity", "activityId": "showcase.auto_report" }
+    ],
+    "controlEdges": [
+      { "from": "forced_scope", "fromPort": "next", "to": "forced_offer" },
+      { "from": "pooled_scope", "fromPort": "next", "to": "pooled_offer" },
+      { "from": "automatic_scope", "fromPort": "next", "to": "automatic_offer" }
+    ],
+    "valueEdges": [
+      { "from": "forced_scope", "fromPort": "value", "to": "forced_offer", "toPort": "source" },
+      { "from": "pooled_scope", "fromPort": "value", "to": "pooled_offer", "toPort": "source" },
+      { "from": "automatic_scope", "fromPort": "value", "to": "automatic_offer", "toPort": "source" }
+    ]
+  }
+]

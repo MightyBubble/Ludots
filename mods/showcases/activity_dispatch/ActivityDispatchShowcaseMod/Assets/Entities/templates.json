@@ -1,0 +1,27 @@
+[
+  {
+    "id": "activity_council",
+    "components": {
+      "Name": {
+        "Value": "ActivityShowcaseCouncil"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 60
+        }
+      }
+    }
+  }
+]
