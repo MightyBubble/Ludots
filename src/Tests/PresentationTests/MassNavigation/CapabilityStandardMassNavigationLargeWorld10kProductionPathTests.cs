@@ -503,8 +503,6 @@ namespace Ludots.Tests.Presentation
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, ShowcaseMods),
                 Path.Combine(repoRoot, "assets"));
-            engine.SimulationBudgetMsPerFrame = int.MaxValue;
-            engine.SimulationMaxSlicesPerLogicFrame = 1000;
             ApplyHostAssets(engine);
             InstallInput(engine);
             HeadlessPresentationTestHost.Install(engine);
@@ -758,6 +756,8 @@ namespace Ludots.Tests.Presentation
             Vector2 start = gesture.Start;
             Vector2 end = gesture.End;
             ScreenRect marquee = gesture.Marquee;
+            engine.SimulationBudgetMsPerFrame = int.MaxValue;
+            engine.SimulationMaxSlicesPerLogicFrame = 1000;
             var handler = RequireService(engine, CoreServiceKeys.InputHandler);
             Assert.That(handler.HasContext("CaseE.Controls"), Is.True,
                 "battle context must project CaseE.Controls before the marquee starts.");
