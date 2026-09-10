@@ -67,6 +67,13 @@ namespace Ludots.Core.Knowledge
             return ExpiryTick > 0 && currentTick >= ExpiryTick;
         }
 
+        public bool CanKnowEntity => Presence != KnowledgePresence.Unknown;
+
+        public bool CanReadPosition(KnowledgePositionAccess required)
+        {
+            return required == KnowledgePositionAccess.None || Position >= required;
+        }
+
         private static void ValidatePresence(KnowledgePresence presence)
         {
             if ((uint)presence > (uint)KnowledgePresence.HiddenWithSource)
