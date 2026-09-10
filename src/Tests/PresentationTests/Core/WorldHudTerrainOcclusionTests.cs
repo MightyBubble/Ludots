@@ -167,6 +167,88 @@ public sealed class WorldHudTerrainOcclusionTests
     }
 }
 
+/// <summary>
+/// Locks the capacity contract of the terrain occlusion cache. A field-wide anchor set
+/// (10K anchors spread across the whole play area, as the large-world crowd showcase produces)
+/// must stay resident: the table clears itself entirely once it overflows, and every anchor then
+/// re-raycasts every frame. An undersized capacity is a pure performance defect with no
+/// correctness symptom, so it needs a test rather than a comment.
+/// </summary>
+[TestFixture]
+public sealed class WorldHudTerrainOcclusionCacheCapacityTests
+{
+    [Test]
+    public void FieldWideAnchorSet_FitsWithoutOverflowClear()
+    {
+        const int capacity = 131_072;
+        var cache = new TerrainHudOcclusionCache(capacity);
+
+        // Mirror the key shape the projector builds: one camera cell, 100x100 anchor cells,
+        // plus neighbouring camera cells so the key set spans what a field-wide crowd touches.
+        int generated = 0;
+        for (int cameraCellX = 0; cameraCellX <= 2; cameraCellX++)
+        {
+            for (int cameraCellZ = 0; cameraCellZ <= 2; cameraCellZ++)
+            {
+                for (int anchorCellX = 0; anchorCellX < 100; anchorCellX++)
+                {
+                    for (int anchorCellZ = 0; anchorCellZ < 100; anchorCellZ++)
+                    {
+                        long key = TerrainHudOcclusionCache.ComposeKey(
+                            heightmapRevision: 3,
+                            cameraCellX: cameraCellX,
+                            cameraCellZ: cameraCellZ,
+                            anchorCellX: anchorCellX,
+                            anchorCellZ: anchorCellZ,
+                            heightBucket: 1);
+                        cache.Set(key, visible: true);
+                        generated++;
+                    }
+                }
+            }
+        }
+
+        Assert.That(generated, Is.EqualTo(90_000),
+            "The test must generate a key set comparable to a field-wide crowd.");
+        Assert.That(cache.OverflowClearCount, Is.Zero,
+            $"A {capacity}-entry cache must hold the generated {generated} field-wide keys; " +
+            "any overflow clear means every anchor re-raycasts each frame.");
+        Assert.That(cache.EntryCount, Is.EqualTo(generated));
+
+        // Second pass over the same keys: still resident, still no clear.
+        for (int anchorCellX = 0; anchorCellX < 100; anchorCellX++)
+        {
+            for (int anchorCellZ = 0; anchorCellZ < 100; anchorCellZ++)
+            {
+                long key = TerrainHudOcclusionCache.ComposeKey(3, 1, 1, anchorCellX, anchorCellZ, 1);
+                Assert.That(cache.TryGet(key, out bool visible), Is.True,
+                    "A resident key must hit rather than miss into a raycast.");
+                Assert.That(visible, Is.True);
+            }
+        }
+
+        Assert.That(cache.OverflowClearCount, Is.Zero);
+    }
+
+    [Test]
+    public void UndersizedCapacity_OverflowsAndClearsInsteadOfSilentlyDegrading()
+    {
+        var cache = new TerrainHudOcclusionCache(4096);
+
+        for (int anchorCellX = 0; anchorCellX < 100; anchorCellX++)
+        {
+            for (int anchorCellZ = 0; anchorCellZ < 100; anchorCellZ++)
+            {
+                long key = TerrainHudOcclusionCache.ComposeKey(1, 1, 1, anchorCellX, anchorCellZ, 1);
+                cache.Set(key, visible: true);
+            }
+        }
+
+        Assert.That(cache.OverflowClearCount, Is.GreaterThan(0),
+            "An undersized cache must report the overflow explicitly rather than degrade silently.");
+    }
+}
+
 public sealed class CachedBucketedOcclusionMatchesExactTests
     {
         [Test]
