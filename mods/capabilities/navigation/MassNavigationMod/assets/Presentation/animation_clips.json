@@ -5,7 +5,7 @@
     "locators": [
       {
         "backendId": "raylib",
-        "assetRef": "MassNavigationMod:assets/Models/mass_navigation_agent_soldier.glb#anim:0"
+        "assetRef": "MassNavigationMod:assets/Models/mass_navigation_agent_mannequin.glb#anim:2"
       }
     ]
   },
@@ -15,7 +15,7 @@
     "locators": [
       {
         "backendId": "raylib",
-        "assetRef": "MassNavigationMod:assets/Models/mass_navigation_agent_soldier.glb#anim:0"
+        "assetRef": "MassNavigationMod:assets/Models/mass_navigation_agent_mannequin.glb#anim:3"
       }
     ]
   }

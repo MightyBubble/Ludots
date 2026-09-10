@@ -5,7 +5,7 @@
     "assetId": "mass_navigation.agent.soldier",
     "backendId": "raylib",
     "sourceUris": [
-      "MassNavigationMod:assets/Models/mass_navigation_agent_soldier.glb"
+      "MassNavigationMod:assets/Models/mass_navigation_agent_mannequin.glb"
     ]
   },
   {
