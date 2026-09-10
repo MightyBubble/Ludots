@@ -179,3 +179,57 @@ N/A（不新增 opcode；只扩既有 op 的 authorableKinds）
 - **Boundary**: 字典只做 Entity 到暂存数组行的定位；数组仍决定提交顺序、容量检查和回滚顺序。所有索引在 Begin/End 清空并复用。
 - **No fallback**: 查找不到实体仍按既有“未暂存”路径处理；容量不足、缺组件和缺服务继续显式抛错。
 - **Validation**: `EffectLifetimeScaleTests`、`EffectTransactionIndexTests` 和既有事务/挂接/分配回归测试；证据见 `docs/benchmarks/effect-transaction-pressure/`。
+
+
+## GAS Composition Gate — Entity attachment motion contract (2026-09-09)
+
+- Task / Issue: Explicit entity attachment and navigation motion ownership; related existing issue #1064. Association design SSOT remains #239/#244.
+- Date: 2026-09-09
+- Agent / Author: Codex
+
+### 1. Core judgment
+
+A, PASS. Correct the execution of existing attachment operations and position ownership. This adds no gameplay variant DSL, profile enum or preset switch.
+
+### 2. Layer assignment
+
+| Capability | Layer | Implementation |
+| --- | --- | --- |
+| Parent membership | 0 | Existing RelationOps and ChildOf/ChildrenBuffer |
+| Explicit spatial binding | 0 | Existing AttachmentOps and AttachedLocalPose |
+| Parent-first position propagation | 0 | Existing AttachmentPositionSyncSystem |
+| Motion ownership transitions | 0 | Existing PoseAuthorityArbiter and navigation listener |
+| Authored gameplay use | 2 | Existing attach/detach graph operations and effects |
+
+### 3. Reuse list
+
+- Handlers: existing attach/detach and relationship operations.
+- Queues / Systems: AttachmentPositionSyncSystem, PoseAuthorityCommitSystem, existing structural command buffers and navigation runtime.
+- Resolvers / Registries: existing entity identity and template registry; no new registry.
+- Existing presets / graphs: existing attachment effect graphs remain the authoring route.
+- Storage: existing declared attachment scratch capacity, preallocated arrays and BCL Dictionary<Entity,int> for bounded snapshot lookup. TransactionEntityIndex was inspected but has transaction-specific error/namespace contracts; it remains untouched.
+
+### 4. New Layer 0 ops
+
+N/A. No new opcode or materialization pipeline.
+
+### 5. Transaction boundary
+
+Preserve attach/detach rollback of relations, local pose and authority requests. Topology capacity and cycle checks precede position writes. Do not alter GAS transaction indexing.
+
+### 6. Config SSOT
+
+Existing entity templates, effect templates and graph assets. Only explicit AttachedLocalPose requests spatial propagation; ChildOf membership does not imply it.
+
+New JSON schema: NO for this implementation slice.
+
+### 7. Red flag scan
+
+- [x] No new profile inherit/placement enum.
+- [x] No parallel spawn/materialization pipeline.
+- [x] No placement checks in lifecycle operations.
+- [x] No fallback or silent failure.
+
+### 8. Next variant test
+
+The next Mod variant changes graph wiring or effect steps, not a Core enum.
