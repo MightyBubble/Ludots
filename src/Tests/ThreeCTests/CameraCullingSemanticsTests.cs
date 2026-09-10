@@ -130,6 +130,40 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void Culling_AlreadyVisibleLeavesSpatialSet_BecomesHiddenWithCameraUnchanged()
+        {
+            using World world = World.Create();
+            var camera = new CameraManager();
+            camera.State.TargetCm = Vector2.Zero;
+            camera.State.DistanceCm = 2000f;
+            camera.State.Pitch = 45f;
+            camera.State.FovYDeg = 60f;
+
+            Entity entity = CreateCullableEntity(world, 0, 0);
+            var spatial = new MutableStubSpatialQueryService(entity);
+            var view = new StubViewController();
+
+            using var system = new CameraCullingSystem(
+                world,
+                camera,
+                spatial,
+                view,
+                cullingConfig: new CameraCullingRuntimeConfig
+                {
+                    HighLodDistanceCm = 4000f,
+                    MediumLodDistanceCm = 10000f,
+                    LowLodDistanceCm = 20000f,
+                });
+
+            system.Update(0.016f);
+            Assert.That(world.Get<CullState>(entity).IsVisible, Is.True);
+
+            spatial.IncludeEntity = false;
+            system.Update(0.016f);
+            Assert.That(world.Get<CullState>(entity).IsVisible, Is.False);
+        }
+
+        [Test]
         public void Culling_LoadedChunkGate_UsesLoadedSourceWorldKeyResolver()
         {
             using World world = World.Create();
@@ -228,6 +262,41 @@ namespace Ludots.Tests.ThreeC
 
             public SpatialQueryResult QueryAabb(in WorldAabbCm bounds, Span<Entity> buffer)
             {
+                if (buffer.Length == 0)
+                {
+                    return new SpatialQueryResult(0, 1);
+                }
+
+                buffer[0] = _entity;
+                return new SpatialQueryResult(1, 0);
+            }
+
+            public SpatialQueryResult QueryRadius(WorldCmInt2 center, int radiusCm, Span<Entity> buffer) => throw new NotSupportedException();
+            public SpatialQueryResult QueryCone(WorldCmInt2 origin, int directionDeg, int halfAngleDeg, int rangeCm, Span<Entity> buffer) => throw new NotSupportedException();
+            public SpatialQueryResult QueryRectangle(WorldCmInt2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer) => throw new NotSupportedException();
+            public SpatialQueryResult QueryLine(WorldCmInt2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer) => throw new NotSupportedException();
+            public SpatialQueryResult QueryHexRange(Ludots.Core.Map.Hex.HexCoordinates center, int hexRadius, Span<Entity> buffer) => throw new NotSupportedException();
+            public SpatialQueryResult QueryHexRing(Ludots.Core.Map.Hex.HexCoordinates center, int hexRadius, Span<Entity> buffer) => throw new NotSupportedException();
+        }
+
+        private sealed class MutableStubSpatialQueryService : ISpatialQueryService
+        {
+            private readonly Entity _entity;
+
+            public MutableStubSpatialQueryService(Entity entity)
+            {
+                _entity = entity;
+            }
+
+            public bool IncludeEntity { get; set; } = true;
+
+            public SpatialQueryResult QueryAabb(in WorldAabbCm bounds, Span<Entity> buffer)
+            {
+                if (!IncludeEntity)
+                {
+                    return new SpatialQueryResult(0, 0);
+                }
+
                 if (buffer.Length == 0)
                 {
                     return new SpatialQueryResult(0, 1);
