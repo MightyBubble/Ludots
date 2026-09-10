@@ -39,9 +39,9 @@ namespace Ludots.Tests.GAS
                 queue.EnqueueTagCountChanged(new TagCountChangedTrigger { Target = _entity, TagId = i });
             }
             That(queue.Capacity, Is.EqualTo(capacity));
-            That(() => queue.EnqueueAttributeChanged(default), Throws.TypeOf<System.InvalidOperationException>());
-            That(() => queue.EnqueueTagChanged(default), Throws.TypeOf<System.InvalidOperationException>());
-            That(() => queue.EnqueueTagCountChanged(default), Throws.TypeOf<System.InvalidOperationException>());
+            That(() => queue.EnqueueAttributeChanged(default), NUnit.Framework.Throws.TypeOf<System.InvalidOperationException>());
+            That(() => queue.EnqueueTagChanged(default), NUnit.Framework.Throws.TypeOf<System.InvalidOperationException>());
+            That(() => queue.EnqueueTagCountChanged(default), NUnit.Framework.Throws.TypeOf<System.InvalidOperationException>());
             queue.Clear();
             That(queue.AttributeTriggerCount, Is.EqualTo(capacity));
             That(queue.TagTriggerCount, Is.EqualTo(capacity));
@@ -54,7 +54,7 @@ namespace Ludots.Tests.GAS
             }
             queue.Clear();
             That(queue.AttributeTriggerCount + queue.TagTriggerCount + queue.TagCountTriggerCount, Is.Zero);
-            That(() => new DeferredTriggerQueue(0), Throws.TypeOf<System.ArgumentOutOfRangeException>());
+            That(() => new DeferredTriggerQueue(0), NUnit.Framework.Throws.TypeOf<System.ArgumentOutOfRangeException>());
         }
 
         [Test]

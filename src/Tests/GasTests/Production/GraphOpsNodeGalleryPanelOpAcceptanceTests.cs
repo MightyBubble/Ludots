@@ -1,4 +1,9 @@
+using System;
+using CapabilityStandardGraphBehaviorCommon;
 using CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
+using Ludots.Core.Engine;
+using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production;
@@ -8,6 +13,34 @@ namespace Ludots.Tests.Gas.Production;
 [Category("ci-gate")]
 public sealed class GraphOpsNodeGalleryPanelOpAcceptanceTests
 {
+    [Test]
+    public void ShowMinimapVignette_LightsTheNativeMinimap()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("ShowMinimap");
+        runtime.EnsureWorld();
+
+        GameEngine engine = GraphOpsHeadlessGameEngine.SharedGallery(
+            GraphOpsHeadlessGameEngine.FindRepoRoot(runtime.Context.AssetsRoot));
+        MinimapRuntime minimap = engine.GetService(CoreServiceKeys.MinimapRuntime)
+            ?? throw new InvalidOperationException("Gallery engine is missing MinimapRuntime.");
+        minimap.Visible = false;
+        minimap.UseFollowCameraPreset();
+        minimap.SetRotateWithCamera(true);
+
+        runtime.Tick(0.35f);
+
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase),
+                $"ShowMinimap detail missing phrase: {runtime.Metrics.Detail}");
+        }
+
+        Assert.That(minimap.Visible, Is.True, "ShowMinimap must turn the native minimap on.");
+        Assert.That(minimap.Preset, Is.EqualTo(MinimapPreset.RtsFullMap));
+        Assert.That(minimap.RotateWithCamera, Is.False);
+    }
+
     [Test]
     public void ShowPanelVignette_ExecutesOpWithoutThrow()
     {

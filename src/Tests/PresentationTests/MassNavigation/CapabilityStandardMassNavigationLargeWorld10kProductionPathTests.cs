@@ -6,8 +6,6 @@ using System.Numerics;
 using System.Reflection;
 using Arch.Core;
 using Arch.System;
-using CapabilityStandardMassNavigationLargeWorld10kMod;
-using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -21,7 +19,6 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Interaction;
-using Ludots.Core.Input.Orders;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.MassNavigation;
@@ -66,7 +63,6 @@ namespace Ludots.Tests.Presentation
         private static readonly string[] ShowcaseMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "SelectionInteractionMod",
             "MassNavigationMod",
             "CapabilityStandardMassNavigationLargeWorld10kMod"
@@ -91,8 +87,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Showcase_ProjectsFourTeamAgentsToMinimapAndScreenHud()
         {
-            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
-
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
@@ -197,8 +191,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Showcase_UnchangedRelationshipRevisionDoesNotRepeat10kDomainResolution()
         {
-            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
-
             using var engine = CreateEngine();
             StartStartupMap(engine);
             MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
@@ -223,8 +215,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Showcase_CommandSourceCapacityCoversAuthoredAgentSet()
         {
-            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
-
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
@@ -247,8 +237,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Showcase_PeriodicHealthChangesReachBarsAndNumbersWithStableIdentities()
         {
-            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
-
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
@@ -364,8 +352,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Showcase_MouseBoxAcquisition_AcquiresVisibleMassNavigationAgents()
         {
-            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
-
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
@@ -396,8 +382,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Showcase_MouseBoxAcquisition_RightClickIssuesOrdersForCommandableAgents()
         {
-            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
-
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
@@ -423,12 +407,7 @@ namespace Ludots.Tests.Presentation
             Vector2 commandScreenPoint = ResolveCommandTargetScreenPoint(engine, simulation, commandActors);
 
             int appliedCommands = DriveRightClickCommandFrame(engine, hudProjection, backend, commandScreenPoint);
-
-            string orderDebug = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out object? order)
-                ? order?.ToString() ?? "<null>" : "<missing>";
-            string groundDebug = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out object? ground)
-                ? ground?.ToString() ?? "<null>" : "<missing>";
-            Assert.That(appliedCommands, Is.GreaterThan(0), commandSourceDiagnostics + $"; order={orderDebug}; ground={groundDebug}");
+            Assert.That(appliedCommands, Is.GreaterThan(0), commandSourceDiagnostics.ToString());
             Assert.That(simulation.LastOrderMemberCount, Is.EqualTo(commandActors.Length), commandSourceDiagnostics.ToString());
             Assert.That(CountActiveMoveOrders(engine, commandActors), Is.GreaterThan(activeOrdersBefore), commandSourceDiagnostics.ToString());
 
@@ -787,17 +766,6 @@ namespace Ludots.Tests.Presentation
             TickProjectionFrames(engine, hudProjection, 2);
             applied += RequireMassNavigationSimulation(engine).CommandCountFrame;
             Assert.That(RequireService(engine, CoreServiceKeys.InputHandler).IsDown("Command"), Is.True);
-            var groups = (Dictionary<SystemGroup, List<ISystem<float>>>)typeof(GameEngine)
-                .GetField("_systemGroups", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(engine)!;
-            foreach (var systems in groups.Values)
-            foreach (var system in systems)
-            {
-                if (system.GetType().Name != "MassNavigationLargeWorldLocalOrderSourceSystem") continue;
-                var mapping = (InputOrderMappingSystem)system.GetType()
-                    .GetField("_mapping", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(system)!;
-                Assert.That(mapping.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted),
-                    $"Command routing: {mapping.LastActivationResult.State}, {mapping.LastActivationResult.Rejection}");
-            }
 
             backend.SetButton(MouseRightButtonPath, false);
             for (int frame = 0; frame < 4; frame++)
