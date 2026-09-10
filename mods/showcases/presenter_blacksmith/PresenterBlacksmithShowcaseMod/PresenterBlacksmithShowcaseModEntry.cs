@@ -20,6 +20,7 @@ namespace PresenterBlacksmithShowcaseMod
                 var engine = ctx.GetEngine();
                 if (engine != null)
                 {
+                    runtime.InitializeRegistryHandles();
                     engine.SetService(CoreServiceKeys.BenchmarkSceneController, runtime);
                     engine.RegisterSystem(
                         new DynamicWorkerCrowdMovementSystem(engine),
