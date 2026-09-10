@@ -789,7 +789,7 @@ namespace Ludots.Core.Config
                 {
                     signature += Component<GameplayTagContainer>.Signature;
                     // 出生即种 Quick 快照/缓存：DeferredTriggerCollection 的标签比较走
-                    // 引用更新路径，避免收集时结构性补件（10K 规模 100KB+/帧 的分配源）。
+                    // 引用更新路径，避免收集时对实体做结构性补件（CommandBuffer.Add）。
                     signature += Component<GameplayTagSnapshot>.Signature;
                     signature += Component<GameplayTagEffectiveCache>.Signature;
                 }
