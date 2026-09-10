@@ -6,4 +6,4 @@
 
 | Total | Each subtype | Create | First Emit | First Requests | Stable Cache | Avg Tick | P95 Tick | Avg Emit | Max Steady Requests | Stable Cache Min/Max | Content Revision First/Max |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
-| 10000 | 2000 | 81.1010 ms | 20.2578 ms | 6000 | 4000 | 0.0631 ms | 0.0712 ms | 0.0630 ms | 0 | 4000 / 4000 | 4000 / 4000 |
+| 10000 | 2000 | 59.6644 ms | 6.2614 ms | 6000 | 4000 | 0.0145 ms | 0.0225 ms | 0.0144 ms | 0 | 4000 / 4000 | 4000 / 4000 |
