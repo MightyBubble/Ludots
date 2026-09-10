@@ -439,6 +439,7 @@ namespace Ludots.Core.Presentation.Presenters
                 includeTransformSyncTick,
                 includeOwnerPayloadTransformSync,
                 includeOwnerPayloadAttachedTransformSync: false,
+                includeEntityAnchorRootTransformSync: includeTransformSyncTick,
                 includeAttachmentTick: true,
                 includeGroundingTick);
             LastRootBatchSetupMs = ElapsedMs(setupStart);
@@ -1573,6 +1574,9 @@ namespace Ludots.Core.Presentation.Presenters
                 entity,
                 needsTransformSync && CanUseCurrentOwnerPayloadTransformSync(entity));
             SyncTickBehaviorMarker<PerfOwnerPayloadAttachedTransformSync>(entity, canUseOwnerPayloadAttachedTransformSync);
+            SyncTickBehaviorMarker<PerfEntityAnchorRootTransformSync>(
+                entity,
+                needsTransformSync && IsEntityAnchoredRootPresenter(entity));
             SyncTickBehaviorMarker<PerfHasAnimator>(entity, hasAnimator);
         }
 
@@ -1637,6 +1641,9 @@ namespace Ludots.Core.Presentation.Presenters
                 entity,
                 needsTransformSync && CanUseCurrentOwnerPayloadTransformSync(entity));
             SyncTickBehaviorMarker<PerfOwnerPayloadAttachedTransformSync>(entity, canUseOwnerPayloadAttachedTransformSync);
+            SyncTickBehaviorMarker<PerfEntityAnchorRootTransformSync>(
+                entity,
+                needsTransformSync && IsEntityAnchoredRootPresenter(entity));
         }
 
         public bool SetBehaviorActive(Entity entity, PresenterDefinition definition, int slotIndex, bool active)
@@ -2565,6 +2572,7 @@ namespace Ludots.Core.Presentation.Presenters
                     includeTransformSyncTick,
                     includeOwnerPayloadTransformSync,
                     includeOwnerPayloadAttachedTransformSync,
+                    includeEntityAnchorRootTransformSync: false,
                     includeAttachmentTick,
                     includeGroundingTick);
                 LastChildBatchSetupMs += ElapsedMs(childSetupStart);
@@ -2757,6 +2765,7 @@ namespace Ludots.Core.Presentation.Presenters
                 includeTransformSyncTick: true,
                 includeOwnerPayloadTransformSync: false,
                 includeOwnerPayloadAttachedTransformSync: false,
+                includeEntityAnchorRootTransformSync: true,
                 includeAttachmentTick: true,
                 includeGroundingTick: true);
         }
@@ -2767,6 +2776,7 @@ namespace Ludots.Core.Presentation.Presenters
             bool includeTransformSyncTick,
             bool includeOwnerPayloadTransformSync,
             bool includeOwnerPayloadAttachedTransformSync,
+            bool includeEntityAnchorRootTransformSync,
             bool includeAttachmentTick,
             bool includeGroundingTick)
         {
@@ -2892,6 +2902,11 @@ namespace Ludots.Core.Presentation.Presenters
             if (includeOwnerPayloadAttachedTransformSync)
             {
                 signature += Component<PerfOwnerPayloadAttachedTransformSync>.Signature;
+            }
+
+            if (includeEntityAnchorRootTransformSync)
+            {
+                signature += Component<PerfEntityAnchorRootTransformSync>.Signature;
             }
 
             return signature;
