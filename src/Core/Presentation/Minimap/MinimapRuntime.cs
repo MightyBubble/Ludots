@@ -806,7 +806,8 @@ namespace Ludots.Core.Presentation.Minimap
         private void ProjectMarkers(GameEngine engine, MinimapMarkerBuffer markers, MinimapScreenMarkerBuffer screenMarkers)
         {
             _projectionFrameCounter++;
-            bool hasKnowledgeResolver = KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
+            bool revealHidden = KnowledgeProjectionConsumer.IsAudienceRevealHidden(engine.GlobalContext);
+            bool hasKnowledgeResolver = !revealHidden && KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
             bool hasKnowledgeViewer = false;
             Entity knowledgeViewer = Entity.Null;
             if (hasKnowledgeResolver &&
