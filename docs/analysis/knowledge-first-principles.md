@@ -59,7 +59,14 @@ knowledge grant、不持 controls 边的 viewer anchor"——这是它存在的�
 但**没有任何 issue 提到"稠密消费方的集合级读取 / revision 增量"这个形态缺口**。
 这就是我要开的那一个（挂 #190 之下，不另立 epic）。
 
-## 3 结论与建议
+## 3 已开 issue
+
+形态缺口已登记为 **issue #1489**（挂 #190 之下，不另立平级 epic，
+遵守 #190 «The SSOT for this plan is this GitHub issue hierarchy» 与仓库 doc-governance）。
+含设计取舍待定项（集合级产物挂谁、刷新时机、aspect 宽度切分、与 #197 点级授权合同的关系）、
+验收标准与 TDD 指引。
+
+## 4 结论与建议
 
 **保留场景，重构形态。** 具体三条，按价值排序：
 
