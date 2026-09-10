@@ -255,6 +255,9 @@ namespace Ludots.Core.Config
                 Span<AttributeLastSnapshot> attributeSnapshots = descriptor.HasAttributeBuffer ? chunk.GetSpan<AttributeLastSnapshot>() : default;
                 Span<GameplayTagContainer> gameplayTags = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagContainer>() : default;
                 Span<TagCountContainer> tagCounts = descriptor.HasTagCountContainer ? chunk.GetSpan<TagCountContainer>() : default;
+                Span<GameplayTagSnapshot> tagSnapshots = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagSnapshot>() : default;
+                Span<GameplayTagEffectiveCache> effectiveCaches = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagEffectiveCache>() : default;
+                Span<TagCountSnapshot> countSnapshots = descriptor.HasTagCountContainer ? chunk.GetSpan<TagCountSnapshot>() : default;
                 Span<DirtyFlags> dirtyFlags = descriptor.HasDirtyFlags ? chunk.GetSpan<DirtyFlags>() : default;
                 Span<TimedTagBuffer> timedTags = descriptor.HasTimedTagBuffer ? chunk.GetSpan<TimedTagBuffer>() : default;
                 Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
@@ -310,11 +313,16 @@ namespace Ludots.Core.Config
                     if (descriptor.HasGameplayTagContainer)
                     {
                         gameplayTags[componentIndex] = descriptor.GameplayTags;
+                        GameplayTagContainer seedTags = descriptor.GameplayTags;
+                        tagSnapshots[componentIndex] = System.Runtime.CompilerServices.Unsafe.As<GameplayTagContainer, GameplayTagSnapshot>(ref seedTags);
+                        effectiveCaches[componentIndex] = System.Runtime.CompilerServices.Unsafe.As<GameplayTagContainer, GameplayTagEffectiveCache>(ref seedTags);
                     }
 
                     if (descriptor.HasTagCountContainer)
                     {
                         tagCounts[componentIndex] = descriptor.TagCounts;
+                        TagCountContainer seedCounts = descriptor.TagCounts;
+                        countSnapshots[componentIndex] = TagCountSnapshot.From(ref seedCounts);
                     }
                     if (descriptor.HasDirtyFlags)
                     {
@@ -780,11 +788,16 @@ namespace Ludots.Core.Config
                 if (hasGameplayTagContainer)
                 {
                     signature += Component<GameplayTagContainer>.Signature;
+                    // 出生即种 Quick 快照/缓存：DeferredTriggerCollection 的标签比较走
+                    // 引用更新路径，避免收集时结构性补件（10K 规模 100KB+/帧 的分配源）。
+                    signature += Component<GameplayTagSnapshot>.Signature;
+                    signature += Component<GameplayTagEffectiveCache>.Signature;
                 }
 
                 if (hasTagCountContainer)
                 {
                     signature += Component<TagCountContainer>.Signature;
+                    signature += Component<TagCountSnapshot>.Signature;
                 }
 
                 if (hasTimedTagBuffer)

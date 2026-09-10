@@ -103,6 +103,8 @@ namespace Ludots.Core.Config
                 ApplyComponent(entity, kvp.Key, kvp.Value, isOverride: true);
             }
 
+            SeedGasTagSnapshots(entity);
+
             EntityRuntimeStatePlan.EnsureInstalledForAuthoredEntity(
                 _world,
                 entity,
@@ -116,6 +118,31 @@ namespace Ludots.Core.Config
             _overrides.Clear();
 
             return entity;
+        }
+
+        private void SeedGasTagSnapshots(Entity entity)
+        {
+            if (!_world.Has<GameplayTagContainer>(entity))
+            {
+                return;
+            }
+
+            ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(entity);
+            if (!_world.Has<GameplayTagSnapshot>(entity))
+            {
+                _world.Add(entity, System.Runtime.CompilerServices.Unsafe.As<GameplayTagContainer, GameplayTagSnapshot>(ref tags));
+            }
+
+            if (!_world.Has<GameplayTagEffectiveCache>(entity))
+            {
+                _world.Add(entity, System.Runtime.CompilerServices.Unsafe.As<GameplayTagContainer, GameplayTagEffectiveCache>(ref tags));
+            }
+
+            if (_world.Has<TagCountContainer>(entity) && !_world.Has<TagCountSnapshot>(entity))
+            {
+                ref TagCountContainer counts = ref _world.Get<TagCountContainer>(entity);
+                _world.Add(entity, TagCountSnapshot.From(ref counts));
+            }
         }
 
         private void ApplyComponent(Entity entity, string componentName, JsonNode data, bool isOverride)
