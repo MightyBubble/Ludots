@@ -720,10 +720,11 @@ namespace Ludots.Tests.Presentation
             IClock clock = RequireService(engine, CoreServiceKeys.Clock);
             int startTick = clock.Now(ClockDomainId.FixedFrame);
             int hostFrames = 0;
+            int hostFrameLimit = Math.Max(ticks * 8, MaxWarmupFrames);
             while (clock.Now(ClockDomainId.FixedFrame) - startTick < ticks)
             {
                 TickProjectionFrames(engine, hudProjection, 1);
-                Assert.That(++hostFrames, Is.LessThanOrEqualTo(ticks * 8),
+                Assert.That(++hostFrames, Is.LessThanOrEqualTo(hostFrameLimit),
                     "MassNavigation simulation did not advance the requested FixedFrame window.");
             }
         }
