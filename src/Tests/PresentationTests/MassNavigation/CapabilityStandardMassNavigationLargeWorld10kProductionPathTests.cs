@@ -752,6 +752,9 @@ namespace Ludots.Tests.Presentation
             in CommandSourceDragGesture gesture)
         {
             Entity player = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            Vector2 start = gesture.Start;
+            Vector2 end = gesture.End;
+            ScreenRect marquee = gesture.Marquee;
             var handler = RequireService(engine, CoreServiceKeys.InputHandler);
             Assert.That(handler.HasContext("CaseE.Controls"), Is.True,
                 "battle context must project CaseE.Controls before the marquee starts.");
@@ -760,7 +763,7 @@ namespace Ludots.Tests.Presentation
                 Is.True,
                 "local player must carry the battle interaction context before the marquee starts.");
 
-            backend.SetMousePosition(gesture.Start);
+            backend.SetMousePosition(start);
             backend.SetButton(MouseLeftButtonPath, false);
             AdvanceFixedClock(engine, hudProjection, 1);
 
@@ -773,7 +776,7 @@ namespace Ludots.Tests.Presentation
                 () => "pressing must activate the boxing context (box_begin graph mount). " +
                       $"BoxSelectBegin down={handler.IsDown("CaseE.BoxSelectBegin")}.");
 
-            backend.SetMousePosition(gesture.End);
+            backend.SetMousePosition(end);
             AdvanceFixedClock(engine, hudProjection, BoxSelectDragFrames);
 
             backend.SetButton(MouseLeftButtonPath, false);
@@ -783,7 +786,7 @@ namespace Ludots.Tests.Presentation
                 BoxSelectReleaseFrames,
                 () => SnapshotCommandSource(engine).Length > 0,
                 () => "releasing must commit rectangle hits into selected. " +
-                      CaptureCommandSourceDiagnostics(engine, gesture.Marquee));
+                      CaptureCommandSourceDiagnostics(engine, marquee));
         }
 
         private static int DriveRightClickCommandFrame(
