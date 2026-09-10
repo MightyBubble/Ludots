@@ -242,21 +242,20 @@ namespace Ludots.Core.Systems
             ArgumentNullException.ThrowIfNull(cameraManager);
             ArgumentNullException.ThrowIfNull(presentSurface);
 
-            // Hosts call this through RebindPipeline on every present-binding drive. An equivalent
-            // single binding must stay a no-op, otherwise the static camera cache is wiped each frame
-            // and every static entity is re-culled in full (measured 5-8ms per frame on 30K).
-            if (_presentBindingArmed &&
-                _presentBindingPasses.Count == 1 &&
-                ReferenceEquals(_presentBindingPasses[0].Camera, cameraManager) &&
-                SurfaceMatches(_presentBindingPasses[0].Surface, presentSurface))
-            {
-                return;
-            }
-
+            // Hosts drive this every frame with a freshly built surface wrapper, so always refresh the
+            // pass entry to keep the wrapper current. Only the static cull caches are conditional: they
+            // must survive when the camera binding is equivalent, otherwise the static entities look
+            // 'never culled' forever and are re-culled in full each frame (measured 5-8ms on 30K).
+            bool sameCamera = _presentBindingArmed &&
+                              _presentBindingPasses.Count == 1 &&
+                              ReferenceEquals(_presentBindingPasses[0].Camera, cameraManager);
             _presentBindingPasses.Clear();
             _presentBindingPasses.Add(new PresentBindingCullPass(null, cameraManager, presentSurface));
             _presentBindingArmed = true;
-            ResetPassStaticCaches();
+            if (!sameCamera)
+            {
+                ResetPassStaticCaches();
+            }
         }
 
         /// <summary>
@@ -272,13 +271,9 @@ namespace Ludots.Core.Systems
                 throw new ArgumentException("At least one present binding cull pass is required.", nameof(passes));
             }
 
-            // Hosts re-arm every frame before the tick. Clearing the static caches here would make the
-            // static entities look "never culled" forever and force a full 30K+ re-cull each frame, so
-            // an equivalent pass set must be a no-op.
-            if (_presentBindingArmed && PassSetMatches(passes))
-            {
-                return;
-            }
+            // Hosts re-arm every frame before the tick. Refreshing the entries keeps the surfaces
+            // current; only a genuinely different camera set invalidates the static cull caches.
+            bool samePasses = _presentBindingArmed && PassSetMatches(passes);
 
             _presentBindingPasses.Clear();
             for (int i = 0; i < passes.Count; i++)
@@ -287,7 +282,10 @@ namespace Ludots.Core.Systems
             }
 
             _presentBindingArmed = true;
-            ResetPassStaticCaches();
+            if (!samePasses)
+            {
+                ResetPassStaticCaches();
+            }
         }
 
         private bool PassSetMatches(IReadOnlyList<PresentBindingCullPass> passes)
