@@ -4,7 +4,8 @@
 
 ## 1 环境要求
 
-- .NET 9.0 SDK（`global.json` 固定 9.0.x，全仓 target `net9.0`）——**唯一硬前置**
+- .NET 9.0 SDK（`global.json` 固定 9.0.x，全仓 target `net9.0`）——日常启动的硬前置
+- 编维护测试图还要 .NET 8 SDK（vendored 图库仍是 `net8.0`），见 [环境与构建](contributing/environment-setup.md)
 - 仓库自带离线 NuGet（`external/nuget/` + 根 `nuget.config`）：规范路径 **不需要访问 nuget.org**（弱网可用）
 - Node.js + npm：**仅** GUI 启动器 / Web adapter 需要；Raylib CLI 主路径不需要
 
