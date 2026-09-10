@@ -4,6 +4,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.Raylib.Render;
 using NUnit.Framework;
 using Raylib_cs;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Ludots.Tests.Presentation;
@@ -35,6 +36,51 @@ public unsafe class RaylibAnimationProfileBindingsTests
     {
         Assert.Throws<InvalidOperationException>(() => RaylibSkinnedPlayback.ResolveStateMap(1, _path, null));
         Assert.That(RaylibSkinnedPlayback.ResolveStateMap(0, _path, null), Is.Null);
+    }
+
+    [Test]
+    public void QuantizeFrameIndex_ZeroBuckets_IsIdentity()
+    {
+        for (int frame = 0; frame < 62; frame++)
+        {
+            Assert.That(RaylibSkinnedPlayback.QuantizeFrameIndex(frame, 62, 0), Is.EqualTo(frame));
+        }
+    }
+
+    [Test]
+    public void QuantizeFrameIndex_SixteenBucketsOnWalkClip_CollapsesToBucketCount()
+    {
+        var unique = new HashSet<int>();
+        for (int frame = 0; frame < 62; frame++)
+        {
+            unique.Add(RaylibSkinnedPlayback.QuantizeFrameIndex(frame, 62, 16));
+        }
+
+        Assert.That(unique.Count, Is.LessThanOrEqualTo(16));
+        Assert.That(unique.Count, Is.GreaterThan(1));
+        Assert.That(
+            RaylibSkinnedPlayback.QuantizeFrameIndex(0, 62, 16),
+            Is.EqualTo(RaylibSkinnedPlayback.QuantizeFrameIndex(1, 62, 16)));
+    }
+
+    [Test]
+    public void QuantizeFrameIndex_BucketsAtLeastFrameCount_IsIdentity()
+    {
+        Assert.That(RaylibSkinnedPlayback.QuantizeFrameIndex(7, 16, 16), Is.EqualTo(7));
+        Assert.That(RaylibSkinnedPlayback.QuantizeFrameIndex(7, 16, 32), Is.EqualTo(7));
+    }
+
+    [Test]
+    public void QuantizeFrameIndex_NegativeBuckets_FailsClosed()
+    {
+        Assert.Throws<InvalidOperationException>(() => RaylibSkinnedPlayback.QuantizeFrameIndex(0, 62, -1));
+    }
+
+    [Test]
+    public void QuantizeFrameIndex_OutOfRangeFrame_FailsClosed()
+    {
+        Assert.Throws<InvalidOperationException>(() => RaylibSkinnedPlayback.QuantizeFrameIndex(62, 62, 16));
+        Assert.Throws<InvalidOperationException>(() => RaylibSkinnedPlayback.QuantizeFrameIndex(-1, 62, 16));
     }
 
     [Test]

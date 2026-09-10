@@ -202,6 +202,40 @@ namespace Ludots.Raylib.Render
             return (int)(t * (frameCount - 1));
         }
 
+        public static int QuantizeFrameIndex(int frameIndex, int frameCount, int phaseBuckets)
+        {
+            if (phaseBuckets < 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibSkinnedPlayback)} posePhaseBuckets={phaseBuckets} is negative; use 0 for exact frames.");
+            }
+
+            if (frameCount <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibSkinnedPlayback)} clip has frameCount={frameCount}; GpuSkinnedInstance requires a usable clip.");
+            }
+
+            if ((uint)frameIndex >= (uint)frameCount)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibSkinnedPlayback)} frameIndex={frameIndex} is outside frameCount={frameCount}.");
+            }
+
+            if (phaseBuckets == 0 || phaseBuckets >= frameCount)
+            {
+                return frameIndex;
+            }
+
+            int bucket = (int)((long)frameIndex * phaseBuckets / frameCount);
+            if (bucket >= phaseBuckets)
+            {
+                bucket = phaseBuckets - 1;
+            }
+
+            return ResolveFrameIndex(frameCount, (bucket + 0.5f) / phaseBuckets, looping: true);
+        }
+
         private void EnsureBound()
         {
             if (_animations == null || _animCount <= 0)
