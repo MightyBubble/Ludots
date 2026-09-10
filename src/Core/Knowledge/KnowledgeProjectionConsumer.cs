@@ -132,6 +132,23 @@ namespace Ludots.Core.Knowledge
         /// KnowledgeProjection construction, which is where thousands of per-frame resolutions spent
         /// their time.
         /// </summary>
+        /// <summary>Dense-consumer form: caller hoists the resolver and tick out of its per-entity loop.</summary>
+        public static bool TryResolveDisclosure(
+            KnowledgeProjectionResolver resolver,
+            int currentTick,
+            Entity viewer,
+            Entity target,
+            out KnowledgeDisclosureRecord record)
+        {
+            record = default;
+            if (viewer == Entity.Null || target == Entity.Null)
+            {
+                return false;
+            }
+
+            return resolver.TryResolveDisclosure(viewer, target, currentTick, out record);
+        }
+
         public static bool TryResolveDisclosureForViewer(
             World world,
             Dictionary<string, object> globals,
@@ -149,8 +166,6 @@ namespace Ludots.Core.Knowledge
 
             return resolver.TryResolveDisclosure(viewer, target, ResolveCurrentTick(globals), out record);
         }
-
-        /// <summary>Dense-consumer form: caller hoists the resolver and tick out of its per-entity loop.</summary>
 
         /// <summary>
         /// Resolves the viewer's knowledge resolver and the current step tick once, so dense consumers
