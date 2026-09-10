@@ -122,6 +122,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderAdmissionResultCapacity, Is.GreaterThanOrEqualTo(expectedAgents * 2));
             Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderTerminalResultCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
             Assert.That(simulation.Config.Scenario.Teams.Length, Is.EqualTo(ExpectedTeamCount));
+            Assert.That(engine.MergedConfig.Presentation.Minimap.MaxMarkersPerFieldPixel, Is.EqualTo(1),
+                "10K crowd minimap must cap one marker per field pixel; the field is smaller than the agent set.");
 
             var hudProjection = CreateHudProjection(engine);
             ProjectionSample sample = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
@@ -137,8 +139,13 @@ namespace Ludots.Tests.Presentation
             Assert.That(minimapRuntime.Preset, Is.EqualTo(MinimapPreset.RtsFullMap), diagnostics);
             Assert.That(sample.MinimapSnapshot.ZoomBand, Is.EqualTo(MinimapZoomBand.Strategic), diagnostics);
             Assert.That(minimapMarkers.Count, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
-            Assert.That(minimapScreenMarkers.Count, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
-            Assert.That(sample.MinimapSnapshot.VisibleMarkerCount, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
+            Assert.That(minimapScreenMarkers.Count, Is.GreaterThan(0), diagnostics);
+            Assert.That(minimapScreenMarkers.Count, Is.LessThanOrEqualTo(expectedAgents), diagnostics);
+            Assert.That(sample.MinimapSnapshot.VisibleMarkerCount, Is.GreaterThan(0), diagnostics);
+            Assert.That(
+                sample.MinimapSnapshot.VisibleMarkerCount,
+                Is.LessThanOrEqualTo(minimapRuntime.FieldSize * minimapRuntime.FieldSize),
+                diagnostics);
             Assert.That(sample.WorldHudBars, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(sample.WorldHudText, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(screenHud.BarCount, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
@@ -883,8 +890,8 @@ namespace Ludots.Tests.Presentation
                 lastSample = CaptureProjectionSample(engine, simulation);
                 if (simulation.NavigationAgentCount == expectedAgents &&
                     lastSample.MinimapSnapshot.ZoomBand == MinimapZoomBand.Strategic &&
-                    lastSample.MinimapScreenMarkers >= expectedAgents &&
-                    lastSample.MinimapSnapshot.VisibleMarkerCount >= expectedAgents &&
+                    lastSample.MinimapSnapshot.MarkerCount >= expectedAgents &&
+                    lastSample.MinimapSnapshot.VisibleMarkerCount > 0 &&
                     lastSample.WorldHudBars >= expectedAgents &&
                     lastSample.WorldHudText >= expectedAgents &&
                     lastSample.ScreenHudBars >= expectedAgents &&
