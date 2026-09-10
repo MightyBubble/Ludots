@@ -106,7 +106,51 @@ parentSnapshot.WorldPosition = World.Has<PresenterWorldPosition>(parentEntity)
    `presenterPlaneCm` 与 owner 的 `logicCm` 同步位移。这是当前缺口。
 4. **#1486 合并前必须解决**：该提交是 Draft，且**不在 main**，本回归是合并门槛问题。
 
-## 修正：真正的时间线（本文早前版本归因有误）
+## 最终结论：不是引擎缺陷，是配置缺声明
+
+**修复已提交 `2b3d0a9d1f`。**
+
+父级重构之后，"跟随 owner"必须**显式声明 Attachment 行为**；
+marker 只写了 `anchor.offset`（一次性偏移），因此不跟随。
+
+修复内容（`SelectionInteractionMod/assets/Presentation/presenters.json`，
+两个 marker 各一份）：
+
+```json
+{
+  "slot": "attachment",
+  "kind": "Attachment",
+  "activeByDefault": true,
+  "attachment": {
+    "target": "Parent",
+    "updatePolicy": "Continuous",
+    "inherit": ["Position", "Rotation"],
+    "localPositionParamKey": "...attachment.position",
+    "localRotationParamKey": "...attachment.rotation",
+    "localScaleParamKey":   "...attachment.scale"
+  }
+}
+```
+
+- 原 `anchor.offset` (0, 0.2, 0) 迁到 attachment 的 `localPosition`
+- **删除 `anchor`**：引擎明确拒绝"anchor.offset 与 Attachment 并存"
+  （`the root transform accepts exactly one offset source`）
+- position/scale 的 W 必须为 0（只有 rotation 用 W=1），否则引擎拒绝
+
+### 实测（owner 在移动）
+
+| | 修复前 | 修复后 |
+|---|---|---|
+| `transformSource` | `InheritParent` / `WorldFixed` | **`AttachedToParent`** |
+| owner 移动的 marker | 125（全部冻结） | **499（全部跟随）** |
+
+**本文下面几节是排错过程记录，保留以备查（其中存在两次错误归因，已标注）。**
+
+---
+
+## 排错过程（历史，含已证伪的假设）
+
+### 修正：真正的时间线（本文早前版本归因有误）
 
 **早前版本把根因写成"#1486 的 `c202aa3978` 把 InheritParent 改成 WorldFixed"。
 方向对，但时间线错了——marker 在更早就已经不动了。**
