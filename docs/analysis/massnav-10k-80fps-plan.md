@@ -349,3 +349,44 @@
 2. **`CameraCullingSystem` 2.4–4.8ms**：动态实体每帧全量 `ProcessEntity`。
 3. **`MinimapPresentationSystem` 2.3–4.3ms**：每帧对 10K marker 做 knowledge 解析（viewer 已注册，缓存按 owner 命中不了，因每 marker 一个 owner）。
 4. **30K 场景是纯 GPU 绑（85%+）**：30K × 2,410 tri = 7,200 万三角面/帧；除非换低模，否则是硬地板。
+
+---
+
+## 12. 与 origin/main 合并（`3113ae3cde` + `63583b5dd3`）
+
+合入前 main 已前进 6 个提交，且**打的正是我列出的同一批热点**：
+
+| main 提交 | 内容 | 与我的关系 |
+|---|---|---|
+| `5657c69fbf` | hard resolve 每 agent 每 pass 分离预算 + `QuadrantSpread` 出生散开 | **互补**（我列的第 1 项，main 先做了） |
+| `de3dddd1bb` | `QuadrantSpread` 逐单位散点目标 | 互补 |
+| `f1a971a3d7` | 预算字段挪回 `semantics.solver`（修真机启动崩溃） | 无关 |
+| `7ecd469645` | GAS 出生种 tag 快照，消结构性补件 | 互补（我提到的「热路径结构变更」） |
+| `1699990795` | 无消费者时跳过地图事件分发 | 互补（分配 −18%） |
+
+**冲突只有 1 处**（`MassNavigationFlowSolverState.cs` 的 hard-resolve 内层）：保留我把已算好的
+`dx/dy/d2/半径和` 直接传给 `SeparateAgents` 的融合形式，叠加 main 的每 agent 分离预算 —— 预算路径
+不会退回「探测两遍」。
+
+### 合并后实测（headless 10K，1600×900）
+
+| 指标 | 数值 |
+|---|---|
+| main 的分离预算效果 | `hardPenetrating` 峰值 52K → 稳态 ~2K；`hard` 5.4 → ~1.8ms |
+| main 的出生散开效果 | `hardPairs` 起始 100K+ → 7.8K |
+| 我的 flow 索引 | flow 重建 **0–1.4ms**（合并前后一致） |
+| 我的 culling 修复 | `cullStatic` **0.00ms**，`visibleEntities=10006` 正常渲染 |
+| 稳态 `sim` | **0.19–7.6ms**（此前 20ms+） |
+| 最好帧 | **49.1 FPS**（连续 5 帧 40–49） |
+| 现在的主导成本 | `presentation` 12–16ms（`Minimap` 2–3、`Emit` 2–5、`TransformSync` 1–4、`cull` 2–3.7） |
+
+### 合并中我自己引入并修掉的一个回归（`63583b5dd3`）
+
+合并后 10K 只剩 `visibleEntities=5`、`gpuSkinned=0`（单位不渲染）。定位为我上一轮的 culling 优化
+`RebindPresentBinding` 提前 return —— host 每帧都新建 `PresentBindingSurface` 包装，提前 return 会让
+缓存里的包装**陈旧**，可见性判定失效。修法：**pass 条目始终重写**（保证包装是最新的），只把
+`ResetPassStaticCaches` 继续按「相机绑定是否真的变了」门控。修后 10006 可见 + `cullStatic=0` 同时成立，
+`ThreeCTests` 回到既有的 7 失败 / 112 通过。
+
+> 教训记在案：cull 缓存这类「跳过重算」的优化，必须把**旁路的状态刷新**和**缓存失效**分开处理，
+> 不能整体 early-return。
