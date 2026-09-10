@@ -390,3 +390,62 @@
 
 > 教训记在案：cull 缓存这类「跳过重算」的优化，必须把**旁路的状态刷新**和**缓存失效**分开处理，
 > 不能整体 early-return。
+
+---
+
+## 13. PR #1486 评估结论：**暂不合，但有 1 个可单独摘的优化（已试，收益不成立）**
+
+### 13.1 为什么不能整体合
+
+`codex/presenter-attachment-contract-perf`：**267 文件 / +20137 −1769**，其中
+**235 个是 artifacts 证据**，真正的代码是 `src/` 下 **32 文件 / +2136 −817**。
+
+实测动作：
+1. `git merge origin/codex/presenter-attachment-contract-perf` → **无冲突**，编译通过。
+2. 跑 10K 载体 → **直接崩**：
+   ```
+   System.InvalidOperationException: Presenter behavior references unknown Mesh asset 'mass_navigation.command.marker'.
+   ```
+   该 PR 往 `MassNavigationMod/assets/Presentation/presenters.json` 加了
+   `mass_navigation_agent_command_marker_{light,heavy}` 两个定义，引用 Mesh 资产
+   `mass_navigation.command.marker` —— **该资产在 main 与该分支的任何 `mesh_assets.json` 里都不存在**
+   （`git grep` 全仓零命中；MassNavigationMod 的 `mesh_assets.json` 只有 3 条，都不匹配）。
+   ⇒ 这个 PR 自身在 massnav 场景上是**启动即失败**的，与它 Draft + 7 条未勾选合入阻塞项的状态一致。
+
+结论：**不能整包合**。它自己也承认「旧隐式空间行为的完整迁移仍未完成」，且它的 10K 测量是
+「约 3 FPS、EndDrawing 265–278ms」（未区分 GPU 执行与窗口等待，未验证恢复 60 FPS）。
+
+### 13.2 唯一看起来有账可算的那条，实测不成立
+
+该 PR 里最贴我热点的是 `4416820854 perf(presentation): restrict entity transform sync to compiled roots`
+—— 只 11 行，给 `EntityAnchoredQuery` 加一个 `PerfEntityAnchorRootTransformSync` 标记，
+把每帧变换同步从「全部 presenter」收窄到「entity-anchored 根」。
+
+关键前提：它依赖的 `IsEntityAnchoredRootPresenter(Entity)` **在 main 上已经存在**（3 处引用），
+所以我按同样思路在本分支**原生实现了一遍**（marker + 两个 `SyncTickBehaviorMarker` 点 + 批量出生签名 +
+移除点 + 查询收窄），不依赖 PR 的其余部分。
+
+实测（10K massnav，1600×900）：
+
+| 指标 | 基线 | 收窄后 |
+|---|---|---|
+| `transformSync` | 1.4–2.2ms | **1.2–1.8ms**（确实略降） |
+| `visibleEntities` | **10006（稳定）** | 1179–8503（**抖动、不收敛**） |
+| `worldHud` | **20000** | 2358–17004 |
+| `hudProjected` | **20000** | 0–5258 |
+
+⇒ **收窄把挂接子对象的同步漏掉了**：20K 血条/文本子 presenter 不再被每帧变换同步覆盖，
+可见性与 HUD 投影双双塌陷。也就是说，当前 `EntityAnchoredQuery` 同时承担了
+「根从 owner 取姿态」和「挂接子对象兜底同步」两个职责，**不能只按 anchorKind 收窄**。
+
+已回退（工作树回到基线：`visibleEntities=10006` / `worldHud=20000` / `cullStatic=0.01`）。
+这恰好对应 PR #1486 自己列的未完成项：「核对…嵌套挂接、贴地传播」「完成
+`TransformSource.InheritParent`、`PresenterInstanceTransformOverride` 旧路径迁移」。
+
+### 13.3 建议
+
+- **#1486 不并入本分支**。它是契约重构，正确做法是它自己补齐阻塞项（尤其那次
+  `mass_navigation.command.marker` 资产缺失是纯粹的配置错误，必须先修）后再独立评审。
+- 其中有价值的**思路**（按 anchor 收窄变换同步）可以做，但前提是先把「挂接子对象的
+  兜底同步」拆成独立车道，否则就是上面这个塌陷。
+- 它的 artifacts 目录（235 文件）不应随代码一起进主干。
