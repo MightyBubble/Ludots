@@ -32,19 +32,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.07,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "presenter.ability.superweapon.caster_marker.attachment.position",
+          "localRotationParamKey": "presenter.ability.superweapon.caster_marker.attachment.rotation",
+          "localScaleParamKey": "presenter.ability.superweapon.caster_marker.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "presenter.ability.superweapon.caster_marker.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.07,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "presenter.ability.superweapon.caster_marker.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "presenter.ability.superweapon.caster_marker.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -81,19 +109,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.05,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "presenter.ability.superweapon.target_marker.attachment.position",
+          "localRotationParamKey": "presenter.ability.superweapon.target_marker.attachment.rotation",
+          "localScaleParamKey": "presenter.ability.superweapon.target_marker.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "presenter.ability.superweapon.target_marker.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.05,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "presenter.ability.superweapon.target_marker.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "presenter.ability.superweapon.target_marker.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },

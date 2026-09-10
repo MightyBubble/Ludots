@@ -208,6 +208,11 @@ namespace Ludots.Tests.Presentation
             int parentDefId = definitions.Register("boneprovider.knight.parent", parentDefinition);
             var childDefinition = new PresenterDefinition
             {
+                ParamDefaults = [
+                    new ParamDefault { ParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.position"), Lane = ParamLane.Vector, VectorValue = new Vector4(Vector3.Zero, 0f) },
+                    new ParamDefault { ParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.rotation"), Lane = ParamLane.Vector, VectorValue = new Vector4((Quaternion.Identity).X, (Quaternion.Identity).Y, (Quaternion.Identity).Z, (Quaternion.Identity).W) },
+                    new ParamDefault { ParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.scale"), Lane = ParamLane.Vector, VectorValue = new Vector4(1f, 1f, 1f, 0f) }
+                ],
                 Behaviors =
                 [
                     new BehaviorSlot
@@ -215,14 +220,7 @@ namespace Ludots.Tests.Presentation
                         SlotIndex = 0,
                         Kind = BehaviorKind.Attachment,
                         ActiveByDefault = true,
-                        Attachment = new AttachmentConfig
-                        {
-                            Target = AttachmentTarget.Bone,
-                            BoneId = boneId,
-                            Offset = Vector3.Zero,
-                            RotationOffset = Quaternion.Identity,
-                            InheritScale = false,
-                        },
+                        Attachment = new AttachmentConfig { Target = AttachmentTarget.Bone, BoneId = boneId, UpdatePolicy = AttachmentUpdatePolicy.Continuous, Inherit = AttachmentInheritance.Position | AttachmentInheritance.Rotation, LocalPositionParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.position"), LocalRotationParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.rotation"), LocalScaleParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.scale") },
                     },
                 ],
             };
@@ -280,7 +278,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Attachment_WithoutProvider_WarnsOnceAndSkipsBoneSubstitution()
+        public void Attachment_WithoutProvider_ThrowsExplicitError()
         {
             using var world = World.Create();
             var instances = new PresenterEntityRuntime(world);
@@ -289,6 +287,11 @@ namespace Ludots.Tests.Presentation
 
             var definition = new PresenterDefinition
             {
+                ParamDefaults = [
+                    new ParamDefault { ParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.position"), Lane = ParamLane.Vector, VectorValue = new Vector4(Vector3.Zero, 0f) },
+                    new ParamDefault { ParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.rotation"), Lane = ParamLane.Vector, VectorValue = new Vector4((Quaternion.Identity).X, (Quaternion.Identity).Y, (Quaternion.Identity).Z, (Quaternion.Identity).W) },
+                    new ParamDefault { ParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.scale"), Lane = ParamLane.Vector, VectorValue = new Vector4(1f, 1f, 1f, 0f) }
+                ],
                 Behaviors =
                 [
                     new BehaviorSlot
@@ -296,19 +299,13 @@ namespace Ludots.Tests.Presentation
                         SlotIndex = 0,
                         Kind = BehaviorKind.Attachment,
                         ActiveByDefault = true,
-                        Attachment = new AttachmentConfig
-                        {
-                            Target = AttachmentTarget.Bone,
-                            BoneId = 1,
-                            Offset = Vector3.Zero,
-                            RotationOffset = Quaternion.Identity,
-                            InheritScale = false,
-                        },
+                        Attachment = new AttachmentConfig { Target = AttachmentTarget.Bone, BoneId = 1, UpdatePolicy = AttachmentUpdatePolicy.Continuous, Inherit = AttachmentInheritance.Position | AttachmentInheritance.Rotation, LocalPositionParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.position"), LocalRotationParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.rotation"), LocalScaleParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.scale") },
                     },
                 ],
             };
             int defId = definitions.Register("boneprovider.warn", definition);
-            Entity parentPresenter = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7400, Entity.Null, definition);
+            int parentDefId = definitions.Register("boneprovider.root", new PresenterDefinition());
+            Entity parentPresenter = instances.Create(parentDefId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7400, Entity.Null, definitions.Get(parentDefId));
             Entity childPresenter = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7401, parentPresenter, definition);
             world.Get<PresenterState>(childPresenter).BehaviorActiveMask = 1u;
             world.Get<PresenterState>(parentPresenter).StableId = 7400;
@@ -323,15 +320,12 @@ namespace Ludots.Tests.Presentation
                 heightmap: null,
                 boneTransformProvider: null);
 
-            system.Update(0.016f);
-            system.Update(0.016f);
+            var error = Assert.Throws<InvalidOperationException>(() => system.Update(0.016f));
 
             Assert.That(world.Has<PresenterTransformSource>(childPresenter) == false ||
                 world.Get<PresenterTransformSource>(childPresenter).Value != TransformSource.BoneAttached,
                 Is.True, "无 provider 时不得做骨骼挂点替换");
-            Assert.That(_log.Warnings.Count, Is.EqualTo(1), "warn 只应发生一次（去重）");
-            Assert.That(_log.Warnings[0], Does.Contain("bone provider is not registered"));
-            Assert.That(_log.Warnings[0], Does.Contain("Parent-position substitution is not applied"));
+            Assert.That(error!.Message, Does.Contain("PRESENTATION.ATTACHMENT.ERR.BoneProviderMissing"));
         }
 
         private RaylibBoneTransformProvider CreateProvider(

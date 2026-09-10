@@ -119,3 +119,12 @@ Ruleset: `scripts/validate-docs.ps1`（链接/反引号路径/命名规则）+ `
 - 帧统计表摘自当前验收工件（`engine_gallery_all/*.json` 等），证据重跑后数值会变化；页面已标注工件路径供对账。
 - 侧栏 Playwright 自动化点击在粘性滚动容器内偶发超时（人工路径不受影响；哈希路由 `#scene/<id>` 等价可达，实测正常）。
 - 本次操作事故记录：在他人工作树 `.worktrees/audit-raylib-main` 做 stash 验证时，因多工作树共享 stash 栈弹入了他人 stash 造成冲突残留；已 `git reset --hard` 恢复至该分支干净 HEAD（`a4b594a118`），他人 stash（wip-nr）完好保留。教训：不在共享仓库的他人工作树执行 stash/pop。
+
+
+## Presenter attachment measurement review (2026-09-09)
+
+- Scope: artifacts/evidence/presenter-attachment-contract/measurement-20260909.md and PR #1486 description only.
+- Rules: repository-relative evidence paths; design SSOT remains issue #1483; retain measurement scopes, baseline hashes, failures and uncertainty.
+- Findings: P1 formal gitbook contract migration remains incomplete; P1 stable runtime A/B and motion evidence remain missing. Both remain PR merge blockers. No new duplicate design authority or missing linked evidence in this report.
+- Fix order: publish raw evidence and current limits; finish contract migration and runtime verification; synchronize formal docs before merge.
+- Residual risk: Windows foreground/session state confounds runtime samples; local CPU timings cannot establish whole-machine FPS. This is not a repository-wide documentation audit.

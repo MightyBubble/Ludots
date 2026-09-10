@@ -164,19 +164,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.03,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "control_plane.visual.owned_marker.attachment.position",
+          "localRotationParamKey": "control_plane.visual.owned_marker.attachment.rotation",
+          "localScaleParamKey": "control_plane.visual.owned_marker.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "control_plane.visual.owned_marker.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.03,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "control_plane.visual.owned_marker.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "control_plane.visual.owned_marker.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -213,19 +241,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.03,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "control_plane.visual.proxied_marker.attachment.position",
+          "localRotationParamKey": "control_plane.visual.proxied_marker.attachment.rotation",
+          "localScaleParamKey": "control_plane.visual.proxied_marker.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "control_plane.visual.proxied_marker.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.03,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "control_plane.visual.proxied_marker.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "control_plane.visual.proxied_marker.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -262,19 +318,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.05,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "control_plane.visual.referee_phase0_marker.attachment.position",
+          "localRotationParamKey": "control_plane.visual.referee_phase0_marker.attachment.rotation",
+          "localScaleParamKey": "control_plane.visual.referee_phase0_marker.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "control_plane.visual.referee_phase0_marker.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.05,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "control_plane.visual.referee_phase0_marker.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "control_plane.visual.referee_phase0_marker.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -311,19 +395,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.05,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "control_plane.visual.referee_phase1_marker.attachment.position",
+          "localRotationParamKey": "control_plane.visual.referee_phase1_marker.attachment.rotation",
+          "localScaleParamKey": "control_plane.visual.referee_phase1_marker.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "control_plane.visual.referee_phase1_marker.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.05,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "control_plane.visual.referee_phase1_marker.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "control_plane.visual.referee_phase1_marker.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
