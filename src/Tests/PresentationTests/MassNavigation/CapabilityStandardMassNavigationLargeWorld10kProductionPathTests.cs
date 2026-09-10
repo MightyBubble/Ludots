@@ -55,8 +55,11 @@ namespace Ludots.Tests.Presentation
         private const int HudStabilityObservationFrames = 12;
         private const float CommandTargetOffsetWindowScale = 0.25f;
         private const float MovementEpsilonCm = 1f;
-        private const string MouseLeftButtonPath = "<Mouse>/LeftButton";
-        private const string MouseRightButtonPath = "<Mouse>/RightButton";
+        private const int BoxSelectPressFrames = 6;
+        private const int BoxSelectDragFrames = 6;
+        private const int BoxSelectReleaseFrames = 30;
+        private const string MouseLeftButtonPath = "<Mouse>/leftButton";
+        private const string MouseRightButtonPath = "<Mouse>/rightButton";
         private const string LightCommandMarkerPresenterId = "presenter.case_e.selection_marker";
         private const string HeavyCommandMarkerPresenterId = "presenter.case_e.selection_marker";
 
@@ -371,7 +374,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(before.EligibleIntersecting, Is.GreaterThan(0), before.ToString());
 
             DriveCommandSourceBoxAcquisition(engine, hudProjection, backend, gesture);
-            TickProjectionFrames(engine, hudProjection, 2);
 
             Entity[] commandActors = SnapshotCommandSource(engine);
             CommandSourceDiagnostics after = CaptureCommandSourceDiagnostics(engine, gesture.Marquee);
@@ -395,7 +397,6 @@ namespace Ludots.Tests.Presentation
             var backend = RequireMutableInputBackend(engine);
             CommandSourceDragGesture gesture = ResolveVisibleAgentDragGesture(engine);
             DriveCommandSourceBoxAcquisition(engine, hudProjection, backend, gesture);
-            TickProjectionFrames(engine, hudProjection, 2);
 
             Entity[] commandActors = SnapshotCommandSource(engine);
             CommandSourceDiagnostics commandSourceDiagnostics = CaptureCommandSourceDiagnostics(engine, gesture.Marquee);
@@ -731,18 +732,27 @@ namespace Ludots.Tests.Presentation
             MutableInputBackend backend,
             in CommandSourceDragGesture gesture)
         {
+            Entity player = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            var handler = RequireService(engine, CoreServiceKeys.InputHandler);
+            Assert.That(handler.HasContext("CaseE.Controls"), Is.True,
+                "battle context must project CaseE.Controls before the marquee starts.");
+
             backend.SetMousePosition(gesture.Start);
             backend.SetButton(MouseLeftButtonPath, false);
             TickProjectionFrames(engine, hudProjection, 1);
 
             backend.SetButton(MouseLeftButtonPath, true);
-            TickProjectionFrames(engine, hudProjection, 1);
+            TickProjectionFrames(engine, hudProjection, BoxSelectPressFrames);
+            Assert.That(
+                engine.World.TryGet(player, out InteractionContextInstances boxing) && boxing.Count > 0,
+                Is.True,
+                "pressing must activate the boxing context (box_begin graph mount).");
 
             backend.SetMousePosition(gesture.End);
-            TickProjectionFrames(engine, hudProjection, 1);
+            TickProjectionFrames(engine, hudProjection, BoxSelectDragFrames);
 
             backend.SetButton(MouseLeftButtonPath, false);
-            TickProjectionFrames(engine, hudProjection, 1);
+            TickProjectionFrames(engine, hudProjection, BoxSelectReleaseFrames);
         }
 
         private static int DriveRightClickCommandFrame(
