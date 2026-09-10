@@ -1,0 +1,38 @@
+{
+  "op": "ShowMinimap",
+  "driver": "linear",
+  "title": "整张战场铺开",
+  "beat": "进图那一下，小地图按全图铺开，单位点跟着亮。",
+  "detailTemplate": "小地图铺开了——{healthBefore}→{healthAfter}。",
+  "assertDetailContains": [
+    "小地图铺开了"
+  ],
+  "featuredNodeId": "toggle",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "graphSettled"
+  }
+}

@@ -165,8 +165,7 @@
       "name": "capability_standard_mass_navigation_large_world_10k",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod",
-        "projectPath": "CapabilityStandardMassNavigationLargeWorld10kMod.csproj"
+        "value": "mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod"
       }
     },
     {
@@ -2393,6 +2392,30 @@
         "type": "path",
         "value": "mods/showcases/contact_sensor_textbook/ContactSensorTextbookMod",
         "projectPath": "ContactSensorTextbookMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DiscloseCollection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDiscloseCollectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDiscloseCollectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ShowMinimap",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpShowMinimapEntryMod",
+        "projectPath": "CapabilityStandardGraphOpShowMinimapEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SubmitOrder",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitOrderEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSubmitOrderEntryMod.csproj"
       }
     }
   ],

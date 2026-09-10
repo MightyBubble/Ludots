@@ -3296,6 +3296,33 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DiscloseCollection_raylib",
+      "name": "Graph Op DiscloseCollection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DiscloseCollection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ShowMinimap_raylib",
+      "name": "Graph Op ShowMinimap Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ShowMinimap"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitOrder_raylib",
+      "name": "Graph Op SubmitOrder Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SubmitOrder"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
