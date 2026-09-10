@@ -79,5 +79,15 @@
    （6 mesh / 9148 tri / 23 joints / 4 clips，替代 Knight 的 15 mesh / 615 骨槽）。
 2. ✅ 修好 animator 状态索引（原 41/42 是按 Knight 的 80 clips 编的，mannequin 只有 4）。
 3. ⏳ 离线生成 10K 静态 map instance（`Entities[]` + `Teams`/`Players`）。
-4. ⏳ 用 core 的声明式可见性替换 209 行重复实现（依赖缺口 1）。
+4. ⏳ 改用 core 的 `VisionSystem`（`src/Core/Vision/`，11 个 showcase + 2 个 CI 验收），
+   替换 209 行重复实现。该引擎装配已数据驱动（`VisionFogLayerConfigLoader` + `VisionEmitterCm`
+   组件），且 `VisionSystem` 无条件注册在 `PostMovement`。
 5. ⏳ 删掉 mod entry 的运行时 minimap 改动，改为配置字段。
+
+## 5 后续治理条目
+
+见 `docs/analysis/massnav10k-authoring-governance-todo.md`。
+
+**更正**：本文早期版本称"核心已有声明式配置的等价机制，209 行是重复实现"。经核对，
+`DynamicParticipantVisibilityPublisher` 的 binding 同样需 C# 手搓（无配置加载器）。
+真正可依赖的等价能力是 **`src/Core/Vision/` 的 fog 引擎**，它才是配置驱动的。
