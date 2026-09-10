@@ -1103,6 +1103,7 @@ public sealed class MassNavigationScenarioConfig
 public enum MassNavigationScenarioSpawnLayoutKind : byte
 {
     OrbitOpposedTargets = 1,
+    QuadrantSpread = 2,
 }
 
 public sealed class MassNavigationScenarioSpawnLayoutConfig
@@ -1121,14 +1122,15 @@ public sealed class MassNavigationScenarioSpawnLayoutConfig
         _parsedKind = Kind switch
         {
             "OrbitOpposedTargets" => MassNavigationScenarioSpawnLayoutKind.OrbitOpposedTargets,
+            "QuadrantSpread" => MassNavigationScenarioSpawnLayoutKind.QuadrantSpread,
             "" => throw new InvalidOperationException("MassNavigation scenario.spawnLayout.kind must be a non-empty semantic string."),
             _ => throw new InvalidOperationException(
                 $"MassNavigation scenario.spawnLayout.kind '{Kind}' is not configured.")
         };
 
-        if (OrbitRadiusCm <= 0f)
+        if (_parsedKind == MassNavigationScenarioSpawnLayoutKind.OrbitOpposedTargets && OrbitRadiusCm <= 0f)
         {
-            throw new InvalidOperationException("MassNavigation scenario.spawnLayout.orbitRadiusCm must be > 0.");
+            throw new InvalidOperationException("MassNavigation scenario.spawnLayout.orbitRadiusCm must be > 0 for OrbitOpposedTargets.");
         }
     }
 }

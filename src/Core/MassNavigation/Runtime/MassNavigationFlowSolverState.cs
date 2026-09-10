@@ -83,6 +83,9 @@ public sealed partial class MassNavigationFlowSolverState
     private byte[] _hasUnitTarget = Array.Empty<byte>();
     private byte[] _hardResolveCandidates = Array.Empty<byte>();
     private byte[] _heavyProfileFlags = Array.Empty<byte>();
+    private float _activeSpawnGridSpacingCm;
+    private bool _quadrantSpreadSpawnActive;
+    private bool _quadrantSpreadTargetsPlanted;
     private byte[] _entitySyncDirtyFlags = Array.Empty<byte>();
     private byte[] _unitSettledFlags = Array.Empty<byte>();
     private byte[] _arrivalEventEmittedFlags = Array.Empty<byte>();
@@ -134,6 +137,28 @@ public sealed partial class MassNavigationFlowSolverState
     public long LastHardResolveFallbackPairCheckCount { get; private set; }
     public long LastHardResolvePairCheckCount { get; private set; }
     public int LastHardResolvePenetratingPairCount { get; private set; }
+    public int LastHardResolveSeparateCount { get; private set; }
+    public int LastHardResolveWindowCellVisitCount { get; private set; }
+    public double LastHardResolveBuildHashMs { get; private set; }
+    public double LastHardResolvePairLoopMs { get; private set; }
+    public double LastHardResolveTotalMs { get; private set; }
+    internal bool QuadrantSpreadSpawnActive => _quadrantSpreadSpawnActive;
+    internal int UnitTargetCount
+    {
+        get
+        {
+            int count = 0;
+            if (_hasUnitTarget != null)
+            {
+                for (int i = 0; i < UnitCount; i++)
+                {
+                    count += _hasUnitTarget[i];
+                }
+            }
+
+            return count;
+        }
+    }
     public MassNavigationFlowArrivalTuning ArrivalTuning { get; } = new();
     public MassNavigationFlowAvoidanceTuning AvoidanceTuning { get; } = new();
     public MassNavigationCrowdSemantics Semantics { get; } = new();
@@ -953,6 +978,11 @@ public sealed partial class MassNavigationFlowSolverState
             return;
         }
 
+        if (_quadrantSpreadSpawnActive && !_quadrantSpreadTargetsPlanted)
+        {
+            PlantQuadrantSpreadUnitTargets();
+        }
+
         long prepStart = System.Diagnostics.Stopwatch.GetTimestamp();
         RefreshTeamRelationshipMatrixIfStale();
 
@@ -1189,9 +1219,18 @@ public sealed partial class MassNavigationFlowSolverState
         _teamStates.Clear();
         _flowStates.Clear();
         _teamStateIndexById.Clear();
+        _quadrantSpreadSpawnActive = false;
         if (teamIds.Length <= 0)
         {
             throw new InvalidOperationException("MassNavigationFlowSolverState requires at least one team id for scenario team initialization.");
+        }
+
+        if (spawnLayout.ParsedKind == MassNavigationScenarioSpawnLayoutKind.QuadrantSpread)
+        {
+            _quadrantSpreadSpawnActive = true;
+            InitializeTeamsQuadrantSpread(teamIds, unitsPerTeam, spawnLayout);
+            PrepareTeamRelationshipMatrixForTeamCount(_teamStates.Count);
+            return;
         }
 
         if (spawnLayout.ParsedKind != MassNavigationScenarioSpawnLayoutKind.OrbitOpposedTargets)
@@ -1229,6 +1268,71 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         PrepareTeamRelationshipMatrixForTeamCount(_teamStates.Count);
+    }
+
+    /// <summary>
+    /// QuadrantSpread：把整场划分为 colsTeams×rowsTeams 个象限，每个队伍在一个象限内
+    /// 以 cols×rows 网格满铺（格距按象限跨度自适应，≥ 全局 SpawnSpacingCm），
+    /// 目标投影到对侧象限中心，保持"opposed 对进"的布阵语义，避免出生即挤成团。
+    /// </summary>
+    private void InitializeTeamsQuadrantSpread(
+        ReadOnlySpan<int> teamIds,
+        int unitsPerTeam,
+        MassNavigationScenarioSpawnLayoutConfig spawnLayout)
+    {
+        float centerX = _fieldWidthCm * 0.5f;
+        float centerY = _fieldHeightCm * 0.5f;
+        int colsTeams = Math.Max(1, (int)MathF.Ceiling(MathF.Sqrt(teamIds.Length)));
+        int rowsTeams = Math.Max(1, (int)MathF.Ceiling(teamIds.Length / (float)colsTeams));
+        float cellWidthCm = _fieldWidthCm / colsTeams;
+        float cellHeightCm = _fieldHeightCm / rowsTeams;
+
+        int cols = Math.Max(1, (int)MathF.Ceiling(MathF.Sqrt(unitsPerTeam)));
+        int rows = Math.Max(1, (int)MathF.Ceiling(unitsPerTeam / (float)cols));
+        _activeSpawnGridSpacingCm = Math.Max(
+            Semantics.Group.SpawnSpacingCm,
+            MathF.Min(cellWidthCm / cols, cellHeightCm / rows));
+
+        for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
+        {
+            int teamId = teamIds[teamIndex];
+            int quadrantX = teamIndex % colsTeams;
+            int quadrantY = teamIndex / colsTeams;
+            float spawnCenterX = centerX + (quadrantX - (colsTeams - 1) * 0.5f) * cellWidthCm;
+            float spawnCenterY = centerY + (quadrantY - (rowsTeams - 1) * 0.5f) * cellHeightCm;
+
+            // 切线=列方向、方向=行方向，轴向网格填满象限。
+            float tangentX = 1f;
+            float tangentY = 0f;
+            float directionX = 0f;
+            float directionY = 1f;
+
+            // 目标 = 对侧象限中心（穿过场心，保持 opposed）。
+            float targetCenterX = centerX * 2f - spawnCenterX;
+            float targetCenterY = centerY * 2f - spawnCenterY;
+            float hintX = targetCenterX - spawnCenterX;
+            float hintY = targetCenterY - spawnCenterY;
+            float hintLength = MathF.Sqrt((hintX * hintX) + (hintY * hintY));
+            if (hintLength > 1e-3f)
+            {
+                hintX /= hintLength;
+                hintY /= hintLength;
+            }
+
+            Vector2 target = ResolveNavigableTarget(
+                targetCenterX,
+                targetCenterY,
+                hintX,
+                hintY,
+                Semantics.TargetProjection.TeamTargetClearanceCm);
+            var state = new TeamRuntimeState(teamId, unitsPerTeam, spawnCenterX, spawnCenterY, directionX, directionY, tangentX, tangentY)
+            {
+                TargetX = target.X,
+                TargetY = target.Y,
+            };
+            _teamStateIndexById[teamId] = _teamStates.Count;
+            _teamStates.Add(state);
+        }
     }
 
     private void InitializeTeams(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
@@ -1279,7 +1383,9 @@ public sealed partial class MassNavigationFlowSolverState
         Array.Clear(_unitStuckSeconds, 0, UnitCount);
 
         int unitIndex = 0;
-        float spacingCm = Semantics.Group.SpawnSpacingCm;
+        float spacingCm = _activeSpawnGridSpacingCm > 0f
+            ? _activeSpawnGridSpacingCm
+            : Semantics.Group.SpawnSpacingCm;
         for (int teamStateIndex = 0; teamStateIndex < _teamStates.Count; teamStateIndex++)
         {
             TeamRuntimeState team = _teamStates[teamStateIndex];
@@ -2565,6 +2671,26 @@ public sealed partial class MassNavigationFlowSolverState
         SettledUnitCount = settled;
     }
 
+    /// <summary>
+    /// QuadrantSpread 的逐单位散点目标：把每个单位的可到达目标设为
+    /// "当前出生位关于场心的镜像点"，到站后整个对侧象限满铺、不汇向单一
+    /// 队目标点。只在第一步播种一次（不依赖实体绑定/预分配的初始化顺序）。
+    /// </summary>
+    private void PlantQuadrantSpreadUnitTargets()
+    {
+        float unitTargetStopThresholdCm = Semantics.Group.UnitTargetStopThresholdCm;
+        for (int i = 0; i < UnitCount; i++)
+        {
+            int i2 = i << 1;
+            _unitTargetsCm[i2] = _fieldWidthCm - _positionsCm[i2];
+            _unitTargetsCm[i2 + 1] = _fieldHeightCm - _positionsCm[i2 + 1];
+            _unitTargetStopThresholdsCm[i] = unitTargetStopThresholdCm;
+            _hasUnitTarget[i] = 1;
+        }
+
+        _quadrantSpreadTargetsPlanted = true;
+    }
+
     private void ResolveHardPenetration()
     {
         LastHardResolveCandidateAgentCount = 0;
@@ -2572,6 +2698,9 @@ public sealed partial class MassNavigationFlowSolverState
         LastHardResolveFallbackPairCheckCount = 0;
         LastHardResolvePairCheckCount = 0;
         LastHardResolvePenetratingPairCount = 0;
+        LastHardResolveSeparateCount = 0;
+        LastHardResolveWindowCellVisitCount = 0;
+        long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
 
         if (UnitCount <= 1)
         {
@@ -2580,7 +2709,9 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         RecomputeMaxInteractingBodyRadiiCmIfDirty();
+        long buildStart = System.Diagnostics.Stopwatch.GetTimestamp();
         BuildHardResolveHash(_positionsCm);
+        LastHardResolveBuildHashMs = (System.Diagnostics.Stopwatch.GetTimestamp() - buildStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
         float invHashCell = 1f / _hardResolveHashCellSizeCm;
         int hwm1 = _hardResolveHashWidth - 1;
         int hhm1 = _hardResolveHashHeight - 1;
@@ -2593,6 +2724,7 @@ public sealed partial class MassNavigationFlowSolverState
             }
         }
 
+        int maxSeparatesPerAgent = Semantics.Solver.HardResolveMaxSeparatesPerAgentPass;
         for (int i = 0; i < UnitCount; i++)
         {
             int i2 = i << 1;
@@ -2619,12 +2751,14 @@ public sealed partial class MassNavigationFlowSolverState
                 continue;
             }
 
+            int separatesThisAgent = 0;
             for (int neighborY = minY; neighborY <= maxY; neighborY++)
             {
                 int rowBase = neighborY * _hardResolveHashWidth;
                 for (int neighborX = minX; neighborX <= maxX; neighborX++)
                 {
                     int cell = rowBase + neighborX;
+                    LastHardResolveWindowCellVisitCount++;
                     int start = _hardResolveCellOffsets[cell];
                     int end = start + _hardResolveCellCounts[cell];
                     for (int hashIndex = start; hashIndex < end; hashIndex++)
@@ -2649,6 +2783,14 @@ public sealed partial class MassNavigationFlowSolverState
                             }
 
                             LastHardResolvePenetratingPairCount++;
+                            if (maxSeparatesPerAgent > 0 && separatesThisAgent >= maxSeparatesPerAgent)
+                            {
+                                // 每 agent 每 pass 分离预算已用尽：留到下个 pass，避免单帧 5ms 尖峰。
+                                continue;
+                            }
+
+                            separatesThisAgent++;
+                            LastHardResolveSeparateCount++;
                             SeparateAgents(i, j, i2, j2, dx, dy, d2, minDistance);
                         }
                     }
@@ -2656,7 +2798,11 @@ public sealed partial class MassNavigationFlowSolverState
             }
         }
 
+        LastHardResolvePairLoopMs = (System.Diagnostics.Stopwatch.GetTimestamp() - buildStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        LastHardResolveTotalMs = (System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+
         ResolveObstaclePenetration();
+        LastHardResolveTotalMs = (System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
     }
 
     private void SeparateAgents(int i, int j, int i2, int j2, float dx, float dy, float d2, float minDistance)

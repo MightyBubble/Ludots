@@ -25,9 +25,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly TriggerManager _triggerManager;
         private readonly World _world;
         private readonly Func<ScriptContext> _contextFactory;
+        private readonly Dictionary<int, BridgeTagState> _tagStates = new();
 
         public int DroppedUnknownTagEvents { get; private set; }
         public int DroppedNoMapEvents { get; private set; }
+        public int DroppedNoConsumerEvents { get; private set; }
 
         public GasEventTriggerBridgeSystem(
             GameplayEventBus eventBus,
@@ -55,6 +57,18 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
         }
 
+        private readonly struct BridgeTagState
+        {
+            public BridgeTagState(MapId mapId, string eventKeyValue)
+            {
+                MapId = mapId;
+                EventKeyValue = eventKeyValue;
+            }
+
+            public MapId MapId { get; }
+            public string EventKeyValue { get; }
+        }
+
         private void PublishOne(in GameplayEvent evt)
         {
             string? tagName = TagRegistry.GetName(evt.TagId);
@@ -76,13 +90,26 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return;
             }
 
+            // 无消费者的事件完全跳过分发：不再每笔 new ScriptContext + 字符串拼接。
+            if (!_tagStates.TryGetValue(evt.TagId, out BridgeTagState state))
+            {
+                state = new BridgeTagState(mapId, EventKeyPrefix + tagName);
+                _tagStates[evt.TagId] = state;
+            }
+
+            if (!_triggerManager.HasDispatchTarget(state.MapId, state.EventKeyValue))
+            {
+                DroppedNoConsumerEvents++;
+                return;
+            }
+
             ScriptContext context = _contextFactory();
             context.Set(ContextKeys.MapId, mapId);
             context.Set(MapTriggerEventPayloadKeys.SourceEntity, evt.Source);
             context.Set(MapTriggerEventPayloadKeys.TargetEntity, evt.Target);
             context.Set(MapTriggerEventPayloadKeys.TagId, evt.TagId);
             context.Set(MapTriggerEventPayloadKeys.Magnitude, evt.Magnitude);
-            _triggerManager.FireMapEvent(mapId, new EventKey(EventKeyPrefix + tagName), context);
+            _triggerManager.FireMapEvent(mapId, new EventKey(state.EventKeyValue), context);
         }
 
         private MapId ResolveMap(Entity entity)

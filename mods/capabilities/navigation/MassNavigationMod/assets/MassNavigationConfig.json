@@ -125,7 +125,7 @@
       }
     ],
     "spawnLayout": {
-      "kind": "OrbitOpposedTargets",
+      "kind": "QuadrantSpread",
       "orbitRadiusCm": 3650,
       "randomSeed": 12648430
     }
@@ -295,6 +295,7 @@
       "minVisualScale": 0.01,
       "maxStepDtSeconds": 0.05,
       "parallelStepMinAgents": 2048,
+      "hardResolveMaxSeparatesPerAgentPass": 2,
       "directionEpsilonSq": 0.0001,
       "normalizationEpsilonSq": 0.000001,
       "inverseSqrtMinValue": 1e-8,

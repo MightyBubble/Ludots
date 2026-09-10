@@ -184,6 +184,11 @@ public sealed class MassNavigationSimulationRuntime
     public long LastHardResolveFallbackPairCheckCount => MassNavigationFlow.LastHardResolveFallbackPairCheckCount;
     public long LastHardResolvePairCheckCount => MassNavigationFlow.LastHardResolvePairCheckCount;
     public int LastHardResolvePenetratingPairCount => MassNavigationFlow.LastHardResolvePenetratingPairCount;
+    public int LastHardResolveSeparateCount => MassNavigationFlow.LastHardResolveSeparateCount;
+    public int LastHardResolveWindowCellVisitCount => MassNavigationFlow.LastHardResolveWindowCellVisitCount;
+    public double LastHardResolveBuildHashMs => MassNavigationFlow.LastHardResolveBuildHashMs;
+    public double LastHardResolvePairLoopMs => MassNavigationFlow.LastHardResolvePairLoopMs;
+    public double LastHardResolveTotalMs => MassNavigationFlow.LastHardResolveTotalMs;
     public float LastEntitySyncMs => Telemetry.LastEntitySyncMs;
     public float PresenterCommandMs => Telemetry.PresenterCommandMs;
     public float ControlHzObserved => Telemetry.ControlHzObserved;
