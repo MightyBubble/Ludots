@@ -28,6 +28,9 @@ namespace Ludots.Raylib.Render
         private readonly int _locDepthSkinningBoneBase;
         private readonly int _locDepthSkinningPaletteSlotsPerRow;
         private readonly int _locDepthSkinningPaletteSlotRows;
+        private readonly int _locDepthSkinningRigidBoneIndex;
+        private readonly int _locDepthUseSharedPose;
+        private readonly int _locDepthSharedBones;
         private readonly int _locCutoutAlphaCutoff;
         private RaylibMatrix _lightView;
         private RaylibMatrix _lightProjection;
@@ -78,6 +81,12 @@ namespace Ludots.Raylib.Render
                 ConfigurePoseTextureSkinningDepthShader(
                     _depthSkinningPoseTextureShader,
                     "shadow_depth_skinning_pose_texture");
+            _locDepthSkinningRigidBoneIndex = RaylibShaderBindingGuard.RequireUniform(
+                _depthSkinningPoseTextureShader, "uRigidBoneIndex", "shadow_depth_skinning_pose_texture");
+            _locDepthUseSharedPose = RaylibShaderBindingGuard.RequireUniform(
+                _depthSkinningPoseTextureShader, "uUseSharedPose", "shadow_depth_skinning_pose_texture");
+            _locDepthSharedBones = RaylibShaderBindingGuard.RequireUniform(
+                _depthSkinningPoseTextureShader, "uSharedBones[0]", "shadow_depth_skinning_pose_texture");
             _locCutoutAlphaCutoff = ConfigureCutoutDepthShader(_depthCutoutShader, "shadow_depth_cutout");
 
             _depthMaterial = RaylibNativeResources.LoadMaterialDefault();
@@ -101,6 +110,26 @@ namespace Ludots.Raylib.Render
         public RaylibMatrix LightViewProjection => Multiply(_lightView, _lightProjection);
 
         public float DepthRange => _depthRange;
+
+        /// <summary>
+        /// World-space ortho box the current frame's shadow map covers. Depth casters outside it
+        /// cannot contribute a visible shadow, so callers may skip them.
+        /// </summary>
+        public Vector3 CasterVolumeCenter { get; private set; }
+        public float CasterVolumeRadius { get; private set; }
+        public bool HasCasterVolume { get; private set; }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool ContainsCaster(Vector3 worldPosition, float casterRadius)
+        {
+            if (!HasCasterVolume)
+            {
+                return true;
+            }
+
+            float reach = CasterVolumeRadius + MathF.Max(0f, casterRadius);
+            return Vector3.DistanceSquared(worldPosition, CasterVolumeCenter) <= reach * reach;
+        }
 
         public void BeginFrame(Vector3 lightDirectionToward, Vector3 sceneCenter, float sceneRadius)
         {
@@ -127,6 +156,10 @@ namespace Ludots.Raylib.Render
             Vector3 eye = sceneCenter + (forward * eyeDistance);
 
             _lightView = BuildLookAt(eye, sceneCenter, upHint);
+
+            CasterVolumeCenter = sceneCenter;
+            CasterVolumeRadius = MathF.Max(sceneRadius, 1f);
+            HasCasterVolume = true;
 
             float halfExtent = MathF.Max(sceneRadius * 1.35f, 4f);
             float farPlane = eyeDistance + (sceneRadius * 2.2f);
@@ -198,7 +231,9 @@ namespace Ludots.Raylib.Render
             float instanceBase,
             float boneBase,
             int paletteSlotsPerRow,
-            int paletteSlotRows)
+            int paletteSlotRows,
+            int rigidBoneIndex,
+            bool useSharedPose)
         {
             EnsureFrameActive();
             if (transforms == null)
@@ -225,6 +260,15 @@ namespace Ludots.Raylib.Render
             float slotRows = paletteSlotRows;
             Rl.SetShaderValue(_depthSkinningPoseTextureShader, _locDepthSkinningPaletteSlotsPerRow, &slotsPerRow, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_depthSkinningPoseTextureShader, _locDepthSkinningPaletteSlotRows, &slotRows, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            float rigidBone = rigidBoneIndex;
+            Rl.SetShaderValue(_depthSkinningPoseTextureShader, _locDepthSkinningRigidBoneIndex, &rigidBone, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            float sharedPose = useSharedPose ? 1 : 0;
+            Rl.SetShaderValue(_depthSkinningPoseTextureShader, _locDepthUseSharedPose, &sharedPose, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            if (useSharedPose)
+            {
+                Rl.rlEnableShader(_depthSkinningPoseTextureShader.id);
+                Rl.rlSetUniformMatrices(_locDepthSharedBones, mesh.boneMatrices, mesh.boneCount);
+            }
             Rl.DrawMeshInstanced(mesh, _depthSkinningPoseTextureMaterial, transforms, count);
         }
 

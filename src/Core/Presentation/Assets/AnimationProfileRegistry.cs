@@ -9,6 +9,9 @@ namespace Ludots.Core.Presentation.Assets
         private AnimationProfileDefinition[] _definitions;
         private bool[] _hasDefinitions;
 
+        public int Count => _ids.Count;
+        public int Revision { get; private set; }
+
         public AnimationProfileRegistry(int capacity = 256)
         {
             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
@@ -26,6 +29,7 @@ namespace Ludots.Core.Presentation.Assets
             definition.ProfileId = id;
             _definitions[id] = definition;
             _hasDefinitions[id] = true;
+            Revision = checked(Revision + 1);
             return id;
         }
 

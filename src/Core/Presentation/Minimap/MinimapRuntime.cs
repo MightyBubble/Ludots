@@ -804,6 +804,16 @@ namespace Ludots.Core.Presentation.Minimap
                 hasKnowledgeViewer = true;
             }
 
+            KnowledgeProjectionResolver? knowledgeResolver = null;
+            int knowledgeTick = 0;
+            if (hasKnowledgeResolver && hasKnowledgeViewer)
+            {
+                KnowledgeProjectionConsumer.TryGetResolveContext(
+                    engine.GlobalContext,
+                    out knowledgeResolver,
+                    out knowledgeTick);
+            }
+
             for (int i = 0; i < count; i++)
             {
                 float worldXcm = worldXcmValues[i];
@@ -815,19 +825,19 @@ namespace Ludots.Core.Presentation.Minimap
                 Entity owner = owners[i];
                 if (hasKnowledgeResolver && owner != Entity.Null)
                 {
-                    if (!hasKnowledgeViewer ||
-                        !KnowledgeProjectionConsumer.TryResolveForViewer(
-                            engine.World,
-                            engine.GlobalContext,
+                    if (knowledgeResolver == null ||
+                        !KnowledgeProjectionConsumer.TryResolveDisclosure(
+                            knowledgeResolver,
+                            knowledgeTick,
                             knowledgeViewer,
                             owner,
-                            out KnowledgeProjection projection) ||
-                        !projection.CanReadPosition(KnowledgePositionAccess.LastKnown))
+                            out KnowledgeDisclosureRecord disclosure) ||
+                        !disclosure.CanReadPosition(KnowledgePositionAccess.LastKnown))
                     {
                         continue;
                     }
 
-                    knowledgeState = ResolveKnowledgeState(in projection);
+                    knowledgeState = ResolveKnowledgeState(in disclosure, knowledgeViewer, owner);
                     ApplyKnowledgeMarkerStyle(knowledgeState, ref markerColor, ref markerSizePx);
                     useAuthoredStyleBucket = knowledgeState == MinimapKnowledgeState.LiveVisible ||
                                              knowledgeState == MinimapKnowledgeState.Unfiltered;
@@ -948,17 +958,17 @@ namespace Ludots.Core.Presentation.Minimap
             screenMarkers.MaterializeStagedBucketKeys();
         }
 
-        private static MinimapKnowledgeState ResolveKnowledgeState(in KnowledgeProjection projection)
+        private static MinimapKnowledgeState ResolveKnowledgeState(in KnowledgeDisclosureRecord projection, Entity viewer, Entity target)
         {
             if (projection.Presence == KnowledgePresence.LiveVisible &&
                 projection.Position == KnowledgePositionAccess.Live)
             {
-                return KnowledgePresenceSourceIsDisclosed(in projection)
+                return KnowledgePresenceSourceIsDisclosed(in projection, viewer, target)
                     ? MinimapKnowledgeState.Disclosed
                     : MinimapKnowledgeState.LiveVisible;
             }
 
-            if (KnowledgePresenceSourceIsDisclosed(in projection))
+            if (KnowledgePresenceSourceIsDisclosed(in projection, viewer, target))
             {
                 return MinimapKnowledgeState.Disclosed;
             }
@@ -968,16 +978,16 @@ namespace Ludots.Core.Presentation.Minimap
                 return MinimapKnowledgeState.LastKnown;
             }
 
-            return projection.CanKnowEntity
+            return projection.Presence != KnowledgePresence.Unknown
                 ? MinimapKnowledgeState.Known
                 : MinimapKnowledgeState.Unknown;
         }
 
-        private static bool KnowledgePresenceSourceIsDisclosed(in KnowledgeProjection projection)
+        private static bool KnowledgePresenceSourceIsDisclosed(in KnowledgeDisclosureRecord projection, Entity viewer, Entity target)
         {
             return projection.Source != Entity.Null &&
-                   projection.Source != projection.Viewer &&
-                   projection.Source != projection.Target;
+                   projection.Source != viewer &&
+                   projection.Source != target;
         }
 
         private static void ApplyKnowledgeMarkerStyle(

@@ -16,6 +16,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Core.Client;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Systems
@@ -154,7 +155,8 @@ namespace Ludots.Core.Systems
         private bool _presentBindingArmed;
         private readonly List<Entity> _changedOwners = new List<Entity>(32768);
         private Entity[] _spatialQueryBuffer = new Entity[65536];
-        private readonly HashSet<Entity> _spatialCandidates = new(65536);
+        private int[] _spatialCandidateStamps = Array.Empty<int>();
+        private int _spatialCandidateStamp;
         private readonly CommandBuffer _commandBuffer = new();
         private int _lastPresenterCullSyncStructureVersion = -1;
         private bool _ownerCullChangedThisFrame;
@@ -239,10 +241,21 @@ namespace Ludots.Core.Systems
         {
             ArgumentNullException.ThrowIfNull(cameraManager);
             ArgumentNullException.ThrowIfNull(presentSurface);
+
+            // Hosts drive this every frame with a freshly built surface wrapper, so always refresh the
+            // pass entry to keep the wrapper current. Only the static cull caches are conditional: they
+            // must survive when the camera binding is equivalent, otherwise the static entities look
+            // 'never culled' forever and are re-culled in full each frame (measured 5-8ms on 30K).
+            bool sameCamera = _presentBindingArmed &&
+                              _presentBindingPasses.Count == 1 &&
+                              ReferenceEquals(_presentBindingPasses[0].Camera, cameraManager);
             _presentBindingPasses.Clear();
             _presentBindingPasses.Add(new PresentBindingCullPass(null, cameraManager, presentSurface));
             _presentBindingArmed = true;
-            ResetPassStaticCaches();
+            if (!sameCamera)
+            {
+                ResetPassStaticCaches();
+            }
         }
 
         /// <summary>
@@ -258,6 +271,10 @@ namespace Ludots.Core.Systems
                 throw new ArgumentException("At least one present binding cull pass is required.", nameof(passes));
             }
 
+            // Hosts re-arm every frame before the tick. Refreshing the entries keeps the surfaces
+            // current; only a genuinely different camera set invalidates the static cull caches.
+            bool samePasses = _presentBindingArmed && PassSetMatches(passes);
+
             _presentBindingPasses.Clear();
             for (int i = 0; i < passes.Count; i++)
             {
@@ -265,7 +282,54 @@ namespace Ludots.Core.Systems
             }
 
             _presentBindingArmed = true;
-            ResetPassStaticCaches();
+            if (!samePasses)
+            {
+                ResetPassStaticCaches();
+            }
+        }
+
+        private bool PassSetMatches(IReadOnlyList<PresentBindingCullPass> passes)
+        {
+            if (_presentBindingPasses.Count != passes.Count)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < passes.Count; i++)
+            {
+                PresentBindingCullPass current = _presentBindingPasses[i];
+                PresentBindingCullPass next = passes[i];
+                // SeatId is descriptive only: the single-binding rebind carries null while the
+                // plural arming carries the seat id, and both drive the same camera+surface.
+                if (!ReferenceEquals(current.Camera, next.Camera) ||
+                    !SurfaceMatches(current.Surface, next.Surface))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// The host rebuilds a <see cref="PresentBindingSurface"/> wrapper every frame
+        /// (<c>CollectCullPasses</c>), so reference equality would never match. Compare the
+        /// binding identity plus the sampled fov instead — that is the only state the wrapper adds.
+        /// </summary>
+        private static bool SurfaceMatches(IViewController current, IViewController next)
+        {
+            if (ReferenceEquals(current, next))
+            {
+                return true;
+            }
+
+            if (current is not PresentBindingSurface currentSurface || next is not PresentBindingSurface nextSurface)
+            {
+                return false;
+            }
+
+            return currentSurface.Binding.Equals(nextSurface.Binding) &&
+                   currentSurface.Fov.Equals(nextSurface.Fov);
         }
 
         private void ResetPassStaticCaches()
@@ -413,10 +477,6 @@ namespace Ludots.Core.Systems
                 long spatialQueryStart = Stopwatch.GetTimestamp();
                 RefreshSpatialCandidates(in queryBounds);
                 spatialQueryMs += ElapsedMs(spatialQueryStart);
-            }
-            else if (_spatialCandidates.Count != 0)
-            {
-                _spatialCandidates.Clear();
             }
 
             float tx = target.X;
@@ -642,14 +702,19 @@ namespace Ludots.Core.Systems
 
         private void RefreshSpatialCandidates(in WorldAabbCm queryBounds)
         {
-            _spatialCandidates.Clear();
+            _spatialCandidateStamp++;
+            if (_spatialCandidateStamp == int.MaxValue)
+            {
+                Array.Clear(_spatialCandidateStamps);
+                _spatialCandidateStamp = 1;
+            }
 
             while (true)
             {
                 SpatialQueryResult result = _spatial.QueryAabb(in queryBounds, _spatialQueryBuffer);
                 for (int i = 0; i < result.Count; i++)
                 {
-                    _spatialCandidates.Add(_spatialQueryBuffer[i]);
+                    MarkSpatialCandidate(_spatialQueryBuffer[i]);
                 }
 
                 if (!result.Overflowed)
@@ -661,8 +726,39 @@ namespace Ludots.Core.Systems
                     ? 1024
                     : _spatialQueryBuffer.Length * 2;
                 _spatialQueryBuffer = new Entity[nextCapacity];
-                _spatialCandidates.Clear();
+                _spatialCandidateStamp++;
+                if (_spatialCandidateStamp == int.MaxValue)
+                {
+                    Array.Clear(_spatialCandidateStamps);
+                    _spatialCandidateStamp = 1;
+                }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void MarkSpatialCandidate(Entity entity)
+        {
+            int key = entity.Id + 1;
+            if ((uint)key >= (uint)_spatialCandidateStamps.Length)
+            {
+                int next = _spatialCandidateStamps.Length == 0 ? 65536 : _spatialCandidateStamps.Length;
+                while (next <= key)
+                {
+                    next *= 2;
+                }
+
+                Array.Resize(ref _spatialCandidateStamps, next);
+            }
+
+            _spatialCandidateStamps[key] = _spatialCandidateStamp;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsSpatialCandidate(Entity entity)
+        {
+            int key = entity.Id + 1;
+            return (uint)key < (uint)_spatialCandidateStamps.Length &&
+                   _spatialCandidateStamps[key] == _spatialCandidateStamp;
         }
 
         private int ProcessStaticEntitiesDirty(
@@ -1906,7 +2002,7 @@ namespace Ludots.Core.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool PassesSpatialCandidateGate(Entity entity)
         {
-            return _spatialCandidates.Contains(entity);
+            return IsSpatialCandidate(entity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -38,6 +39,12 @@ public sealed partial class MassNavigationFlowSolverState
 
     private readonly float[] _staticCost;
     private readonly float[] _cost;
+
+    // Blocked cells (cost above the flow threshold) listed by row. The 9x9 obstacle-neighbour scan in
+    // ComputeFlow used to run for every grid cell even though obstacles are sparse, which dominated the
+    // flow rebuild; gathering only the listed blocked cells keeps the field identical while scanning far fewer.
+    private readonly int[] _blockedCells;
+    private readonly int[] _blockedRowStart;
     private readonly float[] _obsX;
     private readonly float[] _obsY;
     private readonly float[] _obsWorldX;
@@ -210,6 +217,8 @@ public sealed partial class MassNavigationFlowSolverState
         _playAreaMaxYCm = solver.PlayAreaMaxYCm;
 
         _staticCost = new float[_gridCellCount];
+        _blockedCells = new int[_gridCellCount];
+        _blockedRowStart = new int[_gridHeight + 1];
         _cost = new float[_gridCellCount];
         _obsX = new float[_maxObstacleCount];
         _obsY = new float[_maxObstacleCount];
@@ -1504,23 +1513,49 @@ public sealed partial class MassNavigationFlowSolverState
     private void RebuildFlowCostForState(FlowRuntimeState flowState, int crowdStampBudgetUnits)
     {
         Array.Copy(_staticCost, _cost, _staticCost.Length);
-        if (crowdStampBudgetUnits <= 0 || UnitCount <= 0)
+        if (crowdStampBudgetUnits > 0 && UnitCount > 0)
         {
-            return;
-        }
-
-        int budget = Math.Min(UnitCount, crowdStampBudgetUnits);
-        for (int sample = 0; sample < budget; sample++)
-        {
-            int unitIndex = (_crowdStampCursor + sample) % UnitCount;
-            if (!CanFlowStateObserveAgent(flowState, unitIndex))
+            int budget = Math.Min(UnitCount, crowdStampBudgetUnits);
+            for (int sample = 0; sample < budget; sample++)
             {
-                continue;
-            }
+                int unitIndex = (_crowdStampCursor + sample) % UnitCount;
+                if (!CanFlowStateObserveAgent(flowState, unitIndex))
+                {
+                    continue;
+                }
 
-            int offset = unitIndex << 1;
-            StampCrowdCost(_positionsCm[offset], _positionsCm[offset + 1]);
+                int offset = unitIndex << 1;
+                StampCrowdCost(_positionsCm[offset], _positionsCm[offset + 1]);
+            }
         }
+
+        RebuildBlockedCellIndex();
+    }
+
+    /// <summary>
+    /// Collects the cells above <c>flowBlockedCellThreshold</c> into a row-bucketed list so
+    /// <see cref="ComputeFlow"/> can scan only real blockers instead of every neighbour in the 9x9
+    /// window. Runs once per flow rebuild (O(grid)) and leaves the produced vector field unchanged.
+    /// </summary>
+    private void RebuildBlockedCellIndex()
+    {
+        float threshold = Semantics.Solver.FlowBlockedCellThreshold;
+        int[] rowStart = _blockedRowStart;
+        int count = 0;
+        for (int y = 0; y < _gridHeight; y++)
+        {
+            rowStart[y] = count;
+            int rowBase = y * _gridWidth;
+            for (int x = 0; x < _gridWidth; x++)
+            {
+                if (_cost[rowBase + x] > threshold)
+                {
+                    _blockedCells[count++] = x;
+                }
+            }
+        }
+
+        rowStart[_gridHeight] = count;
     }
 
     private bool CanFlowStateObserveAgent(FlowRuntimeState flowState, int agentIndex)
@@ -1677,35 +1712,49 @@ public sealed partial class MassNavigationFlowSolverState
                 float avoidX = 0f;
                 float avoidY = 0f;
                 int obstacleNeighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;
-                for (int offsetY = -obstacleNeighborRadiusCells; offsetY <= obstacleNeighborRadiusCells; offsetY++)
+                int minBlockedRow = y - obstacleNeighborRadiusCells;
+                if (minBlockedRow < 0)
                 {
-                    for (int offsetX = -obstacleNeighborRadiusCells; offsetX <= obstacleNeighborRadiusCells; offsetX++)
+                    minBlockedRow = 0;
+                }
+
+                int maxBlockedRow = y + obstacleNeighborRadiusCells;
+                if (maxBlockedRow >= _gridHeight)
+                {
+                    maxBlockedRow = _gridHeight - 1;
+                }
+
+                float normalizationEpsilonSq = Semantics.Solver.NormalizationEpsilonSq;
+                float neighborWeight = Semantics.Solver.FlowObstacleNeighborWeight;
+                for (int ny = minBlockedRow; ny <= maxBlockedRow; ny++)
+                {
+                    int offsetY = ny - y;
+                    int rowStart = _blockedRowStart[ny];
+                    int rowEnd = _blockedRowStart[ny + 1];
+                    for (int blockedIndex = rowStart; blockedIndex < rowEnd; blockedIndex++)
                     {
+                        int nx = _blockedCells[blockedIndex];
+                        int offsetX = nx - x;
+                        if (offsetX < -obstacleNeighborRadiusCells || offsetX > obstacleNeighborRadiusCells)
+                        {
+                            continue;
+                        }
+
                         if (offsetX == 0 && offsetY == 0)
                         {
                             continue;
                         }
 
-                        int nx = x + offsetX;
-                        int ny = y + offsetY;
-                        if ((uint)nx >= (uint)_gridWidth || (uint)ny >= (uint)_gridHeight)
+                        float ovx = -offsetX;
+                        float ovy = -offsetY;
+                        float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
+                        if (obstacleDistSq > normalizationEpsilonSq)
                         {
-                            continue;
-                        }
-
-                        if (_cost[(ny * _gridWidth) + nx] > Semantics.Solver.FlowBlockedCellThreshold)
-                        {
-                            float ovx = -offsetX;
-                            float ovy = -offsetY;
-                            float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
-                            if (obstacleDistSq > Semantics.Solver.NormalizationEpsilonSq)
-                            {
-                                float invObstacleDist = SafeInverseSqrt(obstacleDistSq);
-                                float obstacleDist = obstacleDistSq * invObstacleDist;
-                                float obstacleWeight = Semantics.Solver.FlowObstacleNeighborWeight / (obstacleDist * obstacleDist);
-                                avoidX += (ovx * invObstacleDist) * obstacleWeight;
-                                avoidY += (ovy * invObstacleDist) * obstacleWeight;
-                            }
+                            float invObstacleDist = SafeInverseSqrt(obstacleDistSq);
+                            float obstacleDist = obstacleDistSq * invObstacleDist;
+                            float obstacleWeight = neighborWeight / (obstacleDist * obstacleDist);
+                            avoidX += (ovx * invObstacleDist) * obstacleWeight;
+                            avoidY += (ovy * invObstacleDist) * obstacleWeight;
                         }
                     }
                 }
@@ -1798,6 +1847,20 @@ public sealed partial class MassNavigationFlowSolverState
         bool useCandidateGating)
     {
         _ = sepRadiusSq;
+        float minNavMass = Semantics.Solver.MinNavMass;
+        float hardCandidatePaddingCm = Semantics.Obstacle.HardResolveCandidateDistanceCm;
+        float directionEpsilonSq = Semantics.Solver.DirectionEpsilonSq;
+        float friendlyResponseScale = AvoidanceTuning.FriendlyResponseScale;
+        float friendlyResponseMin = AvoidanceTuning.FriendlyResponseMin;
+        float friendlyResponseMax = AvoidanceTuning.FriendlyResponseMax;
+        float nonFriendlyResponseScale = AvoidanceTuning.NonFriendlyResponseScale;
+        float nonFriendlyResponseMin = AvoidanceTuning.NonFriendlyResponseMin;
+        float nonFriendlyResponseMax = AvoidanceTuning.NonFriendlyResponseMax;
+        float dominantPushResponseScale = AvoidanceTuning.DominantPushResponseScale;
+        float dominantPushResponseMin = AvoidanceTuning.DominantPushResponseMin;
+        float dominantPushResponseMax = AvoidanceTuning.DominantPushResponseMax;
+        float dominantMassRatio = AvoidanceTuning.DominantMassRatio;
+        int teamCount = _teamStates.Count;
         for (int i = startIndex; i < endIndex; i++)
         {
             int i2 = i << 1;
@@ -2064,6 +2127,8 @@ public sealed partial class MassNavigationFlowSolverState
             int maxY = Math.Min(hashHeightMinusOne, cellY + separationHashSearchRadius);
             int minX = Math.Max(0, cellX - separationHashSearchRadius);
             int maxX = Math.Min(hashWidthMinusOne, cellX + separationHashSearchRadius);
+            float selfBodyRadiusCm = _bodyRadiiCm[i];
+            float selfMass = _navMasses[i];
 
             for (int neighborY = minY; neighborY <= maxY; neighborY++)
             {
@@ -2093,19 +2158,40 @@ public sealed partial class MassNavigationFlowSolverState
                             float dx = px - _readPositionsCm[j2];
                             float dy = py - _readPositionsCm[j2 + 1];
                             float d2 = dx * dx + dy * dy;
-                            float pairHardCandidateDistance = ResolvePairHardCandidateDistanceCm(i, j);
-                            if (useCandidateGating && d2 < pairHardCandidateDistance * pairHardCandidateDistance)
+                            float bodyRadiusSum = selfBodyRadiusCm + _bodyRadiiCm[j];
+                            if (useCandidateGating)
                             {
-                                _hardResolveCandidates[i] = 1;
+                                float pairHardCandidateDistance = bodyRadiusSum + hardCandidatePaddingCm;
+                                if (d2 < pairHardCandidateDistance * pairHardCandidateDistance)
+                                {
+                                    _hardResolveCandidates[i] = 1;
+                                }
                             }
 
-                            float pairSeparationRadius = ResolvePairSeparationRadiusCm(i, j, sepRadiusCm);
-                            if (d2 < pairSeparationRadius * pairSeparationRadius && d2 > Semantics.Solver.DirectionEpsilonSq)
+                            float pairSeparationRadius = bodyRadiusSum > sepRadiusCm ? bodyRadiusSum : sepRadiusCm;
+                            if (d2 < pairSeparationRadius * pairSeparationRadius && d2 > directionEpsilonSq)
                             {
                                 float invD = SafeInverseSqrt(d2);
                                 float d = d2 * invD;
                                 float force = 1f - (d / pairSeparationRadius);
-                                float response = ComputeSeparationResponse(teamStateIndex, _teamRuntimeIndices[j], i, j);
+                                float response = ComputeSeparationResponseInline(
+                                    teamStateIndex,
+                                    _teamRuntimeIndices[j],
+                                    i,
+                                    j,
+                                    selfMass,
+                                    minNavMass,
+                                    teamCount,
+                                    friendlyResponseScale,
+                                    friendlyResponseMin,
+                                    friendlyResponseMax,
+                                    nonFriendlyResponseScale,
+                                    nonFriendlyResponseMin,
+                                    nonFriendlyResponseMax,
+                                    dominantPushResponseScale,
+                                    dominantPushResponseMin,
+                                    dominantPushResponseMax,
+                                    dominantMassRatio);
                                 separationX += dx * invD * force * response;
                                 separationY += dy * invD * force * response;
                             }
@@ -2284,6 +2370,58 @@ public sealed partial class MassNavigationFlowSolverState
         };
     }
 
+    /// <summary>
+    /// Hot-loop form of <see cref="ComputeSeparationResponse"/>: the caller hoists the tuning
+    /// scalars and the self mass out of the per-agent loop, so the inner pair math stays branch-cheap.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private float ComputeSeparationResponseInline(
+        int selfTeamStateIndex,
+        int otherTeamStateIndex,
+        int selfUnitIndex,
+        int otherUnitIndex,
+        float selfMass,
+        float minNavMass,
+        int teamCount,
+        float friendlyResponseScale,
+        float friendlyResponseMin,
+        float friendlyResponseMax,
+        float nonFriendlyResponseScale,
+        float nonFriendlyResponseMin,
+        float nonFriendlyResponseMax,
+        float dominantPushResponseScale,
+        float dominantPushResponseMin,
+        float dominantPushResponseMax,
+        float dominantMassRatio)
+    {
+        if ((uint)selfTeamStateIndex >= (uint)teamCount || (uint)otherTeamStateIndex >= (uint)teamCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationFlow team relationship index out of range: source={selfTeamStateIndex}, target={otherTeamStateIndex}, teamCount={teamCount}.");
+        }
+
+        float otherMass = _navMasses[otherUnitIndex];
+        float safeSelf = selfMass > minNavMass ? selfMass : minNavMass;
+        float safeOther = otherMass > minNavMass ? otherMass : minNavMass;
+        if (_teamRelationshipMatrix[(selfTeamStateIndex * teamCount) + otherTeamStateIndex] != 0)
+        {
+            float ratio = selfMass / (otherMass > minNavMass ? otherMass : minNavMass);
+            float value = ratio * friendlyResponseScale;
+            return value < friendlyResponseMin ? friendlyResponseMin : (value > friendlyResponseMax ? friendlyResponseMax : value);
+        }
+
+        float minMass = safeSelf < safeOther ? safeSelf : safeOther;
+        float maxMass = safeSelf > safeOther ? safeSelf : safeOther;
+        if ((maxMass / minMass) >= dominantMassRatio)
+        {
+            float value = (otherMass / safeSelf) * dominantPushResponseScale;
+            return value < dominantPushResponseMin ? dominantPushResponseMin : (value > dominantPushResponseMax ? dominantPushResponseMax : value);
+        }
+
+        float nonFriendly = (otherMass / safeSelf) * nonFriendlyResponseScale;
+        return nonFriendly < nonFriendlyResponseMin ? nonFriendlyResponseMin : (nonFriendly > nonFriendlyResponseMax ? nonFriendlyResponseMax : nonFriendly);
+    }
+
     private bool IsCooperative(int sourceTeamStateIndex, int targetTeamStateIndex)
     {
         int teamCount = _teamStates.Count;
@@ -2403,21 +2541,6 @@ public sealed partial class MassNavigationFlowSolverState
             ignoreBehindMovingAgents: config.IgnoreBehindMovingAgents,
             blockedStop: config.BlockedStop,
             usePreferredVelocityWhenBlocked: config.UsePreferredVelocityWhenBlocked);
-    }
-
-    private float ResolvePairBodyRadiusSumCm(int selfUnitIndex, int otherUnitIndex)
-    {
-        return _bodyRadiiCm[selfUnitIndex] + _bodyRadiiCm[otherUnitIndex];
-    }
-
-    private float ResolvePairSeparationRadiusCm(int selfUnitIndex, int otherUnitIndex, float configuredSeparationRadiusCm)
-    {
-        return MathF.Max(configuredSeparationRadiusCm, ResolvePairBodyRadiusSumCm(selfUnitIndex, otherUnitIndex));
-    }
-
-    private float ResolvePairHardCandidateDistanceCm(int selfUnitIndex, int otherUnitIndex)
-    {
-        return ResolvePairBodyRadiusSumCm(selfUnitIndex, otherUnitIndex) + Semantics.Obstacle.HardResolveCandidateDistanceCm;
     }
 
     private int ResolveSeparationHashSearchRadiusCells(int selfUnitIndex)
@@ -2644,7 +2767,17 @@ public sealed partial class MassNavigationFlowSolverState
                         if (j > i)
                         {
                             LastHardResolvePairCheckCount++;
-                            if (!CanAgentsInteract(i, j) || !AreAgentsPenetrating(i, j))
+                            if (!CanAgentsInteract(i, j))
+                            {
+                                continue;
+                            }
+
+                            int j2 = j << 1;
+                            float dx = _positionsCm[i2] - _positionsCm[j2];
+                            float dy = _positionsCm[i2 + 1] - _positionsCm[j2 + 1];
+                            float d2 = (dx * dx) + (dy * dy);
+                            float minDistance = _bodyRadiiCm[i] + _bodyRadiiCm[j];
+                            if (d2 >= minDistance * minDistance)
                             {
                                 continue;
                             }
@@ -2658,7 +2791,7 @@ public sealed partial class MassNavigationFlowSolverState
 
                             separatesThisAgent++;
                             LastHardResolveSeparateCount++;
-                            SeparateAgents(i, j);
+                            SeparateAgents(i, j, i2, j2, dx, dy, d2, minDistance);
                         }
                     }
                 }
@@ -2672,17 +2805,7 @@ public sealed partial class MassNavigationFlowSolverState
         LastHardResolveTotalMs = (System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
     }
 
-    private bool AreAgentsPenetrating(int i, int j)
-    {
-        int i2 = i << 1;
-        int j2 = j << 1;
-        float dx = _positionsCm[i2] - _positionsCm[j2];
-        float dy = _positionsCm[i2 + 1] - _positionsCm[j2 + 1];
-        float minDistance = ResolvePairBodyRadiusSumCm(i, j);
-        return (dx * dx) + (dy * dy) < minDistance * minDistance;
-    }
-
-    private void SeparateAgents(int i, int j)
+    private void SeparateAgents(int i, int j, int i2, int j2, float dx, float dy, float d2, float minDistance)
     {
         // Displaced agents are pose-authority owned by an external writer:
         // hard resolve must never move them, but their non-displaced neighbor still takes
@@ -2690,17 +2813,6 @@ public sealed partial class MassNavigationFlowSolverState
         bool displacedI = _displacedAgentFlags[i] != 0;
         bool displacedJ = _displacedAgentFlags[j] != 0;
         if (displacedI && displacedJ)
-        {
-            return;
-        }
-
-        int i2 = i << 1;
-        int j2 = j << 1;
-        float dx = _positionsCm[i2] - _positionsCm[j2];
-        float dy = _positionsCm[i2 + 1] - _positionsCm[j2 + 1];
-        float d2 = dx * dx + dy * dy;
-        float minDistance = ResolvePairBodyRadiusSumCm(i, j);
-        if (d2 >= minDistance * minDistance)
         {
             return;
         }

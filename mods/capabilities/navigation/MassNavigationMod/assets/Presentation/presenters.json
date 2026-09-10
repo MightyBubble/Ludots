@@ -502,18 +502,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.25,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "mass_navigation_agent_health_hud_light.attachment.position",
+          "localRotationParamKey": "mass_navigation_agent_health_hud_light.attachment.rotation",
+          "localScaleParamKey": "mass_navigation_agent_health_hud_light.attachment.scale"
         }
       },
       {
@@ -532,6 +528,36 @@
         "paramKey": "massNavigation.agent.health.ratio",
         "lane": "Float",
         "floatValue": 1
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_hud_light.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.25,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_hud_light.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_hud_light.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -561,19 +587,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.55,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "mass_navigation_agent_health_hud_heavy.attachment.position",
+          "localRotationParamKey": "mass_navigation_agent_health_hud_heavy.attachment.rotation",
+          "localScaleParamKey": "mass_navigation_agent_health_hud_heavy.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "mass_navigation_agent_health_hud_heavy.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.55,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_hud_heavy.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_hud_heavy.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -606,18 +660,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.42,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "mass_navigation_agent_health_text_light.attachment.position",
+          "localRotationParamKey": "mass_navigation_agent_health_text_light.attachment.rotation",
+          "localScaleParamKey": "mass_navigation_agent_health_text_light.attachment.scale"
         }
       },
       {
@@ -651,6 +701,36 @@
         "paramKey": "massNavigation.agent.health.base",
         "lane": "Float",
         "floatValue": 100
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_text_light.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.42,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_text_light.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_text_light.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -676,18 +756,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.76,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "mass_navigation_agent_health_text_heavy.attachment.position",
+          "localRotationParamKey": "mass_navigation_agent_health_text_heavy.attachment.rotation",
+          "localScaleParamKey": "mass_navigation_agent_health_text_heavy.attachment.scale"
         }
       }
     ],
@@ -701,6 +777,36 @@
         "paramKey": "massNavigation.agent.health.base",
         "lane": "Float",
         "floatValue": 260
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_text_heavy.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.76,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_text_heavy.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "mass_navigation_agent_health_text_heavy.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },

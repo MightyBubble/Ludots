@@ -167,8 +167,16 @@ namespace Ludots.Core.Presentation.Presenters
                     }
 
                     ValidateParamOverrides(rootDefinition.Key, nodePath, child.ParamOverrides);
+                    PresenterParamCapacity.Validate(child.ParamOverrides, $"root='{rootDefinition.Key}', childPath='{nodePath}'");
 
                     PresenterChildInstanceOverride? instanceOverride = child.InstanceOverride;
+                    uint defaultMask = 0;
+                    foreach (ref readonly BehaviorSlot slot in childDefinition.Behaviors.AsSpan())
+                        if (slot.ActiveByDefault) defaultMask |= 1u << slot.SlotIndex;
+                    foreach (ref readonly BehaviorSlot slot in (instanceOverride?.InstanceBehaviors).AsSpan())
+                        if (slot.ActiveByDefault) defaultMask |= 1u << slot.SlotIndex;
+                    PresenterAttachmentTransform.ValidateActiveDrivers(childDefinition.Behaviors,
+                        instanceOverride?.InstanceBehaviors, defaultMask, $"root='{rootDefinition.Key}', childPath='{nodePath}'");
                     if (instanceOverride != null &&
                         instanceOverride.ChildrenMode == PresenterChildrenMode.Instance &&
                         instanceOverride.InstanceChildren == null)

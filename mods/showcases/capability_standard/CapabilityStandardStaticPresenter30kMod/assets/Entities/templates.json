@@ -109,5 +109,18 @@
       "SpatialPartitionExcluded": {},
       "MinimapMarkerBallMovementTag": {}
     }
+  },
+  {
+    "id": "static_presenter_player_team",
+    "components": {
+      "Name": { "Value": "CapabilityStaticPresenterPlayerTeam" }
+    }
+  },
+  {
+    "id": "static_presenter_local_player",
+    "components": {
+      "Name": { "Value": "CapabilityStaticPresenterLocalPlayer" },
+      "PlayerOwner": { "PlayerId": 1 }
+    }
   }
 ]

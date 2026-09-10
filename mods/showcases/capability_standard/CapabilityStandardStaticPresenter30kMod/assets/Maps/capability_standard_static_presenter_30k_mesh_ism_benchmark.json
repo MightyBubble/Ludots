@@ -25,5 +25,27 @@
     "TargetXCm": 0,
     "TargetYCm": 0
   },
-  "Entities": []
+    "Entities": [
+    {
+      "InstanceId": "player_team",
+      "Template": "static_presenter_player_team"
+    },
+    {
+      "InstanceId": "local_player",
+      "Template": "static_presenter_local_player"
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "player_team"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "local_player"
+    }
+  ]
 }

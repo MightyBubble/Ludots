@@ -110,6 +110,9 @@ namespace Ludots.Raylib.Render
         public int LastImmediateSkippedCount { get; private set; }
         public int LastInstancedMatrixCacheHits { get; private set; }
         public int LastInstancedMatrixCacheMisses { get; private set; }
+
+        /// <summary>Instances skipped from the shadow depth pass because they fall outside the shadow volume.</summary>
+        public int LastInstancedShadowCastersCulled { get; private set; }
         public int LastPersistentCreates { get; private set; }
         public int LastPersistentUpdates { get; private set; }
         public int LastPersistentRemoves { get; private set; }
@@ -274,8 +277,22 @@ namespace Ludots.Raylib.Render
             _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs, _modelStore);
             _materialPipeline = new RaylibInstancedMaterialPipeline(_materialLibrary);
             _gpuSkinned = new RaylibGpuSkinnedBatchRenderer(_gpuSkinnedModelCache, _materialPipeline, _maxModelInstancesPerDraw);
+            _gpuSkinned.EnableSharedPoseUniforms =
+                Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_SHARED_POSE_UNIFORMS") == "1";
             _vfxRenderer = new RaylibVfxRenderer(vfs, _textureStore);
             _decalRenderer = new RaylibDecalProjectorRenderer(materials, _materialLibrary);
+        }
+
+        public bool EnableSharedPoseUniforms
+        {
+            get => _gpuSkinned.EnableSharedPoseUniforms;
+            set => _gpuSkinned.EnableSharedPoseUniforms = value;
+        }
+
+        public Func<int, string, IReadOnlyDictionary<int, int>?>? AnimationStateMapResolver
+        {
+            get => _gpuSkinned.AnimationStateMapResolver;
+            set => _gpuSkinned.AnimationStateMapResolver = value;
         }
 
         private static Texture2D LoadTextureResource(string fullPath)
@@ -1400,6 +1417,13 @@ namespace Ludots.Raylib.Render
                 $"{nameof(RaylibPrimitiveRenderer)} shadow");
             if (!RaylibMaterialDrawState.CastsShadow(blendMode))
             {
+                return;
+            }
+
+            // Casters outside the shadow map's world box cannot contribute a visible shadow.
+            if (!shadow.ContainsCaster(position, CasterReachMeters(in scale)))
+            {
+                LastInstancedShadowCastersCulled++;
                 return;
             }
 
@@ -2807,6 +2831,26 @@ namespace Ludots.Raylib.Render
         }
 
         /// <summary>
+        /// Conservative world-space caster radius for a cached model, used to decide whether an
+        /// instance can reach the shadow volume. Local extents are already in world units here.
+        /// </summary>
+        private static float ModelBoundingRadiusMeters(in CachedModel cached)
+        {
+            Vector3 extents = cached.LocalMax - cached.LocalMin;
+            return 0.5f * extents.Length();
+        }
+
+        /// <summary>
+        /// Upper bound on how far a caster of this world-space scale can reach. Used only as a
+        /// core.
+        /// </summary>
+        private static float CasterReachMeters(in Vector3 scale)
+        {
+            float maxAxis = MathF.Max(MathF.Abs(scale.X), MathF.Max(MathF.Abs(scale.Y), MathF.Abs(scale.Z)));
+            return MathF.Max(0f, maxAxis) * 2f;
+        }
+
+        /// <summary>
         /// 帧级视锥侧平面（#1331）：System.Numerics 行向量约定下 clip = world*(view*proj)，
         /// 平面取列组合 col1±col4 / col2±col4；只做四个侧平面的保守球筛选——近平面（near=0.05 收益可忽略）
         /// 与远平面不参与，深度约定差异（GL -w..w vs D3D 0..w）因此不构成风险。平面构建失败兜底为全可见（保守方向）。
@@ -2925,7 +2969,9 @@ namespace Ludots.Raylib.Render
             Dictionary<int, ModelInstanceBatch> cache,
             in RaylibInstancedBatchLane lane,
             uint colorKey,
-            float scaleMul)
+            float scaleMul,
+            RaylibDirectionalShadowMap? shadowCasterFilter = null,
+            float casterRadiusMeters = 0f)
         {
             if (!cache.TryGetValue(lane.LaneId, out ModelInstanceBatch batch) || batch.ColorKey != colorKey)
             {
@@ -2934,13 +2980,14 @@ namespace Ludots.Raylib.Render
 
             // scaleMul != 1 rescales the world-space matrix basis per frame, so only the exact
             // static scale (acceptance zoom disabled) is cacheable — mirrors bucket lane policy.
-            bool canCacheStaticMatrices = MathF.Abs(scaleMul - 1f) <= 0.0001f;
+            // A shadow-filtered batch is camera-relative and therefore never cacheable.
+            bool canCacheStaticMatrices = shadowCasterFilter == null && MathF.Abs(scaleMul - 1f) <= 0.0001f;
             if (!canCacheStaticMatrices ||
                 batch.Revision != lane.Revision ||
                 batch.Count != lane.Count)
             {
                 LastInstancedMatrixCacheMisses++;
-                RebuildTypedLaneBatch(ref batch, in lane, scaleMul);
+                RebuildTypedLaneBatch(ref batch, in lane, scaleMul, shadowCasterFilter, casterRadiusMeters);
                 cache[lane.LaneId] = batch;
             }
             else
@@ -2951,7 +2998,12 @@ namespace Ludots.Raylib.Render
             return batch;
         }
 
-        private void RebuildTypedLaneBatch(ref ModelInstanceBatch batch, in RaylibInstancedBatchLane lane, float scaleMul)
+        private void RebuildTypedLaneBatch(
+            ref ModelInstanceBatch batch,
+            in RaylibInstancedBatchLane lane,
+            float scaleMul,
+            RaylibDirectionalShadowMap? shadowCasterFilter = null,
+            float casterRadiusMeters = 0f)
         {
             long start = Stopwatch.GetTimestamp();
             batch.Count = 0;
@@ -2960,6 +3012,13 @@ namespace Ludots.Raylib.Render
             for (int i = 0; i < lane.Count; i++)
             {
                 Matrix4x4 matrix = lane.Matrices[i];
+                if (shadowCasterFilter != null &&
+                    !shadowCasterFilter.ContainsCaster(matrix.Translation, casterRadiusMeters))
+                {
+                    LastInstancedShadowCastersCulled++;
+                    continue;
+                }
+
                 if (rescale)
                 {
                     matrix.M11 *= scaleMul;

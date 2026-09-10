@@ -21,6 +21,7 @@ namespace Ludots.Core.Presentation.Presenters
     public struct PerfTransformSyncTick {}
     public struct PerfOwnerPayloadTransformSync {}
     public struct PerfOwnerPayloadAttachedTransformSync {}
+    public struct PerfEntityAnchorRootTransformSync {}
     public struct PerfStaticStableVisual {}
     public struct PerfRetainedPresentationRequest {}
     public struct PerfRetainedPresentationRequestLifecycleTick {}

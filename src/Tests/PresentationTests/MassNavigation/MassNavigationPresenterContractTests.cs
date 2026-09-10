@@ -817,64 +817,6 @@ namespace Ludots.Tests.Presentation
             return (currentParamKey, baseParamKey);
         }
 
-        private static void AssertPresenterDoesNotBindMeshAsset(JsonObject definition, string definitionId, string forbiddenAssetId)
-        {
-            JsonArray behaviors = definition["behaviors"]?.AsArray()
-                ?? throw new InvalidOperationException($"Presenter '{definitionId}' must declare behaviors.");
-            foreach (JsonObject behavior in behaviors.Select(node => node?.AsObject() ?? throw new InvalidOperationException($"Presenter '{definitionId}' behavior must be an object.")))
-            {
-                JsonObject? assetBinding = behavior["assetBinding"]?.AsObject();
-                string assetId = assetBinding?["assetId"]?.GetValue<string>() ?? string.Empty;
-                Assert.That(assetId, Is.Not.EqualTo(forbiddenAssetId),
-                    $"Presenter '{definitionId}' must not carry always-present hidden asset '{forbiddenAssetId}'.");
-            }
-        }
-
-        private static void AssertSelectionMarkerLifecycleRules(JsonObject definition, string definitionId, string markerDefinitionId)
-        {
-            JsonArray rules = definition["rules"]?.AsArray()
-                ?? throw new InvalidOperationException($"Presenter '{definitionId}' must declare command marker lifecycle rules.");
-
-            AssertSelectionMarkerLifecycleRule(
-                rules,
-                definitionId,
-                markerDefinitionId,
-                eventKind: "EntityCollectionMemberAdded",
-                commandKind: "CreatePresenter");
-            AssertSelectionMarkerLifecycleRule(
-                rules,
-                definitionId,
-                markerDefinitionId,
-                eventKind: "EntityCollectionMemberRemoved",
-                commandKind: "DestroyScopedPresenter");
-        }
-
-        private static void AssertSelectionMarkerLifecycleRule(
-            JsonArray rules,
-            string definitionId,
-            string markerDefinitionId,
-            string eventKind,
-            string commandKind)
-        {
-            JsonObject? match = rules
-                .Select(node => node?.AsObject())
-                .FirstOrDefault(rule =>
-                {
-                    JsonObject? evt = rule?["event"]?.AsObject();
-                    JsonObject? command = rule?["command"]?.AsObject();
-                    return string.Equals(evt?["kind"]?.GetValue<string>(), eventKind, StringComparison.Ordinal) &&
-                           string.Equals(evt?["key"]?.GetValue<string>(), EntityCollectionKeys.CommandSource, StringComparison.Ordinal) &&
-                           string.Equals(command?["kind"]?.GetValue<string>(), commandKind, StringComparison.Ordinal) &&
-                           string.Equals(command?["definitionId"]?.GetValue<string>(), markerDefinitionId, StringComparison.Ordinal);
-                });
-
-            Assert.That(match, Is.Not.Null,
-                $"Presenter '{definitionId}' must map {eventKind} for {EntityCollectionKeys.CommandSource} to {commandKind} '{markerDefinitionId}'.");
-            JsonObject commandObj = match!["command"]!.AsObject();
-            Assert.That(commandObj["scopeSource"]?.GetValue<string>(), Is.EqualTo("SourceStableId"),
-                $"Presenter '{definitionId}' must scope command marker lifecycle by source stable id.");
-        }
-
         private static void AssertDefinitionHasNoRules(JsonObject definition, string definitionId)
         {
             Assert.That(definition.ContainsKey("rules"), Is.False,

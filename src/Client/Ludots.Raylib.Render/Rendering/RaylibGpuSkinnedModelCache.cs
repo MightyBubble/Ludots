@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raylib_cs;
@@ -32,14 +33,16 @@ namespace Ludots.Raylib.Render
             public readonly int AnimCount;
             public readonly string SourcePath;
             public readonly bool Loaded;
+            public readonly ReadOnlyMemory<int> MeshRigidBoneIndices;
 
-            public Entry(Model model, ModelAnimation* animations, int animCount, string sourcePath, bool loaded)
+            public Entry(Model model, ModelAnimation* animations, int animCount, string sourcePath, bool loaded, ReadOnlyMemory<int> meshRigidBoneIndices)
             {
                 Model = model;
                 Animations = animations;
                 AnimCount = animCount;
                 SourcePath = sourcePath;
                 Loaded = loaded;
+                MeshRigidBoneIndices = meshRigidBoneIndices;
             }
         }
 
@@ -212,9 +215,18 @@ namespace Ludots.Raylib.Render
                     return Fail(meshAssetId, BuildFailure(pending), out status);
                 }
 
+                int[] meshRigidBoneIndices;
                 try
                 {
                     ValidateAnimations(meshAssetId, pending.FullPath!, model, animation);
+                    var boneNames = new string[model.boneCount];
+                    for (int boneIndex = 0; boneIndex < model.boneCount; boneIndex++)
+                    {
+                        var name = new ReadOnlySpan<byte>(model.bones[boneIndex].name, 32);
+                        int end = name.IndexOf((byte)0);
+                        boneNames[boneIndex] = Encoding.UTF8.GetString(end < 0 ? name : name[..end]);
+                    }
+                    meshRigidBoneIndices = RaylibGltfMeshSkinBindings.Load(animation.LoadablePath, model.meshCount, boneNames);
                 }
                 catch (Exception ex)
                 {
@@ -230,7 +242,7 @@ namespace Ludots.Raylib.Render
                     return Fail(meshAssetId, BuildFailure(pending), out status);
                 }
 
-                Entry completed = new(model, animation.Animations, animation.AnimCount, pending.FullPath!, loaded: true);
+                Entry completed = new(model, animation.Animations, animation.AnimCount, pending.FullPath!, loaded: true, meshRigidBoneIndices);
                 _entries[meshAssetId] = completed;
                 _leases[meshAssetId] = modelLease;
                 _selectedUris[meshAssetId] = pending.Uri!;

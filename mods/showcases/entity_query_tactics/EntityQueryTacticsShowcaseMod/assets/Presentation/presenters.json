@@ -584,19 +584,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            0.03,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "entityquery.tactics.visual.selection.marker.attachment.position",
+          "localRotationParamKey": "entityquery.tactics.visual.selection.marker.attachment.rotation",
+          "localScaleParamKey": "entityquery.tactics.visual.selection.marker.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "entityquery.tactics.visual.selection.marker.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.03,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "entityquery.tactics.visual.selection.marker.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "entityquery.tactics.visual.selection.marker.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -633,18 +661,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.25,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "entityquery.tactics.visual.health.light.attachment.position",
+          "localRotationParamKey": "entityquery.tactics.visual.health.light.attachment.rotation",
+          "localScaleParamKey": "entityquery.tactics.visual.health.light.attachment.scale"
         }
       },
       {
@@ -663,6 +687,36 @@
         "paramKey": "entityquery.tactics.health.ratio",
         "lane": "Float",
         "floatValue": 1
+      },
+      {
+        "paramKey": "entityquery.tactics.visual.health.light.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.25,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "entityquery.tactics.visual.health.light.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "entityquery.tactics.visual.health.light.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -692,19 +746,47 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.55,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "entityquery.tactics.visual.health.heavy.attachment.position",
+          "localRotationParamKey": "entityquery.tactics.visual.health.heavy.attachment.rotation",
+          "localScaleParamKey": "entityquery.tactics.visual.health.heavy.attachment.scale"
         }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "entityquery.tactics.visual.health.heavy.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.55,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "entityquery.tactics.visual.health.heavy.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "entityquery.tactics.visual.health.heavy.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
