@@ -109,7 +109,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void AgentSelectionMarkers_AreSeparateScopedPresenters()
+        public void AgentSelectionMarkers_UseSharedCaseESelectionPresenters()
         {
             string modRoot = MassNavigationModRoot();
             JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
@@ -124,31 +124,32 @@ namespace Ludots.Tests.Presentation
             Assert.That(presentation.ContainsKey("selectionMarkerHeavyPresenterId"), Is.False,
                 "Command marker presenter ownership belongs to presenter rules, not MassNavigation presentation config fields.");
 
-            const string lightMarkerId = "mass_navigation_agent_command_marker_light";
-            const string heavyMarkerId = "mass_navigation_agent_command_marker_heavy";
+            JsonObject manifest = ReadObject(Path.Combine(modRoot, "mod.json"));
+            JsonObject dependencies = manifest["dependencies"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationMod dependencies missing.");
+            Assert.That(dependencies.ContainsKey("SelectionInteractionMod"), Is.True,
+                "MassNavigation must consume the shared Case E selection module.");
+            Assert.That(presentation["requiredMeshAssetIds"]?.AsArray()
+                .Select(node => node?.GetValue<string>()).ToArray(), Does.Not.Contain("case_e.select_ring_slab"));
+            Assert.That(presenters.Any(node =>
+            {
+                string id = node?.AsObject()?["id"]?.GetValue<string>() ?? string.Empty;
+                return id.Contains("command_marker", StringComparison.Ordinal);
+            }), Is.False, "MassNavigation must not define a private selection marker presenter.");
 
-            JsonObject lightAgent = FindObjectById(presenters, "mass_navigation_agent_light");
-            JsonObject heavyAgent = FindObjectById(presenters, "mass_navigation_agent_heavy");
-            AssertPresenterDoesNotBindMeshAsset(lightAgent, "mass_navigation_agent_light", "mass_navigation.command.marker");
-            AssertPresenterDoesNotBindMeshAsset(heavyAgent, "mass_navigation_agent_heavy", "mass_navigation.command.marker");
-            AssertSelectionMarkerLifecycleRules(lightAgent, "mass_navigation_agent_light", lightMarkerId);
-            AssertSelectionMarkerLifecycleRules(heavyAgent, "mass_navigation_agent_heavy", heavyMarkerId);
-            AssertSelectionMarkerDefinition(
-                FindObjectById(presenters, lightMarkerId),
-                lightMarkerId,
-                expectedScaleX: 0.55f,
-                expectedScaleY: 0.05f,
-                expectedScaleZ: 0.55f,
-                expectedOffsetY: 0.035f);
-            JsonObject heavyMarker = FindObjectById(presenters, heavyMarkerId);
-            Assert.That(RequireString(heavyMarker, "extends"), Is.EqualTo(lightMarkerId));
-            AssertSelectionMarkerDefinition(
-                heavyMarker,
-                heavyMarkerId,
-                expectedScaleX: 0.78f,
-                expectedScaleY: 0.06f,
-                expectedScaleZ: 0.78f,
-                expectedOffsetY: 0.04f);
+            string selectionRoot = Path.Combine(FindRepoRoot(), "mods", "capabilities", "input", "SelectionInteractionMod");
+            JsonArray sharedPresenters = ReadArray(Path.Combine(selectionRoot, "assets", "Presentation", "presenters.json"));
+            JsonObject sharedMarker = FindObjectById(sharedPresenters, "presenter.case_e.selection_marker");
+            JsonObject sharedAssetBinding = sharedMarker["behaviors"]!.AsArray()
+                .Select(node => node!.AsObject())
+                .First(obj => obj["kind"]?.GetValue<string>() == "AssetBinding")["assetBinding"]!.AsObject();
+            Assert.That(sharedAssetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("case_e.select_ring_slab"));
+            Assert.That(sharedAssetBinding["renderPath"]?.GetValue<string>(), Is.EqualTo("InstancedStaticMesh"));
+            Assert.That(sharedAssetBinding["visibilityParamKey"]?.GetValue<string>(), Is.EqualTo("case_e.marker.visible"));
+            Assert.That(sharedMarker["anchor"]?.AsObject(), Is.Not.Null);
+            JsonObject sharedRules = FindObjectById(sharedPresenters, "presenter.case_e.selection_rules");
+            Assert.That(sharedRules["rules"]!.AsArray().Any(node =>
+                node!.AsObject()["event"]?.AsObject()["key"]?.GetValue<string>() == "selected"), Is.True);
 
             Assert.That(
                 File.Exists(Path.Combine(modRoot, "Systems", "MassNavigationSelectionPresenterSyncSystem.cs")),
@@ -814,102 +815,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(currentParamKey, Is.EqualTo(HealthCurrentParamKey), $"Text presenter '{definitionId}' must drive current value from a semantic param.");
             Assert.That(baseParamKey, Is.EqualTo(HealthBaseParamKey), $"Text presenter '{definitionId}' must drive base value from a semantic param.");
             return (currentParamKey, baseParamKey);
-        }
-
-        private static void AssertPresenterDoesNotBindMeshAsset(JsonObject definition, string definitionId, string forbiddenAssetId)
-        {
-            JsonArray behaviors = definition["behaviors"]?.AsArray()
-                ?? throw new InvalidOperationException($"Presenter '{definitionId}' must declare behaviors.");
-            foreach (JsonObject behavior in behaviors.Select(node => node?.AsObject() ?? throw new InvalidOperationException($"Presenter '{definitionId}' behavior must be an object.")))
-            {
-                JsonObject? assetBinding = behavior["assetBinding"]?.AsObject();
-                string assetId = assetBinding?["assetId"]?.GetValue<string>() ?? string.Empty;
-                Assert.That(assetId, Is.Not.EqualTo(forbiddenAssetId),
-                    $"Presenter '{definitionId}' must not carry always-present hidden asset '{forbiddenAssetId}'.");
-            }
-        }
-
-        private static void AssertSelectionMarkerDefinition(
-            JsonObject definition,
-            string definitionId,
-            float expectedScaleX,
-            float expectedScaleY,
-            float expectedScaleZ,
-            float expectedOffsetY)
-        {
-            JsonArray behaviors = definition["behaviors"]?.AsArray()
-                ?? throw new InvalidOperationException($"Command marker '{definitionId}' must declare behaviors.");
-
-            JsonObject assetBinding = behaviors
-                .Select(node => node?.AsObject())
-                .FirstOrDefault(obj => obj?["kind"]?.GetValue<string>() == "AssetBinding")?["assetBinding"]?.AsObject()
-                ?? throw new InvalidOperationException($"Command marker '{definitionId}' must declare an AssetBinding behavior.");
-            Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("Mesh"));
-            Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("mass_navigation.command.marker"));
-            Assert.That(assetBinding["renderPath"]?.GetValue<string>(), Is.EqualTo("InstancedStaticMesh"));
-            Assert.That(assetBinding["mobility"]?.GetValue<string>(), Is.EqualTo("Movable"));
-            Assert.That(assetBinding.ContainsKey("localOffset"), Is.False,
-                $"Command marker '{definitionId}' position must come from parent Attachment, not duplicated mesh localOffset.");
-            Assert.That(assetBinding.ContainsKey("visibilityParamKey"), Is.False,
-                $"Command marker '{definitionId}' visibility is controlled by scoped create/destroy, not a root visibility param.");
-            AssertVector3(assetBinding["localScale"]?.AsArray(), expectedScaleX, expectedScaleY, expectedScaleZ, $"Command marker '{definitionId}' scale");
-
-            JsonObject attachment = behaviors
-                .Select(node => node?.AsObject())
-                .FirstOrDefault(obj => obj?["kind"]?.GetValue<string>() == "Attachment")?["attachment"]?.AsObject()
-                ?? throw new InvalidOperationException($"Command marker '{definitionId}' must follow the agent root through an Attachment behavior.");
-            Assert.That(attachment["target"]?.GetValue<string>(), Is.EqualTo("Parent"));
-            string positionKey = attachment["localPositionParamKey"]!.GetValue<string>();
-            JsonNode position = definition["paramDefaults"]!.AsArray()
-                .Single(node => node!["paramKey"]!.GetValue<string>() == positionKey)!["vectorValue"]!;
-            Assert.That(position.AsArray().Select(v => v!.GetValue<float>()), Is.EqualTo(new[] { 0f, expectedOffsetY, 0f, 0f }));
-            Assert.That(attachment["updatePolicy"]!.GetValue<string>(), Is.EqualTo("Continuous"));
-            Assert.That(attachment["inherit"]!.AsArray().Select(v => v!.GetValue<string>()), Does.Not.Contain("Scale"));
-        }
-
-        private static void AssertSelectionMarkerLifecycleRules(JsonObject definition, string definitionId, string markerDefinitionId)
-        {
-            JsonArray rules = definition["rules"]?.AsArray()
-                ?? throw new InvalidOperationException($"Presenter '{definitionId}' must declare command marker lifecycle rules.");
-
-            AssertSelectionMarkerLifecycleRule(
-                rules,
-                definitionId,
-                markerDefinitionId,
-                eventKind: "EntityCollectionMemberAdded",
-                commandKind: "CreatePresenter");
-            AssertSelectionMarkerLifecycleRule(
-                rules,
-                definitionId,
-                markerDefinitionId,
-                eventKind: "EntityCollectionMemberRemoved",
-                commandKind: "DestroyScopedPresenter");
-        }
-
-        private static void AssertSelectionMarkerLifecycleRule(
-            JsonArray rules,
-            string definitionId,
-            string markerDefinitionId,
-            string eventKind,
-            string commandKind)
-        {
-            JsonObject? match = rules
-                .Select(node => node?.AsObject())
-                .FirstOrDefault(rule =>
-                {
-                    JsonObject? evt = rule?["event"]?.AsObject();
-                    JsonObject? command = rule?["command"]?.AsObject();
-                    return string.Equals(evt?["kind"]?.GetValue<string>(), eventKind, StringComparison.Ordinal) &&
-                           string.Equals(evt?["key"]?.GetValue<string>(), EntityCollectionKeys.CommandSource, StringComparison.Ordinal) &&
-                           string.Equals(command?["kind"]?.GetValue<string>(), commandKind, StringComparison.Ordinal) &&
-                           string.Equals(command?["definitionId"]?.GetValue<string>(), markerDefinitionId, StringComparison.Ordinal);
-                });
-
-            Assert.That(match, Is.Not.Null,
-                $"Presenter '{definitionId}' must map {eventKind} for {EntityCollectionKeys.CommandSource} to {commandKind} '{markerDefinitionId}'.");
-            JsonObject commandObj = match!["command"]!.AsObject();
-            Assert.That(commandObj["scopeSource"]?.GetValue<string>(), Is.EqualTo("SourceStableId"),
-                $"Presenter '{definitionId}' must scope command marker lifecycle by source stable id.");
         }
 
         private static void AssertDefinitionHasNoRules(JsonObject definition, string definitionId)
