@@ -55,13 +55,6 @@
     "lifecycle": {
       "persistence": "Scoped"
     },
-    "anchor": {
-      "offset": [
-        0,
-        0.2,
-        0
-      ]
-    },
     "behaviors": [
       {
         "slot": "body",
@@ -90,6 +83,22 @@
             1
           ]
         }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
+          ],
+          "localPositionParamKey": "presenter.case_e.selection_marker.attachment.position",
+          "localRotationParamKey": "presenter.case_e.selection_marker.attachment.rotation",
+          "localScaleParamKey": "presenter.case_e.selection_marker.attachment.scale"
+        }
       }
     ],
     "paramDefaults": [
@@ -97,6 +106,36 @@
         "paramKey": "case_e.marker.visible",
         "lane": "Int",
         "intValue": 0
+      },
+      {
+        "paramKey": "presenter.case_e.selection_marker.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.2,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "presenter.case_e.selection_marker.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "presenter.case_e.selection_marker.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -104,13 +143,6 @@
     "id": "presenter.case_e.selection_preview_marker",
     "lifecycle": {
       "persistence": "Scoped"
-    },
-    "anchor": {
-      "offset": [
-        0,
-        0.35,
-        0
-      ]
     },
     "behaviors": [
       {
@@ -140,6 +172,22 @@
             0.95
           ]
         }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
+          ],
+          "localPositionParamKey": "presenter.case_e.selection_preview_marker.attachment.position",
+          "localRotationParamKey": "presenter.case_e.selection_preview_marker.attachment.rotation",
+          "localScaleParamKey": "presenter.case_e.selection_preview_marker.attachment.scale"
+        }
       }
     ],
     "paramDefaults": [
@@ -147,6 +195,36 @@
         "paramKey": "case_e.marker.visible",
         "lane": "Int",
         "intValue": 0
+      },
+      {
+        "paramKey": "presenter.case_e.selection_preview_marker.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0.35,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "presenter.case_e.selection_preview_marker.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "presenter.case_e.selection_preview_marker.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
