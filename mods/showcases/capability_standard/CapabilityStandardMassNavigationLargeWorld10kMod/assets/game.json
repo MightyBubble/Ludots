@@ -60,7 +60,8 @@
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExplicitHalfExtentCm": 0.0
-    }
+    },
+    "worldHudTerrainOcclusionCacheCapacity": 131072
   },
   "startupLocalSeats": [
     {
