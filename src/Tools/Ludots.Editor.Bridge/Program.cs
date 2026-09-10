@@ -1387,10 +1387,13 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
             }
 
             var tiles = new List<object>(navBakeResult.SuccessCount);
+            // Artifact writers must use the same board-scoped path contract as the runtime
+            // loader, otherwise a multi-board map writes tiles the loader never reads.
+            string? artifactBoardId = EditorRepo.ResolveNavArtifactBoardId(repoRoot, mapId, modId, boardName);
             for (int i = 0; i < navBakeResult.Entries.Count; i++)
             {
                 var r = navBakeResult.Entries[i];
-                string rel = NavAssetPaths.GetNavTileRelativePath(mapId, r.Layer, r.ProfileId, r.Target.ChunkX, r.Target.ChunkY);
+                string rel = NavAssetPaths.GetNavTileRelativePath(mapId, artifactBoardId, r.Layer, r.ProfileId, r.Target.ChunkX, r.Target.ChunkY);
                 string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
                 Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
                 using (var fs = File.Create(outFile))
@@ -5122,6 +5125,24 @@ static class EditorRepo
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Resolves the board id that nav artifacts must be written under, or null when the map
+    /// is single-board and keeps the historical unscoped path. Mirrors the runtime loader's
+    /// scoped-ness rule so writers and readers cannot drift.
+    /// </summary>
+    public static string? ResolveNavArtifactBoardId(string repoRoot, string mapId, string? modId, string? boardName)
+    {
+        Ludots.Core.Config.MapConfig mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+        if (!NavAssetPaths.IsBoardScoped(mapConfig.Boards.Select(b => b?.NavTileGrid != null).ToList()))
+        {
+            return null;
+        }
+
+        return string.IsNullOrWhiteSpace(boardName)
+            ? ToolMapConfigResolver.ResolvePrimaryNavigationBoard(mapConfig).Name
+            : ResolveRequiredBoardByName(mapConfig, boardName).Name;
     }
 
     public static Ludots.Core.Map.Board.BoardConfig ResolveRequiredBoardByName(Ludots.Core.Config.MapConfig map, string? boardName)

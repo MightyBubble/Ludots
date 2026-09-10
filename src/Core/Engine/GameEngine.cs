@@ -4090,40 +4090,138 @@ namespace Ludots.Core.Engine
             int widthChunks = tileGrids.Max(g => g!.WidthChunks);
             int heightChunks = tileGrids.Max(g => g!.HeightChunks);
 
+            // Board-scoped addressing: when a map declares more than one navigable board,
+            // each board owns its own tile geometry, stores and identity. A single-board
+            // map keeps the legacy un-scoped key so existing baked artifacts stay loadable,
+            // but it still carries its real declared origin, tile extents and tile range.
+            // A board participates in nav addressing when it is navigation-enabled and declares
+            // an explicit NavTileGrid, matching ToolMapConfigResolver.ResolvePrimaryNavigationBoard.
+            // Multi-board maps use those grids as board identity, so one board can no longer
+            // overwrite another's tiles.
+            var navigableBoards = mapConfig.Boards
+                .Where((b, index) => tileGrids[index] != null && b.NavigationEnabled)
+                .ToList();
+            if (navigableBoards.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' enables navmesh but declares no navigation-enabled board with a NavTileGrid.");
+            }
+
+            bool boardScopedAddressing = NavAssetPaths.IsBoardScoped(
+                navigableBoards.Select(b => b.NavTileGrid != null).ToList());
+            var boardGeometry = new Dictionary<string, NavBoardTileGeometry>(navigableBoards.Count, StringComparer.Ordinal);
+
+            foreach (BoardConfig board in navigableBoards)
+            {
+                if (boardScopedAddressing && string.IsNullOrWhiteSpace(board.Name))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' declares multiple navigable boards; every navigable board must have a name for nav addressing.");
+                }
+
+                string geometryKey = boardScopedAddressing ? board.Name : string.Empty;
+                if (boardGeometry.ContainsKey(geometryKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' declares duplicate navigable board name '{geometryKey}'; nav addressing keys must be unique.");
+                }
+
+                NavTileGridConfig grid = board.NavTileGrid!;
+                boardGeometry[geometryKey] = new NavBoardTileGeometry(
+                    grid.ChunkWidthCm,
+                    grid.ChunkHeightCm,
+                    grid.OriginXcm,
+                    grid.OriginZcm,
+                    grid.WidthChunks,
+                    grid.HeightChunks);
+            }
+
+            // Cold start must prove which artifact set it is about to serve before any tile is
+            // read. When a manifest is present it is binding: identity and format mismatches
+            // fail closed instead of silently serving another map's or version's geometry.
+            // Maps baked before manifests existed simply have no manifest to validate.
+            var boardManifests = new Dictionary<string, NavTileManifest?>(navigableBoards.Count, StringComparer.Ordinal);
+            foreach (BoardConfig board in navigableBoards)
+            {
+                string manifestKey = boardScopedAddressing ? board.Name : string.Empty;
+                NavTileManifest? boardManifest = ValidateNavTileManifest(
+                    mapId,
+                    boardScopedAddressing ? board.Name : null);
+                boardManifests[manifestKey] = boardManifest;
+                if (boardManifest != null && !boardScopedAddressing)
+                {
+                    // Single-board maps expose one authoritative manifest to diagnostics;
+                    // board-scoped maps keep manifests per store, not under one global key.
+                    SetService(CoreServiceKeys.NavTileManifest, boardManifest);
+                }
+            }
+
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
                 int layer = bakeConfig.Layers[li].Layer;
                 for (int pi = 0; pi < profileRegistry.Count; pi++)
                 {
                     int profileIndex = pi;
-                    var uriCache = new Dictionary<NavTileId, string>(256);
-
-                    string ResolveTileUri(NavTileId id)
+                    foreach (BoardConfig? board in boardScopedAddressing
+                        ? navigableBoards.Cast<BoardConfig?>()
+                        : new BoardConfig?[] { null })
                     {
-                        if (id.Layer != layer) throw new InvalidOperationException($"NavTileId.Layer mismatch. Expected={layer}, actual={id.Layer}.");
-                        if (uriCache.TryGetValue(id, out var cached)) return cached;
-                        string profileId = profileRegistry.GetId(profileIndex);
-                        string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, id.ChunkX, id.ChunkY);
-                        string uri = ResolveSingleExistingUri(rel);
-                        uriCache[id] = uri;
-                        return uri;
-                    }
+                        string boardId = board?.Name ?? string.Empty;
+                        NavTileManifest? storeManifest = boardManifests.TryGetValue(
+                            boardScopedAddressing ? boardId : string.Empty,
+                            out NavTileManifest? resolved)
+                                ? resolved
+                                : null;
+                        var uriCache = new Dictionary<NavTileId, string>(256);
 
-                    for (int cy = 0; cy < heightChunks; cy++)
-                    {
-                        for (int cx = 0; cx < widthChunks; cx++)
+                        string ResolveTileUri(NavTileId id)
                         {
-                            _ = ResolveTileUri(new NavTileId(cx, cy, layer));
+                            if (id.Layer != layer) throw new InvalidOperationException($"NavTileId.Layer mismatch. Expected={layer}, actual={id.Layer}.");
+                            if (uriCache.TryGetValue(id, out var cached)) return cached;
+                            string profileId = profileRegistry.GetId(profileIndex);
+                            string rel = NavAssetPaths.GetNavTileRelativePath(
+                                mapId,
+                                boardScopedAddressing ? boardId : null,
+                                layer,
+                                profileId,
+                                id.ChunkX,
+                                id.ChunkY);
+                            string uri = ResolveSingleExistingUri(rel);
+                            uriCache[id] = uri;
+                            return uri;
                         }
-                    }
 
-                    var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)));
-                    stores[new NavQueryServiceKey(layer, profileIndex)] = store;
+                        int boardWidthChunks = board?.NavTileGrid?.WidthChunks ?? widthChunks;
+                        int boardHeightChunks = board?.NavTileGrid?.HeightChunks ?? heightChunks;
+                        for (int cy = 0; cy < boardHeightChunks; cy++)
+                        {
+                            for (int cx = 0; cx < boardWidthChunks; cx++)
+                            {
+                                _ = ResolveTileUri(new NavTileId(cx, cy, layer));
+                            }
+                        }
+
+                        var storeScope = new NavTileStoreScope(
+                            mapId,
+                            boardScopedAddressing ? boardId : string.Empty,
+                            layer,
+                            profileRegistry.GetId(profileIndex));
+                        EnsureManifestCoversStore(
+                            storeManifest,
+                            boardScopedAddressing ? boardId : string.Empty,
+                            profileRegistry.GetId(profileIndex),
+                            layer,
+                            boardWidthChunks,
+                            boardHeightChunks);
+                        var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)), storeManifest, storeScope);
+                        stores[new NavQueryServiceKey(boardScopedAddressing ? boardId : string.Empty, layer, profileIndex)] = store;
+                    }
                 }
             }
 
-            var chunkWidthCm = tileGrids.Max(g => g!.ChunkWidthCm);
-            var navRegistry = new NavQueryServiceRegistry(stores, chunkWidthCm, chunkWidthCm);
+            int chunkWidthCm = tileGrids.Max(g => g!.ChunkWidthCm);
+            int chunkHeightCm = tileGrids.Max(g => g!.ChunkHeightCm);
+            var navRegistry = new NavQueryServiceRegistry(stores, boardGeometry, chunkWidthCm, chunkHeightCm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {
@@ -4395,7 +4493,7 @@ namespace Ludots.Core.Engine
 
             AgentProfileConfig agentProfile = agentProfiles.Require(agent.ProfileId, $"PathingConfig default agent '{agent.Id}'");
             var areaCosts = BuildPathNavAreaCosts(agent.NavMesh);
-            if (!navRegistry.TryCreateQuery(agentProfile.Layer, profileIndex, areaCosts, out var query))
+            if (!navRegistry.TryCreatePrimaryQuery(agentProfile.Layer, profileIndex, areaCosts, out var query))
             {
                 throw new InvalidOperationException(
                     $"PathingConfig default agent '{agent.Id}' cannot create navmesh query for layer {agentProfile.Layer}, profile '{agent.ProfileId}'.");
@@ -4444,6 +4542,70 @@ namespace Ludots.Core.Engine
             var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
                 ?? throw new InvalidOperationException("NavMeshBakeConfig requires AgentProfiles.");
             return new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
+        }
+
+        private static void EnsureManifestCoversStore(
+            NavTileManifest? manifest,
+            string boardId,
+            string profileId,
+            int layer,
+            int widthChunks,
+            int heightChunks)
+        {
+            if (manifest == null) return;
+            for (int cy = 0; cy < heightChunks; cy++)
+            {
+                for (int cx = 0; cx < widthChunks; cx++)
+                {
+                    if (!manifest.HasEntryFor(layer, profileId, cx, cy))
+                    {
+                        throw new InvalidOperationException(
+                            $"Nav tile manifest for map '{manifest.MapId}' board '{boardId}' does not list " +
+                            $"({cx},{cy}) layer {layer} profile '{profileId}', which the declared nav tile grid requires. " +
+                            $"Re-bake the map so the manifest and tiles cover the whole grid.");
+                    }
+                }
+            }
+        }
+
+        private NavTileManifest? ValidateNavTileManifest(string mapId, string? boardId)
+        {
+            string rel = NavAssetPaths.GetNavTileManifestRelativePath(mapId, boardId);
+            if (!TryResolveSingleExistingUri(rel, out string manifestUri) ||
+                !VFS.TryResolveFullPath(manifestUri, out string manifestPath) ||
+                !File.Exists(manifestPath))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{(string.IsNullOrEmpty(boardId) ? "(default)" : boardId)}' enables navmesh but has no nav tile manifest at '{rel}'. " +
+                    $"Re-run the nav bake so the manifest is written next to the .ntil files; the runtime refuses to serve un-validated artifact sets.");
+            }
+
+            NavTileManifest manifest;
+            try
+            {
+                manifest = NavTileManifestSerializer.Read(manifestPath);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has an unusable nav tile manifest at '{rel}': {ex.Message} Re-bake the map's nav tiles.", ex);
+            }
+
+            if (!string.Equals(manifest.MapId, mapId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Nav tile manifest at '{rel}' declares mapId '{manifest.MapId}' but the loading map is '{mapId}'. Re-bake this map.");
+            }
+
+            string expectedBoard = boardId ?? string.Empty;
+            if (!string.Equals(manifest.BoardId ?? string.Empty, expectedBoard, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Nav tile manifest at '{rel}' declares boardId '{manifest.BoardId}' but the runtime addresses board '{expectedBoard}'. Re-bake this map.");
+            }
+
+            SetService(CoreServiceKeys.NavTileManifest, manifest);
+            return manifest;
         }
 
         private string ResolveSingleExistingUri(string relPath)

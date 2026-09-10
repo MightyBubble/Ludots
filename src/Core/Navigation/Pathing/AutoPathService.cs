@@ -333,7 +333,7 @@ namespace Ludots.Core.Navigation.Pathing
                 return false;
             }
 
-            if (!navRegistry.TryCreateQuery(agent.NavLayer, agent.NavProfileIndex, agent.NavAreaCosts, out var query))
+            if (!navRegistry.TryCreatePrimaryQuery(agent.NavLayer, agent.NavProfileIndex, agent.NavAreaCosts, out var query))
             {
                 result = new PathResult(request.RequestId, request.Actor, PathStatus.NotReady, default, expanded: 0, errorCode: 21);
                 return false;

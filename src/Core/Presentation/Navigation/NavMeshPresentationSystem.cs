@@ -76,7 +76,7 @@ namespace Ludots.Core.Presentation.Navigation
                     ? capabilities
                     : null);
 
-            if (!registry.TryGetStore(layer, profile, out NavTileStore store))
+            if (!registry.TryGetPrimaryStore(layer, profile, out NavTileStore store))
             {
                 throw new InvalidOperationException(
                     $"NavMesh presentation enabled with layer={layer}, profile={profile}, but no matching NavTileStore is registered.");

@@ -379,6 +379,7 @@ namespace Ludots.Tests.Architecture
                         new BoardConfig
                         {
                             Name = "default",
+                            NavigationEnabled = true,
                             // The declared grid must match the tile geometry written by
                             // WriteAllChunkTileFiles: 64-cell chunks at 250 cm per cell.
                             NavTileGrid = new NavTileGridConfig
@@ -402,6 +403,7 @@ namespace Ludots.Tests.Architecture
             LogicTerrainField terrain,
             (int ChunkX, int ChunkY) realTileCoord)
         {
+            var entries = new List<NavTileManifestEntry>();
             for (int layerIndex = 0; layerIndex < config.Layers.Count; layerIndex++)
             {
                 int layer = config.Layers[layerIndex].Layer;
@@ -415,21 +417,48 @@ namespace Ludots.Tests.Architecture
                             string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, cx, cy);
                             string tilePath = Path.Combine(tempAssetsRoot, rel.Replace('/', Path.DirectorySeparatorChar));
                             Directory.CreateDirectory(Path.GetDirectoryName(tilePath)!);
-                            if (cx == realTileCoord.ChunkX && cy == realTileCoord.ChunkY)
+                            var tile = DefaultGridNavTileFactory.CreateFlatTile(
+                                cx, cy, layer, tileVersion: 1, chunkSizeCells: 64, cellSizeCm: 250);
+                            using (var ms = new MemoryStream())
                             {
-                                using var ms = new MemoryStream();
-                                NavTileBinary.Write(ms, DefaultGridNavTileFactory.CreateFlatTile(
-                                    cx, cy, layer, tileVersion: 1, chunkSizeCells: 64, cellSizeCm: 250));
+                                NavTileBinary.Write(ms, tile);
                                 File.WriteAllBytes(tilePath, ms.ToArray());
                             }
-                            else
+
+                            entries.Add(new NavTileManifestEntry
                             {
-                                File.WriteAllBytes(tilePath, Array.Empty<byte>());
-                            }
+                                Layer = layer,
+                                ProfileId = profileId,
+                                ChunkX = cx,
+                                ChunkY = cy,
+                                TileVersion = tile.TileVersion,
+                                TileChecksum = "fnv1a64:" + NavTileBinary.ComputePersistedChecksum(tile).ToString("x16")
+                            });
                         }
                     }
                 }
             }
+
+            WriteBootstrapManifest(tempAssetsRoot, mapId, entries);
+        }
+
+        private static void WriteBootstrapManifest(string tempAssetsRoot, string mapId, List<NavTileManifestEntry> entries)
+        {
+            var manifest = new NavTileManifest
+            {
+                MapId = mapId,
+                BoardId = string.Empty,
+                SourceRevision = "test-fixture:" + mapId,
+                Algorithm = "Recast",
+                Mode = "Offline",
+                TileVersion = 1,
+                Tiles = entries.ToArray(),
+                WrittenUtc = DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture)
+            };
+
+            string rel = NavAssetPaths.GetNavTileManifestRelativePath(mapId);
+            string path = Path.Combine(tempAssetsRoot, rel.Replace('/', Path.DirectorySeparatorChar));
+            NavTileManifestSerializer.Write(path, manifest);
         }
 
         private static void RewriteTempNavmeshMode(string tempAssetsRoot, string mode, string algorithm)
@@ -449,6 +478,7 @@ namespace Ludots.Tests.Architecture
             CopyDirectory(configSource, configTarget);
 
             var config = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot);
+            var entries = new List<NavTileManifestEntry>();
             for (int layerIndex = 0; layerIndex < config.Layers.Count; layerIndex++)
             {
                 int layer = config.Layers[layerIndex].Layer;
@@ -458,10 +488,26 @@ namespace Ludots.Tests.Architecture
                     string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, 0, 0);
                     string tilePath = Path.Combine(tempRoot, rel.Replace('/', Path.DirectorySeparatorChar));
                     Directory.CreateDirectory(Path.GetDirectoryName(tilePath)!);
-                    File.WriteAllBytes(tilePath, Array.Empty<byte>());
+                    var tile = DefaultGridNavTileFactory.CreateFlatTile(0, 0, layer, tileVersion: 1, chunkSizeCells: 64, cellSizeCm: 250);
+                    using (var ms = new MemoryStream())
+                    {
+                        NavTileBinary.Write(ms, tile);
+                        File.WriteAllBytes(tilePath, ms.ToArray());
+                    }
+
+                    entries.Add(new NavTileManifestEntry
+                    {
+                        Layer = layer,
+                        ProfileId = profileId,
+                        ChunkX = 0,
+                        ChunkY = 0,
+                        TileVersion = tile.TileVersion,
+                        TileChecksum = "fnv1a64:" + NavTileBinary.ComputePersistedChecksum(tile).ToString("x16")
+                    });
                 }
             }
 
+            WriteBootstrapManifest(tempRoot, mapId, entries);
             return tempRoot;
         }
 

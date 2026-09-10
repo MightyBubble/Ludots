@@ -421,8 +421,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             for (int i = 0; i < context.Targets.Count; i++)
             {
                 NavBakeTileCoord target = context.Targets[i];
-                AppendInt32(hash, buffer, target.ChunkX);
-                AppendInt32(hash, buffer, target.ChunkY);
+                NavBakeHashShared.AppendInt32(hash, buffer, target.ChunkX);
+                NavBakeHashShared.AppendInt32(hash, buffer, target.ChunkY);
 
                 int startCol = target.ChunkX * context.Terrain.ChunkSizeCells;
                 int startRow = target.ChunkY * context.Terrain.ChunkSizeCells;
@@ -434,31 +434,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     {
                         int globalCol = startCol + col;
                         int globalRow = startRow + row;
-                        LogicTerrainCell cell = context.Terrain.GetCell(globalCol, globalRow);
-                        buffer[0] = cell.HeightLevel;
-                        buffer[1] = cell.WaterHeightLevel;
-                        buffer[2] = (byte)cell.SurfaceFlags;
-                        buffer[3] = cell.AreaId;
-                        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(4, 4), BitConverter.SingleToInt32Bits(cell.Cost));
-                        for (int edge = 0; edge < 3; edge++)
-                        {
-                            buffer[8 + edge] = context.Terrain.TryGetCliffStraightenEdge(globalCol, globalRow, edge, out bool value) && value
-                                ? (byte)1
-                                : (byte)0;
-                        }
-
-                        hash.AppendData(buffer.Slice(0, 11));
+                        NavBakeHashShared.AppendCellContent(hash, buffer, context.Terrain, globalCol, globalRow);
                     }
                 }
             }
 
             return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
-        }
-
-        private static void AppendInt32(IncrementalHash hash, Span<byte> buffer, int value)
-        {
-            BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(0, 4), value);
-            hash.AppendData(buffer.Slice(0, 4));
         }
 
         private static string ComputeEstimateHash(
@@ -493,9 +474,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 .Append(budgetWorkUnitCount).Append('|');
 
             AppendTargets(sb, context.Targets);
-            AppendLayers(sb, context.Config.Layers);
-            AppendProfiles(sb, context.Config.Profiles, context.AgentProfiles);
-            AppendObstacles(sb, context.Obstacles.Obstacles);
+            NavBakeHashShared.AppendLayersText(sb, context.Config.Layers);
+            NavBakeHashShared.AppendProfilesText(sb, context.Config.Profiles, context.AgentProfiles);
+            NavBakeHashShared.AppendObstaclesText(sb, context.Obstacles.Obstacles);
 
             byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()));
             return Convert.ToHexString(hash).ToLowerInvariant();
@@ -512,63 +493,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             sb.Append('|');
         }
 
-        private static void AppendLayers(StringBuilder sb, IReadOnlyList<NavLayerConfig> layers)
-        {
-            sb.Append("layers=");
-            for (int i = 0; i < layers.Count; i++)
-            {
-                NavLayerConfig layer = layers[i];
-                sb.Append(layer.Id).Append(':').Append(layer.Layer).Append(';');
-            }
-            sb.Append('|');
-        }
 
-        private static void AppendProfiles(
-            StringBuilder sb,
-            IReadOnlyList<NavMeshAgentProfileConfig> profiles,
-            AgentProfileRegistry agentProfiles)
-        {
-            sb.Append("profiles=");
-            for (int i = 0; i < profiles.Count; i++)
-            {
-                NavMeshAgentProfileConfig navProfile = profiles[i];
-                AgentProfileConfig agent = agentProfiles.Require(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{i}]");
-                sb.Append(navProfile.Id).Append(':')
-                    .Append(navProfile.MaxClimbCm).Append(':')
-                    .Append(navProfile.MaxSlopeDeg.ToString("R", CultureInfo.InvariantCulture)).Append(':')
-                    .Append(agent.RadiusCm.ToString("R", CultureInfo.InvariantCulture)).Append(':')
-                    .Append(agent.HeightCm.ToString("R", CultureInfo.InvariantCulture)).Append(':')
-                    .Append(agent.ClearanceCm.ToString("R", CultureInfo.InvariantCulture)).Append(';');
-            }
-            sb.Append('|');
-        }
 
-        private static void AppendObstacles(StringBuilder sb, IReadOnlyList<NavObstacle> obstacles)
-        {
-            sb.Append("obstacles=");
-            for (int i = 0; i < obstacles.Count; i++)
-            {
-                NavObstacle obstacle = obstacles[i];
-                sb.Append(obstacle.Id).Append(':')
-                    .Append(obstacle.Enabled).Append(':')
-                    .Append(obstacle.Kind).Append(':')
-                    .Append(obstacle.LayerId).Append(':')
-                    .Append(obstacle.AreaId?.ToString(CultureInfo.InvariantCulture) ?? "").Append(':')
-                    .Append(obstacle.Center.Xcm).Append(',').Append(obstacle.Center.Zcm).Append(':')
-                    .Append(obstacle.RadiusCm).Append(':')
-                    .Append(obstacle.A.Xcm).Append(',').Append(obstacle.A.Zcm).Append(':')
-                    .Append(obstacle.B.Xcm).Append(',').Append(obstacle.B.Zcm).Append(':');
-                if (obstacle.Points != null)
-                {
-                    for (int p = 0; p < obstacle.Points.Count; p++)
-                    {
-                        NavPointCm point = obstacle.Points[p];
-                        sb.Append(point.Xcm).Append(',').Append(point.Zcm).Append(',');
-                    }
-                }
 
-                sb.Append(';');
-            }
-        }
+
+
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.IO;
@@ -879,7 +880,7 @@ namespace {modId}
                 }
 
                 string navOutputRoot = ResolveNavOutputRoot(repoRoot, modId, outputRoot);
-                WriteNavBakeResultToRepository(navOutputRoot, mapId, result, writeArtifact, "BakeNavHeightmap");
+                WriteNavBakeResultToRepository(navOutputRoot, mapId, ResolveNavArtifactBoardId(repoRoot, mapId, modId), result, context, writeArtifact, "BakeNavHeightmap", mergeExistingManifest: !string.IsNullOrWhiteSpace(dirtyChunksPath));
                 Console.WriteLine($"BakeNavHeightmap done. ok={result.SuccessCount} empty={emptyTileCount} fail={result.FailureCount} outputRoot={Path.GetFullPath(navOutputRoot)}");
                 return result.FailureCount == 0 ? 0 : 1;
             }
@@ -1083,7 +1084,7 @@ namespace {modId}
                     return 1;
                 }
 
-                WriteNavBakeResultToRepository(repoRoot, mapId, result, writeArtifact, "BakeNavRecastReact");
+                WriteNavBakeResultToRepository(repoRoot, mapId, ResolveNavArtifactBoardId(repoRoot, mapId, modId), result, context, writeArtifact, "BakeNavRecastReact", mergeExistingManifest: !string.IsNullOrWhiteSpace(dirtyChunksPath));
                 Console.WriteLine($"BakeNavRecastReact done. ok={result.SuccessCount} fail={result.FailureCount} repoRoot={Path.GetFullPath(repoRoot)}");
                 return result.FailureCount == 0 ? 0 : 1;
             }
@@ -1405,7 +1406,31 @@ namespace {modId}
             return resolved;
         }
 
-        static void WriteNavBakeResultToRepository(string repoRoot, string mapId, NavBakeResult result, bool writeArtifact, string logPrefix)
+        /// <summary>
+        /// Resolves the board id that nav artifacts must be written under, or null when the
+        /// map is single-board and keeps the historical unscoped path. Uses the same primary
+        /// navigation board the runtime loader walks.
+        /// </summary>
+        static string? ResolveNavArtifactBoardId(string repoRoot, string mapId, string? modId)
+        {
+            MapConfig mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+            if (!NavAssetPaths.IsBoardScoped(mapConfig.Boards.Select(b => b?.NavTileGrid != null).ToList()))
+            {
+                return null;
+            }
+
+            return ToolMapConfigResolver.ResolvePrimaryNavigationBoard(mapConfig).Name;
+        }
+
+        static void WriteNavBakeResultToRepository(
+            string outputRoot,
+            string mapId,
+            string? artifactBoardId,
+            NavBakeResult result,
+            NavBakeContext context,
+            bool writeArtifact,
+            string logPrefix,
+            bool mergeExistingManifest)
         {
             if (result.FailureCount > 0)
             {
@@ -1413,6 +1438,10 @@ namespace {modId}
                 throw new InvalidOperationException($"{logPrefix} refuses to publish partial NavTile output when any bake entry failed.");
             }
 
+            // Authoritative publish: one shared publisher stages every tile, reads the checksum
+            // back from the staged file on disk, validates the whole batch, then atomically
+            // publishes tiles + manifest with rollback. Paths derive from the context identity.
+            var publishEntries = new List<NavArtifactPublishEntry>(result.Entries.Count);
             for (int i = 0; i < result.Entries.Count; i++)
             {
                 NavBakeResultEntry entry = result.Entries[i];
@@ -1422,23 +1451,42 @@ namespace {modId}
                     continue;
                 }
 
-                string rel = NavAssetPaths.GetNavTileRelativePath(mapId, entry.Layer, entry.ProfileId, entry.Target.ChunkX, entry.Target.ChunkY);
-                string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
-                Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
-                using (var fs = File.Create(outFile))
+                publishEntries.Add(new NavArtifactPublishEntry
                 {
-                    NavTileBinary.Write(fs, entry.Tile);
-                }
+                    Tile = entry.Tile,
+                    Layer = entry.Layer,
+                    ProfileId = entry.ProfileId,
+                    ChunkX = entry.Target.ChunkX,
+                    ChunkY = entry.Target.ChunkY
+                });
 
                 if (writeArtifact)
                 {
+                    string rel = NavAssetPaths.GetNavTileRelativePath(mapId, artifactBoardId, entry.Layer, entry.ProfileId, entry.Target.ChunkX, entry.Target.ChunkY);
                     string artRel = rel.Replace("navtile_", "artifact_").Replace(".ntil", ".json");
-                    string artFile = Path.Combine(repoRoot, artRel.Replace('/', Path.DirectorySeparatorChar));
+                    string artFile = Path.Combine(outputRoot, artRel.Replace('/', Path.DirectorySeparatorChar));
                     Directory.CreateDirectory(Path.GetDirectoryName(artFile)!);
                     var json = JsonSerializer.Serialize(entry.Artifact, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true });
                     File.WriteAllText(artFile, json);
                 }
             }
+
+            NavTileManifest manifest = NavArtifactPublisher.Publish(
+                new NavArtifactPublisher.Context
+                {
+                    RootDir = outputRoot,
+                    MapId = mapId,
+                    BoardId = artifactBoardId ?? string.Empty,
+                    SourceRevision = NavBakeSnapshotFingerprint.Compute(context),
+                    Algorithm = context.Algorithm.ToString(),
+                    Mode = context.Mode.ToString(),
+                    TileVersion = context.TileVersion,
+                    WrittenUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)
+                },
+                publishEntries,
+                replaceWholeManifest: !mergeExistingManifest);
+
+            Console.WriteLine($"Nav artifacts published: ok={result.SuccessCount} manifestTiles={manifest.Tiles.Length} buildHash={manifest.BuildHash}");
         }
 
         static void PrintNavBakeFailures(NavBakeResult result, string logPrefix)
