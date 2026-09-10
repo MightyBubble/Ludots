@@ -44,7 +44,7 @@ Speed is not part of this registry. `speedCmPerSecond` stays in execution moveme
 
 - `Navigation/navmesh.json` keeps bake-only fields such as `maxClimbCm` and `maxSlopeDeg`. Its profile entries reference AgentProfile ids and must not define `radiusCm` or `heightCm`.
 - `Navigation/pathing.json` keeps route strategy fields. Its `agentTypes[]` entries reference AgentProfile ids and must not define `layer`; the layer comes from the AgentProfile.
-- `MassNavigationConfig.json` keeps execution strategy fields: `heavy`, `visualScale`, `speedCmPerSecond`, `everyNth`, `nthOffset`. It must not define `navMass` or `bodyRadiusCm`; MassNavigationFlow resolves `mass` and `radiusCm` through AgentProfile.
+- `MassNavigationConfig.json` keeps execution strategy fields: `heavy`, `speedCmPerSecond`, `everyNth`, `nthOffset`. It must not define `navMass`, `bodyRadiusCm`, or `visualScale`. MassNavigationFlow resolves `mass` and `radiusCm` through AgentProfile. Drawn size belongs to presenter `AssetBinding.localScale`, not the crowd execution profile.
 - NodeGraph transport capacity checks compare `draftCm` to edge `depthCm` and `beamCm` to edge `widthCm`. A zero profile value means the agent does not require that capacity dimension; a zero edge value means the edge has no limit for that dimension.
 
 ## UAT Showcase

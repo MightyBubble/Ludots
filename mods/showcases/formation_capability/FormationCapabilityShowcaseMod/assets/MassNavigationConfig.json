@@ -41,7 +41,6 @@
       {
         "id": "heavy",
         "heavy": true,
-        "visualScale": 0.34,
         "speedCmPerSecond": 780,
         "everyNth": 7,
         "nthOffset": 0
@@ -49,7 +48,6 @@
       {
         "id": "light",
         "heavy": false,
-        "visualScale": 0.22,
         "speedCmPerSecond": 920,
         "everyNth": 0,
         "nthOffset": 0

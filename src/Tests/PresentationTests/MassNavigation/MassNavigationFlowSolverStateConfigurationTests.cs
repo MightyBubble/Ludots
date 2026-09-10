@@ -172,7 +172,6 @@ namespace Ludots.Tests.Presentation
                     localPositionYCm: 1_000f + ((i / 4) * 800f),
                     heavy: false,
                     navMass: 1f,
-                    visualScale: 1f,
                     bodyRadiusCm: 20f,
                     speedCmPerSecond: 800f,
                     layer);
@@ -229,7 +228,6 @@ namespace Ludots.Tests.Presentation
                     localPositionYCm: 100f + ((i / 4) * 35f),
                     heavy: false,
                     navMass: 1f,
-                    visualScale: 1f,
                     bodyRadiusCm: 20f,
                     speedCmPerSecond: 800f,
                     layer);
@@ -748,7 +746,6 @@ namespace Ludots.Tests.Presentation
                     localPositionYCm: 5_000f + (i * 500f),
                     heavy: false,
                     navMass: 1f,
-                    visualScale: 1f,
                     bodyRadiusCm: 20f,
                     speedCmPerSecond: 800f,
                     layer);
@@ -840,7 +837,6 @@ namespace Ludots.Tests.Presentation
                     {
                         Id = "light",
                         Heavy = false,
-                        VisualScale = 1f,
                         SpeedCmPerSecond = 800f,
                         EveryNth = 0,
                         NthOffset = 0,
@@ -888,7 +884,6 @@ namespace Ludots.Tests.Presentation
                 localY,
                 heavy,
                 navMass: heavy ? 4f : 1f,
-                visualScale: heavy ? 1.5f : 1f,
                 bodyRadiusCm: 20f,
                 speedCmPerSecond: 800f,
                 layer);

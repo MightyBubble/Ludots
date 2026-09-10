@@ -53,7 +53,6 @@ public sealed class MassNavigationMovePlanExecutionTests
             localPositionYCm: 1_000f,
             heavy: false,
             navMass: 1f,
-            visualScale: 1f,
             bodyRadiusCm: 20f,
             speedCmPerSecond: 800f,
             layer);

@@ -786,7 +786,6 @@ namespace Ludots.Tests.Presentation
                 localPositionYCm: localY,
                 heavy: false,
                 navMass: 1f,
-                visualScale: 1f,
                 bodyRadiusCm: 20f,
                 speedCmPerSecond: 800f,
                 layer);
@@ -800,7 +799,6 @@ namespace Ludots.Tests.Presentation
                 localPositionYCm: localY,
                 heavy: false,
                 navMass: 1f,
-                visualScale: 1f,
                 bodyRadiusCm: 20f,
                 speedCmPerSecond: 800f,
                 layer);

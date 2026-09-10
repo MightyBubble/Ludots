@@ -17,7 +17,6 @@ public struct MassNavigationAgentProfile
 {
     public int ProfileId;
     public bool Heavy;
-    public float VisualScale;
     public float SpeedCmPerSecond;
 }
 

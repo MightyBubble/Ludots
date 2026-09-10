@@ -77,8 +77,8 @@ namespace Ludots.Tests.Presentation
                     new[] { Carrier, Rider },
                     new[]
                     {
-                        new MassNavigationAgentSeed(profileId, 1000f, 1000f, heavy: false, 1f, 1f, 20f, 800f, layer),
-                        new MassNavigationAgentSeed(1, 1500f, 1300f, heavy: false, 1f, 1f, 20f, 800f, layer),
+                        new MassNavigationAgentSeed(profileId, 1000f, 1000f, heavy: false, 1f, 20f, 800f, layer),
+                        new MassNavigationAgentSeed(1, 1500f, 1300f, heavy: false, 1f, 20f, 800f, layer),
                     },
                     new[] { true, true });
 
@@ -116,7 +116,6 @@ namespace Ludots.Tests.Presentation
                         position.Value.X.ToFloat(),
                         position.Value.Y.ToFloat(),
                         heavy: false,
-                        1f,
                         1f,
                         20f,
                         800f,
