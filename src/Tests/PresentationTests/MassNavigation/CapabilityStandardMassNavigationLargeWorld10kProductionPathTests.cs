@@ -503,6 +503,8 @@ namespace Ludots.Tests.Presentation
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, ShowcaseMods),
                 Path.Combine(repoRoot, "assets"));
+            engine.SimulationBudgetMsPerFrame = int.MaxValue;
+            engine.SimulationMaxSlicesPerLogicFrame = 1000;
             ApplyHostAssets(engine);
             InstallInput(engine);
             HeadlessPresentationTestHost.Install(engine);
