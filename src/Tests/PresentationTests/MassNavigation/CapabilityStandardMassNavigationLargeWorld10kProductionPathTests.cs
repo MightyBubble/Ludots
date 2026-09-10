@@ -6,8 +6,6 @@ using System.Numerics;
 using System.Reflection;
 using Arch.Core;
 using Arch.System;
-using CapabilityStandardMassNavigationLargeWorld10kMod;
-using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -21,7 +19,6 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Interaction;
-using Ludots.Core.Input.Orders;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.MassNavigation;
@@ -58,15 +55,17 @@ namespace Ludots.Tests.Presentation
         private const int HudStabilityObservationFrames = 12;
         private const float CommandTargetOffsetWindowScale = 0.25f;
         private const float MovementEpsilonCm = 1f;
-        private const string MouseLeftButtonPath = "<Mouse>/LeftButton";
-        private const string MouseRightButtonPath = "<Mouse>/RightButton";
+        private const int BoxSelectPressFrames = 6;
+        private const int BoxSelectDragFrames = 6;
+        private const int BoxSelectReleaseFrames = 30;
+        private const string MouseLeftButtonPath = "<Mouse>/leftButton";
+        private const string MouseRightButtonPath = "<Mouse>/rightButton";
         private const string LightCommandMarkerPresenterId = "presenter.case_e.selection_marker";
         private const string HeavyCommandMarkerPresenterId = "presenter.case_e.selection_marker";
 
         private static readonly string[] ShowcaseMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "SelectionInteractionMod",
             "MassNavigationMod",
             "CapabilityStandardMassNavigationLargeWorld10kMod"
@@ -91,8 +90,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Showcase_ProjectsFourTeamAgentsToMinimapAndScreenHud()
         {
-            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
-
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
@@ -120,6 +117,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderAdmissionResultCapacity, Is.GreaterThanOrEqualTo(expectedAgents * 2));
             Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderTerminalResultCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
             Assert.That(simulation.Config.Scenario.Teams.Length, Is.EqualTo(ExpectedTeamCount));
+            Assert.That(engine.MergedConfig.Presentation.GpuSkinnedPosePhaseBuckets, Is.EqualTo(16),
+                "10K crowd must share quantized GpuSkinned pose rows; exact-frame poses are the measured bottleneck.");
+            Assert.That(engine.MergedConfig.Presentation.Minimap.MaxMarkersPerFieldPixel, Is.EqualTo(1),
+                "10K crowd minimap must cap one marker per field pixel; the field is smaller than the agent set.");
 
             var hudProjection = CreateHudProjection(engine);
             ProjectionSample sample = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
@@ -135,8 +136,13 @@ namespace Ludots.Tests.Presentation
             Assert.That(minimapRuntime.Preset, Is.EqualTo(MinimapPreset.RtsFullMap), diagnostics);
             Assert.That(sample.MinimapSnapshot.ZoomBand, Is.EqualTo(MinimapZoomBand.Strategic), diagnostics);
             Assert.That(minimapMarkers.Count, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
-            Assert.That(minimapScreenMarkers.Count, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
-            Assert.That(sample.MinimapSnapshot.VisibleMarkerCount, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
+            Assert.That(minimapScreenMarkers.Count, Is.GreaterThan(0), diagnostics);
+            Assert.That(minimapScreenMarkers.Count, Is.LessThanOrEqualTo(expectedAgents), diagnostics);
+            Assert.That(sample.MinimapSnapshot.VisibleMarkerCount, Is.GreaterThan(0), diagnostics);
+            Assert.That(
+                sample.MinimapSnapshot.VisibleMarkerCount,
+                Is.LessThanOrEqualTo(minimapRuntime.FieldSize * minimapRuntime.FieldSize),
+                diagnostics);
             Assert.That(sample.WorldHudBars, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(sample.WorldHudText, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(screenHud.BarCount, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
@@ -188,8 +194,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Showcase_UnchangedRelationshipRevisionDoesNotRepeat10kDomainResolution()
         {
-            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
-
             using var engine = CreateEngine();
             StartStartupMap(engine);
             MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
@@ -214,8 +218,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Showcase_CommandSourceCapacityCoversAuthoredAgentSet()
         {
-            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
-
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
@@ -238,8 +240,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Showcase_PeriodicHealthChangesReachBarsAndNumbersWithStableIdentities()
         {
-            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
-
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
@@ -355,8 +355,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Showcase_MouseBoxAcquisition_AcquiresVisibleMassNavigationAgents()
         {
-            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
-
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
@@ -376,7 +374,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(before.EligibleIntersecting, Is.GreaterThan(0), before.ToString());
 
             DriveCommandSourceBoxAcquisition(engine, hudProjection, backend, gesture);
-            TickProjectionFrames(engine, hudProjection, 2);
 
             Entity[] commandActors = SnapshotCommandSource(engine);
             CommandSourceDiagnostics after = CaptureCommandSourceDiagnostics(engine, gesture.Marquee);
@@ -387,8 +384,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Showcase_MouseBoxAcquisition_RightClickIssuesOrdersForCommandableAgents()
         {
-            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
-
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
@@ -402,7 +397,6 @@ namespace Ludots.Tests.Presentation
             var backend = RequireMutableInputBackend(engine);
             CommandSourceDragGesture gesture = ResolveVisibleAgentDragGesture(engine);
             DriveCommandSourceBoxAcquisition(engine, hudProjection, backend, gesture);
-            TickProjectionFrames(engine, hudProjection, 2);
 
             Entity[] commandActors = SnapshotCommandSource(engine);
             CommandSourceDiagnostics commandSourceDiagnostics = CaptureCommandSourceDiagnostics(engine, gesture.Marquee);
@@ -414,12 +408,7 @@ namespace Ludots.Tests.Presentation
             Vector2 commandScreenPoint = ResolveCommandTargetScreenPoint(engine, simulation, commandActors);
 
             int appliedCommands = DriveRightClickCommandFrame(engine, hudProjection, backend, commandScreenPoint);
-
-            string orderDebug = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out object? order)
-                ? order?.ToString() ?? "<null>" : "<missing>";
-            string groundDebug = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out object? ground)
-                ? ground?.ToString() ?? "<null>" : "<missing>";
-            Assert.That(appliedCommands, Is.GreaterThan(0), commandSourceDiagnostics + $"; order={orderDebug}; ground={groundDebug}");
+            Assert.That(appliedCommands, Is.GreaterThan(0), commandSourceDiagnostics.ToString());
             Assert.That(simulation.LastOrderMemberCount, Is.EqualTo(commandActors.Length), commandSourceDiagnostics.ToString());
             Assert.That(CountActiveMoveOrders(engine, commandActors), Is.GreaterThan(activeOrdersBefore), commandSourceDiagnostics.ToString());
 
@@ -613,8 +602,8 @@ namespace Ludots.Tests.Presentation
                 lastSample = CaptureProjectionSample(engine, simulation);
                 if (simulation.NavigationAgentCount == expectedAgents &&
                     lastSample.MinimapSnapshot.ZoomBand == MinimapZoomBand.Strategic &&
-                    lastSample.MinimapScreenMarkers >= expectedAgents &&
-                    lastSample.MinimapSnapshot.VisibleMarkerCount >= expectedAgents &&
+                    lastSample.MinimapSnapshot.MarkerCount >= expectedAgents &&
+                    lastSample.MinimapSnapshot.VisibleMarkerCount > 0 &&
                     lastSample.WorldHudBars >= expectedAgents &&
                     lastSample.WorldHudText >= expectedAgents &&
                     lastSample.ScreenHudBars >= expectedAgents &&
@@ -729,12 +718,32 @@ namespace Ludots.Tests.Presentation
             IClock clock = RequireService(engine, CoreServiceKeys.Clock);
             int startTick = clock.Now(ClockDomainId.FixedFrame);
             int hostFrames = 0;
+            int hostFrameLimit = Math.Max(ticks * 8, MaxWarmupFrames);
             while (clock.Now(ClockDomainId.FixedFrame) - startTick < ticks)
             {
                 TickProjectionFrames(engine, hudProjection, 1);
-                Assert.That(++hostFrames, Is.LessThanOrEqualTo(ticks * 8),
+                Assert.That(++hostFrames, Is.LessThanOrEqualTo(hostFrameLimit),
                     "MassNavigation simulation did not advance the requested FixedFrame window.");
             }
+        }
+
+        private static void AdvanceFixedClockUntil(
+            GameEngine engine,
+            WorldHudToScreenSystem hudProjection,
+            int maxFixedTicks,
+            Func<bool> condition,
+            Func<string> failure)
+        {
+            for (int tick = 0; tick < maxFixedTicks; tick++)
+            {
+                AdvanceFixedClock(engine, hudProjection, 1);
+                if (condition())
+                {
+                    return;
+                }
+            }
+
+            Assert.Fail(failure());
         }
 
         private static void DriveCommandSourceBoxAcquisition(
@@ -743,18 +752,44 @@ namespace Ludots.Tests.Presentation
             MutableInputBackend backend,
             in CommandSourceDragGesture gesture)
         {
-            backend.SetMousePosition(gesture.Start);
+            Entity player = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            Vector2 start = gesture.Start;
+            Vector2 end = gesture.End;
+            ScreenRect marquee = gesture.Marquee;
+            engine.SimulationBudgetMsPerFrame = int.MaxValue;
+            engine.SimulationMaxSlicesPerLogicFrame = 1000;
+            var handler = RequireService(engine, CoreServiceKeys.InputHandler);
+            Assert.That(handler.HasContext("CaseE.Controls"), Is.True,
+                "battle context must project CaseE.Controls before the marquee starts.");
+            Assert.That(
+                engine.World.TryGet(player, out InteractionContextInstance battle) && battle.ContextId > 0,
+                Is.True,
+                "local player must carry the battle interaction context before the marquee starts.");
+
+            backend.SetMousePosition(start);
             backend.SetButton(MouseLeftButtonPath, false);
-            TickProjectionFrames(engine, hudProjection, 1);
+            AdvanceFixedClock(engine, hudProjection, 1);
 
             backend.SetButton(MouseLeftButtonPath, true);
-            TickProjectionFrames(engine, hudProjection, 1);
+            AdvanceFixedClockUntil(
+                engine,
+                hudProjection,
+                BoxSelectPressFrames,
+                () => engine.World.TryGet(player, out InteractionContextInstances boxing) && boxing.Count > 0,
+                () => "pressing must activate the boxing context (box_begin graph mount). " +
+                      $"BoxSelectBegin down={handler.IsDown("CaseE.BoxSelectBegin")}.");
 
-            backend.SetMousePosition(gesture.End);
-            TickProjectionFrames(engine, hudProjection, 1);
+            backend.SetMousePosition(end);
+            AdvanceFixedClock(engine, hudProjection, BoxSelectDragFrames);
 
             backend.SetButton(MouseLeftButtonPath, false);
-            TickProjectionFrames(engine, hudProjection, 1);
+            AdvanceFixedClockUntil(
+                engine,
+                hudProjection,
+                BoxSelectReleaseFrames,
+                () => SnapshotCommandSource(engine).Length > 0,
+                () => "releasing must commit rectangle hits into selected. " +
+                      CaptureCommandSourceDiagnostics(engine, marquee));
         }
 
         private static int DriveRightClickCommandFrame(
@@ -771,29 +806,18 @@ namespace Ludots.Tests.Presentation
             Assert.That(context.CommandIntentProfileId, Is.GreaterThan(0));
             backend.SetMousePosition(position);
             backend.SetButton(MouseRightButtonPath, false);
-            TickProjectionFrames(engine, hudProjection, 1);
+            AdvanceFixedClock(engine, hudProjection, 1);
 
             backend.SetButton(MouseRightButtonPath, true);
             int applied = 0;
-            TickProjectionFrames(engine, hudProjection, 2);
+            AdvanceFixedClock(engine, hudProjection, 2);
             applied += RequireMassNavigationSimulation(engine).CommandCountFrame;
             Assert.That(RequireService(engine, CoreServiceKeys.InputHandler).IsDown("Command"), Is.True);
-            var groups = (Dictionary<SystemGroup, List<ISystem<float>>>)typeof(GameEngine)
-                .GetField("_systemGroups", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(engine)!;
-            foreach (var systems in groups.Values)
-            foreach (var system in systems)
-            {
-                if (system.GetType().Name != "MassNavigationLargeWorldLocalOrderSourceSystem") continue;
-                var mapping = (InputOrderMappingSystem)system.GetType()
-                    .GetField("_mapping", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(system)!;
-                Assert.That(mapping.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted),
-                    $"Command routing: {mapping.LastActivationResult.State}, {mapping.LastActivationResult.Rejection}");
-            }
 
             backend.SetButton(MouseRightButtonPath, false);
             for (int frame = 0; frame < 4; frame++)
             {
-                TickProjectionFrames(engine, hudProjection, 1);
+                AdvanceFixedClock(engine, hudProjection, 1);
                 applied += RequireMassNavigationSimulation(engine).CommandCountFrame;
             }
             return applied;

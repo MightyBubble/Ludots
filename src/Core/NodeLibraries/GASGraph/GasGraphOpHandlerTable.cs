@@ -314,6 +314,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.TableReadFloat or
                 GraphNodeOp.ShowPanel or
                 GraphNodeOp.HidePanel or
+                GraphNodeOp.ShowMinimap or
                 GraphNodeOp.CreatePanel or
                 GraphNodeOp.DestroyPanel or
                 GraphNodeOp.ReadMapVarInt or
@@ -348,7 +349,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.LoadPointerScreenY or
                 GraphNodeOp.ActivateContext or
                 GraphNodeOp.DeactivateContext or
-                GraphNodeOp.WriteCollection or GraphNodeOp.BindQueryCollection
+                GraphNodeOp.WriteCollection or GraphNodeOp.DiscloseCollection or GraphNodeOp.SubmitOrder or GraphNodeOp.BindQueryCollection
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -911,6 +912,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.TableReadInt, HandleTableReadInt, "TableReadInt graph opcode.");
             Register(GraphNodeOp.ShowPanel, HandleShowPanel, "ShowPanel graph opcode.");
             Register(GraphNodeOp.HidePanel, HandleHidePanel, "HidePanel graph opcode.");
+            Register(GraphNodeOp.ShowMinimap, HandleShowMinimap, "ShowMinimap graph opcode.");
             Register(GraphNodeOp.CreatePanel, HandleCreatePanel, "CreatePanel graph opcode.");
         Register(GraphNodeOp.SpawnTemplate, HandleSpawnTemplate, "SpawnTemplate graph opcode.");
         Register(GraphNodeOp.SetWorldPosition, HandleSetWorldPosition, "SetWorldPosition graph opcode.");
@@ -918,6 +920,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
             Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
             Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
+            Register(GraphNodeOp.DiscloseCollection, HandleDiscloseCollection, "DiscloseCollection graph opcode.");
+            Register(GraphNodeOp.SubmitOrder, HandleSubmitOrder, "SubmitOrder graph opcode.");
             Register(GraphNodeOp.BindQueryCollection, HandleBindQueryCollection, "BindQueryCollection graph opcode.");
         Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
@@ -1491,6 +1495,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.Api.ShowPanel(ins.Imm);
         }
 
+        private static void HandleShowMinimap(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.ShowMinimap();
+        }
+
         private static void HandleHidePanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.HidePanel(ins.Imm);
@@ -1550,6 +1559,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 owner,
                 s.Targets,
                 s.TargetList.Count);
+        }
+
+        private static void HandleDiscloseCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity owner = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.DiscloseCollection(ins.Imm, owner);
+        }
+
+        private static void HandleSubmitOrder(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SubmitOrder(ins.Imm, s.Caster, s.Targets, s.TargetList.Count, s.TargetPosCm);
         }
 
         private static void HandleBindQueryCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

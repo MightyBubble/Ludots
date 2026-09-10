@@ -167,6 +167,7 @@ namespace Ludots.Core.Systems
         private bool[] _passHasStaticCameraState = Array.Empty<bool>();
         private int[] _passLastStaticVisibleCount = Array.Empty<int>();
         private bool _unionPass;
+        private bool _reuseStableVisibleCull;
         private int _staticCullEpoch;
         private int _visibilityRevision;
 
@@ -487,6 +488,7 @@ namespace Ludots.Core.Systems
             bool hasStaticCullCameraState = _passHasStaticCameraState[passIndex];
             bool cameraChanged = hasStaticCullCameraState &&
                                  HasCameraStateChanged(passIndex, in cameraState, aspectRatio);
+            _reuseStableVisibleCull = !_unionPass && hasStaticCullCameraState && !cameraChanged;
             int activeStaticCullEpoch = _staticCullEpoch == int.MaxValue ? 1 : _staticCullEpoch + 1;
             long staticProcessStart = Stopwatch.GetTimestamp();
             int passStaticCount;
@@ -1578,6 +1580,11 @@ namespace Ludots.Core.Systems
                 return;
             }
 
+            if (TryReuseStableVisible(ref cull, hasPayload, in payload, ref visibleCount))
+            {
+                return;
+            }
+
             ComputeScreenCoverageAndViewportIntersection(
                 px,
                 py,
@@ -1718,6 +1725,11 @@ namespace Ludots.Core.Systems
                 return;
             }
 
+            if (TryReuseStableVisible(ref cull, hasPayload, in payload, ref visibleCount))
+            {
+                return;
+            }
+
             if (!IntersectsViewportDefaultBounds(in visualTransform, in queryBounds))
             {
                 ForceCull(entity, ref cull);
@@ -1852,6 +1864,11 @@ namespace Ludots.Core.Systems
                 return;
             }
 
+            if (TryReuseStableVisible(ref cull, hasPayload, in payload, ref visibleCount))
+            {
+                return;
+            }
+
             ComputeScreenCoverageAndViewportIntersection(
                 px,
                 py,
@@ -1962,6 +1979,29 @@ namespace Ludots.Core.Systems
                    minX <= queryBounds.Right &&
                    maxY >= queryBounds.Top &&
                    minY <= queryBounds.Bottom;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TryReuseStableVisible(
+            ref CullState cull,
+            bool hasPayload,
+            in PresentationOwnerHasPresenterPayload payload,
+            ref int visibleCount)
+        {
+            // Camera unchanged: already-visible agents that still pass spatial + chunk gates
+            // keep last frame's LOD/coverage. Spatial miss still ForceCulls leavers.
+            if (!_reuseStableVisibleCull || !cull.IsVisible)
+            {
+                return false;
+            }
+
+            if (hasPayload)
+            {
+                EnsureVisiblePayloadEmitWork(in payload);
+            }
+
+            visibleCount++;
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

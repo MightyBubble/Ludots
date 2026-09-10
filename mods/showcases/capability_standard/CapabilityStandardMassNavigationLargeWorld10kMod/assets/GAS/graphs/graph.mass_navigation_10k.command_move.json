@@ -1,0 +1,47 @@
+[
+  {
+    "id": "graph.mass_navigation_10k.command_move",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_command",
+        "action": "Command",
+        "start": "px",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      { "id": "px", "op": "LoadPointerScreenX" },
+      { "id": "py", "op": "LoadPointerScreenY" },
+      { "id": "ground", "op": "ScreenPointToGround" },
+      { "id": "jif", "op": "JumpIfFalse" },
+      { "id": "owner", "op": "LoadCaster" },
+      { "id": "query", "op": "QueryFromCollection", "collectionKey": "selected" },
+      { "id": "submit", "op": "SubmitOrder", "orderTypeKey": "massNavigationMove" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" },
+      { "id": "miss", "op": "ConstInt", "intValue": 0 },
+      { "id": "miss_halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "px", "fromPort": "next", "to": "py" },
+      { "from": "py", "fromPort": "next", "to": "ground" },
+      { "from": "ground", "fromPort": "next", "to": "jif" },
+      { "from": "jif", "fromPort": "true", "to": "owner" },
+      { "from": "jif", "fromPort": "false", "to": "miss" },
+      { "from": "owner", "fromPort": "next", "to": "query" },
+      { "from": "query", "fromPort": "next", "to": "submit" },
+      { "from": "submit", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" },
+      { "from": "miss", "fromPort": "next", "to": "miss_halt" }
+    ],
+    "valueEdges": [
+      { "from": "px", "fromPort": "value", "to": "ground", "toPort": "a" },
+      { "from": "py", "fromPort": "value", "to": "ground", "toPort": "b" },
+      { "from": "ground", "fromPort": "value", "to": "jif", "toPort": "condition" },
+      { "from": "owner", "fromPort": "value", "to": "query", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" },
+      { "from": "miss", "fromPort": "value", "to": "miss_halt", "toPort": "value" }
+    ]
+  }
+]

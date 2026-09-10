@@ -1,0 +1,25 @@
+name: Setup Ludots .NET
+description: Install SDK 9 from global.json, plus SDK 8 for vendored net8.0 targeting packs.
+
+runs:
+  using: composite
+  steps:
+    # setup-dotnet with only 9.0.x points DOTNET_ROOT at a 9-only install.
+    # Vendored islands (Svg.Skia / SkiaSharp / LiteNetLib / ExCSS) still target
+    # net8.0; restoring them then asks NuGet for Microsoft.NETCore.App.Ref 8.0.31
+    # (and WindowsDesktop / AspNetCore 8.0.31). LudotsOffline only has 6.0.36 and
+    # 7.0.20, and nuget.config <clear/> forbids nuget.org. SDK 8 puts the packs on
+    # the same DOTNET_ROOT. global.json is the 9.x SSOT — do not re-float 9.0.x
+    # in individual workflows.
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        global-json-file: global.json
+        dotnet-version: |
+          8.0.x
+
+    - name: Report installed SDKs
+      shell: pwsh
+      run: |
+        dotnet --list-sdks
+        dotnet --version

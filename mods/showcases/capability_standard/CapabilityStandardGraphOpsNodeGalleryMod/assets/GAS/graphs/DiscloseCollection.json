@@ -1,0 +1,59 @@
+[
+  {
+    "id": "showcase.graph_op.DiscloseCollection",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "beat"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "beat",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "commit",
+        "op": "WriteCollection",
+        "collectionKey": "gallery.selected"
+      },
+      {
+        "id": "disclose",
+        "op": "DiscloseCollection",
+        "collectionKey": "gallery.selected"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "beat",
+        "fromPort": "next",
+        "to": "commit"
+      },
+      {
+        "from": "commit",
+        "fromPort": "next",
+        "to": "disclose"
+      },
+      {
+        "from": "disclose",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "beat",
+        "fromPort": "value",
+        "to": "commit",
+        "toPort": "value"
+      }
+    ]
+  }
+]

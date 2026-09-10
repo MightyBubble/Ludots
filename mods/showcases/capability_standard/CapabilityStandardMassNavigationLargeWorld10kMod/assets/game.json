@@ -59,9 +59,11 @@
       "minZoomExtentMode": "OneChunk",
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
-      "maxZoomExplicitHalfExtentCm": 0.0
+      "maxZoomExplicitHalfExtentCm": 0.0,
+      "maxMarkersPerFieldPixel": 1
     },
-    "worldHudTerrainOcclusionCacheCapacity": 131072
+    "worldHudTerrainOcclusionCacheCapacity": 131072,
+    "gpuSkinnedPosePhaseBuckets": 16
   },
   "startupLocalSeats": [
     {

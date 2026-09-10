@@ -8,6 +8,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -85,6 +86,7 @@ public static class GraphOpsHeadlessGameEngine
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapId);
+        RestoreSharedGalleryMinimap(engine);
         if (engine.CurrentMapSession != null)
         {
             engine.UnloadMap(engine.CurrentMapSession.MapId.Value);
@@ -100,6 +102,18 @@ public static class GraphOpsHeadlessGameEngine
 
         ResetSpatialIndex(engine);
         AdvanceUntilMapActorsAreSpatiallyIndexed(engine, mapId);
+    }
+
+    private static void RestoreSharedGalleryMinimap(GameEngine engine)
+    {
+        MinimapRuntime? minimap = engine.GetService(CoreServiceKeys.MinimapRuntime);
+        if (minimap == null)
+        {
+            return;
+        }
+
+        minimap.Visible = false;
+        minimap.UseFollowCameraPreset();
     }
 
     private static void ClearQueuedEffects(GameEngine engine)

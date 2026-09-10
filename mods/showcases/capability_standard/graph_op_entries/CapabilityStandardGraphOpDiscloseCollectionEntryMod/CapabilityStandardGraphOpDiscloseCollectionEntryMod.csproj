@@ -3,10 +3,9 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>CapabilityStandardGraphOpDiscloseCollectionEntryMod</RootNamespace>
   </PropertyGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
-    <ProjectReference Include="..\..\..\CoreInputMod\CoreInputMod.csproj" />
+    <ProjectReference Include="..\..\CapabilityStandardGraphOpsNodeGalleryMod\CapabilityStandardGraphOpsNodeGalleryMod.csproj" />
   </ItemGroup>
 </Project>

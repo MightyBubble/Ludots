@@ -371,6 +371,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         DeactivateContext = 475,
         /// <summary>
+        /// Presentation side effect: make the native minimap visible and switch it to the
+        /// full-map RTS preset. No Imm/ports; fail-closed when MinimapRuntime is unbound.
+        /// </summary>
+        ShowMinimap = 476,
+        /// <summary>
         /// Direct owned-collection write: owner = caster (the writing rep), entity list = the
         /// graph's current query result set (s.Targets), I[B] = op (0=replace, 1=add,
         /// 2=subtract, computed in-graph), Imm = collection key symbol patched to its key id.
@@ -378,6 +383,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// fire from the store's presentation diff like any other writer.
         /// </summary>
         WriteCollection = 477,
+        /// <summary>
+        /// Upsert LiveVisible knowledge for every member of an owned collection. Owner/viewer =
+        /// E[A] (A=0xFF → caster). Imm = collection key symbol patched to its key id. Reads the
+        /// collection store directly so the write is not capped by the graph TargetList.
+        /// </summary>
+        DiscloseCollection = 478,
         /// <summary>
         /// Live pointer screen X (window px) for the authoritative PointerPos action.
         /// Pure float read; fail closed when the input snapshot is unavailable.
@@ -391,6 +402,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         BindQueryCollection = 481,
         QueryScreenRegionCollection = 482,
         QueryFilterControllable = 483,
+        /// <summary>
+        /// Enqueue one shared fan-out batch of world-centimeter move orders. Actors = the
+        /// graph's current query result set (s.Targets); destination = TargetPosCm (X/Z ground
+        /// plane); Imm = order type key interned then resolved against OrderTypeRegistry.
+        /// Empty actor sets are a no-op; missing services / rejected admission fail closed.
+        /// </summary>
+        SubmitOrder = 484,
 
     }
 

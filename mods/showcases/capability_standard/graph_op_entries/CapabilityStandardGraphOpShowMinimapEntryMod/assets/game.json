@@ -1,0 +1,15 @@
+{
+  "startupMapId": "capability_standard_graph_op_ShowMinimap",
+  "windowTitle": "Ludots - 整张战场铺开",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "presentation": {
+    "cameraCulling": {
+      "highLodDistanceCm": 12000,
+      "mediumLodDistanceCm": 36000,
+      "lowLodDistanceCm": 72000
+    }
+  }
+}

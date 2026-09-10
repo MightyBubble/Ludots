@@ -181,7 +181,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // to the caller; GraphReturnWriter must not steal collection writes). Optional source
             // resolves the owner entity (defaults to caster) — map-domain observers writing another
             // rep's collection declare it explicitly.
+            Add(rows, GraphNodeOp.ShowMinimap, EffectAndScript, GraphValueType.Void, worldSideEffect: true);
             Add(rows, GraphNodeOp.WriteCollection, ScriptAndTriggerGraph, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.DiscloseCollection, ScriptAndTriggerGraph, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.SubmitOrder, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.BindQueryCollection, ScriptAndTriggerGraph, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.SetPanelAudience, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.ModifyAttributeSet, EffectAndTriggerGraph, GraphValueType.Void, portTargetValue, scriptPorts: portTargetValue, imm: GraphOperandRole.SymbolImm);

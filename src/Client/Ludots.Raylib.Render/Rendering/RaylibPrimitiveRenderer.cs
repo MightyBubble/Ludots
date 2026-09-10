@@ -289,6 +289,12 @@ namespace Ludots.Raylib.Render
             set => _gpuSkinned.EnableSharedPoseUniforms = value;
         }
 
+        public int GpuSkinnedPosePhaseBuckets
+        {
+            get => _gpuSkinned.PosePhaseBuckets;
+            set => _gpuSkinned.PosePhaseBuckets = value;
+        }
+
         public Func<int, string, IReadOnlyDictionary<int, int>?>? AnimationStateMapResolver
         {
             get => _gpuSkinned.AnimationStateMapResolver;

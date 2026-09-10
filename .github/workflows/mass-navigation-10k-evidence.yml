@@ -5,6 +5,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
+      - '.github/actions/setup-ludots-dotnet/**'
       - '.github/workflows/mass-navigation-10k-evidence.yml'
       - 'global.json'
       - 'mods/capabilities/navigation/**'
@@ -46,10 +47,7 @@ jobs:
           fetch-depth: 1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            9.0.x
+        uses: ./.github/actions/setup-ludots-dotnet
 
       - name: Configure evidence root
         shell: pwsh

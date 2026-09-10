@@ -4,7 +4,9 @@
 
 ## 1 SDK 要求
 
-- .NET 9.0（`global.json` 固定 SDK 9.0.x，全仓 target `net9.0`）
+- .NET 9.0（`global.json` 固定 SDK `9.0.100`，`rollForward: latestFeature`，全仓正式 target `net9.0`）
+- 编维护测试图还要 .NET 8 SDK：vendored 图库（`Svg.Skia` / `SkiaSharp` / `LiteNetLib` / `ExCSS`）仍是 `net8.0`。targeting pack 必须来自本机 SDK 8，不能去 nuget.org；离线源里也没有 8.0 App.Ref。
+- CI 四个 .NET 工作流走 `.github/actions/setup-ludots-dotnet`：认 `global.json` 装 9，再装 `8.0.x`。不要在 yml 里另漂一个 `9.0.x`。
 - Node.js + npm
 
 ## 2 常用构建命令

@@ -33,6 +33,7 @@ namespace Ludots.Core.Presentation
         private int? _worldHudTerrainOcclusionCacheCapacity;
         private int? _worldHudTerrainOcclusionCellDivisor;
         private int? _worldHudTerrainOcclusionHeightBucketCm;
+        private int? _gpuSkinnedPosePhaseBuckets;
         private int? _minimapMarkerCapacity;
         private int? _navMeshTileCapacity;
         private int? _trailMeshCapacity;
@@ -73,6 +74,11 @@ namespace Ludots.Core.Presentation
 
         /// <summary>遮挡锚点高度桶（cm），控制高度方向复用粒度。</summary>
         public int WorldHudTerrainOcclusionHeightBucketCm { get => _worldHudTerrainOcclusionHeightBucketCm ?? 100; set => _worldHudTerrainOcclusionHeightBucketCm = value; }
+
+        /// <summary>
+        /// GpuSkinned 姿势相位分桶数。0 = 按精确帧解姿势；&gt;0 时同 clip 相近相位共享一行姿势。
+        /// </summary>
+        public int GpuSkinnedPosePhaseBuckets { get => _gpuSkinnedPosePhaseBuckets ?? 0; set => _gpuSkinnedPosePhaseBuckets = value; }
         public int MinimapMarkerCapacity { get => _minimapMarkerCapacity ?? 0; set => _minimapMarkerCapacity = value; }
         public int NavMeshTileCapacity { get => _navMeshTileCapacity ?? 4096; set => _navMeshTileCapacity = value; }
         public int TrailMeshCapacity { get => _trailMeshCapacity ?? 0; set => _trailMeshCapacity = value; }
@@ -133,6 +139,12 @@ namespace Ludots.Core.Presentation
                 throw new InvalidOperationException("presentation.minimap must be explicitly configured.");
             }
 
+            if (_gpuSkinnedPosePhaseBuckets.HasValue && _gpuSkinnedPosePhaseBuckets.Value < 0)
+            {
+                throw new InvalidOperationException(
+                    "presentation.gpuSkinnedPosePhaseBuckets must be >= 0 (0 = exact frames).");
+            }
+
             _cameraCulling.Validate();
             _minimap.Validate();
         }
@@ -188,6 +200,7 @@ namespace Ludots.Core.Presentation
         private MinimapZoomExtentMode? _maxZoomExtentMode;
         private float? _minZoomExplicitHalfExtentCm;
         private float? _maxZoomExplicitHalfExtentCm;
+        private int? _maxMarkersPerFieldPixel;
 
         public float InitialZoomNormalized { get => _initialZoomNormalized ?? 0f; set => _initialZoomNormalized = value; }
         public float WheelZoomNormalizedStep { get => _wheelZoomNormalizedStep ?? 0f; set => _wheelZoomNormalizedStep = value; }
@@ -200,6 +213,9 @@ namespace Ludots.Core.Presentation
         public MinimapZoomExtentMode MaxZoomExtentMode { get => _maxZoomExtentMode ?? MinimapZoomExtentMode.FullMap; set => _maxZoomExtentMode = value; }
         public float MinZoomExplicitHalfExtentCm { get => _minZoomExplicitHalfExtentCm ?? 0f; set => _minZoomExplicitHalfExtentCm = value; }
         public float MaxZoomExplicitHalfExtentCm { get => _maxZoomExplicitHalfExtentCm ?? 0f; set => _maxZoomExplicitHalfExtentCm = value; }
+
+        /// <summary>每个小地图 field 像素最多保留几颗 marker。0 = 不封顶。</summary>
+        public int MaxMarkersPerFieldPixel { get => _maxMarkersPerFieldPixel ?? 0; set => _maxMarkersPerFieldPixel = value; }
 
         public void Validate()
         {
@@ -273,6 +289,12 @@ namespace Ludots.Core.Presentation
             {
                 throw new InvalidOperationException(
                     "presentation.minimap.maxZoomExplicitHalfExtentCm must be > 0 when maxZoomExtentMode is ExplicitCm.");
+            }
+
+            if (_maxMarkersPerFieldPixel.HasValue && _maxMarkersPerFieldPixel.Value < 0)
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.maxMarkersPerFieldPixel must be >= 0 (0 = unlimited).");
             }
         }
     }

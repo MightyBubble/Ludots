@@ -87,23 +87,31 @@ Unity 的 `SkinnedMeshRenderer` 走 GPU skinning 后，批处理依赖**共享�
 | 能力 | Unity | Unreal | 我们 |
 |---|---|---|---|
 | 骨骼贴图/索引缓冲 | ✅ | ✅ 皮肤缓存 | ✅ 姿势调色板 |
-| **动画状态分桶共享** | ✅ Animation Instancing | ✅ Animation Sharing | ⚠️ **只有 4K demo 手写，生产路径没有** |
+| **动画状态分桶共享** | ✅ Animation Instancing | ✅ Animation Sharing | ✅ 生产路径 `gpuSkinnedPosePhaseBuckets`（10K=16） |
 | 离线顶点动画 | ✅ | ✅ VAT | ✅ 有（预蒙皮探针，未进生产） |
 | 每实例姿势独立解算 | ❌ 不这么干 | ❌ 不这么干 | ❌ **10K 生产路径就是这样** |
 
-**判断：我们的 GpuSkinned 车道是工业级的"单帧内合批"，但缺了工业界用来处理
-crowd 的关键一层——动画状态离散化共享。** 4K demo 用 30 行手写逻辑补上了这一层，
-所以它不卡；10K 生产路径没补，所以卡。这不是 Raylib 的限制，是**上层没做分桶**。
+**判断：我们的 GpuSkinned 车道是工业级的"单帧内合批"，缺的是 crowd 那一层动画状态离散化共享。** 4K demo 用 30 行手写逻辑补上了这一层；生产路径现在通过 `presentation.gpuSkinnedPosePhaseBuckets` 接下同一套分桶（10K 标定 16），同桶走 shared-pose uniform，不再按精确帧给每个实例单独解骨骼。
 
 ---
 
 ## 4. 待办
 
-- [ ] **把 4K demo 的相位分桶下沉到生产路径**：`GpuSkinnedInstanceBatchKey` 或姿势行 key
-      纳入"量化后的动画相位"，让同 clip 相近相位的实例共享姿势行。
-      验收：10K mannequin 的 `_dirtyPoseRows` 数量从 ~N 降到与桶数同量级。
-- [ ] 分桶粒度必须可配（4K demo 证明 16 档够用；10K 需要重新标定）。
+- [x] **把 4K demo 的相位分桶下沉到生产路径**：`presentation.gpuSkinnedPosePhaseBuckets`（10K 配 16）量化姿势行，并把量化后的 clip/frame 纳入批次键，同姿势走 shared-pose uniform。
+      验收：同 clip 的 `_dirtyPoseRows` 从 ~N 降到与桶数同量级（`QuantizeFrameIndex` 合同测试锁 62 帧 / 16 桶）。
+- [x] 分桶粒度必须可配（4K demo 证明 16 档够用；10K 标定 16）。
+- [x] 分桶开启时跳过姿势调色板骨骼行写入：VS 已走 `uSharedBones`，再 `UpdateModelAnimationBones` + 上传调色板是重复成本。
 - [ ] 记录：cube 替换仅用于隔离"蒙皮成本 vs 其他成本"，不进仓库。
+
+**80 FPS 还剩下的 CPU（相位分桶只把蒙皮从 18 FPS 拉回 cube 量级 ~46 FPS）：**
+
+| 步骤 | 当时成本 | 本轮 |
+|---|---|---|
+| 小地图 1 万点投影/staging | 1.9–3.4ms | 10K 开 `maxMarkersPerFieldPixel=1`；先占像素再 knowledge |
+| CameraCulling 动态全量 ProcessEntity | 2.4–4.8ms | 相机未动时，已可见且仍在空间候选里的单位复用上帧 LOD |
+| PresenterEmit 每帧扫可见 presenter | 2–5ms | 未做（仍靠 `PerfHasEmitWork` 结构标记） |
+| TransformSync | ~2.1ms | 1490 已收窄到已编译根 |
+| hudProj | 1.49ms | 1490 已修缓存容量 |
 
 ---
 

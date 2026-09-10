@@ -9,6 +9,7 @@ on:
     branches:
       - main
     paths:
+      - '.github/actions/setup-ludots-dotnet/**'
       - '.github/workflows/ci-acceptance.yml'
       - 'global.json'
       - 'scripts/build-acceptance-index.py'
@@ -27,10 +28,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            9.0.x
+        uses: ./.github/actions/setup-ludots-dotnet
 
       - name: Check acceptance index is in sync with registry
         shell: pwsh

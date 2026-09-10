@@ -1,0 +1,32 @@
+[
+  {
+    "id": "graph.mass_navigation_10k.disclose_roster",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "owner",
+        "refire": "restart",
+        "priority": 10
+      }
+    ],
+    "nodes": [
+      { "id": "owner", "op": "LoadExplicitTarget" },
+      { "id": "wait_spawn", "op": "Yield" },
+      { "id": "disclose", "op": "DiscloseCollection", "collectionKey": "case_e.selectable" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "owner", "fromPort": "next", "to": "wait_spawn" },
+      { "from": "wait_spawn", "fromPort": "next", "to": "disclose" },
+      { "from": "disclose", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "owner", "fromPort": "value", "to": "disclose", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

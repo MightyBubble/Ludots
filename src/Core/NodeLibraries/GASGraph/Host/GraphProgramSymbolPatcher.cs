@@ -134,9 +134,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         break;
 
                     case GraphNodeOp.WriteCollection:
+                    case GraphNodeOp.DiscloseCollection:
                         // The collection key resolves in the EntityCollectionStore key space,
                         // same space QueryFromCollection reads.
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.SubmitOrder:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.SetPanelAudience:
                         ins.Imm = UI.PanelHosting.PanelOpEncoding.PackAudience(

@@ -41,5 +41,6 @@
 
 - **增删 PackageReference**：把新包 nupkg 放入 `external/nuget/`（连同依赖闭包），canonical 路径保持离线；否则还原会因 `<clear/>` 失败——这是有意的防回归信号。
 - **TFM 升级**：同步 `external/ref/<tfm>/`（从 SDK packs 提取）与 `mods/Directory.Build.props` 字面量。
+- **vendored net8.0 岛**（`Svg.Skia` 等）：targeting pack 由本机 .NET 8 SDK 提供。不要把 8.0 App.Ref nupkg 塞进 `external/nuget/` 来过 CI，也不要为了还原打开 nuget.org。
 - **ModSdk 引用集**：`LauncherModSdkExporter.ProjectSpecs` 是单一来源。
 - npm（Web 客户端 / Launcher UI）仍是开发向依赖，不在离线契约内；玩家路径与 `dev-up` Raylib 路径不触碰。

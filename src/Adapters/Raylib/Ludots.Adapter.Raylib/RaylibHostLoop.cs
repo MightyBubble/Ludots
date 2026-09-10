@@ -357,6 +357,7 @@ namespace Ludots.Adapter.Raylib
                         ?? throw new InvalidOperationException("Raylib host requires AnimationClipRegistry."),
                     engine.VFS);
                 primitiveRenderer.AnimationStateMapResolver = animationBindings.Resolve;
+                primitiveRenderer.GpuSkinnedPosePhaseBuckets = engine.MergedConfig.Presentation.GpuSkinnedPosePhaseBuckets;
                 using var mapLoadResidencyGate = new RenderAssetMapLoadCompletionGate((IRenderAssetResidency)primitiveRenderer);
                 using var backendSceneRuntime = new RaylibBackendSceneRuntime(primitiveRenderer);
                 backendSceneRuntime.LoadDescriptors(PresentationCatalogMerge.MergeEntries(

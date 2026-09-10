@@ -3,6 +3,7 @@ name: solution-verify
 on:
   pull_request:
     paths:
+      - '.github/actions/setup-ludots-dotnet/**'
       - '.github/workflows/mass-navigation-10k-evidence.yml'
       - '.github/workflows/solution-verify.yml'
       - '.gitattributes'
@@ -23,6 +24,7 @@ on:
     branches:
       - main
     paths:
+      - '.github/actions/setup-ludots-dotnet/**'
       - '.github/workflows/mass-navigation-10k-evidence.yml'
       - '.github/workflows/solution-verify.yml'
       - '.gitattributes'
@@ -75,10 +77,7 @@ jobs:
           }
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            9.0.x
+        uses: ./.github/actions/setup-ludots-dotnet
 
       - name: Build maintained test project graphs
         shell: pwsh
