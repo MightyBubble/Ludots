@@ -804,6 +804,16 @@ namespace Ludots.Core.Presentation.Minimap
                 hasKnowledgeViewer = true;
             }
 
+            KnowledgeProjectionResolver? knowledgeResolver = null;
+            int knowledgeTick = 0;
+            if (hasKnowledgeResolver && hasKnowledgeViewer)
+            {
+                KnowledgeProjectionConsumer.TryGetResolveContext(
+                    engine.GlobalContext,
+                    out knowledgeResolver,
+                    out knowledgeTick);
+            }
+
             for (int i = 0; i < count; i++)
             {
                 float worldXcm = worldXcmValues[i];
@@ -815,10 +825,10 @@ namespace Ludots.Core.Presentation.Minimap
                 Entity owner = owners[i];
                 if (hasKnowledgeResolver && owner != Entity.Null)
                 {
-                    if (!hasKnowledgeViewer ||
-                        !KnowledgeProjectionConsumer.TryResolveDisclosureForViewer(
-                            engine.World,
-                            engine.GlobalContext,
+                    if (knowledgeResolver == null ||
+                        !KnowledgeProjectionConsumer.TryResolveDisclosure(
+                            knowledgeResolver,
+                            knowledgeTick,
                             knowledgeViewer,
                             owner,
                             out KnowledgeDisclosureRecord disclosure) ||

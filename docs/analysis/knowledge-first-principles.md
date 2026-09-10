@@ -26,51 +26,38 @@ knowledge grant、不持 controls 边的 viewer anchor"——这是它存在的�
 所以：**场景成立，不是幻想出来的基建。** 如果删掉它，fog 下的点选/瞄准会退化成
 读 sim 真值，玩家能隔着迷雾点到看不见的单位——这是实打实的玩法缺陷。
 
-## 2 架构上真正的问题（不是性能，是分层和形态）
+## 2 复查：现有形态是**有意设计**，我先前两条批评不成立
 
-### 2.1 它是一张**与 ECS 平行的关系表**，而不是 ECS 数据
+读完 #190 / #191 ADR 后必须修正（原稿把"SoA 自建表"当成架构缺陷，是误判）：
 
-`KnowledgeProjectionStore` 内部是 `EntityKeyedSoaTable<KnowledgeProjectionPayload>`：
-自己维护 `_primaryIds/_primaryVersions/_secondaryIds/_bucketHeads/_entryNext`……
-即**自建哈希表 + 自建世代号 + 自建过期**。它挂在一个 Service 上
-（`CoreServiceKeys.KnowledgeProjectionStore`），**没有任何 ECS 组件承载**。
+**#191 ADR 明文规定**了当前形态：
+- `finite projection`：可见性"不是布尔，是对 aspect 的有限投影"，
+  presence / position / attributes / relationships / tags / source·expiry·confidence·revision。
+- 热路径要求 **registry-id + array/span 基座、禁 LINQ / 禁迭代器分配 / 禁堆建投影对象**。
+- 边界纪律：Blackboard 只做本地执行内存；Relationship 只做语义边与授权；
+  EntityCollection 只做实体列表；**Knowledge Projection 是唯一的有限信息读取路径**。
 
-与项目自己的原则对照：
+所以：
+- **§2.1「该搬进 ECS 组件」——撤回。** ADR 明确选了实体中心的 SoA 存储
+  （#193）与零分配 resolver（#195），而不是普通 ECS 组件：因为 aspect 是
+  "稀疏 + 有限 + 带过期与授权来源"的投影，不是每实体必有的稠密事实。
+- **§2.3「三个 mask 是纯负担」——部分撤回。** mask 是 #191 定义的**最小有限 aspect**
+  之一（#192 已落地），不是臆造；我之所以能对 minimap 绕开它，是因为
+  **minimap 这个消费方不需要 mask**，不是因为 mask 本身多余。
 
-- `gitbook/architecture/entity-simulation-layering.md` 与本仓库一贯的
-  "一切皆 Mod / 数据先声明 / 复用 Registry 和 ECS" 取向，要求实体事实尽量落在
-  **组件 + System** 上，让查询、结构变更、序列化、调试观测都走同一条链路。
-- 现状是：一类实体事实（谁看得见谁）落在**自建索引**里，于是 ECS 那套
-  （chunk 迭代、SoA、revision、存档、agent-bridge 观测）全部用不上，
-  必须为它单独写一遍 scope 解析 / accumulator 合并 / 投影构造。
+真正成立、且 #190 尚未覆盖的缺口只有一个：
 
-**代价已经在测量里显形**：minimap 每 marker 一次解析 = 每帧 10K 次自建表查找 +
-两个大结构体（各带 3×256-bit mask）的构造。热路径优化只能削掉一部分，因为
-根因是"ECS 之外还有一张表"。
+### 2.1（修正后）缺失的是**稠密消费方的查询形态**，不是存储形态
 
-### 2.2 查询形态与消费形态不匹配（这是 10K 成本的直接来源）
+- 存储是 #193 定的 **"稀疏对"**：`(viewer, target)` 一条记录 —— 符合 ADR。
+- 消费是 **"稠密扫描"**：minimap / 剔除 / 世界 HUD 要对**屏幕上每个实体**问一次 —— 10K 次点查。
+- #195 的 resolver API 是 `CanKnowEntity / CanReadPosition / CanReadAttribute / ...`
+  全是**点级**谓词；`CopyByPrimary/CopyTargets` 这类**集合级**读取存在但**没被稠密消费方使用**。
 
-- **存储是"稀疏对"**：(viewer, target) 一条记录。合理。
-- **消费是"稠密扫描"**：minimap 要对**屏幕上每个 marker**问一次。10K 个 agent
-  = 10K 次单点查找。
-- 但 minimap 真正需要的只是"**这张地图上，我这个 viewer 能看见哪些**"——
-  一个**集合级**问题，被实现成了 10K 次**点级**查询。
-
-正确形态应该是：knowledge 变化时产出一个**按 viewer 的可见集合/掩码**
-（或一个 revision），minimap 直接过滤，而不是每帧重问 10K 次。
-RFC 其实已经指向这个方向：INT-4 提到"spatial 候选查询必须补 knowledge 过滤"，
-说明 knowledge 应该能作为**查询谓词**参与，而不是逐点后置判断。
-
-### 2.3 三个 256-bit mask 在"点级查询"上是纯负担
-
-`KnowledgeDisclosureRecord` / `KnowledgeProjection` 各带
-attribute/relationship/tag 三个 256-bit mask。它们是 RFC 里 **INT-8**（per-viewer
-tag/stance 事实投影，伪装/假情报的前提）的预留，**该单尚未落地**。
-
-于是当前每一帧的 10K 次查询，都在为**一个还没实现的特性**搬运/合并 96 字节的掩码。
-我刚提交的 `TryResolveDisclosure` 正是绕开它们——但这是打补丁；
-如果 INT-8 落地后再长回来，又会回到原地。**该按消费方需要分区**：
-只要 presence/position 的消费方（minimap、可见性门控）不该付 mask 的钱。
+而 minimap 真正要的是"**这个 viewer 能看见哪些**"—— 集合级问题。
+`#190` 的验收清单里 #197（selection/targeting）与 #198（minimap）都还是**未勾选**，
+但**没有任何 issue 提到"稠密消费方的集合级读取 / revision 增量"这个形态缺口**。
+这就是我要开的那一个（挂 #190 之下，不另立 epic）。
 
 ## 3 结论与建议
 
