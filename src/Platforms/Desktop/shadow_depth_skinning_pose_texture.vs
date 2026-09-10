@@ -10,6 +10,9 @@ layout(location = 8) in vec4 vertexBoneWeights;
 layout(location = 9) in mat4 instanceTransform;
 
 uniform mat4 mvp;
+uniform float uRigidBoneIndex; // -1: vertex weights, -2: static, >=0: rigid joint.
+uniform float uUseSharedPose;
+uniform mat4 uSharedBones[128];
 uniform sampler2D uBonePalette;
 uniform sampler2D uInstanceTable;
 uniform float uInstanceBase;
@@ -19,6 +22,7 @@ uniform float uPaletteSlotRows;
 
 mat4 FetchBoneMatrix(int poseRow, int boneSlot)
 {
+    if (uUseSharedPose > 0.5) return uSharedBones[boneSlot - int(uBoneBase)];
     int slotsPerRow = int(uPaletteSlotsPerRow + 0.5);
     int slotRows = int(uPaletteSlotRows + 0.5);
     int slabRow = boneSlot / slotsPerRow;
@@ -38,25 +42,37 @@ void main()
     vec4 instance = texelFetch(uInstanceTable, ivec2(instanceTexel % 1024, instanceTexel / 1024), 0);
     int poseRow = int(instance.x + 0.5);
 
-    mat4 skin = mat4(0.0);
-    if (vertexBoneWeights.x > 0.0)
+    mat4 skin;
+    if (uRigidBoneIndex >= 0.0)
     {
-        skin += FetchBoneMatrix(poseRow, int(vertexBoneIds.x) + int(uBoneBase)) * vertexBoneWeights.x;
+        skin = FetchBoneMatrix(poseRow, int(uRigidBoneIndex) + int(uBoneBase));
     }
-
-    if (vertexBoneWeights.y > 0.0)
+    else if (uRigidBoneIndex < -1.5)
     {
-        skin += FetchBoneMatrix(poseRow, int(vertexBoneIds.y) + int(uBoneBase)) * vertexBoneWeights.y;
+        skin = mat4(1.0);
     }
-
-    if (vertexBoneWeights.z > 0.0)
+    else
     {
-        skin += FetchBoneMatrix(poseRow, int(vertexBoneIds.z) + int(uBoneBase)) * vertexBoneWeights.z;
-    }
+        skin = mat4(0.0);
+        if (vertexBoneWeights.x > 0.0)
+        {
+            skin += FetchBoneMatrix(poseRow, int(vertexBoneIds.x) + int(uBoneBase)) * vertexBoneWeights.x;
+        }
 
-    if (vertexBoneWeights.w > 0.0)
-    {
-        skin += FetchBoneMatrix(poseRow, int(vertexBoneIds.w) + int(uBoneBase)) * vertexBoneWeights.w;
+        if (vertexBoneWeights.y > 0.0)
+        {
+            skin += FetchBoneMatrix(poseRow, int(vertexBoneIds.y) + int(uBoneBase)) * vertexBoneWeights.y;
+        }
+
+        if (vertexBoneWeights.z > 0.0)
+        {
+            skin += FetchBoneMatrix(poseRow, int(vertexBoneIds.z) + int(uBoneBase)) * vertexBoneWeights.z;
+        }
+
+        if (vertexBoneWeights.w > 0.0)
+        {
+            skin += FetchBoneMatrix(poseRow, int(vertexBoneIds.w) + int(uBoneBase)) * vertexBoneWeights.w;
+        }
     }
 
     vec4 skinnedPosition = skin * vec4(vertexPosition, 1.0);

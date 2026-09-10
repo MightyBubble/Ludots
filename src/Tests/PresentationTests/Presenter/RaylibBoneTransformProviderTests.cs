@@ -238,7 +238,7 @@ namespace Ludots.Tests.Presentation
                 skinnedBatch,
                 definitions,
                 meshAssets,
-                (_, _) => new RaylibGpuSkinnedModelCache.Entry(default, _animations, _animCount, string.Empty, loaded: true));
+                (_, _) => new RaylibGpuSkinnedModelCache.Entry(default, _animations, _animCount, string.Empty, loaded: true, ReadOnlyMemory<int>.Empty));
             using var system = new PresenterBehaviorSystem(
                 world,
                 instances,

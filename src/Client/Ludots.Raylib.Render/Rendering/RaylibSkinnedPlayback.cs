@@ -151,6 +151,18 @@ namespace Ludots.Raylib.Render
             frameIndex = ResolveFrameIndex(animations[clipIndex].frameCount, normalizedTime01, looping);
         }
 
+        public static IReadOnlyDictionary<int, int>? ResolveStateMap(
+            int profileId,
+            string sourcePath,
+            Func<int, string, IReadOnlyDictionary<int, int>?>? resolver)
+        {
+            if (profileId == 0) return null;
+            if (resolver == null)
+                throw new InvalidOperationException($"Animation profile id={profileId} requires a bound Raylib state map resolver.");
+            return resolver(profileId, sourcePath)
+                ?? throw new InvalidOperationException($"Animation profile id={profileId} has no Raylib state map.");
+        }
+
         public static int MapStateToClipIndex(int stateIndex, IReadOnlyDictionary<int, int>? stateToClipMap)
         {
             if (stateToClipMap == null)

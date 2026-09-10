@@ -277,8 +277,22 @@ namespace Ludots.Raylib.Render
             _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs, _modelStore);
             _materialPipeline = new RaylibInstancedMaterialPipeline(_materialLibrary);
             _gpuSkinned = new RaylibGpuSkinnedBatchRenderer(_gpuSkinnedModelCache, _materialPipeline, _maxModelInstancesPerDraw);
+            _gpuSkinned.EnableSharedPoseUniforms =
+                Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_SHARED_POSE_UNIFORMS") == "1";
             _vfxRenderer = new RaylibVfxRenderer(vfs, _textureStore);
             _decalRenderer = new RaylibDecalProjectorRenderer(materials, _materialLibrary);
+        }
+
+        public bool EnableSharedPoseUniforms
+        {
+            get => _gpuSkinned.EnableSharedPoseUniforms;
+            set => _gpuSkinned.EnableSharedPoseUniforms = value;
+        }
+
+        public Func<int, string, IReadOnlyDictionary<int, int>?>? AnimationStateMapResolver
+        {
+            get => _gpuSkinned.AnimationStateMapResolver;
+            set => _gpuSkinned.AnimationStateMapResolver = value;
         }
 
         private static Texture2D LoadTextureResource(string fullPath)

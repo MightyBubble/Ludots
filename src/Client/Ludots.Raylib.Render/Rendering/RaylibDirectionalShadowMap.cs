@@ -28,6 +28,9 @@ namespace Ludots.Raylib.Render
         private readonly int _locDepthSkinningBoneBase;
         private readonly int _locDepthSkinningPaletteSlotsPerRow;
         private readonly int _locDepthSkinningPaletteSlotRows;
+        private readonly int _locDepthSkinningRigidBoneIndex;
+        private readonly int _locDepthUseSharedPose;
+        private readonly int _locDepthSharedBones;
         private readonly int _locCutoutAlphaCutoff;
         private RaylibMatrix _lightView;
         private RaylibMatrix _lightProjection;
@@ -78,6 +81,12 @@ namespace Ludots.Raylib.Render
                 ConfigurePoseTextureSkinningDepthShader(
                     _depthSkinningPoseTextureShader,
                     "shadow_depth_skinning_pose_texture");
+            _locDepthSkinningRigidBoneIndex = RaylibShaderBindingGuard.RequireUniform(
+                _depthSkinningPoseTextureShader, "uRigidBoneIndex", "shadow_depth_skinning_pose_texture");
+            _locDepthUseSharedPose = RaylibShaderBindingGuard.RequireUniform(
+                _depthSkinningPoseTextureShader, "uUseSharedPose", "shadow_depth_skinning_pose_texture");
+            _locDepthSharedBones = RaylibShaderBindingGuard.RequireUniform(
+                _depthSkinningPoseTextureShader, "uSharedBones[0]", "shadow_depth_skinning_pose_texture");
             _locCutoutAlphaCutoff = ConfigureCutoutDepthShader(_depthCutoutShader, "shadow_depth_cutout");
 
             _depthMaterial = RaylibNativeResources.LoadMaterialDefault();
@@ -222,7 +231,9 @@ namespace Ludots.Raylib.Render
             float instanceBase,
             float boneBase,
             int paletteSlotsPerRow,
-            int paletteSlotRows)
+            int paletteSlotRows,
+            int rigidBoneIndex,
+            bool useSharedPose)
         {
             EnsureFrameActive();
             if (transforms == null)
@@ -249,6 +260,15 @@ namespace Ludots.Raylib.Render
             float slotRows = paletteSlotRows;
             Rl.SetShaderValue(_depthSkinningPoseTextureShader, _locDepthSkinningPaletteSlotsPerRow, &slotsPerRow, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_depthSkinningPoseTextureShader, _locDepthSkinningPaletteSlotRows, &slotRows, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            float rigidBone = rigidBoneIndex;
+            Rl.SetShaderValue(_depthSkinningPoseTextureShader, _locDepthSkinningRigidBoneIndex, &rigidBone, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            float sharedPose = useSharedPose ? 1 : 0;
+            Rl.SetShaderValue(_depthSkinningPoseTextureShader, _locDepthUseSharedPose, &sharedPose, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            if (useSharedPose)
+            {
+                Rl.rlEnableShader(_depthSkinningPoseTextureShader.id);
+                Rl.rlSetUniformMatrices(_locDepthSharedBones, mesh.boneMatrices, mesh.boneCount);
+            }
             Rl.DrawMeshInstanced(mesh, _depthSkinningPoseTextureMaterial, transforms, count);
         }
 

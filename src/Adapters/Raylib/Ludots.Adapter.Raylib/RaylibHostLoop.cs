@@ -350,6 +350,13 @@ namespace Ludots.Adapter.Raylib
                 MeshAssetRegistry residencyMeshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
                     ?? throw new InvalidOperationException("Raylib map residency requires PresentationMeshAssetRegistry.");
                 primitiveRenderer.BindResidencyMeshAssets(residencyMeshes);
+                var animationBindings = new RaylibAnimationProfileBindings(
+                    engine.GetService(CoreServiceKeys.AnimationProfileRegistry)
+                        ?? throw new InvalidOperationException("Raylib host requires AnimationProfileRegistry."),
+                    engine.GetService(CoreServiceKeys.AnimationClipRegistry)
+                        ?? throw new InvalidOperationException("Raylib host requires AnimationClipRegistry."),
+                    engine.VFS);
+                primitiveRenderer.AnimationStateMapResolver = animationBindings.Resolve;
                 using var mapLoadResidencyGate = new RenderAssetMapLoadCompletionGate((IRenderAssetResidency)primitiveRenderer);
                 using var backendSceneRuntime = new RaylibBackendSceneRuntime(primitiveRenderer);
                 backendSceneRuntime.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
@@ -381,7 +388,7 @@ namespace Ludots.Adapter.Raylib
                                 out entry,
                                 out status);
                             return outcome;
-                        }));
+                        }) { AnimationStateMapResolver = animationBindings.Resolve });
                 using var directionalShadowMap = new RaylibDirectionalShadowMap(renderEnvironmentConfig.Shadow);
 
                 using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS);
