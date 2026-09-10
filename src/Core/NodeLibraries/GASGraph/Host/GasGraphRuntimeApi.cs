@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
@@ -8,11 +9,13 @@ using Ludots.Core.EntityQueries;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
@@ -153,6 +156,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private IClock? _clock;
         private int[] _graphProjectionCandidateScratch = Array.Empty<int>();
         private Entity[] _collectionEventEntityScratch = Array.Empty<Entity>();
+        private Entity[] _discloseScratch = Array.Empty<Entity>();
+        private Order[] _orderScratch = Array.Empty<Order>();
 
         // ── Config context: set before each graph execution, cleared after ──
         private EffectConfigParams _currentConfigParams;
@@ -462,6 +467,107 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RequirePanelActivationApi().ShowPanel(ResolvePanelTypeName(panelTypeId));
         }
 
+        public void ShowMinimap()
+        {
+            MinimapRuntime minimap = RequireEngine().GetService(CoreServiceKeys.MinimapRuntime)
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapUnavailable");
+            minimap.Visible = true;
+            minimap.SetRotateWithCamera(false);
+            minimap.UseRtsFullMapPreset();
+        }
+
+        public void DiscloseCollection(int collectionKeyId, Entity owner)
+        {
+            if (collectionKeyId <= 0)
+            {
+                throw new InvalidOperationException($"GAS.GRAPH.ERR.UnknownCollectionKey: {collectionKeyId}.");
+            }
+
+            if (!_world.IsAlive(owner))
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.DiscloseCollectionOwnerDead");
+            }
+
+            EntityCollectionStore collections = _entityCollections
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.EntityCollectionsUnavailable");
+            if (!collections.TryGet(owner, collectionKeyId, out EntityCollectionHandle handle) ||
+                !collections.TryGetView(handle, out EntityCollectionView view))
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.CollectionInvalid");
+            }
+
+            if (view.Count <= 0)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.DiscloseCollectionEmpty");
+            }
+
+            KnowledgeProjectionStore knowledge = RequireEngine().GetService(CoreServiceKeys.KnowledgeProjectionStore)
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.KnowledgeProjectionStoreUnavailable");
+            int tick = ResolveKnowledgeTick();
+            if (_discloseScratch.Length < view.Count)
+            {
+                _discloseScratch = new Entity[view.Count];
+            }
+
+            int count = collections.CopyEntities(handle, 0, _discloseScratch.AsSpan(0, view.Count));
+            for (int i = 0; i < count; i++)
+            {
+                Entity target = _discloseScratch[i];
+                KnowledgeDisclosureRecord record = BuildLiveVisibleRecord(owner, target, tick);
+                knowledge.Upsert(owner, target, in record);
+            }
+        }
+
+        public void SubmitOrder(int orderTypeKeyId, Entity player, Span<Entity> actors, int count, IntVector2 destinationCm)
+        {
+            if (count <= 0)
+            {
+                return;
+            }
+
+            if (count > actors.Length)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SubmitOrderCount: count={count} exceeds actor span {actors.Length}.");
+            }
+
+            string orderTypeKey = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(orderTypeKeyId)
+                ?? throw new InvalidOperationException($"GAS.GRAPH.ERR.UnknownOrderTypeKey: {orderTypeKeyId}.");
+            GameEngine engine = RequireEngine();
+            OrderTypeRegistry orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.OrderTypeRegistryUnavailable");
+            OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.OrderQueueUnavailable");
+            int orderTypeId = orderTypes.GetId(orderTypeKey);
+            if (!_world.IsAlive(player) || !_world.TryGet(player, out PlayerOwner owner) || owner.PlayerId <= 0)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.SubmitOrderPlayerOwnerRequired");
+            }
+
+            if (_orderScratch.Length < count)
+            {
+                _orderScratch = new Order[count];
+            }
+
+            Vector3 destinationWorldCm = new(destinationCm.X, 0f, destinationCm.Y);
+            for (int i = 0; i < count; i++)
+            {
+                _orderScratch[i] = OrderBuilder.CreateMoveToWorldCm(
+                    orderTypeId,
+                    owner.PlayerId,
+                    actors[i],
+                    destinationWorldCm,
+                    OrderSubmitMode.Immediate,
+                    submitStep: 0);
+            }
+
+            OrderSubmitResult result = orders.TryEnqueueSharedBatch(_orderScratch.AsSpan(0, count));
+            if (!OrderSubmitResultSemantics.IsAccepted(result))
+            {
+                throw new InvalidOperationException($"GAS.GRAPH.ERR.SubmitOrderRejected: {result}.");
+            }
+        }
+
         public void HidePanel(int panelTypeId)
         {
             RequirePanelActivationApi().HidePanel(ResolvePanelTypeName(panelTypeId));
@@ -627,6 +733,50 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return template.Source.AsSpan();
+        }
+
+        private GameEngine RequireEngine()
+        {
+            GameEngine? engine = _engineResolver?.Invoke();
+            return engine ?? throw new InvalidOperationException("GAS.GRAPH.ERR.EngineUnavailable");
+        }
+
+        private int ResolveKnowledgeTick()
+        {
+            if (_clock != null)
+            {
+                return _clock.Now(ClockDomainId.FixedFrame);
+            }
+
+            return RequireEngine().GameSession.CurrentTick;
+        }
+
+        private KnowledgeDisclosureRecord BuildLiveVisibleRecord(Entity source, Entity target, int tick)
+        {
+            KnowledgeIdMask256 attributeMask = KnowledgeIdMask256.Empty;
+            if (_world.IsAlive(target) && _world.TryGet(target, out AttributeBuffer attributes))
+            {
+                int definedLimit = Math.Min(AttributeBuffer.MAX_ATTRS, 64);
+                for (int id = 0; id < definedLimit; id++)
+                {
+                    if (attributes.HasAttribute(id))
+                    {
+                        attributeMask = attributeMask.WithId(id);
+                    }
+                }
+            }
+
+            return new KnowledgeDisclosureRecord(
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.Live,
+                attributeMask,
+                KnowledgeIdMask256.Empty,
+                KnowledgeIdMask256.Empty,
+                source,
+                tick,
+                expiryTick: 0,
+                confidencePermille: 1000,
+                revision: 0);
         }
 
         private string ResolvePanelTypeName(int panelTypeId)

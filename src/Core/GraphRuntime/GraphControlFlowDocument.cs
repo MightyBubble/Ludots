@@ -233,6 +233,8 @@ namespace Ludots.Core.GraphRuntime
         public string? ArgKey { get; set; }
         /// <summary>Interaction mode id symbol for SetInteractionMode; resolved against the installed interaction mode map at run time.</summary>
         public string? Mode { get; set; }
+        /// <summary>Order type key symbol for SubmitOrder; interned then resolved against OrderTypeRegistry at run time.</summary>
+        public string? OrderTypeKey { get; set; }
         /// <summary>Interaction context profile id symbol for ActivateContext/DeactivateContext; resolved against the installed context profiles at run time.</summary>
         public string? Context { get; set; }
         /// <summary>Optional parent interaction context profile id symbol for ActivateContext; omit for a root-level derived context.</summary>

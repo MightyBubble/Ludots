@@ -143,7 +143,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         or GraphNodeOp.SetInteractionMode
                         or GraphNodeOp.ActivateContext
                         or GraphNodeOp.DeactivateContext
-                        or GraphNodeOp.WriteCollection;
+                        or GraphNodeOp.WriteCollection
+                        or GraphNodeOp.DiscloseCollection;
                 // WriteMapVar* 的 B 是可选 scope 操作数：byte.MaxValue 表示"缺省"（→caster）。
                 // CreatePanel 的 B 是可选皮肤符号索引：byte.MaxValue 表示"未指定皮"（走模板/全局默认链）。
                 bool bIsOptionalAbsent = instruction.B == byte.MaxValue &&

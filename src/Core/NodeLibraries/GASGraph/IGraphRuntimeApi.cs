@@ -142,6 +142,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.EntityCollectionsUnavailable");
         }
 
+        void ShowMinimap()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapUnavailable");
+        }
+
+        void DiscloseCollection(int collectionKeyId, Entity owner)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.KnowledgeProjectionStoreUnavailable");
+        }
+
+        void SubmitOrder(int orderTypeKeyId, Entity player, Span<Entity> actors, int count, IntVector2 destinationCm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.OrderQueueUnavailable");
+        }
+
         /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
         void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
 

@@ -1,5 +1,70 @@
 ## GAS Composition Gate — Self Review
 
+- **Task / Issue**: 10K MassNavigation overlay 收成纯数据：进图亮小地图、写认知、右键下单都走 TriggerGraph；卸 CoreInputMod / RevealHidden / 覆盖层 C# 系统
+- **Date**: 2026-09-10
+- **Agent / Author**: cloud agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 亮小地图、披露名册、右键点地移动都是新 Layer 0 graph op 加 overlay 图连线；不给 game.json / profile 加「开不开」开关，也不保留覆盖层系统。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 进图亮原生小地图 | 0 | `ShowMinimap` |
+| 进图按集合写认知 | 0 | `DiscloseCollection` |
+| 右键点地成批下单 | 0 | `SubmitOrder` |
+| 10K 进图 / 战斗态连线 | 2 | overlay TriggerGraph + 战斗态 `triggers[]` |
+| 容量 / 裁剪 / 占用 | 数据 | overlay `game.json`（容量，不是行为开关） |
+
+### 3. Reuse list
+
+- Handlers: `MinimapRuntime.UseRtsFullMapPreset`、`KnowledgeProjectionStore.Upsert`、`OrderQueue.TryEnqueueSharedBatch`、`OrderBuilder.CreateMoveToWorldCm`
+- Queues / Systems: 既有 `OrderQueue`、MassNavigation MovePlan 适配；不新建 InputCollection 系统
+- Resolvers / Registries: `EntityCollectionStore`、`OrderTypeRegistry`、`ConfigKeyRegistry`、`AttributeBuffer` 定义位
+- Existing presets / graphs: `graph.mass_navigation.selection_roster` / `case_e.selectable`、Case E 框选图、`CaseE.Controls` 的 `Command` 绑定
+
+### 4. New Layer 0 ops
+
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| ShowMinimap | 打开原生小地图并切全图预设 | `ShowPanel` 只碰面板宿主，碰不到 `MinimapRuntime` |
+| DiscloseCollection | 按集合成员 Upsert LiveVisible | 没有写 knowledge 的 op；`QueryAllMapEntities` 有 256 上限 |
+| SubmitOrder | 把当前查询结果成批送进 OrderQueue | 没有下单 op；禁止再挂 `InputOrderMappingSystem` |
+
+### 5. Transaction boundary
+
+无新事务壳。下单失败（队列拒收、缺服务、缺玩家）fail-closed；空选中集是「没有演员」的合法结果，不成批入队。
+
+### 6. Config SSOT
+
+行为配置落在:
+
+- overlay `GAS/graphs/graph.mass_navigation_10k.*`
+- overlay `Maps/mass_navigation.json` 的 TriggerGraphs 追加挂载
+- overlay `Input/interaction_context_profiles.json`（DeepObject 数组整表覆盖，故必须带上 Case E 的 boxing 全表，再给 battle 加上 Command）
+
+是否新增 JSON schema: NO — `orderTypeKey` 是既有 GraphControlFlow 节点字段补齐，不是 profile DSL。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback（缺小地图 / 缺认知库 / 缺订单队列 / 点地失败都 fail-closed）
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线（换集合 key、换 orderTypeKey、换进图挂载），不动 Core enum
+
+
+## GAS Composition Gate — Self Review
+
 - **Task / Issue**: #1398 Case E 纠偏——退役档案空壳键；起角落操作者 rep；ScreenRect 按 audience；删四张 Score 适配器
 - **Date**: 2026-09-03
 - **Agent / Author**: cloud agent
