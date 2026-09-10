@@ -455,3 +455,49 @@
 - 其中有价值的**思路**（按 anchor 收窄变换同步）可以做，但前提是先把「挂接子对象的
   兜底同步」拆成独立车道，否则就是上面这个塌陷。
 - 它的 artifacts 目录（235 文件）不应随代码一起进主干。
+
+---
+
+## 14. 本轮又找到的最大单点：HUD 地形遮挡缓存的**容量**没按场景配
+
+**症状**：`hudProj` 5.29ms，是 presentation 里最大的一项（超过 minimap/cull/emit）。
+
+**定位方法**（不是猜）：加一个 measurement-only 开关，
+在 `WorldHudToScreenSystem.ResolveTerrainOcclusion` 入口直接 `return true`：
+
+| | `hudProj` |
+|---|---|
+| 正常 | **5.29ms**（max 6.34） |
+| 跳过遮挡 raycast | **1.22ms**（max 1.65） |
+
+⇒ ~4ms 是**每帧重新做地形遮挡 raycast**，不是缓存查找本身。
+
+**根因**：`TerrainHudOcclusionCache` 是有界开放寻址表，键 =
+`(heightmapRevision, cameraCell, anchorCell, heightBucket)`，**容量满时整表全清**。
+10K showcase 把 agent 铺满整个场地，活跃键集超过通用默认容量 8192
+⇒ 每帧溢出全清 ⇒ 约 1 万个 anchor 全部重算。
+
+**修法（纯配置，画面零变化）**：
+`CapabilityStandardMassNavigationLargeWorld10kMod/assets/game.json` 声明
+`presentation.worldHudTerrainOcclusionCacheCapacity = 131072`。
+
+| 指标 | 修前 | 修后 |
+|---|---|---|
+| `hudProj` | 5.33ms | **1.49ms** |
+| `hudProjected` / `screenBars` / `screenText` | 20000 / 10000 / 10000 | **完全一致** |
+| 10K 最好帧 | ~38 FPS | **50.2 FPS** |
+
+### 本轮一并实测后**回退**的两项（同样记在案）
+
+- **给 health HUD 加 `maxLod`**：探针显示该相机距离下所有 bar 的 LOD 都是 High
+  （`barHigh=157, barMed=0, barLow=0` 走 retained 路径；bulk 路径 `hudSeen=0`），
+  没有任何东西被门控 ⇒ 无效。另外发现一个**能力缺口**：`maxLod` 只在
+  `AssetBindingFields` 里合法，`WorldTextFields` 不含它，所以 WorldText 行为
+  目前**无法声明 maxLod**（虽然 `IsWithinMaxLod` 对它的合成 `AssetBinding` 已生效）。
+- **缓存 `HasDynamicCullWork()`**：populated 场景下第一条 query 就命中，
+  实测无收益（`cull` 3.29→3.46，噪声内），已回退。
+
+> 教训重复出现且值得固化：**per-frame 开销的第一嫌疑是"本该命中的缓存没命中"，
+> 而不是"缓存查找太慢"**。先做 bypass 实验拿到天花板，再决定优化方向 —— 这次
+> bypass 直接指出 4ms/5.3ms 是重算，避免了去优化查找逻辑（那条路我已经走过，
+> 在 §13.2 / knowledge 那轮都证明是噪声）。
