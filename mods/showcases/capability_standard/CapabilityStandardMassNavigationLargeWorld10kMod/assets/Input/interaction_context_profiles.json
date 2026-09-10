@@ -1,0 +1,46 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.case_e.battle",
+      "activeCollectionKey": "selected",
+      "commandIntentId": "intent.command.default",
+      "inputContextId": "CaseE.Controls",
+      "bindings": [
+        "CaseE.BoxSelectBegin",
+        "CaseE.BoxSelectEnd",
+        "QueueModifier",
+        "PrecisionModifier",
+        "ModifierSubtract",
+        "Command"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.case_e.box_begin"
+        },
+        {
+          "trigger": "graph.mass_navigation_10k.command_move"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.case_e.boxing",
+      "foreground": true,
+      "bindings": [
+        "CaseE.BoxSelectEnd"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.case_e.selection_preview_tick"
+        },
+        {
+          "trigger": "graph.case_e.box_commit"
+        }
+      ],
+      "onActivated": [],
+      "onDeactivated": [
+        "graph.case_e.selection_preview_clear",
+        "graph.case_e.selection_commit"
+      ]
+    }
+  ]
+}

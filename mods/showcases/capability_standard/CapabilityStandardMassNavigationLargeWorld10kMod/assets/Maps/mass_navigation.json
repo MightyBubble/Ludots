@@ -1,5 +1,9 @@
 {
   "Id": "mass_navigation",
+  "TriggerGraphs": [
+    { "graph": "graph.mass_navigation_10k.show_minimap", "scopeInstanceId": "local_player" },
+    { "graph": "graph.mass_navigation_10k.disclose_roster", "scopeInstanceId": "local_player" }
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
     "TargetXCm": 0,

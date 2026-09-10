@@ -1,12 +1,10 @@
 {
   "name": "CapabilityStandardMassNavigationLargeWorld10kMod",
   "version": "1.0.0",
-  "description": "Standard capability acceptance entry for the large-world 10K MassNavigation presenter showcase.",
-  "main": "bin/net9.0/CapabilityStandardMassNavigationLargeWorld10kMod.dll",
+  "description": "Data-only large-world 10K MassNavigation overlay: capacities, camera, and TriggerGraphs that light the minimap, disclose the roster, and issue move orders.",
   "priority": -2000,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
     "SelectionInteractionMod": "^1.0.0",
     "MassNavigationMod": "^1.0.0"
   },
