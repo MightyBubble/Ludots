@@ -106,6 +106,54 @@ parentSnapshot.WorldPosition = World.Has<PresenterWorldPosition>(parentEntity)
    `presenterPlaneCm` 与 owner 的 `logicCm` 同步位移。这是当前缺口。
 4. **#1486 合并前必须解决**：该提交是 Draft，且**不在 main**，本回归是合并门槛问题。
 
+## 修正：真正的时间线（本文早前版本归因有误）
+
+**早前版本把根因写成"#1486 的 `c202aa3978` 把 InheritParent 改成 WorldFixed"。
+方向对，但时间线错了——marker 在更早就已经不动了。**
+
+### 真正的分界点：`fe1dae22d6`
+
+```
+fe1dae22d6  feat(massnav): migrate selection to shared Case E data
+            Codex  2026-09-09 02:42
+```
+
+这个提交（即"mass nav 并入 case_e 最新做法"）做了两件事：
+
+1. 新建 `mods/capabilities/input/SelectionInteractionMod`（共享 mod），
+   把 marker 从 case_e 私有配置搬过来；
+2. **把 marker 的 `renderPath` 从 `StaticMesh` 改成 `InstancedStaticMesh`，
+   `mobility` 从 `Static` 改成 `Movable`。**
+
+对照证据：
+
+| 来源 | marker 的 renderPath | mobility |
+|---|---|---|
+| `fe1dae22d6~1` case_e 私有（**当时可见环在动**） | `StaticMesh` | `Static` |
+| `fe1dae22d6` 共享 mod（新建） | `InstancedStaticMesh` | `Movable` |
+
+因此**真正的引入点是这次迁移**，而不是后来的 #1486。
+`WorldFixed` 那个分支改动发生在**其后**，只是把已坏的链路又改了一处。
+
+### 实测：改回 `StaticMesh` 并不能修复
+
+把 marker 改回 `StaticMesh`/`Static` 后重测（排除"路径"假设）：
+采样到 **125 个 owner 正在移动的 marker**，`logicCm` 每轮都在变，
+而 `presenterPlaneCm` **全部冻结**：
+
+```
+def=31 owner=4732 src=InheritParent
+   logic  (-347,-4426) -> (-356,-4432)     在动
+   plane  (-1132,-2372) -> (-1132,-2372)   *** 冻结 ***
+...
+markers with moving owner: 125   (presenter_moved 全部为 False)
+```
+
+**结论：坏的是 `InheritParent` 链路本身（父位置 sourcing），
+与 renderPath / mobility / #1486 都无因果关系。**
+`fe1dae22d6` 只是让 marker 第一次以"独立 scoped presenter + 共享 mod"的形态出现，
+从而走进了这条从未被验证过的链路。
+
 ## 为什么 case_e 一直没暴露这个问题
 
 **因为 case_e 的单位从不移动。**
