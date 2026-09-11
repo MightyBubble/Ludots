@@ -36,7 +36,7 @@ export const STUDIO_CHROME = {
     'rounded-md bg-studio-blue px-3 py-1.5 text-sm font-semibold text-studio-label hover:brightness-110 disabled:opacity-50',
   btnGhost:
     'rounded-md border border-studio-elevated bg-studio-surface px-3 py-1.5 text-sm text-studio-label hover:bg-studio-elevated',
-  btnDanger: 'rounded-md border border-studio-red/50 px-3 py-1.5 text-sm text-studio-red hover:bg-studio-red/10',
+  btnDanger: 'rounded-md border border-studio-red/50 px-3 py-1.5 text-sm text-studio-red hover:bg-studio-red/10 disabled:opacity-50',
   navOn: 'rounded-md bg-studio-elevated px-2 py-1 text-xs text-studio-label',
   navOff: 'rounded-md px-2 py-1 text-xs text-studio-muted hover:bg-studio-elevated hover:text-studio-label',
 } as const;

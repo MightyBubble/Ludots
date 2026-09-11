@@ -95,7 +95,7 @@ function TreeBranch({
             type="button"
             aria-label={isOpen ? `Collapse ${node.label}` : `Expand ${node.label}`}
             onClick={() => onToggle(node.key)}
-            className="rounded p-0.5 text-slate-500 hover:bg-slate-800 hover:text-slate-200"
+            className="rounded p-0.5 text-studio-muted hover:bg-studio-elevated hover:text-studio-label"
           >
             {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
@@ -107,26 +107,26 @@ function TreeBranch({
             type="button"
             onClick={() => onSelect(node.graph!.id)}
             className={`flex min-w-0 flex-1 items-center gap-1 rounded px-1 py-0.5 text-left text-[11px] ${
-              isSelected ? 'bg-sky-900/70 text-sky-100' : 'text-slate-300 hover:bg-slate-800'
+              isSelected ? 'bg-studio-blue/20 text-studio-label' : 'text-studio-secondary hover:bg-studio-elevated'
             }`}
           >
-            <Workflow size={11} className="shrink-0 text-amber-300" aria-hidden="true" />
+            <Workflow size={11} className="shrink-0 text-studio-yellow" aria-hidden="true" />
             <span className="truncate font-mono">{node.label}</span>
-            <span className="ml-auto shrink-0 text-[9px] uppercase text-slate-500">{node.graph.kind}</span>
+            <span className="ml-auto shrink-0 text-[9px] uppercase text-studio-muted">{node.graph.kind}</span>
           </button>
         ) : (
           <button
             type="button"
             onClick={() => onToggle(node.key)}
-            className="flex min-w-0 flex-1 items-center gap-1 rounded px-1 py-0.5 text-left text-[11px] text-slate-400 hover:bg-slate-800"
+            className="flex min-w-0 flex-1 items-center gap-1 rounded px-1 py-0.5 text-left text-[11px] text-studio-muted hover:bg-studio-elevated"
           >
-            <Folder size={11} className="shrink-0 text-slate-500" aria-hidden="true" />
+            <Folder size={11} className="shrink-0 text-studio-muted" aria-hidden="true" />
             <span className="truncate">{node.label}</span>
           </button>
         )}
       </div>
       {hasChildren && isOpen ? (
-        <div className="ml-3 border-l border-slate-800 pl-1">
+        <div className="ml-3 border-l border-studio-elevated pl-1">
           {node.children.map((child) => (
             <TreeBranch
               key={child.key}
@@ -181,22 +181,22 @@ export function GraphCatalogTree({
   const normalizedQuery = query.trim().toLocaleLowerCase();
 
   return (
-    <aside className="flex min-h-0 flex-col border-r border-slate-800 bg-slate-950/80">
-      <div className="border-b border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+    <aside className="flex min-h-0 flex-col border-r border-studio-elevated bg-studio-bg/80">
+      <div className="border-b border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-muted">
         Graphs
       </div>
-      <div className="border-b border-slate-800 px-2 py-2">
+      <div className="border-b border-studio-elevated px-2 py-2">
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Filter mods / graphs"
           aria-label="Filter graph catalog"
-          className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px] text-slate-100 outline-none placeholder:text-slate-600"
+          className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 text-[11px] text-studio-label outline-none placeholder:text-studio-muted"
         />
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-2 py-2">
         {mods.length === 0 ? (
-          <div className="px-1 text-[11px] text-slate-500">{status || 'No mods with graphs.json.'}</div>
+          <div className="px-1 text-[11px] text-studio-muted">{status || 'No mods with graphs.json.'}</div>
         ) : (
           mods
             .filter((mod) => {
@@ -222,15 +222,15 @@ export function GraphCatalogTree({
                       });
                     }}
                     className={`flex w-full items-center gap-1 rounded px-1 py-1 text-left text-[11px] ${
-                      selectedModId === mod.id ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800'
+                      selectedModId === mod.id ? 'bg-studio-elevated text-studio-label' : 'text-studio-secondary hover:bg-studio-elevated'
                     }`}
                   >
                     {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                     <span className="truncate font-semibold">{mod.name}</span>
-                    <span className="ml-auto text-[9px] text-slate-500">{mod.graphs.length}</span>
+                    <span className="ml-auto text-[9px] text-studio-muted">{mod.graphs.length}</span>
                   </button>
                   {mod.error ? (
-                    <div className="mt-1 flex items-start gap-1 px-2 text-[10px] text-amber-300">
+                    <div className="mt-1 flex items-start gap-1 px-2 text-[10px] text-studio-yellow">
                       <FileWarning size={11} className="mt-0.5 shrink-0" aria-hidden="true" />
                       <span>{mod.error}</span>
                     </div>

@@ -7,6 +7,8 @@ import {
   dialogueToFlow,
   hubWidth,
   parseChoiceHandle,
+  removeDialogueChoice,
+  removeDialogueStatement,
   validateDialogueTree,
   type DialogueTree,
 } from '../src/pages/dialogue-tree-editor/dialogueTreeModel.ts';
@@ -122,5 +124,39 @@ const audiencePos = Object.fromEntries(audienceFlow.nodes.map((node) => [node.id
 assert(audiencePos.ask_reply.x < audiencePos.standing.x && audiencePos.standing.x < audiencePos.ready_reply.x, 'join sits between the two branches');
 assert(audiencePos.duty_end.x !== audiencePos.mercy_end.x, 'ending choices fan out');
 assert(applyFlowToDialogue(audience, audienceFlow.nodes, audienceFlow.edges).nodes.length === 6, 'audience hubs stay off JSON');
+
+const droppedBye = applyFlowToDialogue(
+  gate,
+  flow.nodes.filter((node) => node.id !== 'bye'),
+  flow.edges.filter((edge) => edge.source !== 'bye' && edge.target !== 'bye'),
+);
+assert(droppedBye.nodes.every((node) => node.id !== 'bye'), 'canvas delete of a say node must drop it from JSON');
+assert(
+  droppedBye.nodes.every((node) => node.nextNode !== 'bye' && !(node.choices ?? []).some((choice) => choice.nextNode === 'bye')),
+  'dangling next to a deleted say must clear',
+);
+
+const withoutOpenHub = applyFlowToDialogue(
+  gate,
+  flow.nodes.filter((node) => node.id !== choiceHubId('open')),
+  flow.edges.filter((edge) => edge.source !== choiceHubId('open') && edge.target !== choiceHubId('open')),
+);
+assert(
+  (withoutOpenHub.nodes.find((node) => node.id === 'open')?.choices ?? []).length === 0,
+  'deleting the choice hub clears that line\'s choices',
+);
+
+const removedLeave = removeDialogueChoice(gate, 'open', 'leave');
+assert(
+  !(removedLeave.nodes.find((node) => node.id === 'open')?.choices ?? []).some((choice) => choice.id === 'leave'),
+  'inspector can drop one choice',
+);
+assert((removedLeave.nodes.find((node) => node.id === 'open')?.choices ?? []).length === 2, 'other choices stay');
+
+const removedBye = removeDialogueStatement(gate, 'bye');
+assert(removedBye.nodes.length === 3, 'inspector delete drops the say');
+assert(removedBye.nodes.every((node) => node.id !== 'bye'), 'bye is gone from the tree');
+const lastOnly: DialogueTree = { ...gate, entryNode: 'open', nodes: [gate.nodes.find((node) => node.id === 'open')!] };
+assert(removeDialogueStatement(lastOnly, 'open').nodes.length === 1, 'the last say cannot be deleted');
 
 console.log('assert-dialogue-tree: ok');

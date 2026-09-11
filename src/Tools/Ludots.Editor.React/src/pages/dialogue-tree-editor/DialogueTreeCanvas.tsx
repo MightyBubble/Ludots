@@ -26,9 +26,12 @@ import {
   dialogueToFlow,
   isChoiceHubId,
   makeDialogueEdge,
+  parseChoiceHubOwner,
   NEXT_HANDLE,
   uniqueChoiceId,
   uniqueDialogueNodeId,
+  removeDialogueChoice,
+  removeDialogueStatement,
   type DialogueCanvasNode,
   type DialogueChoice,
   type DialogueEdgeKind,
@@ -191,6 +194,26 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
             const nextEdges = edges.filter((edge) => !ids.has(edge.id));
             commit(nodes, nextEdges);
           }}
+          onNodesDelete={(deleted) => {
+            const ids = new Set(deleted.map((node) => node.id));
+            const remaining = nodes.filter((node) => {
+              if (ids.has(node.id)) return false;
+              const owner = parseChoiceHubOwner(node.id);
+              return !(owner && ids.has(owner));
+            });
+            if (remaining.filter((node) => node.type === 'dialogueSay').length === 0) {
+              const flow = dialogueToFlow(treeRef.current, lines);
+              setNodes(flow.nodes);
+              setEdges(flow.edges);
+              return;
+            }
+            const remainingIds = new Set(remaining.map((node) => node.id));
+            const remainingEdges = edges.filter((edge) => remainingIds.has(edge.source) && remainingIds.has(edge.target));
+            commit(remaining, remainingEdges);
+            if (selectedNodeId && (ids.has(selectedNodeId) || ids.has(choiceHubId(selectedNodeId)))) {
+              onSelectNode('');
+            }
+          }}
           onNodeClick={(_, node) => onSelectNode(canvasOwnerId(node as DialogueCanvasNode))}
           onPaneClick={() => onSelectNode('')}
           fitView
@@ -206,7 +229,7 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
             zoomable
             position="bottom-right"
             bgColor={STUDIO_THEME.bg}
-            maskColor="rgba(28,28,30,0.45)"
+            maskColor="color-mix(in srgb, var(--studio-bg) 55%, transparent)"
             nodeColor={(node) => (node.type === 'dialogueChoice' ? STUDIO_THEME.yellow : STUDIO_THEME.blue)}
           />
         </ReactFlow>
@@ -257,11 +280,10 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
             lines={lines}
             onChange={patchNode}
             onAddChoice={addChoice}
+            onRemoveChoice={(choiceId) => onChange(removeDialogueChoice(tree, selectedNode.id, choiceId))}
+            canRemove={tree.nodes.length > 1}
             onRemove={() => {
-              onChange({
-                ...tree,
-                nodes: tree.nodes.filter((node) => node.id !== selectedNode.id),
-              });
+              onChange(removeDialogueStatement(tree, selectedNode.id));
               onSelectNode('');
             }}
           />
@@ -280,12 +302,16 @@ function StatementInspector({
   lines,
   onChange,
   onAddChoice,
+  onRemoveChoice,
+  canRemove,
   onRemove,
 }: {
   node: DialogueNode;
   lines: readonly LinePreview[];
   onChange: (node: DialogueNode) => void;
   onAddChoice: () => void;
+  onRemoveChoice: (choiceId: string) => void;
+  canRemove: boolean;
   onRemove: () => void;
 }) {
   const lineIds = lines.map((line) => line.id);
@@ -409,9 +435,16 @@ function StatementInspector({
             />
           </label>
           <p className="text-[10px] text-studio-muted">下一句从选项节点「{choiceHandle(choice.id)}」口往下拉。</p>
+          <button
+            type="button"
+            className={STUDIO_CHROME.btnDanger}
+            onClick={() => onRemoveChoice(choice.id)}
+          >
+            删除此选项
+          </button>
         </div>
       ))}
-      <button type="button" className={STUDIO_CHROME.btnDanger} onClick={onRemove}>
+      <button type="button" className={STUDIO_CHROME.btnDanger} disabled={!canRemove} onClick={onRemove}>
         删除此句
       </button>
     </div>

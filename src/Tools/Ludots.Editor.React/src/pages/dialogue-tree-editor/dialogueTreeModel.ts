@@ -421,20 +421,23 @@ export function applyFlowToDialogue(
   }
 
   const sayNodes = flowNodes.filter((flowNode) => flowNode.type === 'dialogueSay' && prev.has(flowNode.id));
+  const remainingHubs = new Set(
+    flowNodes.filter((flowNode) => flowNode.type === 'dialogueChoice').map((flowNode) => flowNode.id),
+  );
   const orderedIds = sayNodes.map((flowNode) => flowNode.id);
-  for (const node of tree.nodes) {
-    if (!orderedIds.includes(node.id)) orderedIds.push(node.id);
-  }
 
   const nodes: DialogueNode[] = orderedIds.map((id) => {
     const prior = prev.get(id);
     if (!prior) {
       return { id, lineId: '', presentationProfile: 'story.dialogue_overlay', choices: [] };
     }
-    const choices = (prior.choices ?? []).map((choice) => {
-      const next = choiceNext.get(`${id}::${choice.id}`);
-      return next ? { ...choice, nextNode: next } : { ...choice, nextNode: undefined };
-    });
+    const hubKept = remainingHubs.has(choiceHubId(id));
+    const choices = hubKept
+      ? (prior.choices ?? []).map((choice) => {
+          const next = choiceNext.get(`${id}::${choice.id}`);
+          return next ? { ...choice, nextNode: next } : { ...choice, nextNode: undefined };
+        })
+      : [];
     const hasChoices = choices.length > 0;
     const nextNode = hasChoices ? undefined : nextBySource.get(id);
     return {
@@ -471,6 +474,36 @@ export function emptyDialogue(id: string): DialogueTree {
         choices: [],
       },
     ],
+  };
+}
+
+export function removeDialogueStatement(tree: DialogueTree, nodeId: string): DialogueTree {
+  if (tree.nodes.length <= 1) return tree;
+  const nodes = tree.nodes
+    .filter((node) => node.id !== nodeId)
+    .map((node) => ({
+      ...node,
+      nextNode: node.nextNode === nodeId ? undefined : node.nextNode,
+      choices: (node.choices ?? []).map((choice) => ({
+        ...choice,
+        nextNode: choice.nextNode === nodeId ? undefined : choice.nextNode,
+      })),
+    }));
+  return {
+    ...tree,
+    entryNode: tree.entryNode === nodeId ? (nodes[0]?.id ?? tree.entryNode) : tree.entryNode,
+    nodes,
+  };
+}
+
+export function removeDialogueChoice(tree: DialogueTree, nodeId: string, choiceId: string): DialogueTree {
+  return {
+    ...tree,
+    nodes: tree.nodes.map((node) =>
+      node.id !== nodeId
+        ? node
+        : { ...node, choices: (node.choices ?? []).filter((choice) => choice.id !== choiceId) },
+    ),
   };
 }
 

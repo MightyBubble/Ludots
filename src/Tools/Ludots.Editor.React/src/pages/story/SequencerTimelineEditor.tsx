@@ -114,7 +114,7 @@ export const SequencerTimelineEditor: React.FC<Props> = ({
           {LANE_ORDER.map((lane) => (
             <div key={lane} className="flex border-b border-studio-elevated/80">
               <div className="w-[140px] shrink-0 bg-studio-surface px-2 py-3 text-xs text-studio-label">{LANE_LABEL[lane]}</div>
-              <div className="relative h-14 bg-[linear-gradient(90deg,rgba(39,39,42,0.35)_1px,transparent_1px)] bg-[length:96px_100%]" style={{ width }}>
+              <div className="relative h-14 bg-studio-bg bg-[length:96px_100%]" style={{ width, backgroundImage: 'linear-gradient(90deg, color-mix(in srgb, var(--studio-elevated) 55%, transparent) 1px, transparent 1px)' }}>
                 {tracks.map((track, index) => {
                   if (track.type !== lane) return null;
                   const left = (Number(track.start) || 0) * pixelsPerSecond;

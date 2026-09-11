@@ -33,4 +33,36 @@ body,
 #root {
   background: var(--studio-bg);
   color: var(--studio-label);
+  scrollbar-color: var(--studio-fill) var(--studio-bg);
+  scrollbar-width: thin;
+}
+
+* {
+  scrollbar-color: var(--studio-fill) var(--studio-bg);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--studio-bg);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--studio-fill);
+  border-radius: 8px;
+  border: 2px solid var(--studio-bg);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--studio-muted);
+}
+
+.react-flow {
+  --xy-theme-color-primary: var(--studio-blue);
+  --xy-selection-background-color: color-mix(in srgb, var(--studio-yellow) 12%, transparent);
+  --xy-selection-border-color: var(--studio-yellow);
 }

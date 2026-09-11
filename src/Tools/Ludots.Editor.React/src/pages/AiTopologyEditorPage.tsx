@@ -10,7 +10,9 @@ import {
   useNodesState,
   type Connection,
   type Edge,
+  type EdgeChange,
   type Node,
+  type NodeChange,
   type OnConnect,
   type ReactFlowInstance,
   SelectionMode,
@@ -24,7 +26,7 @@ import {
   type HfsmTransitionEdgeData,
 } from './ai-topology-editor/hfsmTransitions';
 import { computeTopologyTreeLayout } from './ai-topology-editor/topologyLayout';
-import { diskSaveStatus, STUDIO_THEME } from './authoring-studio/authoringTheme';
+import { diskSaveStatus, STUDIO_CHROME, STUDIO_THEME } from './authoring-studio/authoringTheme';
 
 type TopologyKind = 'behavior-trees' | 'hfsm';
 
@@ -490,6 +492,75 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     [edges, isBt, nodes, selected, setNodes, syncItemsFromFlow],
   );
 
+  const handleNodesChange = useCallback(
+    (changes: NodeChange<Node<TopologyNodeData>>[]) => {
+      const removing = changes.filter((change) => change.type === 'remove').map((change) => change.id);
+      if (selected && removing.includes(selected.root)) {
+        setError('根节点不能删');
+        onNodesChange(changes.filter((change) => change.type !== 'remove' || change.id !== selected.root));
+        return;
+      }
+      onNodesChange(changes);
+      if (removing.length === 0) return;
+      const nextNodes = nodes.filter((node) => !removing.includes(node.id));
+      const nextEdges = edges.filter((edge) => !removing.includes(edge.source) && !removing.includes(edge.target));
+      setEdges(nextEdges);
+      syncItemsFromFlow(nextNodes, nextEdges);
+      if (selectedNodeId && removing.includes(selectedNodeId)) setSelectedNodeId('');
+      setError('');
+      setStatus(`已删 ${removing.length} 个节点`);
+    },
+    [edges, nodes, onNodesChange, selected, selectedNodeId, setEdges, syncItemsFromFlow],
+  );
+
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange<Edge<TopologyEdgeData>>[]) => {
+      onEdgesChange(changes);
+      if (!changes.some((change) => change.type === 'remove')) return;
+      const removed = new Set(changes.filter((change) => change.type === 'remove').map((change) => change.id));
+      const nextEdges = edges.filter((edge) => !removed.has(edge.id));
+      syncItemsFromFlow(nodes, nextEdges);
+      if (selectedEdgeId && removed.has(selectedEdgeId)) setSelectedEdgeId('');
+    },
+    [edges, nodes, onEdgesChange, selectedEdgeId, syncItemsFromFlow],
+  );
+
+  const removeSelectedNode = useCallback(() => {
+    if (!selected || !selectedNodeId) return;
+    if (selectedNodeId === selected.root) {
+      setError('根节点不能删');
+      return;
+    }
+    const nextNodes = nodes.filter((node) => node.id !== selectedNodeId);
+    const nextEdges = edges.filter((edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId);
+    setNodes(nextNodes);
+    setEdges(nextEdges);
+    syncItemsFromFlow(nextNodes, nextEdges);
+    setSelectedNodeId('');
+    setError('');
+    setStatus(`已删节点 ${selectedNodeId}`);
+  }, [edges, nodes, selected, selectedNodeId, setEdges, setNodes, syncItemsFromFlow]);
+
+  const removeSelectedEdge = useCallback(() => {
+    if (!selectedEdgeId) return;
+    const nextEdges = edges.filter((edge) => edge.id !== selectedEdgeId);
+    setEdges(nextEdges);
+    syncItemsFromFlow(nodes, nextEdges);
+    setSelectedEdgeId('');
+    setStatus('已删连线');
+  }, [edges, nodes, selectedEdgeId, setEdges, syncItemsFromFlow]);
+
+  const removeSelectedTopology = useCallback(() => {
+    if (!selected) return;
+    const next = items.filter((row) => row.id !== selected.id);
+    setItems(next);
+    const first = next[0] ?? null;
+    setSelectedId(first?.id ?? '');
+    applySelectionToFlow(first);
+    setError('');
+    setStatus(`已删 ${selected.id}（尚未写盘）`);
+  }, [applySelectionToFlow, items, selected]);
+
   const updateSelectedNode = useCallback(
     (patch: Record<string, unknown>) => {
       if (!selected || !selectedNodeId) return;
@@ -687,6 +758,14 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
           >
             + 新建拓扑
           </button>
+          <button
+            type="button"
+            disabled={!selected}
+            className={`w-full ${STUDIO_CHROME.btnDanger}`}
+            onClick={removeSelectedTopology}
+          >
+            删除当前拓扑
+          </button>
         </aside>
 
         <main className="relative col-span-7 min-h-0 border-r border-studio-elevated">
@@ -698,8 +777,8 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                 edges={edges}
                 nodeTypes={nodeTypes}
                 onInit={(instance) => { reactFlowRef.current = instance; }}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
+                onNodesChange={handleNodesChange}
+                onEdgesChange={handleEdgesChange}
                 onConnect={onConnect}
                 onNodeClick={(_, node) => {
                   setSelectedNodeId(node.id);
@@ -733,7 +812,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                 proOptions={{ hideAttribution: true }}
               >
                 <Background gap={18} color={STUDIO_THEME.fill} />
-                <Controls />
+                <Controls position="bottom-left" />
                 <MiniMap
                   pannable
                   zoomable
@@ -751,17 +830,17 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
               <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-studio-elevated bg-studio-bg/80 px-2 py-1 text-[10px] text-studio-muted">
                 中键平移 · 左键框选 · 右键添加节点 · 从节点下方拖线连接
               </div>
-              <div className="absolute bottom-3 left-3 z-10 flex gap-2">
+              <div className="absolute right-3 top-3 z-10 flex gap-2">
                 <button
                   type="button"
-                  className="rounded border border-studio-fill bg-studio-bg/90 px-2 py-1 text-xs text-studio-label hover:bg-studio-elevated"
+                  className={STUDIO_CHROME.btnGhost}
                   onClick={() => setPaletteOpen((v) => !v)}
                 >
                   添加节点
                 </button>
                 <button
                   type="button"
-                  className="rounded border border-studio-fill bg-studio-bg/90 px-2 py-1 text-xs text-studio-label hover:bg-studio-elevated"
+                  className={STUDIO_CHROME.btnGhost}
                   onClick={() => {
                     if (!selected) return;
                     const flow = isBt ? btToFlow(selected as BtTree) : hfsmToFlow(selected as HfsmMachine);
@@ -774,7 +853,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                 </button>
               </div>
               {paletteOpen ? (
-                <div className="absolute bottom-14 left-3 z-20 w-56 rounded border border-studio-fill bg-studio-bg p-2 shadow-xl">
+                <div className="absolute right-3 top-14 z-20 w-56 rounded border border-studio-fill bg-studio-bg p-2 shadow-xl">
                   <div className="mb-2 text-[10px] uppercase tracking-wide text-studio-muted">调色板</div>
                   {(isBt
                     ? ['Selector', 'Sequence', 'Action', 'Condition']
@@ -862,6 +941,9 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   组合节点：从下方手柄拖线到子节点。子序 = 连线顺序。
                 </div>
               )}
+              <button type="button" className={STUDIO_CHROME.btnDanger} onClick={removeSelectedNode}>
+                删除此节点
+              </button>
             </div>
           ) : null}
 
@@ -917,6 +999,9 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   打开叶子函数图
                 </button>
               ) : null}
+              <button type="button" className={STUDIO_CHROME.btnDanger} onClick={removeSelectedNode}>
+                删除此节点
+              </button>
             </div>
           ) : null}
 
@@ -960,6 +1045,9 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   onChange={(e) => updateSelectedTransition({ priority: Number.parseInt(e.target.value, 10) || 0 })}
                 />
               </label>
+              <button type="button" className={STUDIO_CHROME.btnDanger} onClick={removeSelectedEdge}>
+                删除此转移
+              </button>
             </div>
           ) : null}
 
