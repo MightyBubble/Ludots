@@ -16,6 +16,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Input;
 using Ludots.UI.Runtime;
@@ -117,6 +118,60 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
             Assert.That(state.MetricALabel, Is.EqualTo("Calls"));
             Assert.That(ReadPlainInt(state.MetricAValue), Is.GreaterThan(0));
         });
+    }
+
+    [Test]
+    public void GraphOpExtension_PlayerRescoresThreatUsingProviderModOp()
+    {
+        const string modId = "CapabilityStandardGraphOpExtensionShowcaseMod";
+        const string mapId = "capability_standard_graph_op_extension_showcase";
+        const string bindingName = "capability_standard_graph_op_extension_showcase";
+        const string presetId = "capability_standard_graph_op_extension_showcase_raylib";
+        string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
+
+        AssertRootShowcaseAssets(repoRoot, modId, mapId, bindingName, presetId,
+            "assets/GAS/graphs/capability_standard.graph_op_extension.score_threat.json");
+        AssertLauncherBinding(repoRoot, "capability_standard_graph_op_provider", "CapabilityStandardGraphOpProviderMod");
+
+        using var engine = CreateEngine(repoRoot, "CapabilityStandardGraphOpProviderMod", modId);
+        engine.LoadEntryMap(engine.MergedConfig.StartupMapId);
+        UIRoot uiRoot = RequireUiRoot(engine);
+        ExtensibleRuntimeShowcaseRuntime runtime = RequireRuntime(engine);
+        TickFrames(engine, 1);
+
+        AssertPanelAndButton(uiRoot, "capability-standard-graph-op-extension-panel", "capability-standard-graph-op-extension-rescore");
+        int graphId = GraphIdRegistry.GetId("Graph.CapabilityStandard.GraphOpExtension.ScoreThreat");
+        Assert.That(engine.GetService(CoreServiceKeys.GraphProgramRegistry)!.TryGetProgram(graphId, out _), Is.True);
+
+        ClickElement(uiRoot, "capability-standard-graph-op-extension-rescore");
+        TickFrames(engine, 1);
+        ExtensibleRuntimeShowcasePanelState state = runtime.CapturePanelState(engine);
+        Assert.Multiple(() =>
+        {
+            Assert.That(state.LastEvent, Does.Contain("Threat scores were recalculated"));
+            Assert.That(state.MetricALabel, Is.EqualTo("Left"));
+            Assert.That(state.MetricBLabel, Is.EqualTo("Right"));
+            Assert.That(state.MetricAValue, Is.EqualTo("35"));
+            Assert.That(state.MetricBValue, Is.EqualTo("96"));
+        });
+    }
+
+    [Test]
+    public void GraphOpExtension_ProviderOpRejectsTargetWithoutThreatScore()
+    {
+        const string modId = "CapabilityStandardGraphOpExtensionShowcaseMod";
+        const string mapId = "capability_standard_graph_op_extension_showcase";
+        string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
+
+        using var engine = CreateEngine(repoRoot, "CapabilityStandardGraphOpProviderMod", modId);
+        engine.LoadEntryMap(engine.MergedConfig.StartupMapId);
+        TickFrames(engine, 1);
+        Assert.That(engine.CurrentMapSession?.MapId.Value, Is.EqualTo(mapId));
+
+        Entity targetWithoutThreatScore = engine.World.Create();
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            ExecuteGraphOpExtensionScore(engine, targetWithoutThreatScore));
+        Assert.That(ex!.Message, Does.Contain("CapabilityStandardGraphOpThreatScore"));
     }
 
     [Test]
@@ -361,5 +416,30 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
         }
 
         Assert.Fail($"Launcher preset '{presetId}' is missing.");
+    }
+
+    private static float ExecuteGraphOpExtensionScore(GameEngine engine, Entity target)
+    {
+        int graphId = GraphIdRegistry.GetId("Graph.CapabilityStandard.GraphOpExtension.ScoreThreat");
+        var registry = engine.GetService(CoreServiceKeys.GraphProgramRegistry)
+            ?? throw new InvalidOperationException("GraphProgramRegistry service is missing.");
+        var handlers = engine.GetService(CoreServiceKeys.GasGraphOpHandlerTable)
+            ?? throw new InvalidOperationException("GasGraphOpHandlerTable service is missing.");
+        var api = engine.GetService(CoreServiceKeys.GasGraphRuntimeApi)
+            ?? throw new InvalidOperationException("GasGraphRuntimeApi service is missing.");
+        if (!registry.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
+        {
+            throw new InvalidOperationException("Graph op extension score graph is not registered.");
+        }
+
+        return GasGraphExecutor.ExecuteScore(
+            engine.World,
+            Entity.Null,
+            target,
+            IntVector2.Zero,
+            program,
+            api,
+            GraphKind.Score,
+            handlers);
     }
 }

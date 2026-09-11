@@ -115,6 +115,8 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardModExtensibleRuntimeShowcaseShared\CapabilityStandardModExtensibleRuntimeShowcaseShared.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardConfigShardsShowcaseMod\CapabilityStandardConfigShardsShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardEffectPresetTypeCodeShowcaseMod\CapabilityStandardEffectPresetTypeCodeShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpProviderMod\CapabilityStandardGraphOpProviderMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpExtensionShowcaseMod\CapabilityStandardGraphOpExtensionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPresenterBehaviorExtensionShowcaseMod\CapabilityStandardPresenterBehaviorExtensionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPresenterCommandExtensionShowcaseMod\CapabilityStandardPresenterCommandExtensionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTransportNetworkMod\CapabilityStandardTransportNetworkMod.csproj" />

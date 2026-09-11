@@ -66,6 +66,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             if (extensions == null) throw new ArgumentNullException(nameof(extensions));
             extensions.InstallHandlers(Handlers);
+            for (int opCode = GasGraphOpRegistry.FirstModOpCode; opCode < Handlers.Length; opCode++)
+            {
+                if (!extensions.TryGet(opCode, out GasGraphOpDefinition definition))
+                {
+                    continue;
+                }
+
+                _descriptions[opCode] = definition.Key;
+                _operationMetadata[opCode] = EffectOperationMetadata.Pure(definition.Key);
+            }
         }
 
         /// <summary>

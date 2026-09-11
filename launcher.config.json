@@ -377,6 +377,22 @@
       }
     },
     {
+      "name": "capability_standard_graph_op_extension_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpExtensionShowcaseMod",
+        "projectPath": "CapabilityStandardGraphOpExtensionShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_provider",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpProviderMod",
+        "projectPath": "CapabilityStandardGraphOpProviderMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_presenter_behavior_extension_showcase",
       "target": {
         "type": "path",
