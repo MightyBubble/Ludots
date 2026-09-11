@@ -2126,14 +2126,14 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       : 'rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800';
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-slate-950 text-slate-100">
+    <div className="flex h-full w-full flex-col bg-slate-950 text-slate-100">
       <header className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3">
         <div className="min-w-40">
           <div className="text-sm font-semibold text-white">{titles.title}</div>
           <div className="text-[10px] text-slate-500">{titles.subtitle}</div>
         </div>
         <Link to="/" className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800">
-          Map Editor
+          工作室
         </Link>
         <Link to={dialectPath('func')} className={dialectNavClass('func')}>
           Graph Editor

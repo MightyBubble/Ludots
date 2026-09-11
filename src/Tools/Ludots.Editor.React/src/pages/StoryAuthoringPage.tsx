@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { SequencerTimelineEditor } from './story/SequencerTimelineEditor';
 
 type CatalogInfo = {
@@ -69,6 +68,21 @@ const CATALOG_LABELS: Record<string, string> = {
 
 const FORM_CATALOGS = new Set(['lines', 'speakers', 'dialogues', 'sequences']);
 
+const DIALOGUE_CATALOGS = new Set(['lines', 'speakers', 'dialogues', 'text_tokens']);
+const TIMELINE_CATALOGS = new Set(['sequences']);
+
+export type StoryAuthoringTool = 'dialogue' | 'timeline';
+
+function catalogsForTool(tool: StoryAuthoringTool | undefined): Set<string> | null {
+  if (tool === 'dialogue') return DIALOGUE_CATALOGS;
+  if (tool === 'timeline') return TIMELINE_CATALOGS;
+  return null;
+}
+
+function defaultCatalogId(tool: StoryAuthoringTool | undefined): string {
+  return tool === 'timeline' ? 'sequences' : 'dialogues';
+}
+
 const fieldClass =
   'mt-1 w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-100';
 const labelClass = 'block text-xs text-zinc-400';
@@ -77,11 +91,11 @@ function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
-export const StoryAuthoringPage: React.FC = () => {
+export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ tool }) => {
   const [mods, setMods] = useState<ModInfo[]>([]);
   const [modId, setModId] = useState('NarrativeShowcaseMod');
   const [catalogs, setCatalogs] = useState<CatalogInfo[]>([]);
-  const [catalogId, setCatalogId] = useState('dialogues');
+  const [catalogId, setCatalogId] = useState(() => defaultCatalogId(tool));
   const [items, setItems] = useState<unknown[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [advancedJson, setAdvancedJson] = useState(false);
@@ -108,9 +122,11 @@ export const StoryAuthoringPage: React.FC = () => {
       setError(json.error ?? 'failed to list catalogs');
       return;
     }
-    setCatalogs(json.catalogs ?? []);
+    const listed: CatalogInfo[] = json.catalogs ?? [];
+    const allowed = catalogsForTool(tool);
+    setCatalogs(allowed ? listed.filter((c) => allowed.has(c.id)) : listed);
     setError('');
-  }, []);
+  }, [tool]);
 
   const loadCatalog = useCallback(async (targetMod: string, id: string) => {
     setStatus('加载中…');
@@ -128,6 +144,10 @@ export const StoryAuthoringPage: React.FC = () => {
     setError('');
     setStatus(`已加载 ${CATALOG_LABELS[id] ?? id}`);
   }, []);
+
+  useEffect(() => {
+    setCatalogId(defaultCatalogId(tool));
+  }, [tool]);
 
   useEffect(() => {
     void loadMods();
@@ -729,13 +749,18 @@ export const StoryAuthoringPage: React.FC = () => {
   })();
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 font-sans">
+    <div className="h-full overflow-auto bg-zinc-950 text-zinc-100 p-6 font-sans">
       <div className="mb-4 flex items-center gap-4 flex-wrap">
-        <Link to="/" className="text-emerald-400 hover:underline text-sm">
-          ← 编辑器
-        </Link>
-        <h1 className="text-xl text-amber-200">叙事配置</h1>
-        <span className="text-xs text-zinc-500">台词 / 对话树 / 演出序列用表单；换肤只动 panelTheme + CSS</span>
+        <h1 className="text-xl text-amber-200">
+          {tool === 'timeline' ? '时间轴' : tool === 'dialogue' ? '对话' : '叙事配置'}
+        </h1>
+        <span className="text-xs text-zinc-500">
+          {tool === 'timeline'
+            ? '演出序列：镜头 / 字幕 / 信号轨。拖块改时长，保存进 Sequencer/sequences.json。'
+            : tool === 'dialogue'
+              ? '台词、说话的人、对话树。条件和副作用在蓝图里。'
+              : '台词 / 对话树 / 演出序列用表单；换肤只动 panelTheme + CSS'}
+        </span>
       </div>
 
       <div className="grid grid-cols-12 gap-4">

@@ -9,8 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "check": "tsc -b --noEmit && npm run lint:graph-editor && npm run assert && node scripts/validate-panel-templates.mjs",
-    "lint:graph-editor": "eslint src/pages/GasGraphEditorPage.tsx src/pages/gas-graph-editor src/pages/AiTopologyEditorPage.tsx src/pages/ai-topology-editor scripts",
-    "assert": "node --experimental-strip-types scripts/assert-live-visual-debug.mts && node --experimental-strip-types scripts/assert-graph-annotations.mts && node --experimental-strip-types scripts/assert-ai-topology-editor.mts",
+    "lint:graph-editor": "eslint src/pages/GasGraphEditorPage.tsx src/pages/gas-graph-editor src/pages/AiTopologyEditorPage.tsx src/pages/ai-topology-editor src/pages/authoring-studio src/App.tsx scripts",
+    "assert": "node --experimental-strip-types scripts/assert-live-visual-debug.mts && node --experimental-strip-types scripts/assert-graph-annotations.mts && node --experimental-strip-types scripts/assert-ai-topology-editor.mts && node --experimental-strip-types scripts/assert-authoring-studio.mts",
     "validate:panel-templates": "node scripts/validate-panel-templates.mjs"
   },
   "dependencies": {

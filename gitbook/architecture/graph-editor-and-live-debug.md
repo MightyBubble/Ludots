@@ -30,12 +30,22 @@ React /gas-graphs  ──/api──▶ Editor.Bridge :5299  ──descriptor─�
 
 ### 3.1 启动编辑器
 
+一键（正门是作者工作室，不是地图）：
+
+```bash
+./scripts/run-authoring-studio.sh
+```
+
+Windows：`.\scripts\run-authoring-studio.cmd`。合同见 [作者工作室](authoring-studio.md)。
+
+拆开手动起：
+
 ```bash
 dotnet run --project src/Tools/Ludots.Editor.Bridge -c Release
 cd src/Tools/Ludots.Editor.React && npm ci && npm run dev
 ```
 
-打开 <http://localhost:5173/gas-graphs>。
+打开 <http://localhost:5173/> 进工作室，或 <http://localhost:5173/blueprint>（旧址 `/gas-graphs` 仍认）。
 
 | 字段 | 示例 |
 |------|------|

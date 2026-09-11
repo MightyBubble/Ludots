@@ -1806,25 +1806,11 @@ export const Toolbar: React.FC = () => {
                     <div className="text-[10px] text-slate-500">Navigation authoring</div>
                     <div className="pointer-events-auto mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
                         <Link
-                            to="/gas-graphs"
-                            className="text-[10px] text-sky-300 underline hover:text-sky-200"
-                            title="Open Func / Event Graph editor"
+                            to="/"
+                            className="text-[10px] text-amber-300 underline hover:text-amber-200"
+                            title="Open authoring studio"
                         >
-                            Graph
-                        </Link>
-                        <Link
-                            to="/bt-editor"
-                            className="text-[10px] text-violet-300 underline hover:text-violet-200"
-                            title="Open Behavior Tree editor"
-                        >
-                            BT
-                        </Link>
-                        <Link
-                            to="/fsm-editor"
-                            className="text-[10px] text-fuchsia-300 underline hover:text-fuchsia-200"
-                            title="Open FSM editor"
-                        >
-                            FSM
+                            工作室
                         </Link>
                     </div>
                 </div>

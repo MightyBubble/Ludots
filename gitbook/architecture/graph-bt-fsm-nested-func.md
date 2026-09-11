@@ -8,7 +8,9 @@
 |--------|------|----------|
 | **Behavior Tree Editor** | `/bt-editor` | 改 `AI/behavior_trees.json`：Sequence / Selector，以及 Action / Condition 叶子（挂 ActionLib） |
 | **FSM Editor** | `/fsm-editor` | 改 `AI/hfsm.json`：Compound / Leaf 状态与转移；生命周期 / 条件挂 ActionLib |
-| **Graph Editor** | `/gas-graphs` | 改 Func / Event / Effect / Query 等函数图；**不**再当 BT/FSM 外壳编辑器 |
+| **Graph Editor** | `/blueprint`（旧址 `/gas-graphs`） | 改 Func / Event / Effect / Query 等函数图；**不**再当 BT/FSM 外壳编辑器 |
+
+一键入口见 [作者工作室](authoring-studio.md)。
 
 叶子上的 Action、Condition、状态体，各自是一张 **Func Graph**（今日落地为 `Script`，经 `action_lib.json` 绑定）。在 Graph Editor 里改逻辑；在 BT / FSM 拓扑编辑器里双击叶子，跳进对应函数图。
 

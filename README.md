@@ -51,10 +51,11 @@ The whole repo targets `net9.0` (`global.json` pins SDK 9.0.x). Weak-network con
 Scripts are located in the `scripts/` directory:
 
 ```bash
-# Run the Visual Editor (Web + Bridge)
-.\scripts\run-editor.cmd
+# 作者工作室（蓝图 / 行为树 / 状态机 / 对话 / 时间轴）
+./scripts/run-authoring-studio.sh          # Linux / macOS
+.\scripts\run-authoring-studio.cmd         # Windows
 
-# Run the Mod Launcher
+# 运行 Mod 启动器
 .\scripts\run-mod-launcher.cmd
 ```
 
