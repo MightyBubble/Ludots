@@ -1,24 +1,24 @@
 /**
- * 作者工作室画布皮：苹果 HIG Dark Mode 的银底 + 红 / 黄 / 蓝。
- * 色值是 HIG 文档给设计参考的 Dark 系统色（systemGray 阶、systemRed/Yellow/Blue），
- * 不是另一套品牌彩虹。语义固定：蓝=结构/数据/主操作，黄=控制流/时间，红=事件/动作/危险。
+ * 工作室画布皮。色值只在 index.css 的 --studio-*。
+ * 灰阶是 shadcn zinc dark，语义色是同一张表的 chart-1 / chart-3 / chart-5。
+ * 蓝=结构/数据/主操作，黄=控制流/时间，红=事件/结束/危险。
  */
 export type StudioAccent = 'blue' | 'yellow' | 'red';
 
 export const STUDIO_THEME = {
-  bg: '#1c1c1e',
-  surface: '#2c2c2e',
-  elevated: '#3a3a3c',
-  fill: '#48484a',
-  label: '#f5f5f7',
-  secondary: 'rgba(235, 235, 245, 0.6)',
-  muted: '#8e8e93',
-  separator: 'rgba(84, 84, 88, 0.65)',
-  silver: '#8e8e93',
-  red: '#ff453a',
-  yellow: '#ffd60a',
-  blue: '#0a84ff',
-  onYellow: '#1c1c1e',
+  bg: 'var(--studio-bg)',
+  surface: 'var(--studio-surface)',
+  elevated: 'var(--studio-elevated)',
+  fill: 'var(--studio-fill)',
+  label: 'var(--studio-label)',
+  secondary: 'var(--studio-secondary)',
+  muted: 'var(--studio-muted)',
+  separator: 'var(--studio-separator)',
+  silver: 'var(--studio-muted)',
+  red: 'var(--studio-red)',
+  yellow: 'var(--studio-yellow)',
+  blue: 'var(--studio-blue)',
+  onYellow: 'var(--studio-bg)',
 } as const;
 
 export const STUDIO_ROLE = {
@@ -33,7 +33,7 @@ export const STUDIO_CHROME = {
     'mt-1 w-full rounded-md border border-studio-elevated bg-studio-bg px-2 py-1.5 text-sm text-studio-label',
   label: 'block text-xs text-studio-muted',
   btnPrimary:
-    'rounded-md bg-studio-blue px-3 py-1.5 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-50',
+    'rounded-md bg-studio-blue px-3 py-1.5 text-sm font-semibold text-studio-label hover:brightness-110 disabled:opacity-50',
   btnGhost:
     'rounded-md border border-studio-elevated bg-studio-surface px-3 py-1.5 text-sm text-studio-label hover:bg-studio-elevated',
   btnDanger: 'rounded-md border border-studio-red/50 px-3 py-1.5 text-sm text-studio-red hover:bg-studio-red/10',

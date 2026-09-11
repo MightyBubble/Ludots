@@ -1,7 +1,7 @@
 import { MarkerType, type Edge, type Node } from '@xyflow/react';
 
-const EDGE_BLUE = '#0a84ff';
-const EDGE_YELLOW = '#ffd60a';
+const EDGE_STRUCTURE = 'var(--studio-blue)';
+const EDGE_CHOICE = 'var(--studio-yellow)';
 
 const GAP_X = 360;
 const GAP_Y = 176;
@@ -262,7 +262,7 @@ export function makeDialogueEdge(args: {
   kind: DialogueEdgeKind;
   animated?: boolean;
 }): Edge {
-  const stroke = args.kind === 'choice' ? EDGE_YELLOW : EDGE_BLUE;
+  const stroke = args.kind === 'choice' ? EDGE_CHOICE : EDGE_STRUCTURE;
   return {
     id: args.id,
     type: 'dialogueFlow',

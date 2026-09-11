@@ -1,21 +1,23 @@
 .dialogue-nc-node {
   overflow: visible;
-  border: 1px solid #3a3a3c;
+  border: 1px solid var(--studio-elevated);
   border-radius: 4px;
-  background: #2c2c2e;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.38);
-  color: #f5f5f7;
+  background: var(--studio-surface);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--studio-bg) 70%, transparent);
+  color: var(--studio-label);
   font-size: 12px;
   line-height: 1.35;
 }
 
 .dialogue-nc-node.selected {
-  border-color: #0a84ff;
-  box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.7), 0 8px 18px rgba(0, 0, 0, 0.38);
+  border-color: var(--studio-blue);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--studio-blue) 70%, transparent),
+    0 8px 18px color-mix(in srgb, var(--studio-bg) 70%, transparent);
 }
 
 .dialogue-nc-node.missing {
-  border-color: #ff453a;
+  border-color: var(--studio-red);
 }
 
 .dialogue-nc-head {
@@ -30,24 +32,24 @@
 }
 
 .dialogue-nc-say .dialogue-nc-head {
-  background: #0a84ff;
-  color: #fff;
+  background: var(--studio-blue);
+  color: var(--studio-label);
 }
 
 .dialogue-nc-choice .dialogue-nc-head {
-  background: #ffd60a;
-  color: #1c1c1e;
+  background: var(--studio-yellow);
+  color: var(--studio-bg);
 }
 
 .dialogue-nc-say.finish .dialogue-nc-head {
-  background: #ff453a;
-  color: #fff;
+  background: var(--studio-red);
+  color: var(--studio-label);
 }
 
 .dialogue-nc-badge {
   padding: 0 5px;
   border-radius: 3px;
-  background: rgba(0, 0, 0, 0.22);
+  background: color-mix(in srgb, var(--studio-bg) 22%, transparent);
   font-size: 9px;
   font-weight: 650;
   letter-spacing: 0.04em;
@@ -58,14 +60,14 @@
 }
 
 .dialogue-nc-id {
-  color: #8e8e93;
+  color: var(--studio-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
 }
 
 .dialogue-nc-speaker {
   margin-top: 2px;
-  color: #0a84ff;
+  color: var(--studio-blue);
   font-size: 11px;
 }
 
@@ -73,7 +75,7 @@
   display: -webkit-box;
   margin-top: 4px;
   overflow: hidden;
-  color: rgba(235, 235, 245, 0.78);
+  color: var(--studio-secondary);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -82,13 +84,13 @@
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
-  border-top: 1px solid #3a3a3c;
+  border-top: 1px solid var(--studio-elevated);
 }
 
 .dialogue-nc-choice-cell {
   min-width: 0;
   padding: 8px 6px 14px;
-  border-right: 1px solid #3a3a3c;
+  border-right: 1px solid var(--studio-elevated);
   text-align: center;
 }
 
@@ -99,7 +101,7 @@
 .dialogue-nc-choice-label {
   display: -webkit-box;
   overflow: hidden;
-  color: #f5f5f7;
+  color: var(--studio-label);
   font-size: 11px;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -107,14 +109,14 @@
 
 .dialogue-nc-choice-meta {
   margin-top: 4px;
-  color: #ffd60a;
+  color: var(--studio-yellow);
   font-size: 9px;
 }
 
 .dialogue-nc-node .react-flow__handle {
   width: 10px;
   height: 10px;
-  border: 2px solid #1c1c1e;
+  border: 2px solid var(--studio-bg);
 }
 
 .react-flow__edge-path {
@@ -122,6 +124,6 @@
 }
 
 .react-flow__connection-line {
-  stroke: #8e8e93;
+  stroke: var(--studio-muted);
   stroke-width: 2;
 }

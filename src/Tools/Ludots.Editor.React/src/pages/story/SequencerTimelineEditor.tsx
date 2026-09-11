@@ -131,7 +131,7 @@ export const SequencerTimelineEditor: React.FC<Props> = ({
                         width: Math.max(28, w),
                         background: LANE_FILL[lane],
                         borderColor: LANE_FILL[lane],
-                        color: lane === 'Subtitle' ? STUDIO_THEME.bg : '#fff',
+                        color: lane === 'Subtitle' ? STUDIO_THEME.onYellow : STUDIO_THEME.label,
                       }}
                       onPointerDown={(e) => {
                         e.preventDefault();

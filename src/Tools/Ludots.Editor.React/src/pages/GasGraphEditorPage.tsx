@@ -1898,7 +1898,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
         ...node,
         style: {
           ...node.style,
-          outline: '2px solid #fbbf24',
+          outline: `2px solid ${GAS_GRAPH_THEME.execLive}`,
           outlineOffset: '2px',
         },
       } as Node<GasNodeData>;
@@ -2344,11 +2344,11 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                   zoomable
                   bgColor={GAS_GRAPH_THEME.minimapBg}
                   maskColor={GAS_GRAPH_THEME.minimapMask}
-                  nodeStrokeColor="#71717a"
+                  nodeStrokeColor={GAS_GRAPH_THEME.nodeMuted}
                   nodeColor={(node) => {
                     if (node.data.role === 'event-entry') return GAS_GRAPH_THEME.eventAccent;
                     if (node.data.op === 'SwitchInt' || node.data.op === 'FsmState') return GAS_GRAPH_THEME.execLiveHot;
-                    if (sugars[node.data.op as string]?.childArms || node.data.op === 'BtDecorator') return '#a78bfa';
+                    if (sugars[node.data.op as string]?.childArms || node.data.op === 'BtDecorator') return GAS_GRAPH_THEME.eventAccent;
                     if (isPureValueOp(String(node.data.op ?? ''))) return GAS_GRAPH_THEME.valueAccent;
                     return GAS_GRAPH_THEME.dataLive;
                   }}
@@ -2420,7 +2420,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                   ) : null}
                   <div className="mt-1 max-h-16 overflow-auto rounded border border-slate-800 bg-slate-950 p-1.5 font-mono text-[10px]">
                     {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-16).map((event) => (
-                      <div key={event.sequence} className={event.nodeId ? 'text-cyan-200' : 'text-slate-400'}>
+                      <div key={event.sequence} className={event.nodeId ? 'text-studio-blue' : 'text-slate-400'}>
                         #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
                         {event.controlPort ? ` →${event.controlPort}` : ''}
                         {event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}
@@ -2981,7 +2981,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
             <div className="text-[10px] text-slate-400">{debugStatus}</div>
             <div className="max-h-28 overflow-auto rounded border border-slate-800 bg-slate-950 p-2 font-mono text-[10px]">
               {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-24).map((event) => (
-                <div key={event.sequence} className={event.nodeId ? 'text-cyan-200' : 'text-slate-400'}>
+                <div key={event.sequence} className={event.nodeId ? 'text-studio-blue' : 'text-slate-400'}>
                   #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
                   {event.controlPort ? ` →${event.controlPort}` : ''}
                   {event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}

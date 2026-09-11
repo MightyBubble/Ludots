@@ -8,16 +8,19 @@
   font-weight: 400;
   color-scheme: dark;
 
-  --studio-bg: #1c1c1e;
-  --studio-surface: #2c2c2e;
-  --studio-elevated: #3a3a3c;
-  --studio-fill: #48484a;
-  --studio-secondary: rgba(235, 235, 245, 0.6);
-  --studio-muted: #8e8e93;
-  --studio-separator: rgba(84, 84, 88, 0.65);
-  --studio-red: #ff453a;
-  --studio-yellow: #ffd60a;
-  --studio-blue: #0a84ff;
+  /* shadcn/ui zinc dark + chart（Vercel AI Elements / assistant-ui 共用这张表）。
+     灰阶取 Tailwind zinc；语义色取 chart-1 / chart-3 / chart-5。禁止在 TS 再抄一份。 */
+  --studio-bg: #09090b;
+  --studio-surface: #18181b;
+  --studio-elevated: #27272a;
+  --studio-fill: #3f3f46;
+  --studio-label: #fafafa;
+  --studio-secondary: #a1a1aa;
+  --studio-muted: #71717a;
+  --studio-separator: #27272a;
+  --studio-blue: hsl(220 70% 50%);
+  --studio-yellow: hsl(30 80% 55%);
+  --studio-red: hsl(340 75% 55%);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
