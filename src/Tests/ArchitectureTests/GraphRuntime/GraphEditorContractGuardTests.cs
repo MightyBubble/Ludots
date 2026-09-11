@@ -240,6 +240,22 @@ namespace Ludots.Tests.Architecture.GraphRuntime
                 Regex.Matches(source, @"GraphBehaviorDefinitionLoader\.ValidateHfsms\(items, actions\)").Count,
                 Is.EqualTo(1),
                 "The HFSM PUT path must reject data that the production loader cannot compile.");
+            Assert.That(
+                source,
+                Does.Not.Contain("if (!hasBt && !hasHfsm)"),
+                "The topology catalog must list every discovered mod, including overlays that do not exist yet.");
+            Assert.That(
+                source,
+                Does.Contain("ReadAiTopologyFile("),
+                "Missing Mod overlays must read as an empty list, not 404.");
+            Assert.That(
+                source,
+                Does.Contain("TryCollectMergedActionLibRows("),
+                "ActionLib lookup must merge Core with the selected Mod overlay.");
+            Assert.That(
+                Regex.Matches(source, @"TryBuildAiTopologyActionCatalog\(launcher, resolvedSource").Count,
+                Is.EqualTo(2),
+                "Both topology PUT paths must validate against the selected source's merged ActionLib.");
         }
 
         [Test]
