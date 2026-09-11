@@ -505,6 +505,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_op_extension_showcase_raylib",
+      "name": "Capability Standard Graph Op Extension Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_extension_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_presenter_behavior_extension_showcase_raylib",
       "name": "Capability Standard Presenter Behavior Extension Raylib",
       "selectors": [

@@ -10,11 +10,11 @@
 |------|----------|--------------|
 | 配置拆分 | `CapabilityStandardConfigShardsShowcaseMod` | 点击按钮后，面板显示来自独立 ability/effect shard 的技能被加载并触发 |
 | Effect preset type 代码扩展 | `CapabilityStandardEffectPresetTypeCodeShowcaseMod` | 点击按钮后，Heat Mark 被正式执行，面板显示调用次数 |
+| Graph op 扩展复用 | `CapabilityStandardGraphOpExtensionShowcaseMod` | 点击按钮后，左右目标重新评分，分数来自 provider mod 的 graph op |
 | Presenter behavior 扩展 | `CapabilityStandardPresenterBehaviorExtensionShowcaseMod` | 进入地图后 CloudDrift 持续 tick，点击按钮时面板显示行为仍在运行 |
 | Presenter command 扩展 | `CapabilityStandardPresenterCommandExtensionShowcaseMod` | 点击按钮发送信号，面板显示信号被处理的次数 |
 
-> Graph op 扩展（`RegisterGraphOp` + JSON 图引用 mod 算子）尚未迁移到 L1 control-flow 编译 SSOT（issue #861 之后的作者形态），
-> 对应 showcase 暂缓合入；hub 级注册 API 与执行侧 handler table 支持已在 Core 中保留。
+`CapabilityStandardGraphOpProviderMod` 不是 root showcase。它只负责提供 `CapabilityStandardGraphOpProviderMod.QueryThreat` 和目标威胁分数契约，供 Graph Op Extension root mod 复用，因此没有独立 Raylib preset。
 
 ## 结构
 
@@ -24,6 +24,7 @@ mods/showcases/capability_standard/
   CapabilityStandardConfigShardsShowcaseMod/
   CapabilityStandardEffectPresetTypeCodeShowcaseMod/
   CapabilityStandardGraphOpProviderMod/
+  CapabilityStandardGraphOpExtensionShowcaseMod/
   CapabilityStandardPresenterBehaviorExtensionShowcaseMod/
   CapabilityStandardPresenterCommandExtensionShowcaseMod/
 ```
@@ -45,6 +46,7 @@ mods/showcases/capability_standard/
 ```powershell
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_config_shards_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_effect_preset_type_code_showcase_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_op_extension_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_presenter_behavior_extension_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_presenter_command_extension_showcase_raylib'
 ```
@@ -83,6 +85,6 @@ Feature: 玩家通过五个独立入口看见扩展运行时能力
 
   Scenario: 玩家逐个启动五个案例
     Given 我从启动器选择 capability standard showcase 案例
-    When 我分别进入四张 showcase 地图
+    When 我分别进入五张 showcase 地图
     Then 每个地图都会显示自己的面板和主按钮
     And 每个面板都只展示当前案例的一种玩法结果

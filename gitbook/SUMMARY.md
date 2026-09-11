@@ -73,6 +73,7 @@
   - [Mod Extensible Runtime Showcases](architecture/mod-extensible-runtime-showcases/README.md)
     - [Config Shards](architecture/mod-extensible-runtime-showcases/config-shards.md)
     - [Effect Preset Type Code](architecture/mod-extensible-runtime-showcases/effect-preset-type-code.md)
+    - [Graph Op Extension](architecture/mod-extensible-runtime-showcases/graph-op-extension.md)
     - [Presenter Behavior Extension](architecture/mod-extensible-runtime-showcases/presenter-behavior-extension.md)
     - [Presenter Command Extension](architecture/mod-extensible-runtime-showcases/presenter-command-extension.md)
   - [GAS 分层架构](architecture/gas-layered-architecture.md)
