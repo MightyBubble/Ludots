@@ -1,0 +1,127 @@
+.dialogue-nc-node {
+  overflow: visible;
+  border: 1px solid #3a3a3c;
+  border-radius: 4px;
+  background: #2c2c2e;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.38);
+  color: #f5f5f7;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.dialogue-nc-node.selected {
+  border-color: #0a84ff;
+  box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.7), 0 8px 18px rgba(0, 0, 0, 0.38);
+}
+
+.dialogue-nc-node.missing {
+  border-color: #ff453a;
+}
+
+.dialogue-nc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.dialogue-nc-say .dialogue-nc-head {
+  background: #0a84ff;
+  color: #fff;
+}
+
+.dialogue-nc-choice .dialogue-nc-head {
+  background: #ffd60a;
+  color: #1c1c1e;
+}
+
+.dialogue-nc-say.finish .dialogue-nc-head {
+  background: #ff453a;
+  color: #fff;
+}
+
+.dialogue-nc-badge {
+  padding: 0 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+
+.dialogue-nc-body {
+  padding: 8px 8px 10px;
+}
+
+.dialogue-nc-id {
+  color: #8e8e93;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+
+.dialogue-nc-speaker {
+  margin-top: 2px;
+  color: #0a84ff;
+  font-size: 11px;
+}
+
+.dialogue-nc-line {
+  display: -webkit-box;
+  margin-top: 4px;
+  overflow: hidden;
+  color: rgba(235, 235, 245, 0.78);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.dialogue-nc-choice-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  border-top: 1px solid #3a3a3c;
+}
+
+.dialogue-nc-choice-cell {
+  min-width: 0;
+  padding: 8px 6px 14px;
+  border-right: 1px solid #3a3a3c;
+  text-align: center;
+}
+
+.dialogue-nc-choice-cell:last-child {
+  border-right: none;
+}
+
+.dialogue-nc-choice-label {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #f5f5f7;
+  font-size: 11px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.dialogue-nc-choice-meta {
+  margin-top: 4px;
+  color: #ffd60a;
+  font-size: 9px;
+}
+
+.dialogue-nc-node .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #1c1c1e;
+}
+
+.react-flow__edge-path {
+  stroke-linecap: round;
+}
+
+.react-flow__connection-line {
+  stroke: #8e8e93;
+  stroke-width: 2;
+}

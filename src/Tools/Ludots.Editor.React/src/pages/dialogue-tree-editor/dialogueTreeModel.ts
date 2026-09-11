@@ -1,53 +1,16 @@
-import type { Edge, Node } from '@xyflow/react';
+import { MarkerType, type Edge, type Node } from '@xyflow/react';
 
-const GAP_X = 300;
-const GAP_Y = 190;
+const EDGE_BLUE = '#0a84ff';
+const EDGE_YELLOW = '#ffd60a';
+
+const GAP_X = 360;
+const GAP_Y = 176;
 const ORIGIN_X = 48;
 const ORIGIN_Y = 40;
 
-function layoutDialogueNodes(
-  nodes: Node[],
-  edges: Edge[],
-  rootId: string,
-): Record<string, { x: number; y: number }> {
-  const children = new Map<string, string[]>();
-  for (const edge of edges) {
-    if (!edge.source || !edge.target) continue;
-    const list = children.get(edge.source) ?? [];
-    if (!list.includes(edge.target)) list.push(edge.target);
-    children.set(edge.source, list);
-  }
-
-  const positions: Record<string, { x: number; y: number }> = {};
-  const visiting = new Set<string>();
-  let leafCursor = 0;
-
-  const place = (id: string, depth: number): number => {
-    if (positions[id]) return positions[id].x;
-    visiting.add(id);
-    const kids = (children.get(id) ?? []).filter((child) => !visiting.has(child) && child !== id);
-    if (kids.length === 0) {
-      const x = ORIGIN_X + leafCursor * GAP_X;
-      positions[id] = { x, y: ORIGIN_Y + depth * GAP_Y };
-      leafCursor += 1;
-      return x;
-    }
-    const childXs = kids.map((child) => place(child, depth + 1));
-    const x = (Math.min(...childXs) + Math.max(...childXs)) / 2;
-    positions[id] = { x, y: ORIGIN_Y + depth * GAP_Y };
-    return x;
-  };
-
-  if (nodes.some((node) => node.id === rootId)) {
-    place(rootId, 0);
-  }
-  for (const node of nodes) {
-    if (positions[node.id]) continue;
-    positions[node.id] = { x: ORIGIN_X + leafCursor * GAP_X, y: ORIGIN_Y };
-    leafCursor += 1;
-  }
-  return positions;
-}
+export const CHOICE_HUB_SUFFIX = '__mc';
+export const NEXT_HANDLE = 'next';
+export const IN_HANDLE = 'in';
 
 export type DialogueChoice = {
   id: string;
@@ -76,18 +39,51 @@ export type DialogueTree = {
   nodes: DialogueNode[];
 };
 
-export type DialogueStatementData = {
+export type DialogueSayData = {
+  kind: 'say';
   nodeId: string;
   lineId: string;
   linePreview?: string;
   speakerId?: string;
   isEntry: boolean;
-  choiceIds: string[];
+  isFinish: boolean;
+  hasChoices: boolean;
   missingLine: boolean;
 };
 
-export const NEXT_HANDLE = 'next';
-export const IN_HANDLE = 'in';
+export type DialogueChoicePort = {
+  id: string;
+  lineId: string;
+  preview?: string;
+  hasCondition: boolean;
+};
+
+export type DialogueChoiceHubData = {
+  kind: 'choiceHub';
+  ownerId: string;
+  choices: DialogueChoicePort[];
+};
+
+export type DialogueCanvasData = DialogueSayData | DialogueChoiceHubData;
+export type DialogueCanvasNode = Node<DialogueCanvasData>;
+
+export type DialogueEdgeKind = 'next' | 'choice' | 'hub';
+
+export type LinePreview = { id: string; speakerId?: string; textToken?: string };
+
+export function choiceHubId(statementId: string): string {
+  return `${statementId}${CHOICE_HUB_SUFFIX}`;
+}
+
+export function parseChoiceHubOwner(id: string | null | undefined): string | null {
+  if (!id || !id.endsWith(CHOICE_HUB_SUFFIX)) return null;
+  const owner = id.slice(0, -CHOICE_HUB_SUFFIX.length);
+  return owner.length > 0 ? owner : null;
+}
+
+export function isChoiceHubId(id: string | null | undefined): boolean {
+  return parseChoiceHubOwner(id) !== null;
+}
 
 export function choiceHandle(choiceId: string): string {
   return `choice:${choiceId}`;
@@ -99,7 +95,13 @@ export function parseChoiceHandle(handle: string | null | undefined): string | n
   return id.length > 0 ? id : null;
 }
 
-export type LinePreview = { id: string; speakerId?: string; textToken?: string };
+export function canvasOwnerId(node: DialogueCanvasNode): string {
+  return node.data.kind === 'choiceHub' ? node.data.ownerId : node.data.nodeId;
+}
+
+export function hubWidth(choiceCount: number): number {
+  return Math.max(248, choiceCount * 108);
+}
 
 function previewOf(lineId: string, lines: readonly LinePreview[]): string | undefined {
   const row = lines.find((line) => line.id === lineId);
@@ -107,72 +109,196 @@ function previewOf(lineId: string, lines: readonly LinePreview[]): string | unde
   return row.textToken || lineId;
 }
 
+function layoutDialogueNodes(
+  nodes: DialogueCanvasNode[],
+  edges: Edge[],
+  rootId: string,
+): Record<string, { x: number; y: number }> {
+  const children = new Map<string, string[]>();
+  for (const edge of edges) {
+    if (!edge.source || !edge.target) continue;
+    const list = children.get(edge.source) ?? [];
+    if (!list.includes(edge.target)) list.push(edge.target);
+    children.set(edge.source, list);
+  }
+
+  const positions: Record<string, { x: number; y: number }> = {};
+  const visiting = new Set<string>();
+  let leafCursor = 0;
+
+  const place = (id: string, depth: number): number => {
+    if (positions[id]) return positions[id].x;
+    visiting.add(id);
+    const kids = (children.get(id) ?? []).filter(
+      (child) => !visiting.has(child) && !positions[child] && child !== id,
+    );
+    if (kids.length === 0) {
+      const x = ORIGIN_X + leafCursor * GAP_X;
+      positions[id] = { x, y: ORIGIN_Y + depth * GAP_Y };
+      leafCursor += 1;
+      return x;
+    }
+    const childXs = kids.map((child) => place(child, depth + 1));
+    const x = (Math.min(...childXs) + Math.max(...childXs)) / 2;
+    positions[id] = { x, y: ORIGIN_Y + depth * GAP_Y };
+    return x;
+  };
+
+  if (nodes.some((node) => node.id === rootId)) {
+    place(rootId, 0);
+  }
+  for (const node of nodes) {
+    if (positions[node.id]) continue;
+    positions[node.id] = { x: ORIGIN_X + leafCursor * GAP_X, y: ORIGIN_Y };
+    leafCursor += 1;
+  }
+  return positions;
+}
+
+export function makeDialogueEdge(args: {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle: string;
+  targetHandle?: string;
+  kind: DialogueEdgeKind;
+  animated?: boolean;
+}): Edge {
+  const stroke = args.kind === 'choice' ? EDGE_YELLOW : EDGE_BLUE;
+  return {
+    id: args.id,
+    type: 'dialogueFlow',
+    source: args.source,
+    target: args.target,
+    sourceHandle: args.sourceHandle,
+    targetHandle: args.targetHandle ?? IN_HANDLE,
+    data: { kind: args.kind },
+    animated: Boolean(args.animated),
+    style: { stroke, strokeWidth: args.kind === 'hub' ? 2.25 : 2.75 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 14,
+      height: 14,
+      color: stroke,
+    },
+  };
+}
+
 export function dialogueToFlow(
   tree: DialogueTree,
   lines: readonly LinePreview[] = [],
-): { nodes: Node<DialogueStatementData>[]; edges: Edge[] } {
-  const nodes: Node<DialogueStatementData>[] = tree.nodes.map((node) => {
+): { nodes: DialogueCanvasNode[]; edges: Edge[] } {
+  const nodes: DialogueCanvasNode[] = [];
+  const edges: Edge[] = [];
+
+  for (const node of tree.nodes) {
     const line = lines.find((row) => row.id === node.lineId);
-    return {
+    const choices = node.choices ?? [];
+    const hasChoices = choices.length > 0;
+    const isFinish = !hasChoices && !node.nextNode;
+    nodes.push({
       id: node.id,
-      type: 'dialogueStatement',
+      type: 'dialogueSay',
       position: { x: 0, y: 0 },
+      style: { width: 248 },
       data: {
+        kind: 'say',
         nodeId: node.id,
         lineId: node.lineId,
         linePreview: previewOf(node.lineId, lines),
         speakerId: line?.speakerId,
         isEntry: node.id === tree.entryNode,
-        choiceIds: (node.choices ?? []).map((choice) => choice.id),
+        isFinish,
+        hasChoices,
         missingLine: !node.lineId,
       },
-    };
-  });
+    });
 
-  const edges: Edge[] = [];
-  for (const node of tree.nodes) {
-    if (node.nextNode) {
-      edges.push({
-        id: `next:${node.id}->${node.nextNode}`,
+    if (!hasChoices) {
+      if (node.nextNode) {
+        edges.push(
+          makeDialogueEdge({
+            id: `next:${node.id}->${node.nextNode}`,
+            source: node.id,
+            target: node.nextNode,
+            sourceHandle: NEXT_HANDLE,
+            kind: 'next',
+          }),
+        );
+      }
+      continue;
+    }
+
+    const hubId = choiceHubId(node.id);
+    nodes.push({
+      id: hubId,
+      type: 'dialogueChoice',
+      position: { x: 0, y: 0 },
+      deletable: false,
+      style: { width: hubWidth(choices.length) },
+      data: {
+        kind: 'choiceHub',
+        ownerId: node.id,
+        choices: choices.map((choice) => ({
+          id: choice.id,
+          lineId: choice.lineId,
+          preview: previewOf(choice.lineId, lines),
+          hasCondition: Boolean(choice.conditionGraphId),
+        })),
+      },
+    });
+    edges.push(
+      makeDialogueEdge({
+        id: `hub:${node.id}->${hubId}`,
         source: node.id,
-        target: node.nextNode,
+        target: hubId,
         sourceHandle: NEXT_HANDLE,
-        targetHandle: IN_HANDLE,
-        data: { kind: 'next' },
-        style: { stroke: '#0a84ff', strokeWidth: 2 },
-        label: '接下句',
-        labelStyle: { fill: '#8e8e93', fontSize: 10 },
-        labelBgStyle: { fill: '#2c2c2e', fillOpacity: 0.9 },
-      });
-    }
-    for (const choice of node.choices ?? []) {
+        kind: 'hub',
+      }),
+    );
+    for (const choice of choices) {
       if (!choice.nextNode) continue;
-      edges.push({
-        id: `choice:${node.id}:${choice.id}->${choice.nextNode}`,
-        source: node.id,
-        target: choice.nextNode,
-        sourceHandle: choiceHandle(choice.id),
-        targetHandle: IN_HANDLE,
-        data: { kind: 'choice', choiceId: choice.id, conditionGraphId: choice.conditionGraphId },
-        style: { stroke: '#ffd60a', strokeWidth: 2 },
-        animated: Boolean(choice.conditionGraphId),
-        label: choice.conditionGraphId ? `${choice.id} · 条件` : choice.id,
-        labelStyle: { fill: '#ffd60a', fontSize: 10 },
-        labelBgStyle: { fill: '#1c1c1e', fillOpacity: 0.9 },
-      });
+      edges.push(
+        makeDialogueEdge({
+          id: `choice:${node.id}:${choice.id}->${choice.nextNode}`,
+          source: hubId,
+          target: choice.nextNode,
+          sourceHandle: choiceHandle(choice.id),
+          kind: 'choice',
+          animated: Boolean(choice.conditionGraphId),
+        }),
+      );
     }
   }
 
-  const positions = layoutDialogueNodes(nodes, edges, tree.entryNode);
-  for (const node of nodes) {
-    node.position = positions[node.id] ?? node.position;
-  }
+  applyCenteredLayout(nodes, layoutDialogueNodes(nodes, edges, tree.entryNode));
   return { nodes, edges };
+}
+
+function nodeWidth(node: DialogueCanvasNode): number {
+  return typeof node.style?.width === 'number' ? node.style.width : 248;
+}
+
+function applyCenteredLayout(
+  nodes: DialogueCanvasNode[],
+  centers: Record<string, { x: number; y: number }>,
+): void {
+  if (nodes.length === 0) return;
+  for (const node of nodes) {
+    const center = centers[node.id] ?? node.position;
+    node.position = { x: center.x - nodeWidth(node) / 2, y: center.y };
+  }
+  const minX = Math.min(...nodes.map((node) => node.position.x));
+  const dx = ORIGIN_X - minX;
+  if (dx === 0) return;
+  for (const node of nodes) {
+    node.position = { x: node.position.x + dx, y: node.position.y };
+  }
 }
 
 export function applyFlowToDialogue(
   tree: DialogueTree,
-  flowNodes: Node<DialogueStatementData>[],
+  flowNodes: Node[],
   edges: Edge[],
 ): DialogueTree {
   const prev = new Map(tree.nodes.map((node) => [node.id, node]));
@@ -181,31 +307,46 @@ export function applyFlowToDialogue(
 
   for (const edge of edges) {
     if (!edge.source || !edge.target) continue;
+    const kind = (edge.data as { kind?: DialogueEdgeKind } | undefined)?.kind;
+    if (kind === 'hub') continue;
+
+    const owner = parseChoiceHubOwner(edge.source);
     const choiceId = parseChoiceHandle(edge.sourceHandle);
-    if (choiceId) {
-      choiceNext.set(`${edge.source}::${choiceId}`, edge.target);
+    if (owner && choiceId) {
+      choiceNext.set(`${owner}::${choiceId}`, edge.target);
       continue;
     }
-    if (edge.sourceHandle === NEXT_HANDLE || edge.data?.kind === 'next') {
+    if (isChoiceHubId(edge.target)) continue;
+    if (edge.sourceHandle === NEXT_HANDLE || kind === 'next') {
       nextBySource.set(edge.source, edge.target);
     }
   }
 
-  const nodes: DialogueNode[] = flowNodes.map((flowNode) => {
-    const prior = prev.get(flowNode.id);
-    const choices = (prior?.choices ?? []).map((choice) => {
-      const next = choiceNext.get(`${flowNode.id}::${choice.id}`);
+  const sayNodes = flowNodes.filter((flowNode) => flowNode.type === 'dialogueSay' && prev.has(flowNode.id));
+  const orderedIds = sayNodes.map((flowNode) => flowNode.id);
+  for (const node of tree.nodes) {
+    if (!orderedIds.includes(node.id)) orderedIds.push(node.id);
+  }
+
+  const nodes: DialogueNode[] = orderedIds.map((id) => {
+    const prior = prev.get(id);
+    if (!prior) {
+      return { id, lineId: '', presentationProfile: 'story.dialogue_overlay', choices: [] };
+    }
+    const choices = (prior.choices ?? []).map((choice) => {
+      const next = choiceNext.get(`${id}::${choice.id}`);
       return next ? { ...choice, nextNode: next } : { ...choice, nextNode: undefined };
     });
-    const nextNode = nextBySource.get(flowNode.id);
+    const hasChoices = choices.length > 0;
+    const nextNode = hasChoices ? undefined : nextBySource.get(id);
     return {
       ...prior,
-      id: flowNode.id,
-      lineId: prior?.lineId ?? flowNode.data.lineId ?? '',
-      presentationProfile: prior?.presentationProfile,
-      cameraId: prior?.cameraId,
-      autoAdvanceSeconds: prior?.autoAdvanceSeconds,
-      onEnterActionGraphId: prior?.onEnterActionGraphId,
+      id,
+      lineId: prior.lineId,
+      presentationProfile: prior.presentationProfile,
+      cameraId: prior.cameraId,
+      autoAdvanceSeconds: prior.autoAdvanceSeconds,
+      onEnterActionGraphId: prior.onEnterActionGraphId,
       nextNode,
       choices,
     };
@@ -237,7 +378,7 @@ export function emptyDialogue(id: string): DialogueTree {
 
 export function uniqueDialogueNodeId(existing: Set<string>): string {
   let i = 1;
-  while (existing.has(`say_${i}`)) i += 1;
+  while (existing.has(`say_${i}`) || existing.has(choiceHubId(`say_${i}`))) i += 1;
   return `say_${i}`;
 }
 
@@ -255,6 +396,9 @@ export function validateDialogueTree(tree: DialogueTree): string | null {
   const choiceIds = new Set<string>();
   for (const node of tree.nodes) {
     if (!node.id.trim()) return '有节点没有 id。';
+    if (node.id.endsWith(CHOICE_HUB_SUFFIX)) {
+      return `节点 id 不能以 ${CHOICE_HUB_SUFFIX} 结尾，那是选项节点用的。`;
+    }
     if (ids.has(node.id)) return `节点 id 重复：${node.id}`;
     ids.add(node.id);
     if (!node.lineId.trim()) return `节点 ${node.id} 缺台词 lineId。游戏加载会失败。`;

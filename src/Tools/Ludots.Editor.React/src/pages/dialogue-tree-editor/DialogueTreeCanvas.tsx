@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Background,
+  ConnectionLineType,
   Controls,
   MiniMap,
   ReactFlow,
@@ -8,28 +9,36 @@ import {
   useNodesState,
   type Connection,
   type Edge,
-  type Node,
   type OnConnect,
   type ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import './dialogueTree.css';
 import { STUDIO_CHROME, STUDIO_THEME } from '../authoring-studio/authoringTheme';
-import { DialogueStatementNode } from './DialogueStatementNode';
+import { DialogueChoiceNode } from './DialogueChoiceNode';
+import { DialogueFlowEdge } from './DialogueFlowEdge';
+import { DialogueSayNode } from './DialogueSayNode';
 import {
   applyFlowToDialogue,
+  canvasOwnerId,
   choiceHandle,
+  choiceHubId,
   dialogueToFlow,
+  isChoiceHubId,
+  makeDialogueEdge,
   NEXT_HANDLE,
   uniqueChoiceId,
   uniqueDialogueNodeId,
+  type DialogueCanvasNode,
   type DialogueChoice,
+  type DialogueEdgeKind,
   type DialogueNode,
-  type DialogueStatementData,
   type DialogueTree,
   type LinePreview,
 } from './dialogueTreeModel';
 
-const nodeTypes = { dialogueStatement: DialogueStatementNode };
+const nodeTypes = { dialogueSay: DialogueSayNode, dialogueChoice: DialogueChoiceNode };
+const edgeTypes = { dialogueFlow: DialogueFlowEdge };
 
 type Props = {
   tree: DialogueTree;
@@ -44,7 +53,7 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
   const treeRef = useRef(tree);
   treeRef.current = tree;
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<DialogueStatementData>>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<DialogueCanvasNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   const topologyKey = useMemo(
@@ -58,17 +67,25 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
   useEffect(() => {
     const flow = dialogueToFlow(tree, lines);
     setNodes((prev) => {
+      const prevIds = prev.map((node) => node.id).join('|');
+      const nextIds = flow.nodes.map((node) => node.id).join('|');
+      const sameTopology = prevIds === nextIds;
       const placed = new Map(prev.map((node) => [node.id, node.position]));
       return flow.nodes.map((node) => ({
         ...node,
-        position: placed.get(node.id) ?? node.position,
+        position: sameTopology ? (placed.get(node.id) ?? node.position) : node.position,
       }));
     });
     setEdges(flow.edges);
   }, [topologyKey, lines, tree, setEdges, setNodes]);
 
+  const paintedNodes = useMemo(
+    () => nodes.map((node) => ({ ...node, selected: canvasOwnerId(node) === selectedNodeId })),
+    [nodes, selectedNodeId],
+  );
+
   useEffect(() => {
-    requestAnimationFrame(() => reactFlowRef.current?.fitView({ padding: 0.2 }));
+    requestAnimationFrame(() => reactFlowRef.current?.fitView({ padding: 0.18 }));
   }, [tree.id]);
 
   const selectedNode = useMemo(
@@ -77,7 +94,7 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
   );
 
   const commit = useCallback(
-    (nextNodes: Node<DialogueStatementData>[], nextEdges: Edge[], base = treeRef.current) => {
+    (nextNodes: DialogueCanvasNode[], nextEdges: Edge[], base = treeRef.current) => {
       onChange(applyFlowToDialogue(base, nextNodes, nextEdges));
     },
     [onChange],
@@ -86,17 +103,31 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target || connection.source === connection.target) return;
+      if (isChoiceHubId(connection.target)) return;
+      const sourceIsHub = isChoiceHubId(connection.source);
+      const sourceNode = treeRef.current.nodes.find((node) => node.id === connection.source);
+      if (!sourceIsHub && (sourceNode?.choices?.length ?? 0) > 0) {
+        if (connection.target !== choiceHubId(connection.source)) return;
+      }
+      const kind: DialogueEdgeKind = sourceIsHub
+        ? 'choice'
+        : connection.target === choiceHubId(connection.source)
+          ? 'hub'
+          : 'next';
       const nextEdges = edges.filter((edge) => {
         if (edge.source !== connection.source) return true;
         return edge.sourceHandle !== connection.sourceHandle;
       });
-      nextEdges.push({
-        id: `${connection.sourceHandle ?? NEXT_HANDLE}:${connection.source}->${connection.target}`,
-        source: connection.source,
-        target: connection.target,
-        sourceHandle: connection.sourceHandle,
-        targetHandle: connection.targetHandle,
-      });
+      nextEdges.push(
+        makeDialogueEdge({
+          id: `${connection.sourceHandle ?? NEXT_HANDLE}:${connection.source}->${connection.target}`,
+          source: connection.source,
+          target: connection.target,
+          sourceHandle: connection.sourceHandle ?? NEXT_HANDLE,
+          targetHandle: connection.targetHandle ?? undefined,
+          kind,
+        }),
+      );
       setEdges(nextEdges);
       commit(nodes, nextEdges);
     },
@@ -128,53 +159,53 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
     if (!selectedNode) return;
     const used = new Set(tree.nodes.flatMap((node) => (node.choices ?? []).map((choice) => choice.id)));
     const choice: DialogueChoice = { id: uniqueChoiceId(used), lineId: '' };
-    patchNode({ ...selectedNode, choices: [...(selectedNode.choices ?? []), choice] });
+    patchNode({ ...selectedNode, choices: [...(selectedNode.choices ?? []), choice], nextNode: undefined });
   };
 
   const relayout = () => {
     const flow = dialogueToFlow(tree, lines);
     setNodes(flow.nodes);
     setEdges(flow.edges);
-    requestAnimationFrame(() => reactFlowRef.current?.fitView({ padding: 0.2 }));
+    requestAnimationFrame(() => reactFlowRef.current?.fitView({ padding: 0.18 }));
   };
 
   return (
     <div className="grid h-full min-h-[32rem] grid-cols-12 gap-0 overflow-hidden rounded-lg border border-studio-elevated">
       <div className="relative col-span-8 bg-studio-bg">
         <ReactFlow
-          nodes={nodes}
+          nodes={paintedNodes}
           edges={edges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          defaultEdgeOptions={{ type: 'dialogueFlow' }}
+          connectionLineType={ConnectionLineType.Bezier}
+          connectionLineStyle={{ stroke: STUDIO_THEME.silver, strokeWidth: 2 }}
           onInit={(instance) => {
             reactFlowRef.current = instance;
           }}
           onNodesChange={onNodesChange}
-          onEdgesChange={(changes) => {
-            onEdgesChange(changes);
-          }}
+          onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onEdgesDelete={(deleted) => {
             const ids = new Set(deleted.map((edge) => edge.id));
             const nextEdges = edges.filter((edge) => !ids.has(edge.id));
             commit(nodes, nextEdges);
           }}
-          onNodeClick={(_, node) => onSelectNode(node.id)}
+          onNodeClick={(_, node) => onSelectNode(canvasOwnerId(node as DialogueCanvasNode))}
           onPaneClick={() => onSelectNode('')}
           fitView
-          minZoom={0.15}
+          minZoom={0.12}
           maxZoom={1.8}
           proOptions={{ hideAttribution: true }}
         >
-          <Background gap={20} color={STUDIO_THEME.fill} />
+          <Background gap={22} color={STUDIO_THEME.fill} />
           <Controls />
           <MiniMap
             pannable
             zoomable
             bgColor={STUDIO_THEME.bg}
             maskColor="rgba(28,28,30,0.45)"
-            nodeColor={(node) =>
-              (node.data as DialogueStatementData).isEntry ? STUDIO_THEME.blue : STUDIO_THEME.silver
-            }
+            nodeColor={(node) => (node.type === 'dialogueChoice' ? STUDIO_THEME.yellow : STUDIO_THEME.blue)}
           />
         </ReactFlow>
         <div className="absolute bottom-3 left-3 z-10 flex gap-2">
@@ -233,7 +264,9 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
             }}
           />
         ) : (
-          <p className="text-xs text-studio-muted">点画布上的说话节点。黄线是选项，蓝线是无选项时的下一句。条件和副作用仍挂蓝图 id。</p>
+          <p className="text-xs text-studio-muted">
+            蓝头是说话，黄头是选项。线从下口接到上口，线上不写字。黄线是选项，蓝线是接下句。
+          </p>
         )}
       </aside>
     </div>
@@ -311,7 +344,7 @@ function StatementInspector({
         />
       </label>
       <div className="flex items-center justify-between">
-        <div className="text-xs text-studio-muted">选项（黄端口）</div>
+        <div className="text-xs text-studio-muted">选项（黄头节点下口）</div>
         <button type="button" className={STUDIO_CHROME.btnGhost} onClick={onAddChoice}>
           + 加选项
         </button>
@@ -373,7 +406,7 @@ function StatementInspector({
               }}
             />
           </label>
-          <p className="text-[10px] text-studio-muted">下一句用画布从「{choiceHandle(choice.id)}」端口拉线。</p>
+          <p className="text-[10px] text-studio-muted">下一句从选项节点「{choiceHandle(choice.id)}」口往下拉。</p>
         </div>
       ))}
       <button type="button" className={STUDIO_CHROME.btnDanger} onClick={onRemove}>

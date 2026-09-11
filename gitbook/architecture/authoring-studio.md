@@ -74,16 +74,17 @@ Windows：
 
 旧书签 `/gas-graphs`、`/story-authoring` 仍打开对应房间。五个房间共用同一套银底：蓝是结构/数据/主按钮，黄是控制流和时间，红是事件、动作和危险。色值按苹果 HIG Dark 的系统红/黄/蓝和灰阶来，不另开一套彩虹。
 
-### 3.3 对话树（Paradox Notion NodeCanvas 对照）
+### 3.3 对话树（对照 FlowCanvas / NodeCanvas）
 
-对话房是节点画布，不是长表单。合同仍是 `Dialogue/dialogues.json`，不另造一份树格式。
+对话房是节点画布，不是长表单。合同仍是 `Dialogue/dialogues.json`，不另造一份树格式。节点样子对照 NodeCanvas 对话树：说话是一张，选项是另一张；线对照 FlowCanvas：从下口接到上口，线上不写字。
 
-| 在 NodeCanvas 里 | 在这间房里 |
+| 在 NodeCanvas / FlowCanvas 里 | 在这间房里 |
 |------------------|------------|
-| Say / Statement | 说话节点。台词走 `lineId`，说话人在 `Story/lines.json` |
-| Multiple Choice | 同一节点右侧的黄端口。选项仍写在该节点的 `choices[]` |
-| 无选项 Continue | 节点下方蓝端口 = `nextNode` |
-| Finish | 没有出边 |
+| Say | 蓝头说话节点。台词走 `lineId`，说话人在 `Story/lines.json` |
+| Multiple Choice | 单独的黄头节点，挂在该句下面。每个选项一个底边口。磁盘上仍写在该句的 `choices[]`，不另存一份 |
+| Continue | 说话节点下口。没选项时接下句（`nextNode`）；有选项时接到黄头节点，这条线不写进 JSON |
+| Finish | 没有出边，头是红的 |
+| 线 | 下口到上口的弯线，约 3px，无标签。黄线是选项，蓝线是接下句 |
 | Condition / Action | 不另做节点。条件/副作用是选项或进句上的蓝图 id |
 | SubDialogue / Probability | 运行时没有这两类节点，画布也不发明 |
 
@@ -116,7 +117,7 @@ Windows：
 
 1. 我在仓库根跑 `./scripts/run-authoring-studio.sh`。过一会儿出现工作室窗口，五张卡片。
 2. 我点「蓝图」，画布打开。顶栏仍能切到行为树。
-3. 我点「对话」，看见说话节点连成的树。黄线是选项，没有演出轨道当主目录。
+3. 我点「对话」，看见蓝头说话节点和黄头选项节点连成的树。线上没有字。没有演出轨道当主目录。
 4. 我点「时间轴」，只看到演出序列和轨道。
 5. 我保存对话后，状态栏写出文件路径，并写明要重开游戏。
 6. 桥没起来时，顶栏是红的「桥没连上」，首页也写明要用那条启动命令。
@@ -156,8 +157,9 @@ Feature: 作者一键进工作室
   Scenario: 对话是树
     Given 我在工作室
     When 我打开「对话」并选中一条对话
-    Then 我看见说话节点画布
-    And 选项是从节点拉出的黄线
+    Then 我看见蓝头的说话节点
+    And 有选项的句子下面另有一张黄头选项节点
+    And 选项从黄头下边拉出黄线，线上没有字
     And 我打不开这页上的演出轨道当主目录
 
   Scenario: 时间轴是另一间房
