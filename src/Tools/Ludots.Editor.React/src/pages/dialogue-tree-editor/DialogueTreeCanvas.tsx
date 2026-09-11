@@ -194,21 +194,23 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
           onNodeClick={(_, node) => onSelectNode(canvasOwnerId(node as DialogueCanvasNode))}
           onPaneClick={() => onSelectNode('')}
           fitView
+          fitViewOptions={{ padding: 0.22 }}
           minZoom={0.12}
           maxZoom={1.8}
           proOptions={{ hideAttribution: true }}
         >
           <Background gap={22} color={STUDIO_THEME.fill} />
-          <Controls />
+          <Controls position="top-left" />
           <MiniMap
             pannable
             zoomable
+            position="bottom-right"
             bgColor={STUDIO_THEME.bg}
             maskColor="rgba(28,28,30,0.45)"
             nodeColor={(node) => (node.type === 'dialogueChoice' ? STUDIO_THEME.yellow : STUDIO_THEME.blue)}
           />
         </ReactFlow>
-        <div className="absolute bottom-3 left-3 z-10 flex gap-2">
+        <div className="absolute right-3 top-3 z-10 flex gap-2">
           <button type="button" className={STUDIO_CHROME.btnGhost} onClick={addStatement}>
             加一句
           </button>
