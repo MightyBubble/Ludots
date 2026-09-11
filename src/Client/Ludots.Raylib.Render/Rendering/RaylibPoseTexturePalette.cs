@@ -6,10 +6,10 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.Raylib.Render
 {
     /// <summary>
-    /// 姿势纹理蒙皮的 GPU 资源管理（#1395）：骨骼调色板（RGBA32F）与实例表（RGBA32F）两张纹理。
-    /// 调色板按 BoneSlotsPerRow 分页：宽固定 BoneSlotsPerRow*4 texel，Y = poseRow*槽行数 + 槽行，
+    /// 姿势纹理蒙皮的 GPU 资源管理：骨骼调色板（RGBA32F）与实例表（RGBA32F）两张纹理。
+    /// 调色板按 BoneSlotsPerRow 分页：宽固定 BoneSlotsPerRow*3 texel，Y = poseRow*槽行数 + 槽行，
     /// 槽位容量不再受单行纹理宽（GL 3.3 MAX_TEXTURE_SIZE=2048 最低保证）限制，只受总面积约束。
-    /// 实例表宽 1024，每实例 2 texel；槽位容量按模型全部 mesh 的 boneCount 累计动态扩容。
+    /// 实例表宽 1024，每实例 1 texel；槽位容量按模型全部 mesh 的 boneCount 累计定容。
     /// 纹理创建经 LoadTextureFromImage（format=10 即 R32G32B32A32）；更新经 UpdateTextureRec 脏矩形。
     /// POINT 采样 + 无 mipmap（浮点纹理禁 mipmap）。
     /// </summary>
@@ -17,12 +17,12 @@ namespace Ludots.Raylib.Render
     {
         public const int MaxBoneCount = RaylibGpuSkinnedModelCache.MaxBones; // 单 mesh 骨骼上限 128
         public const int MaxBoneSlotCapacity = 2048;                         // 全模型累计槽位硬上限（分页后受总面积约束，256 槽/页 × 8 页）
-        public const int BoneSlotsPerRow = 256;                              // 每槽行容纳的骨位数（宽 = 256*4 = 1024 texel，适配 GL 3.3 纹理宽保证）
+        public const int BoneSlotsPerRow = 256;                              // 每槽行容纳的骨位数（宽 = 256*3 = 768 texel，适配 GL 3.3 纹理宽保证）
         public const int InstanceTableWidth = 1024;
-        public const int TexelsPerInstance = 2;
-        public const int InstancesPerRow = InstanceTableWidth / TexelsPerInstance; // 512
+        public const int TexelsPerInstance = 1;
+        public const int InstancesPerRow = InstanceTableWidth;
         private const int PixelFormatR32G32B32A32 = 10;
-        private const int TexelsPerBoneSlot = 4;
+        internal const int TexelsPerBoneSlot = 3;
 
         private Texture2D _bonePalette;
         private Texture2D _instanceTable;
@@ -39,12 +39,19 @@ namespace Ludots.Raylib.Render
         public int PaletteWidthTexels => BoneSlotsPerRow * TexelsPerBoneSlot;
         public int SlotRowsPerPose => _slotRowsPerPose;
 
-        public RaylibPoseTexturePalette(int initialPoseRows = 64, int initialInstances = 4096)
+        public RaylibPoseTexturePalette(int poseRows, int instances, int boneSlots)
         {
-            _boneSlotCapacity = MaxBoneCount * 2;
+            if (poseRows <= 0) throw new ArgumentOutOfRangeException(nameof(poseRows));
+            if (instances <= 0) throw new ArgumentOutOfRangeException(nameof(instances));
+            if (boneSlots <= 0 || boneSlots > MaxBoneSlotCapacity)
+            {
+                throw new ArgumentOutOfRangeException(nameof(boneSlots));
+            }
+
+            _boneSlotCapacity = boneSlots;
             _slotRowsPerPose = SlabRowsFor(_boneSlotCapacity);
-            _poseRowCapacity = Math.Max(16, initialPoseRows);
-            _instanceCapacity = Math.Max(1024, initialInstances);
+            _poseRowCapacity = poseRows;
+            _instanceCapacity = instances;
             _paletteStaging = new float[PaletteWidthTexels * _poseRowCapacity * _slotRowsPerPose * 4]; // RGBA per texel
             _instanceStaging = new float[InstanceTableWidth * InstanceTableHeight(_instanceCapacity) * 4];
 
@@ -57,72 +64,93 @@ namespace Ludots.Raylib.Render
             return Math.Max(1, (boneSlotCapacity + BoneSlotsPerRow - 1) / BoneSlotsPerRow);
         }
 
-        /// <summary>扩容骨骼槽位（多 mesh 模型的累计 boneCount 超过当前容量时）。
-        /// 重建纹理会丢既有行内容——必须在帧内任何行上传之前一次性定容（与 EnsurePoseRowCapacity 同款约束）。</summary>
         public void EnsureBoneSlotCapacity(int minSlots)
         {
-            if (minSlots <= _boneSlotCapacity)
-            {
-                return;
-            }
-
-            if (minSlots > MaxBoneSlotCapacity)
+            if (minSlots > _boneSlotCapacity)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibPoseTexturePalette)} requested bone slot capacity {minSlots} exceeds hard cap {MaxBoneSlotCapacity}.");
+                    $"{nameof(RaylibPoseTexturePalette)} requires {minSlots} bone slots, configured capacity is {_boneSlotCapacity}.");
             }
-
-            int newCapacity = Math.Max(minSlots, _boneSlotCapacity * 2);
-            _slotRowsPerPose = SlabRowsFor(newCapacity);
-            Array.Resize(ref _paletteStaging, PaletteWidthTexels * _poseRowCapacity * _slotRowsPerPose * 4);
-            RaylibNativeResources.UnloadTexture(_bonePalette);
-            _bonePalette = CreateFloatTexture(PaletteWidthTexels, _poseRowCapacity * _slotRowsPerPose);
-            _boneSlotCapacity = newCapacity;
         }
 
         /// <summary>
-        /// 把一个骨骼矩阵（raylib native RaylibMatrix）写入调色板 staging 的指定槽位。
-        /// texel 布局必须与 raylib 自身的骨骼矩阵上传语义逐位一致（#1395 排障结论）：
-        /// rlSetUniformMatrices 走 glUniformMatrix4fv(transpose=true)，故 GLSL 的
-        /// mat4 第 k 列 = RaylibMatrix 字段序的第 k 组 4 个分量，即
-        /// texel0=(m0,m1,m2,m3), texel1=(m4,m5,m6,m7), texel2=(m8,m9,m10,m11), texel3=(m3..m15)。
-        /// 按"内存连续序"复制反而得到转置（w 分量被 t·v 污染，透视除法融毁几何）。
+        /// 把一个仿射骨骼矩阵写入调色板 staging 的指定槽位。
+        /// RaylibMatrix 的 GLSL 列为 (m0,m1,m2,m3)、(m4,m5,m6,m7)、
+        /// (m8,m9,m10,m11)、(m12,m13,m14,m15)。仿射矩阵省略固定的末行 (0,0,0,1)，
+        /// 三个 texel 的 w 分量保存平移列 xyz。
         /// </summary>
         public void WriteBoneMatrix(int poseRow, int boneSlot, in RaylibMatrix matrix)
         {
             int slabRow = boneSlot / BoneSlotsPerRow;
             int slotInRow = boneSlot - slabRow * BoneSlotsPerRow;
             int baseIdx = ((poseRow * _slotRowsPerPose + slabRow) * PaletteWidthTexels + slotInRow * TexelsPerBoneSlot) * 4;
-            _paletteStaging[baseIdx + 0] = matrix.m0;
-            _paletteStaging[baseIdx + 1] = matrix.m1;
-            _paletteStaging[baseIdx + 2] = matrix.m2;
-            _paletteStaging[baseIdx + 3] = matrix.m3;
-            _paletteStaging[baseIdx + 4] = matrix.m4;
-            _paletteStaging[baseIdx + 5] = matrix.m5;
-            _paletteStaging[baseIdx + 6] = matrix.m6;
-            _paletteStaging[baseIdx + 7] = matrix.m7;
-            _paletteStaging[baseIdx + 8] = matrix.m8;
-            _paletteStaging[baseIdx + 9] = matrix.m9;
-            _paletteStaging[baseIdx + 10] = matrix.m10;
-            _paletteStaging[baseIdx + 11] = matrix.m11;
-            _paletteStaging[baseIdx + 12] = matrix.m12;
-            _paletteStaging[baseIdx + 13] = matrix.m13;
-            _paletteStaging[baseIdx + 14] = matrix.m14;
-            _paletteStaging[baseIdx + 15] = matrix.m15;
+            PackAffineBoneMatrix(in matrix, _paletteStaging.AsSpan(baseIdx, TexelsPerBoneSlot * 4));
         }
 
         /// <summary>
-        /// 写入实例表（每实例 2 texel）：texelA = (poseRow, tint.rgb)，texelB = (tint.a, 0, 0, 0)。
-        /// 不与相邻实例共享 texel——借用"下一 texel"会被下一个实例的 poseRow 覆盖（#1395 排障结论）。
+        /// 写入实例表：一个 texel = (poseRow, RGB24, alpha8, 0)。
+        /// RGB24 的整数范围可由 RGBA32F 分量精确表示，颜色通道按 UNORM8 量化。
         /// </summary>
         public void WriteInstance(int globalInstance, int poseRow, float r, float g, float b, float a)
         {
             int baseIdx = globalInstance * TexelsPerInstance * 4;
-            _instanceStaging[baseIdx + 0] = poseRow;
-            _instanceStaging[baseIdx + 1] = r;
-            _instanceStaging[baseIdx + 2] = g;
-            _instanceStaging[baseIdx + 3] = b;
-            _instanceStaging[baseIdx + 4] = a;
+            PackInstance(poseRow, r, g, b, a, _instanceStaging.AsSpan(baseIdx, 4));
+        }
+
+        internal static void PackAffineBoneMatrix(in RaylibMatrix matrix, Span<float> destination)
+        {
+            if (destination.Length < TexelsPerBoneSlot * 4)
+            {
+                throw new ArgumentException("Affine bone matrix destination requires 12 floats.", nameof(destination));
+            }
+            if (matrix.m3 != 0f || matrix.m7 != 0f || matrix.m11 != 0f || matrix.m15 != 1f)
+            {
+                throw new InvalidOperationException("GPU-skinned pose palette requires an affine RaylibMatrix with final row (0, 0, 0, 1).");
+            }
+
+            destination[0] = matrix.m0;
+            destination[1] = matrix.m1;
+            destination[2] = matrix.m2;
+            destination[3] = matrix.m12;
+            destination[4] = matrix.m4;
+            destination[5] = matrix.m5;
+            destination[6] = matrix.m6;
+            destination[7] = matrix.m13;
+            destination[8] = matrix.m8;
+            destination[9] = matrix.m9;
+            destination[10] = matrix.m10;
+            destination[11] = matrix.m14;
+        }
+
+        internal static void PackInstance(int poseRow, float r, float g, float b, float a, Span<float> destination)
+        {
+            if (poseRow < 0 || poseRow > 16_777_215)
+            {
+                throw new ArgumentOutOfRangeException(nameof(poseRow), "Pose row must be exactly representable in an RGBA32F channel.");
+            }
+            if (destination.Length < 4)
+            {
+                throw new ArgumentException("Instance destination requires 4 floats.", nameof(destination));
+            }
+
+            int red = QuantizeUnorm8(r, nameof(r));
+            int green = QuantizeUnorm8(g, nameof(g));
+            int blue = QuantizeUnorm8(b, nameof(b));
+            int alpha = QuantizeUnorm8(a, nameof(a));
+            destination[0] = poseRow;
+            destination[1] = red | (green << 8) | (blue << 16);
+            destination[2] = alpha / 255f;
+            destination[3] = 0f;
+        }
+
+        private static int QuantizeUnorm8(float value, string parameterName)
+        {
+            if (!float.IsFinite(value))
+            {
+                throw new ArgumentOutOfRangeException(parameterName, "Instance color channels must be finite.");
+            }
+
+            return (int)MathF.Round(Math.Clamp(value, 0f, 1f) * 255f, MidpointRounding.AwayFromZero);
         }
 
         /// <summary>姿势行容量前置保障。容量判定必须先于本帧任何调色板行上传：
@@ -131,7 +159,8 @@ namespace Ludots.Raylib.Render
         {
             if (minRows > _poseRowCapacity)
             {
-                ResizePalette(minRows);
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPoseTexturePalette)} requires {minRows} pose rows, configured capacity is {_poseRowCapacity}.");
             }
         }
 
@@ -161,11 +190,10 @@ namespace Ludots.Raylib.Render
 
         public void EnsureInstanceCapacity(int instanceCount)
         {
-            int neededHeight = InstanceTableHeight(instanceCount);
-            int currentHeight = InstanceTableHeight(_instanceCapacity);
-            if (neededHeight > currentHeight)
+            if (instanceCount > _instanceCapacity)
             {
-                ResizeInstanceTable(neededHeight);
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPoseTexturePalette)} requires {instanceCount} instances, configured capacity is {_instanceCapacity}.");
             }
         }
 
@@ -204,23 +232,5 @@ namespace Ludots.Raylib.Render
             return texture;
         }
 
-        private void ResizePalette(int minRows)
-        {
-            int newCapacity = Math.Max(minRows, _poseRowCapacity * 2);
-            Array.Resize(ref _paletteStaging, PaletteWidthTexels * newCapacity * _slotRowsPerPose * 4);
-            RaylibNativeResources.UnloadTexture(_bonePalette);
-            _bonePalette = CreateFloatTexture(PaletteWidthTexels, newCapacity * _slotRowsPerPose);
-            _poseRowCapacity = newCapacity;
-        }
-
-        private void ResizeInstanceTable(int minHeight)
-        {
-            int newInstanceCapacity = Math.Max(minHeight * InstanceTableWidth, _instanceCapacity * 2);
-            int newHeight = InstanceTableHeight(newInstanceCapacity);
-            Array.Resize(ref _instanceStaging, InstanceTableWidth * newHeight * 4);
-            RaylibNativeResources.UnloadTexture(_instanceTable);
-            _instanceTable = CreateFloatTexture(InstanceTableWidth, newHeight);
-            _instanceCapacity = newInstanceCapacity;
-        }
     }
 }

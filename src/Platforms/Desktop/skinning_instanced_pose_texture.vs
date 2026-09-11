@@ -1,11 +1,11 @@
 #version 330
 
-// 姿势纹理蒙皮（#1395）：骨骼矩阵经 RGBA32F 调色板纹理按 (poseRow, boneSlot) texelFetch，
+// 姿势纹理蒙皮：骨骼矩阵经 RGBA32F 调色板纹理按 (poseRow, boneSlot) texelFetch，
 // 姿势行与 RGBA tint 经实例表纹理按 gl_InstanceID 寻址——每 draw 覆盖全部姿势与颜色。
-// 调色板 texel 布局与 raylib 原生上传语义一致（glUniformMatrix4fv/GL_FALSE 列主序）：
-// 第 b 根骨骼占 4 texel，texel[k] = 该矩阵内存中第 k 组 4 个 float（即 mat4 第 k 列）。
+// 调色板 texel 布局按 RaylibMatrix 的 GLSL 数学列组织：
+// 第 b 根骨骼占 3 texel；仿射矩阵固定末行 (0,0,0,1)，三枚 w 分量保存平移 xyz。
 // 多 mesh 模型：骨骼槽位 = mesh 局部 boneId + uBoneBase（各 mesh 按 boneCount 累计）。
-// 实例表每实例占 2 texel：texelA = (poseRow, tint.r, tint.g, tint.b)，texelB = (tint.a, 0, 0, 0)；
+// 实例表每实例占 1 texel：(poseRow, RGB24, alpha8, 0)。
 // 实例表宽度固定 1024（与 RaylibPoseTexturePalette.InstanceTableWidth 一致）。
 // uInstanceBase/uBoneBase 走 float：SetShaderValue 以 glUniform1fv 上传，
 // 声明为 int 会因类型不符触发 GL_INVALID_OPERATION 且 uniform 保持默认值 0。
@@ -23,7 +23,7 @@ layout (location = 9) in mat4 instanceTransform;
 uniform mat4 mvp;
 uniform sampler2D uBonePalette;
 uniform sampler2D uInstanceTable;
-uniform float uInstanceBase;     // 本 draw 首实例在实例表中的全局序号（texel 对编号）
+uniform float uInstanceBase;     // 本 draw 首实例在实例表中的全局 texel 编号
 uniform float uBoneBase;         // 本 mesh 首骨骼在调色板槽位中的全局序号
 uniform float uPaletteSlotsPerRow; // 调色板每槽行骨位数（RaylibPoseTexturePalette.BoneSlotsPerRow）
 uniform float uPaletteSlotRows;    // 每个姿势行占用的槽行数（=ceil(boneSlotCapacity/BoneSlotsPerRow)）
@@ -39,23 +39,29 @@ mat4 FetchBoneMatrix(int poseRow, int boneSlot)
     int slotRows = int(uPaletteSlotRows + 0.5);
     int slabRow = boneSlot / slotsPerRow;
     int slotInRow = boneSlot - slabRow * slotsPerRow;
-    int baseX = slotInRow * 4;
+    int baseX = slotInRow * 3;
     int y = poseRow * slotRows + slabRow;
     vec4 c0 = texelFetch(uBonePalette, ivec2(baseX + 0, y), 0);
     vec4 c1 = texelFetch(uBonePalette, ivec2(baseX + 1, y), 0);
     vec4 c2 = texelFetch(uBonePalette, ivec2(baseX + 2, y), 0);
-    vec4 c3 = texelFetch(uBonePalette, ivec2(baseX + 3, y), 0);
-    return mat4(c0, c1, c2, c3);
+    return mat4(
+        vec4(c0.xyz, 0.0),
+        vec4(c1.xyz, 0.0),
+        vec4(c2.xyz, 0.0),
+        vec4(c0.w, c1.w, c2.w, 1.0));
 }
 
 void main()
 {
-    int instanceTexel = (int(uInstanceBase) + gl_InstanceID) * 2;
+    int instanceTexel = int(uInstanceBase) + gl_InstanceID;
     vec4 instance = texelFetch(uInstanceTable, ivec2(instanceTexel % 1024, instanceTexel / 1024), 0);
-    vec4 alphaTexel = texelFetch(uInstanceTable, ivec2((instanceTexel + 1) % 1024, (instanceTexel + 1) / 1024), 0);
     int poseRow = int(instance.x + 0.5);
-    vec3 tint = vec3(instance.y, instance.z, instance.w);
-    float alpha = alphaTexel.x;
+    int packedRgb = int(instance.y + 0.5);
+    vec3 tint = vec3(
+        packedRgb % 256,
+        (packedRgb / 256) % 256,
+        (packedRgb / 65536) % 256) / 255.0;
+    float alpha = instance.z;
 
     mat4 skin = mat4(0.0);
     if (vertexBoneWeights.x > 0.0)

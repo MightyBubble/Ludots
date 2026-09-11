@@ -1,6 +1,6 @@
 #version 330
 
-// 姿势纹理蒙皮的深度 pass（#1395）：与主 pass 共用同一骨骼调色板与实例表，
+// 姿势纹理蒙皮的深度 pass：与主 pass 共用同一骨骼调色板与实例表，
 // 只计算位置（无法线/颜色变换）——阴影与主 pass 的蒙皮位置严格一致。
 // texel 布局与 addressing 合同见 skinning_instanced_pose_texture.vs 顶部注释。
 
@@ -23,18 +23,21 @@ mat4 FetchBoneMatrix(int poseRow, int boneSlot)
     int slotRows = int(uPaletteSlotRows + 0.5);
     int slabRow = boneSlot / slotsPerRow;
     int slotInRow = boneSlot - slabRow * slotsPerRow;
-    int baseX = slotInRow * 4;
+    int baseX = slotInRow * 3;
     int y = poseRow * slotRows + slabRow;
     vec4 c0 = texelFetch(uBonePalette, ivec2(baseX + 0, y), 0);
     vec4 c1 = texelFetch(uBonePalette, ivec2(baseX + 1, y), 0);
     vec4 c2 = texelFetch(uBonePalette, ivec2(baseX + 2, y), 0);
-    vec4 c3 = texelFetch(uBonePalette, ivec2(baseX + 3, y), 0);
-    return mat4(c0, c1, c2, c3);
+    return mat4(
+        vec4(c0.xyz, 0.0),
+        vec4(c1.xyz, 0.0),
+        vec4(c2.xyz, 0.0),
+        vec4(c0.w, c1.w, c2.w, 1.0));
 }
 
 void main()
 {
-    int instanceTexel = (int(uInstanceBase) + gl_InstanceID) * 2;
+    int instanceTexel = int(uInstanceBase) + gl_InstanceID;
     vec4 instance = texelFetch(uInstanceTable, ivec2(instanceTexel % 1024, instanceTexel / 1024), 0);
     int poseRow = int(instance.x + 0.5);
 

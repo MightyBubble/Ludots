@@ -346,10 +346,30 @@ namespace Ludots.Adapter.Raylib
                 using var navMeshPresentationRenderer = new RaylibNavMeshPresentationRenderer(navMeshPresentationBuffer.TileCapacity);
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 RaylibPrimitiveRenderMode primitiveMode = ResolvePrimitiveRenderMode();
-                using var primitiveRenderer = new RaylibPrimitiveRenderer(primitiveMode, engine.VFS, materials, Ludots.Core.Presentation.Assets.AnimationChannelRegistry.Register);
+                PresentationRuntimeConfig presentationConfig = engine.MergedConfig.Presentation;
+                var gpuSkinnedCapacity = new RaylibGpuSkinnedCapacity(
+                    presentationConfig.SkinnedVisualBatchCapacity,
+                    presentationConfig.GpuSkinned.MaxBatches,
+                    presentationConfig.GpuSkinned.MaxUniquePoses,
+                    presentationConfig.GpuSkinned.MaxBoneSlots);
+                using var primitiveRenderer = new RaylibPrimitiveRenderer(
+                    primitiveMode,
+                    engine.VFS,
+                    materials,
+                    Ludots.Core.Presentation.Assets.AnimationChannelRegistry.Register,
+                    gpuSkinnedCapacity);
                 MeshAssetRegistry residencyMeshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
                     ?? throw new InvalidOperationException("Raylib map residency requires PresentationMeshAssetRegistry.");
+                var animationBindings = new RaylibAnimationProfileBindings(
+                    engine.GetService(CoreServiceKeys.AnimationProfileRegistry)
+                        ?? throw new InvalidOperationException("Raylib animation binding requires AnimationProfileRegistry."),
+                    engine.GetService(CoreServiceKeys.AnimationClipRegistry)
+                        ?? throw new InvalidOperationException("Raylib animation binding requires AnimationClipRegistry."),
+                    residencyMeshes,
+                    engine.VFS);
+                primitiveRenderer.AnimationStateMapResolver = animationBindings.Resolve;
                 primitiveRenderer.BindResidencyMeshAssets(residencyMeshes);
+                primitiveRenderer.InitializeGpuSkinnedDeviceResources();
                 using var mapLoadResidencyGate = new RenderAssetMapLoadCompletionGate((IRenderAssetResidency)primitiveRenderer);
                 using var backendSceneRuntime = new RaylibBackendSceneRuntime(primitiveRenderer);
                 backendSceneRuntime.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
@@ -364,9 +384,7 @@ namespace Ludots.Adapter.Raylib
                 primitiveRenderer.BindReceiverMeshProjector(
                     new MapLaneReceiverMeshProjector(engine, continuousHeightmapRenderer, terrainRenderer, primitiveRenderer.StaticMeshReceiverProjector));
                 primitiveRenderer.BindInstancedBatchLaneSource(setup.InstancedBatchLaneStore);
-                engine.SetService(
-                    CoreServiceKeys.BoneTransformProvider,
-                    (Core.Presentation.Presenters.IBoneTransformProvider)new RaylibBoneTransformProvider(
+                var boneTransformProvider = new RaylibBoneTransformProvider(
                         engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer)
                             ?? throw new InvalidOperationException("Raylib host requires the Core PresentationSkinnedVisualBatchBuffer service."),
                         engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
@@ -381,7 +399,13 @@ namespace Ludots.Adapter.Raylib
                                 out entry,
                                 out status);
                             return outcome;
-                        }));
+                        })
+                {
+                    AnimationStateMapResolver = animationBindings.Resolve,
+                };
+                engine.SetService(
+                    CoreServiceKeys.BoneTransformProvider,
+                    (Core.Presentation.Presenters.IBoneTransformProvider)boneTransformProvider);
                 using var directionalShadowMap = new RaylibDirectionalShadowMap(renderEnvironmentConfig.Shadow);
 
                 using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS);
@@ -513,9 +537,13 @@ namespace Ludots.Adapter.Raylib
                         break;
                     }
 
+                    bool skinnedFramePrepared = false;
                     try
                     {
                         long wallFrameStart = Stopwatch.GetTimestamp();
+                        long threadAllocatedBytesStart = GC.GetAllocatedBytesForCurrentThread();
+                        int gen0CollectionStart = GC.CollectionCount(0);
+                        int gen1CollectionStart = GC.CollectionCount(1);
                         presentationTiming?.ObserveHostLoopGap((wallFrameStart - previousLoopEnd) * 1000d / Stopwatch.Frequency);
                         presentationTiming?.ObserveWindowPoll(windowPollMs);
                         long preTickStart = wallFrameStart;
@@ -747,6 +775,16 @@ namespace Ludots.Adapter.Raylib
                         var activeCamera = cameraAdapter.Camera;
                         CameraRenderState3D activeCameraState = cameraPresenter.SmoothedRenderState;
                         float windowAspect = MathF.Max(0.001f, lastW / (float)Math.Max(1, lastH));
+                        if (drawPrimitives &&
+                            engine.TryGetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer, out SkinnedVisualBatchBuffer? frameSkinnedBatch) &&
+                            engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry? frameSkinnedMeshes))
+                        {
+                            primitiveRenderer.PrepareSkinnedFrame(
+                                frameSkinnedBatch,
+                                frameSkinnedMeshes,
+                                renderDebug.AcceptanceScaleMultiplier);
+                            skinnedFramePrepared = true;
+                        }
 
                         if (skyEnvironment.HasDayPhase)
                         {
@@ -892,7 +930,11 @@ namespace Ludots.Adapter.Raylib
                             Camera3D viewportCamera = viewport.Camera;
                             CameraRenderState3D viewportCameraState = viewport.CameraState;
                             float viewportAspect = windowAspect;
-                            primitiveRenderer.ApplyFrameLighting(frameLighting, viewportCamera.position);
+                            primitiveRenderer.ApplyFrameLighting(
+                                frameLighting,
+                                viewportCamera.position,
+                                frameShadow,
+                                shadowTexelWorld);
                             if (multiViewport)
                             {
                                 Vector4 viewportRect = viewport.Frame.Binding.NormalizedScreenRect;
@@ -1150,6 +1192,11 @@ namespace Ludots.Adapter.Raylib
                             }
                         }
 
+                        if (skinnedFramePrepared)
+                        {
+                            primitiveRenderer.EndSkinnedFrame();
+                            skinnedFramePrepared = false;
+                        }
                         presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
                         if (postProcessWorldFrame)
                         {
@@ -1180,14 +1227,6 @@ namespace Ludots.Adapter.Raylib
                             overlayResult.FinalDrawMs,
                             overlayCompositor.OverlayRenderer.RebuiltLaneCountLastFrame,
                             overlayCompositor.OverlayRenderer.CachedTextLayoutCount);
-                        if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
-                        {
-                            SkiaOverlayRenderer overlaySkiaRenderer = overlayCompositor.OverlayRenderer;
-                            AppendRaylibDiagnostic(
-                                diagnosticPath,
-                                $"overlay-lanes backend=skia underBar={overlaySkiaRenderer.LastUnderUiBarMs:F2} underText={overlaySkiaRenderer.LastUnderUiTextMs:F2} barBuild={overlaySkiaRenderer.LastBarBatchBuildMs:F2} barDraw={overlaySkiaRenderer.LastBarBatchDrawMs:F2} barBuckets={overlaySkiaRenderer.LastBarBatchBucketCount} barCache={overlaySkiaRenderer.LastBarSpriteCacheHits}/{overlaySkiaRenderer.LastBarSpriteCacheMisses}/clear{overlaySkiaRenderer.LastBarSpriteCacheClears}/size{overlaySkiaRenderer.BarSpriteCacheCount} textBuild={overlaySkiaRenderer.LastTextBatchBuildMs:F2} textDraw={overlaySkiaRenderer.LastTextBatchDrawMs:F2} textBuckets={overlaySkiaRenderer.LastTextSpriteBatchBucketCount} markerBuild={overlaySkiaRenderer.LastMinimapMarkerBatchBuildMs:F2} markerDraw={overlaySkiaRenderer.LastMinimapMarkerBatchDrawMs:F2} markerBuckets={overlaySkiaRenderer.LastMinimapMarkerBatchBucketCount}/{overlaySkiaRenderer.LastMinimapMarkerOrientationBatchBucketCount} markerSpriteCache={overlaySkiaRenderer.LastMinimapMarkerSpriteCacheHits}/{overlaySkiaRenderer.LastMinimapMarkerSpriteCacheMisses}/clear{overlaySkiaRenderer.LastMinimapMarkerSpriteCacheClears}/size{overlaySkiaRenderer.MarkerSpriteCacheCount} textSpriteCache={overlaySkiaRenderer.LastTextSpriteCacheHits}/{overlaySkiaRenderer.LastTextSpriteCacheMisses}/clear{overlaySkiaRenderer.LastTextSpriteCacheClears}/size{overlaySkiaRenderer.TextSpriteCacheCount} textLayout={overlaySkiaRenderer.LastTextLayoutCacheHits}/{overlaySkiaRenderer.LastTextLayoutCacheMisses}/clear{overlaySkiaRenderer.LastTextLayoutCacheClears}/size{overlaySkiaRenderer.CachedTextLayoutCount}");
-                        }
-
                         bool drawLightweightDiagnosticHud = lightweightDiagnosticHudEnabled;
                         if (drawLightweightDiagnosticHud)
                         {
@@ -1210,15 +1249,28 @@ namespace Ludots.Adapter.Raylib
                         presentationTiming?.ObserveEndDrawing(ElapsedMs(endDrawingStart));
                         presentationTiming?.ObserveWallFrame(ElapsedMs(wallFrameStart));
                         previousLoopEnd = Stopwatch.GetTimestamp();
+                        long frameThreadAllocatedBytes = Math.Max(
+                            0L,
+                            GC.GetAllocatedBytesForCurrentThread() - threadAllocatedBytesStart);
+                        int frameGen0Collections = Math.Max(0, GC.CollectionCount(0) - gen0CollectionStart);
+                        int frameGen1Collections = Math.Max(0, GC.CollectionCount(1) - gen1CollectionStart);
 
                         frameIndex++;
                         if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
                         {
+                            SkiaOverlayRenderer overlaySkiaRenderer = overlayCompositor.OverlayRenderer;
                             AppendRaylibDiagnostic(diagnosticPath, $"sample frame={frameIndex}");
+                            AppendRaylibDiagnostic(
+                                diagnosticPath,
+                                $"managed-frame threadAllocatedBytes={frameThreadAllocatedBytes} gen0={frameGen0Collections} gen1={frameGen1Collections}");
+                            AppendRaylibDiagnostic(
+                                diagnosticPath,
+                                $"overlay-lanes backend=skia underBar={overlaySkiaRenderer.LastUnderUiBarMs:F2} underText={overlaySkiaRenderer.LastUnderUiTextMs:F2} barBuild={overlaySkiaRenderer.LastBarBatchBuildMs:F2} barDraw={overlaySkiaRenderer.LastBarBatchDrawMs:F2} barBuckets={overlaySkiaRenderer.LastBarBatchBucketCount} barCache={overlaySkiaRenderer.LastBarSpriteCacheHits}/{overlaySkiaRenderer.LastBarSpriteCacheMisses}/clear{overlaySkiaRenderer.LastBarSpriteCacheClears}/size{overlaySkiaRenderer.BarSpriteCacheCount} textBuild={overlaySkiaRenderer.LastTextBatchBuildMs:F2} textDraw={overlaySkiaRenderer.LastTextBatchDrawMs:F2} textBuckets={overlaySkiaRenderer.LastTextSpriteBatchBucketCount} markerBuild={overlaySkiaRenderer.LastMinimapMarkerBatchBuildMs:F2} markerDraw={overlaySkiaRenderer.LastMinimapMarkerBatchDrawMs:F2} markerBuckets={overlaySkiaRenderer.LastMinimapMarkerBatchBucketCount}/{overlaySkiaRenderer.LastMinimapMarkerOrientationBatchBucketCount} markerSpriteCache={overlaySkiaRenderer.LastMinimapMarkerSpriteCacheHits}/{overlaySkiaRenderer.LastMinimapMarkerSpriteCacheMisses}/clear{overlaySkiaRenderer.LastMinimapMarkerSpriteCacheClears}/size{overlaySkiaRenderer.MarkerSpriteCacheCount} textSpriteCache={overlaySkiaRenderer.LastTextSpriteCacheHits}/{overlaySkiaRenderer.LastTextSpriteCacheMisses}/clear{overlaySkiaRenderer.LastTextSpriteCacheClears}/size{overlaySkiaRenderer.TextSpriteCacheCount} textLayout={overlaySkiaRenderer.LastTextLayoutCacheHits}/{overlaySkiaRenderer.LastTextLayoutCacheMisses}/clear{overlaySkiaRenderer.LastTextLayoutCacheClears}/size{overlaySkiaRenderer.CachedTextLayoutCount}");
                             AppendRaylibDiagnostic(diagnosticPath,
-                                $"skinning-cpu poses={primitiveRenderer.LastGpuSkinnedUniquePoses} poseBuildMs={primitiveRenderer.LastGpuSkinnedPoseBuildCpuMs:F4} textureUploadMs={primitiveRenderer.LastGpuSkinnedTextureUploadCpuMs:F4} textureUploadBytes={primitiveRenderer.LastGpuSkinnedTextureUploadBytes} shadowSubmitMs={primitiveRenderer.LastGpuSkinnedShadowSubmitCpuMs:F4}");
+                                $"skinning-cpu stableIds={primitiveRenderer.LastGpuSkinnedValidatedStableIds} poses={primitiveRenderer.LastGpuSkinnedUniquePoses} poseBuildMs={primitiveRenderer.LastGpuSkinnedPoseBuildCpuMs:F4} textureUploadMs={primitiveRenderer.LastGpuSkinnedTextureUploadCpuMs:F4} textureUploadBytes={primitiveRenderer.LastGpuSkinnedTextureUploadBytes} shadowSubmitMs={primitiveRenderer.LastGpuSkinnedShadowSubmitCpuMs:F4}");
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
-                            if (MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out MassNavigationSimulationRuntime massNavigation))
+                            if (presentationTiming != null &&
+                                MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out MassNavigationSimulationRuntime massNavigation))
                             {
                                 AppendRaylibDiagnostic(
                                     diagnosticPath,
@@ -1323,6 +1375,13 @@ namespace Ludots.Adapter.Raylib
                     {
                         Log.Error(in LogChannels.Engine, $"Unhandled exception in game loop: {ex}");
                         break;
+                    }
+                    finally
+                    {
+                        if (skinnedFramePrepared)
+                        {
+                            primitiveRenderer.EndSkinnedFrame();
+                        }
                     }
                 }
             }
@@ -2945,11 +3004,9 @@ namespace Ludots.Adapter.Raylib
                     primitiveRenderer.DrawShadow(draw, shadowMap, meshes, camera, primitiveScaleMul);
                 }
 
-                SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
-                if (skinnedBatch != null &&
-                    engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry? skinMeshes))
+                if (drawPrimitives && primitiveRenderer.HasPreparedSkinnedFrame)
                 {
-                    primitiveRenderer.DrawShadow(skinnedBatch, shadowMap, skinMeshes, primitiveScaleMul);
+                    primitiveRenderer.DrawPreparedSkinnedShadow(shadowMap);
                 }
             }
             finally

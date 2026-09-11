@@ -8,6 +8,33 @@ namespace Ludots.Tests.RaylibAdapter;
 public sealed class RaylibShaderContractTests
 {
     [Test]
+    public void PoseTextureShaders_UseAffineThreeTexelBonesAndSingleTexelInstances()
+    {
+        string shaderRoot = Path.Combine(FindRepoRoot(), "src", "Platforms", "Desktop");
+        string main = File.ReadAllText(Path.Combine(shaderRoot, "skinning_instanced_pose_texture.vs"));
+        string shadow = File.ReadAllText(Path.Combine(shaderRoot, "shadow_depth_skinning_pose_texture.vs"));
+
+        foreach (string shader in new[] { main, shadow })
+        {
+            Assert.That(shader, Does.Contain("int baseX = slotInRow * 3;"));
+            Assert.That(CountOccurrences(shader, "texelFetch(uBonePalette"), Is.EqualTo(3));
+            Assert.That(shader, Does.Contain("vec4(c0.xyz, 0.0)"));
+            Assert.That(shader, Does.Contain("vec4(c1.xyz, 0.0)"));
+            Assert.That(shader, Does.Contain("vec4(c2.xyz, 0.0)"));
+            Assert.That(shader, Does.Contain("vec4(c0.w, c1.w, c2.w, 1.0)"));
+            Assert.That(shader, Does.Contain("int instanceTexel = int(uInstanceBase) + gl_InstanceID;"));
+            Assert.That(shader, Does.Not.Contain("instanceTexel + 1"));
+            Assert.That(shader, Does.Not.Contain("gl_InstanceID) * 2"));
+        }
+
+        Assert.That(main, Does.Contain("int packedRgb = int(instance.y + 0.5);"));
+        Assert.That(main, Does.Contain("packedRgb % 256"));
+        Assert.That(main, Does.Contain("(packedRgb / 256) % 256"));
+        Assert.That(main, Does.Contain("(packedRgb / 65536) % 256"));
+        Assert.That(main, Does.Contain("float alpha = instance.z;"));
+    }
+
+    [Test]
     public void SkyEnvironment_UsesDedicatedDayNightShaderContract()
     {
         string repoRoot = FindRepoRoot();
@@ -113,8 +140,11 @@ public sealed class RaylibShaderContractTests
         Assert.That(hostLoop, Does.Contain("RenderShadow"));
         Assert.That(hostLoop, Does.Contain("RenderTerrainShadow"));
         Assert.That(hostLoop, Does.Contain("DrawShadow"));
-        Assert.That(hostLoop, Does.Contain("ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld)"));
-        Assert.That(hostLoop, Does.Contain("ApplyFrameLighting(frameLighting, activeCamera.position, directionalShadowMap, shadowTexelWorld)"));
+        Assert.That(hostLoop, Does.Contain("ApplyFrameLighting(frameLighting, frameShadow, shadowTexelWorld)"));
+        Assert.That(hostLoop, Does.Contain("ApplyFrameLighting(frameLighting, activeCamera.position, frameShadow, shadowTexelWorld)"));
+        Assert.That(hostLoop, Does.Contain("primitiveRenderer.PrepareSkinnedFrame("));
+        Assert.That(hostLoop, Does.Contain("primitiveRenderer.EndSkinnedFrame();"));
+        Assert.That(hostLoop, Does.Contain("finally"));
         Assert.That(hostLoop, Does.Not.Contain("terrainRenderer.ApplyFrameLighting(frameLighting);"));
         Assert.That(hostLoop, Does.Not.Contain("visualHeightmapRenderer.ApplyFrameLighting(frameLighting);"));
         Assert.That(hostLoop, Does.Not.Contain("primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position);"));
@@ -339,6 +369,18 @@ public sealed class RaylibShaderContractTests
         int end = text.IndexOf("finalColor = vec4(enc, 1.0);", start, StringComparison.Ordinal);
         Assert.That(end, Is.GreaterThanOrEqualTo(0), "Could not locate depth packing end.");
         return text[start..(end + "finalColor = vec4(enc, 1.0);".Length)].Trim();
+    }
+
+    private static int CountOccurrences(string text, string value)
+    {
+        int count = 0;
+        int index = 0;
+        while ((index = text.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += value.Length;
+        }
+        return count;
     }
 
     [Test]

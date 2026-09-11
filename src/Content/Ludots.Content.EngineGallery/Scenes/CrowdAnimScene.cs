@@ -73,7 +73,12 @@ namespace Ludots.Content.EngineGallery.Scenes
                 RaylibPrimitiveRenderMode.Instanced,
                 vfs: GalleryAssetPaths.Instance,
                 materials: null,
-                channelRegistrar: GalleryAnimationChannels.Register);
+                channelRegistrar: GalleryAnimationChannels.Register,
+                gpuSkinnedCapacity: new RaylibGpuSkinnedCapacity(
+                    TargetInstances,
+                    MaxBatches: 1,
+                    MaxUniquePoses: DesiredPhaseBuckets,
+                    MaxBoneSlots: 256));
             _shadowMap = new RaylibDirectionalShadowMap();
 
             // 只探测 clip 元数据（名字/帧数）供相位分桶；绘制模型由渲染器内置
@@ -145,28 +150,36 @@ namespace Ludots.Content.EngineGallery.Scenes
                 });
             }
 
-            _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(0f, 1f, 0f), 52f);
-            _primitives.DrawShadow(_snapshot, _shadowMap, _meshes, camera);
-            _primitives.DrawShadow(_skinnedBatch, _shadowMap, _meshes);
-            _shadowMap.EndFrame();
+            _primitives.PrepareSkinnedFrame(_skinnedBatch, _meshes);
+            try
+            {
+                _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(0f, 1f, 0f), 52f);
+                _primitives.DrawShadow(_snapshot, _shadowMap, _meshes, camera);
+                _primitives.DrawShadow(_skinnedBatch, _shadowMap, _meshes);
+                _shadowMap.EndFrame();
 
-            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_lighting, sizeMeters: 1400f);
-            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
-            Rl.BeginMode3D(camera);
-            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
-            _primitives.ApplyFrameLighting(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.12f);
+                RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_lighting, sizeMeters: 1400f);
+                Rl.ClearBackground(skyConfig.Skybox.ClearColor);
+                Rl.BeginMode3D(camera);
+                _skybox.Draw(camera, totalTimeSeconds, skyConfig);
+                _primitives.ApplyFrameLighting(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.12f);
 
-            // snapshot 形参保持非空以进入 persistent-lanes 调用形态（RaylibFrameRenderer 同款），
-            // 其中蒙皮批次先于动态 lane 绘制；图元快照仅承载地面盘，人群全部走蒙皮车道。
-            _primitives.Draw(
-                _snapshot,
-                camera,
-                snapshot: _snapshot,
-                skinnedBatch: _skinnedBatch,
-                _meshes,
-                timeSeconds: totalTimeSeconds);
+                // snapshot 形参保持非空以进入 persistent-lanes 调用形态（RaylibFrameRenderer 同款），
+                // 其中蒙皮批次先于动态 lane 绘制；图元快照仅承载地面盘，人群全部走蒙皮车道。
+                _primitives.Draw(
+                    _snapshot,
+                    camera,
+                    snapshot: _snapshot,
+                    skinnedBatch: _skinnedBatch,
+                    _meshes,
+                    timeSeconds: totalTimeSeconds);
 
-            Rl.EndMode3D();
+                Rl.EndMode3D();
+            }
+            finally
+            {
+                _primitives.EndSkinnedFrame();
+            }
 
             GalleryFont.Draw(
                 $"crowd {_primitives.LastGpuSkinnedInstances} gpu-skinned  rings {RingCount}/{ColorBandCount}bands  phase {_phaseBucketCount}/{_walkClipFrameCount}f  draws {_primitives.LastGpuSkinnedBatches}  gpu {_primitives.LastGpuSkinnedMeshDrawMs:F2}ms  mat {_primitives.LastGpuSkinnedMatrixBuildMs:F2}ms",

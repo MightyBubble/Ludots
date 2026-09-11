@@ -8,6 +8,7 @@ namespace Ludots.Platform.Abstractions
         public string[] SourceUris;
         public ProceduralMeshAssetData ProceduralMeshData;
         public VfxAssetData VfxData;
+        public GpuSkinnedLodAssetSet GpuSkinnedLod;
 
         public static MeshAssetDescriptor Primitive(int id, PrimitiveMeshKind kind)
         {

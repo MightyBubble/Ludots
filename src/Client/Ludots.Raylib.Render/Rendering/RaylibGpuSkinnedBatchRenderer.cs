@@ -21,6 +21,7 @@ namespace Ludots.Raylib.Render
         private readonly RaylibGpuSkinnedModelCache _modelCache;
         private readonly RaylibInstancedMaterialPipeline _materials;
         private readonly int _maxModelInstancesPerDraw;
+        private readonly RaylibGpuSkinnedCapacity? _capacity;
 
         private Shader _skinningShader;
         private bool _skinningShaderReady;
@@ -36,9 +37,25 @@ namespace Ludots.Raylib.Render
         private RaylibFrameLightingLocations _skinningLightingLocs;
         private RaylibShadowSamplingLocations _skinningShadowLocs;
 
-        private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches = new();
-        private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches = new(64);
-        private bool _gpuSkinnedBatchesPreparedForShadow;
+        private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches;
+        private readonly GpuSkinnedInstanceBatch[] _gpuSkinnedInstanceBatchSlots;
+        private readonly Dictionary<GpuSkinnedBatchFamilyKey, GpuSkinnedBatchFamily> _gpuSkinnedBatchFamilies;
+        private readonly GpuSkinnedBatchFamily[] _gpuSkinnedBatchFamilySlots;
+        private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches;
+        private readonly RaylibMatrix[] _collectedTransforms;
+        private readonly int[] _collectedPoseRows;
+        private readonly Vector4[] _collectedTints;
+        private readonly int[] _collectedBatchIndices;
+        private readonly RaylibMatrix[] _packedTransforms;
+        private readonly int[] _packedPoseRows;
+        private readonly Vector4[] _packedTints;
+        private readonly StableIdFrameIndex? _stableIds;
+        private int _collectedInstanceCount;
+        private int _registeredBatchCount;
+        private int _registeredFamilyCount;
+        private long _prepareStartTimestamp;
+        private bool _frameCollecting;
+        private bool _frameSealed;
         private bool _poseTexturesBuiltForFrame;
 
         private RaylibFrameLighting? _frameLighting;
@@ -47,50 +64,159 @@ namespace Ludots.Raylib.Render
         private RaylibDirectionalShadowMap? _frameShadow;
         private float _frameShadowTexelWorld = 0.04f;
         private RaylibPoseTexturePalette? _posePalette;
-        private readonly Dictionary<(int MeshAssetId, int ClipIndex, int FrameIndex), int> _poseRowByKey = new();
-        private readonly List<(int PoseRow, int MeshAssetId, int ClipIndex, int FrameIndex)> _dirtyPoseRows = new();
+        private readonly Dictionary<(int MeshAssetId, int ClipIndex, int FrameIndex), int> _poseRowByKey;
+        private readonly List<(int PoseRow, GpuSkinnedInstanceBatch Batch, int ClipIndex, int FrameIndex)> _dirtyPoseRows;
         private int _locBonePaletteSampler = -1;
         private int _locInstanceTableSampler = -1;
         private int _locInstanceBase = -1;
         private int _locBoneBase = -1;
         private int _locPaletteSlotsPerRow = -1;
         private int _locPaletteSlotRows = -1;
+        private int _locUseSharedPose = -1;
+        private int _locSharedBones = -1;
+        private int _posePhaseBuckets;
+
+        internal Func<int, int, IReadOnlyDictionary<int, int>?>? AnimationStateMapResolver { get; set; }
+
+        internal int PosePhaseBuckets
+        {
+            get => _posePhaseBuckets;
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires a positive pose phase bucket count.");
+                }
+                if (_registeredBatchCount != 0 || _registeredFamilyCount != 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} pose phase buckets must be configured before the first submission.");
+                }
+
+                _posePhaseBuckets = value;
+            }
+        }
 
         public RaylibGpuSkinnedBatchRenderer(
             RaylibGpuSkinnedModelCache modelCache,
             RaylibInstancedMaterialPipeline materials,
-            int maxModelInstancesPerDraw)
+            int maxModelInstancesPerDraw,
+            RaylibGpuSkinnedCapacity? capacity)
         {
             _modelCache = modelCache ?? throw new ArgumentNullException(nameof(modelCache));
             _materials = materials ?? throw new ArgumentNullException(nameof(materials));
             _maxModelInstancesPerDraw = maxModelInstancesPerDraw;
+            _capacity = capacity;
+            capacity?.Validate();
+            int batchCapacity = capacity?.MaxBatches ?? 0;
+            int poseCapacity = capacity?.MaxUniquePoses ?? 0;
+            int instanceCapacity = capacity?.MaxInstances ?? 0;
+            _gpuSkinnedInstanceBatches = new Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch>(batchCapacity);
+            _gpuSkinnedInstanceBatchSlots = new GpuSkinnedInstanceBatch[batchCapacity];
+            _gpuSkinnedBatchFamilies = new Dictionary<GpuSkinnedBatchFamilyKey, GpuSkinnedBatchFamily>(batchCapacity);
+            _gpuSkinnedBatchFamilySlots = new GpuSkinnedBatchFamily[batchCapacity];
+            for (int i = 0; i < _gpuSkinnedInstanceBatchSlots.Length; i++)
+            {
+                _gpuSkinnedInstanceBatchSlots[i] = new GpuSkinnedInstanceBatch();
+                _gpuSkinnedBatchFamilySlots[i] = new GpuSkinnedBatchFamily();
+            }
+            _activeGpuSkinnedInstanceBatches = new List<GpuSkinnedInstanceBatch>(batchCapacity);
+            _poseRowByKey = new Dictionary<(int MeshAssetId, int ClipIndex, int FrameIndex), int>(poseCapacity);
+            _dirtyPoseRows = new List<(int PoseRow, GpuSkinnedInstanceBatch Batch, int ClipIndex, int FrameIndex)>(poseCapacity);
+            _collectedTransforms = new RaylibMatrix[instanceCapacity];
+            _collectedPoseRows = new int[instanceCapacity];
+            _collectedTints = new Vector4[instanceCapacity];
+            _collectedBatchIndices = new int[instanceCapacity];
+            _packedTransforms = new RaylibMatrix[instanceCapacity];
+            _packedPoseRows = new int[instanceCapacity];
+            _packedTints = new Vector4[instanceCapacity];
+            _stableIds = capacity.HasValue
+                ? new StableIdFrameIndex(instanceCapacity)
+                : null;
         }
 
-        public int LastInstances { get; private set; }
-        public int LastBatches { get; private set; }
-        public double LastMatrixBuildMs { get; private set; }
+        public int LastInstances => LastMainInstancesSubmitted;
+        public int LastBatches => LastMainDrawCalls;
+        public double LastMatrixBuildMs => LastPrepareCpuMs;
+        public int LastCollectedUniqueInstances { get; private set; }
+        public int LastMainInstancesSubmitted { get; private set; }
+        public int LastMainDrawCalls { get; private set; }
+        public long LastMainTrianglesSubmitted { get; private set; }
+        public int LastShadowInstancesSubmitted { get; private set; }
+        public int LastShadowDrawCalls { get; private set; }
+        public long LastShadowTrianglesSubmitted { get; private set; }
+        public int LastCollectedHighLodInstances { get; private set; }
+        public int LastCollectedMediumLodInstances { get; private set; }
+        public int LastCollectedLowLodInstances { get; private set; }
+        public double LastPrepareCpuMs { get; private set; }
         public double LastMeshDrawMs { get; private set; }
         public double LastPoseBuildCpuMs { get; private set; }
         public double LastTextureUploadCpuMs { get; private set; }
         public double LastShadowSubmitCpuMs { get; private set; }
         public int LastUniquePoses { get; private set; }
         public long LastTextureUploadBytes { get; private set; }
+        public int LastSharedPoseInstances { get; private set; }
+        public int LastValidatedStableIds => _stableIds?.Count ?? 0;
 
-        public bool BatchesPreparedForShadow => _gpuSkinnedBatchesPreparedForShadow;
+        public bool DeviceResourcesInitialized => _posePalette != null && _skinningShaderReady;
+
+        internal int BatchSlotCapacity => _gpuSkinnedInstanceBatchSlots.Length;
+
+        internal int RegisteredBatchCount => _registeredBatchCount;
+
+        public bool FramePrepared => _frameSealed;
 
         public bool HasActiveBatches => _activeGpuSkinnedInstanceBatches.Count > 0;
 
         public void ResetStats()
         {
-            LastInstances = 0;
-            LastBatches = 0;
-            LastMatrixBuildMs = 0d;
+            LastCollectedUniqueInstances = 0;
+            LastMainInstancesSubmitted = 0;
+            LastMainDrawCalls = 0;
+            LastMainTrianglesSubmitted = 0;
+            LastShadowInstancesSubmitted = 0;
+            LastShadowDrawCalls = 0;
+            LastShadowTrianglesSubmitted = 0;
+            LastCollectedHighLodInstances = 0;
+            LastCollectedMediumLodInstances = 0;
+            LastCollectedLowLodInstances = 0;
+            LastPrepareCpuMs = 0d;
             LastMeshDrawMs = 0d;
             LastPoseBuildCpuMs = 0d;
             LastTextureUploadCpuMs = 0d;
             LastShadowSubmitCpuMs = 0d;
             LastUniquePoses = 0;
             LastTextureUploadBytes = 0;
+            LastSharedPoseInstances = 0;
+        }
+
+        public void InitializeDeviceResources()
+        {
+            if (DeviceResourcesInitialized)
+            {
+                return;
+            }
+
+            RaylibGpuSkinnedCapacity capacity = _capacity
+                ?? throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires explicit capacity configuration before device resource initialization.");
+            if (_frameCollecting || _frameSealed)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} device resources must be initialized outside an active frame.");
+            }
+            if (Rl.GetWindowHandle() == IntPtr.Zero)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} device resource initialization requires an active Raylib window and GL context.");
+            }
+
+            _posePalette ??= new RaylibPoseTexturePalette(
+                capacity.MaxUniquePoses,
+                capacity.MaxInstances,
+                capacity.MaxBoneSlots);
+            EnsureShaderInitialized();
         }
 
         public void ApplyFrameLighting(RaylibFrameLighting lighting, Vector3 viewPos, RaylibDirectionalShadowMap? shadow, float shadowTexelWorld)
@@ -106,116 +232,240 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        public void Prepare()
+        public void BeginFrame()
         {
+            if (_frameCollecting || _frameSealed)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} already has an active frame.");
+            }
+
+            long prepareStartTimestamp = Stopwatch.GetTimestamp();
+
             for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
             {
-                _activeGpuSkinnedInstanceBatches[i].Count = 0;
-                _activeGpuSkinnedInstanceBatches[i].BonesPrepared = false;
+                GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
+                batch.Count = 0;
+                batch.ActiveIndex = -1;
+                batch.WriteCursor = 0;
             }
 
             _activeGpuSkinnedInstanceBatches.Clear();
+            _collectedInstanceCount = 0;
+            _stableIds?.BeginFrame();
             _poseRowByKey.Clear();
             _dirtyPoseRows.Clear();
             _poseTexturesBuiltForFrame = false;
+            ResetStats();
+            _prepareStartTimestamp = prepareStartTimestamp;
+            _frameCollecting = true;
         }
 
-        public bool TrySubmit(in SkinnedVisualBatchItem item, IRenderMeshAssets meshes, float scaleMul)
+        public bool TryCollect(in SkinnedVisualBatchItem item, IRenderMeshAssets meshes, float scaleMul)
         {
-            return TrySubmit(in item, meshes, scaleMul, out _);
+            return TryCollect(in item, meshes, scaleMul, out _);
         }
 
-        public bool TrySubmit(
+        public bool TryCollect(
             in SkinnedVisualBatchItem item,
             IRenderMeshAssets meshes,
             float scaleMul,
             out RaylibGpuSkinnedSubmitOutcome outcome)
         {
-            outcome = RaylibGpuSkinnedSubmitOutcome.Unsupported;
-            if (item.RenderPath != VisualRenderPath.GpuSkinnedInstance ||
-                !meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor) ||
-                descriptor.Type != MeshAssetType.Model)
-            {
-                return false;
-            }
-
-            RaylibGpuSkinnedModelAcquireOutcome acquire = _modelCache.TryGetOrLoad(
-                item.MeshAssetId,
-                in descriptor,
-                out RaylibGpuSkinnedModelCache.Entry entry,
-                out string? status);
-            if (acquire == RaylibGpuSkinnedModelAcquireOutcome.InFlight)
-            {
-                outcome = RaylibGpuSkinnedSubmitOutcome.InFlight;
-                return false;
-            }
-
-            if (acquire == RaylibGpuSkinnedModelAcquireOutcome.Failed)
+            if (!_frameCollecting)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} meshAssetId={item.MeshAssetId} failed to load GpuSkinnedInstance: {status}");
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires BeginFrame before collection.");
+            }
+
+            outcome = RaylibGpuSkinnedSubmitOutcome.Unsupported;
+            if (item.RenderPath != VisualRenderPath.GpuSkinnedInstance)
+            {
+                return false;
+            }
+
+            RaylibGpuSkinnedCapacity capacity = _capacity
+                ?? throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires explicit capacity configuration before GpuSkinnedInstance submission.");
+            RequireDeviceResourcesInitialized();
+            RequireSupportedLod(item.LOD);
+            if (_collectedInstanceCount >= capacity.MaxInstances)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires another instance slot; configured maxInstances={capacity.MaxInstances}.");
+            }
+
+            var familyKey = new GpuSkinnedBatchFamilyKey(
+                item.MeshAssetId,
+                item.MaterialId,
+                item.LOD,
+                item.AnimationProfileId);
+            if (!_gpuSkinnedBatchFamilies.TryGetValue(familyKey, out GpuSkinnedBatchFamily? family))
+            {
+                if (_registeredFamilyCount >= _gpuSkinnedBatchFamilySlots.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires another batch family for meshAssetId={item.MeshAssetId}, materialId={item.MaterialId}; configured maxBatches={capacity.MaxBatches}.");
+                }
+
+                if (!meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor logicalDescriptor) ||
+                    logicalDescriptor.Type != MeshAssetType.Model)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} logical meshAssetId={item.MeshAssetId} is not a registered Model.");
+                }
+
+                int poseAssetId = item.MeshAssetId;
+                int mainAssetId = item.MeshAssetId;
+                int shadowAssetId = item.MeshAssetId;
+                if (logicalDescriptor.GpuSkinnedLod.IsConfigured)
+                {
+                    poseAssetId = logicalDescriptor.GpuSkinnedLod.Main.High;
+                    mainAssetId = logicalDescriptor.GpuSkinnedLod.ResolveMain(item.LOD);
+                    shadowAssetId = logicalDescriptor.GpuSkinnedLod.ResolveShadow(item.LOD);
+                }
+
+                if (!TryAcquireEntry(meshes, poseAssetId, "pose", out RaylibGpuSkinnedModelCache.Entry poseEntry, out outcome) ||
+                    !TryAcquireEntry(meshes, mainAssetId, "main", out RaylibGpuSkinnedModelCache.Entry mainEntry, out outcome) ||
+                    !TryAcquireEntry(meshes, shadowAssetId, "shadow", out RaylibGpuSkinnedModelCache.Entry shadowEntry, out outcome))
+                {
+                    return false;
+                }
+
+                ValidateCompatibleModel(item.MeshAssetId, poseAssetId, in poseEntry, mainAssetId, in mainEntry, "main");
+                ValidateCompatibleModel(item.MeshAssetId, poseAssetId, in poseEntry, shadowAssetId, in shadowEntry, "shadow");
+
+                IReadOnlyDictionary<int, int>? stateToClipMap = RaylibSkinnedPlayback.ResolveStateMap(
+                    item.AnimationProfileId,
+                    item.MeshAssetId,
+                    AnimationStateMapResolver);
+                bool castsShadow = ResolveCastsShadow(item.MaterialId);
+
+                family = _gpuSkinnedBatchFamilySlots[_registeredFamilyCount];
+                family.Bind(
+                    familyKey,
+                    poseAssetId,
+                    in poseEntry,
+                    in mainEntry,
+                    in shadowEntry,
+                    stateToClipMap,
+                    castsShadow);
+                _gpuSkinnedBatchFamilies.Add(familyKey, family);
+                _registeredFamilyCount++;
             }
 
             AnimatorPackedState animator = item.Animator;
             RaylibSkinnedPlayback.ResolveFromAnimator(
                 in animator,
-                entry.Animations,
-                entry.AnimCount,
-                stateToClipMap: null,
+                family.Animations,
+                family.AnimCount,
+                family.StateToClipMap,
                 out int clipIndex,
                 out int frameIndex);
+            int poseFrame = RaylibSkinnedPlayback.QuantizeFrameIndex(
+                frameIndex,
+                family.Animations[clipIndex].frameCount,
+                PosePhaseBuckets);
 
-            long start = Stopwatch.GetTimestamp();
-
-            // 姿势纹理蒙皮（#1395）：桶键只含 (mesh, material)——姿势与颜色按实例记录
-            var key = new GpuSkinnedInstanceBatchKey(item.MeshAssetId, item.MaterialId);
+            var key = new GpuSkinnedInstanceBatchKey(
+                item.MeshAssetId,
+                item.MaterialId,
+                item.LOD,
+                item.AnimationProfileId,
+                clipIndex,
+                poseFrame);
             if (!_gpuSkinnedInstanceBatches.TryGetValue(key, out GpuSkinnedInstanceBatch? batch))
             {
-                batch = new GpuSkinnedInstanceBatch(key);
+                if (_registeredBatchCount >= _gpuSkinnedInstanceBatchSlots.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires another pose batch for meshAssetId={item.MeshAssetId}, materialId={item.MaterialId}, clipIndex={clipIndex}, frameIndex={poseFrame}; configured maxBatches={capacity.MaxBatches}.");
+                }
+
+                batch = _gpuSkinnedInstanceBatchSlots[_registeredBatchCount];
+                batch.Bind(key, family, clipIndex, poseFrame);
                 _gpuSkinnedInstanceBatches.Add(key, batch);
+                _registeredBatchCount++;
             }
+
+            // All validated LOD variants share the canonical pose asset and one palette row.
+            var poseKey = (item.MeshAssetId, clipIndex, poseFrame);
+            bool isNewPose = !_poseRowByKey.TryGetValue(poseKey, out int poseRow);
+            if (isNewPose)
+            {
+                if (_poseRowByKey.Count >= capacity.MaxUniquePoses)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires another pose row for meshAssetId={item.MeshAssetId}, clipIndex={clipIndex}, frameIndex={frameIndex}; configured maxUniquePoses={capacity.MaxUniquePoses}.");
+                }
+
+                poseRow = _poseRowByKey.Count;
+            }
+
+            (_stableIds ?? throw new InvalidOperationException(
+                $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires a configured StableId index before GpuSkinnedInstance submission."))
+                .Add(item.StableId);
 
             if (batch.Count == 0)
             {
-                batch.Model = entry.Model;
-                batch.Animations = entry.Animations;
-                batch.AnimCount = entry.AnimCount;
+                batch.ActiveIndex = _activeGpuSkinnedInstanceBatches.Count;
                 _activeGpuSkinnedInstanceBatches.Add(batch);
             }
 
-            if (_gpuSkinnedBatchesPreparedForShadow && batch.Count > 0)
+            if (isNewPose)
             {
-                return true;
-            }
-
-            // 姿势行分配：(mesh, clip, frame) 精确键唯一映射到调色板一行（禁哈希碰撞静默错姿势）
-            var poseKey = (item.MeshAssetId, clipIndex, frameIndex);
-            if (!_poseRowByKey.TryGetValue(poseKey, out int poseRow))
-            {
-                _posePalette ??= new RaylibPoseTexturePalette();
-                poseRow = _poseRowByKey.Count;
                 _poseRowByKey[poseKey] = poseRow;
-                _dirtyPoseRows.Add((poseRow, item.MeshAssetId, clipIndex, frameIndex));
+                _dirtyPoseRows.Add((poseRow, batch, clipIndex, poseFrame));
             }
 
-            batch.Add(
-                RaylibMatrix.FromSystemNumerics(
-                    Matrix4x4.CreateScale(item.Scale * scaleMul) *
-                    Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(item.Rotation)) *
-                    Matrix4x4.CreateTranslation(item.Position)),
-                poseRow,
-                item.Color);
-            LastMatrixBuildMs += (Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency;
+            int collectedIndex = _collectedInstanceCount++;
+            _collectedTransforms[collectedIndex] = RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(item.Scale * scaleMul) *
+                Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(item.Rotation)) *
+                Matrix4x4.CreateTranslation(item.Position));
+            _collectedPoseRows[collectedIndex] = poseRow;
+            _collectedTints[collectedIndex] = item.Color;
+            _collectedBatchIndices[collectedIndex] = batch.ActiveIndex;
+            batch.Count++;
+            LastCollectedUniqueInstances++;
+            RecordCollectedLod(item.LOD);
             outcome = RaylibGpuSkinnedSubmitOutcome.Submitted;
             return true;
         }
 
-        public void Flush(Shader instancingShader, in RaylibPbrUniformLocations instancingPbrLocs, RaylibSkyIbl? skyIbl)
+        public void SealFrame()
         {
+            if (!_frameCollecting || _frameSealed)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires one active collection before SealFrame.");
+            }
+
+            BuildAndUploadPoseTextures();
+            if (LastCollectedUniqueInstances != LastValidatedStableIds)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} collected {LastCollectedUniqueInstances} unique instances but validated {LastValidatedStableIds} StableIds.");
+            }
+            int collectedLodInstances = checked(
+                LastCollectedHighLodInstances + LastCollectedMediumLodInstances + LastCollectedLowLodInstances);
+            if (collectedLodInstances != LastCollectedUniqueInstances)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} collected {LastCollectedUniqueInstances} unique instances but classified {collectedLodInstances} LOD instances.");
+            }
+
+            LastPrepareCpuMs = (Stopwatch.GetTimestamp() - _prepareStartTimestamp) * 1000d / Stopwatch.Frequency;
+            _frameCollecting = false;
+            _frameSealed = true;
+        }
+
+        public void DrawMain(Shader instancingShader, in RaylibPbrUniformLocations instancingPbrLocs, RaylibSkyIbl? skyIbl)
+        {
+            RequireSealedFrame();
             if (_activeGpuSkinnedInstanceBatches.Count > 0)
             {
-                EnsureShaderInitialized();
-                BuildAndUploadPoseTextures();
+                RequireDeviceResourcesInitialized();
                 long drawStart = Stopwatch.GetTimestamp();
                 for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
                 {
@@ -225,20 +475,29 @@ namespace Ludots.Raylib.Render
                         continue;
                     }
 
-                    LastInstances += batch.Count;
-                    LastBatches += DrawBatch(batch, instancingShader, in instancingPbrLocs, skyIbl);
+                    GpuSkinnedMeshSubmission submission = DrawBatch(
+                        batch,
+                        instancingShader,
+                        in instancingPbrLocs,
+                        skyIbl);
+                    if (submission.DrawCalls > 0)
+                    {
+                        LastMainInstancesSubmitted = checked(LastMainInstancesSubmitted + batch.Count);
+                        LastSharedPoseInstances = checked(LastSharedPoseInstances + batch.Count);
+                        LastMainDrawCalls = checked(LastMainDrawCalls + submission.DrawCalls);
+                        LastMainTrianglesSubmitted = checked(LastMainTrianglesSubmitted + submission.Triangles);
+                    }
                 }
 
                 LastMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000d / Stopwatch.Frequency;
             }
 
-            _gpuSkinnedBatchesPreparedForShadow = false;
         }
 
         /// <summary>
         /// 把 dirty 姿势行的骨骼矩阵从 native 内存按 texel 合同写入调色板 staging 并上传；
         /// 同时把全部活跃实例的 (poseRow, tint) 写入实例表 staging 并上传，并在此确定每个
-        /// 批次的 GlobalInstanceBase（阴影与主 pass 共用同一寻址，#1395）。
+        /// 批次的 GlobalInstanceBase（阴影与主 pass 共用同一寻址）。
         /// 每帧只构建一次：阴影 pass 先于主 pass，两处调用经 _poseTexturesBuiltForFrame 幂等。
         /// </summary>
         private unsafe void BuildAndUploadPoseTextures()
@@ -250,13 +509,13 @@ namespace Ludots.Raylib.Render
 
             long buildStart = Stopwatch.GetTimestamp();
             LastUniquePoses = _dirtyPoseRows.Count;
+            PackInstancesByBatch();
 
-            // 0. 容量前置（一次定型）：扩容会重建纹理、丢弃已上传行，因此必须发生在本帧
-            // 任何行写入/上传之前，禁止在逐行循环中途触发（#1395 codex 复审结论）。
+            // Validate the fixed palette shape before writing any row.
             int maxBoneSlots = 0;
             for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
             {
-                Model model = _activeGpuSkinnedInstanceBatches[i].Model;
+                Model model = _activeGpuSkinnedInstanceBatches[i].PoseModel;
                 int slots = 0;
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
@@ -276,18 +535,17 @@ namespace Ludots.Raylib.Render
             // 骨骼槽位 = mesh 局部 boneId + 前序 mesh 的 boneCount 累计（多 mesh 合同）。
             for (int i = 0; i < _dirtyPoseRows.Count; i++)
             {
-                (int poseRow, int meshAssetId, int clipIndex, int frameIndex) = _dirtyPoseRows[i];
-                var batch = _activeGpuSkinnedInstanceBatches.FirstOrDefault(b => b.Key.MeshAssetId == meshAssetId);
-                if (batch == null || batch.Animations == null)
+                (int poseRow, GpuSkinnedInstanceBatch batch, int clipIndex, int frameIndex) = _dirtyPoseRows[i];
+                int meshAssetId = batch.Key.MeshAssetId;
+                if (batch.Animations == null)
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} meshAssetId={meshAssetId} pose requires loaded animations.");
                 }
 
-                Model model = batch.Model;
+                Model model = batch.PoseModel;
                 ModelAnimation anim = batch.Animations[clipIndex];
                 Rl.UpdateModelAnimationBones(model, anim, frameIndex);
-                batch.BonesPrepared = true;
-
                 int boneBase = 0;
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
@@ -313,26 +571,15 @@ namespace Ludots.Raylib.Render
             }
 
             // 2. 实例表：每实例 (poseRow + RGBA tint) 写入 staging 并上传，同时锁定批次实例基址
-            int totalInstances = 0;
-            for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
-            {
-                totalInstances += _activeGpuSkinnedInstanceBatches[i].Count;
-            }
+            int totalInstances = _collectedInstanceCount;
 
             if (totalInstances > 0)
             {
                 _posePalette.EnsureInstanceCapacity(totalInstances);
-                int global = 0;
-                for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
+                for (int global = 0; global < totalInstances; global++)
                 {
-                    GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
-                    batch.GlobalInstanceBase = global;
-                    for (int j = 0; j < batch.Count; j++)
-                    {
-                        Vector4 tint = batch.Tints[j];
-                        _posePalette.WriteInstance(global, batch.PoseRows[j], tint.X, tint.Y, tint.Z, tint.W);
-                        global++;
-                    }
+                    Vector4 tint = _packedTints[global];
+                    _posePalette.WriteInstance(global, _packedPoseRows[global], tint.X, tint.Y, tint.Z, tint.W);
                 }
 
                 int rows = (totalInstances + RaylibPoseTexturePalette.InstancesPerRow - 1) / RaylibPoseTexturePalette.InstancesPerRow;
@@ -349,30 +596,300 @@ namespace Ludots.Raylib.Render
             LastPoseBuildCpuMs = (Stopwatch.GetTimestamp() - buildStart) * 1000d / Stopwatch.Frequency - LastTextureUploadCpuMs;
         }
 
-        public void FlushShadow(RaylibDirectionalShadowMap shadow)
+        private void PackInstancesByBatch()
         {
+            int instanceBase = 0;
+            for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
+            {
+                GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
+                batch.GlobalInstanceBase = instanceBase;
+                batch.WriteCursor = 0;
+                instanceBase = checked(instanceBase + batch.Count);
+            }
+
+            if (instanceBase != _collectedInstanceCount)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} collected {_collectedInstanceCount} instances but batch counts total {instanceBase}.");
+            }
+
+            for (int i = 0; i < _collectedInstanceCount; i++)
+            {
+                int activeBatchIndex = _collectedBatchIndices[i];
+                if ((uint)activeBatchIndex >= (uint)_activeGpuSkinnedInstanceBatches.Count)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} collected invalid active batch index {activeBatchIndex}.");
+                }
+
+                GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[activeBatchIndex];
+                int packedIndex = batch.GlobalInstanceBase + batch.WriteCursor++;
+                _packedTransforms[packedIndex] = _collectedTransforms[i];
+                _packedPoseRows[packedIndex] = _collectedPoseRows[i];
+                _packedTints[packedIndex] = _collectedTints[i];
+            }
+
+            for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
+            {
+                GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
+                if (batch.WriteCursor != batch.Count)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} packed {batch.WriteCursor} of {batch.Count} instances for meshAssetId={batch.Key.MeshAssetId}.");
+                }
+            }
+        }
+
+        public void DrawShadow(RaylibDirectionalShadowMap shadow)
+        {
+            RequireSealedFrame();
             if (_activeGpuSkinnedInstanceBatches.Count == 0)
             {
                 return;
             }
 
-            // 阴影 pass 先于主 pass：姿势纹理必须先于阴影绘制构建（与主 pass 幂等同一次）
-            BuildAndUploadPoseTextures();
+            RequireDeviceResourcesInitialized();
 
             long shadowStart = Stopwatch.GetTimestamp();
             for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
             {
                 GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
-                if (batch.Count == 0)
+                if (batch.Count == 0 || !batch.CastsShadow)
                 {
                     continue;
                 }
 
-                DrawBatchShadow(batch, shadow);
+                GpuSkinnedMeshSubmission submission = DrawBatchShadow(batch, shadow);
+                if (submission.DrawCalls > 0)
+                {
+                    LastShadowInstancesSubmitted = checked(LastShadowInstancesSubmitted + batch.Count);
+                    LastShadowDrawCalls = checked(LastShadowDrawCalls + submission.DrawCalls);
+                    LastShadowTrianglesSubmitted = checked(LastShadowTrianglesSubmitted + submission.Triangles);
+                }
             }
 
-            _gpuSkinnedBatchesPreparedForShadow = true;
             LastShadowSubmitCpuMs += (Stopwatch.GetTimestamp() - shadowStart) * 1000d / Stopwatch.Frequency;
+        }
+
+        public void EndFrame()
+        {
+            if (!_frameCollecting && !_frameSealed)
+            {
+                return;
+            }
+
+            _frameCollecting = false;
+            _frameSealed = false;
+        }
+
+        private bool TryAcquireEntry(
+            IRenderMeshAssets meshes,
+            int assetId,
+            string pass,
+            out RaylibGpuSkinnedModelCache.Entry entry,
+            out RaylibGpuSkinnedSubmitOutcome outcome)
+        {
+            entry = default;
+            outcome = RaylibGpuSkinnedSubmitOutcome.Unsupported;
+            if (!meshes.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor) ||
+                descriptor.Type != MeshAssetType.Model)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} {pass} LOD asset id={assetId} is not a registered Model.");
+            }
+
+            RaylibGpuSkinnedModelAcquireOutcome acquire = _modelCache.TryGetOrLoad(
+                assetId,
+                in descriptor,
+                out entry,
+                out string? status);
+            if (acquire == RaylibGpuSkinnedModelAcquireOutcome.InFlight)
+            {
+                outcome = RaylibGpuSkinnedSubmitOutcome.InFlight;
+                return false;
+            }
+
+            if (acquire == RaylibGpuSkinnedModelAcquireOutcome.Failed)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} {pass} LOD asset id={assetId} failed to load: {status}");
+            }
+
+            outcome = RaylibGpuSkinnedSubmitOutcome.Submitted;
+            return true;
+        }
+
+        private bool ResolveCastsShadow(int materialId)
+        {
+            if (materialId <= 0)
+            {
+                return true;
+            }
+
+            if (!_materials.TryGetResolvedForLane(materialId, out ResolvedMaterialAsset material))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} cannot resolve material id={materialId} during collection.");
+            }
+
+            return RaylibMaterialDrawState.CastsShadow(material.BlendMode);
+        }
+
+        private static unsafe void ValidateCompatibleModel(
+            int logicalAssetId,
+            int poseAssetId,
+            in RaylibGpuSkinnedModelCache.Entry poseEntry,
+            int drawAssetId,
+            in RaylibGpuSkinnedModelCache.Entry drawEntry,
+            string pass)
+        {
+            if (poseAssetId == drawAssetId)
+            {
+                return;
+            }
+
+            Model poseModel = poseEntry.Model;
+            Model drawModel = drawEntry.Model;
+            string prefix =
+                $"GPU-skinned logical asset id={logicalAssetId} {pass} LOD asset id={drawAssetId} is incompatible with pose asset id={poseAssetId}";
+            if (poseModel.boneCount != drawModel.boneCount ||
+                poseModel.bones == null || drawModel.bones == null ||
+                poseModel.bindPose == null || drawModel.bindPose == null)
+            {
+                throw new InvalidOperationException(
+                    $"{prefix}: bone contract differs (pose={poseModel.boneCount}, draw={drawModel.boneCount}).");
+            }
+
+            if (poseModel.meshCount != drawModel.meshCount)
+            {
+                throw new InvalidOperationException(
+                    $"{prefix}: mesh count differs (pose={poseModel.meshCount}, draw={drawModel.meshCount}).");
+            }
+
+            for (int meshIndex = 0; meshIndex < poseModel.meshCount; meshIndex++)
+            {
+                int poseBones = poseModel.meshes[meshIndex].boneCount;
+                int drawBones = drawModel.meshes[meshIndex].boneCount;
+                if (poseBones != drawBones)
+                {
+                    throw new InvalidOperationException(
+                        $"{prefix}: mesh[{meshIndex}] bone slot count differs (pose={poseBones}, draw={drawBones}).");
+                }
+            }
+
+            for (int boneIndex = 0; boneIndex < poseModel.boneCount; boneIndex++)
+            {
+                BoneInfo* poseBone = poseModel.bones + boneIndex;
+                BoneInfo* drawBone = drawModel.bones + boneIndex;
+                if (poseBone->parent != drawBone->parent || !BoneNameEquals(poseBone, drawBone))
+                {
+                    throw new InvalidOperationException(
+                        $"{prefix}: bone[{boneIndex}] name or parent differs.");
+                }
+
+                Transform pose = poseModel.bindPose[boneIndex];
+                Transform draw = drawModel.bindPose[boneIndex];
+                if (!pose.translation.Equals(draw.translation) ||
+                    !pose.rotation.Equals(draw.rotation) ||
+                    !pose.scale.Equals(draw.scale))
+                {
+                    throw new InvalidOperationException(
+                        $"{prefix}: bone[{boneIndex}] bind pose differs.");
+                }
+            }
+
+            for (int animationIndex = 0; animationIndex < poseEntry.AnimCount; animationIndex++)
+            {
+                if (!Rl.IsModelAnimationValid(drawModel, poseEntry.Animations[animationIndex]))
+                {
+                    throw new InvalidOperationException(
+                        $"{prefix}: canonical animation[{animationIndex}] is invalid for the draw model.");
+                }
+            }
+        }
+
+        private static unsafe bool BoneNameEquals(BoneInfo* left, BoneInfo* right)
+        {
+            for (int i = 0; i < 32; i++)
+            {
+                if (left->name[i] != right->name[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        internal static GpuSkinnedMeshSubmission CalculateMeshSubmission(
+            int instanceCount,
+            int triangleCount,
+            int maxInstancesPerDraw)
+        {
+            if (instanceCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(instanceCount));
+            }
+            if (triangleCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(triangleCount));
+            }
+            if (maxInstancesPerDraw <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxInstancesPerDraw));
+            }
+            if (instanceCount == 0)
+            {
+                return default;
+            }
+
+            int drawCalls = 1 + ((instanceCount - 1) / maxInstancesPerDraw);
+            long triangles = checked((long)instanceCount * triangleCount);
+            return new GpuSkinnedMeshSubmission(drawCalls, triangles);
+        }
+
+        private static void RequireSupportedLod(LODLevel lod)
+        {
+            if (lod is not LODLevel.High and not LODLevel.Medium and not LODLevel.Low)
+            {
+                throw new InvalidOperationException($"GPU-skinned submission received unsupported LOD value {(byte)lod}.");
+            }
+        }
+
+        private void RecordCollectedLod(LODLevel lod)
+        {
+            switch (lod)
+            {
+                case LODLevel.High:
+                    LastCollectedHighLodInstances++;
+                    break;
+                case LODLevel.Medium:
+                    LastCollectedMediumLodInstances++;
+                    break;
+                case LODLevel.Low:
+                    LastCollectedLowLodInstances++;
+                    break;
+                default:
+                    throw new InvalidOperationException($"GPU-skinned submission received unsupported LOD value {(byte)lod}.");
+            }
+        }
+
+        private void RequireDeviceResourcesInitialized()
+        {
+            if (!DeviceResourcesInitialized)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires {nameof(InitializeDeviceResources)} after the Raylib GL context is created and before GPU-skinned frame collection.");
+            }
+        }
+
+        private void RequireSealedFrame()
+        {
+            if (!_frameSealed)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires SealFrame before drawing.");
+            }
         }
 
         public void Dispose()
@@ -387,12 +904,16 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        private int DrawBatch(GpuSkinnedInstanceBatch batch, Shader instancingShader, in RaylibPbrUniformLocations instancingPbrLocs, RaylibSkyIbl? skyIbl)
+        private GpuSkinnedMeshSubmission DrawBatch(
+            GpuSkinnedInstanceBatch batch,
+            Shader instancingShader,
+            in RaylibPbrUniformLocations instancingPbrLocs,
+            RaylibSkyIbl? skyIbl)
         {
-            Model model = batch.Model;
+            Model model = batch.MainModel;
             if (model.meshCount <= 0 || batch.Count <= 0)
             {
-                return 0;
+                return default;
             }
 
             if (batch.Animations == null || batch.AnimCount <= 0)
@@ -403,18 +924,21 @@ namespace Ludots.Raylib.Render
 
             EnsureFrameLightingApplied();
             int drawCalls = 0;
+            long triangles = 0;
             int materialId = batch.Key.MaterialId;
             if (_materials.TryGetResolvedForLane(materialId, out ResolvedMaterialAsset skinnedResolved))
             {
                 RaylibMaterialDrawState.RequireLaneShaderKey(in skinnedResolved, materialId, "GpuSkinnedInstance");
             }
             RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
-            fixed (RaylibMatrix* transforms = batch.Transforms)
+            ApplyBatchPoseBones(batch);
+            fixed (RaylibMatrix* transforms = _packedTransforms)
             {
                 int boneBase = 0;
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
+                    Mesh poseMesh = batch.PoseModel.meshes[meshIndex];
                     // boneBase 累计必须覆盖全部 mesh（与 BuildAndUploadPoseTextures 一致），跳过绘制不跳过累计
                     int nextBoneBase = boneBase + mesh.boneCount;
                     if (mesh.vertexCount > 0)
@@ -422,22 +946,29 @@ namespace Ludots.Raylib.Render
                         RaylibInstancedMaterialPipeline.RequireMeshNormals(in mesh, "GpuSkinnedInstance");
                         if (_materials.TryResolveInstancedModelMaterial(model, meshIndex, materialId, instancingShader, in instancingPbrLocs, skyIbl, _frameShadow, out Material material))
                         {
+                            GpuSkinnedMeshSubmission meshSubmission = CalculateMeshSubmission(
+                                batch.Count,
+                                mesh.triangleCount,
+                                _maxModelInstancesPerDraw);
                             material.shader = _skinningShader;
                             _materials.ApplyHostMaterialMaps(ref material, materialId, _skinningShader, in _skinningPbrLocs);
                             RaylibInstancedMaterialPipeline.BindFrameShadow(ref material, _frameShadow);
-                            // tint 经实例表按实例传入（#1395）
+                            // Tint is read from the per-instance table.
 
                             // 姿势纹理蒙皮：骨骼矩阵已在调色板纹理中，无需 uniform 上传
                             BindPoseTextures(ref material);
                             SetPaletteStrideUniforms();
                             SetBoneBaseUniform(boneBase);
+                            SetSharedPoseUniform(poseMesh.boneMatrices, poseMesh.boneCount);
                             for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
                             {
                                 int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
                                 SetInstanceBaseUniform(batch.GlobalInstanceBase + offset);
-                                Rl.DrawMeshInstanced(mesh, material, transforms + offset, chunkCount);
-                                drawCalls++;
+                                Rl.DrawMeshInstanced(mesh, material, transforms + batch.GlobalInstanceBase + offset, chunkCount);
                             }
+
+                            drawCalls = checked(drawCalls + meshSubmission.DrawCalls);
+                            triangles = checked(triangles + meshSubmission.Triangles);
                         }
                     }
 
@@ -445,15 +976,17 @@ namespace Ludots.Raylib.Render
                 }
             }
 
-            return drawCalls;
+            return new GpuSkinnedMeshSubmission(drawCalls, triangles);
         }
 
-        private void DrawBatchShadow(GpuSkinnedInstanceBatch batch, RaylibDirectionalShadowMap shadow)
+        private GpuSkinnedMeshSubmission DrawBatchShadow(
+            GpuSkinnedInstanceBatch batch,
+            RaylibDirectionalShadowMap shadow)
         {
-            Model model = batch.Model;
+            Model model = batch.ShadowModel;
             if (model.meshCount <= 0 || batch.Count <= 0)
             {
-                return;
+                return default;
             }
 
             if (batch.Animations == null || batch.AnimCount <= 0)
@@ -468,34 +1001,50 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibGpuSkinnedBatchRenderer)} GpuSkinned shadow requires the pose texture palette; silent uniform shadow is forbidden.");
             }
 
-            fixed (RaylibMatrix* transforms = batch.Transforms)
+            int drawCalls = 0;
+            long triangles = 0;
+            ApplyBatchPoseBones(batch);
+            fixed (RaylibMatrix* transforms = _packedTransforms)
             {
                 int boneBase = 0;
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
+                    Mesh poseMesh = batch.PoseModel.meshes[meshIndex];
                     int nextBoneBase = boneBase + mesh.boneCount;
                     if (mesh.vertexCount > 0)
                     {
+                        GpuSkinnedMeshSubmission meshSubmission = CalculateMeshSubmission(
+                            batch.Count,
+                            mesh.triangleCount,
+                            _maxModelInstancesPerDraw);
                         for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
                         {
                             int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
                             shadow.DrawSkinnedMeshPoseTextureShadow(
                                 mesh,
-                                transforms + offset,
+                                transforms + batch.GlobalInstanceBase + offset,
                                 chunkCount,
                                 _posePalette.BonePalette,
                                 _posePalette.InstanceTable,
                                 batch.GlobalInstanceBase + offset,
                                 boneBase,
                                 RaylibPoseTexturePalette.BoneSlotsPerRow,
-                                _posePalette.SlotRowsPerPose);
+                                _posePalette.SlotRowsPerPose,
+                                poseMesh.boneMatrices,
+                                poseMesh.boneCount,
+                                useSharedPose: true);
                         }
+
+                        drawCalls = checked(drawCalls + meshSubmission.DrawCalls);
+                        triangles = checked(triangles + meshSubmission.Triangles);
                     }
 
                     boneBase = nextBoneBase;
                 }
             }
+
+            return new GpuSkinnedMeshSubmission(drawCalls, triangles);
         }
 
         private void EnsureFrameLightingApplied()
@@ -512,7 +1061,7 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibGpuSkinnedBatchRenderer)} lit GpuSkinnedInstance requires camera view position before draw.");
             }
 
-            EnsureShaderInitialized();
+            RequireDeviceResourcesInitialized();
             ApplySkinningFrameLighting();
         }
 
@@ -601,7 +1150,7 @@ namespace Ludots.Raylib.Render
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_BRDF] =
                 RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uBrdfLut", "skinning_instanced");
 
-            // 姿势纹理蒙皮（#1395）：boneMatrices uniform 不再存在，调色板走纹理
+            // Pose-texture skinning reads matrices from the palette texture.
             if (_locBonePaletteSampler < 0) throw new InvalidOperationException("Skinning shader sampler 'uBonePalette' not found.");
             if (_locInstanceTableSampler < 0) throw new InvalidOperationException("Skinning shader sampler 'uInstanceTable' not found.");
             if (_locInstanceBase < 0) throw new InvalidOperationException("Skinning shader uniform 'uInstanceBase' not found.");
@@ -679,42 +1228,129 @@ namespace Ludots.Raylib.Render
 
         private readonly record struct GpuSkinnedInstanceBatchKey(
             int MeshAssetId,
-            int MaterialId);
+            int MaterialId,
+            LODLevel Lod,
+            int AnimationProfileId);
+
+        internal readonly record struct GpuSkinnedMeshSubmission(int DrawCalls, long Triangles);
+
+        internal sealed class StableIdFrameIndex
+        {
+            private readonly int[] _keys;
+            private readonly long[] _stamps;
+            private readonly int _mask;
+            private readonly int _maxEntries;
+            private long _generation;
+
+            public StableIdFrameIndex(int maxEntries)
+            {
+                if (maxEntries <= 0 || maxEntries > (1 << 29))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(maxEntries));
+                }
+
+                int tableSize = 1;
+                int required = checked(maxEntries * 2);
+                while (tableSize < required)
+                {
+                    tableSize <<= 1;
+                }
+
+                _keys = new int[tableSize];
+                _stamps = new long[tableSize];
+                _mask = tableSize - 1;
+                _maxEntries = maxEntries;
+            }
+
+            public int Count { get; private set; }
+
+            public void BeginFrame()
+            {
+                _generation = checked(_generation + 1);
+                Count = 0;
+            }
+
+            public void Add(int stableId)
+            {
+                if (stableId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"GPU-skinned submission requires a positive StableId; received {stableId}.");
+                }
+
+                int slot = (int)(unchecked((uint)stableId * 2654435761u) & (uint)_mask);
+                for (int probe = 0; probe < _keys.Length; probe++)
+                {
+                    if (_stamps[slot] != _generation)
+                    {
+                        if (Count >= _maxEntries)
+                        {
+                            throw new InvalidOperationException(
+                                $"GPU-skinned StableId index requires another entry; configured maxEntries={_maxEntries}.");
+                        }
+
+                        _stamps[slot] = _generation;
+                        _keys[slot] = stableId;
+                        Count++;
+                        return;
+                    }
+
+                    if (_keys[slot] == stableId)
+                    {
+                        throw new InvalidOperationException(
+                            $"GPU-skinned StableId={stableId} was submitted more than once in the same frame.");
+                    }
+
+                    slot = (slot + 1) & _mask;
+                }
+
+                throw new InvalidOperationException(
+                    $"GPU-skinned StableId index exhausted its fixed table of {_keys.Length} slots.");
+            }
+        }
 
         private sealed class GpuSkinnedInstanceBatch
         {
-            public readonly GpuSkinnedInstanceBatchKey Key;
-            public RaylibMatrix[] Transforms;
-            public int[] PoseRows;
-            public Vector4[] Tints;
-            public int Count;
-            public Model Model;
+            public GpuSkinnedInstanceBatchKey Key;
+            public int PoseAssetId;
+            public Model PoseModel;
+            public Model MainModel;
+            public Model ShadowModel;
             public ModelAnimation* Animations;
             public int AnimCount;
-            public bool BonesPrepared;
+            public IReadOnlyDictionary<int, int>? StateToClipMap;
+            public bool CastsShadow;
+            public bool IsBound;
+            public int Count;
+            public int ActiveIndex = -1;
             public int GlobalInstanceBase;
+            public int WriteCursor;
 
-            public GpuSkinnedInstanceBatch(GpuSkinnedInstanceBatchKey key, int initialCapacity = 256)
+            public void Bind(
+                GpuSkinnedInstanceBatchKey key,
+                int poseAssetId,
+                in RaylibGpuSkinnedModelCache.Entry poseEntry,
+                in RaylibGpuSkinnedModelCache.Entry mainEntry,
+                in RaylibGpuSkinnedModelCache.Entry shadowEntry,
+                IReadOnlyDictionary<int, int>? stateToClipMap,
+                bool castsShadow)
             {
-                Key = key;
-                Transforms = new RaylibMatrix[Math.Max(4, initialCapacity)];
-                PoseRows = new int[Math.Max(4, initialCapacity)];
-                Tints = new Vector4[Math.Max(4, initialCapacity)];
-            }
-
-            public void Add(in RaylibMatrix matrix, int poseRow, in Vector4 tint)
-            {
-                if (Count >= Transforms.Length)
+                if (IsBound)
                 {
-                    Array.Resize(ref Transforms, Transforms.Length * 2);
-                    Array.Resize(ref PoseRows, PoseRows.Length * 2);
-                    Array.Resize(ref Tints, Tints.Length * 2);
+                    throw new InvalidOperationException(
+                        $"{nameof(GpuSkinnedInstanceBatch)} slot is already bound to meshAssetId={Key.MeshAssetId}.");
                 }
 
-                Transforms[Count] = matrix;
-                PoseRows[Count] = poseRow;
-                Tints[Count] = tint;
-                Count++;
+                Key = key;
+                PoseAssetId = poseAssetId;
+                PoseModel = poseEntry.Model;
+                MainModel = mainEntry.Model;
+                ShadowModel = shadowEntry.Model;
+                Animations = poseEntry.Animations;
+                AnimCount = poseEntry.AnimCount;
+                StateToClipMap = stateToClipMap;
+                CastsShadow = castsShadow;
+                IsBound = true;
             }
         }
     }
