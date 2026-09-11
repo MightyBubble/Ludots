@@ -122,36 +122,134 @@ function layoutDialogueNodes(
     children.set(edge.source, list);
   }
 
+  const parentsOf = (id: string) => edges.filter((edge) => edge.target === id).map((edge) => edge.source);
+
+  const isUnder = (root: string, node: string) => {
+    const seen = new Set<string>();
+    const stack = [...(children.get(root) ?? [])];
+    while (stack.length > 0) {
+      const cur = stack.pop();
+      if (!cur || seen.has(cur)) continue;
+      if (cur === node) return true;
+      seen.add(cur);
+      stack.push(...(children.get(cur) ?? []));
+    }
+    return false;
+  };
+
+  const isPeerJoin = (hubId: string, target: string) =>
+    parentsOf(target).some((parent) => parent !== hubId && !isUnder(hubId, parent));
+
   const positions: Record<string, { x: number; y: number }> = {};
   const visiting = new Set<string>();
   let leafCursor = 0;
 
-  const place = (id: string, depth: number): number => {
-    if (positions[id]) return positions[id].x;
+  const at = (depth: number, x: number) => ({ x, y: ORIGIN_Y + depth * GAP_Y });
+  const depthOf = (id: string) => Math.round((positions[id].y - ORIGIN_Y) / GAP_Y);
+  const kidsOf = (id: string) =>
+    (children.get(id) ?? []).filter((child) => !visiting.has(child) && child !== id);
+
+  const expandSay = (id: string, depth: number): number => {
+    if (visiting.has(id) && positions[id]) return positions[id].x;
     visiting.add(id);
-    const kids = (children.get(id) ?? []).filter(
-      (child) => !visiting.has(child) && !positions[child] && child !== id,
-    );
-    if (kids.length === 0) {
-      const x = ORIGIN_X + leafCursor * GAP_X;
-      positions[id] = { x, y: ORIGIN_Y + depth * GAP_Y };
-      leafCursor += 1;
-      return x;
+    const kids = kidsOf(id);
+    if (!positions[id]) {
+      if (kids.length === 0) {
+        positions[id] = at(depth, ORIGIN_X + leafCursor * GAP_X);
+        leafCursor += 1;
+      } else {
+        const childXs = kids.map((child) =>
+          isChoiceHubId(child) ? placeHub(child, depth + 1) : expandSay(child, depth + 1),
+        );
+        positions[id] = at(depth, (Math.min(...childXs) + Math.max(...childXs)) / 2);
+      }
+    } else {
+      for (const child of kids) {
+        if (isChoiceHubId(child)) placeHub(child, depth + 1);
+        else expandSay(child, depth + 1);
+      }
     }
-    const childXs = kids.map((child) => place(child, depth + 1));
-    const x = (Math.min(...childXs) + Math.max(...childXs)) / 2;
-    positions[id] = { x, y: ORIGIN_Y + depth * GAP_Y };
-    return x;
+    visiting.delete(id);
+    return positions[id].x;
+  };
+
+  const placeHub = (id: string, depth: number): number => {
+    if (positions[id] && !visiting.has(id)) return positions[id].x;
+    visiting.add(id);
+    const targets = kidsOf(id).filter((target) => !isPeerJoin(id, target));
+    const owned: string[] = [];
+    for (const target of targets) {
+      if (positions[target]) continue;
+      positions[target] = at(depth + 1, ORIGIN_X + leafCursor * GAP_X);
+      leafCursor += 1;
+      owned.push(target);
+    }
+    for (const target of targets) {
+      expandSay(target, depth + 1);
+    }
+    const owner = parseChoiceHubOwner(id);
+    if (owned.length > 0) {
+      const xs = owned.map((target) => positions[target].x);
+      positions[id] = at(depth, (Math.min(...xs) + Math.max(...xs)) / 2);
+    } else if (owner && positions[owner]) {
+      positions[id] = at(depth, positions[owner].x);
+    } else {
+      positions[id] = at(depth, ORIGIN_X + leafCursor * GAP_X);
+      leafCursor += 1;
+    }
+    visiting.delete(id);
+    return positions[id].x;
   };
 
   if (nodes.some((node) => node.id === rootId)) {
-    place(rootId, 0);
+    expandSay(rootId, 0);
   }
+
+  let progressed = true;
+  let guard = 0;
+  while (progressed && guard < nodes.length) {
+    progressed = false;
+    guard += 1;
+    for (const node of nodes) {
+      if (positions[node.id]) continue;
+      if (isChoiceHubId(node.id)) {
+        const owner = parseChoiceHubOwner(node.id);
+        if (!owner || !positions[owner]) continue;
+        placeHub(node.id, depthOf(owner) + 1);
+        progressed = true;
+        continue;
+      }
+      const parents = parentsOf(node.id);
+      if (parents.length === 0 || parents.some((parent) => !positions[parent])) continue;
+      const parentXs = parents.map((parent) => positions[parent].x);
+      const parentDepth = Math.max(...parents.map((parent) => depthOf(parent)));
+      positions[node.id] = at(parentDepth + 1, (Math.min(...parentXs) + Math.max(...parentXs)) / 2);
+      progressed = true;
+    }
+  }
+
   for (const node of nodes) {
     if (positions[node.id]) continue;
-    positions[node.id] = { x: ORIGIN_X + leafCursor * GAP_X, y: ORIGIN_Y };
+    positions[node.id] = at(0, ORIGIN_X + leafCursor * GAP_X);
     leafCursor += 1;
   }
+
+  const shift = (id: string, dx: number, seen: Set<string>) => {
+    if (dx === 0 || seen.has(id) || !positions[id]) return;
+    seen.add(id);
+    positions[id] = { x: positions[id].x + dx, y: positions[id].y };
+    for (const child of children.get(id) ?? []) {
+      if (!positions[child] || positions[child].y <= positions[id].y) continue;
+      shift(child, dx, seen);
+    }
+  };
+  for (const node of nodes) {
+    if (!isChoiceHubId(node.id) || !positions[node.id]) continue;
+    const owner = parseChoiceHubOwner(node.id);
+    if (!owner || !positions[owner]) continue;
+    shift(node.id, positions[owner].x - positions[node.id].x, new Set());
+  }
+
   return positions;
 }
 

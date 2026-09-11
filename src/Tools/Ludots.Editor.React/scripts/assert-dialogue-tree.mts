@@ -93,4 +93,34 @@ assert(problem === null, `valid tree must pass runtime-shaped checks, got: ${pro
 const broken = { ...gate, nodes: gate.nodes.map((node) => ({ ...node, lineId: node.id === 'open' ? '' : node.lineId })) };
 assert(validateDialogueTree(broken) !== null, 'missing lineId must fail closed before save');
 
+const briefingPath = join(
+  here,
+  '../../../../mods/showcases/narrative/NarrativeShowcaseMod/assets/Dialogue/dialogues.json',
+);
+const briefingCatalog = JSON.parse(readFileSync(briefingPath, 'utf8')) as DialogueTree[];
+const briefing = briefingCatalog.find((row) => row.id === 'Dialogue.Narrative.Briefing');
+assert(briefing, 'Narrative briefing must exist for fan-out layout');
+const briefingFlow = dialogueToFlow(briefing);
+const briefingPos = Object.fromEntries(briefingFlow.nodes.map((node) => [node.id, node.position]));
+assert(briefingPos.briefing_lore_reply.x !== briefingPos.briefing_accept.x, 'briefing choices must fan out, not stack');
+assert(
+  Math.abs(briefingPos.briefing_lore_reply.y - briefingPos.briefing_accept.y) < 1,
+  'briefing choice targets share a row',
+);
+const briefingRound = applyFlowToDialogue(briefing, briefingFlow.nodes, briefingFlow.edges);
+assert(briefingRound.nodes.length === 3, 'briefing hub nodes stay off Dialogue JSON');
+assert(
+  briefingRound.nodes.find((node) => node.id === 'briefing_intro')?.choices?.find((choice) => choice.id === 'briefing_accept_now')
+    ?.nextNode === 'briefing_accept',
+  'shortcut choice still points at the join',
+);
+
+const audience = briefingCatalog.find((row) => row.id === 'Dialogue.Demo.Audience');
+assert(audience, 'Audience dialogue must exist for join layout');
+const audienceFlow = dialogueToFlow(audience);
+const audiencePos = Object.fromEntries(audienceFlow.nodes.map((node) => [node.id, node.position]));
+assert(audiencePos.ask_reply.x < audiencePos.standing.x && audiencePos.standing.x < audiencePos.ready_reply.x, 'join sits between the two branches');
+assert(audiencePos.duty_end.x !== audiencePos.mercy_end.x, 'ending choices fan out');
+assert(applyFlowToDialogue(audience, audienceFlow.nodes, audienceFlow.edges).nodes.length === 6, 'audience hubs stay off JSON');
+
 console.log('assert-dialogue-tree: ok');
