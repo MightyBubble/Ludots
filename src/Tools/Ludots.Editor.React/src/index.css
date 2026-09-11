@@ -65,4 +65,16 @@ body,
   --xy-theme-color-primary: var(--studio-blue);
   --xy-selection-background-color: color-mix(in srgb, var(--studio-yellow) 12%, transparent);
   --xy-selection-border-color: var(--studio-yellow);
+  --xy-controls-button-background-color: var(--studio-surface);
+  --xy-controls-button-background-color-hover: var(--studio-elevated);
+  --xy-controls-button-color: var(--studio-label);
+  --xy-controls-button-color-hover: var(--studio-label);
+  --xy-controls-button-border-color: var(--studio-elevated);
+  --xy-controls-box-shadow: none;
+  --xy-minimap-background-color: var(--studio-bg);
+  --xy-minimap-mask-background-color: color-mix(in srgb, var(--studio-bg) 55%, transparent);
+  --xy-attribution-background-color: var(--studio-surface);
+  --xy-background-color: var(--studio-bg);
+  --xy-edge-label-background-color: var(--studio-surface);
+  --xy-edge-label-color: var(--studio-label);
 }

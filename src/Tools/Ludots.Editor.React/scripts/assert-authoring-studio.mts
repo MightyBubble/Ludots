@@ -76,6 +76,7 @@ assert(!editorCss.includes('#003a73'), 'blueprint must not keep the invented val
 assert(!editorCss.includes('#0a84ff'), 'blueprint CSS must not keep HIG blue hex');
 assert(css.includes('scrollbar-color: var(--studio-fill)'), 'scrollbar must use studio tokens');
 assert(css.includes('::-webkit-scrollbar-thumb'), 'webkit scrollbar must be themed');
+assert(css.includes('--xy-controls-button-background-color: var(--studio-surface)'), 'zoom controls must not stay xyflow white');
 
 const studioSurfaces = [
   'src/pages/GasGraphEditorPage.tsx',
