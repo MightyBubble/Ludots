@@ -1,0 +1,15 @@
+{
+  "actions": [
+    { "id": "TrailMeshShowcase.ToggleTrail", "name": "TrailMeshShowcase_ToggleTrail", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "TrailMeshShowcase.Controls",
+      "name": "TrailMesh Showcase Controls",
+      "priority": 140,
+      "bindings": [
+        { "actionId": "TrailMeshShowcase.ToggleTrail", "path": "<Keyboard>/t" }
+      ]
+    }
+  ]
+}

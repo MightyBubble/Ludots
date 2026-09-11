@@ -353,6 +353,30 @@
       }
     },
     {
+      "name": "capability_standard_presenter_activation_condition_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPresenterActivationConditionShowcaseMod",
+        "projectPath": "CapabilityStandardPresenterActivationConditionShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_presenter_material_behavior_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPresenterMaterialBehaviorShowcaseMod",
+        "projectPath": "CapabilityStandardPresenterMaterialBehaviorShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_presenter_trailmesh_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPresenterTrailMeshShowcaseMod",
+        "projectPath": "CapabilityStandardPresenterTrailMeshShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_time_flow_showcase",
       "target": {
         "type": "path",

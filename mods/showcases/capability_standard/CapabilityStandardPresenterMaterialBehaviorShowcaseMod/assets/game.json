@@ -1,0 +1,12 @@
+{
+  "startupMapId": "capability_standard_presenter_material_behavior_showcase",
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "MaterialBehaviorShowcase.Controls"
+  ],
+  "windowTitle": "Ludots Engine - Capability Standard Presenter Material Behavior Showcase",
+  "targetFps": 0,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "material_behavior_showcase.mat.cool",
+    "domain": "Surface",
+    "roughness": 0.55,
+    "metalness": 0.05
+  },
+  {
+    "id": "material_behavior_showcase.mat.warm",
+    "domain": "Surface",
+    "roughness": 0.35,
+    "metalness": 0.15
+  }
+]

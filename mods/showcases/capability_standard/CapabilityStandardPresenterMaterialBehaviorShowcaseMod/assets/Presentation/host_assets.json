@@ -1,0 +1,20 @@
+[
+  {
+    "id": "material_behavior_showcase.mat.cool.raylib",
+    "assetKind": "Material",
+    "assetId": "material_behavior_showcase.mat.cool",
+    "backendId": "raylib",
+    "textures": {
+      "albedo": "CapabilityStandardPresenterMaterialBehaviorShowcaseMod:assets/Textures/mat_cool.png"
+    }
+  },
+  {
+    "id": "material_behavior_showcase.mat.warm.raylib",
+    "assetKind": "Material",
+    "assetId": "material_behavior_showcase.mat.warm",
+    "backendId": "raylib",
+    "textures": {
+      "albedo": "CapabilityStandardPresenterMaterialBehaviorShowcaseMod:assets/Textures/mat_warm.png"
+    }
+  }
+]

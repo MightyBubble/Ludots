@@ -339,32 +339,8 @@ public sealed class CapabilityStandardPresenterCommandShowcaseModEntry : IMod
     {
         Entity refreshPillarOwner = FindOwnerByStableId(engine, RefreshPillarOwnerStableId)
             ?? throw new InvalidOperationException("Presenter command showcase lost the refresh pillar owner.");
-        var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
-            ?? throw new InvalidOperationException("Presenter definition registry missing.");
-        if (engine.GetService(CoreServiceKeys.PresenterCommandBuffer) is not PresenterCommandBuffer commands)
-        {
-            throw new InvalidOperationException("Presenter command showcase requires PresenterCommandBuffer.");
-        }
-
-        if (!commands.TryAdd(new PresenterCommand
-        {
-            CommandKind = PresenterCommandKind.SinkParamToAsset,
-            CommandKindId = (byte)PresenterCommandKind.SinkParamToAsset,
-            RouteStrategy = PresenterCommandRouteStrategy.SingleRuntime,
-            PresenterDefinitionId = definitions.GetId(LampPostDefinitionKey),
-            ScopeTag = PresenterScopeTagRegistry.Register("pcmd.lamp.pillar.refresh"),
-            AnchorKind = PresentationAnchorKind.Entity,
-            Source = refreshPillarOwner,
-            ParamKey = PresenterParamKeyRegistry.Register("pcmd.lamp.color"),
-            ParamLane = ParamLane.Vector,
-            // 灯柱定义唯一行为槽 body 即索引 0；槽注册表不对外，程序化路径按定义槽序寻址
-            TargetBehaviorSlot = 0,
-        }))
-        {
-            throw new InvalidOperationException("PresenterCommandBuffer overflowed while sinking refresh pillar params.");
-        }
-
-        runtime.SetLastEvent("B 站 SinkParamToAsset：对照柱槽位同步重写入（程序化直发，scoped 解析）。");
+        PublishGameplayEvent(engine, "pcmd.lamp.refresh", refreshPillarOwner);
+        runtime.SetLastEvent("B 站 SinkParamToAsset：对照柱由 presenters 规则编译刷新（scoped 解析）。");
     }
 
     private void ToggleBoiler(PresenterCommandShowcaseRuntime runtime, GameEngine engine)
