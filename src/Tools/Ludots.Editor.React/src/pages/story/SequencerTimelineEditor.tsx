@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { STUDIO_THEME } from '../authoring-studio/authoringTheme';
 
 export type SequencerTrackRow = {
   type: string;
@@ -25,10 +26,10 @@ const LANE_LABEL: Record<string, string> = {
   Subtitle: '字幕 Subtitle',
   Signal: '信号 Signal',
 };
-const LANE_COLOR: Record<string, string> = {
-  Camera: 'bg-sky-500/80 border-sky-300',
-  Subtitle: 'bg-amber-500/80 border-amber-200',
-  Signal: 'bg-rose-500/70 border-rose-200',
+const LANE_FILL: Record<string, string> = {
+  Camera: STUDIO_THEME.blue,
+  Subtitle: STUDIO_THEME.yellow,
+  Signal: STUDIO_THEME.red,
 };
 
 function trackLabel(track: SequencerTrackRow): string {
@@ -81,10 +82,10 @@ export const SequencerTimelineEditor: React.FC<Props> = ({
   };
 
   return (
-    <div className="rounded border border-zinc-700 bg-zinc-950/80 overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800">
-        <div className="text-sm text-amber-200">演出时间轴</div>
-        <div className="text-[11px] text-zinc-500">拖块改开始；拖右边改时长 · {pixelsPerSecond}px/s</div>
+    <div className="overflow-hidden rounded-lg border border-studio-elevated bg-studio-bg">
+      <div className="flex items-center justify-between border-b border-studio-elevated px-3 py-2">
+        <div className="text-sm text-studio-label">演出时间轴</div>
+        <div className="text-[11px] text-studio-muted">拖块改开始；拖右边改时长 · {pixelsPerSecond}px/s</div>
       </div>
 
       <div
@@ -95,24 +96,24 @@ export const SequencerTimelineEditor: React.FC<Props> = ({
         onPointerLeave={() => setDrag(null)}
       >
         <div className="min-w-full" style={{ width: width + 140 }}>
-          <div className="flex border-b border-zinc-800">
-            <div className="w-[140px] shrink-0 px-2 py-1 text-[10px] text-zinc-500">轨道</div>
+          <div className="flex border-b border-studio-elevated">
+            <div className="w-[140px] shrink-0 px-2 py-1 text-[10px] text-studio-muted">轨道</div>
             <div className="relative h-7" style={{ width }}>
               {ticks.map((t) => (
                 <div
                   key={t}
-                  className="absolute top-0 bottom-0 border-l border-zinc-800/80"
+                  className="absolute top-0 bottom-0 border-l border-studio-elevated/80"
                   style={{ left: t * pixelsPerSecond }}
                 >
-                  <span className="absolute top-1 left-1 text-[10px] text-zinc-500">{t}s</span>
+                  <span className="absolute top-1 left-1 text-[10px] text-studio-muted">{t}s</span>
                 </div>
               ))}
             </div>
           </div>
 
           {LANE_ORDER.map((lane) => (
-            <div key={lane} className="flex border-b border-zinc-900/80">
-              <div className="w-[140px] shrink-0 px-2 py-3 text-xs text-zinc-300 bg-zinc-900/40">{LANE_LABEL[lane]}</div>
+            <div key={lane} className="flex border-b border-studio-elevated/80">
+              <div className="w-[140px] shrink-0 bg-studio-surface px-2 py-3 text-xs text-studio-label">{LANE_LABEL[lane]}</div>
               <div className="relative h-14 bg-[linear-gradient(90deg,rgba(39,39,42,0.35)_1px,transparent_1px)] bg-[length:96px_100%]" style={{ width }}>
                 {tracks.map((track, index) => {
                   if (track.type !== lane) return null;
@@ -122,10 +123,16 @@ export const SequencerTimelineEditor: React.FC<Props> = ({
                   return (
                     <div
                       key={`${lane}-${index}`}
-                      className={`absolute top-2 h-10 rounded border px-2 text-[11px] text-zinc-950 font-medium cursor-grab active:cursor-grabbing flex items-center overflow-hidden ${LANE_COLOR[lane]} ${
-                        selected ? 'ring-2 ring-emerald-300 z-10' : 'z-[1]'
+                      className={`absolute top-2 z-[1] flex h-10 cursor-grab items-center overflow-hidden rounded border px-2 text-[11px] font-medium active:cursor-grabbing ${
+                        selected ? 'z-10 ring-2 ring-studio-blue' : ''
                       }`}
-                      style={{ left, width: Math.max(28, w) }}
+                      style={{
+                        left,
+                        width: Math.max(28, w),
+                        background: LANE_FILL[lane],
+                        borderColor: LANE_FILL[lane],
+                        color: lane === 'Subtitle' ? STUDIO_THEME.bg : '#fff',
+                      }}
                       onPointerDown={(e) => {
                         e.preventDefault();
                         onSelect(index);

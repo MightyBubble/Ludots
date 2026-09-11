@@ -43,7 +43,7 @@ export const AUTHORING_TOOLS: readonly AuthoringTool[] = [
     path: '/dialogue',
     aliases: ['/story-authoring'],
     title: '对话',
-    blurb: '台词、说话的人、选项分支。条件和图在蓝图里。',
+    blurb: '说话节点连成树。黄线是选项，蓝线接下句。条件和副作用进蓝图。',
     hint: 'Dialogue/ · Story/lines.json',
   },
   {

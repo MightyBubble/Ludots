@@ -1,4 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { STUDIO_CHROME, diskSaveStatus } from './authoring-studio/authoringTheme';
+import { DialogueTreeCanvas } from './dialogue-tree-editor/DialogueTreeCanvas';
+import {
+  emptyDialogue,
+  validateDialogueTree,
+  type DialogueTree,
+  type LinePreview,
+} from './dialogue-tree-editor/dialogueTreeModel';
 import { SequencerTimelineEditor } from './story/SequencerTimelineEditor';
 
 type CatalogInfo = {
@@ -17,26 +25,7 @@ type SpeakerRow = {
   portraitImageId?: string;
   standingImageId?: string;
 };
-type ChoiceRow = {
-  id: string;
-  lineId: string;
-  conditionGraphId?: string;
-  actionGraphId?: string;
-  nextNode?: string;
-};
-type NodeRow = {
-  id: string;
-  lineId: string;
-  presentationProfile?: string;
-  cameraId?: string;
-  choices?: ChoiceRow[];
-};
-type DialogueRow = {
-  id: string;
-  displayName: string;
-  entryNode: string;
-  nodes: NodeRow[];
-};
+type DialogueRow = DialogueTree;
 type TrackRow = {
   type: string;
   profile?: string;
@@ -49,7 +38,8 @@ type TrackRow = {
 };
 type SequenceRow = {
   id: string;
-  displayName: string;
+  displayName?: string;
+  displayNameToken?: string;
   clearCameraOnComplete?: boolean;
   clock?: { rate: number };
   tracks: TrackRow[];
@@ -83,9 +73,8 @@ function defaultCatalogId(tool: StoryAuthoringTool | undefined): string {
   return tool === 'timeline' ? 'sequences' : 'dialogues';
 }
 
-const fieldClass =
-  'mt-1 w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-100';
-const labelClass = 'block text-xs text-zinc-400';
+const fieldClass = STUDIO_CHROME.field;
+const labelClass = STUDIO_CHROME.label;
 
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
@@ -103,6 +92,8 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [selectedTrackIndex, setSelectedTrackIndex] = useState(0);
+  const [selectedDialogueNodeId, setSelectedDialogueNodeId] = useState('');
+  const [linePreviews, setLinePreviews] = useState<LinePreview[]>([]);
   const [textKeyCatalog, setTextKeyCatalog] = useState<Array<{ id: string; preview?: string | null }>>([]);
 
   const loadMods = useCallback(async () => {
@@ -180,6 +171,26 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
     void loadCatalog(modId, catalogId);
   }, [modId, catalogId, loadCatalog]);
 
+  useEffect(() => {
+    if (!modId || tool === 'timeline') {
+      setLinePreviews([]);
+      return;
+    }
+    void (async () => {
+      try {
+        const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/story/catalogs/lines`);
+        const json = await res.json();
+        if (!json.ok || !Array.isArray(json.items)) {
+          setLinePreviews([]);
+          return;
+        }
+        setLinePreviews(json.items as LinePreview[]);
+      } catch {
+        setLinePreviews([]);
+      }
+    })();
+  }, [modId, tool]);
+
   const itemIds = useMemo(
     () =>
       items
@@ -211,16 +222,11 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
     } else if (catalogId === 'speakers') {
       row = { id: `speaker.new.${Date.now()}`, displayNameToken: '', portraitImageId: '', standingImageId: '' };
     } else if (catalogId === 'dialogues') {
-      row = {
-        id: `Dialogue.New.${Date.now()}`,
-        displayName: '新对话',
-        entryNode: 'start',
-        nodes: [{ id: 'start', lineId: '', presentationProfile: 'story.dialogue_overlay', choices: [] }],
-      };
+      row = emptyDialogue(`Dialogue.New.${Date.now()}`);
     } else if (catalogId === 'sequences') {
       row = {
         id: `Sequence.New.${Date.now()}`,
-        displayName: '新演出',
+        displayNameToken: '',
         clearCameraOnComplete: true,
         clock: { rate: 1 },
         tracks: [{ type: 'Camera', profile: '', start: 0, duration: 2 }],
@@ -254,6 +260,16 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
         return;
       }
     }
+    if (catalogId === 'dialogues' && Array.isArray(payloadItems)) {
+      for (const row of payloadItems) {
+        const problem = validateDialogueTree(row as DialogueTree);
+        if (problem) {
+          setError(problem);
+          setStatus('');
+          return;
+        }
+      }
+    }
     const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/story/catalogs/${encodeURIComponent(catalogId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -266,7 +282,7 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
       return;
     }
     setError('');
-    setStatus(`已保存 ${CATALOG_LABELS[catalogId] ?? catalogId}`);
+    setStatus(typeof json.path === 'string' ? diskSaveStatus(json.path) : `已保存 ${CATALOG_LABELS[catalogId] ?? catalogId}`);
     if (Array.isArray(payloadItems)) {
       setItems(payloadItems);
       setItemsText(JSON.stringify(payloadItems, null, 2));
@@ -397,176 +413,6 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
     </div>
   );
 
-  const renderDialogueForm = (row: DialogueRow) => {
-    const nodes = row.nodes ?? [];
-    const updateNode = (idx: number, next: NodeRow) => {
-      const copy = nodes.slice();
-      copy[idx] = next;
-      replaceSelected({ ...row, nodes: copy });
-    };
-    return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <label className={labelClass}>
-            对话 ID
-            <input className={fieldClass} value={row.id} onChange={(e) => replaceSelected({ ...row, id: e.target.value })} />
-          </label>
-          <label className={labelClass}>
-            显示名
-            <input
-              className={fieldClass}
-              value={row.displayName ?? ''}
-              onChange={(e) => replaceSelected({ ...row, displayName: e.target.value })}
-            />
-          </label>
-          <label className={labelClass}>
-            入口节点
-            <input
-              className={fieldClass}
-              value={row.entryNode ?? ''}
-              onChange={(e) => replaceSelected({ ...row, entryNode: e.target.value })}
-            />
-          </label>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm text-amber-200">节点</h3>
-          <button
-            type="button"
-            className="text-xs px-2 py-1 rounded border border-zinc-700 hover:bg-zinc-900"
-            onClick={() =>
-              replaceSelected({
-                ...row,
-                nodes: [
-                  ...nodes,
-                  { id: `node_${nodes.length + 1}`, lineId: '', presentationProfile: 'story.dialogue_overlay', choices: [] },
-                ],
-              })
-            }
-          >
-            + 加节点
-          </button>
-        </div>
-
-        {nodes.map((node, ni) => (
-          <div key={`${node.id}-${ni}`} className="rounded border border-zinc-800 bg-zinc-950/60 p-3 space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <label className={labelClass}>
-                节点 ID
-                <input className={fieldClass} value={node.id} onChange={(e) => updateNode(ni, { ...node, id: e.target.value })} />
-              </label>
-              <label className={labelClass}>
-                台词 ID
-                <input
-                  className={fieldClass}
-                  value={node.lineId ?? ''}
-                  onChange={(e) => updateNode(ni, { ...node, lineId: e.target.value })}
-                />
-              </label>
-              <label className={labelClass}>
-                表现配置
-                <input
-                  className={fieldClass}
-                  value={node.presentationProfile ?? ''}
-                  onChange={(e) => updateNode(ni, { ...node, presentationProfile: e.target.value })}
-                />
-              </label>
-              <label className={labelClass}>
-                镜头
-                <input
-                  className={fieldClass}
-                  value={node.cameraId ?? ''}
-                  onChange={(e) => updateNode(ni, { ...node, cameraId: e.target.value })}
-                />
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between pt-1">
-              <div className="text-xs text-zinc-500">选项</div>
-              <button
-                type="button"
-                className="text-[11px] px-2 py-0.5 rounded border border-zinc-700"
-                onClick={() =>
-                  updateNode(ni, {
-                    ...node,
-                    choices: [...(node.choices ?? []), { id: `choice_${(node.choices?.length ?? 0) + 1}`, lineId: '', nextNode: '' }],
-                  })
-                }
-              >
-                + 加选项
-              </button>
-            </div>
-
-            {(node.choices ?? []).map((choice, ci) => (
-              <div key={`${choice.id}-${ci}`} className="grid grid-cols-2 gap-2 rounded border border-zinc-800 p-2">
-                <label className={labelClass}>
-                  选项 ID
-                  <input
-                    className={fieldClass}
-                    value={choice.id}
-                    onChange={(e) => {
-                      const choices = (node.choices ?? []).slice();
-                      choices[ci] = { ...choice, id: e.target.value };
-                      updateNode(ni, { ...node, choices });
-                    }}
-                  />
-                </label>
-                <label className={labelClass}>
-                  台词 ID
-                  <input
-                    className={fieldClass}
-                    value={choice.lineId ?? ''}
-                    onChange={(e) => {
-                      const choices = (node.choices ?? []).slice();
-                      choices[ci] = { ...choice, lineId: e.target.value };
-                      updateNode(ni, { ...node, choices });
-                    }}
-                  />
-                </label>
-                <label className={labelClass}>
-                  条件图
-                  <input
-                    className={fieldClass}
-                    value={choice.conditionGraphId ?? ''}
-                    onChange={(e) => {
-                      const choices = (node.choices ?? []).slice();
-                      choices[ci] = { ...choice, conditionGraphId: e.target.value };
-                      updateNode(ni, { ...node, choices });
-                    }}
-                  />
-                </label>
-                <label className={labelClass}>
-                  动作图
-                  <input
-                    className={fieldClass}
-                    value={choice.actionGraphId ?? ''}
-                    onChange={(e) => {
-                      const choices = (node.choices ?? []).slice();
-                      choices[ci] = { ...choice, actionGraphId: e.target.value };
-                      updateNode(ni, { ...node, choices });
-                    }}
-                  />
-                </label>
-                <label className={`${labelClass} col-span-2`}>
-                  下一节点
-                  <input
-                    className={fieldClass}
-                    value={choice.nextNode ?? ''}
-                    onChange={(e) => {
-                      const choices = (node.choices ?? []).slice();
-                      choices[ci] = { ...choice, nextNode: e.target.value };
-                      updateNode(ni, { ...node, choices });
-                    }}
-                  />
-                </label>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   const renderSequenceForm = (row: SequenceRow) => {
     const tracks = row.tracks ?? [];
     const updateTrack = (idx: number, next: TrackRow) => {
@@ -584,11 +430,11 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
             <input className={fieldClass} value={row.id} onChange={(e) => replaceSelected({ ...row, id: e.target.value })} />
           </label>
           <label className={labelClass}>
-            显示名
+            显示名词条
             <input
               className={fieldClass}
-              value={row.displayName ?? ''}
-              onChange={(e) => replaceSelected({ ...row, displayName: e.target.value })}
+              value={row.displayNameToken ?? row.displayName ?? ''}
+              onChange={(e) => replaceSelected({ ...row, displayNameToken: e.target.value })}
             />
           </label>
           <label className={labelClass}>
@@ -601,7 +447,7 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
               onChange={(e) => replaceSelected({ ...row, clock: { rate: Number(e.target.value) || 1 } })}
             />
           </label>
-          <label className="flex items-center gap-2 text-xs text-zinc-400 pt-5">
+          <label className="flex items-center gap-2 pt-5 text-xs text-studio-muted">
             <input
               type="checkbox"
               checked={!!row.clearCameraOnComplete}
@@ -619,10 +465,10 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
         />
 
         <div className="flex items-center justify-between">
-          <h3 className="text-sm text-amber-200">选中轨道属性</h3>
+          <h3 className="text-sm text-studio-yellow">选中轨道属性</h3>
           <button
             type="button"
-            className="text-xs px-2 py-1 rounded border border-zinc-700 hover:bg-zinc-900"
+            className={STUDIO_CHROME.btnGhost}
             onClick={() => {
               const nextTracks = [
                 ...tracks,
@@ -637,7 +483,7 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
         </div>
 
         {track && (
-          <div className="rounded border border-zinc-800 bg-zinc-950/60 p-3 grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 rounded-md border border-studio-elevated bg-studio-bg p-3">
             <label className={labelClass}>
               类型
               <select
@@ -724,7 +570,7 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
             )}
             <button
               type="button"
-              className="col-span-2 text-xs px-2 py-1 rounded border border-rose-900 text-rose-300"
+              className={`col-span-2 ${STUDIO_CHROME.btnDanger}`}
               onClick={() => {
                 const copy = tracks.filter((_, i) => i !== ti);
                 replaceSelected({ ...row, tracks: copy });
@@ -743,28 +589,29 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
     if (!selected || advancedJson || !FORM_CATALOGS.has(catalogId)) return null;
     if (catalogId === 'lines') return renderLineForm(selected as LineRow);
     if (catalogId === 'speakers') return renderSpeakerForm(selected as SpeakerRow);
-    if (catalogId === 'dialogues') return renderDialogueForm(selected as DialogueRow);
     if (catalogId === 'sequences') return renderSequenceForm(selected as SequenceRow);
     return null;
   })();
 
+  const dialogueTree = catalogId === 'dialogues' && selected ? (selected as DialogueTree) : null;
+
   return (
-    <div className="h-full overflow-auto bg-zinc-950 text-zinc-100 p-6 font-sans">
+    <div className={`${STUDIO_CHROME.page} overflow-hidden p-6 font-sans`}>
       <div className="mb-4 flex items-center gap-4 flex-wrap">
-        <h1 className="text-xl text-amber-200">
+        <h1 className="text-xl text-studio-label">
           {tool === 'timeline' ? '时间轴' : tool === 'dialogue' ? '对话' : '叙事配置'}
         </h1>
-        <span className="text-xs text-zinc-500">
+        <span className="text-xs text-studio-muted">
           {tool === 'timeline'
             ? '演出序列：镜头 / 字幕 / 信号轨。拖块改时长，保存进 Sequencer/sequences.json。'
             : tool === 'dialogue'
-              ? '台词、说话的人、对话树。条件和副作用在蓝图里。'
-              : '台词 / 对话树 / 演出序列用表单；换肤只动 panelTheme + CSS'}
+              ? '对话是树：说话节点、黄线选项、蓝线接下句。条件和副作用挂蓝图。'
+              : '台词 / 对话树 / 演出序列；换肤只动 panelTheme + CSS'}
         </span>
       </div>
 
-      <div className="grid grid-cols-12 gap-4">
-        <aside className="col-span-3 space-y-3">
+      <div className="grid h-[calc(100%-3rem)] grid-cols-12 gap-4">
+        <aside className="col-span-3 space-y-3 overflow-auto">
           <label className={labelClass}>
             目标 Mod
             <select className={fieldClass} value={modId} onChange={(e) => setModId(e.target.value)}>
@@ -776,34 +623,34 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
             </select>
           </label>
 
-          <div className="text-xs text-zinc-400">目录</div>
+          <div className="text-xs text-studio-muted">目录</div>
           <ul className="space-y-1">
             {catalogs.map((c) => (
               <li key={c.id}>
                 <button
                   type="button"
-                  className={`w-full text-left px-2 py-2 rounded border text-sm ${
+                  className={`w-full rounded-md border px-2 py-2 text-left text-sm ${
                     catalogId === c.id
-                      ? 'border-amber-400 bg-amber-500/10 text-amber-100'
-                      : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-600'
+                      ? 'border-studio-blue bg-studio-blue/10 text-studio-label'
+                      : 'border-studio-elevated bg-studio-surface text-studio-secondary hover:border-studio-fill'
                   }`}
                   onClick={() => setCatalogId(c.id)}
                 >
                   {CATALOG_LABELS[c.id] ?? c.id}
-                  {!c.exists && <span className="ml-2 text-rose-400 text-[10px]">缺失</span>}
+                  {!c.exists && <span className="ml-2 text-[10px] text-studio-red">缺失</span>}
                 </button>
               </li>
             ))}
           </ul>
 
-          <div className="text-xs text-zinc-400 pt-2">条目</div>
-          <ul className="max-h-64 overflow-auto space-y-1 border border-zinc-800 rounded p-1">
+          <div className="pt-2 text-xs text-studio-muted">条目</div>
+          <ul className="max-h-64 space-y-1 overflow-auto rounded-md border border-studio-elevated p-1">
             {itemIds.map((id) => (
               <li key={id}>
                 <button
                   type="button"
-                  className={`w-full text-left px-2 py-1 rounded text-xs ${
-                    selectedId === id ? 'bg-emerald-500/20 text-emerald-200' : 'hover:bg-zinc-800'
+                  className={`w-full rounded-md px-2 py-1 text-left text-xs ${
+                    selectedId === id ? 'bg-studio-blue/20 text-studio-label' : 'hover:bg-studio-elevated'
                   }`}
                   onClick={() => setSelectedId(id)}
                 >
@@ -813,53 +660,56 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
             ))}
           </ul>
           <div className="flex gap-2">
-            <button type="button" onClick={addEntry} className="flex-1 text-xs px-2 py-1.5 rounded border border-zinc-700">
+            <button type="button" onClick={addEntry} className={`flex-1 ${STUDIO_CHROME.btnGhost}`}>
               新建
             </button>
-            <button type="button" onClick={removeSelected} className="flex-1 text-xs px-2 py-1.5 rounded border border-rose-900 text-rose-300">
+            <button type="button" onClick={removeSelected} className={`flex-1 ${STUDIO_CHROME.btnDanger}`}>
               删除
             </button>
           </div>
         </aside>
 
-        <main className="col-span-9 space-y-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              type="button"
-              onClick={() => void save()}
-              className="px-4 py-2 rounded bg-amber-500 text-zinc-950 font-bold hover:bg-amber-400"
-            >
+        <main className="col-span-9 flex min-h-0 flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => void save()} className={STUDIO_CHROME.btnPrimary}>
               保存
             </button>
-            <button
-              type="button"
-              onClick={() => void loadCatalog(modId, catalogId)}
-              className="px-3 py-2 rounded border border-zinc-700 text-sm hover:bg-zinc-900"
-            >
+            <button type="button" onClick={() => void loadCatalog(modId, catalogId)} className={STUDIO_CHROME.btnGhost}>
               重载
             </button>
-            <label className="flex items-center gap-2 text-xs text-zinc-400">
+            <label className="flex items-center gap-2 text-xs text-studio-muted">
               <input type="checkbox" checked={advancedJson} onChange={(e) => setAdvancedJson(e.target.checked)} />
               高级 JSON
             </label>
-            {status && <span className="text-xs text-emerald-400">{status}</span>}
-            {error && <span className="text-xs text-rose-400">{error}</span>}
+            {status && <span className="text-xs text-studio-blue">{status}</span>}
+            {error && <span className="text-xs text-studio-red">{error}</span>}
           </div>
 
-          {formBody && !advancedJson ? (
-            <div className="rounded border border-zinc-800 bg-zinc-900/40 p-4 max-h-[75vh] overflow-auto">{formBody}</div>
+          {dialogueTree && !advancedJson ? (
+            <div className="min-h-0 flex-1">
+              <DialogueTreeCanvas
+                tree={dialogueTree}
+                lines={linePreviews}
+                selectedNodeId={selectedDialogueNodeId}
+                onSelectNode={setSelectedDialogueNodeId}
+                onChange={(next) => replaceSelected(next)}
+              />
+            </div>
+          ) : formBody && !advancedJson ? (
+            <div className="max-h-[75vh] overflow-auto rounded-lg border border-studio-elevated bg-studio-surface p-4">
+              {formBody}
+            </div>
           ) : (
             <textarea
-              className="w-full h-[70vh] bg-zinc-900 border border-zinc-700 rounded p-3 text-sm font-mono leading-relaxed"
+              className="h-[70vh] w-full rounded-md border border-studio-elevated bg-studio-bg p-3 font-mono text-sm leading-relaxed"
               value={itemsText}
               onChange={(e) => setItemsText(e.target.value)}
               spellCheck={false}
             />
           )}
 
-          <p className="text-xs text-zinc-500">
-            写入 {catalogs.find((c) => c.id === catalogId)?.relativePath ?? '…'}。对话树 / 演出序列用表单编节点与轨道；换肤请改
-            game.json 的 panelTheme，并在 PanelThemes 下放九宫格框图。
+          <p className="text-xs text-studio-muted">
+            写入 {catalogs.find((c) => c.id === catalogId)?.relativePath ?? '…'}。保存只改磁盘；正在玩的局要重开才会按新树走。
           </p>
         </main>
       </div>

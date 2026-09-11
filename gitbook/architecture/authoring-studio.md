@@ -72,9 +72,37 @@ Windows：
 
 首页只列出上面五张卡片。顶栏同一张表，切房间不丢工作室壳。桥没连上时顶栏写「桥没连上」，保存走原失败关闭，不假装写盘。
 
-旧书签 `/gas-graphs`、`/story-authoring` 仍打开对应房间。
+旧书签 `/gas-graphs`、`/story-authoring` 仍打开对应房间。五个房间共用同一套银底：蓝是结构/数据/主按钮，黄是控制流和时间，红是事件、动作和危险。色值按苹果 HIG Dark 的系统红/黄/蓝和灰阶来，不另开一套彩虹。
 
-### 3.3 不在正门
+### 3.3 对话树（Paradox Notion NodeCanvas 对照）
+
+对话房是节点画布，不是长表单。合同仍是 `Dialogue/dialogues.json`，不另造一份树格式。
+
+| 在 NodeCanvas 里 | 在这间房里 |
+|------------------|------------|
+| Say / Statement | 说话节点。台词走 `lineId`，说话人在 `Story/lines.json` |
+| Multiple Choice | 同一节点右侧的黄端口。选项仍写在该节点的 `choices[]` |
+| 无选项 Continue | 节点下方蓝端口 = `nextNode` |
+| Finish | 没有出边 |
+| Condition / Action | 不另做节点。条件/副作用是选项或进句上的蓝图 id |
+| SubDialogue / Probability | 运行时没有这两类节点，画布也不发明 |
+
+保存前按运行时规矩检查：入口存在、每句有 `lineId` 和 `presentationProfile`、选项 id 不重复。缺了当场失败，不会写出游戏加载会炸的树。
+
+### 3.4 保存之后游戏看不看得见
+
+工作室保存只改 Mod 磁盘上的 JSON。桥不会把正在玩的局热补进去。
+
+| 房间 | 写到哪 | 游戏什么时候吃到 |
+|------|--------|------------------|
+| 蓝图 | `GAS/graphs.json` | 重开游戏（`ReloadConfigs` 也不重编图） |
+| 行为树 / 状态机 | `AI/behavior_trees.json` / `AI/hfsm.json` | 重开，或局内触发 `ReloadConfigs(AI)` |
+| 对话 | `Dialogue/dialogues.json` | 重开，或局内 `ReloadConfigs(Dialogue/Story)`（会清当前会话） |
+| 时间轴 | `Sequencer/sequences.json` | 重开，或局内 `ReloadConfigs(Sequencer/Story)`。显示名写 `displayNameToken` |
+
+保存成功时状态栏写清路径，并写明「正在玩的局要重开才会按这份走」。不假装点保存战场立刻变。
+
+### 3.5 不在正门
 
 | 入口 | 还在哪 |
 |------|--------|
@@ -88,9 +116,10 @@ Windows：
 
 1. 我在仓库根跑 `./scripts/run-authoring-studio.sh`。过一会儿出现工作室窗口，五张卡片。
 2. 我点「蓝图」，画布打开。顶栏仍能切到行为树。
-3. 我点「对话」，看到台词和对话树，没有演出轨道列表。
+3. 我点「对话」，看见说话节点连成的树。黄线是选项，没有演出轨道当主目录。
 4. 我点「时间轴」，只看到演出序列和轨道。
-5. 桥没起来时，顶栏是红的「桥没连上」，首页也写明要用那条启动命令。
+5. 我保存对话后，状态栏写出文件路径，并写明要重开游戏。
+6. 桥没起来时，顶栏是红的「桥没连上」，首页也写明要用那条启动命令。
 
 ---
 
@@ -99,8 +128,9 @@ Windows：
 - 不把地图、面板、场编辑、技能数值塞进工作室卡片。
 - 不新做 Electron / CEF 壳；桌面窗口复用本机 Chrome `--app=`。
 - 不改蓝图 / 行为树 / 状态机 / 对话运行时合同。时间轴仍是现有 `Sequencer` 表单轨道，不是未合入的统一技能时间轴 PR。
+- NodeCanvas 的 SubDialogue、Probability 没有运行时节点，画布不补这两类。
 - 启动失败必须打出来。禁止端口不通还打开空页当成功。
-- 五件工具的名单只写在 `authoringTools.ts`，启动脚本和文档不另列一套。
+- 五件工具的名单只写在 `authoringTools.ts`，画布皮只写在 `authoringTheme.ts`，启动脚本和文档不另列一套。
 
 ---
 
@@ -123,13 +153,22 @@ Feature: 作者一键进工作室
     Then 我进入蓝图画布
     And 顶栏仍能切到行为树和对话
 
-  Scenario: 对话和时间轴是两间房
+  Scenario: 对话是树
     Given 我在工作室
-    When 我打开「对话」
-    Then 我编辑台词和对话树
+    When 我打开「对话」并选中一条对话
+    Then 我看见说话节点画布
+    And 选项是从节点拉出的黄线
     And 我打不开这页上的演出轨道当主目录
-    When 我再打开「时间轴」
+
+  Scenario: 时间轴是另一间房
+    Given 我在工作室
+    When 我打开「时间轴」
     Then 我编辑演出序列的镜头和字幕轨
+
+  Scenario: 保存进游戏要重开
+    Given 我改了一句对话并点保存
+    Then 磁盘上的 Dialogue/dialogues.json 已更新
+    And 页面写明正在玩的局要重开才会按新树走
 
   Scenario: 桥没连上不能假装能保存
     Given 前端开着但桥没起

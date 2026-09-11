@@ -31,5 +31,6 @@ assert(matchAuthoringTool('/dialogue')?.id === 'dialogue', '/dialogue is the stu
 assert(matchAuthoringTool('/timeline')?.id === 'timeline', '/timeline is a first-class studio room');
 assert(matchAuthoringTool('/map') === undefined, 'map editor must not be a studio tool');
 assert(matchAuthoringTool('/ui-panel-authoring') === undefined, 'panel authoring must not be a studio tool');
+assert(AUTHORING_TOOLS.find((tool) => tool.id === 'dialogue')?.blurb.includes('树'), 'dialogue card must say it is a tree');
 
 console.log('assert-authoring-studio: ok');

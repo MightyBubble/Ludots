@@ -24,6 +24,7 @@ import {
   type HfsmTransitionEdgeData,
 } from './ai-topology-editor/hfsmTransitions';
 import { computeTopologyTreeLayout } from './ai-topology-editor/topologyLayout';
+import { diskSaveStatus, STUDIO_THEME } from './authoring-studio/authoringTheme';
 
 type TopologyKind = 'behavior-trees' | 'hfsm';
 
@@ -78,8 +79,8 @@ type TopologyEdgeData = {
 const nodeTypes = { topology: TopologyNodeView };
 
 const fieldClass =
-  'mt-1 w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-100';
-const labelClass = 'block text-xs text-zinc-400';
+  'mt-1 w-full rounded-md border border-studio-elevated bg-studio-bg px-2 py-1.5 text-sm text-studio-label';
+const labelClass = 'block text-xs text-studio-muted';
 
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
@@ -138,7 +139,7 @@ function btToFlow(tree: BtTree): { nodes: Node<TopologyNodeData>[]; edges: Edge<
         sourceHandle: 'out',
         targetHandle: 'in',
         data: { kind: 'child' },
-        style: { stroke: '#a78bfa', strokeWidth: 2 },
+        style: { stroke: '#0a84ff', strokeWidth: 2 },
         animated: false,
       });
     }
@@ -178,9 +179,9 @@ function hfsmToFlow(machine: HfsmMachine): { nodes: Node<TopologyNodeData>[]; ed
         sourceHandle: 'out',
         targetHandle: 'in',
         data: { kind: 'child' },
-        style: { stroke: '#e879f9', strokeWidth: 1.5, strokeDasharray: '4 4' },
+        style: { stroke: '#8e8e93', strokeWidth: 1.5, strokeDasharray: '4 4' },
         label: 'child',
-        labelStyle: { fill: '#c026d3', fontSize: 10 },
+        labelStyle: { fill: '#8e8e93', fontSize: 10 },
       });
     }
   }
@@ -193,11 +194,11 @@ function hfsmToFlow(machine: HfsmMachine): { nodes: Node<TopologyNodeData>[]; ed
       sourceHandle: 'out',
       targetHandle: 'in',
       data: hfsmTransitionToEdgeData(t),
-      style: { stroke: '#fbbf24', strokeWidth: 2.5 },
+      style: { stroke: '#ffd60a', strokeWidth: 2.5 },
       animated: true,
       label: t.condition ? `${t.predicate} · ${t.condition}` : t.predicate,
-      labelStyle: { fill: '#fcd34d', fontSize: 10 },
-      labelBgStyle: { fill: '#1c1917', fillOpacity: 0.85 },
+      labelStyle: { fill: '#ffd60a', fontSize: 10 },
+      labelBgStyle: { fill: '#1c1c1e', fillOpacity: 0.85 },
     });
   }
 
@@ -401,7 +402,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     }
     setItems(next);
     setError('');
-    setStatus(`已写入 ${json.path}`);
+    setStatus(typeof json.path === 'string' ? diskSaveStatus(json.path) : `已写入`);
     void loadCatalog();
   }, [isBt, sourceId, loadCatalog]);
 
@@ -575,7 +576,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     : undefined;
 
   return (
-    <div className="flex h-full w-full flex-col bg-zinc-950 text-zinc-100">
+    <div className="flex h-full w-full flex-col bg-studio-bg text-studio-label">
       <header className="flex flex-wrap items-center gap-3 border-b border-zinc-800 bg-zinc-900 px-4 py-3">
         <div className="min-w-40">
           <div className="text-sm font-semibold text-white">{title}</div>
@@ -731,19 +732,19 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                 maxZoom={1.8}
                 proOptions={{ hideAttribution: true }}
               >
-                <Background gap={18} color="#3f3f46" />
+                <Background gap={18} color={STUDIO_THEME.fill} />
                 <Controls />
                 <MiniMap
                   pannable
                   zoomable
-                  bgColor="#09090b"
-                  maskColor="rgba(9,9,11,0.4)"
+                  bgColor={STUDIO_THEME.bg}
+                  maskColor="rgba(28,28,30,0.4)"
                   nodeColor={(node) => {
                     const role = (node.data as TopologyNodeData).role;
-                    if (role === 'composite') return '#a78bfa';
-                    if (role === 'leaf') return '#38bdf8';
-                    if (role === 'compound') return '#e879f9';
-                    return '#fbbf24';
+                    if (role === 'composite') return STUDIO_THEME.blue;
+                    if (role === 'leaf') return STUDIO_THEME.red;
+                    if (role === 'compound') return STUDIO_THEME.yellow;
+                    return STUDIO_THEME.yellow;
                   }}
                 />
               </ReactFlow>

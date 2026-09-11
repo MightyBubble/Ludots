@@ -2122,17 +2122,17 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
 
   const dialectNavClass = (target: GraphEditorDialect) =>
     target === dialect
-      ? 'rounded border border-sky-500 bg-sky-950 px-2 py-1 text-xs font-semibold text-sky-200'
-      : 'rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800';
+      ? 'rounded-md border border-studio-blue bg-studio-blue/15 px-2 py-1 text-xs font-semibold text-studio-blue'
+      : 'rounded-md border border-studio-elevated px-2 py-1 text-xs text-studio-muted hover:bg-studio-elevated';
 
   return (
-    <div className="flex h-full w-full flex-col bg-slate-950 text-slate-100">
-      <header className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3">
+    <div className="flex h-full w-full flex-col bg-studio-bg text-studio-label">
+      <header className="flex flex-wrap items-center gap-3 border-b border-studio-elevated bg-studio-surface px-4 py-3">
         <div className="min-w-40">
-          <div className="text-sm font-semibold text-white">{titles.title}</div>
-          <div className="text-[10px] text-slate-500">{titles.subtitle}</div>
+          <div className="text-sm font-semibold text-studio-label">{titles.title}</div>
+          <div className="text-[10px] text-studio-muted">{titles.subtitle}</div>
         </div>
-        <Link to="/" className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800">
+        <Link to="/" className="rounded-md border border-studio-elevated px-2 py-1 text-xs text-studio-secondary hover:bg-studio-elevated">
           工作室
         </Link>
         <Link to={dialectPath('func')} className={dialectNavClass('func')}>

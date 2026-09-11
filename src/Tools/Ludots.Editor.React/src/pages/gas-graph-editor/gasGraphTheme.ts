@@ -1,42 +1,43 @@
 /**
- * Graph canvas palette — zinc agent-kit dark (n8n / assistant-ui / shadcn AI Elements),
- * Flow Canvas exec semantics (warm amber control, quiet data wires).
+ * Graph canvas palette — studio HIG dark (silver chrome, blue data, yellow exec, red events).
  */
+import { STUDIO_THEME } from '../authoring-studio/authoringTheme';
+
 export const GAS_GRAPH_THEME = {
-  canvasBg: '#09090b',
-  canvasDot: '#3f3f46',
-  minimapBg: '#09090b',
-  minimapMask: 'rgba(9, 9, 11, 0.55)',
+  canvasBg: STUDIO_THEME.bg,
+  canvasDot: STUDIO_THEME.fill,
+  minimapBg: STUDIO_THEME.bg,
+  minimapMask: 'rgba(28, 28, 30, 0.55)',
 
-  nodeBg: '#18181b',
-  nodeHeader: '#27272a',
-  nodeBorder: '#3f3f46',
-  nodeBorderSelected: '#a1a1aa',
-  nodeText: '#fafafa',
-  nodeMuted: '#a1a1aa',
+  nodeBg: STUDIO_THEME.surface,
+  nodeHeader: STUDIO_THEME.elevated,
+  nodeBorder: STUDIO_THEME.fill,
+  nodeBorderSelected: STUDIO_THEME.silver,
+  nodeText: STUDIO_THEME.label,
+  nodeMuted: STUDIO_THEME.muted,
 
-  eventHeader: '#881337',
-  eventAccent: '#fb7185',
-  eventBorder: '#9f1239',
+  eventHeader: '#8b1a16',
+  eventAccent: STUDIO_THEME.red,
+  eventBorder: STUDIO_THEME.red,
 
-  valueHeader: '#0c4a6e',
-  valueAccent: '#7dd3fc',
-  valueBorder: '#0369a1',
+  valueHeader: '#003a73',
+  valueAccent: STUDIO_THEME.blue,
+  valueBorder: STUDIO_THEME.blue,
 
-  execAccent: '#fbbf24',
-  execIdle: '#a8a29e',
-  execLive: '#fbbf24',
-  execLiveHot: '#f59e0b',
-  execBead: '#fff7ed',
+  execAccent: STUDIO_THEME.yellow,
+  execIdle: STUDIO_THEME.muted,
+  execLive: STUDIO_THEME.yellow,
+  execLiveHot: STUDIO_THEME.yellow,
+  execBead: STUDIO_THEME.label,
 
-  dataIdle: '#64748b',
-  dataLive: '#bae6fd',
-  dataLabel: '#e2e8f0',
-  listAccent: '#2dd4bf',
+  dataIdle: STUDIO_THEME.muted,
+  dataLive: STUDIO_THEME.blue,
+  dataLabel: STUDIO_THEME.label,
+  listAccent: STUDIO_THEME.blue,
 
-  liveCurrent: '#fbbf24',
-  liveHot: '#fcd34d',
-  liveTrail: '#a8a29e',
+  liveCurrent: STUDIO_THEME.yellow,
+  liveHot: STUDIO_THEME.yellow,
+  liveTrail: STUDIO_THEME.muted,
 } as const;
 
 export type GasGraphTheme = typeof GAS_GRAPH_THEME;

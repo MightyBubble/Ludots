@@ -21,19 +21,31 @@ export function computeTopologyTreeLayout(
 
   const positions: Record<string, { x: number; y: number }> = {};
   let leafCursor = 0;
+  const visiting = new Set<string>();
 
   const place = (id: string, depth: number): number => {
-    const kids = children.get(id) ?? [];
-    if (kids.length === 0) {
+    if (positions[id]) return positions[id].x;
+    if (visiting.has(id)) {
       const x = ORIGIN_X + leafCursor * GAP_X;
       positions[id] = { x, y: ORIGIN_Y + depth * GAP_Y };
       leafCursor += 1;
       return x;
     }
 
+    visiting.add(id);
+    const kids = (children.get(id) ?? []).filter((child) => child !== id);
+    if (kids.length === 0) {
+      const x = ORIGIN_X + leafCursor * GAP_X;
+      positions[id] = { x, y: ORIGIN_Y + depth * GAP_Y };
+      leafCursor += 1;
+      visiting.delete(id);
+      return x;
+    }
+
     const childXs = kids.map((child) => place(child, depth + 1));
     const x = (Math.min(...childXs) + Math.max(...childXs)) / 2;
     positions[id] = { x, y: ORIGIN_Y + depth * GAP_Y };
+    visiting.delete(id);
     return x;
   };
 

@@ -1,35 +1,35 @@
-/* Agent-kit zinc canvas + Flow Canvas exec semantics (amber control / quiet data). */
+/* Studio HIG dark canvas: silver chrome, blue data, yellow exec, red events. */
 .gas-graph-flow {
-  --gas-canvas-bg: #09090b;
-  --gas-canvas-dot: #3f3f46;
-  --gas-node-bg: #18181b;
-  --gas-node-header: #27272a;
-  --gas-node-border: #3f3f46;
-  --gas-node-border-selected: #a1a1aa;
-  --gas-node-text: #fafafa;
-  --gas-node-muted: #a1a1aa;
-  --gas-event-header: #881337;
-  --gas-event-accent: #fb7185;
-  --gas-event-border: #9f1239;
-  --gas-value-header: #0c4a6e;
-  --gas-value-accent: #7dd3fc;
-  --gas-value-border: #0369a1;
-  --gas-exec: #fbbf24;
-  --gas-exec-idle: #a8a29e;
-  --gas-data: #bae6fd;
-  --gas-data-idle: #64748b;
-  --gas-list: #2dd4bf;
-  --gas-live-current: #fbbf24;
-  --gas-live-hot: #fcd34d;
+  --gas-canvas-bg: #1c1c1e;
+  --gas-canvas-dot: #48484a;
+  --gas-node-bg: #2c2c2e;
+  --gas-node-header: #3a3a3c;
+  --gas-node-border: #48484a;
+  --gas-node-border-selected: #8e8e93;
+  --gas-node-text: #f5f5f7;
+  --gas-node-muted: #8e8e93;
+  --gas-event-header: #8b1a16;
+  --gas-event-accent: #ff453a;
+  --gas-event-border: #ff453a;
+  --gas-value-header: #003a73;
+  --gas-value-accent: #0a84ff;
+  --gas-value-border: #0a84ff;
+  --gas-exec: #ffd60a;
+  --gas-exec-idle: #8e8e93;
+  --gas-data: #0a84ff;
+  --gas-data-idle: #8e8e93;
+  --gas-list: #0a84ff;
+  --gas-live-current: #ffd60a;
+  --gas-live-hot: #ffd60a;
   background: var(--gas-canvas-bg);
 }
 
 .gas-graph-flow .react-flow__handle {
   width: 10px;
   height: 10px;
-  background: #09090b;
+  background: #1c1c1e;
   border: 2px solid currentColor;
-  box-shadow: 0 0 0 1px #09090b;
+  box-shadow: 0 0 0 1px #1c1c1e;
 }
 
 .gas-graph-flow .gas-pin {
@@ -196,13 +196,13 @@
 }
 
 .gas-node--event .gas-node__header {
-  background: linear-gradient(180deg, #9f1239 0%, var(--gas-event-header) 100%);
-  border-bottom-color: rgba(251, 113, 133, 0.25);
+  background: #8b1a16;
+  border-bottom-color: rgba(255, 69, 58, 0.35);
 }
 
 .gas-node--value .gas-node__header {
-  background: linear-gradient(180deg, #075985 0%, var(--gas-value-header) 100%);
-  border-bottom-color: rgba(125, 211, 252, 0.2);
+  background: #003a73;
+  border-bottom-color: rgba(10, 132, 255, 0.35);
 }
 
 .gas-node__eyebrow-row {

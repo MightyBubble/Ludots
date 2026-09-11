@@ -67,7 +67,7 @@ export function GasControlEdge({
           <circle r={4.8} fill={GAS_GRAPH_THEME.execBead} className="gas-control-bead">
             <animateMotion dur={beadDur} repeatCount="indefinite" path={path} rotate="auto" />
           </circle>
-          <circle r={2.4} fill="#f59e0b" className="gas-control-bead" opacity={0.85}>
+          <circle r={2.4} fill={GAS_GRAPH_THEME.execAccent} className="gas-control-bead" opacity={0.85}>
             <animateMotion dur={beadDur} begin="0.18s" repeatCount="indefinite" path={path} rotate="auto" />
           </circle>
         </>
