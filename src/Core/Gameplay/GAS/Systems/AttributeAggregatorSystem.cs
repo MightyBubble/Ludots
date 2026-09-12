@@ -32,8 +32,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
         }
 
+        /// <summary>上一次 Update 的耗时（毫秒）；稳态零脏实体帧应近零，供预算守卫测试读取。</summary>
+        public double LastUpdateElapsedMs { get; private set; }
+
+        /// <summary>上一次 Update 实际聚合的脏实体数；零属性变更帧必须为 0。</summary>
+        public int LastProcessedEntities { get; private set; }
+
         public override unsafe void Update(in float dt)
         {
+            long startTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+            int processed = 0;
             var withDirtyJob = new AttributeAggregatorWithDirtyJob
             {
                 World = World,
@@ -41,8 +49,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 GraphPrograms = _graphPrograms,
                 GraphApi = _graphApi,
                 TagOps = _tagOps,
+                ProcessedEntities = 0,
             };
             World.InlineEntityQuery<AttributeAggregatorWithDirtyJob, AttributeBuffer, ActiveEffectContainer, DirtyFlags>(in _withDirtyFlagsQuery, ref withDirtyJob);
+            processed = withDirtyJob.ProcessedEntities;
 
             var withoutDirtyJob = new AttributeAggregatorWithoutDirtyJob();
             World.InlineEntityQuery<AttributeAggregatorWithoutDirtyJob, AttributeBuffer, ActiveEffectContainer>(in _withoutDirtyFlagsQuery, ref withoutDirtyJob);
@@ -51,6 +61,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 _commandBuffer.Playback(World);
             }
+
+            LastProcessedEntities = processed;
+            LastUpdateElapsedMs = (System.Diagnostics.Stopwatch.GetTimestamp() - startTimestamp) * 1000d / System.Diagnostics.Stopwatch.Frequency;
         }
 
         public override void Dispose()
@@ -165,6 +178,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
 
+            if (!world.Has<AttributeDerivedGraphBinding>(entity))
+            {
+                return 0UL;
+            }
+
             Span<float> beforeDerived = stackalloc float[AttributeBuffer.MAX_ATTRS];
             for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
             {
@@ -192,11 +210,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             public GraphProgramRegistry GraphPrograms;
             public IGraphRuntimeApi GraphApi;
             public TagOps TagOps;
+            public int ProcessedEntities;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe void Update(Entity entity, ref AttributeBuffer attrBuffer, ref ActiveEffectContainer effects, ref DirtyFlags dirtyFlags)
             {
-                AttributeBuffer attributesBefore = attrBuffer;
+                ProcessedEntities++;
                 DirtyFlags dirtyBefore = dirtyFlags;
                 Span<float> oldValues = stackalloc float[AttributeBuffer.MAX_ATTRS];
                 Span<float> oldCaps = stackalloc float[AttributeBuffer.MAX_ATTRS];
@@ -237,7 +256,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                     catch
                     {
-                        attrBuffer = attributesBefore;
+                        // 回滚只涉及 CurrentValues/CapValues/DirtyFlags：BaseValues 与 DefinedMask
+                        // 在本作业内不可变（派生图只写 Current，见 EndDerivedAttributeWrites 契约）。
+                        for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+                        {
+                            attrBuffer.CurrentValues[i] = oldValues[i];
+                            attrBuffer.CapValues[i] = oldCaps[i];
+                        }
+
                         dirtyFlags = dirtyBefore;
                         throw;
                     }
