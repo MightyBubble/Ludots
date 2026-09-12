@@ -1924,13 +1924,18 @@ namespace Ludots.Adapter.Raylib
             string line3 = $"HUD {FormatFixed(timing.WorldHudProjectedLastFrame, 6)}/{FormatFixed(worldHud?.Count ?? 0, 6)}  BAR {FormatFixed(screenHud?.BarCount ?? 0, 6)}  TEXT {FormatFixed(screenHud?.TextCount ?? 0, 6)}";
             string line4 = $"SKIA {FormatFixed(timing.LastScreenOverlayPaintMs, 5, 1)}MS  EMIT {FormatFixed(timing.LastPresenterEmitMs, 5, 1)}MS  BEHAV {FormatFixed(timing.LastPresenterBehaviorMs, 5, 1)}MS";
             string line5 = $"FXQ {FormatFixed(effectRequests?.Count ?? 0, 6)}  OVF {FormatFixed(effectRequests?.OverflowCount ?? 0, 6)}  AVL {FormatFixed(effectRequests?.AvailableCapacity ?? 0, 6)}";
+            string line6 = $"SIM {FormatFixed(timing.LastSimulationMs, 5, 1)}  PRS {FormatFixed(timing.LastPresentationMs, 5, 1)}  HPRJ {FormatFixed(timing.LastWorldHudProjectionMs, 5, 1)}  ANIM {FormatFixed(timing.LastPresenterAnimatorMs, 5, 1)}";
+            string line7 = $"SYNC {FormatFixed(timing.LastPresenterEntityTransformSyncMs, 5, 1)}  MPRJ {FormatFixed(timing.LastMinimapProjectionMs, 5, 1)}  MKRK {FormatFixed(timing.LastPresenterMinimapMarkerMs, 5, 1)}  CULL {FormatFixed(timing.LastCameraCullingMs, 5, 1)}";
+            string line8 = $"OVL B{FormatFixed(timing.LastScreenOverlayBuildMs, 4, 1)} P{FormatFixed(timing.LastScreenOverlayPaintMs, 4, 1)} C{FormatFixed(timing.LastScreenOverlayCompositeMs, 4, 1)} D{FormatFixed(timing.LastScreenOverlayDrawMs, 4, 1)} F{FormatFixed(timing.LastScreenOverlayFinalDrawMs, 4, 1)}";
+            string line9 = $"UII {FormatFixed(timing.UiInputMs, 4, 1)} UIR {FormatFixed(timing.LastUiRenderMs, 4, 1)} UIU {FormatFixed(timing.LastUiUploadMs, 4, 1)} PT {FormatFixed(timing.LastHostPreTickMs, 4, 1)}";
+            string line10 = $"BD {FormatFixed(timing.LastBeginDrawingMs, 4, 1)} ED {FormatFixed(timing.LastEndDrawingMs, 4, 1)} FRM {FormatFixed(timing.LastFrameMs, 4, 1)}";
 
             const int x = 10;
             const int y = 10;
             const int fontSize = 20;
             const int lineHeight = 25;
             const int panelWidth = 720;
-            const int panelHeight = 137;
+            const int panelHeight = 262;
             var background = new Color(0, 0, 0, 238);
             var border = new Color(80, 255, 150, 255);
             Rl.DrawRectangle(x - 8, y - 8, panelWidth, panelHeight, background);
@@ -1940,6 +1945,11 @@ namespace Ludots.Adapter.Raylib
             DrawDiagnosticText(line3, x, y + lineHeight * 2, fontSize, new Color(255, 245, 185, 255));
             DrawDiagnosticText(line4, x, y + lineHeight * 3, fontSize, new Color(245, 210, 255, 255));
             DrawDiagnosticText(line5, x, y + lineHeight * 4, fontSize, new Color(255, 215, 180, 255));
+            DrawDiagnosticText(line6, x, y + lineHeight * 5, fontSize, new Color(180, 255, 250, 255));
+            DrawDiagnosticText(line7, x, y + lineHeight * 6, fontSize, new Color(180, 255, 250, 255));
+            DrawDiagnosticText(line8, x, y + lineHeight * 7, fontSize, new Color(255, 180, 220, 255));
+            DrawDiagnosticText(line9, x, y + lineHeight * 8, fontSize, new Color(210, 220, 255, 255));
+            DrawDiagnosticText(line10, x, y + lineHeight * 9, fontSize, new Color(210, 220, 255, 255));
         }
 
         private static string FormatFixed(float value, int width, int decimals)
