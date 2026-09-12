@@ -12,6 +12,7 @@ layout(std430, binding = 8) readonly buffer SkinnedVerts { vec4 skinned[]; };
 uniform mat4 mvp;
 uniform int uPreskinVertexCount;
 uniform float uTime;
+uniform float uWanderScale;   // 0 = 模拟层已写最终变换，1 = GPU 确定性游走
 
 // ludo:include crowd_wander.glsl.inc
 
@@ -33,9 +34,9 @@ void main()
 
     // 游走：位置偏移 + 朝向对齐轨迹切线（实例表第 4 个 vec4 的 .w = 源索引）
     float heading;
-    vec3 wander = CrowdWanderOffset(int(inst.w + 0.5), uTime, heading);
+    vec3 wander = CrowdWanderOffset(int(inst.w + 0.5), uTime, heading) * uWanderScale;
     float baseYaw = atan(tC2.x, tC2.z);
-    float dy = heading - baseYaw;
+    float dy = (heading - baseYaw) * uWanderScale;
     float cs = cos(dy), sn = sin(dy);
     mat3 rotY = mat3(cs, 0.0, -sn, 0.0, 1.0, 0.0, sn, 0.0, cs);
     mat3 rotatedTransform = rotY * mat3(instanceTransform);

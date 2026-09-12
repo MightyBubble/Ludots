@@ -68,6 +68,12 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
     private int _locShadowCenter;
     private int _locShadowRadius;
     private int _locCullTime;
+    private int _locCullWanderScale;
+    private int _locShadowDepthWanderScale = int.MinValue;
+    private int _locMainWanderScale = int.MinValue;
+    private int _locImposterWanderScale;
+    private float _gpuWanderScale = 1f;
+    private bool _dynamicInstances;
     private int _locPreskinVertexCount;
     private int _locPreskinRows;
     private int _locPreskinStride;
@@ -127,11 +133,15 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
         float instanceRadius,
         uint albedoHigh,
         uint albedoMedium,
-        uint albedoLow)
+        uint albedoLow,
+        bool dynamicInstances = false,
+        bool gpuWander = true)
     {
         Gl43.Initialize();
+        _dynamicInstances = dynamicInstances;
+        _gpuWanderScale = gpuWander ? 1f : 0f;
 
-        _sourceBuffer = CreateBuffer((nint)((long)_maxInstances * 64), GL_STATIC_DRAW);
+        _sourceBuffer = CreateBuffer((nint)((long)_maxInstances * 64), dynamicInstances ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
         fixed (float* data = instanceData)
         {
             Gl43.BindBuffer(GL_SHADER_STORAGE_BUFFER, _sourceBuffer);
@@ -214,7 +224,8 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
         _locShadowCenter = Gl43.GetUniformLocation(_cullProgram, "uShadowCenter");
         _locShadowRadius = Gl43.GetUniformLocation(_cullProgram, "uShadowRadius");
         _locCullTime = Gl43.GetUniformLocation(_cullProgram, "uTime");
-        if (_locFrustum < 0 || _locCameraPos < 0 || _locTotal < 0 || _locShadowPass < 0 || _locShadowCenter < 0 || _locShadowRadius < 0 || _locLodImposter < 0 || _locCullTime < 0)
+        _locCullWanderScale = Gl43.GetUniformLocation(_cullProgram, "uWanderScale");
+        if (_locFrustum < 0 || _locCameraPos < 0 || _locTotal < 0 || _locShadowPass < 0 || _locShadowCenter < 0 || _locShadowRadius < 0 || _locLodImposter < 0 || _locCullTime < 0 || _locCullWanderScale < 0)
         {
             throw new InvalidOperationException("gpu_cull.comp 缺少必需 uniform。");
         }
@@ -253,6 +264,7 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
             throw new InvalidOperationException("gpu_imposter 缺少必需 uniform。");
         }
 
+        _locImposterWanderScale = Rl.GetShaderLocation(_imposterShader, "uWanderScale");
         float viewDirs = ImposterViewDirs;
         float phaseRows = _poseRows;
         Rl.SetShaderValue(_imposterShader, Rl.GetShaderLocation(_imposterShader, "uViewDirs"), &viewDirs, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
@@ -456,6 +468,7 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
         Gl43.UseProgram(_cullProgram);
         Gl43.Uniform1i(_locShadowPass, 1);
         Gl43.Uniform1f(_locCullTime, timeSeconds);
+        Gl43.Uniform1f(_locCullWanderScale, _gpuWanderScale);
         Gl43.Uniform3f(_locShadowCenter, shadowCenter.X, shadowCenter.Y, shadowCenter.Z);
         Gl43.Uniform1f(_locShadowRadius, shadowRadius);
         Gl43.Uniform1i(_locTotal, totalInstances);
@@ -487,6 +500,7 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
         Rl.SetShaderValueMatrix(_shadowDepthShader, _locShadowDepthMvp, RaylibNativeResources.ComputeDrawMvp());
         Gl43.Uniform1i(_locShadowDepthVertexCount, slot.Mesh.vertexCount);
         Gl43.Uniform1f(Gl43.GetUniformLocation(_shadowDepthShader.id, "uTime"), timeSeconds);
+        Gl43.Uniform1f(Gl43.GetUniformLocation(_shadowDepthShader.id, "uWanderScale"), _gpuWanderScale);
         Gl43.BindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, _shadowCompactBuffer);
         Gl43.BindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, slot.SkinnedBuffer);
         Gl43.BindVertexArray(slot.Mesh.vaoId);
@@ -530,6 +544,7 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
 
         Gl43.Uniform3f(_locCameraPos, cameraPos.X, cameraPos.Y, cameraPos.Z);
         Gl43.Uniform1f(_locCullTime, timeSeconds);
+        Gl43.Uniform1f(_locCullWanderScale, _gpuWanderScale);
         Gl43.Uniform1i(_locTotal, totalInstances);
         Gl43.BindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _sourceBuffer);
         Gl43.BindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, _lodSlots[0].CompactBuffer);
@@ -548,6 +563,7 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
             _locMainPreskinVertexCount = Gl43.GetUniformLocation(skinningProgramId, "uPreskinVertexCount");
             _locMainAlbedoMap = Gl43.GetUniformLocation(skinningProgramId, "uAlbedoMap");
             _locMainHasAlbedoMap = Gl43.GetUniformLocation(skinningProgramId, "uHasAlbedoMap");
+            _locMainWanderScale = Gl43.GetUniformLocation(skinningProgramId, "uWanderScale");
             if (_locMainPreskinVertexCount < 0)
             {
                 throw new InvalidOperationException("人群主 pass 着色器缺少 uPreskinVertexCount（须用 gpu_crowd_preskin.vs）。");
@@ -559,6 +575,11 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
         {
             GpuCrowdLodSlot slot = _lodSlots[lod];
             Gl43.UseProgram(skinningProgramId);
+            if (_locMainWanderScale >= 0)
+            {
+                Gl43.Uniform1f(_locMainWanderScale, _gpuWanderScale);
+            }
+
             Gl43.BindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, slot.CompactBuffer);
             Gl43.BindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, slot.SkinnedBuffer);
             Gl43.Uniform1i(_locMainPreskinVertexCount, slot.Mesh.vertexCount);
@@ -588,6 +609,10 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
         // imposter billboard draw（mvp 由渲染器设置；PBR/相机基 uniform 由场景经 ImposterShader 设置）
         Gl43.UseProgram(_imposterShader.id);
         Rl.SetShaderValueMatrix(_imposterShader, _locImposterMvp, RaylibNativeResources.ComputeDrawMvp());
+        if (_locImposterWanderScale >= 0)
+        {
+            Gl43.Uniform1f(Gl43.GetUniformLocation(_imposterShader.id, "uWanderScale"), _gpuWanderScale);
+        }
         Gl43.BindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, _imposterCompactBuffer);
         Gl43.ActiveTexture(GL_TEXTURE0 + ImposterAtlasUnit);
         Gl43.BindTexture(GL_TEXTURE_2D, _imposterAtlas.texture.id);
@@ -633,6 +658,22 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
                 Gl43.GetBufferSubData(GL_COPY_READ_BUFFER, 0, 100, (IntPtr)raw);
                 Console.WriteLine($"[gpu-crowd] indirect raw: {raw[1]} | {raw[6]} | {raw[11]} | {raw[16]} | {raw[21]}");
             }
+        }
+    }
+
+    /// <summary>模拟层 presenter 通道：整表重传实例数据（须 Initialize(dynamicInstances: true)）。
+    /// CPU 写最终变换/动画行，GPU 侧游走自动关闭由 Initialize(gpuWander:false) 决定。</summary>
+    public void UploadInstances(ReadOnlySpan<float> instanceData)
+    {
+        if (!_dynamicInstances)
+        {
+            throw new InvalidOperationException("实例表按 STATIC 创建；模拟层通道须 Initialize(dynamicInstances: true)。");
+        }
+
+        Gl43.BindBuffer(GL_SHADER_STORAGE_BUFFER, _sourceBuffer);
+        fixed (float* data = instanceData)
+        {
+            Gl43.BufferSubData(GL_SHADER_STORAGE_BUFFER, 0, (nint)(instanceData.Length * 4), (IntPtr)data);
         }
     }
 

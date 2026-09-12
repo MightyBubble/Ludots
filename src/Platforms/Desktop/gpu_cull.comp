@@ -33,6 +33,7 @@ uniform int uShadowPass;
 uniform vec3 uShadowCenter;
 uniform float uShadowRadius;
 uniform float uTime;
+uniform float uWanderScale;   // 0 = 模拟层写最终位置（CPU 驱动），1 = GPU 确定性游走
 
 // ludo:include crowd_wander.glsl.inc
 
@@ -58,7 +59,7 @@ void main()
 
     // 实例位置 = 驻留点（3 列变换的 .w）+ 确定性游走（与绘制 VS 同合同，包围球不脱靶）
     float wanderHeading;
-    vec3 pos = vec3(d0.w, d1.w, d2.w) + CrowdWanderOffset(id, uTime, wanderHeading);
+    vec3 pos = vec3(d0.w, d1.w, d2.w) + CrowdWanderOffset(id, uTime, wanderHeading) * uWanderScale;
 
     if (uShadowPass == 1)
     {

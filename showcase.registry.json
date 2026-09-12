@@ -9793,6 +9793,29 @@
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
+      "id": "engine_raylib_gpu_crowd_sim",
+      "path": "projects/engine_gallery",
+      "projectPath": "project.json",
+      "title": "模拟层驱动：200K Arch 实体 → presenter → GPU 军团",
+      "summary": "200K Arch ECS 实体（CrowdHome/Transform/Animator，无寻路无避障）每帧模拟游走与动画，presenter 整表上传 GPU 管线（预蒙皮 + GPU 剔除 + imposter + PBR/IBL + 投射体阴影）——HUD 分列 sim/present/渲染耗时",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering",
+        "gpu-driven",
+        "ecs"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "gpu_crowd_sim",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_gpu_crowd_sim",
+      "screenshot": "artifacts/acceptance/engine_raylib_gpu_crowd_sim/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
       "id": "capability_standard_graph_op_WriteCollection",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteCollectionEntryMod",
       "projectPath": "CapabilityStandardGraphOpWriteCollectionEntryMod.csproj",

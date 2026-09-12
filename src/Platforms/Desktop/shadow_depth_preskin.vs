@@ -9,6 +9,7 @@ layout(std430, binding = 8) readonly buffer SkinnedVerts { vec4 skinned[]; };
 uniform mat4 mvp;
 uniform int uPreskinVertexCount;
 uniform float uTime;
+uniform float uWanderScale;
 
 // ludo:include crowd_wander.glsl.inc
 
@@ -25,13 +26,13 @@ void main()
 
     // 与主 pass 同一游走合同（阴影深度与可见位置严格一致，否则阴影脱靶）
     float heading;
-    vec3 wander = CrowdWanderOffset(int(instanceData[instanceVec4 + 3].w + 0.5), uTime, heading);
+    vec3 wander = CrowdWanderOffset(int(instanceData[instanceVec4 + 3].w + 0.5), uTime, heading) * uWanderScale;
     vec3 local = vec3(
         dot(tC0.xyz, skinnedPos),
         dot(tC1.xyz, skinnedPos),
         dot(tC2.xyz, skinnedPos));
     float baseYaw = atan(tC2.x, tC2.z);
-    float dy = heading - baseYaw;
+    float dy = (heading - baseYaw) * uWanderScale;
     float cs = cos(dy), sn = sin(dy);
     vec3 rotated = vec3(cs * local.x + sn * local.z, local.y, -sn * local.x + cs * local.z);
     vec3 worldPos = rotated + vec3(tC0.w + wander.x, tC1.w + wander.y, tC2.w + wander.z);

@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Client\Ludots.Raylib.Render\Ludots.Raylib.Render.csproj" />
+    <ProjectReference Include="..\..\Libraries\Arch\src\Arch\Arch.csproj" />
     <ProjectReference Include="..\..\Client\Ludots.Raylib.SceneKit\Ludots.Raylib.SceneKit.csproj" />
   </ItemGroup>
 

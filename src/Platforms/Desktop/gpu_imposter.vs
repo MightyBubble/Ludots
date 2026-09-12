@@ -14,6 +14,7 @@ uniform vec2 uImposterSize;    // x = 半宽，y = 全高
 uniform float uViewDirs;       // 视角桶数（图集行数）
 uniform float uPhaseRows;      // 相位桶数（图集列数）
 uniform float uTime;
+uniform float uWanderScale;
 
 // ludo:include crowd_wander.glsl.inc
 
@@ -47,8 +48,9 @@ void main()
     // 朝向 = 游走轨迹切线（与网格路径旋转一致），位置 = 驻留点 + 游走
     float heading;
     vec3 wander = CrowdWanderOffset(int(inst.w + 0.5), uTime, heading);
-    pos += wander;
-    float yaw = heading;
+    pos += wander * uWanderScale;
+    float bakedYaw = atan(tC2.x, tC2.z);
+    float yaw = mix(bakedYaw, heading, uWanderScale);
     fragYawCosSin = vec2(cos(yaw), sin(yaw));
 
     // 相对视角 = 相机→实例方位角 - 实例朝向；量化到图集行（capture 时以 yaw 0 正对 θ_k 视角渲染）

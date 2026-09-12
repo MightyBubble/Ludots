@@ -92,6 +92,10 @@
     {
       "id": "composition",
       "asset": "scenes/composition.scene.json"
+    },
+    {
+      "id": "gpu_crowd_sim",
+      "asset": "scenes/gpu_crowd_sim.scene.json"
     }
   ]
 }
