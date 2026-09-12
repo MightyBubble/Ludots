@@ -1452,13 +1452,35 @@ namespace Ludots.Presentation.Skia
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly PresentationOverlayItem item = ref span[i];
-                if (!string.IsNullOrEmpty(item.Text) && item.StableId <= 0)
+                if (string.IsNullOrEmpty(item.Text))
+                {
+                    continue;
+                }
+
+                // 数值 HUD 文本（"123" / "cur/max"）的字符串基数随取值变化，走整串 sprite 缓存
+                // 必然撞 8192 上限全清（miss 风暴）；glyph 直排路径天然只有 ~10×字号级 layout 条目
+                if (item.StableId <= 0 || IsNumericHudText(item.Text))
                 {
                     return false;
                 }
             }
 
             return true;
+        }
+
+        private static bool IsNumericHudText(string text)
+        {
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                bool ok = (c >= '0' && c <= '9') || c == '/' || c == '-' || c == '.' || c == ',' || c == '+';
+                if (!ok)
+                {
+                    return false;
+                }
+            }
+
+            return text.Length > 0;
         }
 
         private int DrawRetainedTextAtlas(SKCanvas canvas, RetainedTextSpriteLaneState state)
