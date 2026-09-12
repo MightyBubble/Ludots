@@ -1,16 +1,15 @@
 using System.Numerics;
-using Ludots.Raylib.Render;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 
-namespace Ludots.Content.EngineGallery.Scenes;
+namespace Ludots.Raylib.Render;
 
 /// <summary>
 /// gpu_crowd / gpu_crowd_sim 共用的 PBR uniform 绑定：主 pass（gpu_crowd_preskin.vs + gpu_crowd_pbr.fs）
 /// 与 imposter billboard 的光照/IBL/雾/阴影/相机基 uniform 解析与逐帧下发。
 /// 采样单元约定见 GpuCrowdIndirectRenderer（albedo=1 / atlas=4 / env=5 / lut=6 / shadow=7）。
 /// </summary>
-public sealed unsafe class GpuCrowdPbrUniforms
+internal sealed unsafe class GpuCrowdPbrUniforms
 {
     private const int ShadowTextureUnit = 7;
     private const float PbrRoughness = 0.55f;

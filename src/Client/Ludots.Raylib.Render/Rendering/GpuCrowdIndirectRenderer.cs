@@ -34,10 +34,11 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
     private const int ImposterCommandOffsetBytes = 80;
     private const int ImposterCellPx = 128;
     private const int ImposterViewDirs = 8;
-    public const uint AlbedoTextureUnit = 1;
-    public const uint ImposterAtlasUnit = 4;
-    public const uint EnvCubemapUnit = 5;
-    public const uint BrdfLutUnit = 6;
+    public const int AlbedoTextureUnit = 1;
+    public const int ImposterAtlasUnit = 4;
+    public const int EnvCubemapUnit = 5;
+    public const int BrdfLutUnit = 6;
+    public const int ShadowTextureUnit = 7;
 
     private uint _sourceBuffer;
     private uint _indirectBuffer;
@@ -590,7 +591,7 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
 
             if (_lodAlbedoTextures[lod] != 0)
             {
-                Gl43.ActiveTexture(GL_TEXTURE0 + AlbedoTextureUnit);
+                Gl43.ActiveTexture(GL_TEXTURE0 + (uint)AlbedoTextureUnit);
                 Gl43.BindTexture(GL_TEXTURE_2D, _lodAlbedoTextures[lod]);
                 Gl43.ActiveTexture(GL_TEXTURE0);
             }
@@ -614,7 +615,7 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
             Gl43.Uniform1f(Gl43.GetUniformLocation(_imposterShader.id, "uWanderScale"), _gpuWanderScale);
         }
         Gl43.BindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, _imposterCompactBuffer);
-        Gl43.ActiveTexture(GL_TEXTURE0 + ImposterAtlasUnit);
+        Gl43.ActiveTexture(GL_TEXTURE0 + (uint)ImposterAtlasUnit);
         Gl43.BindTexture(GL_TEXTURE_2D, _imposterAtlas.texture.id);
         Gl43.ActiveTexture(GL_TEXTURE0);
         Gl43.BindVertexArray(_imposterQuad.vaoId);
@@ -647,18 +648,6 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
         }
 
         _frameCounter++;
-        if ((_frameCounter % 30) == 0)
-        {
-            Console.WriteLine(
-                $"[gpu-crowd] frame={_frameCounter} H/M/L={_lodSlots[0].LastDrawnInstances}/{_lodSlots[1].LastDrawnInstances}/{_lodSlots[2].LastDrawnInstances} imposter={LastImposterCount} shadowCasters={LastShadowCasterCount}");
-            if (Environment.GetEnvironmentVariable("LUDOTS_CROWD_DEBUG") == "1")
-            {
-                uint* raw = stackalloc uint[25];
-                Gl43.BindBuffer(GL_COPY_READ_BUFFER, _indirectBuffer);
-                Gl43.GetBufferSubData(GL_COPY_READ_BUFFER, 0, 100, (IntPtr)raw);
-                Console.WriteLine($"[gpu-crowd] indirect raw: {raw[1]} | {raw[6]} | {raw[11]} | {raw[16]} | {raw[21]}");
-            }
-        }
     }
 
     /// <summary>模拟层 presenter 通道：整表重传实例数据（须 Initialize(dynamicInstances: true)）。
@@ -680,9 +669,9 @@ public sealed unsafe class GpuCrowdIndirectRenderer : IDisposable
     /// <summary>绑定 IBL 资源到人群着色器约定的采样单元（env=5 立方图 / lut=6；完成后恢复 unit 0）。</summary>
     public void BindIbl(uint envCubemapId, uint brdfLutId)
     {
-        Gl43.ActiveTexture(GL_TEXTURE0 + EnvCubemapUnit);
+        Gl43.ActiveTexture(GL_TEXTURE0 + (uint)EnvCubemapUnit);
         Gl43.BindTexture(GL_TEXTURE_CUBE_MAP, envCubemapId);
-        Gl43.ActiveTexture(GL_TEXTURE0 + BrdfLutUnit);
+        Gl43.ActiveTexture(GL_TEXTURE0 + (uint)BrdfLutUnit);
         Gl43.BindTexture(GL_TEXTURE_2D, brdfLutId);
         Gl43.ActiveTexture(GL_TEXTURE0);
     }
