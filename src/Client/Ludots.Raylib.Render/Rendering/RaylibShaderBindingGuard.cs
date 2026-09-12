@@ -4,7 +4,7 @@ using Rl = Raylib_cs.Raylib;
 
 namespace Ludots.Raylib.Render
 {
-    internal static class RaylibShaderBindingGuard
+    public static class RaylibShaderBindingGuard
     {
         public static int RequireUniform(Shader shader, string name, string shaderLabel)
         {

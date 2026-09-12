@@ -25,6 +25,8 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly EntryResolver _resolveEntry;
         private readonly TryEntryResolver? _tryResolveEntry;
 
+        public Func<int, int, IReadOnlyDictionary<int, int>?>? AnimationStateMapResolver { get; set; }
+
         /// <summary>
         /// 蒙皮模型条目解析（meshAssetId+descriptor → Model/Animations）。
         /// 生产接线为 RaylibGpuSkinnedModelCache.GetOrLoad；无 GL 环境的装配测试可接
@@ -112,7 +114,10 @@ namespace Ludots.Client.Raylib.Rendering
                 in animator,
                 entry.Animations,
                 entry.AnimCount,
-                stateToClipMap: null,
+                stateToClipMap: RaylibSkinnedPlayback.ResolveStateMap(
+                    item.AnimationProfileId,
+                    item.MeshAssetId,
+                    AnimationStateMapResolver),
                 out int clipIndex,
                 out int frameIndex);
 

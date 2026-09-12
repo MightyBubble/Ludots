@@ -12,6 +12,15 @@
       "id": { "type": "string", "minLength": 1 },
       "type": { "enum": ["Primitive", "Model", "Billboard"] },
       "primitiveKind": { "enum": ["Cube", "Sphere"] },
+      "gpuSkinnedLod": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["main", "shadow"],
+        "properties": {
+          "main": { "$ref": "#/$defs/meshLodAssetIds" },
+          "shadow": { "$ref": "#/$defs/meshLodAssetIds" }
+        }
+      },
       "vfx": {
         "type": "object",
         "additionalProperties": false,
@@ -19,6 +28,18 @@
         "properties": {
           "particleVfxId": { "type": "string", "minLength": 1 }
         }
+      }
+    }
+  },
+  "$defs": {
+    "meshLodAssetIds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["high", "medium", "low"],
+      "properties": {
+        "high": { "type": "string", "minLength": 1 },
+        "medium": { "type": "string", "minLength": 1 },
+        "low": { "type": "string", "minLength": 1 }
       }
     }
   }
