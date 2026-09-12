@@ -294,4 +294,62 @@ public static unsafe class RaylibNativeResources
 
         return totalBytes;
     }
+
+    /// <summary>rlgl 栈的当前矩阵（直接 GL 绘制时与 raylib 自身绘制共用同一矩阵源）。
+    /// vendored 绑定缺这些入口（不可改 vendored 文件），本地声明 native raylib 5.5 导出。</summary>
+    [DllImport("raylib", EntryPoint = "rlGetMatrixTransform", CallingConvention = CallingConvention.Cdecl)]
+    private static extern RaylibMatrix RlGetMatrixTransformNative();
+
+    [DllImport("raylib", EntryPoint = "rlGetMatrixModelview", CallingConvention = CallingConvention.Cdecl)]
+    private static extern RaylibMatrix RlGetMatrixModelviewNative();
+
+    [DllImport("raylib", EntryPoint = "rlGetMatrixProjection", CallingConvention = CallingConvention.Cdecl)]
+    private static extern RaylibMatrix RlGetMatrixProjectionNative();
+
+    /// <summary>rlgl 的实例化索引绘制入口（与 DrawMeshInstanced 内部同一调用）；
+    /// 直接 GL 路径复用它可消除自建委托编组差异这一变量。</summary>
+    [DllImport("raylib", EntryPoint = "rlDrawVertexArrayElementsInstanced", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern void RlDrawVertexArrayElementsInstanced(int offset, int count, IntPtr buffer, int instances);
+
+    [DllImport("raylib", EntryPoint = "rlEnableShader", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern void RlEnableShader(uint id);
+
+    /// <summary>raymath MatrixMultiply 的逐位复刻（行向量约定）；直接 GL 绘制的 mvp
+    /// 必须与 DrawMeshInstanced 的 Transform×Modelview×Projection 合成完全一致。</summary>
+    public static RaylibMatrix MultiplyRaylibMatrices(in RaylibMatrix left, in RaylibMatrix right)
+    {
+        return new RaylibMatrix
+        {
+            m0 = left.m0 * right.m0 + left.m1 * right.m4 + left.m2 * right.m8 + left.m3 * right.m12,
+            m1 = left.m0 * right.m1 + left.m1 * right.m5 + left.m2 * right.m9 + left.m3 * right.m13,
+            m2 = left.m0 * right.m2 + left.m1 * right.m6 + left.m2 * right.m10 + left.m3 * right.m14,
+            m3 = left.m0 * right.m3 + left.m1 * right.m7 + left.m2 * right.m11 + left.m3 * right.m15,
+            m4 = left.m4 * right.m0 + left.m5 * right.m4 + left.m6 * right.m8 + left.m7 * right.m12,
+            m5 = left.m4 * right.m1 + left.m5 * right.m5 + left.m6 * right.m9 + left.m7 * right.m13,
+            m6 = left.m4 * right.m2 + left.m5 * right.m6 + left.m6 * right.m10 + left.m7 * right.m14,
+            m7 = left.m4 * right.m3 + left.m5 * right.m7 + left.m6 * right.m11 + left.m7 * right.m15,
+            m8 = left.m8 * right.m0 + left.m9 * right.m4 + left.m10 * right.m8 + left.m11 * right.m12,
+            m9 = left.m8 * right.m1 + left.m9 * right.m5 + left.m10 * right.m9 + left.m11 * right.m13,
+            m10 = left.m8 * right.m2 + left.m9 * right.m6 + left.m10 * right.m10 + left.m11 * right.m14,
+            m11 = left.m8 * right.m3 + left.m9 * right.m7 + left.m10 * right.m11 + left.m11 * right.m15,
+            m12 = left.m12 * right.m0 + left.m13 * right.m4 + left.m14 * right.m8 + left.m15 * right.m12,
+            m13 = left.m12 * right.m1 + left.m13 * right.m5 + left.m14 * right.m9 + left.m15 * right.m13,
+            m14 = left.m12 * right.m2 + left.m13 * right.m6 + left.m14 * right.m10 + left.m15 * right.m14,
+            m15 = left.m12 * right.m3 + left.m13 * right.m7 + left.m14 * right.m11 + left.m15 * right.m15,
+        };
+    }
+
+    /// <summary>直接 GL 绘制的 mvp（与 DrawMeshInstanced 内部合成逐位一致）。</summary>
+    public static RaylibMatrix ComputeDrawMvp()
+    {
+        return MultiplyRaylibMatrices(
+            MultiplyRaylibMatrices(RlGetMatrixTransformNative(), RlGetMatrixModelviewNative()),
+            RlGetMatrixProjectionNative());
+    }
+
+    /// <summary>诊断：倾倒 rlgl 三矩阵的原始字段（LUDOTS_SSBO_DEBUG）。</summary>
+    public static (RaylibMatrix Transform, RaylibMatrix Modelview, RaylibMatrix Projection) ReadDrawMatrices()
+    {
+        return (RlGetMatrixTransformNative(), RlGetMatrixModelviewNative(), RlGetMatrixProjectionNative());
+    }
 }

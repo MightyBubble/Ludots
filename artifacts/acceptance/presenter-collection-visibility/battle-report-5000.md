@@ -1,6 +1,6 @@
 # Collection marker acceptance
 
-Build: PresentationTests Release. Owners: 10000. Members: 5000. Seed: sequential owner identities. Clock: 1/60 s. UTC: 2026-09-08T10:47:37.7135411Z.
+Build: PresentationTests Release. Owners: 10000. Members: 5000. Seed: sequential owner identities. Clock: 1/60 s. UTC: 2026-09-11T08:18:51.0272613Z.
 
 Player previews the formation, commits the selection, and clears it. The same sequence repeats four times. Preview disappears on commit; selected markers disappear on clear. No duplicate instances accumulate.
 

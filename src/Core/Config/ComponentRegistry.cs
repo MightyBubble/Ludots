@@ -152,6 +152,13 @@ namespace Ludots.Core.Config
                     throw new InvalidOperationException($"Component '{name}' failed strict deserialization: {ex.Message}", ex);
                 }
 
+                if (entity.Has<T>())
+                {
+                    throw new InvalidOperationException(
+                        $"Component '{name}' is already present on entity {entity.Id}. " +
+                        "Templates must not declare both 'GameplayTagContainer.tags' (derives the count container) and an explicit 'TagCountContainer'."); // 诊断：双挂组件名定位（main 存量断言根因调查）
+                }
+
                 entity.Add<T>(component);
             }, modId, Component<T>.ComponentType);
         }

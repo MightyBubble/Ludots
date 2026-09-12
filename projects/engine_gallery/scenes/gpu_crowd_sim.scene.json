@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "id": "gpu_crowd_sim",
+  "title": "模拟层驱动：200K Arch 实体 → presenter → GPU 军团",
+  "summary": "200K Arch ECS 实体（CrowdHome/Transform/Animator，无寻路无避障）每帧模拟游走与动画，presenter 整表上传 GPU 管线（预蒙皮 + GPU 剔除 + imposter + PBR/IBL + 投射体阴影）——HUD 分列 sim/present/渲染耗时",
+  "world": {
+    "units": "meters",
+    "upAxis": "Y",
+    "bounds": {
+      "min": [
+        -1200,
+        -32,
+        -1200
+      ],
+      "max": [
+        1200,
+        128,
+        1200
+      ]
+    }
+  },
+  "camera": {
+    "mode": "orbit",
+    "target": [
+      0,
+      2,
+      0
+    ],
+    "distance": 520,
+    "pitchDegrees": 30,
+    "yawDegrees": 45,
+    "fovyDegrees": 60
+  },
+  "assets": [
+    {
+      "id": "gpu_crowd.mannequin_high",
+      "kind": "model",
+      "source": "Models/mannequin_large_idle_walk.glb"
+    },
+    {
+      "id": "gpu_crowd.mannequin_medium",
+      "kind": "model",
+      "source": "Models/mannequin_large_idle_walk_lod1.glb"
+    },
+    {
+      "id": "gpu_crowd.mannequin_low",
+      "kind": "model",
+      "source": "Models/mannequin_large_idle_walk_lod2.glb"
+    }
+  ],
+  "rootNode": "root",
+  "nodes": [
+    {
+      "id": "root",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "type": "gpu_crowd",
+          "assets": [
+            "gpu_crowd.mannequin_high",
+            "gpu_crowd.mannequin_medium",
+            "gpu_crowd.mannequin_low"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -221,7 +221,9 @@ namespace Ludots.Tests.GAS
             harness.Input.SetActionValue("Move", new Vector3(1f, 0f, 0f));
 
             harness.Globals.Remove(CoreServiceKeys.ClientLocalSeatRegistry.Name);
-            system.Update(0f);
+            Assert.Throws<InvalidOperationException>(
+                () => system.Update(0f),
+                "a declared axis move without the seat registry is a wiring error, not a silent no-op.");
             Assert.That(harness.Orders.Count, Is.EqualTo(0), "no resolved local player entity: nothing to move.");
 
             Entity positionless = harness.World.Create();

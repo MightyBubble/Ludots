@@ -181,6 +181,7 @@ namespace Ludots.Adapter.Raylib
             bool worldFrameActive = false;
             bool mode3DActive = false;
             bool frameCompleted = false;
+            bool skinnedFramePrepared = false;
             _lastExecutedPassCount = 0;
 
             try
@@ -190,6 +191,17 @@ namespace Ludots.Adapter.Raylib
                 drawingActive = true;
                 _presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
                 Restore3DDepthState();
+
+                if (frame.DrawPrimitives &&
+                    _engine.TryGetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer, out SkinnedVisualBatchBuffer? skinnedBatch) &&
+                    _engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry? skinnedMeshes))
+                {
+                    _primitiveRenderer.PrepareSkinnedFrame(
+                        skinnedBatch,
+                        skinnedMeshes,
+                        frame.RenderDebug.AcceptanceScaleMultiplier);
+                    skinnedFramePrepared = true;
+                }
 
                 RaylibFrameWaterFrame waterFrame = PrepareFrameEnvironment(in frame);
                 Span<RaylibFramePass> plan = stackalloc RaylibFramePass[MaxPassesPerFrame];
@@ -297,6 +309,11 @@ namespace Ludots.Adapter.Raylib
             }
             finally
             {
+                if (skinnedFramePrepared)
+                {
+                    _primitiveRenderer.EndSkinnedFrame();
+                }
+
                 if (!frameCompleted)
                 {
                     if (mode3DActive)
@@ -676,15 +693,9 @@ namespace Ludots.Adapter.Raylib
                         frame.RenderDebug.AcceptanceScaleMultiplier);
                 }
 
-                SkinnedVisualBatchBuffer? skinnedBatch = _engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
-                if (skinnedBatch != null &&
-                    _engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry? skinMeshes))
+                if (frame.DrawPrimitives && _primitiveRenderer.HasPreparedSkinnedFrame)
                 {
-                    _primitiveRenderer.DrawShadow(
-                        skinnedBatch,
-                        shadow,
-                        skinMeshes,
-                        frame.RenderDebug.AcceptanceScaleMultiplier);
+                    _primitiveRenderer.DrawPreparedSkinnedShadow(shadow);
                 }
             }
             finally

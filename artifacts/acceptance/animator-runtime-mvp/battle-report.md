@@ -5,7 +5,7 @@
 - build/version: local PresentationTests
 - seed/map/clock: deterministic unit fixture / in-memory world / 2 ticks
 - controller id: 1
-- execution timestamp: 2026-09-01T10:20:30.6543633Z
+- execution timestamp: 2026-09-11T08:09:49.4710168Z
 
 ## Timeline
 - [T+001] blackboard trigger param #12 consumed -> attack state entered immediately

@@ -1,6 +1,26 @@
 [
   {
     "id": "mass_navigation.agent.soldier",
+    "type": "Model",
+    "gpuSkinnedLod": {
+      "main": {
+        "high": "mass_navigation.agent.soldier",
+        "medium": "mass_navigation.agent.soldier.lod1",
+        "low": "mass_navigation.agent.soldier.lod2"
+      },
+      "shadow": {
+        "high": "mass_navigation.agent.soldier.lod1",
+        "medium": "mass_navigation.agent.soldier.lod2",
+        "low": "mass_navigation.agent.soldier.lod2"
+      }
+    }
+  },
+  {
+    "id": "mass_navigation.agent.soldier.lod1",
+    "type": "Model"
+  },
+  {
+    "id": "mass_navigation.agent.soldier.lod2",
     "type": "Model"
   },
   {

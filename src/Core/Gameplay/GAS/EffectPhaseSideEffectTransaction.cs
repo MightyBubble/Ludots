@@ -30,6 +30,9 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly RuntimeEntitySpawnQueue? _spawnRequests;
     private readonly GasPresentationEventBuffer? _presentationEvents;
     private readonly RootBudgetTable? _rootBudget;
+
+    /// <summary>提交取消标记后强制快道效果下一 slice 出桶；由持有系统注入，未注入时取消仅靠自然到期观察。</summary>
+    internal Systems.EffectDueWheel? DueWheel { get; set; }
     private readonly Entity[] _attributeEntities;
     private readonly TransactionEntityIndex _attributeIndex;
     private readonly AttributeBuffer[] _attributeOriginalValues;
@@ -1332,6 +1335,14 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             for (int i = 0; i < _cancelledEffectCount; i++)
             {
                 _world.Get<GameplayEffect>(_cancelledEffects[i]).CancelRequested = true;
+            }
+
+            if (DueWheel != null)
+            {
+                for (int i = 0; i < _cancelledEffectCount; i++)
+                {
+                    DueWheel.ForceVisit(_cancelledEffects[i]);
+                }
             }
             for (int i = 0; i < _listenerEntityCount; i++)
             {

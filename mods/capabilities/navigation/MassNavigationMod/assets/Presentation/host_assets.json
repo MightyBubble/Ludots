@@ -5,7 +5,25 @@
     "assetId": "mass_navigation.agent.soldier",
     "backendId": "raylib",
     "sourceUris": [
-      "MassNavigationMod:assets/Models/mass_navigation_agent_soldier.glb"
+      "MassNavigationMod:assets/Models/mannequin_large_idle_walk.glb"
+    ]
+  },
+  {
+    "id": "mass_navigation.agent.soldier.lod1.raylib",
+    "assetKind": "Mesh",
+    "assetId": "mass_navigation.agent.soldier.lod1",
+    "backendId": "raylib",
+    "sourceUris": [
+      "MassNavigationMod:assets/Models/mannequin_large_idle_walk_lod1.glb"
+    ]
+  },
+  {
+    "id": "mass_navigation.agent.soldier.lod2.raylib",
+    "assetKind": "Mesh",
+    "assetId": "mass_navigation.agent.soldier.lod2",
+    "backendId": "raylib",
+    "sourceUris": [
+      "MassNavigationMod:assets/Models/mannequin_large_idle_walk_lod2.glb"
     ]
   },
   {

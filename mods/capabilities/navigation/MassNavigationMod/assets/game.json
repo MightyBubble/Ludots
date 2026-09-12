@@ -28,6 +28,12 @@
     "worldHudCapacity": 131072,
     "screenHudCapacity": 131072,
     "skinnedVisualBatchCapacity": 131072,
+    "gpuSkinned": {
+      "maxBatches": 256,
+      "maxUniquePoses": 128,
+      "maxBoneSlots": 32,
+      "posePhaseBuckets": 16
+    },
     "minimapMarkerCapacity": 131072,
     "runtimeEntitySpawnQueueCapacity": 131072,
     "runtimeEntitySpawnReceiptQueueCapacity": 131072

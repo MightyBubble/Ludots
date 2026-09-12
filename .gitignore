@@ -158,3 +158,4 @@ dist/
 .tmp-dotnet*/
 tmp/wt-*
 tmp/wt-issue*
+tmp/

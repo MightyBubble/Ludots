@@ -15,6 +15,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
@@ -233,6 +234,115 @@ namespace Ludots.Tests.Presentation
             ReplaceCommandSource(engine, localPlayer, agents);
 
             Assert.That(SnapshotCommandSource(engine), Has.Length.EqualTo(expectedAgents));
+        }
+
+        [Test]
+        public void Showcase_SteadyStateTickBudget_MinimapProjectionAndAttributeAggregation()
+        {
+            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
+
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
+            var hudProjection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, hudProjection, simulation, ExpectedAgentCount);
+
+            var timing = RequireService(engine, CoreServiceKeys.PresentationTimingDiagnostics);
+            timing.SystemBreakdownEnabled = true;
+            var minimapRuntime = RequireService(engine, CoreServiceKeys.MinimapRuntime);
+            var minimapMarkers = RequireService(engine, CoreServiceKeys.MinimapMarkerBuffer);
+            var minimapScreenMarkers = RequireService(engine, CoreServiceKeys.MinimapScreenMarkerBuffer);
+
+            const int warmupFrames = 8;
+            const int observationFrames = 121;
+            var aggregator = RequireSystem<AttributeAggregatorSystem>(engine, SystemGroup.AttributeCalculation);
+            var projectionMs = new double[observationFrames];
+            var aggregatorMs = new double[observationFrames];
+            var aggregatorProcessed = new int[observationFrames];
+            var reprojectedCounts = new int[observationFrames];
+            var retainedCounts = new int[observationFrames];
+            var screenMarkerCounts = new int[observationFrames];
+            for (int frame = 0; frame < warmupFrames + observationFrames; frame++)
+            {
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
+                engine.Tick(FixedDeltaSeconds);
+                HeadlessPresentationTestHost.UpdateCamera(engine);
+                long refreshStart = Stopwatch.GetTimestamp();
+                minimapRuntime.Refresh(engine, minimapMarkers, minimapScreenMarkers);
+                long refreshEnd = Stopwatch.GetTimestamp();
+                hudProjection.Update(FixedDeltaSeconds);
+                if (frame >= warmupFrames)
+                {
+                    int sample = frame - warmupFrames;
+                    projectionMs[sample] = (refreshEnd - refreshStart) * 1000d / Stopwatch.Frequency;
+                    aggregatorMs[sample] = aggregator.LastUpdateElapsedMs;
+                    aggregatorProcessed[sample] = aggregator.LastProcessedEntities;
+                    reprojectedCounts[sample] = minimapRuntime.ReprojectedMarkerCountLastFrame;
+                    retainedCounts[sample] = minimapRuntime.RetainedMarkerCountLastFrame;
+                    screenMarkerCounts[sample] = minimapScreenMarkers.Count;
+                }
+            }
+
+            timing.SystemBreakdownEnabled = false;
+            Array.Sort(projectionMs);
+            Array.Sort(aggregatorMs);
+            double projectionMean = Mean(projectionMs);
+            TestContext.Out.WriteLine(
+                $"Steady-state budget over {observationFrames} ticks: minimapProjection median={projectionMs[observationFrames / 2]:F3}ms mean={projectionMean:F3}ms p95={projectionMs[(int)(observationFrames * 0.95)]:F3}ms max={projectionMs[^1]:F3}ms (reprojected median={Median(reprojectedCounts)}, retained median={Median(retainedCounts)}, fullRebuilds={minimapRuntime.FullProjectionRebuildCount}); attributeAggregator median={aggregatorMs[observationFrames / 2]:F3}ms p95={aggregatorMs[(int)(observationFrames * 0.95)]:F3}ms max={aggregatorMs[^1]:F3}ms (dirtyEntities median={Median(aggregatorProcessed)}, max={Maximum(aggregatorProcessed)}); screenMarkers min={Minimum(screenMarkerCounts)}");
+            Assert.That(Minimum(screenMarkerCounts), Is.GreaterThanOrEqualTo(ExpectedAgentCount),
+                "Steady-state ticks must retain every agent minimap screen marker.");
+            Assert.That(projectionMs[observationFrames / 2], Is.LessThanOrEqualTo(0.5d),
+                $"Minimap projection median {projectionMs[observationFrames / 2]:F3}ms exceeds the 0.5ms steady-state budget.");
+            Assert.That(projectionMean, Is.LessThanOrEqualTo(0.6d),
+                $"Minimap projection amortized mean {projectionMean:F3}ms exceeds the rotation amortized budget.");
+            Assert.That(aggregatorMs[observationFrames / 2], Is.LessThanOrEqualTo(0.8d),
+                $"Attribute aggregation median {aggregatorMs[observationFrames / 2]:F3}ms exceeds the spread-firing regression bound; zero-dirty gating is guarded by AttributeAggregatorSteadyStateBudgetTests.");
+        }
+
+        private static double Mean(double[] values)
+        {
+            double sum = 0;
+            for (int i = 0; i < values.Length; i++)
+            {
+                sum += values[i];
+            }
+
+            return sum / values.Length;
+        }
+
+        private static int Median(int[] values)
+        {
+            int[] copy = (int[])values.Clone();
+            Array.Sort(copy);
+            return copy[copy.Length / 2];
+        }
+
+        private static int Maximum(int[] values)
+        {
+            int max = values[0];
+            for (int i = 1; i < values.Length; i++)
+            {
+                if (values[i] > max)
+                {
+                    max = values[i];
+                }
+            }
+
+            return max;
+        }
+
+        private static int Minimum(int[] values)
+        {
+            int min = values[0];
+            for (int i = 1; i < values.Length; i++)
+            {
+                if (values[i] < min)
+                {
+                    min = values[i];
+                }
+            }
+
+            return min;
         }
 
         [Test]

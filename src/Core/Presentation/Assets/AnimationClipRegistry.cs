@@ -9,6 +9,8 @@ namespace Ludots.Core.Presentation.Assets
         private AnimationClipDefinition[] _definitions;
         private bool[] _hasDefinitions;
 
+        public int Revision { get; private set; }
+
         public AnimationClipRegistry(int capacity = 256)
         {
             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
@@ -26,6 +28,7 @@ namespace Ludots.Core.Presentation.Assets
             definition.ClipAssetId = id;
             _definitions[id] = definition;
             _hasDefinitions[id] = true;
+            Revision++;
             return id;
         }
 
