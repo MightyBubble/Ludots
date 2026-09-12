@@ -20,6 +20,9 @@ namespace Ludots.Core.Gameplay.Items
         private readonly List<DesiredPassiveEffect> _desiredEffects = new(32);
         private bool[] _matchedDesiredEffects = Array.Empty<bool>();
 
+        /// <summary>共享到期时间轮；卸下装备的取消写标记后强制快道效果下一 slice 出桶。</summary>
+        internal Ludots.Core.Gameplay.GAS.Systems.EffectDueWheel? DueWheel { get; set; }
+
         public InventoryEquipmentGrantSyncSystem(
             World world,
             InventoryRuntimeService inventory,
@@ -231,12 +234,14 @@ namespace Ludots.Core.Gameplay.Items
                     continue;
                 }
 
-                ref GameplayEffect effect = ref World.Get<GameplayEffect>(effectEntity);
+                ref var effect = ref World.Get<GameplayEffect>(effectEntity);
                 effect.CancelRequested = true;
                 if (effect.AggregatesModifiers && !World.Has<AttributeAggregateDirty>(actor))
                 {
                     World.Add(actor, new AttributeAggregateDirty());
                 }
+
+                DueWheel?.ForceVisit(effectEntity);
             }
 
             for (int i = 0; i < desiredEffects.Count; i++)

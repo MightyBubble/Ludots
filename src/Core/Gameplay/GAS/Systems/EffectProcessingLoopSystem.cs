@@ -63,6 +63,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public int LifetimeProcessedLastSlice { get; private set; }
         public byte DebugProposalWindowPhase => _proposal.DebugWindowPhase;
 
+        /// <summary>
+        /// 共享到期时间轮；引擎在首次 tick 前注入，使图 API / 装备同步等取消路径保持 next-slice 语义。
+        /// </summary>
+        internal EffectDueWheel DueWheel
+        {
+            get => _lifetime.DueWheel!;
+            set
+            {
+                _application.DueWheel = value;
+                _lifetime.DueWheel = value;
+            }
+        }
+
         public EffectProcessingLoopSystem(World world, EffectRequestQueue effectRequests, IClock clock, GasConditionRegistry conditions, int lifetimeSnapshotCapacity, int fanOutCommandCapacity, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, int maxWorkUnitsPerSlice = int.MaxValue, OrderQueue orderIntake = null, Ludots.Core.Movement.PoseAuthorityArbiter poseAuthorityArbiter = null)
             : base(world)
         {
@@ -83,6 +96,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                  relationshipRuntime, knowledgeAreaRevealRuntime, orderIntake, _fanOutBudget, poseAuthorityArbiter);
             _application = new EffectApplicationSystem(world, fanOutCommandCapacity, clock, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz, relationshipRuntime, knowledgeAreaRevealRuntime, orderIntake, _fanOutBudget, poseAuthorityArbiter);
             _lifetime = new EffectLifetimeSystem(world, clock, conditions, lifetimeSnapshotCapacity, fanOutCommandCapacity, effectRequests, budget, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz, relationshipRuntime, presentationEvents, knowledgeAreaRevealRuntime, orderIntake, _fanOutBudget, poseAuthorityArbiter);
+            var sharedDueWheel = new EffectDueWheel(clock, lifetimeSnapshotCapacity);
+            _application.DueWheel = sharedDueWheel;
+            _lifetime.DueWheel = sharedDueWheel;
             MaxWorkUnitsPerSlice = maxWorkUnitsPerSlice;
             _runtimeStateEntity = world.Create(new GasRuntimeState
             {

@@ -1115,6 +1115,8 @@ namespace Ludots.Core.Engine
                 itemDefinitions,
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
+            var effectDueWheel = new Ludots.Core.Gameplay.GAS.Systems.EffectDueWheel(clock, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity);
+            gasGraphApi.DueWheel = effectDueWheel;
             gasGraphApi.BindTriggerManager(TriggerManager);
             gasGraphApi.BindAimSource(new Ludots.Core.Input.AimSource.GraphAimSourceRuntime(World, GlobalContext));
             gasGraphApi.BindEngineResolver(() => this);
@@ -2240,9 +2242,9 @@ namespace Ludots.Core.Engine
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
             RegisterSystem(new ProgressionScopeBindingSystem(World, progressionEvaluator, progressionScopeKeys), SystemGroup.InputCollection);
-            RegisterSystem(
-                new InventoryEquipmentGrantSyncSystem(World, inventoryRuntime, effectRequestQueue, abilityDefinitions),
-                SystemGroup.InputCollection);
+            var inventoryEquipmentGrantSyncSystem = new InventoryEquipmentGrantSyncSystem(World, inventoryRuntime, effectRequestQueue, abilityDefinitions);
+            inventoryEquipmentGrantSyncSystem.DueWheel = effectDueWheel;
+            RegisterSystem(inventoryEquipmentGrantSyncSystem, SystemGroup.InputCollection);
             RegisterSystem(new AbilityFormRoutingSystem(World, abilityFormSets, tagOps), SystemGroup.InputCollection);
             RegisterSystem(new UtilityAiThinkScheduleSystem(World, clock, AiRuntime.UtilityRuntime), SystemGroup.InputCollection);
             var poseAuthorityArbiter = new PoseAuthorityArbiter();
@@ -2321,7 +2323,9 @@ namespace Ludots.Core.Engine
                 presenterDefinitions,
                 componentAuthoringContext,
                 entityTriggerGraphMounts: EntityTriggerGraphMounts);
-            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter), SystemGroup.EffectProcessing);
+            var effectProcessingLoopSystem = new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter);
+            effectProcessingLoopSystem.DueWheel = effectDueWheel;
+            RegisterSystem(effectProcessingLoopSystem, SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(
                 World,
                 effectRequestQueue,

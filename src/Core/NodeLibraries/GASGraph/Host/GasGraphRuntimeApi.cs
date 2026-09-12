@@ -351,6 +351,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _engineResolver = engineResolver ?? throw new ArgumentNullException(nameof(engineResolver));
         }
 
+        /// <summary>共享到期时间轮；直接取消路径写标记后强制快道效果下一 slice 出桶。</summary>
+        internal Ludots.Core.Gameplay.GAS.Systems.EffectDueWheel? DueWheel { get; set; }
+
         public GasGraphRuntimeApi(
             World world,
             ISpatialQueryService? spatialQueries = null,
@@ -2155,6 +2158,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 {
                     _world.Add(target, new AttributeAggregateDirty());
                 }
+
+                DueWheel?.ForceVisit(effectEntity);
             }
         }
 

@@ -75,8 +75,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Entity[] _resolverBuffer = new Entity[256];
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
         private readonly EffectPhaseSideEffectTransaction _persistentPhaseTransaction;
+        private EffectDueWheel? _dueWheel;
         private int _activeEffectAttachDropped;
         private int _listenerRegistrationDropped;
+
+        /// <summary>
+        /// 共享到期时间轮（由 EffectProcessingLoopSystem 注入）：效果提交成功后入轮；
+        /// 未注入时提交钩子不注册，效果由 EffectLifetimeSystem 首个 slice 的 Rebuild 兜底入轮。
+        /// </summary>
+        internal EffectDueWheel? DueWheel
+        {
+            get => _dueWheel;
+            set
+            {
+                _dueWheel = value;
+                _persistentPhaseTransaction.DueWheel = value;
+            }
+        }
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
         public int LastSliceProcessed { get; private set; }
@@ -464,6 +479,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             {
                                 ref GameplayEffect effectForActivate = ref World.Get<GameplayEffect>(e);
                                 effectForActivate.State = EffectState.Committed;
+                                _dueWheel?.RegisterCommitted(e, World);
                             }
 
                         }
