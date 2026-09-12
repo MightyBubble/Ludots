@@ -7539,6 +7539,28 @@
       "docsPath": "gitbook/architecture/engine-capability-showcases.md"
     },
     {
+      "id": "engine_raylib_gpu_crowd",
+      "path": "projects/engine_gallery",
+      "projectPath": "project.json",
+      "title": "GPU 剔除 + Indirect Draw：200K PBR 蒙皮军团",
+      "summary": "200K GPU 蒙皮实例：compute 预蒙皮 + PBR/IBL + 四级 LOD（远景 imposter billboard）+ GPU 剔除 + indirect draw + 投射体阴影 + 确定性游走与多剪辑动画——CPU 每帧零逐实例工作",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering",
+        "gpu-driven"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "gpu_crowd",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_gpu_crowd",
+      "screenshot": "artifacts/acceptance/engine_raylib_gpu_crowd/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
       "id": "engine_raylib_slash_trail",
       "path": "projects/engine_gallery",
       "projectPath": "project.json",

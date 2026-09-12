@@ -1,0 +1,44 @@
+#version 430
+
+// Compute 预蒙皮：把每个姿势行的骨骼矩阵直接烘焙到网格顶点上（UE VAT 思路）。
+// 输入：binding 0 = 网格静态数据（每顶点 4×vec4：pos.xyz|0, nrm.xyz|0, boneIds(f4), weights(f4)）
+//       binding 2 = 姿势矩阵（行 × uPoseStride × mat4，与 SSBO 蒙皮管线同合同）
+// 输出：binding 8 = 预蒙皮顶点（每 (row, vertex) 2×vec4：skinnedPos.xyz|1, skinnedNrm.xyz|0）
+// 主/阴影 pass 的顶点着色器只做 2 次 vec4 取数 + 实例变换——顶点级骨骼吞吐不再受 4×mat4 取数限制。
+
+layout(local_size_x = 256) in;
+
+layout(std430, binding = 0) readonly buffer MeshData { vec4 meshData[]; };
+layout(std430, binding = 2) readonly buffer PoseMatrixBlock { mat4 poseMatrices[]; };
+layout(std430, binding = 8) writeonly buffer SkinnedVerts { vec4 skinned[]; };
+
+uniform int uVertexCount;
+uniform int uPoseRows;
+uniform int uPoseStride;
+
+void main()
+{
+    int total = uVertexCount * uPoseRows;
+    int id = int(gl_GlobalInvocationID.x);
+    if (id >= total) return;
+
+    int row = id / uVertexCount;
+    int v = id - row * uVertexCount;
+
+    vec4 bindPos = meshData[v * 4 + 0];
+    vec3 bindNrm = meshData[v * 4 + 1].xyz;
+    vec4 boneIds = meshData[v * 4 + 2];
+    vec4 weights = meshData[v * 4 + 3];
+
+    int base = row * uPoseStride;
+    mat4 skin = mat4(0.0);
+    if (weights.x > 0.0) skin += poseMatrices[base + int(boneIds.x)] * weights.x;
+    if (weights.y > 0.0) skin += poseMatrices[base + int(boneIds.y)] * weights.y;
+    if (weights.z > 0.0) skin += poseMatrices[base + int(boneIds.z)] * weights.z;
+    if (weights.w > 0.0) skin += poseMatrices[base + int(boneIds.w)] * weights.w;
+
+    vec3 skinnedPos = (skin * vec4(bindPos.xyz, 1.0)).xyz;
+    vec3 skinnedNrm = mat3(skin) * bindNrm;
+    skinned[id * 2 + 0] = vec4(skinnedPos, 1.0);
+    skinned[id * 2 + 1] = vec4(skinnedNrm, 0.0);
+}

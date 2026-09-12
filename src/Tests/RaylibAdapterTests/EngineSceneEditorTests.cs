@@ -34,7 +34,7 @@ namespace Ludots.Tests.RaylibAdapter
         public void SceneFiles_NoOpLoadSave_AreByteStable()
         {
             string[] scenes = Directory.GetFiles(Path.Combine(RepoRoot(), "projects", "engine_gallery", "scenes"), "*.scene.json");
-            Assert.That(scenes.Length, Is.EqualTo(22));
+            Assert.That(scenes.Length, Is.EqualTo(23));
 
             foreach (string path in scenes)
             {

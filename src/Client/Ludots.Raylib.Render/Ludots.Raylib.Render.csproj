@@ -34,8 +34,22 @@
     <None Include="..\..\Platforms\Desktop\mat_emissive.vs"><Link>mat_emissive.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\mat_emissive.fs"><Link>mat_emissive.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\skinning_instanced.fs"><Link>skinning_instanced.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
-    <None Include="..\..\Platforms\Desktop\skinning_instanced_pose_texture.vs"><Link>skinning_instanced_pose_texture.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
-    <None Include="..\..\Platforms\Desktop\shadow_depth_skinning_pose_texture.vs"><Link>shadow_depth_skinning_pose_texture.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    
+    
+    <None Include="..\..\Platforms\Desktop\gpu_crowd_preskin.vs"><Link>gpu_crowd_preskin.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\shadow_depth_preskin.vs"><Link>shadow_depth_preskin.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\gpu_preskin.comp"><Link>gpu_preskin.comp</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\gpu_crowd_pbr.fs"><Link>gpu_crowd_pbr.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\pbr_terms.glsl.inc"><Link>pbr_terms.glsl.inc</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\crowd_wander.glsl.inc"><Link>crowd_wander.glsl.inc</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\gpu_imposter.vs"><Link>gpu_imposter.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\gpu_imposter.fs"><Link>gpu_imposter.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\gpu_imposter_capture.vs"><Link>gpu_imposter_capture.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\gpu_imposter_capture.fs"><Link>gpu_imposter_capture.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\gpu_cull.comp"><Link>gpu_cull.comp</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\skinning_pose_compute.glsl"><Link>skinning_pose_compute.glsl</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\skinning_instanced_ssbo.vs"><Link>skinning_instanced_ssbo.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\shadow_depth_skinning_ssbo.vs"><Link>shadow_depth_skinning_ssbo.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\vfx_unlit_tint.vs"><Link>vfx_unlit_tint.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\vfx_unlit_tint.fs"><Link>vfx_unlit_tint.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\decal_project.vs"><Link>decal_project.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
