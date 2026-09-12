@@ -3158,6 +3158,13 @@ namespace Ludots.Core.Engine
 
                 if (!registry.TryGet("Default", out definition) || definition == null)
                 {
+                    // 地图位姿是作者意图，不允许因为没有虚拟相机定义而静默丢弃：
+                    // 无 rig 时直写 CameraState（无活动虚拟相机，Update 不会覆盖它）。
+                    if (cam != null)
+                    {
+                        ApplyDefaultCameraPoseOnly(cam);
+                    }
+
                     return;
                 }
 
@@ -3209,6 +3216,39 @@ namespace Ludots.Core.Engine
             {
                 var state = logged.State;
                 Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera: yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");
+            }
+        }
+
+        private void ApplyDefaultCameraPoseOnly(Ludots.Core.Config.CameraConfig cam)
+        {
+            EnsureCameraRuntimeConfigured();
+            var targets = new System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager>(4);
+            CollectDefaultCameraTargets(targets);
+            var pose = new CameraPoseRequest
+            {
+                TargetCm = (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
+                    ? new System.Numerics.Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f)
+                    : null,
+                Yaw = cam.Yaw,
+                Pitch = cam.Pitch,
+                DistanceCm = cam.DistanceCm,
+                FovYDeg = cam.FovYDeg
+            };
+
+            Ludots.Core.Gameplay.Camera.CameraManager? logged = null;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                Ludots.Core.Gameplay.Camera.CameraManager camera = targets[i];
+                EnsureAuthorityCameraServices(camera);
+                camera.ResetVirtualCameras();
+                camera.ApplyPose(pose);
+                logged ??= camera;
+            }
+
+            if (logged != null)
+            {
+                var state = logged.State;
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera (pose-only): yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");
             }
         }
 

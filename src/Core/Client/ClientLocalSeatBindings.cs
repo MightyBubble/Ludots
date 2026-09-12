@@ -69,9 +69,12 @@ namespace Ludots.Core.Client
                 ?? throw new InvalidOperationException("ClientLocalSeatRegistry missing.");
             LogicViewRegistry views = engine.GetService(CoreServiceKeys.LogicViewRegistry)
                 ?? throw new InvalidOperationException("LogicViewRegistry missing.");
+            // sole seat 接管呈现眼时收养现有相机实例：地图 DefaultCamera 位姿可能已落在
+            // bootstrap 视图上，重建相机会把作者取景连同实例一起丢弃（投影从此解析到构造默认值）。
+            CameraManager? adoptedCamera = ResolveAdoptablePresentCamera(views);
             seats.Clear();
             views.Clear();
-            string viewId = views.EnsureDefaultView(possessedRep);
+            string viewId = views.EnsureDefaultView(possessedRep, camera: adoptedCamera);
             Vector2 presentResolution = ResolvePresentResolution(engine, presentResolutionPx);
             seats.Add(new ClientLocalSeat(seatId)
             {
@@ -92,6 +95,23 @@ namespace Ludots.Core.Client
             }
 
             UpsertSolePlayerLookup(engine, playerId, possessedRep, replacement);
+        }
+
+        private static CameraManager? ResolveAdoptablePresentCamera(LogicViewRegistry views)
+        {
+            if (views.TryGetClientPresentCamera(out CameraManager clientPresent))
+            {
+                return clientPresent;
+            }
+
+            if (views.Count == 1)
+            {
+                var soleCamera = new System.Collections.Generic.List<CameraManager>(1);
+                views.CopyCameras(soleCamera);
+                return soleCamera[0];
+            }
+
+            return null;
         }
 
         private static void UpsertSolePlayerLookup(GameEngine engine, int playerId, Entity possessedRep, Ludots.Core.Gameplay.Teams.PlayerEntityLookup replacement)
