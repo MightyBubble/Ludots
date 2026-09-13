@@ -91,6 +91,9 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly QueryDescription _bootstrapPendingQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterBootstrapPending>();
+        private readonly QueryDescription _compiledHudAnchorQuery = new QueryDescription()
+            .WithAll<PresenterState, PresenterParent, PresenterTransformSource, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterEmitCache, Components.CompiledHudAnchor>()
+            .WithNone<PresenterBootstrapPending>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterWorldPosition, PresenterWorldPlanePosition>()
             .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasGraphParamBinding, PerfHasLiveParamBinding, PerfHasInteractionContextBinding, PerfHasExtensionBehavior, PerfHasTrailMesh>()
@@ -204,6 +207,7 @@ namespace Ludots.Core.Presentation.Systems
                 _runtime.EndDeferredStructuralChanges(_commandBuffer);
             }
 
+            SyncCompiledHudAnchors();
             PlaybackStructuralChanges();
             _trailMesh?.Advance(World, _trailElapsedSeconds);
             int destroyEventScanCount = StopDestroyedSounds();
@@ -2689,6 +2693,70 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             return allResolved;
+        }
+
+        /// <summary>
+        /// 纯 HUD 锚（CompiledHudAnchor）的位置通道：锚只依赖父 presenter 的最终位置
+        /// （含接地等行为结果）加固定偏移，因此排在行为批处理之后、emit 之前执行；
+        /// 只更位置与平面位置并标记 emit 脏，不做四元数/缩放/朝向与逐子 definition 解析。
+        /// </summary>
+        private void SyncCompiledHudAnchors()
+        {
+            Entity cachedParent = Entity.Null;
+            Vector3 parentPosition = Vector3.Zero;
+            bool parentPositionValid = false;
+            foreach (ref readonly Chunk chunk in World.Query(in _compiledHudAnchorQuery))
+            {
+                Span<PresenterState> states = chunk.GetSpan<PresenterState>();
+                Span<PresenterParent> parents = chunk.GetSpan<PresenterParent>();
+                Span<PresenterTransformSource> sources = chunk.GetSpan<PresenterTransformSource>();
+                Span<PresenterWorldPosition> positions = chunk.GetSpan<PresenterWorldPosition>();
+                Span<PresenterWorldPlanePosition> planePositions = chunk.GetSpan<PresenterWorldPlanePosition>();
+                Span<PresenterEmitCache> emitCaches = chunk.GetSpan<PresenterEmitCache>();
+                Span<Components.CompiledHudAnchor> anchors = chunk.GetSpan<Components.CompiledHudAnchor>();
+                bool hasRetainedPresentationRequest = chunk.Has<PerfRetainedPresentationRequest>();
+                ref readonly Entity entityFirst = ref chunk.Entity(0);
+                foreach (int index in chunk)
+                {
+                    Entity parent = parents[index].Parent;
+                    if (parent != cachedParent)
+                    {
+                        cachedParent = parent;
+                        parentPositionValid = false;
+                        parentPosition = Vector3.Zero;
+                        if (World.IsAlive(parent) &&
+                            World.TryGet<PresenterWorldPosition>(parent, out PresenterWorldPosition parentPos))
+                        {
+                            parentPositionValid = true;
+                            parentPosition = parentPos.Value;
+                        }
+                    }
+
+                    if (!parentPositionValid)
+                    {
+                        continue;
+                    }
+
+                    Vector3 newPosition = parentPosition + anchors[index].VisualOffset;
+                    bool changed =
+                        sources[index].Value != TransformSource.AttachedToParent ||
+                        positions[index].Value != newPosition;
+                    if (!changed)
+                    {
+                        continue;
+                    }
+
+                    sources[index].Value = TransformSource.AttachedToParent;
+                    positions[index].Value = newPosition;
+                    planePositions[index].ValueCm = WorldPlane2D.VisualMetersToLogicCm(in newPosition);
+                    _runtime.MarkCompiledTransformDrivenEmitDirty(
+                        Unsafe.Add(ref Unsafe.AsRef(in entityFirst), index),
+                        ref emitCaches[index],
+                        hasStaticStableVisual: false,
+                        hasRetainedPresentationRequest,
+                        positionOnly: true);
+                }
+            }
         }
 
         private void ApplyParentAttachmentBatch(

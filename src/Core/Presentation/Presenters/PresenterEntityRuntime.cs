@@ -2348,7 +2348,7 @@ namespace Ludots.Core.Presentation.Presenters
                 try
                 {
                     childEntity = CreateFromPlanNode(
-                        definitions, node, owner, childScopeId, anchorKind, parentEntity, childStableId);
+                        definitions, node, owner, childScopeId, anchorKind, rootEntity, parentEntity, childStableId);
                 }
                 catch (Exception ex)
                 {
@@ -2371,6 +2371,7 @@ namespace Ludots.Core.Presentation.Presenters
             Entity owner,
             int childScopeId,
             PresentationAnchorKind anchorKind,
+            Entity rootEntity,
             Entity parentEntity,
             int childStableId)
         {
@@ -2405,6 +2406,14 @@ namespace Ludots.Core.Presentation.Presenters
             if (childDefinition.RequiresBootstrapProcessing && !_world.Has<PresenterBootstrapPending>(childEntity))
             {
                 AddMarker<PresenterBootstrapPending>(childEntity);
+            }
+
+            if (parentEntity == rootEntity &&
+                !node.TransformOverride.HasOverride &&
+                _world.Has<PerfHasAttachmentTick>(childEntity) &&
+                childDefinition.TryResolveCompiledHudAnchor(out System.Numerics.Vector3 anchorOffset))
+            {
+                _world.Add(childEntity, new Components.CompiledHudAnchor { VisualOffset = anchorOffset });
             }
 
             return childEntity;

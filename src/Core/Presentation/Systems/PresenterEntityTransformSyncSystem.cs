@@ -30,7 +30,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private static readonly QueryDescription DebugSyncPathQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterTransformSource, PresenterWorldPosition, PerfTransformSyncTick>()
-            .WithNone<PresenterBootstrapPending, PerfStaticStableVisual>();
+            .WithNone<PresenterBootstrapPending, PerfStaticStableVisual, Components.CompiledHudAnchor>();
 
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly PresenterEntityRuntime _runtime;
@@ -424,7 +424,8 @@ namespace Ludots.Core.Presentation.Systems
             {
                 Entity child = children.Get(i);
                 if (!World.IsAlive(child) ||
-                    World.Has<PerfOwnerPayloadAttachedTransformSync>(child))
+                    World.Has<PerfOwnerPayloadAttachedTransformSync>(child) ||
+                    World.Has<Components.CompiledHudAnchor>(child))
                 {
                     continue;
                 }

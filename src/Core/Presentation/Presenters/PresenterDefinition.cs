@@ -1020,6 +1020,82 @@ namespace Ludots.Core.Presentation.Presenters
             return kind is AssetKind.WorldHud or AssetKind.WorldText or AssetKind.Spline or AssetKind.GroundOverlay;
         }
 
+        /// <summary>
+        /// 识别"纯 HUD 锚"闭式形状：唯一资产行为是 WorldHud/WorldText，唯一 Attachment 挂 Parent、
+        /// 单位旋转偏移、不继承缩放，其余行为只允许事件驱动的 AttributeBinding；无接地等逐帧 tick 工作。
+        /// 满足时输出锚相对父 presenter 的固定视觉偏移，运行期位置走 CompiledHudAnchor 轻通道
+        /// （只更位置，不做四元数/缩放/朝向重算）。不满足则留在通用 presenter 道，行为不变。
+        /// </summary>
+        public bool TryResolveCompiledHudAnchor(out System.Numerics.Vector3 visualOffset)
+        {
+            visualOffset = System.Numerics.Vector3.Zero;
+            if (!SupportsFastParentAttachmentTick ||
+                HasEveryFrameGroundingWork ||
+                RequiresBootstrapProcessing ||
+                Behaviors == null)
+            {
+                return false;
+            }
+
+            bool hasHudAsset = false;
+            bool hasParentAttachment = false;
+            System.Numerics.Vector3 attachOffset = System.Numerics.Vector3.Zero;
+            for (int i = 0; i < Behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref Behaviors[i];
+                switch (slot.Kind)
+                {
+                    case BehaviorKind.AssetBinding:
+                        if (hasHudAsset ||
+                            slot.AssetBinding.AssetKind is not (AssetKind.WorldHud or AssetKind.WorldText) ||
+                            slot.AssetBinding.Mobility == VisualMobility.Static)
+                        {
+                            return false;
+                        }
+
+                        hasHudAsset = true;
+                        break;
+
+                    case BehaviorKind.WorldText:
+                        if (hasHudAsset)
+                        {
+                            return false;
+                        }
+
+                        hasHudAsset = true;
+                        break;
+
+                    case BehaviorKind.Attachment:
+                        if (hasParentAttachment ||
+                            slot.Attachment.Target != AttachmentTarget.Parent ||
+                            slot.Attachment.RotationOffset != System.Numerics.Quaternion.Identity ||
+                            slot.Attachment.InheritScale ||
+                            slot.Attachment.BoneId != 0)
+                        {
+                            return false;
+                        }
+
+                        hasParentAttachment = true;
+                        attachOffset = slot.Attachment.Offset;
+                        break;
+
+                    case BehaviorKind.AttributeBinding:
+                        break;
+
+                    default:
+                        return false;
+                }
+            }
+
+            if (!hasHudAsset || !hasParentAttachment)
+            {
+                return false;
+            }
+
+            visualOffset = attachOffset + PositionOffset;
+            return true;
+        }
+
         private static bool SupportsRetainedParentAttachmentFastTick(
             BehaviorSlot[] behaviors,
             int[] tickBehaviorIndices,
