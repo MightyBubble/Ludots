@@ -80,17 +80,20 @@ internal static class MassNavigationScenarioBootstrap
                 membershipTarget: teamDomains[IndexOfScenarioTeam(teamIds, teamId)]);
         }
 
-        string hotspotTemplateId = simulation.Config.Presentation.HotspotTemplateId;
-        authoring.ValidateTemplate(hotspotTemplateId);
         ReadOnlySpan<MassNavigationHotZoneConfig> hotZones = simulation.HotZones;
-        for (int i = 0; i < hotZones.Length; i++)
+        if (hotZones.Length > 0)
         {
-            MassNavigationHotZoneConfig zone = hotZones[i];
-            EnqueueSpawn(
-                spawnQueue,
-                mapId,
-                hotspotTemplateId,
-                Fix64Vec2.FromInt(zone.CenterXCm, zone.CenterYCm));
+            string hotspotTemplateId = simulation.Config.Presentation.HotspotTemplateId;
+            authoring.ValidateTemplate(hotspotTemplateId);
+            for (int i = 0; i < hotZones.Length; i++)
+            {
+                MassNavigationHotZoneConfig zone = hotZones[i];
+                EnqueueSpawn(
+                    spawnQueue,
+                    mapId,
+                    hotspotTemplateId,
+                    Fix64Vec2.FromInt(zone.CenterXCm, zone.CenterYCm));
+            }
         }
 
         simulation.MarkScenarioSpawned();
