@@ -48,7 +48,22 @@ namespace Ludots.Tests.Presentation
             InstallInput(engine);
             InstallHeadlessPresentation(engine);
             engine.Start();
+            InstallSoleLocalSeatViewer(engine);
             return engine;
+        }
+
+        /// <summary>
+        /// 与实机同一坐席合同：唯一本地 seat 持有一个在场 viewer。没有它，Core 默认注册的
+        /// 知识 resolver 会按迷雾合同把全部 owned minimap marker 挡成 0——基准/验收要测的是
+        /// marker 管线本身，必须以真实观众身份跑，而不是豁免知识门。
+        /// </summary>
+        private static void InstallSoleLocalSeatViewer(GameEngine engine)
+        {
+            var seats = engine.GetService(CoreServiceKeys.ClientLocalSeatRegistry)
+                ?? throw new InvalidOperationException("ClientLocalSeatRegistry must be installed by engine core.");
+            Entity viewer = engine.World.Create(new Ludots.Core.Gameplay.Components.PlayerIdentity { PlayerId = 1 });
+            seats.Add(new ClientLocalSeat("seat.0"));
+            seats.SetPossession("seat.0", playerId: 1, viewer);
         }
 
         private static void ResetGlobalRegistries()

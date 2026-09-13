@@ -3182,9 +3182,11 @@ namespace Ludots.Core.Engine
                 ResolveDefaultCameraFollowCollectionOwner(definition.FollowTargetKind),
                 definition.FollowCollectionKey);
 
-            EnsureCameraRuntimeConfigured();
             var targets = new System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager>(4);
             CollectDefaultCameraTargets(targets);
+            // ConfigureRuntime 必须在收集目标之后：收集会按需 EnsureClientPresentView 现场创建相机，
+            // 先 Configure 只会覆盖既有视图（冷启动时 0 个），新相机的 bounds/heightmap provider 将缺失。
+            EnsureCameraRuntimeConfigured();
             Ludots.Core.Gameplay.Camera.CameraManager? logged = null;
             for (int i = 0; i < targets.Count; i++)
             {
@@ -3225,9 +3227,9 @@ namespace Ludots.Core.Engine
 
         private void ApplyDefaultCameraPoseOnly(Ludots.Core.Config.CameraConfig cam)
         {
-            EnsureCameraRuntimeConfigured();
             var targets = new System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager>(4);
             CollectDefaultCameraTargets(targets);
+            EnsureCameraRuntimeConfigured();
             var pose = new CameraPoseRequest
             {
                 TargetCm = (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
