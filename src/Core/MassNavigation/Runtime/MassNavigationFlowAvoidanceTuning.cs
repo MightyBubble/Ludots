@@ -54,8 +54,16 @@ public sealed class MassNavigationFlowAvoidanceTuning
         ArgumentNullException.ThrowIfNull(source);
         Mode = source.Mode;
         _parsedMode = source.ParsedMode;
-        Orca.CopyFrom(source.Orca);
-        Sonar.CopyFrom(source.Sonar);
+        if (source.Orca != null)
+        {
+            Orca.CopyFrom(source.Orca);
+        }
+
+        if (source.Sonar != null)
+        {
+            Sonar.CopyFrom(source.Sonar);
+        }
+
         DominantMassRatio = source.DominantMassRatio;
         FriendlyResponseScale = source.FriendlyResponseScale;
         FriendlyResponseMin = source.FriendlyResponseMin;
@@ -86,18 +94,26 @@ public sealed class MassNavigationFlowAvoidanceTuning
             "" => throw new InvalidOperationException("MassNavigation avoidance.mode must be explicit."),
             _ => throw new InvalidOperationException($"MassNavigation avoidance.mode '{Mode}' is not configured.")
         };
-        if (Orca == null)
+        if (_parsedMode == MassNavigationFlowAvoidanceMode.Orca)
         {
-            throw new InvalidOperationException("MassNavigation avoidance.orca must be explicitly configured.");
+            if (Orca == null)
+            {
+                throw new InvalidOperationException("MassNavigation avoidance.orca must be explicitly configured for mode 'Orca'.");
+            }
+
+            Orca.Validate();
         }
 
-        if (Sonar == null)
+        if (_parsedMode == MassNavigationFlowAvoidanceMode.Sonar)
         {
-            throw new InvalidOperationException("MassNavigation avoidance.sonar must be explicitly configured.");
+            if (Sonar == null)
+            {
+                throw new InvalidOperationException("MassNavigation avoidance.sonar must be explicitly configured for mode 'Sonar'.");
+            }
+
+            Sonar.Validate();
         }
 
-        Orca.Validate();
-        Sonar.Validate();
         RequirePositive(DominantMassRatio, nameof(DominantMassRatio));
         RequirePositive(FriendlyResponseScale, nameof(FriendlyResponseScale));
         RequirePositive(NonFriendlyResponseScale, nameof(NonFriendlyResponseScale));

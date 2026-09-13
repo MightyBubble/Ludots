@@ -1,6 +1,8 @@
 using Arch.System;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Systems;
@@ -141,10 +143,38 @@ public sealed class MassNavigationRuntime
         engine.RegisterSystem(
             new MassNavigationMovePlanExecutionSystem(engine, config),
             SystemGroup.AbilityActivation);
+        InstallMovePlanOrderAdapter(engine);
         engine.InsertPresentationSystemBefore<AnimatorRuntimeSystem>(
             new MassNavigationLocomotionAnimatorParamSystem(engine));
         _systemsInstalled = true;
         Log.Info(in LogChannels.Engine, "[MassNavigation runtime] Installed mass-navigation runtime.");
+    }
+
+    /// <summary>
+    /// MovePlan order adapter (Projection + Lifecycle) installs with the mass-navigation runtime:
+    /// the runtime activating on its configured mapId is the activation contract, so downstream
+    /// mods never wire the adapter themselves. The projection system anchors directly before the
+    /// MovePlan execution system registered by the caller.
+    /// </summary>
+    internal static void InstallMovePlanOrderAdapter(GameEngine engine)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        OrderTypeRegistry orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+            ?? throw new InvalidOperationException(
+                "MassNavigation runtime requires OrderTypeRegistry before installing the MovePlan order adapter.");
+        if (!orderTypes.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation runtime requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}' " +
+                "before the MovePlan order adapter can install.");
+        }
+
+        engine.InsertSystemBeforeRequired<IMovePlanCommandGroupExecutionSystem>(
+            new MovePlanOrderProjectionSystem(engine.World, moveOrderTypeId),
+            SystemGroup.AbilityActivation);
+        engine.RegisterSystem(
+            new MovePlanOrderLifecycleSystem(engine.World, orderTypes, moveOrderTypeId),
+            SystemGroup.AbilityActivation);
     }
 
     private MassNavigationSimulationRuntime EnsureSimulationRuntime(GameEngine engine, MassNavigationConfig config)

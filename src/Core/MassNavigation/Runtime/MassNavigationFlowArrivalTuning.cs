@@ -4,16 +4,8 @@ public sealed class MassNavigationFlowArrivalTuning
 {
     public bool Enabled { get; set; }
     public int TimeoutMs { get; set; }
-    public int TimeoutMinMs { get; set; }
-    public int TimeoutMaxMs { get; set; }
     public int ProgressDistanceCm { get; set; }
-    public int ProgressDistanceMinCm { get; set; }
-    public int ProgressDistanceMaxCm { get; set; }
     public int WakePushDistanceCm { get; set; }
-    public int WakePushDistanceMinCm { get; set; }
-    public int WakePushDistanceMaxCm { get; set; }
-    public int MaxRetryCountMin { get; set; }
-    public int MaxRetryCountMax { get; set; }
     public int MaxRetryCount { get; set; }
 
     public float TimeoutSeconds => TimeoutMs / 1000f;
@@ -23,16 +15,8 @@ public sealed class MassNavigationFlowArrivalTuning
         System.ArgumentNullException.ThrowIfNull(source);
         Enabled = source.Enabled;
         TimeoutMs = source.TimeoutMs;
-        TimeoutMinMs = source.TimeoutMinMs;
-        TimeoutMaxMs = source.TimeoutMaxMs;
         ProgressDistanceCm = source.ProgressDistanceCm;
-        ProgressDistanceMinCm = source.ProgressDistanceMinCm;
-        ProgressDistanceMaxCm = source.ProgressDistanceMaxCm;
         WakePushDistanceCm = source.WakePushDistanceCm;
-        WakePushDistanceMinCm = source.WakePushDistanceMinCm;
-        WakePushDistanceMaxCm = source.WakePushDistanceMaxCm;
-        MaxRetryCountMin = source.MaxRetryCountMin;
-        MaxRetryCountMax = source.MaxRetryCountMax;
         MaxRetryCount = source.MaxRetryCount;
     }
 
@@ -44,31 +28,11 @@ public sealed class MassNavigationFlowArrivalTuning
         }
 
         RequirePositive(ProgressDistanceCm, nameof(ProgressDistanceCm));
-        RequirePositive(TimeoutMinMs, nameof(TimeoutMinMs));
-        RequirePositive(TimeoutMaxMs, nameof(TimeoutMaxMs));
-        RequirePositive(ProgressDistanceMinCm, nameof(ProgressDistanceMinCm));
-        RequirePositive(ProgressDistanceMaxCm, nameof(ProgressDistanceMaxCm));
         RequirePositive(WakePushDistanceCm, nameof(WakePushDistanceCm));
-        RequirePositive(WakePushDistanceMinCm, nameof(WakePushDistanceMinCm));
-        RequirePositive(WakePushDistanceMaxCm, nameof(WakePushDistanceMaxCm));
-        RequireRange(TimeoutMinMs, TimeoutMaxMs, nameof(TimeoutMinMs), nameof(TimeoutMaxMs));
-        RequireRange(ProgressDistanceMinCm, ProgressDistanceMaxCm, nameof(ProgressDistanceMinCm), nameof(ProgressDistanceMaxCm));
-        RequireRange(WakePushDistanceMinCm, WakePushDistanceMaxCm, nameof(WakePushDistanceMinCm), nameof(WakePushDistanceMaxCm));
         if (MaxRetryCount < 0)
         {
             throw new System.InvalidOperationException("MassNavigation arrival requires MaxRetryCount >= 0.");
         }
-
-        if (MaxRetryCountMin < 0)
-        {
-            throw new System.InvalidOperationException("MassNavigation arrival requires MaxRetryCountMin >= 0.");
-        }
-
-        RequireRange(MaxRetryCountMin, MaxRetryCountMax, nameof(MaxRetryCountMin), nameof(MaxRetryCountMax));
-        RequireInside(TimeoutMs, TimeoutMinMs, TimeoutMaxMs, nameof(TimeoutMs));
-        RequireInside(ProgressDistanceCm, ProgressDistanceMinCm, ProgressDistanceMaxCm, nameof(ProgressDistanceCm));
-        RequireInside(WakePushDistanceCm, WakePushDistanceMinCm, WakePushDistanceMaxCm, nameof(WakePushDistanceCm));
-        RequireInside(MaxRetryCount, MaxRetryCountMin, MaxRetryCountMax, nameof(MaxRetryCount));
     }
 
     private static void RequirePositive(int value, string name)
@@ -76,22 +40,6 @@ public sealed class MassNavigationFlowArrivalTuning
         if (value <= 0)
         {
             throw new System.InvalidOperationException($"MassNavigation arrival requires {name} > 0.");
-        }
-    }
-
-    private static void RequireRange(int min, int max, string minName, string maxName)
-    {
-        if (min > max)
-        {
-            throw new System.InvalidOperationException($"MassNavigation arrival requires {minName} <= {maxName}.");
-        }
-    }
-
-    private static void RequireInside(int value, int min, int max, string name)
-    {
-        if (value < min || value > max)
-        {
-            throw new System.InvalidOperationException($"MassNavigation arrival requires {name} inside its configured adjustment range.");
         }
     }
 }

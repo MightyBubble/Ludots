@@ -284,6 +284,7 @@ public sealed class MassNavigationIssue671RuntimeTests
         MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
         config.Solver.ParallelWorkerCount = workerCount;
         config.Avoidance.Mode = mode;
+        PopulateModeSpecificAvoidance(config.Avoidance, mode);
         config.Avoidance.Validate();
         var flow = new MassNavigationFlowSolverState(config.Solver);
         flow.ArrivalTuning.CopyFrom(config.Arrival);
@@ -293,6 +294,32 @@ public sealed class MassNavigationIssue671RuntimeTests
         flow.PreallocateAgentCapacity(seeds.Length);
         flow.ResetAuthoredAgents(seeds);
         return flow;
+    }
+
+    private static void PopulateModeSpecificAvoidance(MassNavigationFlowAvoidanceTuning avoidance, string mode)
+    {
+        if (mode == "Orca")
+        {
+            avoidance.Orca = new MassNavigationFlowOrcaAvoidanceConfig
+            {
+                TimeHorizonSeconds = 0.85f,
+                MaxNeighbors = 16,
+            };
+        }
+        else if (mode == "Sonar")
+        {
+            avoidance.Sonar = new MassNavigationFlowSonarAvoidanceConfig
+            {
+                MaxSteerAngleDeg = 280,
+                BackwardPenaltyAngleDeg = 230,
+                PredictionTimeScale = 0.9f,
+                IgnoreBehindMovingAgents = true,
+                BlockedStop = false,
+                UsePreferredVelocityWhenBlocked = true,
+                TimeHorizonSeconds = 0.85f,
+                MaxNeighbors = 16,
+            };
+        }
     }
 
     private static MassNavigationGroupRuntime CreateGroupRuntime(int agentCapacity)

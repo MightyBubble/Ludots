@@ -282,24 +282,29 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void ScenarioRuntimeCapacity_CoversAuthoredScenarioOrderMembers()
         {
-            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject scenario = config["scenario"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenario missing.");
-            JsonArray teams = scenario["teams"]?.AsArray()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.teams missing.");
-            int authoredAgentCount = checked(teams.Count * (scenario["agentsPerTeam"]?.GetValue<int>()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.agentsPerTeam missing.")));
-            JsonObject scenarioRuntime = config["scenarioRuntime"]?.AsObject()
+            JsonObject configJson = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject scenarioRuntime = configJson["scenarioRuntime"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime missing.");
             JsonObject runtimeCapacity = scenarioRuntime["runtimeCapacity"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime.runtimeCapacity missing.");
+            Assert.That(runtimeCapacity.ContainsKey("groupMemberCapacity"), Is.False,
+                "groupMemberCapacity is derived from the authored scenario scale; the base config must not pin it.");
+            Assert.That(runtimeCapacity.ContainsKey("movePlanExecutionMemberCapacity"), Is.False,
+                "movePlanExecutionMemberCapacity is derived from the authored scenario scale; the base config must not pin it.");
+            Assert.That(runtimeCapacity.ContainsKey("relationshipDomainCapacity"), Is.False,
+                "relationshipDomainCapacity is derived from the authored scenario team count; the base config must not pin it.");
 
+            MassNavigationConfig config = MassNavigationConfig.Load(configJson);
+            int authoredAgentCount = checked(config.Scenario.Teams.Length * config.Scenario.AgentsPerTeam);
             Assert.That(
-                runtimeCapacity["groupMemberCapacity"]?.GetValue<int>(),
+                config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity,
                 Is.EqualTo(authoredAgentCount));
             Assert.That(
-                runtimeCapacity["movePlanExecutionMemberCapacity"]?.GetValue<int>(),
+                config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity,
                 Is.EqualTo(authoredAgentCount));
+            Assert.That(
+                config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity,
+                Is.EqualTo(config.Scenario.Teams.Length));
         }
 
         [Test]
