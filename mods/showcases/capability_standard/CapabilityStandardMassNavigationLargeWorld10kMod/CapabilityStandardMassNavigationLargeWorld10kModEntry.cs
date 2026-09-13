@@ -13,8 +13,6 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
 {
     private const string ObserverVisibilitySystemInstalledKey =
         "CapabilityStandardMassNavigationLargeWorld10k.ObserverVisibilitySystemInstalled";
-    private const string LocalOrderSourceSystemInstalledKey =
-        "CapabilityStandardMassNavigationLargeWorld10k.LocalOrderSourceSystemInstalled";
     private IModContext? _context;
 
     public void OnLoad(IModContext context)

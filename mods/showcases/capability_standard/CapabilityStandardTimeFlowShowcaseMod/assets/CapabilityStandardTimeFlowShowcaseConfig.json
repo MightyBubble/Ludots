@@ -48,34 +48,12 @@
   "navigationArrival": {
     "enabled": true,
     "timeoutMs": 1500,
-    "timeoutMinMs": 250,
-    "timeoutMaxMs": 10000,
     "progressDistanceCm": 60,
-    "progressDistanceMinCm": 10,
-    "progressDistanceMaxCm": 500,
     "wakePushDistanceCm": 80,
-    "wakePushDistanceMinCm": 10,
-    "wakePushDistanceMaxCm": 500,
-    "maxRetryCountMin": 0,
-    "maxRetryCountMax": 16,
     "maxRetryCount": 2
   },
   "navigationAvoidance": {
     "mode": "Separation",
-    "orca": {
-      "timeHorizonSeconds": 0.85,
-      "maxNeighbors": 8
-    },
-    "sonar": {
-      "maxSteerAngleDeg": 280,
-      "backwardPenaltyAngleDeg": 230,
-      "predictionTimeScale": 0.9,
-      "ignoreBehindMovingAgents": true,
-      "blockedStop": false,
-      "usePreferredVelocityWhenBlocked": true,
-      "timeHorizonSeconds": 0.85,
-      "maxNeighbors": 8
-    },
     "dominantMassRatio": 2.25,
     "friendlyResponseScale": 1.1,
     "friendlyResponseMin": 0.35,
