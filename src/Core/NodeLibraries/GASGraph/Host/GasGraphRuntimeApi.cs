@@ -129,6 +129,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private GraphPresentationTextSink? _presentationTextSink;
         private PresentationTextCatalog? _presentationTextCatalog;
         private Action<string>? _startDialogue;
+        private Action<string>? _startSequence;
+        private Action<string, Entity>? _bindSpeakerEntity;
         private Func<Span<int>, int>? _collectActiveDialogueChoices;
         private Func<int, string?>? _resolveDialogueChoiceDisplayText;
         private IGraphAimSourceRuntime? _aimSource;
@@ -146,6 +148,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
         private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
         private Func<GameEngine?>? _engineResolver;
+        private Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? _commandIntentSubmissions;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -338,6 +341,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
+        /// Binds the per-tick command intent submission buffer (constitution §12) so the
+        /// <c>SubmitCommandIntent</c> op can queue intents; the order kernel owns the drain.
+        /// </summary>
+        public void BindCommandIntentSubmissions(Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer submissions)
+        {
+            _commandIntentSubmissions = submissions ?? throw new ArgumentNullException(nameof(submissions));
+        }
+
+        /// <summary>
         /// Binds the custom event name registry so collection pass-through dispatches can
         
         /// </summary>
@@ -428,6 +440,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             var tasks = _taskRuntime
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
             tasks.OfferOrStart(taskId, scopeHost);
+        }
+
+        public void EmitTaskSignal(int signalKeyId)
+        {
+            string? signalKey = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(signalKeyId);
+            if (string.IsNullOrWhiteSpace(signalKey))
+            {
+                throw new InvalidOperationException(
+                    $"EmitTaskSignal references unregistered signal key id {signalKeyId}.");
+            }
+
+            var tasks = _taskRuntime
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
+            tasks.EmitSignal(signalKey);
         }
 
         public int WeightedPick(int distributionKeyId, int modulationPermille)
@@ -598,6 +624,44 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             start(dialogueId);
+        }
+
+        public void StartSequence(int sequenceKeyId)
+        {
+            Action<string> start = _startSequence
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.SequencerRuntimeUnavailable");
+            string? sequenceId = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(sequenceKeyId);
+            if (string.IsNullOrWhiteSpace(sequenceId))
+            {
+                throw new InvalidOperationException(
+                    $"StartSequence references unregistered sequence key id {sequenceKeyId}.");
+            }
+
+            start(sequenceId);
+        }
+
+        public void BindStartSequence(Action<string> startSequence)
+        {
+            _startSequence = startSequence ?? throw new ArgumentNullException(nameof(startSequence));
+        }
+
+        public void BindSpeakerEntity(Action<string, Entity> bindSpeakerEntity)
+        {
+            _bindSpeakerEntity = bindSpeakerEntity ?? throw new ArgumentNullException(nameof(bindSpeakerEntity));
+        }
+
+        public void BindSpeakerEntity(int speakerAliasKeyId, Entity entity)
+        {
+            Action<string, Entity> bind = _bindSpeakerEntity
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.DialogueRuntimeUnavailable");
+            string? alias = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(speakerAliasKeyId);
+            if (string.IsNullOrWhiteSpace(alias))
+            {
+                throw new InvalidOperationException(
+                    $"BindSpeakerEntity references unregistered speaker alias key id {speakerAliasKeyId}.");
+            }
+
+            bind(alias, entity);
         }
 
         public ReadOnlySpan<char> ResolvePresentationTextKey(int tokenId)
@@ -956,6 +1020,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             CollectionWrite.Apply(store, owner, collectionKeyId, (CollectionWriteOp)opKind, entities.Slice(0, count));
+        }
+
+        /// <summary>
+        /// Pushes one command intent into the submission buffer; routing happens when the
+        /// order kernel drains the buffer in its own system-group phase (constitution §12).
+        /// </summary>
+        public void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in Ludots.Platform.Abstractions.IntVector2 groundCm)
+        {
+            var submissions = _commandIntentSubmissions
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+            submissions.Push(new Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmission(
+                rep,
+                hasTarget ? target : Entity.Null,
+                hasTarget,
+                groundCm));
         }
 
         /// <summary>

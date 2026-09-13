@@ -3,9 +3,12 @@
     {
       "id": "interaction.context.case_e.battle",
       "inputContextId": "CaseE.Controls",
+      "activeCollectionKey": "selected",
+      "commandIntentId": "intent.command.default",
       "bindings": [
         "CaseE.BoxSelectBegin",
         "CaseE.BoxSelectEnd",
+        "CaseE.Command",
         "QueueModifier",
         "PrecisionModifier",
         "ModifierSubtract"
@@ -16,6 +19,9 @@
         },
         {
           "trigger": "graph.case_e.box_begin"
+        },
+        {
+          "trigger": "graph.case_e.command_commit"
         }
       ]
     },

@@ -390,6 +390,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.SubmitCommandIntent:
+                    RequireValueInput(node, GraphControlFlowPorts.Condition, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Target)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    break;
+
                 case GraphNodeOp.SetPanelAudience:
                     RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
                     break;
@@ -621,8 +630,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.TaskId, "taskId", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.EmitTaskSignal:
+                    RequireNonEmpty(node.SignalKey, "signalKey", node, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.StartDialogue:
                     RequireNonEmpty(node.DialogueId, "dialogueId", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.StartSequence:
+                    RequireNonEmpty(node.SequenceId, "sequenceId", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.BindSpeakerEntity:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.SpeakerAlias, "speakerAlias", node, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.ConcatText:
@@ -1355,6 +1377,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.SubmitCommandIntent:
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Target))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
+                    break;
+
                 case GraphNodeOp.SetPanelAudience:
                     instruction.Imm = RequireSymbol(node.PanelType, "panelType", node, symbolToIndex, symbols, graphId, diagnostics);
                     instruction.Dst = EncodeByteSymbol(node.PanelSeat, symbolToIndex, symbols, graphId, node.Id, diagnostics);
@@ -1687,8 +1720,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Imm = RequireSymbol(node.TaskId, "taskId", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.EmitTaskSignal:
+                    instruction.Imm = RequireSymbol(node.SignalKey, "signalKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.StartDialogue:
                     instruction.Imm = RequireSymbol(node.DialogueId, "dialogueId", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.StartSequence:
+                    instruction.Imm = RequireSymbol(node.SequenceId, "sequenceId", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.BindSpeakerEntity:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.SpeakerAlias, "speakerAlias", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.ConcatText:

@@ -65,6 +65,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     public RelationshipFlagRegistry RelationshipFlags { get; private set; } = null!;
     public RelationshipReasonRegistry RelationshipReasons { get; private set; } = null!;
     public EntityCollectionStore Collections { get; private set; } = null!;
+    public Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer CommandIntents { get; private set; } = null!;
     public EffectRequestQueue EffectRequests { get; private set; } = null!;
         public TagOps TagOps { get; private set; } = null!;
         public TargetDispatchPresetRegistry DispatchPresets { get; private set; } = null!;
@@ -175,6 +176,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             EffectRequests = EffectRequests,
             Relationships = Relationships,
             Collections = Collections,
+            CommandIntents = CommandIntents,
             TagOps = TagOps,
             EventBus = EventBus,
             GraphCallbacks = GraphCallbacks,
@@ -253,6 +255,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         RelationshipReasons = RequireEngineService(engine, CoreServiceKeys.RelationshipReasonRegistry);
         DispatchPresets = RequireEngineService(engine, CoreServiceKeys.TargetDispatchPresetRegistry);
         Collections = RequireEngineService(engine, CoreServiceKeys.EntityCollectionStore);
+        CommandIntents = RequireEngineService(engine, CoreServiceKeys.CommandIntentSubmissions);
         Knowledge = RequireEngineService(engine, CoreServiceKeys.KnowledgeProjectionStore);
         Templates = RequireEngineService(engine, CoreServiceKeys.EntityTemplateKeyRegistry);
         _templateRegistry = engine.MapLoader.TemplateRegistry;

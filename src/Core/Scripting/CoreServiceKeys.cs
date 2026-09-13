@@ -336,6 +336,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptQueue> RuntimeEntitySpawnReceiptQueue = new("RuntimeEntitySpawnReceiptQueue");
         public static readonly ServiceKey<InputOrderMappingSystem> ActiveInputOrderMapping = new("ActiveInputOrderMapping");
         public static readonly ServiceKey<OrderQueue> OrderQueue = new("OrderQueue");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer> CommandIntentSubmissions = new("CommandIntentSubmissions");
+        public static readonly ServiceKey<Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem> CommandIntentBufferDrain = new("CommandIntentBufferDrain");
         public static readonly ServiceKey<OrderTypeRegistry> OrderTypeRegistry = new("OrderTypeRegistry");
         public static readonly ServiceKey<OrderRuleRegistry> OrderRuleRegistry = new("OrderRuleRegistry");
         public static readonly ServiceKey<OrderBufferSystem> OrderBufferSystem = new("OrderBufferSystem");

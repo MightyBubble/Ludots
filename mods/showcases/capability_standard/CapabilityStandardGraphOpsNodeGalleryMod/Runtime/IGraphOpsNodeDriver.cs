@@ -40,6 +40,7 @@ public sealed class GraphOpsNodeDriverContext
     public RelationshipMetricRegistry? RelationshipMetrics { get; set; }
     public RelationshipFlagRegistry? RelationshipFlags { get; set; }
     public EntityCollectionStore? Collections { get; set; }
+    public Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? CommandIntents { get; set; }
     public TagOps? TagOps { get; set; }
     public GameplayEventBus? EventBus { get; set; }
     public GraphCallbackService? GraphCallbacks { get; set; }

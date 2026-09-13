@@ -1,0 +1,61 @@
+[
+  {
+    "id": "graph.case_e.command_commit",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_command",
+        "action": "CaseE.Command",
+        "start": "pointer_x",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "pointer_x",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "pointer_y",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "to_ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "ground_branch",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCommandIntent"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      { "from": "pointer_x", "fromPort": "next", "to": "pointer_y" },
+      { "from": "pointer_y", "fromPort": "next", "to": "to_ground" },
+      { "from": "to_ground", "fromPort": "next", "to": "ground_branch" },
+      { "from": "ground_branch", "fromPort": "true", "to": "submit" },
+      { "from": "ground_branch", "fromPort": "false", "to": "halt" },
+      { "from": "submit", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "pointer_x", "fromPort": "value", "to": "to_ground", "toPort": "a" },
+      { "from": "pointer_y", "fromPort": "value", "to": "to_ground", "toPort": "b" },
+      { "from": "to_ground", "fromPort": "value", "to": "ground_branch", "toPort": "condition" },
+      { "from": "to_ground", "fromPort": "value", "to": "submit", "toPort": "condition" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

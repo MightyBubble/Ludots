@@ -26,6 +26,14 @@
       }
     },
     {
+      "name": "narrative_native",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative_native/NarrativeNativeShowcaseMod",
+        "projectPath": "NarrativeNativeShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "save_panel",
       "target": {
         "type": "path",
@@ -2361,6 +2369,14 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPointerScreenYEntryMod",
         "projectPath": "CapabilityStandardGraphOpLoadPointerScreenYEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SubmitCommandIntent",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitCommandIntentEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSubmitCommandIntentEntryMod.csproj"
       }
     }
   ],

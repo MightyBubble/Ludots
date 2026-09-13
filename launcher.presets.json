@@ -2,6 +2,25 @@
   "schemaVersion": 1,
   "presets": [
     {
+      "id": "narrative_native_raylib",
+      "name": "Narrative Native Raylib",
+      "selectors": [
+        "$narrative_native"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_native_debug_raylib",
+      "name": "Narrative Native + Agent Bridge Raylib",
+      "selectors": [
+        "$narrative_native",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "save_load_showcase_raylib",
       "name": "Save Load Raylib",
       "selectors": [
@@ -3255,6 +3274,15 @@
       "name": "Graph Op LoadPointerScreenY Raylib",
       "selectors": [
         "$capability_standard_graph_op_LoadPointerScreenY"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitCommandIntent_raylib",
+      "name": "Graph Op SubmitCommandIntent Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SubmitCommandIntent"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

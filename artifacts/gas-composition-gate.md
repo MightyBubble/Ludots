@@ -115,3 +115,63 @@ N/A（不新增 opcode；只扩既有 op 的 authorableKinds）
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: effect 步骤（保持 `EffectRequestQueue` 固定容量合同不变）
+
+---
+
+## GAS Composition Gate — Self Review
+
+- **Task / Issue**: 输入→下令全链图化 切1——`SubmitCommandIntent` op + 意图提交缓冲 + drain 内核 + Case E 全链下单（分支 `graph-input-order-chain`）
+- **Date**: 2026-09-14
+- **Agent / Author**: ZCode
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: **A——新增 graph 节点（op）+ 通用内核系统，零 profile enum / preset 开关**
+
+结论: PASS
+
+一句话理由: 下令桥是单一职责原子 op（把一次意图写进缓冲），路由仍是既有 CommandIntentProfileRegistry 数据内核；没有任何集合键、profile、枚举被特化，drain 无兜底键。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer | 实现载体 |
+|-----------|-------|----------|
+| SubmitCommandIntent op | 0 | GraphNodeOp 483 + handler + API 薄写缓冲 |
+| 意图提交缓冲 | 0（基建） | CommandIntentSubmissionBuffer（预分配、超限 fail-loud） |
+| §12 路由 drain | 0（内核） | CommandIntentBufferDrainSystem（LIFO 声明解析、具名拒绝） |
+| Case E 下单触发 | 2（图） | graph.case_e.command_commit.json |
+| battle 声明 | 配置 | interaction_context_profiles.json（activeCollectionKey/commandIntentId） |
+
+### 3. Reuse list
+
+- Handlers: GasGraphOpHandlerTable Register 模式、GraphControlFlowCompiler.Linear 校验+编码
+- Queues / Systems: OrderQueue（SubmitAssigned/TryEnqueueSharedBatch）、GameEngine LocalInput 相位
+- Resolvers / Registries: CommandIntentProfileRegistry.RouteGroup、CastDispatchProfileRegistry.SelectDispatchTargets、InputOrderActorAuthorization、InteractionContextInstance/Instances、InteractionPref
+- Existing presets / graphs: aimsource 纯函数（ScreenPointToGround）、Case E 既有 box 链
+
+### 4. New Layer 0 ops (if any)
+
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| SubmitCommandIntent | 把一次命令意图（rep、可选命中实体、地物点、地面已解析条件）写入意图缓冲 | 词表 482 个 op 无任何下单 op（已枚举验证）；图与 OrderQueue 之间此前只有 C# 桥 |
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A——op 只写缓冲；drain 内单条意图全有/全无由授权门 + 共享批语义保证（任一 actor 授权失败整条拒绝），与既有内核一致。
+
+### 6. Config SSOT
+
+行为配置落在: `mods/showcases/case_e_selection/CaseESelectionMod/assets/Input/interaction_context_profiles.json`（activeCollectionKey/commandIntentId）+ 既有 `assets/Input/command_intent_profiles.json` + 新图 `assets/GAS/graphs/graph.case_e.command_commit.json`
+
+是否新增 JSON schema: NO——既有 profile/graph schema 原样复用。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback——drain 显式无兜底：活跃链无声明 activeCollectionKey 的 context ⇒ 具名拒绝；PlayerOwner/InteractionPref/派发 profile 缺失 ⇒ 具名抛错
+
+### 8. Next variant test
+
+「下一个 Mod 变体」（Case F 点地下单、arpg self-roster 下单、moba 意图路由换 profile）将修改: **graph 连线 + profile 声明**（不触 Core enum）。

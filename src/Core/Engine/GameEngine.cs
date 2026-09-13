@@ -1114,6 +1114,9 @@ namespace Ludots.Core.Engine
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             gasGraphApi.BindTriggerManager(TriggerManager);
             gasGraphApi.BindAimSource(new Ludots.Core.Input.AimSource.GraphAimSourceRuntime(World, GlobalContext));
+            var commandIntentSubmissions = new Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer(
+                gasRuntimeCapacity.CommandIntentScratchCapacity);
+            gasGraphApi.BindCommandIntentSubmissions(commandIntentSubmissions);
             gasGraphApi.BindEngineResolver(() => this);
             var graphCallbackService = new Ludots.Core.GraphRuntime.GraphCallbackService();
             SetService(CoreServiceKeys.GraphCallbackService, graphCallbackService);
@@ -2181,6 +2184,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.DialogueRuntime, dialogueRuntime);
             SetService(CoreServiceKeys.SequencerRuntime, sequencerRuntime);
             _gasGraphRuntimeApi?.BindStartDialogue(dialogueId => dialogueRuntime.StartDialogue(dialogueId));
+            _gasGraphRuntimeApi?.BindStartSequence(sequencerRuntime.Start);
+            _gasGraphRuntimeApi?.BindSpeakerEntity(dialogueRuntime.BindEntity);
             _gasGraphRuntimeApi?.BindCollectActiveDialogueChoices(dialogueRuntime.CollectActiveChoiceIds);
             _gasGraphRuntimeApi?.BindResolveDialogueChoiceDisplayText(choiceIntId =>
                 dialogueRuntime.TryResolveChoiceDisplayText(choiceIntId, out string text) ? text : null);
@@ -2205,6 +2210,23 @@ namespace Ludots.Core.Engine
             // snapshot still freezes before every InputCollection consumer.
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator, clientLocalSeatInputRuntime), SystemGroup.LocalInput);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.LocalInput);
+            // Constitution §12 order bridge: graph-pushed command intents (SubmitCommandIntent
+            // op) drain here in the order kernel's phase — after last tick's trigger phase wrote
+            // them, before this tick's movement consumes the routed orders. No engine-reserved
+            // key: routing reads only the rep's active-context-declared activeCollectionKey.
+            var commandIntentBufferDrain = new Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem(
+                World,
+                commandIntentSubmissions,
+                commandIntentProfileRegistry,
+                castDispatchProfileRegistry,
+                entityCollectionStore,
+                orderQueue,
+                playerEntityLookup,
+                controlDomainQuery,
+                gasRuntimeCapacity.CommandIntentScratchCapacity);
+            SetService(CoreServiceKeys.CommandIntentSubmissions, commandIntentSubmissions);
+            SetService(CoreServiceKeys.CommandIntentBufferDrain, commandIntentBufferDrain);
+            RegisterSystem(commandIntentBufferDrain, SystemGroup.LocalInput);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
             // Local IMC projection: mode components on possessed reps and the mounted
             // active interaction context diff into per-seat (seatId, contextId, op) commands;

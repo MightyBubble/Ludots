@@ -10,6 +10,11 @@
       "name": "CaseE_BoxSelectEnd",
       "type": "Button",
       "firesOn": "release"
+    },
+    {
+      "id": "CaseE.Command",
+      "name": "CaseE_Command",
+      "type": "Button"
     }
   ],
   "contexts": [
@@ -25,6 +30,10 @@
         {
           "actionId": "CaseE.BoxSelectEnd",
           "path": "<Mouse>/leftButton"
+        },
+        {
+          "actionId": "CaseE.Command",
+          "path": "<Mouse>/rightButton"
         },
         {
           "actionId": "PointerPos",

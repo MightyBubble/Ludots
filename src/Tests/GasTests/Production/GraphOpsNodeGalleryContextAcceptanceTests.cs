@@ -76,4 +76,22 @@ public sealed class GraphOpsNodeGalleryContextAcceptanceTests
 
         Assert.That(runtime.Metrics.Detail, Does.Contain("1"), "the caption quotes the committed member count");
     }
+
+    [Test]
+    public void SubmitCommandIntentVignette_PushesIntoTheSubmissionBuffer()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("SubmitCommandIntent");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase),
+                $"SubmitCommandIntent detail missing phrase: {runtime.Metrics.Detail}");
+        }
+
+        Assert.That(runtime.Context.CommandIntents?.Count ?? 0, Is.GreaterThanOrEqualTo(1),
+            "the featured op pushed the intent into the engine submission buffer; routing stays in the order kernel's own phase");
+    }
 }

@@ -32,15 +32,18 @@
       "BlackboardFloatBuffer": {}
     }
   },
-  {
-    "id": "case_e_marine",
-    "components": {
-      "Name": {
-        "Value": "可框选单位"
-      },
-      "Team": {
-        "Id": 1
-      },
+    {
+      "id": "case_e_marine",
+      "components": {
+        "Name": {
+          "Value": "可框选单位"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
       "WorldPositionCm": {
         "Value": {
           "X": 0,

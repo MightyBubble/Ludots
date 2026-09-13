@@ -9850,6 +9850,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_LoadPointerScreenY/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitCommandIntent",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitCommandIntentEntryMod",
+      "projectPath": "CapabilityStandardGraphOpSubmitCommandIntentEntryMod.csproj",
+      "title": "一声令下先进缓冲",
+      "summary": "图里定好落点，一声令下交给缓冲，下令内核下一拍再路由。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "SubmitCommandIntent"
+      ],
+      "binding": "capability_standard_graph_op_SubmitCommandIntent",
+      "preset": "capability_standard_graph_op_SubmitCommandIntent_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SubmitCommandIntent.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SubmitCommandIntent",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SubmitCommandIntent/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SubmitCommandIntent/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [
