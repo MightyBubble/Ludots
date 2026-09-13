@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
@@ -297,6 +298,165 @@ namespace Ludots.Tests.Presentation
                 $"Minimap projection amortized mean {projectionMean:F3}ms exceeds the rotation amortized budget.");
             Assert.That(aggregatorMs[observationFrames / 2], Is.LessThanOrEqualTo(0.8d),
                 $"Attribute aggregation median {aggregatorMs[observationFrames / 2]:F3}ms exceeds the spread-firing regression bound; zero-dirty gating is guarded by AttributeAggregatorSteadyStateBudgetTests.");
+        }
+
+        [Test]
+        public void Showcase_SteadyStateSimTickBudget_CadenceAgentSliceAmortization()
+        {
+            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
+
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
+            Assert.That(simulation.CadenceAgentSliceCount, Is.GreaterThan(1),
+                "10K massnav cadence must contract agent slicing to amortize the solver across fixed ticks.");
+            var hudProjection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, hudProjection, simulation, ExpectedAgentCount);
+
+            var timing = RequireService(engine, CoreServiceKeys.PresentationTimingDiagnostics);
+            timing.SystemBreakdownEnabled = true;
+            IClock clock = RequireService(engine, CoreServiceKeys.Clock);
+            var bindingSystem = RequireSystem<MassNavigationAuthoredAgentBindingSystem>(engine, SystemGroup.RuntimeEntityBinding);
+
+            const int congestionFixedTicks = 91;
+            SimBudgetSample congestion = ObserveSimBudget(
+                engine,
+                hudProjection,
+                timing,
+                clock,
+                simulation,
+                bindingSystem,
+                congestionFixedTicks,
+                jitterWarmupFixedTicks: 24);
+            const int settleCapFixedTicks = 1500;
+            int settledWarmupTicks = 0;
+            while (settledWarmupTicks < settleCapFixedTicks &&
+                   simulation.NavigationSettledAgentCount < (ExpectedAgentCount * 95) / 100)
+            {
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
+                int fixedTickBefore = clock.Now(ClockDomainId.FixedFrame);
+                engine.Tick(FixedDeltaSeconds);
+                HeadlessPresentationTestHost.UpdateCamera(engine);
+                hudProjection.Update(FixedDeltaSeconds);
+                if (clock.Now(ClockDomainId.FixedFrame) != fixedTickBefore)
+                {
+                    settledWarmupTicks++;
+                }
+            }
+
+            const int steadyFixedTicks = 181;
+            SimBudgetSample steady = ObserveSimBudget(
+                engine,
+                hudProjection,
+                timing,
+                clock,
+                simulation,
+                bindingSystem,
+                steadyFixedTicks,
+                jitterWarmupFixedTicks: 24);
+            timing.SystemBreakdownEnabled = false;
+
+            TestContext.Out.WriteLine(
+                $"Sim congestion walk window ({congestionFixedTicks} fixed ticks, settled={simulation.NavigationSettledAgentCount}): min={congestion.MinMs:F3}ms median={congestion.MedianMs:F3}ms p95={congestion.P95Ms:F3}ms max={congestion.MaxMs:F3}ms; stepping min/med/max={Minimum(congestion.SteppingAgents)}/{Median(congestion.SteppingAgents)}/{Maximum(congestion.SteppingAgents)}");
+            TestContext.Out.WriteLine(
+                $"Sim steady-state window ({steadyFixedTicks} fixed ticks, settled={simulation.NavigationSettledAgentCount}/{ExpectedAgentCount} after {settledWarmupTicks} settle ticks): min={steady.MinMs:F3}ms median={steady.MedianMs:F3}ms p95={steady.P95Ms:F3}ms max={steady.MaxMs:F3}ms; steppingAgents min/med/max={Minimum(steady.SteppingAgents)}/{Median(steady.SteppingAgents)}/{Maximum(steady.SteppingAgents)} of {ExpectedAgentCount} (agentSliceCount={simulation.CadenceAgentSliceCount}, steppingTotal={steady.SteppingTotal}, flowStatesPerRefreshTick max={Maximum(steady.FlowStatesPerTick)}, bindingSliceScanAgents med/max={Median(steady.BindingScanAgents)}/{Maximum(steady.BindingScanAgents)}); simTop totals: {steady.FormatTopSystems()}");
+            Assert.That(Maximum(congestion.SteppingAgents), Is.LessThan(ExpectedAgentCount),
+                "Cadence agent slicing must never step the full population inside one fixed tick.");
+            Assert.That(Maximum(steady.SteppingAgents), Is.LessThan(ExpectedAgentCount));
+            Assert.That(steady.SteppingTotal, Is.GreaterThanOrEqualTo((long)ExpectedAgentCount * 20),
+                "Sliced stepping must keep covering the whole population at simulationHz across rounds.");
+            Assert.That(Median(steady.BindingScanAgents), Is.LessThan(ExpectedAgentCount),
+                "Steady-state authored binding must amortize its scan over agent slices instead of hashing the full population every tick.");
+            Assert.That(steady.P95Ms, Is.LessThanOrEqualTo(8.0d),
+                $"Steady-state sim p95 {steady.P95Ms:F3}ms exceeds the cadence agent-slice amortization budget.");
+        }
+
+        private sealed class SimBudgetSample
+        {
+            public double[] SimMs = Array.Empty<double>();
+            public int[] SteppingAgents = Array.Empty<int>();
+            public int[] FlowStatesPerTick = Array.Empty<int>();
+            public int[] BindingScanAgents = Array.Empty<int>();
+            public long SteppingTotal;
+            private readonly Dictionary<string, double> _topSystemTotals = new();
+
+            public double MinMs => SimMs[0];
+            public double MedianMs => SimMs[SimMs.Length / 2];
+            public double P95Ms => SimMs[(int)(SimMs.Length * 0.95)];
+            public double MaxMs => SimMs[^1];
+
+            public void RecordTopSystem(string systemName, double ms)
+            {
+                _topSystemTotals.TryGetValue(systemName, out double total);
+                _topSystemTotals[systemName] = total + ms;
+            }
+
+            public string FormatTopSystems()
+            {
+                return string.Join(", ",
+                    _topSystemTotals.OrderByDescending(pair => pair.Value).Take(5).Select(pair => $"{pair.Key}:{pair.Value:F1}"));
+            }
+        }
+
+        private static SimBudgetSample ObserveSimBudget(
+            GameEngine engine,
+            WorldHudToScreenSystem hudProjection,
+            PresentationTimingDiagnostics timing,
+            IClock clock,
+            MassNavigationSimulationRuntime simulation,
+            MassNavigationAuthoredAgentBindingSystem bindingSystem,
+            int observationFixedTicks,
+            int jitterWarmupFixedTicks)
+        {
+            var sample = new SimBudgetSample
+            {
+                SimMs = new double[observationFixedTicks],
+                SteppingAgents = new int[observationFixedTicks],
+                FlowStatesPerTick = new int[observationFixedTicks],
+                BindingScanAgents = new int[observationFixedTicks],
+            };
+            int sampleCount = 0;
+            int guardFrames = 0;
+            int warmupRemaining = jitterWarmupFixedTicks;
+            while (sampleCount < observationFixedTicks)
+            {
+                Assert.That(++guardFrames, Is.LessThanOrEqualTo((jitterWarmupFixedTicks + observationFixedTicks) * 8),
+                    "MassNavigation fixed ticks must keep advancing during the steady-state sim budget probe.");
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
+                int fixedTickBefore = clock.Now(ClockDomainId.FixedFrame);
+                engine.Tick(FixedDeltaSeconds);
+                HeadlessPresentationTestHost.UpdateCamera(engine);
+                hudProjection.Update(FixedDeltaSeconds);
+                if (clock.Now(ClockDomainId.FixedFrame) == fixedTickBefore)
+                {
+                    continue;
+                }
+
+                if (warmupRemaining > 0)
+                {
+                    warmupRemaining--;
+                    continue;
+                }
+
+                sample.SimMs[sampleCount] = timing.LastSimulationMs;
+                sample.SteppingAgents[sampleCount] = simulation.LastSteppingAgentCount;
+                sample.FlowStatesPerTick[sampleCount] = simulation.LastFlowRefreshStateCount;
+                sample.BindingScanAgents[sampleCount] = bindingSystem.LastSliceScanAgentCount;
+                sample.SteppingTotal += sample.SteppingAgents[sampleCount];
+                if (timing.LastSimulationTopSystem1Ms > 0f)
+                {
+                    sample.RecordTopSystem(timing.LastSimulationTopSystem1Name, timing.LastSimulationTopSystem1Ms);
+                    if (timing.LastSimulationTopSystem2Ms > 0f)
+                    {
+                        sample.RecordTopSystem(timing.LastSimulationTopSystem2Name, timing.LastSimulationTopSystem2Ms);
+                    }
+                }
+
+                sampleCount++;
+            }
+
+            Array.Sort(sample.SimMs);
+            return sample;
         }
 
         private static double Mean(double[] values)
