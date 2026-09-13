@@ -25,7 +25,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void SteadyTick_WithoutDirtyEntities_AggregatesNothingNearZeroCost()
         {
-            (World world, AttributeAggregatorSystem aggregator, _) = BuildPopulation();
+            (World world, AttributeAggregatorSystem aggregator, AttributeAggregateDirtyRegistry registry, _) = BuildPopulation();
             using (world)
             {
                 for (int i = 0; i < 8; i++)
@@ -46,14 +46,14 @@ namespace Ludots.Tests.GAS
                     $"Aggregator steady zero-dirty: entities={EntityCount} median={samples[ObservationTicks / 2]:F4}ms p95={samples[(int)(ObservationTicks * 0.95)]:F4}ms max={samples[^1]:F4}ms");
                 Assert.That(samples[^1], Is.LessThan(0.3d),
                     $"Zero-dirty steady ticks must aggregate nothing; worst observed {samples[^1]:F4}ms exceeds the 0.3ms budget.");
-                Assert.That(CountDirtyTags(world), Is.Zero);
+                Assert.That(CountDirtyTags(registry), Is.Zero);
             }
         }
 
         [Test]
         public void SpreadFiringTicks_ConsumeOnlyMarkedEntities()
         {
-            (World world, AttributeAggregatorSystem aggregator, Entity[] entities) = BuildPopulation();
+            (World world, AttributeAggregatorSystem aggregator, AttributeAggregateDirtyRegistry registry, Entity[] entities) = BuildPopulation();
             using (world)
             {
                 for (int i = 0; i < 8; i++)
@@ -67,15 +67,15 @@ namespace Ludots.Tests.GAS
                 {
                     for (int m = 0; m < SpreadFiringPerTick; m++)
                     {
-                        world.Add(entities[cursor], new AttributeAggregateDirty());
+                        registry.MarkDirty(entities[cursor]);
                         cursor = (cursor + 1) % entities.Length;
                     }
 
                     long start = Stopwatch.GetTimestamp();
                     aggregator.Update(0.0166f);
                     samples[tick] = (Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency;
-                    Assert.That(CountDirtyTags(world), Is.Zero,
-                        $"Tick {tick}: aggregator must consume every AttributeAggregateDirty entity it processed.");
+                    Assert.That(CountDirtyTags(registry), Is.Zero,
+                        $"Tick {tick}: aggregator must consume every aggregate-dirty entity it processed.");
                 }
 
                 Array.Sort(samples);
@@ -89,38 +89,39 @@ namespace Ludots.Tests.GAS
         [Test]
         public void BurstFiringTick_ConsumesAllDirtyEntities()
         {
-            (World world, AttributeAggregatorSystem aggregator, Entity[] entities) = BuildPopulation();
+            (World world, AttributeAggregatorSystem aggregator, AttributeAggregateDirtyRegistry registry, Entity[] entities) = BuildPopulation();
             using (world)
             {
                 for (int i = 0; i < entities.Length; i++)
                 {
-                    world.Add(entities[i], new AttributeAggregateDirty());
+                    registry.MarkDirty(entities[i]);
                 }
 
                 for (int warmup = 0; warmup < 64; warmup++)
                 {
-                    world.Add(entities[warmup], new AttributeAggregateDirty());
+                    registry.MarkDirty(entities[warmup]);
                     aggregator.Update(0.0166f);
                 }
 
                 for (int i = 0; i < entities.Length; i++)
                 {
-                    world.Add(entities[i], new AttributeAggregateDirty());
+                    registry.MarkDirty(entities[i]);
                 }
 
                 long start = Stopwatch.GetTimestamp();
                 aggregator.Update(0.0166f);
                 double elapsedMs = (Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency;
                 TestContext.Out.WriteLine($"Aggregator burst-firing ({EntityCount} dirty in one tick): {elapsedMs:F3}ms");
-                Assert.That(CountDirtyTags(world), Is.Zero);
+                Assert.That(CountDirtyTags(registry), Is.Zero);
             }
         }
 
-        private static (World world, AttributeAggregatorSystem aggregator, Entity[] entities) BuildPopulation()
+        private static (World world, AttributeAggregatorSystem aggregator, AttributeAggregateDirtyRegistry registry, Entity[] entities) BuildPopulation()
         {
             var world = World.Create();
             var tagOps = new TagOps(new DirtyEntityQueue(EntityCount + 8), new TagRuleRegistry());
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
+            var registry = new AttributeAggregateDirtyRegistry(EntityCount + 8);
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: registry);
             var entities = new Entity[EntityCount];
             for (int i = 0; i < EntityCount; i++)
             {
@@ -130,13 +131,12 @@ namespace Ludots.Tests.GAS
                     new DirtyFlags());
             }
 
-            return (world, aggregator, entities);
+            return (world, aggregator, registry, entities);
         }
 
-        private static int CountDirtyTags(World world)
+        private static int CountDirtyTags(AttributeAggregateDirtyRegistry registry)
         {
-            var query = new QueryDescription().WithAll<AttributeAggregateDirty>();
-            return world.CountEntities(in query);
+            return registry.Count;
         }
     }
 }

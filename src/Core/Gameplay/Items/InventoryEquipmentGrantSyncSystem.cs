@@ -22,6 +22,7 @@ namespace Ludots.Core.Gameplay.Items
 
         /// <summary>共享到期时间轮；卸下装备的取消写标记后强制快道效果下一 slice 出桶。</summary>
         internal Ludots.Core.Gameplay.GAS.Systems.EffectDueWheel? DueWheel { get; set; }
+        internal Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? AggregateDirty { get; set; }
 
         public InventoryEquipmentGrantSyncSystem(
             World world,
@@ -236,9 +237,9 @@ namespace Ludots.Core.Gameplay.Items
 
                 ref var effect = ref World.Get<GameplayEffect>(effectEntity);
                 effect.CancelRequested = true;
-                if (effect.AggregatesModifiers && !World.Has<AttributeAggregateDirty>(actor))
+                if (effect.AggregatesModifiers)
                 {
-                    World.Add(actor, new AttributeAggregateDirty());
+                    AggregateDirty?.MarkDirty(actor);
                 }
 
                 DueWheel?.ForceVisit(effectEntity);

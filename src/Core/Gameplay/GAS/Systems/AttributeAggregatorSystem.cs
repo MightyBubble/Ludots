@@ -7,30 +7,29 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Mathematics;
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
     public class AttributeAggregatorSystem : BaseSystem<World, float>
     {
-        private static readonly QueryDescription _withDirtyFlagsQuery = new QueryDescription()
-            .WithAll<AttributeBuffer, ActiveEffectContainer, AttributeAggregateDirty, DirtyFlags>();
-
-        private static readonly QueryDescription _withoutDirtyFlagsQuery = new QueryDescription()
-            .WithAll<AttributeBuffer, ActiveEffectContainer, AttributeAggregateDirty>()
-            .WithNone<DirtyFlags>();
-
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
         private readonly TagOps _tagOps;
+        private readonly AttributeAggregateDirtyRegistry _aggregateDirty;
         private readonly CommandBuffer _commandBuffer = new();
+        private readonly List<Entity> _drainedEntities = new(256);
 
-        public AttributeAggregatorSystem(World world, GraphProgramRegistry graphPrograms = null, IGraphRuntimeApi graphApi = null, TagOps tagOps = null) : base(world)
+        public AttributeAggregatorSystem(World world, GraphProgramRegistry graphPrograms = null, IGraphRuntimeApi graphApi = null, TagOps tagOps = null, AttributeAggregateDirtyRegistry aggregateDirty = null) : base(world)
         {
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
             _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
+            _aggregateDirty = aggregateDirty ?? throw new InvalidOperationException(AttributeAggregateDirtyRegistry.MissingRegistryError);
         }
+
+        public AttributeAggregateDirtyRegistry DirtyRegistry => _aggregateDirty;
 
         /// <summary>上一次 Update 的耗时（毫秒）；稳态零脏实体帧应近零，供预算守卫测试读取。</summary>
         public double LastUpdateElapsedMs { get; private set; }
@@ -42,20 +41,41 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             long startTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
             int processed = 0;
-            var withDirtyJob = new AttributeAggregatorWithDirtyJob
-            {
-                World = World,
-                CommandBuffer = _commandBuffer,
-                GraphPrograms = _graphPrograms,
-                GraphApi = _graphApi,
-                TagOps = _tagOps,
-                ProcessedEntities = 0,
-            };
-            World.InlineEntityQuery<AttributeAggregatorWithDirtyJob, AttributeBuffer, ActiveEffectContainer, DirtyFlags>(in _withDirtyFlagsQuery, ref withDirtyJob);
-            processed = withDirtyJob.ProcessedEntities;
+            _drainedEntities.Clear();
+            _aggregateDirty.Drain(_drainedEntities);
 
-            var withoutDirtyJob = new AttributeAggregatorWithoutDirtyJob();
-            World.InlineEntityQuery<AttributeAggregatorWithoutDirtyJob, AttributeBuffer, ActiveEffectContainer>(in _withoutDirtyFlagsQuery, ref withoutDirtyJob);
+            int i = 0;
+            try
+            {
+                for (; i < _drainedEntities.Count; i++)
+                {
+                    Entity entity = _drainedEntities[i];
+                    if (!World.IsAlive(entity) ||
+                        !World.Has<AttributeBuffer>(entity) ||
+                        !World.Has<ActiveEffectContainer>(entity))
+                    {
+                        continue;
+                    }
+
+                    if (!World.Has<DirtyFlags>(entity))
+                    {
+                        throw new InvalidOperationException(
+                            $"{TagOps.MissingDirtyFlagsError}: entity={entity.Id}, system=AttributeAggregatorSystem.");
+                    }
+
+                    ProcessDirtyEntity(World, entity, _commandBuffer, _graphPrograms, _graphApi, _tagOps, ref processed);
+                }
+            }
+            catch
+            {
+                // 抛点起（含抛错实体）回灌注册表：聚合失败保持脏、下一 tick 重试，对齐旧 tag 未消费即滞留的合同。
+                for (; i < _drainedEntities.Count; i++)
+                {
+                    _aggregateDirty.MarkDirty(_drainedEntities[i]);
+                }
+
+                throw;
+            }
 
             if (_commandBuffer.Size > 0)
             {
@@ -136,12 +156,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe ulong RecomputeEffectiveValues(
-            World world,
-            Entity entity,
+            World world, Entity entity,
             ref AttributeBuffer attrBuffer,
             ref ActiveEffectContainer effects,
-            GraphProgramRegistry graphPrograms,
-            IGraphRuntimeApi graphApi)
+            GraphProgramRegistry graphPrograms, IGraphRuntimeApi graphApi)
         {
             for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
             {
@@ -203,99 +221,90 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return derivedWrittenMask;
         }
 
-        struct AttributeAggregatorWithDirtyJob : IForEachWithEntity<AttributeBuffer, ActiveEffectContainer, DirtyFlags>
+        /// <summary>
+        /// 旧 AttributeAggregatorWithDirtyJob 的逐实体聚合体；DirtyFlags 缺失由调用方先行抛错，
+        /// 本方法入口即假定四组件齐备。CommandBuffer 仅承载 GameplayAttributeChangedBits 的
+        /// 首次结构 Add（该组件由 ClearPresentationFlagsSystem 每 tick 清除并移除，结构合同属表现消费方）。
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static unsafe void ProcessDirtyEntity(
+            World world,
+            Entity entity,
+            CommandBuffer commandBuffer,
+            GraphProgramRegistry graphPrograms,
+            IGraphRuntimeApi graphApi,
+            TagOps tagOps,
+            ref int processedEntities)
         {
-            public World World;
-            public CommandBuffer CommandBuffer;
-            public GraphProgramRegistry GraphPrograms;
-            public IGraphRuntimeApi GraphApi;
-            public TagOps TagOps;
-            public int ProcessedEntities;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void Update(Entity entity, ref AttributeBuffer attrBuffer, ref ActiveEffectContainer effects, ref DirtyFlags dirtyFlags)
+            processedEntities++;
+            ref AttributeBuffer attrBuffer = ref world.Get<AttributeBuffer>(entity);
+            ref ActiveEffectContainer effects = ref world.Get<ActiveEffectContainer>(entity);
+            ref DirtyFlags dirtyFlags = ref world.Get<DirtyFlags>(entity);
+            DirtyFlags dirtyBefore = dirtyFlags;
+            Span<float> oldValues = stackalloc float[AttributeBuffer.MAX_ATTRS];
+            Span<float> oldCaps = stackalloc float[AttributeBuffer.MAX_ATTRS];
+            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
             {
-                ProcessedEntities++;
-                DirtyFlags dirtyBefore = dirtyFlags;
-                Span<float> oldValues = stackalloc float[AttributeBuffer.MAX_ATTRS];
-                Span<float> oldCaps = stackalloc float[AttributeBuffer.MAX_ATTRS];
-                for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+                oldValues[i] = attrBuffer.CurrentValues[i];
+                oldCaps[i] = attrBuffer.CapValues[i];
+            }
+
+            ulong derivedWrittenMask = RecomputeEffectiveValues(
+                world,
+                entity,
+                ref attrBuffer,
+                ref effects,
+                graphPrograms,
+                graphApi);
+            RestorePersistentCurrentValues(ref attrBuffer, oldValues, derivedWrittenMask);
+            bool hasPresentationChanged = world.Has<GameplayAttributeChangedBits>(entity);
+            GameplayAttributeChangedBits presentationChangedLocal = default;
+
+            // 4. 标记脏属性（用于延迟触发器）
+            ulong changedMask = 0UL;
+            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            {
+                if (oldValues[i] != attrBuffer.CurrentValues[i] ||
+                    oldCaps[i] != attrBuffer.CapValues[i])
                 {
-                    oldValues[i] = attrBuffer.CurrentValues[i];
-                    oldCaps[i] = attrBuffer.CapValues[i];
+                    dirtyFlags.MarkAttributeDirty(i);
+                    changedMask |= 1UL << i;
                 }
+            }
 
-                ulong derivedWrittenMask = RecomputeEffectiveValues(
-                    World,
-                    entity,
-                    ref attrBuffer,
-                    ref effects,
-                    GraphPrograms,
-                    GraphApi);
-                RestorePersistentCurrentValues(ref attrBuffer, oldValues, derivedWrittenMask);
-                bool hasPresentationChanged = World.Has<GameplayAttributeChangedBits>(entity);
-                GameplayAttributeChangedBits presentationChangedLocal = default;
-
-                // 4. 标记脏属性（用于延迟触发器）
-                ulong changedMask = 0UL;
-                for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            if (changedMask != 0UL)
+            {
+                try
                 {
-                    if (oldValues[i] != attrBuffer.CurrentValues[i] ||
-                        oldCaps[i] != attrBuffer.CapValues[i])
-                    {
-                        dirtyFlags.MarkAttributeDirty(i);
-                        changedMask |= 1UL << i;
-                    }
+                    tagOps.MarkDirtyEntity(world, entity);
                 }
-
-                if (changedMask != 0UL)
+                catch
                 {
-                    try
-                    {
-                        TagOps.MarkDirtyEntity(World, entity);
-                    }
-                    catch
-                    {
-                        // 回滚只涉及 CurrentValues/CapValues/DirtyFlags：BaseValues 与 DefinedMask
-                        // 在本作业内不可变（派生图只写 Current，见 EndDerivedAttributeWrites 契约）。
-                        for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
-                        {
-                            attrBuffer.CurrentValues[i] = oldValues[i];
-                            attrBuffer.CapValues[i] = oldCaps[i];
-                        }
-
-                        dirtyFlags = dirtyBefore;
-                        throw;
-                    }
-
+                    // 回滚只涉及 CurrentValues/CapValues/DirtyFlags：BaseValues 与 DefinedMask
+                    // 在本作业内不可变（派生图只写 Current，见 EndDerivedAttributeWrites 契约）。
                     for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
                     {
-                        if ((changedMask & (1UL << i)) != 0UL)
-                        {
-                            MarkPresentationChanged(World, entity, i, ref presentationChangedLocal, ref hasPresentationChanged);
-                        }
+                        attrBuffer.CurrentValues[i] = oldValues[i];
+                        attrBuffer.CapValues[i] = oldCaps[i];
+                    }
+
+                    dirtyFlags = dirtyBefore;
+                    throw;
+                }
+
+                for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+                {
+                    if ((changedMask & (1UL << i)) != 0UL)
+                    {
+                        MarkPresentationChanged(world, entity, i, ref presentationChangedLocal, ref hasPresentationChanged);
                     }
                 }
-
-                if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
-                {
-                    CommandBuffer.Add(entity, presentationChangedLocal);
-                }
-
-                CommandBuffer.Remove<AttributeAggregateDirty>(entity);
             }
 
-        }
-
-        struct AttributeAggregatorWithoutDirtyJob : IForEachWithEntity<AttributeBuffer, ActiveEffectContainer>
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void Update(Entity entity, ref AttributeBuffer attrBuffer, ref ActiveEffectContainer effects)
+            if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
             {
-                throw new InvalidOperationException(
-                    $"{TagOps.MissingDirtyFlagsError}: entity={entity.Id}, system=AttributeAggregatorSystem.");
+                commandBuffer.Add(entity, presentationChangedLocal);
             }
-
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

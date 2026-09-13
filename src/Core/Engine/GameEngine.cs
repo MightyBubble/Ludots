@@ -849,7 +849,9 @@ namespace Ludots.Core.Engine
             var orderTypeRegistry = new OrderTypeRegistry(orderTerminalResults);
             var orderRuleRegistry = new OrderRuleRegistry();
             var dirtyEntities = new DirtyEntityQueue(gasRuntimeCapacity.DeferredTriggerActiveEntityCapacity);
-            var tagOps = new TagOps(dirtyEntities, new TagRuleRegistry(), gasBudget);
+            var aggregateDirtyRegistry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(gasRuntimeCapacity.DeferredTriggerActiveEntityCapacity);
+            SetService(CoreServiceKeys.AttributeAggregateDirtyRegistry, aggregateDirtyRegistry);
+            var tagOps = new TagOps(dirtyEntities, new TagRuleRegistry(), gasBudget, aggregateDirtyRegistry);
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             RegisterBuiltInEntityCollectionKeys(entityCollectionKeyRegistry);
             var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
@@ -1117,6 +1119,7 @@ namespace Ludots.Core.Engine
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             var effectDueWheel = new Ludots.Core.Gameplay.GAS.Systems.EffectDueWheel(clock, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity);
             gasGraphApi.DueWheel = effectDueWheel;
+            gasGraphApi.AggregateDirty = aggregateDirtyRegistry;
             gasGraphApi.BindTriggerManager(TriggerManager);
             gasGraphApi.BindAimSource(new Ludots.Core.Input.AimSource.GraphAimSourceRuntime(World, GlobalContext));
             gasGraphApi.BindEngineResolver(() => this);
@@ -1576,7 +1579,7 @@ namespace Ludots.Core.Engine
             new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load(ConfigCatalog, ConfigConflictReport);
             attributeSinks.Freeze();
             var bindingSystem = new AttributeBindingSystem(World, attributeSinks, attributeBindings);
-            var aggSystem = new AttributeAggregatorSystem(World, graphProgramRegistry, gasGraphApi, tagOps);
+            var aggSystem = new AttributeAggregatorSystem(World, graphProgramRegistry, gasGraphApi, tagOps, aggregateDirtyRegistry);
             var sessionSystem = new GameSessionSystem(GameSession);
             var authoritativeInput = new FrozenInputActionReader();
             var authoritativeInputAccumulator = new AuthoritativeInputAccumulator();
@@ -2244,6 +2247,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(new ProgressionScopeBindingSystem(World, progressionEvaluator, progressionScopeKeys), SystemGroup.InputCollection);
             var inventoryEquipmentGrantSyncSystem = new InventoryEquipmentGrantSyncSystem(World, inventoryRuntime, effectRequestQueue, abilityDefinitions);
             inventoryEquipmentGrantSyncSystem.DueWheel = effectDueWheel;
+            inventoryEquipmentGrantSyncSystem.AggregateDirty = aggregateDirtyRegistry;
             RegisterSystem(inventoryEquipmentGrantSyncSystem, SystemGroup.InputCollection);
             RegisterSystem(new AbilityFormRoutingSystem(World, abilityFormSets, tagOps), SystemGroup.InputCollection);
             RegisterSystem(new UtilityAiThinkScheduleSystem(World, clock, AiRuntime.UtilityRuntime), SystemGroup.InputCollection);
@@ -2323,7 +2327,7 @@ namespace Ludots.Core.Engine
                 presenterDefinitions,
                 componentAuthoringContext,
                 entityTriggerGraphMounts: EntityTriggerGraphMounts);
-            var effectProcessingLoopSystem = new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter);
+            var effectProcessingLoopSystem = new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter, aggregateDirty: aggregateDirtyRegistry);
             effectProcessingLoopSystem.DueWheel = effectDueWheel;
             RegisterSystem(effectProcessingLoopSystem, SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(

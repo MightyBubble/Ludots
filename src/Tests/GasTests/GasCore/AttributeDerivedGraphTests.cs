@@ -44,9 +44,10 @@ namespace Ludots.Tests.GAS
             Entity entity = world.Create(
                 CreateAttributes(attributeId, 10f),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
                 new DirtyFlags());
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
+            aggDirty.MarkDirty(entity);
 
             AssertDerivedProgramRejectedAtRegister(program, GraphNodeOp.ModifyAttributeAdd, 2);
 
@@ -54,7 +55,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<DirtyFlags>(entity).IsAnyAttributeDirty(), Is.False);
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
             Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.False);
-            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+            Assert.That(aggDirty.Contains(entity), Is.True);
         }
 
         [Test]
@@ -71,9 +72,10 @@ namespace Ludots.Tests.GAS
             Entity entity = world.Create(
                 CreateAttributes(attributeId, 10f),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
                 new DirtyFlags());
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
+            aggDirty.MarkDirty(entity);
             var effectRequests = new EffectRequestQueue();
 
             AssertDerivedProgramRejectedAtRegister(program, GraphNodeOp.ApplyEffectTemplate, 1);
@@ -82,7 +84,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
             Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.False);
-            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+            Assert.That(aggDirty.Contains(entity), Is.True);
         }
 
         [Test]
@@ -100,20 +102,21 @@ namespace Ludots.Tests.GAS
             Entity entity = world.Create(
                 CreateAttributes(attributeId, 10f),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
                 new DirtyFlags());
             Entity effect = world.Create(
                 new GameplayEffect(),
                 new EffectTemplateRef { TemplateId = effectTemplateId });
             Assert.That(world.Get<ActiveEffectContainer>(entity).Add(effect), Is.True);
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
+            aggDirty.MarkDirty(entity);
 
             AssertDerivedProgramRejectedAtRegister(program, GraphNodeOp.RemoveEffectTemplate, 1);
 
             Assert.That(world.Get<GameplayEffect>(effect).CancelRequested, Is.False);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
-            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+            Assert.That(aggDirty.Contains(entity), Is.True);
         }
 
         [Test]
@@ -131,9 +134,10 @@ namespace Ludots.Tests.GAS
             Entity entity = world.Create(
                 CreateAttributes(attributeId, 10f),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
                 new DirtyFlags());
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
+            aggDirty.MarkDirty(entity);
             var eventBus = new GameplayEventBus();
 
             AssertDerivedProgramRejectedAtRegister(program, GraphNodeOp.SendEvent, 2);
@@ -142,7 +146,7 @@ namespace Ludots.Tests.GAS
             Assert.That(eventBus.Events.Count, Is.Zero);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
-            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+            Assert.That(aggDirty.Contains(entity), Is.True);
         }
 
         [Test]
@@ -163,9 +167,10 @@ namespace Ludots.Tests.GAS
             Entity entity = world.Create(
                 CreateAttributes(attributeId, 10f),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
                 new DirtyFlags());
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
+            aggDirty.MarkDirty(entity);
             var effectRequests = new EffectRequestQueue();
 
             AssertDerivedProgramRejectedAtRegister(program, GraphNodeOp.FanOutDispatchEffect, 0);
@@ -173,7 +178,7 @@ namespace Ludots.Tests.GAS
             Assert.That(effectRequests.Count, Is.Zero);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
-            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+            Assert.That(aggDirty.Contains(entity), Is.True);
         }
 
         [TestCase(GraphNodeOp.RelationshipEnsureLink)]
@@ -269,15 +274,16 @@ namespace Ludots.Tests.GAS
             Entity entity = world.Create(
                 CreateAttributes(attributeId, 10f),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
                 new DirtyFlags());
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
+            aggDirty.MarkDirty(entity);
 
             AssertDerivedProgramRejectedAtRegister(program, operation, 0);
 
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
-            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+            Assert.That(aggDirty.Contains(entity), Is.True);
         }
 
         [Test]
@@ -297,9 +303,10 @@ namespace Ludots.Tests.GAS
             Entity entity = world.Create(
                 CreateAttributes(sourceAttributeId, 10f),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
                 new DirtyFlags());
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
+            aggDirty.MarkDirty(entity);
             var effectRequests = new EffectRequestQueue();
 
             AssertDerivedProgramRejectedAtRegister(program, GraphNodeOp.ApplyEffectTemplate, 3);
@@ -309,7 +316,7 @@ namespace Ludots.Tests.GAS
             Assert.That(effectRequests.Count, Is.Zero);
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
             Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.False);
-            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+            Assert.That(aggDirty.Contains(entity), Is.True);
         }
 
         [Test]
@@ -328,10 +335,11 @@ namespace Ludots.Tests.GAS
             Entity entity = world.Create(
                 CreateAttributes(sourceAttributeId, 10f),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
-                new DirtyFlags(),
+                                new DirtyFlags(),
                 new BlackboardFloatBuffer());
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
+            aggDirty.MarkDirty(entity);
 
             AssertDerivedProgramRejectedAtRegister(program, GraphNodeOp.WriteBlackboardFloat, 2);
 
@@ -339,7 +347,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(sourceAttributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
             Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.False);
-            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+            Assert.That(aggDirty.Contains(entity), Is.True);
         }
 
         [Test]
@@ -372,16 +380,18 @@ namespace Ludots.Tests.GAS
             Entity entity = world.Create(
                 CreateAttributes(sourceAttributeId, 10f),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
-                new DirtyFlags(),
+                                new DirtyFlags(),
                 binding);
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
             using var system = new AttributeAggregatorSystem(
                 world,
                 programs,
                 new GasGraphRuntimeApi(world, tagOps: tagOps),
-                tagOps);
+                tagOps,
+                aggregateDirty: aggDirty);
 
+            aggDirty.MarkDirty(entity);
             system.Update(0f);
 
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(entity);
@@ -395,7 +405,7 @@ namespace Ludots.Tests.GAS
             ref GameplayAttributeChangedBits presentation = ref world.Get<GameplayAttributeChangedBits>(entity);
             Assert.That(presentation.IsSet(intermediateAttributeId), Is.True);
             Assert.That(presentation.IsSet(resultAttributeId), Is.True);
-            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.False);
+            Assert.That(aggDirty.Contains(entity), Is.False);
         }
 
         [Test]
@@ -410,8 +420,7 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(
                 new AttributeBuffer(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
-                new DirtyFlags()
+                                new DirtyFlags()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetBase(abilityHasteAttrId, 50f);
@@ -445,12 +454,15 @@ namespace Ludots.Tests.GAS
             world.Add(entity, binding);
 
             // Act: run aggregator
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
             using var system = new AttributeAggregatorSystem(
                 world,
                 registry,
                 new GasGraphRuntimeApi(world, tagOps: tagOps),
-                tagOps);
+                tagOps,
+                aggregateDirty: aggDirty);
+            aggDirty.MarkDirty(entity);
             system.Update(0f);
 
             // Assert
@@ -473,8 +485,7 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(
                 new AttributeBuffer(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
-                new DirtyFlags()
+                                new DirtyFlags()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetBase(hpAttrId, 1000f);
@@ -511,12 +522,15 @@ namespace Ludots.Tests.GAS
             binding.Add(1);
             world.Add(entity, binding);
 
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
             using var system = new AttributeAggregatorSystem(
                 world,
                 registry,
                 new GasGraphRuntimeApi(world, tagOps: tagOps),
-                tagOps);
+                tagOps,
+                aggregateDirty: aggDirty);
+            aggDirty.MarkDirty(entity);
             system.Update(0f);
 
             ref var result = ref world.Get<AttributeBuffer>(entity);
@@ -533,20 +547,22 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(
                 new AttributeBuffer(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
-                new DirtyFlags()
+                                new DirtyFlags()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             int attributeId = AttributeRegistry.Register("tests.derived-graph.no-binding.base");
             buf.SetBase(attributeId, 42f);
 
             var registry = new GraphProgramRegistry();
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
             using var system = new AttributeAggregatorSystem(
                 world,
                 registry,
                 new GasGraphRuntimeApi(world, tagOps: tagOps),
-                tagOps);
+                tagOps,
+                aggregateDirty: aggDirty);
+            aggDirty.MarkDirty(entity);
             system.Update(0f);
 
             ref var result = ref world.Get<AttributeBuffer>(entity);
@@ -566,8 +582,7 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(
                 new AttributeBuffer(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
-                new DirtyFlags()
+                                new DirtyFlags()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetBase(sourceAttr, 10f);
@@ -591,12 +606,15 @@ namespace Ludots.Tests.GAS
             binding.Add(1);
             world.Add(entity, binding);
 
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
             using var system = new AttributeAggregatorSystem(
                 world,
                 registry,
                 new GasGraphRuntimeApi(world, tagOps: tagOps),
-                tagOps);
+                tagOps,
+                aggregateDirty: aggDirty);
+            aggDirty.MarkDirty(entity);
             system.Update(0f);
 
             // Entity keeps its preinstalled DirtyFlags and records the derived change.

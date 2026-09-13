@@ -26,13 +26,17 @@ namespace Ludots.Core.Gameplay.GAS
         private readonly DirtyEntityQueue _dirtyEntities;
         private readonly Dictionary<int, TagRuleSet> _authoredRuleSets = new();
 
-        public TagOps(DirtyEntityQueue dirtyEntities, TagRuleRegistry rules, GasBudget budget = null)
+        public TagOps(DirtyEntityQueue dirtyEntities, TagRuleRegistry rules, GasBudget budget = null, AttributeAggregateDirtyRegistry aggregateDirty = null)
         {
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _transaction = new TagRuleTransaction();
             _budget = budget;
             _dirtyEntities = dirtyEntities ?? throw new ArgumentNullException(nameof(dirtyEntities));
+            AggregateDirty = aggregateDirty;
         }
+
+        /// <summary>属性聚合脏注册表：属性变异经 TagOps 统一携带，标记与消费共享同一实例。</summary>
+        public AttributeAggregateDirtyRegistry? AggregateDirty { get; }
 
         /// <summary>
         /// Access the underlying TagRuleRegistry (e.g. for OrderSubmitter).

@@ -44,7 +44,7 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 world.Get<DirtyFlags>(target).MarkAttributeDirty(attributeId);
                 tagOps.MarkDirtyEntity(world, target);
-                MarkAttributeAggregateDirty(world, target);
+                MarkAttributeAggregateDirty(world, target, tagOps);
             }
             catch
             {
@@ -92,7 +92,7 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 world.Get<DirtyFlags>(target).MarkAttributeDirty(attributeId);
                 tagOps.MarkDirtyEntity(world, target);
-                MarkAttributeAggregateDirty(world, target);
+                MarkAttributeAggregateDirty(world, target, tagOps);
             }
             catch
             {
@@ -169,7 +169,7 @@ namespace Ludots.Core.Gameplay.GAS
                 try
                 {
                     tagOps.MarkDirtyEntity(world, target);
-                    MarkAttributeAggregateDirty(world, target);
+                    MarkAttributeAggregateDirty(world, target, tagOps);
                 }
                 catch
                 {
@@ -205,14 +205,14 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        private static void MarkAttributeAggregateDirty(World world, Entity target)
+        private static void MarkAttributeAggregateDirty(World world, Entity target, TagOps tagOps)
         {
-            if (!world.Has<ActiveEffectContainer>(target) || world.Has<AttributeAggregateDirty>(target))
+            if (!world.Has<ActiveEffectContainer>(target))
             {
                 return;
             }
 
-            world.Add(target, new AttributeAggregateDirty());
+            (tagOps.AggregateDirty ?? throw new InvalidOperationException(AttributeAggregateDirtyRegistry.MissingRegistryError)).MarkDirty(target);
         }
 
         private static void MarkPresentationChanged(World world, Entity target, int attributeId)

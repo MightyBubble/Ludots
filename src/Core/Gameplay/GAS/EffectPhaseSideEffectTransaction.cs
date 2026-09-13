@@ -142,6 +142,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly int[] _relationParentRingTotal;
     private readonly ushort[] _relationParentRingSlotsTaken;
     private readonly Ludots.Core.Movement.PoseAuthorityArbiter? _poseAuthorityArbiter;
+    private readonly AttributeAggregateDirtyRegistry? _aggregateDirty;
     private CommandBuffer _structuralCommands;
     private readonly CommandBuffer _structuralRollbackCommands;
     private readonly int _structuralCommandCapacity;
@@ -183,7 +184,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         GasPresentationEventBuffer? presentationEvents,
         int attributeEntityCapacity,
         RootBudgetTable? rootBudget = null,
-        Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null)
+        Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null,
+        AttributeAggregateDirtyRegistry? aggregateDirty = null)
     {
         if (attributeEntityCapacity <= 0)
         {
@@ -192,6 +194,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         _world = world ?? throw new ArgumentNullException(nameof(world));
         _tagOps = tagOps;
+        _aggregateDirty = aggregateDirty;
         _effectRequests = effectRequests;
         _spawnRequests = spawnRequests;
         _presentationEvents = presentationEvents;
@@ -1143,6 +1146,10 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public void StageAggregateDirty(Entity target)
     {
         RequireActive();
+        if (_aggregateDirty == null)
+        {
+            throw new InvalidOperationException(AttributeAggregateDirtyRegistry.MissingRegistryError);
+        }
         if (!_world.IsAlive(target))
         {
             throw new InvalidOperationException(
@@ -1264,7 +1271,14 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         try
         {
             PrepareCommitState();
+            // 脏标记随世界写入阶段一并生效（对齐旧 tag 经 _structuralCommands 回放的生效时机），
+            // existed 位在此刻随 MarkDirty 的翻转结果落账，供回滚判定“本事务新标脏”。
             _worldCommitStarted = true;
+            for (int i = 0; i < _aggregateDirtyCount; i++)
+            {
+                _aggregateDirtyExisted[i] = !_aggregateDirty!.MarkDirty(_aggregateDirtyEntities[i]);
+            }
+
             if (_structuralCommands.Size > 0)
             {
                 _structuralCommands.Playback(_world);
@@ -1926,16 +1940,6 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         {
             _cancelledEffectOriginalValues[i] = _world.Get<GameplayEffect>(_cancelledEffects[i]).CancelRequested;
         }
-        for (int i = 0; i < _aggregateDirtyCount; i++)
-        {
-            Entity entity = _aggregateDirtyEntities[i];
-            bool existed = _world.Has<AttributeAggregateDirty>(entity);
-            _aggregateDirtyExisted[i] = existed;
-            if (!existed)
-            {
-                _structuralCommands.Add(entity, new AttributeAggregateDirty());
-            }
-        }
 
         PrepareListenerValues();
         PrepareRelationValues();
@@ -2465,11 +2469,9 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
         for (int i = 0; i < _aggregateDirtyCount; i++)
         {
-            if (!_aggregateDirtyExisted[i] &&
-                _world.IsAlive(_aggregateDirtyEntities[i]) &&
-                _world.Has<AttributeAggregateDirty>(_aggregateDirtyEntities[i]))
+            if (!_aggregateDirtyExisted[i])
             {
-                _structuralRollbackCommands.Remove<AttributeAggregateDirty>(_aggregateDirtyEntities[i]);
+                _aggregateDirty!.Unmark(_aggregateDirtyEntities[i]);
             }
         }
         for (int i = 0; i < _listenerEntityCount; i++)

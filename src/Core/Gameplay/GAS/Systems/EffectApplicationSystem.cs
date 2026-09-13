@@ -123,6 +123,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectTemplateRegistry _templates;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly TagOps _tagOps;
+        private readonly AttributeAggregateDirtyRegistry? _aggregateDirty;
 
         // ── Phase Graph execution (optional) ──
         private readonly EffectPhaseExecutor _phaseExecutor;
@@ -133,7 +134,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly IClock _clock;
         private readonly int _stepRateHz;
 
-        public EffectApplicationSystem(World world, int fanOutCommandCapacity, IClock clock, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter poseAuthorityArbiter = null) : base(world)
+        public EffectApplicationSystem(World world, int fanOutCommandCapacity, IClock clock, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter poseAuthorityArbiter = null, AttributeAggregateDirtyRegistry aggregateDirty = null) : base(world)
         {
             _fanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
             _fanOutBudget = fanOutBudget ?? new RootBudgetTable(fanOutCommandCapacity);
@@ -155,6 +156,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _phaseExecutor = phaseExecutor;
             _graphApiHost = graphApi;
             _graphApi = graphApi;
+            _aggregateDirty = aggregateDirty;
             _builtinRuntime.SpatialQueries = spatialQueries;
             _builtinRuntime.FanOutBudget = _fanOutBudget;
             _builtinRuntime.FanOutCommands = _fanOutCommands;
@@ -180,7 +182,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 presentationEvents,
                 _resolverBuffer.Length,
                 _fanOutBudget,
-                poseAuthorityArbiter);
+                poseAuthorityArbiter,
+                aggregateDirty);
         }
 
         private void RefreshBuiltinOrderContext()
@@ -566,9 +569,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 _persistentPhaseTransaction.StageAggregateDirty(target);
             }
-            else if (!World.Has<AttributeAggregateDirty>(target))
+            else
             {
-                World.Add(target, new AttributeAggregateDirty());
+                RequireAggregateDirtyRegistry();
+                _aggregateDirty!.MarkDirty(target);
+            }
+        }
+
+        private void RequireAggregateDirtyRegistry()
+        {
+            if (_aggregateDirty == null)
+            {
+                throw new InvalidOperationException(AttributeAggregateDirtyRegistry.MissingRegistryError);
             }
         }
 
