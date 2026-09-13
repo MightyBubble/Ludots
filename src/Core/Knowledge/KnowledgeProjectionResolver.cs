@@ -54,6 +54,21 @@ namespace Ludots.Core.Knowledge
             return required == KnowledgePositionAccess.None || Position >= required;
         }
 
+        public KnowledgeDisclosureRecord ToDisclosureRecord()
+        {
+            return new KnowledgeDisclosureRecord(
+                Presence,
+                Position,
+                in AttributeMask,
+                in RelationshipTypeMask,
+                in TagMask,
+                Source,
+                ObservedTick,
+                ExpiryTick,
+                ConfidencePermille,
+                Revision);
+        }
+
         public bool CanReadAttribute(int attributeId) => AttributeMask.ContainsId(attributeId);
 
         public bool CanReadRelationship(int relationshipTypeId) => RelationshipTypeMask.ContainsId(relationshipTypeId);
