@@ -833,8 +833,24 @@ namespace Ludots.Presentation.Skia
                 return 0;
             }
 
+            int bucketCount = state.Buckets.Count;
+            int totalInstanceCount = 0;
+            for (int bucketIndex = 0; bucketIndex < bucketCount; bucketIndex++)
+            {
+                totalInstanceCount += state.Buckets[bucketIndex].Count;
+            }
+
+            if (totalInstanceCount <= 0)
+            {
+                return 0;
+            }
+
+            // 所有 bar 桶共享同一张 atlas，实例合并成一次 draw atlas；
+            // fill 量化会让桶数随可见取值线性增长，逐桶签发会等量放大绘制调用
+            state.EnsureDrawCapacity(totalInstanceCount);
+            int writeIndex = 0;
             int activeBucketCount = 0;
-            for (int bucketIndex = 0; bucketIndex < state.Buckets.Count; bucketIndex++)
+            for (int bucketIndex = 0; bucketIndex < bucketCount; bucketIndex++)
             {
                 RetainedBarBatchBucket bucket = state.Buckets[bucketIndex];
                 int count = bucket.Count;
@@ -843,11 +859,21 @@ namespace Ludots.Presentation.Skia
                     continue;
                 }
 
-                bucket.SetSpriteRect(state.AtlasSprites[bucketIndex]);
-                DrawAtlasCount(canvas, state.AtlasImage, bucket.Sprites, bucket.Transforms, count);
                 activeBucketCount++;
+                SKRect spriteRect = state.AtlasSprites[bucketIndex];
+                float[] positionsX = bucket.X;
+                float[] positionsY = bucket.Y;
+                SKRotationScaleMatrix[] drawTransforms = state.DrawTransforms;
+                SKRect[] drawSprites = state.DrawSprites;
+                for (int instanceIndex = 0; instanceIndex < count; instanceIndex++)
+                {
+                    drawSprites[writeIndex] = spriteRect;
+                    drawTransforms[writeIndex] = new SKRotationScaleMatrix(1f, 0f, positionsX[instanceIndex], positionsY[instanceIndex]);
+                    writeIndex++;
+                }
             }
 
+            DrawAtlasCount(canvas, state.AtlasImage, state.DrawSprites, state.DrawTransforms, totalInstanceCount);
             return activeBucketCount;
         }
 
@@ -867,6 +893,18 @@ namespace Ludots.Presentation.Skia
                 {
                     RebuildRetainedBarLane(state, laneVersion, span);
                     return;
+                }
+
+                if (state.OrderStableIds[i] == stableId)
+                {
+                    RetainedBarEntry orderEntry = state.OrderEntries[i];
+                    if (orderEntry.BucketIndex >= 0 &&
+                        (uint)orderEntry.BucketIndex < (uint)state.Buckets.Count &&
+                        orderEntry.DirtySerial == item.DirtySerial)
+                    {
+                        state.Buckets[orderEntry.BucketIndex].AddVisible(item.X, item.Y);
+                        continue;
+                    }
                 }
 
                 if (state.ItemsByStableId.TryGetValue(stableId, out RetainedBarEntry entry))
@@ -1084,17 +1122,30 @@ namespace Ludots.Presentation.Skia
                 return;
             }
 
+            // 桶数随 fill 量化取值增长，单行条带会持续拉宽；按限宽 shelf 换行打包
+            const int maxAtlasWidth = 2048;
+            state.EnsureAtlasSpriteCapacity(bucketCount);
             int atlasWidth = 0;
             int atlasHeight = 0;
-            state.EnsureAtlasSpriteCapacity(bucketCount);
+            int cursorX = 0;
+            int rowHeight = 0;
             for (int i = 0; i < bucketCount; i++)
             {
                 SKImage image = state.Buckets[i].Image;
-                state.AtlasSprites[i] = new SKRect(atlasWidth, 0f, atlasWidth + image.Width, image.Height);
-                atlasWidth += image.Width;
-                atlasHeight = Math.Max(atlasHeight, image.Height);
+                if (cursorX > 0 && cursorX + image.Width > maxAtlasWidth)
+                {
+                    cursorX = 0;
+                    atlasHeight += rowHeight;
+                    rowHeight = 0;
+                }
+
+                state.AtlasSprites[i] = new SKRect(cursorX, atlasHeight, cursorX + image.Width, atlasHeight + image.Height);
+                cursorX += image.Width;
+                atlasWidth = Math.Max(atlasWidth, cursorX);
+                rowHeight = Math.Max(rowHeight, image.Height);
             }
 
+            atlasHeight += rowHeight;
             if (atlasWidth <= 0 || atlasHeight <= 0)
             {
                 state.AtlasDirty = false;
@@ -1107,7 +1158,7 @@ namespace Ludots.Presentation.Skia
             for (int i = 0; i < bucketCount; i++)
             {
                 SKRect sprite = state.AtlasSprites[i];
-                atlasCanvas.DrawImage(state.Buckets[i].Image, sprite.Left, 0f);
+                atlasCanvas.DrawImage(state.Buckets[i].Image, sprite.Left, sprite.Top);
             }
 
             state.AtlasImage = surface.Snapshot();
@@ -1532,10 +1583,14 @@ namespace Ludots.Presentation.Skia
 
                 activeBucketCount++;
                 SKRect spriteRect = state.AtlasSprites[bucketIndex];
+                float[] positionsX = bucket.X;
+                float[] positionsY = bucket.Y;
+                SKRotationScaleMatrix[] drawTransforms = state.DrawTransforms;
+                SKRect[] drawSprites = state.DrawSprites;
                 for (int instanceIndex = 0; instanceIndex < count; instanceIndex++)
                 {
-                    state.DrawSprites[writeIndex] = spriteRect;
-                    state.DrawTransforms[writeIndex] = bucket.Transforms[instanceIndex];
+                    drawSprites[writeIndex] = spriteRect;
+                    drawTransforms[writeIndex] = new SKRotationScaleMatrix(1f, 0f, positionsX[instanceIndex], positionsY[instanceIndex]);
                     writeIndex++;
                 }
             }
@@ -1605,7 +1660,7 @@ namespace Ludots.Presentation.Skia
                     orderEntry.DirtySerial == item.DirtySerial)
                 {
                     RetainedTextSpriteBatchBucket orderBucket = state.Buckets[orderEntry.BucketIndex];
-                    float orderDrawY = (item.Y + fontSize) - orderBucket.Sprite.BaselineY;
+                    float orderDrawY = (item.Y + fontSize) - state.BucketBaselines[orderEntry.BucketIndex];
                     orderBucket.AddVisible(item.X, orderDrawY);
                     continue;
                 }
@@ -1618,7 +1673,7 @@ namespace Ludots.Presentation.Skia
                         : entry.Key.Equals(new TextBatchKey(item.Text, fontSize, ToColorKey(ToSkColor(item.Color0))))))
                 {
                     RetainedTextSpriteBatchBucket bucket = state.Buckets[entry.BucketIndex];
-                    float drawY = (item.Y + fontSize) - bucket.Sprite.BaselineY;
+                    float drawY = (item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex];
                     bucket.AddVisible(item.X, drawY);
                     entry.SeenStamp = stamp;
                     entry.DirtySerial = item.DirtySerial;
@@ -1683,7 +1738,7 @@ namespace Ludots.Presentation.Skia
 
                 RetainedTextSpriteBatchBucket bucket = state.Buckets[entry.BucketIndex];
                 int fontSize = state.OrderFontSizes[i];
-                float drawY = (item.Y + fontSize) - bucket.Sprite.BaselineY;
+                float drawY = (item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex];
                 bucket.AddVisible(item.X, drawY);
             }
 
@@ -1768,6 +1823,12 @@ namespace Ludots.Presentation.Skia
             bucketIndex = state.Buckets.Count;
             CachedTextSprite sprite = GetTextSprite(text, fontSize, color);
             state.Buckets.Add(new RetainedTextSpriteBatchBucket(sprite));
+            if (state.BucketBaselines.Length <= bucketIndex)
+            {
+                Array.Resize(ref state.BucketBaselines, ResolveNextCapacity(state.BucketBaselines.Length, bucketIndex + 1));
+            }
+
+            state.BucketBaselines[bucketIndex] = sprite.BaselineY;
             state.BucketIndexByKey[key] = bucketIndex;
             state.AtlasDirty = true;
             return bucketIndex;
@@ -2552,6 +2613,7 @@ namespace Ludots.Presentation.Skia
             public readonly List<RetainedTextSpriteBatchBucket> Buckets = new();
             public readonly List<int> RemovedStableIds = new();
             public readonly List<int> PendingGlyphIndices = new();
+            public float[] BucketBaselines = Array.Empty<float>();
             public int[] OrderStableIds = Array.Empty<int>();
             public RetainedTextSpriteEntry[] OrderEntries = Array.Empty<RetainedTextSpriteEntry>();
             public int[] OrderFontSizes = Array.Empty<int>();
@@ -2658,16 +2720,10 @@ namespace Ludots.Presentation.Skia
             private int[] _stableIds = Array.Empty<int>();
             private float[] _x = Array.Empty<float>();
             private float[] _y = Array.Empty<float>();
-            private SKRect[] _sprites = Array.Empty<SKRect>();
-            private SKRotationScaleMatrix[] _transforms = Array.Empty<SKRotationScaleMatrix>();
-            private readonly SKRect _spriteRect;
-            private SKRect _drawSpriteRect;
 
             public RetainedBarBatchBucket(SKImage image)
             {
                 Image = image;
-                _spriteRect = new SKRect(0f, 0f, image.Width, image.Height);
-                _drawSpriteRect = _spriteRect;
             }
 
             public SKImage Image { get; }
@@ -2678,10 +2734,6 @@ namespace Ludots.Presentation.Skia
 
             public float[] Y => _y;
 
-            public SKRect[] Sprites => _sprites;
-
-            public SKRotationScaleMatrix[] Transforms => _transforms;
-
             public void ResetVisible()
             {
                 Count = 0;
@@ -2692,7 +2744,8 @@ namespace Ludots.Presentation.Skia
                 EnsureCapacity(Count + 1);
                 int index = Count++;
                 _stableIds[index] = 0;
-                Update(index, x, y);
+                _x[index] = x;
+                _y[index] = y;
             }
 
             public int Add(int stableId, float x, float y)
@@ -2700,30 +2753,9 @@ namespace Ludots.Presentation.Skia
                 EnsureCapacity(Count + 1);
                 int index = Count++;
                 _stableIds[index] = stableId;
-                Update(index, x, y);
-                return index;
-            }
-
-            public void Update(int index, float x, float y)
-            {
                 _x[index] = x;
                 _y[index] = y;
-                _sprites[index] = _drawSpriteRect;
-                _transforms[index] = SKRotationScaleMatrix.CreateTranslation(x, y);
-            }
-
-            public void SetSpriteRect(SKRect spriteRect)
-            {
-                if (_drawSpriteRect == spriteRect)
-                {
-                    return;
-                }
-
-                _drawSpriteRect = spriteRect;
-                for (int i = 0; i < Count; i++)
-                {
-                    _sprites[i] = spriteRect;
-                }
+                return index;
             }
 
             public int RemoveAt(int index)
@@ -2736,8 +2768,6 @@ namespace Ludots.Presentation.Skia
                     _stableIds[index] = movedStableId;
                     _x[index] = _x[lastIndex];
                     _y[index] = _y[lastIndex];
-                    _sprites[index] = _sprites[lastIndex];
-                    _transforms[index] = _transforms[lastIndex];
                 }
 
                 _stableIds[lastIndex] = 0;
@@ -2761,8 +2791,6 @@ namespace Ludots.Presentation.Skia
                 Array.Resize(ref _stableIds, next);
                 Array.Resize(ref _x, next);
                 Array.Resize(ref _y, next);
-                Array.Resize(ref _sprites, next);
-                Array.Resize(ref _transforms, next);
             }
         }
 
@@ -2771,16 +2799,10 @@ namespace Ludots.Presentation.Skia
             private int[] _stableIds = Array.Empty<int>();
             private float[] _x = Array.Empty<float>();
             private float[] _y = Array.Empty<float>();
-            private SKRect[] _sprites = Array.Empty<SKRect>();
-            private SKRotationScaleMatrix[] _transforms = Array.Empty<SKRotationScaleMatrix>();
-            private readonly SKRect _spriteRect;
-            private SKRect _drawSpriteRect;
 
             public RetainedTextSpriteBatchBucket(CachedTextSprite sprite)
             {
                 Sprite = sprite;
-                _spriteRect = new SKRect(0f, 0f, sprite.Image.Width, sprite.Image.Height);
-                _drawSpriteRect = _spriteRect;
             }
 
             public CachedTextSprite Sprite { get; }
@@ -2791,10 +2813,6 @@ namespace Ludots.Presentation.Skia
 
             public float[] Y => _y;
 
-            public SKRect[] Sprites => _sprites;
-
-            public SKRotationScaleMatrix[] Transforms => _transforms;
-
             public void ResetVisible()
             {
                 Count = 0;
@@ -2805,7 +2823,8 @@ namespace Ludots.Presentation.Skia
                 EnsureCapacity(Count + 1);
                 int index = Count++;
                 _stableIds[index] = 0;
-                Update(index, x, y);
+                _x[index] = x;
+                _y[index] = y;
             }
 
             public int Add(int stableId, float x, float y)
@@ -2813,16 +2832,9 @@ namespace Ludots.Presentation.Skia
                 EnsureCapacity(Count + 1);
                 int index = Count++;
                 _stableIds[index] = stableId;
-                Update(index, x, y);
-                return index;
-            }
-
-            public void Update(int index, float x, float y)
-            {
                 _x[index] = x;
                 _y[index] = y;
-                _sprites[index] = _drawSpriteRect;
-                _transforms[index] = SKRotationScaleMatrix.CreateTranslation(x, y);
+                return index;
             }
 
             public int RemoveAt(int index)
@@ -2835,8 +2847,6 @@ namespace Ludots.Presentation.Skia
                     _stableIds[index] = movedStableId;
                     _x[index] = _x[lastIndex];
                     _y[index] = _y[lastIndex];
-                    _sprites[index] = _sprites[lastIndex];
-                    _transforms[index] = _transforms[lastIndex];
                 }
 
                 _stableIds[lastIndex] = 0;
@@ -2860,8 +2870,6 @@ namespace Ludots.Presentation.Skia
                 Array.Resize(ref _stableIds, next);
                 Array.Resize(ref _x, next);
                 Array.Resize(ref _y, next);
-                Array.Resize(ref _sprites, next);
-                Array.Resize(ref _transforms, next);
             }
         }
 
