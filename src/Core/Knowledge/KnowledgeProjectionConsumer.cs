@@ -130,7 +130,9 @@ namespace Ludots.Core.Knowledge
         /// Per-marker consumers (the minimap projects one marker per agent) only need the raw disclosure
         /// behind a viewer/target pair. This skips scope resolution, the accumulator merge and the
         /// KnowledgeProjection construction, which is where thousands of per-frame resolutions spent
-        /// their time.
+        /// their time. When the store holds no direct viewer/target record the fast path would silently
+        /// drop knowledge that the full projection surfaces through relation grants (ally intel), so the
+        /// miss falls back to the grant-resolving path before answering "unknown".
         /// </summary>
         /// <summary>Dense-consumer form: caller hoists the resolver and tick out of its per-entity loop.</summary>
         public static bool TryResolveDisclosure(
@@ -146,7 +148,12 @@ namespace Ludots.Core.Knowledge
                 return false;
             }
 
-            return resolver.TryResolveDisclosure(viewer, target, currentTick, out record);
+            if (resolver.TryResolveDisclosure(viewer, target, currentTick, out record))
+            {
+                return true;
+            }
+
+            return TryResolveDisclosureWithRelationGrants(resolver, currentTick, viewer, target, out record);
         }
 
         public static bool TryResolveDisclosureForViewer(
@@ -164,7 +171,46 @@ namespace Ludots.Core.Knowledge
                 return false;
             }
 
-            return resolver.TryResolveDisclosure(viewer, target, ResolveCurrentTick(globals), out record);
+            if (resolver.TryResolveDisclosure(viewer, target, ResolveCurrentTick(globals), out record))
+            {
+                return true;
+            }
+
+            return TryResolveDisclosureWithRelationGrants(resolver, ResolveCurrentTick(globals), viewer, target, out record);
+        }
+
+        private static bool TryResolveDisclosureWithRelationGrants(
+            KnowledgeProjectionResolver resolver,
+            int currentTick,
+            Entity viewer,
+            Entity target,
+            out KnowledgeDisclosureRecord record)
+        {
+            Span<Entity> scopeMembers = stackalloc Entity[1];
+            Span<Entity> relationSources = stackalloc Entity[RelationSourceBufferCapacity];
+            Span<Entity> relationTargets = stackalloc Entity[RelationTargetBufferCapacity];
+            ScopeKey viewerScope = ScopeKey.Self;
+            var roleContext = new RoleResolverContext(
+                actor: viewer,
+                subject: viewer,
+                viewer: viewer);
+            if (!resolver.TryResolveWithRelationGrants(
+                    viewer,
+                    target,
+                    currentTick,
+                    in viewerScope,
+                    in roleContext,
+                    scopeMembers,
+                    relationSources,
+                    relationTargets,
+                    out KnowledgeProjection projection))
+            {
+                record = default;
+                return false;
+            }
+
+            record = projection.ToDisclosureRecord();
+            return true;
         }
 
         /// <summary>
