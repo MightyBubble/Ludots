@@ -61,7 +61,8 @@ namespace Ludots.Core.Input.CommandSources
                 return false;
             }
 
-            if (!KnowledgeProjectionConsumer.HasResolver(globals))
+            if (KnowledgeProjectionConsumer.IsAudienceRevealHidden(globals) ||
+                !KnowledgeProjectionConsumer.HasResolver(globals))
             {
                 return true;
             }
@@ -93,7 +94,8 @@ namespace Ludots.Core.Input.CommandSources
                 return false;
             }
 
-            if (!KnowledgeProjectionConsumer.HasResolver(globals))
+            if (KnowledgeProjectionConsumer.IsAudienceRevealHidden(globals) ||
+                !KnowledgeProjectionConsumer.HasResolver(globals))
             {
                 return true;
             }
