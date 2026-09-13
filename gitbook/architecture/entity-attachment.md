@@ -47,6 +47,9 @@ AttachmentPositionSyncSystem
 ### 3.3 位姿
 
 - 深度序父先子后；`None` / `ParentFacing` / `OwnFacing` 语义固定。
+- 排序只使用同时具有 `ChildOf` 与 `AttachedLocalPose` 的空间挂接边。普通子集关系不增加空间挂接深度。
+- 对象与父实体未变化时复用派生顺序；重挂、移除或实体身份变化时，通过固定容量快照重建父先子后顺序。局部位姿变化直接参与下一次派生。
+- 空间挂接环与快照超容在写入位置前报错。重建和同步均不按每个深度重扫全部实体。
 - `inheritParentFacing=true` 与 `OwnFacing` 互斥（装载期失败）。
 - 缺必要父/子位姿组件失败，不自动补组件。
 - 不做 `Current==Previous` 门控；恒重算以保证 post-sink 写者时序下子实体不冻结。

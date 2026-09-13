@@ -119,3 +119,12 @@ Ruleset: `scripts/validate-docs.ps1`（链接/反引号路径/命名规则）+ `
 - 帧统计表摘自当前验收工件（`engine_gallery_all/*.json` 等），证据重跑后数值会变化；页面已标注工件路径供对账。
 - 侧栏 Playwright 自动化点击在粘性滚动容器内偶发超时（人工路径不受影响；哈希路由 `#scene/<id>` 等价可达，实测正常）。
 - 本次操作事故记录：在他人工作树 `.worktrees/audit-raylib-main` 做 stash 验证时，因多工作树共享 stash 栈弹入了他人 stash 造成冲突残留；已 `git reset --hard` 恢复至该分支干净 HEAD（`a4b594a118`），他人 stash（wip-nr）完好保留。教训：不在共享仓库的他人工作树执行 stash/pop。
+
+
+## Entity attachment topology review — 2026-09-09
+
+- Scope: gitbook/architecture/entity-attachment.md section 3.3 and artifacts/evidence/entity-attachment-motion/topology-measurement.md.
+- Rules: update existing SSOT, preserve #239/#244 design ownership, repository-relative paths, distinguish focused CPU evidence from runtime FPS.
+- Findings: no new broken evidence paths; P1 existing navigation component suspension and implicit template children remain unresolved and are expressly retained as open work. P1 stock GasTests compilation is blocked by DeferredTriggerTests.cs, independently of this topology change.
+- Fix order: publish focused topology evidence; complete navigation ownership and explicit authoring migration; rerun full and runtime acceptance.
+- Residual risks: current schedule/previous-pose and orphan cleanup contracts remain unchanged. Only explicit attachment dependency ordering was verified here. This is not a repository-wide governance audit.

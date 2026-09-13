@@ -1,0 +1,108 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="61cd4e37-87dd-476c-91fe-c0377c6e187b" name="sietg@CODESEAL 2026-09-09 19:25:24" runUser="CODESEAL\sietg" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-09T19:25:24.7043086+08:00" queuing="2026-09-09T19:25:24.7043088+08:00" start="2026-09-09T19:25:22.6882666+08:00" finish="2026-09-09T19:25:25.0215350+08:00" />
+  <TestSettings name="default" id="6f80ca8e-e4ca-4c7e-9ea2-b2be0e878175">
+    <Deployment runDeploymentRoot="sietg_CODESEAL_2026-09-09_19_25_24" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="c8a4545e-ee0a-4395-962c-eaa09c9de0d7" testId="80a8673f-af98-f35b-ddfe-68dfc6ce1cbd" testName="MovingAssemblies_ReportScalingAndAllocations(5000,128)" computerName="CODESEAL" duration="00:00:00.2148500" startTime="2026-09-09T19:25:24.1315260+08:00" endTime="2026-09-09T19:25:24.3463660+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c8a4545e-ee0a-4395-962c-eaa09c9de0d7" />
+    <UnitTestResult executionId="223032ad-8947-40ab-b462-8846913d9b44" testId="cfbc86d6-2a5d-0280-4ff5-21e4145cc2fd" testName="MovingAssemblies_ReportScalingAndAllocations(1000,32)" computerName="CODESEAL" duration="00:00:00.0172510" startTime="2026-09-09T19:25:23.9573548+08:00" endTime="2026-09-09T19:25:23.9746044+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="223032ad-8947-40ab-b462-8846913d9b44" />
+    <UnitTestResult executionId="cfd26d19-8cdc-4d2d-978d-8ffc0b58cb43" testId="1af890c6-34a0-2374-6fff-e6db542057dc" testName="MovingAssemblies_ReportScalingAndAllocations(5000,32)" computerName="CODESEAL" duration="00:00:00.0639570" startTime="2026-09-09T19:25:24.0675403+08:00" endTime="2026-09-09T19:25:24.1314933+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cfd26d19-8cdc-4d2d-978d-8ffc0b58cb43" />
+    <UnitTestResult executionId="072da6eb-0783-429d-b4aa-c5b60d78641b" testId="e68ef58a-4f34-a032-5590-81b586ce5d77" testName="MovingAssemblies_ReportScalingAndAllocations(1000,128)" computerName="CODESEAL" duration="00:00:00.0488600" startTime="2026-09-09T19:25:23.9746422+08:00" endTime="2026-09-09T19:25:24.0234996+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="072da6eb-0783-429d-b4aa-c5b60d78641b" />
+    <UnitTestResult executionId="b3e99681-e671-4c73-af46-aaae6adc54a3" testId="6558a83d-f3d6-7095-a9aa-3174acebd916" testName="MovingAssemblies_ReportScalingAndAllocations(10000,128)" computerName="CODESEAL" duration="00:00:00.4385300" startTime="2026-09-09T19:25:24.5197875+08:00" endTime="2026-09-09T19:25:24.9582985+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b3e99681-e671-4c73-af46-aaae6adc54a3" />
+    <UnitTestResult executionId="73e1b21b-d7ce-4da7-8bb0-308a0b3460ca" testId="0933dc2c-43ed-4367-77a2-bdc064f6018d" testName="MovingAssemblies_ReportScalingAndAllocations(10000,1)" computerName="CODESEAL" duration="00:00:00.0429430" startTime="2026-09-09T19:25:24.3463891+08:00" endTime="2026-09-09T19:25:24.3893301+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="73e1b21b-d7ce-4da7-8bb0-308a0b3460ca" />
+    <UnitTestResult executionId="46a0a82e-d44b-495a-802d-af1860943003" testId="eb1fef2b-24e4-164b-2168-ed606e69e0b6" testName="MovingAssemblies_ReportScalingAndAllocations(5000,1)" computerName="CODESEAL" duration="00:00:00.0440030" startTime="2026-09-09T19:25:24.0235199+08:00" endTime="2026-09-09T19:25:24.0675210+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="46a0a82e-d44b-495a-802d-af1860943003" />
+    <UnitTestResult executionId="082fd342-562e-473f-a392-e06674915159" testId="49062796-9a0b-c738-243a-f0f8f89e9c29" testName="MovingAssemblies_ReportScalingAndAllocations(10000,32)" computerName="CODESEAL" duration="00:00:00.1304150" startTime="2026-09-09T19:25:24.3893584+08:00" endTime="2026-09-09T19:25:24.5197675+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="082fd342-562e-473f-a392-e06674915159" />
+    <UnitTestResult executionId="e5b01c66-182e-40b0-9cff-a417bcc8f6f2" testId="126cb0b1-84ba-8377-63b0-2d5b37c44904" testName="MovingAssemblies_ReportScalingAndAllocations(1000,1)" computerName="CODESEAL" duration="00:00:00.0982300" startTime="2026-09-09T19:25:23.8568873+08:00" endTime="2026-09-09T19:25:23.9549848+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e5b01c66-182e-40b0-9cff-a417bcc8f6f2" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="MovingAssemblies_ReportScalingAndAllocations(5000,32)" storage="c:\001_ai\ludots-entity-attachment-motion-contract\src\tests\gastests\bin\release\net9.0\gastests.dll" id="1af890c6-34a0-2374-6fff-e6db542057dc">
+      <Execution id="cfd26d19-8cdc-4d2d-978d-8ffc0b58cb43" />
+      <TestMethod codeBase="C:\001_AI\Ludots-entity-attachment-motion-contract\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.GAS.AttachmentPositionScaleTests" name="MovingAssemblies_ReportScalingAndAllocations(5000,32)" />
+    </UnitTest>
+    <UnitTest name="MovingAssemblies_ReportScalingAndAllocations(10000,32)" storage="c:\001_ai\ludots-entity-attachment-motion-contract\src\tests\gastests\bin\release\net9.0\gastests.dll" id="49062796-9a0b-c738-243a-f0f8f89e9c29">
+      <Execution id="082fd342-562e-473f-a392-e06674915159" />
+      <TestMethod codeBase="C:\001_AI\Ludots-entity-attachment-motion-contract\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.GAS.AttachmentPositionScaleTests" name="MovingAssemblies_ReportScalingAndAllocations(10000,32)" />
+    </UnitTest>
+    <UnitTest name="MovingAssemblies_ReportScalingAndAllocations(5000,1)" storage="c:\001_ai\ludots-entity-attachment-motion-contract\src\tests\gastests\bin\release\net9.0\gastests.dll" id="eb1fef2b-24e4-164b-2168-ed606e69e0b6">
+      <Execution id="46a0a82e-d44b-495a-802d-af1860943003" />
+      <TestMethod codeBase="C:\001_AI\Ludots-entity-attachment-motion-contract\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.GAS.AttachmentPositionScaleTests" name="MovingAssemblies_ReportScalingAndAllocations(5000,1)" />
+    </UnitTest>
+    <UnitTest name="MovingAssemblies_ReportScalingAndAllocations(5000,128)" storage="c:\001_ai\ludots-entity-attachment-motion-contract\src\tests\gastests\bin\release\net9.0\gastests.dll" id="80a8673f-af98-f35b-ddfe-68dfc6ce1cbd">
+      <Execution id="c8a4545e-ee0a-4395-962c-eaa09c9de0d7" />
+      <TestMethod codeBase="C:\001_AI\Ludots-entity-attachment-motion-contract\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.GAS.AttachmentPositionScaleTests" name="MovingAssemblies_ReportScalingAndAllocations(5000,128)" />
+    </UnitTest>
+    <UnitTest name="MovingAssemblies_ReportScalingAndAllocations(10000,128)" storage="c:\001_ai\ludots-entity-attachment-motion-contract\src\tests\gastests\bin\release\net9.0\gastests.dll" id="6558a83d-f3d6-7095-a9aa-3174acebd916">
+      <Execution id="b3e99681-e671-4c73-af46-aaae6adc54a3" />
+      <TestMethod codeBase="C:\001_AI\Ludots-entity-attachment-motion-contract\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.GAS.AttachmentPositionScaleTests" name="MovingAssemblies_ReportScalingAndAllocations(10000,128)" />
+    </UnitTest>
+    <UnitTest name="MovingAssemblies_ReportScalingAndAllocations(1000,128)" storage="c:\001_ai\ludots-entity-attachment-motion-contract\src\tests\gastests\bin\release\net9.0\gastests.dll" id="e68ef58a-4f34-a032-5590-81b586ce5d77">
+      <Execution id="072da6eb-0783-429d-b4aa-c5b60d78641b" />
+      <TestMethod codeBase="C:\001_AI\Ludots-entity-attachment-motion-contract\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.GAS.AttachmentPositionScaleTests" name="MovingAssemblies_ReportScalingAndAllocations(1000,128)" />
+    </UnitTest>
+    <UnitTest name="MovingAssemblies_ReportScalingAndAllocations(10000,1)" storage="c:\001_ai\ludots-entity-attachment-motion-contract\src\tests\gastests\bin\release\net9.0\gastests.dll" id="0933dc2c-43ed-4367-77a2-bdc064f6018d">
+      <Execution id="73e1b21b-d7ce-4da7-8bb0-308a0b3460ca" />
+      <TestMethod codeBase="C:\001_AI\Ludots-entity-attachment-motion-contract\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.GAS.AttachmentPositionScaleTests" name="MovingAssemblies_ReportScalingAndAllocations(10000,1)" />
+    </UnitTest>
+    <UnitTest name="MovingAssemblies_ReportScalingAndAllocations(1000,32)" storage="c:\001_ai\ludots-entity-attachment-motion-contract\src\tests\gastests\bin\release\net9.0\gastests.dll" id="cfbc86d6-2a5d-0280-4ff5-21e4145cc2fd">
+      <Execution id="223032ad-8947-40ab-b462-8846913d9b44" />
+      <TestMethod codeBase="C:\001_AI\Ludots-entity-attachment-motion-contract\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.GAS.AttachmentPositionScaleTests" name="MovingAssemblies_ReportScalingAndAllocations(1000,32)" />
+    </UnitTest>
+    <UnitTest name="MovingAssemblies_ReportScalingAndAllocations(1000,1)" storage="c:\001_ai\ludots-entity-attachment-motion-contract\src\tests\gastests\bin\release\net9.0\gastests.dll" id="126cb0b1-84ba-8377-63b0-2d5b37c44904">
+      <Execution id="e5b01c66-182e-40b0-9cff-a417bcc8f6f2" />
+      <TestMethod codeBase="C:\001_AI\Ludots-entity-attachment-motion-contract\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.GAS.AttachmentPositionScaleTests" name="MovingAssemblies_ReportScalingAndAllocations(1000,1)" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="80a8673f-af98-f35b-ddfe-68dfc6ce1cbd" executionId="c8a4545e-ee0a-4395-962c-eaa09c9de0d7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cfbc86d6-2a5d-0280-4ff5-21e4145cc2fd" executionId="223032ad-8947-40ab-b462-8846913d9b44" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1af890c6-34a0-2374-6fff-e6db542057dc" executionId="cfd26d19-8cdc-4d2d-978d-8ffc0b58cb43" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e68ef58a-4f34-a032-5590-81b586ce5d77" executionId="072da6eb-0783-429d-b4aa-c5b60d78641b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6558a83d-f3d6-7095-a9aa-3174acebd916" executionId="b3e99681-e671-4c73-af46-aaae6adc54a3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0933dc2c-43ed-4367-77a2-bdc064f6018d" executionId="73e1b21b-d7ce-4da7-8bb0-308a0b3460ca" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="eb1fef2b-24e4-164b-2168-ed606e69e0b6" executionId="46a0a82e-d44b-495a-802d-af1860943003" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="49062796-9a0b-c738-243a-f0f8f89e9c29" executionId="082fd342-562e-473f-a392-e06674915159" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="126cb0b1-84ba-8377-63b0-2d5b37c44904" executionId="e5b01c66-182e-40b0-9cff-a417bcc8f6f2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="9" executed="9" passed="9" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in C:\001_AI\Ludots-entity-attachment-motion-contract\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll&#xD;
+   NUnit3TestExecutor discovered 9 of 9 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+count,chain_length,median_ms,p95_ms,allocated_bytes&#xD;
+1000,1,0.048000,0.052200,0&#xD;
+&#xD;
+count,chain_length,median_ms,p95_ms,allocated_bytes&#xD;
+1000,32,0.304100,0.314200,0&#xD;
+&#xD;
+count,chain_length,median_ms,p95_ms,allocated_bytes&#xD;
+1000,128,0.893500,0.935300,0&#xD;
+&#xD;
+count,chain_length,median_ms,p95_ms,allocated_bytes&#xD;
+5000,1,0.292100,0.299800,0&#xD;
+&#xD;
+count,chain_length,median_ms,p95_ms,allocated_bytes&#xD;
+5000,32,1.178000,1.325200,0&#xD;
+&#xD;
+count,chain_length,median_ms,p95_ms,allocated_bytes&#xD;
+5000,128,4.184800,4.414200,0&#xD;
+&#xD;
+count,chain_length,median_ms,p95_ms,allocated_bytes&#xD;
+10000,1,0.524400,0.545300,0&#xD;
+&#xD;
+count,chain_length,median_ms,p95_ms,allocated_bytes&#xD;
+10000,32,2.376200,2.471900,0&#xD;
+&#xD;
+count,chain_length,median_ms,p95_ms,allocated_bytes&#xD;
+10000,128,8.114300,9.335600,0&#xD;
+&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

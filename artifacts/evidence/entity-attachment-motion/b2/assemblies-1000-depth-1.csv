@@ -1,0 +1,2 @@
+count,chain_length,median_ms,p95_ms,allocated_bytes
+1000,1,0.046700,0.047000,0
