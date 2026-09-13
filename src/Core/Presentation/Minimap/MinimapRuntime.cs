@@ -114,6 +114,7 @@ namespace Ludots.Core.Presentation.Minimap
         private readonly int _debugMarkerSampleCapacity;
         private int _projectionFrameCounter;
         private bool _projectionSeeded;
+        private int _seededMarkerCount;
         private int _reprojectedMarkerCountLastFrame = -1;
         private int _retainedMarkerCountLastFrame = -1;
         private int _fullRebuildFrameCounter;
@@ -819,7 +820,7 @@ namespace Ludots.Core.Presentation.Minimap
             bool sliceDueFrame = _projectionFrameCounter % period == 0;
             if (!sliceDueFrame &&
                 _projectionSeeded &&
-                ProjectionInputsUnchanged(hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer))
+                ProjectionInputsUnchanged(markers.Count, hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer))
             {
                 // 零重投影帧：相机/缩放/knowledge 视口未变且未轮到本切片相位，
                 // 屏幕缓冲整帧保留上一投影帧内容。
@@ -832,9 +833,10 @@ namespace Ludots.Core.Presentation.Minimap
             ProjectMarkersFullRebuild(engine, markers, screenMarkers, hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer);
         }
 
-        private bool ProjectionInputsUnchanged(bool hasKnowledgeResolver, bool hasKnowledgeViewer, Entity knowledgeViewer)
+        private bool ProjectionInputsUnchanged(int markerCount, bool hasKnowledgeResolver, bool hasKnowledgeViewer, Entity knowledgeViewer)
         {
-            return _centerXcm == _seededCenterXcm &&
+            return markerCount == _seededMarkerCount &&
+                _centerXcm == _seededCenterXcm &&
                 _centerYcm == _seededCenterYcm &&
                 _halfExtentCm == _seededHalfExtentCm &&
                 _mapRight == _seededMapRight &&
@@ -850,7 +852,7 @@ namespace Ludots.Core.Presentation.Minimap
                 knowledgeViewer == _seededKnowledgeViewer;
         }
 
-        private void SeedProjectionInputs(bool hasKnowledgeResolver, bool hasKnowledgeViewer, Entity knowledgeViewer)
+        private void SeedProjectionInputs(int markerCount, bool hasKnowledgeResolver, bool hasKnowledgeViewer, Entity knowledgeViewer)
         {
             _seededCenterXcm = _centerXcm;
             _seededCenterYcm = _centerYcm;
@@ -858,6 +860,7 @@ namespace Ludots.Core.Presentation.Minimap
             _seededMapRight = _mapRight;
             _seededMapUp = _mapUp;
             _seededScreenFacingOffsetRad = _screenFacingOffsetRad;
+            _seededMarkerCount = markerCount;
             _seededFieldX = _fieldX;
             _seededFieldY = _fieldY;
             _seededFieldSize = _fieldSize;
@@ -877,7 +880,7 @@ namespace Ludots.Core.Presentation.Minimap
             Entity knowledgeViewer)
         {
             _fullRebuildFrameCounter++;
-            SeedProjectionInputs(hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer);
+            SeedProjectionInputs(markers.Count, hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer);
             _projectionSeeded = true;
             _debugVisibleMarkers.Clear();
             screenMarkers.BeginBucketedFrame();
