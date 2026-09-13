@@ -58,7 +58,7 @@ namespace Ludots.Tests.Presentation
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 new MeshAssetConfigLoader(pipeline, new MeshAssetRegistry()).Load(catalog))!;
             Assert.That(ex.Message, Does.Contain("duplicate id 'shared.model'"));
-            Assert.That(ex.Message, Does.Contain("Core:Configs/Presentation/mesh_assets.json"));
+            Assert.That(ex.Message, Does.Contain("Core:Presentation/mesh_assets.json"));
             Assert.That(ex.Message, Does.Contain("TestMod:assets/Presentation/mesh_assets.json"));
         }
 
@@ -285,7 +285,7 @@ namespace Ludots.Tests.Presentation
 
         private void WriteCoreConfig(string relativePath, string content)
         {
-            WriteFile(Path.Combine(_root, "Core", "Configs"), relativePath, content);
+            WriteFile(Path.Combine(_root, "Core"), relativePath, content);
         }
 
         private void WriteModAsset(string modId, string relativePath, string content)
