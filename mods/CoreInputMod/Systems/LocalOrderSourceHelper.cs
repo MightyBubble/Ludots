@@ -92,15 +92,20 @@ namespace CoreInputMod.Systems
 
         public InputOrderMappingSystem? TryCreateMapping(IModContext ctx)
         {
+            return TryCreateMapping(ctx, ctx.ModId);
+        }
+
+        public InputOrderMappingSystem? TryCreateMapping(IModContext ctx, string sourceModId)
+        {
             if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input)
             {
                 return null;
             }
 
-            string uri = $"{ctx.ModId}:assets/Input/input_order_mappings.json";
+            string uri = $"{sourceModId}:assets/Input/input_order_mappings.json";
             if (!ctx.VFS.TryResolveFullPath(uri, out var fullPath) || !File.Exists(fullPath))
             {
-                ctx.Log($"[{ctx.ModId}] input_order_mappings.json not found, skipping local order mapping.");
+                ctx.Log($"[{sourceModId}] input_order_mappings.json not found, skipping local order mapping.");
                 return null;
             }
 
@@ -125,7 +130,7 @@ namespace CoreInputMod.Systems
                 }
 
                 throw new InvalidOperationException(
-                    $"[{ctx.ModId}] input_order_mappings.json references unknown orderTypeKey '{key}'.");
+                    $"[{sourceModId}] input_order_mappings.json references unknown orderTypeKey '{key}'.");
             });
             mapping.SetGroundPositionProvider((out Vector3 worldCm) =>
             {

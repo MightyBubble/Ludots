@@ -1048,17 +1048,9 @@ namespace Ludots.Tests.Presentation
             TickProjectionFrames(engine, hudProjection, 2);
             applied += RequireMassNavigationSimulation(engine).CommandCountFrame;
             Assert.That(RequireService(engine, CoreServiceKeys.InputHandler).IsDown("Command"), Is.True);
-            var groups = (Dictionary<SystemGroup, List<ISystem<float>>>)typeof(GameEngine)
-                .GetField("_systemGroups", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(engine)!;
-            foreach (var systems in groups.Values)
-            foreach (var system in systems)
-            {
-                if (system.GetType().Name != "MassNavigationLargeWorldLocalOrderSourceSystem") continue;
-                var mapping = (InputOrderMappingSystem)system.GetType()
-                    .GetField("_mapping", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(system)!;
-                Assert.That(mapping.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted),
-                    $"Command routing: {mapping.LastActivationResult.State}, {mapping.LastActivationResult.Rejection}");
-            }
+            var localOrderMapping = RequireService(engine, CoreServiceKeys.ActiveInputOrderMapping);
+            Assert.That(localOrderMapping.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted),
+                $"Command routing: {localOrderMapping.LastActivationResult.State}, {localOrderMapping.LastActivationResult.Rejection}");
 
             backend.SetButton(MouseRightButtonPath, false);
             for (int frame = 0; frame < 4; frame++)

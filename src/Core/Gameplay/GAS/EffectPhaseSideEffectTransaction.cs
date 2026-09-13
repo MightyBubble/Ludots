@@ -1297,26 +1297,13 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 }
 
                 Entity entity = _attributeEntities[i];
-                for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
-                {
-                    if ((_attributeChangedMasks[i] & (1UL << attributeId)) == 0UL)
-                    {
-                        continue;
-                    }
-
-                    float stagedBase = ReadRawBase(ref _attributeValues[i], attributeId);
-                    if (stagedBase != ReadRawBase(ref _attributeOriginalValues[i], attributeId))
-                    {
-                        AttributeMutationOps.SetBase(_world, entity, attributeId, stagedBase, _tagOps!);
-                    }
-
-                    AttributeMutationOps.SetCurrent(
-                        _world,
-                        entity,
-                        attributeId,
-                        _attributeValues[i].GetCurrent(attributeId),
-                        _tagOps!);
-                }
+                CommitAttributeWritesForTarget(
+                    entity,
+                    _attributeChangedMasks[i],
+                    !_attributeChangedExisted[i],
+                    _attributeChangedValues[i],
+                    ref _attributeValues[i],
+                    ref _attributeOriginalValues[i]);
             }
             for (int i = 0; i < _tagEntityCount; i++)
             {
@@ -1708,6 +1695,89 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         return buffer.BaseValues[attributeId];
     }
 
+    /// <summary>
+    /// 提交期单目标属性写回的批形态：与逐属性 AttributeMutationOps.SetCurrent 链的
+    /// 可观测结果逐项一致（同值数学、同 before==after 早退、同脏位/变更位、同 Track 与
+    /// 聚合脏集合），但把 per-attribute 的实体/组件解析、DirtyEntityQueue Track 与聚合
+    /// 脏标收敛为 per-target 一次；缺席的 GameplayAttributeChangedBits 由本方法前置
+    /// World.Add 一次挂载（替原结构命令回放）。NotifyComponentChanged 的触发次数因此
+    /// 从逐属性降为逐目标——订阅方（派生索引、空间包围盒）均为幂等集合收集，最终态不变。
+    /// 写回失败不再有 SetCurrent 的内部局部回滚副本：外层 Commit 的 catch 走整事务
+    /// RollbackWorldWrites，从暂存原件恢复，最终状态与旧路径一致。
+    /// </summary>
+    private void CommitAttributeWritesForTarget(
+        Entity entity,
+        ulong changedMask,
+        bool changedBitsNeedsAttach,
+        GameplayAttributeChangedBits stagedChangedBits,
+        ref AttributeBuffer staged,
+        ref AttributeBuffer original)
+    {
+        if (!_world.IsAlive(entity) || !_world.Has<AttributeBuffer>(entity))
+        {
+            return;
+        }
+
+        if (!_world.Has<DirtyFlags>(entity))
+        {
+            throw new InvalidOperationException(
+                $"{TagOps.MissingDirtyFlagsError}: entity={entity.Id}, operation=CommitAttributeWritesForTarget.");
+        }
+
+        if (changedBitsNeedsAttach)
+        {
+            _world.Add(entity, stagedChangedBits);
+        }
+
+        ref AttributeBuffer buffer = ref _world.Get<AttributeBuffer>(entity);
+        ref DirtyFlags dirty = ref _world.Get<DirtyFlags>(entity);
+        bool anyCurrentChanged = false;
+        for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+        {
+            if ((changedMask & (1UL << attributeId)) == 0UL)
+            {
+                continue;
+            }
+
+            float stagedBase = ReadRawBase(ref staged, attributeId);
+            if (stagedBase != ReadRawBase(ref original, attributeId))
+            {
+                AttributeMutationOps.SetBase(_world, entity, attributeId, stagedBase, _tagOps!);
+                buffer = ref _world.Get<AttributeBuffer>(entity);
+                dirty = ref _world.Get<DirtyFlags>(entity);
+            }
+
+            float before = buffer.GetCurrent(attributeId);
+            buffer.SetCurrent(attributeId, staged.GetCurrent(attributeId));
+            if (before == buffer.GetCurrent(attributeId))
+            {
+                continue;
+            }
+
+            dirty.MarkAttributeDirty(attributeId);
+            if (!_world.Has<GameplayAttributeChangedBits>(entity))
+            {
+                // World.Add 触发结构迁移，缓存的组件 ref 必须重取。
+                _world.Add(entity, stagedChangedBits);
+                buffer = ref _world.Get<AttributeBuffer>(entity);
+                dirty = ref _world.Get<DirtyFlags>(entity);
+            }
+
+            _world.Get<GameplayAttributeChangedBits>(entity).Mark(attributeId);
+            anyCurrentChanged = true;
+        }
+
+        if (anyCurrentChanged)
+        {
+            _tagOps!.MarkDirtyEntity(_world, entity);
+            if (_world.Has<ActiveEffectContainer>(entity))
+            {
+                (_tagOps.AggregateDirty ?? throw new InvalidOperationException(AttributeAggregateDirtyRegistry.MissingRegistryError))
+                    .MarkDirty(entity);
+            }
+        }
+    }
+
     private void ValidateCommit()
     {
         for (int i = 0; i < _attributeCount; i++)
@@ -1912,7 +1982,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             }
 
             Entity entity = _attributeEntities[i];
-            bool existed = _world.Has<GameplayAttributeChangedBits>(entity);
+            bool existed = _world.IsAlive(entity) && _world.Has<GameplayAttributeChangedBits>(entity);
             _attributeChangedExisted[i] = existed;
             _attributeChangedOriginalValues[i] = existed
                 ? _world.Get<GameplayAttributeChangedBits>(entity)
@@ -1926,10 +1996,10 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 }
             }
 
-            if (!existed)
-            {
-                _structuralCommands.Add(entity, _attributeChangedValues[i]);
-            }
+            // 缺席组件改由提交期写回路径直接 World.Add（每次一次线性搬迁）。
+            // Arch CommandBuffer 的 Playback 对同帧多实体 Add 是 O(adds x usedSets) 的
+            // 重复扫描，周期履约的稠密到期流会把它放大成毫秒级。
+            // 回滚不依赖正向缓冲：_attributeChangedExisted 驱动 _structuralRollbackCommands.Remove。
         }
 
         for (int i = 0; i < _dirtyEntityCount; i++)

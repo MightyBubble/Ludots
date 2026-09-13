@@ -59,8 +59,7 @@
     "relationships": []
   },
   "flow": {
-    "iterationsPerStep": 16,
-    "maxIterationsPerStep": 1024
+    "iterationsPerStep": 16
   },
   "semantics": {
     "route": {

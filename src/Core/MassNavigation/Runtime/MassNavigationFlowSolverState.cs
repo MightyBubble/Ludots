@@ -1173,9 +1173,6 @@ public sealed partial class MassNavigationFlowSolverState
         bool shouldRefreshObstacles = _flowDirty || refreshObstacles;
         bool shouldRefreshCrowd = _flowDirty || refreshCrowd;
         bool shouldRefreshFlow = _flowDirty || refreshFlow;
-        tuning.ForceRefreshFlow = false;
-        tuning.ForceRefreshCrowd = false;
-        tuning.ForceRefreshObstacles = false;
         if (!shouldRefreshObstacles && !shouldRefreshCrowd && !shouldRefreshFlow && _flowRefreshCursor >= _flowStates.Count)
         {
             return false;
