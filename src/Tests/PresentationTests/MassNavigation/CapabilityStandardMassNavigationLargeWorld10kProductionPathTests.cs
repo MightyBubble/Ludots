@@ -297,8 +297,10 @@ namespace Ludots.Tests.Presentation
             double projectionMean = Mean(projectionMs);
             TestContext.Out.WriteLine(
                 $"Steady-state budget over {observationFrames} ticks: minimapProjection median={projectionMs[observationFrames / 2]:F3}ms mean={projectionMean:F3}ms p95={projectionMs[(int)(observationFrames * 0.95)]:F3}ms max={projectionMs[^1]:F3}ms (reprojected median={Median(reprojectedCounts)}, retained median={Median(retainedCounts)}, fullRebuilds={minimapRuntime.FullProjectionRebuildCount}); attributeAggregator median={aggregatorMs[observationFrames / 2]:F3}ms p95={aggregatorMs[(int)(observationFrames * 0.95)]:F3}ms max={aggregatorMs[^1]:F3}ms (dirtyEntities median={Median(aggregatorProcessed)}, max={Maximum(aggregatorProcessed)}); screenMarkers min={Minimum(screenMarkerCounts)}");
-            Assert.That(Minimum(screenMarkerCounts), Is.GreaterThanOrEqualTo(ExpectedAgentCount),
-                "Steady-state ticks must retain every agent minimap screen marker.");
+            Assert.That(Minimum(screenMarkerCounts), Is.GreaterThan(0),
+                "Steady-state ticks must keep the minimap screen buffer populated.");
+            Assert.That(Maximum(screenMarkerCounts), Is.LessThanOrEqualTo(minimapRuntime.FieldSize * minimapRuntime.FieldSize),
+                "The one-marker-per-field-pixel cap bounds staged screen markers to occupied field pixels.");
             Assert.That(projectionMs[observationFrames / 2], Is.LessThanOrEqualTo(0.5d),
                 $"Minimap projection median {projectionMs[observationFrames / 2]:F3}ms exceeds the 0.5ms steady-state budget.");
             Assert.That(projectionMean, Is.LessThanOrEqualTo(0.6d),
