@@ -137,6 +137,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 | `npm run check` 末步 `validate-panel-templates` 本来就挂 | 债（非本轮） | 报 `Unsupported schema 'ludots.ui.panel_template'`，main 上同样挂；`graph-editor-frontend` 不跑这步，属面板线 |
 | `TriggerGraphRenameMigrationTests` 误伤合法 payloadKey | 债（非本轮） | 夜袭 `graphs.json` 的 `MapTrigger.PointerScreenX/Y`（随 #1398 入口直绑 action 落地）被「不得出现退役方言名」的子串检查判红；该守卫要改成只查 `kind` / `mount` 字段而不是裸子串 |
 | 可调用函数远景（Case E：入参表、whileActive（已替 continuousQuery）、预览 S1/S2、Invoke 与 FuncLib） | **开着 · 先出方案** | 正本 [可调用函数远景](graph-callable-function-vision.md)；Case E 短任务条 `mods/showcases/case_e_selection/CaseESelectionMod/docs/NEXT-AGENT-BRIEF.md`。PR #1444 是台阶。评审前不大改 Core。 |
+| 输入→下令全链图化（选中/名册/下单/瞄准/蓄力/指示器；`SubmitCommandIntent`/`SubmitCast` op + 意图缓冲；引擎特权键拆除：`InteractionContextIds.Default` 稳态锚点、`EntityCollectionKeys` 预注册、`GetControlledActor` 族、`CommandSourceAcquisitionSystem`、`InputOrderMappingSystem` 施法状态机、12 个 `*LocalOrderSourceSystem`） | **开着 · 切片交付中** | 合同正本 [输入与可调用函数系统·配置宪法](../../mods/showcases/case_e_selection/CaseESelectionMod/docs/input-config-constitution.html) §12；概念正本 `input-command-system.html`；分支 `graph-input-order-chain`。切0 合同已落，切1=SubmitCommandIntent+Case E 全链下单。图函数签名/InvokeFunc/登记表仍归上一行远景，不混。 |
 
 
 分层合同条款同步修订在 [图怎么分层](graph-layering-flow-and-behavior.md)。

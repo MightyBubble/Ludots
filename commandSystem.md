@@ -91,3 +91,5 @@
 如果后面继续写“指令系统”，我建议先把这些概念分层成“现状术语”和“目标术语”两套，不然很容易在设计里默认某些能力已经存在统一入口，但代码实际还没有。
 
 > 2026-08-29 刷新：Device 一等抽象已落地（升入第 1 类）；Input Context Stack 已退役，“图式”承载定为 trigger graph；手势输入原语立项（#1398，框选降级为其 trigger graph 消费者）；InteractionPref 已实体化为玩家组件（#1336）；多座位分屏（#1058）真机验收通过。抑制类旗子（UiCaptured / IsAiming 等）裁定退役归一为 Input Context 机制（待实施）。
+>
+> 2026-09-14 刷新：输入→下令链路开始按《输入与可调用函数系统·配置宪法》（`mods/showcases/case_e_selection/CaseESelectionMod/docs/input-config-constitution.html`）全面图化——选中、名册、下单触发、瞄准、蓄力、指示器全部归图与 profile；基础 context 由实体模板 `initialInteractionContext` 或启动数据挂载，下令只读活跃 context 声明的 `activeCollectionKey`，引擎不设默认 profile、默认集合键或隐式回退（现行 `InteractionContextIds.Default` 稳态锚点与 `EntityCollectionKeys` 引擎预注册键进入拆除排期）。#1523 的 rep/受控实体绑定分歧随之定案：只保留「rep 入口 + 声明派生」，直接占有用 self-roster 图形态表达。切片进度见 `gitbook/architecture/graph-capability-status.md`。
