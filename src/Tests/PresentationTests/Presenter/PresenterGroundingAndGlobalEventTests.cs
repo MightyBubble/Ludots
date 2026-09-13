@@ -403,7 +403,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ResolveTransform_BoneAttached_ComposesAssetAndInstanceScale()
+        public void ResolveTransform_BoneAttached_RejectsSecondLocalTransformSource()
         {
             var instance = new PresenterTransformSnapshot
             {
@@ -419,17 +419,15 @@ namespace Ludots.Tests.Presentation
                 HasOverride = true,
             };
 
-            PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
+            var error = Assert.Throws<InvalidOperationException>(() => PresenterGroundingUtility.ResolveTransform(
                 instance,
                 default,
                 hasParent: false,
                 ownerTransform: default,
                 hasOwnerTransform: false,
                 anchorOffset: Vector3.Zero,
-                instanceOverride);
-
-            Assert.That(resolved.Position, Is.EqualTo(instance.WorldPosition));
-            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(0.75f, 4f, 2.5f)));
+                instanceOverride));
+            Assert.That(error!.Message, Does.Contain("PRESENTATION.ATTACHMENT.ERR.TransformOverride"));
         }
 
         [Test]
@@ -719,6 +717,11 @@ namespace Ludots.Tests.Presentation
             int parentDefId = definitions.Register("static.parent", new PresenterDefinition());
             int childDefId = definitions.Register("static.child.attached.once.grounded", new PresenterDefinition
             {
+                ParamDefaults = [
+                    new ParamDefault { ParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.position"), Lane = ParamLane.Vector, VectorValue = new Vector4(new Vector3(2f, 0f, 3f), 0f) },
+                    new ParamDefault { ParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.rotation"), Lane = ParamLane.Vector, VectorValue = new Vector4((Quaternion.Identity).X, (Quaternion.Identity).Y, (Quaternion.Identity).Z, (Quaternion.Identity).W) },
+                    new ParamDefault { ParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.scale"), Lane = ParamLane.Vector, VectorValue = new Vector4(1f, 1f, 1f, 0f) }
+                ],
                 Behaviors =
                 [
                     new BehaviorSlot
@@ -726,13 +729,7 @@ namespace Ludots.Tests.Presentation
                         SlotIndex = 0,
                         Kind = BehaviorKind.Attachment,
                         ActiveByDefault = true,
-                        Attachment = new AttachmentConfig
-                        {
-                            Target = AttachmentTarget.Parent,
-                            Offset = new Vector3(2f, 0f, 3f),
-                            RotationOffset = Quaternion.Identity,
-                            InheritScale = false,
-                        },
+                        Attachment = new AttachmentConfig { Target = AttachmentTarget.Parent, BoneId = 0, UpdatePolicy = AttachmentUpdatePolicy.Continuous, Inherit = AttachmentInheritance.Position | AttachmentInheritance.Rotation, LocalPositionParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.position"), LocalRotationParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.rotation"), LocalScaleParamKey = PresenterParamKeyRegistry.Register("test.attachment.0.scale") },
                     },
                     new BehaviorSlot
                     {

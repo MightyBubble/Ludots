@@ -1044,7 +1044,8 @@ namespace Ludots.Core.Presentation.Config
 
         private static readonly string[] AttachmentFields =
         {
-            "target", "boneId", "offset", "rotationOffset", "inheritScale",
+            "target", "boneId", "updatePolicy", "inherit",
+            "localPositionParamKey", "localRotationParamKey", "localScaleParamKey",
         };
 
         private static readonly string[] AttributeBindingFields =
@@ -3523,15 +3524,42 @@ namespace Ludots.Core.Presentation.Config
             }
 
             RejectUnknownFields(obj, path, AttachmentFields);
-
-            return new AttachmentConfig
+            AttachmentTarget target = ParseRequiredEnum<AttachmentTarget>(obj["target"], $"{path}.target");
+            if (target == AttachmentTarget.Parent && obj.ContainsKey("boneId"))
             {
-                Target = ParseEnum(obj["target"]?.GetValue<string>(), AttachmentTarget.Parent),
+                throw new InvalidOperationException($"{path}.boneId is only valid for target Bone.");
+            }
+            if (target == AttachmentTarget.Bone && obj["boneId"] == null)
+            {
+                throw new InvalidOperationException($"{path}.boneId is required for target Bone.");
+            }
+            if (obj["inherit"] is not JsonArray inheritance)
+            {
+                throw new InvalidOperationException($"{path}.inherit requires an array of Position, Rotation, Scale.");
+            }
+            AttachmentInheritance mask = AttachmentInheritance.None;
+            for (int i = 0; i < inheritance.Count; i++)
+            {
+                AttachmentInheritance channel = ParseRequiredEnum<AttachmentInheritance>(inheritance[i], $"{path}.inherit[{i}]");
+                if (channel is not (AttachmentInheritance.Position or AttachmentInheritance.Rotation or AttachmentInheritance.Scale) ||
+                    (mask & channel) != 0)
+                {
+                    throw new InvalidOperationException($"{path}.inherit[{i}] must name a unique Position, Rotation or Scale channel.");
+                }
+                mask |= channel;
+            }
+            var config = new AttachmentConfig
+            {
+                Target = target,
                 BoneId = obj["boneId"]?.GetValue<int>() ?? 0,
-                Offset = ParseVector3(obj["offset"]),
-                RotationOffset = ParseQuaternion(obj["rotationOffset"]),
-                InheritScale = obj["inheritScale"]?.GetValue<bool>() ?? false,
+                UpdatePolicy = ParseRequiredEnum<AttachmentUpdatePolicy>(obj["updatePolicy"], $"{path}.updatePolicy"),
+                Inherit = mask,
+                LocalPositionParamKey = ParseRequiredParamKey(obj["localPositionParamKey"], $"{path}.localPositionParamKey"),
+                LocalRotationParamKey = ParseRequiredParamKey(obj["localRotationParamKey"], $"{path}.localRotationParamKey"),
+                LocalScaleParamKey = ParseRequiredParamKey(obj["localScaleParamKey"], $"{path}.localScaleParamKey"),
             };
+            PresenterAttachmentTransform.Validate(in config, path);
+            return config;
         }
 
         private static GroundingConfig ParseGrounding(JsonNode? node, string path)

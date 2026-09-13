@@ -229,18 +229,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            1.25,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "night_raid_health_hud.attachment.position",
+          "localRotationParamKey": "night_raid_health_hud.attachment.rotation",
+          "localScaleParamKey": "night_raid_health_hud.attachment.scale"
         }
       },
       {
@@ -259,6 +255,36 @@
         "paramKey": "night_raid.agent.health.ratio",
         "lane": "Float",
         "floatValue": 1
+      },
+      {
+        "paramKey": "night_raid_health_hud.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          1.25,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "night_raid_health_hud.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "night_raid_health_hud.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -295,18 +321,14 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [
-            0,
-            2.4,
-            0
+          "updatePolicy": "Continuous",
+          "inherit": [
+            "Position",
+            "Rotation"
           ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
+          "localPositionParamKey": "night_raid_health_hud_boss.attachment.position",
+          "localRotationParamKey": "night_raid_health_hud_boss.attachment.rotation",
+          "localScaleParamKey": "night_raid_health_hud_boss.attachment.scale"
         }
       },
       {
@@ -325,6 +347,36 @@
         "paramKey": "night_raid.agent.health.ratio",
         "lane": "Float",
         "floatValue": 1
+      },
+      {
+        "paramKey": "night_raid_health_hud_boss.attachment.position",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          2.4,
+          0,
+          0
+        ]
+      },
+      {
+        "paramKey": "night_raid_health_hud_boss.attachment.rotation",
+        "lane": "Vector",
+        "vectorValue": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "paramKey": "night_raid_health_hud_boss.attachment.scale",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          0
+        ]
       }
     ]
   },
@@ -756,7 +808,7 @@
       {
         "paramKey": "groundOverlay.fill.r",
         "lane": "Float",
-        "floatValue": 1.0
+        "floatValue": 1
       },
       {
         "paramKey": "groundOverlay.fill.g",
@@ -776,7 +828,7 @@
       {
         "paramKey": "groundOverlay.border.r",
         "lane": "Float",
-        "floatValue": 1.0
+        "floatValue": 1
       },
       {
         "paramKey": "groundOverlay.border.g",

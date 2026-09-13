@@ -1,0 +1,484 @@
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Applying explicit mod plan: mods=6
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CoreInputMod (P:0)
+[INF][ModLoader] - SelectionInteractionMod (P:0)
+[INF][ModLoader] - MassNavigationMod (P:0)
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)
+[INF][ModLoader] - AgentBridgeMod (P:950)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+[INF][ModLoader] Scanning 33 types in assembly...
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+[INF][ModLoader] CoreInputMod OnLoad completed.
+[INF][ModLoader] Loaded CoreInputMod
+[INF][ModLoader] Skip code load for SelectionInteractionMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Loading DLL for MassNavigationMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for MassNavigationMod. Calling OnLoad...
+[INF][Mod.MassNavigationMod] [MassNavigationMod] Loaded MassNavigation assets and MovePlan order adapter.
+[INF][ModLoader] MassNavigationMod OnLoad completed.
+[INF][ModLoader] Loaded MassNavigationMod
+[INF][ModLoader] Loading DLL for CapabilityStandardMassNavigationLargeWorld10kMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll
+[INF][ModLoader] Scanning 4 types in assembly...
+[INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...
+[INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded
+[INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.
+[INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod
+[INF][ModLoader] Loading DLL for AgentBridgeMod at C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\AgentBridgeMod\bin\net9.0\AgentBridgeMod.dll
+[INF][ModLoader] Scanning 3 types in assembly...
+[INF][ModLoader] Instantiated entry for AgentBridgeMod. Calling OnLoad...
+[INF][ModLoader] AgentBridgeMod OnLoad completed.
+[INF][ModLoader] Loaded AgentBridgeMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/game.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json
+[INF][Config] Loaded 16 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_begin.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_commit.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_hit.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_commit.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_clear.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_tick.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.selection.rectangle_hits.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.case_e.box_hit.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_candidates.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_roster.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/tag_rules.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/host_assets.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json
+INFO: Initializing raylib 5.5
+INFO: Platform backend: DESKTOP (GLFW)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Device initialized successfully
+INFO:     > Display size: 2560 x 1600
+INFO:     > Screen size:  1600 x 900
+INFO:     > Render size:  1600 x 900
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 296
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   ATI Technologies Inc.
+INFO:     > Renderer: AMD Radeon(TM) 8060S Graphics
+INFO:     > Version:  3.3.0 Core Profile Context 26.10.32.01.260717
+INFO:     > GLSL:     4.60
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (GLFW - Win32): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: SYSTEM: Working Directory: C:\001_AI\Ludots-presenter-attachment-contract-perf
+INFO: TIMER: Target time per frame: 0.000 milliseconds
+INFO: AUDIO: Device initialized successfully
+INFO:     > Backend:       miniaudio | WASAPI
+INFO:     > Format:        32-bit IEEE Floating Point -> 32-bit IEEE Floating Point
+INFO:     > Channels:      2 -> 2
+INFO:     > Sample rate:   48000 -> 48000
+INFO:     > Periods size:  1440
+[INF][Presentation] GPU Accelerated: False (raster UI compositor)
+INFO: TEXTURE: [ID 3] Texture loaded successfully (1600x900 | R8G8B8A8 | 1 mipmaps)
+[INF][Presentation] Skia overlay backend: GPU direct framebuffer underlay with raster compositor for UI/top overlay
+[INF][Config] Merged fragment from: Core:Presentation/raylib_scenes.json
+INFO: TEXTURE: [ID 4] Texture loaded successfully (2048x2048 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 6] Program shader loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth_instanced.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 7] Program shader loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth_skinning_pose_texture.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 8] Program shader loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth_cutout.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth_cutout.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 9] Program shader loaded successfully
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] Acquisition enabled: False; input and presentation systems registered.
+[INF][Engine] [AgentBridge] listening on http://127.0.0.1:47922/ (discovery: C:\001_AI\Ludots-presenter-attachment-contract-perf\artifacts\agent-bridge\sessions\187568.json)
+[INF][Mod.AgentBridgeMod] [AgentBridgeMod] Agent bridge active: http://127.0.0.1:47922/ (38 tools)
+[INF][Engine] Activated system 'AgentBridge' (group=SchemaUpdate, presentation=True).
+[INF][Engine] Loading Map: mass_navigation
+[INF][Map] Loading Map: mass_navigation
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json
+[INF][Map] Map 'mass_navigation' loaded.
+[INF][Map] Creating GridBoard 'default' (250x250 macroTiles, cell=100cm)
+[INF][Engine] Created Board 'default' (type=Grid) for map 'mass_navigation'
+[INF][Map] Map 'mass_navigation' pushed to focus (stack depth=1).
+[INF][Engine] ContinuousHeightmap does not cover board 'default' extent 6400000x6400000cm; keeping flat grid terrain.
+[INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Engine] Pathing bootstrap skipped for map 'mass_navigation': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Registered 2 triggers for map 'mass_navigation'.
+[INF][Engine] MapLoaded deferred for 'mass_navigation'.
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 10] Program shader loaded successfully
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 5] Mesh uploaded successfully to VRAM (GPU)
+INFO: FILEIO: [C:\Users\sietg\AppData\Local\Temp\Ludots.AssetConvert\0388747A272E60704E72EAB94D0D59DDCDECBA56\mass_navigation_blocker_rock.glb] File loaded successfully
+INFO: MODEL: [C:\Users\sietg\AppData\Local\Temp\Ludots.AssetConvert\0388747A272E60704E72EAB94D0D59DDCDECBA56\mass_navigation_blocker_rock.glb] Model basic data (glb) loaded successfully
+INFO:     > Meshes count: 1
+INFO:     > Materials count: 2 (+1 default)
+WARNING: MODEL: [C:\Users\sietg\AppData\Local\Temp\Ludots.AssetConvert\0388747A272E60704E72EAB94D0D59DDCDECBA56\mass_navigation_blocker_rock.glb] Indices data converted from u32 to u16, possible loss of data
+INFO: VAO: [ID 6] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 7] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 7] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 8] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 8] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 9] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 9] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 10] Mesh uploaded successfully to VRAM (GPU)
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\vfx_unlit_tint.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\vfx_unlit_tint.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 11] Program shader loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 12] Program shader loaded successfully
+INFO: TEXTURE: [ID 5] Texture loaded successfully (512x512 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 6] Cubemap texture loaded successfully (64x64)
+INFO: TEXTURE: [ID 7] Texture loaded successfully (1600x900 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 2] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 2] Framebuffer object created successfully
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\postprocess.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Fragment shader compiled successfully
+INFO: SHADER: [ID 5] Program shader loaded successfully
+INFO: VAO: [ID 2] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 3] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 4] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 5] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 5] Mesh uploaded successfully to VRAM (GPU)
+[INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=14000cm fov=60
+[INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json
+[INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.
+[INF][Engine] Firing MapLoaded event for mass_navigation...
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.
+[INF][Engine] Appended 2 triggers to map 'mass_navigation'.
+[INF][Presentation] GPU Accelerated: True (Raylib Skia direct framebuffer overlay)
+[WRN][Presentation] Raylib renderer skipped model shadow draw: meshAssetId=7 could not be loaded. No placeholder model is drawn.
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] File loaded successfully
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Model basic data (glb) loaded successfully
+INFO:     > Meshes count: 15
+INFO:     > Materials count: 1 (+1 default)
+INFO: IMAGE: Data loaded successfully (1024x1024 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (1024x1024 | R8G8B8A8 | 1 mipmaps)
+INFO: VAO: [ID 12] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 13] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 14] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 15] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 16] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 17] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 18] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 19] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 20] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 21] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 22] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 23] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 24] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 25] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 26] Mesh uploaded successfully to VRAM (GPU)
+INFO: FILEIO: [C:\Users\sietg\AppData\Local\Temp\Ludots.AssetConvert\0807E713918A71640E5BFED685CBB4E376FD1EFF\mass_navigation_hotspot_obelisk.glb] File loaded successfully
+INFO: MODEL: [C:\Users\sietg\AppData\Local\Temp\Ludots.AssetConvert\0807E713918A71640E5BFED685CBB4E376FD1EFF\mass_navigation_hotspot_obelisk.glb] Model basic data (glb) loaded successfully
+INFO:     > Meshes count: 1
+INFO:     > Materials count: 2 (+1 default)
+WARNING: MODEL: [C:\Users\sietg\AppData\Local\Temp\Ludots.AssetConvert\0807E713918A71640E5BFED685CBB4E376FD1EFF\mass_navigation_hotspot_obelisk.glb] Indices data converted from u32 to u16, possible loss of data
+INFO: VAO: [ID 27] Mesh uploaded successfully to VRAM (GPU)
+INFO: FILEIO: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] File loaded successfully
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 1H_Melee_Attack_Chop (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 1H_Melee_Attack_Slice_Diagonal (59 frames, 1.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 1H_Melee_Attack_Slice_Horizontal (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 1H_Melee_Attack_Stab (95 frames, 1.600000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 1H_Ranged_Aiming (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 1H_Ranged_Reload (69 frames, 1.166667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 1H_Ranged_Shoot (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 1H_Ranged_Shooting (95 frames, 1.600000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 2H_Melee_Attack_Chop (97 frames, 1.633333s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 2H_Melee_Attack_Slice (65 frames, 1.100000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 2H_Melee_Attack_Spin (142 frames, 2.400000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 2H_Melee_Attack_Spinning (40 frames, 0.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 2H_Melee_Attack_Stab (95 frames, 1.600000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 2H_Melee_Idle (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 2H_Ranged_Aiming (95 frames, 1.600000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 2H_Ranged_Reload (95 frames, 1.600000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 2H_Ranged_Shoot (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: 2H_Ranged_Shooting (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Block (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Block_Attack (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Block_Hit (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Blocking (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Cheer (99 frames, 1.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Death_A (48 frames, 0.800000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Death_A_Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Death_B (155 frames, 2.633333s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Death_B_Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Dodge_Backward (24 frames, 0.400000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Dodge_Forward (24 frames, 0.400000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Dodge_Left (24 frames, 0.400000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Dodge_Right (24 frames, 0.400000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Dualwield_Melee_Attack_Chop (75 frames, 1.266667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Dualwield_Melee_Attack_Slice (69 frames, 1.166667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Dualwield_Melee_Attack_Stab (95 frames, 1.600000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Hit_A (40 frames, 0.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Hit_B (51 frames, 0.866667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Idle (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Interact (77 frames, 1.300000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Jump_Full_Long (138 frames, 2.333333s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Jump_Full_Short (69 frames, 1.166667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Jump_Idle (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Jump_Land (40 frames, 0.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Jump_Start (36 frames, 0.600000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Lie_Down (177 frames, 3.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Lie_Idle (157 frames, 2.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Lie_Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Lie_StandUp (138 frames, 2.333333s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: PickUp (77 frames, 1.300000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Running_A (48 frames, 0.800000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Running_B (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Running_Strafe_Left (48 frames, 0.800000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Running_Strafe_Right (48 frames, 0.800000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Sit_Chair_Down (48 frames, 0.800000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Sit_Chair_Idle (212 frames, 3.600000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Sit_Chair_Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Sit_Chair_StandUp (48 frames, 0.800000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Sit_Floor_Down (59 frames, 1.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Sit_Floor_Idle (236 frames, 4.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Sit_Floor_Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Sit_Floor_StandUp (67 frames, 1.133333s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Spellcast_Long (150 frames, 2.533333s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Spellcast_Raise (124 frames, 2.100000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Spellcast_Shoot (55 frames, 0.933333s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Spellcasting (40 frames, 0.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: T-Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Throw (81 frames, 1.366667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Unarmed_Idle (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Unarmed_Melee_Attack_Kick (55 frames, 0.933333s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Unarmed_Melee_Attack_Punch_A (87 frames, 1.466667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Unarmed_Melee_Attack_Punch_B (99 frames, 1.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Unarmed_Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Use_Item (95 frames, 1.600000s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Walking_A (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Walking_B (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Walking_Backwards (63 frames, 1.066667s)
+INFO: MODEL: [C:\001_AI\Ludots-presenter-attachment-contract-perf\mods\capabilities\navigation\MassNavigationMod\assets\Models\mass_navigation_agent_soldier.glb] Loaded animation: Walking_C (95 frames, 1.600000s)
+INFO: TEXTURE: [ID 11] Texture loaded successfully (1024x64 | R32G32B32A32 | 1 mipmaps)
+INFO: TEXTURE: [ID 12] Texture loaded successfully (1024x8 | R32G32B32A32 | 1 mipmaps)
+INFO: TEXTURE: [ID 11] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 11] Texture loaded successfully (1024x192 | R32G32B32A32 | 1 mipmaps)
+INFO: TEXTURE: [ID 12] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 12] Texture loaded successfully (1024x40 | R32G32B32A32 | 1 mipmaps)
+INFO: SHADER: [ID 36] Vertex shader compiled successfully
+INFO: SHADER: [ID 37] Fragment shader compiled successfully
+INFO: SHADER: [ID 38] Program shader loaded successfully
+[INF][Presentation] GPU Accelerated: True (Raylib Skia direct framebuffer overlay)
+[INF][Engine] Captured runtime screenshot: C:\001_AI\Ludots-presenter-attachment-contract-perf\artifacts\evidence\presenter-attachment-contract\whole-machine\orbit.png
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 6] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 7] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 8] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 9] Unloaded shader program data from VRAM (GPU)
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: TEXTURE: [ID 11] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 12] Unloaded texture data from VRAM (GPU)
+INFO: SHADER: [ID 38] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 11] Unloaded shader program data from VRAM (GPU)
+INFO: TEXTURE: [ID 6] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 5] Unloaded texture data from VRAM (GPU)
+INFO: VAO: [ID 7] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 8] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 9] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 10] Unloaded vertex array data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 12] Unloaded shader program data from VRAM (GPU)
+INFO: VAO: [ID 6] Unloaded vertex array data from VRAM (GPU)
+INFO: MODEL: Unloaded model (and meshes) from RAM and VRAM
+INFO: VAO: [ID 27] Unloaded vertex array data from VRAM (GPU)
+INFO: MODEL: Unloaded model (and meshes) from RAM and VRAM
+INFO: VAO: [ID 12] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 13] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 14] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 15] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 16] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 17] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 18] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 19] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 20] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 21] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 22] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 23] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 24] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 25] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 26] Unloaded vertex array data from VRAM (GPU)
+INFO: MODEL: Unloaded model (and meshes) from RAM and VRAM
+INFO: FBO: [ID 2] Unloaded framebuffer from VRAM (GPU)
+INFO: SHADER: [ID 5] Unloaded shader program data from VRAM (GPU)
+INFO: TEXTURE: [ID 3] Unloaded texture data from VRAM (GPU)
+INFO: AUDIO: Device closed successfully
+INFO: TEXTURE: [ID 2] Unloaded texture data from VRAM (GPU)
+INFO: SHADER: [ID 3] Default shader unloaded successfully
+INFO: TEXTURE: [ID 1] Default texture unloaded successfully
+INFO: Window closed successfully
+INFO: VAO: [ID 2] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 3] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 4] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 5] Unloaded vertex array data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 10] Unloaded shader program data from VRAM (GPU)
+[INF][Engine] Unloading ModLoader contexts...
+[INF][Engine] Disposing JobScheduler...
