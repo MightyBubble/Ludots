@@ -574,12 +574,16 @@ namespace Ludots.Core.Presentation.Systems
             WorldHudValueMode valueMode = slot.WorldText.Mode;
             int fontSize = slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16;
             int stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
-            PresentationTextPacket packet = PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
+            bool valueBound = slot.WorldText.BoundAttributeId != WorldTextConfig.UnboundAttributeId &&
+                (valueMode == WorldHudValueMode.AttributeCurrentOverBase || valueMode == WorldHudValueMode.AttributeCurrent);
+            PresentationTextPacket packet = valueBound
+                ? default
+                : PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
 
             WorldHudItem item = new WorldHudItem
             {
                 StableId = HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Text, definitionId, slot.SlotIndex),
-                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, (int)valueMode, value0, value1, color, packet),
+                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, (int)valueMode, value0, value1, color, packet, valueBound),
                 Kind = WorldHudItemKind.Text,
                 WorldPosition = position,
                 Value0 = value0,
@@ -588,6 +592,9 @@ namespace Ludots.Core.Presentation.Systems
                 Id1 = (int)valueMode,
                 FontSize = fontSize,
                 Color0 = color,
+                Owner = state.OwnerEntity,
+                ValueBound = valueBound ? (byte)1 : (byte)0,
+                BoundAttributeId = valueBound ? slot.WorldText.BoundAttributeId : 0,
                 Text = packet,
             };
             _requests.AddWorldHud(state.OwnerEntity, in item, phaseResult.LOD);

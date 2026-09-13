@@ -807,13 +807,18 @@ namespace Ludots.Core.Presentation.Systems
             WorldHudValueMode valueMode = slot.WorldText.Mode;
             int fontSize = slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16;
             int stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
-            PresentationTextPacket packet = PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
+            bool valueBound = slot.WorldText.BoundAttributeId != WorldTextConfig.UnboundAttributeId &&
+                (valueMode == WorldHudValueMode.AttributeCurrentOverBase || valueMode == WorldHudValueMode.AttributeCurrent);
+            // 值绑定条目不带 emit 期参数快照包：解析落屏幕数值车道，权威值由投影期现读。
+            PresentationTextPacket packet = valueBound
+                ? default
+                : PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
 
             return new WorldHudItem
             {
                 Owner = state.OwnerEntity,
                 StableId = stableId,
-                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, (int)valueMode, value0, value1, color, packet),
+                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, (int)valueMode, value0, value1, color, packet, valueBound),
                 Kind = WorldHudItemKind.Text,
                 WorldPosition = worldPosition,
                 Value0 = value0,
@@ -822,6 +827,8 @@ namespace Ludots.Core.Presentation.Systems
                 Id1 = (int)valueMode,
                 FontSize = fontSize,
                 Color0 = color,
+                ValueBound = valueBound ? (byte)1 : (byte)0,
+                BoundAttributeId = valueBound ? slot.WorldText.BoundAttributeId : 0,
                 Text = packet,
             };
         }

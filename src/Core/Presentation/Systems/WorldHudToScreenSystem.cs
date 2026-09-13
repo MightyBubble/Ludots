@@ -82,6 +82,8 @@ namespace Ludots.Core.Presentation.Systems
         public override void Update(in float dt)
         {
             long start = Stopwatch.GetTimestamp();
+            // 值绑定条目的权威值现读：置于一切早退判定之前，静帧也保持数值鲜活。
+            _screenHud.RefreshAttributeBoundTexts(World);
             int worldHudRevision = _worldHud.ContentRevision;
             int worldHudProjectionRevision = _worldHud.ProjectionRevision;
             int positionRevision = _worldHud.PositionRevision;
@@ -401,6 +403,9 @@ namespace Ludots.Core.Presentation.Systems
                 Id0 = item.Id0,
                 Id1 = item.Id1,
                 FontSize = item.FontSize,
+                ValueBound = item.ValueBound,
+                BoundAttributeId = item.BoundAttributeId,
+                Owner = item.Owner,
                 Text = item.Text,
             };
             bool textAccepted = _retainedProjectedBuild

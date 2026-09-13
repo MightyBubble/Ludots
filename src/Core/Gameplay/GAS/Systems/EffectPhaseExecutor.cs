@@ -946,6 +946,26 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return Ludots.Core.Engine.Randomization.RngSeed.Finalize(hash);
         }
 
+        /// <summary>周期内核与解释 VM 的 RNG 种子链共享点：同输入必得同种子。</summary>
+        internal static uint BuildRandomSeedForKernel(
+            Entity caster,
+            Entity target,
+            Entity targetContext,
+            int graphProgramId,
+            int effectTemplateId,
+            EffectPhaseId phase,
+            uint executionSeed)
+        {
+            return BuildRandomSeed(caster, target, targetContext, graphProgramId, effectTemplateId, phase, executionSeed);
+        }
+
+        /// <summary>全局 Phase Listener 匹配查询，供周期内核路由判定干涉。</summary>
+        internal bool HasGlobalPhaseListener(EffectPhaseId phase, int effectCategoryId, int effectTemplateId)
+        {
+            return _globalListeners != null &&
+                _globalListeners.HasMatch(phase, effectCategoryId, effectTemplateId);
+        }
+
         private ScratchUsage GetScratchUsage(int graphProgramId, ReadOnlySpan<GraphInstruction> program)
         {
             EnsureScratchUsageCapacity(graphProgramId);

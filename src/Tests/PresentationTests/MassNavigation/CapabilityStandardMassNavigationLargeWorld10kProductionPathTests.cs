@@ -1687,7 +1687,27 @@ namespace Ludots.Tests.Presentation
             {
                 if (!engine.World.Has<MassNavigationAgent>(item.Owner)) continue;
                 Assert.That(screenItems.TryGetValue(item.StableId, out var screen), Is.True);
-                Assert.That(screen.DirtySerial, Is.EqualTo(item.DirtySerial));
+                if (item.Kind == WorldHudItemKind.Text && item.ValueBound != 0)
+                {
+                    // 值绑定文本的双 serial 合同：emit 侧 serial 值无关（漂移重发在 world 缓冲归零）；
+                    // 屏幕侧 serial 只能来自 emit 初值或刷新通道（取整显示值跨边界时换绑）。
+                    Assert.That(screen.ValueBound, Is.EqualTo(item.ValueBound), $"Bound flag for agent {item.Owner.Id}");
+                    Assert.That(screen.BoundAttributeId, Is.EqualTo(item.BoundAttributeId), $"Bound attribute for agent {item.Owner.Id}");
+                    Assert.That(
+                        screen.DirtySerial == item.DirtySerial ||
+                        screen.DirtySerial == HudItemIdentity.ComposeBoundTextValueSerial(
+                            screen.FontSize <= 0 ? 16 : screen.FontSize,
+                            screen.Id1,
+                            screen.Color0,
+                            screen.Value0,
+                            screen.Value1),
+                        Is.True,
+                        $"Bound text serial for agent {item.Owner.Id} must originate from emit or the refresh channel");
+                }
+                else
+                {
+                    Assert.That(screen.DirtySerial, Is.EqualTo(item.DirtySerial));
+                }
                 samples.TryGetValue(item.Owner.Id, out AgentHealthHudSample sample);
                 if (item.Kind == WorldHudItemKind.Bar)
                 {
@@ -1697,7 +1717,10 @@ namespace Ludots.Tests.Presentation
                 else
                 {
                     Assert.That(screen.Text, Is.EqualTo(item.Text));
-                    sample = sample with { TextStableId = item.StableId, TextValue = item.Text.Arg0.AsInt32() };
+                    int textValue = item.ValueBound != 0
+                        ? (int)screen.Value0
+                        : item.Text.Arg0.AsInt32();
+                    sample = sample with { TextStableId = item.StableId, TextValue = textValue };
                 }
                 samples[item.Owner.Id] = sample;
             }

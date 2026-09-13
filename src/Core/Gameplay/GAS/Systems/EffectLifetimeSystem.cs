@@ -241,8 +241,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
 
-                if (ProcessPhaseStage(LifetimeStage.PeriodGraphs, LifetimeStage.ExpireGraphs, _periodPhaseGraphs, EffectPhaseId.OnPeriod, ref workUnits) ||
-                    ProcessPhaseStage(LifetimeStage.ExpireGraphs, LifetimeStage.RemoveGraphs, _expirePhaseGraphs, EffectPhaseId.OnExpire, ref workUnits) ||
+                if (_stage == LifetimeStage.PeriodGraphs)
+                {
+                    if (_cursor < _periodPhaseGraphs.Count)
+                    {
+                        PhaseGraphEntry entry = _periodPhaseGraphs[_cursor++];
+                        if (!TryExecutePeriodKernelEntry(in entry))
+                        {
+                            ExecutePhaseGraphEntry(in entry, EffectPhaseId.OnPeriod, _builtinRuntime);
+                        }
+
+                        CountWork(ref workUnits);
+                        continue;
+                    }
+
+                    AdvanceTo(LifetimeStage.ExpireGraphs);
+                    continue;
+                }
+
+                if (ProcessPhaseStage(LifetimeStage.ExpireGraphs, LifetimeStage.RemoveGraphs, _expirePhaseGraphs, EffectPhaseId.OnExpire, ref workUnits) ||
                     ProcessPhaseStage(LifetimeStage.RemoveGraphs, LifetimeStage.FanOut, _removePhaseGraphs, EffectPhaseId.OnRemove, ref workUnits))
                 {
                     continue;
@@ -675,6 +692,64 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
+        /// <summary>
+        /// PeriodGraphs 阶段的快车道路由：命中内核表、无 Phase Listener 干涉、无解释路径
+        /// 失败面的到期条目由内核求值并直写事务（同事务、同 RNG 种子、同写入顺序）。
+        /// 任何不命中原样落回逐事件解释路径——双车道合同，不是 fallback。
+        /// </summary>
+        private bool TryExecutePeriodKernelEntry(in PhaseGraphEntry entry)
+        {
+            if (_phaseExecutor == null || _graphApi == null || _templates == null)
+            {
+                return false;
+            }
+
+            EffectPeriodKernelTable? table = _templates.PeriodKernelTable;
+            if (table == null || !table.TryGetProgram(entry.TemplateId, out EffectPeriodKernelProgram program))
+            {
+                return false;
+            }
+
+            if (HasPeriodListenerInterference(in entry))
+            {
+                return false;
+            }
+
+            if (!program.TryEvaluate(World, entry.EffectEntity, in entry.Context, entry.ClockTick, out Entity target, out float delta))
+            {
+                return false;
+            }
+
+            if (target != Entity.Null)
+            {
+                _phaseTransaction.StageAttributeAdd(target, program.AttributeId, delta);
+            }
+
+            return true;
+        }
+
+        private bool HasPeriodListenerInterference(in PhaseGraphEntry entry)
+        {
+            if ((World.IsAlive(entry.Context.Target) && World.Has<EffectPhaseListenerBuffer>(entry.Context.Target)) ||
+                (World.IsAlive(entry.Context.Source) && World.Has<EffectPhaseListenerBuffer>(entry.Context.Source)))
+            {
+                return true;
+            }
+
+            return _phaseExecutor != null &&
+                _phaseExecutor.HasGlobalPhaseListener(
+                    EffectPhaseId.OnPeriod,
+                    ResolveTemplateCategoryId(entry.TemplateId),
+                    entry.TemplateId);
+        }
+
+        private int ResolveTemplateCategoryId(int templateId)
+        {
+            return _templates!.TryGetRef(templateId, out int templateIndex)
+                ? _templates.GetRef(templateIndex).CategoryId
+                : 0;
+        }
+
         private void CompleteSlice()
         {
             _sliceActive = false;
@@ -930,6 +1005,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             hash = Mix(hash, (int)phase);
             hash = Mix(hash, clockTick);
             return hash == 0u ? 1u : hash;
+        }
+
+        /// <summary>周期内核与解释 VM 的执行种子共享点：同输入必得同种子。</summary>
+        internal static uint BuildExecutionSeedForKernel(Entity effectEntity, EffectPhaseId phase, int templateId, int clockTick, in Components.EffectContext context)
+        {
+            return BuildExecutionSeed(effectEntity, phase, templateId, clockTick, in context);
         }
 
         private static uint Mix(uint hash, int value)
