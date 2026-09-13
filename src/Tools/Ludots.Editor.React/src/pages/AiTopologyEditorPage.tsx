@@ -10,7 +10,9 @@ import {
   useNodesState,
   type Connection,
   type Edge,
+  type EdgeChange,
   type Node,
+  type NodeChange,
   type OnConnect,
   type ReactFlowInstance,
   SelectionMode,
@@ -24,6 +26,7 @@ import {
   type HfsmTransitionEdgeData,
 } from './ai-topology-editor/hfsmTransitions';
 import { computeTopologyTreeLayout } from './ai-topology-editor/topologyLayout';
+import { diskSaveStatus, STUDIO_CHROME, STUDIO_THEME } from './authoring-studio/authoringTheme';
 
 type TopologyKind = 'behavior-trees' | 'hfsm';
 
@@ -78,8 +81,8 @@ type TopologyEdgeData = {
 const nodeTypes = { topology: TopologyNodeView };
 
 const fieldClass =
-  'mt-1 w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-100';
-const labelClass = 'block text-xs text-zinc-400';
+  'mt-1 w-full rounded-md border border-studio-elevated bg-studio-bg px-2 py-1.5 text-sm text-studio-label';
+const labelClass = 'block text-xs text-studio-muted';
 
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
@@ -138,7 +141,7 @@ function btToFlow(tree: BtTree): { nodes: Node<TopologyNodeData>[]; edges: Edge<
         sourceHandle: 'out',
         targetHandle: 'in',
         data: { kind: 'child' },
-        style: { stroke: '#a78bfa', strokeWidth: 2 },
+        style: { stroke: STUDIO_THEME.blue, strokeWidth: 2 },
         animated: false,
       });
     }
@@ -178,9 +181,9 @@ function hfsmToFlow(machine: HfsmMachine): { nodes: Node<TopologyNodeData>[]; ed
         sourceHandle: 'out',
         targetHandle: 'in',
         data: { kind: 'child' },
-        style: { stroke: '#e879f9', strokeWidth: 1.5, strokeDasharray: '4 4' },
+        style: { stroke: STUDIO_THEME.silver, strokeWidth: 1.5, strokeDasharray: '4 4' },
         label: 'child',
-        labelStyle: { fill: '#c026d3', fontSize: 10 },
+        labelStyle: { fill: STUDIO_THEME.silver, fontSize: 10 },
       });
     }
   }
@@ -193,11 +196,11 @@ function hfsmToFlow(machine: HfsmMachine): { nodes: Node<TopologyNodeData>[]; ed
       sourceHandle: 'out',
       targetHandle: 'in',
       data: hfsmTransitionToEdgeData(t),
-      style: { stroke: '#fbbf24', strokeWidth: 2.5 },
+      style: { stroke: STUDIO_THEME.yellow, strokeWidth: 2.5 },
       animated: true,
       label: t.condition ? `${t.predicate} · ${t.condition}` : t.predicate,
-      labelStyle: { fill: '#fcd34d', fontSize: 10 },
-      labelBgStyle: { fill: '#1c1917', fillOpacity: 0.85 },
+      labelStyle: { fill: STUDIO_THEME.yellow, fontSize: 10 },
+      labelBgStyle: { fill: STUDIO_THEME.bg, fillOpacity: 0.85 },
     });
   }
 
@@ -401,7 +404,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     }
     setItems(next);
     setError('');
-    setStatus(`已写入 ${json.path}`);
+    setStatus(typeof json.path === 'string' ? diskSaveStatus(json.path) : `已写入`);
     void loadCatalog();
   }, [isBt, sourceId, loadCatalog]);
 
@@ -437,10 +440,10 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
             : { kind: 'child' },
         style:
           kind === 'transition'
-            ? { stroke: '#fbbf24', strokeWidth: 2.5 }
+            ? { stroke: STUDIO_THEME.yellow, strokeWidth: 2.5 }
             : isBt
-              ? { stroke: '#a78bfa', strokeWidth: 2 }
-              : { stroke: '#e879f9', strokeWidth: 1.5, strokeDasharray: '4 4' },
+              ? { stroke: STUDIO_THEME.blue, strokeWidth: 2 }
+              : { stroke: STUDIO_THEME.silver, strokeWidth: 1.5, strokeDasharray: '4 4' },
         animated: kind === 'transition',
         label: kind === 'transition' ? 'Always' : kind === 'child' && !isBt ? 'child' : undefined,
       };
@@ -488,6 +491,75 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     },
     [edges, isBt, nodes, selected, setNodes, syncItemsFromFlow],
   );
+
+  const handleNodesChange = useCallback(
+    (changes: NodeChange<Node<TopologyNodeData>>[]) => {
+      const removing = changes.filter((change) => change.type === 'remove').map((change) => change.id);
+      if (selected && removing.includes(selected.root)) {
+        setError('根节点不能删');
+        onNodesChange(changes.filter((change) => change.type !== 'remove' || change.id !== selected.root));
+        return;
+      }
+      onNodesChange(changes);
+      if (removing.length === 0) return;
+      const nextNodes = nodes.filter((node) => !removing.includes(node.id));
+      const nextEdges = edges.filter((edge) => !removing.includes(edge.source) && !removing.includes(edge.target));
+      setEdges(nextEdges);
+      syncItemsFromFlow(nextNodes, nextEdges);
+      if (selectedNodeId && removing.includes(selectedNodeId)) setSelectedNodeId('');
+      setError('');
+      setStatus(`已删 ${removing.length} 个节点`);
+    },
+    [edges, nodes, onNodesChange, selected, selectedNodeId, setEdges, syncItemsFromFlow],
+  );
+
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange<Edge<TopologyEdgeData>>[]) => {
+      onEdgesChange(changes);
+      if (!changes.some((change) => change.type === 'remove')) return;
+      const removed = new Set(changes.filter((change) => change.type === 'remove').map((change) => change.id));
+      const nextEdges = edges.filter((edge) => !removed.has(edge.id));
+      syncItemsFromFlow(nodes, nextEdges);
+      if (selectedEdgeId && removed.has(selectedEdgeId)) setSelectedEdgeId('');
+    },
+    [edges, nodes, onEdgesChange, selectedEdgeId, syncItemsFromFlow],
+  );
+
+  const removeSelectedNode = useCallback(() => {
+    if (!selected || !selectedNodeId) return;
+    if (selectedNodeId === selected.root) {
+      setError('根节点不能删');
+      return;
+    }
+    const nextNodes = nodes.filter((node) => node.id !== selectedNodeId);
+    const nextEdges = edges.filter((edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId);
+    setNodes(nextNodes);
+    setEdges(nextEdges);
+    syncItemsFromFlow(nextNodes, nextEdges);
+    setSelectedNodeId('');
+    setError('');
+    setStatus(`已删节点 ${selectedNodeId}`);
+  }, [edges, nodes, selected, selectedNodeId, setEdges, setNodes, syncItemsFromFlow]);
+
+  const removeSelectedEdge = useCallback(() => {
+    if (!selectedEdgeId) return;
+    const nextEdges = edges.filter((edge) => edge.id !== selectedEdgeId);
+    setEdges(nextEdges);
+    syncItemsFromFlow(nodes, nextEdges);
+    setSelectedEdgeId('');
+    setStatus('已删连线');
+  }, [edges, nodes, selectedEdgeId, setEdges, syncItemsFromFlow]);
+
+  const removeSelectedTopology = useCallback(() => {
+    if (!selected) return;
+    const next = items.filter((row) => row.id !== selected.id);
+    setItems(next);
+    const first = next[0] ?? null;
+    setSelectedId(first?.id ?? '');
+    applySelectionToFlow(first);
+    setError('');
+    setStatus(`已删 ${selected.id}（尚未写盘）`);
+  }, [applySelectionToFlow, items, selected]);
 
   const updateSelectedNode = useCallback(
     (patch: Record<string, unknown>) => {
@@ -575,28 +647,28 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     : undefined;
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-zinc-950 text-zinc-100">
-      <header className="flex flex-wrap items-center gap-3 border-b border-zinc-800 bg-zinc-900 px-4 py-3">
+    <div className="flex h-full w-full flex-col bg-studio-bg text-studio-label">
+      <header className="flex flex-wrap items-center gap-3 border-b border-studio-elevated bg-studio-surface px-4 py-3">
         <div className="min-w-40">
-          <div className="text-sm font-semibold text-white">{title}</div>
-          <div className="text-[10px] text-zinc-500">{subtitle}</div>
+          <div className="text-sm font-semibold text-studio-label">{title}</div>
+          <div className="text-[10px] text-studio-muted">{subtitle}</div>
         </div>
-        <Link to="/" className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-800">
-          主编辑器
+        <Link to="/" className="rounded border border-studio-fill px-2 py-1 text-xs text-studio-secondary hover:bg-studio-elevated">
+          工作室
         </Link>
-        <Link to="/gas-graphs" className="rounded border border-sky-500/40 px-2 py-1 text-xs text-sky-300 hover:bg-sky-500/10">
+        <Link to="/gas-graphs" className="rounded border border-studio-blue/40 px-2 py-1 text-xs text-studio-blue hover:bg-studio-blue/10">
           函数图
         </Link>
         <Link
           to={isBt ? '/fsm-editor' : '/bt-editor'}
-          className="rounded border border-violet-500/40 px-2 py-1 text-xs text-violet-300 hover:bg-violet-500/10"
+          className="rounded border border-studio-red/40 px-2 py-1 text-xs text-studio-red hover:bg-studio-red/10"
         >
           {isBt ? '状态机' : '行为树'}
         </Link>
-        <label className="flex items-center gap-2 text-xs text-zinc-400">
+        <label className="flex items-center gap-2 text-xs text-studio-muted">
           数据源
           <select
-            className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-zinc-100"
+            className="rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
             value={sourceId}
             onChange={(e) => setSourceId(e.target.value)}
           >
@@ -607,10 +679,10 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
           </select>
         </label>
         {!isBt ? (
-          <label className="flex items-center gap-2 text-xs text-zinc-400">
+          <label className="flex items-center gap-2 text-xs text-studio-muted">
             连线模式
             <select
-              className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-zinc-100"
+              className="rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
               value={connectMode}
               onChange={(e) => setConnectMode(e.target.value as 'child' | 'transition')}
             >
@@ -621,14 +693,14 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
         ) : null}
         <button
           type="button"
-          className="rounded border border-zinc-600 px-2 py-1 text-xs hover:bg-zinc-800"
+          className="rounded border border-studio-fill px-2 py-1 text-xs hover:bg-studio-elevated"
           onClick={() => void loadItems(sourceId)}
         >
           重新加载
         </button>
         <button
           type="button"
-          className="rounded border border-emerald-500/50 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-500/10"
+          className="rounded border border-studio-blue/50 px-2 py-1 text-xs text-studio-blue hover:bg-studio-blue/10"
           onClick={() => {
             // Flush current canvas into items then save.
             if (selected) {
@@ -644,19 +716,19 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
         >
           保存
         </button>
-        {status ? <span className="text-xs text-emerald-400">{status}</span> : null}
-        {error ? <span className="text-xs text-rose-400">{error}</span> : null}
+        {status ? <span className="text-xs text-studio-blue">{status}</span> : null}
+        {error ? <span className="text-xs text-studio-red">{error}</span> : null}
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-12">
-        <aside className="col-span-2 space-y-2 overflow-auto border-r border-zinc-800 p-3">
-          <div className="text-[10px] uppercase tracking-wide text-zinc-500">拓扑清单</div>
+        <aside className="col-span-2 space-y-2 overflow-auto border-r border-studio-elevated p-3">
+          <div className="text-[10px] uppercase tracking-wide text-studio-muted">拓扑清单</div>
           {items.map((row) => (
             <button
               key={row.id}
               type="button"
               className={`w-full rounded border px-2 py-1.5 text-left text-sm ${
-                selectedId === row.id ? 'border-emerald-400 bg-emerald-500/10' : 'border-zinc-800 bg-zinc-900/60'
+                selectedId === row.id ? 'border-studio-blue bg-studio-blue/10' : 'border-studio-elevated bg-studio-surface/60'
               }`}
               onClick={() => {
                 if (selected) {
@@ -674,7 +746,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
           ))}
           <button
             type="button"
-            className="w-full rounded border border-dashed border-zinc-600 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-900"
+            className="w-full rounded border border-dashed border-studio-fill px-2 py-1.5 text-xs text-studio-muted hover:bg-studio-surface"
             onClick={() => {
               const id = isBt ? `bt.new.${items.length + 1}` : `hfsm.new.${items.length + 1}`;
               const created = isBt ? emptyBtTree(id) : emptyHfsm(id);
@@ -686,9 +758,17 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
           >
             + 新建拓扑
           </button>
+          <button
+            type="button"
+            disabled={!selected}
+            className={`w-full ${STUDIO_CHROME.btnDanger}`}
+            onClick={removeSelectedTopology}
+          >
+            删除当前拓扑
+          </button>
         </aside>
 
-        <main className="relative col-span-7 min-h-0 border-r border-zinc-800">
+        <main className="relative col-span-7 min-h-0 border-r border-studio-elevated">
           {selected ? (
             <>
               <ReactFlow
@@ -697,8 +777,8 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                 edges={edges}
                 nodeTypes={nodeTypes}
                 onInit={(instance) => { reactFlowRef.current = instance; }}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
+                onNodesChange={handleNodesChange}
+                onEdgesChange={handleEdgesChange}
                 onConnect={onConnect}
                 onNodeClick={(_, node) => {
                   setSelectedNodeId(node.id);
@@ -731,36 +811,36 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                 maxZoom={1.8}
                 proOptions={{ hideAttribution: true }}
               >
-                <Background gap={18} color="#3f3f46" />
-                <Controls />
+                <Background gap={18} color={STUDIO_THEME.fill} />
+                <Controls position="bottom-left" />
                 <MiniMap
                   pannable
                   zoomable
-                  bgColor="#09090b"
-                  maskColor="rgba(9,9,11,0.4)"
+                  bgColor={STUDIO_THEME.bg}
+                  maskColor="color-mix(in srgb, var(--studio-bg) 55%, transparent)"
                   nodeColor={(node) => {
                     const role = (node.data as TopologyNodeData).role;
-                    if (role === 'composite') return '#a78bfa';
-                    if (role === 'leaf') return '#38bdf8';
-                    if (role === 'compound') return '#e879f9';
-                    return '#fbbf24';
+                    if (role === 'composite') return STUDIO_THEME.blue;
+                    if (role === 'leaf') return STUDIO_THEME.red;
+                    if (role === 'compound') return STUDIO_THEME.yellow;
+                    return STUDIO_THEME.yellow;
                   }}
                 />
               </ReactFlow>
-              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-zinc-800 bg-zinc-950/80 px-2 py-1 text-[10px] text-zinc-400">
+              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-studio-elevated bg-studio-bg/80 px-2 py-1 text-[10px] text-studio-muted">
                 中键平移 · 左键框选 · 右键添加节点 · 从节点下方拖线连接
               </div>
-              <div className="absolute bottom-3 left-3 z-10 flex gap-2">
+              <div className="absolute right-3 top-3 z-10 flex gap-2">
                 <button
                   type="button"
-                  className="rounded border border-zinc-600 bg-zinc-950/90 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+                  className={STUDIO_CHROME.btnGhost}
                   onClick={() => setPaletteOpen((v) => !v)}
                 >
                   添加节点
                 </button>
                 <button
                   type="button"
-                  className="rounded border border-zinc-600 bg-zinc-950/90 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+                  className={STUDIO_CHROME.btnGhost}
                   onClick={() => {
                     if (!selected) return;
                     const flow = isBt ? btToFlow(selected as BtTree) : hfsmToFlow(selected as HfsmMachine);
@@ -773,8 +853,8 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                 </button>
               </div>
               {paletteOpen ? (
-                <div className="absolute bottom-14 left-3 z-20 w-56 rounded border border-zinc-700 bg-zinc-950 p-2 shadow-xl">
-                  <div className="mb-2 text-[10px] uppercase tracking-wide text-zinc-500">调色板</div>
+                <div className="absolute right-3 top-14 z-20 w-56 rounded border border-studio-fill bg-studio-bg p-2 shadow-xl">
+                  <div className="mb-2 text-[10px] uppercase tracking-wide text-studio-muted">调色板</div>
                   {(isBt
                     ? ['Selector', 'Sequence', 'Action', 'Condition']
                     : ['Compound', 'Leaf']
@@ -782,7 +862,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                     <button
                       key={k}
                       type="button"
-                      className="mb-1 flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-zinc-100 hover:bg-zinc-800"
+                      className="mb-1 flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-studio-label hover:bg-studio-elevated"
                       onClick={() => addNode(k)}
                     >
                       {k}
@@ -792,14 +872,14 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
               ) : null}
             </>
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+            <div className="flex h-full items-center justify-center text-sm text-studio-muted">
               左边选一条拓扑
             </div>
           )}
         </main>
 
         <aside className="col-span-3 space-y-4 overflow-auto p-4">
-          <div className="text-[10px] uppercase tracking-wide text-zinc-500">检查器</div>
+          <div className="text-[10px] uppercase tracking-wide text-studio-muted">检查器</div>
           {selectedBtNode ? (
             <div className="space-y-3">
               <label className={labelClass}>
@@ -850,17 +930,20 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   </label>
                   <button
                     type="button"
-                    className="rounded border border-sky-500/50 px-3 py-1.5 text-xs text-sky-300 hover:bg-sky-500/10"
+                    className="rounded border border-studio-blue/50 px-3 py-1.5 text-xs text-studio-blue hover:bg-studio-blue/10"
                     onClick={() => openLeafGraph(selectedBtNode.action)}
                   >
                     打开叶子函数图
                   </button>
                 </>
               ) : (
-                <div className="text-xs text-zinc-500">
+                <div className="text-xs text-studio-muted">
                   组合节点：从下方手柄拖线到子节点。子序 = 连线顺序。
                 </div>
               )}
+              <button type="button" className={STUDIO_CHROME.btnDanger} onClick={removeSelectedNode}>
+                删除此节点
+              </button>
             </div>
           ) : null}
 
@@ -910,18 +993,21 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
               {(selectedHfsmState.onEnter || selectedHfsmState.onTick || selectedHfsmState.onExit) ? (
                 <button
                   type="button"
-                  className="rounded border border-sky-500/50 px-3 py-1.5 text-xs text-sky-300 hover:bg-sky-500/10"
+                  className="rounded border border-studio-blue/50 px-3 py-1.5 text-xs text-studio-blue hover:bg-studio-blue/10"
                   onClick={() => openLeafGraph(selectedHfsmState.onTick || selectedHfsmState.onEnter || selectedHfsmState.onExit)}
                 >
                   打开叶子函数图
                 </button>
               ) : null}
+              <button type="button" className={STUDIO_CHROME.btnDanger} onClick={removeSelectedNode}>
+                删除此节点
+              </button>
             </div>
           ) : null}
 
           {selectedTransition ? (
             <div className="space-y-3">
-              <div className="text-xs text-amber-200">
+              <div className="text-xs text-studio-yellow">
                 转移 {selectedTransition.source} → {selectedTransition.target}
               </div>
               <label className={labelClass}>
@@ -959,11 +1045,14 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   onChange={(e) => updateSelectedTransition({ priority: Number.parseInt(e.target.value, 10) || 0 })}
                 />
               </label>
+              <button type="button" className={STUDIO_CHROME.btnDanger} onClick={removeSelectedEdge}>
+                删除此转移
+              </button>
             </div>
           ) : null}
 
           {!selectedBtNode && !selectedHfsmState && !selectedTransition ? (
-            <div className="text-sm text-zinc-500">点画布上的节点或转移边看详情</div>
+            <div className="text-sm text-studio-muted">点画布上的节点或转移边看详情</div>
           ) : null}
         </aside>
       </div>

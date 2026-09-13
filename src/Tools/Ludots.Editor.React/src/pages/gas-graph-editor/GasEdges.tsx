@@ -59,7 +59,9 @@ export function GasControlEdge({
           strokeWidth,
           opacity: live ? 0.7 + intensity * 0.3 : style?.opacity ?? 0.9,
           strokeDasharray: undefined,
-          filter: live ? `drop-shadow(0 0 ${6 + intensity * 8}px rgba(251, 191, 36, ${0.45 + intensity * 0.4}))` : undefined,
+          filter: live
+            ? `drop-shadow(0 0 ${6 + intensity * 8}px color-mix(in srgb, var(--studio-yellow) ${Math.round(45 + intensity * 40)}%, transparent))`
+            : undefined,
         }}
       />
       {live ? (
@@ -67,7 +69,7 @@ export function GasControlEdge({
           <circle r={4.8} fill={GAS_GRAPH_THEME.execBead} className="gas-control-bead">
             <animateMotion dur={beadDur} repeatCount="indefinite" path={path} rotate="auto" />
           </circle>
-          <circle r={2.4} fill="#f59e0b" className="gas-control-bead" opacity={0.85}>
+          <circle r={2.4} fill={GAS_GRAPH_THEME.execAccent} className="gas-control-bead" opacity={0.85}>
             <animateMotion dur={beadDur} begin="0.18s" repeatCount="indefinite" path={path} rotate="auto" />
           </circle>
         </>

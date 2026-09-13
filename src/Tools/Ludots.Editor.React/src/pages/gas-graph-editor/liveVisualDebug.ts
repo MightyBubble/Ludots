@@ -462,8 +462,8 @@ export function applyWatchFocusToEdges(
         style: {
           ...edge.style,
           stroke: live
-            ? (isValue ? '#bae6fd' : '#fbbf24')
-            : (isValue ? '#64748b' : '#a8a29e'),
+            ? (isValue ? 'var(--studio-blue)' : 'var(--studio-yellow)')
+            : 'var(--studio-muted)',
           strokeWidth: isValue ? 1.45 : (live ? 4 : 2.25),
           opacity: isValue ? 0.75 : 1,
           strokeDasharray: undefined,

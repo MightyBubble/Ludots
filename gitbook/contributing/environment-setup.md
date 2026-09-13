@@ -21,6 +21,13 @@ dotnet build src/Tools/Ludots.Editor.Bridge/Ludots.Editor.Bridge.csproj -c Relea
 .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
+.\scripts\run-authoring-studio.cmd
+```
+
+Linux / macOS 作者工作室：
+
+```bash
+./scripts/run-authoring-studio.sh
 ```
 
 规则：
