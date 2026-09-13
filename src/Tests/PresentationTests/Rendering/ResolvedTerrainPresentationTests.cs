@@ -58,7 +58,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Resolve_VisualHeightmapRejectsBoardNameAndRequiresLoadedHeightmap()
+        public void Resolve_ContinuousHeightmapRejectsBoardNameAndRequiresLoadedHeightmap()
         {
             MapSession conflicting = CreateSession(new TerrainPresentationBindingConfig
             {
@@ -76,7 +76,7 @@ namespace Ludots.Tests.Presentation
             });
             Assert.That(
                 () => ResolvedTerrainPresentation.Resolve(missing),
-                Throws.InvalidOperationException.With.Message.Contains("no visual heightmap was loaded"));
+                Throws.InvalidOperationException.With.Message.Contains("no continuous heightmap was loaded"));
         }
 
         private static MapSession CreateSession(TerrainPresentationBindingConfig binding)
@@ -100,6 +100,7 @@ namespace Ludots.Tests.Presentation
                     Name = name,
                     WidthInMacroTiles = 1,
                     HeightInMacroTiles = 1,
+                    LoadedChunkCapacity = 16,
                 })
             {
                 VertexMap = vertexMap!,

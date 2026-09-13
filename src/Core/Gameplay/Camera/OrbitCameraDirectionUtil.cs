@@ -28,11 +28,6 @@ namespace Ludots.Core.Gameplay.Camera
             return WorldPlane2D.CameraRightFromYawDegrees(yawDeg);
         }
 
-        public static Vector2 ScreenRightFromYawDegrees(float yawDeg)
-        {
-            return WorldPlane2D.CameraScreenRightFromYawDegrees(yawDeg);
-        }
-
         /// <summary>
         /// 将 WASD 输入 (move.X=右-左, move.Y=上-下) 转为 TargetCm 空间平移方向。
         /// </summary>

@@ -235,8 +235,16 @@ namespace Ludots.Tests.Presentation
                 Visibility = VisualVisibility.Visible,
             }), Is.True);
 
+            var camera = new Camera3D
+            {
+                position = new Vector3(0f, 500f, 500f),
+                target = Vector3.Zero,
+                up = Vector3.UnitY,
+                fovy = 60f,
+                projection = CameraProjection.CAMERA_PERSPECTIVE,
+            };
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => renderer.Draw(draw, default(Camera3D), new MeshAssetRegistry()))!;
+                () => renderer.Draw(draw, camera, new MeshAssetRegistry()))!;
             Assert.That(ex.Message, Does.Contain(nameof(RaylibPrimitiveRenderer.BindReceiverMeshProjector)));
             Assert.That(ex.Message, Does.Not.Contain("terrain-only"));
         }

@@ -62,8 +62,10 @@ namespace Ludots.Tests.Presentation
             var planner = new StaticMeshAdapterSyncPlanner();
             planner.Sync(snapshot);
 
+            int[] structureMeshAssetIds = instancedStaticVisuals.Select(item => item.MeshAssetId).Distinct().ToArray();
             StaticMeshAdapterBindingState[] instancedBindings = planner.ActiveBindings.Values
                 .Where(binding => binding.Lane.RenderPath == VisualRenderPath.InstancedStaticMesh)
+                .Where(binding => structureMeshAssetIds.Contains(binding.Lane.MeshAssetId))
                 .ToArray();
 
             Assert.That(instancedBindings.Length, Is.EqualTo(3),
