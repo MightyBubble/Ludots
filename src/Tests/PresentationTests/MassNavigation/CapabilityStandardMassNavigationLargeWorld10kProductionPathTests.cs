@@ -532,6 +532,12 @@ namespace Ludots.Tests.Presentation
 
             var hudProjection = CreateHudProjection(engine);
             _ = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
+            AdvanceFixedClockUntil(
+                engine,
+                hudProjection,
+                MaxWarmupFrames,
+                () => CountAgentsMissingPeriodicEffect(engine, expectedAgents) == 0,
+                () => $"{CountAgentsMissingPeriodicEffect(engine, expectedAgents)} of {expectedAgents} agents have not attached their periodic spawn effect yet.");
             AssertScreenHudIdentityStableAcrossProjectionFrames(engine, hudProjection, HudStabilityObservationFrames);
 
             Dictionary<int, AgentHealthSample> before = CaptureAgentHealth(engine, expectedAgents);
@@ -1678,6 +1684,23 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(samples.Count, Is.EqualTo(expectedAgents));
             return samples;
+        }
+
+        private static int CountAgentsMissingPeriodicEffect(GameEngine engine, int expectedAgents)
+        {
+            int missing = 0;
+            var query = new QueryDescription().WithAll<MassNavigationAgent, ActiveEffectContainer>();
+            int agents = 0;
+            engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _, ref ActiveEffectContainer effects) =>
+            {
+                agents++;
+                if (effects.Count == 0)
+                {
+                    missing++;
+                }
+            });
+
+            return agents == expectedAgents ? missing : int.MaxValue;
         }
 
         private static Dictionary<int, int> CaptureAgentEffectTicks(GameEngine engine, int expectedAgents)
