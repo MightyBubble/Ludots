@@ -160,6 +160,8 @@ namespace Ludots.Core.Presentation.Minimap
 
         private readonly List<MinimapDebugMarker> _debugVisibleMarkers;
         private readonly Vector2[] _cameraFrustumScreenPoints = new Vector2[CameraFrustumPointCapacity];
+        private readonly Vector2[] _cameraFrustumMapPoints = new Vector2[CameraFrustumPointCapacity];
+        private readonly Vector2[] _cameraFrustumClipPoints = new Vector2[CameraFrustumPointCapacity];
         private string _currentMapId = string.Empty;
         private string _diagnostic = string.Empty;
         private float _centerXcm;
@@ -176,6 +178,7 @@ namespace Ludots.Core.Presentation.Minimap
         private Vector2 _mapRight = Vector2.UnitX;
         private Vector2 _mapUp = Vector2.UnitY;
         private float _screenFacingOffsetRad;
+        private bool _screenFacingReflected;
         private float _metricGridStepCm = 1000f;
         private bool _viewportInitialized;
         private bool _rtsCenterResetPending = true;
@@ -892,6 +895,7 @@ namespace Ludots.Core.Presentation.Minimap
             float fieldX = _fieldX;
             float fieldY = _fieldY;
             float screenFacingOffsetRad = _screenFacingOffsetRad;
+            bool screenFacingReflected = _screenFacingReflected;
             ReadOnlySpan<int> stableIds = markers.StableIds;
             ReadOnlySpan<float> worldXcmValues = markers.WorldXcm;
             ReadOnlySpan<float> worldYcmValues = markers.WorldYcm;
@@ -983,6 +987,7 @@ namespace Ludots.Core.Presentation.Minimap
                     orientationBucket = WorldPlane2D.ProjectFacingRadToScreenBucket(
                         orientationRadValues[i],
                         screenFacingOffsetRad,
+                        screenFacingReflected,
                         MinimapScreenMarkerBuffer.OrientationBucketCount);
                     orientationRad = WorldPlane2D.BucketToFacingRad(
                         orientationBucket,
@@ -1136,7 +1141,7 @@ namespace Ludots.Core.Presentation.Minimap
             {
                 _mapRight = Vector2.UnitX;
                 _mapUp = Vector2.UnitY;
-                _screenFacingOffsetRad = WorldPlane2D.ResolveScreenFacingOffsetRad(in _mapRight, in _mapUp);
+                _screenFacingOffsetRad = WorldPlane2D.ResolveScreenFacingOffsetRad(in _mapRight, in _mapUp, out _screenFacingReflected);
                 return;
             }
 
@@ -1144,7 +1149,7 @@ namespace Ludots.Core.Presentation.Minimap
             WorldPlane2D.CameraMinimapBasisFromYawDegrees(state.Yaw, out Vector2 right, out Vector2 forward);
             _mapUp = WorldPlane2D.NormalizeOrDefault(forward, Vector2.UnitY);
             _mapRight = WorldPlane2D.NormalizeOrDefault(right, Vector2.UnitX);
-            _screenFacingOffsetRad = WorldPlane2D.ResolveScreenFacingOffsetRad(in _mapRight, in _mapUp);
+            _screenFacingOffsetRad = WorldPlane2D.ResolveScreenFacingOffsetRad(in _mapRight, in _mapUp, out _screenFacingReflected);
         }
 
         private void UpdateCameraFrustum(GameEngine engine)
@@ -1169,7 +1174,22 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
-            _cameraFrustumPointCount = 4;
+            int clippedCount = WorldPlane2D.ClipConvexPolygonToUnitSquare(
+                _cameraFrustumMapPoints.AsSpan(0, 4),
+                _cameraFrustumClipPoints);
+            if (clippedCount < 3)
+            {
+                return;
+            }
+
+            for (int i = 0; i < clippedCount; i++)
+            {
+                _cameraFrustumScreenPoints[i] = MapNormalizedToScreen(
+                    _cameraFrustumClipPoints[i].X,
+                    _cameraFrustumClipPoints[i].Y);
+            }
+
+            _cameraFrustumPointCount = clippedCount;
             EnsureCameraFrustumMinimumDisplaySize();
             _cameraFrustumVisible = true;
         }
@@ -1530,8 +1550,15 @@ namespace Ludots.Core.Presentation.Minimap
                 return false;
             }
 
-            ProjectWorldToScreenClamped(worldCm.X, worldCm.Y, out float screenX, out float screenY);
-            _cameraFrustumScreenPoints[index] = new Vector2(screenX, screenY);
+            // 屏幕上沿射线在低俯角时落点远超世界边界，这里只取未钳制的归一化坐标，
+            // 越界折叠交给凸多边形裁剪处理。
+            WorldToMapNormalizedUnclipped(worldCm.X, worldCm.Y, out float normalizedX, out float normalizedY);
+            if (!float.IsFinite(normalizedX) || !float.IsFinite(normalizedY))
+            {
+                return false;
+            }
+
+            _cameraFrustumMapPoints[index] = new Vector2(normalizedX, normalizedY);
             return true;
         }
 
@@ -1590,9 +1617,17 @@ namespace Ludots.Core.Presentation.Minimap
                 return false;
             }
 
-            screenX = _fieldX + (normalizedX * (_fieldSize - 1));
-            screenY = _fieldY + ((1f - normalizedY) * (_fieldSize - 1));
+            Vector2 screenPoint = MapNormalizedToScreen(normalizedX, normalizedY);
+            screenX = screenPoint.X;
+            screenY = screenPoint.Y;
             return true;
+        }
+
+        private Vector2 MapNormalizedToScreen(float normalizedX, float normalizedY)
+        {
+            return new Vector2(
+                _fieldX + (normalizedX * (_fieldSize - 1f)),
+                _fieldY + ((1f - normalizedY) * (_fieldSize - 1f)));
         }
 
         private bool TryWorldToMapNormalized(float worldXcm, float worldYcm, out float normalizedX, out float normalizedY)
@@ -1639,25 +1674,6 @@ namespace Ludots.Core.Presentation.Minimap
         private Vector2 MapLocalOffsetToWorld(float localXcm, float localYcm)
         {
             return WorldPlane2D.MapLocalOffsetToWorld(localXcm, localYcm, in _mapRight, in _mapUp);
-        }
-
-        private void ProjectWorldToScreenClamped(float worldXcm, float worldYcm, out float screenX, out float screenY)
-        {
-            WorldPlane2D.ProjectWorldCmToScreenClamped(
-                worldXcm,
-                worldYcm,
-                _centerXcm,
-                _centerYcm,
-                _mapRight.X,
-                _mapRight.Y,
-                _mapUp.X,
-                _mapUp.Y,
-                _halfExtentCm,
-                _fieldX,
-                _fieldY,
-                _fieldSize - 1f,
-                out screenX,
-                out screenY);
         }
 
         private void ProjectWorldToScreenUnclipped(float worldXcm, float worldYcm, out float screenX, out float screenY)
