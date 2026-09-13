@@ -65,6 +65,7 @@ namespace Ludots.Core.Presentation.Hud
             {
                 if (WorldHudItemEquals(in _buffer[existingIndex], in item))
                 {
+                    AdoptValueBoundValues(existingIndex, in item);
                     return true;
                 }
 
@@ -107,6 +108,26 @@ namespace Ludots.Core.Presentation.Hud
             ProjectionRevision++;
             StructuralRevision++;
             return true;
+        }
+
+        /// <summary>
+        /// 值绑定条目的 emit 侧 serial 不混入数值，重发在 serial 命中被判"相等"；
+        /// 但世界车道自身（wire 全量帧、调试读数）直接消费 Value0/Value1，
+        /// 不能停留在首帧快照——静默采纳重发带来的新值，不产生脏增量与修订号：
+        /// 屏幕侧权威值仍由 RefreshAttributeBoundTexts 投影期现读，互不替代。
+        /// </summary>
+        private void AdoptValueBoundValues(int index, in WorldHudItem item)
+        {
+            ref WorldHudItem retained = ref _buffer[index];
+            if (retained.ValueBound == 0 ||
+                item.ValueBound == 0 ||
+                (retained.Value0 == item.Value0 && retained.Value1 == item.Value1))
+            {
+                return;
+            }
+
+            retained.Value0 = item.Value0;
+            retained.Value1 = item.Value1;
         }
 
         public void UpdatePosition(int stableId, in Vector3 position)
