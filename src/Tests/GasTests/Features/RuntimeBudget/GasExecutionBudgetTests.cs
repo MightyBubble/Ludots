@@ -698,6 +698,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         [Test]
         public void EffectLifetime_ResetSlice_AfterExternalCommit_CompletesCommittedCleanup()
         {
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(64);
             using var world = World.Create();
             Entity source = world.Create();
             Entity target = world.Create(new ActiveEffectContainer());
@@ -728,12 +729,13 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
 
             Assert.That(world.IsAlive(effect), Is.False);
             Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.Zero);
-            Assert.That(world.Has<AttributeAggregateDirty>(target), Is.True);
+            Assert.That(registry.Contains(target), Is.True);
         }
 
         [Test]
         public void RealtimePacemaker_BudgetFuse_AfterLifetimeCommit_ResetsWithoutPartialCleanup()
         {
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(64);
             float fixedDeltaBefore = Time.FixedDeltaTime;
             try
             {
@@ -762,7 +764,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                     lifetimeSnapshotCapacity: 4,
                     fanOutCommandCapacity: 4,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    maxWorkUnitsPerSlice: 2);
+                    maxWorkUnitsPerSlice: 2,
+                    aggregateDirty: registry);
                 var systems = new Dictionary<SystemGroup, List<ISystem<float>>>
                 {
                     [SystemGroup.EffectProcessing] = new List<ISystem<float>> { loop },
@@ -780,7 +783,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 Assert.That(pacemaker.IsBudgetFused, Is.True);
                 Assert.That(world.IsAlive(effect), Is.False);
                 Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.Zero);
-                Assert.That(world.Has<AttributeAggregateDirty>(target), Is.True);
+                Assert.That(registry.Contains(target), Is.True);
             }
             finally
             {
@@ -893,6 +896,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         [Test]
         public void EffectProcessingLoop_AllStagesShareOneDeterministicWorkBudget()
         {
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(64);
             using var world = World.Create();
             var clock = new DiscreteClock();
             var requests = new EffectRequestQueue();
@@ -938,7 +942,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                maxWorkUnitsPerSlice: 4);
+                maxWorkUnitsPerSlice: 4,
+                    aggregateDirty: registry);
 
             bool completed;
             bool sawProposal = false;
@@ -969,6 +974,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         [Test]
         public void EffectProcessingLoop_ExactProposalBudgetBoundary_DoesNotOverrunWhenClosingWindow()
         {
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(64);
             const int workBudget = 4096;
             const int ordinaryRequestCount = 1364;
             const int ordinaryTemplateId = 1;
@@ -1025,7 +1031,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 fanOutCommandCapacity: workBudget,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                maxWorkUnitsPerSlice: workBudget);
+                maxWorkUnitsPerSlice: workBudget,
+                    aggregateDirty: registry);
 
             Assert.That(loop.UpdateSlice(0f, int.MaxValue), Is.False);
             Assert.That(loop.ProposalProcessedLastSlice, Is.EqualTo(workBudget));

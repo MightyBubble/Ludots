@@ -15,6 +15,14 @@ public sealed class MassNavigationCadenceConfig
     public int MaxStepsPerFixedTick { get; set; }
     public int HardResolveCandidateThresholdAgents { get; set; }
 
+    /// <summary>
+    /// Agent 分片合同：把一个 simulation 轮次（simulationHz 语义、每个 agent 的步长 dt 不变）
+    /// 拆成 N 个连续 fixed tick 上的分片步。每个 agent 仍以 simulationHz 更新，
+    /// 但单帧不再全量处理人群——steering/hard resolve/entity sync 按稠密代理索引分片摊销。
+    /// 1 = 现行为（逐帧全量精确语义）；N &gt; 1 要求 simulationHz × N 能被 fixed tick 预算承载。
+    /// </summary>
+    public int AgentSliceCount { get; set; } = 1;
+
     public void Validate()
     {
         ValidateHz(nameof(SimulationHz), SimulationHz, allowZero: false);
@@ -33,6 +41,11 @@ public sealed class MassNavigationCadenceConfig
         if (HardResolveCandidateThresholdAgents < 1)
         {
             throw new InvalidOperationException("MassNavigation cadence requires HardResolveCandidateThresholdAgents >= 1.");
+        }
+
+        if (AgentSliceCount < 1)
+        {
+            throw new InvalidOperationException("MassNavigation cadence requires AgentSliceCount >= 1.");
         }
 
     }
@@ -54,7 +67,12 @@ internal readonly record struct MassNavigationCadenceStep(
     bool RefreshCrowd,
     bool RefreshObstacles,
     bool RunHardResolve,
-    bool SyncEntities);
+    bool SyncEntities,
+    int AgentSliceIndex,
+    int AgentSliceCount)
+{
+    public bool AgentSliceRoundStart => AgentSliceIndex == 0;
+}
 
 internal sealed class MassNavigationCadenceScheduler
 {
@@ -71,6 +89,7 @@ internal sealed class MassNavigationCadenceScheduler
     private int _fixedHz;
     private int _simulationHz;
     private int _maxStepsPerFixedTick;
+    private int _agentSliceCount;
     private int _targetUpdateHz;
     private int _flowStepHz;
     private int _flowCrowdStampHz;
@@ -78,10 +97,20 @@ internal sealed class MassNavigationCadenceScheduler
     private int _hardResolveHz;
     private int _entitySyncHz;
 
+    private int _sliceStepOrdinal;
+    private bool _roundUpdateTargets;
+    private bool _roundRefreshFlow;
+    private bool _roundRefreshCrowd;
+    private bool _roundRefreshObstacles;
+    private bool _roundRunHardResolve;
+    private bool _roundSyncEntities;
+
     public MassNavigationCadenceScheduler(MassNavigationCadenceConfig config)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
     }
+
+    public int AgentSliceCount => _config.AgentSliceCount;
 
     public int BeginFixedTick(float fixedDt)
     {
@@ -97,14 +126,33 @@ internal sealed class MassNavigationCadenceScheduler
     public MassNavigationCadenceStep NextSimulationStep()
     {
         EnsureSimulationCadence();
+        if (_sliceStepOrdinal == 0)
+        {
+            _roundUpdateTargets = ShouldRun(_targetUpdate);
+            _roundRefreshFlow = ShouldRun(_flowStep);
+            _roundRefreshCrowd = ShouldRun(_flowCrowd);
+            _roundRefreshObstacles = ShouldRun(_flowObstacle);
+            _roundRunHardResolve = ShouldRun(_hardResolve);
+            _roundSyncEntities = ShouldRun(_entitySync);
+        }
+
+        int sliceIndex = _sliceStepOrdinal;
+        _sliceStepOrdinal++;
+        if (_sliceStepOrdinal >= _agentSliceCount)
+        {
+            _sliceStepOrdinal = 0;
+        }
+
         return new MassNavigationCadenceStep(
-            _simulation!.TargetDeltaTime,
-            ShouldRun(_targetUpdate),
-            ShouldRun(_flowStep),
-            ShouldRun(_flowCrowd),
-            ShouldRun(_flowObstacle),
-            ShouldRun(_hardResolve),
-            ShouldRun(_entitySync));
+            _simulationHz > 0 ? 1f / _simulationHz : 0f,
+            _roundUpdateTargets,
+            _roundRefreshFlow,
+            _roundRefreshCrowd,
+            _roundRefreshObstacles,
+            _roundRunHardResolve,
+            _roundSyncEntities,
+            sliceIndex,
+            _agentSliceCount);
     }
 
     private void EnsureFixedCadence(float fixedDt)
@@ -113,7 +161,8 @@ internal sealed class MassNavigationCadenceScheduler
         if (_simulation != null &&
             _fixedHz == fixedHz &&
             _simulationHz == _config.SimulationHz &&
-            _maxStepsPerFixedTick == _config.MaxStepsPerFixedTick)
+            _maxStepsPerFixedTick == _config.MaxStepsPerFixedTick &&
+            _agentSliceCount == _config.AgentSliceCount)
         {
             return;
         }
@@ -121,7 +170,16 @@ internal sealed class MassNavigationCadenceScheduler
         _fixedHz = fixedHz;
         _simulationHz = _config.SimulationHz;
         _maxStepsPerFixedTick = _config.MaxStepsPerFixedTick;
-        _simulation = Reset(_simulation, fixedHz, _config.SimulationHz, _config.MaxStepsPerFixedTick);
+        _agentSliceCount = _config.AgentSliceCount;
+        int sliceStepHz = checked(_simulationHz * _agentSliceCount);
+        int maxSliceStepsPerFixedTick = (sliceStepHz + fixedHz - 1) / fixedHz;
+        if (maxSliceStepsPerFixedTick > _maxStepsPerFixedTick)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation cadence simulationHz {_simulationHz} x agentSliceCount {_agentSliceCount} requires {maxSliceStepsPerFixedTick} slice steps per fixed tick at fixedHz {fixedHz}, exceeding MaxStepsPerFixedTick {_maxStepsPerFixedTick}.");
+        }
+
+        _simulation = Reset(_simulation, fixedHz, sliceStepHz, _maxStepsPerFixedTick);
         ResetSimulationCadence();
     }
 
@@ -161,6 +219,7 @@ internal sealed class MassNavigationCadenceScheduler
         _flowObstacle = null;
         _hardResolve = null;
         _entitySync = null;
+        _sliceStepOrdinal = 0;
     }
 
     private static DiscreteRateTickDistributor Reset(

@@ -369,10 +369,52 @@ namespace Ludots.Core.Systems
             void AddAssetId(AssetKind assetKind, int assetId, VisualRenderPath renderPath)
             {
                 if (assetKind is not (AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Surface) ||
-                    assetId <= 0 || !_meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor) ||
-                    descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)
+                    assetId <= 0 || !_meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor))
                 {
                     return;
+                }
+
+                if (renderPath == VisualRenderPath.GpuSkinnedInstance && descriptor.GpuSkinnedLod.IsConfigured)
+                {
+                    AddRequiredGpuSkinnedAsset(assetKind, assetId, renderPath);
+                    AddGpuSkinnedLodPass(assetKind, descriptor.GpuSkinnedLod.Main, renderPath);
+                    AddGpuSkinnedLodPass(assetKind, descriptor.GpuSkinnedLod.Shadow, renderPath);
+                    return;
+                }
+
+                if (descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)
+                {
+                    return;
+                }
+
+                manifest.Add(MapPresentationAsset.Create(assetKind, assetId, renderPath, descriptor.SourceUris));
+            }
+
+            void AddGpuSkinnedLodPass(AssetKind assetKind, MeshLodAssetIds lods, VisualRenderPath renderPath)
+            {
+                AddRequiredGpuSkinnedAsset(assetKind, lods.High, renderPath);
+                AddRequiredGpuSkinnedAsset(assetKind, lods.Medium, renderPath);
+                AddRequiredGpuSkinnedAsset(assetKind, lods.Low, renderPath);
+            }
+
+            void AddRequiredGpuSkinnedAsset(AssetKind assetKind, int assetId, VisualRenderPath renderPath)
+            {
+                if (assetId <= 0 || !_meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' GPU-skinned LOD references unknown mesh asset id {assetId}.");
+                }
+
+                if (descriptor.Type != MeshAssetType.Model)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' GPU-skinned LOD mesh asset '{_meshAssets.GetName(assetId)}' must be a Model, but has type '{descriptor.Type}'.");
+                }
+
+                if (descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' GPU-skinned LOD mesh asset '{_meshAssets.GetName(assetId)}' has no host sourceUris.");
                 }
 
                 manifest.Add(MapPresentationAsset.Create(assetKind, assetId, renderPath, descriptor.SourceUris));

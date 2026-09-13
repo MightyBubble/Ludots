@@ -160,7 +160,8 @@ namespace Ludots.Tests.GAS
 
             var tagOps = new TagOps(
                 new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME),
-                new TagRuleRegistry());
+                new TagRuleRegistry(),
+                aggregateDirty: new AttributeAggregateDirtyRegistry());
 
             var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
             ref var targetAttributes = ref world.Get<AttributeBuffer>(target);
@@ -192,7 +193,7 @@ namespace Ludots.Tests.GAS
                 phaseExecutor: executor,
                 graphApi: graphApi,
                 tagOps: tagOps);
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
 
             const int graphId = 9001;
             const int templateId = 701;

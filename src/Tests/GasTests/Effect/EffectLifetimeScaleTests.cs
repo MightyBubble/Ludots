@@ -101,9 +101,11 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var clock = new DiscreteClock();
+            var aggregateDirty = new AttributeAggregateDirtyRegistry();
             var tagOps = new TagOps(
                 new DirtyEntityQueue(Math.Max(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, count * 2)),
-                new TagRuleRegistry());
+                new TagRuleRegistry(),
+                aggregateDirty: aggregateDirty);
 
             const int graphId = 1001;
             const int templateId = 1001;
@@ -153,7 +155,7 @@ namespace Ludots.Tests.GAS
                 phaseExecutor: executor,
                 graphApi: graphApi,
                 tagOps: tagOps);
-            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
+            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: aggregateDirty);
 
             var targets = new Entity[count];
             var effects = new Entity[count];
@@ -164,8 +166,7 @@ namespace Ludots.Tests.GAS
                     new ActiveEffectContainer(),
                     new DirtyFlags(),
                     new GameplayTagContainer(),
-                    new TagCountContainer(),
-                    new AttributeAggregateDirty());
+                    new TagCountContainer());
                 world.Get<AttributeBuffer>(target).SetBase(DurabilityId, 100f);
                 world.Get<AttributeBuffer>(target).SetCurrent(DurabilityId, 100f);
                 targets[i] = target;
@@ -449,8 +450,7 @@ namespace Ludots.Tests.GAS
                     new ActiveEffectContainer(),
                     new DirtyFlags(),
                     new GameplayTagContainer(),
-                    new TagCountContainer(),
-                    new AttributeAggregateDirty());
+                    new TagCountContainer());
                 world.Get<AttributeBuffer>(target).SetBase(DurabilityId, 100f);
                 world.Get<AttributeBuffer>(target).SetCurrent(DurabilityId, 100f);
 
@@ -554,7 +554,6 @@ namespace Ludots.Tests.GAS
                     new DirtyFlags(),
                     new GameplayTagContainer(),
                     new TagCountContainer(),
-                    new AttributeAggregateDirty(),
                     new EffectPhaseListenerBuffer());
                 world.Get<AttributeBuffer>(target).SetBase(DurabilityId, 100f);
                 world.Get<AttributeBuffer>(target).SetCurrent(DurabilityId, 100f);

@@ -94,6 +94,119 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MeshAssetConfigLoader_WhenGpuSkinnedLodUsesForwardReferences_CompilesAllPassesToRuntimeIds()
+        {
+            WriteCoreConfig("Presentation/mesh_assets.json", "[]");
+            WriteModAsset(
+                "TestMod",
+                "Presentation/mesh_assets.json",
+                """
+                [
+                  {
+                    "id": "soldier",
+                    "type": "Model",
+                    "gpuSkinnedLod": {
+                      "main": {
+                        "high": "soldier",
+                        "medium": "soldier.lod1",
+                        "low": "soldier.lod2"
+                      },
+                      "shadow": {
+                        "high": "soldier.lod1",
+                        "medium": "soldier.lod2",
+                        "low": "soldier.shadow"
+                      }
+                    }
+                  },
+                  { "id": "soldier.lod1", "type": "Model" },
+                  { "id": "soldier.lod2", "type": "Model" },
+                  { "id": "soldier.shadow", "type": "Model" }
+                ]
+                """);
+
+            var (_, pipeline, catalog) = BuildPipelineWithMods("TestMod");
+            var meshes = new MeshAssetRegistry();
+
+            new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
+
+            int soldierId = meshes.GetId("soldier");
+            Assert.That(meshes.TryGetDescriptor(soldierId, out var descriptor), Is.True);
+            Assert.That(descriptor.GpuSkinnedLod.IsConfigured, Is.True);
+            Assert.That(descriptor.GpuSkinnedLod.ResolveMain(LODLevel.High), Is.EqualTo(soldierId));
+            Assert.That(descriptor.GpuSkinnedLod.ResolveMain(LODLevel.Medium), Is.EqualTo(meshes.GetId("soldier.lod1")));
+            Assert.That(descriptor.GpuSkinnedLod.ResolveMain(LODLevel.Low), Is.EqualTo(meshes.GetId("soldier.lod2")));
+            Assert.That(descriptor.GpuSkinnedLod.ResolveShadow(LODLevel.High), Is.EqualTo(meshes.GetId("soldier.lod1")));
+            Assert.That(descriptor.GpuSkinnedLod.ResolveShadow(LODLevel.Medium), Is.EqualTo(meshes.GetId("soldier.lod2")));
+            Assert.That(descriptor.GpuSkinnedLod.ResolveShadow(LODLevel.Low), Is.EqualTo(meshes.GetId("soldier.shadow")));
+        }
+
+        [TestCase(
+            "{ \"main\": { \"high\": \"soldier\", \"medium\": \"soldier.lod1\" }, \"shadow\": { \"high\": \"soldier.lod1\", \"medium\": \"soldier.lod1\", \"low\": \"soldier.lod1\" } }",
+            "main.low")]
+        [TestCase(
+            "{ \"main\": { \"high\": \"soldier\", \"medium\": \"missing\", \"low\": \"soldier.lod1\" }, \"shadow\": { \"high\": \"soldier.lod1\", \"medium\": \"soldier.lod1\", \"low\": \"soldier.lod1\" } }",
+            "unknown mesh asset 'missing'")]
+        [TestCase(
+            "{ \"main\": { \"high\": \"soldier\", \"medium\": \"soldier.billboard\", \"low\": \"soldier.lod1\" }, \"shadow\": { \"high\": \"soldier.lod1\", \"medium\": \"soldier.lod1\", \"low\": \"soldier.lod1\" } }",
+            "must reference a Model")]
+        [TestCase(
+            "{ \"main\": { \"high\": \"soldier.lod1\", \"medium\": \"soldier.lod1\", \"low\": \"soldier.lod1\" }, \"shadow\": { \"high\": \"soldier.lod1\", \"medium\": \"soldier.lod1\", \"low\": \"soldier.lod1\" } }",
+            "main.high must reference itself")]
+        public void MeshAssetConfigLoader_WhenGpuSkinnedLodContractIsInvalid_Throws(
+            string gpuSkinnedLodJson,
+            string expectedMessage)
+        {
+            WriteCoreConfig("Presentation/mesh_assets.json", "[]");
+            WriteModAsset(
+                "TestMod",
+                "Presentation/mesh_assets.json",
+                $$"""
+                [
+                  {
+                    "id": "soldier",
+                    "type": "Model",
+                    "gpuSkinnedLod": {{gpuSkinnedLodJson}}
+                  },
+                  { "id": "soldier.lod1", "type": "Model" },
+                  { "id": "soldier.billboard", "type": "Billboard" }
+                ]
+                """);
+
+            var (_, pipeline, catalog) = BuildPipelineWithMods("TestMod");
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                new MeshAssetConfigLoader(pipeline, new MeshAssetRegistry()).Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain(expectedMessage));
+        }
+
+        [Test]
+        public void MeshAssetConfigLoader_WhenNonModelDeclaresGpuSkinnedLod_Throws()
+        {
+            WriteCoreConfig("Presentation/mesh_assets.json", "[]");
+            WriteModAsset(
+                "TestMod",
+                "Presentation/mesh_assets.json",
+                """
+                [
+                  {
+                    "id": "billboard",
+                    "type": "Billboard",
+                    "gpuSkinnedLod": {
+                      "main": { "high": "billboard", "medium": "billboard", "low": "billboard" },
+                      "shadow": { "high": "billboard", "medium": "billboard", "low": "billboard" }
+                    }
+                  }
+                ]
+                """);
+
+            var (_, pipeline, catalog) = BuildPipelineWithMods("TestMod");
+
+            Assert.That(
+                () => new MeshAssetConfigLoader(pipeline, new MeshAssetRegistry()).Load(catalog),
+                Throws.InvalidOperationException.With.Message.Contains("only valid for Model assets"));
+        }
+
+        [Test]
         public void PresentationLodProfileConfigLoader_LoadsConfiguredProfile()
         {
             WriteCoreConfig(

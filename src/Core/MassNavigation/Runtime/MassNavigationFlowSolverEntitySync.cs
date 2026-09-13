@@ -11,9 +11,11 @@ public sealed partial class MassNavigationFlowSolverState
     {
         if (UnitCount <= 0 || _entitySyncDirtyCount <= 0)
         {
+            LastEntitySyncAgentCount = 0;
             return;
         }
 
+        int syncedCount = 0;
         int dirtyCount = _entitySyncDirtyCount;
         for (int dirtyIndex = 0; dirtyIndex < dirtyCount; dirtyIndex++)
         {
@@ -33,6 +35,7 @@ public sealed partial class MassNavigationFlowSolverState
                 continue;
             }
 
+            syncedCount++;
             if (!agentState.TryGetAgentEntity(i, out Entity entity))
             {
                 throw new InvalidOperationException(
@@ -55,6 +58,7 @@ public sealed partial class MassNavigationFlowSolverState
             worldPosition.Value = worldValue;
         }
 
+        LastEntitySyncAgentCount = syncedCount;
         _entitySyncDirtyCount = 0;
     }
 

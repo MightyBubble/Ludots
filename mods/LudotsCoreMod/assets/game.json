@@ -14,6 +14,12 @@
     "visualSnapshotBufferCapacity": 131072,
     "visualProxyBufferCapacity": 131072,
     "skinnedVisualBatchCapacity": 65536,
+    "gpuSkinned": {
+      "maxBatches": 64,
+      "maxUniquePoses": 128,
+      "maxBoneSlots": 1024,
+      "posePhaseBuckets": 16
+    },
     "presentationRequestCapacity": 262144,
     "clearTransientVisualProjectionCapacity": 262144,
     "instancedBatchRequestCapacity": 32768,

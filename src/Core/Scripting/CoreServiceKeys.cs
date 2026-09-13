@@ -223,6 +223,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<GasController> GasController = new("GasController");
         public static readonly ServiceKey<GasConditionRegistry> GasConditionRegistry = new("GasConditionRegistry");
         public static readonly ServiceKey<TagOps> TagOps = new("TagOps");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry> AttributeAggregateDirtyRegistry = new("AttributeAggregateDirtyRegistry");
         public static readonly ServiceKey<DirtyEntityQueue> DirtyEntityQueue = new("DirtyEntityQueue");
         public static readonly ServiceKey<EffectTemplateRegistry> EffectTemplateRegistry = new("EffectTemplateRegistry");
         public static readonly ServiceKey<TargetDispatchPresetRegistry> TargetDispatchPresetRegistry = new("TargetDispatchPresetRegistry");

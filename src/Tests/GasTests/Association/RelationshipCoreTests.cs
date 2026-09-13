@@ -141,7 +141,8 @@ namespace Ludots.Tests.GAS
             FinalizeBuffTemplates(templates);
 
             var requests = new EffectRequestQueue();
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var aggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggregateDirty);
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
@@ -149,9 +150,10 @@ namespace Ludots.Tests.GAS
                 new Ludots.Core.Engine.DiscreteClock(),
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                tagOps: tagOps);
-            var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), requests, templates: templates, tagOps: tagOps);
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
+                tagOps: tagOps,
+                aggregateDirty: aggregateDirty);
+            var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), requests, templates: templates, tagOps: tagOps, aggregateDirty: aggregateDirty);
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
 
             requests.Publish(new EffectRequest
             {

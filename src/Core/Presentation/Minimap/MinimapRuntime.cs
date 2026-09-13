@@ -90,6 +90,12 @@ namespace Ludots.Core.Presentation.Minimap
         private const int ToggleButtonHitPadding = 4;
         private const float FollowCameraToggleHalfExtentCm = 7000f;
         private const int MarkerStableIdSalt = 0x4d4d;
+        /// <summary>
+        /// 轮转重投影预算：标记数超过该值时投影与渲染帧率解耦——每 period = ceil(count/预算)
+        /// 帧做一次全量重投影，其余帧（相机/缩放/knowledge 视口未变）零重投影、整帧保留屏幕缓冲；
+        /// 不超过时 period = 1，保持逐帧全量投影的精确语义。
+        /// </summary>
+        private const int ReprojectionSliceBudget = 2500;
         private const int CameraFrustumPointCapacity = 16;
         private const int CameraFrustumLineThickness = 3;
         private const int CameraFrustumShadowThickness = 5;
@@ -106,6 +112,25 @@ namespace Ludots.Core.Presentation.Minimap
 
         private readonly MinimapRuntimeConfig _config;
         private readonly int _debugMarkerSampleCapacity;
+        private int _projectionFrameCounter;
+        private bool _projectionSeeded;
+        private int _reprojectedMarkerCountLastFrame = -1;
+        private int _retainedMarkerCountLastFrame = -1;
+        private int _fullRebuildFrameCounter;
+        private float _seededCenterXcm;
+        private float _seededCenterYcm;
+        private float _seededHalfExtentCm;
+        private Vector2 _seededMapRight;
+        private Vector2 _seededMapUp;
+        private float _seededScreenFacingOffsetRad;
+        private int _seededFieldX;
+        private int _seededFieldY;
+        private int _seededFieldSize;
+        private PresentationClipShapeKind _seededFieldClipShapeKind;
+        private bool _seededRotateWithCamera;
+        private bool _seededHasKnowledgeResolver;
+        private bool _seededHasKnowledgeViewer;
+        private Entity _seededKnowledgeViewer;
         private static readonly string[] BandLabels =
         {
             "Strategic",
@@ -267,6 +292,18 @@ namespace Ludots.Core.Presentation.Minimap
 
         public float MetricGridStepCm => _metricGridStepCm;
 
+        /// <summary>本帧完整重投影（含 knowledge 解析）的标记数；轮转跳过帧为 0。</summary>
+        public int ReprojectedMarkerCountLastFrame => _reprojectedMarkerCountLastFrame;
+
+        /// <summary>本帧零工作留存的屏幕标记数（轮转跳过帧为上一投影帧的全部标记）。</summary>
+        public int RetainedMarkerCountLastFrame => _retainedMarkerCountLastFrame;
+
+        /// <summary>投影帧序号（含跳过帧与全量重建帧），测试用于断言轮转覆盖。</summary>
+        public int ProjectionFrameIndex => _projectionFrameCounter;
+
+        /// <summary>累计全量重建帧数（相机/缩放/结构变化触发），诊断用。</summary>
+        public int FullProjectionRebuildCount => _fullRebuildFrameCounter;
+
         public void SetExternalFieldRect(int x, int y, int width, int height)
         {
             if (width <= 0 || height <= 0)
@@ -372,8 +409,6 @@ namespace Ludots.Core.Presentation.Minimap
             ArgumentNullException.ThrowIfNull(screenMarkers);
 
             RefreshPanelLayout(engine);
-            screenMarkers.BeginFrame();
-            _debugVisibleMarkers.Clear();
             _markerCount = markers.Count;
             _visibleMarkerCount = 0;
             _diagnostic = string.Empty;
@@ -381,7 +416,9 @@ namespace Ludots.Core.Presentation.Minimap
 
             if (!Visible)
             {
+                screenMarkers.BeginFrame();
                 ResetBounds();
+                _projectionSeeded = false;
                 return;
             }
 
@@ -761,6 +798,85 @@ namespace Ludots.Core.Presentation.Minimap
 
         private void ProjectMarkers(GameEngine engine, MinimapMarkerBuffer markers, MinimapScreenMarkerBuffer screenMarkers)
         {
+            _projectionFrameCounter++;
+            bool hasKnowledgeResolver = KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
+            bool hasKnowledgeViewer = false;
+            Entity knowledgeViewer = Entity.Null;
+            if (hasKnowledgeResolver &&
+                engine.TryGetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, out MinimapKnowledgeViewerProvider knowledgeViewerProvider) &&
+                knowledgeViewerProvider(engine, out knowledgeViewer) &&
+                knowledgeViewer != Entity.Null &&
+                engine.World.IsAlive(knowledgeViewer))
+            {
+                hasKnowledgeViewer = true;
+            }
+
+            int count = markers.Count;
+            int period = Math.Max(1, (count + ReprojectionSliceBudget - 1) / ReprojectionSliceBudget);
+            bool sliceDueFrame = _projectionFrameCounter % period == 0;
+            if (!sliceDueFrame &&
+                _projectionSeeded &&
+                ProjectionInputsUnchanged(hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer))
+            {
+                // 零重投影帧：相机/缩放/knowledge 视口未变且未轮到本切片相位，
+                // 屏幕缓冲整帧保留上一投影帧内容。
+                _visibleMarkerCount = screenMarkers.Count;
+                _retainedMarkerCountLastFrame = screenMarkers.Count;
+                _reprojectedMarkerCountLastFrame = 0;
+                return;
+            }
+
+            ProjectMarkersFullRebuild(engine, markers, screenMarkers, hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer);
+        }
+
+        private bool ProjectionInputsUnchanged(bool hasKnowledgeResolver, bool hasKnowledgeViewer, Entity knowledgeViewer)
+        {
+            return _centerXcm == _seededCenterXcm &&
+                _centerYcm == _seededCenterYcm &&
+                _halfExtentCm == _seededHalfExtentCm &&
+                _mapRight == _seededMapRight &&
+                _mapUp == _seededMapUp &&
+                _screenFacingOffsetRad == _seededScreenFacingOffsetRad &&
+                _fieldX == _seededFieldX &&
+                _fieldY == _seededFieldY &&
+                _fieldSize == _seededFieldSize &&
+                _fieldClipShapeKind == _seededFieldClipShapeKind &&
+                RotateWithCamera == _seededRotateWithCamera &&
+                hasKnowledgeResolver == _seededHasKnowledgeResolver &&
+                hasKnowledgeViewer == _seededHasKnowledgeViewer &&
+                knowledgeViewer == _seededKnowledgeViewer;
+        }
+
+        private void SeedProjectionInputs(bool hasKnowledgeResolver, bool hasKnowledgeViewer, Entity knowledgeViewer)
+        {
+            _seededCenterXcm = _centerXcm;
+            _seededCenterYcm = _centerYcm;
+            _seededHalfExtentCm = _halfExtentCm;
+            _seededMapRight = _mapRight;
+            _seededMapUp = _mapUp;
+            _seededScreenFacingOffsetRad = _screenFacingOffsetRad;
+            _seededFieldX = _fieldX;
+            _seededFieldY = _fieldY;
+            _seededFieldSize = _fieldSize;
+            _seededFieldClipShapeKind = _fieldClipShapeKind;
+            _seededRotateWithCamera = RotateWithCamera;
+            _seededHasKnowledgeResolver = hasKnowledgeResolver;
+            _seededHasKnowledgeViewer = hasKnowledgeViewer;
+            _seededKnowledgeViewer = knowledgeViewer;
+        }
+
+        private void ProjectMarkersFullRebuild(
+            GameEngine engine,
+            MinimapMarkerBuffer markers,
+            MinimapScreenMarkerBuffer screenMarkers,
+            bool hasKnowledgeResolver,
+            bool hasKnowledgeViewer,
+            Entity knowledgeViewer)
+        {
+            _fullRebuildFrameCounter++;
+            SeedProjectionInputs(hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer);
+            _projectionSeeded = true;
+            _debugVisibleMarkers.Clear();
             screenMarkers.BeginBucketedFrame();
             screenMarkers.SetFieldBounds(_fieldX, _fieldY, _fieldSize);
             screenMarkers.SetClipShape(ResolveFieldClipShape());
@@ -792,18 +908,7 @@ namespace Ludots.Core.Presentation.Minimap
             cachedBucketIndices.Fill(-1);
 
             bool captureDebugMarkers = _debugMarkerSampleCapacity > 0;
-            bool hasKnowledgeResolver = KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
-            bool hasKnowledgeViewer = false;
-            Entity knowledgeViewer = Entity.Null;
-            if (hasKnowledgeResolver &&
-                engine.TryGetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, out MinimapKnowledgeViewerProvider knowledgeViewerProvider) &&
-                knowledgeViewerProvider(engine, out knowledgeViewer) &&
-                knowledgeViewer != Entity.Null &&
-                engine.World.IsAlive(knowledgeViewer))
-            {
-                hasKnowledgeViewer = true;
-            }
-
+            int reprojected = 0;
             for (int i = 0; i < count; i++)
             {
                 float worldXcm = worldXcmValues[i];
@@ -927,6 +1032,7 @@ namespace Ludots.Core.Presentation.Minimap
                     continue;
                 }
 
+                reprojected++;
                 _visibleMarkerCount++;
                 if (captureDebugMarkers && _debugVisibleMarkers.Count < _debugMarkerSampleCapacity)
                 {
@@ -946,6 +1052,8 @@ namespace Ludots.Core.Presentation.Minimap
             }
 
             screenMarkers.MaterializeStagedBucketKeys();
+            _reprojectedMarkerCountLastFrame = reprojected;
+            _retainedMarkerCountLastFrame = 0;
         }
 
         private static MinimapKnowledgeState ResolveKnowledgeState(in KnowledgeProjection projection)

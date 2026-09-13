@@ -158,7 +158,7 @@ namespace Ludots.Tests.GAS
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
-                var agg = new AttributeAggregatorSystem(world, tagOps: tagOps);
+                var agg = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
 
                 var player = world.Create(new AttributeBuffer(), new DirtyFlags(), new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
                 ref var playerAttr = ref world.Get<AttributeBuffer>(player);

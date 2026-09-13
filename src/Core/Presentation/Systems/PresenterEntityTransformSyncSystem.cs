@@ -60,6 +60,15 @@ namespace Ludots.Core.Presentation.Systems
 
             bool ownerPayloadTransformsChanged = SyncSingleRootOwnerPayloads();
 
+            // Presenters anchored to the same owner are created consecutively and stay adjacent in
+            // iteration order; resolving each owner once per Update is bit-identical because nothing
+            // mutates VisualTransform/FacingDirection while this system runs.
+            Entity resolvedOwner = Entity.Null;
+            bool resolvedOwnerAlive = false;
+            bool resolvedOwnerHasTransform = false;
+            VisualTransform resolvedOwnerTransform = default;
+            PresenterWorldFacing resolvedOwnerFacing = default;
+
             foreach (ref var chunk in World.Query(in EntityAnchoredQuery))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
@@ -71,24 +80,52 @@ namespace Ludots.Core.Presentation.Systems
                 Span<PresenterWorldScale> scales = chunk.GetSpan<PresenterWorldScale>();
                 Span<PresenterTransformSource> sources = chunk.GetSpan<PresenterTransformSource>();
                 Span<PresenterEmitCache> emitCaches = chunk.GetSpan<PresenterEmitCache>();
+                bool hasRetainedPresentationRequest = chunk.Has<PerfRetainedPresentationRequest>();
+                bool hasEmitWorkMarker = chunk.Has<PerfHasEmitWork>();
 
                 foreach (int index in chunk)
                 {
                     ref PresenterState state = ref states[index];
                     if (state.AnchorKind != PresentationAnchorKind.Entity ||
-                        sources[index].Value != TransformSource.EntityTransform ||
-                        !World.IsAlive(state.OwnerEntity) ||
-                        !World.Has<VisualTransform>(state.OwnerEntity) ||
+                        sources[index].Value != TransformSource.EntityTransform)
+                    {
+                        continue;
+                    }
+
+                    Entity owner = state.OwnerEntity;
+                    if (owner != resolvedOwner)
+                    {
+                        resolvedOwner = owner;
+                        resolvedOwnerAlive = World.IsAlive(owner);
+                        resolvedOwnerHasTransform = false;
+                        resolvedOwnerFacing = default;
+                        if (resolvedOwnerAlive)
+                        {
+                            ref VisualTransform ownerTransformRef = ref World.TryGetRef<VisualTransform>(owner, out bool hasOwnerTransform);
+                            resolvedOwnerHasTransform = hasOwnerTransform;
+                            if (hasOwnerTransform)
+                            {
+                                resolvedOwnerTransform = ownerTransformRef;
+                                ref FacingDirection ownerFacingRef = ref World.TryGetRef<FacingDirection>(owner, out bool hasOwnerFacing);
+                                resolvedOwnerFacing = hasOwnerFacing
+                                    ? new PresenterWorldFacing { AngleRad = ownerFacingRef.AngleRad, HasValue = 1 }
+                                    : default;
+                            }
+                        }
+                    }
+
+                    if (!resolvedOwnerAlive ||
+                        !resolvedOwnerHasTransform ||
                         !_definitions.TryGet(state.DefId, out PresenterDefinition definition))
                     {
                         continue;
                     }
 
-                    VisualTransform ownerTransform = World.Get<VisualTransform>(state.OwnerEntity);
+                    VisualTransform ownerTransform = resolvedOwnerTransform;
                     Vector3 newPosition = ownerTransform.Position + definition.PositionOffset;
                     Vector2 newPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in newPosition);
                     Quaternion newRotation = VisualMath.NormalizeOrIdentity(ownerTransform.Rotation);
-                    PresenterWorldFacing newFacing = ResolveOwnerFacing(state.OwnerEntity);
+                    PresenterWorldFacing newFacing = resolvedOwnerFacing;
                     Vector3 newScale = VisualMath.NormalizeScale(ownerTransform.Scale);
 
                     bool changed =
@@ -110,7 +147,26 @@ namespace Ludots.Core.Presentation.Systems
                     facings[index] = newFacing;
                     scales[index].Value = newScale;
                     Entity presenter = Unsafe.Add(ref entityFirst, index);
-                    MarkEmitDirty(presenter, positionOnly);
+                    if (hasEmitWorkMarker)
+                    {
+                        _runtime.MarkCompiledTransformDrivenEmitDirty(
+                            presenter,
+                            ref emitCaches[index],
+                            hasStaticStableVisual: false,
+                            hasRetainedPresentationRequest,
+                            positionOnly);
+                    }
+                    else
+                    {
+                        _runtime.MarkCompiledTransformDrivenEmitDirty(
+                            presenter,
+                            ref emitCaches[index],
+                            definition,
+                            state.BehaviorActiveMask,
+                            hasEmitWorkMarker: false,
+                            hasRetainedPresentationRequest,
+                            positionOnly);
+                    }
                     if (SyncFastAttachedChildren(presenter, in newPosition, in newRotation, in newFacing, in newScale))
                     {
                         PropagateInheritedChildTransforms(presenter);
@@ -352,41 +408,45 @@ namespace Ludots.Core.Presentation.Systems
         {
             if (_definitions == null ||
                 parent == Entity.Null ||
-                !World.IsAlive(parent) ||
-                !World.Has<PresenterChildren>(parent))
+                !World.IsAlive(parent))
             {
                 return false;
             }
 
-            ref PresenterChildren children = ref World.Get<PresenterChildren>(parent);
+            ref PresenterChildren children = ref World.TryGetRef<PresenterChildren>(parent, out bool hasChildren);
+            if (!hasChildren)
+            {
+                return false;
+            }
+
             bool requiresInheritedPropagation = false;
             for (int i = 0; i < children.Count; i++)
             {
                 Entity child = children.Get(i);
-                if (!World.IsAlive(child))
+                if (!World.IsAlive(child) ||
+                    World.Has<PerfOwnerPayloadAttachedTransformSync>(child))
                 {
                     continue;
                 }
 
-                if (World.Has<PerfOwnerPayloadAttachedTransformSync>(child))
+                if (!World.Has<PresenterState, PresenterParent, PerfHasAttachmentTick>(child))
+                {
+                    if (World.Has<PresenterState, PresenterParent>(child) &&
+                        World.Get<PresenterParent>(child).Parent == parent)
+                    {
+                        requiresInheritedPropagation = true;
+                    }
+
+                    continue;
+                }
+
+                Components<PresenterState, PresenterParent> childCore = World.Get<PresenterState, PresenterParent>(child);
+                if (childCore.t1.Parent != parent)
                 {
                     continue;
                 }
 
-                if (!World.Has<PresenterState>(child) ||
-                    !World.Has<PresenterParent>(child) ||
-                    World.Get<PresenterParent>(child).Parent != parent)
-                {
-                    continue;
-                }
-
-                if (!World.Has<PerfHasAttachmentTick>(child))
-                {
-                    requiresInheritedPropagation = true;
-                    continue;
-                }
-
-                ref PresenterState state = ref World.Get<PresenterState>(child);
+                ref PresenterState state = ref childCore.t0;
                 if (!_definitions.TryGet(state.DefId, out PresenterDefinition definition) ||
                     !definition.SupportsFastParentAttachmentTick ||
                     (uint)definition.FastParentAttachmentBehaviorIndex >= (uint)definition.Behaviors.Length)
@@ -400,13 +460,29 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
+                if (!World.Has<PresenterTransformSource, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale, PresenterEmitCache>(child))
+                {
+                    continue;
+                }
+
+                Components<PresenterTransformSource, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale, PresenterEmitCache> childTransforms =
+                    World.Get<PresenterTransformSource, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale, PresenterEmitCache>(child);
                 ApplyFastParentAttachment(
                     child,
                     in slot.Attachment,
                     in parentPosition,
                     in parentRotation,
                     in parentFacing,
-                    in parentScale);
+                    in parentScale,
+                    ref childTransforms.t0,
+                    ref childTransforms.t1,
+                    ref childTransforms.t2,
+                    ref childTransforms.t3,
+                    ref childTransforms.t4,
+                    ref childTransforms.t5,
+                    ref childTransforms.t6,
+                    World.Has<PerfStaticStableVisual>(child),
+                    World.Has<PerfRetainedPresentationRequest>(child));
             }
 
             return requiresInheritedPropagation;
@@ -448,44 +524,6 @@ namespace Ludots.Core.Presentation.Systems
                 _runtime.PropagateParentDrivenTransforms(parent);
                 return;
             }
-        }
-
-        private void ApplyFastParentAttachment(
-            Entity child,
-            in AttachmentConfig config,
-            in Vector3 parentPosition,
-            in Quaternion parentRotation,
-            in PresenterWorldFacing parentFacing,
-            in Vector3 parentScale)
-        {
-            if (!World.Has<PresenterTransformSource>(child) ||
-                !World.Has<PresenterWorldPosition>(child) ||
-                !World.Has<PresenterWorldPlanePosition>(child) ||
-                !World.Has<PresenterWorldRotation>(child) ||
-                !World.Has<PresenterWorldFacing>(child) ||
-                !World.Has<PresenterWorldScale>(child) ||
-                !World.Has<PresenterEmitCache>(child))
-            {
-                return;
-            }
-
-            var components = World.Get<PresenterTransformSource, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale, PresenterEmitCache>(child);
-            ApplyFastParentAttachment(
-                child,
-                in config,
-                in parentPosition,
-                in parentRotation,
-                in parentFacing,
-                in parentScale,
-                ref components.t0,
-                ref components.t1,
-                ref components.t2,
-                ref components.t3,
-                ref components.t4,
-                ref components.t5,
-                ref components.t6,
-                World.Has<PerfStaticStableVisual>(child),
-                World.Has<PerfRetainedPresentationRequest>(child));
         }
 
         private void ApplyFastParentAttachment(
@@ -542,23 +580,6 @@ namespace Ludots.Core.Presentation.Systems
                 hasRetainedPresentationRequest,
                 positionOnly);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private PresenterWorldFacing ResolveOwnerFacing(Entity owner)
-        {
-            if (owner == Entity.Null ||
-                !World.IsAlive(owner) ||
-                !World.Has<FacingDirection>(owner))
-            {
-                return default;
-            }
-
-            return new PresenterWorldFacing
-            {
-                AngleRad = World.Get<FacingDirection>(owner).AngleRad,
-                HasValue = 1,
-            };
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void MarkEmitDirty(Entity presenter, bool positionOnly = false)
         {

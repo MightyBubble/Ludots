@@ -906,6 +906,126 @@ namespace Ludots.Tests.Presentation
                 OrderBuffer.CreateEmpty());
         }
 
+        [Test]
+        public void CadenceAgentSlicing_SpreadsSolverRoundsAcrossFixedTicks()
+        {
+            var config = new MassNavigationCadenceConfig
+            {
+                SimulationHz = 15,
+                TargetUpdateHz = 15,
+                FlowStepHz = 5,
+                FlowCrowdStampHz = 5,
+                FlowObstacleStampHz = 2,
+                HardResolveHz = 10,
+                EntitySyncHz = 15,
+                MaxStepsPerFixedTick = 1,
+                HardResolveCandidateThresholdAgents = 1,
+                AgentSliceCount = 3,
+            };
+            var scheduler = new MassNavigationCadenceScheduler(config);
+            const float fixedDt = 1f / 45f;
+            const int fixedTicks = 90;
+            int sliceSteps = 0;
+            var sliceVisits = new int[3];
+            int roundStarts = 0;
+            int hardResolveRounds = 0;
+            for (int tick = 0; tick < fixedTicks; tick++)
+            {
+                int stepsToRun = scheduler.BeginFixedTick(fixedDt);
+                Assert.That(stepsToRun, Is.LessThanOrEqualTo(1), "Sliced cadence must keep one slice step per fixed tick.");
+                for (int step = 0; step < stepsToRun; step++)
+                {
+                    MassNavigationCadenceStep cadenceStep = scheduler.NextSimulationStep();
+                    Assert.That(cadenceStep.SimulationDt, Is.EqualTo(1f / 15f).Within(0.00001f),
+                        "Each agent must keep stepping with the full simulationHz delta.");
+                    Assert.That(cadenceStep.AgentSliceCount, Is.EqualTo(3));
+                    sliceVisits[cadenceStep.AgentSliceIndex]++;
+                    if (cadenceStep.AgentSliceRoundStart)
+                    {
+                        roundStarts++;
+                        if (cadenceStep.RunHardResolve)
+                        {
+                            hardResolveRounds++;
+                        }
+                    }
+
+                    sliceSteps++;
+                }
+            }
+
+            Assert.That(sliceSteps, Is.EqualTo(90), "45 slice steps per second must amortize across every fixed tick.");
+            Assert.That(roundStarts, Is.EqualTo(30), "Rounds must complete at simulationHz (15 per second).");
+            foreach (int visits in sliceVisits)
+            {
+                Assert.That(visits, Is.EqualTo(30), "Every agent slice must be visited exactly once per round.");
+            }
+
+            Assert.That(hardResolveRounds, Is.EqualTo(20), "Hard resolve must keep its 10Hz round cadence.");
+        }
+
+        [Test]
+        public void CadenceAgentSlicing_DefaultSingleSliceKeepsLegacyStepRhythm()
+        {
+            var config = new MassNavigationCadenceConfig
+            {
+                SimulationHz = 15,
+                TargetUpdateHz = 15,
+                FlowStepHz = 5,
+                FlowCrowdStampHz = 5,
+                FlowObstacleStampHz = 2,
+                HardResolveHz = 10,
+                EntitySyncHz = 15,
+                MaxStepsPerFixedTick = 1,
+                HardResolveCandidateThresholdAgents = 1,
+                AgentSliceCount = 1,
+            };
+            var scheduler = new MassNavigationCadenceScheduler(config);
+            int steps = 0;
+            int hardResolveSteps = 0;
+            for (int tick = 0; tick < 90; tick++)
+            {
+                int stepsToRun = scheduler.BeginFixedTick(1f / 45f);
+                for (int step = 0; step < stepsToRun; step++)
+                {
+                    MassNavigationCadenceStep cadenceStep = scheduler.NextSimulationStep();
+                    Assert.That(cadenceStep.AgentSliceIndex, Is.EqualTo(0));
+                    Assert.That(cadenceStep.AgentSliceCount, Is.EqualTo(1));
+                    Assert.That(cadenceStep.AgentSliceRoundStart, Is.True);
+                    if (cadenceStep.RunHardResolve)
+                    {
+                        hardResolveSteps++;
+                    }
+
+                    steps++;
+                }
+            }
+
+            Assert.That(steps, Is.EqualTo(30), "Default cadence keeps the legacy 15Hz simulation rhythm at fixed 45Hz.");
+            Assert.That(hardResolveSteps, Is.EqualTo(20));
+        }
+
+        [Test]
+        public void CadenceAgentSlicing_RejectsUnsustainableSliceRate()
+        {
+            var config = new MassNavigationCadenceConfig
+            {
+                SimulationHz = 15,
+                TargetUpdateHz = 15,
+                FlowStepHz = 5,
+                FlowCrowdStampHz = 5,
+                FlowObstacleStampHz = 2,
+                HardResolveHz = 10,
+                EntitySyncHz = 15,
+                MaxStepsPerFixedTick = 1,
+                HardResolveCandidateThresholdAgents = 1,
+                AgentSliceCount = 4,
+            };
+            var scheduler = new MassNavigationCadenceScheduler(config);
+            InvalidOperationException rejected = Assert.Throws<InvalidOperationException>(
+                () => scheduler.BeginFixedTick(1f / 45f))!;
+            Assert.That(rejected.Message, Does.Contain("agentSliceCount"));
+        }
+
         private static JsonObject ReadObject(string path)
         {
             return JsonNode.Parse(File.ReadAllText(path))?.AsObject()

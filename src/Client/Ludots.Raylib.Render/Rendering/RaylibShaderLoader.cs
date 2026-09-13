@@ -6,7 +6,7 @@ using Rl = Raylib_cs.Raylib;
 
 namespace Ludots.Raylib.Render
 {
-    internal static class RaylibShaderLoader
+    public static class RaylibShaderLoader
     {
         private const int MaxIncludeDepth = 4;
 

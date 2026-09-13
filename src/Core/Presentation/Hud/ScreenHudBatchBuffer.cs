@@ -39,6 +39,8 @@ namespace Ludots.Core.Presentation.Hud
         private bool _projectedBuildMembershipChanged;
         private bool _stableIndexValid = true;
         private int _projectedBuildStamp;
+        // 值绑定文本存在标记：置位后刷新通道每帧扫描（绑定项被移除后的残留扫描只是几次死循环迭代）。
+        private bool _hasAttributeBoundTexts;
 
         public int Count => _count;
         public int Capacity => _flattened.Length;
@@ -119,9 +121,17 @@ namespace Ludots.Core.Presentation.Hud
                         Id0 = item.Id0,
                         Id1 = item.Id1,
                         FontSize = item.FontSize,
+                        ValueBound = item.ValueBound,
+                        BoundAttributeId = item.BoundAttributeId,
+                        Owner = item.Owner,
                         Text = item.Text,
                     };
                     _texts[_textCount++] = text;
+                    if (text.ValueBound != 0)
+                    {
+                        _hasAttributeBoundTexts = true;
+                    }
+
                     if (text.StableId > 0)
                     {
                         SetStableIndex(_textIndexByStableId, text.StableId, _textCount - 1);
@@ -309,6 +319,16 @@ namespace Ludots.Core.Presentation.Hud
             return TryUpsertText(in item, bumpRevision: !_bulkProjectedBuildActive, markProjected: true, preferredIndex);
         }
 
+        /// <summary>
+        /// 位置-only 快路径的 serial 门槛。值绑定条目的 serial 由刷新通道维护（含取整显示值），
+        /// 会与 emit 侧的值无关 serial 分叉；此时内容仍视觉等价（颜色/字号随内容增量走），
+        /// 位置更新照常只写 ScreenX/Y。
+        /// </summary>
+        private static bool TextPositionSerialCompatible(in ScreenHudTextItem current, int dirtySerial)
+        {
+            return current.DirtySerial == dirtySerial || current.ValueBound != 0;
+        }
+
         public bool TryUpsertProjectedTextPosition(
             int preferredIndex,
             int stableId,
@@ -320,7 +340,7 @@ namespace Ludots.Core.Presentation.Hud
             {
                 _textProjectedBuildStamps[index] = _projectedBuildStamp;
                 ref ScreenHudTextItem current = ref _texts[index];
-                if (current.DirtySerial == dirtySerial)
+                if (TextPositionSerialCompatible(in current, dirtySerial))
                 {
                     if (current.ScreenX == screenX && current.ScreenY == screenY)
                     {
@@ -348,7 +368,7 @@ namespace Ludots.Core.Presentation.Hud
                 {
                     _textProjectedBuildStamps[resolvedIndex] = _projectedBuildStamp;
                     ref ScreenHudTextItem current = ref _texts[resolvedIndex];
-                    if (current.DirtySerial == dirtySerial)
+                    if (TextPositionSerialCompatible(in current, dirtySerial))
                     {
                         if (current.ScreenX == screenX && current.ScreenY == screenY)
                         {
@@ -394,6 +414,11 @@ namespace Ludots.Core.Presentation.Hud
 
             int index = _textCount++;
             _texts[index] = item;
+            if (item.ValueBound != 0)
+            {
+                _hasAttributeBoundTexts = true;
+            }
+
             if (_bulkProjectedBuildActive && _projectedBuildRetained)
             {
                 _projectedBuildMembershipChanged = true;
@@ -556,6 +581,11 @@ namespace Ludots.Core.Presentation.Hud
                 }
 
                 _texts[index] = item;
+                if (item.ValueBound != 0)
+                {
+                    _hasAttributeBoundTexts = true;
+                }
+
                 AddDirtyText(in item);
 
                 _flattenedDirty = true;
@@ -669,11 +699,63 @@ namespace Ludots.Core.Presentation.Hud
                     Id0 = item.Id0,
                     Id1 = item.Id1,
                     FontSize = item.FontSize,
+                    ValueBound = item.ValueBound,
+                    BoundAttributeId = item.BoundAttributeId,
+                    Owner = item.Owner,
                     Text = item.Text,
                 });
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// 值绑定文本的权威值现读：按 Owner 的 AttributeBuffer 读 current/base 写回
+        /// Value0/Value1；显示文本只依赖取整值，跨过整数边界才换 serial 并进脏文本增量。
+        /// 值漂移的重发链（emit serial 值无关）不再产生内容增量——刷新是唯一值来源。
+        /// </summary>
+        public void RefreshAttributeBoundTexts(Arch.Core.World world)
+        {
+            if (!_hasAttributeBoundTexts)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _textCount; i++)
+            {
+                ref ScreenHudTextItem item = ref _texts[i];
+                if (item.ValueBound == 0 || item.BoundAttributeId < 0)
+                {
+                    continue;
+                }
+
+                if (!world.IsAlive(item.Owner) || !world.Has<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(item.Owner))
+                {
+                    continue;
+                }
+
+                ref Ludots.Core.Gameplay.GAS.Components.AttributeBuffer attributes =
+                    ref world.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(item.Owner);
+                int attributeId = item.BoundAttributeId;
+                float value0 = attributes.GetCurrent(attributeId);
+                float value1 = attributes.GetBase(attributeId);
+                if ((int)value0 == (int)item.Value0 && (int)value1 == (int)item.Value1)
+                {
+                    continue;
+                }
+
+                item.Value0 = value0;
+                item.Value1 = value1;
+                item.DirtySerial = HudItemIdentity.ComposeBoundTextValueSerial(
+                    item.FontSize <= 0 ? 16 : item.FontSize,
+                    item.Id1,
+                    item.Color0,
+                    value0,
+                    value1);
+                AddDirtyText(in item);
+                _flattenedDirty = true;
+                ContentRevision++;
+            }
         }
 
         public void ClearDeltas()
@@ -709,6 +791,7 @@ namespace Ludots.Core.Presentation.Hud
             _count = 0;
             DroppedSinceClear = 0;
             _flattenedDirty = false;
+            _hasAttributeBoundTexts = false;
             _barIndexByStableId.Clear();
             _textIndexByStableId.Clear();
             _stableIndexValid = true;
@@ -1175,6 +1258,9 @@ namespace Ludots.Core.Presentation.Hud
                     Id0 = item.Id0,
                     Id1 = item.Id1,
                     FontSize = item.FontSize,
+                    ValueBound = item.ValueBound,
+                    BoundAttributeId = item.BoundAttributeId,
+                    Owner = item.Owner,
                     Text = item.Text,
                 };
             }

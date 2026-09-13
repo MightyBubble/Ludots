@@ -347,7 +347,7 @@ namespace Ludots.Tests.GAS
                 requests,
                 templates: templates,
                 tagOps: tagOps);
-            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
+            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
             using var lifetime = new EffectLifetimeSystem(
                 world,
                 clock,
@@ -365,7 +365,6 @@ namespace Ludots.Tests.GAS
                 new AttributeBuffer(),
                 new DirtyFlags(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
                 new GameplayTagContainer(),
                 new TagCountContainer(),
                 new TimedTagBuffer());

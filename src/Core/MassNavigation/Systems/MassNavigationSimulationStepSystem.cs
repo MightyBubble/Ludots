@@ -46,9 +46,12 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
         for (int stepIndex = 0; stepIndex < stepsToRun; stepIndex++)
         {
             MassNavigationCadenceStep step = simulation.CadenceScheduler.NextSimulationStep();
-            simulation.ObserveSimTick();
+            if (step.AgentSliceRoundStart)
+            {
+                simulation.ObserveSimTick();
+            }
 
-            if (step.UpdateTargets)
+            if (step.UpdateTargets && step.AgentSliceRoundStart)
             {
                 long targetStart = Stopwatch.GetTimestamp();
                 simulation.NavGroupRuntime.UpdateTargets(
@@ -63,6 +66,8 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
                     step.RefreshFlow,
                     step.RefreshCrowd,
                     step.RefreshObstacles,
+                    step.AgentSliceIndex,
+                    step.AgentSliceCount,
                     _observeFlowFieldRebuild!))
             {
                 simulation.MarkFlowReconcile();
@@ -75,6 +80,8 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
                 simulation.NavGroupRuntime,
                 step.RunHardResolve,
                 simulation.Cadence.HardResolveCandidateThresholdAgents,
+                step.AgentSliceIndex,
+                step.AgentSliceCount,
                 _observeStepPrep!,
                 _observeLocalSteering!,
                 _observeHardResolve!);

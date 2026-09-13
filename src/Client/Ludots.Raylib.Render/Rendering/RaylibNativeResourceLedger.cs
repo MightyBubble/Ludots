@@ -10,6 +10,8 @@ public enum RaylibNativeResourceKind
     Material,
     Sound,
     SoundAlias,
+    GlBuffer,
+    GlProgram,
     KindCount,
 }
 

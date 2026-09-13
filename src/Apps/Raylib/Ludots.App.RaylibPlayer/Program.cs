@@ -188,7 +188,7 @@ namespace Ludots.App.RaylibPlayer
         {
             GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, "Ludots Player — 选择工程");
-            Rl.SetTargetFPS(60);
+            Rl.SetTargetFPS(0);
             int selected = 0;
 
             while (!Rl.WindowShouldClose())
@@ -250,7 +250,7 @@ namespace Ludots.App.RaylibPlayer
 
             GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, $"Ludots Player — {project.Name}/{scene.Id}");
-            Rl.SetTargetFPS(60);
+            Rl.SetTargetFPS(0);
 
             var camera = CreateCamera(scene);
             scene.Load();
@@ -326,7 +326,7 @@ namespace Ludots.App.RaylibPlayer
         {
             GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, $"Ludots Player — {project.Name}");
-            Rl.SetTargetFPS(60);
+            Rl.SetTargetFPS(0);
 
             var scenes = project.Descriptors;
             int selected = 0;
@@ -373,7 +373,7 @@ namespace Ludots.App.RaylibPlayer
         {
             GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, $"Ludots Player — {project.Name}/{scene.Title}");
-            Rl.SetTargetFPS(60);
+            Rl.SetTargetFPS(0);
             PlayerMode mode = startInEditor && editorScenePath != null ? PlayerMode.Edit : PlayerMode.Preview;
             EngineOrbitCamera camera = CreateCamera(scene);
             scene.Load();

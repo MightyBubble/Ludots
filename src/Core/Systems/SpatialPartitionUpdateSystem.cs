@@ -17,9 +17,12 @@ namespace Ludots.Core.Systems
 
         private ISpatialPartitionWorld _partition;
         private WorldSizeSpec _spec;
-        private readonly QueryDescription _trackedQuery = new QueryDescription()
-            .WithAll<WorldPositionCm, SpatialCellRef>()
+        private readonly QueryDescription _trackedWithPreviousQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, PreviousWorldPositionCm, SpatialCellRef>()
             .WithNone<PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
+        private readonly QueryDescription _trackedWithoutPreviousQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, SpatialCellRef>()
+            .WithNone<PreviousWorldPositionCm, PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
         private readonly QueryDescription _untrackedQuery = new QueryDescription()
             .WithAll<WorldPositionCm>()
             .WithNone<SpatialCellRef, PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
@@ -76,8 +79,8 @@ namespace Ludots.Core.Systems
             ResetSuspendedMemberships();
             AddMissingSpatialRefs();
 
-            var moveJob = new MoveJob { Partition = _partition, Spec = _spec };
-            World.InlineEntityQuery<MoveJob, WorldPositionCm, SpatialCellRef>(in _trackedQuery, ref moveJob);
+            MoveTracked(in _trackedWithoutPreviousQuery, gateOnPreviousPosition: false);
+            MoveTracked(in _trackedWithPreviousQuery, gateOnPreviousPosition: true);
         }
 
         public SpatialMembershipValidationResult ValidateSynchronize(Entity entity)
@@ -412,24 +415,41 @@ namespace Ludots.Core.Systems
             }
         }
 
-        private struct MoveJob : IForEachWithEntity<WorldPositionCm, SpatialCellRef>
+        private void MoveTracked(in QueryDescription queryDescription, bool gateOnPreviousPosition)
         {
-            public ISpatialPartitionWorld Partition;
-            public WorldSizeSpec Spec;
-
-            public void Update(Entity entity, ref WorldPositionCm pos, ref SpatialCellRef cellRef)
+            foreach (ref var chunk in World.Query(in queryDescription))
             {
-                switch (cellRef.State)
+                ref var entityFirst = ref chunk.Entity(0);
+                var positions = chunk.GetSpan<WorldPositionCm>();
+                var cellRefs = chunk.GetSpan<SpatialCellRef>();
+                var previouses = gateOnPreviousPosition ? chunk.GetSpan<PreviousWorldPositionCm>() : default;
+
+                foreach (var index in chunk)
                 {
-                    case SpatialMembershipState.Uninitialized:
-                    case SpatialMembershipState.Active:
-                        SynchronizeTracked(Partition, in Spec, entity, in pos, ref cellRef, reactivateDeactivated: false);
-                        return;
-                    case SpatialMembershipState.Deactivated:
-                        return;
-                    default:
-                        ThrowInvalidMembershipState(entity, cellRef.State);
-                        return;
+                    ref SpatialCellRef cellRef = ref cellRefs[index];
+                    // Previous == Current marks an unmoved tick for Active memberships only:
+                    // Uninitialized memberships (e.g. resumed suspended entities) must still be
+                    // (re)added even when the position did not change.
+                    if (gateOnPreviousPosition &&
+                        cellRef.State == SpatialMembershipState.Active &&
+                        positions[index].Value == previouses[index].Value)
+                    {
+                        continue;
+                    }
+
+                    var entity = Unsafe.Add(ref entityFirst, index);
+                    switch (cellRef.State)
+                    {
+                        case SpatialMembershipState.Uninitialized:
+                        case SpatialMembershipState.Active:
+                            SynchronizeTracked(_partition, in _spec, entity, in positions[index], ref cellRef, reactivateDeactivated: false);
+                            break;
+                        case SpatialMembershipState.Deactivated:
+                            break;
+                        default:
+                            ThrowInvalidMembershipState(entity, cellRef.State);
+                            break;
+                    }
                 }
             }
         }

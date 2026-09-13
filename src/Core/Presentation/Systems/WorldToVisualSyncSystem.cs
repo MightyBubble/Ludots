@@ -93,24 +93,44 @@ namespace Ludots.Core.Presentation.Systems
             {
                 _commandBuffer.Playback(World);
             }
-            
-            // 2. 同步仅位置的实体（无 FacingDirection）
-            var noCullJob = new SyncNoCullJob { Alpha = alpha };
-            World.InlineQuery<SyncNoCullJob, WorldPositionCm, PreviousWorldPositionCm, VisualTransform>(
-                in _noCullQuery, ref noCullJob);
-            
-            var withCullJob = new SyncWithCullJob { Alpha = alpha };
-            World.InlineQuery<SyncWithCullJob, WorldPositionCm, PreviousWorldPositionCm, VisualTransform, CullState>(
-                in _withCullQuery, ref withCullJob);
-            
-            // 3. 同步位置 + 旋转的实体（有 FacingDirection）
-            var facingNoCullJob = new SyncFacingNoCullJob { Alpha = alpha };
-            World.InlineQuery<SyncFacingNoCullJob, WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection>(
-                in _facingNoCullQuery, ref facingNoCullJob);
-                
-            var facingWithCullJob = new SyncFacingWithCullJob { Alpha = alpha };
-            World.InlineQuery<SyncFacingWithCullJob, WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection, CullState>(
-                in _facingWithCullQuery, ref facingWithCullJob);
+
+            // 2. chunk 级三元组 Span 批插值：alpha 已提出循环，逐实体零组件解析
+            SyncPositions(in _noCullQuery, alpha);
+            SyncPositions(in _withCullQuery, alpha);
+            SyncPositionsWithFacing(in _facingNoCullQuery, alpha);
+            SyncPositionsWithFacing(in _facingWithCullQuery, alpha);
+        }
+
+        private void SyncPositions(in QueryDescription query, Fix64 alpha)
+        {
+            foreach (ref Chunk chunk in World.Query(in query))
+            {
+                ReadOnlySpan<WorldPositionCm> currents = chunk.GetSpan<WorldPositionCm>();
+                ReadOnlySpan<PreviousWorldPositionCm> previouses = chunk.GetSpan<PreviousWorldPositionCm>();
+                Span<VisualTransform> visuals = chunk.GetSpan<VisualTransform>();
+                int count = chunk.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    visuals[i].Position = InterpolateToVisual(in previouses[i].Value, in currents[i].Value, alpha);
+                }
+            }
+        }
+
+        private void SyncPositionsWithFacing(in QueryDescription query, Fix64 alpha)
+        {
+            foreach (ref Chunk chunk in World.Query(in query))
+            {
+                ReadOnlySpan<WorldPositionCm> currents = chunk.GetSpan<WorldPositionCm>();
+                ReadOnlySpan<PreviousWorldPositionCm> previouses = chunk.GetSpan<PreviousWorldPositionCm>();
+                Span<VisualTransform> visuals = chunk.GetSpan<VisualTransform>();
+                ReadOnlySpan<FacingDirection> facings = chunk.GetSpan<FacingDirection>();
+                int count = chunk.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    visuals[i].Position = InterpolateToVisual(in previouses[i].Value, in currents[i].Value, alpha);
+                    visuals[i].Rotation = WorldPlane2D.FacingRadToVisualYRotation(facings[i].AngleRad);
+                }
+            }
         }
 
         public override void Dispose()
@@ -132,17 +152,6 @@ namespace Ludots.Core.Presentation.Systems
             public void Update(ref PresentationFrameState state)
             {
                 Alpha = state.Enabled ? Fix64.FromFloat(state.InterpolationAlpha) : Fix64.OneValue;
-            }
-        }
-
-        private struct SyncNoCullJob : IForEach<WorldPositionCm, PreviousWorldPositionCm, VisualTransform>
-        {
-            public Fix64 Alpha;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Update(ref WorldPositionCm current, ref PreviousWorldPositionCm previous, ref VisualTransform visual)
-            {
-                visual.Position = InterpolateToVisual(in previous.Value, in current.Value, Alpha);
             }
         }
 
@@ -172,45 +181,6 @@ namespace Ludots.Core.Presentation.Systems
                 CommandBuffer.Remove<PresentationStaticVisualPending>(in entity);
             }
         }
-        
-        private struct SyncWithCullJob : IForEach<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, CullState>
-        {
-            public Fix64 Alpha;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Update(ref WorldPositionCm current, ref PreviousWorldPositionCm previous, 
-                               ref VisualTransform visual, ref CullState cull)
-            {
-                visual.Position = InterpolateToVisual(in previous.Value, in current.Value, Alpha);
-            }
-        }
-        
-        private struct SyncFacingNoCullJob : IForEach<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection>
-        {
-            public Fix64 Alpha;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Update(ref WorldPositionCm current, ref PreviousWorldPositionCm previous, 
-                               ref VisualTransform visual, ref FacingDirection facing)
-            {
-                visual.Position = InterpolateToVisual(in previous.Value, in current.Value, Alpha);
-                visual.Rotation = WorldPlane2D.FacingRadToVisualYRotation(facing.AngleRad);
-            }
-        }
-        
-        private struct SyncFacingWithCullJob : IForEach<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection, CullState>
-        {
-            public Fix64 Alpha;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Update(ref WorldPositionCm current, ref PreviousWorldPositionCm previous, 
-                               ref VisualTransform visual, ref FacingDirection facing, ref CullState cull)
-            {
-                visual.Position = InterpolateToVisual(in previous.Value, in current.Value, Alpha);
-                visual.Rotation = WorldPlane2D.FacingRadToVisualYRotation(facing.AngleRad);
-            }
-        }
-        
 
         /// <summary>
         /// 从 Fix64Vec2 (定点数厘米, XY) 插值并转换到 Visual 空间 (浮点米, XZ)。

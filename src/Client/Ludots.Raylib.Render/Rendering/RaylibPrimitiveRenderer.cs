@@ -72,6 +72,10 @@ namespace Ludots.Raylib.Render
         private readonly RaylibGpuSkinnedModelCache _gpuSkinnedModelCache;
         private readonly RaylibInstancedMaterialPipeline _materialPipeline;
         private readonly RaylibGpuSkinnedBatchRenderer _gpuSkinned;
+        private ISkinnedVisualBatchSnapshot? _preparedSkinnedSnapshot;
+        private IRenderMeshAssets? _preparedSkinnedMeshes;
+        private float _preparedSkinnedScaleMul;
+        private bool _preparedSkinnedHasNonGpuItems;
         private readonly RaylibVfxRenderer _vfxRenderer;
         private readonly RaylibDecalProjectorRenderer _decalRenderer;
         private readonly RaylibStaticMeshReceiverProjector _staticMeshReceiverProjector = new();
@@ -120,8 +124,12 @@ namespace Ludots.Raylib.Render
         public double LastGpuSkinnedPoseBuildCpuMs => _gpuSkinned.LastPoseBuildCpuMs;
         public double LastGpuSkinnedTextureUploadCpuMs => _gpuSkinned.LastTextureUploadCpuMs;
         public double LastGpuSkinnedShadowSubmitCpuMs => _gpuSkinned.LastShadowSubmitCpuMs;
+        public double LastGpuSkinnedPoseComputeGpuMs => _gpuSkinned.LastPoseComputeGpuMs;
+        public double LastGpuSkinnedMainDrawGpuMs => _gpuSkinned.LastMainDrawGpuMs;
+        public double LastGpuSkinnedShadowDrawGpuMs => _gpuSkinned.LastShadowDrawGpuMs;
         public int LastGpuSkinnedUniquePoses => _gpuSkinned.LastUniquePoses;
         public long LastGpuSkinnedTextureUploadBytes => _gpuSkinned.LastTextureUploadBytes;
+        public int LastGpuSkinnedValidatedStableIds => _gpuSkinned.LastValidatedStableIds;
         public int LastMeshVisualCount { get; private set; }
         public int LastDecalVisualCount { get; private set; }
         public int LastVfxVisualCount { get; private set; }
@@ -133,11 +141,18 @@ namespace Ludots.Raylib.Render
         public int LastDrawnVfxCount => _vfxRenderer.LastDrawnVfxCount;
         public int TotalDrawnVfxCount => _vfxRenderer.TotalDrawnVfxCount;
 
+        public bool HasPreparedSkinnedFrame => _gpuSkinned.FramePrepared;
+
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
 
         public void BindResidencyMeshAssets(IRenderMeshAssets meshes)
         {
             _residencyMeshAssets = meshes ?? throw new ArgumentNullException(nameof(meshes));
+        }
+
+        public void InitializeGpuSkinnedDeviceResources()
+        {
+            _gpuSkinned.InitializeDeviceResources();
         }
 
         /// <summary>GPU 蒙皮模型/动画缓存；宿主骨骼挂点 provider 与绘制路径共用同一实例（同一动画数据源）。</summary>
@@ -217,6 +232,12 @@ namespace Ludots.Raylib.Render
         /// <summary>Surface 线框是调试可视化；宿主每帧用 RenderDebugState.DrawDebugDraw 与 cleanPerformanceMode 覆写。</summary>
         public bool DrawSurfaceWireBoxes { get; set; } = true;
 
+        public Func<int, int, IReadOnlyDictionary<int, int>?>? AnimationStateMapResolver
+        {
+            get => _gpuSkinned.AnimationStateMapResolver;
+            set => _gpuSkinned.AnimationStateMapResolver = value;
+        }
+
         internal static IRaylibReceiverMeshProjector RequireBoundReceiverMeshProjector(
             IRaylibReceiverMeshProjector? projector,
             int stableId)
@@ -234,7 +255,9 @@ namespace Ludots.Raylib.Render
             RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate,
             IRenderAssetPathResolver? vfs = null,
             IRenderMaterialAssets? materials = null,
-            System.Func<string, int>? channelRegistrar = null)
+            System.Func<string, int>? channelRegistrar = null,
+            RaylibGpuSkinnedCapacity? gpuSkinnedCapacity = null,
+            int gpuSkinnedPosePhaseBuckets = 0)
         {
             _mode = mode;
             _channelRegistrar = channelRegistrar ?? ThrowMissingChannelRegistrar;
@@ -273,7 +296,16 @@ namespace Ludots.Raylib.Render
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
             _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs, _modelStore);
             _materialPipeline = new RaylibInstancedMaterialPipeline(_materialLibrary);
-            _gpuSkinned = new RaylibGpuSkinnedBatchRenderer(_gpuSkinnedModelCache, _materialPipeline, _maxModelInstancesPerDraw);
+            gpuSkinnedCapacity?.Validate();
+            _gpuSkinned = new RaylibGpuSkinnedBatchRenderer(
+                _gpuSkinnedModelCache,
+                _materialPipeline,
+                _maxModelInstancesPerDraw,
+                gpuSkinnedCapacity);
+            if (gpuSkinnedPosePhaseBuckets > 0)
+            {
+                _gpuSkinned.PosePhaseBuckets = gpuSkinnedPosePhaseBuckets;
+            }
             _vfxRenderer = new RaylibVfxRenderer(vfs, _textureStore);
             _decalRenderer = new RaylibDecalProjectorRenderer(materials, _materialLibrary);
         }
@@ -649,7 +681,7 @@ namespace Ludots.Raylib.Render
             LastGpuSkinnedBatches = 0;
             LastGpuSkinnedMatrixBuildMs = 0d;
             LastGpuSkinnedMeshDrawMs = 0d;
-            if (!_gpuSkinned.BatchesPreparedForShadow)
+            if (!_gpuSkinned.FramePrepared)
             {
                 _gpuSkinned.ResetStats();
             }
@@ -749,37 +781,100 @@ namespace Ludots.Raylib.Render
             IRenderMeshAssets meshes,
             float scaleMul = 1f)
         {
-            PumpAssetUploads();
             if (skinnedBatch == null) throw new ArgumentNullException(nameof(skinnedBatch));
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
-            var span = skinnedBatch.GetSpan();
-            _gpuSkinned.ResetStats();
-            _gpuSkinned.Prepare();
-            for (int i = 0; i < span.Length; i++)
+            ValidatePreparedSkinnedFrame(skinnedBatch, meshes, scaleMul);
+
+            DrawPreparedSkinnedShadow(shadow);
+            LastGpuSkinnedInstances = _gpuSkinned.LastInstances;
+            LastGpuSkinnedBatches = _gpuSkinned.LastBatches;
+            LastGpuSkinnedMatrixBuildMs = _gpuSkinned.LastMatrixBuildMs;
+            LastGpuSkinnedMeshDrawMs = _gpuSkinned.LastMeshDrawMs;
+        }
+
+        public void PrepareSkinnedFrame(
+            ISkinnedVisualBatchSnapshot skinnedBatch,
+            IRenderMeshAssets meshes,
+            float scaleMul = 1f)
+        {
+            if (skinnedBatch == null) throw new ArgumentNullException(nameof(skinnedBatch));
+            if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+            if (_gpuSkinned.FramePrepared)
             {
-                ref readonly var item = ref span[i];
-                if (item.Visibility != VisualVisibility.Visible)
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} already has a prepared GPU-skinned frame.");
+            }
+
+            PumpAssetUploads();
+            _gpuSkinned.BeginFrame();
+            try
+            {
+                _preparedSkinnedSnapshot = skinnedBatch;
+                _preparedSkinnedMeshes = meshes;
+                _preparedSkinnedScaleMul = scaleMul;
+                _preparedSkinnedHasNonGpuItems = false;
+
+                ReadOnlySpan<SkinnedVisualBatchItem> span = skinnedBatch.GetSpan();
+                for (int i = 0; i < span.Length; i++)
                 {
-                    continue;
+                    ref readonly SkinnedVisualBatchItem item = ref span[i];
+                    if (item.Visibility != VisualVisibility.Visible)
+                    {
+                        continue;
+                    }
+
+                    if (_gpuSkinned.TryCollect(in item, meshes, scaleMul, out RaylibGpuSkinnedSubmitOutcome submitOutcome))
+                    {
+                        continue;
+                    }
+
+                    if (submitOutcome == RaylibGpuSkinnedSubmitOutcome.InFlight)
+                    {
+                        continue;
+                    }
+
+                    _preparedSkinnedHasNonGpuItems = true;
                 }
 
-                if (!RaylibMaterialDrawState.CastsShadow(RaylibMaterialDrawState.ResolveBlendMode(
+                _gpuSkinned.SealFrame();
+            }
+            catch
+            {
+                EndSkinnedFrame();
+                throw;
+            }
+        }
+
+        public void DrawPreparedSkinnedShadow(RaylibDirectionalShadowMap shadow)
+        {
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+            if (!_gpuSkinned.FramePrepared)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} requires PrepareSkinnedFrame before drawing skinned shadows.");
+            }
+
+            _gpuSkinned.DrawShadow(shadow);
+            if (!_preparedSkinnedHasNonGpuItems)
+            {
+                return;
+            }
+
+            ISkinnedVisualBatchSnapshot snapshot = _preparedSkinnedSnapshot!;
+            IRenderMeshAssets meshes = _preparedSkinnedMeshes!;
+            ReadOnlySpan<SkinnedVisualBatchItem> span = snapshot.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly SkinnedVisualBatchItem item = ref span[i];
+                if (item.Visibility != VisualVisibility.Visible ||
+                    item.RenderPath == VisualRenderPath.GpuSkinnedInstance ||
+                    !RaylibMaterialDrawState.CastsShadow(RaylibMaterialDrawState.ResolveBlendMode(
                         _materials,
                         item.MaterialId,
                         MaterialBlendMode.Opaque,
-                        $"{nameof(RaylibPrimitiveRenderer)} skinned shadow")))
-                {
-                    continue;
-                }
-
-                if (_gpuSkinned.TrySubmit(in item, meshes, scaleMul, out RaylibGpuSkinnedSubmitOutcome submitOutcome))
-                {
-                    continue;
-                }
-
-                if (submitOutcome == RaylibGpuSkinnedSubmitOutcome.InFlight)
+                        $"{nameof(RaylibPrimitiveRenderer)} non-GPU skinned shadow")))
                 {
                     continue;
                 }
@@ -788,18 +883,41 @@ namespace Ludots.Raylib.Render
                     item.MeshAssetId,
                     item.Position,
                     item.Rotation,
-                    item.Scale * scaleMul,
+                    item.Scale * _preparedSkinnedScaleMul,
                     default,
                     meshes,
                     shadow,
                     item.MaterialId);
             }
+        }
 
-            _gpuSkinned.FlushShadow(shadow);
-            LastGpuSkinnedInstances = _gpuSkinned.LastInstances;
-            LastGpuSkinnedBatches = _gpuSkinned.LastBatches;
-            LastGpuSkinnedMatrixBuildMs = _gpuSkinned.LastMatrixBuildMs;
-            LastGpuSkinnedMeshDrawMs = _gpuSkinned.LastMeshDrawMs;
+        public void EndSkinnedFrame()
+        {
+            _gpuSkinned.EndFrame();
+            _preparedSkinnedSnapshot = null;
+            _preparedSkinnedMeshes = null;
+            _preparedSkinnedScaleMul = 0f;
+            _preparedSkinnedHasNonGpuItems = false;
+        }
+
+        internal void ValidatePreparedSkinnedFrame(
+            ISkinnedVisualBatchSnapshot skinnedBatch,
+            IRenderMeshAssets meshes,
+            float scaleMul)
+        {
+            if (!_gpuSkinned.FramePrepared)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} requires PrepareSkinnedFrame before drawing a GPU-skinned pass.");
+            }
+
+            if (!ReferenceEquals(_preparedSkinnedSnapshot, skinnedBatch) ||
+                !ReferenceEquals(_preparedSkinnedMeshes, meshes) ||
+                _preparedSkinnedScaleMul != scaleMul)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} prepared GPU-skinned frame must be reused with the same snapshot, mesh registry, and scale multiplier.");
+            }
         }
 
         private void DrawPersistentStaticLanes(Camera3D camera, IRenderMeshAssets meshes, float scaleMul)
@@ -1196,54 +1314,63 @@ namespace Ludots.Raylib.Render
 
         private void DrawSkinnedBatch(ISkinnedVisualBatchSnapshot skinnedBatch, Camera3D camera, IRenderMeshAssets meshes, float scaleMul)
         {
-            var span = skinnedBatch.GetSpan();
-            if (!_gpuSkinned.BatchesPreparedForShadow)
+            bool ownsPreparedFrame = !_gpuSkinned.FramePrepared;
+            bool preparedHere = false;
+            try
             {
-                _gpuSkinned.Prepare();
+                if (ownsPreparedFrame)
+                {
+                    PrepareSkinnedFrame(skinnedBatch, meshes, scaleMul);
+                    preparedHere = true;
+                }
+                ValidatePreparedSkinnedFrame(skinnedBatch, meshes, scaleMul);
+
+                if (_preparedSkinnedHasNonGpuItems)
+                {
+                    ReadOnlySpan<SkinnedVisualBatchItem> span = skinnedBatch.GetSpan();
+                    for (int i = 0; i < span.Length; i++)
+                    {
+                        ref readonly SkinnedVisualBatchItem item = ref span[i];
+                        if (item.Visibility != VisualVisibility.Visible ||
+                            item.RenderPath == VisualRenderPath.GpuSkinnedInstance)
+                        {
+                            continue;
+                        }
+
+                        if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
+                        {
+                            continue;
+                        }
+
+                        DrawAssetRecursive(
+                            item.MeshAssetId,
+                            item.Position,
+                            item.Rotation,
+                            item.Scale * scaleMul,
+                            item.Color,
+                            camera,
+                            meshes,
+                            item.MaterialId);
+                    }
+                }
+
+                if (_gpuSkinned.HasActiveBatches)
+                {
+                    EnsureInitialized();
+                }
+                _gpuSkinned.DrawMain(_shader, in _instancingPbrLocs, _skyIbl);
+                LastGpuSkinnedInstances = _gpuSkinned.LastInstances;
+                LastGpuSkinnedBatches = _gpuSkinned.LastBatches;
+                LastGpuSkinnedMatrixBuildMs = _gpuSkinned.LastMatrixBuildMs;
+                LastGpuSkinnedMeshDrawMs = _gpuSkinned.LastMeshDrawMs;
             }
-            for (int i = 0; i < span.Length; i++)
+            finally
             {
-                ref readonly var item = ref span[i];
-                if (item.Visibility != VisualVisibility.Visible)
+                if (preparedHere)
                 {
-                    continue;
+                    EndSkinnedFrame();
                 }
-
-                if (_gpuSkinned.TrySubmit(in item, meshes, scaleMul, out RaylibGpuSkinnedSubmitOutcome submitOutcome))
-                {
-                    continue;
-                }
-
-                if (submitOutcome == RaylibGpuSkinnedSubmitOutcome.InFlight)
-                {
-                    continue;
-                }
-
-                if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
-                {
-                    continue;
-                }
-
-                DrawAssetRecursive(
-                    item.MeshAssetId,
-                    item.Position,
-                    item.Rotation,
-                    item.Scale * scaleMul,
-                    item.Color,
-                    camera,
-                    meshes,
-                    item.MaterialId);
             }
-
-            if (_gpuSkinned.HasActiveBatches)
-            {
-                EnsureInitialized();
-            }
-            _gpuSkinned.Flush(_shader, in _instancingPbrLocs, _skyIbl);
-            LastGpuSkinnedInstances = _gpuSkinned.LastInstances;
-            LastGpuSkinnedBatches = _gpuSkinned.LastBatches;
-            LastGpuSkinnedMatrixBuildMs = _gpuSkinned.LastMatrixBuildMs;
-            LastGpuSkinnedMeshDrawMs = _gpuSkinned.LastMeshDrawMs;
         }
         private bool TryDrawPrototypeSkinned(in SkinnedVisualBatchItem item, IRenderMeshAssets meshes, float scaleMul)
         {

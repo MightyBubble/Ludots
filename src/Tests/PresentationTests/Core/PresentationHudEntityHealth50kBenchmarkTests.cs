@@ -198,8 +198,6 @@ namespace Ludots.Tests.Presentation
             ref uint randomState,
             out long healthChecksum)
         {
-            screenHud.Clear();
-
             const int columns = 400;
             const float baseX = 4f;
             const float baseY = 6f;
@@ -212,8 +210,13 @@ namespace Ludots.Tests.Presentation
             Vector4 barForeground = new(0.16f, 0.82f, 0.36f, 0.96f);
             Vector4 textColor = new(0.94f, 0.96f, 0.88f, 1f);
 
+            // 生产管线形态：BeginProjectedBuild(retained) → 顺序 TryUpsert（serial 命中即跳过/位置 lane）
+            // → EndProjectedBuild(removeUnseen) → ClearDeltas——与 WorldHudToScreenSystem 全量重建同款；
+            // 字典 ColdAdd 重建形态（Clear+TryAdd）自 52e5bd5e66 起已被生产淘汰，另测为对照指标。
+            screenHud.BeginProjectedBuild(retained: true);
             int changedEntities = 0;
             long checksum = 0;
+            int preferredIndex = 0;
             for (int i = 0; i < entities.Length; i++)
             {
                 ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(entities[i]);
@@ -239,7 +242,7 @@ namespace Ludots.Tests.Presentation
                 float y = baseY + (row * rowSpacing);
                 float fill = currentHealth / (float)baseHealth;
 
-                screenHud.TryAddBar(new ScreenHudBarItem
+                screenHud.TryUpsertProjectedBar(new ScreenHudBarItem
                 {
                     StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Bar, discriminator: healthAttributeId),
                     DirtySerial = HudItemIdentity.ComposeBarDirtySerial(barWidth, barHeight, fill, barBackground, barForeground),
@@ -250,9 +253,9 @@ namespace Ludots.Tests.Presentation
                     Value0 = fill,
                     Color0 = barBackground,
                     Color1 = barForeground,
-                });
+                }, preferredIndex);
 
-                screenHud.TryAddText(new ScreenHudTextItem
+                screenHud.TryUpsertProjectedText(new ScreenHudTextItem
                 {
                     StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Text, discriminator: healthAttributeId),
                     DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
@@ -270,9 +273,12 @@ namespace Ludots.Tests.Presentation
                     Value0 = currentHealth,
                     Value1 = baseHealth,
                     Id1 = (int)WorldHudValueMode.AttributeCurrentOverBase,
-                });
+                }, preferredIndex);
+                preferredIndex++;
             }
 
+            screenHud.EndProjectedBuild(removeUnseenProjectedItems: true);
+            screenHud.ClearDeltas();
             healthChecksum = checksum;
             return changedEntities;
         }

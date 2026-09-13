@@ -180,6 +180,11 @@ public sealed class MassNavigationSimulationRuntime
     public float LastSimStepMs => Telemetry.LastSimStepMs;
     public float LastHardResolveMs => Telemetry.LastHardResolveMs;
     public int LastHardResolveCandidateAgentCount => MassNavigationFlow.LastHardResolveCandidateAgentCount;
+    public int LastSteppingAgentCount => MassNavigationFlow.LastSteppingAgentCount;
+    public int LastHardResolveOwnerAgentCount => MassNavigationFlow.LastHardResolveOwnerAgentCount;
+    public int LastEntitySyncAgentCount => MassNavigationFlow.LastEntitySyncAgentCount;
+    public int LastFlowRefreshStateCount => MassNavigationFlow.LastFlowRefreshStateCount;
+    public int CadenceAgentSliceCount => Cadence.AgentSliceCount;
     public int LastHardResolveFallbackProbeAgentCount => MassNavigationFlow.LastHardResolveFallbackProbeAgentCount;
     public long LastHardResolveFallbackPairCheckCount => MassNavigationFlow.LastHardResolveFallbackPairCheckCount;
     public long LastHardResolvePairCheckCount => MassNavigationFlow.LastHardResolvePairCheckCount;
