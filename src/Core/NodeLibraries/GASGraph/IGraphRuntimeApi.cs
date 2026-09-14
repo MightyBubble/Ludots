@@ -536,6 +536,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("Graph knowledge runtime is not available.");
         }
+
+        /// <summary>
+        /// In-place TargetList filter: keeps candidates the viewer currently has a knowledge
+        /// projection of; returns the surviving count. Order preserved.
+        /// </summary>
+        int FilterKnowledgeVisible(Span<Entity> candidates, int count, Entity viewer)
+        {
+            return 0;
+        }
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId);
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args);
         void FanOutDispatchEffect(Entity source, Entity target, Entity targetContext, ReadOnlySpan<Entity> targets, int templateId, int payloadPresetId)

@@ -110,6 +110,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     }
 
                     break;
+                case GraphNodeOp.QueryFilterKnowledgeVisible:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
                 case GraphNodeOp.QueryFilterTemplate:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     if (string.IsNullOrWhiteSpace(node.Template))
@@ -470,6 +473,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         instruction.Flags = 0;
                     }
 
+                    break;
+                case GraphNodeOp.QueryFilterKnowledgeVisible:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QueryFilterTemplate:
                     instruction.Imm = RequireSymbol(node.Template, "template", node, symbolToIndex, symbols, graphId, diagnostics);

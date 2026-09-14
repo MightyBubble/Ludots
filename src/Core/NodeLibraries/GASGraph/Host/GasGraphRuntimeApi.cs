@@ -1998,6 +1998,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public bool HasKnowledgeProjection(Entity viewer, Entity target)
             => RequireKnowledgeProjections().CanKnowEntity(viewer, target, CurrentStepTick());
 
+        public int FilterKnowledgeVisible(Span<Entity> candidates, int count, Entity viewer)
+        {
+            var knowledge = RequireKnowledgeProjections();
+            int tick = CurrentStepTick();
+            int kept = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (knowledge.CanKnowEntity(viewer, candidates[i], tick))
+                {
+                    candidates[kept++] = candidates[i];
+                }
+            }
+
+            return kept;
+        }
+
         private ControlDomainQuery RequireControlDomains()
         {
             return _controlDomains ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingControlDomainQuery");

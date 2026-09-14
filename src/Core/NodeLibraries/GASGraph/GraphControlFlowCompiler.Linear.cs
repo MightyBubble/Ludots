@@ -461,6 +461,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.QueryFilterNotEntity:
+                case GraphNodeOp.QueryFilterKnowledgeVisible:
                 case GraphNodeOp.QueryFilterRelationship:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     if (op.NodeOp == GraphNodeOp.QueryFilterRelationship)
@@ -1484,6 +1485,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.QueryFilterNotEntity:
+                case GraphNodeOp.QueryFilterKnowledgeVisible:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);

@@ -412,6 +412,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         SubmitCast = 484,
 
+        /// <summary>
+        /// TargetList := candidates the viewer E[A] currently has a knowledge projection of
+        /// (per the viewer-target knowledge store); candidates order preserved. Read-only
+        /// viewer-relative query filter (RFC-0065 DEC-5).
+        /// </summary>
+        QueryFilterKnowledgeVisible = 485,
+
     }
 
     public static class GraphNodeOpParser

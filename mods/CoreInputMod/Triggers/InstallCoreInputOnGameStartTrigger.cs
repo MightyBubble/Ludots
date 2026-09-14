@@ -46,8 +46,6 @@ namespace CoreInputMod.Triggers
                 return Task.CompletedTask;
             engine.SetService(CoreInputServiceKeys.Installed, true);
 
-            var commandSourceAcquiredCallbacks = new List<Action<WorldCmInt2, Entity>>();
-            engine.SetService(CoreInputServiceKeys.CommandSourceAcquiredCallbacks, commandSourceAcquiredCallbacks);
             engine.SetService(
                 CoreServiceKeys.MinimapFocusCollectionProvider,
                 (Ludots.Core.Presentation.Minimap.MinimapFocusCollectionProvider)TryResolveMinimapFocusCollection);
@@ -57,21 +55,6 @@ namespace CoreInputMod.Triggers
 
             _ = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore must be registered before CoreInputMod installs.");
-            var commandSourceAcquisitionConfig = engine.GetService(CoreServiceKeys.CommandSourceAcquisitionConfig)
-                ?? throw new InvalidOperationException("CommandSourceAcquisitionConfig must be registered before CoreInputMod installs.");
-
-            var commandSourceAcquisition = new CommandSourceAcquisitionSystem(
-                engine.World,
-                engine.GlobalContext,
-                (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner));
-            commandSourceAcquisition.OnEntityAcquired = (worldCm, entity) =>
-            {
-                foreach (var cb in commandSourceAcquiredCallbacks) cb(worldCm, entity);
-            };
-            // Replicated clients execute only the LocalInput group; acquisition must run there,
-            // before AxisMoveOrderSystem consumes pointer edges (same relative order as the
-            // single-process InputCollection contract).
-            engine.InsertSystemBeforeRequired<AxisMoveOrderSystem>(commandSourceAcquisition, SystemGroup.LocalInput);
 
             engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
             engine.RegisterSystem(new AbilityExecAimSyncSystem(engine.World, new InputInteractionContextAccessor(engine.World, engine.GlobalContext)), SystemGroup.InputCollection);
@@ -79,11 +62,6 @@ namespace CoreInputMod.Triggers
                 engine.World,
                 engine.GlobalContext,
                 (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner)));
-            engine.RegisterPresentationSystem(new CommandSourceDragOverlaySystem(
-                engine.World,
-                engine.GlobalContext,
-                (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner),
-                commandSourceAcquisitionConfig));
             engine.InsertPresentationSystemBefore<EntityCollectionPresentationEventSystem>(new AbilityAimPresentationProjectionSystem(engine.World, engine.GlobalContext));
             engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new CommandActorMovePathPresentationSystem(
                 engine.World,
@@ -97,7 +75,7 @@ namespace CoreInputMod.Triggers
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.LocalInput);
             RegisterAutoLocalOrderSource(engine);
 
-            _ctx.Log("[CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered");
+            _ctx.Log("[CoreInputMod] GasInputResponse, SkillBar, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered");
             return Task.CompletedTask;
         }
 
