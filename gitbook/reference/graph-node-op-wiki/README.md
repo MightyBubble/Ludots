@@ -4,6 +4,13 @@
 
 生成器：`scripts/generate-graph-op-node-wiki.py`（从 vignette 与引擎描述表生成，勿手改正文）。
 
+## 下令桥
+
+> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
+
+- [一声令下先进缓冲](SubmitCommandIntent.md) — 图里定好落点，一声令下交给缓冲，下令内核下一拍再路由。
+- [施法令先进缓冲](SubmitCast.md) — 图里定好槽位，一声施法交给缓冲，下令内核下一拍按活跃集成员扇出。
+
 ## 事件与吸附
 
 > 作者语义与全量字段见手册分册 [事件与情境 · gr-op-01](../mod-editor-prd/config/gr-op-01-context.md)。
@@ -236,7 +243,7 @@
 - [续一杯，歇一口气](Yield.md) — 每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
 - [进图开一场对话](StartDialogue.md) — 图节点点名对话 id；跑完，会话已开，字幕报「对话已开」。
 
-## 集合透传
+## 集合写入
 
 > 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
 
