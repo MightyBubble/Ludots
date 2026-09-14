@@ -295,6 +295,59 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         AssertCollection(engine, commander, SelectedKey, "下单不改动选中集", marine1, marine2);
     }
 
+    [Test]
+    public void CastIntentFullChain_SkillKeyPressCastsThroughGraphBridge()
+    {
+        string repoRoot = FindRepoRoot();
+        var backend = new TestInputBackend();
+        using GameEngine engine = CreateEngine(repoRoot, backend);
+        engine.LoadMap(new MapLoadRequest(
+            new MapId(MapId),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.case_e") })));
+        TickUntil(engine, 40, () => engine.CurrentMapSession != null);
+
+        Entity commander = Resolve(engine, "case-e-commander");
+        Entity marine1 = Resolve(engine, "case-e-marine-1");
+        Entity marine2 = Resolve(engine, "case-e-marine-2");
+        TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
+
+        // 框选两个单位作为活跃集
+        DragBox(engine, backend, commander, new Vector2(-1200f, -100f), new Vector2(-300f, 100f));
+        AssertCollection(engine, commander, SelectedKey, "施法前选中集就位", marine1, marine2);
+
+        var orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+            as Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry
+            ?? throw new InvalidOperationException("OrderTypeRegistry service is missing.");
+        int castAbilityTypeId = orderTypes.GetId("castAbility");
+        Assert.That(castAbilityTypeId, Is.GreaterThan(0), "castAbility 订单类型已注册");
+
+        var drain = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain)
+            as Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem
+            ?? throw new InvalidOperationException("CommandIntentBufferDrain service is missing.");
+
+        // 按 1 = CaseE.CastQ 动作 → cast_q 图 → SubmitCast op → 施法意图缓冲 → drain 扇出
+        InputHandler(engine).InjectButtonPress("CaseE.CastQ");
+        TickUntil(engine, 30, () => drain.LastDrainedCount > 0);
+        Tick(engine, 4);
+        AssertNoTriggerErrors(engine);
+        Assert.That(drain.LastAcceptedCount, Is.EqualTo(1), $"图提交的一条施法意图应整条接受（拒绝原因：{drain.LastRejectionReason}）");
+
+        AssertCastOrder(engine, marine1, castAbilityTypeId, "选中单位 1 收到 castAbility（槽位 I0=0，来自活跃集成员扇出）");
+        AssertCastOrder(engine, marine2, castAbilityTypeId, "选中单位 2 收到 castAbility");
+    }
+
+    private static void AssertCastOrder(GameEngine engine, Entity marine, int castAbilityTypeId, string message)
+    {
+        Assert.That(
+            engine.World.TryGet<OrderBuffer>(marine, out OrderBuffer buffer) && buffer.HasActive,
+            message);
+        Order order = buffer.ActiveOrder.Order;
+        Assert.That(order.OrderTypeId, Is.EqualTo(castAbilityTypeId), $"{message}：订单类型");
+        Assert.That(order.PlayerId, Is.EqualTo(1), $"{message}：下单玩家");
+        Assert.That(order.Actor, Is.EqualTo(marine), $"{message}：执行者");
+        Assert.That(order.Args.I0, Is.EqualTo(0), $"{message}：槽位 I0=0");
+    }
+
     private static void AssertAcceptedMoveTo(GameEngine engine, Entity marine, int moveToTypeId, string message)
     {
         Assert.That(

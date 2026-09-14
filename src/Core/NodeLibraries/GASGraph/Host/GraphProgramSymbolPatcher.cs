@@ -43,6 +43,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         ins.Imm = symbolResolver.ResolveTextToken(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.StartDialogue:
+                    case GraphNodeOp.SubmitCast:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.OfferActivity:

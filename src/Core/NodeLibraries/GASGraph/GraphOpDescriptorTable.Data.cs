@@ -183,6 +183,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // Input-edge order bridge (constitution §12): TriggerGraph-only — the submit op is
             // the graph side of the intent buffer and never routes inline.
             Add(rows, GraphNodeOp.SubmitCommandIntent, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portTargetCondition, worldSideEffect: true);
+            string[] portSlotTargetGround = { GraphControlFlowPorts.Value, GraphControlFlowPorts.Target, GraphControlFlowPorts.Condition };
+            // Cast side of the §12 order bridge: slot lands as Args.I0 on each active-set member.
+            Add(rows, GraphNodeOp.SubmitCast, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portSlotTargetGround, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.SetPanelAudience, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.ModifyAttributeSet, EffectAndTriggerGraph, GraphValueType.Void, portTargetValue, scriptPorts: portTargetValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.OfferActivity, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);

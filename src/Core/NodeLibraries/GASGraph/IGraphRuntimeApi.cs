@@ -151,6 +151,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
         }
 
+        /// <summary>
+        /// Pushes one cast intent into the per-tick submission buffer (constitution §12);
+        /// the drain resolves the cast order type id from the config-key symbol id.
+        /// </summary>
+        void SubmitCastIntent(Entity rep, int slot, Entity target, bool hasTarget, bool hasGround, in IntVector2 groundCm, int orderTypeKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+        }
+
         /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
         void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
 

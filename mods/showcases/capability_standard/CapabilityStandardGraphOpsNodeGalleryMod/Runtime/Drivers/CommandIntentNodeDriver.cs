@@ -76,7 +76,8 @@ public sealed class CommandIntentNodeDriver : IGraphOpsNodeDriver
     {
         if (!_halted)
         {
-            int before = _submissions.Count;
+            bool castVariant = string.Equals(ctx.Vignette.Op, "SubmitCast", StringComparison.Ordinal);
+            int before = castVariant ? _submissions.CastCount : _submissions.Count;
             var frame = GraphFrame.Bind(
                 GraphKind.TriggerGraph,
                 GraphEntityPreset.None,
@@ -102,7 +103,7 @@ public sealed class CommandIntentNodeDriver : IGraphOpsNodeDriver
             }
 
             _halted = true;
-            SubmittedCount = _submissions.Count - before;
+            SubmittedCount = (castVariant ? _submissions.CastCount : _submissions.Count) - before;
         }
 
         ApplyBeat(ctx);

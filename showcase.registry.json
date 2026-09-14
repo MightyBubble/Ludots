@@ -9877,6 +9877,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SubmitCommandIntent/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitCast",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitCastEntryMod",
+      "projectPath": "CapabilityStandardGraphOpSubmitCastEntryMod.csproj",
+      "title": "施法令先进缓冲",
+      "summary": "图里定好槽位，一声施法交给缓冲，下令内核下一拍按活跃集成员扇出。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "SubmitCast"
+      ],
+      "binding": "capability_standard_graph_op_SubmitCast",
+      "preset": "capability_standard_graph_op_SubmitCast_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SubmitCast.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SubmitCast",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SubmitCast/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SubmitCast/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

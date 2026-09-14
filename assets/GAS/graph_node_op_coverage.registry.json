@@ -3430,6 +3430,22 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "SubmitCast",
+      "authorableKinds": [
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_SubmitCast",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.SubmitCastVignette_PushesIntoTheCastSubmissionBuffer"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "SubmitCommandIntent",
       "authorableKinds": [
         "TriggerGraph"

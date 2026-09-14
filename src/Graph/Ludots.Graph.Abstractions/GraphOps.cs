@@ -401,6 +401,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         SubmitCommandIntent = 483,
 
+        /// <summary>
+        /// Submit one cast intent into the order pipeline's per-tick submission buffer
+        /// (constitution §12). Caster = the acting rep; I[A] = ability slot index; E[B]
+        /// (optional) = cast target entity; B[C] (optional) asserts the frame's TargetPosCm was
+        /// resolved this run and carries the ground point. Imm = the cast order-type key symbol
+        /// (e.g. "castAbility"), resolved by the drain through the OrderTypeRegistry. Actors are
+        /// the rep's active-context-declared active collection members — same §12 resolution as
+        /// command intents.
+        /// </summary>
+        SubmitCast = 484,
+
     }
 
     public static class GraphNodeOpParser

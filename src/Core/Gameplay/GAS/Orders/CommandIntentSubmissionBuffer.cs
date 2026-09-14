@@ -26,6 +26,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             _submissions = new CommandIntentSubmission[capacity];
+            _casts = new CastIntentSubmission[capacity];
         }
 
         public int Capacity => _submissions.Length;
@@ -62,6 +63,35 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public void Clear()
         {
             _count = 0;
+            _castCount = 0;
+        }
+
+        private readonly CastIntentSubmission[] _casts;
+        private int _castCount;
+
+        /// <summary>Cast intents queued since the last drain (same tick contract as commands).</summary>
+        public int CastCount => _castCount;
+
+        public CastIntentSubmission Cast(int index)
+        {
+            if ((uint)index >= (uint)_castCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            return _casts[index];
+        }
+
+        public void PushCast(in CastIntentSubmission submission)
+        {
+            if (_castCount >= _casts.Length)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.CAST_INTENT.ERR.SubmissionBufferOverflow: cast intent submission buffer capacity {_casts.Length} exceeded; " +
+                    "raise gasRuntimeCapacity.commandIntentScratchCapacity or submit fewer intents per tick.");
+            }
+
+            _casts[_castCount++] = submission;
         }
     }
 
@@ -70,4 +100,18 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         Entity Target,
         bool HasTarget,
         IntVector2 GroundCm);
+
+    /// <summary>
+    /// One graph-submitted cast intent: the slot lands as Args.I0; GroundCm applies only when
+    /// HasGround (the graph asserted a resolved ground point this run); OrderTypeKeyId is the
+    /// cast order-type config-key symbol id, resolved by the drain through OrderTypeRegistry.
+    /// </summary>
+    public readonly record struct CastIntentSubmission(
+        Entity Rep,
+        int Slot,
+        Entity Target,
+        bool HasTarget,
+        bool HasGround,
+        IntVector2 GroundCm,
+        int OrderTypeKeyId);
 }

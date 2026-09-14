@@ -148,7 +148,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 bool bIsOptionalAbsent = instruction.B == byte.MaxValue &&
                     op is GraphNodeOp.WriteMapVarInt
                         or GraphNodeOp.WriteMapVarFloat
-                        or GraphNodeOp.CreatePanel;
+                        or GraphNodeOp.CreatePanel
+                        or GraphNodeOp.SubmitCast;
+                // SubmitCast 的 C 是可选 ground 条件寄存器：byte.MaxValue 表示"无地面断言"。
+                bool cIsOptionalAbsent = instruction.C == byte.MaxValue &&
+                    op is GraphNodeOp.SubmitCast;
                 if (!aIsOptionalAbsent)
                 {
                     RequireRegisterIndex(graphId, i, nameof(GraphInstruction.A), instruction.A, entrypoint);
@@ -157,7 +161,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 {
                     RequireRegisterIndex(graphId, i, nameof(GraphInstruction.B), instruction.B, entrypoint);
                 }
-                RequireRegisterIndex(graphId, i, nameof(GraphInstruction.C), instruction.C, entrypoint);
+                if (!cIsOptionalAbsent)
+                {
+                    RequireRegisterIndex(graphId, i, nameof(GraphInstruction.C), instruction.C, entrypoint);
+                }
             }
         }
 

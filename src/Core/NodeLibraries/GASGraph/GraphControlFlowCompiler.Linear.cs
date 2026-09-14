@@ -399,6 +399,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.SubmitCast:
+                    RequireNonEmpty(node.OrderTypeKey, "orderTypeKey", node, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Target)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Condition)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Condition, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    break;
+
                 case GraphNodeOp.SetPanelAudience:
                     RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
                     break;
@@ -1371,6 +1386,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Target))
                         ? ResolveValueInput(
                             node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
+                    break;
+
+                case GraphNodeOp.SubmitCast:
+                    instruction.Imm = RequireSymbol(node.OrderTypeKey, "orderTypeKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Target))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
+                    instruction.C = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Condition))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
                             valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
                         : byte.MaxValue;
                     break;

@@ -984,6 +984,31 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
+        /// Pushes one cast intent into the submission buffer; the drain resolves actors from the
+        /// rep's active-context-declared collection and lands Args.I0 = slot (constitution §12).
+        /// </summary>
+        public void SubmitCastIntent(
+            Entity rep,
+            int slot,
+            Entity target,
+            bool hasTarget,
+            bool hasGround,
+            in Ludots.Platform.Abstractions.IntVector2 groundCm,
+            int orderTypeKeyId)
+        {
+            var submissions = _commandIntentSubmissions
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+            submissions.PushCast(new Ludots.Core.Gameplay.GAS.Orders.CastIntentSubmission(
+                rep,
+                slot,
+                hasTarget ? target : Entity.Null,
+                hasTarget,
+                hasGround,
+                groundCm,
+                orderTypeKeyId));
+        }
+
+        /// <summary>
         /// Enqueues a template entity spawn on the runtime spawn queue. Fail-closed on
         /// unknown template symbols, unmapped spawn anchors, and queue capacity.
         /// </summary>

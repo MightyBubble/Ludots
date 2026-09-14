@@ -39,6 +39,7 @@ namespace Ludots.Core.Input.Orders
         private readonly CommandIntentRoute[] _routeScratch;
         private readonly Entity[] _dispatchScratch;
         private readonly Order[] _orderScratch;
+        private readonly Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
 
         /// <summary>Diagnostic counters from the last drain; not world state, never persisted.</summary>
         public int LastDrainedCount;
@@ -51,6 +52,7 @@ namespace Ludots.Core.Input.Orders
             CommandIntentSubmissionBuffer submissions,
             CommandIntentProfileRegistry intentProfiles,
             CastDispatchProfileRegistry dispatchProfiles,
+            Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? orderTypes,
             EntityCollectionStore entityCollections,
             OrderQueue orders,
             PlayerEntityLookup players,
@@ -61,6 +63,7 @@ namespace Ludots.Core.Input.Orders
             _submissions = submissions ?? throw new ArgumentNullException(nameof(submissions));
             _intentProfiles = intentProfiles ?? throw new ArgumentNullException(nameof(intentProfiles));
             _dispatchProfiles = dispatchProfiles ?? throw new ArgumentNullException(nameof(dispatchProfiles));
+            _orderTypes = orderTypes;
             _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
             _orders = orders ?? throw new ArgumentNullException(nameof(orders));
             _players = players ?? throw new ArgumentNullException(nameof(players));
@@ -81,7 +84,7 @@ namespace Ludots.Core.Input.Orders
         public void Update(in float dt)
         {
             int count = _submissions.Count;
-            if (count == 0)
+            if (count == 0 && _submissions.CastCount == 0)
             {
                 return;
             }
@@ -102,7 +105,120 @@ namespace Ludots.Core.Input.Orders
                 }
             }
 
+            for (int i = 0; i < _submissions.CastCount; i++)
+            {
+                if (TryRouteCastSubmission(_submissions.Cast(i)))
+                {
+                    LastAcceptedCount++;
+                }
+                else
+                {
+                    LastRejectedCount++;
+                }
+            }
+
+            LastDrainedCount += _submissions.CastCount;
             _submissions.Clear();
+        }
+
+        /// <summary>
+        /// Cast side of the §12 bridge: actors are the same active-context-declared collection
+        /// members; each authorized member receives one cast order with Args.I0 = slot. The cast
+        /// order-type key resolves through the OrderTypeRegistry at drain time (cold path).
+        /// </summary>
+        private bool TryRouteCastSubmission(in CastIntentSubmission submission)
+        {
+            if (!_world.IsAlive(submission.Rep))
+            {
+                return Reject("cast acting rep is dead");
+            }
+
+            if (!_world.TryGet<PlayerOwner>(submission.Rep, out PlayerOwner owner) || owner.PlayerId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.CAST_INTENT.ERR.RepHasNoPlayerOwner: rep {submission.Rep} submitted a cast intent but carries no PlayerOwner.");
+            }
+
+            if (!TryResolveRoutingContext(submission.Rep, out InteractionContextInstance routingContext))
+            {
+                return Reject("cast: no active context declares activeCollectionKey");
+            }
+
+            if (!_world.IsAlive(routingContext.ContextEntity))
+            {
+                return Reject("cast: routing context carrier is dead");
+            }
+
+            var orderTypes = _orderTypes
+                ?? throw new InvalidOperationException(
+                    "ORDER.CAST_INTENT.ERR.OrderTypeRegistryUnavailable: cast intent drain requires the OrderTypeRegistry.");
+            string orderTypeKey = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(submission.OrderTypeKeyId);
+            if (string.IsNullOrWhiteSpace(orderTypeKey) ||
+                !orderTypes.TryGetId(orderTypeKey, out int orderTypeId) ||
+                orderTypeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.CAST_INTENT.ERR.UnknownCastOrderType: SubmitCast references order type key '{orderTypeKey}' which is not registered.");
+            }
+
+            if (!_entityCollections.TryGet(routingContext.ContextEntity, routingContext.ActiveCollectionKeyId, out EntityCollectionHandle handle) ||
+                !_entityCollections.TryGetView(handle, out EntityCollectionView view))
+            {
+                return Reject("cast: active collection is not mounted");
+            }
+
+            if (view.Count > _actorScratch.Length)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.CAST_INTENT.ERR.ActorScratchCapacityExceeded: active collection holds {view.Count} actors, capacity {_actorScratch.Length}.");
+            }
+
+            int actorCount = _entityCollections.CopyEntities(handle, 0, _actorScratch);
+            if (actorCount <= 0)
+            {
+                return Reject("cast: active collection is empty");
+            }
+
+            bool allAccepted = true;
+            for (int i = 0; i < actorCount; i++)
+            {
+                Entity actor = _actorScratch[i];
+                if (!InputOrderActorAuthorization.IsAuthorized(_world, _players, _controlDomains, actor, owner.PlayerId))
+                {
+                    LastRejectionReason = "cast: actor failed authorization";
+                    allAccepted = false;
+                    continue;
+                }
+
+                var args = new OrderArgs
+                {
+                    I0 = submission.Slot,
+                };
+                if (submission.HasGround)
+                {
+                    args.Spatial.Kind = OrderSpatialKind.WorldCm;
+                    args.Spatial.Mode = OrderCollectionMode.Single;
+                    args.Spatial.WorldCm = new System.Numerics.Vector3(submission.GroundCm.X, 0f, submission.GroundCm.Y);
+                }
+
+                var order = new Order
+                {
+                    OrderTypeId = orderTypeId,
+                    PlayerId = owner.PlayerId,
+                    Actor = actor,
+                    CommandSource = Entity.Null,
+                    Target = submission.HasTarget && _world.IsAlive(submission.Target) ? submission.Target : Entity.Null,
+                    Args = args,
+                };
+                OrderSubmitResult result = _orders.SubmitAssigned(ref order);
+                if (!OrderSubmitResultSemantics.IsAccepted(result))
+                {
+                    LastRejectionReason = $"cast: order submit returned {result}";
+                    allAccepted = false;
+                }
+            }
+
+            return allAccepted;
         }
 
         private bool TryRouteSubmission(in CommandIntentSubmission submission)

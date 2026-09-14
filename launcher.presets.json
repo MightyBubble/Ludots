@@ -3267,6 +3267,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitCast_raylib",
+      "name": "Graph Op SubmitCast Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SubmitCast"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -347,7 +347,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ActivateContext or
                 GraphNodeOp.DeactivateContext or
                 GraphNodeOp.WriteCollection or
-                GraphNodeOp.SubmitCommandIntent
+                GraphNodeOp.SubmitCommandIntent or
+                GraphNodeOp.SubmitCast
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -916,6 +917,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
             Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
             Register(GraphNodeOp.SubmitCommandIntent, HandleSubmitCommandIntent, "SubmitCommandIntent graph opcode.");
+            Register(GraphNodeOp.SubmitCast, HandleSubmitCast, "SubmitCast graph opcode.");
         Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
@@ -1567,6 +1569,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 hasTarget ? s.E[ins.A] : Entity.Null,
                 hasTarget,
                 s.TargetPosCm);
+        }
+
+        private static void HandleSubmitCast(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (!s.World.IsAlive(s.Caster))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.CastIntentCasterDead: SubmitCast requires a living acting rep (the trigger mount subject).");
+            }
+
+            bool hasTarget = ins.B != byte.MaxValue && s.E[ins.B] != Entity.Null && s.World.IsAlive(s.E[ins.B]);
+            bool hasGround = ins.C != byte.MaxValue && s.B[ins.C] != 0;
+            s.Api.SubmitCastIntent(
+                s.Caster,
+                s.I[ins.A],
+                hasTarget ? s.E[ins.B] : Entity.Null,
+                hasTarget,
+                hasGround,
+                s.TargetPosCm,
+                ins.Imm);
         }
 
         private static void HandleSetPanelAudience(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

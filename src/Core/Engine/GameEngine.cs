@@ -2217,6 +2217,7 @@ namespace Ludots.Core.Engine
                 commandIntentSubmissions,
                 commandIntentProfileRegistry,
                 castDispatchProfileRegistry,
+                orderTypeRegistry,
                 entityCollectionStore,
                 orderQueue,
                 playerEntityLookup,
