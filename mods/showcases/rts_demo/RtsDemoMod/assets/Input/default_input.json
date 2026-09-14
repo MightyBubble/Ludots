@@ -21,11 +21,6 @@
       "type": "Button"
     },
     {
-      "id": "CommandSourceAcquire",
-      "name": "Gameplay_CommandSourceAcquire",
-      "type": "Button"
-    },
-    {
       "id": "Command",
       "name": "Gameplay_Command",
       "type": "Button"
