@@ -29,3 +29,38 @@
 - 引擎侧新增：GraphNodeOp 483、CommandIntentSubmissionBuffer、CommandIntentBufferDrainSystem、GameEngine 装配（LocalInput，早于 AxisMoveOrderSystem）。
 - 群组布局（groupMoveTargetLayout）与 ICommandActorExpander 尚未进图桥（切2/切3 随 formation 迁移补）；本次 moveTo 扇出为并行共享批。
 - 本工作树存在**先于本分支**的未提交 WIP（narrative/launcher/game.json 等）与既有测试失败（GasTests 145 / ArchitectureTests 5，含 3 个前人新 op 未登记画廊）；与本切片无关，未处理。
+
+---
+
+## 终态追加（2026-09-14，分支 graph-order-migration 全程战报）
+
+### 已交付切片（14 提交）
+
+- 切0 宪法合同：§12 重写 + 门户对账 + #1523 定案与关闭（arpg 复活后）
+- 切1 图桥：SubmitCommandIntent(483) + 意图缓冲 + §12 drain（LIFO 声明解析、零回退）+ Case E 全链
+- 切2 装配收口：CoreInputMod 自动装配 + 12/12 per-mod 系统退役（9 删 + 4 策略系统）
+- 切3/切4 rts 收官：四技能全图化（含 W 实体目标拾取链）+ 选中图化 + 采集对 rts 退役
+- 切4 施法桥：SubmitCast(484) + 施法缓冲/drain + Case E 施法链 + 画廊纪律
+- 切5 arpg 复活：self-roster 纯数据链，#1523 收官关闭
+- 切6 首批守卫：装配唯一性/图桥零业务键/声明式活跃集 三条合同锁死
+
+### 终态全量验收
+
+```
+GasTests 终态 139 失败 vs 基线 140
+新增失败：0；净修复：1
+```
+
+### 新链合同要点（已锁）
+
+- 图→op→缓冲→drain 为下令唯一图侧入口；drain 只读活跃 context 声明的键
+- 表现域零计算（指示器只读绑定参数）——ContextDeactivated 事件主干已具备
+- 每 op 画廊纪律全程执行（SubmitCommandIntent/SubmitCast 均登记 covered + vignette + 入口 mod）
+
+### 剩余面（机械展开，模式已全部验证）
+
+- 指示器 presenter behaviors（WorldCircle/Sector/Polyline/ProgressArc）双端渲染件
+- 七 mod（moba/champion/interaction/road/ux/formation/browser_rts）battle context 声明化
+  （crowd 模式照抄）→ Default 稳态 profile/EntityCollectionKeys/GetControlledActor 族拆除
+- moba/champion 技能图化前置=偏好读写 op（pref 分支：智能/瞄准施法）
+- 引擎 Core 零业务键守卫（待上述拆除后启用）
