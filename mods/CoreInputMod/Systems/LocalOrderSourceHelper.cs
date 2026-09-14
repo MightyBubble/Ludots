@@ -92,12 +92,22 @@ namespace CoreInputMod.Systems
 
         public InputOrderMappingSystem? TryCreateMapping(IModContext ctx)
         {
+            return TryCreateMapping(ctx, sourceModId: null);
+        }
+
+        /// <summary>
+        /// Builds and installs the local order mapping from one mod's assets. sourceModId null
+        /// resolves against the context's own mod (per-mod VFS authoring contract); the
+        /// auto-installed order source passes the shipping mod explicitly.
+        /// </summary>
+        public InputOrderMappingSystem? TryCreateMapping(IModContext ctx, string? sourceModId)
+        {
             if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input)
             {
                 return null;
             }
 
-            string uri = $"{ctx.ModId}:assets/Input/input_order_mappings.json";
+            string uri = $"{sourceModId ?? ctx.ModId}:assets/Input/input_order_mappings.json";
             if (!ctx.VFS.TryResolveFullPath(uri, out var fullPath) || !File.Exists(fullPath))
             {
                 ctx.Log($"[{ctx.ModId}] input_order_mappings.json not found, skipping local order mapping.");
@@ -314,6 +324,16 @@ namespace CoreInputMod.Systems
             }
 
             _globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = mapping;
+            if (config.SkillBar?.Enabled is { } skillBarEnabled)
+            {
+                _globals[SkillBarOverlaySystem.SkillBarEnabledKey] = skillBarEnabled;
+            }
+
+            if (config.SkillBar?.KeyLabels is { } keyLabels)
+            {
+                _globals[SkillBarOverlaySystem.SkillBarKeyLabelsKey] = keyLabels.ToArray();
+            }
+
             return mapping;
         }
 

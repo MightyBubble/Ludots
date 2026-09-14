@@ -7,6 +7,7 @@ using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Mathematics;
@@ -94,6 +95,7 @@ namespace CoreInputMod.Triggers
             engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
             RegisterLoadedModViewModes(engine);
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.LocalInput);
+            RegisterAutoLocalOrderSource(engine);
 
             _ctx.Log("[CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered");
             return Task.CompletedTask;
@@ -117,6 +119,49 @@ namespace CoreInputMod.Triggers
         {
             collectionKey = EntityCollectionKeys.CommandSource;
             return TryResolveLocalCommandSourceOwner(engine, out owner);
+        }
+
+        /// <summary>
+        /// Slice-2 auto assembly: exactly one loaded mod may ship the local order mapping
+        /// config; the shipping mod is resolved here (load-time, fail-fast on ambiguity) and
+        /// the shared config-installed order source replaces every per-mod installer.
+        /// </summary>
+        private void RegisterAutoLocalOrderSource(GameEngine engine)
+        {
+            string? sourceModId = null;
+            var loadedModIds = engine.ModLoader?.LoadedModIds;
+            if (loadedModIds != null)
+            {
+                for (int i = 0; i < loadedModIds.Count; i++)
+                {
+                    string modId = loadedModIds[i];
+                    string uri = $"{modId}:assets/Input/input_order_mappings.json";
+                    if (_ctx.VFS.TryResolveFullPath(uri, out string? path) && System.IO.File.Exists(path))
+                    {
+                        if (sourceModId != null)
+                        {
+                            throw new InvalidOperationException(
+                                $"[CoreInputMod] Both '{sourceModId}' and '{modId}' ship assets/Input/input_order_mappings.json; " +
+                                "exactly one gameplay mod may own the local order mapping per game set.");
+                        }
+
+                        sourceModId = modId;
+                    }
+                }
+            }
+
+            if (sourceModId == null)
+            {
+                _ctx.Log("[CoreInputMod] No loaded mod ships input_order_mappings.json; auto local order source stays uninstalled.");
+                return;
+            }
+
+            OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
+                ?? throw new InvalidOperationException("[CoreInputMod] Auto local order source requires OrderQueue.");
+            engine.RegisterSystem(
+                new AutoInstalledLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx, sourceModId),
+                SystemGroup.InputCollection);
+            _ctx.Log($"[CoreInputMod] Auto local order source installed from '{sourceModId}'.");
         }
 
         private void RegisterLoadedModViewModes(GameEngine engine)
