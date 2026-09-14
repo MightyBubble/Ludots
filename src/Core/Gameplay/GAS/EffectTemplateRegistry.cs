@@ -229,6 +229,8 @@ namespace Ludots.Core.Gameplay.GAS
         public bool CopySourcePlayerOwner;
         /// <summary>Whether the source entity becomes the owns-owner of the spawned unit (control domain).</summary>
         public bool CopySourceOwnership;
+        /// <summary>Whether the source entity becomes the member-of domain of the spawned unit (relationship membership).</summary>
+        public bool CopySourceMembership;
         /// <summary>Whether the source entity should become the parent relation of the spawned unit.</summary>
         public bool LinkSourceAsParent;
         /// <summary>Fixed formation radius in centimeters for non-scatter patterns.</summary>

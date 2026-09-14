@@ -26,8 +26,8 @@ namespace GasTests
                     {
                       "name": "default",
                       "spatialType": "Hex",
-                      "widthInMacroTiles": 128,
-                      "heightInMacroTiles": 64,
+                      "widthInCells": 32768,
+                      "heightInCells": 16384,
                       "gridCellSizeCm": 200,
                       "hexEdgeLengthCm": 900,
                       "chunkSizeCells": 32
@@ -51,7 +51,11 @@ namespace GasTests
                 Assert.That(cfg.Boards.Count, Is.EqualTo(1));
                 var board = cfg.Boards[0];
                 Assert.That(board.SpatialType, Is.EqualTo("Hex"));
-                Assert.That(board.WidthInMacroTiles, Is.EqualTo(128));
+                Assert.That(board.WidthInCells, Is.EqualTo(32768));
+                Assert.That(board.HeightInCells, Is.EqualTo(16384));
+                Assert.That(board.WidthInMacroTiles, Is.EqualTo(128),
+                    "Macro tiles are derived (ceil) from the cell authoring face.");
+                Assert.That(board.HeightInMacroTiles, Is.EqualTo(64));
                 Assert.That(board.HexEdgeLengthCm, Is.EqualTo(900));
             }
             finally
@@ -102,8 +106,7 @@ namespace GasTests
                   "boards": [
                     {
                       "name": "default",
-                      "widthInTiles": 2,
-                      "heightInMacroTiles": 2
+                      "widthInTiles": 2
                     }
                   ]
                 }
@@ -113,7 +116,37 @@ namespace GasTests
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("legacy"));
 
                 Assert.That(ex!.Message, Does.Contain("legacy key 'widthInTiles'"));
-                Assert.That(ex.Message, Does.Contain("widthInMacroTiles"));
+                Assert.That(ex.Message, Does.Contain("widthInCells"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardUsesRetiredMacroTileExtentKey_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "retired", """
+                {
+                  "id": "retired",
+                  "boards": [
+                    {
+                      "name": "default",
+                      "heightInMacroTiles": 2
+                    }
+                  ]
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("retired"));
+
+                Assert.That(ex!.Message, Does.Contain("legacy key 'heightInMacroTiles'"));
+                Assert.That(ex.Message, Does.Contain("heightInCells"));
             }
             finally
             {

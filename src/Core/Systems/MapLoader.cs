@@ -798,6 +798,7 @@ namespace Ludots.Core.Systems
                 }
 
                 var entity = builder.Build();
+                SeedPhysicsBodyFromAuthoredWorldPosition(mapConfig.Id, entityData, entity);
                 TryApplyTemplateKey(entity, entityData.Template);
                 _world.Add(entity, mapEntityTag);
                 entityIndex.Register(mapConfig.Id, entityData.InstanceId, entity);
@@ -824,6 +825,28 @@ namespace Ludots.Core.Systems
             }
 
             _entityTriggerGraphMounts.BufferMapLoadSpawn(entity, templateId, template.TriggerGraphs);
+        }
+
+        /// <summary>
+        /// 地图位姿覆写是物化 SSOT：物理体作者面（如 RigidBody positionCm）给的 Position2D
+        /// 必须与最终 WorldPositionCm 一致，否则 Physics2DToWorldPositionSyncSystem 会用
+        /// 体内的旧位姿覆写逻辑层位置（与 runtime spawn lane 的 ApplyWorldPosition 同语义）。
+        /// </summary>
+        private void SeedPhysicsBodyFromAuthoredWorldPosition(string mapId, EntitySpawnData entityData, Entity entity)
+        {
+            if (entityData.Overrides == null ||
+                !entityData.Overrides.ContainsKey("WorldPositionCm") ||
+                !_world.Has<Ludots.Core.Physics2D.Components.Position2D>(entity))
+            {
+                return;
+            }
+
+            var authored = ParseWorldPositionOverride(mapId, entityData, entityData.Overrides["WorldPositionCm"]);
+            _world.Set(entity, new Ludots.Core.Physics2D.Components.Position2D { Value = authored });
+            if (_world.Has<Ludots.Core.Physics2D.Components.PreviousPosition2D>(entity))
+            {
+                _world.Set(entity, new Ludots.Core.Physics2D.Components.PreviousPosition2D { Value = authored });
+            }
         }
 
         private void MountInitialInteractionContext(Entity entity, string templateId, EntityTemplate template)

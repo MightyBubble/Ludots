@@ -31,8 +31,6 @@
     "effectRequestQueueCapacity": 4096
   },
   "gridCellSizeCm": 100,
-  "worldWidthInMacroTiles": 64,
-  "worldHeightInMacroTiles": 64,
   "commandSource": {
     "targetFilter": { "relationFilter": "All" },
     "clickPickRadiusPixels": 20,

@@ -409,6 +409,8 @@ namespace Ludots.Core.Gameplay.GAS
                     CopySourcePlayerOwner = (byte)(unit.CopySourcePlayerOwner ? 1 : 0),
                     OwnershipSource = unit.CopySourceOwnership ? context.Source : Entity.Null,
                     HasOwnershipSource = (byte)(unit.CopySourceOwnership ? 1 : 0),
+                    MembershipTarget = unit.CopySourceMembership ? context.Source : Entity.Null,
+                    HasMembershipTarget = (byte)(unit.CopySourceMembership ? 1 : 0),
                     LinkSourceAsParent = (byte)(unit.LinkSourceAsParent ? 1 : 0),
                 };
 

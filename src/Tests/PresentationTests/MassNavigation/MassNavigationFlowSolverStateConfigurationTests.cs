@@ -29,37 +29,50 @@ namespace Ludots.Tests.Presentation
     public sealed class MassNavigationFlowSolverStateConfigurationTests
     {
         [Test]
-        public void MassNavigationConfig_RequiresExplicitParallelWorkerCount()
+        public void MassNavigationConfig_SolverIsOptionalWithEngineDefaultWorkers()
         {
-            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject solver = config["solver"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.solver must be authored.");
-            solver.Remove("parallelWorkerCount");
+            JsonObject minimal = new JsonObject { ["mapId"] = "minimal_map" };
+            MassNavigationConfig defaults = MassNavigationConfig.Load(minimal);
+            Assert.That(defaults.Solver.ParallelWorkerCount, Is.EqualTo(MassNavigationEngineDefaults.ParallelWorkerCount),
+                "An absent solver section must load the engine-default worker count.");
 
-            InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
-            Assert.That(missing.Message, Does.Contain("parallelWorkerCount"));
+            JsonObject zeroed = new JsonObject
+            {
+                ["mapId"] = "minimal_map",
+                ["solver"] = new JsonObject { ["parallelWorkerCount"] = 0 },
+            };
+            MassNavigationConfig zeroLoaded = MassNavigationConfig.Load(zeroed);
+            Assert.That(zeroLoaded.Solver.ParallelWorkerCount, Is.EqualTo(MassNavigationEngineDefaults.ParallelWorkerCount),
+                "parallelWorkerCount 0 is an unauthored value and must fall back to the engine default.");
 
-            config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            solver = config["solver"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.solver must be authored.");
-            solver["parallelWorkerCount"] = 0;
-
-            InvalidOperationException invalid = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
-            Assert.That(invalid.Message, Does.Contain("ParallelWorkerCount"));
+            JsonObject authored = new JsonObject
+            {
+                ["mapId"] = "minimal_map",
+                ["solver"] = new JsonObject { ["parallelWorkerCount"] = 2 },
+            };
+            Assert.That(MassNavigationConfig.Load(authored).Solver.ParallelWorkerCount, Is.EqualTo(2),
+                "An explicit worker-count override must survive defaulting.");
         }
 
         [Test]
-        public void AutoSpawnLayout_RequiresExplicitRandomSeed()
+        public void MassNavigationConfig_RejectsLegacyScenarioAutoSpawnBodies()
         {
-            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject scenario = config["scenario"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenario must be authored.");
-            JsonObject spawnLayout = scenario["spawnLayout"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.spawnLayout must be authored.");
-            spawnLayout.Remove("randomSeed");
-
-            InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
-            Assert.That(missing.Message, Does.Contain("randomSeed"));
+            JsonObject legacyAutoSpawn = new JsonObject
+            {
+                ["autoSpawn"] = new JsonObject
+                {
+                    ["teams"] = new JsonArray { new JsonObject { ["teamId"] = 1 } },
+                    ["spawnLayout"] = new JsonObject { ["randomSeed"] = 7 },
+                },
+            };
+            foreach (string deadKey in new[] { "scenario", "scenarioRuntime" })
+            {
+                JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+                config[deadKey] = legacyAutoSpawn.DeepClone();
+                JsonException rejected = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(config))!;
+                Assert.That(rejected.Message, Does.Contain(deadKey),
+                    $"Legacy autoSpawn body under '{deadKey}' must be rejected on write.");
+            }
         }
 
         [Test]
@@ -84,105 +97,59 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationConfig_RequiresExplicitStrictCaseAvoidanceMode()
+        public void MassNavigationConfig_AvoidanceModeIsOptionalWithStrictCaseMatching()
         {
-            JsonObject missingModeConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject missingAvoidance = missingModeConfig["avoidance"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
-            missingAvoidance.Remove("mode");
+            JsonObject minimal = new JsonObject { ["mapId"] = "minimal_map" };
+            MassNavigationConfig defaults = MassNavigationConfig.Load(minimal);
+            Assert.That(defaults.Avoidance.ParsedMode, Is.EqualTo(MassNavigationFlowAvoidanceMode.Separation),
+                "avoidance.mode must default to the engine Separation mode.");
 
-            InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(missingModeConfig))!;
-            Assert.That(missing.Message, Does.Contain("mode"));
-
-            JsonObject wrongCaseConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject wrongCaseAvoidance = wrongCaseConfig["avoidance"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
-            wrongCaseAvoidance["mode"] = "orca";
-
-            InvalidOperationException wrongCase = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(wrongCaseConfig))!;
-            Assert.That(wrongCase.Message, Does.Contain("avoidance.mode"));
-            Assert.That(wrongCase.Message, Does.Contain("orca"));
+            JsonObject wrongCase = new JsonObject
+            {
+                ["mapId"] = "minimal_map",
+                ["avoidance"] = new JsonObject { ["mode"] = "orca" },
+            };
+            InvalidOperationException rejected = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(wrongCase))!;
+            Assert.That(rejected.Message, Does.Contain("avoidance.mode"));
+            Assert.That(rejected.Message, Does.Contain("orca"));
         }
 
         [Test]
-        public void MassNavigationConfig_SeparationModeAvoidanceToleratesMissingOrcaAndSonarSections()
+        public void MassNavigationConfig_AvoidanceKernelsAreOptionalForEveryMode()
         {
-            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject avoidance = config["avoidance"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
-            Assert.That(avoidance["mode"]?.GetValue<string>(), Is.EqualTo("Separation"));
-            Assert.That(avoidance.ContainsKey("orca"), Is.False);
-            Assert.That(avoidance.ContainsKey("sonar"), Is.False);
-
-            MassNavigationConfig loaded = MassNavigationConfig.Load(config);
-            Assert.That(loaded.Avoidance.ParsedMode, Is.EqualTo(MassNavigationFlowAvoidanceMode.Separation));
-        }
-
-        [Test]
-        public void MassNavigationConfig_OrcaModeRequiresOrcaSectionButNotSonar()
-        {
-            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject avoidance = config["avoidance"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
-            avoidance["mode"] = "Orca";
-            avoidance["orca"] = new JsonObject
+            JsonObject separation = new JsonObject
             {
-                ["timeHorizonSeconds"] = 0.85,
-                ["maxNeighbors"] = 16,
+                ["mapId"] = "minimal_map",
+                ["avoidance"] = new JsonObject { ["mode"] = "Separation" },
             };
+            Assert.That(MassNavigationConfig.Load(separation).Avoidance.ParsedMode,
+                Is.EqualTo(MassNavigationFlowAvoidanceMode.Separation));
 
-            MassNavigationConfig loaded = MassNavigationConfig.Load(config);
-            Assert.That(loaded.Avoidance.ParsedMode, Is.EqualTo(MassNavigationFlowAvoidanceMode.Orca));
-
-            JsonObject missingOrca = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject missingOrcaAvoidance = missingOrca["avoidance"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
-            missingOrcaAvoidance["mode"] = "Orca";
-            missingOrcaAvoidance["orca"] = new JsonObject
+            JsonObject orca = new JsonObject
             {
-                ["maxNeighbors"] = 16,
+                ["mapId"] = "minimal_map",
+                ["avoidance"] = new JsonObject { ["mode"] = "Orca" },
             };
+            MassNavigationConfig orcaLoaded = MassNavigationConfig.Load(orca);
+            Assert.That(orcaLoaded.Avoidance.ParsedMode, Is.EqualTo(MassNavigationFlowAvoidanceMode.Orca));
+            Assert.That(orcaLoaded.Avoidance.Orca.TimeHorizonSeconds, Is.EqualTo(1f).Within(0.001f),
+                "The Orca kernel must load engine defaults without an authored section.");
+            Assert.That(orcaLoaded.Avoidance.Orca.MaxNeighbors, Is.EqualTo(16));
 
-            InvalidOperationException missingHorizon = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(missingOrca))!;
-            Assert.That(missingHorizon.Message, Does.Contain("timeHorizonSeconds"));
-        }
-
-        [Test]
-        public void MassNavigationConfig_SonarModeRequiresSonarSection()
-        {
-            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject avoidance = config["avoidance"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
-            avoidance["mode"] = "Sonar";
-            avoidance.Remove("sonar");
-            avoidance["sonar"] = new JsonObject
+            JsonObject sonar = new JsonObject
             {
-                ["maxSteerAngleDeg"] = 280,
-                ["backwardPenaltyAngleDeg"] = 230,
-                ["predictionTimeScale"] = 0.9,
-                ["ignoreBehindMovingAgents"] = true,
-                ["blockedStop"] = false,
-                ["usePreferredVelocityWhenBlocked"] = true,
-                ["timeHorizonSeconds"] = 0.85,
-                ["maxNeighbors"] = 16,
+                ["mapId"] = "minimal_map",
+                ["avoidance"] = new JsonObject
+                {
+                    ["mode"] = "Sonar",
+                    ["sonar"] = new JsonObject { ["maxSteerAngleDeg"] = 280 },
+                },
             };
-
-            MassNavigationConfig loaded = MassNavigationConfig.Load(config);
-            Assert.That(loaded.Avoidance.ParsedMode, Is.EqualTo(MassNavigationFlowAvoidanceMode.Sonar));
-
-            avoidance["sonar"] = new JsonObject
-            {
-                ["maxSteerAngleDeg"] = 280,
-                ["backwardPenaltyAngleDeg"] = 230,
-                ["predictionTimeScale"] = 0.9,
-                ["ignoreBehindMovingAgents"] = true,
-                ["blockedStop"] = false,
-                ["usePreferredVelocityWhenBlocked"] = true,
-                ["timeHorizonSeconds"] = 0.85,
-            };
-
-            InvalidOperationException missingNeighbors = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
-            Assert.That(missingNeighbors.Message, Does.Contain("maxNeighbors"));
+            MassNavigationConfig sonarLoaded = MassNavigationConfig.Load(sonar);
+            Assert.That(sonarLoaded.Avoidance.ParsedMode, Is.EqualTo(MassNavigationFlowAvoidanceMode.Sonar));
+            Assert.That(sonarLoaded.Avoidance.Sonar.MaxSteerAngleDeg, Is.EqualTo(280),
+                "An explicit sonar kernel override must survive defaulting.");
+            Assert.That(sonarLoaded.Avoidance.Sonar.MaxNeighbors, Is.EqualTo(16));
         }
 
         [Test]
@@ -210,7 +177,7 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigationConfig.world must be authored.")).Remove("activeHotZoneId");
 
             InvalidOperationException missingActive = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(zonesWithoutActive))!;
-            Assert.That(missingActive.Message, Does.Contain("activeHotZoneId"));
+            Assert.That(missingActive.Message, Does.Contain("ActiveHotZoneId"));
         }
 
         [Test]
@@ -222,8 +189,10 @@ namespace Ludots.Tests.Presentation
                 "An explicit override larger than the engine default must survive defaulting.");
             Assert.That(loaded.RuntimeCapacity.LoadedChunkCapacity, Is.EqualTo(256),
                 "An explicit loadedChunkCapacity override must survive defaulting.");
-            Assert.That(loaded.RuntimeCapacity.GroupMemberCapacity, Is.EqualTo(MassNavigationEngineDefaults.GroupMembershipAgentCapacity),
-                "Omitted member capacities default to the engine agent-capacity default.");
+            Assert.That(loaded.RuntimeCapacity.GroupMemberCapacity, Is.EqualTo(loaded.RuntimeCapacity.GroupMembershipAgentCapacity),
+                "An omitted member capacity defaults to the (possibly overridden) agent-capacity value.");
+            Assert.That(loaded.RuntimeCapacity.MovePlanExecutionMemberCapacity, Is.EqualTo(loaded.RuntimeCapacity.GroupMembershipAgentCapacity),
+                "An omitted move-plan member capacity defaults to the (possibly overridden) agent-capacity value.");
             Assert.That(loaded.RuntimeCapacity.RelationshipDomainCapacity, Is.EqualTo(MassNavigationEngineDefaults.RelationshipDomainCapacity));
 
             JsonObject minimal = new JsonObject
@@ -237,8 +206,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(defaults.RuntimeCapacity.LoadedChunkCapacity, Is.Zero,
                 "loadedChunkCapacity stays 0 (board-derived) until BindBoardWorld.");
             defaults.RuntimeCapacity.ApplyBoardDerivedChunkCapacity(6400, 16000);
-            Assert.That(defaults.RuntimeCapacity.LoadedChunkCapacity, Is.EqualTo(9),
-                "A 16000cm radius window over 6400cm chunks needs a 3x3 chunk span.");
+            Assert.That(defaults.RuntimeCapacity.LoadedChunkCapacity, Is.EqualTo(49),
+                "A 16000cm radius window over 6400cm chunks spans a 7x7 chunk square.");
         }
 
         [Test]

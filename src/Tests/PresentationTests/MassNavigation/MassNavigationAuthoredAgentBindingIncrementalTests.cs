@@ -808,9 +808,18 @@ namespace Ludots.Tests.Presentation
 
         private static Entity CreateAuthoredAgentEntity(World world, float localX, float localY, MassNavigationAgentLayer layer)
         {
-            int profileId = MassNavigationProfileRegistry.Register("light");
+            int profileId = MassNavigationProfileRegistry.InternParameters(
+                speedCmPerSecond: 800f,
+                radiusCm: 20f,
+                heavy: false);
             return world.Create(
-                new MassNavigationAgent { ProfileId = profileId },
+                new MassNavigationAgent
+                {
+                    ProfileId = profileId,
+                    SpeedCmPerSecond = 800f,
+                    RadiusCm = 20f,
+                    Heavy = false,
+                },
                 WorldPositionCm.FromCmFloat(localX, localY),
                 new EntityLayer(layer.CategoryMask, layer.InteractionMask),
                 new FacingDirection { AngleRad = 0f });

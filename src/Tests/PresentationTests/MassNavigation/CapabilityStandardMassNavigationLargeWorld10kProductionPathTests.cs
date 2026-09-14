@@ -1653,7 +1653,11 @@ namespace Ludots.Tests.Presentation
         {
             int count = 0;
             var query = new Arch.Core.QueryDescription().WithAll<Ludots.Core.Gameplay.Components.TeamIdentity>();
-            engine.World.Query(in query, (in Arch.Core.Entity _) => count++);
+            foreach (ref var chunk in engine.World.Query(in query))
+            {
+                count += chunk.Count;
+            }
+
             return count;
         }
 

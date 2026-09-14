@@ -307,8 +307,17 @@ namespace Ludots.Tests.Presentation
             // cooldown 2250ms > displacement.maxDurationMs 2000ms), so no unit is still inside a window.
             Assert.That(arbiter.ActiveWindowCount, Is.Zero,
                 "No agent may still hold a displacement window before the second Q cast (stacking guard).");
+            // The first cast's execution must also be finalized: the ability-start lane skips
+            // actors that still hold an AbilityExecInstance, so casting again mid-execution
+            // silently drops the second epicenter.
+            WaitUntil(
+                engine,
+                600,
+                () => !engine.World.Has<Ludots.Core.Gameplay.GAS.Components.AbilityExecInstance>(localPlayer),
+                () => "First Q cast execution did not finalize before the second cast.");
             Vector2 secondCentroid = ComputeCentroid(engine, squad);
             DriveAbilityCast(engine, backend, SkillQKeyPath, secondCentroid);
+
 
             WaitUntil(
                 engine,
@@ -461,7 +470,11 @@ namespace Ludots.Tests.Presentation
         {
             int count = 0;
             var query = new Arch.Core.QueryDescription().WithAll<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>();
-            engine.World.Query(in query, (in Arch.Core.Entity _) => count++);
+            foreach (ref var chunk in engine.World.Query(in query))
+            {
+                count += chunk.Count;
+            }
+
             return count;
         }
 

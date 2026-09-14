@@ -7,19 +7,19 @@
     },
     {
       "graph": "graph.mass_navigation.spawn_team1",
-      "scopeInstanceId": "spawn_anchor_team1_light"
+      "scopeInstanceId": "player_team"
     },
     {
       "graph": "graph.mass_navigation.spawn_team2",
-      "scopeInstanceId": "spawn_anchor_team2_light"
+      "scopeInstanceId": "team_2_rep"
     },
     {
       "graph": "graph.mass_navigation.spawn_team3",
-      "scopeInstanceId": "spawn_anchor_team3_light"
+      "scopeInstanceId": "team_3_rep"
     },
     {
       "graph": "graph.mass_navigation.spawn_team4",
-      "scopeInstanceId": "spawn_anchor_team4_light"
+      "scopeInstanceId": "team_4_rep"
     }
   ],
   "ContinuousHeightmap": {
@@ -60,7 +60,12 @@
   "Entities": [
     {
       "InstanceId": "player_team",
-      "Template": "mass_navigation_player_team"
+      "Template": "mass_navigation_player_team",
+      "Overrides": {
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
     },
     {
       "InstanceId": "local_player",
@@ -180,12 +185,6 @@
             "X": -2500,
             "Y": -2500
           }
-        },
-        "Team": {
-          "Id": 1
-        },
-        "PlayerOwner": {
-          "PlayerId": 1
         }
       }
     },
@@ -198,9 +197,6 @@
             "X": -2450,
             "Y": -2450
           }
-        },
-        "Team": {
-          "Id": 1
         }
       }
     },
@@ -217,9 +213,6 @@
             "X": 2500,
             "Y": -2500
           }
-        },
-        "Team": {
-          "Id": 2
         }
       }
     },
@@ -232,9 +225,6 @@
             "X": 2550,
             "Y": -2450
           }
-        },
-        "Team": {
-          "Id": 2
         }
       }
     },
@@ -251,9 +241,6 @@
             "X": -2500,
             "Y": 2500
           }
-        },
-        "Team": {
-          "Id": 3
         }
       }
     },
@@ -266,9 +253,6 @@
             "X": -2450,
             "Y": 2550
           }
-        },
-        "Team": {
-          "Id": 3
         }
       }
     },
@@ -285,9 +269,6 @@
             "X": 2500,
             "Y": 2500
           }
-        },
-        "Team": {
-          "Id": 4
         }
       }
     },
@@ -300,9 +281,6 @@
             "X": 2550,
             "Y": 2550
           }
-        },
-        "Team": {
-          "Id": 4
         }
       }
     }

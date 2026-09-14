@@ -1186,6 +1186,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             RejectOptionalFalse(cfg.CopySourcePlayerOwner, ownerId, relativePath, "unitCreation.copySourcePlayerOwner");
             RejectOptionalFalse(cfg.CopySourceOwnership, ownerId, relativePath, "unitCreation.copySourceOwnership");
+            RejectOptionalFalse(cfg.CopySourceMembership, ownerId, relativePath, "unitCreation.copySourceMembership");
             RejectOptionalFalse(cfg.LinkSourceAsParent, ownerId, relativePath, "unitCreation.linkSourceAsParent");
 
             return new UnitCreationDescriptor
@@ -1203,6 +1204,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 OnSpawnEffectTemplateId = onSpawnId,
                 CopySourcePlayerOwner = cfg.CopySourcePlayerOwner ?? false,
                 CopySourceOwnership = cfg.CopySourceOwnership ?? false,
+                CopySourceMembership = cfg.CopySourceMembership ?? false,
                 LinkSourceAsParent = cfg.LinkSourceAsParent ?? false,
             };
         }

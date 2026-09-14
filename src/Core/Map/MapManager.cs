@@ -406,8 +406,10 @@ namespace Ludots.Core.Map
                 return;
             }
 
-            RejectLegacyKey(root, "WidthInTiles", "widthInMacroTiles", jsonPath);
-            RejectLegacyKey(root, "HeightInTiles", "heightInMacroTiles", jsonPath);
+            RejectLegacyKey(root, "WidthInTiles", "widthInCells", jsonPath);
+            RejectLegacyKey(root, "HeightInTiles", "heightInCells", jsonPath);
+            RejectLegacyKey(root, "WidthInMacroTiles", "widthInCells", jsonPath);
+            RejectLegacyKey(root, "HeightInMacroTiles", "heightInCells", jsonPath);
 
             if (!TryGetPropertyCaseInsensitive(root, "boards", out JsonNode boardsNode) ||
                 boardsNode is not JsonArray boards)
@@ -422,8 +424,10 @@ namespace Ludots.Core.Map
                     continue;
                 }
 
-                RejectLegacyKey(board, "WidthInTiles", "widthInMacroTiles", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "HeightInTiles", "heightInMacroTiles", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInTiles", "widthInCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInTiles", "heightInCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInMacroTiles", "widthInCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInMacroTiles", "heightInCells", $"{jsonPath}.boards[{i}]");
             }
         }
 

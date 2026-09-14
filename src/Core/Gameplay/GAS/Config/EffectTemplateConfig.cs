@@ -212,6 +212,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public string? OnSpawnEffect { get; set; }
         public bool? CopySourcePlayerOwner { get; set; }
         public bool? CopySourceOwnership { get; set; }
+        public bool? CopySourceMembership { get; set; }
         public bool? LinkSourceAsParent { get; set; }
     }
 

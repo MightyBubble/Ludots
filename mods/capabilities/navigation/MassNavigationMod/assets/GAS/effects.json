@@ -31,8 +31,8 @@
       "count": 2142,
       "placementPattern": "Grid",
       "placementSpacingCm": 100,
-      "copySourcePlayerOwner": true,
-      "copySourceOwnership": true
+      "copySourceOwnership": true,
+      "copySourceMembership": true
     },
     "categories": [
       "Effect.MassNavigation.Spawn"
@@ -48,8 +48,8 @@
       "count": 358,
       "placementPattern": "Grid",
       "placementSpacingCm": 100,
-      "copySourcePlayerOwner": true,
-      "copySourceOwnership": true
+      "copySourceOwnership": true,
+      "copySourceMembership": true
     },
     "categories": [
       "Effect.MassNavigation.Spawn"
@@ -64,7 +64,8 @@
       "templateId": "mass_navigation_agent_crimson_light",
       "count": 2142,
       "placementPattern": "Grid",
-      "placementSpacingCm": 100
+      "placementSpacingCm": 100,
+      "copySourceMembership": true
     },
     "categories": [
       "Effect.MassNavigation.Spawn"
@@ -79,7 +80,8 @@
       "templateId": "mass_navigation_agent_crimson_heavy",
       "count": 358,
       "placementPattern": "Grid",
-      "placementSpacingCm": 100
+      "placementSpacingCm": 100,
+      "copySourceMembership": true
     },
     "categories": [
       "Effect.MassNavigation.Spawn"
@@ -94,7 +96,8 @@
       "templateId": "mass_navigation_agent_amber_light",
       "count": 2142,
       "placementPattern": "Grid",
-      "placementSpacingCm": 100
+      "placementSpacingCm": 100,
+      "copySourceMembership": true
     },
     "categories": [
       "Effect.MassNavigation.Spawn"
@@ -109,7 +112,8 @@
       "templateId": "mass_navigation_agent_amber_heavy",
       "count": 358,
       "placementPattern": "Grid",
-      "placementSpacingCm": 100
+      "placementSpacingCm": 100,
+      "copySourceMembership": true
     },
     "categories": [
       "Effect.MassNavigation.Spawn"
@@ -124,7 +128,8 @@
       "templateId": "mass_navigation_agent_emerald_light",
       "count": 2142,
       "placementPattern": "Grid",
-      "placementSpacingCm": 100
+      "placementSpacingCm": 100,
+      "copySourceMembership": true
     },
     "categories": [
       "Effect.MassNavigation.Spawn"
@@ -139,7 +144,8 @@
       "templateId": "mass_navigation_agent_emerald_heavy",
       "count": 358,
       "placementPattern": "Grid",
-      "placementSpacingCm": 100
+      "placementSpacingCm": 100,
+      "copySourceMembership": true
     },
     "categories": [
       "Effect.MassNavigation.Spawn"

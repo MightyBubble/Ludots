@@ -13,7 +13,8 @@
     "nodes": [
       {
         "id": "anchor",
-        "op": "LoadExplicitTarget"
+        "op": "LoadPlacedEntity",
+        "instanceId": "spawn_anchor_team2_light"
       },
       {
         "id": "spawn_light",
