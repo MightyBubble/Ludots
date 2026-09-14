@@ -710,11 +710,12 @@ namespace Ludots.Core.Presentation.Hud
         }
 
         /// <summary>
-        /// 值绑定文本的权威值现读：按 Owner 的 AttributeBuffer 读 current/base 写回
-        /// Value0/Value1；显示文本只依赖取整值，跨过整数边界才换 serial 并进脏文本增量。
+        /// 值绑定文本的权威值现读：经属主快照按行读 current/base 写回 Value0/Value1；
+        /// 显示文本只依赖取整值，跨过整数边界才换 serial 并进脏文本增量。
         /// 值漂移的重发链（emit serial 值无关）不再产生内容增量——刷新是唯一值来源。
+        /// 未登记进快照的属性本帧回退 World 现读并登记，下一帧起回到快照列。
         /// </summary>
-        public void RefreshAttributeBoundTexts(Arch.Core.World world)
+        public void RefreshAttributeBoundTexts(HudOwnerFrameSnapshot owners, Arch.Core.World world)
         {
             if (!_hasAttributeBoundTexts)
             {
@@ -729,16 +730,31 @@ namespace Ludots.Core.Presentation.Hud
                     continue;
                 }
 
-                if (!world.IsAlive(item.Owner) || !world.Has<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(item.Owner))
+                float value0;
+                float value1;
+                if (owners.TryGetRow(item.Owner, out int row) &&
+                    owners.TryGetAttributeValues(row, item.BoundAttributeId, out value0, out value1))
+                {
+                }
+                else if (!owners.IsTracked(item.BoundAttributeId))
+                {
+                    owners.RegisterTrackedAttribute(item.BoundAttributeId);
+                    if (!world.IsAlive(item.Owner) ||
+                        !world.Has<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(item.Owner))
+                    {
+                        continue;
+                    }
+
+                    ref Ludots.Core.Gameplay.GAS.Components.AttributeBuffer attributes =
+                        ref world.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(item.Owner);
+                    value0 = attributes.GetCurrent(item.BoundAttributeId);
+                    value1 = attributes.GetBase(item.BoundAttributeId);
+                }
+                else
                 {
                     continue;
                 }
 
-                ref Ludots.Core.Gameplay.GAS.Components.AttributeBuffer attributes =
-                    ref world.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(item.Owner);
-                int attributeId = item.BoundAttributeId;
-                float value0 = attributes.GetCurrent(attributeId);
-                float value1 = attributes.GetBase(attributeId);
                 if ((int)value0 == (int)item.Value0 && (int)value1 == (int)item.Value1)
                 {
                     continue;
@@ -757,6 +773,8 @@ namespace Ludots.Core.Presentation.Hud
                 ContentRevision++;
             }
         }
+
+        public bool HasAttributeBoundTexts => _hasAttributeBoundTexts;
 
         public void ClearDeltas()
         {

@@ -26,9 +26,9 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly CameraCullingDebugState? _cullingDebug;
         private readonly Func<IContinuousHeightmap?>? _heightmapProvider;
-        private readonly TerrainHudOcclusionCache? _terrainOcclusionCache;
-        private readonly int _occlusionCellDivisor;
-        private readonly int _occlusionHeightBucketCm;
+        private readonly TerrainHudOcclusionHorizon _horizon = new();
+        private int _frameStamp;
+        private int _horizonFrameStamp = -1;
         private int _lastWorldHudRevision = -1;
         private int _lastWorldHudProjectionRevision = -1;
         private int _lastWorldHudPositionRevision = -1;
@@ -38,7 +38,7 @@ namespace Ludots.Core.Presentation.Systems
 
         public const int ProjectionMarginPixels = 200;
         public const float ProjectionCoarseMarginCm = 600f;
-        private OwnerVisibilityCacheEntry[] _ownerVisibilityCache = Array.Empty<OwnerVisibilityCacheEntry>();
+        private readonly HudOwnerFrameSnapshot _ownerSnapshot = new();
         private OwnerProjectionCacheEntry[] _ownerProjectionCache = Array.Empty<OwnerProjectionCacheEntry>();
         private int _frameCacheStamp;
         private bool _retainedProjectedBuild;
@@ -54,8 +54,7 @@ namespace Ludots.Core.Presentation.Systems
             ScreenHudBatchBuffer screenHud,
             PresentationTimingDiagnostics? timingDiagnostics = null,
             CameraCullingDebugState? cullingDebug = null,
-            Func<IContinuousHeightmap?>? heightmapProvider = null,
-            TerrainHudOcclusionConfig occlusionConfig = default)
+            Func<IContinuousHeightmap?>? heightmapProvider = null)
             : base(world)
         {
             _worldHud = worldHud ?? throw new System.ArgumentNullException(nameof(worldHud));
@@ -66,24 +65,12 @@ namespace Ludots.Core.Presentation.Systems
             _timingDiagnostics = timingDiagnostics;
             _cullingDebug = cullingDebug;
             _heightmapProvider = heightmapProvider;
-            TerrainHudOcclusionConfig config = occlusionConfig.CacheCapacity == 0 &&
-                                               occlusionConfig.CellDivisor == 0 &&
-                                               occlusionConfig.HeightBucketCm == 0
-                ? TerrainHudOcclusionConfig.Default
-                : occlusionConfig;
-            _occlusionCellDivisor = Math.Max(1, config.CellDivisor);
-            _occlusionHeightBucketCm = Math.Max(1, config.HeightBucketCm);
-            if (heightmapProvider != null && config.CacheCapacity > 0)
-            {
-                _terrainOcclusionCache = new TerrainHudOcclusionCache(config.CacheCapacity);
-            }
         }
 
         public override void Update(in float dt)
         {
             long start = Stopwatch.GetTimestamp();
-            // 值绑定条目的权威值现读：置于一切早退判定之前，静帧也保持数值鲜活。
-            _screenHud.RefreshAttributeBoundTexts(World);
+            _frameStamp++;
             int worldHudRevision = _worldHud.ContentRevision;
             int worldHudProjectionRevision = _worldHud.ProjectionRevision;
             int positionRevision = _worldHud.PositionRevision;
@@ -110,16 +97,27 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException("Terrain HUD occlusion requires an invertible presentation projection snapshot.");
             }
 
-            if (_terrainOcclusionCache != null && heightmap != null && hasProjectionSnapshot)
-            {
-                DeriveCameraCell(in projectionSnapshot);
-            }
-
             bool cameraStill = projectionRevision >= 0 && projectionRevision == _lastProjectionRevision;
             bool positionsChanged = positionRevision != _lastWorldHudPositionRevision;
             bool structuralChanged = structuralRevision != _lastWorldHudStructuralRevision;
             bool projectionChanged = worldHudProjectionRevision != _lastWorldHudProjectionRevision;
             bool contentChanged = worldHudRevision != _lastWorldHudRevision;
+
+            // 属主快照按存储序单趟拉取；仅在有值绑定文本要刷新或本帧确有投影工作时付费，
+            // 纯静帧早退保持零成本。值刷新先于一切早退判定，静帧也保持数值鲜活。
+            bool needsValueRefresh = _screenHud.HasAttributeBoundTexts;
+            bool earlyExitEligible = cameraStill && terrainUnchanged &&
+                cullVisibilityRevision == _lastCullVisibilityRevision &&
+                !projectionChanged && !contentChanged;
+            if (needsValueRefresh || !earlyExitEligible)
+            {
+                _ownerSnapshot.Rebuild(World);
+            }
+
+            if (needsValueRefresh)
+            {
+                _screenHud.RefreshAttributeBoundTexts(_ownerSnapshot, World);
+            }
 
             // 相机/地形/粗 cull 未变时的三档轻路径；任何几何或结构变化都落全量重建。
             if (cameraStill && terrainUnchanged && cullVisibilityRevision == _lastCullVisibilityRevision)
@@ -217,7 +215,6 @@ namespace Ludots.Core.Presentation.Systems
                         if (!ResolveTerrainOcclusion(
                                 first.WorldPosition,
                                 heightmap,
-                                heightmapRevision,
                                 screen,
                                 in projectionSnapshot,
                                 in inverseProjection))
@@ -476,36 +473,9 @@ namespace Ludots.Core.Presentation.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsOwnerVisible(Entity owner)
         {
-            int ownerKey = ResolveOwnerCacheKey(owner);
-            if ((uint)ownerKey < (uint)_ownerVisibilityCache.Length)
-            {
-                ref OwnerVisibilityCacheEntry cached = ref _ownerVisibilityCache[ownerKey];
-                if (cached.Stamp == _frameCacheStamp && cached.Version == owner.Version)
-                {
-                    return cached.IsVisible;
-                }
-            }
-
-            bool visible = World.IsAlive(owner) &&
-                (!World.Has<CullState>(owner) || World.Get<CullState>(owner).IsVisible);
-            SetOwnerVisible(ownerKey, owner.Version, visible);
-            return visible;
-        }
-
-        private void SetOwnerVisible(int ownerKey, int ownerVersion, bool visible)
-        {
-            if (ownerKey >= _ownerVisibilityCache.Length)
-            {
-                int next = _ownerVisibilityCache.Length == 0 ? 1024 : _ownerVisibilityCache.Length;
-                while (next <= ownerKey)
-                {
-                    next *= 2;
-                }
-
-                Array.Resize(ref _ownerVisibilityCache, next);
-            }
-
-            _ownerVisibilityCache[ownerKey] = new OwnerVisibilityCacheEntry(_frameCacheStamp, ownerVersion, visible);
+            return _ownerSnapshot.TryGetRow(owner, out int row)
+                ? _ownerSnapshot.IsVisible(row)
+                : World.IsAlive(owner);
         }
 
         private static bool IsTerrainVisible(
@@ -550,65 +520,9 @@ namespace Ludots.Core.Presentation.Systems
 
         private const float TerrainOcclusionEpsilonMeters = 0.005f;
 
-        private IContinuousHeightmap? _occlusionHeightmap;
-        private int _occlusionTerrainCellCm = 6250;
-        private int _occlusionBoundsLeftCm;
-        private int _occlusionBoundsTopCm;
-        private int _cameraCellX;
-        private int _cameraCellZ;
-        private bool _occlusionCacheDisabledThisFrame;
-
-        private void DeriveCameraCell(in ProjectionSnapshot projectionSnapshot)
-        {
-            Vector3 camera = projectionSnapshot.CameraPosition;
-            if (camera == Vector3.Zero ||
-                float.IsNaN(camera.X) || float.IsNaN(camera.Y) || float.IsNaN(camera.Z))
-            {
-                // 未提供相机位置（默认 0,0,0）或位为 NaN：本帧退回逐项精确 raycast，
-                // 保证遮挡判定永远正确；只有真实相机位置可用的投影器才启用缓存。
-                _occlusionCacheDisabledThisFrame = true;
-                return;
-            }
-
-            IContinuousHeightmap? heightmap = _heightmapProvider?.Invoke();
-            if (heightmap == null)
-            {
-                _occlusionCacheDisabledThisFrame = true;
-                return;
-            }
-
-            EnsureOcclusionGeometry(heightmap);
-            int cell = Math.Max(1, _occlusionTerrainCellCm / _occlusionCellDivisor);
-            _cameraCellX = (int)MathF.Floor((camera.X * 100f - _occlusionBoundsLeftCm) / cell);
-            _cameraCellZ = (int)MathF.Floor((camera.Z * 100f - _occlusionBoundsTopCm) / cell);
-            _occlusionCacheDisabledThisFrame = false;
-        }
-
-        private void EnsureOcclusionGeometry(IContinuousHeightmap heightmap)
-        {
-            if (ReferenceEquals(_occlusionHeightmap, heightmap))
-            {
-                return;
-            }
-
-            _occlusionHeightmap = heightmap;
-            _occlusionTerrainCellCm = TerrainHudOcclusionCache.ResolveTerrainCellSizeCm(heightmap);
-            if (heightmap is IContinuousHeightmapRenderSource source)
-            {
-                _occlusionBoundsLeftCm = source.Bounds.Left;
-                _occlusionBoundsTopCm = source.Bounds.Top;
-            }
-            else
-            {
-                _occlusionBoundsLeftCm = 0;
-                _occlusionBoundsTopCm = 0;
-            }
-        }
-
         private bool ResolveTerrainOcclusion(
             Vector3 worldPosition,
             IContinuousHeightmap? heightmap,
-            int heightmapRevision,
             Vector2 screen,
             in ProjectionSnapshot projectionSnapshot,
             in Matrix4x4 inverseProjection)
@@ -618,33 +532,20 @@ namespace Ludots.Core.Presentation.Systems
                 return true;
             }
 
-            TerrainHudOcclusionCache? cache = _terrainOcclusionCache;
-            if (cache == null || _occlusionCacheDisabledThisFrame)
+            // 帧内首查构建地平线包络；构建不可用（相机位缺失/不在图内/高度图不可采样）
+            // 时逐项回退精确 raycast。
+            if (_horizonFrameStamp != _frameStamp)
             {
-                return IsTerrainVisible(worldPosition, heightmap, screen, in projectionSnapshot, in inverseProjection);
+                _horizonFrameStamp = _frameStamp;
+                _horizon.TryRebuild(heightmap, projectionSnapshot.CameraPosition);
             }
 
-            EnsureOcclusionGeometry(heightmap);
-            int cell = Math.Max(1, _occlusionTerrainCellCm / _occlusionCellDivisor);
-            int anchorCellX = (int)MathF.Floor((worldPosition.X * 100f - _occlusionBoundsLeftCm) / cell);
-            int anchorCellZ = (int)MathF.Floor((worldPosition.Z * 100f - _occlusionBoundsTopCm) / cell);
-            int heightBucket = (int)MathF.Floor(worldPosition.Y * 100f / _occlusionHeightBucketCm);
-            long key = TerrainHudOcclusionCache.ComposeKey(
-                heightmapRevision,
-                _cameraCellX,
-                _cameraCellZ,
-                anchorCellX,
-                anchorCellZ,
-                heightBucket);
-
-            if (cache.TryGet(key, out bool visible))
+            if (_horizon.IsValid)
             {
-                return visible;
+                return _horizon.IsVisible(worldPosition);
             }
 
-            visible = IsTerrainVisible(worldPosition, heightmap, screen, in projectionSnapshot, in inverseProjection);
-            cache.Set(key, visible);
-            return visible;
+            return IsTerrainVisible(worldPosition, heightmap, screen, in projectionSnapshot, in inverseProjection);
         }
 
         private bool ApplyRetainedPropertyDeltas(IContinuousHeightmap? heightmap, ref long start)
@@ -657,11 +558,6 @@ namespace Ludots.Core.Presentation.Systems
                 !Matrix4x4.Invert(projectionSnapshot.ViewProjection, out inverseProjection)))
             {
                 throw new InvalidOperationException("Terrain HUD occlusion requires an invertible presentation projection snapshot.");
-            }
-
-            if (_terrainOcclusionCache != null && heightmap != null && hasProjectionSnapshot)
-            {
-                DeriveCameraCell(in projectionSnapshot);
             }
 
             int heightmapRevision = heightmap is IContinuousHeightmapRenderSource renderSource
@@ -712,7 +608,6 @@ namespace Ludots.Core.Presentation.Systems
                 if (!ResolveTerrainOcclusion(
                         item.WorldPosition,
                         heightmap,
-                        heightmapRevision,
                         screen,
                         in projectionSnapshot,
                         in inverseProjection))
@@ -883,12 +778,9 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Array.Clear(_ownerVisibilityCache, 0, _ownerVisibilityCache.Length);
             Array.Clear(_ownerProjectionCache, 0, _ownerProjectionCache.Length);
             _frameCacheStamp = 1;
         }
-
-        private readonly record struct OwnerVisibilityCacheEntry(int Stamp, int Version, bool IsVisible);
 
         private readonly record struct OwnerProjectionCacheEntry(
             int Stamp,
