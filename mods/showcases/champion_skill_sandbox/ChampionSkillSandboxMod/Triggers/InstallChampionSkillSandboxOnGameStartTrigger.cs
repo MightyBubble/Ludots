@@ -58,9 +58,6 @@ namespace ChampionSkillSandboxMod.Triggers
                 ordersObj is OrderQueue orders)
             {
                 engine.RegisterSystem(
-                    new ChampionSkillSandboxLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _context),
-                    SystemGroup.InputCollection);
-                engine.RegisterSystem(
                     new ChampionSkillCommandSnapshotCaptureSystem(engine, _runtime),
                     SystemGroup.InputCollection);
 

@@ -2652,7 +2652,7 @@ namespace Ludots.Tests.GAS.Production
             string pressFrame = engine.GlobalContext.TryGetValue(RightClickPressDiagnosticsKey, out var pressFrameObj)
                 ? pressFrameObj?.ToString() ?? "<null>"
                 : "<missing>";
-            string localOrderSource = engine.GlobalContext.TryGetValue("ChampionSkillSandbox.Debug.LocalOrderSource", out var localOrderSourceObj)
+            string localOrderSource = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LocalOrderSource", out var localOrderSourceObj)
                 ? localOrderSourceObj?.ToString() ?? "<null>"
                 : "<missing>";
 

@@ -65,7 +65,7 @@ namespace RoadNetworkShowcaseMod.Triggers
             var moveRuntime = new MovePlanRuntimeService(engine.World, plans);
             engine.GlobalContext[typeof(MovePlanStore).FullName!] = plans;
             engine.RegisterSystem(
-                new RoadNetworkLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _context),
+                new RoadNetworkOrderPolicySystem(engine.World, engine.GlobalContext, orders),
                 SystemGroup.InputCollection);
             engine.RegisterSystem(
                 new RoadNetworkAiAndCaptureSystem(engine.World, engine.GlobalContext, orders),

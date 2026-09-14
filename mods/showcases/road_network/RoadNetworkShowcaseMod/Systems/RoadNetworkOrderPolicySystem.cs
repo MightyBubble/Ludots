@@ -5,36 +5,35 @@ using Arch.System;
 using CoreInputMod.Systems;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
-using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
-using RoadNetworkShowcaseMod.Gameplay;
 using Ludots.Platform.Abstractions;
+using RoadNetworkShowcaseMod.Gameplay;
 
 namespace RoadNetworkShowcaseMod.Systems
 {
-    internal sealed class RoadNetworkLocalOrderSourceSystem : ISystem<float>
+    /// <summary>
+    /// Road-network order policy (migration slice 2): the local order mapping installs through
+    /// the CoreInputMod auto assembly; this policy system waits for that mapping and reroutes its
+    /// submit handlers through the road move-order expander, emitting transient cue markers per
+    /// submitted order.
+    /// </summary>
+    internal sealed class RoadNetworkOrderPolicySystem : ISystem<float>
     {
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly LocalOrderSourceHelper _helper;
-        private readonly IModContext _context;
         private readonly RoadMoveOrderExpander _expander;
-        private InputOrderMappingSystem? _mapping;
         private TransientMarkerBuffer? _transientMarkers;
         private MeshAssetRegistry? _meshes;
         private int _cueMarkerMeshId;
-        private bool _initialized;
+        private bool _attached;
 
-        public RoadNetworkLocalOrderSourceSystem(World world, Dictionary<string, object> globals, OrderQueue orders, IModContext context)
+        public RoadNetworkOrderPolicySystem(World world, Dictionary<string, object> globals, OrderQueue orders)
         {
             _world = world;
             _globals = globals;
-            _context = context;
-            _helper = new LocalOrderSourceHelper(world, globals, orders);
             _expander = new RoadMoveOrderExpander(world, globals, orders, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
         }
 
@@ -48,43 +47,14 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public void Update(in float dt)
         {
-            EnsureInitialized();
-            if (_mapping == null)
+            if (_attached ||
+                !_globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) ||
+                mappingObj is not InputOrderMappingSystem mapping)
             {
                 return;
             }
 
-            Entity actor = _helper.GetControlledActor();
-            if (!_world.IsAlive(actor))
-            {
-                return;
-            }
-
-            if (!_helper.TryBindSoleSeatActor(_mapping, actor))
-            {
-                return;
-            }
-
-            _mapping.Update(dt);
-        }
-
-        public void AfterUpdate(in float dt)
-        {
-        }
-
-        public void Dispose()
-        {
-        }
-
-        private void EnsureInitialized()
-        {
-            if (_initialized)
-            {
-                return;
-            }
-
-            _initialized = true;
-            _mapping = _helper.TryCreateMapping(_context);
+            _attached = true;
             _transientMarkers = _globals.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markerObj) &&
                                 markerObj is TransientMarkerBuffer transientMarkers
                 ? transientMarkers
@@ -93,12 +63,7 @@ namespace RoadNetworkShowcaseMod.Systems
                       meshObj is MeshAssetRegistry meshes
                 ? meshes
                 : null;
-            if (_mapping == null)
-            {
-                return;
-            }
-
-            _mapping.SetOrderSubmitHandler((in Order order) =>
+            mapping.SetOrderSubmitHandler((in Order order) =>
             {
                 _globals[LocalOrderSourceHelper.LastOrderDebugKey] =
                     $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version},submit:{order.SubmitMode}";
@@ -106,7 +71,7 @@ namespace RoadNetworkShowcaseMod.Systems
                 EmitSubmitCue(in order, OrderSubmitResultSemantics.IsAccepted(result));
                 return result;
             });
-            _mapping.SetOrderBatchSubmitHandler((Span<Order> orders) =>
+            mapping.SetOrderBatchSubmitHandler((Span<Order> orders) =>
             {
                 if (orders.IsEmpty)
                 {
@@ -124,12 +89,14 @@ namespace RoadNetworkShowcaseMod.Systems
 
                 return result;
             });
-            _mapping.SetQueueModifierProvider(() =>
-            {
-                return _globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) &&
-                       inputObj is IInputActionReader input &&
-                       input.IsDown("QueueModifier");
-            });
+        }
+
+        public void AfterUpdate(in float dt)
+        {
+        }
+
+        public void Dispose()
+        {
         }
 
         private void EmitSubmitCue(in Order order, bool accepted)

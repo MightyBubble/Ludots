@@ -29,6 +29,10 @@ namespace CoreInputMod.Systems
         private readonly LocalOrderSourceHelper _helper;
         private InputOrderMappingSystem? _mapping;
         private bool _initialized;
+        private string _commandActionId = string.Empty;
+
+        /// <summary>Generic per-tick install/binding diagnostic (actor, bind result, command edge).</summary>
+        public const string LastUpdateDebugKey = "CoreInputMod.Debug.LocalOrderSource";
 
         public AutoInstalledLocalOrderSourceSystem(
             World world,
@@ -54,27 +58,52 @@ namespace CoreInputMod.Systems
             {
                 _initialized = true;
                 _mapping = _helper.TryCreateMapping(_ctx, _sourceModId);
+                if (_mapping != null)
+                {
+                    _commandActionId = Ludots.Core.Input.Interaction.InteractionActionBindingsResolver
+                        .Require(_globals, nameof(AutoInstalledLocalOrderSourceSystem)).CommandActionId;
+                }
             }
 
             InputOrderMappingSystem? mapping = _mapping;
             if (mapping == null)
             {
+                _globals[LastUpdateDebugKey] = "mapping=<missing>";
                 return;
             }
 
             if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) ||
                 !_world.IsAlive(local))
             {
+                _globals[LastUpdateDebugKey] = "rep=<unresolved>";
                 return;
             }
 
             // Controlled-actor binding follows the mounted context carrier, so it is
             // re-resolved per tick exactly like the retired per-mod installers did; the
             // mapping only ticks while the binding resolves.
-            if (_helper.TryBindSoleSeatActor(mapping, _helper.GetControlledActor()))
+            Entity actor = _helper.GetControlledActor();
+            if (!_world.IsAlive(actor))
+            {
+                _globals[LastUpdateDebugKey] = "actor=<dead> commandPressed=" + IsCommandPressed();
+                return;
+            }
+
+            bool bound = _helper.TryBindSoleSeatActor(mapping, actor);
+            _globals[LastUpdateDebugKey] =
+                "actor=" + actor.Id + ":" + actor.WorldId + ":" + actor.Version +
+                " bindSoleSeatActor=" + bound + " commandPressed=" + IsCommandPressed();
+            if (bound)
             {
                 mapping.Update(dt);
             }
+        }
+
+        private bool IsCommandPressed()
+        {
+            return _globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) &&
+                inputObj is Ludots.Core.Input.Runtime.IInputActionReader input &&
+                input.PressedThisFrame(_commandActionId);
         }
 
         public void BeforeUpdate(in float dt) { }
