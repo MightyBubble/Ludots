@@ -44,12 +44,16 @@
 - 切5 arpg 复活：self-roster 纯数据链，#1523 收官关闭
 - 切6 首批守卫：装配唯一性/图桥零业务键/声明式活跃集 三条合同锁死
 
-### 终态全量验收
+### 终态全量验收（18 提交终局）
 
 ```
-GasTests 终态 139 失败 vs 基线 140
-新增失败：0；净修复：1
+GasTests 终态 104 失败 vs 基线 140
+新增失败：0；净修复：37
 ```
+
+净修复主因：profiles 数组追加合并修复（ConfigMerger DeepObject+ArrayAppendFields）
+与七 mod battle 声明化，使 PanelFireball/Training/Transport/TypeTemplate/
+Relationship 等一批基线红回绿。
 
 ### 新链合同要点（已锁）
 
