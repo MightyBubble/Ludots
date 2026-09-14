@@ -1471,10 +1471,9 @@ namespace Ludots.Core.Engine
             // loading so presenter rules resolve ContextActivated/Deactivated keys (#1398
             // S2b). The full install (row fill + bindings/triggers reference validation)
             // runs later in the input kernel where its graph/action catalogs exist; Register
-            // is idempotent and both passes agree on ids by construction (Default first,
-            // then config order).
+            // is idempotent and both passes agree on ids by construction (config order only
+            // — the engine contributes no profile ids of its own).
             var interactionContextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            interactionContextProfileIds.Register(InteractionContextIds.Default);
             var interactionContextProfilesConfig = new InteractionContextProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             for (int i = 0; i < interactionContextProfilesConfig.Profiles.Count; i++)
             {
@@ -1710,25 +1709,9 @@ namespace Ludots.Core.Engine
             // Interaction context profiles + cast commit profiles (RFC-0065 CTX-6/CTX-7, DEC-13).
             // Id fields resolve at install: collection keys into the store's key space, filter and
             // command intent names against their kernel registries (installed above), so unknown
-            // references fail fast at startup. The engine-reserved steady-state profile (never
-            // mounted; absence of the mounted component is the steady state) installs first — an
-            // asset declaring the reserved id fails fast below.
+            // references fail fast at startup. The engine installs no profile of its own — the
+            // data-merged profiles (root assets + mod fragments) are the only source.
             var interactionContextProfileRegistry = new InteractionContextProfileRegistry(interactionContextProfileIds);
-            interactionContextProfileRegistry.Install(
-                new InteractionContextProfilesConfig
-                {
-                    Profiles = new List<InteractionContextProfileDefinition>
-                    {
-                        new()
-                        {
-                            Id = InteractionContextIds.Default,
-                            ActiveCollectionKey = EntityCollectionKeys.CommandSource,
-                        },
-                    },
-                },
-                entityCollectionKeyRegistry,
-                filterProfileIdRegistry,
-                commandIntentProfileIds);
             interactionContextProfileRegistry.Install(
                 interactionContextProfilesConfig,
                 entityCollectionKeyRegistry,

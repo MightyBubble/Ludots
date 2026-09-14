@@ -324,7 +324,6 @@ namespace Ludots.Core.Input.Orders
         private PlayerRepresentativeProvider? _playerRepresentativeProvider;
         private CommandIntentTargetFactsProvider? _commandIntentTargetFactsProvider;
         private OrderIdentityAssigner? _orderIdentityAssigner;
-        private int _steadyStateCollectionKeyId;
 
         // Context
         private Entity _solePossessedRep;
@@ -572,13 +571,6 @@ namespace Ludots.Core.Input.Orders
             _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
             _activeActorCollectionOwnerProvider = activeActorCollectionOwnerProvider;
             _playerRepresentativeProvider = playerRepresentativeProvider;
-            if (!contextProfiles.TryGetSteadyStateRouting(out int steadyStateCollectionKeyId, out _))
-            {
-                throw new InvalidOperationException(
-                    $"Command intent routing requires the steady-state interaction context profile '{InteractionContextIds.Default}' to be installed.");
-            }
-
-            _steadyStateCollectionKeyId = steadyStateCollectionKeyId;
         }
 
         public void SetOrderIdentityAssigner(OrderIdentityAssigner assigner) =>
@@ -1720,8 +1712,12 @@ namespace Ludots.Core.Input.Orders
             }
 
             Entity actingRep = RequireActingPlayerRepresentative();
-            bool hasActiveContext = _commandIntentWorld.TryGet<InteractionContextInstance>(actingRep, out InteractionContextInstance activeContext);
-            int activeCollectionKeyId = hasActiveContext ? activeContext.ActiveCollectionKeyId : _steadyStateCollectionKeyId;
+            if (!_commandIntentWorld.TryGet<InteractionContextInstance>(actingRep, out InteractionContextInstance activeContext))
+            {
+                return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
+            }
+
+            int activeCollectionKeyId = activeContext.ActiveCollectionKeyId;
 
             int actorCount;
             if (_hasExplicitActivationContext)
@@ -1781,7 +1777,7 @@ namespace Ludots.Core.Input.Orders
             int dispatchCount = _castDispatchProfiles.SelectDispatchTargets(
                 dispatchProfileId,
                 routedActors,
-                new CastDispatchContext(_commandIntentWorld, groundWorldCm, ResolveCastDispatchGroupKey(hasActiveContext, activeContext)),
+                new CastDispatchContext(_commandIntentWorld, groundWorldCm, ResolveCastDispatchGroupKey(true, activeContext)),
                 _commandIntentDispatchActorsScratch.AsSpan(0, routedCount),
                 out CastDispatchRouting routing);
 

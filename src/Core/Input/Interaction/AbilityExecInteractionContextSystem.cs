@@ -38,6 +38,12 @@ namespace Ludots.Core.Input.Interaction
         private int[] _trackedAbilityIds = new int[16];
         private int[] _trackedProfileIds = new int[16];
         private int _trackedCount;
+        // Per desired rep: the base instance an exec mount displaced (template/spawn/op
+        // mounted), restored when the exec lifecycle reclaims. Null entity = none saved.
+        private Entity[] _savedBaseReps = new Entity[8];
+        private InteractionContextInstance[] _savedBaseStates = new InteractionContextInstance[8];
+        private bool[] _savedBaseValid = new bool[8];
+        private int _savedBaseCount;
         private Entity[] _scratch = new Entity[64];
         private Entity[] _mountedScratch = new Entity[8];
         private Entity[] _desiredReps = new Entity[8];
@@ -210,7 +216,13 @@ namespace Ludots.Core.Input.Interaction
                 if (TryFindDesired(holder, out int desiredIndex))
                 {
                     ref InteractionContextInstance mounted = ref World.Get<InteractionContextInstance>(holder);
-                    if (!Equals(mounted, _desiredStates[desiredIndex]))
+                    if (mounted.Source != InteractionContextInstanceSource.ExecLifecycle &&
+                        !Equals(mounted, _desiredStates[desiredIndex]))
+                    {
+                        RememberBase(holder, in mounted);
+                        mounted = _desiredStates[desiredIndex];
+                    }
+                    else if (!Equals(mounted, _desiredStates[desiredIndex]))
                     {
                         mounted = _desiredStates[desiredIndex];
                     }
@@ -228,7 +240,55 @@ namespace Ludots.Core.Input.Interaction
                 }
 
                 World.Remove<InteractionContextInstance>(holder);
+                if (TryTakeSavedBase(holder, out InteractionContextInstance savedBase) &&
+                    World.IsAlive(savedBase.ContextEntity))
+                {
+                    World.Add(holder, savedBase);
+                }
             }
+        }
+
+        private void RememberBase(Entity rep, in InteractionContextInstance instance)
+        {
+            for (int i = 0; i < _savedBaseCount; i++)
+            {
+                if (_savedBaseReps[i] == rep)
+                {
+                    return;
+                }
+            }
+
+            if (_savedBaseCount == _savedBaseReps.Length)
+            {
+                Array.Resize(ref _savedBaseReps, _savedBaseCount * 2);
+                Array.Resize(ref _savedBaseStates, _savedBaseCount * 2);
+                Array.Resize(ref _savedBaseValid, _savedBaseCount * 2);
+            }
+
+            _savedBaseReps[_savedBaseCount] = rep;
+            _savedBaseStates[_savedBaseCount] = instance;
+            _savedBaseValid[_savedBaseCount] = true;
+            _savedBaseCount++;
+        }
+
+        private bool TryTakeSavedBase(Entity rep, out InteractionContextInstance instance)
+        {
+            instance = default;
+            for (int i = 0; i < _savedBaseCount; i++)
+            {
+                if (_savedBaseReps[i] == rep)
+                {
+                    instance = _savedBaseStates[i];
+                    int last = _savedBaseCount - 1;
+                    _savedBaseReps[i] = _savedBaseReps[last];
+                    _savedBaseStates[i] = _savedBaseStates[last];
+                    _savedBaseValid[i] = _savedBaseValid[last];
+                    _savedBaseCount = last;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void MountMissingContexts()

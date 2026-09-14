@@ -410,7 +410,11 @@
   },
   {
     "Path": "Input/default_input.json",
-    "Policy": "DeepObject"
+    "Policy": "DeepObject",
+    "ArrayAppendFields": [
+      "actions",
+      "contexts"
+    ]
   },
   {
     "Path": "Input/action_attribute_bindings.json",

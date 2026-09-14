@@ -21,8 +21,7 @@ namespace Ludots.Core.Input.Interaction
         private readonly FilterProfileRegistry _filters;
         private readonly DomainRoutedCollectionWriter _routedWriter;
         private readonly EntityCollectionStore _store;
-        private readonly int _steadyStateCollectionKeyId;
-        private readonly int _steadyStateFilterProfileId;
+
 
         private Entity[] _filteredScratch = new Entity[256];
 
@@ -38,11 +37,7 @@ namespace Ludots.Core.Input.Interaction
             _filters = filters ?? throw new ArgumentNullException(nameof(filters));
             _routedWriter = routedWriter ?? throw new ArgumentNullException(nameof(routedWriter));
             _store = store ?? throw new ArgumentNullException(nameof(store));
-            if (!_contextProfiles.TryGetSteadyStateRouting(out _steadyStateCollectionKeyId, out _steadyStateFilterProfileId))
-            {
-                throw new InvalidOperationException(
-                    $"Context-bound collection writing requires the steady-state interaction context profile '{InteractionContextIds.Default}' to be installed.");
-            }
+
         }
 
         /// <summary>
@@ -68,13 +63,15 @@ namespace Ludots.Core.Input.Interaction
                 EntityCollectionRoleKind.AcquisitionPreview);
             _store.Replace(localAnchorRep, rawDescriptor, rawHits, localAnchorRep);
 
-            int filterProfileId = _steadyStateFilterProfileId;
-            int collectionKeyId = _steadyStateCollectionKeyId;
-            if (_world.TryGet<InteractionContextInstance>(localAnchorRep, out InteractionContextInstance context))
+            if (!_world.TryGet<InteractionContextInstance>(localAnchorRep, out InteractionContextInstance context) ||
+                context.ActiveCollectionKeyId == 0)
             {
-                filterProfileId = context.FilterProfileId;
-                collectionKeyId = context.ActiveCollectionKeyId;
+                throw new InvalidOperationException(
+                    "Context-bound collection writing requires the anchor rep's active interaction context to declare activeCollectionKey (constitution §12: no steady-state fallback).");
             }
+
+            int filterProfileId = context.FilterProfileId;
+            int collectionKeyId = context.ActiveCollectionKeyId;
 
             ReadOnlySpan<Entity> routed = rawHits;
             if (filterProfileId != 0)

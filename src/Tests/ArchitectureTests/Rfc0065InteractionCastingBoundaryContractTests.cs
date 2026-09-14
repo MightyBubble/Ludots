@@ -177,8 +177,8 @@ namespace Ludots.Tests.Architecture
                     "GameEngine must register the command-source collection key with EntityCollectionStore.");
                 Assert.That(gameEngine, Does.Contain("EntityCollectionKeys.CommandSource"),
                     "The steady-state interaction context must use EntityCollectionKeys.CommandSource.");
-                Assert.That(gameEngine, Does.Contain("InteractionContextIds.Default"),
-                    "GameEngine must install the engine-reserved steady-state interaction context profile (command routing anchor).");
+                Assert.That(gameEngine, Does.Not.Contain("InteractionContextIds.Default"),
+                    "GameEngine must not install any profile programmatically — profiles come only from data (constitution: no steady-state anchor).");
                 Assert.That(contextRuntime, Does.Contain("TryResolveCollection(collections, owner, collectionKey"),
                     "EntityCollectionContextRuntime must resolve the caller-provided collection key, not hard-code command-source authority.");
                 Assert.That(contextRuntime, Does.Contain("collections.TryGet(owner, collectionKey"),

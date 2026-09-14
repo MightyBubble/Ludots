@@ -225,7 +225,8 @@ namespace Ludots.Tests.GAS
             {
                 ContextEntity = world.Create(),
                 CommandIntentProfileId = 0,
-            });
+                ActiveCollectionKeyId = harness.Collections.KeyRegistry.Register(EntityCollectionKeys.CommandSource),
+                });
 
             OrderSubmitResult result = harness.SubmitPointerCommandRaw();
 
@@ -415,6 +416,12 @@ namespace Ludots.Tests.GAS
                         harness.Dispatch.ProfileIdRegistry.GetId(DispatchId));
                     world.Add(rep, pref);
                     harness.Pref = pref;
+                    world.Add(rep, new InteractionContextInstance
+                    {
+                        ContextEntity = rep,
+                        CommandIntentProfileId = pref.DefaultCommandIntentId,
+                        ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+                    });
                 }
 
                 var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);

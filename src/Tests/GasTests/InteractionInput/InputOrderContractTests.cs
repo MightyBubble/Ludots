@@ -1944,7 +1944,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             world.Add(localPlayer, new InteractionContextInstance
             {
-                ContextEntity = actor,
+                ContextEntity = localPlayer,
+                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
                 CommandIntentProfileId = 0,
             });
             var commandIntents = CommandIntentProfileTests.Harness.Create(world).Intents;
@@ -2081,6 +2082,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.capacity", "dispatch.all_together");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.capacity"),
+                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+            });
 
             var collections = new EntityCollectionStore(
                 collectionKeys,
@@ -2231,6 +2238,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = false },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.parallel_layout", "dispatch.parallel_per_actor");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.parallel_layout"),
+                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2412,6 +2425,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.mixed_layout", "dispatch.all_together");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.mixed_layout"),
+                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2548,6 +2567,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.programmatic", "dispatch.all_together");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.programmatic"),
+                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2662,6 +2687,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.none_target", "dispatch.all_together");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.none_target"),
+                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+            });
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
                 EntityCollectionKeys.CommandSource,
@@ -2828,6 +2859,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_batch", "dispatch.all_together");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.atomic_batch"),
+                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2963,6 +3000,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.routed_only", "dispatch.nearest_one");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.routed_only"),
+                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -3073,6 +3116,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_authorization", "dispatch.atomic_authorization");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.atomic_authorization"),
+                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -3196,6 +3245,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.test", "dispatch.all_together");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.test"),
+                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
