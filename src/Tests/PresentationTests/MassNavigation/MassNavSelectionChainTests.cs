@@ -31,7 +31,7 @@ namespace Ludots.Tests.Presentation
 
         private static readonly string[] Mods =
         {
-            "LudotsCoreMod", "SelectionInteractionMod",
+            "LudotsCoreMod", "CoreInputMod", "SelectionInteractionMod",
             "MassNavigationMod", "CapabilityStandardMassNavigationLargeWorld10kMod"
         };
 
