@@ -29,6 +29,7 @@ namespace Ludots.Presentation.Skia
         private const int TextBatchBucketsPerBlob = 256;
         private const int TextChurnSampleCount = 32;
         private const byte TextSpritePromotionStableFrames = 3;
+        private const float TextSpriteLeftPad = 1f;
         private static readonly PresentationOverlayItemKind[] RenderOrder =
         {
             PresentationOverlayItemKind.Rect,
@@ -1509,12 +1510,12 @@ namespace Ludots.Presentation.Skia
 
             LastTextBatchBuildMs += ElapsedMs(buildStart);
             long drawStart = Stopwatch.GetTimestamp();
-            int activeBucketCount = DrawRetainedTextAtlas(canvas, state);
+            int activeBucketCount = DrawRetainedTextAtlas(canvas, state, span);
             LastTextSpriteBatchBucketCount += activeBucketCount;
             LastTextBatchDrawMs += ElapsedMs(drawStart);
-            if (state.PendingGlyphIndices.Count > 0)
+            if (state.MergedGlyphIndices.Count > 0)
             {
-                DrawTextBatched(canvas, span, CollectionsMarshal.AsSpan(state.PendingGlyphIndices));
+                DrawTextBatched(canvas, span, CollectionsMarshal.AsSpan(state.MergedGlyphIndices));
             }
         }
 
@@ -1547,56 +1548,161 @@ namespace Ludots.Presentation.Skia
             return string.IsNullOrEmpty(item.Text) ? 0 : RuntimeHelpers.GetHashCode(item.Text);
         }
 
-        private int DrawRetainedTextAtlas(SKCanvas canvas, RetainedTextSpriteLaneState state)
+        private int DrawRetainedTextAtlas(SKCanvas canvas, RetainedTextSpriteLaneState state, ReadOnlySpan<PresentationOverlayItem> span)
         {
             EnsureRetainedTextAtlas(state);
-            if (state.AtlasImage == null)
+            if (state.AtlasImage == null || state.Buckets.Count == 0 || state.OrderCount != span.Length)
+            {
+                state.MergedGlyphIndices.Clear();
+                for (int i = 0; i < span.Length; i++)
+                {
+                    state.MergedGlyphIndices.Add(i);
+                }
+
+                return 0;
+            }
+
+            // 空间上互不重叠的实例合并成一次 draw atlas（distinct 字符串数不再线性放大绘制调用）；
+            // 其余实例与 pending 文本一起按 lane 顺序并入同一条 glyph 直排通道：
+            // drawAtlas 对重叠四边形的合成舍入、以及"先 sprite 后 glyph"的合成顺序，
+            // 都与当帧全新渲染的 glyph 直排有 ±1/255 像素差，保留帧合同要求逐像素一致
+            MarkOverlappingTextSpriteInstances(state, span);
+            int atlasInstanceCount = 0;
+            for (int i = 0; i < span.Length; i++)
+            {
+                if (!state.NeighborFlags[i])
+                {
+                    atlasInstanceCount++;
+                }
+            }
+
+            if (atlasInstanceCount <= 0)
             {
                 return 0;
             }
 
-            int totalInstanceCount = 0;
+            state.EnsureDrawCapacity(atlasInstanceCount);
             int bucketCount = state.Buckets.Count;
-            for (int bucketIndex = 0; bucketIndex < bucketCount; bucketIndex++)
-            {
-                totalInstanceCount += state.Buckets[bucketIndex].Count;
-            }
-
-            if (totalInstanceCount <= 0)
-            {
-                return 0;
-            }
-
-            // 所有 bucket 共享同一张 atlas：实例合并成一次 draw atlas，
-            // 避免 distinct 字符串数（数值文本可达数百）线性放大绘制调用数
-            state.EnsureDrawCapacity(totalInstanceCount);
+            state.EnsureBucketSeenFlags(bucketCount);
             int writeIndex = 0;
-            int activeBucketCount = 0;
-            for (int bucketIndex = 0; bucketIndex < bucketCount; bucketIndex++)
+            for (int i = 0; i < span.Length; i++)
             {
-                RetainedTextSpriteBatchBucket bucket = state.Buckets[bucketIndex];
-                int count = bucket.Count;
-                if (count <= 0)
+                if (state.NeighborFlags[i])
                 {
                     continue;
                 }
 
-                activeBucketCount++;
-                SKRect spriteRect = state.AtlasSprites[bucketIndex];
-                float[] positionsX = bucket.X;
-                float[] positionsY = bucket.Y;
-                SKRotationScaleMatrix[] drawTransforms = state.DrawTransforms;
-                SKRect[] drawSprites = state.DrawSprites;
-                for (int instanceIndex = 0; instanceIndex < count; instanceIndex++)
+                int bucketIndex = state.OrderEntries[i].BucketIndex;
+                state.DrawSprites[writeIndex] = state.AtlasSprites[bucketIndex];
+                int fontSize = state.OrderFontSizes[i];
+                state.DrawTransforms[writeIndex] = new SKRotationScaleMatrix(
+                    1f,
+                    0f,
+                    span[i].X - TextSpriteLeftPad,
+                    span[i].Y + fontSize - state.BucketBaselines[bucketIndex]);
+                state.BucketSeenFlags[bucketIndex] = true;
+                writeIndex++;
+            }
+
+            DrawAtlasCount(canvas, state.AtlasImage, state.DrawSprites, state.DrawTransforms, writeIndex);
+            int activeBucketCount = 0;
+            for (int bucketIndex = 0; bucketIndex < bucketCount; bucketIndex++)
+            {
+                if (state.BucketSeenFlags[bucketIndex])
                 {
-                    drawSprites[writeIndex] = spriteRect;
-                    drawTransforms[writeIndex] = new SKRotationScaleMatrix(1f, 0f, positionsX[instanceIndex], positionsY[instanceIndex]);
-                    writeIndex++;
+                    activeBucketCount++;
+                    state.BucketSeenFlags[bucketIndex] = false;
                 }
             }
 
-            DrawAtlasCount(canvas, state.AtlasImage, state.DrawSprites, state.DrawTransforms, totalInstanceCount);
             return activeBucketCount;
+        }
+
+        private void MarkOverlappingTextSpriteInstances(RetainedTextSpriteLaneState state, ReadOnlySpan<PresentationOverlayItem> span)
+        {
+            if (state.SplitVersion == state.LastVersion)
+            {
+                return;
+            }
+
+            int length = span.Length;
+            state.EnsureNeighborFlags(length);
+            Array.Clear(state.NeighborFlags, 0, length);
+            state.MergedGlyphIndices.Clear();
+            float cellSize = 1f;
+            for (int bucketIndex = 0; bucketIndex < state.Buckets.Count; bucketIndex++)
+            {
+                SKImage spriteImage = state.Buckets[bucketIndex].Sprite.Image;
+                cellSize = MathF.Max(cellSize, MathF.Max(spriteImage.Width, spriteImage.Height));
+            }
+
+            Dictionary<long, int> cellFirstInstance = state.CellFirstInstance;
+            cellFirstInstance.Clear();
+            for (int i = 0; i < length; i++)
+            {
+                float x0, y0, x1, y1;
+                if (IsPromotedTextSprite(state, span, i, out int bucketIndex))
+                {
+                    SKImage spriteImage = state.Buckets[bucketIndex].Sprite.Image;
+                    int fontSize = state.OrderFontSizes[i];
+                    x0 = span[i].X - TextSpriteLeftPad;
+                    y0 = span[i].Y + fontSize - state.BucketBaselines[bucketIndex];
+                    x1 = x0 + spriteImage.Width;
+                    y1 = y0 + spriteImage.Height;
+                }
+                else
+                {
+                    int fontSize = state.OrderFontSizes[i];
+                    CachedTextLayout layout = GetTextLayout(span[i].Text ?? string.Empty, fontSize);
+                    x0 = span[i].X - 2f;
+                    y0 = span[i].Y - 2f;
+                    x1 = span[i].X + layout.Width + 3f;
+                    y1 = span[i].Y + fontSize + 5f;
+                }
+
+                int cellX0 = (int)MathF.Floor(x0 / cellSize);
+                int cellX1 = (int)MathF.Floor(x1 / cellSize);
+                int cellY0 = (int)MathF.Floor(y0 / cellSize);
+                int cellY1 = (int)MathF.Floor(y1 / cellSize);
+                for (int cellY = cellY0; cellY <= cellY1; cellY++)
+                {
+                    for (int cellX = cellX0; cellX <= cellX1; cellX++)
+                    {
+                        long key = ((long)cellX << 32) | (uint)cellY;
+                        if (cellFirstInstance.TryGetValue(key, out int firstInstance))
+                        {
+                            state.NeighborFlags[firstInstance] = true;
+                            state.NeighborFlags[i] = true;
+                        }
+                        else
+                        {
+                            cellFirstInstance[key] = i;
+                        }
+                    }
+                }
+            }
+
+            // 标记必须先于合并列表构建：晚到的邻居标记要把早处理的实例一并挤出 atlas
+            for (int i = 0; i < length; i++)
+            {
+                if (!IsPromotedTextSprite(state, span, i, out _) || state.NeighborFlags[i])
+                {
+                    state.MergedGlyphIndices.Add(i);
+                }
+            }
+
+            state.SplitVersion = state.LastVersion;
+        }
+
+        private static bool IsPromotedTextSprite(
+            RetainedTextSpriteLaneState state,
+            ReadOnlySpan<PresentationOverlayItem> span,
+            int index,
+            out int bucketIndex)
+        {
+            bucketIndex = state.OrderEntries[index].BucketIndex;
+            return !string.IsNullOrEmpty(span[index].Text) &&
+                bucketIndex >= 0 && (uint)bucketIndex < (uint)state.Buckets.Count;
         }
 
         private void UpdateRetainedTextSpriteLane(
@@ -1607,7 +1713,6 @@ namespace Ludots.Presentation.Skia
             int stamp = state.NextStamp();
             state.BeginVisibleFrame();
             state.EnsureOrderCapacity(span.Length);
-            state.PendingGlyphIndices.Clear();
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly PresentationOverlayItem item = ref span[i];
@@ -1648,7 +1753,6 @@ namespace Ludots.Presentation.Skia
                 {
                     // 未稳定文本本帧走 glyph 直排且不新建精灵：churn 取值只重置 streak，
                     // 打不进 sprite 缓存；连续稳定帧数达标后才晋升为保留精灵
-                    state.PendingGlyphIndices.Add(i);
                     state.OrderEntries[i] = new RetainedTextSpriteEntry(-1, 0, default, item.DirtySerial, fontSize, stamp);
                     continue;
                 }
@@ -1661,7 +1765,7 @@ namespace Ludots.Presentation.Skia
                 {
                     RetainedTextSpriteBatchBucket orderBucket = state.Buckets[orderEntry.BucketIndex];
                     float orderDrawY = (item.Y + fontSize) - state.BucketBaselines[orderEntry.BucketIndex];
-                    orderBucket.AddVisible(item.X, orderDrawY);
+                    orderBucket.AddVisible(item.X - TextSpriteLeftPad, orderDrawY);
                     continue;
                 }
 
@@ -1674,7 +1778,7 @@ namespace Ludots.Presentation.Skia
                 {
                     RetainedTextSpriteBatchBucket bucket = state.Buckets[entry.BucketIndex];
                     float drawY = (item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex];
-                    bucket.AddVisible(item.X, drawY);
+                    bucket.AddVisible(item.X - TextSpriteLeftPad, drawY);
                     entry.SeenStamp = stamp;
                     entry.DirtySerial = item.DirtySerial;
                     entry.FontSize = fontSize;
@@ -1739,11 +1843,10 @@ namespace Ludots.Presentation.Skia
                 RetainedTextSpriteBatchBucket bucket = state.Buckets[entry.BucketIndex];
                 int fontSize = state.OrderFontSizes[i];
                 float drawY = (item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex];
-                bucket.AddVisible(item.X, drawY);
+                bucket.AddVisible(item.X - TextSpriteLeftPad, drawY);
             }
 
             state.LastVersion = laneVersion;
-            state.PendingGlyphIndices.Clear();
             return true;
         }
 
@@ -1753,7 +1856,6 @@ namespace Ludots.Presentation.Skia
             ReadOnlySpan<PresentationOverlayItem> span)
         {
             state.Clear();
-            state.PendingGlyphIndices.Clear();
             int stamp = state.NextStamp();
             state.BeginVisibleFrame();
             state.EnsureOrderCapacity(span.Length);
@@ -1797,7 +1899,7 @@ namespace Ludots.Presentation.Skia
             int bucketIndex = GetOrCreateRetainedTextSpriteBucket(state, key, item.Text!, fontSize, color);
             RetainedTextSpriteBatchBucket bucket = state.Buckets[bucketIndex];
             float drawY = (item.Y + fontSize) - bucket.Sprite.BaselineY;
-            int slotIndex = bucket.Add(stableId, item.X, drawY);
+            int slotIndex = bucket.Add(stableId, item.X - TextSpriteLeftPad, drawY);
             RetainedTextSpriteEntry entry = new(bucketIndex, slotIndex, key, item.DirtySerial, fontSize, stamp);
             state.ItemsByStableId[stableId] = entry;
             if ((uint)orderIndex < (uint)state.OrderStableIds.Length)
@@ -2612,7 +2714,10 @@ namespace Ludots.Presentation.Skia
             public readonly Dictionary<TextBatchKey, int> BucketIndexByKey = new();
             public readonly List<RetainedTextSpriteBatchBucket> Buckets = new();
             public readonly List<int> RemovedStableIds = new();
-            public readonly List<int> PendingGlyphIndices = new();
+            public readonly Dictionary<long, int> CellFirstInstance = new();
+            public readonly List<int> MergedGlyphIndices = new();
+            public bool[] NeighborFlags = Array.Empty<bool>();
+            public bool[] BucketSeenFlags = Array.Empty<bool>();
             public float[] BucketBaselines = Array.Empty<float>();
             public int[] OrderStableIds = Array.Empty<int>();
             public RetainedTextSpriteEntry[] OrderEntries = Array.Empty<RetainedTextSpriteEntry>();
@@ -2621,7 +2726,28 @@ namespace Ludots.Presentation.Skia
             public byte[] OrderStableStreaks = Array.Empty<byte>();
             public int OrderCount;
             public int LastVersion = -1;
+            public int SplitVersion = -1;
             private int _stamp;
+
+            public void EnsureNeighborFlags(int required)
+            {
+                if (NeighborFlags.Length >= required)
+                {
+                    return;
+                }
+
+                Array.Resize(ref NeighborFlags, ResolveNextCapacity(NeighborFlags.Length, required));
+            }
+
+            public void EnsureBucketSeenFlags(int required)
+            {
+                if (BucketSeenFlags.Length >= required)
+                {
+                    return;
+                }
+
+                Array.Resize(ref BucketSeenFlags, ResolveNextCapacity(BucketSeenFlags.Length, required));
+            }
 
             public int NextStamp()
             {
@@ -2641,9 +2767,11 @@ namespace Ludots.Presentation.Skia
                 BucketIndexByKey.Clear();
                 Buckets.Clear();
                 RemovedStableIds.Clear();
-                PendingGlyphIndices.Clear();
+                MergedGlyphIndices.Clear();
+                CellFirstInstance.Clear();
                 OrderCount = 0;
                 LastVersion = -1;
+                SplitVersion = -1;
                 DisposeAtlas();
             }
 
