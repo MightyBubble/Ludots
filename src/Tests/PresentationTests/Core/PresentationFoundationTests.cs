@@ -1145,6 +1145,40 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void WorldHudPresentBehavior_RevealHidden_AllowsAttributeHudWithoutKnowledgeRecords()
+        {
+            using var world = World.Create();
+
+            const int healthAttributeId = 7;
+            Entity owner = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity audience = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 });
+
+            var projectionStore = new KnowledgeProjectionStore();
+            var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+            var behavior = new WorldHudPresentBehavior();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+                [CoreServiceKeys.PresentationAudienceRevealHidden.Name] = true,
+            };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, audience, 1, "seat.0");
+            ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { healthAttributeId };
+
+            bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out PresentPhaseResult phase);
+
+            Assert.That(projected, Is.True);
+            Assert.That(phase.ShouldPresent, Is.True);
+            Assert.That(phase.RequiresAttributeProjection, Is.True);
+            Assert.That(phase.HasAttributeProjection, Is.True);
+            Assert.That(phase.AllowWorldHudProjection, Is.True);
+        }
+
+        [Test]
         public void WorldHudPresentBehavior_SuppressesUnknownAudienceWithoutKnowledgeProjection()
         {
             using var world = World.Create();
