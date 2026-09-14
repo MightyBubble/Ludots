@@ -32,7 +32,8 @@
       "Overrides": {
         "Team": {
           "Id": 1
-        }
+        },
+        "initialInteractionContext": "interaction.context.formation.battle"
       }
     },
     {
@@ -142,9 +143,16 @@
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "formation.local_player" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "formation.local_player"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "formation.local_player" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "formation.local_player"
+    }
   ]
 }
