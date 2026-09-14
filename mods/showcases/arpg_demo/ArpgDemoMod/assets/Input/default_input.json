@@ -1,0 +1,83 @@
+{
+  "actions": [
+    {
+      "id": "Arpg.Skill1",
+      "name": "Arpg_Skill1",
+      "type": "Button"
+    },
+    {
+      "id": "Arpg.Skill2",
+      "name": "Arpg_Skill2",
+      "type": "Button"
+    },
+    {
+      "id": "Arpg.Skill3",
+      "name": "Arpg_Skill3",
+      "type": "Button"
+    },
+    {
+      "id": "Arpg.Skill4",
+      "name": "Arpg_Skill4",
+      "type": "Button"
+    },
+    {
+      "id": "Arpg.Skill5",
+      "name": "Arpg_Skill5",
+      "type": "Button"
+    },
+    {
+      "id": "Arpg.Skill6",
+      "name": "Arpg_Skill6",
+      "type": "Button"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "Arpg_Gameplay",
+      "name": "ARPG Gameplay",
+      "priority": 60,
+      "bindings": [
+        {
+          "actionId": "Arpg.Skill1",
+          "path": "<Keyboard>/digit1"
+        },
+        {
+          "actionId": "Arpg.Skill2",
+          "path": "<Keyboard>/digit2"
+        },
+        {
+          "actionId": "Arpg.Skill3",
+          "path": "<Keyboard>/digit3"
+        },
+        {
+          "actionId": "Arpg.Skill4",
+          "path": "<Keyboard>/digit4"
+        },
+        {
+          "actionId": "Arpg.Skill5",
+          "path": "<Keyboard>/digit5"
+        },
+        {
+          "actionId": "Arpg.Skill6",
+          "path": "<Keyboard>/digit6"
+        },
+        {
+          "actionId": "Move",
+          "path": "<Keyboard>/w"
+        },
+        {
+          "actionId": "Move",
+          "path": "<Keyboard>/a"
+        },
+        {
+          "actionId": "Move",
+          "path": "<Keyboard>/s"
+        },
+        {
+          "actionId": "Move",
+          "path": "<Keyboard>/d"
+        }
+      ]
+    }
+  ]
+}

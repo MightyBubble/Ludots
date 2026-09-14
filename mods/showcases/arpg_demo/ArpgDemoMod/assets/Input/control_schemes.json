@@ -1,0 +1,24 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.default",
+      "inputContexts": []
+    },
+    {
+      "id": "scheme.arpg",
+      "inputContexts": [
+        "Arpg_Gameplay"
+      ],
+      "axisMove": {
+        "actionId": "Move",
+        "orderTypeKey": "moveTo",
+        "throttleTicks": 6,
+        "stepDistanceCm": 400
+      }
+    }
+  ],
+  "allowedSchemes": [
+    "scheme.default",
+    "scheme.arpg"
+  ]
+}

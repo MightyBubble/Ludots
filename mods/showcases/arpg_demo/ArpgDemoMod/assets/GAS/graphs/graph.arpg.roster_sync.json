@@ -1,0 +1,85 @@
+[
+  {
+    "id": "graph.arpg.roster_sync",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_heartbeat",
+        "event": "MapHeartbeat",
+        "start": "all_units",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "all_units",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "heroes",
+        "op": "QueryFilterTemplate",
+        "template": "arpg_hero"
+      },
+      {
+        "id": "replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write_active",
+        "op": "WriteCollection",
+        "collectionKey": "arpg.active"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "all_units",
+        "fromPort": "next",
+        "to": "heroes"
+      },
+      {
+        "from": "heroes",
+        "fromPort": "next",
+        "to": "replace"
+      },
+      {
+        "from": "replace",
+        "fromPort": "next",
+        "to": "write_active"
+      },
+      {
+        "from": "write_active",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "replace",
+        "fromPort": "value",
+        "to": "write_active",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]
