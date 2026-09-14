@@ -381,7 +381,7 @@ public sealed class GraphOpsNodeGalleryQueryAcceptanceTests
             Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
         }
 
-        Assert.Ignore("WIP：画廊引擎的知识库为空使筛后 0 成员，待画廊 harness 种子知识后启用");
+        Assert.That(runtime.Context.CaptionValues.ContainsKey("count"), Is.True, "认知筛执行后名单计数可读");
     }
 
     private static GraphOpsNodeGalleryRuntime Play(string op)

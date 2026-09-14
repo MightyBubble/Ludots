@@ -67,6 +67,7 @@ namespace Ludots.Tests.GAS
             harness.Ownership.EnsureOwnership(p1Rep, m05);
             harness.Ownership.EnsureOwnership(p1Rep, m06);
 
+            harness.MountBaseContext(p1Rep);
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m01, m02 }, EntityCollectionSourceKind.UiAcquisition);
 
             Entity actor = harness.CreateCastingActor(AbilityWithContextId);
@@ -103,7 +104,11 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Has<AbilityExecInstance>(actor), Is.False, "Exec must be torn down after End.");
 
             harness.ContextSystem.Update(0f);
-            Assert.That(world.Has<InteractionContextInstance>(p1Rep), Is.False, "The context must be reclaimed when the exec ends.");
+            // Exec reclaim restored the saved base context (steady-state fallback retired);
+            // the pre-ability mount is present again rather than the bare no-context form.
+            Assert.That(world.TryGet<InteractionContextInstance>(p1Rep, out InteractionContextInstance restored), Is.True,
+                "The exec reclaim must restore the pre-ability base context.");
+            Assert.That(restored.ActiveCollectionKeyId, Is.EqualTo(harness.CommandSourceKeyId));
 
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m02 }, EntityCollectionSourceKind.UiAcquisition);
             Assert.That(harness.Store.TryGet(p1Rep, harness.CommandSourceKeyId, out commandHandle), Is.True);
@@ -543,6 +548,8 @@ namespace Ludots.Tests.GAS
             return count;
         }
 
+        private const string BaseContextProfileName = "interaction.context.test.base";
+
         private sealed class Harness
         {
             public World World = null!;
@@ -601,7 +608,7 @@ namespace Ludots.Tests.GAS
                         },
                         new()
                         {
-                            Id = InteractionContextIds.Default,
+                            Id = BaseContextProfileName,
                             ActiveCollectionKey = EntityCollectionKeys.CommandSource,
                         },
                     },
@@ -681,6 +688,23 @@ namespace Ludots.Tests.GAS
                     CommandSourceKeyId = keyRegistry.Register(EntityCollectionKeys.CommandSource),
                     AbilityTargetsKeyId = keyRegistry.Register(AbilityTargetsCollectionKey),
                 };
+            }
+
+            public void MountBaseContext(Entity rep)
+            {
+                int profileId = ContextProfiles.ProfileIdRegistry.GetId(BaseContextProfileName);
+                if (World.Has<InteractionContextInstance>(rep))
+                {
+                    World.Remove<InteractionContextInstance>(rep);
+                }
+
+                World.Add(rep, new InteractionContextInstance
+                {
+                    ContextId = profileId,
+                    ContextEntity = rep,
+                    ActiveCollectionKeyId = CommandSourceKeyId,
+                    Source = InteractionContextInstanceSource.TemplateSpawn,
+                });
             }
 
             public Entity CreateCastingActor(int abilityId)
