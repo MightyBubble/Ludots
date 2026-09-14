@@ -29,6 +29,7 @@ namespace Ludots.Presentation.Skia
         private const int TextBatchBucketsPerBlob = 256;
         private const int TextChurnSampleCount = 32;
         private const byte TextSpritePromotionStableFrames = 3;
+        private const float TextSpriteLeftPad = 1f;
         private static readonly PresentationOverlayItemKind[] RenderOrder =
         {
             PresentationOverlayItemKind.Rect,
@@ -1329,7 +1330,30 @@ namespace Ludots.Presentation.Skia
                 cursorX = FlushRun(runs, activeTypeface, fontSize, cursorX);
             }
 
-            var created = new CachedTextLayout(runs.ToArray(), cursorX);
+            SKRect ink = SKRect.Empty;
+            for (int i = 0; i < runs.Count; i++)
+            {
+                SKTextBlob? runBlob = runs[i].Blob;
+                if (runBlob == null)
+                {
+                    continue;
+                }
+
+                SKRect runInk = runBlob.Bounds;
+                if (ink.IsEmpty)
+                {
+                    ink = new SKRect(runs[i].XOffset + runInk.Left, runInk.Top, runs[i].XOffset + runInk.Right, runInk.Bottom);
+                }
+                else
+                {
+                    ink.Left = MathF.Min(ink.Left, runs[i].XOffset + runInk.Left);
+                    ink.Top = MathF.Min(ink.Top, runInk.Top);
+                    ink.Right = MathF.Max(ink.Right, runs[i].XOffset + runInk.Right);
+                    ink.Bottom = MathF.Max(ink.Bottom, runInk.Bottom);
+                }
+            }
+
+            var created = new CachedTextLayout(runs.ToArray(), cursorX, ink);
             _textLayoutCache[cacheKey] = created;
             return created;
         }
@@ -1509,12 +1533,12 @@ namespace Ludots.Presentation.Skia
 
             LastTextBatchBuildMs += ElapsedMs(buildStart);
             long drawStart = Stopwatch.GetTimestamp();
-            int activeBucketCount = DrawRetainedTextAtlas(canvas, state);
+            int activeBucketCount = DrawRetainedTextAtlas(canvas, state, span);
             LastTextSpriteBatchBucketCount += activeBucketCount;
             LastTextBatchDrawMs += ElapsedMs(drawStart);
-            if (state.PendingGlyphIndices.Count > 0)
+            if (state.MergedGlyphIndices.Count > 0)
             {
-                DrawTextBatched(canvas, span, CollectionsMarshal.AsSpan(state.PendingGlyphIndices));
+                DrawTextBatched(canvas, span, CollectionsMarshal.AsSpan(state.MergedGlyphIndices));
             }
         }
 
@@ -1547,56 +1571,242 @@ namespace Ludots.Presentation.Skia
             return string.IsNullOrEmpty(item.Text) ? 0 : RuntimeHelpers.GetHashCode(item.Text);
         }
 
-        private int DrawRetainedTextAtlas(SKCanvas canvas, RetainedTextSpriteLaneState state)
+        private int DrawRetainedTextAtlas(SKCanvas canvas, RetainedTextSpriteLaneState state, ReadOnlySpan<PresentationOverlayItem> span)
         {
             EnsureRetainedTextAtlas(state);
-            if (state.AtlasImage == null)
+            if (state.AtlasImage == null || state.Buckets.Count == 0 || state.OrderCount != span.Length)
+            {
+                state.MergedGlyphIndices.Clear();
+                for (int i = 0; i < span.Length; i++)
+                {
+                    state.MergedGlyphIndices.Add(i);
+                }
+
+                return 0;
+            }
+
+            // 墨迹不相交的实例合并成一次 draw atlas（distinct 字符串数不再线性放大绘制调用）；
+            // 墨迹相交的实例与 pending 文本一起按 lane 顺序并入同一条 glyph 直排通道：
+            // 相交四边形的 blit 合成舍入与当帧全新渲染的 glyph 直排有 ±1/255 像素差，
+            // 保留帧合同要求逐像素一致
+            MarkOverlappingTextSpriteInstances(state, span);
+            int atlasInstanceCount = 0;
+            for (int i = 0; i < span.Length; i++)
+            {
+                if (!state.NeighborFlags[i] && IsPromotedTextSprite(state, span, i, out _))
+                {
+                    atlasInstanceCount++;
+                }
+            }
+
+            if (atlasInstanceCount <= 0)
             {
                 return 0;
             }
 
-            int totalInstanceCount = 0;
+            state.EnsureDrawCapacity(atlasInstanceCount);
             int bucketCount = state.Buckets.Count;
-            for (int bucketIndex = 0; bucketIndex < bucketCount; bucketIndex++)
-            {
-                totalInstanceCount += state.Buckets[bucketIndex].Count;
-            }
-
-            if (totalInstanceCount <= 0)
-            {
-                return 0;
-            }
-
-            // 所有 bucket 共享同一张 atlas：实例合并成一次 draw atlas，
-            // 避免 distinct 字符串数（数值文本可达数百）线性放大绘制调用数
-            state.EnsureDrawCapacity(totalInstanceCount);
+            state.EnsureBucketSeenFlags(bucketCount);
             int writeIndex = 0;
-            int activeBucketCount = 0;
-            for (int bucketIndex = 0; bucketIndex < bucketCount; bucketIndex++)
+            for (int i = 0; i < span.Length; i++)
             {
-                RetainedTextSpriteBatchBucket bucket = state.Buckets[bucketIndex];
-                int count = bucket.Count;
-                if (count <= 0)
+                if (state.NeighborFlags[i] || !IsPromotedTextSprite(state, span, i, out _))
                 {
                     continue;
                 }
 
-                activeBucketCount++;
-                SKRect spriteRect = state.AtlasSprites[bucketIndex];
-                float[] positionsX = bucket.X;
-                float[] positionsY = bucket.Y;
-                SKRotationScaleMatrix[] drawTransforms = state.DrawTransforms;
-                SKRect[] drawSprites = state.DrawSprites;
-                for (int instanceIndex = 0; instanceIndex < count; instanceIndex++)
+                int bucketIndex = state.OrderEntries[i].BucketIndex;
+                state.DrawSprites[writeIndex] = state.AtlasSprites[bucketIndex];
+                int fontSize = state.OrderFontSizes[i];
+                state.DrawTransforms[writeIndex] = new SKRotationScaleMatrix(
+                    1f,
+                    0f,
+                    span[i].X - TextSpriteLeftPad,
+                    span[i].Y + fontSize - state.BucketBaselines[bucketIndex]);
+                state.BucketSeenFlags[bucketIndex] = true;
+                writeIndex++;
+            }
+
+            DrawAtlasCount(canvas, state.AtlasImage, state.DrawSprites, state.DrawTransforms, writeIndex);
+            int activeBucketCount = 0;
+            for (int bucketIndex = 0; bucketIndex < bucketCount; bucketIndex++)
+            {
+                if (state.BucketSeenFlags[bucketIndex])
                 {
-                    drawSprites[writeIndex] = spriteRect;
-                    drawTransforms[writeIndex] = new SKRotationScaleMatrix(1f, 0f, positionsX[instanceIndex], positionsY[instanceIndex]);
-                    writeIndex++;
+                    activeBucketCount++;
+                    state.BucketSeenFlags[bucketIndex] = false;
                 }
             }
 
-            DrawAtlasCount(canvas, state.AtlasImage, state.DrawSprites, state.DrawTransforms, totalInstanceCount);
             return activeBucketCount;
+        }
+
+        private const float TextInkOverlapPad = 1f;
+        private const int TextOverlapSaturatedCellCount = 96;
+        private const int SaturatedCellMarker = -2;
+
+        private void MarkOverlappingTextSpriteInstances(RetainedTextSpriteLaneState state, ReadOnlySpan<PresentationOverlayItem> span)
+        {
+            if (state.SplitVersion == state.LastVersion)
+            {
+                return;
+            }
+
+            int length = span.Length;
+            state.EnsureNeighborFlags(length);
+            Array.Clear(state.NeighborFlags, 0, length);
+            state.MergedGlyphIndices.Clear();
+
+            // 驱逐判定用墨迹紧包围盒（blob 保守 bounds，promoted/pending 同一公式：
+            // sprite 的 1px 左垫与 blit 偏移、基线偏移在构造时完全抵消）；
+            // 外扩 pad 吸收亚像素相位抖动——盒外像素 alpha=0，blit 逐位不写。
+            // 墨迹盒不相交的实例对合成互不影响，可同批进 drawAtlas；
+            // 相交对的 blit 合成与 glyph 直排存在 ±1/255 差，必须驱逐到 glyph 通道。
+            state.EnsureBoxCapacity(length);
+            float[] boxX0 = state.BoxX0, boxY0 = state.BoxY0, boxX1 = state.BoxX1, boxY1 = state.BoxY1;
+            float cellSize = 1f;
+            for (int i = 0; i < length; i++)
+            {
+                string? text = span[i].Text;
+                if (string.IsNullOrEmpty(text))
+                {
+                    boxX0[i] = 0f;
+                    boxY0[i] = 0f;
+                    boxX1[i] = -1f;
+                    boxY1[i] = -1f;
+                    continue;
+                }
+
+                int fontSize = state.OrderFontSizes[i] <= 0 ? 16 : state.OrderFontSizes[i];
+                CachedTextLayout layout = GetTextLayout(text, fontSize);
+                float x0 = span[i].X + layout.Ink.Left - TextInkOverlapPad;
+                float y0 = span[i].Y + fontSize + layout.Ink.Top - TextInkOverlapPad;
+                float x1 = span[i].X + layout.Ink.Right + TextInkOverlapPad;
+                float y1 = span[i].Y + fontSize + layout.Ink.Bottom + TextInkOverlapPad;
+                boxX0[i] = x0;
+                boxY0[i] = y0;
+                boxX1[i] = x1;
+                boxY1[i] = y1;
+                cellSize = MathF.Max(cellSize, MathF.Max(x1 - x0, y1 - y0));
+            }
+
+            // 均匀网格只做候选生成：盒宽高 ≤ cellSize ⇒ 覆盖同一 cell 的对才需要精确判交；
+            // 一个实例可覆盖多个 cell，链节点按 (实例, cell) 分配，避免 next 被覆写串链
+            Dictionary<long, int> cellHead = state.CellHead;
+            int nodeCapacity = length * 4 + 4;
+            int[] cellNext = state.CellNext;
+            int[] cellItem = state.CellItem;
+            if (cellNext.Length < nodeCapacity)
+            {
+                cellNext = new int[nodeCapacity];
+                cellItem = new int[nodeCapacity];
+                state.CellNext = cellNext;
+                state.CellItem = cellItem;
+            }
+
+            cellHead.Clear();
+            int nodeCount = 0;
+            for (int i = 0; i < length; i++)
+            {
+                if (boxX1[i] < boxX0[i])
+                {
+                    continue;
+                }
+
+                int cellX0 = (int)MathF.Floor(boxX0[i] / cellSize);
+                int cellX1 = (int)MathF.Floor(boxX1[i] / cellSize);
+                int cellY0 = (int)MathF.Floor(boxY0[i] / cellSize);
+                int cellY1 = (int)MathF.Floor(boxY1[i] / cellSize);
+                for (int cellY = cellY0; cellY <= cellY1; cellY++)
+                {
+                    for (int cellX = cellX0; cellX <= cellX1; cellX++)
+                    {
+                        long key = ((long)cellX << 32) | (uint)cellY;
+                        cellItem[nodeCount] = i;
+                        cellNext[nodeCount] = cellHead.TryGetValue(key, out int head) ? head : -1;
+                        cellHead[key] = nodeCount;
+                        nodeCount++;
+                    }
+                }
+            }
+
+            for (int i = 0; i < length; i++)
+            {
+                if (boxX1[i] < boxX0[i])
+                {
+                    continue;
+                }
+
+                int cellX0 = (int)MathF.Floor(boxX0[i] / cellSize);
+                int cellX1 = (int)MathF.Floor(boxX1[i] / cellSize);
+                int cellY0 = (int)MathF.Floor(boxY0[i] / cellSize);
+                int cellY1 = (int)MathF.Floor(boxY1[i] / cellSize);
+                for (int cellY = cellY0; cellY <= cellY1; cellY++)
+                {
+                    for (int cellX = cellX0; cellX <= cellX1; cellX++)
+                    {
+                        long key = ((long)cellX << 32) | (uint)cellY;
+                        if (!cellHead.TryGetValue(key, out int chainHead) || chainHead == SaturatedCellMarker)
+                        {
+                            continue;
+                        }
+
+                        // 单走链：边数边判交；超过阈值判定为极端堆叠，转整 cell 保守驱逐
+                        // （单 cell 塞满实例在几何上必然互相墨迹相交，方向保守只多驱不漏驱），
+                        // cell 打上饱和标记，后续访问者免重走整链
+                        int chainLength = 0;
+                        for (int node = chainHead; node >= 0; node = cellNext[node])
+                        {
+                            chainLength++;
+                            if (chainLength > TextOverlapSaturatedCellCount)
+                            {
+                                for (int flagNode = chainHead; flagNode >= 0; flagNode = cellNext[flagNode])
+                                {
+                                    state.NeighborFlags[cellItem[flagNode]] = true;
+                                }
+
+                                cellHead[key] = SaturatedCellMarker;
+                                break;
+                            }
+
+                            int j = cellItem[node];
+                            if (j <= i || (state.NeighborFlags[i] && state.NeighborFlags[j]))
+                            {
+                                continue;
+                            }
+
+                            if (boxX0[i] < boxX1[j] && boxX1[i] > boxX0[j] &&
+                                boxY0[i] < boxY1[j] && boxY1[i] > boxY0[j])
+                            {
+                                state.NeighborFlags[i] = true;
+                                state.NeighborFlags[j] = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 标记必须先于合并列表构建：晚到的邻居标记要把早处理的实例一并挤出 atlas
+            for (int i = 0; i < length; i++)
+            {
+                if (!IsPromotedTextSprite(state, span, i, out _) || state.NeighborFlags[i])
+                {
+                    state.MergedGlyphIndices.Add(i);
+                }
+            }
+
+            state.SplitVersion = state.LastVersion;
+        }
+
+        private static bool IsPromotedTextSprite(
+            RetainedTextSpriteLaneState state,
+            ReadOnlySpan<PresentationOverlayItem> span,
+            int index,
+            out int bucketIndex)
+        {
+            bucketIndex = state.OrderEntries[index].BucketIndex;
+            return !string.IsNullOrEmpty(span[index].Text) &&
+                bucketIndex >= 0 && (uint)bucketIndex < (uint)state.Buckets.Count;
         }
 
         private void UpdateRetainedTextSpriteLane(
@@ -1607,7 +1817,6 @@ namespace Ludots.Presentation.Skia
             int stamp = state.NextStamp();
             state.BeginVisibleFrame();
             state.EnsureOrderCapacity(span.Length);
-            state.PendingGlyphIndices.Clear();
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly PresentationOverlayItem item = ref span[i];
@@ -1648,7 +1857,6 @@ namespace Ludots.Presentation.Skia
                 {
                     // 未稳定文本本帧走 glyph 直排且不新建精灵：churn 取值只重置 streak，
                     // 打不进 sprite 缓存；连续稳定帧数达标后才晋升为保留精灵
-                    state.PendingGlyphIndices.Add(i);
                     state.OrderEntries[i] = new RetainedTextSpriteEntry(-1, 0, default, item.DirtySerial, fontSize, stamp);
                     continue;
                 }
@@ -1661,7 +1869,7 @@ namespace Ludots.Presentation.Skia
                 {
                     RetainedTextSpriteBatchBucket orderBucket = state.Buckets[orderEntry.BucketIndex];
                     float orderDrawY = (item.Y + fontSize) - state.BucketBaselines[orderEntry.BucketIndex];
-                    orderBucket.AddVisible(item.X, orderDrawY);
+                    orderBucket.AddVisible(item.X - TextSpriteLeftPad, orderDrawY);
                     continue;
                 }
 
@@ -1674,7 +1882,7 @@ namespace Ludots.Presentation.Skia
                 {
                     RetainedTextSpriteBatchBucket bucket = state.Buckets[entry.BucketIndex];
                     float drawY = (item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex];
-                    bucket.AddVisible(item.X, drawY);
+                    bucket.AddVisible(item.X - TextSpriteLeftPad, drawY);
                     entry.SeenStamp = stamp;
                     entry.DirtySerial = item.DirtySerial;
                     entry.FontSize = fontSize;
@@ -1739,11 +1947,10 @@ namespace Ludots.Presentation.Skia
                 RetainedTextSpriteBatchBucket bucket = state.Buckets[entry.BucketIndex];
                 int fontSize = state.OrderFontSizes[i];
                 float drawY = (item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex];
-                bucket.AddVisible(item.X, drawY);
+                bucket.AddVisible(item.X - TextSpriteLeftPad, drawY);
             }
 
             state.LastVersion = laneVersion;
-            state.PendingGlyphIndices.Clear();
             return true;
         }
 
@@ -1753,7 +1960,6 @@ namespace Ludots.Presentation.Skia
             ReadOnlySpan<PresentationOverlayItem> span)
         {
             state.Clear();
-            state.PendingGlyphIndices.Clear();
             int stamp = state.NextStamp();
             state.BeginVisibleFrame();
             state.EnsureOrderCapacity(span.Length);
@@ -1797,7 +2003,7 @@ namespace Ludots.Presentation.Skia
             int bucketIndex = GetOrCreateRetainedTextSpriteBucket(state, key, item.Text!, fontSize, color);
             RetainedTextSpriteBatchBucket bucket = state.Buckets[bucketIndex];
             float drawY = (item.Y + fontSize) - bucket.Sprite.BaselineY;
-            int slotIndex = bucket.Add(stableId, item.X, drawY);
+            int slotIndex = bucket.Add(stableId, item.X - TextSpriteLeftPad, drawY);
             RetainedTextSpriteEntry entry = new(bucketIndex, slotIndex, key, item.DirtySerial, fontSize, stamp);
             state.ItemsByStableId[stableId] = entry;
             if ((uint)orderIndex < (uint)state.OrderStableIds.Length)
@@ -2612,7 +2818,10 @@ namespace Ludots.Presentation.Skia
             public readonly Dictionary<TextBatchKey, int> BucketIndexByKey = new();
             public readonly List<RetainedTextSpriteBatchBucket> Buckets = new();
             public readonly List<int> RemovedStableIds = new();
-            public readonly List<int> PendingGlyphIndices = new();
+            public readonly Dictionary<long, int> CellHead = new();
+            public readonly List<int> MergedGlyphIndices = new();
+            public bool[] NeighborFlags = Array.Empty<bool>();
+            public bool[] BucketSeenFlags = Array.Empty<bool>();
             public float[] BucketBaselines = Array.Empty<float>();
             public int[] OrderStableIds = Array.Empty<int>();
             public RetainedTextSpriteEntry[] OrderEntries = Array.Empty<RetainedTextSpriteEntry>();
@@ -2621,7 +2830,48 @@ namespace Ludots.Presentation.Skia
             public byte[] OrderStableStreaks = Array.Empty<byte>();
             public int OrderCount;
             public int LastVersion = -1;
+            public int SplitVersion = -1;
+            public float[] BoxX0 = Array.Empty<float>();
+            public float[] BoxY0 = Array.Empty<float>();
+            public float[] BoxX1 = Array.Empty<float>();
+            public float[] BoxY1 = Array.Empty<float>();
+            public int[] CellNext = Array.Empty<int>();
+            public int[] CellItem = Array.Empty<int>();
             private int _stamp;
+
+            public void EnsureBoxCapacity(int required)
+            {
+                if (BoxX0.Length >= required)
+                {
+                    return;
+                }
+
+                int capacity = ResolveNextCapacity(BoxX0.Length, required);
+                Array.Resize(ref BoxX0, capacity);
+                Array.Resize(ref BoxY0, capacity);
+                Array.Resize(ref BoxX1, capacity);
+                Array.Resize(ref BoxY1, capacity);
+            }
+
+            public void EnsureNeighborFlags(int required)
+            {
+                if (NeighborFlags.Length >= required)
+                {
+                    return;
+                }
+
+                Array.Resize(ref NeighborFlags, ResolveNextCapacity(NeighborFlags.Length, required));
+            }
+
+            public void EnsureBucketSeenFlags(int required)
+            {
+                if (BucketSeenFlags.Length >= required)
+                {
+                    return;
+                }
+
+                Array.Resize(ref BucketSeenFlags, ResolveNextCapacity(BucketSeenFlags.Length, required));
+            }
 
             public int NextStamp()
             {
@@ -2641,9 +2891,11 @@ namespace Ludots.Presentation.Skia
                 BucketIndexByKey.Clear();
                 Buckets.Clear();
                 RemovedStableIds.Clear();
-                PendingGlyphIndices.Clear();
+                MergedGlyphIndices.Clear();
+                CellHead.Clear();
                 OrderCount = 0;
                 LastVersion = -1;
+                SplitVersion = -1;
                 DisposeAtlas();
             }
 
@@ -3334,15 +3586,20 @@ namespace Ludots.Presentation.Skia
 
         private sealed class CachedTextLayout : IDisposable
         {
-            public CachedTextLayout(CachedTextRun[] runs, float width)
+            public CachedTextLayout(CachedTextRun[] runs, float width, SKRect ink)
             {
                 Runs = runs;
                 Width = width;
+                Ink = ink;
             }
 
             public CachedTextRun[] Runs { get; }
 
             public float Width { get; }
+
+            // 墨迹紧包围盒，坐标系与 DrawText(blob, x, baseline) 的 blob 原点一致：
+            // 实例绝对墨迹 = (item.X + Ink.Left, item.Y + fontSize + Ink.Top, ...)
+            public SKRect Ink { get; }
 
             public void Dispose()
             {
