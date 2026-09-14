@@ -129,8 +129,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private GraphPresentationTextSink? _presentationTextSink;
         private PresentationTextCatalog? _presentationTextCatalog;
         private Action<string>? _startDialogue;
-        private Action<string>? _startSequence;
-        private Action<string, Entity>? _bindSpeakerEntity;
         private Func<Span<int>, int>? _collectActiveDialogueChoices;
         private Func<int, string?>? _resolveDialogueChoiceDisplayText;
         private IGraphAimSourceRuntime? _aimSource;
@@ -442,20 +440,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             tasks.OfferOrStart(taskId, scopeHost);
         }
 
-        public void EmitTaskSignal(int signalKeyId)
-        {
-            string? signalKey = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(signalKeyId);
-            if (string.IsNullOrWhiteSpace(signalKey))
-            {
-                throw new InvalidOperationException(
-                    $"EmitTaskSignal references unregistered signal key id {signalKeyId}.");
-            }
-
-            var tasks = _taskRuntime
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
-            tasks.EmitSignal(signalKey);
-        }
-
         public int WeightedPick(int distributionKeyId, int modulationPermille)
         {
             var picks = _rngPickService
@@ -624,44 +608,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             start(dialogueId);
-        }
-
-        public void StartSequence(int sequenceKeyId)
-        {
-            Action<string> start = _startSequence
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.SequencerRuntimeUnavailable");
-            string? sequenceId = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(sequenceKeyId);
-            if (string.IsNullOrWhiteSpace(sequenceId))
-            {
-                throw new InvalidOperationException(
-                    $"StartSequence references unregistered sequence key id {sequenceKeyId}.");
-            }
-
-            start(sequenceId);
-        }
-
-        public void BindStartSequence(Action<string> startSequence)
-        {
-            _startSequence = startSequence ?? throw new ArgumentNullException(nameof(startSequence));
-        }
-
-        public void BindSpeakerEntity(Action<string, Entity> bindSpeakerEntity)
-        {
-            _bindSpeakerEntity = bindSpeakerEntity ?? throw new ArgumentNullException(nameof(bindSpeakerEntity));
-        }
-
-        public void BindSpeakerEntity(int speakerAliasKeyId, Entity entity)
-        {
-            Action<string, Entity> bind = _bindSpeakerEntity
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.DialogueRuntimeUnavailable");
-            string? alias = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(speakerAliasKeyId);
-            if (string.IsNullOrWhiteSpace(alias))
-            {
-                throw new InvalidOperationException(
-                    $"BindSpeakerEntity references unregistered speaker alias key id {speakerAliasKeyId}.");
-            }
-
-            bind(alias, entity);
         }
 
         public ReadOnlySpan<char> ResolvePresentationTextKey(int tokenId)

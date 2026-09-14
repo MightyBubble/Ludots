@@ -181,25 +181,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Start a SequencerRuntime session by sequence definition config key id.
-        /// Requires a bound SequencerRuntime.
-        /// </summary>
-        void StartSequence(int sequenceKeyId)
-        {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.SequencerRuntimeUnavailable");
-        }
-
-        /// <summary>
-        /// Bind a dialogue speaker alias (resolved from config key id) to an entity, so
-        /// world-projected dialogue surfaces resolve the speaker's world position.
-        /// Requires a bound DialogueRuntime.
-        /// </summary>
-        void BindSpeakerEntity(int speakerAliasKeyId, Entity entity)
-        {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.DialogueRuntimeUnavailable");
-        }
-
-        /// <summary>
         /// Resolves a patched PresentationTextCatalog token id to default-locale template characters.
         /// Zero-arg tokens only; argCount&gt;0 fails closed until FormatTextKey lands.
         /// </summary>
@@ -610,16 +591,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// TaskRuntimeService.
         /// </summary>
         void OfferTask(string taskId, Entity scopeHost)
-        {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
-        }
-
-        /// <summary>
-        /// Emits a Task runtime signal by definition key into the TaskRuntimeService signal
-        /// table. Unknown signal keys are tolerated by the runtime (objectives simply stay
-        /// uncompleted); requires a bound TaskRuntimeService.
-        /// </summary>
-        void EmitTaskSignal(int signalKeyId)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
         }

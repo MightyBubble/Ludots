@@ -380,13 +380,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         WriteCollection = 477,
 
         /// <summary>
-        /// Emit a Task runtime signal by definition key (Imm: symbol id) into the
-        /// TaskRuntimeService signal table, completing signal/count objectives that subscribe
-        /// to it. Symmetric to <see cref="OfferTask"/>: OfferTask opens a task, EmitTaskSignal
-        /// feeds its objectives.
-        /// </summary>
-        EmitTaskSignal = 478,
-        /// <summary>
         /// Live pointer screen X (window px) for the authoritative PointerPos action.
         /// Pure float read; fail closed when the input snapshot is unavailable.
         /// </summary>
@@ -396,19 +389,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Pure float read; fail closed when the input snapshot is unavailable.
         /// </summary>
         LoadPointerScreenY = 480,
-
-        /// <summary>
-        /// Start a SequencerRuntime session by sequence definition id (config key), mirroring
-        /// StartDialogue. Requires a bound SequencerRuntime.
-        /// </summary>
-        StartSequence = 481,
-
-        /// <summary>
-        /// Bind the speaker alias named by Symbols[Imm] to the entity in E[A] on the active
-        /// DialogueRuntime, so world-projected dialogue surfaces can resolve the speaker's world
-        /// position. Symmetric story authoring op; requires a bound DialogueRuntime.
-        /// </summary>
-        BindSpeakerEntity = 482,
 
         /// <summary>
         /// Submit one command intent into the order pipeline's per-tick submission buffer

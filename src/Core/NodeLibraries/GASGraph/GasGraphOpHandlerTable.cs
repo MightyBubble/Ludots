@@ -329,7 +329,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.DispatchMapEvent or
                 GraphNodeOp.OfferActivity or
                 GraphNodeOp.OfferTask or
-                GraphNodeOp.EmitTaskSignal or
                 GraphNodeOp.AwaitCallback or
                 GraphNodeOp.ConstText or
                 GraphNodeOp.ConcatText or
@@ -338,8 +337,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SinkPresentationText or
                 GraphNodeOp.LoadTextKey or
                 GraphNodeOp.StartDialogue or
-                GraphNodeOp.StartSequence or
-                GraphNodeOp.BindSpeakerEntity or
                 GraphNodeOp.ScreenPointToGround or
                 GraphNodeOp.ScreenPointToEntity or
                 GraphNodeOp.ScreenRegionToEntities or
@@ -940,10 +937,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.LoadTextKey, HandleLoadTextKey, "LoadTextKey graph opcode.");
             Register(GraphNodeOp.OfferActivity, HandleOfferActivity, "OfferActivity graph opcode.");
             Register(GraphNodeOp.OfferTask, HandleOfferTask, "OfferTask graph opcode.");
-            Register(GraphNodeOp.EmitTaskSignal, HandleEmitTaskSignal, "EmitTaskSignal graph opcode.");
             Register(GraphNodeOp.StartDialogue, HandleStartDialogue, "StartDialogue graph opcode.");
-            Register(GraphNodeOp.StartSequence, HandleStartSequence, "StartSequence graph opcode.");
-            Register(GraphNodeOp.BindSpeakerEntity, HandleBindSpeakerEntity, "BindSpeakerEntity graph opcode.");
         }
 
         // ── Value Ops ──
@@ -1032,16 +1026,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleStartDialogue(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.StartDialogue(ins.Imm);
-        }
-
-        private static void HandleStartSequence(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
-        {
-            s.Api.StartSequence(ins.Imm);
-        }
-
-        private static void HandleBindSpeakerEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
-        {
-            s.Api.BindSpeakerEntity(ins.Imm, s.E[ins.A]);
         }
 
         private static GraphTextHeap RequireTextHeap(ref GraphExecutionState s)
@@ -1475,11 +1459,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             s.Api.OfferTask(registration.Symbols[ins.Imm], s.E[ins.A]);
-        }
-
-        private static void HandleEmitTaskSignal(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
-        {
-            s.Api.EmitTaskSignal(ins.Imm);
         }
 
         private static MapId ResolveMapOfEntity(ref GraphExecutionState s, Entity entity)

@@ -26,14 +26,6 @@
       }
     },
     {
-      "name": "narrative_native",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/narrative_native/NarrativeNativeShowcaseMod",
-        "projectPath": "NarrativeNativeShowcaseMod.csproj"
-      }
-    },
-    {
       "name": "save_panel",
       "target": {
         "type": "path",

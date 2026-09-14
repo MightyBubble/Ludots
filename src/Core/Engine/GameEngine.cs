@@ -2184,8 +2184,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.DialogueRuntime, dialogueRuntime);
             SetService(CoreServiceKeys.SequencerRuntime, sequencerRuntime);
             _gasGraphRuntimeApi?.BindStartDialogue(dialogueId => dialogueRuntime.StartDialogue(dialogueId));
-            _gasGraphRuntimeApi?.BindStartSequence(sequencerRuntime.Start);
-            _gasGraphRuntimeApi?.BindSpeakerEntity(dialogueRuntime.BindEntity);
             _gasGraphRuntimeApi?.BindCollectActiveDialogueChoices(dialogueRuntime.CollectActiveChoiceIds);
             _gasGraphRuntimeApi?.BindResolveDialogueChoiceDisplayText(choiceIntId =>
                 dialogueRuntime.TryResolveChoiceDisplayText(choiceIntId, out string text) ? text : null);
