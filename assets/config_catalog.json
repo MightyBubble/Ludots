@@ -48,7 +48,9 @@
     "Path": "Enums/enums.json",
     "Policy": "ArrayById",
     "IdField": "id",
-    "ArrayAppendFields": [ "members" ],
+    "ArrayAppendFields": [
+      "members"
+    ],
     "AllowEmpty": true
   },
   {
@@ -434,7 +436,10 @@
   },
   {
     "Path": "Input/interaction_context_profiles.json",
-    "Policy": "DeepObject"
+    "Policy": "DeepObject",
+    "ArrayAppendFields": [
+      "profiles"
+    ]
   },
   {
     "Path": "Input/cast_commit_profiles.json",
