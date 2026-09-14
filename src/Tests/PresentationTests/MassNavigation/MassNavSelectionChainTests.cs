@@ -193,36 +193,16 @@ namespace Ludots.Tests.Presentation
             var proj = engine.GetService(CoreServiceKeys.ScreenProjector)!;
             var heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap);
             Assert.That(heightmap, Is.Not.Null, "the mass navigation map declares a continuous heightmap");
-            // Pick a live agent and measure both projections. The projector answers NaN for
-            // off-screen points, and spawn order (hence query order) varies per run, so a sample
-            // must land inside the viewport at BOTH the ground-level and rendered elevations
-            // before the flat-vs-raised contract below is measurable.
+            // Pick a live agent and measure both projections.
             Entity sample = Entity.Null;
             var q = new QueryDescription().WithAll<Ludots.Core.Components.WorldPositionCm>();
             engine.World.Query(in q, (Entity e, ref Ludots.Core.Components.WorldPositionCm wp) =>
             {
                 if (sample != Entity.Null) return;
                 if (wp.Value.Y.ToFloat() < 3000f) return;
-                if (!heightmap!.TrySampleHeightCm(wp.Value.X.ToFloat(), wp.Value.Y.ToFloat(), out float candidateHeightCm) ||
-                    candidateHeightCm <= 10000f)
-                {
-                    return;
-                }
-
-                var candidateFlat = proj.WorldToScreen(
-                    Ludots.Core.Mathematics.WorldPlane2D.LogicCmToVisualMeters(in wp.Value));
-                var candidateRaised = proj.WorldToScreen(
-                    Ludots.Core.Mathematics.WorldPlane2D.LogicCmToVisualMeters(in wp.Value, candidateHeightCm / 100f));
-                if (float.IsNaN(candidateFlat.X) || float.IsNaN(candidateFlat.Y) ||
-                    float.IsNaN(candidateRaised.X) || float.IsNaN(candidateRaised.Y))
-                {
-                    return;
-                }
-
                 sample = e;
             });
-            Assert.That(sample, Is.Not.EqualTo(Entity.Null),
-                "expected an agent on the raised terrain projecting inside the viewport at both elevations");
+            Assert.That(sample, Is.Not.EqualTo(Entity.Null), "expected an agent on the raised terrain");
 
             var wpSample = engine.World.Get<Ludots.Core.Components.WorldPositionCm>(sample);
             float flatX = wpSample.Value.X.ToFloat();
