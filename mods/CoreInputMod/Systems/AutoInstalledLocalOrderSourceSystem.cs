@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using Ludots.Core.Engine;
 
 namespace CoreInputMod.Systems
 {
@@ -33,6 +34,13 @@ namespace CoreInputMod.Systems
 
         /// <summary>Generic per-tick install/binding diagnostic (actor, bind result, command edge).</summary>
         public const string LastUpdateDebugKey = "CoreInputMod.Debug.LocalOrderSource";
+
+        /// <summary>Shared service key; mods with order policy attach through the helper's hooks.</summary>
+        public static readonly Ludots.Core.Scripting.ServiceKey<AutoInstalledLocalOrderSourceSystem> ServiceKey =
+            new("CoreInputMod.AutoLocalOrderSource");
+
+        /// <summary>The install helper whose BeforeOrderSubmit/AfterOrderAccepted hooks mods may set.</summary>
+        public LocalOrderSourceHelper OrderSource => _helper;
 
         public AutoInstalledLocalOrderSourceSystem(
             World world,

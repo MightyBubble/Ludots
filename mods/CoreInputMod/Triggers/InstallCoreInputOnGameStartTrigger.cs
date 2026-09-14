@@ -158,9 +158,9 @@ namespace CoreInputMod.Triggers
 
             OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new InvalidOperationException("[CoreInputMod] Auto local order source requires OrderQueue.");
-            engine.RegisterSystem(
-                new AutoInstalledLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx, sourceModId),
-                SystemGroup.InputCollection);
+            var autoOrderSource = new AutoInstalledLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx, sourceModId);
+            engine.SetService(AutoInstalledLocalOrderSourceSystem.ServiceKey, autoOrderSource);
+            engine.RegisterSystem(autoOrderSource, SystemGroup.InputCollection);
             _ctx.Log($"[CoreInputMod] Auto local order source installed from '{sourceModId}'.");
         }
 

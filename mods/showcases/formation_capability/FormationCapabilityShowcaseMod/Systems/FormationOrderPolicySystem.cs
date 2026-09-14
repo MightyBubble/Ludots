@@ -2,42 +2,40 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using CoreInputMod.Systems;
+using Ludots.Core.Client;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.MassNavigation.Runtime;
-using Ludots.Core.Modding;
-using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using FormationCapabilityShowcaseMod.Runtime;
 
 namespace FormationCapabilityShowcaseMod.Systems;
 
-internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
+/// <summary>
+/// Formation order policy (migration slice 2): the local order mapping installs through the
+/// CoreInputMod auto assembly; this policy system waits for that install and attaches the
+/// control-domain move-order gate (helper BeforeOrderSubmit) plus the formation command actor
+/// expander.
+/// </summary>
+internal sealed class FormationOrderPolicySystem : ISystem<float>
 {
     private readonly World _world;
     private readonly Dictionary<string, object> _globals;
-    private readonly IModContext _context;
-    private readonly LocalOrderSourceHelper _helper;
-    private InputOrderMappingSystem? _mapping;
-    private ControlDomainQuery? _controlDomains;
     private readonly FormationCommandActorExpander _commandActorExpander;
+    private ControlDomainQuery? _controlDomains;
     private int _moveOrderTypeId;
-    private bool _initialized;
+    private bool _attached;
 
-    public FormationCapabilityLocalOrderSourceSystem(
+    public FormationOrderPolicySystem(
         World world,
         Dictionary<string, object> globals,
-        OrderQueue orders,
-        IModContext context,
         int maxMembersPerFormation,
         int maxExpandedActorCount)
     {
         _world = world;
         _globals = globals;
-        _context = context;
-        _helper = new LocalOrderSourceHelper(world, globals, orders);
         _commandActorExpander = new FormationCommandActorExpander(
             world,
             maxMembersPerFormation,
@@ -54,17 +52,18 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        EnsureInitialized();
-        if (_mapping == null)
+        if (_attached ||
+            !_globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) ||
+            mappingObj is not InputOrderMappingSystem mapping ||
+            !_globals.TryGetValue(AutoInstalledLocalOrderSourceSystem.ServiceKey.Name, out var sourceObj) ||
+            sourceObj is not AutoInstalledLocalOrderSourceSystem orderSource)
         {
             return;
         }
 
-        Entity actor = _helper.GetControlledActor();
-        if (_helper.TryBindSoleSeatActor(_mapping, actor))
-        {
-            _mapping.Update(dt);
-        }
+        _attached = true;
+        orderSource.OrderSource.BeforeOrderSubmit = CanSolePossessedSubmitOrder;
+        mapping.SetCommandActorExpander(_commandActorExpander);
     }
 
     public void AfterUpdate(in float dt)
@@ -73,22 +72,6 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
 
     public void Dispose()
     {
-    }
-
-    private void EnsureInitialized()
-    {
-        if (_initialized)
-        {
-            return;
-        }
-
-        _initialized = true;
-        _mapping = _helper.TryCreateMapping(_context);
-        if (_mapping != null)
-        {
-            _helper.BeforeOrderSubmit = CanSolePossessedSubmitOrder;
-            _mapping.SetCommandActorExpander(_commandActorExpander);
-        }
     }
 
     private bool CanSolePossessedSubmitOrder(in Order order)
@@ -139,5 +122,4 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
                _world.IsAlive(local) &&
                (solePossessedRep = local) != Entity.Null;
     }
-
 }

@@ -57,7 +57,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
     private readonly List<PendingObstacleOverlayBinding> _pendingObstacleOverlayBindings = new();
     private ISystem<float>? _scenarioBindingSystem;
     private ISystem<float>? _showcaseStateSystem;
-    private ISystem<float>? _localOrderSourceSystem;
+    private ISystem<float>? _orderPolicySystem;
     private ISystem<float>? _formationOutlinePresentationSystem;
     private ISystem<float>? _obstacleOverlayPresentationSystem;
     private bool _systemsInstalled;
@@ -153,16 +153,11 @@ internal sealed class FormationCapabilityShowcaseRuntime
         FormationCapabilityShowcaseConfig config = EnsureConfig(engine);
         OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
             ?? throw new InvalidOperationException("Formation Capability showcase requires OrderQueue.");
-        Ludots.Core.Modding.IModContext context = _context
-            ?? throw new InvalidOperationException("Formation Capability showcase requires IModContext before installing local order source.");
-
         var scenarioBindingSystem = new FormationCapabilityShowcaseScenarioBindingSystem(engine, this);
         var showcaseStateSystem = new FormationCapabilityShowcaseStateSystem(engine, this);
-        var localOrderSourceSystem = new FormationCapabilityLocalOrderSourceSystem(
+        var orderPolicySystem = new FormationOrderPolicySystem(
             engine.World,
             engine.GlobalContext,
-            orders,
-            context,
             ResolveMaxSlotsPerFormation(config),
             config.OrderBatchCapacity);
         var formationOutlinePresentationSystem = new FormationCapabilityShowcaseFormationOutlinePresentationSystem(engine, this, config);
@@ -174,8 +169,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
             _scenarioBindingSystem = scenarioBindingSystem;
             engine.InsertSystemBeforeRequired<MassNavigationPreSimulationStepSystem>(showcaseStateSystem, SystemGroup.PostMovement);
             _showcaseStateSystem = showcaseStateSystem;
-            engine.RegisterSystem(localOrderSourceSystem, SystemGroup.InputCollection);
-            _localOrderSourceSystem = localOrderSourceSystem;
+            engine.RegisterSystem(orderPolicySystem, SystemGroup.InputCollection);
+            _orderPolicySystem = orderPolicySystem;
             engine.InsertPresentationSystemBefore<PresenterRuleSystem>(formationOutlinePresentationSystem);
             _formationOutlinePresentationSystem = formationOutlinePresentationSystem;
             engine.InsertPresentationSystemBefore<PresenterRuleSystem>(obstacleOverlayPresentationSystem);
@@ -194,7 +189,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         bool hadSystems =
             _scenarioBindingSystem != null ||
             _showcaseStateSystem != null ||
-            _localOrderSourceSystem != null ||
+            _orderPolicySystem != null ||
             _formationOutlinePresentationSystem != null ||
             _obstacleOverlayPresentationSystem != null;
         if (!hadSystems)
@@ -205,7 +200,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
         UnregisterPresentationSystem(engine, ref _obstacleOverlayPresentationSystem, nameof(_obstacleOverlayPresentationSystem));
         UnregisterPresentationSystem(engine, ref _formationOutlinePresentationSystem, nameof(_formationOutlinePresentationSystem));
-        UnregisterSystem(engine, ref _localOrderSourceSystem, SystemGroup.InputCollection, nameof(_localOrderSourceSystem));
+        UnregisterSystem(engine, ref _orderPolicySystem, SystemGroup.InputCollection, nameof(_orderPolicySystem));
         UnregisterSystem(engine, ref _showcaseStateSystem, SystemGroup.PostMovement, nameof(_showcaseStateSystem));
         UnregisterSystem(engine, ref _scenarioBindingSystem, SystemGroup.RuntimeEntityBinding, nameof(_scenarioBindingSystem));
         _systemsInstalled = false;
