@@ -324,6 +324,12 @@ namespace CoreInputMod.Systems
             }
 
             _globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = mapping;
+            mapping.SetQueueModifierProvider(() =>
+            {
+                return _globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) &&
+                       inputObj is IInputActionReader heldInput &&
+                       heldInput.IsDown("QueueModifier");
+            });
             if (config.SkillBar?.Enabled is { } skillBarEnabled)
             {
                 _globals[SkillBarOverlaySystem.SkillBarEnabledKey] = skillBarEnabled;

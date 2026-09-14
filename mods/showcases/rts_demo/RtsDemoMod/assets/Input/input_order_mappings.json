@@ -5,7 +5,9 @@
       "actionId": "SkillQ",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 0 },
+      "argsTemplate": {
+        "i0": 0
+      },
       "requireTarget": false,
       "targetType": "Position",
       "isSkillMapping": true,
@@ -15,7 +17,9 @@
       "actionId": "SkillW",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 1 },
+      "argsTemplate": {
+        "i0": 1
+      },
       "requireTarget": false,
       "targetType": "Entity",
       "isSkillMapping": true,
@@ -25,7 +29,9 @@
       "actionId": "SkillE",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 2 },
+      "argsTemplate": {
+        "i0": 2
+      },
       "requireTarget": false,
       "targetType": "None",
       "isSkillMapping": true,
@@ -35,7 +41,9 @@
       "actionId": "SkillR",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 3 },
+      "argsTemplate": {
+        "i0": 3
+      },
       "requireTarget": false,
       "targetType": "Position",
       "isSkillMapping": true,
@@ -59,7 +67,9 @@
             "match": {
               "abilitySlotIndex": 2,
               "abilityIdKeySuffix": ".Train",
-              "blockedAnyTags": ["Progression.Rts.WarpGate"]
+              "blockedAnyTags": [
+                "Progression.Rts.WarpGate"
+              ]
             }
           },
           {
@@ -86,10 +96,22 @@
     "mode": "Grid",
     "assignment": "PreserveRelative",
     "spacingCm": 140,
-    "orderTypeKeys": ["moveTo", "attackTarget"]
+    "orderTypeKeys": [
+      "moveTo",
+      "attackTarget"
+    ]
   },
   "userOverrides": {
     "enabled": true,
     "persistPath": "user://RtsDemoMod/input_preferences.json"
+  },
+  "skillBar": {
+    "enabled": true,
+    "keyLabels": [
+      "Q",
+      "W",
+      "E",
+      "R"
+    ]
   }
 }

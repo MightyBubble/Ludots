@@ -56,14 +56,6 @@ namespace InteractionShowcaseMod.Triggers
             engine.GlobalContext[InteractionShowcaseStressTelemetry.GlobalKey] = _stressTelemetry;
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var ordersObj) &&
-                ordersObj is OrderQueue orders)
-            {
-                engine.RegisterSystem(
-                    new InteractionShowcaseLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx),
-                    SystemGroup.InputCollection);
-            }
-
             if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue spawnQueue)
             {
                 throw new InvalidOperationException("InteractionShowcaseMod requires RuntimeEntitySpawnQueue for stress validation.");
