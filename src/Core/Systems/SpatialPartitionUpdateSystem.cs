@@ -79,8 +79,8 @@ namespace Ludots.Core.Systems
             ResetSuspendedMemberships();
             AddMissingSpatialRefs();
 
-            MoveTracked(in _trackedWithoutPreviousQuery, gateOnCurrentCell: false);
-            MoveTracked(in _trackedWithPreviousQuery, gateOnCurrentCell: true);
+            MoveTracked(in _trackedWithoutPreviousQuery, gateOnPreviousPosition: false);
+            MoveTracked(in _trackedWithPreviousQuery, gateOnPreviousPosition: true);
         }
 
         public SpatialMembershipValidationResult ValidateSynchronize(Entity entity)
@@ -415,23 +415,24 @@ namespace Ludots.Core.Systems
             }
         }
 
-        private void MoveTracked(in QueryDescription queryDescription, bool gateOnCurrentCell)
+        private void MoveTracked(in QueryDescription queryDescription, bool gateOnPreviousPosition)
         {
             foreach (ref var chunk in World.Query(in queryDescription))
             {
                 ref var entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
                 var cellRefs = chunk.GetSpan<SpatialCellRef>();
+                var previouses = gateOnPreviousPosition ? chunk.GetSpan<PreviousWorldPositionCm>() : default;
 
                 foreach (var index in chunk)
                 {
                     ref SpatialCellRef cellRef = ref cellRefs[index];
-                    // Active 且位置仍在已挂格内才免重挂。判据必须是格身份而非 Previous==Current
-                    // 快照：位置写者（massnav / GAS 位移）可能晚于本系统调度，快照判据恒真，
-                    // 移动实体的格籍会冻结在初始格、空间查询全数落空。
-                    if (gateOnCurrentCell &&
+                    // Previous == Current marks an unmoved tick for Active memberships only:
+                    // Uninitialized memberships (e.g. resumed suspended entities) must still be
+                    // (re)added even when the position did not change.
+                    if (gateOnPreviousPosition &&
                         cellRef.State == SpatialMembershipState.Active &&
-                        IsInsideCell(positions[index].Value.ToWorldCmInt2(), cellRef.CellX, cellRef.CellY, _spec.GridCellSizeCm))
+                        positions[index].Value == previouses[index].Value)
                     {
                         continue;
                     }
