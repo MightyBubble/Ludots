@@ -2083,6 +2083,23 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "QueryFilterKnowledgeVisible",
+      "authorableKinds": [
+        "Query",
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryFilterKnowledgeVisible",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterKnowledgeVisible_KeepsOnlyKnownCandidatesInOrder"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "QueryFilterLayer",
       "authorableKinds": [
         "Derived",

@@ -9904,6 +9904,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SubmitCast/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterKnowledgeVisible",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterKnowledgeVisibleEntryMod",
+      "projectPath": "CapabilityStandardGraphOpQueryFilterKnowledgeVisibleEntryMod.csproj",
+      "title": "认知筛只留看得见的",
+      "summary": "名单先问观察者认不认识：认识的留下，不认识的当场划掉，顺序不变。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "QueryFilterKnowledgeVisible"
+      ],
+      "binding": "capability_standard_graph_op_QueryFilterKnowledgeVisible",
+      "preset": "capability_standard_graph_op_QueryFilterKnowledgeVisible_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryFilterKnowledgeVisible.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryFilterKnowledgeVisible",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryFilterKnowledgeVisible/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryFilterKnowledgeVisible/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

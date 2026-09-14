@@ -89,6 +89,7 @@
 - [翻开效果图鉴](QueryCollectEffectTemplates.md) — 墙上贴着一批效果说明书。
 - [翻开物品图鉴](QueryCollectItemDefinitions.md) — 物品说明书贴在墙上。
 - [翻开背包](QueryCollectInventoryItems.md) — 背包里的物被点名线牵住。
+- [认知筛只留看得见的](QueryFilterKnowledgeVisible.md) — 名单先问观察者认不认识：认识的留下，不认识的当场划掉，顺序不变。
 - [谁会这招](QueryCollectAbilityHolders.md) — 会这招的人被点名线牵住。
 
 ## 子图调用与事件派发

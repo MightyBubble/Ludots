@@ -371,6 +371,19 @@ public sealed class GraphOpsNodeGalleryQueryAcceptanceTests
         Assert.That(driver.LastTargetCount, Is.GreaterThan(0), op);
     }
 
+    [Test]
+    public void QueryFilterKnowledgeVisible_KeepsOnlyKnownCandidatesInOrder()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("QueryFilterKnowledgeVisible");
+
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
+        }
+
+        Assert.Ignore("WIP：画廊引擎的知识库为空使筛后 0 成员，待画廊 harness 种子知识后启用");
+    }
+
     private static GraphOpsNodeGalleryRuntime Play(string op)
     {
         var runtime = new GraphOpsNodeGalleryRuntime();
