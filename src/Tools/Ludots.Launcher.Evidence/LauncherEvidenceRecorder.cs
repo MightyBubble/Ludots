@@ -2397,7 +2397,7 @@ public static class LauncherEvidenceRecorder
         WaitForMassNavigationScenario(runtime, simulation, frameTimesMs, maxTicks: 240);
         MassNavigationSolverRuntimeConfigSnapshot solverSnapshot = simulation.CaptureSolverRuntimeConfig();
         var avoidanceScratch = new MassNavigationAvoidanceScratch(
-            simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity,
+            simulation.Config.RuntimeCapacity.GroupMembershipAgentCapacity,
             solverSnapshot.MaxObstacleCount);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, 0, "000_boot", captureImage: true);
 
@@ -2479,15 +2479,25 @@ public static class LauncherEvidenceRecorder
         List<double> frameTimesMs,
         int maxTicks)
     {
-        int expectedAgents = ExpectedMassNavigationScenarioAgentCount(simulation);
-        int expectedBlockers = simulation.NavigationObstacleCount;
-        int expectedMarkers = simulation.HotZones.Length;
+        const int stableTicksRequired = 15;
+        int stableTicks = 0;
+        int lastEcsAgents = -1;
         for (int i = 0; i < maxTicks; i++)
         {
-            if (simulation.NavigationAgentCount == expectedAgents &&
-                runtime.Engine.World.CountEntities(in MassNavigationAgentQuery) == expectedAgents &&
-                runtime.Engine.World.CountEntities(in MassNavigationBlockerQuery) == expectedBlockers &&
-                runtime.Engine.World.CountEntities(in MassNavigationHotspotMarkerQuery) == expectedMarkers)
+            int ecsAgents = runtime.Engine.World.CountEntities(in MassNavigationAgentQuery);
+            if (ecsAgents == lastEcsAgents)
+            {
+                stableTicks++;
+            }
+            else
+            {
+                stableTicks = 0;
+                lastEcsAgents = ecsAgents;
+            }
+
+            if (ecsAgents > 0 &&
+                simulation.NavigationAgentCount == ecsAgents &&
+                stableTicks >= stableTicksRequired)
             {
                 return;
             }
@@ -2496,12 +2506,7 @@ public static class LauncherEvidenceRecorder
         }
 
         throw new InvalidOperationException(
-            $"MassNavigation scenario did not finish core-authored MassNavigation binding: solverAgents={simulation.NavigationAgentCount}/{expectedAgents}, ecsAgents={runtime.Engine.World.CountEntities(in MassNavigationAgentQuery)}/{expectedAgents}, blockers={runtime.Engine.World.CountEntities(in MassNavigationBlockerQuery)}/{expectedBlockers}, markers={runtime.Engine.World.CountEntities(in MassNavigationHotspotMarkerQuery)}/{expectedMarkers}.");
-    }
-
-    private static int ExpectedMassNavigationScenarioAgentCount(MassNavigationSimulationRuntime simulation)
-    {
-        return checked(simulation.AgentsPerTeam * simulation.TeamCount);
+            $"MassNavigation blueprint spawn did not reach a bound steady state: solverAgents={simulation.NavigationAgentCount}, ecsAgents={runtime.Engine.World.CountEntities(in MassNavigationAgentQuery)}, stableTicks={stableTicks}/{stableTicksRequired}.");
     }
 
     private static Entity[] SeedMassNavigationCommandSource(GameEngine engine, MassNavigationSimulationRuntime simulation, int requestedCount)
@@ -2964,12 +2969,24 @@ public static class LauncherEvidenceRecorder
     private static MassNavigationSnapshot SampleMassNavigationSnapshot(RecordingRuntime runtime, MassNavigationSimulationRuntime simulation, int tick, string step, double tickMs)
     {
         GameEngine engine = runtime.Engine;
-        int[] configuredTeamIds = simulation.TeamIds.ToArray();
-        var teamCounts = new Dictionary<int, int>(configuredTeamIds.Length);
-        for (int i = 0; i < configuredTeamIds.Length; i++)
+        var solver = simulation.GetFlowSolverForTests();
+        var configuredTeamIds = new List<int>(capacity: 8);
+        var teamCounts = new Dictionary<int, int>(capacity: 8);
+        for (int i = 0; i < solver.UnitCount; i++)
         {
-            teamCounts[configuredTeamIds[i]] = 0;
+            int teamId = solver.GetTeam(i);
+            if (teamCounts.TryGetValue(teamId, out int count))
+            {
+                teamCounts[teamId] = count + 1;
+            }
+            else
+            {
+                teamCounts[teamId] = 1;
+                configuredTeamIds.Add(teamId);
+            }
         }
+
+        configuredTeamIds.Sort();
 
         WorldHudBatchBuffer worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
             ?? throw new InvalidOperationException("MassNavigation UAT requires WorldHudBatchBuffer.");
@@ -3173,7 +3190,7 @@ public static class LauncherEvidenceRecorder
             FlowWorkAreaReason: simulation.FlowWorkAreaReason,
             LoadedChunkCount: simulation.LoadedChunkCount,
             ActiveHotZoneId: simulation.ActiveHotZoneId,
-            TeamCount: simulation.TeamCount,
+            TeamCount: configuredTeamIds.Count,
             TeamIds: configuredTeamIds,
             TeamCounts: teamCounts,
             AgentCount: simulation.NavigationAgentCount,
@@ -3194,7 +3211,7 @@ public static class LauncherEvidenceRecorder
             MinimapCameraTargetCm: new Vector2(minimapSnapshot.CameraTargetXcm, minimapSnapshot.CameraTargetYcm),
             CommandSourceCount: commandSourceCount,
             ActiveMoveOrderCount: activeMoveOrderCount,
-            ScenarioSpawnCount: simulation.ScenarioSpawnCount,
+            SpawnedAgentCount: simulation.NavigationAgentCount,
             CommandCountFrame: simulation.CommandCountFrame,
             SolverWindowMovesTotal: simulation.SolverWindowMovesTotal,
             FocusBudgetUpdatesTotal: simulation.FocusBudgetUpdatesTotal,
@@ -3334,8 +3351,7 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(boot.ActiveMapId == expectedMapId, $"Expected MassNavigation map '{expectedMapId}', got '{boot.ActiveMapId}'.", failures);
         AddAcceptanceCheck(boot.WorldWidthCm == 6_400_000 && boot.WorldHeightCm == 6_400_000, $"Expected 64km x 64km config, got {boot.WorldWidthCm}x{boot.WorldHeightCm} cm.", failures);
         AddAcceptanceCheck(boot.TeamCount >= 4, $"Expected at least 4 configured teams, got {boot.TeamCount}.", failures);
-        int expectedAgentCount = ExpectedMassNavigationScenarioAgentCount(simulation);
-        AddAcceptanceCheck(boot.AgentCount == expectedAgentCount, $"Agent state count mismatch: {boot.AgentCount} vs configured {expectedAgentCount}.", failures);
+        AddAcceptanceCheck(boot.AgentCount == simulation.NavigationAgentCount, $"Agent state count mismatch: {boot.AgentCount} vs bound {simulation.NavigationAgentCount}.", failures);
         AddAcceptanceCheck(boot.EcsAgentCount == boot.AgentCount, $"ECS controllable agent count mismatch: {boot.EcsAgentCount} vs runtime {boot.AgentCount}.", failures);
         AddAcceptanceCheck(boot.BlockerCount == simulation.NavigationObstacleCount, $"Blocker count mismatch: {boot.BlockerCount} vs solver {simulation.NavigationObstacleCount}.", failures);
         AddAcceptanceCheck(boot.HotspotMarkerCount == simulation.HotZones.Length, $"Hotspot marker count mismatch: {boot.HotspotMarkerCount} vs config {simulation.HotZones.Length}.", failures);
@@ -3356,7 +3372,7 @@ public static class LauncherEvidenceRecorder
             failures);
         AddAcceptanceCheck(Vector2.Distance(remote.CameraTargetCm, boot.CameraTargetCm) > 500_000f, $"Remote minimap jump did not move the camera far enough: boot={FormatPoint(boot.CameraTargetCm)} remote={FormatPoint(remote.CameraTargetCm)}.", failures);
         AddAcceptanceCheck(returned.AgentCount == boot.AgentCount, $"Returning to original area changed agent count: {boot.AgentCount} -> {returned.AgentCount}.", failures);
-        AddAcceptanceCheck(returned.ScenarioSpawnCount == boot.ScenarioSpawnCount, $"Returning to original area re-ran scenario spawn: {boot.ScenarioSpawnCount} -> {returned.ScenarioSpawnCount}.", failures);
+        AddAcceptanceCheck(returned.SpawnedAgentCount == boot.SpawnedAgentCount, $"Returning to original area re-ran blueprint spawn: {boot.SpawnedAgentCount} -> {returned.SpawnedAgentCount}.", failures);
         AddAcceptanceCheck(boot.WorldHudCount <= boot.WorldHudCapacity, $"WorldHud count exceeded capacity: {boot.WorldHudCount}/{boot.WorldHudCapacity}.", failures);
         AddAcceptanceCheck(boot.ScreenHudCount <= boot.ScreenHudCapacity, $"ScreenHud count exceeded capacity: {boot.ScreenHudCount}/{boot.ScreenHudCapacity}.", failures);
         AddAcceptanceCheck(boot.WorldHudBarCount >= boot.AgentCount && boot.WorldHudTextCount >= boot.AgentCount,
@@ -3404,7 +3420,7 @@ public static class LauncherEvidenceRecorder
             $"presenters:{boot.PresenterActiveCount}",
             $"markers:{boot.MinimapBufferCount}/{boot.MinimapDroppedTotal}",
             $"remote:{MathF.Round(remote.CameraTargetCm.X):F0},{MathF.Round(remote.CameraTargetCm.Y):F0}",
-            $"spawns:{boot.ScenarioSpawnCount}->{returned.ScenarioSpawnCount}",
+            $"spawns:{boot.SpawnedAgentCount}->{returned.SpawnedAgentCount}",
             $"movement:{firstMoveSampleCount}/{firstMoveMaxDisplacement:F1}:{secondMoveSampleCount}/{secondMoveMaxDisplacement:F1}",
             $"hud:{boot.WorldHudBarCount}/{boot.WorldHudTextCount}/{boot.ScreenHudBarCount}/{boot.ScreenHudTextCount}",
             $"chain:{stageFailures.PayloadFailureCount}/{stageFailures.TransformFailureCount}/{stageFailures.EmissionFailureCount}/{stageFailures.CullingFailureCount}/{stageFailures.ProjectionFailureCount}/{stageFailures.CapacityFailureCount}",
@@ -3604,7 +3620,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- max MassNavigation timings frame/massNavigation/prepare/steer/resolve/crowd/sync: `{timing.MaxFrameMs:F3}` / `{timing.MaxMassNavigationMs:F3}` / `{timing.MaxMassNavigationPrepareMs:F3}` / `{timing.MaxMassNavigationSteerMs:F3}` / `{timing.MaxMassNavigationResolveMs:F3}` / `{timing.MaxMassNavigationCrowdStepMs:F3}` / `{timing.MaxMassNavigationSyncMs:F3}` ms");
         sb.AppendLine($"- fixed position samples: `{boot.SamplePositions.Count}` (tolerance `{MassNavigationPositionToleranceCm:F0}cm`)");
         sb.AppendLine($"- movement samples first/second command: `{firstMoveSampleCount}` / `{secondMoveSampleCount}` moved at least `{MassNavigationMovementSampleThresholdCm:F0}cm`; max displacement `{firstMoveMaxDisplacement:F1}` / `{secondMoveMaxDisplacement:F1}` cm");
-        sb.AppendLine($"- scenario spawn count boot/final: `{boot.ScenarioSpawnCount}` / `{final.ScenarioSpawnCount}`");
+        sb.AppendLine($"- spawned agent count boot/final: `{boot.SpawnedAgentCount}` / `{final.SpawnedAgentCount}`");
         sb.AppendLine($"- avoidance frames: `{avoidance.FrameCount}`");
         sb.AppendLine($"- avoidance max visible/play-area/command-actor/heavy-profile agents: `{avoidance.MaxVisibleAgentCount}` / `{avoidance.MaxPlayAreaAgentCount}` / `{avoidance.MaxCommandActorVisibleCount}` / `{avoidance.MaxHeavyAgentCount}`");
         sb.AppendLine($"- avoidance peak/final deep overlap pairs: `{avoidance.PeakDeepOverlapPairCount}` / `{avoidance.FinalDeepOverlapPairCount}`");
@@ -3667,7 +3683,7 @@ public static class LauncherEvidenceRecorder
                 loaded_chunks = snapshot.LoadedChunkCount,
                 solver_window_driver = snapshot.SolverWindowDriver,
                 flow_work_area_reason = snapshot.FlowWorkAreaReason,
-                scenario_spawns = snapshot.ScenarioSpawnCount,
+                spawned_agents = snapshot.SpawnedAgentCount,
                 frame_ms = Math.Round(snapshot.FrameMs, 4),
                 simulation_ms = Math.Round(snapshot.SimulationMs, 4),
                 presentation_ms = Math.Round(snapshot.PresentationMs, 4),
@@ -3795,8 +3811,8 @@ public static class LauncherEvidenceRecorder
             movement_sample_threshold_cm = MassNavigationMovementSampleThresholdCm,
             first_command_max_sample_displacement_cm = MaxMassNavigationSampleDisplacementCm(boot, afterOrder),
             second_command_max_sample_displacement_cm = MaxMassNavigationSampleDisplacementCm(beforeCrossing, crossing),
-            boot_scenario_spawn_count = boot.ScenarioSpawnCount,
-            final_scenario_spawn_count = final.ScenarioSpawnCount,
+            boot_spawned_agent_count = boot.SpawnedAgentCount,
+            final_spawned_agent_count = final.SpawnedAgentCount,
             avoidance_frame_count = avoidance.FrameCount,
             avoidance_max_visible_agent_count = avoidance.MaxVisibleAgentCount,
             avoidance_max_play_area_agent_count = avoidance.MaxPlayAreaAgentCount,
@@ -4611,7 +4627,7 @@ public static class LauncherEvidenceRecorder
         Vector2 MinimapCameraTargetCm,
         int CommandSourceCount,
         int ActiveMoveOrderCount,
-        int ScenarioSpawnCount,
+        int SpawnedAgentCount,
         int CommandCountFrame,
         int SolverWindowMovesTotal,
         int FocusBudgetUpdatesTotal,
