@@ -310,6 +310,13 @@ namespace Ludots.Core.Presentation.Systems
             float x = MathF.Round(screen.X - item.Width * 0.5f);
             float y = MathF.Round(screen.Y);
 
+            // ProjectWorldToScreenFast 以 NaN 表示屏幕外/相机后；不得放行到保留 upsert——
+            // (int)NaN 强转得 0 会被边界剔除误判为屏幕内，NaN 位置随后毒化保留槽。
+            if (!float.IsFinite(x) || !float.IsFinite(y))
+            {
+                return;
+            }
+
             int ix = (int)x;
             int iy = (int)y;
             int iw = (int)item.Width;
