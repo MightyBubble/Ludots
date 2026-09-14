@@ -1,0 +1,29 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.entityquery.battle",
+      "activeCollectionKey": "collection.command.source",
+      "commandIntentId": "intent.command.default",
+      "bindings": [
+        "Select.Begin",
+        "Select.End"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.entityquery.select_begin"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.entityquery.selecting",
+      "bindings": [
+        "Select.End"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.entityquery.select_commit"
+        }
+      ]
+    }
+  ]
+}
