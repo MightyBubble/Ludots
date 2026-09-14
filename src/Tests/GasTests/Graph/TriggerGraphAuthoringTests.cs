@@ -674,8 +674,8 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.ReadMapVarInt), Is.True);
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Script, GraphNodeOp.ReadMapVarInt), Is.True);
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Effect, GraphNodeOp.ReadMapVarInt), Is.False);
-            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.ApplyEffectTemplate), Is.False,
-                "effect-transactional ops stay out of the TriggerGraph dialect");
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.ApplyEffectTemplate), Is.True,
+                "blueprint-driven showcase behavior applies effect templates directly from the TriggerGraph dialect; effect requests stay transactional through the effect request queue");
 
             // #1106: entry payload reads are the TriggerGraph-only extension of the mirror;
             // they read the mount's entry capture, which no other kind hosts.
@@ -699,6 +699,10 @@ namespace Ludots.Tests.Gas.Graph
                 GraphNodeOp.LoadPlacedEntity,
                 GraphNodeOp.LoadPlacedRegion,
                 GraphNodeOp.LoadPlacedAnchor,
+                // Named carve-out: effect application is the blueprint behavior verb
+                // (blueprint spawn / showcase behavior apply effect templates directly);
+                // it stays Effect-dialect, not a Script op.
+                GraphNodeOp.ApplyEffectTemplate,
                 // Named carve-outs: the aimsource kernel family and the collection-query
                 // seed/filter family join the TriggerGraph authoring face per op (the
                 // input-event graphs' read-side vocabulary); they stay Query-authorable,

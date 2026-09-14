@@ -2144,7 +2144,7 @@ namespace Ludots.Tests.GAS
             simulation.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(-25_000, -25_000, 50_000, 50_000), 100),
                 new WorldGridLoadedChunks(
-                    simulation.WorldConfig.StreamingChunkSizeCm,
+                    chunkSizeCm: RoadBoardStreamingChunkSizeCm,
                     simulation.Config.RuntimeCapacity.LoadedChunkCapacity));
 
             Vector2 worldPosition = world.Get<WorldPositionCm>(actor).Value.ToVector2();
@@ -2185,10 +2185,13 @@ namespace Ludots.Tests.GAS
             simulation.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(-25_000, -25_000, 50_000, 50_000), 100),
                 new WorldGridLoadedChunks(
-                    simulation.WorldConfig.StreamingChunkSizeCm,
+                    chunkSizeCm: RoadBoardStreamingChunkSizeCm,
                     simulation.Config.RuntimeCapacity.LoadedChunkCapacity));
             return simulation;
         }
+
+        /// <summary>道路图板 64 cells × 100cm 的流送 chunk；chunk 尺寸由板持有，config 缺席为 0。</summary>
+        private const int RoadBoardStreamingChunkSizeCm = 6_400;
 
         private static MassNavigationConfig CreateRoadMassConfigForTests()
         {

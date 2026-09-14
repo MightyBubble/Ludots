@@ -294,7 +294,8 @@
     {
       "op": "ApplyEffectTemplate",
       "authorableKinds": [
-        "Effect"
+        "Effect",
+        "TriggerGraph"
       ],
       "showcaseId": "capability_standard_graph_op_ApplyEffectTemplate",
       "status": "covered",
