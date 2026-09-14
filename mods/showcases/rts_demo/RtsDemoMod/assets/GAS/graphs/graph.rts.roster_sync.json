@@ -1,0 +1,75 @@
+[
+  {
+    "id": "graph.rts.roster_sync",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_heartbeat",
+        "event": "MapHeartbeat",
+        "start": "map_units",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "map_units",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write_roster",
+        "op": "WriteCollection",
+        "collectionKey": "rts.selectable"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "map_units",
+        "fromPort": "next",
+        "to": "replace"
+      },
+      {
+        "from": "replace",
+        "fromPort": "next",
+        "to": "write_roster"
+      },
+      {
+        "from": "write_roster",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "replace",
+        "fromPort": "value",
+        "to": "write_roster",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

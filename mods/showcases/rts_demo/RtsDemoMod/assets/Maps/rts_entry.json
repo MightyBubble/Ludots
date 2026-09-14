@@ -288,5 +288,6 @@
       }
     ]
   },
-  "ContinuousHeightmapAsset": "assets/terrain/rts_flat.height"
+  "ContinuousHeightmapAsset": "assets/terrain/rts_flat.height",
+  "HeartbeatIntervalTicks": 6
 }

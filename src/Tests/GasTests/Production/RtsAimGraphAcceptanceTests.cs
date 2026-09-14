@@ -156,6 +156,59 @@ public sealed class RtsAimGraphAcceptanceTests
             "取消不得产生施法令（fail-closed，无静默提交）");
     }
 
+    [Test]
+    public void SelectionChain_LeftBoxSelectWritesCommandSourceViaGraphs()
+    {
+        string repoRoot = FindRepoRoot();
+        var backend = new HeadlessBackend();
+        using GameEngine engine = CreateEngine(repoRoot, backend);
+        engine.LoadMap(new MapLoadRequest(
+            new MapId(MapId),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+        TickUntil(engine, 60, () => engine.CurrentMapSession != null);
+
+        Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+        var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            as EntityCollectionStore
+            ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
+        int rosterKeyIdWarm = store.KeyRegistry.GetId("rts.selectable");
+        TickUntil(engine, 60, () =>
+            rosterKeyIdWarm > 0 &&
+            store.TryGet(rep, rosterKeyIdWarm, out var rh2) &&
+            store.TryGetView(rh2, out var rv2) &&
+            rv2.Count > 0);
+
+        int commandSourceKeyId = store.KeyRegistry.GetId("collection.command.source");
+        Assert.That(commandSourceKeyId, Is.GreaterThan(0), "collection.command.source 键已注册（battle profile 声明）");
+
+        // ── 左键拖框：press 起角+激活 selecting context，release 提交命中到命令源集合 ──
+        backend.SetMousePosition(new Vector2(0f, 0f));
+        backend.SetButton("<Mouse>/LeftButton", true);
+        TickUntil(engine, 30, () =>
+            engine.World.TryGet<InteractionContextInstances>(rep, out InteractionContextInstances instances) &&
+            instances.Count > 0);
+        Assert.That(
+            engine.World.TryGet<InteractionContextInstances>(rep, out InteractionContextInstances boxing) &&
+            boxing.Count > 0,
+            "按下激活 selecting context（父=战斗）");
+
+        backend.SetMousePosition(new Vector2(6000f, 6000f));
+        Tick(engine, 2);
+        backend.SetButton("<Mouse>/LeftButton", false);
+        TickUntil(engine, 30, () =>
+            !engine.World.TryGet<InteractionContextInstances>(rep, out InteractionContextInstances cleared) ||
+            cleared.Count == 0);
+        Tick(engine, 4);
+        Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0),
+            string.Join(" | ", engine.TriggerManager.Errors));
+
+        Assert.That(
+            store.TryGet(rep, commandSourceKeyId, out EntityCollectionHandle handle) &&
+            store.TryGetView(handle, out EntityCollectionView view) &&
+            view.Count > 0,
+            "抬起后框选命中写入命令源集合（图路径，采集系统对 rts 已退役）");
+    }
+
     private static Entity SpawnOwnedUnit(GameEngine engine)
     {
         // rts_entry 出生表里已有玩家单位；取一个带 PlayerOwner 的活体作为活跃集成员

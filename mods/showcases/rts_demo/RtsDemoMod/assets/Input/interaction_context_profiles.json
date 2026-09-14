@@ -4,12 +4,28 @@
       "id": "interaction.context.rts.battle",
       "inputContextId": "Rts_Gameplay",
       "bindings": [
-        "Rts.AimConfirm",
-        "Rts.AimCancel"
+        "Rts.AimCancel",
+        "Rts.SelectBegin",
+        "Rts.SelectEnd"
       ],
       "triggers": [
         {
           "trigger": "graph.rts.aim_q_begin"
+        },
+        {
+          "trigger": "graph.rts.cast_e"
+        },
+        {
+          "trigger": "graph.rts.cast_r_begin"
+        },
+        {
+          "trigger": "graph.rts.cast_w_begin"
+        },
+        {
+          "trigger": "graph.rts.roster_sync"
+        },
+        {
+          "trigger": "graph.rts.select_begin"
         }
       ],
       "activeCollectionKey": "collection.command.source"
@@ -17,7 +33,7 @@
     {
       "id": "interaction.context.rts.aim",
       "bindings": [
-        "Rts.AimConfirm",
+        "Rts.SelectBegin",
         "Rts.AimCancel"
       ],
       "triggers": [
@@ -26,6 +42,47 @@
         },
         {
           "trigger": "graph.rts.aim_cancel"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.rts.aim_r",
+      "bindings": [
+        "Rts.SelectBegin",
+        "Rts.AimCancel"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.rts.aim_r_confirm"
+        },
+        {
+          "trigger": "graph.rts.aim_r_cancel"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.rts.aim_w",
+      "bindings": [
+        "Rts.SelectBegin",
+        "Rts.AimCancel"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.rts.aim_w_confirm"
+        },
+        {
+          "trigger": "graph.rts.aim_w_cancel"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.rts.selecting",
+      "bindings": [
+        "Rts.SelectEnd"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.rts.select_commit"
         }
       ]
     }

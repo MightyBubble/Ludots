@@ -36,14 +36,20 @@
       "type": "Button"
     },
     {
-      "id": "Rts.AimConfirm",
-      "name": "Rts_AimConfirm",
-      "type": "Button"
-    },
-    {
       "id": "Rts.AimCancel",
       "name": "Rts_AimCancel",
       "type": "Button"
+    },
+    {
+      "id": "Rts.SelectBegin",
+      "name": "Rts_SelectBegin",
+      "type": "Button"
+    },
+    {
+      "id": "Rts.SelectEnd",
+      "name": "Rts_SelectEnd",
+      "type": "Button",
+      "firesOn": "release"
     }
   ],
   "contexts": [
@@ -69,10 +75,6 @@
           "path": "<Keyboard>/r"
         },
         {
-          "actionId": "CommandSourceAcquire",
-          "path": "<Mouse>/LeftButton"
-        },
-        {
           "actionId": "Command",
           "path": "<Mouse>/RightButton"
         },
@@ -81,12 +83,16 @@
           "path": "<Keyboard>/s"
         },
         {
-          "actionId": "Rts.AimConfirm",
+          "actionId": "Rts.AimCancel",
+          "path": "<Keyboard>/escape"
+        },
+        {
+          "actionId": "Rts.SelectBegin",
           "path": "<Mouse>/LeftButton"
         },
         {
-          "actionId": "Rts.AimCancel",
-          "path": "<Keyboard>/escape"
+          "actionId": "Rts.SelectEnd",
+          "path": "<Mouse>/LeftButton"
         }
       ]
     }

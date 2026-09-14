@@ -1,6 +1,6 @@
 [
   {
-    "id": "graph.rts.aim_confirm",
+    "id": "graph.rts.aim_r_confirm",
     "kind": "TriggerGraph",
     "entries": [
       {
@@ -30,7 +30,7 @@
       {
         "id": "slot",
         "op": "ConstInt",
-        "intValue": 0
+        "intValue": 3
       },
       {
         "id": "submit",
@@ -45,7 +45,7 @@
       {
         "id": "deactivate_aim",
         "op": "DeactivateContext",
-        "context": "interaction.context.rts.aim"
+        "context": "interaction.context.rts.aim_r"
       },
       {
         "id": "ok",

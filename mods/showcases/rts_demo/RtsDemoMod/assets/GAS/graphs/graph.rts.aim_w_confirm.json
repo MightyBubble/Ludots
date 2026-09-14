@@ -1,16 +1,21 @@
 [
   {
-    "id": "graph.rts.aim_confirm",
+    "id": "graph.rts.aim_w_confirm",
     "kind": "TriggerGraph",
     "entries": [
       {
         "label": "on_aim_confirm",
         "action": "Rts.SelectBegin",
-        "start": "pointer_x",
+        "start": "rep",
         "refire": "restart"
       }
     ],
     "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
       {
         "id": "pointer_x",
         "op": "LoadPointerScreenX"
@@ -20,17 +25,22 @@
         "op": "LoadPointerScreenY"
       },
       {
-        "id": "to_ground",
+        "id": "candidates",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "ground",
         "op": "ScreenPointToGround"
       },
       {
-        "id": "ground_branch",
-        "op": "JumpIfFalse"
+        "id": "pick",
+        "op": "ScreenPointToEntity",
+        "pickRadiusPx": 32
       },
       {
         "id": "slot",
         "op": "ConstInt",
-        "intValue": 0
+        "intValue": 1
       },
       {
         "id": "submit",
@@ -38,14 +48,9 @@
         "orderTypeKey": "castAbility"
       },
       {
-        "id": "rep",
-        "op": "LoadEntryPayloadEntity",
-        "payloadKey": "MapTrigger.Rep"
-      },
-      {
         "id": "deactivate_aim",
         "op": "DeactivateContext",
-        "context": "interaction.context.rts.aim"
+        "context": "interaction.context.rts.aim_w"
       },
       {
         "id": "ok",
@@ -59,6 +64,11 @@
     ],
     "controlEdges": [
       {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "pointer_x"
+      },
+      {
         "from": "pointer_x",
         "fromPort": "next",
         "to": "pointer_y"
@@ -66,22 +76,22 @@
       {
         "from": "pointer_y",
         "fromPort": "next",
-        "to": "to_ground"
+        "to": "candidates"
       },
       {
-        "from": "to_ground",
+        "from": "candidates",
         "fromPort": "next",
-        "to": "ground_branch"
+        "to": "ground"
       },
       {
-        "from": "ground_branch",
-        "fromPort": "true",
+        "from": "ground",
+        "fromPort": "next",
+        "to": "pick"
+      },
+      {
+        "from": "pick",
+        "fromPort": "next",
         "to": "slot"
-      },
-      {
-        "from": "ground_branch",
-        "fromPort": "false",
-        "to": "halt"
       },
       {
         "from": "slot",
@@ -90,11 +100,6 @@
       },
       {
         "from": "submit",
-        "fromPort": "next",
-        "to": "rep"
-      },
-      {
-        "from": "rep",
         "fromPort": "next",
         "to": "deactivate_aim"
       },
@@ -111,40 +116,58 @@
     ],
     "valueEdges": [
       {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "deactivate_aim",
+        "toPort": "source"
+      },
+      {
         "from": "pointer_x",
         "fromPort": "value",
-        "to": "to_ground",
+        "to": "ground",
         "toPort": "a"
       },
       {
         "from": "pointer_y",
         "fromPort": "value",
-        "to": "to_ground",
+        "to": "ground",
         "toPort": "b"
       },
       {
-        "from": "to_ground",
+        "from": "pointer_x",
         "fromPort": "value",
-        "to": "ground_branch",
-        "toPort": "condition"
+        "to": "pick",
+        "toPort": "a"
       },
       {
-        "from": "to_ground",
+        "from": "pointer_y",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "b"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "source"
+      },
+      {
+        "from": "ground",
         "fromPort": "value",
         "to": "submit",
         "toPort": "condition"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "target"
       },
       {
         "from": "slot",
         "fromPort": "value",
         "to": "submit",
         "toPort": "value"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "deactivate_aim",
-        "toPort": "source"
       },
       {
         "from": "ok",

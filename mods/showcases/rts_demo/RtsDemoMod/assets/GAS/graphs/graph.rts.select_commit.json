@@ -1,0 +1,209 @@
+[
+  {
+    "id": "graph.rts.select_commit",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_select_release",
+        "action": "Rts.SelectEnd",
+        "start": "read_modifiers",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "read_modifiers",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "MapTrigger.Modifiers"
+      },
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "run_hit",
+        "op": "InvokeGraph",
+        "functionName": "graph.rts.select_hit"
+      },
+      {
+        "id": "modifier_switch",
+        "op": "SwitchInt"
+      },
+      {
+        "id": "op_replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "commit_replace",
+        "op": "WriteCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "op_add",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "commit_add",
+        "op": "WriteCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "op_subtract",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "commit_subtract",
+        "op": "WriteCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "deactivate_boxing",
+        "op": "DeactivateContext",
+        "context": "interaction.context.rts.selecting"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "read_modifiers",
+        "fromPort": "next",
+        "to": "rep"
+      },
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "run_hit"
+      },
+      {
+        "from": "run_hit",
+        "fromPort": "next",
+        "to": "modifier_switch"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "case:1",
+        "to": "op_add"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "case:3",
+        "to": "op_add"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "case:4",
+        "to": "op_subtract"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "case:5",
+        "to": "op_subtract"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "case:6",
+        "to": "op_subtract"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "case:7",
+        "to": "op_subtract"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "default",
+        "to": "op_replace"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "next",
+        "to": "commit_replace"
+      },
+      {
+        "from": "op_add",
+        "fromPort": "next",
+        "to": "commit_add"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "next",
+        "to": "commit_subtract"
+      },
+      {
+        "from": "commit_replace",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "commit_add",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "commit_subtract",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "deactivate_boxing"
+      },
+      {
+        "from": "deactivate_boxing",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "read_modifiers",
+        "fromPort": "value",
+        "to": "modifier_switch",
+        "toPort": "selector"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "deactivate_boxing",
+        "toPort": "source"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "value",
+        "to": "commit_replace",
+        "toPort": "value"
+      },
+      {
+        "from": "op_add",
+        "fromPort": "value",
+        "to": "commit_add",
+        "toPort": "value"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "value",
+        "to": "commit_subtract",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]
