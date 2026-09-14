@@ -14,5 +14,5 @@
 - success: yes
 - farms: 2 -> 3
 - workers: 2 -> 3
-- median tick: 2.415ms
-- max tick: 12.973ms
+- median tick: 4.085ms
+- max tick: 19.345ms
