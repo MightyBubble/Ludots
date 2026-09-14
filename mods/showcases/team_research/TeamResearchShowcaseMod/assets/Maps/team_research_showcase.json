@@ -1,6 +1,9 @@
 {
   "Id": "team_research_showcase",
-  "Tags": ["team_research_showcase", "participant_view_showcase"],
+  "Tags": [
+    "team_research_showcase",
+    "participant_view_showcase"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "TeamResearch.Camera.Overview",
     "TargetXCm": 6400,
@@ -14,11 +17,11 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthInMacroTiles": 32,
-      "HeightInMacroTiles": 32,
       "HexEdgeLengthCm": 400,
       "ChunkSizeCells": 32,
-      "NavigationEnabled": false
+      "NavigationEnabled": false,
+      "WidthInCells": 8192,
+      "HeightInCells": 8192
     }
   ],
   "Entities": []

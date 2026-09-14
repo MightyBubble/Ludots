@@ -24,7 +24,7 @@ public sealed class MassNavigationMovePlanExecutionSink : IMovePlanExecutionSink
     public MassNavigationMovePlanExecutionSink(MassNavigationSimulationRuntime simulation)
     {
         _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
-        int capacity = simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        int capacity = simulation.Config.RuntimeCapacity.GroupMembershipAgentCapacity;
         _entitiesByAgentIndex = new Entity[capacity];
         _lastTargetsByAgentIndex = new Vector2[capacity];
         _initializedByAgentIndex = new byte[capacity];

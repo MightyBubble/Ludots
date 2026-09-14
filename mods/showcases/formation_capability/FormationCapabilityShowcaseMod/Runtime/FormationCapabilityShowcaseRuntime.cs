@@ -343,7 +343,6 @@ internal sealed class FormationCapabilityShowcaseRuntime
                 $"Formation Capability showcase requires RuntimeEntitySpawnQueue free capacity {spawnRequestCount}, actual {spawnQueue.FreeCapacity}.");
         }
 
-        ConfigureScenarioTeams(simulation, config);
         ValidateAuthoring(engine, config);
 
         TeamEntityLookup teamLookup = engine.GetService(CoreServiceKeys.TeamEntityLookup)
@@ -353,15 +352,15 @@ internal sealed class FormationCapabilityShowcaseRuntime
         var registeredTeamIds = new HashSet<int>(_formationPlans.Length);
         for (int i = 0; i < _formationPlans.Length; i++)
         {
-            MassNavigationScenarioTeamConfig team = ResolveScenarioTeam(simulation.Config.Scenario, _formationPlans[i].TeamId);
-            if (!registeredTeamIds.Add(team.Id))
+            int teamId = _formationPlans[i].TeamId;
+            if (!registeredTeamIds.Add(teamId))
             {
                 continue;
             }
 
             teamLookup.Register(
-                team.Id,
-                RelationshipTeamBootstrapper.EnsureTeamEntity(engine.World, teamLookup, team.Id, team.Name));
+                teamId,
+                RelationshipTeamBootstrapper.EnsureTeamEntity(engine.World, teamLookup, teamId, $"Formation Team {teamId}"));
         }
 
         RemovePendingScenarioSpawns(engine, config);
@@ -406,7 +405,6 @@ internal sealed class FormationCapabilityShowcaseRuntime
         _scenarioSpawned = true;
         _obstacleOverlaySpawnsQueued = false;
         _initialCommandSourceApplied = false;
-        simulation.MarkScenarioSpawned();
         simulation.MarkStructuralChange();
     }
 
@@ -768,10 +766,9 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
     private void BuildAgentPlans(GameEngine engine, MassNavigationSimulationRuntime simulation, FormationCapabilityShowcaseConfig config)
     {
-        MassNavigationAgentProfileSetConfig profileSet = simulation.Config.AgentProfiles;
         var geometryProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
             ?? throw new InvalidOperationException("Capability Standard Formation Capability showcase requires AgentProfiles.");
-        config.ValidateAgentProfileReferences(profileSet, geometryProfiles);
+        config.ValidateAgentProfileReferences(geometryProfiles);
 
         int soldierCount = 0;
         for (int i = 0; i < config.Formations.Length; i++)
@@ -1213,31 +1210,6 @@ internal sealed class FormationCapabilityShowcaseRuntime
         {
             Array.Fill(_obstacleOverlayEntities, Entity.Null);
         }
-    }
-
-    private static void ConfigureScenarioTeams(MassNavigationSimulationRuntime simulation, FormationCapabilityShowcaseConfig config)
-    {
-        MassNavigationScenarioTeamConfig[] configuredTeams = simulation.Config.Scenario.Teams;
-        int[] teamIds = new int[configuredTeams.Length];
-        for (int i = 0; i < configuredTeams.Length; i++)
-        {
-            teamIds[i] = configuredTeams[i].Id;
-        }
-
-        simulation.ConfigureScenarioTeams(teamIds);
-    }
-
-    private static MassNavigationScenarioTeamConfig ResolveScenarioTeam(MassNavigationScenarioConfig scenario, int teamId)
-    {
-        for (int i = 0; i < scenario.Teams.Length; i++)
-        {
-            if (scenario.Teams[i].Id == teamId)
-            {
-                return scenario.Teams[i];
-            }
-        }
-
-        throw new InvalidOperationException($"Formation Capability showcase formation references MassNavigation scenario team {teamId}, but that team is not configured.");
     }
 
     internal MassNavigationSimulationRuntime RequireCurrentSimulation(GameEngine engine)

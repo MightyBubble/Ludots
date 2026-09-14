@@ -227,18 +227,23 @@ namespace Ludots.Core.Gameplay.GAS
         public int OnSpawnEffectTemplateId;
         /// <summary>Whether the spawned unit should inherit PlayerOwner from the source entity.</summary>
         public bool CopySourcePlayerOwner;
+        /// <summary>Whether the source entity becomes the owns-owner of the spawned unit (control domain).</summary>
+        public bool CopySourceOwnership;
         /// <summary>Whether the source entity should become the parent relation of the spawned unit.</summary>
         public bool LinkSourceAsParent;
         /// <summary>Fixed formation radius in centimeters for non-scatter patterns.</summary>
         public int PlacementRadiusCm;
         /// <summary>Starting angle for circular formation patterns in degrees.</summary>
         public int PlacementStartAngleDeg;
+        /// <summary>Cell spacing in centimeters for the grid formation pattern.</summary>
+        public int PlacementSpacingCm;
     }
 
     public enum UnitCreationPlacementPattern : byte
     {
         Scatter = 0,
         Circle = 1,
+        Grid = 2,
     }
 
     public enum UnitCreationFacingPattern : byte

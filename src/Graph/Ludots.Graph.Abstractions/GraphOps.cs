@@ -391,6 +391,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         BindQueryCollection = 481,
         QueryScreenRegionCollection = 482,
         QueryFilterControllable = 483,
+        /// <summary>Set a mass-navigation agent's target in world cm. E[A] = agent (A=0xFF → caster); I[B] = xCm; I[C] = yCm; unwired agent port targets the caster.</summary>
+        SetNavAgentTarget = 484,
 
     }
 

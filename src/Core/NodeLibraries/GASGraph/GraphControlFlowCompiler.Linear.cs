@@ -371,6 +371,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.SetWorldPosition:
+                case GraphNodeOp.SetNavAgentTarget:
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
@@ -1341,6 +1342,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.SetWorldPosition:
+                case GraphNodeOp.SetNavAgentTarget:
                     instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
                         ? ResolveValueInput(
                             node, GraphControlFlowPorts.Source, GraphValueType.Entity,

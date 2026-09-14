@@ -1,6 +1,14 @@
 {
   "Id": "presenter_blacksmith_dynamic_worker_large_world_benchmark",
-  "Tags": ["showcase", "presenter", "benchmark", "dynamic", "skinned", "animator", "large-world"],
+  "Tags": [
+    "showcase",
+    "presenter",
+    "benchmark",
+    "dynamic",
+    "skinned",
+    "animator",
+    "large-world"
+  ],
   "ContinuousHeightmapAsset": "assets/terrain/presenter_blacksmith_dynamic_worker_large_world.height",
   "Metadata": {
     "presenterBlacksmith": {
@@ -16,11 +24,11 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 256,
-      "HeightInMacroTiles": 256,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "LoadedChunkCapacity": 256,
+      "WidthInCells": 65536,
+      "HeightInCells": 65536
     }
   ],
   "DefaultCamera": {

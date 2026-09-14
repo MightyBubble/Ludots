@@ -1,6 +1,14 @@
 {
   "Id": "presenter_blacksmith_scatter_hudtext_benchmark",
-  "Tags": ["showcase", "presenter", "benchmark", "scatter", "blacksmith", "hudbar", "hudtext"],
+  "Tags": [
+    "showcase",
+    "presenter",
+    "benchmark",
+    "scatter",
+    "blacksmith",
+    "hudbar",
+    "hudtext"
+  ],
   "Metadata": {
     "presenterBlacksmith": {
       "scatterInitialTarget": 30000,
@@ -14,10 +22,10 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 2,
-      "HeightInMacroTiles": 2,
       "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 64
+      "LoadedChunkCapacity": 64,
+      "WidthInCells": 512,
+      "HeightInCells": 512
     }
   ],
   "DefaultCamera": {

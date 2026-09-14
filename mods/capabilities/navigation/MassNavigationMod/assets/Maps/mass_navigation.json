@@ -1,7 +1,26 @@
 {
   "Id": "mass_navigation",
   "TriggerGraphs": [
-    { "graph": "graph.mass_navigation.selection_roster", "scopeInstanceId": "local_player" }
+    {
+      "graph": "graph.mass_navigation.selection_roster",
+      "scopeInstanceId": "local_player"
+    },
+    {
+      "graph": "graph.mass_navigation.spawn_team1",
+      "scopeInstanceId": "spawn_anchor_team1_light"
+    },
+    {
+      "graph": "graph.mass_navigation.spawn_team2",
+      "scopeInstanceId": "spawn_anchor_team2_light"
+    },
+    {
+      "graph": "graph.mass_navigation.spawn_team3",
+      "scopeInstanceId": "spawn_anchor_team3_light"
+    },
+    {
+      "graph": "graph.mass_navigation.spawn_team4",
+      "scopeInstanceId": "spawn_anchor_team4_light"
+    }
   ],
   "ContinuousHeightmap": {
     "Asset": "assets/terrain/mass_navigation_large_world_relief.height",
@@ -31,11 +50,11 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 250,
-      "HeightInMacroTiles": 250,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "LoadedChunkCapacity": 256,
+      "WidthInCells": 64000,
+      "HeightInCells": 64000
     }
   ],
   "Entities": [
@@ -151,12 +170,159 @@
           "localOffsetYCm": 0
         }
       }
+    },
+    {
+      "InstanceId": "spawn_anchor_team1_light",
+      "Template": "mass_navigation_spawn_anchor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": -2500,
+            "Y": -2500
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "spawn_anchor_team1_heavy",
+      "Template": "mass_navigation_spawn_anchor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": -2450,
+            "Y": -2450
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "team_2_rep",
+      "Template": "mass_navigation_player_team"
+    },
+    {
+      "InstanceId": "spawn_anchor_team2_light",
+      "Template": "mass_navigation_spawn_anchor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2500,
+            "Y": -2500
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "spawn_anchor_team2_heavy",
+      "Template": "mass_navigation_spawn_anchor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2550,
+            "Y": -2450
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "team_3_rep",
+      "Template": "mass_navigation_player_team"
+    },
+    {
+      "InstanceId": "spawn_anchor_team3_light",
+      "Template": "mass_navigation_spawn_anchor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": -2500,
+            "Y": 2500
+          }
+        },
+        "Team": {
+          "Id": 3
+        }
+      }
+    },
+    {
+      "InstanceId": "spawn_anchor_team3_heavy",
+      "Template": "mass_navigation_spawn_anchor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": -2450,
+            "Y": 2550
+          }
+        },
+        "Team": {
+          "Id": 3
+        }
+      }
+    },
+    {
+      "InstanceId": "team_4_rep",
+      "Template": "mass_navigation_player_team"
+    },
+    {
+      "InstanceId": "spawn_anchor_team4_light",
+      "Template": "mass_navigation_spawn_anchor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2500,
+            "Y": 2500
+          }
+        },
+        "Team": {
+          "Id": 4
+        }
+      }
+    },
+    {
+      "InstanceId": "spawn_anchor_team4_heavy",
+      "Template": "mass_navigation_spawn_anchor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2550,
+            "Y": 2550
+          }
+        },
+        "Team": {
+          "Id": 4
+        }
+      }
     }
   ],
   "Teams": [
     {
       "TeamId": 1,
       "RepresentativeInstanceId": "player_team"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "team_2_rep"
+    },
+    {
+      "TeamId": 3,
+      "RepresentativeInstanceId": "team_3_rep"
+    },
+    {
+      "TeamId": 4,
+      "RepresentativeInstanceId": "team_4_rep"
     }
   ],
   "Players": [
@@ -165,5 +331,59 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "local_player"
     }
-  ]
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 3,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 4,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 3,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 4,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 3,
+        "TeamB": 4,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Neutral",
+        "Symmetric": true
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": [
+      {
+        "PlayerId": 1,
+        "TeamId": 1,
+        "TypeId": "LudotsCore.Participant"
+      }
+    ]
+  }
 }

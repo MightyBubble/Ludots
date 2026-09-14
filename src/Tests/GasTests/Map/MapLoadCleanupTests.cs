@@ -32,8 +32,8 @@ namespace GasTests
         {
             Name = "default",
             SpatialType = "Grid",
-            WidthInMacroTiles = 1,
-            HeightInMacroTiles = 1,
+            WidthInCells = 256,
+            HeightInCells = 256,
             GridCellSizeCm = 100,
             ChunkSizeCells = 4,
             LoadedChunkCapacity = 16

@@ -1,7 +1,12 @@
 {
   "Id": "capability_standard_static_presenter_30k_minimap_marker_large_world_showcase",
   "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_minimap_marker_large_world_relief.height",
-  "Tags": ["showcase", "presenter", "minimap", "large-world"],
+  "Tags": [
+    "showcase",
+    "presenter",
+    "minimap",
+    "large-world"
+  ],
   "Metadata": {
     "capabilityStandardStaticPresenter30k": {
       "minimapMarkerShowcaseTotal": 30000,
@@ -21,11 +26,11 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 256,
-      "HeightInMacroTiles": 256,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "LoadedChunkCapacity": 256,
+      "WidthInCells": 65536,
+      "HeightInCells": 65536
     }
   ],
   "DefaultCamera": {

@@ -11,8 +11,6 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthInMacroTiles": 4,
-      "HeightInMacroTiles": 4,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 16,
@@ -26,7 +24,9 @@
         "cellSizeCm": 100,
         "originXcm": 0,
         "originZcm": 0
-      }
+      },
+      "WidthInCells": 1024,
+      "HeightInCells": 1024
     }
   ],
   "Entities": [],

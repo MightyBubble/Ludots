@@ -41,29 +41,33 @@ namespace Ludots.Tests.Presentation
             Assert.That(dependencies.ContainsKey("PresenterBlacksmithShowcaseMod"), Is.False,
                 "MassNavigation capability visuals must be owned by MassNavigation, not a showcase asset pack.");
 
-            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
-            JsonArray requiredMeshAssets = config["presentation"]?["requiredMeshAssetIds"]?.AsArray()
-                ?? throw new InvalidOperationException("MassNavigationConfig.presentation.requiredMeshAssetIds missing.");
-            Assert.That(requiredMeshAssets.Select(node => node?.GetValue<string>()).ToArray(), Does.Contain("mass_navigation.agent.soldier"));
+            JsonObject agentLight = FindObjectById(presenters, "mass_navigation_agent_light");
+            Assert.That(agentLight["behaviors"]!.AsArray()
+                .Select(node => node?.AsObject()?["assetBinding"]?.AsObject()?["assetId"]?.GetValue<string>() ?? string.Empty),
+                Does.Contain("mass_navigation.agent.soldier"),
+                "Agent presenter bindings must reference the MassNavigation-owned soldier mesh asset.");
         }
 
         [Test]
         public void AgentTemplates_AuthorHealthAndOnSpawnGasEffect()
         {
             string modRoot = MassNavigationModRoot();
-            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
             JsonArray templates = ReadArray(Path.Combine(modRoot, "assets", "Entities", "templates.json"));
 
-            foreach (JsonObject team in EnumeratePresentationTeams(config))
+            foreach (JsonObject template in templates)
             {
+                JsonObject components = template["components"]?.AsObject()
+                    ?? throw new InvalidOperationException("Template must author components.");
+                if (!components.ContainsKey("MassNavigationAgent"))
+                {
+                    continue;
+                }
+
+                bool heavy = components["MassNavigationAgent"]!.AsObject()["heavy"]?.GetValue<bool>() == true;
                 AssertAgentTemplateAuthorsHealth(
-                    FindObjectById(templates, RequireString(team, "lightTemplateId")),
-                    expectedBase: 100f,
-                    expectedCurrent: 82f);
-                AssertAgentTemplateAuthorsHealth(
-                    FindObjectById(templates, RequireString(team, "heavyTemplateId")),
-                    expectedBase: 260f,
-                    expectedCurrent: 236f);
+                    template,
+                    expectedBase: heavy ? 260f : 100f,
+                    expectedCurrent: heavy ? 236f : 82f);
             }
         }
 
@@ -115,22 +119,18 @@ namespace Ludots.Tests.Presentation
             JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
             JsonArray presenters = ReadArray(Path.Combine(modRoot, "assets", "Presentation", "presenters.json"));
 
-            JsonObject presentation = config["presentation"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.presentation missing.");
-            Assert.That(presentation.ContainsKey("selectionVisibilityParamKey"), Is.False,
-                "Selection visibility must not keep a hidden mesh inside every agent root presenter.");
-            Assert.That(presentation.ContainsKey("selectionMarkerLightPresenterId"), Is.False,
-                "Command marker presenter ownership belongs to presenter rules, not MassNavigation presentation config fields.");
-            Assert.That(presentation.ContainsKey("selectionMarkerHeavyPresenterId"), Is.False,
-                "Command marker presenter ownership belongs to presenter rules, not MassNavigation presentation config fields.");
+            Assert.That(config.ContainsKey("presentation"), Is.False,
+                "MassNavigationConfig no longer owns a presentation section; presenter ownership lives in presenter rules.");
 
             JsonObject manifest = ReadObject(Path.Combine(modRoot, "mod.json"));
             JsonObject dependencies = manifest["dependencies"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationMod dependencies missing.");
             Assert.That(dependencies.ContainsKey("SelectionInteractionMod"), Is.True,
                 "MassNavigation must consume the shared Case E selection module.");
-            Assert.That(presentation["requiredMeshAssetIds"]?.AsArray()
-                .Select(node => node?.GetValue<string>()).ToArray(), Does.Not.Contain("case_e.select_ring_slab"));
+            Assert.That(presenters.Select(node => node?.AsObject())
+                .SelectMany(obj => obj?["behaviors"]?.AsArray() ?? new JsonArray())
+                .Select(node => node?.AsObject()?["assetBinding"]?.AsObject()?["assetId"]?.GetValue<string>() ?? string.Empty),
+                Does.Not.Contain("case_e.select_ring_slab"));
             Assert.That(presenters.Any(node =>
             {
                 string id = node?.AsObject()?["id"]?.GetValue<string>() ?? string.Empty;
@@ -229,8 +229,12 @@ namespace Ludots.Tests.Presentation
             JsonObject map = ReadObject(Path.Combine(modRoot, "assets", "Maps", "mass_navigation.json"));
             JsonObject board = map["Boards"]?.AsArray()?.FirstOrDefault()?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigation map must author a primary board.");
-            Assert.That(board["WidthInMacroTiles"]?.GetValue<int>(), Is.EqualTo(250));
-            Assert.That(board["HeightInMacroTiles"]?.GetValue<int>(), Is.EqualTo(250));
+            Assert.That(board.ContainsKey("WidthInMacroTiles"), Is.False,
+                "Board authoring face is WidthInCells; macro tiles are derived for streaming only.");
+            Assert.That(board.ContainsKey("HeightInMacroTiles"), Is.False,
+                "Board authoring face is HeightInCells; macro tiles are derived for streaming only.");
+            Assert.That(board["WidthInCells"]?.GetValue<int>(), Is.EqualTo(64_000));
+            Assert.That(board["HeightInCells"]?.GetValue<int>(), Is.EqualTo(64_000));
             Assert.That(board["GridCellSizeCm"]?.GetValue<int>(), Is.EqualTo(100));
         }
 
@@ -280,156 +284,99 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ScenarioRuntimeCapacity_CoversAuthoredScenarioOrderMembers()
+        public void RuntimeCapacitySection_IsOptionalWithEngineDefaults()
         {
             JsonObject configJson = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject scenarioRuntime = configJson["scenarioRuntime"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime missing.");
-            JsonObject runtimeCapacity = scenarioRuntime["runtimeCapacity"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime.runtimeCapacity missing.");
-            Assert.That(runtimeCapacity.ContainsKey("groupMemberCapacity"), Is.False,
-                "groupMemberCapacity is derived from the authored scenario scale; the base config must not pin it.");
-            Assert.That(runtimeCapacity.ContainsKey("movePlanExecutionMemberCapacity"), Is.False,
-                "movePlanExecutionMemberCapacity is derived from the authored scenario scale; the base config must not pin it.");
-            Assert.That(runtimeCapacity.ContainsKey("relationshipDomainCapacity"), Is.False,
-                "relationshipDomainCapacity is derived from the authored scenario team count; the base config must not pin it.");
-
             MassNavigationConfig config = MassNavigationConfig.Load(configJson);
-            int authoredAgentCount = checked(config.Scenario.Teams.Length * config.Scenario.AgentsPerTeam);
-            Assert.That(
-                config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity,
-                Is.EqualTo(authoredAgentCount));
-            Assert.That(
-                config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity,
-                Is.EqualTo(authoredAgentCount));
-            Assert.That(
-                config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity,
-                Is.EqualTo(config.Scenario.Teams.Length));
+            Assert.That(config.RuntimeCapacity.GroupMembershipAgentCapacity, Is.EqualTo(160_000),
+                "The base 10K overlay pins the agent capacity; everything else takes engine defaults.");
+            Assert.That(config.RuntimeCapacity.NavigationGroupCapacity, Is.EqualTo(MassNavigationEngineDefaults.NavigationGroupCapacity));
+            Assert.That(config.RuntimeCapacity.RouteStateCapacity, Is.EqualTo(MassNavigationEngineDefaults.RouteStateCapacity));
+
+            JsonObject minimal = new JsonObject { ["mapId"] = "minimal_map" };
+            MassNavigationConfig defaults = MassNavigationConfig.Load(minimal);
+            Assert.That(defaults.RuntimeCapacity.GroupMembershipAgentCapacity, Is.EqualTo(MassNavigationEngineDefaults.GroupMembershipAgentCapacity));
         }
 
         [Test]
-        public void SpawnEffectQueueCapacity_CoversAuthoredScenarioSpawnEffects()
+        public void SpawnBlueprint_SpawnsTheFullTenThousandAgentBenchmark()
         {
             string modRoot = MassNavigationModRoot();
             JsonObject game = ReadObject(Path.Combine(modRoot, "assets", "game.json"));
-            JsonObject gasRuntimeCapacity = game["gasRuntimeCapacity"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigation game.json gasRuntimeCapacity missing.");
-            int effectRequestQueueCapacity = gasRuntimeCapacity["effectRequestQueueCapacity"]?.GetValue<int>()
-                ?? throw new InvalidOperationException(
-                    "MassNavigation game.json gasRuntimeCapacity.effectRequestQueueCapacity missing.");
+            int effectRequestQueueCapacity = game["gasRuntimeCapacity"]?["effectRequestQueueCapacity"]?.GetValue<int>()
+                ?? 5000;
 
-            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
-            JsonObject scenario = config["scenario"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenario missing.");
-            JsonArray teams = scenario["teams"]?.AsArray()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.teams missing.");
-            int authoredAgentCount = checked(teams.Count * (scenario["agentsPerTeam"]?.GetValue<int>()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.agentsPerTeam missing.")));
-
-            JsonObject presentation = config["presentation"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.presentation missing.");
-            JsonArray presentationTeams = presentation["teams"]?.AsArray()
-                ?? throw new InvalidOperationException("MassNavigationConfig.presentation.teams missing.");
-            string[] agentTemplateIds = presentationTeams
-                .SelectMany(team => new[]
-                {
-                    team?["lightTemplateId"]?.GetValue<string>(),
-                    team?["heavyTemplateId"]?.GetValue<string>()
-                })
-                .Where(templateId => !string.IsNullOrWhiteSpace(templateId))
-                .Select(templateId => templateId!)
-                .Distinct(StringComparer.Ordinal)
-                .ToArray();
-            Assert.That(agentTemplateIds, Is.Not.Empty);
-
+            JsonArray effects = ReadArray(Path.Combine(modRoot, "assets", "GAS", "effects.json"));
             JsonArray templates = ReadArray(Path.Combine(modRoot, "assets", "Entities", "templates.json"));
-            foreach (string templateId in agentTemplateIds)
+            int blueprintAgentCount = 0;
+            foreach (JsonObject effect in effects.Select(node => node!.AsObject()))
             {
-                JsonObject template = FindObjectById(templates, templateId);
+                JsonObject unitCreation = effect["unitCreation"]?.AsObject();
+                if (unitCreation == null)
+                {
+                    continue;
+                }
+
+                string templateId = RequireString(unitCreation, "templateId");
+                int count = unitCreation["count"]?.GetValue<int>()
+                    ?? throw new InvalidOperationException($"Spawn effect '{effect["id"]}' must author count.");
+                Assert.That(count, Is.GreaterThan(0));
+                blueprintAgentCount += count;
                 Assert.That(
-                    template["onSpawnEffect"]?.GetValue<string>(),
+                    FindObjectById(templates, templateId)["onSpawnEffect"]?.GetValue<string>(),
                     Is.Not.Null.And.Not.Empty,
-                    $"MassNavigation agent template '{templateId}' must author an onSpawnEffect.");
+                    $"Spawned agent template '{templateId}' must author an onSpawnEffect.");
             }
 
+            Assert.That(blueprintAgentCount, Is.EqualTo(10_000),
+                "The base spawn blueprint must keep the 4x2500 benchmark scale.");
             Assert.That(
                 checked(effectRequestQueueCapacity * 2),
-                Is.GreaterThanOrEqualTo(authoredAgentCount),
-                "MassNavigation fixed EffectRequestQueue total capacity must cover every configured agent spawn effect.");
+                Is.GreaterThanOrEqualTo(blueprintAgentCount),
+                "MassNavigation fixed EffectRequestQueue total capacity must cover every blueprint agent spawn effect.");
         }
 
         [Test]
-        public void MassNavigationFlowRuntime_IsConfigDrivenForCadenceAndAgentProfiles()
+        public void AgentTemplates_OwnNavParametersWithEngineDefaults()
         {
             string modRoot = MassNavigationModRoot();
-            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
-            JsonObject cadence = config["cadence"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.cadence missing.");
-            Assert.That(cadence["simulationHz"]?.GetValue<int>(), Is.GreaterThan(0));
-            Assert.That(cadence["targetUpdateHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
-            Assert.That(cadence["flowStepHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
-            Assert.That(cadence["flowCrowdStampHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
-            Assert.That(cadence["flowObstacleStampHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
-            Assert.That(cadence["hardResolveHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
-            Assert.That(cadence["entitySyncHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
-            Assert.That(cadence["maxStepsPerFixedTick"]?.GetValue<int>(), Is.GreaterThan(0));
+            JsonArray templates = ReadArray(Path.Combine(modRoot, "assets", "Entities", "templates.json"));
+            var agentTemplates = templates
+                .Select(node => node!.AsObject())
+                .Where(template => template["components"]?.AsObject().ContainsKey("MassNavigationAgent") == true)
+                .ToArray();
+            Assert.That(agentTemplates.Length, Is.GreaterThanOrEqualTo(8));
 
-            JsonObject profiles = config["agentProfiles"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.agentProfiles missing.");
-            string defaultProfileId = profiles["defaultProfileId"]?.GetValue<string>() ?? string.Empty;
-            Assert.That(defaultProfileId, Is.Not.Empty);
-            JsonArray profileEntries = profiles["profiles"]?.AsArray()
-                ?? throw new InvalidOperationException("MassNavigationConfig.agentProfiles.profiles missing.");
-            Assert.That(profileEntries.Count, Is.GreaterThanOrEqualTo(2));
-            Assert.That(
-                profileEntries.Select(node => node?["id"]?.GetValue<string>()).ToArray(),
-                Does.Contain(defaultProfileId));
-
-            JsonObject heavy = profileEntries
-                .Select(node => node?.AsObject())
-                .FirstOrDefault(obj => obj?["heavy"]?.GetValue<bool>() == true)
-                ?? throw new InvalidOperationException("MassNavigation agentProfiles must author at least one heavy profile.");
-            Assert.That(heavy["everyNth"]?.GetValue<int>(), Is.GreaterThan(0),
-                "Heavy distribution is an authored profile rule, not a solver hardcode.");
-            Assert.That(heavy["visualScale"]?.GetValue<float>(), Is.GreaterThan(0f));
-            Assert.That(heavy.ContainsKey("navMass"), Is.False,
-                "MassNavigation execution profiles must not own geometry or solver mass.");
-            Assert.That(heavy.ContainsKey("bodyRadiusCm"), Is.False,
-                "MassNavigation execution profiles must not own geometry or solver radius.");
+            foreach (JsonObject template in agentTemplates)
+            {
+                JsonObject nav = template["components"]!["MassNavigationAgent"]!.AsObject();
+                bool heavy = nav["heavy"]?.GetValue<bool>() == true;
+                Assert.That(nav["speedCmPerSecond"]?.GetValue<float>(), Is.GreaterThan(0f),
+                    "Template nav parameters own agent speed.");
+                Assert.That(nav["radiusCm"]?.GetValue<float>(), Is.GreaterThan(0f),
+                    "Template nav parameters own agent body radius.");
+                if (heavy)
+                {
+                    Assert.That(nav["radiusCm"]!.GetValue<float>(), Is.GreaterThan(20f),
+                        "Heavy tier uses the larger body radius.");
+                }
+            }
 
             JsonArray geometryProfiles = ReadArray(Path.Combine(FindRepoRoot(), "assets", "Navigation", "agent_profiles.json"));
             JsonObject heavyGeometry = FindObjectById(geometryProfiles, "heavy");
             Assert.That(heavyGeometry["mass"]?.GetValue<float>(), Is.GreaterThan(1f));
             Assert.That(heavyGeometry["radiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
 
-            JsonObject avoidance = config["avoidance"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance missing.");
-            Assert.That(avoidance.ContainsKey("lightNavMass"), Is.False,
-                "Agent mass must be owned only by Navigation/agent_profiles.json, not duplicated in avoidance.");
-            Assert.That(avoidance.ContainsKey("heavyNavMass"), Is.False,
-                "Agent mass must be owned only by Navigation/agent_profiles.json, not duplicated in avoidance.");
-            Assert.That(avoidance.ContainsKey("lightVisualScale"), Is.False,
-                "Agent visualScale must be owned only by agentProfiles, not duplicated in avoidance.");
-            Assert.That(avoidance.ContainsKey("heavyVisualScale"), Is.False,
-                "Agent visualScale must be owned only by agentProfiles, not duplicated in avoidance.");
-            Assert.That(avoidance["dominantMassRatio"]?.GetValue<float>(), Is.GreaterThan(0f));
-
-            JsonObject obstacle = config["semantics"]?["obstacle"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.semantics.obstacle missing.");
-            Assert.That(obstacle.ContainsKey("agentBodyRadiusCm"), Is.False,
-                "Obstacle hard-block radius must use Navigation/agent_profiles.json radiusCm, not a global obstacle body radius.");
+            JsonObject legacyProfilesConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
+            legacyProfilesConfig["agentProfiles"] = new JsonObject();
+            JsonException legacyProfiles = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(legacyProfilesConfig))!;
+            Assert.That(legacyProfiles.Message, Does.Contain("agentProfiles"));
 
             JsonObject legacyAvoidanceConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
-            legacyAvoidanceConfig["avoidance"]!["lightNavMass"] = 1.0f;
+            legacyAvoidanceConfig["avoidance"] = new JsonObject { ["lightNavMass"] = 1.0f };
             JsonException legacyAvoidanceField = Assert.Throws<JsonException>(
                 () => MassNavigationConfig.Load(legacyAvoidanceConfig))!;
             Assert.That(legacyAvoidanceField.Message, Does.Contain("lightNavMass"));
-
-            JsonObject legacyObstacleConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
-            legacyObstacleConfig["semantics"]!["obstacle"]!["agentBodyRadiusCm"] = 20.0f;
-            JsonException legacyObstacleField = Assert.Throws<JsonException>(
-                () => MassNavigationConfig.Load(legacyObstacleConfig))!;
-            Assert.That(legacyObstacleField.Message, Does.Contain("agentBodyRadiusCm"));
         }
 
         [Test]
@@ -603,7 +550,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(config.MapId, Is.EqualTo("mass_navigation"));
             Assert.That(config.World, Is.Not.Null);
             Assert.That(config.World!.SolverWindowWidthCm, Is.EqualTo(10_000));
-            Assert.That(config.Presentation.ResolveAgentTemplateId(1, heavy: false), Is.EqualTo("mass_navigation_agent_azure_light"));
+            Assert.That(config.RuntimeCapacity.GroupMembershipAgentCapacity, Is.EqualTo(160_000));
+            Assert.That(config.Cadence.SimulationHz, Is.EqualTo(MassNavigationEngineDefaults.SimulationHz),
+                "Omitted cadence keys take engine defaults after the DeepObject merge.");
         }
 
         [Test]
@@ -650,47 +599,16 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PresentationTeams_AreRequiredOnlyForAutoSpawnScenarios()
+        public void DeadConfigSections_AreRejectedOnWrite()
         {
-            JsonObject missingAutoSpawnTemplateConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject autoSpawnPresentation = missingAutoSpawnTemplateConfig["presentation"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.presentation missing.");
-            autoSpawnPresentation.Remove("blockerTemplateId");
-
-            InvalidOperationException missingTemplate = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(missingAutoSpawnTemplateConfig))!;
-            Assert.That(missingTemplate.Message, Does.Contain("blockerTemplateId"));
-
-            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonArray teams = config["presentation"]?["teams"]?.AsArray()
-                ?? throw new InvalidOperationException("MassNavigationConfig.presentation.teams missing.");
-            teams.Clear();
-
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
-            Assert.That(ex.Message, Does.Contain("presentation team style count must match scenario teams"));
-
-            config["scenarioRuntime"]!["autoSpawnConfiguredScenario"] = false;
-            config["scenario"]!["agentsPerTeam"] = 0;
-            JsonObject presentation = config["presentation"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.presentation missing.");
-            presentation.Remove("blockerPresenterId");
-            presentation.Remove("hotspotPresenterId");
-            presentation.Remove("hotspotTemplateId");
-            JsonObject runtimeCapacity = config["scenarioRuntime"]!["runtimeCapacity"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime.runtimeCapacity missing.");
-            runtimeCapacity["groupMemberCapacity"] = 4;
-            runtimeCapacity["movePlanExecutionMemberCapacity"] = 4;
-            runtimeCapacity["relationshipDomainCapacity"] = 4;
-            MassNavigationConfig formationOwnedConfig =
-                MassNavigationConfig.Load(config);
-
-            Assert.That(formationOwnedConfig.ScenarioRuntime.AutoSpawnConfiguredScenario, Is.False);
-            Assert.That(formationOwnedConfig.Presentation.Teams, Is.Empty);
-            Assert.That(formationOwnedConfig.Presentation.BlockerTemplateId, Is.EqualTo("mass_navigation_blocker"));
-            Assert.That(formationOwnedConfig.Presentation.HotspotTemplateId, Is.EqualTo(string.Empty));
-
-            presentation.Remove("blockerTemplateId");
-            InvalidOperationException missingExternalBlockerTemplate = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
-            Assert.That(missingExternalBlockerTemplate.Message, Does.Contain("blockerTemplateId"));
+            foreach (string deadKey in new[] { "scenario", "scenarioRuntime", "agentProfiles", "presentation", "teamRelationships" })
+            {
+                JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+                config[deadKey] = new JsonObject();
+                JsonException rejected = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(config))!;
+                Assert.That(rejected.Message, Does.Contain(deadKey),
+                    $"Dead config section '{deadKey}' must be rejected on write.");
+            }
         }
 
         private static void AssertAgentBodyUsesMassNavigationSoldier(JsonObject definition, string definitionId, float expectedScale)
@@ -916,17 +834,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(values[0]?.GetValue<float>(), Is.EqualTo(expectedX).Within(0.0001f), $"{label}[0]");
             Assert.That(values[1]?.GetValue<float>(), Is.EqualTo(expectedY).Within(0.0001f), $"{label}[1]");
             Assert.That(values[2]?.GetValue<float>(), Is.EqualTo(expectedZ).Within(0.0001f), $"{label}[2]");
-        }
-
-        private static IEnumerable<JsonObject> EnumeratePresentationTeams(JsonObject config)
-        {
-            JsonArray teams = config["presentation"]?["teams"]?.AsArray()
-                ?? throw new InvalidOperationException("MassNavigationConfig.presentation.teams missing.");
-            foreach (JsonNode? node in teams)
-            {
-                yield return node?.AsObject()
-                    ?? throw new InvalidOperationException("MassNavigationConfig.presentation.teams entries must be objects.");
-            }
         }
 
         private static string RequireString(JsonObject obj, string propertyName)

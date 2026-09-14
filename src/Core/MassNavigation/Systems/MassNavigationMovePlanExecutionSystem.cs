@@ -40,7 +40,7 @@ public sealed class MassNavigationMovePlanExecutionSystem : ISystem<float>, IMov
             throw new ArgumentNullException(nameof(config));
         }
 
-        MassNavigationRuntimeCapacityConfig capacity = config.ScenarioRuntime.RuntimeCapacity;
+        MassNavigationRuntimeCapacityConfig capacity = config.RuntimeCapacity;
         _commandGroupCapacity = capacity.MovePlanExecutionGroupCapacity;
         _memberCapacity = capacity.MovePlanExecutionMemberCapacity;
         _bucketIndexByToken = new Dictionary<int, int>(_commandGroupCapacity);
@@ -335,7 +335,7 @@ public sealed class MassNavigationMovePlanExecutionSystem : ISystem<float>, IMov
             return _routeSink;
         }
 
-        MassNavigationRuntimeCapacityConfig capacity = simulation.Config.ScenarioRuntime.RuntimeCapacity;
+        MassNavigationRuntimeCapacityConfig capacity = simulation.Config.RuntimeCapacity;
         _routeSink = new MassNavigationRouteExecutionSink(
             pathService,
             pathStore,
@@ -350,7 +350,7 @@ public sealed class MassNavigationMovePlanExecutionSystem : ISystem<float>, IMov
         MassNavigationSimulationRuntime simulation,
         MassNavigationRouteExecutionSink routeSink)
     {
-        MassNavigationRuntimeCapacityConfig capacity = simulation.Config.ScenarioRuntime.RuntimeCapacity;
+        MassNavigationRuntimeCapacityConfig capacity = simulation.Config.RuntimeCapacity;
         for (int bucketIndex = 0; bucketIndex < _usedBucketCount; bucketIndex++)
         {
             CommandGroupBucket bucket = _buckets[bucketIndex];
@@ -393,7 +393,7 @@ public sealed class MassNavigationMovePlanExecutionSystem : ISystem<float>, IMov
         routeSink.BeginSync();
         try
         {
-            MassNavigationRuntimeCapacityConfig capacity = simulation.Config.ScenarioRuntime.RuntimeCapacity;
+            MassNavigationRuntimeCapacityConfig capacity = simulation.Config.RuntimeCapacity;
             for (int bucketIndex = 0; bucketIndex < _usedBucketCount; bucketIndex++)
             {
                 CommandGroupBucket bucket = _buckets[bucketIndex];

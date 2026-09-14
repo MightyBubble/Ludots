@@ -25,7 +25,7 @@ public sealed class MassNavigationOrderChainTests
     {
         return new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(
             simulation.WorldConfig.StreamingChunkSizeCm,
-            simulation.Config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity);
+            simulation.Config.RuntimeCapacity.LoadedChunkCapacity);
     }
 
     [Test]
@@ -192,70 +192,32 @@ public sealed class MassNavigationOrderChainTests
                 ],
             },
             Streaming = new MassNavigationStreamingConfig { RetainSeconds = 6f, RadiusCm = 1000 },
-            Scenario = new MassNavigationScenarioConfig
+            RuntimeCapacity = new MassNavigationRuntimeCapacityConfig
             {
-                AgentsPerTeam = 1,
-                Teams =
-                [
-                    new MassNavigationScenarioTeamConfig { Id = LocalTeamId, Name = "Team 1" },
-                    new MassNavigationScenarioTeamConfig { Id = EnemyTeamId, Name = "Team 2" },
-                ],
-                SpawnLayout = new MassNavigationScenarioSpawnLayoutConfig
-                {
-                    Kind = "OrbitOpposedTargets",
-                    OrbitRadiusCm = 3000f,
-                },
-            },
-            ScenarioRuntime = new MassNavigationScenarioRuntimeConfig
-            {
-                AutoSpawnConfiguredScenario = true,
-                RuntimeCapacity = new MassNavigationRuntimeCapacityConfig
-                {
-                    NavigationGroupCapacity = 8,
-                    GroupMembershipAgentCapacity = 16,
-                    GroupMemberCapacity = 8,
-                    MovePlanExecutionGroupCapacity = 8,
-                    MovePlanExecutionMemberCapacity = 8,
-                    RouteStateCapacity = 16,
-                    RouteMaxExpandedPerRequest = 128,
-                    RouteWaypointCapacityPerAgent = 64,
-                    LoadedChunkCapacity = 32,
-                    RelationshipDomainCapacity = 2,
-                    DisplacedAgentCapacity = 4,
-                },
-            },
-            AgentProfiles = new MassNavigationAgentProfileSetConfig
-            {
-                DefaultProfileId = "light",
-                Profiles =
-                [
-                    new MassNavigationAgentProfileConfig
-                    {
-                        Id = "light",
-                        Heavy = false,
-                        VisualScale = 0.22f,
-                        SpeedCmPerSecond = 800f,
-                        EveryNth = 0,
-                        NthOffset = 0,
-                    },
-                ],
+                NavigationGroupCapacity = 8,
+                GroupMembershipAgentCapacity = 16,
+                GroupMemberCapacity = 8,
+                MovePlanExecutionGroupCapacity = 8,
+                MovePlanExecutionMemberCapacity = 8,
+                RouteStateCapacity = 16,
+                RouteMaxExpandedPerRequest = 128,
+                RouteWaypointCapacityPerAgent = 64,
+                LoadedChunkCapacity = 32,
+                RelationshipDomainCapacity = 2,
+                DisplacedAgentCapacity = 4,
             },
             Cadence = baseConfig.Cadence,
-            Presentation = baseConfig.Presentation,
-            TeamRelationships = baseConfig.TeamRelationships,
             RelationshipPolicy = baseConfig.RelationshipPolicy,
             Flow = baseConfig.Flow,
             Arrival = baseConfig.Arrival,
             Avoidance = baseConfig.Avoidance,
             Semantics = baseConfig.Semantics,
         };
+        config.ApplyEngineDefaults();
         config.Solver.Validate();
         config.World.Validate(config.Solver);
         config.Streaming.Validate();
-        config.ScenarioRuntime.Validate();
-        config.Scenario.Validate(config.ScenarioRuntime);
-        config.AgentProfiles.Validate();
-        config.AgentProfiles.BindAgentProfiles(CreateAgentProfilesForTests());
+        config.RuntimeCapacity.Validate();
         return config;
     }
 

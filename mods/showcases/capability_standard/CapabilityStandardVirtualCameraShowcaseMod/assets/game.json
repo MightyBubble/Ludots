@@ -6,8 +6,6 @@
   ],
   "windowTitle": "Ludots Engine - Capability Standard Virtual Camera",
   "targetFps": 0,
-  "worldWidthInMacroTiles": 2,
-  "worldHeightInMacroTiles": 2,
   "gridCellSizeCm": 100,
   "presentation": {
     "presenterInstanceCapacity": 256,

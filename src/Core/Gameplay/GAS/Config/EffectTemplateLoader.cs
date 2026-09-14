@@ -1150,6 +1150,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             int offsetRadius = cfg.OffsetRadius ?? 0;
             int placementRadiusCm = cfg.PlacementRadiusCm ?? 0;
             int placementStartAngleDeg = cfg.PlacementStartAngleDeg ?? 0;
+            int placementSpacingCm = 0;
 
             if (placementPattern == UnitCreationPlacementPattern.Scatter)
             {
@@ -1172,8 +1173,19 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unitCreation.placementRadiusCm must be > 0 when placementPattern=Circle.");
                 }
             }
+            else if (placementPattern == UnitCreationPlacementPattern.Grid)
+            {
+                RequireAbsent(cfg.OffsetRadius, ownerId, relativePath, "unitCreation.offsetRadius", "placementPattern=Grid");
+                RequireAbsent(cfg.FacingPattern, ownerId, relativePath, "unitCreation.facingPattern", "placementPattern=Grid");
+                placementSpacingCm = RequireInt(cfg.PlacementSpacingCm, ownerId, relativePath, "unitCreation.placementSpacingCm");
+                if (placementSpacingCm <= 0)
+                {
+                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unitCreation.placementSpacingCm must be > 0 when placementPattern=Grid.");
+                }
+            }
 
             RejectOptionalFalse(cfg.CopySourcePlayerOwner, ownerId, relativePath, "unitCreation.copySourcePlayerOwner");
+            RejectOptionalFalse(cfg.CopySourceOwnership, ownerId, relativePath, "unitCreation.copySourceOwnership");
             RejectOptionalFalse(cfg.LinkSourceAsParent, ownerId, relativePath, "unitCreation.linkSourceAsParent");
 
             return new UnitCreationDescriptor
@@ -1187,8 +1199,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 OffsetRadius = offsetRadius,
                 PlacementRadiusCm = placementRadiusCm,
                 PlacementStartAngleDeg = placementStartAngleDeg,
+                PlacementSpacingCm = placementSpacingCm,
                 OnSpawnEffectTemplateId = onSpawnId,
                 CopySourcePlayerOwner = cfg.CopySourcePlayerOwner ?? false,
+                CopySourceOwnership = cfg.CopySourceOwnership ?? false,
                 LinkSourceAsParent = cfg.LinkSourceAsParent ?? false,
             };
         }
@@ -1204,6 +1218,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 "Scatter" => UnitCreationPlacementPattern.Scatter,
                 "Circle" => UnitCreationPlacementPattern.Circle,
+                "Grid" => UnitCreationPlacementPattern.Grid,
                 _ => throw new InvalidOperationException($"Unsupported unitCreation.placementPattern '{raw}'.")
             };
         }

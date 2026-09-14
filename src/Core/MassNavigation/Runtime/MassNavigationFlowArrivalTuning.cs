@@ -2,13 +2,36 @@ namespace Ludots.Core.MassNavigation.Runtime;
 
 public sealed class MassNavigationFlowArrivalTuning
 {
-    public bool Enabled { get; set; }
+    public bool Enabled { get; set; } = true;
     public int TimeoutMs { get; set; }
     public int ProgressDistanceCm { get; set; }
     public int WakePushDistanceCm { get; set; }
     public int MaxRetryCount { get; set; }
 
     public float TimeoutSeconds => TimeoutMs / 1000f;
+
+    public void ApplyEngineDefaults()
+    {
+        if (TimeoutMs <= 0)
+        {
+            TimeoutMs = MassNavigationEngineDefaults.ArrivalTimeoutMs;
+        }
+
+        if (ProgressDistanceCm <= 0)
+        {
+            ProgressDistanceCm = MassNavigationEngineDefaults.ArrivalProgressDistanceCm;
+        }
+
+        if (WakePushDistanceCm <= 0)
+        {
+            WakePushDistanceCm = MassNavigationEngineDefaults.ArrivalWakePushDistanceCm;
+        }
+
+        if (MaxRetryCount <= 0)
+        {
+            MaxRetryCount = MassNavigationEngineDefaults.ArrivalMaxRetryCount;
+        }
+    }
 
     public void CopyFrom(MassNavigationFlowArrivalTuning source)
     {

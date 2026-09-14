@@ -2,13 +2,22 @@
   {
     "id": "road_column_player",
     "components": {
-      "Name": { "Value": "Blue Column" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Blue Column"
+      },
+      "Team": {
+        "Id": 1
+      },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": {
         "IsEnabled": true
       },
-      "WorldPositionCm": { "Value": { "X": -9000, "Y": 0 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": -9000,
+          "Y": 0
+        }
+      },
       "ContinuousHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0
@@ -22,9 +31,15 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "Small"
+        "speedCmPerSecond": 1400,
+        "radiusCm": 30
       },
-      "AttributeBuffer": { "base": { "Health": 100, "MoveSpeed": 1200 } },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100,
+          "MoveSpeed": 1200
+        }
+      },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "OrderSpatialPayloadBuffer": {},
@@ -42,13 +57,22 @@
   {
     "id": "road_column_enemy",
     "components": {
-      "Name": { "Value": "Red Column" },
-      "Team": { "Id": 2 },
+      "Name": {
+        "Value": "Red Column"
+      },
+      "Team": {
+        "Id": 2
+      },
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": {
         "IsEnabled": true
       },
-      "WorldPositionCm": { "Value": { "X": 9000, "Y": 0 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 9000,
+          "Y": 0
+        }
+      },
       "ContinuousHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0
@@ -62,9 +86,15 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "Small"
+        "speedCmPerSecond": 1400,
+        "radiusCm": 30
       },
-      "AttributeBuffer": { "base": { "Health": 100, "MoveSpeed": 1180 } },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100,
+          "MoveSpeed": 1180
+        }
+      },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "OrderSpatialPayloadBuffer": {},
@@ -83,9 +113,18 @@
   {
     "id": "road_fort_blue",
     "components": {
-      "Name": { "Value": "Blue Fort" },
-      "Team": { "Id": 1 },
-      "WorldPositionCm": { "Value": { "X": -9000, "Y": 0 } },
+      "Name": {
+        "Value": "Blue Fort"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": -9000,
+          "Y": 0
+        }
+      },
       "RoadFortTag": {},
       "RoadFortControlState": {
         "ControllerTeamId": 1,
@@ -99,9 +138,18 @@
   {
     "id": "road_fort_red",
     "components": {
-      "Name": { "Value": "Red Fort" },
-      "Team": { "Id": 2 },
-      "WorldPositionCm": { "Value": { "X": 9000, "Y": 0 } },
+      "Name": {
+        "Value": "Red Fort"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 9000,
+          "Y": 0
+        }
+      },
       "RoadFortTag": {},
       "RoadFortControlState": {
         "ControllerTeamId": 2,
@@ -115,9 +163,18 @@
   {
     "id": "road_fort_neutral",
     "components": {
-      "Name": { "Value": "Neutral Fort" },
-      "Team": { "Id": 0 },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "Name": {
+        "Value": "Neutral Fort"
+      },
+      "Team": {
+        "Id": 0
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
       "RoadFortTag": {},
       "RoadFortControlState": {
         "ControllerTeamId": 0,

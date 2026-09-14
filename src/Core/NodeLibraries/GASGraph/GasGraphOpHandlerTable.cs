@@ -322,6 +322,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.WriteMapVarFloat or
                 GraphNodeOp.SpawnTemplate or
                 GraphNodeOp.SetWorldPosition or
+                GraphNodeOp.SetNavAgentTarget or
                 GraphNodeOp.SetInteractionMode or
                 GraphNodeOp.SetPanelAudience or
                 GraphNodeOp.InvokeGraph or
@@ -913,7 +914,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.HidePanel, HandleHidePanel, "HidePanel graph opcode.");
             Register(GraphNodeOp.CreatePanel, HandleCreatePanel, "CreatePanel graph opcode.");
         Register(GraphNodeOp.SpawnTemplate, HandleSpawnTemplate, "SpawnTemplate graph opcode.");
-        Register(GraphNodeOp.SetWorldPosition, HandleSetWorldPosition, "SetWorldPosition graph opcode.");
+                Register(GraphNodeOp.SetNavAgentTarget, HandleSetNavAgentTarget, "SetNavAgentTarget graph opcode.");
+Register(GraphNodeOp.SetWorldPosition, HandleSetWorldPosition, "SetWorldPosition graph opcode.");
             Register(GraphNodeOp.SetInteractionMode, HandleSetInteractionMode, "SetInteractionMode graph opcode.");
             Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
             Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
@@ -1517,6 +1519,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
             s.Api.SetWorldPosition(target, s.I[ins.B], s.I[ins.C]);
+        }
+
+        private static void HandleSetNavAgentTarget(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity agent = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.SetNavAgentTarget(agent, s.I[ins.B], s.I[ins.C]);
         }
 
         private static void HandleSetInteractionMode(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

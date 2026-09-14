@@ -144,7 +144,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.QueryHexRange, LinearAll, GraphValueType.Void, flags: GraphOperandRole.SpatialCapacityFlags, imm: GraphOperandRole.Immediate);
             Add(rows, GraphNodeOp.QueryHexRing, LinearAll, GraphValueType.Void, flags: GraphOperandRole.SpatialCapacityFlags, imm: GraphOperandRole.Immediate);
             Add(rows, GraphNodeOp.QueryHexNeighbors, LinearAll, GraphValueType.Void);
-            Add(rows, GraphNodeOp.ApplyEffectTemplate, LinearEffect, GraphValueType.Void, portApplyTemplate, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.ApplyEffectTemplate, EffectAndTriggerGraph, GraphValueType.Void, portApplyTemplate, scriptPorts: portApplyTemplate, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.FanOutApplyEffect, LinearEffect, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ApplyEffectDynamic, LinearEffect, GraphValueType.Void, portTargetValue);
             Add(rows, GraphNodeOp.FanOutApplyEffectDynamic, LinearEffect, GraphValueType.Void, portValue);
@@ -174,6 +174,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.CreatePanel, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.SpawnTemplate, EffectAndScript, GraphValueType.Void, portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.SetWorldPosition, EffectAndScript, GraphValueType.Void, portSourceAB, scriptPorts: portSourceAB, worldSideEffect: true);
+            Add(rows, GraphNodeOp.SetNavAgentTarget, EffectAndScript, GraphValueType.Void, portSourceAB, scriptPorts: portSourceAB, worldSideEffect: true);
             Add(rows, GraphNodeOp.SetInteractionMode, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.ActivateContext, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
             Add(rows, GraphNodeOp.DeactivateContext, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);

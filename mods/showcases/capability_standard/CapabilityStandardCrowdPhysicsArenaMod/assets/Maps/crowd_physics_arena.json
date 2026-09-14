@@ -17,11 +17,11 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 250,
-      "HeightInMacroTiles": 250,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "LoadedChunkCapacity": 256,
+      "WidthInCells": 64000,
+      "HeightInCells": 64000
     }
   ],
   "Entities": [
@@ -209,12 +209,1460 @@
           "OpenThresholdContacts": 20
         }
       }
+    },
+    {
+      "InstanceId": "arena_azure_agent_00",
+      "Template": "crowd_arena_agent_azure_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2538,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_01",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2538,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_02",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2538,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_03",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2538,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_04",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2538,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_05",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2538,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_06",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2538,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_07",
+      "Template": "crowd_arena_agent_azure_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2492,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_08",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2492,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_09",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2492,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_10",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2492,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_11",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2492,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_12",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2492,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_13",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2492,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_14",
+      "Template": "crowd_arena_agent_azure_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2446,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_15",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2446,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_16",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2446,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_17",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2446,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_18",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2446,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_19",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2446,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_20",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2446,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_21",
+      "Template": "crowd_arena_agent_azure_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2400,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_22",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2400,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_23",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2400,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_24",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2400,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_25",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2400,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_26",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2400,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_27",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2400,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_28",
+      "Template": "crowd_arena_agent_azure_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2354,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_29",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2354,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_30",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2354,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_31",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2354,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_32",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2354,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_33",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2354,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_34",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2354,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_35",
+      "Template": "crowd_arena_agent_azure_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2308,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_36",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2308,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_37",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2308,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_38",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2308,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_39",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2308,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_40",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2308,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_41",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2308,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_42",
+      "Template": "crowd_arena_agent_azure_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2262,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_43",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2262,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_44",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2262,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_45",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2262,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_46",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2262,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_azure_agent_47",
+      "Template": "crowd_arena_agent_azure_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2262,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_00",
+      "Template": "crowd_arena_agent_crimson_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7462,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_01",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7462,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_02",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7462,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_03",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7462,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_04",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7462,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_05",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7462,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_06",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7462,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_07",
+      "Template": "crowd_arena_agent_crimson_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7508,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_08",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7508,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_09",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7508,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_10",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7508,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_11",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7508,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_12",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7508,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_13",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7508,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_14",
+      "Template": "crowd_arena_agent_crimson_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7554,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_15",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7554,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_16",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7554,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_17",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7554,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_18",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7554,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_19",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7554,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_20",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7554,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_21",
+      "Template": "crowd_arena_agent_crimson_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7600,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_22",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7600,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_23",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7600,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_24",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7600,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_25",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7600,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_26",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7600,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_27",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7600,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_28",
+      "Template": "crowd_arena_agent_crimson_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7646,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_29",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7646,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_30",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7646,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_31",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7646,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_32",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7646,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_33",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7646,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_34",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7646,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_35",
+      "Template": "crowd_arena_agent_crimson_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7692,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_36",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7692,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_37",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7692,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_38",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7692,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_39",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7692,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_40",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7692,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_41",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7692,
+            "Y": 5138
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_42",
+      "Template": "crowd_arena_agent_crimson_heavy",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7738,
+            "Y": 4862
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_43",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7738,
+            "Y": 4908
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_44",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7738,
+            "Y": 4954
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_45",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7738,
+            "Y": 5000
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_46",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7738,
+            "Y": 5046
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_crimson_agent_47",
+      "Template": "crowd_arena_agent_crimson_light",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7738,
+            "Y": 5092
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "crimson_team_rep",
+      "Template": "crowd_arena_player_team"
     }
   ],
   "Teams": [
     {
       "TeamId": 1,
       "RepresentativeInstanceId": "player_team"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "crimson_team_rep"
     }
   ],
   "Players": [
@@ -222,6 +1670,31 @@
       "PlayerId": 1,
       "TeamId": 1,
       "RepresentativeInstanceId": "local_player"
+    }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": [
+      {
+        "PlayerId": 1,
+        "TeamId": 1,
+        "TypeId": "LudotsCore.Participant"
+      }
+    ]
+  },
+  "TriggerGraphs": [
+    {
+      "graph": "graph.crowd_arena.march",
+      "scopeInstanceId": "local_player"
     }
   ]
 }

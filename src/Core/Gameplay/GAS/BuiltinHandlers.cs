@@ -407,6 +407,8 @@ namespace Ludots.Core.Gameplay.GAS
                     OnSpawnEffectTemplateId = unit.OnSpawnEffectTemplateId,
                     CopySourceTeam = 1,
                     CopySourcePlayerOwner = (byte)(unit.CopySourcePlayerOwner ? 1 : 0),
+                    OwnershipSource = unit.CopySourceOwnership ? context.Source : Entity.Null,
+                    HasOwnershipSource = (byte)(unit.CopySourceOwnership ? 1 : 0),
                     LinkSourceAsParent = (byte)(unit.LinkSourceAsParent ? 1 : 0),
                 };
 
@@ -1149,12 +1151,49 @@ namespace Ludots.Core.Gameplay.GAS
                 case UnitCreationPlacementPattern.Circle:
                     ComputeCirclePlacement(in unit, index, out offsetCm, out facingAngleRad, out hasFacing);
                     return;
+                case UnitCreationPlacementPattern.Grid:
+                    ComputeGridPlacement(in unit, index, out offsetCm, out facingAngleRad, out hasFacing);
+                    return;
                 default:
                     offsetCm = ComputeScatterOffsetCm(source, effectEntity, rootId, unitTypeId, index, unit.OffsetRadius);
                     facingAngleRad = 0f;
                     hasFacing = false;
                     return;
             }
+        }
+
+        /// <summary>
+        /// 确定性网格摆位：cols×rows 以 count 开方取整、居中排布，
+        /// 与 massnav 求解器出生网格同一数学（不抖动）。
+        /// </summary>
+        private static void ComputeGridPlacement(
+            in UnitCreationDescriptor unit,
+            int index,
+            out Fix64Vec2 offsetCm,
+            out float facingAngleRad,
+            out bool hasFacing)
+        {
+            int count = unit.Count <= 0 ? 1 : unit.Count;
+            int cols = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(count)));
+            int row = index / cols;
+            int col = index % cols;
+            int rows = Math.Max(1, (int)Math.Ceiling(count / (double)cols));
+            Fix64 spacing = Fix64.FromInt(unit.PlacementSpacingCm);
+            Fix64 lateral = Fix64.FromInt(col - ((cols - 1) >> 1));
+            Fix64 depth = Fix64.FromInt(row - ((rows - 1) >> 1));
+            if ((cols & 1) == 0)
+            {
+                lateral -= Fix64.FromInt(1) / Fix64.FromInt(2);
+            }
+
+            if ((rows & 1) == 0)
+            {
+                depth -= Fix64.FromInt(1) / Fix64.FromInt(2);
+            }
+
+            offsetCm = new Fix64Vec2(lateral * spacing, depth * spacing);
+            facingAngleRad = 0f;
+            hasFacing = false;
         }
 
         private static void ComputeCirclePlacement(

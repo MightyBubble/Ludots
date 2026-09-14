@@ -6,7 +6,6 @@ using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Movement;
-using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
@@ -14,19 +13,25 @@ using Ludots.Core.Spatial;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
+/// <summary>
+/// 地图聚焦激活合同：MassNavigationConfig.json 在场 = overlay（mapId 可选作用域）；
+/// 缺席 = 全默认配置，且仅当地图模板里出现 MassNavigationAgent 组件时激活。
+/// 单位一律 authored 实体（地图 Entities 或 trigger 蓝图 spawn），
+/// 由 <see cref="MassNavigationAuthoredAgentBindingSystem"/> 自动绑定。
+/// </summary>
 public sealed class MassNavigationRuntime
 {
-    private MassNavigationConfig? _config;
+    private const string NavAgentComponentKey = "MassNavigationAgent";
+
+    private MassNavigationConfig? _fileConfig;
     private bool _configResolved;
     private bool _systemsInstalled;
-    private bool _scenarioSpawned;
     private MassNavigationSimulationRuntime? _simulation;
 
     public bool HandleMapFocused(GameEngine engine, MapId mapId)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        if (!TryEnsureConfig(engine, out MassNavigationConfig? config) || config is null ||
-            !string.Equals(mapId.Value, config.MapId, StringComparison.Ordinal))
+        if (!TryResolveConfig(engine, mapId, out MassNavigationConfig? config) || config is null)
         {
             return false;
         }
@@ -44,10 +49,6 @@ public sealed class MassNavigationRuntime
         try
         {
             BindBoardWorld(engine);
-            if (config.ScenarioRuntime.AutoSpawnConfiguredScenario)
-            {
-                EnsureScenario(engine);
-            }
         }
         catch
         {
@@ -77,15 +78,10 @@ public sealed class MassNavigationRuntime
     private bool ReleaseMapState(GameEngine engine, MapId mapId, bool unloadScenario)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        if (!TryEnsureConfig(engine, out MassNavigationConfig? config) || config is null ||
-            !string.Equals(mapId.Value, config.MapId, StringComparison.Ordinal))
+        if (!TryResolveConfig(engine, mapId, out MassNavigationConfig? resolved) ||
+            resolved is not MassNavigationConfig config)
         {
             return false;
-        }
-
-        if (unloadScenario)
-        {
-            _scenarioSpawned = false;
         }
 
         if (_simulation is MassNavigationSimulationRuntime simulation)
@@ -159,65 +155,62 @@ public sealed class MassNavigationRuntime
             ?? throw new InvalidOperationException("MassNavigation runtime requires DomainStanceQuery.");
         simulation.SetDomainRelationshipProjection(new MassNavigationDomainStanceProjection(
             stances,
-            config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity,
+            config.RuntimeCapacity.RelationshipDomainCapacity,
             config.RelationshipPolicy.CooperativeStance));
         _simulation = simulation;
         return simulation;
     }
 
-    private bool TryEnsureConfig(GameEngine engine, out MassNavigationConfig? config)
+    private bool TryResolveConfig(GameEngine engine, MapId focusedMapId, out MassNavigationConfig? config)
     {
-        if (_config != null)
+        if (_fileConfig is MassNavigationConfig fileConfig)
         {
-            config = _config;
-            return true;
+            config = fileConfig.AppliesToMap(focusedMapId.Value) ? fileConfig : null;
+            return config != null;
         }
 
-        if (_configResolved)
+        if (!_configResolved)
         {
-            config = null;
-            return false;
-        }
+            if (engine.ConfigPipeline == null)
+            {
+                throw new InvalidOperationException("MassNavigation runtime requires ConfigPipeline before loading MassNavigationConfig.");
+            }
 
-        if (engine.ConfigPipeline == null)
-        {
-            throw new InvalidOperationException("MassNavigation runtime requires ConfigPipeline before loading MassNavigationConfig.");
-        }
-
-        var loader = new MassNavigationConfigLoader(engine.ConfigPipeline);
-        if (!loader.TryLoad(engine.ConfigCatalog, engine.ConfigConflictReport, out MassNavigationConfig? loaded) ||
-            loaded is null)
-        {
+            var loader = new MassNavigationConfigLoader(engine.ConfigPipeline);
             _configResolved = true;
-            config = null;
-            return false;
+            if (loader.TryLoad(engine.ConfigCatalog, engine.ConfigConflictReport, out MassNavigationConfig? loaded) &&
+                loaded is not null)
+            {
+                _fileConfig = loaded;
+                config = loaded.AppliesToMap(focusedMapId.Value) ? loaded : null;
+                return config != null;
+            }
         }
 
-        AgentProfileRegistry agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires AgentProfiles.");
-        loaded.AgentProfiles.BindAgentProfiles(agentProfiles);
-        _config = loaded;
-        _configResolved = true;
-        config = loaded;
-        return true;
+        config = MapDeclaresNavAgents(engine)
+            ? MassNavigationConfig.CreateDefaultForMap(focusedMapId.Value)
+            : null;
+        return config != null;
     }
 
-    private void EnsureScenario(GameEngine engine)
+    private static bool MapDeclaresNavAgents(GameEngine engine)
     {
-        if (_scenarioSpawned &&
-            _simulation is { } existing &&
-            existing.AgentState.TotalAgents > 0)
+        var templates = engine.MapLoader?.TemplateRegistry?.GetAll();
+        if (templates == null)
         {
-            return;
+            return false;
         }
 
-        MassNavigationSimulationRuntime simulation = RequireSimulationRuntime("spawning the configured scenario");
-        MassNavigationScenarioBootstrap.SpawnConfiguredScenario(
-            engine,
-            simulation,
-            engine.GetService(CoreServiceKeys.TeamEntityLookup)
-                ?? throw new InvalidOperationException("MassNavigation runtime requires TeamEntityLookup."));
-        _scenarioSpawned = true;
+        foreach (Ludots.Core.Config.EntityTemplate template in templates)
+        {
+            if (template?.Components != null &&
+                template.Components.ContainsKey(NavAgentComponentKey))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void BindBoardWorld(GameEngine engine)

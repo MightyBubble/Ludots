@@ -68,7 +68,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "light"
+        "speedCmPerSecond": 800,
+        "radiusCm": 20
       }
     }
   },
@@ -116,7 +117,9 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "heavy"
+        "speedCmPerSecond": 800,
+        "radiusCm": 28,
+        "heavy": true
       }
     }
   },
@@ -164,7 +167,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "light"
+        "speedCmPerSecond": 800,
+        "radiusCm": 20
       }
     }
   },
@@ -212,7 +216,9 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "heavy"
+        "speedCmPerSecond": 800,
+        "radiusCm": 28,
+        "heavy": true
       }
     }
   },
@@ -260,7 +266,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "light"
+        "speedCmPerSecond": 800,
+        "radiusCm": 20
       }
     }
   },
@@ -308,7 +315,9 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "heavy"
+        "speedCmPerSecond": 800,
+        "radiusCm": 28,
+        "heavy": true
       }
     }
   },
@@ -356,7 +365,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "light"
+        "speedCmPerSecond": 800,
+        "radiusCm": 20
       }
     }
   },
@@ -404,7 +414,9 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "heavy"
+        "speedCmPerSecond": 800,
+        "radiusCm": 28,
+        "heavy": true
       }
     }
   },
@@ -462,6 +474,20 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavigationHotspotMarker": {}
+    }
+  },
+  {
+    "id": "mass_navigation_spawn_anchor",
+    "components": {
+      "Name": {
+        "Value": "MassNavigation.SpawnAnchor"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      }
     }
   }
 ]

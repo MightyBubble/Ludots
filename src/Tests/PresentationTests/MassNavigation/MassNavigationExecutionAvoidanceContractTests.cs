@@ -5,7 +5,6 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.Avoidance;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
@@ -236,18 +235,7 @@ namespace Ludots.Tests.Presentation
             config.Avoidance.Validate();
             config.Solver.Validate();
             config.World.Validate(config.Solver);
-            config.AgentProfiles.BindAgentProfiles(new AgentProfileRegistry(new[]
-            {
-                new AgentProfileConfig
-                {
-                    Id = "light",
-                    RadiusCm = 20,
-                    HeightCm = 180,
-                    ClearanceCm = 40,
-                    Mass = 1,
-                    Layer = 0
-                }
-            }));
+
             return config;
         }
 

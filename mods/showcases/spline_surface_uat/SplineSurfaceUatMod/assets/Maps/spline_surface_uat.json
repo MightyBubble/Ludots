@@ -1,16 +1,21 @@
 {
   "Id": "spline_surface_uat",
-  "Tags": ["showcase", "uat", "surface_source", "procedural_mesh"],
+  "Tags": [
+    "showcase",
+    "uat",
+    "surface_source",
+    "procedural_mesh"
+  ],
   "ContinuousHeightmapAsset": "assets/terrain/spline_surface_uat_flat.height",
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "NodeGraph",
-      "WidthInMacroTiles": 2,
-      "HeightInMacroTiles": 2,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 64
+      "LoadedChunkCapacity": 64,
+      "WidthInCells": 512,
+      "HeightInCells": 512
     }
   ],
   "DefaultCamera": {

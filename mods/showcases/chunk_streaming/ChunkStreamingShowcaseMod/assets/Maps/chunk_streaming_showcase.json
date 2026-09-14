@@ -1,15 +1,20 @@
 {
   "Id": "chunk_streaming_showcase",
-  "Tags": ["chunk_streaming_showcase", "showcase", "chunked", "road_network"],
+  "Tags": [
+    "chunk_streaming_showcase",
+    "showcase",
+    "chunked",
+    "road_network"
+  ],
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "NodeGraph",
-      "WidthInMacroTiles": 2,
-      "HeightInMacroTiles": 2,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 64
+      "LoadedChunkCapacity": 64,
+      "WidthInCells": 512,
+      "HeightInCells": 512
     }
   ],
   "DefaultCamera": {

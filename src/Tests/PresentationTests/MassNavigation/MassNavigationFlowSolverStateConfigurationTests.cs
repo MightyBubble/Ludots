@@ -214,564 +214,46 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationConfig_RuntimeCapacityDerivesScenarioScaleDefaults()
+        public void MassNavigationConfig_RuntimeCapacityAppliesEngineDefaultsAndKeepsOverrides()
         {
             JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
             MassNavigationConfig loaded = MassNavigationConfig.Load(config);
-            int authoredAgentCount = checked(loaded.Scenario.Teams.Length * loaded.Scenario.AgentsPerTeam);
-            Assert.That(loaded.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity, Is.EqualTo(authoredAgentCount));
-            Assert.That(loaded.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity, Is.EqualTo(authoredAgentCount));
-            Assert.That(loaded.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity, Is.EqualTo(loaded.Scenario.Teams.Length));
-            Assert.That(loaded.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity, Is.EqualTo(160_000),
-                "An explicit override larger than the derived minimum must survive derivation.");
-            Assert.That(loaded.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity, Is.EqualTo(256),
-                "An explicit override larger than the streaming window minimum must survive derivation.");
+            Assert.That(loaded.RuntimeCapacity.GroupMembershipAgentCapacity, Is.EqualTo(160_000),
+                "An explicit override larger than the engine default must survive defaulting.");
+            Assert.That(loaded.RuntimeCapacity.LoadedChunkCapacity, Is.EqualTo(256),
+                "An explicit loadedChunkCapacity override must survive defaulting.");
+            Assert.That(loaded.RuntimeCapacity.GroupMemberCapacity, Is.EqualTo(MassNavigationEngineDefaults.GroupMembershipAgentCapacity),
+                "Omitted member capacities default to the engine agent-capacity default.");
+            Assert.That(loaded.RuntimeCapacity.RelationshipDomainCapacity, Is.EqualTo(MassNavigationEngineDefaults.RelationshipDomainCapacity));
 
-            JsonObject externalAuthoring = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject externalScenarioRuntime = externalAuthoring["scenarioRuntime"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime must be authored.");
-            externalScenarioRuntime["autoSpawnConfiguredScenario"] = false;
-            (externalScenarioRuntime["runtimeCapacity"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime.runtimeCapacity must be authored.")).Remove("groupMembershipAgentCapacity");
-            (externalAuthoring["scenario"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenario must be authored."))["agentsPerTeam"] = 0;
-
-            InvalidOperationException external = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(externalAuthoring))!;
-            Assert.That(external.Message, Does.Contain("groupMembershipAgentCapacity"));
-            Assert.That(external.Message, Does.Contain("explicitly configured"));
-        }
-
-        [Test]
-        public void MassNavigationConfig_ExternalAuthoringOmitsRequiredMeshAssetIds()
-        {
-            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject presentation = config["presentation"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.presentation must be authored.");
-            presentation.Remove("requiredMeshAssetIds");
-            presentation["teams"] = new JsonArray();
-            (config["scenarioRuntime"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime must be authored."))["autoSpawnConfiguredScenario"] = false;
-
-            MassNavigationConfig loaded = MassNavigationConfig.Load(config);
-            Assert.That(loaded.Presentation.RequiredMeshAssetIds, Is.Empty);
-
-            JsonObject autoSpawnMissingMeshIds = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            (autoSpawnMissingMeshIds["presentation"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.presentation must be authored.")).Remove("requiredMeshAssetIds");
-
-            InvalidOperationException missingMeshIds = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(autoSpawnMissingMeshIds))!;
-            Assert.That(missingMeshIds.Message, Does.Contain("requiredMeshAssetIds"));
-        }
-
-        [Test]
-        public void MassNavigationConfig_RejectsRemovedDeadKeysThroughStrictMapping()
-        {
-            JsonObject styleIdConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonArray teams = styleIdConfig["presentation"]?["teams"]?.AsArray()
-                ?? throw new InvalidOperationException("MassNavigationConfig.presentation.teams must be authored.");
-            teams[0]!.AsObject()["styleId"] = "blue";
-
-            JsonException styleId = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(styleIdConfig))!;
-            Assert.That(styleId.Message, Does.Contain("styleId"));
-
-            JsonObject flowConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            (flowConfig["flow"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.flow must be authored."))["forceRefreshFlow"] = true;
-
-            JsonException forceRefresh = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(flowConfig))!;
-            Assert.That(forceRefresh.Message, Does.Contain("forceRefreshFlow"));
-
-            JsonObject arrivalConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            (arrivalConfig["arrival"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.arrival must be authored."))["timeoutMinMs"] = 250;
-
-            JsonException arrivalRange = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(arrivalConfig))!;
-            Assert.That(arrivalRange.Message, Does.Contain("timeoutMinMs"));
-        }
-
-        [Test]
-        public void ParallelStep_RequiresSchedulerWhenConfiguredParallel()
-        {
-            JobScheduler? previousScheduler = World.SharedJobScheduler;
-            World.SharedJobScheduler = null;
-
-            try
+            JsonObject minimal = new JsonObject
             {
-                var flow = CreateConfiguredFlow(parallelWorkerCount: 2);
-                var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
-                flow.Semantics.Solver.ParallelStepMinAgents = 2;
-                flow.Reset(
-                    new[] { 1 },
-                    unitsPerTeam: 2,
-                    CreateProfileSet(),
-                    layer,
-                    CreateSpawnLayout(randomSeed: 1234));
-                TeamManager.LoadConfig(new TeamConfig
-                {
-                    DefaultRelationship = "Friendly",
-                    Relationships = new List<RelationshipEntry>(),
-                });
-
-                using var world = World.Create();
-                var navGroups = new MassNavigationGroupRuntime(
-                    LoadBaseMassNavigationConfig().Semantics.Group,
-                    CreateRuntimeCapacity(agentCapacity: 2, groupMemberCapacity: 2));
-                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                    flow.Step(
-                        dt: 0.016f,
-                        world,
-                        navGroups,
-                        runHardResolve: false,
-                        hardResolveCandidateThresholdAgents: 1))!;
-
-                Assert.That(ex.Message, Does.Contain("World.SharedJobScheduler"));
-                Assert.That(ex.Message, Does.Contain("parallelWorkerCount"));
-            }
-            finally
-            {
-                World.SharedJobScheduler = previousScheduler;
-            }
-        }
-
-        [Test]
-        public void ParallelStep_EmitsExactlyOneArrivalEventPerSettledAgent()
-        {
-            World.SharedJobScheduler ??= new JobScheduler(new JobScheduler.Config
-            {
-                ThreadPrefixName = "MassNavArrivalTests",
-                ThreadCount = 0,
-                MaxExpectedConcurrentJobs = 64,
-                StrictAllocationMode = false
-            });
-
-            const int agentCount = 16;
-            var flow = CreateConfiguredFlow(parallelWorkerCount: 4);
-            flow.Semantics.Solver.ParallelStepMinAgents = 2;
-            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
-            var seeds = new MassNavigationAgentSeed[agentCount];
-            for (int i = 0; i < agentCount; i++)
-            {
-                seeds[i] = new MassNavigationAgentSeed(
-                    teamId: 1,
-                    localPositionXCm: 1_000f + ((i % 4) * 800f),
-                    localPositionYCm: 1_000f + ((i / 4) * 800f),
-                    heavy: false,
-                    navMass: 1f,
-                    visualScale: 1f,
-                    bodyRadiusCm: 20f,
-                    speedCmPerSecond: 800f,
-                    layer);
-            }
-
-            TeamManager.LoadConfig(new TeamConfig
-            {
-                DefaultRelationship = "Friendly",
-                Relationships = new List<RelationshipEntry>(),
-            });
-            flow.ResetAuthoredAgents(seeds);
-            for (int i = 0; i < agentCount; i++)
-            {
-                flow.SetUnitTarget(i, flow.GetPositionX(i), flow.GetPositionY(i), resetRecovery: true);
-            }
-
-            using var world = World.Create();
-            var navGroups = new MassNavigationGroupRuntime(
-                LoadBaseMassNavigationConfig().Semantics.Group,
-                CreateRuntimeCapacity(agentCapacity: agentCount, groupMemberCapacity: agentCount));
-
-            flow.Step(dt: 0.016f, world, navGroups, runHardResolve: false, hardResolveCandidateThresholdAgents: 1);
-            Assert.That(flow.SettledUnitCount, Is.EqualTo(agentCount));
-            Assert.That(flow.PendingArrivalEventCount, Is.EqualTo(agentCount));
-
-            flow.Step(dt: 0.016f, world, navGroups, runHardResolve: false, hardResolveCandidateThresholdAgents: 1);
-            Assert.That(flow.PendingArrivalEventCount, Is.EqualTo(agentCount));
-        }
-
-        [Test]
-        public void ParallelStep_WorkerCountDoesNotChangeSimulationResult()
-        {
-            // 数值域文档承诺：相同版本、配置、fixed tick 输入和初始 WorldPositionCm 下，
-            // worker 分片数量不得改变结果。本测试用 worker=1 与 worker=4 跑相同输入，
-            // 断言 positions/velocities/settled 状态逐位一致，锁住并行分片的确定性不变量。
-            World.SharedJobScheduler ??= new JobScheduler(new JobScheduler.Config
-            {
-                ThreadPrefixName = "MassNavWorkerDeterminismTests",
-                ThreadCount = 0,
-                MaxExpectedConcurrentJobs = 64,
-                StrictAllocationMode = false
-            });
-
-            const int agentCount = 16;
-            const int stepCount = 120;
-            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
-            var seeds = new MassNavigationAgentSeed[agentCount];
-            for (int i = 0; i < agentCount; i++)
-            {
-                // 间距 35cm < 半径和 40cm：初始即重叠，覆盖 separation 与硬解算路径。
-                seeds[i] = new MassNavigationAgentSeed(
-                    teamId: 1,
-                    localPositionXCm: 100f + ((i % 4) * 35f),
-                    localPositionYCm: 100f + ((i / 4) * 35f),
-                    heavy: false,
-                    navMass: 1f,
-                    visualScale: 1f,
-                    bodyRadiusCm: 20f,
-                    speedCmPerSecond: 800f,
-                    layer);
-            }
-
-            TeamManager.LoadConfig(new TeamConfig
-            {
-                DefaultRelationship = "Friendly",
-                Relationships = new List<RelationshipEntry>(),
-            });
-
-            var serialFlow = CreateConfiguredFlow(parallelWorkerCount: 1);
-            var parallelFlow = CreateConfiguredFlow(parallelWorkerCount: 4);
-            serialFlow.Semantics.Solver.ParallelStepMinAgents = 2;
-            parallelFlow.Semantics.Solver.ParallelStepMinAgents = 2;
-            serialFlow.ResetAuthoredAgents(seeds);
-            parallelFlow.ResetAuthoredAgents(seeds);
-            for (int i = 0; i < agentCount; i++)
-            {
-                if (i < 8)
-                {
-                    // 个体目标：unit target 路径。
-                    serialFlow.SetUnitTarget(i, 3_000f, 3_000f, resetRecovery: true);
-                    parallelFlow.SetUnitTarget(i, 3_000f, 3_000f, resetRecovery: true);
-                }
-                // 其余 8 个无个体目标：走 team slot + flow field 路径。
-            }
-
-            using var serialWorld = World.Create();
-            using var parallelWorld = World.Create();
-            var serialGroups = new MassNavigationGroupRuntime(
-                LoadBaseMassNavigationConfig().Semantics.Group,
-                CreateRuntimeCapacity(agentCapacity: agentCount, groupMemberCapacity: agentCount));
-            var parallelGroups = new MassNavigationGroupRuntime(
-                LoadBaseMassNavigationConfig().Semantics.Group,
-                CreateRuntimeCapacity(agentCapacity: agentCount, groupMemberCapacity: agentCount));
-
-            for (int step = 0; step < stepCount; step++)
-            {
-                serialFlow.Step(
-                    dt: 0.016f,
-                    serialWorld,
-                    serialGroups,
-                    runHardResolve: true,
-                    hardResolveCandidateThresholdAgents: 1);
-                parallelFlow.Step(
-                    dt: 0.016f,
-                    parallelWorld,
-                    parallelGroups,
-                    runHardResolve: true,
-                    hardResolveCandidateThresholdAgents: 1);
-
-                Assert.That(parallelFlow.SettledUnitCount, Is.EqualTo(serialFlow.SettledUnitCount),
-                    $"settled unit count diverged at step {step}");
-            }
-
-            Assert.That(parallelFlow.PendingArrivalEventCount, Is.EqualTo(serialFlow.PendingArrivalEventCount));
-            for (int i = 0; i < agentCount; i++)
-            {
-                Assert.That(
-                    BitConverter.SingleToInt32Bits(parallelFlow.GetPositionX(i)),
-                    Is.EqualTo(BitConverter.SingleToInt32Bits(serialFlow.GetPositionX(i))),
-                    $"position.x diverged on agent {i}");
-                Assert.That(
-                    BitConverter.SingleToInt32Bits(parallelFlow.GetPositionY(i)),
-                    Is.EqualTo(BitConverter.SingleToInt32Bits(serialFlow.GetPositionY(i))),
-                    $"position.y diverged on agent {i}");
-
-                var serialVelocity = serialFlow.GetVelocityCmPerSecond(i);
-                var parallelVelocity = parallelFlow.GetVelocityCmPerSecond(i);
-                Assert.That(
-                    BitConverter.SingleToInt32Bits(parallelVelocity.X),
-                    Is.EqualTo(BitConverter.SingleToInt32Bits(serialVelocity.X)),
-                    $"velocity.x diverged on agent {i}");
-                Assert.That(
-                    BitConverter.SingleToInt32Bits(parallelVelocity.Y),
-                    Is.EqualTo(BitConverter.SingleToInt32Bits(serialVelocity.Y)),
-                    $"velocity.y diverged on agent {i}");
-            }
-        }
-
-        [Test]
-        public void HardResolveCandidateGating_CoversLowerIndexDisplacedAgentWithoutFallbackProbe()
-        {
-            var flow = CreateConfiguredFlow(parallelWorkerCount: 1);
-            flow.PreallocateDisplacedAgentCapacity(1);
-            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
-            flow.ResetAuthoredAgents(new[]
-            {
-                CreateSeed(localX: 1_000f, localY: 1_000f, layer),
-                CreateSeed(localX: 1_030f, localY: 1_000f, layer),
-            });
-            flow.MarkAgentDisplaced(0);
-            TeamManager.LoadConfig(new TeamConfig
-            {
-                DefaultRelationship = "Friendly",
-                Relationships = new List<RelationshipEntry>(),
-            });
-
-            using var world = World.Create();
-            flow.Step(
-                dt: 0f,
-                world,
-                CreateNavGroupRuntime(agentCapacity: 2),
-                runHardResolve: true,
-                hardResolveCandidateThresholdAgents: 1);
-
-            Assert.That(flow.LastHardResolvePenetratingPairCount, Is.EqualTo(1));
-            Assert.That(flow.LastHardResolveFallbackProbeAgentCount, Is.Zero,
-                "Candidate generation must cover a lower-index externally displaced pair before hard resolve.");
-            Assert.That(flow.GetPositionX(0), Is.EqualTo(1_000f).Within(0.001f),
-                "Hard resolve must preserve the externally owned displaced pose.");
-            Assert.That(flow.GetPositionX(1), Is.GreaterThanOrEqualTo(1_040f - 0.001f),
-                "The nav-owned neighbor must take the full penetration correction.");
-        }
-
-        [TestCase(1_000)]
-        [TestCase(5_000)]
-        [TestCase(10_000)]
-        public void HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(int agentCount)
-        {
-            var flow = CreateSparseConfiguredFlow();
-            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
-            var seeds = new MassNavigationAgentSeed[agentCount];
-            const int columns = 100;
-            const float spacingCm = 180f;
-            for (int i = 0; i < agentCount; i++)
-            {
-                seeds[i] = CreateSeed(
-                    localX: 500f + ((i % columns) * spacingCm),
-                    localY: 500f + ((i / columns) * spacingCm),
-                    layer);
-            }
-
-            flow.ResetAuthoredAgents(seeds);
-            TeamManager.LoadConfig(new TeamConfig
-            {
-                DefaultRelationship = "Friendly",
-                Relationships = new List<RelationshipEntry>(),
-            });
-            for (int i = 0; i < agentCount; i++)
-            {
-                flow.SetUnitTarget(i, flow.GetPositionX(i), flow.GetPositionY(i), resetRecovery: true);
-            }
-
-            using var world = World.Create();
-            var navGroups = CreateNavGroupRuntime(agentCount);
-            flow.Step(0f, world, navGroups, runHardResolve: true, hardResolveCandidateThresholdAgents: 1);
-
-            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
-            long started = Stopwatch.GetTimestamp();
-            flow.Step(0f, world, navGroups, runHardResolve: true, hardResolveCandidateThresholdAgents: 1);
-            double elapsedMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
-
-            TestContext.WriteLine(
-                $"agents={agentCount} elapsedMs={elapsedMs:F3} candidates={flow.LastHardResolveCandidateAgentCount} " +
-                $"fallbackAgents={flow.LastHardResolveFallbackProbeAgentCount} fallbackPairs={flow.LastHardResolveFallbackPairCheckCount} " +
-                $"pairs={flow.LastHardResolvePairCheckCount} allocated={allocated}");
-            Assert.That(flow.LastHardResolveCandidateAgentCount, Is.Zero);
-            Assert.That(flow.LastHardResolveFallbackProbeAgentCount, Is.Zero,
-                "Sparse settled agents must retain the candidate gate instead of probing every agent neighborhood.");
-            Assert.That(flow.LastHardResolveFallbackPairCheckCount, Is.Zero);
-            Assert.That(allocated, Is.Zero);
-        }
-
-        [TestCase(1_000)]
-        [TestCase(5_000)]
-        [TestCase(10_000)]
-        public void HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(int agentCount)
-        {
-            const int teamCount = 4;
-            Assert.That(agentCount % teamCount, Is.Zero);
-
-            var flow = CreateConfiguredFlow(parallelWorkerCount: 1);
-            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
-            flow.Reset(
-                new[] { 1, 2, 3, 4 },
-                unitsPerTeam: agentCount / teamCount,
-                CreateProfileSet(),
-                layer,
-                CreateSpawnLayout(randomSeed: 12_648_430));
-            TeamManager.LoadConfig(new TeamConfig
-            {
-                DefaultRelationship = "Friendly",
-                Relationships = new List<RelationshipEntry>(),
-            });
-
-            using var world = World.Create();
-            var navGroups = CreateNavGroupRuntime(agentCount);
-            double hardResolveMs = 0d;
-            Action<double> observeHardResolve = sample => hardResolveMs = sample;
-
-            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
-            flow.Step(
-                dt: 1f / 15f,
-                world,
-                navGroups,
-                runHardResolve: true,
-                hardResolveCandidateThresholdAgents: 1,
-                observeHardResolve: observeHardResolve);
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
-
-            TestContext.WriteLine(
-                $"agents={agentCount} hardResolveMs={hardResolveMs:F3} candidates={flow.LastHardResolveCandidateAgentCount} " +
-                $"pairs={flow.LastHardResolvePairCheckCount} penetrating={flow.LastHardResolvePenetratingPairCount} allocated={allocated}");
-            Assert.That(flow.LastHardResolveCandidateAgentCount, Is.GreaterThan(agentCount * 0.9));
-            Assert.That(flow.LastHardResolvePairCheckCount, Is.LessThan(agentCount * 12L),
-                "Hard resolution must scan the actual collision radius, not the wider candidate-warning radius.");
-            Assert.That(flow.LastHardResolvePenetratingPairCount, Is.GreaterThan(0));
-            Assert.That(allocated, Is.Zero);
-        }
-
-        [Test]
-        public void SpawnJitter_UsesConfiguredSeedDeterministically()
-        {
-            var first = CreateSpawnedFlow(randomSeed: 1234);
-            var second = CreateSpawnedFlow(randomSeed: 1234);
-            var different = CreateSpawnedFlow(randomSeed: 5678);
-
-            Assert.That(second.GetPositionX(0), Is.EqualTo(first.GetPositionX(0)));
-            Assert.That(second.GetPositionY(0), Is.EqualTo(first.GetPositionY(0)));
-            Assert.That(
-                MathF.Abs(different.GetPositionX(0) - first.GetPositionX(0)) +
-                MathF.Abs(different.GetPositionY(0) - first.GetPositionY(0)),
-                Is.GreaterThan(0.001f));
-        }
-
-        [Test]
-        public void Step_UsesCallerDeltaTimeAsSingleSimulationClock()
-        {
-            float pausedDistance = StepUnitTargetAndMeasureXDelta(0f);
-            float smallStepDistance = StepUnitTargetAndMeasureXDelta(0.0125f);
-            float mediumStepDistance = StepUnitTargetAndMeasureXDelta(0.025f);
-            float largeStepDistance = StepUnitTargetAndMeasureXDelta(0.05f);
-
-            Assert.That(pausedDistance, Is.EqualTo(0f).Within(0.001f),
-                "A zero simulation dt must stop MassNavigation movement.");
-            Assert.That(smallStepDistance, Is.GreaterThan(pausedDistance),
-                "A positive simulation dt must move MassNavigation agents.");
-            Assert.That(smallStepDistance, Is.LessThan(mediumStepDistance),
-                "MassNavigation must consume the caller-provided simulation dt as its single time source.");
-            Assert.That(largeStepDistance, Is.GreaterThan(mediumStepDistance),
-                "A larger simulation dt within the configured solver cap must move farther.");
-        }
-
-        [Test]
-        public void Step_ZeroDeltaDoesNotAdvanceArrivalTimeout()
-        {
-            using var world = World.Create();
-            var flow = CreateUnitTargetFlow(unitCount: 1);
-            flow.ArrivalTuning.Enabled = true;
-            flow.ArrivalTuning.TimeoutMs = 250;
-            flow.ArrivalTuning.ProgressDistanceCm = 10_000;
-            Assert.That(flow.SetUnitTarget(0, 9_000f, 5_000f, resetRecovery: true), Is.True);
-
-            flow.Step(
-                dt: 0f,
-                world,
-                CreateNavGroupRuntime(agentCapacity: flow.UnitCount),
-                runHardResolve: false,
-                hardResolveCandidateThresholdAgents: flow.UnitCount + 1);
-
-            Assert.That(flow.IsUnitSettled(0), Is.False,
-                "Pause must freeze MassNavigation arrival recovery timers instead of timing out a stopped unit.");
-        }
-
-        [Test]
-        public void SimulationRuntime_PropagatesGroupedAgentSemanticsToMassNavigationFlow()
-        {
-            MassNavigationConfig config = MassNavigationConfig.Load(
-                ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json")));
-            MassNavigationGroupSemantics group = config.Semantics.Group;
-            group.GroupedAgentArriveThresholdCm = 222f;
-            group.GroupedAgentFlowSlowRadiusCm = 444f;
-
-            var runtime = new MassNavigationSimulationRuntime(config);
-            MassNavigationGroupSemantics massFlowGroup = runtime.GetRuntimeGroupSemantics();
-
-            Assert.That(massFlowGroup.GroupedAgentArriveThresholdCm, Is.EqualTo(group.GroupedAgentArriveThresholdCm));
-            Assert.That(massFlowGroup.GroupedAgentFlowSlowRadiusCm, Is.EqualTo(group.GroupedAgentFlowSlowRadiusCm));
-        }
-
-        [Test]
-        public void SimulationRuntime_PropagatesAllMappedConfigFieldsToMassNavigationFlow()
-        {
-            MassNavigationConfig config = MassNavigationConfig.Load(
-                ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json")));
-            int seed = 1;
-            MutateWritableLeaves(config.Arrival, ref seed);
-            MutateWritableLeaves(config.Avoidance, ref seed);
-            MutateWritableLeaves(config.Semantics, ref seed);
-
-            var runtime = new MassNavigationSimulationRuntime(config);
-            MassNavigationFlowSolverState flow = runtime.GetFlowSolverForTests();
-
-            AssertWritableLeavesEqual(config.Arrival, flow.ArrivalTuning, "arrival");
-            AssertWritableLeavesEqual(config.Avoidance, flow.AvoidanceTuning, "avoidance");
-            AssertWritableLeavesEqual(config.Semantics, flow.Semantics, "semantics");
-        }
-
-        [Test]
-        public void SimulationRuntime_PreallocatesRelationshipMatrixFromRuntimeCapacity()
-        {
-            MassNavigationConfig config = LoadBaseMassNavigationConfig();
-            config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity = 5;
-
-            var runtime = new MassNavigationSimulationRuntime(config);
-            MassNavigationFlowSolverState flow = runtime.GetFlowSolverForTests();
-
-            Assert.That(
-                flow.DomainRelationshipMatrixCapacity,
-                Is.EqualTo(25),
-                "Relationship-domain cooperative matrix must be prepared from runtime capacity before fixed-step; it must not grow on demand while stepping.");
-        }
-
-        [Test]
-        public void SimulationRuntime_AuthoredRebuildKeepsPreallocatedRelationshipMatrixCapacity()
-        {
-            using var world = World.Create();
-            MassNavigationConfig config = LoadBaseMassNavigationConfig();
-            config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 4;
-            config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity = 4;
-            var runtime = new MassNavigationSimulationRuntime(config);
-            MassNavigationFlowSolverState flow = runtime.GetFlowSolverForTests();
-            MassNavigationAgentLayer layer = CreateAgentLayer();
-            Entity agent = CreateAuthoredAgentEntity(world, localX: 1000f, localY: 1200f, layer);
-            MassNavigationAgentSeed[] seeds =
-            {
-                CreateAvoidanceSeed(teamId: 1, localX: 1000f, localY: 1200f, heavy: false, layer),
+                ["mapId"] = "minimal_map",
             };
-
-            runtime.RebuildFromAuthoredAgents(world, new[] { agent }, seeds, new[] { true });
-
-            Assert.That(
-                flow.DomainRelationshipMatrixCapacity,
-                Is.EqualTo(16),
-                "Authored map binding must keep the cold-preallocated relationship matrix capacity; shrinking it would make later domain append fail or allocate during fixed-step.");
+            MassNavigationConfig defaults = MassNavigationConfig.Load(minimal);
+            Assert.That(defaults.RuntimeCapacity.GroupMembershipAgentCapacity, Is.EqualTo(MassNavigationEngineDefaults.GroupMembershipAgentCapacity));
+            Assert.That(defaults.World!.StreamingChunkSizeCm, Is.Zero,
+                "streamingChunkSizeCm stays 0 (board-derived) until BindBoardWorld.");
+            Assert.That(defaults.RuntimeCapacity.LoadedChunkCapacity, Is.Zero,
+                "loadedChunkCapacity stays 0 (board-derived) until BindBoardWorld.");
+            defaults.RuntimeCapacity.ApplyBoardDerivedChunkCapacity(6400, 16000);
+            Assert.That(defaults.RuntimeCapacity.LoadedChunkCapacity, Is.EqualTo(9),
+                "A 16000cm radius window over 6400cm chunks needs a 3x3 chunk span.");
         }
 
         [Test]
-        public void MassNavigationAuthoringContract_DoesNotRequirePresentationServicesWhenScenarioIsExternallyAuthored()
+        public void MassNavigationConfig_RejectsDeadScenarioAndProfileSections()
         {
-            using var engine = new GameEngine();
-            MassNavigationConfig config = LoadBaseMassNavigationConfig();
-            config.ScenarioRuntime.AutoSpawnConfiguredScenario = false;
-            engine.RemoveService(CoreServiceKeys.PresenterDefinitionRegistry);
-            engine.RemoveService(CoreServiceKeys.PresentationMeshAssetRegistry);
-            engine.RemoveService(CoreServiceKeys.ContinuousHeightmap);
-
-            Assert.That(
-                () => MassNavigationAuthoringContract.Require(engine, config),
-                Throws.Nothing,
-                "Externally-authored MassNavigation maps must be able to prepare execution without Presentation presenter, mesh, or ContinuousHeightmap services.");
+            foreach (string deadKey in new[] { "scenario", "scenarioRuntime", "agentProfiles", "presentation", "teamRelationships" })
+            {
+                JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+                config[deadKey] = new JsonObject();
+                JsonException rejected = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(config))!;
+                Assert.That(rejected.Message, Does.Contain(deadKey),
+                    $"Dead config section '{deadKey}' must be rejected on write.");
+            }
         }
 
-        [Test]
         public void SimulationRuntime_CapturesReadOnlyAvoidanceSnapshot()
         {
             using var world = World.Create();
@@ -783,9 +265,9 @@ namespace Ludots.Tests.Presentation
             config.Solver.PlayAreaMinYCm = 50f;
             config.Solver.PlayAreaMaxYCm = 9_950f;
             config.Solver.MaxObstacleCount = 8;
-            config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 4;
-            config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 4;
-            config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity = 4;
+            config.RuntimeCapacity.GroupMembershipAgentCapacity = 4;
+            config.RuntimeCapacity.GroupMemberCapacity = 4;
+            config.RuntimeCapacity.MovePlanExecutionMemberCapacity = 4;
             var runtime = new MassNavigationSimulationRuntime(config);
             runtime.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(-5_000, -5_000, 10_000, 10_000), 100),
@@ -844,13 +326,92 @@ namespace Ludots.Tests.Presentation
         {
             var flow = CreateConfiguredFlow(parallelWorkerCount: 1);
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
-            flow.Reset(
-                new[] { 1 },
-                unitsPerTeam: 4,
-                CreateProfileSet(),
-                layer,
-                CreateSpawnLayout(randomSeed));
+            float spread = 400f + (randomSeed % 97);
+            var seeds = new MassNavigationAgentSeed[4];
+            for (int i = 0; i < seeds.Length; i++)
+            {
+                seeds[i] = new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 2000f + (i * spread * 0.25f),
+                    localPositionYCm: 2000f + (randomSeed % 13) + (i * 37f),
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    layer);
+            }
+
+            flow.ResetAuthoredAgents(seeds);
             return flow;
+        }
+
+        private static MassNavigationAgentSeed[] CreateSeededUnits(int teamCount, int unitsPerTeam, MassNavigationAgentLayer layer)
+        {
+            var seeds = new MassNavigationAgentSeed[teamCount * unitsPerTeam];
+            int index = 0;
+            for (int teamIndex = 0; teamIndex < teamCount; teamIndex++)
+            {
+                for (int localIndex = 0; localIndex < unitsPerTeam; localIndex++, index++)
+                {
+                    seeds[index] = new MassNavigationAgentSeed(
+                        teamId: teamIndex + 1,
+                        localPositionXCm: 3000f + (teamIndex * 800f) + (localIndex * 120f),
+                        localPositionYCm: 3000f + (localIndex * 90f),
+                        heavy: false,
+                        navMass: 1f,
+                        visualScale: 1f,
+                        bodyRadiusCm: 20f,
+                        speedCmPerSecond: 800f,
+                        layer);
+                }
+            }
+
+            return seeds;
+        }
+
+        /// <summary>QuadrantSpread 布局的 authored 种子等价物：2x2 象限、每队 cols x rows 网格满铺。</summary>
+        private static MassNavigationAgentSeed[] CreateQuadrantSpreadSeeds(int teamCount, int unitsPerTeam, MassNavigationAgentLayer layer)
+        {
+            const float fieldWidthCm = 10_000f;
+            const float fieldHeightCm = 10_000f;
+            const float spawnSpacingCm = 46f;
+            int colsTeams = System.Math.Max(1, (int)System.MathF.Ceiling(System.MathF.Sqrt(teamCount)));
+            int rowsTeams = System.Math.Max(1, (int)System.MathF.Ceiling(teamCount / (float)colsTeams));
+            float cellWidthCm = fieldWidthCm / colsTeams;
+            float cellHeightCm = fieldHeightCm / rowsTeams;
+            int cols = System.Math.Max(1, (int)System.MathF.Ceiling(System.MathF.Sqrt(unitsPerTeam)));
+            int rows = System.Math.Max(1, (int)System.MathF.Ceiling(unitsPerTeam / (float)cols));
+            float spacing = System.MathF.Max(spawnSpacingCm, System.MathF.Min(cellWidthCm / cols, cellHeightCm / rows));
+
+            var seeds = new MassNavigationAgentSeed[teamCount * unitsPerTeam];
+            int index = 0;
+            for (int teamIndex = 0; teamIndex < teamCount; teamIndex++)
+            {
+                int quadrantX = teamIndex % colsTeams;
+                int quadrantY = teamIndex / colsTeams;
+                float centerX = (fieldWidthCm * 0.5f) + ((quadrantX - ((colsTeams - 1) * 0.5f)) * cellWidthCm);
+                float centerY = (fieldHeightCm * 0.5f) + ((quadrantY - ((rowsTeams - 1) * 0.5f)) * cellHeightCm);
+                for (int localIndex = 0; localIndex < unitsPerTeam; localIndex++, index++)
+                {
+                    int row = localIndex / cols;
+                    int col = localIndex % cols;
+                    float lateral = (col - ((cols - 1) * 0.5f)) * spacing;
+                    float depth = (row - ((rows - 1) * 0.5f)) * spacing;
+                    seeds[index] = new MassNavigationAgentSeed(
+                        teamId: teamIndex + 1,
+                        localPositionXCm: centerX + lateral,
+                        localPositionYCm: centerY + depth,
+                        heavy: false,
+                        navMass: 1f,
+                        visualScale: 1f,
+                        bodyRadiusCm: 20f,
+                        speedCmPerSecond: 800f,
+                        layer);
+                }
+            }
+
+            return seeds;
         }
 
         private static MassNavigationFlowSolverState CreateConfiguredFlow(int parallelWorkerCount)
@@ -1000,57 +561,6 @@ namespace Ludots.Tests.Presentation
                 RelationshipDomainCapacity = 4,
                 DisplacedAgentCapacity = 4,
             };
-        }
-
-        private static MassNavigationScenarioSpawnLayoutConfig CreateSpawnLayout(int randomSeed)
-        {
-            var spawnLayout = new MassNavigationScenarioSpawnLayoutConfig
-            {
-                Kind = "OrbitOpposedTargets",
-                OrbitRadiusCm = 3_650f,
-                RandomSeed = randomSeed,
-            };
-            spawnLayout.Validate();
-            return spawnLayout;
-        }
-
-        private static MassNavigationAgentProfileSetConfig CreateProfileSet()
-        {
-            var profileSet = new MassNavigationAgentProfileSetConfig
-            {
-                DefaultProfileId = "light",
-                Profiles = new[]
-                {
-                    new MassNavigationAgentProfileConfig
-                    {
-                        Id = "light",
-                        Heavy = false,
-                        VisualScale = 1f,
-                        SpeedCmPerSecond = 800f,
-                        EveryNth = 0,
-                        NthOffset = 0,
-                    },
-                },
-            };
-            profileSet.Validate();
-            profileSet.BindAgentProfiles(CreateAgentProfiles());
-            return profileSet;
-        }
-
-        private static AgentProfileRegistry CreateAgentProfiles()
-        {
-            return new AgentProfileRegistry(new[]
-            {
-                new AgentProfileConfig
-                {
-                    Id = "light",
-                    RadiusCm = 20,
-                    HeightCm = 180,
-                    ClearanceCm = 40,
-                    Mass = 1,
-                    Layer = 0
-                }
-            });
         }
 
         private static MassNavigationAgentLayer CreateAgentLayer()

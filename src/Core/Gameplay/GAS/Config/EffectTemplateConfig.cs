@@ -208,8 +208,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public int? OffsetRadius { get; set; }
         public int? PlacementRadiusCm { get; set; }
         public int? PlacementStartAngleDeg { get; set; }
+        public int? PlacementSpacingCm { get; set; }
         public string? OnSpawnEffect { get; set; }
         public bool? CopySourcePlayerOwner { get; set; }
+        public bool? CopySourceOwnership { get; set; }
         public bool? LinkSourceAsParent { get; set; }
     }
 

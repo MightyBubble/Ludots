@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Knowledge;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation.Components;
@@ -40,7 +43,7 @@ public static class MassNavigationObserverDisclosure
         public int ResolveExpectedTargetCount(GameEngine engine)
         {
             return TryResolveSimulation(engine, out var simulation)
-                ? checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam)
+                ? simulation.NavigationAgentCount
                 : 0;
         }
 
@@ -51,25 +54,36 @@ public static class MassNavigationObserverDisclosure
                 : 0;
         }
 
+        /// <summary>
+        /// HUD 属性掩码从携带 MassNavigationAgent 的模板推导：对每个模板经
+        /// presenter bootstrap 规则找到其 presenter 定义，取 HUD 资产绑定的属性集。
+        /// </summary>
         public KnowledgeIdMask256 ResolveAttributeMask(GameEngine engine)
         {
             var presenters = RequirePresenterRegistry(engine);
-            if (!TryResolveSimulation(engine, out var simulation))
-            {
-                return KnowledgeIdMask256.Empty;
-            }
-
+            EntityTemplateKeyRegistry templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
+                as EntityTemplateKeyRegistry
+                ?? throw new InvalidOperationException(
+                    "MassNavigation local observer disclosure requires EntityTemplateKeyRegistry.");
             KnowledgeIdMask256 mask = KnowledgeIdMask256.Empty;
-            ReadOnlySpan<int> teamIds = simulation.TeamIds;
-            for (int i = 0; i < teamIds.Length; i++)
+            foreach (EntityTemplate template in engine.MapLoader.TemplateRegistry.GetAll())
             {
-                int teamId = teamIds[i];
-                mask = mask.Union(ResolveHudAttributeMask(
-                    presenters,
-                    simulation.Config.Presentation.ResolveAgentPresenterId(teamId, heavy: false)));
-                mask = mask.Union(ResolveHudAttributeMask(
-                    presenters,
-                    simulation.Config.Presentation.ResolveAgentPresenterId(teamId, heavy: true)));
+                if (template?.Components == null ||
+                    !template.Components.ContainsKey("MassNavigationAgent") ||
+                    !templateKeys.TryGetId(template.Id, out int templateKeyId))
+                {
+                    continue;
+                }
+
+                if (!presenters.BootstrapRegistry.TryGetEntitySpawnCreates(templateKeyId, out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules))
+                {
+                    continue;
+                }
+
+                for (int ruleIndex = 0; ruleIndex < rules.Length; ruleIndex++)
+                {
+                    mask = mask.Union(ResolveHudAttributeMask(presenters, rules[ruleIndex].PresenterDefinitionId));
+                }
             }
 
             return mask;
@@ -110,13 +124,12 @@ public static class MassNavigationObserverDisclosure
 
         private static KnowledgeIdMask256 ResolveHudAttributeMask(
             PresenterDefinitionRegistry presenters,
-            string presenterKey)
+            int definitionId)
         {
-            int definitionId = presenters.GetId(presenterKey);
             if (definitionId <= 0 || !presenters.TryGet(definitionId, out PresenterDefinition definition))
             {
                 throw new InvalidOperationException(
-                    $"MassNavigation local observer disclosure requires presenter definition '{presenterKey}'.");
+                    $"MassNavigation local observer disclosure requires presenter definition id {definitionId}.");
             }
 
             return ResolveHudAttributeMask(presenters, definition);

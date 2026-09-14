@@ -49,6 +49,106 @@ public sealed class MassNavigationFlowAvoidanceTuning
     [JsonIgnore]
     public MassNavigationFlowAvoidanceMode ParsedMode => _parsedMode;
 
+    public void ApplyEngineDefaults()
+    {
+        if (string.IsNullOrEmpty(Mode))
+        {
+            Mode = MassNavigationEngineDefaults.AvoidanceMode;
+        }
+
+        Orca.ApplyEngineDefaults();
+        Sonar.ApplyEngineDefaults();
+        if (DominantMassRatio <= 0f)
+        {
+            DominantMassRatio = 2.25f;
+        }
+
+        if (FriendlyResponseScale <= 0f)
+        {
+            FriendlyResponseScale = 1.1f;
+        }
+
+        if (FriendlyResponseMin <= 0f)
+        {
+            FriendlyResponseMin = 0.35f;
+        }
+
+        if (FriendlyResponseMax <= 0f)
+        {
+            FriendlyResponseMax = 2.75f;
+        }
+
+        if (NonFriendlyResponseScale <= 0f)
+        {
+            NonFriendlyResponseScale = 1.25f;
+        }
+
+        if (NonFriendlyResponseMin <= 0f)
+        {
+            NonFriendlyResponseMin = 0.25f;
+        }
+
+        if (NonFriendlyResponseMax <= 0f)
+        {
+            NonFriendlyResponseMax = 3.25f;
+        }
+
+        if (DominantPushResponseScale <= 0f)
+        {
+            DominantPushResponseScale = 1.6f;
+        }
+
+        if (DominantPushResponseMin <= 0f)
+        {
+            DominantPushResponseMin = 0.15f;
+        }
+
+        if (DominantPushResponseMax <= 0f)
+        {
+            DominantPushResponseMax = 4.5f;
+        }
+
+        if (FriendlyCorrectionShareMin <= 0f)
+        {
+            FriendlyCorrectionShareMin = 0.18f;
+        }
+
+        if (FriendlyCorrectionShareMax <= 0f)
+        {
+            FriendlyCorrectionShareMax = 0.82f;
+        }
+
+        if (DominantCorrectionOtherMassWeight <= 0f)
+        {
+            DominantCorrectionOtherMassWeight = 1.8f;
+        }
+
+        if (DominantCorrectionShareMin <= 0f)
+        {
+            DominantCorrectionShareMin = 0.05f;
+        }
+
+        if (DominantCorrectionShareMax <= 0f)
+        {
+            DominantCorrectionShareMax = 0.95f;
+        }
+
+        if (NonFriendlyCorrectionOtherMassWeight <= 0f)
+        {
+            NonFriendlyCorrectionOtherMassWeight = 1.2f;
+        }
+
+        if (NonFriendlyCorrectionShareMin <= 0f)
+        {
+            NonFriendlyCorrectionShareMin = 0.08f;
+        }
+
+        if (NonFriendlyCorrectionShareMax <= 0f)
+        {
+            NonFriendlyCorrectionShareMax = 0.92f;
+        }
+    }
+
     public void CopyFrom(MassNavigationFlowAvoidanceTuning source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -158,6 +258,19 @@ public sealed class MassNavigationFlowOrcaAvoidanceConfig
     public float TimeHorizonSeconds { get; set; }
     public int MaxNeighbors { get; set; }
 
+    public void ApplyEngineDefaults()
+    {
+        if (TimeHorizonSeconds <= 0f)
+        {
+            TimeHorizonSeconds = 1f;
+        }
+
+        if (MaxNeighbors <= 0)
+        {
+            MaxNeighbors = 16;
+        }
+    }
+
     public void CopyFrom(MassNavigationFlowOrcaAvoidanceConfig source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -199,6 +312,34 @@ public sealed class MassNavigationFlowSonarAvoidanceConfig
     public bool UsePreferredVelocityWhenBlocked { get; set; }
     public float TimeHorizonSeconds { get; set; }
     public int MaxNeighbors { get; set; }
+
+    public void ApplyEngineDefaults()
+    {
+        if (MaxSteerAngleDeg <= 0)
+        {
+            MaxSteerAngleDeg = 55;
+        }
+
+        if (BackwardPenaltyAngleDeg <= 0)
+        {
+            BackwardPenaltyAngleDeg = 70;
+        }
+
+        if (PredictionTimeScale <= 0f)
+        {
+            PredictionTimeScale = 1.2f;
+        }
+
+        if (TimeHorizonSeconds <= 0f)
+        {
+            TimeHorizonSeconds = 1f;
+        }
+
+        if (MaxNeighbors <= 0)
+        {
+            MaxNeighbors = 16;
+        }
+    }
 
     public void CopyFrom(MassNavigationFlowSonarAvoidanceConfig source)
     {

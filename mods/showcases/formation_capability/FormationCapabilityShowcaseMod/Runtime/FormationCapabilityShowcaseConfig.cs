@@ -206,52 +206,13 @@ internal sealed class FormationCapabilityShowcaseConfig
         }
     }
 
-    public void ValidateAgentProfileReferences(MassNavigationAgentProfileSetConfig profileSet, AgentProfileRegistry geometryProfiles)
+    public void ValidateAgentProfileReferences(AgentProfileRegistry geometryProfiles)
     {
         for (int i = 0; i < Formations.Length; i++)
         {
             FormationCapabilityShowcaseFormationConfig formation = Formations[i];
-            _ = ResolveSoldierAgentProfile(profileSet, i);
             geometryProfiles.Require(formation.SoldierAgent.ProfileId, $"formations[{i}].soldierAgent.profileId");
         }
-    }
-
-    public MassNavigationAgentProfileConfig ResolveSoldierAgentProfile(MassNavigationAgentProfileSetConfig profileSet, int formationIndex)
-    {
-        if ((uint)formationIndex >= (uint)Formations.Length)
-        {
-            throw new InvalidOperationException(
-                $"Formation Capability formation index {formationIndex} exceeds configured formations length {Formations.Length}.");
-        }
-
-        return ResolveAgentProfile(
-            profileSet,
-            Formations[formationIndex].SoldierAgent.ProfileId,
-            $"formations[{formationIndex}].soldierAgent.profileId");
-    }
-
-    private static MassNavigationAgentProfileConfig ResolveAgentProfile(
-        MassNavigationAgentProfileSetConfig profileSet,
-        string profileId,
-        string label)
-    {
-        if (profileSet == null)
-        {
-            throw new ArgumentNullException(nameof(profileSet));
-        }
-
-        RequireNonEmpty(profileId, label);
-        for (int i = 0; i < profileSet.Profiles.Length; i++)
-        {
-            MassNavigationAgentProfileConfig profile = profileSet.Profiles[i];
-            if (string.Equals(profile.Id, profileId, StringComparison.Ordinal))
-            {
-                return profile;
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Formation Capability showcase config {label} references MassNavigation agent profile '{profileId}', but that profile is not configured.");
     }
 
     internal static void RequireNonEmpty(string value, string fieldName)

@@ -84,7 +84,7 @@ namespace Ludots.Tests.Presentation
             StartStartupMap(engine);
 
             MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
-            int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
+            int expectedAgents = CountWorldNavAgents(engine);
             Assert.That(expectedAgents, Is.EqualTo(96));
 
             WaitForScenarioAgents(engine, simulation, expectedAgents);
@@ -455,6 +455,14 @@ namespace Ludots.Tests.Presentation
             File.WriteAllText(
                 Path.Combine(modDir, "assets", "Physics2D", "kinematic.json"),
                 $"{{\n  \"kinematicBodyCapacity\": {kinematicBodyCapacity}\n}}\n");
+        }
+
+        private static int CountWorldNavAgents(GameEngine engine)
+        {
+            int count = 0;
+            var query = new Arch.Core.QueryDescription().WithAll<Ludots.Core.MassNavigation.Runtime.MassNavigationAgent>();
+            engine.World.Query(in query, (in Arch.Core.Entity _) => count++);
+            return count;
         }
 
         private static void WaitForScenarioAgents(

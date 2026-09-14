@@ -2145,7 +2145,7 @@ namespace Ludots.Tests.GAS
                 new WorldSizeSpec(new WorldAabbCm(-25_000, -25_000, 50_000, 50_000), 100),
                 new WorldGridLoadedChunks(
                     simulation.WorldConfig.StreamingChunkSizeCm,
-                    simulation.Config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity));
+                    simulation.Config.RuntimeCapacity.LoadedChunkCapacity));
 
             Vector2 worldPosition = world.Get<WorldPositionCm>(actor).Value.ToVector2();
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
@@ -2186,7 +2186,7 @@ namespace Ludots.Tests.GAS
                 new WorldSizeSpec(new WorldAabbCm(-25_000, -25_000, 50_000, 50_000), 100),
                 new WorldGridLoadedChunks(
                     simulation.WorldConfig.StreamingChunkSizeCm,
-                    simulation.Config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity));
+                    simulation.Config.RuntimeCapacity.LoadedChunkCapacity));
             return simulation;
         }
 
@@ -2208,18 +2208,6 @@ namespace Ludots.Tests.GAS
             MassNavigationConfig config = new MassNavigationConfigLoader(pipeline).Load(
                 catalog,
                 new ConfigConflictReport());
-            config.AgentProfiles.BindAgentProfiles(new AgentProfileRegistry(new[]
-            {
-                new AgentProfileConfig
-                {
-                    Id = "Small",
-                    RadiusCm = 30,
-                    HeightCm = 180,
-                    ClearanceCm = 40,
-                    Mass = 1,
-                    Layer = 0,
-                },
-            }));
             return config;
         }
 

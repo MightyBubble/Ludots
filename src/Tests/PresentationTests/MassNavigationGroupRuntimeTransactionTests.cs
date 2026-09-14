@@ -20,9 +20,9 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
         MassNavigationProfileRegistry.Reset();
         using World world = World.Create();
         MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
-        config.ScenarioRuntime.RuntimeCapacity.NavigationGroupCapacity = 1;
-        config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 2;
-        config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 2;
+        config.RuntimeCapacity.NavigationGroupCapacity = 1;
+        config.RuntimeCapacity.GroupMembershipAgentCapacity = 2;
+        config.RuntimeCapacity.GroupMemberCapacity = 2;
 
         var simulation = new MassNavigationSimulationRuntime(config);
         simulation.BindBoardWorld(
@@ -79,9 +79,9 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
         MassNavigationProfileRegistry.Reset();
         using World world = World.Create();
         MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
-        config.ScenarioRuntime.RuntimeCapacity.NavigationGroupCapacity = 2;
-        config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 3;
-        config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 2;
+        config.RuntimeCapacity.NavigationGroupCapacity = 2;
+        config.RuntimeCapacity.GroupMembershipAgentCapacity = 3;
+        config.RuntimeCapacity.GroupMemberCapacity = 2;
 
         var simulation = new MassNavigationSimulationRuntime(config);
         simulation.BindBoardWorld(
@@ -138,9 +138,9 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
         MassNavigationProfileRegistry.Reset();
         using World world = World.Create();
         MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
-        config.ScenarioRuntime.RuntimeCapacity.NavigationGroupCapacity = 2;
-        config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 3;
-        config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 1;
+        config.RuntimeCapacity.NavigationGroupCapacity = 2;
+        config.RuntimeCapacity.GroupMembershipAgentCapacity = 3;
+        config.RuntimeCapacity.GroupMemberCapacity = 1;
 
         var simulation = new MassNavigationSimulationRuntime(config);
         simulation.BindBoardWorld(

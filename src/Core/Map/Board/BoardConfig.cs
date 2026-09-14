@@ -15,11 +15,17 @@ namespace Ludots.Core.Map.Board
         /// <summary>Spatial type: "Grid", "HexGrid", or "NodeGraph".</summary>
         public string SpatialType { get; set; } = "Grid";
 
-        /// <summary>Board width in 256-cell macro tiles.</summary>
-        public int WidthInMacroTiles { get; set; } = SpatialScaleDefaults.DefaultWorldWidthMacroTiles;
+        /// <summary>Board width in grid cells (authoring face).</summary>
+        public int WidthInCells { get; set; } = SpatialScaleDefaults.DefaultWorldWidthMacroTiles * SpatialScaleDefaults.MacroTileCells;
 
-        /// <summary>Board height in 256-cell macro tiles.</summary>
-        public int HeightInMacroTiles { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles;
+        /// <summary>Board height in grid cells (authoring face).</summary>
+        public int HeightInCells { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles * SpatialScaleDefaults.MacroTileCells;
+
+        /// <summary>256-cell macro tile count derived from the cell authoring face (ceil), for streaming math.</summary>
+        public int WidthInMacroTiles => (WidthInCells + SpatialScaleDefaults.MacroTileCells - 1) / SpatialScaleDefaults.MacroTileCells;
+
+        /// <summary>256-cell macro tile count derived from the cell authoring face (ceil), for streaming math.</summary>
+        public int HeightInMacroTiles => (HeightInCells + SpatialScaleDefaults.MacroTileCells - 1) / SpatialScaleDefaults.MacroTileCells;
 
         /// <summary>Grid cell size in centimeters.</summary>
         public int GridCellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
@@ -70,8 +76,8 @@ namespace Ludots.Core.Map.Board
             {
                 Name = Name,
                 SpatialType = SpatialType,
-                WidthInMacroTiles = WidthInMacroTiles,
-                HeightInMacroTiles = HeightInMacroTiles,
+                WidthInCells = WidthInCells,
+                HeightInCells = HeightInCells,
                 GridCellSizeCm = GridCellSizeCm,
                 HexEdgeLengthCm = HexEdgeLengthCm,
                 ChunkSizeCells = ChunkSizeCells,

@@ -105,7 +105,7 @@ namespace Ludots.Tests.Presentation
                 "GridBoard focus must publish one loaded-chunk SSOT to both Core services and spatial queries.");
 
             MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
-            int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
+            int expectedAgents = ExpectedAgentCount;
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
             var effectRequestQueue = RequireService(engine, CoreServiceKeys.EffectRequestQueue);
             Assert.That(
@@ -121,7 +121,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderQueueCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
             Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderAdmissionResultCapacity, Is.GreaterThanOrEqualTo(expectedAgents * 2));
             Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderTerminalResultCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
-            Assert.That(simulation.Config.Scenario.Teams.Length, Is.EqualTo(ExpectedTeamCount));
+            Assert.That(CountWorldTeamReps(engine), Is.EqualTo(ExpectedTeamCount));
 
             var hudProjection = CreateHudProjection(engine);
             ProjectionSample sample = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
@@ -222,10 +222,10 @@ namespace Ludots.Tests.Presentation
             StartStartupMap(engine);
 
             MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
-            int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
+            int expectedAgents = ExpectedAgentCount;
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
-            Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
-            Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(simulation.Config.RuntimeCapacity.GroupMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(simulation.Config.RuntimeCapacity.MovePlanExecutionMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
 
             var hudProjection = CreateHudProjection(engine);
             _ = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
@@ -514,7 +514,7 @@ namespace Ludots.Tests.Presentation
             StartStartupMap(engine);
 
             MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
-            int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
+            int expectedAgents = ExpectedAgentCount;
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
             AssertScenarioAgentTemplatesDriveHealthPeriodically(engine, simulation);
 
@@ -631,7 +631,7 @@ namespace Ludots.Tests.Presentation
             StartStartupMap(engine);
 
             MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
-            int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
+            int expectedAgents = ExpectedAgentCount;
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
 
             var hudProjection = CreateHudProjection(engine);
@@ -663,7 +663,7 @@ namespace Ludots.Tests.Presentation
             StartStartupMap(engine);
 
             MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
-            int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
+            int expectedAgents = ExpectedAgentCount;
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
 
             var hudProjection = CreateHudProjection(engine);
@@ -1460,7 +1460,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(totalAgents, Is.EqualTo(ExpectedAgentCount));
             Assert.That(
                 controllableAgents,
-                Is.EqualTo(simulation.AgentsPerTeam),
+                Is.EqualTo(ExpectedAgentCount / ExpectedTeamCount),
                 "Exactly one scenario domain must be controllable by the startup player through ownership relationships.");
             Assert.That(
                 legacyIdentityMirrors,
@@ -1577,12 +1577,22 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation)
         {
             var checkedTemplateIds = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < simulation.Config.Presentation.Teams.Length; i++)
+            foreach (Ludots.Core.Config.EntityTemplate template in engine.MapLoader.TemplateRegistry.GetAll())
             {
-                MassNavigationTeamPresentationConfig team = simulation.Config.Presentation.Teams[i];
-                AssertAgentTemplateDrivesHealthPeriodically(engine, team.LightTemplateId, checkedTemplateIds);
-                AssertAgentTemplateDrivesHealthPeriodically(engine, team.HeavyTemplateId, checkedTemplateIds);
+                if (template?.Components != null &&
+                    template.Components.ContainsKey("MassNavigationAgent"))
+                {
+                    AssertAgentTemplateDrivesHealthPeriodically(engine, template.Id, checkedTemplateIds);
+                }
             }
+        }
+
+        private static int CountWorldTeamReps(GameEngine engine)
+        {
+            int count = 0;
+            var query = new Arch.Core.QueryDescription().WithAll<Ludots.Core.Gameplay.Components.TeamIdentity>();
+            engine.World.Query(in query, (in Arch.Core.Entity _) => count++);
+            return count;
         }
 
         private static void AssertAgentTemplateDrivesHealthPeriodically(

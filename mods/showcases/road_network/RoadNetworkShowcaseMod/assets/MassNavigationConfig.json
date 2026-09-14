@@ -24,34 +24,14 @@
     "playAreaMaxXCm": 49950,
     "playAreaMaxYCm": 49950
   },
-  "presentation": {
-    "blockerTemplateId": "road_network_unused_blocker",
-    "teams": []
-  },
-  "scenario": {
-    "agentsPerTeam": 0,
-    "teams": [
-      {
-        "id": 1,
-        "name": "Blue Road Columns"
-      },
-      {
-        "id": 2,
-        "name": "Red Road Columns"
-      }
-    ]
-  },
-  "scenarioRuntime": {
-    "autoSpawnConfiguredScenario": false,
-    "runtimeCapacity": {
-      "navigationGroupCapacity": 32,
-      "groupMembershipAgentCapacity": 128,
-      "groupMemberCapacity": 32,
-      "movePlanExecutionGroupCapacity": 32,
-      "movePlanExecutionMemberCapacity": 32,
-      "relationshipDomainCapacity": 3,
-      "displacedAgentCapacity": 16
-    }
+  "runtimeCapacity": {
+    "navigationGroupCapacity": 32,
+    "groupMembershipAgentCapacity": 128,
+    "groupMemberCapacity": 32,
+    "movePlanExecutionGroupCapacity": 32,
+    "movePlanExecutionMemberCapacity": 32,
+    "relationshipDomainCapacity": 3,
+    "displacedAgentCapacity": 16
   },
   "cadence": {
     "simulationHz": 30,
@@ -60,30 +40,8 @@
     "entitySyncHz": 30,
     "maxStepsPerFixedTick": 2
   },
-  "agentProfiles": {
-    "defaultProfileId": "Small",
-    "profiles": [
-      {
-        "id": "Small",
-        "heavy": false,
-        "visualScale": 1,
-        "speedCmPerSecond": 1400,
-        "everyNth": 0,
-        "nthOffset": 0
-      }
-    ]
-  },
-  "teamRelationships": {
-    "relationships": []
-  },
   "streaming": {
     "retainSeconds": 12,
     "radiusCm": 32000
-  },
-  "semantics": {
-    "route": {
-      "waypointAdvanceStopThresholdScale": 2,
-      "waypointAdvanceBodyRadiusScale": 1.5
-    }
   }
 }

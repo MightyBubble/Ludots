@@ -66,7 +66,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "light"
+        "speedCmPerSecond": 920,
+        "radiusCm": 20
       }
     }
   },
@@ -96,7 +97,9 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "heavy"
+        "speedCmPerSecond": 780,
+        "radiusCm": 28,
+        "heavy": true
       }
     }
   },
@@ -126,7 +129,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "light"
+        "speedCmPerSecond": 920,
+        "radiusCm": 20
       }
     }
   },
@@ -156,7 +160,9 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "heavy"
+        "speedCmPerSecond": 780,
+        "radiusCm": 28,
+        "heavy": true
       }
     }
   },

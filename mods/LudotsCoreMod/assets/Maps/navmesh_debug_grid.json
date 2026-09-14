@@ -11,8 +11,6 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 4,
-      "HeightInMacroTiles": 4,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 256,
@@ -25,7 +23,9 @@
         "cellSizeCm": 100,
         "originXcm": 0,
         "originZcm": 0
-      }
+      },
+      "WidthInCells": 1024,
+      "HeightInCells": 1024
     }
   ],
   "Entities": [],

@@ -76,9 +76,6 @@ public sealed partial class MassNavigationFlowSolverState
     private byte[] _hasUnitTarget = Array.Empty<byte>();
     private byte[] _hardResolveCandidates = Array.Empty<byte>();
     private byte[] _heavyProfileFlags = Array.Empty<byte>();
-    private float _activeSpawnGridSpacingCm;
-    private bool _quadrantSpreadSpawnActive;
-    private bool _quadrantSpreadTargetsPlanted;
     private byte[] _entitySyncDirtyFlags = Array.Empty<byte>();
     private byte[] _unitSettledFlags = Array.Empty<byte>();
     private byte[] _arrivalEventEmittedFlags = Array.Empty<byte>();
@@ -141,7 +138,6 @@ public sealed partial class MassNavigationFlowSolverState
     public double LastHardResolveBuildHashMs { get; private set; }
     public double LastHardResolvePairLoopMs { get; private set; }
     public double LastHardResolveTotalMs { get; private set; }
-    internal bool QuadrantSpreadSpawnActive => _quadrantSpreadSpawnActive;
     internal int UnitTargetCount
     {
         get
@@ -375,41 +371,6 @@ public sealed partial class MassNavigationFlowSolverState
 
         MarkFlowDirty();
         MarkAllEntitiesDirty();
-    }
-
-    public void Reset(
-        ReadOnlySpan<int> teamIds,
-        int unitsPerTeam,
-        MassNavigationAgentProfileSetConfig profileSet,
-        MassNavigationAgentLayer layer,
-        MassNavigationScenarioSpawnLayoutConfig spawnLayout)
-    {
-        if (unitsPerTeam < 0)
-        {
-            throw new InvalidOperationException("MassNavigationFlowSolverState scenario reset requires unitsPerTeam >= 0.");
-        }
-
-        if (teamIds.Length <= 0)
-        {
-            throw new InvalidOperationException("MassNavigationFlowSolverState scenario reset requires at least one team id.");
-        }
-
-        if (spawnLayout == null)
-        {
-            throw new InvalidOperationException("MassNavigationFlowSolverState scenario reset requires explicit spawn layout config.");
-        }
-
-        UnitCount = checked(unitsPerTeam * teamIds.Length);
-        EnsureCapacity(UnitCount);
-        InitializeTeams(teamIds, unitsPerTeam, spawnLayout);
-        ClearRuntimeObstacles();
-        InitializeUnits(profileSet, layer, spawnLayout.RandomSeed);
-        ForceFlowRebuild();
-        MarkAllEntitiesDirty();
-        ResetDisplacedAgents();
-        _frameCount = 0;
-        SettledUnitCount = 0;
-        _arrivalEventCount = 0;
     }
 
     public void ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
@@ -671,6 +632,30 @@ public sealed partial class MassNavigationFlowSolverState
         int previousCount = ObstacleCount;
         ObstacleCount = 0;
         ClearStaleObstacles(0, previousCount);
+    }
+
+    /// <summary>
+    /// 队伍级行军目标（求解器局部坐标）：单位无个人目标时沿流场走向该点。
+    /// 队伍尚未物化（authored 绑定未发生）返回 false，由调用方挂起。
+    /// </summary>
+    public bool TrySetTeamTarget(int teamId, float localXCm, float localYCm)
+    {
+        if (!_teamStateIndexById.TryGetValue(teamId, out int teamStateIndex))
+        {
+            return false;
+        }
+
+        ClampLocalToWorldBounds(ref localXCm, ref localYCm, 0f);
+        TeamRuntimeState team = _teamStates[teamStateIndex];
+        if (team.TargetX == localXCm && team.TargetY == localYCm)
+        {
+            return true;
+        }
+
+        team.TargetX = localXCm;
+        team.TargetY = localYCm;
+        MarkFlowDirty();
+        return true;
     }
 
     public bool SetUnitTarget(int index, float xCm, float yCm, bool resetRecovery = false)
@@ -1006,11 +991,6 @@ public sealed partial class MassNavigationFlowSolverState
                 $"MassNavigationFlow solver agent slice {agentSliceIndex}/{agentSliceCount} is outside the valid cadence slice range.");
         }
 
-        if (_quadrantSpreadSpawnActive && !_quadrantSpreadTargetsPlanted)
-        {
-            PlantQuadrantSpreadUnitTargets();
-        }
-
         ComputeAgentSliceWindow(agentSliceIndex, agentSliceCount, out int sliceStart, out int sliceEnd);
         bool roundStart = agentSliceIndex == 0;
         long prepStart = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -1322,130 +1302,6 @@ public sealed partial class MassNavigationFlowSolverState
         }
     }
 
-    private void InitializeTeams(
-        ReadOnlySpan<int> teamIds,
-        int unitsPerTeam,
-        MassNavigationScenarioSpawnLayoutConfig spawnLayout)
-    {
-        _teamStates.Clear();
-        _flowStates.Clear();
-        _teamStateIndexById.Clear();
-        _quadrantSpreadSpawnActive = false;
-        if (teamIds.Length <= 0)
-        {
-            throw new InvalidOperationException("MassNavigationFlowSolverState requires at least one team id for scenario team initialization.");
-        }
-
-        if (spawnLayout.ParsedKind == MassNavigationScenarioSpawnLayoutKind.QuadrantSpread)
-        {
-            _quadrantSpreadSpawnActive = true;
-            InitializeTeamsQuadrantSpread(teamIds, unitsPerTeam, spawnLayout);
-            PrepareTeamRelationshipMatrixForTeamCount(_teamStates.Count);
-            return;
-        }
-
-        if (spawnLayout.ParsedKind != MassNavigationScenarioSpawnLayoutKind.OrbitOpposedTargets)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigationFlowSolverState does not support scenario spawn layout '{spawnLayout.Kind}'.");
-        }
-
-        float centerX = _fieldWidthCm * 0.5f;
-        float centerY = _fieldHeightCm * 0.5f;
-        float orbitRadiusCm = spawnLayout.OrbitRadiusCm;
-        for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
-        {
-            int teamId = teamIds[teamIndex];
-            float angle = MathF.PI + ((MathF.PI * 2f * teamIndex) / teamIds.Length);
-            float dirX = MathF.Cos(angle);
-            float dirY = MathF.Sin(angle);
-            float tangentX = -dirY;
-            float tangentY = dirX;
-            float spawnCenterX = centerX + dirX * orbitRadiusCm;
-            float spawnCenterY = centerY + dirY * orbitRadiusCm;
-            Vector2 target = ResolveNavigableTarget(
-                centerX - dirX * orbitRadiusCm,
-                centerY - dirY * orbitRadiusCm,
-                -dirX,
-                -dirY,
-                Semantics.TargetProjection.TeamTargetClearanceCm);
-            var state = new TeamRuntimeState(teamId, unitsPerTeam, spawnCenterX, spawnCenterY, dirX, dirY, tangentX, tangentY)
-            {
-                TargetX = target.X,
-                TargetY = target.Y,
-            };
-            _teamStateIndexById[teamId] = _teamStates.Count;
-            _teamStates.Add(state);
-        }
-
-        PrepareTeamRelationshipMatrixForTeamCount(_teamStates.Count);
-    }
-
-    /// <summary>
-    /// QuadrantSpread：把整场划分为 colsTeams×rowsTeams 个象限，每个队伍在一个象限内
-    /// 以 cols×rows 网格满铺（格距按象限跨度自适应，≥ 全局 SpawnSpacingCm），
-    /// 目标投影到对侧象限中心，保持"opposed 对进"的布阵语义，避免出生即挤成团。
-    /// </summary>
-    private void InitializeTeamsQuadrantSpread(
-        ReadOnlySpan<int> teamIds,
-        int unitsPerTeam,
-        MassNavigationScenarioSpawnLayoutConfig spawnLayout)
-    {
-        float centerX = _fieldWidthCm * 0.5f;
-        float centerY = _fieldHeightCm * 0.5f;
-        int colsTeams = Math.Max(1, (int)MathF.Ceiling(MathF.Sqrt(teamIds.Length)));
-        int rowsTeams = Math.Max(1, (int)MathF.Ceiling(teamIds.Length / (float)colsTeams));
-        float cellWidthCm = _fieldWidthCm / colsTeams;
-        float cellHeightCm = _fieldHeightCm / rowsTeams;
-
-        int cols = Math.Max(1, (int)MathF.Ceiling(MathF.Sqrt(unitsPerTeam)));
-        int rows = Math.Max(1, (int)MathF.Ceiling(unitsPerTeam / (float)cols));
-        _activeSpawnGridSpacingCm = Math.Max(
-            Semantics.Group.SpawnSpacingCm,
-            MathF.Min(cellWidthCm / cols, cellHeightCm / rows));
-
-        for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
-        {
-            int teamId = teamIds[teamIndex];
-            int quadrantX = teamIndex % colsTeams;
-            int quadrantY = teamIndex / colsTeams;
-            float spawnCenterX = centerX + (quadrantX - (colsTeams - 1) * 0.5f) * cellWidthCm;
-            float spawnCenterY = centerY + (quadrantY - (rowsTeams - 1) * 0.5f) * cellHeightCm;
-
-            // 切线=列方向、方向=行方向，轴向网格填满象限。
-            float tangentX = 1f;
-            float tangentY = 0f;
-            float directionX = 0f;
-            float directionY = 1f;
-
-            // 目标 = 对侧象限中心（穿过场心，保持 opposed）。
-            float targetCenterX = centerX * 2f - spawnCenterX;
-            float targetCenterY = centerY * 2f - spawnCenterY;
-            float hintX = targetCenterX - spawnCenterX;
-            float hintY = targetCenterY - spawnCenterY;
-            float hintLength = MathF.Sqrt((hintX * hintX) + (hintY * hintY));
-            if (hintLength > 1e-3f)
-            {
-                hintX /= hintLength;
-                hintY /= hintLength;
-            }
-
-            Vector2 target = ResolveNavigableTarget(
-                targetCenterX,
-                targetCenterY,
-                hintX,
-                hintY,
-                Semantics.TargetProjection.TeamTargetClearanceCm);
-            var state = new TeamRuntimeState(teamId, unitsPerTeam, spawnCenterX, spawnCenterY, directionX, directionY, tangentX, tangentY)
-            {
-                TargetX = target.X,
-                TargetY = target.Y,
-            };
-            _teamStateIndexById[teamId] = _teamStates.Count;
-            _teamStates.Add(state);
-        }
-    }
-
     private void InitializeTeams(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
     {
         _teamStates.Clear();
@@ -1471,75 +1327,6 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         PrepareTeamRelationshipMatrixForTeamCount(_teamStates.Count);
-    }
-
-    private void InitializeUnits(MassNavigationAgentProfileSetConfig profileSet, MassNavigationAgentLayer layer, int spawnRandomSeed)
-    {
-        _maxBodyRadiusCm = 0f;
-        Array.Clear(_velocitiesCm, 0, UnitCount * 2);
-        Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
-        Array.Clear(_unitTargetStopThresholdsCm, 0, UnitCount);
-        Array.Clear(_hasUnitTarget, 0, UnitCount);
-        Array.Clear(_heavyProfileFlags, 0, UnitCount);
-        Array.Clear(_bodyRadiiCm, 0, UnitCount);
-        Array.Clear(_speedsCmPerSecond, 0, UnitCount);
-        Array.Clear(_maxInteractingBodyRadiiCm, 0, UnitCount);
-        Array.Clear(_separationHashSearchRadiusCellsByAgent, 0, UnitCount);
-        Array.Clear(_hardResolveHashSearchRadiusCellsByAgent, 0, UnitCount);
-        Array.Clear(_unitProgressAnchorCm, 0, UnitCount * 2);
-        Array.Clear(_unitSettledAnchorCm, 0, UnitCount * 2);
-        Array.Clear(_unitSettledFlags, 0, UnitCount);
-        Array.Clear(_arrivalEventEmittedFlags, 0, UnitCount);
-        Array.Clear(_unitRetryCounts, 0, UnitCount);
-        Array.Clear(_unitStuckSeconds, 0, UnitCount);
-
-        int unitIndex = 0;
-        float spacingCm = _activeSpawnGridSpacingCm > 0f
-            ? _activeSpawnGridSpacingCm
-            : Semantics.Group.SpawnSpacingCm;
-        for (int teamStateIndex = 0; teamStateIndex < _teamStates.Count; teamStateIndex++)
-        {
-            TeamRuntimeState team = _teamStates[teamStateIndex];
-            int flowStateIndex = ResolveFlowStateIndex(teamStateIndex, layer, allowCreate: true);
-            int cols = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(team.UnitCount)));
-            int rows = Math.Max(1, (int)Math.Ceiling(team.UnitCount / (double)cols));
-            float colCenter = (cols - 1) * 0.5f;
-            float rowCenter = (rows - 1) * 0.5f;
-            for (int localIndex = 0; localIndex < team.UnitCount; localIndex++, unitIndex++)
-            {
-                int row = localIndex / cols;
-                int col = localIndex % cols;
-                float lateralOffset = (col - colCenter) * spacingCm;
-                float depthOffset = (row - rowCenter) * spacingCm;
-                float jitterLateral = DeterministicSpawnJitterCm(spawnRandomSeed, team.TeamId, localIndex, 0u, Semantics.Group.SpawnJitterCm);
-                float jitterDepth = DeterministicSpawnJitterCm(spawnRandomSeed, team.TeamId, localIndex, 1u, Semantics.Group.SpawnJitterCm);
-                float xCm = team.SpawnCenterX + team.TangentX * (lateralOffset + jitterLateral) + team.DirectionX * (depthOffset + jitterDepth);
-                float yCm = team.SpawnCenterY + team.TangentY * (lateralOffset + jitterLateral) + team.DirectionY * (depthOffset + jitterDepth);
-                int i2 = unitIndex << 1;
-                MassNavigationAgentProfileConfig profile = profileSet.ResolveForLocalIndex(localIndex);
-                var geometry = profileSet.ResolveGeometry(profile.Id);
-                _teams[unitIndex] = team.TeamId;
-                _teamRuntimeIndices[unitIndex] = teamStateIndex;
-                _teamLocalIndices[unitIndex] = localIndex;
-                _flowRuntimeIndices[unitIndex] = flowStateIndex;
-                _layerCategoryMasks[unitIndex] = layer.CategoryMask;
-                _layerInteractionMasks[unitIndex] = layer.InteractionMask;
-                _navMasses[unitIndex] = geometry.Mass;
-                _visualScales[unitIndex] = profile.VisualScale;
-                _bodyRadiiCm[unitIndex] = geometry.RadiusCm;
-                _speedsCmPerSecond[unitIndex] = profile.SpeedCmPerSecond;
-                _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, geometry.RadiusCm);
-                _heavyProfileFlags[unitIndex] = profile.Heavy ? (byte)1 : (byte)0;
-                _positionsCm[i2] = ClampXPosition(xCm);
-                _positionsCm[i2 + 1] = ClampYPosition(yCm);
-                _unitProgressAnchorCm[i2] = _positionsCm[i2];
-                _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
-                _unitSettledAnchorCm[i2] = _positionsCm[i2];
-                _unitSettledAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
-            }
-        }
-
-        _maxInteractingBodyRadiiDirty = true;
     }
 
     private void CacheObstacle(int index, float xCm, float yCm, float radiusCm)
@@ -2674,26 +2461,6 @@ public sealed partial class MassNavigationFlowSolverState
         SettledUnitCount = settled;
     }
 
-    /// <summary>
-    /// QuadrantSpread 的逐单位散点目标：把每个单位的可到达目标设为
-    /// "当前出生位关于场心的镜像点"，到站后整个对侧象限满铺、不汇向单一
-    /// 队目标点。只在第一步播种一次（不依赖实体绑定/预分配的初始化顺序）。
-    /// </summary>
-    private void PlantQuadrantSpreadUnitTargets()
-    {
-        float unitTargetStopThresholdCm = Semantics.Group.UnitTargetStopThresholdCm;
-        for (int i = 0; i < UnitCount; i++)
-        {
-            int i2 = i << 1;
-            _unitTargetsCm[i2] = _fieldWidthCm - _positionsCm[i2];
-            _unitTargetsCm[i2 + 1] = _fieldHeightCm - _positionsCm[i2 + 1];
-            _unitTargetStopThresholdsCm[i] = unitTargetStopThresholdCm;
-            _hasUnitTarget[i] = 1;
-        }
-
-        _quadrantSpreadTargetsPlanted = true;
-    }
-
     private void ResolveHardPenetration()
     {
         ResolveHardPenetration(0, UnitCount);
@@ -3001,35 +2768,6 @@ public sealed partial class MassNavigationFlowSolverState
         return jobs;
     }
 
-    private static float DeterministicSpawnJitterCm(int seed, int teamId, int localIndex, uint axis, float jitterCm)
-    {
-        if (jitterCm == 0f)
-        {
-            return 0f;
-        }
-
-        uint hash = MixSpawnJitterHash(seed, teamId, localIndex, axis);
-        float unit = ((hash >> 8) * (1f / 16_777_216f)) - 0.5f;
-        return unit * jitterCm;
-    }
-
-    private static uint MixSpawnJitterHash(int seed, int teamId, int localIndex, uint axis)
-    {
-        unchecked
-        {
-            uint hash = 2_166_136_261u;
-            hash = (hash ^ (uint)seed) * 16_777_619u;
-            hash = (hash ^ (uint)teamId) * 16_777_619u;
-            hash = (hash ^ (uint)localIndex) * 16_777_619u;
-            hash = (hash ^ axis) * 16_777_619u;
-            hash ^= hash >> 16;
-            hash *= 2_246_822_519u;
-            hash ^= hash >> 13;
-            hash *= 3_266_489_917u;
-            hash ^= hash >> 16;
-            return hash;
-        }
-    }
 
     private bool IsObstacle(float wx, float wy)
     {

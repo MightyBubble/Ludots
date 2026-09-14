@@ -7,10 +7,10 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 4,
-      "HeightInMacroTiles": 4,
       "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 16
+      "LoadedChunkCapacity": 16,
+      "WidthInCells": 1024,
+      "HeightInCells": 1024
     }
   ],
   "DefaultCamera": {

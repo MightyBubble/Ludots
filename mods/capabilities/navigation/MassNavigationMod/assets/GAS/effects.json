@@ -20,5 +20,129 @@
     "categories": [
       "Effect.MassNavigation.Agent.HealthDrift"
     ]
+  },
+  {
+    "id": "Effect.MassNavigation.Spawn.Team1.Light",
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "mass_navigation_agent_azure_light",
+      "count": 2142,
+      "placementPattern": "Grid",
+      "placementSpacingCm": 100,
+      "copySourcePlayerOwner": true,
+      "copySourceOwnership": true
+    },
+    "categories": [
+      "Effect.MassNavigation.Spawn"
+    ]
+  },
+  {
+    "id": "Effect.MassNavigation.Spawn.Team1.Heavy",
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "mass_navigation_agent_azure_heavy",
+      "count": 358,
+      "placementPattern": "Grid",
+      "placementSpacingCm": 100,
+      "copySourcePlayerOwner": true,
+      "copySourceOwnership": true
+    },
+    "categories": [
+      "Effect.MassNavigation.Spawn"
+    ]
+  },
+  {
+    "id": "Effect.MassNavigation.Spawn.Team2.Light",
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "mass_navigation_agent_crimson_light",
+      "count": 2142,
+      "placementPattern": "Grid",
+      "placementSpacingCm": 100
+    },
+    "categories": [
+      "Effect.MassNavigation.Spawn"
+    ]
+  },
+  {
+    "id": "Effect.MassNavigation.Spawn.Team2.Heavy",
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "mass_navigation_agent_crimson_heavy",
+      "count": 358,
+      "placementPattern": "Grid",
+      "placementSpacingCm": 100
+    },
+    "categories": [
+      "Effect.MassNavigation.Spawn"
+    ]
+  },
+  {
+    "id": "Effect.MassNavigation.Spawn.Team3.Light",
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "mass_navigation_agent_amber_light",
+      "count": 2142,
+      "placementPattern": "Grid",
+      "placementSpacingCm": 100
+    },
+    "categories": [
+      "Effect.MassNavigation.Spawn"
+    ]
+  },
+  {
+    "id": "Effect.MassNavigation.Spawn.Team3.Heavy",
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "mass_navigation_agent_amber_heavy",
+      "count": 358,
+      "placementPattern": "Grid",
+      "placementSpacingCm": 100
+    },
+    "categories": [
+      "Effect.MassNavigation.Spawn"
+    ]
+  },
+  {
+    "id": "Effect.MassNavigation.Spawn.Team4.Light",
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "mass_navigation_agent_emerald_light",
+      "count": 2142,
+      "placementPattern": "Grid",
+      "placementSpacingCm": 100
+    },
+    "categories": [
+      "Effect.MassNavigation.Spawn"
+    ]
+  },
+  {
+    "id": "Effect.MassNavigation.Spawn.Team4.Heavy",
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "mass_navigation_agent_emerald_heavy",
+      "count": 358,
+      "placementPattern": "Grid",
+      "placementSpacingCm": 100
+    },
+    "categories": [
+      "Effect.MassNavigation.Spawn"
+    ]
   }
 ]

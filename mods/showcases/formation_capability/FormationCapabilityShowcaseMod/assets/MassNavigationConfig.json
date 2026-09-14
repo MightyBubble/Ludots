@@ -1,66 +1,17 @@
 {
   "mapId": "formation_capability_showcase",
-  "presentation": {
-    "teams": []
-  },
-  "scenario": {
-    "agentsPerTeam": 0,
-    "teams": [
-      {
-        "id": 1,
-        "name": "Azure Vanguard"
-      },
-      {
-        "id": 2,
-        "name": "Crimson Column"
-      }
-    ],
-    "spawnLayout": null
-  },
-  "scenarioRuntime": {
-    "autoSpawnConfiguredScenario": false,
-    "runtimeCapacity": {
-      "navigationGroupCapacity": 512,
-      "groupMembershipAgentCapacity": 80000,
-      "groupMemberCapacity": 512,
-      "movePlanExecutionGroupCapacity": 512,
-      "movePlanExecutionMemberCapacity": 512,
-      "loadedChunkCapacity": 512,
-      "relationshipDomainCapacity": 2,
-      "displacedAgentCapacity": 64
-    }
-  },
-  "agentProfiles": {
-    "profiles": [
-      {
-        "id": "heavy",
-        "heavy": true,
-        "visualScale": 0.34,
-        "speedCmPerSecond": 780,
-        "everyNth": 7,
-        "nthOffset": 0
-      },
-      {
-        "id": "light",
-        "heavy": false,
-        "visualScale": 0.22,
-        "speedCmPerSecond": 920,
-        "everyNth": 0,
-        "nthOffset": 0
-      }
-    ]
-  },
-  "teamRelationships": {
-    "relationships": []
+  "runtimeCapacity": {
+    "navigationGroupCapacity": 512,
+    "groupMembershipAgentCapacity": 80000,
+    "groupMemberCapacity": 512,
+    "movePlanExecutionGroupCapacity": 512,
+    "movePlanExecutionMemberCapacity": 512,
+    "loadedChunkCapacity": 512,
+    "relationshipDomainCapacity": 2,
+    "displacedAgentCapacity": 64
   },
   "streaming": {
     "retainSeconds": 12,
     "radiusCm": 24000
-  },
-  "semantics": {
-    "route": {
-      "waypointAdvanceStopThresholdScale": 2,
-      "waypointAdvanceBodyRadiusScale": 1.5
-    }
   }
 }

@@ -724,7 +724,7 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("Test requires DomainStanceQuery.");
             simulation.SetDomainRelationshipProjection(new MassNavigationDomainStanceProjection(
                 stances,
-                config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity,
+                config.RuntimeCapacity.RelationshipDomainCapacity,
                 config.RelationshipPolicy.CooperativeStance));
             var mapId = new MapId(config.MapId);
             var runtimeBinding = new MassNavigationRuntimeBinding();
@@ -751,12 +751,12 @@ namespace Ludots.Tests.Presentation
         private static MassNavigationConfig CreateTestConfig(int membershipCapacity, int? relationshipDomainCapacity = null)
         {
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
-            config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = membershipCapacity;
-            config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = membershipCapacity;
-            config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity = membershipCapacity;
+            config.RuntimeCapacity.GroupMembershipAgentCapacity = membershipCapacity;
+            config.RuntimeCapacity.GroupMemberCapacity = membershipCapacity;
+            config.RuntimeCapacity.MovePlanExecutionMemberCapacity = membershipCapacity;
             if (relationshipDomainCapacity.HasValue)
             {
-                config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity = relationshipDomainCapacity.Value;
+                config.RuntimeCapacity.RelationshipDomainCapacity = relationshipDomainCapacity.Value;
             }
 
             return config;

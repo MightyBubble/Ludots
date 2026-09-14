@@ -33,6 +33,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
     private readonly int _agentCapacity;
     private readonly ControlDomainQuery _controlDomains;
     private readonly DomainStanceQuery _stances;
+    private readonly Ludots.Core.Gameplay.Teams.TeamEntityLookup _teamLookup;
     private readonly Entity[] _projectedEntitiesByAgentIndex;
     private readonly Entity[] _projectedDomainsByAgentIndex;
     private readonly byte[] _projectedDomainValidByAgentIndex;
@@ -67,13 +68,15 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             throw new ArgumentNullException(nameof(config));
         }
 
-        _agentCapacity = config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        _agentCapacity = config.RuntimeCapacity.GroupMembershipAgentCapacity;
         _poseAuthorityArbiter = engine.GetService(CoreServiceKeys.PoseAuthorityArbiter)
             ?? throw new InvalidOperationException("MassNavigation authored binding requires the PoseAuthorityArbiter service.");
         _controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery)
             ?? throw new InvalidOperationException("MassNavigation authored binding requires ControlDomainQuery.");
         _stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
             ?? throw new InvalidOperationException("MassNavigation authored binding requires DomainStanceQuery.");
+        _teamLookup = engine.GetService(CoreServiceKeys.TeamEntityLookup)
+            ?? throw new InvalidOperationException("MassNavigation authored binding requires TeamEntityLookup.");
         _entities = new List<Entity>(_agentCapacity);
         _seeds = new List<MassNavigationAgentSeed>(_agentCapacity);
         _controllableFlags = new List<bool>(_agentCapacity);
@@ -645,21 +648,41 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             throw new InvalidOperationException($"MassNavigationAgent entity {entity.Id} requires a resolved positive profileId.");
         }
 
-        string profileKey = MassNavigationProfileRegistry.GetName(agent.ProfileId);
-        MassNavigationAgentProfileConfig profile = simulation.Config.AgentProfiles.Resolve(profileKey);
-        AgentProfileConfig geometry = simulation.Config.AgentProfiles.ResolveGeometry(profileKey);
         float worldXCm = worldPosition.Value.X.ToFloat();
         float worldYCm = worldPosition.Value.Y.ToFloat();
         return new MassNavigationAgentSeed(
             domainRep,
             simulation.ToLocalXCm(worldXCm),
             simulation.ToLocalYCm(worldYCm),
-            profile.Heavy,
-            geometry.Mass,
-            profile.VisualScale,
-            geometry.RadiusCm,
-            profile.SpeedCmPerSecond,
+            agent.Heavy,
+            ResolveNavMass(in agent),
+            MassNavigationAgentDefaults.ResolveVisualScale(agent.Heavy),
+            agent.RadiusCm,
+            agent.SpeedCmPerSecond,
             new MassNavigationAgentLayer(layer.Value.Category, layer.Value.Mask));
+    }
+
+    /// <summary>
+    /// 命名档（Navigation/agent_profiles.json）在场时 navMass 取其 mass；
+    /// 参数档（模板参数 intern）按 heavy 档派生。命名档缺失 = 作者引用错误，fail fast。
+    /// </summary>
+    private float ResolveNavMass(in MassNavigationAgent agent)
+    {
+        if (MassNavigationProfileRegistry.IsParameterProfile(agent.ProfileId))
+        {
+            return MassNavigationAgentDefaults.ResolveNavMass(agent.Heavy);
+        }
+
+        AgentProfileRegistry geometryProfiles = _engine.GetService(CoreServiceKeys.AgentProfiles)
+            ?? throw new InvalidOperationException("MassNavigation authored binding requires AgentProfiles.");
+        string profileKey = MassNavigationProfileRegistry.GetName(agent.ProfileId);
+        if (!geometryProfiles.TryGet(profileKey, out AgentProfileConfig geometry))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationAgent profileId '{profileKey}' is not a named entry in Navigation/agent_profiles.json.");
+        }
+
+        return geometry.Mass;
     }
 
     private Entity ResolveDomain(Entity entity)
@@ -675,8 +698,18 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             return stanceDomain;
         }
 
+        // 地图摆放 lane（EntityBuilder）不走 runtime spawn 管线的隐式 member-of，
+        // 但其 Team 组件 + 地图 Teams 绑定就是作者声明的队伍归属。
+        if (_engine.World.TryGet(entity, out Ludots.Core.Gameplay.Components.Team team) &&
+            team.Id > 0 &&
+            _teamLookup.TryGet(team.Id, out Entity teamRep) &&
+            _engine.World.IsAlive(teamRep))
+        {
+            return teamRep;
+        }
+
         throw new InvalidOperationException(
-            $"MassNavigationAgent entity {entity.Id} requires an authored control-domain or member-of relationship.");
+            $"MassNavigationAgent entity {entity.Id} requires an authored control-domain, member-of, or Team binding.");
     }
 
     private uint ResolveRelationshipRevision()

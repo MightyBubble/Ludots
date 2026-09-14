@@ -33,8 +33,6 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthInMacroTiles": 28,
-      "HeightInMacroTiles": 16,
       "GridCellSizeCm": 125649,
       "HexEdgeLengthCm": 125649,
       "ChunkSizeCells": 64,
@@ -43,7 +41,9 @@
       "StructureCollisionAsset": "",
       "StructureAwareGrounding": false,
       "StructureAwareNavigation": false,
-      "NavigationEnabled": false
+      "NavigationEnabled": false,
+      "WidthInCells": 7168,
+      "HeightInCells": 4096
     }
   ],
   "ContinuousHeightmap": null,

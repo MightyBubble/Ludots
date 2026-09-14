@@ -80,8 +80,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 // authorable on Script/TriggerGraph (Case E box_begin stores press corners on
                 // the operator rep). WriteBlackboardInt joins the same carve-out for the D15
                 // modifier handoff (box_commit stores case_e.select.modifiers on the rep).
+                // ApplyEffectTemplate joins TriggerGraph hosts so map-event blueprints can
+                // run effect templates (spawn waves, orders) with the host as caster —
+                // requests stage through the normal effect pipeline, not an inline phase.
                 if (metadata.Kind == EffectOperationKind.GasTransactional &&
-                    ((kind == GraphKind.TriggerGraph && op == GraphNodeOp.ModifyAttributeSet) ||
+                    ((kind == GraphKind.TriggerGraph &&
+                      (op == GraphNodeOp.ModifyAttributeSet || op == GraphNodeOp.ApplyEffectTemplate)) ||
                      op == GraphNodeOp.WriteBlackboardFloat ||
                      op == GraphNodeOp.WriteBlackboardInt))
                 {

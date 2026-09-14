@@ -384,10 +384,11 @@ namespace Ludots.Tool
                 return;
             }
 
-            if (ContainsKey(root, "WidthInTiles") || ContainsKey(root, "HeightInTiles"))
+            if (ContainsKey(root, "WidthInTiles") || ContainsKey(root, "HeightInTiles") ||
+                ContainsKey(root, "WidthInMacroTiles") || ContainsKey(root, "HeightInMacroTiles"))
             {
                 throw new InvalidOperationException(
-                    $"Map config '{path}' uses legacy WidthInTiles/HeightInTiles. Use WidthInMacroTiles/HeightInMacroTiles.");
+                    $"Map config '{path}' uses legacy width keys. Use WidthInCells/HeightInCells.");
             }
 
             if (TryGetObjectArray(root, "boards", out JsonArray? boards) && boards != null)
@@ -396,10 +397,11 @@ namespace Ludots.Tool
                 {
                     JsonNode? boardNode = boards[i];
                     if (boardNode is JsonObject board &&
-                        (ContainsKey(board, "WidthInTiles") || ContainsKey(board, "HeightInTiles")))
+                        (ContainsKey(board, "WidthInTiles") || ContainsKey(board, "HeightInTiles") ||
+                         ContainsKey(board, "WidthInMacroTiles") || ContainsKey(board, "HeightInMacroTiles")))
                     {
                         throw new InvalidOperationException(
-                            $"Map config '{path}' board[{i}] uses legacy WidthInTiles/HeightInTiles. Use WidthInMacroTiles/HeightInMacroTiles.");
+                            $"Map config '{path}' board[{i}] uses legacy width keys. Use WidthInCells/HeightInCells.");
                     }
                 }
             }

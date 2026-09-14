@@ -1,29 +1,33 @@
 {
   "Id": "nav_editor_grid",
-  "Tags": ["nav_editor", "grid", "navigation"],
+  "Tags": [
+    "nav_editor",
+    "grid",
+    "navigation"
+  ],
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 16,
       "DataFile": "nav_editor_grid.grid",
-      "NavigationEnabled": true
+      "NavigationEnabled": true,
+      "WidthInCells": 256,
+      "HeightInCells": 256
     },
     {
       "Name": "board_2",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 16,
-      "HeightInMacroTiles": 16,
       "GridCellSizeCm": 100,
       "HexEdgeLengthCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 256,
       "DataFile": "nav_editor_grid_board_2.grid",
-      "NavigationEnabled": true
+      "NavigationEnabled": true,
+      "WidthInCells": 4096,
+      "HeightInCells": 4096
     }
   ],
   "Entities": [],

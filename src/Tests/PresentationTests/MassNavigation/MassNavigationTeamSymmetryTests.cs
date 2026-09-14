@@ -31,12 +31,7 @@ public class MassNavigationTeamSymmetryTests
     public void InitialSpawn_IsMirrorSymmetricAroundCenter()
     {
         MassNavigationFlowSolverState flow = CreateArenaFlow();
-        flow.Reset(
-            new[] { 1, 2 },
-            UnitsPerTeam,
-            CreateArenaProfileSet(),
-            CreateAgentLayer(),
-            CreateArenaSpawnLayout());
+        flow.ResetAuthoredAgents(CreateArenaAuthoredSeeds());
 
         // 每队第 i 个 agent（按队内 localIndex）应关于 (5000,5000) 镜像对称。
         // 容差覆盖 DeterministicSpawnJitterCm（jitter 含 TeamId，幅度 ±SpawnJitterCm=12）。
@@ -62,12 +57,7 @@ public class MassNavigationTeamSymmetryTests
     {
         using var world = World.Create();
         MassNavigationFlowSolverState flow = CreateArenaFlow();
-        flow.Reset(
-            new[] { 1, 2 },
-            UnitsPerTeam,
-            CreateArenaProfileSet(),
-            CreateAgentLayer(),
-            CreateArenaSpawnLayout());
+        flow.ResetAuthoredAgents(CreateArenaAuthoredSeeds());
         TeamManager.LoadConfig(new TeamConfig
         {
             DefaultRelationship = "Friendly",
@@ -103,12 +93,7 @@ public class MassNavigationTeamSymmetryTests
     {
         using var world = World.Create();
         MassNavigationFlowSolverState flow = CreateArenaFlow();
-        flow.Reset(
-            new[] { 1, 2 },
-            UnitsPerTeam,
-            CreateArenaProfileSet(),
-            CreateAgentLayer(),
-            CreateArenaSpawnLayout());
+        flow.ResetAuthoredAgents(CreateArenaAuthoredSeeds());
         TeamManager.LoadConfig(new TeamConfig
         {
             DefaultRelationship = "Friendly",
@@ -233,73 +218,45 @@ public class MassNavigationTeamSymmetryTests
         return new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
     }
 
-    private static MassNavigationScenarioSpawnLayoutConfig CreateArenaSpawnLayout()
+    /// <summary>Arena 手摆布局（地图 Entities）的种子等价物：两队对向 7x7 网格、间距 46cm、每第 7 个 heavy。</summary>
+    private static MassNavigationAgentSeed[] CreateArenaAuthoredSeeds()
     {
-        var spawnLayout = new MassNavigationScenarioSpawnLayoutConfig
+        var layer = CreateAgentLayer();
+        var seeds = new MassNavigationAgentSeed[Teams * UnitsPerTeam];
+        (float dirX0, float dirY0) = (-1f, 0f);
+        (float tanX0, float tanY0) = (0f, -1f);
+        (float dirX1, float dirY1) = (1f, 0f);
+        (float tanX1, float tanY1) = (0f, 1f);
+        const int cols = 7;
+        for (int team = 0; team < Teams; team++)
         {
-            Kind = "OrbitOpposedTargets",
-            OrbitRadiusCm = OrbitRadiusCm,
-            RandomSeed = 12648430,
-        };
-        spawnLayout.Validate();
-        return spawnLayout;
-    }
+            float dirX = team == 0 ? dirX0 : dirX1;
+            float dirY = team == 0 ? dirY0 : dirY1;
+            float tanX = team == 0 ? tanX0 : tanX1;
+            float tanY = team == 0 ? tanY0 : tanY1;
+            float centerX = CenterX + ((team == 0 ? -OrbitRadiusCm : OrbitRadiusCm) * dirX0);
+            float centerY = CenterY;
+            for (int localIndex = 0; localIndex < UnitsPerTeam; localIndex++)
+            {
+                int row = localIndex / cols;
+                int col = localIndex % cols;
+                float lateral = (col - ((cols - 1) * 0.5f)) * 46f;
+                float depth = (row - ((cols - 1) * 0.5f)) * 46f;
+                bool heavy = localIndex % 7 == 0;
+                seeds[(team * UnitsPerTeam) + localIndex] = new MassNavigationAgentSeed(
+                    teamId: team + 1,
+                    localPositionXCm: centerX + (tanX * lateral) + (dirX * depth),
+                    localPositionYCm: centerY + (tanY * lateral) + (dirY * depth),
+                    heavy: heavy,
+                    navMass: heavy ? 2f : 1f,
+                    visualScale: heavy ? 0.34f : 0.22f,
+                    bodyRadiusCm: heavy ? 28f : 20f,
+                    speedCmPerSecond: 800f,
+                    layer);
+            }
+        }
 
-    private static MassNavigationAgentProfileSetConfig CreateArenaProfileSet()
-    {
-        var profileSet = new MassNavigationAgentProfileSetConfig
-        {
-            DefaultProfileId = "light",
-            Profiles = new MassNavigationAgentProfileConfig[]
-            {
-                new()
-                {
-                    Id = "heavy",
-                    Heavy = true,
-                    VisualScale = 0.34f,
-                    SpeedCmPerSecond = 800f,
-                    EveryNth = 7,
-                    NthOffset = 0,
-                },
-                new()
-                {
-                    Id = "light",
-                    Heavy = false,
-                    VisualScale = 0.22f,
-                    SpeedCmPerSecond = 800f,
-                    EveryNth = 0,
-                    NthOffset = 0,
-                },
-            },
-        };
-        profileSet.Validate();
-        profileSet.BindAgentProfiles(CreateArenaAgentProfiles());
-        return profileSet;
-    }
-
-    private static AgentProfileRegistry CreateArenaAgentProfiles()
-    {
-        return new AgentProfileRegistry(new[]
-        {
-            new AgentProfileConfig
-            {
-                Id = "heavy",
-                RadiusCm = 28,
-                HeightCm = 200,
-                ClearanceCm = 40,
-                Mass = 2,
-                Layer = 0,
-            },
-            new AgentProfileConfig
-            {
-                Id = "light",
-                RadiusCm = 20,
-                HeightCm = 180,
-                ClearanceCm = 40,
-                Mass = 1,
-                Layer = 0,
-            },
-        });
+        return seeds;
     }
 
     private static MassNavigationRuntimeCapacityConfig CreateRuntimeCapacity(

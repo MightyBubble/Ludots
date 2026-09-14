@@ -1,0 +1,148 @@
+[
+  {
+    "id": "graph.mass_navigation.spawn_team2",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "spawn",
+        "event": "MapLoaded",
+        "start": "anchor",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "anchor",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "spawn_light",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.MassNavigation.Spawn.Team2.Light"
+      },
+      {
+        "id": "heavy_anchor",
+        "op": "LoadPlacedEntity",
+        "instanceId": "spawn_anchor_team2_heavy"
+      },
+      {
+        "id": "spawn_heavy",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.MassNavigation.Spawn.Team2.Heavy"
+      },
+      {
+        "id": "team_rep",
+        "op": "LoadPlacedEntity",
+        "instanceId": "team_2_rep"
+      },
+      {
+        "id": "target_x",
+        "op": "ConstInt",
+        "intValue": -2500
+      },
+      {
+        "id": "target_y",
+        "op": "ConstInt",
+        "intValue": 2500
+      },
+      {
+        "id": "march",
+        "op": "SetNavAgentTarget"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "anchor",
+        "fromPort": "next",
+        "to": "spawn_light"
+      },
+      {
+        "from": "spawn_light",
+        "fromPort": "next",
+        "to": "heavy_anchor"
+      },
+      {
+        "from": "heavy_anchor",
+        "fromPort": "next",
+        "to": "spawn_heavy"
+      },
+      {
+        "from": "spawn_heavy",
+        "fromPort": "next",
+        "to": "team_rep"
+      },
+      {
+        "from": "team_rep",
+        "fromPort": "next",
+        "to": "target_x"
+      },
+      {
+        "from": "target_x",
+        "fromPort": "next",
+        "to": "target_y"
+      },
+      {
+        "from": "target_y",
+        "fromPort": "next",
+        "to": "march"
+      },
+      {
+        "from": "march",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "anchor",
+        "fromPort": "value",
+        "to": "spawn_light",
+        "toPort": "target"
+      },
+      {
+        "from": "heavy_anchor",
+        "fromPort": "value",
+        "to": "spawn_heavy",
+        "toPort": "target"
+      },
+      {
+        "from": "team_rep",
+        "fromPort": "value",
+        "to": "march",
+        "toPort": "source"
+      },
+      {
+        "from": "target_x",
+        "fromPort": "value",
+        "to": "march",
+        "toPort": "a"
+      },
+      {
+        "from": "target_y",
+        "fromPort": "value",
+        "to": "march",
+        "toPort": "b"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -87,8 +87,6 @@ namespace Ludots.Core.Config
 
         public int GridCellSizeCm { get; set; } = 100;
 
-        public int WorldWidthInMacroTiles { get; set; } = 64;
-        public int WorldHeightInMacroTiles { get; set; } = 64;
 
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 

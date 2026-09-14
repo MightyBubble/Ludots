@@ -1,6 +1,13 @@
 {
   "Id": "capability_standard_static_presenter_30k_scatter_hudbar_benchmark",
-  "Tags": ["showcase", "presenter", "benchmark", "scatter", "capability_static_presenter", "hudbar"],
+  "Tags": [
+    "showcase",
+    "presenter",
+    "benchmark",
+    "scatter",
+    "capability_static_presenter",
+    "hudbar"
+  ],
   "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_showcase_flat.height",
   "Metadata": {
     "capabilityStandardStaticPresenter30k": {
@@ -15,10 +22,10 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
       "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 16
+      "LoadedChunkCapacity": 16,
+      "WidthInCells": 256,
+      "HeightInCells": 256
     }
   ],
   "DefaultCamera": {

@@ -1,6 +1,7 @@
 {
   "mapId": "mass_navigation_disabled_for_capability_standard_participant_views",
   "world": {
+    "activeHotZoneId": "central",
     "hotZones": [
       {
         "id": "central",
@@ -16,55 +17,17 @@
     "maxObstacleCount": 8,
     "parallelWorkerCount": 1
   },
-  "presentation": {
-    "teams": []
-  },
-  "scenario": {
-    "agentsPerTeam": 1,
-    "teams": [
-      {
-        "id": 1,
-        "name": "Blue"
-      }
-    ],
-    "spawnLayout": {
-      "randomSeed": 1
-    }
-  },
-  "scenarioRuntime": {
-    "autoSpawnConfiguredScenario": false,
-    "runtimeCapacity": {
-      "navigationGroupCapacity": 32,
-      "groupMembershipAgentCapacity": 64,
-      "groupMemberCapacity": 32,
-      "movePlanExecutionGroupCapacity": 32,
-      "movePlanExecutionMemberCapacity": 32,
-      "loadedChunkCapacity": 64,
-      "displacedAgentCapacity": 16
-    }
-  },
-  "agentProfiles": {
-    "profiles": [
-      {
-        "id": "light",
-        "heavy": false,
-        "visualScale": 0.22,
-        "speedCmPerSecond": 800,
-        "everyNth": 0,
-        "nthOffset": 0
-      }
-    ]
-  },
-  "teamRelationships": {
-    "relationships": []
+  "runtimeCapacity": {
+    "navigationGroupCapacity": 32,
+    "groupMembershipAgentCapacity": 64,
+    "groupMemberCapacity": 32,
+    "movePlanExecutionGroupCapacity": 32,
+    "movePlanExecutionMemberCapacity": 32,
+    "loadedChunkCapacity": 64,
+    "relationshipDomainCapacity": 8,
+    "displacedAgentCapacity": 16
   },
   "flow": {
     "iterationsPerStep": 16
-  },
-  "semantics": {
-    "route": {
-      "waypointAdvanceStopThresholdScale": 2,
-      "waypointAdvanceBodyRadiusScale": 1.5
-    }
   }
 }

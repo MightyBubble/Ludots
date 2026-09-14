@@ -53,13 +53,13 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthInMacroTiles": 64,
-      "HeightInMacroTiles": 64,
       "GridCellSizeCm": 100,
       "HexEdgeLengthCm": 400,
       "ChunkSizeCells": 64,
       "DataFile": "terrain_bench.hex",
-      "NavigationEnabled": false
+      "NavigationEnabled": false,
+      "WidthInCells": 16384,
+      "HeightInCells": 16384
     }
   ],
   "TriggerTypes": []

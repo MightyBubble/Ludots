@@ -9,6 +9,22 @@ public sealed class MassNavigationCrowdSemantics
     public MassNavigationSteeringSemantics Steering { get; set; } = new();
     public MassNavigationSolverSemantics Solver { get; set; } = new();
 
+    public void ApplyEngineDefaults()
+    {
+        Obstacle ??= new MassNavigationObstacleSemantics();
+        TargetProjection ??= new MassNavigationTargetProjectionSemantics();
+        Group ??= new MassNavigationGroupSemantics();
+        Route ??= new MassNavigationRouteSemantics();
+        Steering ??= new MassNavigationSteeringSemantics();
+        Solver ??= new MassNavigationSolverSemantics();
+        Obstacle.ApplyEngineDefaults();
+        TargetProjection.ApplyEngineDefaults();
+        Group.ApplyEngineDefaults();
+        Route.ApplyEngineDefaults();
+        Steering.ApplyEngineDefaults();
+        Solver.ApplyEngineDefaults();
+    }
+
     public void CopyFrom(MassNavigationCrowdSemantics source)
     {
         System.ArgumentNullException.ThrowIfNull(source);
@@ -49,6 +65,24 @@ public sealed class MassNavigationObstacleSemantics
 
     public float ResolveSoftPushRadiusCm(float obstacleRadiusCm) => obstacleRadiusCm + SoftPushPaddingCm;
 
+    public void ApplyEngineDefaults()
+    {
+        if (HardResolveCandidateDistanceCm <= 0f)
+        {
+            HardResolveCandidateDistanceCm = 100f;
+        }
+
+        if (SoftPushPaddingCm <= 0f)
+        {
+            SoftPushPaddingCm = 350f;
+        }
+
+        if (SoftPushForceScale <= 0f)
+        {
+            SoftPushForceScale = 8f;
+        }
+    }
+
     public void CopyFrom(MassNavigationObstacleSemantics source)
     {
         System.ArgumentNullException.ThrowIfNull(source);
@@ -80,6 +114,34 @@ public sealed class MassNavigationTargetProjectionSemantics
     public float TeamSlotClearanceCm { get; set; }
     public float GroupSlotClearanceCm { get; set; }
     public float LooseTargetClearanceCm { get; set; }
+
+    public void ApplyEngineDefaults()
+    {
+        if (TeamTargetClearanceCm <= 0f)
+        {
+            TeamTargetClearanceCm = 60f;
+        }
+
+        if (GroupCenterClearanceCm <= 0f)
+        {
+            GroupCenterClearanceCm = 60f;
+        }
+
+        if (TeamSlotClearanceCm <= 0f)
+        {
+            TeamSlotClearanceCm = 45f;
+        }
+
+        if (GroupSlotClearanceCm <= 0f)
+        {
+            GroupSlotClearanceCm = 50f;
+        }
+
+        if (LooseTargetClearanceCm <= 0f)
+        {
+            LooseTargetClearanceCm = 50f;
+        }
+    }
 
     public void CopyFrom(MassNavigationTargetProjectionSemantics source)
     {
@@ -124,6 +186,64 @@ public sealed class MassNavigationGroupSemantics
     public float NearSlotBlend { get; set; }
     public float FarSlotBlend { get; set; }
     public float NearSlotBlendDistanceSq { get; set; }
+
+    public void ApplyEngineDefaults()
+    {
+        if (SpawnSpacingCm <= 0f)
+        {
+            SpawnSpacingCm = 46f;
+        }
+
+        if (TeamSlotSpacingCm <= 0f)
+        {
+            TeamSlotSpacingCm = 90f;
+        }
+
+        if (PullClampCm <= 0f)
+        {
+            PullClampCm = 2000f;
+        }
+
+        if (ArrivedRadiusCm <= 0f)
+        {
+            ArrivedRadiusCm = 150f;
+        }
+
+        if (GroupedAgentArriveThresholdCm <= 0f)
+        {
+            GroupedAgentArriveThresholdCm = 200f;
+        }
+
+        if (LooseArriveThresholdCm <= 0f)
+        {
+            LooseArriveThresholdCm = 300f;
+        }
+
+        if (UnitTargetStopThresholdCm <= 0f)
+        {
+            UnitTargetStopThresholdCm = 50f;
+        }
+
+        if (GroupedAgentFlowSlowRadiusCm <= 0f)
+        {
+            GroupedAgentFlowSlowRadiusCm = 400f;
+        }
+
+        if (NearSlotBlend <= 0f)
+        {
+            NearSlotBlend = 0.82f;
+        }
+
+        if (FarSlotBlend <= 0f)
+        {
+            FarSlotBlend = 0.38f;
+        }
+
+        if (NearSlotBlendDistanceSq <= 0f)
+        {
+            NearSlotBlendDistanceSq = 4000000f;
+        }
+    }
 
     public void CopyFrom(MassNavigationGroupSemantics source)
     {
@@ -190,6 +310,19 @@ public sealed class MassNavigationRouteSemantics
     public float WaypointAdvanceStopThresholdScale { get; set; }
     public float WaypointAdvanceBodyRadiusScale { get; set; }
 
+    public void ApplyEngineDefaults()
+    {
+        if (WaypointAdvanceStopThresholdScale <= 0f)
+        {
+            WaypointAdvanceStopThresholdScale = 2f;
+        }
+
+        if (WaypointAdvanceBodyRadiusScale <= 0f)
+        {
+            WaypointAdvanceBodyRadiusScale = 1.5f;
+        }
+    }
+
     public void CopyFrom(MassNavigationRouteSemantics source)
     {
         System.ArgumentNullException.ThrowIfNull(source);
@@ -226,6 +359,39 @@ public sealed class MassNavigationSteeringSemantics
     public float GroupedAgentSeparationScale { get; set; }
     public float LooseSeparationScale { get; set; }
     public float VelocityBlendPerSecond { get; set; }
+
+    public void ApplyEngineDefaults()
+    {
+        if (SeparationRadiusCm <= 0f)
+        {
+            SeparationRadiusCm = 200f;
+        }
+
+        if (GoalArrivalRadiusCm <= 0f)
+        {
+            GoalArrivalRadiusCm = 1200f;
+        }
+
+        if (FlowObstacleAvoidanceScale <= 0f)
+        {
+            FlowObstacleAvoidanceScale = 1.2f;
+        }
+
+        if (GroupedAgentSeparationScale <= 0f)
+        {
+            GroupedAgentSeparationScale = 2f;
+        }
+
+        if (LooseSeparationScale <= 0f)
+        {
+            LooseSeparationScale = 4f;
+        }
+
+        if (VelocityBlendPerSecond <= 0f)
+        {
+            VelocityBlendPerSecond = 5f;
+        }
+    }
 
     public void CopyFrom(MassNavigationSteeringSemantics source)
     {
@@ -291,6 +457,114 @@ public sealed class MassNavigationSolverSemantics
 
     /// <summary>每 agent 每 hard-resolve pass 最多执行的分离次数；0 = 不设上限。</summary>
     public int HardResolveMaxSeparatesPerAgentPass { get; set; }
+
+    public void ApplyEngineDefaults()
+    {
+        if (MinNavMass <= 0f)
+        {
+            MinNavMass = 0.001f;
+        }
+
+        if (MinVisualScale <= 0f)
+        {
+            MinVisualScale = 0.01f;
+        }
+
+        if (MaxStepDtSeconds <= 0f)
+        {
+            MaxStepDtSeconds = 0.05f;
+        }
+
+        if (ParallelStepMinAgents <= 0)
+        {
+            ParallelStepMinAgents = 2048;
+        }
+
+        if (DirectionEpsilonSq <= 0f)
+        {
+            DirectionEpsilonSq = 0.0001f;
+        }
+
+        if (NormalizationEpsilonSq <= 0f)
+        {
+            NormalizationEpsilonSq = 0.000001f;
+        }
+
+        if (InverseSqrtMinValue <= 0f)
+        {
+            InverseSqrtMinValue = 1e-8f;
+        }
+
+        if (EntitySyncPositionEpsilonSq <= 0f)
+        {
+            EntitySyncPositionEpsilonSq = 0.25f;
+        }
+
+        if (EntitySyncVelocityEpsilonSq <= 0f)
+        {
+            EntitySyncVelocityEpsilonSq = 0.01f;
+        }
+
+        if (FacingVelocityEpsilonSq <= 0f)
+        {
+            FacingVelocityEpsilonSq = 0.01f;
+        }
+
+        if (FlowBlockedCellCost <= 0f)
+        {
+            FlowBlockedCellCost = 99999f;
+        }
+
+        if (FlowBlockedCellThreshold <= 0f)
+        {
+            FlowBlockedCellThreshold = 9999f;
+        }
+
+        if (FlowTargetStopDistanceSq <= 0f)
+        {
+            FlowTargetStopDistanceSq = 1f;
+        }
+
+        if (FlowObstacleNeighborWeight <= 0f)
+        {
+            FlowObstacleNeighborWeight = 5f;
+        }
+
+        if (FlowObstacleAvoidanceWeight <= 0f)
+        {
+            FlowObstacleAvoidanceWeight = 1.5f;
+        }
+
+        if (CrowdStampCenterCost <= 0f)
+        {
+            CrowdStampCenterCost = 8f;
+        }
+
+        if (CrowdStampNeighborCost <= 0f)
+        {
+            CrowdStampNeighborCost = 3f;
+        }
+
+        if (CoincidentPairHashBucketCount <= 0)
+        {
+            CoincidentPairHashBucketCount = 1024;
+        }
+
+        if (CoincidentPairHashPrimeA <= 0)
+        {
+            CoincidentPairHashPrimeA = 73856093;
+        }
+
+        if (CoincidentPairHashPrimeB <= 0)
+        {
+            CoincidentPairHashPrimeB = 19349663;
+        }
+
+        if (HardResolveMaxSeparatesPerAgentPass <= 0)
+        {
+            HardResolveMaxSeparatesPerAgentPass = 2;
+        }
+    }
 
     public void CopyFrom(MassNavigationSolverSemantics source)
     {

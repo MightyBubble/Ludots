@@ -342,7 +342,7 @@ namespace Ludots.Tests.Presentation.Movement
             {
                 World = World.Create();
                 MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
-                config.ScenarioRuntime.RuntimeCapacity.DisplacedAgentCapacity = 8;
+                config.RuntimeCapacity.DisplacedAgentCapacity = 8;
                 Simulation = new MassNavigationSimulationRuntime(config);
                 Simulation.BindBoardWorld(
                     new Ludots.Core.Spatial.WorldSizeSpec(new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 10_000, 10_000), 100),

@@ -5,6 +5,14 @@ public sealed class MassNavigationFlowTuning
     public bool Enabled { get; set; }
     public int IterationsPerStep { get; set; }
 
+    public void ApplyEngineDefaults()
+    {
+        if (IterationsPerStep <= 0)
+        {
+            IterationsPerStep = MassNavigationEngineDefaults.FlowIterationsPerStep;
+        }
+    }
+
     public void Validate()
     {
         if (IterationsPerStep < 0)

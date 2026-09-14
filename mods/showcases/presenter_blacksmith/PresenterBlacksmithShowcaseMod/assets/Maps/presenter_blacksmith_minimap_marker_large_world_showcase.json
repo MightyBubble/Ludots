@@ -10,7 +10,12 @@
       "ColorContrast": 1.35
     }
   },
-  "Tags": ["showcase", "presenter", "minimap", "large-world"],
+  "Tags": [
+    "showcase",
+    "presenter",
+    "minimap",
+    "large-world"
+  ],
   "Metadata": {
     "presenterBlacksmith": {
       "minimapMarkerShowcaseTotal": 30000,
@@ -30,11 +35,11 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 256,
-      "HeightInMacroTiles": 256,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "LoadedChunkCapacity": 256,
+      "WidthInCells": 65536,
+      "HeightInCells": 65536
     }
   ],
   "DefaultCamera": {

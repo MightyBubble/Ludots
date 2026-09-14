@@ -97,7 +97,7 @@ public sealed class MassNavigationSimulationRuntime
     public const string AgentLocomotionSpeedParamKey = "mass_navigation.agent.locomotion.speed";
 
     private MassNavigationDomainStanceProjection? _domainStanceProjection;
-    private int[] _teamIds = Array.Empty<int>();
+    private readonly Dictionary<int, System.Numerics.Vector2> _pendingDomainTargetWorldCm = new();
     private int _frameIndex;
     private WorldGridLoadedChunks? _loadedChunks;
     private WorldGridLoadedChunkContributor? _loadedChunkContributor;
@@ -105,7 +105,7 @@ public sealed class MassNavigationSimulationRuntime
     private readonly List<long> _loadedChunksToEvict;
     private readonly List<long> _loadedChunksAddedDuringUpdate;
     private readonly HashSet<Entity> _authoredBindingSeenEntities;
-    private readonly int _loadedChunkCapacity;
+    private int _loadedChunkCapacity;
     private float _streamingClockSeconds;
     private int _streamingMinChunkX = int.MinValue;
     private int _streamingMaxChunkX = int.MinValue;
@@ -208,7 +208,6 @@ public sealed class MassNavigationSimulationRuntime
     public int StreamingWindowUpdatesFrame => Telemetry.StreamingWindowUpdatesFrame;
     public int FocusBudgetUpdatesTotal => Telemetry.FocusBudgetUpdatesTotal;
     public int SolverWindowMovesTotal => Telemetry.SolverWindowMovesTotal;
-    public int ScenarioSpawnCount => Telemetry.ScenarioSpawnCount;
     public int AuthoredRuntimeBindingRevision => Telemetry.AuthoredRuntimeBindingRevision;
     internal bool RuntimeBindingPreparationComplete => _authoredAgentBindingPassComplete && _environmentBindingPassComplete;
     public MassNavigationConfig Config { get; }
@@ -230,10 +229,7 @@ public sealed class MassNavigationSimulationRuntime
     }
     public int NavigationObstacleCount => MassNavigationFlow.ObstacleCount;
     public int NavigationSettledAgentCount => MassNavigationFlow.SettledUnitCount;
-    public ReadOnlySpan<int> TeamIds => _teamIds;
-    public int TeamCount => _teamIds.Length;
     public int FrameIndex => _frameIndex;
-    public int AgentsPerTeam => Config.Scenario.AgentsPerTeam;
     public int LoadedChunkCount => _loadedChunkContributor?.ActiveChunkKeys.Count ?? 0;
     public int StreamingChunkSizeCm => RequireLoadedChunks().ChunkSizeCm;
     public float SolverWindowCenterXCm => _simWindowCenterXCm;
@@ -278,7 +274,7 @@ public sealed class MassNavigationSimulationRuntime
     public MassNavigationSimulationRuntime(MassNavigationConfig config)
     {
         Config = config ?? throw new ArgumentNullException(nameof(config));
-        int membershipCapacity = config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        int membershipCapacity = config.RuntimeCapacity.GroupMembershipAgentCapacity;
         if (membershipCapacity <= 0)
         {
             throw new InvalidOperationException(
@@ -289,8 +285,8 @@ public sealed class MassNavigationSimulationRuntime
         _authoredBindingSeenEntities = new HashSet<Entity>(membershipCapacity);
         MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);
         MassNavigationFlow.PreallocateAgentCapacity(membershipCapacity);
-        MassNavigationFlow.PreallocateDomainRelationshipCapacity(config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity);
-        MassNavigationFlow.PreallocateDisplacedAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.DisplacedAgentCapacity);
+        MassNavigationFlow.PreallocateDomainRelationshipCapacity(config.RuntimeCapacity.RelationshipDomainCapacity);
+        MassNavigationFlow.PreallocateDisplacedAgentCapacity(config.RuntimeCapacity.DisplacedAgentCapacity);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
         if (WorldConfig.HotZones.Length > 0)
         {
@@ -304,7 +300,7 @@ public sealed class MassNavigationSimulationRuntime
         }
         Cadence = config.Cadence;
         CadenceScheduler = new MassNavigationCadenceScheduler(Cadence);
-        _loadedChunkCapacity = config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity;
+        _loadedChunkCapacity = config.RuntimeCapacity.LoadedChunkCapacity;
         _loadedChunkLastTouchedSeconds = new Dictionary<long, float>(_loadedChunkCapacity);
         _loadedChunksToEvict = new List<long>(_loadedChunkCapacity);
         _loadedChunksAddedDuringUpdate = new List<long>(_loadedChunkCapacity);
@@ -317,8 +313,7 @@ public sealed class MassNavigationSimulationRuntime
         _flowWorkAreaWidthCm = _simWindowWidthCm;
         _flowWorkAreaHeightCm = _simWindowHeightCm;
         FlowTuning = config.Flow;
-        NavGroupRuntime = new MassNavigationGroupRuntime(config.Semantics.Group, config.ScenarioRuntime.RuntimeCapacity);
-        ConfigureScenarioTeams(CreateTeamIdArray(config.Scenario.Teams));
+        NavGroupRuntime = new MassNavigationGroupRuntime(config.Semantics.Group, config.RuntimeCapacity);
         MassNavigationFlow.ArrivalTuning.CopyFrom(config.Arrival);
         MassNavigationFlow.AvoidanceTuning.CopyFrom(config.Avoidance);
         MassNavigationFlow.Semantics.CopyFrom(config.Semantics);
@@ -327,6 +322,16 @@ public sealed class MassNavigationSimulationRuntime
     public void BindBoardWorld(WorldSizeSpec boardWorldSize, WorldGridLoadedChunks loadedChunks)
     {
         ArgumentNullException.ThrowIfNull(loadedChunks);
+        if (WorldConfig.StreamingChunkSizeCm <= 0)
+        {
+            WorldConfig.StreamingChunkSizeCm = loadedChunks.ChunkSizeCm;
+        }
+
+        Config.RuntimeCapacity.ApplyBoardDerivedChunkCapacity(
+            WorldConfig.StreamingChunkSizeCm,
+            Streaming.RadiusCm);
+        _loadedChunkCapacity = Config.RuntimeCapacity.LoadedChunkCapacity;
+
         if (loadedChunks.ChunkSizeCm != WorldConfig.StreamingChunkSizeCm)
         {
             throw new InvalidOperationException(
@@ -548,11 +553,6 @@ public sealed class MassNavigationSimulationRuntime
         Telemetry.MarkCommandApply();
     }
 
-    public void MarkScenarioSpawned()
-    {
-        Telemetry.MarkScenarioSpawned();
-    }
-
     internal void BeginRuntimeBindingPreparation()
     {
         _authoredAgentBindingPassComplete = false;
@@ -574,21 +574,6 @@ public sealed class MassNavigationSimulationRuntime
         Telemetry.MarkFlowReconcile();
     }
 
-    public void ConfigureScenarioTeams(ReadOnlySpan<int> teamIds)
-    {
-        if (teamIds.Length <= 0)
-        {
-            throw new InvalidOperationException("MassNavigationSimulationRuntime requires at least one configured team.");
-        }
-
-        if (_teamIds.Length != teamIds.Length)
-        {
-            _teamIds = new int[teamIds.Length];
-        }
-
-        teamIds.CopyTo(_teamIds);
-    }
-
     public void ResetRuntimeState(World world)
     {
         ArgumentNullException.ThrowIfNull(world);
@@ -606,6 +591,7 @@ public sealed class MassNavigationSimulationRuntime
     public void ClearAuthoredRuntimeBindings(World world)
     {
         ArgumentNullException.ThrowIfNull(world);
+        _pendingDomainTargetWorldCm.Clear();
         NavGroupRuntime.Reset();
         AgentState.ClearRuntimeBindings(world);
         MassNavigationFlow.ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed>.Empty);
@@ -624,7 +610,7 @@ public sealed class MassNavigationSimulationRuntime
             throw new InvalidOperationException("MassNavigation authored rebuild requires matching entity, seed, and controllable spans.");
         }
 
-        int membershipCapacity = Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        int membershipCapacity = Config.RuntimeCapacity.GroupMembershipAgentCapacity;
         if (agentSeeds.Length > membershipCapacity)
         {
             throw new InvalidOperationException(
@@ -650,6 +636,7 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         NavGroupRuntime.RestoreAuthoredRebuildSnapshot(world, MassNavigationFlow, AgentState, previousGroupSnapshot);
+        ApplyPendingDomainTargets();
         MarkStructuralChange();
     }
 
@@ -670,7 +657,7 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         int newTotal = checked(AgentState.TotalAgents + newAgentSeeds.Length);
-        int membershipCapacity = Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        int membershipCapacity = Config.RuntimeCapacity.GroupMembershipAgentCapacity;
         if (newTotal > membershipCapacity)
         {
             throw new InvalidOperationException(
@@ -694,6 +681,7 @@ public sealed class MassNavigationSimulationRuntime
             BindSpawnedAgent(world, newEntities[i], startIndex + i, controllableFlags[i]);
         }
 
+        ApplyPendingDomainTargets();
         MarkStructuralChange();
     }
 
@@ -1006,6 +994,52 @@ public sealed class MassNavigationSimulationRuntime
         MassNavigationFlow.ReleaseUnitToTeamTarget(agentIndex);
     }
 
+    /// <summary>
+    /// 域行军目标（trigger 蓝图驱动）：目标 = 队伍代表实体（TeamIdentity）。
+    /// 队伍已物化则立即写流场目标；尚未物化（spawn 波未绑定）则挂起，
+    /// 在下一次 authored 绑定提交时应用。世界坐标存储，窗口移动不失效。
+    /// </summary>
+    public void SetDomainMarchTarget(Entity domainRep, float worldXCm, float worldYCm)
+    {
+        if (domainRep == Entity.Null)
+        {
+            throw new InvalidOperationException("MassNavigation domain march target requires a live domain representative.");
+        }
+
+        if (!MassNavigationFlow.TrySetTeamTarget(domainRep.Id, ToLocalXCm(worldXCm), ToLocalYCm(worldYCm)))
+        {
+            _pendingDomainTargetWorldCm[domainRep.Id] = new System.Numerics.Vector2(worldXCm, worldYCm);
+        }
+    }
+
+    private void ApplyPendingDomainTargets()
+    {
+        if (_pendingDomainTargetWorldCm.Count == 0)
+        {
+            return;
+        }
+
+        List<int> applied = null;
+        foreach (KeyValuePair<int, System.Numerics.Vector2> pending in _pendingDomainTargetWorldCm)
+        {
+            if (MassNavigationFlow.TrySetTeamTarget(
+                    pending.Key,
+                    ToLocalXCm(pending.Value.X),
+                    ToLocalYCm(pending.Value.Y)))
+            {
+                (applied ??= new List<int>()).Add(pending.Key);
+            }
+        }
+
+        if (applied != null)
+        {
+            for (int i = 0; i < applied.Count; i++)
+            {
+                _pendingDomainTargetWorldCm.Remove(applied[i]);
+            }
+        }
+    }
+
     public int DrainArrivalEvents(Span<MassNavigationArrivalEvent> destination)
     {
         return MassNavigationFlow.DrainArrivalEvents(destination, AgentState, SolverWindowMinXCm, SolverWindowMinYCm);
@@ -1070,6 +1104,8 @@ public sealed class MassNavigationSimulationRuntime
             Heavy = MassNavigationFlow.IsHeavyProfile(agentIndex),
             VisualScale = MassNavigationFlow.GetVisualScale(agentIndex),
             SpeedCmPerSecond = MassNavigationFlow.GetSpeedCmPerSecond(agentIndex),
+            NavMass = MassNavigationFlow.GetNavMass(agentIndex),
+            RadiusCm = MassNavigationFlow.GetBodyRadiusCm(agentIndex),
         });
         if (world.Has<MovePlanExecutionIntent>(entity))
         {
@@ -1666,17 +1702,6 @@ public sealed class MassNavigationSimulationRuntime
             throw new InvalidOperationException(
                 $"MassNavigation active hot zone '{hotZoneId}' center {axisName}={centerCm:0.###} cannot host solver window {windowSizeCm:0.###} cm inside board center range [{minCenter:0.###}, {maxCenter:0.###}].");
         }
-    }
-
-    private static int[] CreateTeamIdArray(MassNavigationScenarioTeamConfig[] teams)
-    {
-        var ids = new int[teams.Length];
-        for (int i = 0; i < teams.Length; i++)
-        {
-            ids[i] = teams[i].Id;
-        }
-
-        return ids;
     }
 
     private void InvalidateStreamingWindowCache()

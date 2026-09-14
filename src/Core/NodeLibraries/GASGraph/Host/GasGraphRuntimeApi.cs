@@ -838,6 +838,67 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
+        /// Sets a mass-navigation agent's target. Fail-closed when no navigation runtime is
+        /// active or the agent entity is not a bound navigation agent.
+        /// </summary>
+        public void SetNavAgentTarget(Entity agent, int xCm, int yCm)
+        {
+            RejectDerivedAttributeSideEffect(nameof(SetNavAgentTarget));
+            GameEngine? engine = _engineResolver?.Invoke()
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.NavRuntimeUnavailable");
+            if (_world == null || !_world.IsAlive(agent))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.NavAgentTargetDead: entity {agent} is not alive.");
+            }
+
+            bool isDomainRep = _world.Has<Ludots.Core.Gameplay.Components.TeamIdentity>(agent);
+            if (!TryResolveNavigationRuntime(
+                    engine,
+                    allowActivatingRuntime: isDomainRep,
+                    out Ludots.Core.MassNavigation.Runtime.MassNavigationSimulationRuntime? simulation) ||
+                simulation is null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.NavRuntimeUnavailable");
+            }
+
+            if (isDomainRep)
+            {
+                // 域目标在 MapLoaded 时刻（绑定 pass 尚未完成）也要可写：挂起语义由
+                // MassNavigationSimulationRuntime.SetDomainMarchTarget 提供。
+                simulation.SetDomainMarchTarget(agent, xCm, yCm);
+                return;
+            }
+
+            if (!simulation.SetAgentNavigationTargetWorldCm(
+                    agent,
+                    new System.Numerics.Vector2(xCm, yCm)))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.NavAgentUnbound: entity {agent} is not a bound mass-navigation agent.");
+            }
+        }
+
+        private static bool TryResolveNavigationRuntime(
+            GameEngine engine,
+            bool allowActivatingRuntime,
+            out Ludots.Core.MassNavigation.Runtime.MassNavigationSimulationRuntime? simulation)
+        {
+            if (Ludots.Core.MassNavigation.MassNavigationIds.TryGetCurrentNavigationRuntime(
+                    engine,
+                    out Ludots.Core.MassNavigation.Runtime.MassNavigationSimulationRuntime ready))
+            {
+                simulation = ready;
+                return true;
+            }
+
+            simulation = allowActivatingRuntime
+                ? Ludots.Core.MassNavigation.MassNavigationIds.TryGetActivatingNavigationRuntime(engine)
+                : null;
+            return simulation is not null;
+        }
+
+        /// <summary>
         /// Sets an entity's world position. Fail-closed on dead or unmapped targets.
         /// </summary>
         public void SetWorldPosition(Entity target, int xCm, int yCm)

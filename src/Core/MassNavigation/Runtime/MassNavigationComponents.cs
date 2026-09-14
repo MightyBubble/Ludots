@@ -6,6 +6,28 @@ namespace Ludots.Core.MassNavigation.Runtime;
 public struct MassNavigationAgent
 {
     public int ProfileId;
+    public float SpeedCmPerSecond;
+    public float RadiusCm;
+    public bool Heavy;
+}
+
+/// <summary>
+/// 模板参数的引擎默认与派生常数（自现役 light/heavy 档提炼）：
+/// 命名几何档（Navigation/agent_profiles.json）缺场时，navMass 与
+/// visualScale 按 heavy 档派生，speed/radius 用组件默认。
+/// </summary>
+public static class MassNavigationAgentDefaults
+{
+    public const float SpeedCmPerSecond = 300f;
+    public const float RadiusCm = 40f;
+
+    public const float LightNavMass = 1f;
+    public const float HeavyNavMass = 4f;
+    public const float LightVisualScale = 0.22f;
+    public const float HeavyVisualScale = 0.34f;
+
+    public static float ResolveNavMass(bool heavy) => heavy ? HeavyNavMass : LightNavMass;
+    public static float ResolveVisualScale(bool heavy) => heavy ? HeavyVisualScale : LightVisualScale;
 }
 
 public struct MassNavigationAgentIndex
@@ -19,6 +41,8 @@ public struct MassNavigationAgentProfile
     public bool Heavy;
     public float VisualScale;
     public float SpeedCmPerSecond;
+    public float NavMass;
+    public float RadiusCm;
 }
 
 /// <summary>

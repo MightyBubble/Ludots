@@ -79,6 +79,23 @@ public static class MassNavigationIds
         return true;
     }
 
+    /// <summary>
+    /// 已 Activate（map 聚焦）但绑定 pass 可能尚未完成的运行时——供 MapLoaded 时刻的
+    /// 域级写（SetDomainMarchTarget 挂起语义）解析；逐单位写仍要求 IsReady。
+    /// </summary>
+    internal static Runtime.MassNavigationSimulationRuntime? TryGetActivatingNavigationRuntime(GameEngine engine)
+    {
+        if (engine.CurrentMapSession == null ||
+            engine.GetService(MassNavigationKeys.RuntimeBinding) is not Runtime.MassNavigationRuntimeBinding binding ||
+            binding.Current is not Runtime.MassNavigationSimulationRuntime current ||
+            !string.Equals(binding.CurrentMapId.Value, engine.CurrentMapSession.MapId.Value, System.StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return current;
+    }
+
     internal static void PublishPreparedWhenBindingComplete(
         GameEngine engine,
         Runtime.MassNavigationSimulationRuntime simulation)

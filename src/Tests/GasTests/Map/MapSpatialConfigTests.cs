@@ -24,8 +24,8 @@ namespace GasTests
             var config = new BoardConfig();
             Assert.That(config.Name, Is.EqualTo("default"));
             Assert.That(config.SpatialType, Is.EqualTo("Grid"));
-            Assert.That(config.WidthInMacroTiles, Is.EqualTo(64));
-            Assert.That(config.HeightInMacroTiles, Is.EqualTo(64));
+            Assert.That(config.WidthInCells, Is.EqualTo(64 * SpatialScaleDefaults.MacroTileCells));
+            Assert.That(config.HeightInCells, Is.EqualTo(64 * SpatialScaleDefaults.MacroTileCells));
             Assert.That(config.GridCellSizeCm, Is.EqualTo(100));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(400));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(64));
@@ -41,8 +41,8 @@ namespace GasTests
             {
                 Name = "battle",
                 SpatialType = "Hex",
-                WidthInMacroTiles = 128,
-                HeightInMacroTiles = 128,
+                WidthInCells = 128 * 256,
+                HeightInCells = 128 * 256,
                 GridCellSizeCm = 200,
                 HexEdgeLengthCm = 600,
                 ChunkSizeCells = 32,
@@ -54,8 +54,10 @@ namespace GasTests
 
             Assert.That(config.Name, Is.EqualTo("battle"));
             Assert.That(config.SpatialType, Is.EqualTo("Hex"));
-            Assert.That(config.WidthInMacroTiles, Is.EqualTo(128));
-            Assert.That(config.HeightInMacroTiles, Is.EqualTo(128));
+            Assert.That(config.WidthInCells, Is.EqualTo(128 * 256));
+            Assert.That(config.HeightInCells, Is.EqualTo(128 * 256));
+            Assert.That(config.WidthInCells, Is.EqualTo(32768));
+            Assert.That(config.HeightInCells, Is.EqualTo(32768));
             Assert.That(config.GridCellSizeCm, Is.EqualTo(200));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
@@ -72,7 +74,7 @@ namespace GasTests
             {
                 Name = "world",
                 SpatialType = "Hex",
-                WidthInMacroTiles = 256,
+                WidthInCells = 256 * 256,
                 LoadedChunkCapacity = 128,
                 DataFile = "terrain.hex",
                 ContinuousHeightmapAsset = "terrain.height"
@@ -81,15 +83,16 @@ namespace GasTests
             var clone = original.Clone();
             Assert.That(clone.Name, Is.EqualTo("world"));
             Assert.That(clone.SpatialType, Is.EqualTo("Hex"));
+            Assert.That(clone.WidthInCells, Is.EqualTo(256 * 256));
             Assert.That(clone.WidthInMacroTiles, Is.EqualTo(256));
             Assert.That(clone.LoadedChunkCapacity, Is.EqualTo(128));
             Assert.That(clone.DataFile, Is.EqualTo("terrain.hex"));
             Assert.That(clone.ContinuousHeightmapAsset, Is.EqualTo("terrain.height"));
 
             // Modify clone, original unchanged
-            clone.WidthInMacroTiles = 512;
+            clone.WidthInCells = 512 * 256;
             clone.ContinuousHeightmapAsset = "other.height";
-            Assert.That(original.WidthInMacroTiles, Is.EqualTo(256));
+            Assert.That(original.WidthInCells, Is.EqualTo(256 * 256));
             Assert.That(original.ContinuousHeightmapAsset, Is.EqualTo("terrain.height"));
         }
 
@@ -100,8 +103,8 @@ namespace GasTests
             {
                 "name": "strategic",
                 "spatialType": "Hex",
-                "widthInMacroTiles": 128,
-                "heightInMacroTiles": 128,
+                "widthInCells": 32768,
+                "heightInCells": 32768,
                 "hexEdgeLengthCm": 600,
                 "chunkSizeCells": 32,
                 "navigationEnabled": true,
@@ -113,8 +116,10 @@ namespace GasTests
             Assert.That(config, Is.Not.Null);
             Assert.That(config!.Name, Is.EqualTo("strategic"));
             Assert.That(config.SpatialType, Is.EqualTo("Hex"));
-            Assert.That(config.WidthInMacroTiles, Is.EqualTo(128));
-            Assert.That(config.HeightInMacroTiles, Is.EqualTo(128));
+            Assert.That(config.WidthInCells, Is.EqualTo(128 * 256));
+            Assert.That(config.HeightInCells, Is.EqualTo(128 * 256));
+            Assert.That(config.WidthInCells, Is.EqualTo(32768));
+            Assert.That(config.HeightInCells, Is.EqualTo(32768));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
             Assert.That(config.NavigationEnabled, Is.True);
@@ -174,8 +179,8 @@ namespace GasTests
                         continue;
                     }
 
-                    RejectLegacyKey(repoRoot, file, i, board, "WidthInTiles", "WidthInMacroTiles", violations);
-                    RejectLegacyKey(repoRoot, file, i, board, "HeightInTiles", "HeightInMacroTiles", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "WidthInTiles", "WidthInCells", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "HeightInTiles", "HeightInCells", violations);
 
                     string spatialType = TryGetString(board, "SpatialType") ?? "Grid";
                     if (!spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase) &&

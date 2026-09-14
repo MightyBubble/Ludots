@@ -1,0 +1,154 @@
+[
+  {
+    "id": "graph.crowd_arena.march",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "march",
+        "event": "MapLoaded",
+        "start": "azure_rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "azure_rep",
+        "op": "LoadPlacedEntity",
+        "instanceId": "player_team"
+      },
+      {
+        "id": "az_x",
+        "op": "ConstInt",
+        "intValue": 7600
+      },
+      {
+        "id": "az_y",
+        "op": "ConstInt",
+        "intValue": 5000
+      },
+      {
+        "id": "az_march",
+        "op": "SetNavAgentTarget"
+      },
+      {
+        "id": "crimson_rep",
+        "op": "LoadPlacedEntity",
+        "instanceId": "crimson_team_rep"
+      },
+      {
+        "id": "cr_x",
+        "op": "ConstInt",
+        "intValue": 2400
+      },
+      {
+        "id": "cr_y",
+        "op": "ConstInt",
+        "intValue": 5000
+      },
+      {
+        "id": "cr_march",
+        "op": "SetNavAgentTarget"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "azure_rep",
+        "fromPort": "next",
+        "to": "az_x"
+      },
+      {
+        "from": "az_x",
+        "fromPort": "next",
+        "to": "az_y"
+      },
+      {
+        "from": "az_y",
+        "fromPort": "next",
+        "to": "az_march"
+      },
+      {
+        "from": "az_march",
+        "fromPort": "next",
+        "to": "crimson_rep"
+      },
+      {
+        "from": "crimson_rep",
+        "fromPort": "next",
+        "to": "cr_x"
+      },
+      {
+        "from": "cr_x",
+        "fromPort": "next",
+        "to": "cr_y"
+      },
+      {
+        "from": "cr_y",
+        "fromPort": "next",
+        "to": "cr_march"
+      },
+      {
+        "from": "cr_march",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "azure_rep",
+        "fromPort": "value",
+        "to": "az_march",
+        "toPort": "source"
+      },
+      {
+        "from": "az_x",
+        "fromPort": "value",
+        "to": "az_march",
+        "toPort": "a"
+      },
+      {
+        "from": "az_y",
+        "fromPort": "value",
+        "to": "az_march",
+        "toPort": "b"
+      },
+      {
+        "from": "crimson_rep",
+        "fromPort": "value",
+        "to": "cr_march",
+        "toPort": "source"
+      },
+      {
+        "from": "cr_x",
+        "fromPort": "value",
+        "to": "cr_march",
+        "toPort": "a"
+      },
+      {
+        "from": "cr_y",
+        "fromPort": "value",
+        "to": "cr_march",
+        "toPort": "b"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -964,8 +964,8 @@ namespace {modId}
 
             var heightmap = new Ludots.Core.Presentation.Terrain.ContinuousHeightmapRuntime(asset);
             int cellSizeCm = boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm;
-            int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
-            int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+            int widthCells = boardConfig.WidthInCells;
+            int heightCells = boardConfig.HeightInCells;
             int widthCm = checked(widthCells * cellSizeCm);
             int heightCm = checked(heightCells * cellSizeCm);
             if (asset.Bounds.Width != widthCm || asset.Bounds.Height != heightCm)
@@ -1364,8 +1364,8 @@ namespace {modId}
                     $"Map '{mapId}' board has no TerrainBlockedAtOrBelowHeightCm; pass --seaLevelCm.");
             int heightStep = boardConfig.TerrainHeightStepCm > 0 ? boardConfig.TerrainHeightStepCm : SpatialScaleDefaults.CellCm;
             int cellSizeCm = boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm;
-            int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
-            int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+            int widthCells = boardConfig.WidthInCells;
+            int heightCells = boardConfig.HeightInCells;
 
             Ludots.Core.Presentation.Terrain.ContinuousHeightmapAsset asset;
             using (var stream = File.OpenRead(heightmapPath))

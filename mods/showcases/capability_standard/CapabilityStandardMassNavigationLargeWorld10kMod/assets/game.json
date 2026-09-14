@@ -5,8 +5,6 @@
   "windowHeight": 900,
   "windowResizable": true,
   "targetFps": 0,
-  "worldWidthInMacroTiles": 250,
-  "worldHeightInMacroTiles": 250,
   "gasRuntimeCapacity": {
     "deferredTriggerPerFrameCapacity": 16384,
     "orderQueueCapacity": 16384,

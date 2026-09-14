@@ -4951,8 +4951,8 @@ static class EditorRepo
         {
             Name = name,
             SpatialType = spatialType,
-            WidthInMacroTiles = widthMacroTiles,
-            HeightInMacroTiles = heightMacroTiles,
+            WidthInCells = checked(widthMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells),
+            HeightInCells = checked(heightMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells),
             GridCellSizeCm = cellSizeCm,
             HexEdgeLengthCm = request.HexEdgeLengthCm > 0 ? request.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
             ChunkSizeCells = chunkSizeCells,

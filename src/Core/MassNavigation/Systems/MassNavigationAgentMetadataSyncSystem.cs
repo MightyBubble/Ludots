@@ -6,7 +6,6 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.MassNavigation.Runtime;
-using Ludots.Core.Navigation.AgentProfiles;
 
 namespace Ludots.Core.MassNavigation.Systems;
 
@@ -33,7 +32,7 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
             throw new System.ArgumentNullException(nameof(config));
         }
 
-        _relationshipDomainCapacity = config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity;
+        _relationshipDomainCapacity = config.RuntimeCapacity.RelationshipDomainCapacity;
         _domainIdSet = new HashSet<int>(_relationshipDomainCapacity);
     }
 
@@ -75,21 +74,19 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
                 if (!_domainIdSet.Contains(domainId) && _domainIdSet.Count >= _relationshipDomainCapacity)
                 {
                     throw new System.InvalidOperationException(
-                        $"MassNavigation metadata sync required more than configured scenarioRuntime.runtimeCapacity.relationshipDomainCapacity {_relationshipDomainCapacity} domains.");
+                        $"MassNavigation metadata sync required more than configured runtimeCapacity.relationshipDomainCapacity {_relationshipDomainCapacity} domains.");
                 }
 
                 _domainIdSet.Add(domainId);
                 MassNavigationAgentProfile profile = profiles[index];
                 EntityLayer layer = layers[index];
-                string profileKey = MassNavigationProfileRegistry.GetName(profile.ProfileId);
-                AgentProfileConfig geometry = simulation.Config.AgentProfiles.ResolveGeometry(profileKey);
                 simulation.MassNavigationFlow.SetUnitRuntimeProfile(
                     agentIndices[index].Value,
                     domainId,
                     profile.Heavy,
-                    geometry.Mass,
+                    profile.NavMass,
                     profile.VisualScale,
-                    geometry.RadiusCm,
+                    profile.RadiusCm,
                     profile.SpeedCmPerSecond,
                     new MassNavigationAgentLayer(layer.Value.Category, layer.Value.Mask));
             }

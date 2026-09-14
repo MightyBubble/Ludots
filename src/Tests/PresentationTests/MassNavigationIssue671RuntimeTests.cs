@@ -300,9 +300,9 @@ public sealed class MassNavigationIssue671RuntimeTests
     private static MassNavigationGroupRuntime CreateGroupRuntime(int agentCapacity)
     {
         MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
-        config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = agentCapacity;
-        config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = agentCapacity;
-        return new MassNavigationGroupRuntime(config.Semantics.Group, config.ScenarioRuntime.RuntimeCapacity);
+        config.RuntimeCapacity.GroupMembershipAgentCapacity = agentCapacity;
+        config.RuntimeCapacity.GroupMemberCapacity = agentCapacity;
+        return new MassNavigationGroupRuntime(config.Semantics.Group, config.RuntimeCapacity);
     }
 
     private static MassNavigationAgentSeed[] CreateAvoidanceSeeds(int agentCount)

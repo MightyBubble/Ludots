@@ -1796,10 +1796,41 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 throw new InvalidOperationException("MassNavigationAgent requires an object payload.");
             }
 
-            ValidateProperties(obj, "MassNavigationAgent", "profileId");
-            string profileId = RequireStringProperty(obj, "profileId", "MassNavigationAgent");
-            int profileKey = MassNavigationProfileRegistry.Register(profileId);
-            entity.Add(new MassNavigationAgent { ProfileId = profileKey });
+            ValidateProperties(obj, "MassNavigationAgent", "profileId", "speedCmPerSecond", "radiusCm", "heavy");
+            bool hasProfileId = obj.TryGetPropertyValue("profileId", out JsonNode? profileIdNode) &&
+                                profileIdNode is not null &&
+                                profileIdNode.GetValueKind() != JsonValueKind.Null;
+            bool heavy = TryReadBooleanByteProperty(obj, "heavy", out byte heavyByte) ? heavyByte != 0 : false;
+            float speedCmPerSecond = TryReadFloatProperty(obj, "speedCmPerSecond", out float authoredSpeed)
+                ? authoredSpeed
+                : Ludots.Core.MassNavigation.Runtime.MassNavigationAgentDefaults.SpeedCmPerSecond;
+            float radiusCm = TryReadFloatProperty(obj, "radiusCm", out float authoredRadius)
+                ? authoredRadius
+                : Ludots.Core.MassNavigation.Runtime.MassNavigationAgentDefaults.RadiusCm;
+            if (!(speedCmPerSecond > 0f) || !float.IsFinite(speedCmPerSecond))
+            {
+                throw new InvalidOperationException("MassNavigationAgent.speedCmPerSecond must be a finite value > 0.");
+            }
+
+            if (!(radiusCm > 0f) || !float.IsFinite(radiusCm))
+            {
+                throw new InvalidOperationException("MassNavigationAgent.radiusCm must be a finite value > 0.");
+            }
+
+            int profileKey = hasProfileId
+                ? Ludots.Core.MassNavigation.Runtime.MassNavigationProfileRegistry.Register(
+                    RequireStringNode(profileIdNode!, "profileId", "MassNavigationAgent"))
+                : Ludots.Core.MassNavigation.Runtime.MassNavigationProfileRegistry.InternParameters(
+                    speedCmPerSecond,
+                    radiusCm,
+                    heavy);
+            entity.Add(new Ludots.Core.MassNavigation.Runtime.MassNavigationAgent
+            {
+                ProfileId = profileKey,
+                SpeedCmPerSecond = speedCmPerSecond,
+                RadiusCm = radiusCm,
+                Heavy = heavy,
+            });
         }
 
         private static void SetMassNavigationBlocker(Entity entity, JsonNode data)
@@ -2380,6 +2411,11 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
         private static string RequireStringProperty(JsonObject obj, string name, string context)
         {
             JsonNode node = RequireProperty(obj, name, context);
+            return RequireStringNode(node, name, context);
+        }
+
+        private static string RequireStringNode(JsonNode node, string name, string context)
+        {
             if (node.GetValueKind() != JsonValueKind.String)
             {
                 throw new InvalidOperationException($"{context}.{name} requires a string value.");

@@ -23,6 +23,54 @@ public sealed class MassNavigationCadenceConfig
     /// </summary>
     public int AgentSliceCount { get; set; } = 1;
 
+    public void ApplyEngineDefaults()
+    {
+        if (SimulationHz <= 0)
+        {
+            SimulationHz = MassNavigationEngineDefaults.SimulationHz;
+        }
+
+        if (TargetUpdateHz <= 0)
+        {
+            TargetUpdateHz = MassNavigationEngineDefaults.TargetUpdateHz;
+        }
+
+        if (FlowStepHz <= 0)
+        {
+            FlowStepHz = MassNavigationEngineDefaults.FlowStepHz;
+        }
+
+        if (FlowCrowdStampHz <= 0)
+        {
+            FlowCrowdStampHz = MassNavigationEngineDefaults.FlowCrowdStampHz;
+        }
+
+        if (FlowObstacleStampHz <= 0)
+        {
+            FlowObstacleStampHz = MassNavigationEngineDefaults.FlowObstacleStampHz;
+        }
+
+        if (HardResolveHz <= 0)
+        {
+            HardResolveHz = MassNavigationEngineDefaults.HardResolveHz;
+        }
+
+        if (EntitySyncHz <= 0)
+        {
+            EntitySyncHz = MassNavigationEngineDefaults.EntitySyncHz;
+        }
+
+        if (MaxStepsPerFixedTick <= 0)
+        {
+            MaxStepsPerFixedTick = MassNavigationEngineDefaults.MaxStepsPerFixedTick;
+        }
+
+        if (HardResolveCandidateThresholdAgents <= 0)
+        {
+            HardResolveCandidateThresholdAgents = MassNavigationEngineDefaults.HardResolveCandidateThresholdAgents;
+        }
+    }
+
     public void Validate()
     {
         ValidateHz(nameof(SimulationHz), SimulationHz, allowZero: false);
