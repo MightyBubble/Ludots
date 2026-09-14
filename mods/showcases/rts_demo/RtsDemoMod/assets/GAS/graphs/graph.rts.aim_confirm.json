@@ -1,0 +1,42 @@
+[
+  {
+    "id": "graph.rts.aim_confirm",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_aim_confirm", "action": "Rts.AimConfirm", "start": "pointer_x", "refire": "restart" }
+    ],
+    "nodes": [
+      { "id": "pointer_x", "op": "LoadPointerScreenX" },
+      { "id": "pointer_y", "op": "LoadPointerScreenY" },
+      { "id": "to_ground", "op": "ScreenPointToGround" },
+      { "id": "ground_branch", "op": "JumpIfFalse" },
+      { "id": "slot", "op": "ConstInt", "intValue": 0 },
+      { "id": "submit", "op": "SubmitCast", "orderTypeKey": "castAbility" },
+      { "id": "rep", "op": "LoadEntryPayloadEntity", "payloadKey": "MapTrigger.Rep" },
+      { "id": "deactivate_aim", "op": "DeactivateContext", "context": "interaction.context.rts.aim" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "pointer_x", "fromPort": "next", "to": "pointer_y" },
+      { "from": "pointer_y", "fromPort": "next", "to": "to_ground" },
+      { "from": "to_ground", "fromPort": "next", "to": "ground_branch" },
+      { "from": "ground_branch", "fromPort": "true", "to": "slot" },
+      { "from": "ground_branch", "fromPort": "false", "to": "halt" },
+      { "from": "slot", "fromPort": "next", "to": "submit" },
+      { "from": "submit", "fromPort": "next", "to": "rep" },
+      { "from": "rep", "fromPort": "next", "to": "deactivate_aim" },
+      { "from": "deactivate_aim", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "pointer_x", "fromPort": "value", "to": "to_ground", "toPort": "a" },
+      { "from": "pointer_y", "fromPort": "value", "to": "to_ground", "toPort": "b" },
+      { "from": "to_ground", "fromPort": "value", "to": "ground_branch", "toPort": "condition" },
+      { "from": "to_ground", "fromPort": "value", "to": "submit", "toPort": "condition" },
+      { "from": "slot", "fromPort": "value", "to": "submit", "toPort": "value" },
+      { "from": "rep", "fromPort": "value", "to": "deactivate_aim", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

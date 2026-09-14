@@ -1,0 +1,33 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.rts.battle",
+      "inputContextId": "Rts_Gameplay",
+      "bindings": [
+        "Rts.AimConfirm",
+        "Rts.AimCancel"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.rts.aim_q_begin"
+        }
+      ],
+      "activeCollectionKey": "collection.command.source"
+    },
+    {
+      "id": "interaction.context.rts.aim",
+      "bindings": [
+        "Rts.AimConfirm",
+        "Rts.AimCancel"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.rts.aim_confirm"
+        },
+        {
+          "trigger": "graph.rts.aim_cancel"
+        }
+      ]
+    }
+  ]
+}
