@@ -2085,8 +2085,8 @@
     {
       "op": "QueryFilterKnowledgeVisible",
       "authorableKinds": [
-        "Query",
-        "TriggerGraph"
+        "TriggerGraph",
+        "Query"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFilterKnowledgeVisible",
       "status": "covered",

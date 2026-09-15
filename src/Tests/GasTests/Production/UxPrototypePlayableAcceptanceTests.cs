@@ -620,7 +620,13 @@ namespace Ludots.Tests.GAS.Production
             {
                 Vector2 candidate = projectedScreenPoint + HoverProbeOffsets[i];
                 backend.SetMousePosition(candidate);
-                Tick(engine, 1);
+                // Hover 集合由固定步 whileActive 图写入：visual tick 不保证固定步前进，
+                // 指针快照要等固定步跑过才反映新位置。
+                int simTickBefore = engine.GameSession.CurrentTick;
+                for (int t = 0; t < 6 && engine.GameSession.CurrentTick == simTickBefore; t++)
+                {
+                    Tick(engine, 1);
+                }
 
                 string hovered = ReadHoveredEntityName(engine);
                 hoveredSamples.Add($"{candidate.X:F1},{candidate.Y:F1}->{hovered}");

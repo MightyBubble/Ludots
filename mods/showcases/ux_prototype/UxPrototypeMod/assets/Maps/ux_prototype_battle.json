@@ -31,7 +31,7 @@
     { "Template": "ux_well_column", "Overrides": { "Name": { "Value": "Well Column A" }, "WorldPositionCm": { "Value": { "X": 4800, "Y": 3620 } } } },
     { "Template": "ux_gold_deposit", "Overrides": { "Name": { "Value": "Gold Deposit North" }, "WorldPositionCm": { "Value": { "X": 1440, "Y": 1740 } } } },
     { "Template": "ux_gold_deposit", "Overrides": { "Name": { "Value": "Gold Deposit South" }, "WorldPositionCm": { "Value": { "X": 1500, "Y": 3200 } } } },
-    { "Template": "ux_enemy_raider", "InstanceId": "ux-enemy-raider-a", "Overrides": { "Name": { "Value": "Enemy Raider A" }, "WorldPositionCm": { "Value": { "X": 6100, "Y": 2480 } } } },
+    { "Template": "ux_enemy_raider", "InstanceId": "ux-enemy-raider-a", "Overrides": { "Name": { "Value": "Enemy Raider A" }, "WorldPositionCm": { "Value": { "X": 4600, "Y": 2400 } } } },
     { "Template": "ux_enemy_raider", "Overrides": { "Name": { "Value": "Enemy Raider B" }, "WorldPositionCm": { "Value": { "X": 6240, "Y": 2740 } } } }
   ],
   "Teams": [

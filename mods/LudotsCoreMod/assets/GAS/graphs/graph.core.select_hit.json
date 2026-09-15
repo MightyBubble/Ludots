@@ -35,13 +35,13 @@
         "op": "ScreenRegionToEntities"
       },
       {
+        "id": "sort",
+        "op": "QuerySortStable"
+      },
+      {
         "id": "halt",
         "op": "HaltReturnInt",
         "intValue": 1
-      },
-      {
-        "id": "knowledge_visible",
-        "op": "QueryFilterKnowledgeVisible"
       }
     ],
     "controlEdges": [
@@ -73,15 +73,15 @@
       {
         "from": "candidates",
         "fromPort": "next",
-        "to": "knowledge_visible"
-      },
-      {
-        "from": "knowledge_visible",
-        "fromPort": "next",
         "to": "rect_hits"
       },
       {
         "from": "rect_hits",
+        "fromPort": "next",
+        "to": "sort"
+      },
+      {
+        "from": "sort",
         "fromPort": "next",
         "to": "halt"
       }
@@ -124,10 +124,10 @@
         "toPort": "max"
       },
       {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "knowledge_visible",
-        "toPort": "source"
+        "from": "rect_hits",
+        "fromPort": "list",
+        "to": "sort",
+        "toPort": "list"
       }
     ]
   }

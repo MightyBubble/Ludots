@@ -101,10 +101,10 @@ namespace Ludots.Tests.GAS.Production
             string[] friendlyNames = config.Scenario.Allies.Select(static actor => actor.Name).ToArray();
             DragSelectNamed(engine, backend, frameTimesMs, friendlyNames);
             AssertCollectionCount(engine, owner, config.Collections.UiBox, friendlyNames.Length);
-            AssertCollectionCount(engine, owner, config.Collections.CommandSourceMirror, friendlyNames.Length);
-            AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, friendlyNames.Length);
+            AssertCollectionCount(engine, owner, config.Collections.CommandSourceMirror, 0);
+            AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, 0);
             CaptureSnapshot(engine, uiRoot, ground, collections, config, snapshots, frames, screensDir, "ui_box_acquisition_only");
-            timeline.Add("[T+002] Player dragged a friendly box; CommandSourceAcquisition wrote both the UI acquisition collection and the authoritative command source.");
+            timeline.Add("[T+002] Player dragged a friendly box; the select graph chain wrote only the UI acquisition collection — the authoritative command source stays uncommitted until the configured commit action.");
 
             PressButton(engine, backend, GetBinding(bindings, config.Actions.CommitSelection), frameTimesMs);
             TickUntil(engine, frameTimesMs, () => ReadCollectionSnapshot(engine, owner, config.Collections.CommandSourceMirror, required: false).Count == friendlyNames.Length, maxFrames: 30);

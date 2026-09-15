@@ -2263,5 +2263,60 @@ namespace Ludots.Tests.GAS.Production
                 LastState = state;
             }
         }
+
+        [Test]
+        public void ZzzProbe_ClickSelect_Trace()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            var backend = GetInputBackend(engine);
+            LoadMap(engine, HubMapId, frameTimesMs);
+
+            var sb = new StringBuilder();
+            Entity commander = FindEntityByName(engine.World, "Commander");
+            Vector2 point = GetEntityScreen(engine, "Arcweaver");
+            sb.AppendLine($"commander={commander.Id} point=({point.X:F1},{point.Y:F1})");
+
+            void Dump(string tag)
+            {
+                int tick = engine.GameSession.CurrentTick;
+                string ctxList = string.Empty;
+                if (engine.World.TryGet(commander, out Ludots.Core.Input.Interaction.InteractionContextInstances insts))
+                {
+                    for (int i = 0; i < insts.Count; i++) ctxList += insts[i].ContextId + ",";
+                }
+                if (engine.World.TryGet(commander, out Ludots.Core.Input.Interaction.InteractionContextInstance baseInst))
+                {
+                    ctxList += $"base:{baseInst.ContextId}";
+                }
+                int count = EntityCollectionContextRuntime.GetCount(engine.GlobalContext, commander, "collection.command.source");
+                bool primOk = EntityCollectionContextRuntime.TryGetPrimary(engine.World, engine.GlobalContext, commander, "collection.command.source", out Entity prim);
+                string primName = primOk && engine.World.TryGet(prim, out Name n) ? n.Value : "<none>";
+                sb.AppendLine($"{tag} simTick={tick} ctx=[{ctxList}] selCount={count} prim={primName}");
+            }
+
+            Dump("after-load");
+            backend.SetMousePosition(point);
+            backend.SetButton("<Mouse>/LeftButton", true);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+            Dump("press+1step");
+            backend.SetButton("<Mouse>/LeftButton", false);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+            Dump("release+1step");
+            for (int i = 0; i < 4; i++) { TickUntilFixedTickAdvances(engine, frameTimesMs); Dump($"settle+{i}"); }
+            sb.AppendLine($"GetSelectionCount={GetSelectionCount(engine)} GetSelectedEntityName={GetSelectedEntityName(engine)}");
+            sb.AppendLine($"possessedRep={(ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity rep) ? rep.Id.ToString() : "<none>")}");
+            sb.AppendLine($"triggerErrors={engine.TriggerManager.Errors.Count}");
+            foreach (var err in engine.TriggerManager.Errors) sb.AppendLine($"  TRIGERR: {err}");
+
+            backend.SetMousePosition(point);
+            backend.SetButton("<Mouse>/LeftButton", true);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+            backend.SetButton("<Mouse>/LeftButton", false);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+            Dump("click2-release");
+            sb.AppendLine($"click2 GetSelectionCount={GetSelectionCount(engine)} GetSelectedEntityName={GetSelectedEntityName(engine)}");
+            Assert.Fail(sb.ToString());
+        }
     }
 }

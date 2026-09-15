@@ -12,7 +12,10 @@
         {
           "trigger": "graph.core.select_begin"
         }
-      ]
+      ],
+      "whileActive": {
+        "graph": "graph.core.hover_tick"
+      }
     }
   ]
 }
