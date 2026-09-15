@@ -37,7 +37,7 @@ internal static unsafe class Gl43
     public const int GL_COMPILE_STATUS = 0x8B81;
     public const int GL_LINK_STATUS = 0x8B82;
     public const int GL_INFO_LOG_LENGTH = 0x8B84;
-    public const uint GL_SHADER_STORAGE_BARRIER_BIT = 0x0200;
+    public const uint GL_SHADER_STORAGE_BARRIER_BIT = 0x2000;
     public const uint GL_ALL_BARRIER_BITS = 0xFFFFFFFF;
     public const uint GL_TEXTURE0 = 0x84C0;
     public const uint GL_UNSIGNED_SHORT = 0x1403;
