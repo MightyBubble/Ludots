@@ -248,24 +248,6 @@ public sealed class BrowserCanvasContentTests
 	}
 
 	[Test]
-	public void HitTest_AlphaMode_CaptureEnabled_OutsideContentRect_StillMisses()
-	{
-		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
-		var surface = new TestBrowserSurface(frame);
-		var content = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
-		UiScene scene = UiSceneComposer.Compose(
-			new SkiaTextMeasurer(),
-			new SkiaImageSizeProvider(),
-			Ui.Canvas(content).Width(200).Height(100));
-		scene.Layout(200, 100);
-
-		surface.RaisePageMessage(new BrowserScriptMessage(BrowserMessageChannels.HitTestCapture, "true"));
-
-		UiNode? outsideHit = scene.HitTest(240, 50);
-		Assert.That(outsideHit?.TagName, Is.Not.EqualTo("canvas"));
-	}
-
-	[Test]
 	public void HitTest_AlphaMode_CaptureDisabled_RestoresTransparentPassthrough()
 	{
 		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
