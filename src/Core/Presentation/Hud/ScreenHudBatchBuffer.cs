@@ -1155,10 +1155,14 @@ namespace Ludots.Core.Presentation.Hud
             }
         }
 
+        /// <summary>取证计数：removedStableIds 容量溢出被丢弃的条数。</summary>
+        public int RemovedIdDrops { get; private set; }
+
         private void AddRemovedStableId(int stableId)
         {
             if (_removedStableIdCount >= _removedStableIds.Length)
             {
+                RemovedIdDrops++;
                 return;
             }
 

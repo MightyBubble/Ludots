@@ -49,7 +49,7 @@ namespace Ludots.Adapter.Raylib
 
             Log.Info(
                 in LogChannels.Presentation,
-                $"[hud-trace] f={_frame} worldHud={worldHud.Count} screenBar={screenHud.BarCount} screenText={screenHud.TextCount}{anchorText}");
+                $"[hud-trace] f={_frame} worldHud={worldHud.Count} screenBar={screenHud.BarCount} screenText={screenHud.TextCount} removedDrops={screenHud.RemovedIdDrops} removedPending={screenHud.GetRemovedStableIdSpan().Length}{anchorText}");
         }
     }
 }

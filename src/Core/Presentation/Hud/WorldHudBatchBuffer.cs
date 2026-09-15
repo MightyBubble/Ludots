@@ -59,8 +59,44 @@ namespace Ludots.Core.Presentation.Hud
             _ownerGroupWriteOffsets = new int[Math.Min(capacity, 1024)];
         }
 
+        /// <summary>
+        /// LUDOTS_HUD_TRACE=1 时的残留取证：缓冲从近空回填的头三笔 TryAdd 打调用栈，
+        /// 用于钉住“镜头离开后条目被重新生产”的发射路径。默认零开销。
+        /// </summary>
+        private static void TraceRefillCallers(int count)
+        {
+            if (!HudTraceEnabled || _traceRefillLogs >= 3)
+            {
+                return;
+            }
+
+            if (count != 0)
+            {
+                return;
+            }
+
+            _traceRefillLogs++;
+            var stack = new System.Diagnostics.StackTrace(2, false);
+            var frames = new System.Text.StringBuilder();
+            for (int i = 0; i < Math.Min(10, stack.FrameCount); i++)
+            {
+                var frame = stack.GetFrame(i);
+                frames.Append("  ").Append(frame?.GetMethod()?.ReflectedType?.Name).Append('.').Append(frame?.GetMethod()?.Name).Append('\n');
+            }
+
+            Ludots.Core.Diagnostics.Log.Info(
+                in Ludots.Core.Diagnostics.LogChannels.Presentation,
+                $"[hud-refill] TryAdd from empty #{_traceRefillLogs}:\n{frames}");
+        }
+
+        private static readonly bool HudTraceEnabled =
+            Environment.GetEnvironmentVariable("LUDOTS_HUD_TRACE") is "1" or "true" or "yes" or "on";
+
+        private static int _traceRefillLogs;
+
         public bool TryAdd(in WorldHudItem item)
         {
+            TraceRefillCallers(_count);
             if (item.StableId > 0 && _retainedIndexByStableId.TryGetValue(item.StableId, out int existingIndex))
             {
                 if (WorldHudItemEquals(in _buffer[existingIndex], in item))
@@ -376,11 +412,15 @@ namespace Ludots.Core.Presentation.Hud
         {
             if (_removedStableIdCount >= _removedStableIds.Length)
             {
+                RemovedIdDrops++;
                 return;
             }
 
             _removedStableIds[_removedStableIdCount++] = stableId;
         }
+
+        /// <summary>取证计数：removedStableIds 容量溢出被丢弃的条数（LUDOTS_HUD_TRACE 之外恒为 0 且无人读取）。</summary>
+        public int RemovedIdDrops { get; private set; }
 
         private void EnsureOwnerGroups()
         {

@@ -102,9 +102,18 @@ namespace Ludots.Adapter.Raylib
             if (OverlayTraceEnabled && (_traceFrame++ % 30) == 0)
             {
                 int underUiTexts = 0, underUiBars = 0, topMost = 0;
+                var orphanIds = new System.Text.StringBuilder();
                 if (scene != null)
                 {
-                    underUiTexts = scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text).Length;
+                    foreach (ref readonly PresentationOverlayItem orphan in scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text))
+                    {
+                        underUiTexts++;
+                        if (orphanIds.Length < 120)
+                        {
+                            orphanIds.Append($" id={orphan.StableId}({(int)orphan.X},{(int)orphan.Y})");
+                        }
+                    }
+
                     underUiBars = scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar).Length;
                     topMost = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.MinimapMarker).Length +
                         scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text).Length;
@@ -112,7 +121,7 @@ namespace Ludots.Adapter.Raylib
 
                 Ludots.Core.Diagnostics.Log.Info(
                     in Ludots.Core.Diagnostics.LogChannels.Presentation,
-                    $"[overlay-trace] f={_traceFrame} underlay={hasUnderlay} top={hasTopOverlay} fbDirect={framebufferDirectUnderlay} refreshU={refreshUnderlay} uText={underUiTexts} uBar={underUiBars} top={topMost} verU={currentUnderlayVersion}/{_underlayLayerVersion}");
+                    $"[overlay-trace] f={_traceFrame} underlay={hasUnderlay} fbDirect={framebufferDirectUnderlay} uText={underUiTexts} uBar={underUiBars} miss={scene?.RemoveStableMisses ?? 0}{orphanIds}");
             }
 
             bool underlayCanvasChanged = false;

@@ -131,6 +131,299 @@ namespace Ludots.Tests.Presentation
                 $"{stale}/{verified} health texts kept frozen anchors across the cull cycle (ghost remnant contract)");
         }
 
+        [Test]
+        public void OverlaySceneTracksScreenHudAcrossCameraDeparture()
+        {
+            var backend = new TestInputBackend();
+            var focusOverride = new CameraCullingFocusOverride();
+            using GameEngine engine = CreateEngine(backend, focusOverride);
+            WorldHudToScreenSystem hudProjection = CreateHudProjection(engine);
+
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)
+                ?? throw new InvalidOperationException("PresentationScreenHudBuffer missing.");
+            var worldHudStrings = engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
+            var textCatalog = engine.GetService(CoreServiceKeys.PresentationTextCatalog);
+            var localeSelection = engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection);
+            var screenOverlayBuffer = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
+            var minimapScreenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer);
+            var builder = new PresentationOverlaySceneBuilder(
+                screenHud, worldHudStrings, textCatalog, localeSelection, screenOverlayBuffer, minimapScreenMarkers);
+            var scene = new PresentationOverlayScene(
+                screenHud.Capacity + ScreenOverlayBuffer.MaxItems + (minimapScreenMarkers?.Capacity ?? 0));
+
+            engine.LoadMap(new MapLoadRequest(new MapId("mass_navigation"),
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, null) })));
+
+            TickWithOverlay(engine, hudProjection, builder, scene, 60);
+            int nearScreenTexts = screenHud.TextCount;
+            int nearSceneTexts = CountSceneTexts(scene);
+            Console.WriteLine($"near: screenTexts={nearScreenTexts} sceneTexts={nearSceneTexts}");
+
+            // 镜头离开：剔除焦点指向远处空角落、窄视场，全员出视野。
+            focusOverride.Enabled = true;
+            focusOverride.TargetCm = new Vector2(90000f, 90000f);
+            focusOverride.DistanceCm = 800f;
+            focusOverride.Yaw = 0f;
+            focusOverride.Pitch = 45f;
+            focusOverride.FovYDeg = 4f;
+
+            // 单帧诊断：离开第一帧投影层记账的 removed 数与 builder 消费后的 scene 孤儿数。
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
+            engine.Tick(1f / 60f);
+            HeadlessPresentationTestHost.UpdateCamera(engine);
+            hudProjection.Update(1f / 60f);
+            int removedRecorded = screenHud.GetRemovedStableIdSpan().Length;
+            int dirtyTextsRecorded = screenHud.GetDirtyTextSpan().Length;
+            builder.Build(scene);
+            Console.WriteLine($"first away frame: removedRecorded={removedRecorded} dirtyTexts={dirtyTextsRecorded} " +
+                $"screenTexts={screenHud.TextCount} sceneTexts={CountSceneTexts(scene)}");
+
+            TickWithOverlay(engine, hudProjection, builder, scene, 44);
+
+            int awayScreenTexts = screenHud.TextCount;
+            int awaySceneTexts = CountSceneTexts(scene);
+            Console.WriteLine($"away: screenTexts={awayScreenTexts} sceneTexts={awaySceneTexts}");
+            Assert.That(awaySceneTexts, Is.EqualTo(awayScreenTexts),
+                "overlay scene must be a faithful feed of screenHud after the camera departs; orphans = 残留");
+
+            // 回屏后再对账一次（移除→重加的完整周期不得留孤儿）。
+            focusOverride.Enabled = false;
+            TickWithOverlay(engine, hudProjection, builder, scene, 45);
+            Console.WriteLine($"back: screenTexts={screenHud.TextCount} sceneTexts={CountSceneTexts(scene)}");
+            Assert.That(CountSceneTexts(scene), Is.EqualTo(screenHud.TextCount),
+                "overlay scene must re-sync with screenHud after the camera returns");
+
+            // 部分离场（边缘刮过）：目标压在人群边缘、窄视场，逐帧扫 yaw 模拟镜头边缘刮过——
+            // 出画条目必须从 scene 同步消失（黏滞残留的精确复现场景）。
+            focusOverride.Enabled = true;
+            focusOverride.TargetCm = new Vector2(-3000f, 1500f);
+            focusOverride.DistanceCm = 5000f;
+            focusOverride.Pitch = 45f;
+            focusOverride.FovYDeg = 18f;
+            var allRemovedEver = new HashSet<int>();
+            for (int step = 0; step <= 60; step++)
+            {
+                focusOverride.Yaw = 20f + step * 0.8f;
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
+                engine.Tick(1f / 60f);
+                HeadlessPresentationTestHost.UpdateCamera(engine);
+                hudProjection.Update(1f / 60f);
+                ReadOnlySpan<int> removedThisFrame = screenHud.GetRemovedStableIdSpan();
+                foreach (int removedId in removedThisFrame)
+                {
+                    allRemovedEver.Add(removedId);
+                }
+
+                builder.Build(scene);
+                if (CountSceneTexts(scene) != screenHud.TextCount)
+                {
+                    var screenIds = new HashSet<int>();
+                    foreach (ref readonly var t in screenHud.GetTextSpan())
+                    {
+                        if (t.StableId > 0)
+                        {
+                            screenIds.Add(t.StableId);
+                        }
+                    }
+
+                    var sceneOnly = new List<int>();
+                    foreach (ref readonly PresentationOverlayItem item2 in scene.GetSpan())
+                    {
+                        if (item2.Kind == PresentationOverlayItemKind.Text &&
+                            item2.Layer == PresentationOverlayLayer.UnderUi &&
+                            item2.StableId > 0 &&
+                            !screenIds.Contains(item2.StableId))
+                        {
+                            sceneOnly.Add(item2.StableId);
+                        }
+                    }
+
+                    foreach (int orphanId in sceneOnly)
+                    {
+                        Console.WriteLine($"ORPHAN id={orphanId} step={step} wasEverRemoved={allRemovedEver.Contains(orphanId)}");
+                    }
+                }
+            }
+
+            TickWithOverlay(engine, hudProjection, builder, scene, 30);
+            int partialScreenTexts = screenHud.TextCount;
+            int partialSceneTexts = CountSceneTexts(scene);
+            int partialOrphans = scene.CountUnderUiTextOrphansWithoutIndex();
+            Console.WriteLine($"partial: screenTexts={partialScreenTexts} sceneTexts={partialSceneTexts} orphansWithoutIndex={partialOrphans}");
+            Assert.That(partialSceneTexts, Is.EqualTo(partialScreenTexts),
+                "partial departure must leave scene exactly tracking screenHud (edge-graze remnant contract)");
+            Assert.That(partialOrphans, Is.EqualTo(0),
+                "every stable-id text in the UnderUi lane must be present in the stable index");
+        }
+
+        [Test]
+        public void SkiaCanvasClearsWorldTextsAfterCameraDeparture()
+        {
+            var backend = new TestInputBackend();
+            var focusOverride = new CameraCullingFocusOverride();
+            using GameEngine engine = CreateEngine(backend, focusOverride);
+            WorldHudToScreenSystem hudProjection = CreateHudProjection(engine);
+
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)
+                ?? throw new InvalidOperationException("PresentationScreenHudBuffer missing.");
+            var worldHudStrings = engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
+            var textCatalog = engine.GetService(CoreServiceKeys.PresentationTextCatalog);
+            var localeSelection = engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection);
+            var screenOverlayBuffer = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
+            var minimapScreenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer);
+            var builder = new PresentationOverlaySceneBuilder(
+                screenHud, worldHudStrings, textCatalog, localeSelection, screenOverlayBuffer, minimapScreenMarkers);
+            var scene = new PresentationOverlayScene(
+                screenHud.Capacity + ScreenOverlayBuffer.MaxItems + (minimapScreenMarkers?.Capacity ?? 0));
+
+            engine.LoadMap(new MapLoadRequest(new MapId("mass_navigation"),
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, null) })));
+
+            using var renderer = new Ludots.Presentation.Skia.SkiaOverlayRenderer();
+            using var surface = SkiaSharp.SKSurface.Create(new SkiaSharp.SKImageInfo(1280, 720));
+            SkiaSharp.SKCanvas canvas = surface.Canvas;
+            var pacer = new PresentationOverlayLanePacer(PresentationOverlayLayer.UnderUi);
+            int underlayLayerVersion = -1;
+
+            void RenderUnderlay()
+            {
+                bool hasUnderlay = scene.ContainsLayer(PresentationOverlayLayer.UnderUi);
+                int layerVersion = scene.GetLayerVersion(PresentationOverlayLayer.UnderUi);
+                bool refreshUnderlay = (hasUnderlay || underlayLayerVersion >= 0) &&
+                    (layerVersion != underlayLayerVersion);
+                if (refreshUnderlay)
+                {
+                    PresentationOverlayLanePacer.LaneRefreshPlan plan = hasUnderlay
+                        ? pacer.BuildPlan(scene)
+                        : default;
+                    if (!hasUnderlay || plan.HasAnyRefresh)
+                    {
+                        canvas.Clear(SkiaSharp.SKColors.Transparent);
+                        if (hasUnderlay)
+                        {
+                            renderer.Render(scene, canvas, PresentationOverlayLayer.UnderUi, plan);
+                        }
+                    }
+
+                    if (hasUnderlay)
+                    {
+                        pacer.MarkPresented(scene, plan);
+                    }
+                    else
+                    {
+                        pacer.Reset();
+                    }
+
+                    underlayLayerVersion = layerVersion;
+                }
+            }
+
+            void TickFrames(int frames)
+            {
+                for (int i = 0; i < frames; i++)
+                {
+                    engine.SetService(CoreServiceKeys.UiCaptured, false);
+                    engine.Tick(1f / 60f);
+                    HeadlessPresentationTestHost.UpdateCamera(engine);
+                    hudProjection.Update(1f / 60f);
+                    builder.Build(scene);
+                    RenderUnderlay();
+                }
+            }
+
+            TickFrames(60);
+            long nearInk = CountInk(surface);
+            Console.WriteLine($"near: ink={nearInk} screenTexts={screenHud.TextCount}");
+            Assert.That(nearInk, Is.GreaterThan(0), "near camera must paint world texts onto the canvas");
+
+            focusOverride.Enabled = true;
+            focusOverride.DistanceCm = 800f;
+            focusOverride.Yaw = 0f;
+            focusOverride.Pitch = 45f;
+            focusOverride.FovYDeg = 4f;
+            // 连续拖动：每帧把目标挪远一段，模拟玩家拖镜头（条目逐批离屏的混合变更序列）。
+            for (int step = 1; step <= 30; step++)
+            {
+                focusOverride.TargetCm = new Vector2(step * 3000f, step * 3000f);
+                TickFrames(1);
+                long stepInk = CountInk(surface);
+                if (stepInk > 0 && screenHud.TextCount == 0)
+                {
+                    Console.WriteLine($"LEAK at step {step}: ink={stepInk} screenTexts=0");
+                }
+            }
+
+            TickFrames(30);
+            long awayInk = CountInk(surface);
+            Console.WriteLine($"away: ink={awayInk} screenTexts={screenHud.TextCount} sceneTexts={CountSceneTexts(scene)}");
+            Assert.That(awayInk, Is.EqualTo(0),
+                "canvas must be fully cleared after every owner left the view; leftover ink = HUD 残留");
+        }
+
+        private static long CountInk(SkiaSharp.SKSurface surface)
+        {
+            using SkiaSharp.SKImage image = surface.Snapshot();
+            using SkiaSharp.SKPixmap pixmap = new();
+            if (!image.PeekPixels(pixmap))
+            {
+                throw new InvalidOperationException("failed to peek surface pixels.");
+            }
+
+            nint addr = pixmap.GetPixels();
+            int width = pixmap.Width;
+            int height = pixmap.Height;
+            long ink = 0;
+            unsafe
+            {
+                byte* row = (byte*)addr;
+                for (int y = 0; y < height; y++)
+                {
+                    byte* pixel = row + (long)y * pixmap.RowBytes;
+                    for (int x = 0; x < width; x += 7)
+                    {
+                        if (pixel[x * 4 + 3] != 0)
+                        {
+                            ink++;
+                        }
+                    }
+                }
+            }
+
+            return ink;
+        }
+
+        private static int CountSceneTexts(PresentationOverlayScene scene)
+        {
+            int count = 0;
+            foreach (ref readonly PresentationOverlayItem item in scene.GetSpan())
+            {
+                if (item.Kind == PresentationOverlayItemKind.Text &&
+                    item.Layer == PresentationOverlayLayer.UnderUi)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static void TickWithOverlay(
+            GameEngine engine,
+            WorldHudToScreenSystem hudProjection,
+            PresentationOverlaySceneBuilder builder,
+            PresentationOverlayScene scene,
+            int frames)
+        {
+            for (int i = 0; i < frames; i++)
+            {
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
+                engine.Tick(1f / 60f);
+                HeadlessPresentationTestHost.UpdateCamera(engine);
+                hudProjection.Update(1f / 60f);
+                builder.Build(scene);
+            }
+        }
+
         private static GameEngine CreateEngine(TestInputBackend backend, CameraCullingFocusOverride focusOverride)
         {
             string repoRoot = FindRepoRoot();
