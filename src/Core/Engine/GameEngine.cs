@@ -983,7 +983,8 @@ namespace Ludots.Core.Engine
                 MapLoader.EntityTemplateKeys,
                 lookupTables: graphLookupTables,
                 rngPicks: rngPickService,
-                presentationTextCatalog: presentationTextCatalog);
+                presentationTextCatalog: presentationTextCatalog,
+                orderTypes: orderTypeRegistry);
             var graphConfigLoader = new GraphProgramConfigLoader(
                 ConfigPipeline,
                 graphProgramRegistry,
@@ -1238,6 +1239,7 @@ namespace Ludots.Core.Engine
             var orderQueue = new OrderQueue(
                 gasRuntimeCapacity.OrderQueueCapacity,
                 orderAdmissionResults);
+            _gasGraphRuntimeApi.BindOrderPipeline(orderQueue, orderTypeRegistry);
             var chainOrderQueue = new OrderQueue(
                 gasRuntimeCapacity.ResponseChainOrderQueueCapacity,
                 orderAdmissionResults);

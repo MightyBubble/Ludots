@@ -392,6 +392,30 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         QueryScreenRegionCollection = 482,
         QueryFilterControllable = 483,
 
+        // ── Order-driven graph brains (issue #1536; 484-499 reserved as the
+        //    graph-input-order-chain line's renumbering buffer) ──
+
+        /// <summary>Read an entity's world X in int centimeters. E[A] = source; I[Dst] = xCm; fails closed when the entity is dead or has no WorldPositionCm.</summary>
+        LoadEntityPosX = 500,
+        /// <summary>Read an entity's world Y in int centimeters. E[A] = source; I[Dst] = yCm; fails closed when the entity is dead or has no WorldPositionCm.</summary>
+        LoadEntityPosY = 501,
+        IntToFloat = 502,    // F[Dst] = I[A]
+        /// <summary>Float→Int with round-half-away-from-zero, matching the world-centimeter rounding convention.</summary>
+        FloatToInt = 503,
+        SqrtFloat = 504,     // F[Dst] = sqrt(F[A]); negative input fails closed
+        /// <summary>
+        /// Behavior-side order submission: the acting unit enqueues an assigned order into
+        /// the OrderQueue. Imm = order type id (semantic key resolved at patch time),
+        /// I[A] = xCm, I[B] = yCm, E[C] = optional target entity (0xFF = none). Script slice
+        /// hosts only; the input-side SubmitCommandIntent intent-buffer contract is separate.
+        /// </summary>
+        SubmitAssignedOrder = 505,
+        /// <summary>
+        /// Publish the acting unit's terminal outcome for its active order through the
+        /// OrderTerminalResultBuffer. Caster = the acting unit. Script slice hosts only.
+        /// </summary>
+        CompleteActiveOrder = 506,
+
     }
 
     public static class GraphNodeOpParser

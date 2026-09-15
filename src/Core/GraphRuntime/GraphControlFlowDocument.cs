@@ -187,6 +187,8 @@ namespace Ludots.Core.GraphRuntime
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
         public string? EffectTemplate { get; set; }
+        /// <summary>Order type key symbol for SubmitAssignedOrder; resolved to an order type id at patch time.</summary>
+        public string? OrderType { get; set; }
         public string? PayloadPreset { get; set; }
         public string? BuiltinHandler { get; set; }
         public string? BlackboardKey { get; set; }

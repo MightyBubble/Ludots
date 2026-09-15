@@ -1,12 +1,8 @@
 using Arch.Core;
+using Ludots.Core.Gameplay.GraphBrains;
 using Ludots.Core.Gameplay.Teams;
 
 namespace Ludots.Core.Gameplay.ActionLoops;
-
-public interface IGameplayActionLoopGate
-{
-    bool CanAdvanceGameplay { get; }
-}
 
 public struct ResourceTransportProfile
 {

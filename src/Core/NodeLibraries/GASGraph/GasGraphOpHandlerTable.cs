@@ -339,6 +339,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SinkPresentationText or
                 GraphNodeOp.LoadTextKey or
                 GraphNodeOp.StartDialogue or
+                GraphNodeOp.LoadEntityPosX or
+                GraphNodeOp.LoadEntityPosY or
+                GraphNodeOp.IntToFloat or
+                GraphNodeOp.FloatToInt or
+                GraphNodeOp.SqrtFloat or
                 GraphNodeOp.ScreenPointToGround or
                 GraphNodeOp.ScreenPointToEntity or
                 GraphNodeOp.ScreenRegionToEntities or
@@ -350,6 +355,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.DeactivateContext or
                 GraphNodeOp.WriteCollection or GraphNodeOp.BindQueryCollection
                     => EffectOperationMetadata.Pure(description),
+
+                GraphNodeOp.SubmitAssignedOrder or
+                GraphNodeOp.CompleteActiveOrder
+                    => EffectOperationMetadata.Unsupported(EffectAtomicDomain.Order, description),
 
                 _ => throw new InvalidOperationException(
                     $"Executable graph opcode '{op}' is missing explicit effect operation metadata."),
@@ -785,6 +794,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.AggMinByDistance, HandleAggMinByDistance, "AggMinByDistance graph opcode.");
             Register(GraphNodeOp.TargetListGet, HandleTargetListGet, "TargetListGet graph opcode.");
             Register(GraphNodeOp.ApplyEffectTemplate, HandleApplyEffectTemplate, "ApplyEffectTemplate graph opcode.");
+            Register(GraphNodeOp.SubmitAssignedOrder, HandleSubmitAssignedOrder, "SubmitAssignedOrder graph opcode.");
+            Register(GraphNodeOp.CompleteActiveOrder, HandleCompleteActiveOrder, "CompleteActiveOrder graph opcode.");
             Register(GraphNodeOp.FanOutApplyEffect, HandleFanOutApplyEffect, "FanOutApplyEffect graph opcode.");
             Register(GraphNodeOp.RemoveEffectTemplate, HandleRemoveEffectTemplate, "RemoveEffectTemplate graph opcode.");
             Register(GraphNodeOp.ModifyAttributeAdd, HandleModifyAttributeAdd, "ModifyAttributeAdd graph opcode.");
@@ -936,6 +947,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.ConcatText, HandleConcatText, "ConcatText graph opcode.");
             Register(GraphNodeOp.IntToText, HandleIntToText, "IntToText graph opcode.");
             Register(GraphNodeOp.FloatToText, HandleFloatToText, "FloatToText graph opcode.");
+            Register(GraphNodeOp.LoadEntityPosX, HandleLoadEntityPosX, "LoadEntityPosX graph opcode.");
+            Register(GraphNodeOp.LoadEntityPosY, HandleLoadEntityPosY, "LoadEntityPosY graph opcode.");
+            Register(GraphNodeOp.IntToFloat, HandleIntToFloat, "IntToFloat graph opcode.");
+            Register(GraphNodeOp.FloatToInt, HandleFloatToInt, "FloatToInt graph opcode.");
+            Register(GraphNodeOp.SqrtFloat, HandleSqrtFloat, "SqrtFloat graph opcode.");
             Register(GraphNodeOp.SinkPresentationText, HandleSinkPresentationText, "SinkPresentationText graph opcode.");
             Register(GraphNodeOp.LoadTextKey, HandleLoadTextKey, "LoadTextKey graph opcode.");
             Register(GraphNodeOp.OfferActivity, HandleOfferActivity, "OfferActivity graph opcode.");
@@ -1798,6 +1814,60 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 var args = new EffectArgs(floatCount, f0, f1);
                 s.Api.ApplyEffectTemplate(s.Caster, target, ins.Imm, in args);
             }
+        }
+
+        private static void HandleSubmitAssignedOrder(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SubmitAssignedOrder(s.Caster, s.E[ins.A], ins.Imm, s.I[ins.B], s.I[ins.C]);
+        }
+
+        private static void HandleCompleteActiveOrder(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.CompleteActiveOrder(s.Caster);
+        }
+
+        private static void HandleLoadEntityPosX(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = ResolveEntityPositionCm(ref s, ins.A).X;
+        }
+
+        private static void HandleLoadEntityPosY(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = ResolveEntityPositionCm(ref s, ins.A).Y;
+        }
+
+        private static WorldCmInt2 ResolveEntityPositionCm(ref GraphExecutionState s, byte entityRegister)
+        {
+            var entity = s.E[entityRegister];
+            if (!s.World.IsAlive(entity) || !s.World.Has<WorldPositionCm>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadEntityPosSourceInvalid: entity in E[{entityRegister}] is dead or has no WorldPositionCm.");
+            }
+
+            return s.World.Get<WorldPositionCm>(entity).ToWorldCmInt2();
+        }
+
+        private static void HandleIntToFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.F[ins.Dst] = s.I[ins.A];
+        }
+
+        private static void HandleFloatToInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = (int)MathF.Round(s.F[ins.A], MidpointRounding.AwayFromZero);
+        }
+
+        private static void HandleSqrtFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            float value = s.F[ins.A];
+            if (value < 0f)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SqrtNegativeInput: SqrtFloat on F[{ins.A}]={value}.");
+            }
+
+            s.F[ins.Dst] = MathF.Sqrt(value);
         }
 
         private static void HandleModifyAttributeAdd(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
