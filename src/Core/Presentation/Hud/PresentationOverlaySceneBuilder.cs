@@ -18,6 +18,7 @@ namespace Ludots.Core.Presentation.Hud
         private readonly ScreenOverlayBuffer? _screenOverlay;
         private readonly MinimapScreenMarkerBuffer? _minimapMarkers;
         private readonly Dictionary<TextPacketCacheKey, string> _textPacketCache = new();
+        private readonly HashSet<int> _removedThisFrame = new();
         private readonly Dictionary<NumericTextCacheKey, string> _numericTextCache = new();
         private readonly Dictionary<int, ScreenHudResolvedTextCacheEntry> _screenHudResolvedTextCache = new();
         private int _lastScreenHudRevision = -1;
@@ -175,11 +176,13 @@ namespace Ludots.Core.Presentation.Hud
             }
 
             // 同帧"值变化→出画"的条目会同时出现在 dirty 与 removed 流里：dirty 快照不因移除失效，
-            // 若不跳过会把刚移除的条目复活成永生孤儿（边缘刮过的 HUD 黏滞残留根因）。
-            HashSet<int>? removedThisFrame = null;
-            if (dirtyBars.Length > 0 || dirtyTexts.Length > 0)
+            // 若不跳过会把刚移除的条目复活成永生孤儿（边缘刮过的 HUD 黸滞残留根因）。
+            // 复用集合零分配：仅在本帧确有 removed 且 dirty 非空时启用。
+            bool guardRemoved = removedStableIds.Length > 0 && (dirtyBars.Length > 0 || dirtyTexts.Length > 0);
+            HashSet<int> removedThisFrame = _removedThisFrame;
+            if (guardRemoved)
             {
-                removedThisFrame = new HashSet<int>(removedStableIds.Length);
+                removedThisFrame.Clear();
                 foreach (int removedId in removedStableIds)
                 {
                     removedThisFrame.Add(removedId);
@@ -189,7 +192,7 @@ namespace Ludots.Core.Presentation.Hud
             for (int i = 0; i < dirtyBars.Length; i++)
             {
                 ref readonly ScreenHudBarItem item = ref dirtyBars[i];
-                if (removedThisFrame != null && item.StableId > 0 && removedThisFrame.Contains(item.StableId))
+                if (guardRemoved && item.StableId > 0 && removedThisFrame.Contains(item.StableId))
                 {
                     continue;
                 }
@@ -210,7 +213,7 @@ namespace Ludots.Core.Presentation.Hud
             for (int i = 0; i < dirtyTexts.Length; i++)
             {
                 ref readonly ScreenHudTextItem item = ref dirtyTexts[i];
-                if (removedThisFrame != null && item.StableId > 0 && removedThisFrame.Contains(item.StableId))
+                if (guardRemoved && item.StableId > 0 && removedThisFrame.Contains(item.StableId))
                 {
                     continue;
                 }

@@ -245,6 +245,20 @@ namespace Ludots.Tests.Presentation
                 }
             }
 
+            // 零分配合同：刮边稳态（removed+dirty 同时非空、位置持续变化）下 builder.Build 不得分配。
+            long allocBefore = GC.GetAllocatedBytesForCurrentThread();
+            for (int warmup = 0; warmup < 16; warmup++)
+            {
+                builder.Build(scene);
+                hudProjection.Update(1f / 60f);
+                builder.Build(scene);
+            }
+
+            long allocAfter = GC.GetAllocatedBytesForCurrentThread();
+            Console.WriteLine($"builder steady-state allocation: {allocAfter - allocBefore} bytes over 32 builds");
+            Assert.That(allocAfter - allocBefore, Is.EqualTo(0),
+                "steady-state builder.Build must not allocate (removed-guard reuses its set)");
+
             TickWithOverlay(engine, hudProjection, builder, scene, 30);
             int partialScreenTexts = screenHud.TextCount;
             int partialSceneTexts = CountSceneTexts(scene);
