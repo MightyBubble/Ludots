@@ -1512,19 +1512,14 @@ namespace Ludots.Presentation.Skia
             }
 
             LastTextBatchBuildMs += ElapsedMs(buildStart);
-            if (state.PendingGlyphIndices.Count > 0)
-            {
-                // 晋升过渡帧（车道内精灵与直绘混排）整车道退直绘：
-                // 两条路径的合成顺序不同，重叠文本会产生亚像素差异；
-                // 只有全稳定帧才整车道走精灵批量。
-                DrawTextBatched(canvas, span);
-                return;
-            }
-
             long drawStart = Stopwatch.GetTimestamp();
             int activeBucketCount = DrawRetainedTextAtlas(canvas, state);
             LastTextSpriteBatchBucketCount += activeBucketCount;
             LastTextBatchDrawMs += ElapsedMs(drawStart);
+            if (state.PendingGlyphIndices.Count > 0)
+            {
+                DrawTextBatched(canvas, span, CollectionsMarshal.AsSpan(state.PendingGlyphIndices));
+            }
         }
 
         private static bool CanUseRetainedTextSprites(ReadOnlySpan<PresentationOverlayItem> span)
