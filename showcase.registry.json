@@ -553,6 +553,30 @@
       "notes": "Mod-authored builtin handler registered via IModContext.Extensions.Gas.RegisterBuiltinHandler with explicit operation metadata."
     },
     {
+      "id": "capability_standard_graph_op_extension_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardGraphOpExtensionShowcaseMod",
+      "projectPath": "CapabilityStandardGraphOpExtensionShowcaseMod.csproj",
+      "title": "跨 Mod 威胁评分",
+      "summary": "点 Re-score Threat，左右目标的分数由另一份 Mod 登记的评分公式算出，高分那边被点亮。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph-op",
+        "capability-standard",
+        "gas",
+        "mod-extensible-runtime"
+      ],
+      "binding": "capability_standard_graph_op_extension_showcase",
+      "preset": "capability_standard_graph_op_extension_showcase_raylib",
+      "docsPath": "gitbook/architecture/mod-extensible-runtime-showcases/graph-op-extension.md",
+      "readmePath": null,
+      "acceptanceTest": "CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_extension_showcase",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Consumer Score graph references CapabilityStandardGraphOpProviderMod.QueryThreat via controlEdges/valueEdges; provider registers RegisterGraphOp at OnLoad."
+    },
+    {
       "id": "capability_standard_graph_behavior_integration",
       "path": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod",
       "projectPath": "CapabilityStandardGraphBehaviorIntegrationMod.csproj",
