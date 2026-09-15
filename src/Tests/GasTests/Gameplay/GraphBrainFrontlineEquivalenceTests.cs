@@ -261,6 +261,7 @@ namespace Ludots.Tests.GAS
                 Ludots.Core.Components.WorldPositionCm.FromCm(1000, 0));
             Entity sink = world.Create(
                 new Ludots.Core.Components.MapEntity(),
+                new Team { Id = 1 },
                 new Ludots.Core.Gameplay.Spawning.EntityTemplateKeyRef { TemplateKeyId = SinkTemplateKeyId },
                 Ludots.Core.Components.WorldPositionCm.FromCm(600, -200),
                 sinkAttributes,
