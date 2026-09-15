@@ -12,6 +12,7 @@ using Ludots.Core.Scripting;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Platform.Abstractions;
 using Ludots.Tests.TestCommon;
@@ -129,6 +130,84 @@ namespace Ludots.Tests.Presentation
             }
 
             throw new InvalidOperationException($"Presentation system {typeof(T).Name} is not registered.");
+        }
+
+        [Test]
+        public void HudPipelineInlineAbBenchmark()
+        {
+            PresenterInlineHudFeature.SetOverride(false);
+            string classic = RunHudPipelineEngine("classic");
+            PresenterInlineHudFeature.SetOverride(true);
+            string inline = RunHudPipelineEngine("inline");
+            PresenterInlineHudFeature.SetOverride(null);
+            Console.WriteLine(classic);
+            Console.WriteLine(inline);
+        }
+
+        private string RunHudPipelineEngine(string label)
+        {
+            var backend = new TestInputBackend();
+            var focusOverride = new CameraCullingFocusOverride();
+            using GameEngine engine = CreateEngine(backend, focusOverride);
+            WorldHudToScreenSystem hudProjection = CreateHudProjection(engine);
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
+                ?? throw new InvalidOperationException("PresentationWorldHudBuffer missing.");
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)
+                ?? throw new InvalidOperationException("PresentationScreenHudBuffer missing.");
+            var builder = new PresentationOverlaySceneBuilder(
+                screenHud,
+                engine.GetService(CoreServiceKeys.PresentationWorldHudStrings),
+                engine.GetService(CoreServiceKeys.PresentationTextCatalog),
+                engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection),
+                engine.GetService(CoreServiceKeys.ScreenOverlayBuffer),
+                engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer));
+            var scene = new PresentationOverlayScene(screenHud.Capacity + ScreenOverlayBuffer.MaxItems);
+            var sync = RequirePresentationSystem<Ludots.Core.Presentation.Systems.PresenterEntityTransformSyncSystem>(engine);
+            var emit = RequirePresentationSystem<Ludots.Core.Presentation.Systems.PresenterEmitSystem>(engine);
+
+            engine.LoadMap(new MapLoadRequest(new MapId("mass_navigation"),
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, null) })));
+
+            TickWithOverlay(engine, hudProjection, builder, scene, 90);
+
+            int presenterCount = 0;
+            var countQuery = new QueryDescription().WithAll<Ludots.Core.Presentation.Presenters.PresenterState>();
+            engine.World.Query(in countQuery, (ref Ludots.Core.Presentation.Presenters.PresenterState _) => presenterCount++);
+
+            const int Samples = 60;
+            var syncMs = new double[Samples];
+            var emitMs = new double[Samples];
+            var projMs = new double[Samples];
+            var buildMs = new double[Samples];
+            for (int frame = 0; frame < 16 + Samples; frame++)
+            {
+                for (int i = 0; i < 100; i++)
+                {
+                    engine.World.Get<VisualTransform>(CollectAgent(engine, i)).Position.X += 0.01f;
+                }
+
+                long a = Stopwatch.GetTimestamp();
+                sync.Update(1f / 60f);
+                long b = Stopwatch.GetTimestamp();
+                emit.Update(1f / 60f);
+                long c = Stopwatch.GetTimestamp();
+                hudProjection.Update(1f / 60f);
+                long d = Stopwatch.GetTimestamp();
+                builder.Build(scene);
+                long e = Stopwatch.GetTimestamp();
+                if (frame >= 16)
+                {
+                    syncMs[frame - 16] = (b - a) * 1000d / Stopwatch.Frequency;
+                    emitMs[frame - 16] = (c - b) * 1000d / Stopwatch.Frequency;
+                    projMs[frame - 16] = (d - c) * 1000d / Stopwatch.Frequency;
+                    buildMs[frame - 16] = (e - d) * 1000d / Stopwatch.Frequency;
+                }
+            }
+
+            Assert.That(screenHud.TextCount + screenHud.BarCount, Is.GreaterThan(0), $"{label}: HUD items must reach screenHud");
+            return $"hud-{label} presenters={presenterCount} worldHud={worldHud.Count} screen={screenHud.TextCount + screenHud.BarCount} " +
+                $"sync={Median(syncMs):F3} emit={Median(emitMs):F3} proj={Median(projMs):F3} build={Median(buildMs):F3} " +
+                $"inlineComposed={emit.InlineHudComposedLastUpdate} inlineSkipped={emit.InlineHudSkippedLastUpdate}";
         }
 
         [Test]

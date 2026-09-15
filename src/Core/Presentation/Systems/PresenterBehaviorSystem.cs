@@ -566,6 +566,7 @@ namespace Ludots.Core.Presentation.Systems
             if (presenters.TryGetSingle(out Entity single))
             {
                 ProcessOwnerAttributeWorkForPresenter(single, attributeId, ref attributes);
+                MarkInlineHudAttributeDirty(single);
                 return;
             }
 
@@ -573,6 +574,19 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < count; i++)
             {
                 ProcessOwnerAttributeWorkForPresenter(presenters.GetAt(i), attributeId, ref attributes);
+                MarkInlineHudAttributeDirty(presenters.GetAt(i));
+            }
+        }
+
+        private void MarkInlineHudAttributeDirty(Entity presenter)
+        {
+            // HUD 内联专 lane：属主属性变更置脏父描述符集，emit 门控据此重读数值。
+            if (World.IsAlive(presenter) &&
+                World.TryGet<PresenterInlineHud>(presenter, out PresenterInlineHud inlineHud) &&
+                inlineHud.AttributeDirty == 0)
+            {
+                inlineHud.AttributeDirty = 1;
+                World.Set(presenter, inlineHud);
             }
         }
 
