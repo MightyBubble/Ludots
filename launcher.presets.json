@@ -3368,6 +3368,24 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadOrderTypeId_raylib",
+      "name": "Graph Op LoadOrderTypeId Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadOrderTypeId"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntityPosValid_raylib",
+      "name": "Graph Op LoadEntityPosValid Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntityPosValid"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

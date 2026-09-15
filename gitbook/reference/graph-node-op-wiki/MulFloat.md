@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Effect / Score / Validation / Derived |
+| 可用图种 | Effect / Score / Validation / Derived / Script / TriggerGraph |
 | 返回 | Float → 小数寄存器 |
 | 输入端口（值边 toPort） | `a`（第一操作数）、`b`（第二操作数） |
 | 特殊写法 | 结果写入 dst 寄存器 |
@@ -44,7 +44,7 @@ ConstFloat → ConstFloat → **MulFloat**（本篇） → LoadExplicitTarget �
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived；Query / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Score / Validation / Derived / Script / TriggerGraph；Query 图不可用（编译期白名单拒绝）。
 - 同类用法：伤害公式的缩放与浮动、斩杀线/格挡线这类阈值判断、把读数换算成另一个数。
 ## 怎么进
 

@@ -191,4 +191,26 @@ public sealed class GraphOpsNodeGalleryContextAcceptanceTests
 
         Assert.That(runtime.Context.HitTargetCount, Is.GreaterThan(0), "at least one controllable unit stays circled");
     }
+
+    [Test]
+    public void LoadOrderTypeIdVignette_MaterializesTheMoveToOrderTypeId()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("LoadOrderTypeId");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        Assert.That(runtime.Metrics.Detail, Does.Contain("101"), "the caption quotes the patched moveTo id");
+    }
+
+    [Test]
+    public void LoadEntityPosValidVignette_ReportsTheGuardTrue()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("LoadEntityPosValid");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        Assert.That(runtime.Metrics.Detail, Does.Contain("成立"), "the caption reports the guard held");
+    }
 }

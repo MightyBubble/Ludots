@@ -4,6 +4,8 @@ using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -24,7 +26,7 @@ namespace Ludots.Core.Gameplay.GraphBrains;
 public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
 {
     private static readonly QueryDescription BrainQuery = new QueryDescription()
-        .WithAll<GraphActionBrain, OrderBuffer>();
+        .WithAll<GraphActionBrain, OrderBuffer, BlackboardIntBuffer, BlackboardEntityBuffer>();
 
     private readonly GraphProgramRegistry _programs;
     private readonly IGraphRuntimeApi _api;
@@ -92,12 +94,27 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
         {
             cursor.Reset();
             pool.ClearRegisters(slot);
-            Span<int> ints = pool.IntRow(slot);
-            Span<byte> bools = pool.BoolRow(slot);
-            ints[0] = buffer.HasActive ? buffer.ActiveOrder.Order.OrderTypeId : 0;
-            bools[0] = buffer.HasActive ? (byte)1 : (byte)0;
-            bools[1] = buffer.HasPending ? (byte)1 : (byte)0;
-            pool.Entities[slot * GraphVmLimits.MaxEntityRegisters] = actor;
+            ref BlackboardIntBuffer ints = ref World.Get<BlackboardIntBuffer>(actor);
+            ref BlackboardEntityBuffer entities = ref World.Get<BlackboardEntityBuffer>(actor);
+            if (buffer.HasActive)
+            {
+                ref readonly Order order = ref buffer.ActiveOrder.Order;
+                ints.Set(OrderGlueKeys.ActiveTypeId, order.OrderTypeId);
+                ints.Set(OrderGlueKeys.SpatialXCm, (int)order.Args.Spatial.WorldCm.X);
+                ints.Set(OrderGlueKeys.SpatialYCm, (int)order.Args.Spatial.WorldCm.Z);
+                ints.Set(OrderGlueKeys.HasActive, 1);
+                entities.Set(OrderGlueKeys.ActiveTarget, order.Target);
+            }
+            else
+            {
+                ints.Set(OrderGlueKeys.ActiveTypeId, 0);
+                ints.Set(OrderGlueKeys.SpatialXCm, 0);
+                ints.Set(OrderGlueKeys.SpatialYCm, 0);
+                ints.Set(OrderGlueKeys.HasActive, 0);
+                entities.Set(OrderGlueKeys.ActiveTarget, Entity.Null);
+            }
+
+            ints.Set(OrderGlueKeys.HasPending, buffer.HasPending ? 1 : 0);
         }
 
         GraphSliceResult result = GraphExecutor.ExecuteResolvedRegisteredScriptSlice(
@@ -183,6 +200,28 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
 
             return total;
         }
+    }
+
+    /// <summary>
+    /// Fixed entity-blackboard keys carrying the order glue each think tick (ConfigKeyRegistry
+    /// id space, the same one graph blackboard ops resolve against). Brains read these via
+    /// ReadBlackboardInt/Entity; live debug sees them like any blackboard write.
+    /// </summary>
+    public static class OrderGlueKeys
+    {
+        public const string ActiveTypeIdName = "Order.ActiveTypeId";
+        public const string SpatialXCmName = "Order.SpatialXCm";
+        public const string SpatialYCmName = "Order.SpatialYCm";
+        public const string HasActiveName = "Order.HasActive";
+        public const string HasPendingName = "Order.HasPending";
+        public const string ActiveTargetName = "Order.ActiveTarget";
+
+        public static readonly int ActiveTypeId = ConfigKeyRegistry.Register(ActiveTypeIdName);
+        public static readonly int SpatialXCm = ConfigKeyRegistry.Register(SpatialXCmName);
+        public static readonly int SpatialYCm = ConfigKeyRegistry.Register(SpatialYCmName);
+        public static readonly int HasActive = ConfigKeyRegistry.Register(HasActiveName);
+        public static readonly int HasPending = ConfigKeyRegistry.Register(HasPendingName);
+        public static readonly int ActiveTarget = ConfigKeyRegistry.Register(ActiveTargetName);
     }
 
     private sealed class BrainPool

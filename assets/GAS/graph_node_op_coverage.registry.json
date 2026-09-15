@@ -63,7 +63,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_AddFloat",
@@ -294,7 +296,9 @@
     {
       "op": "ApplyEffectTemplate",
       "authorableKinds": [
-        "Effect"
+        "Effect",
+        "TriggerGraph",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_ApplyEffectTemplate",
       "status": "covered",
@@ -718,7 +722,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_DivFloat",
@@ -1586,7 +1592,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_MaxFloat",
@@ -1628,7 +1636,9 @@
     {
       "op": "ModifyAttributeAdd",
       "authorableKinds": [
-        "Effect"
+        "Effect",
+        "TriggerGraph",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_ModifyAttributeAdd",
       "status": "covered",
@@ -1671,7 +1681,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_MulFloat",
@@ -3042,7 +3054,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_SubFloat",
@@ -3154,7 +3168,9 @@
     {
       "op": "WriteBlackboardEntity",
       "authorableKinds": [
-        "Effect"
+        "Effect",
+        "TriggerGraph",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_WriteBlackboardEntity",
       "status": "covered",
@@ -3874,6 +3890,45 @@
         "GraphOpsNodeGalleryContextAcceptanceTests.QueryFilterControllableVignette_KeepsOnlyTheViewerControllableUnits"
       ],
       "codegenStatus": "covered"
+    },
+    {
+      "op": "LoadOrderTypeId",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "status": "covered",
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_LoadOrderTypeId",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.LoadOrderTypeIdVignette_MaterializesTheMoveToOrderTypeId"
+      ]
+    },
+    {
+      "op": "LoadEntityPosValid",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "status": "covered",
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_LoadEntityPosValid",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.LoadEntityPosValidVignette_ReportsTheGuardTrue"
+      ]
     }
   ]
 }

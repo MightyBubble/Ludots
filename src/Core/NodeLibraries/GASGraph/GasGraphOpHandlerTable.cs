@@ -344,6 +344,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.IntToFloat or
                 GraphNodeOp.FloatToInt or
                 GraphNodeOp.SqrtFloat or
+                GraphNodeOp.LoadOrderTypeId or
+                GraphNodeOp.LoadEntityPosValid or
                 GraphNodeOp.ScreenPointToGround or
                 GraphNodeOp.ScreenPointToEntity or
                 GraphNodeOp.ScreenRegionToEntities or
@@ -795,6 +797,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.TargetListGet, HandleTargetListGet, "TargetListGet graph opcode.");
             Register(GraphNodeOp.ApplyEffectTemplate, HandleApplyEffectTemplate, "ApplyEffectTemplate graph opcode.");
             Register(GraphNodeOp.SubmitAssignedOrder, HandleSubmitAssignedOrder, "SubmitAssignedOrder graph opcode.");
+            Register(GraphNodeOp.LoadOrderTypeId, HandleLoadOrderTypeId, "LoadOrderTypeId graph opcode.");
+            Register(GraphNodeOp.LoadEntityPosValid, HandleLoadEntityPosValid, "LoadEntityPosValid graph opcode.");
             Register(GraphNodeOp.CompleteActiveOrder, HandleCompleteActiveOrder, "CompleteActiveOrder graph opcode.");
             Register(GraphNodeOp.FanOutApplyEffect, HandleFanOutApplyEffect, "FanOutApplyEffect graph opcode.");
             Register(GraphNodeOp.RemoveEffectTemplate, HandleRemoveEffectTemplate, "RemoveEffectTemplate graph opcode.");
@@ -1828,24 +1832,53 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleLoadEntityPosX(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.I[ins.Dst] = ResolveEntityPositionCm(ref s, ins.A).X;
+            if (TryResolveEntityPositionCm(ref s, ins.A, out WorldCmInt2 position))
+            {
+                s.I[ins.Dst] = position.X;
+                s.B[ins.Flags] = 1;
+            }
+            else
+            {
+                s.I[ins.Dst] = 0;
+                s.B[ins.Flags] = 0;
+            }
         }
 
         private static void HandleLoadEntityPosY(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.I[ins.Dst] = ResolveEntityPositionCm(ref s, ins.A).Y;
+            if (TryResolveEntityPositionCm(ref s, ins.A, out WorldCmInt2 position))
+            {
+                s.I[ins.Dst] = position.Y;
+                s.B[ins.Flags] = 1;
+            }
+            else
+            {
+                s.I[ins.Dst] = 0;
+                s.B[ins.Flags] = 0;
+            }
         }
 
-        private static WorldCmInt2 ResolveEntityPositionCm(ref GraphExecutionState s, byte entityRegister)
+        private static void HandleLoadOrderTypeId(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = ins.Imm;
+        }
+
+        private static void HandleLoadEntityPosValid(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.B[ins.Dst] = TryResolveEntityPositionCm(ref s, ins.A, out _) ? (byte)1 : (byte)0;
+        }
+
+        private static bool TryResolveEntityPositionCm(ref GraphExecutionState s, byte entityRegister, out WorldCmInt2 position)
         {
             var entity = s.E[entityRegister];
             if (!s.World.IsAlive(entity) || !s.World.Has<WorldPositionCm>(entity))
             {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.LoadEntityPosSourceInvalid: entity in E[{entityRegister}] is dead or has no WorldPositionCm.");
+                position = default;
+                return false;
             }
 
-            return s.World.Get<WorldPositionCm>(entity).ToWorldCmInt2();
+            position = s.World.Get<WorldPositionCm>(entity).ToWorldCmInt2();
+            return true;
         }
 
         private static void HandleIntToFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

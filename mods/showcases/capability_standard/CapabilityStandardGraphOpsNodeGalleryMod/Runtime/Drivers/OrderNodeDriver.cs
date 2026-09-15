@@ -50,7 +50,15 @@ public sealed class OrderNodeDriver : IGraphOpsNodeDriver
         }
 
         int terminalBefore = ctx.OrderTypes!.TerminalResults.Count;
-        ctx.ExecuteFeaturedGraph();
+        var featured = ctx.ExecuteFeaturedGraph();
+
+        if (ctx.Vignette.Op == nameof(GraphNodeOp.LoadOrderTypeId))
+        {
+            ctx.CaptionValues["result"] = featured.IntValue.ToString(CultureInfo.InvariantCulture);
+            ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
+            GraphOpsNodeActorBinding.SyncHud(ctx);
+            return;
+        }
 
         if (ctx.Vignette.Op == nameof(GraphNodeOp.SubmitAssignedOrder))
         {

@@ -682,6 +682,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.CompleteActiveOrder:
                     break;
+                case GraphNodeOp.LoadOrderTypeId:
+                    RequireNonEmpty(node.OrderType, "orderType", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEntityPosValid:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
 
                 case GraphNodeOp.SinkPresentationText:
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Text, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -1817,6 +1824,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.CompleteActiveOrder:
+                    break;
+
+                case GraphNodeOp.LoadOrderTypeId:
+                    instruction.Imm = RequireSymbol(node.OrderType, "orderType", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEntityPosValid:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.SinkPresentationText:

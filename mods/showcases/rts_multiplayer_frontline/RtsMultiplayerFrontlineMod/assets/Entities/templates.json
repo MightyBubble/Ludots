@@ -253,17 +253,12 @@
         "SideIndex": -1
       },
       "FrontlineHarvester": {},
-      "ResourceTransportProfile": {
-        "GatherOrderTypeId": 172,
-        "MoveOrderTypeId": 101,
-        "ResourceAttribute": "Crystals",
-        "CargoAmount": 20,
-        "LoadDurationTicks": 60,
-        "ArrivalRadiusCm": 100
-      },
-      "ResourceTransportState": {},
       "FrontlineDeathState": {},
-      "FrontlineTagBindingState": {}
+      "FrontlineTagBindingState": {},
+      "GraphActionBrain": {
+        "Script": "rts.frontline.transport",
+        "ThinkEveryNTicks": 1
+      }
     }
   },
   {
@@ -358,18 +353,12 @@
         "SideIndex": -1
       },
       "FrontlineInfantry": {},
-      "DirectAttackProfile": {
-        "AttackOrderTypeId": 102,
-        "MoveOrderTypeId": 101,
-        "EffectTemplate": "Effect.Rts.Frontline.InfantryDamage",
-        "TargetRelation": "Hostile",
-        "RangeCm": 650,
-        "CooldownTicks": 30,
-        "EngagementStandoffRadiusCm": 520
-      },
-      "DirectAttackState": {},
       "FrontlineDeathState": {},
-      "FrontlineTagBindingState": {}
+      "FrontlineTagBindingState": {},
+      "GraphActionBrain": {
+        "Script": "rts.frontline.attack",
+        "ThinkEveryNTicks": 1
+      }
     }
   },
   {

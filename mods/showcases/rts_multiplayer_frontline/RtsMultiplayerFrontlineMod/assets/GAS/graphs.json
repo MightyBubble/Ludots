@@ -1,0 +1,3085 @@
+[
+  {
+    "id": "rts.frontline.attack",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "atkType",
+        "op": "LoadOrderTypeId",
+        "orderType": "attackTarget"
+      },
+      {
+        "id": "movType",
+        "op": "LoadOrderTypeId",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "gType",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Order.ActiveTypeId"
+      },
+      {
+        "id": "gTarget",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Order.ActiveTarget"
+      },
+      {
+        "id": "isAtk",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "isMov",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "brAtk",
+        "op": "BranchBool"
+      },
+      {
+        "id": "brMov",
+        "op": "BranchBool"
+      },
+      {
+        "id": "zeroCd",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "saveTgt",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "Brain.Attack.Target"
+      },
+      {
+        "id": "saveCd0",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.Cooldown"
+      },
+      {
+        "id": "consume",
+        "op": "CompleteActiveOrder"
+      },
+      {
+        "id": "rtgt",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Attack.Target"
+      },
+      {
+        "id": "rVal",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "brVal",
+        "op": "BranchBool"
+      },
+      {
+        "id": "rTX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "rTY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "rSX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "rSY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "gPX",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Order.SpatialXCm"
+      },
+      {
+        "id": "gPY",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Order.SpatialYCm"
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "pxZero",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "brPoint",
+        "op": "BranchBool"
+      },
+      {
+        "id": "wGX",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.DirX"
+      },
+      {
+        "id": "wGY",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.DirY"
+      },
+      {
+        "id": "wSX",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.DirX"
+      },
+      {
+        "id": "wSY",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.DirY"
+      },
+      {
+        "id": "rdDX",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Brain.Attack.DirX"
+      },
+      {
+        "id": "rdDY",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Brain.Attack.DirY"
+      },
+      {
+        "id": "haltRoute",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "fDX",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fDY",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fTX",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fTY",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fxD",
+        "op": "SubFloat"
+      },
+      {
+        "id": "fyD",
+        "op": "SubFloat"
+      },
+      {
+        "id": "dx2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "dy2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "len2i",
+        "op": "AddFloat"
+      },
+      {
+        "id": "ln",
+        "op": "SqrtFloat"
+      },
+      {
+        "id": "one",
+        "op": "ConstFloat",
+        "floatValue": 1
+      },
+      {
+        "id": "lenG",
+        "op": "MaxFloat"
+      },
+      {
+        "id": "nx",
+        "op": "DivFloat"
+      },
+      {
+        "id": "ny",
+        "op": "DivFloat"
+      },
+      {
+        "id": "ring",
+        "op": "ConstFloat",
+        "floatValue": 520
+      },
+      {
+        "id": "nxR",
+        "op": "MulFloat"
+      },
+      {
+        "id": "nyR",
+        "op": "MulFloat"
+      },
+      {
+        "id": "slotXf",
+        "op": "AddFloat"
+      },
+      {
+        "id": "slotYf",
+        "op": "AddFloat"
+      },
+      {
+        "id": "slotX",
+        "op": "FloatToInt"
+      },
+      {
+        "id": "slotY",
+        "op": "FloatToInt"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitAssignedOrder",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "haltWait",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "bTgt",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Attack.Target"
+      },
+      {
+        "id": "bVal",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "brBV",
+        "op": "BranchBool"
+      },
+      {
+        "id": "bTX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "bTY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "bSX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "bSY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "rangeSq",
+        "op": "ConstFloat",
+        "floatValue": 422500
+      },
+      {
+        "id": "inRng",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brRng",
+        "op": "BranchBool"
+      },
+      {
+        "id": "d2",
+        "op": "AddFloat"
+      },
+      {
+        "id": "eftx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "efty",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "efmx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "efmy",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "edx",
+        "op": "SubFloat"
+      },
+      {
+        "id": "edy",
+        "op": "SubFloat"
+      },
+      {
+        "id": "edx2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "edy2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "z0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "cd",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Brain.Attack.Cooldown"
+      },
+      {
+        "id": "cdGt0",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "brCd",
+        "op": "BranchBool"
+      },
+      {
+        "id": "negOne",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "cdNext",
+        "op": "AddInt"
+      },
+      {
+        "id": "saveNext",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.Cooldown"
+      },
+      {
+        "id": "haltTick",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "fire",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Rts.Frontline.InfantryDamage"
+      },
+      {
+        "id": "cdReset",
+        "op": "ConstInt",
+        "intValue": 30
+      },
+      {
+        "id": "saveRst",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.Cooldown"
+      },
+      {
+        "id": "haltFire",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "atkType"
+      },
+      {
+        "from": "atkType",
+        "fromPort": "next",
+        "to": "movType"
+      },
+      {
+        "from": "movType",
+        "fromPort": "next",
+        "to": "gType"
+      },
+      {
+        "from": "gType",
+        "fromPort": "next",
+        "to": "gTarget"
+      },
+      {
+        "from": "gTarget",
+        "fromPort": "next",
+        "to": "isAtk"
+      },
+      {
+        "from": "isAtk",
+        "fromPort": "next",
+        "to": "brAtk"
+      },
+      {
+        "from": "brAtk",
+        "fromPort": "false",
+        "to": "isMov"
+      },
+      {
+        "from": "isMov",
+        "fromPort": "next",
+        "to": "brMov"
+      },
+      {
+        "from": "brAtk",
+        "fromPort": "true",
+        "to": "zeroCd"
+      },
+      {
+        "from": "zeroCd",
+        "fromPort": "next",
+        "to": "saveTgt"
+      },
+      {
+        "from": "saveTgt",
+        "fromPort": "next",
+        "to": "saveCd0"
+      },
+      {
+        "from": "saveCd0",
+        "fromPort": "next",
+        "to": "consume"
+      },
+      {
+        "from": "consume",
+        "fromPort": "next",
+        "to": "rtgt"
+      },
+      {
+        "from": "rtgt",
+        "fromPort": "next",
+        "to": "rVal"
+      },
+      {
+        "from": "rVal",
+        "fromPort": "next",
+        "to": "brVal"
+      },
+      {
+        "from": "brVal",
+        "fromPort": "false",
+        "to": "haltRoute"
+      },
+      {
+        "from": "brVal",
+        "fromPort": "true",
+        "to": "rTX"
+      },
+      {
+        "from": "rTX",
+        "fromPort": "next",
+        "to": "rTY"
+      },
+      {
+        "from": "rTY",
+        "fromPort": "next",
+        "to": "rSX"
+      },
+      {
+        "from": "rSX",
+        "fromPort": "next",
+        "to": "rSY"
+      },
+      {
+        "from": "rSY",
+        "fromPort": "next",
+        "to": "gPX"
+      },
+      {
+        "from": "gPX",
+        "fromPort": "next",
+        "to": "gPY"
+      },
+      {
+        "from": "gPY",
+        "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "pxZero"
+      },
+      {
+        "from": "pxZero",
+        "fromPort": "next",
+        "to": "brPoint"
+      },
+      {
+        "from": "brPoint",
+        "fromPort": "false",
+        "to": "wGX"
+      },
+      {
+        "from": "wGX",
+        "fromPort": "next",
+        "to": "wGY"
+      },
+      {
+        "from": "brPoint",
+        "fromPort": "true",
+        "to": "wSX"
+      },
+      {
+        "from": "wSX",
+        "fromPort": "next",
+        "to": "wSY"
+      },
+      {
+        "from": "wGY",
+        "fromPort": "next",
+        "to": "rdDX"
+      },
+      {
+        "from": "wSY",
+        "fromPort": "next",
+        "to": "rdDX"
+      },
+      {
+        "from": "rdDX",
+        "fromPort": "next",
+        "to": "rdDY"
+      },
+      {
+        "from": "rdDY",
+        "fromPort": "next",
+        "to": "fDX"
+      },
+      {
+        "from": "fDX",
+        "fromPort": "next",
+        "to": "fDY"
+      },
+      {
+        "from": "fDY",
+        "fromPort": "next",
+        "to": "fTX"
+      },
+      {
+        "from": "fTX",
+        "fromPort": "next",
+        "to": "fTY"
+      },
+      {
+        "from": "fTY",
+        "fromPort": "next",
+        "to": "fxD"
+      },
+      {
+        "from": "fxD",
+        "fromPort": "next",
+        "to": "fyD"
+      },
+      {
+        "from": "fyD",
+        "fromPort": "next",
+        "to": "dx2"
+      },
+      {
+        "from": "dx2",
+        "fromPort": "next",
+        "to": "dy2"
+      },
+      {
+        "from": "dy2",
+        "fromPort": "next",
+        "to": "len2i"
+      },
+      {
+        "from": "len2i",
+        "fromPort": "next",
+        "to": "ln"
+      },
+      {
+        "from": "ln",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "lenG"
+      },
+      {
+        "from": "lenG",
+        "fromPort": "next",
+        "to": "nx"
+      },
+      {
+        "from": "nx",
+        "fromPort": "next",
+        "to": "ny"
+      },
+      {
+        "from": "ny",
+        "fromPort": "next",
+        "to": "ring"
+      },
+      {
+        "from": "ring",
+        "fromPort": "next",
+        "to": "nxR"
+      },
+      {
+        "from": "nxR",
+        "fromPort": "next",
+        "to": "nyR"
+      },
+      {
+        "from": "nyR",
+        "fromPort": "next",
+        "to": "slotXf"
+      },
+      {
+        "from": "slotXf",
+        "fromPort": "next",
+        "to": "slotYf"
+      },
+      {
+        "from": "slotYf",
+        "fromPort": "next",
+        "to": "slotX"
+      },
+      {
+        "from": "slotX",
+        "fromPort": "next",
+        "to": "slotY"
+      },
+      {
+        "from": "slotY",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "haltRoute"
+      },
+      {
+        "from": "brMov",
+        "fromPort": "true",
+        "to": "haltWait"
+      },
+      {
+        "from": "brMov",
+        "fromPort": "false",
+        "to": "bTgt"
+      },
+      {
+        "from": "bTgt",
+        "fromPort": "next",
+        "to": "bVal"
+      },
+      {
+        "from": "bVal",
+        "fromPort": "next",
+        "to": "brBV"
+      },
+      {
+        "from": "brBV",
+        "fromPort": "false",
+        "to": "haltWait"
+      },
+      {
+        "from": "brBV",
+        "fromPort": "true",
+        "to": "bTX"
+      },
+      {
+        "from": "bTX",
+        "fromPort": "next",
+        "to": "bTY"
+      },
+      {
+        "from": "bTY",
+        "fromPort": "next",
+        "to": "bSX"
+      },
+      {
+        "from": "bSX",
+        "fromPort": "next",
+        "to": "bSY"
+      },
+      {
+        "from": "eftx",
+        "fromPort": "next",
+        "to": "efty"
+      },
+      {
+        "from": "efty",
+        "fromPort": "next",
+        "to": "efmx"
+      },
+      {
+        "from": "efmx",
+        "fromPort": "next",
+        "to": "efmy"
+      },
+      {
+        "from": "efmy",
+        "fromPort": "next",
+        "to": "edx"
+      },
+      {
+        "from": "edx",
+        "fromPort": "next",
+        "to": "edy"
+      },
+      {
+        "from": "edy",
+        "fromPort": "next",
+        "to": "edx2"
+      },
+      {
+        "from": "edx2",
+        "fromPort": "next",
+        "to": "edy2"
+      },
+      {
+        "from": "edy2",
+        "fromPort": "next",
+        "to": "d2"
+      },
+      {
+        "from": "bSY",
+        "fromPort": "next",
+        "to": "eftx"
+      },
+      {
+        "from": "d2",
+        "fromPort": "next",
+        "to": "rangeSq"
+      },
+      {
+        "from": "rangeSq",
+        "fromPort": "next",
+        "to": "inRng"
+      },
+      {
+        "from": "inRng",
+        "fromPort": "next",
+        "to": "brRng"
+      },
+      {
+        "from": "brRng",
+        "fromPort": "true",
+        "to": "rtgt"
+      },
+      {
+        "from": "brRng",
+        "fromPort": "false",
+        "to": "z0"
+      },
+      {
+        "from": "z0",
+        "fromPort": "next",
+        "to": "cd"
+      },
+      {
+        "from": "cd",
+        "fromPort": "next",
+        "to": "cdGt0"
+      },
+      {
+        "from": "cdGt0",
+        "fromPort": "next",
+        "to": "brCd"
+      },
+      {
+        "from": "brCd",
+        "fromPort": "true",
+        "to": "negOne"
+      },
+      {
+        "from": "negOne",
+        "fromPort": "next",
+        "to": "cdNext"
+      },
+      {
+        "from": "cdNext",
+        "fromPort": "next",
+        "to": "saveNext"
+      },
+      {
+        "from": "saveNext",
+        "fromPort": "next",
+        "to": "haltTick"
+      },
+      {
+        "from": "brCd",
+        "fromPort": "false",
+        "to": "fire"
+      },
+      {
+        "from": "fire",
+        "fromPort": "next",
+        "to": "cdReset"
+      },
+      {
+        "from": "cdReset",
+        "fromPort": "next",
+        "to": "saveRst"
+      },
+      {
+        "from": "saveRst",
+        "fromPort": "next",
+        "to": "haltFire"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gType",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gTarget",
+        "toPort": "source"
+      },
+      {
+        "from": "gType",
+        "fromPort": "value",
+        "to": "isAtk",
+        "toPort": "a"
+      },
+      {
+        "from": "atkType",
+        "fromPort": "value",
+        "to": "isAtk",
+        "toPort": "b"
+      },
+      {
+        "from": "gType",
+        "fromPort": "value",
+        "to": "isMov",
+        "toPort": "a"
+      },
+      {
+        "from": "movType",
+        "fromPort": "value",
+        "to": "isMov",
+        "toPort": "b"
+      },
+      {
+        "from": "isAtk",
+        "fromPort": "value",
+        "to": "brAtk",
+        "toPort": "condition"
+      },
+      {
+        "from": "isMov",
+        "fromPort": "value",
+        "to": "brMov",
+        "toPort": "condition"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveTgt",
+        "toPort": "source"
+      },
+      {
+        "from": "gTarget",
+        "fromPort": "value",
+        "to": "saveTgt",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveCd0",
+        "toPort": "source"
+      },
+      {
+        "from": "zeroCd",
+        "fromPort": "value",
+        "to": "saveCd0",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "rtgt",
+        "toPort": "source"
+      },
+      {
+        "from": "rtgt",
+        "fromPort": "value",
+        "to": "rVal",
+        "toPort": "source"
+      },
+      {
+        "from": "rVal",
+        "fromPort": "value",
+        "to": "brVal",
+        "toPort": "condition"
+      },
+      {
+        "from": "rtgt",
+        "fromPort": "value",
+        "to": "rTX",
+        "toPort": "source"
+      },
+      {
+        "from": "rtgt",
+        "fromPort": "value",
+        "to": "rTY",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "rSX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "rSY",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gPX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gPY",
+        "toPort": "source"
+      },
+      {
+        "from": "gPX",
+        "fromPort": "value",
+        "to": "pxZero",
+        "toPort": "a"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "pxZero",
+        "toPort": "b"
+      },
+      {
+        "from": "pxZero",
+        "fromPort": "value",
+        "to": "brPoint",
+        "toPort": "condition"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "wGX",
+        "toPort": "source"
+      },
+      {
+        "from": "gPX",
+        "fromPort": "value",
+        "to": "wGX",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "wGY",
+        "toPort": "source"
+      },
+      {
+        "from": "gPY",
+        "fromPort": "value",
+        "to": "wGY",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "wSX",
+        "toPort": "source"
+      },
+      {
+        "from": "rSX",
+        "fromPort": "value",
+        "to": "wSX",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "wSY",
+        "toPort": "source"
+      },
+      {
+        "from": "rSY",
+        "fromPort": "value",
+        "to": "wSY",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "rdDX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "rdDY",
+        "toPort": "source"
+      },
+      {
+        "from": "rdDX",
+        "fromPort": "value",
+        "to": "fDX",
+        "toPort": "a"
+      },
+      {
+        "from": "rdDY",
+        "fromPort": "value",
+        "to": "fDY",
+        "toPort": "a"
+      },
+      {
+        "from": "rTX",
+        "fromPort": "value",
+        "to": "fTX",
+        "toPort": "a"
+      },
+      {
+        "from": "rTY",
+        "fromPort": "value",
+        "to": "fTY",
+        "toPort": "a"
+      },
+      {
+        "from": "fDX",
+        "fromPort": "value",
+        "to": "fxD",
+        "toPort": "a"
+      },
+      {
+        "from": "fTX",
+        "fromPort": "value",
+        "to": "fxD",
+        "toPort": "b"
+      },
+      {
+        "from": "fDY",
+        "fromPort": "value",
+        "to": "fyD",
+        "toPort": "a"
+      },
+      {
+        "from": "fTY",
+        "fromPort": "value",
+        "to": "fyD",
+        "toPort": "b"
+      },
+      {
+        "from": "fxD",
+        "fromPort": "value",
+        "to": "dx2",
+        "toPort": "a"
+      },
+      {
+        "from": "fxD",
+        "fromPort": "value",
+        "to": "dx2",
+        "toPort": "b"
+      },
+      {
+        "from": "fyD",
+        "fromPort": "value",
+        "to": "dy2",
+        "toPort": "a"
+      },
+      {
+        "from": "fyD",
+        "fromPort": "value",
+        "to": "dy2",
+        "toPort": "b"
+      },
+      {
+        "from": "dx2",
+        "fromPort": "value",
+        "to": "len2i",
+        "toPort": "a"
+      },
+      {
+        "from": "dy2",
+        "fromPort": "value",
+        "to": "len2i",
+        "toPort": "b"
+      },
+      {
+        "from": "len2i",
+        "fromPort": "value",
+        "to": "ln",
+        "toPort": "a"
+      },
+      {
+        "from": "ln",
+        "fromPort": "value",
+        "to": "lenG",
+        "toPort": "a"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "lenG",
+        "toPort": "b"
+      },
+      {
+        "from": "fxD",
+        "fromPort": "value",
+        "to": "nx",
+        "toPort": "a"
+      },
+      {
+        "from": "lenG",
+        "fromPort": "value",
+        "to": "nx",
+        "toPort": "b"
+      },
+      {
+        "from": "fyD",
+        "fromPort": "value",
+        "to": "ny",
+        "toPort": "a"
+      },
+      {
+        "from": "lenG",
+        "fromPort": "value",
+        "to": "ny",
+        "toPort": "b"
+      },
+      {
+        "from": "nx",
+        "fromPort": "value",
+        "to": "nxR",
+        "toPort": "a"
+      },
+      {
+        "from": "ring",
+        "fromPort": "value",
+        "to": "nxR",
+        "toPort": "b"
+      },
+      {
+        "from": "ny",
+        "fromPort": "value",
+        "to": "nyR",
+        "toPort": "a"
+      },
+      {
+        "from": "ring",
+        "fromPort": "value",
+        "to": "nyR",
+        "toPort": "b"
+      },
+      {
+        "from": "fTX",
+        "fromPort": "value",
+        "to": "slotXf",
+        "toPort": "a"
+      },
+      {
+        "from": "nxR",
+        "fromPort": "value",
+        "to": "slotXf",
+        "toPort": "b"
+      },
+      {
+        "from": "fTY",
+        "fromPort": "value",
+        "to": "slotYf",
+        "toPort": "a"
+      },
+      {
+        "from": "nyR",
+        "fromPort": "value",
+        "to": "slotYf",
+        "toPort": "b"
+      },
+      {
+        "from": "slotXf",
+        "fromPort": "value",
+        "to": "slotX",
+        "toPort": "a"
+      },
+      {
+        "from": "slotYf",
+        "fromPort": "value",
+        "to": "slotY",
+        "toPort": "a"
+      },
+      {
+        "from": "rtgt",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "target"
+      },
+      {
+        "from": "slotX",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "a"
+      },
+      {
+        "from": "slotY",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "b"
+      },
+      {
+        "from": "bTX",
+        "fromPort": "value",
+        "to": "eftx",
+        "toPort": "a"
+      },
+      {
+        "from": "bTY",
+        "fromPort": "value",
+        "to": "efty",
+        "toPort": "a"
+      },
+      {
+        "from": "bSX",
+        "fromPort": "value",
+        "to": "efmx",
+        "toPort": "a"
+      },
+      {
+        "from": "bSY",
+        "fromPort": "value",
+        "to": "efmy",
+        "toPort": "a"
+      },
+      {
+        "from": "efmx",
+        "fromPort": "value",
+        "to": "edx",
+        "toPort": "a"
+      },
+      {
+        "from": "eftx",
+        "fromPort": "value",
+        "to": "edx",
+        "toPort": "b"
+      },
+      {
+        "from": "efmy",
+        "fromPort": "value",
+        "to": "edy",
+        "toPort": "a"
+      },
+      {
+        "from": "efty",
+        "fromPort": "value",
+        "to": "edy",
+        "toPort": "b"
+      },
+      {
+        "from": "edx",
+        "fromPort": "value",
+        "to": "edx2",
+        "toPort": "a"
+      },
+      {
+        "from": "edx",
+        "fromPort": "value",
+        "to": "edx2",
+        "toPort": "b"
+      },
+      {
+        "from": "edy",
+        "fromPort": "value",
+        "to": "edy2",
+        "toPort": "a"
+      },
+      {
+        "from": "edy",
+        "fromPort": "value",
+        "to": "edy2",
+        "toPort": "b"
+      },
+      {
+        "from": "edx2",
+        "fromPort": "value",
+        "to": "d2",
+        "toPort": "a"
+      },
+      {
+        "from": "edy2",
+        "fromPort": "value",
+        "to": "d2",
+        "toPort": "b"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "bTgt",
+        "toPort": "source"
+      },
+      {
+        "from": "bTgt",
+        "fromPort": "value",
+        "to": "bVal",
+        "toPort": "source"
+      },
+      {
+        "from": "bVal",
+        "fromPort": "value",
+        "to": "brBV",
+        "toPort": "condition"
+      },
+      {
+        "from": "bTgt",
+        "fromPort": "value",
+        "to": "bTX",
+        "toPort": "source"
+      },
+      {
+        "from": "bTgt",
+        "fromPort": "value",
+        "to": "bTY",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "bSX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "bSY",
+        "toPort": "source"
+      },
+      {
+        "from": "d2",
+        "fromPort": "value",
+        "to": "inRng",
+        "toPort": "a"
+      },
+      {
+        "from": "rangeSq",
+        "fromPort": "value",
+        "to": "inRng",
+        "toPort": "b"
+      },
+      {
+        "from": "inRng",
+        "fromPort": "value",
+        "to": "brRng",
+        "toPort": "condition"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "cd",
+        "toPort": "source"
+      },
+      {
+        "from": "z0",
+        "fromPort": "value",
+        "to": "cdGt0",
+        "toPort": "a"
+      },
+      {
+        "from": "cd",
+        "fromPort": "value",
+        "to": "cdGt0",
+        "toPort": "b"
+      },
+      {
+        "from": "cdGt0",
+        "fromPort": "value",
+        "to": "brCd",
+        "toPort": "condition"
+      },
+      {
+        "from": "cd",
+        "fromPort": "value",
+        "to": "cdNext",
+        "toPort": "a"
+      },
+      {
+        "from": "negOne",
+        "fromPort": "value",
+        "to": "cdNext",
+        "toPort": "b"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveNext",
+        "toPort": "source"
+      },
+      {
+        "from": "cdNext",
+        "fromPort": "value",
+        "to": "saveNext",
+        "toPort": "value"
+      },
+      {
+        "from": "bTgt",
+        "fromPort": "value",
+        "to": "fire",
+        "toPort": "target"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveRst",
+        "toPort": "source"
+      },
+      {
+        "from": "cdReset",
+        "fromPort": "value",
+        "to": "saveRst",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.frontline.transport",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "gType",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Order.ActiveTypeId"
+      },
+      {
+        "id": "gathTy",
+        "op": "LoadOrderTypeId",
+        "orderType": "frontlineGather"
+      },
+      {
+        "id": "movTy",
+        "op": "LoadOrderTypeId",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "isGath",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "brGath",
+        "op": "BranchBool"
+      },
+      {
+        "id": "oneI",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "srcTgt",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Order.ActiveTarget"
+      },
+      {
+        "id": "saveSrc",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "Brain.Transport.Source"
+      },
+      {
+        "id": "savePh1",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Transport.Phase"
+      },
+      {
+        "id": "sX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "sY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "goSrc",
+        "op": "SubmitAssignedOrder",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "consG",
+        "op": "CompleteActiveOrder"
+      },
+      {
+        "id": "haltGo",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "ph",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Brain.Transport.Phase"
+      },
+      {
+        "id": "p1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "isPh1",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "brPh1",
+        "op": "BranchBool"
+      },
+      {
+        "id": "p2",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "isPh2",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "brPh2",
+        "op": "BranchBool"
+      },
+      {
+        "id": "p3",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "isPh3",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "brPh3",
+        "op": "BranchBool"
+      },
+      {
+        "id": "haltIdle",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      },
+      {
+        "id": "twoI",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "savePh2",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Transport.Phase"
+      },
+      {
+        "id": "load60",
+        "op": "ConstInt",
+        "intValue": 60
+      },
+      {
+        "id": "saveT60",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Transport.Ticks"
+      },
+      {
+        "id": "haltArr",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "a1_rT",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Transport.Source"
+      },
+      {
+        "id": "a1_rV",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "a1_brV",
+        "op": "BranchBool"
+      },
+      {
+        "id": "a1_haltP",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      },
+      {
+        "id": "a1_tX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "a1_tY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "a1_mX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "a1_mY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "a1_d2",
+        "op": "AddFloat"
+      },
+      {
+        "id": "a1_arr",
+        "op": "ConstFloat",
+        "floatValue": 10000
+      },
+      {
+        "id": "a1_cmp",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "a1_br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "a1_reGo",
+        "op": "SubmitAssignedOrder",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "a1_haltRe",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "a1_ftx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "a1_fty",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "a1_fmx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "a1_fmy",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "a1_dx",
+        "op": "SubFloat"
+      },
+      {
+        "id": "a1_dy",
+        "op": "SubFloat"
+      },
+      {
+        "id": "a1_dx2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "a1_dy2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "tks",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Brain.Transport.Ticks"
+      },
+      {
+        "id": "tz",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "tGt0",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "brT",
+        "op": "BranchBool"
+      },
+      {
+        "id": "tneg",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "tNext",
+        "op": "AddInt"
+      },
+      {
+        "id": "saveTn",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Transport.Ticks"
+      },
+      {
+        "id": "haltLoad",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "qAll",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "qSink",
+        "op": "QueryFilterTemplate",
+        "template": "rts_frontline_core"
+      },
+      {
+        "id": "cnt",
+        "op": "AggCount"
+      },
+      {
+        "id": "oneC",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "hasSink",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "brSink",
+        "op": "BranchBool"
+      },
+      {
+        "id": "idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "sinkGet",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "saveSink",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "Brain.Transport.Sink"
+      },
+      {
+        "id": "threeI",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "savePh3",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Transport.Phase"
+      },
+      {
+        "id": "kX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "kY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "goSink",
+        "op": "SubmitAssignedOrder",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "haltSink",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "haltNoSink",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      },
+      {
+        "id": "zeroI",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "cargo",
+        "op": "ConstFloat",
+        "floatValue": 20
+      },
+      {
+        "id": "credit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Crystals"
+      },
+      {
+        "id": "savePh0",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Transport.Phase"
+      },
+      {
+        "id": "haltDone",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "a3_rT",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Transport.Sink"
+      },
+      {
+        "id": "a3_rV",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "a3_brV",
+        "op": "BranchBool"
+      },
+      {
+        "id": "a3_haltP",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      },
+      {
+        "id": "a3_tX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "a3_tY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "a3_mX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "a3_mY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "a3_d2",
+        "op": "AddFloat"
+      },
+      {
+        "id": "a3_arr",
+        "op": "ConstFloat",
+        "floatValue": 10000
+      },
+      {
+        "id": "a3_cmp",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "a3_br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "a3_reGo",
+        "op": "SubmitAssignedOrder",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "a3_haltRe",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "a3_ftx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "a3_fty",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "a3_fmx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "a3_fmy",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "a3_dx",
+        "op": "SubFloat"
+      },
+      {
+        "id": "a3_dy",
+        "op": "SubFloat"
+      },
+      {
+        "id": "a3_dx2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "a3_dy2",
+        "op": "MulFloat"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "gType"
+      },
+      {
+        "from": "gType",
+        "fromPort": "next",
+        "to": "gathTy"
+      },
+      {
+        "from": "gathTy",
+        "fromPort": "next",
+        "to": "movTy"
+      },
+      {
+        "from": "movTy",
+        "fromPort": "next",
+        "to": "isGath"
+      },
+      {
+        "from": "isGath",
+        "fromPort": "next",
+        "to": "brGath"
+      },
+      {
+        "from": "brGath",
+        "fromPort": "true",
+        "to": "oneI"
+      },
+      {
+        "from": "oneI",
+        "fromPort": "next",
+        "to": "srcTgt"
+      },
+      {
+        "from": "srcTgt",
+        "fromPort": "next",
+        "to": "saveSrc"
+      },
+      {
+        "from": "saveSrc",
+        "fromPort": "next",
+        "to": "savePh1"
+      },
+      {
+        "from": "savePh1",
+        "fromPort": "next",
+        "to": "sX"
+      },
+      {
+        "from": "sX",
+        "fromPort": "next",
+        "to": "sY"
+      },
+      {
+        "from": "sY",
+        "fromPort": "next",
+        "to": "goSrc"
+      },
+      {
+        "from": "goSrc",
+        "fromPort": "next",
+        "to": "consG"
+      },
+      {
+        "from": "consG",
+        "fromPort": "next",
+        "to": "haltGo"
+      },
+      {
+        "from": "brGath",
+        "fromPort": "false",
+        "to": "ph"
+      },
+      {
+        "from": "ph",
+        "fromPort": "next",
+        "to": "p1"
+      },
+      {
+        "from": "p1",
+        "fromPort": "next",
+        "to": "isPh1"
+      },
+      {
+        "from": "isPh1",
+        "fromPort": "next",
+        "to": "brPh1"
+      },
+      {
+        "from": "brPh1",
+        "fromPort": "false",
+        "to": "p2"
+      },
+      {
+        "from": "p2",
+        "fromPort": "next",
+        "to": "isPh2"
+      },
+      {
+        "from": "isPh2",
+        "fromPort": "next",
+        "to": "brPh2"
+      },
+      {
+        "from": "brPh2",
+        "fromPort": "false",
+        "to": "p3"
+      },
+      {
+        "from": "p3",
+        "fromPort": "next",
+        "to": "isPh3"
+      },
+      {
+        "from": "isPh3",
+        "fromPort": "next",
+        "to": "brPh3"
+      },
+      {
+        "from": "brPh3",
+        "fromPort": "false",
+        "to": "haltIdle"
+      },
+      {
+        "from": "a1_rT",
+        "fromPort": "next",
+        "to": "a1_rV"
+      },
+      {
+        "from": "a1_rV",
+        "fromPort": "next",
+        "to": "a1_brV"
+      },
+      {
+        "from": "a1_brV",
+        "fromPort": "false",
+        "to": "a1_haltP"
+      },
+      {
+        "from": "a1_brV",
+        "fromPort": "true",
+        "to": "a1_tX"
+      },
+      {
+        "from": "a1_tX",
+        "fromPort": "next",
+        "to": "a1_tY"
+      },
+      {
+        "from": "a1_tY",
+        "fromPort": "next",
+        "to": "a1_mX"
+      },
+      {
+        "from": "a1_mX",
+        "fromPort": "next",
+        "to": "a1_mY"
+      },
+      {
+        "from": "a1_ftx",
+        "fromPort": "next",
+        "to": "a1_fty"
+      },
+      {
+        "from": "a1_fty",
+        "fromPort": "next",
+        "to": "a1_fmx"
+      },
+      {
+        "from": "a1_fmx",
+        "fromPort": "next",
+        "to": "a1_fmy"
+      },
+      {
+        "from": "a1_fmy",
+        "fromPort": "next",
+        "to": "a1_dx"
+      },
+      {
+        "from": "a1_dx",
+        "fromPort": "next",
+        "to": "a1_dy"
+      },
+      {
+        "from": "a1_dy",
+        "fromPort": "next",
+        "to": "a1_dx2"
+      },
+      {
+        "from": "a1_dx2",
+        "fromPort": "next",
+        "to": "a1_dy2"
+      },
+      {
+        "from": "a1_dy2",
+        "fromPort": "next",
+        "to": "a1_d2"
+      },
+      {
+        "from": "a1_mY",
+        "fromPort": "next",
+        "to": "a1_ftx"
+      },
+      {
+        "from": "a1_d2",
+        "fromPort": "next",
+        "to": "a1_arr"
+      },
+      {
+        "from": "a1_arr",
+        "fromPort": "next",
+        "to": "a1_cmp"
+      },
+      {
+        "from": "a1_cmp",
+        "fromPort": "next",
+        "to": "a1_br"
+      },
+      {
+        "from": "a1_br",
+        "fromPort": "true",
+        "to": "a1_reGo"
+      },
+      {
+        "from": "a1_reGo",
+        "fromPort": "next",
+        "to": "a1_haltRe"
+      },
+      {
+        "from": "a1_br",
+        "fromPort": "false",
+        "to": "twoI"
+      },
+      {
+        "from": "brPh1",
+        "fromPort": "true",
+        "to": "a1_rT"
+      },
+      {
+        "from": "twoI",
+        "fromPort": "next",
+        "to": "savePh2"
+      },
+      {
+        "from": "savePh2",
+        "fromPort": "next",
+        "to": "load60"
+      },
+      {
+        "from": "load60",
+        "fromPort": "next",
+        "to": "saveT60"
+      },
+      {
+        "from": "saveT60",
+        "fromPort": "next",
+        "to": "haltArr"
+      },
+      {
+        "from": "brPh2",
+        "fromPort": "true",
+        "to": "tks"
+      },
+      {
+        "from": "tks",
+        "fromPort": "next",
+        "to": "tz"
+      },
+      {
+        "from": "tz",
+        "fromPort": "next",
+        "to": "tGt0"
+      },
+      {
+        "from": "tGt0",
+        "fromPort": "next",
+        "to": "brT"
+      },
+      {
+        "from": "brT",
+        "fromPort": "true",
+        "to": "tneg"
+      },
+      {
+        "from": "tneg",
+        "fromPort": "next",
+        "to": "tNext"
+      },
+      {
+        "from": "tNext",
+        "fromPort": "next",
+        "to": "saveTn"
+      },
+      {
+        "from": "saveTn",
+        "fromPort": "next",
+        "to": "haltLoad"
+      },
+      {
+        "from": "brT",
+        "fromPort": "false",
+        "to": "qAll"
+      },
+      {
+        "from": "qAll",
+        "fromPort": "next",
+        "to": "qSink"
+      },
+      {
+        "from": "qSink",
+        "fromPort": "next",
+        "to": "cnt"
+      },
+      {
+        "from": "cnt",
+        "fromPort": "next",
+        "to": "oneC"
+      },
+      {
+        "from": "oneC",
+        "fromPort": "next",
+        "to": "hasSink"
+      },
+      {
+        "from": "hasSink",
+        "fromPort": "next",
+        "to": "brSink"
+      },
+      {
+        "from": "brSink",
+        "fromPort": "true",
+        "to": "haltNoSink"
+      },
+      {
+        "from": "brSink",
+        "fromPort": "false",
+        "to": "idx0"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "next",
+        "to": "sinkGet"
+      },
+      {
+        "from": "sinkGet",
+        "fromPort": "next",
+        "to": "saveSink"
+      },
+      {
+        "from": "saveSink",
+        "fromPort": "next",
+        "to": "threeI"
+      },
+      {
+        "from": "threeI",
+        "fromPort": "next",
+        "to": "savePh3"
+      },
+      {
+        "from": "savePh3",
+        "fromPort": "next",
+        "to": "kX"
+      },
+      {
+        "from": "kX",
+        "fromPort": "next",
+        "to": "kY"
+      },
+      {
+        "from": "kY",
+        "fromPort": "next",
+        "to": "goSink"
+      },
+      {
+        "from": "goSink",
+        "fromPort": "next",
+        "to": "haltSink"
+      },
+      {
+        "from": "a3_rT",
+        "fromPort": "next",
+        "to": "a3_rV"
+      },
+      {
+        "from": "a3_rV",
+        "fromPort": "next",
+        "to": "a3_brV"
+      },
+      {
+        "from": "a3_brV",
+        "fromPort": "false",
+        "to": "a3_haltP"
+      },
+      {
+        "from": "a3_brV",
+        "fromPort": "true",
+        "to": "a3_tX"
+      },
+      {
+        "from": "a3_tX",
+        "fromPort": "next",
+        "to": "a3_tY"
+      },
+      {
+        "from": "a3_tY",
+        "fromPort": "next",
+        "to": "a3_mX"
+      },
+      {
+        "from": "a3_mX",
+        "fromPort": "next",
+        "to": "a3_mY"
+      },
+      {
+        "from": "a3_ftx",
+        "fromPort": "next",
+        "to": "a3_fty"
+      },
+      {
+        "from": "a3_fty",
+        "fromPort": "next",
+        "to": "a3_fmx"
+      },
+      {
+        "from": "a3_fmx",
+        "fromPort": "next",
+        "to": "a3_fmy"
+      },
+      {
+        "from": "a3_fmy",
+        "fromPort": "next",
+        "to": "a3_dx"
+      },
+      {
+        "from": "a3_dx",
+        "fromPort": "next",
+        "to": "a3_dy"
+      },
+      {
+        "from": "a3_dy",
+        "fromPort": "next",
+        "to": "a3_dx2"
+      },
+      {
+        "from": "a3_dx2",
+        "fromPort": "next",
+        "to": "a3_dy2"
+      },
+      {
+        "from": "a3_dy2",
+        "fromPort": "next",
+        "to": "a3_d2"
+      },
+      {
+        "from": "a3_mY",
+        "fromPort": "next",
+        "to": "a3_ftx"
+      },
+      {
+        "from": "a3_d2",
+        "fromPort": "next",
+        "to": "a3_arr"
+      },
+      {
+        "from": "a3_arr",
+        "fromPort": "next",
+        "to": "a3_cmp"
+      },
+      {
+        "from": "a3_cmp",
+        "fromPort": "next",
+        "to": "a3_br"
+      },
+      {
+        "from": "a3_br",
+        "fromPort": "true",
+        "to": "a3_reGo"
+      },
+      {
+        "from": "a3_reGo",
+        "fromPort": "next",
+        "to": "a3_haltRe"
+      },
+      {
+        "from": "a3_br",
+        "fromPort": "false",
+        "to": "cargo"
+      },
+      {
+        "from": "brPh3",
+        "fromPort": "true",
+        "to": "a3_rT"
+      },
+      {
+        "from": "cargo",
+        "fromPort": "next",
+        "to": "credit"
+      },
+      {
+        "from": "credit",
+        "fromPort": "next",
+        "to": "zeroI"
+      },
+      {
+        "from": "zeroI",
+        "fromPort": "next",
+        "to": "savePh0"
+      },
+      {
+        "from": "savePh0",
+        "fromPort": "next",
+        "to": "haltDone"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gType",
+        "toPort": "source"
+      },
+      {
+        "from": "gType",
+        "fromPort": "value",
+        "to": "isGath",
+        "toPort": "a"
+      },
+      {
+        "from": "gathTy",
+        "fromPort": "value",
+        "to": "isGath",
+        "toPort": "b"
+      },
+      {
+        "from": "isGath",
+        "fromPort": "value",
+        "to": "brGath",
+        "toPort": "condition"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "srcTgt",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveSrc",
+        "toPort": "source"
+      },
+      {
+        "from": "srcTgt",
+        "fromPort": "value",
+        "to": "saveSrc",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "savePh1",
+        "toPort": "source"
+      },
+      {
+        "from": "oneI",
+        "fromPort": "value",
+        "to": "savePh1",
+        "toPort": "value"
+      },
+      {
+        "from": "srcTgt",
+        "fromPort": "value",
+        "to": "sX",
+        "toPort": "source"
+      },
+      {
+        "from": "srcTgt",
+        "fromPort": "value",
+        "to": "sY",
+        "toPort": "source"
+      },
+      {
+        "from": "srcTgt",
+        "fromPort": "value",
+        "to": "goSrc",
+        "toPort": "target"
+      },
+      {
+        "from": "sX",
+        "fromPort": "value",
+        "to": "goSrc",
+        "toPort": "a"
+      },
+      {
+        "from": "sY",
+        "fromPort": "value",
+        "to": "goSrc",
+        "toPort": "b"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "ph",
+        "toPort": "source"
+      },
+      {
+        "from": "ph",
+        "fromPort": "value",
+        "to": "isPh1",
+        "toPort": "a"
+      },
+      {
+        "from": "p1",
+        "fromPort": "value",
+        "to": "isPh1",
+        "toPort": "b"
+      },
+      {
+        "from": "isPh1",
+        "fromPort": "value",
+        "to": "brPh1",
+        "toPort": "condition"
+      },
+      {
+        "from": "ph",
+        "fromPort": "value",
+        "to": "isPh2",
+        "toPort": "a"
+      },
+      {
+        "from": "p2",
+        "fromPort": "value",
+        "to": "isPh2",
+        "toPort": "b"
+      },
+      {
+        "from": "isPh2",
+        "fromPort": "value",
+        "to": "brPh2",
+        "toPort": "condition"
+      },
+      {
+        "from": "ph",
+        "fromPort": "value",
+        "to": "isPh3",
+        "toPort": "a"
+      },
+      {
+        "from": "p3",
+        "fromPort": "value",
+        "to": "isPh3",
+        "toPort": "b"
+      },
+      {
+        "from": "isPh3",
+        "fromPort": "value",
+        "to": "brPh3",
+        "toPort": "condition"
+      },
+      {
+        "from": "a1_tX",
+        "fromPort": "value",
+        "to": "a1_ftx",
+        "toPort": "a"
+      },
+      {
+        "from": "a1_tY",
+        "fromPort": "value",
+        "to": "a1_fty",
+        "toPort": "a"
+      },
+      {
+        "from": "a1_mX",
+        "fromPort": "value",
+        "to": "a1_fmx",
+        "toPort": "a"
+      },
+      {
+        "from": "a1_mY",
+        "fromPort": "value",
+        "to": "a1_fmy",
+        "toPort": "a"
+      },
+      {
+        "from": "a1_fmx",
+        "fromPort": "value",
+        "to": "a1_dx",
+        "toPort": "a"
+      },
+      {
+        "from": "a1_ftx",
+        "fromPort": "value",
+        "to": "a1_dx",
+        "toPort": "b"
+      },
+      {
+        "from": "a1_fmy",
+        "fromPort": "value",
+        "to": "a1_dy",
+        "toPort": "a"
+      },
+      {
+        "from": "a1_fty",
+        "fromPort": "value",
+        "to": "a1_dy",
+        "toPort": "b"
+      },
+      {
+        "from": "a1_dx",
+        "fromPort": "value",
+        "to": "a1_dx2",
+        "toPort": "a"
+      },
+      {
+        "from": "a1_dx",
+        "fromPort": "value",
+        "to": "a1_dx2",
+        "toPort": "b"
+      },
+      {
+        "from": "a1_dy",
+        "fromPort": "value",
+        "to": "a1_dy2",
+        "toPort": "a"
+      },
+      {
+        "from": "a1_dy",
+        "fromPort": "value",
+        "to": "a1_dy2",
+        "toPort": "b"
+      },
+      {
+        "from": "a1_dx2",
+        "fromPort": "value",
+        "to": "a1_d2",
+        "toPort": "a"
+      },
+      {
+        "from": "a1_dy2",
+        "fromPort": "value",
+        "to": "a1_d2",
+        "toPort": "b"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "a1_rT",
+        "toPort": "source"
+      },
+      {
+        "from": "a1_rT",
+        "fromPort": "value",
+        "to": "a1_rV",
+        "toPort": "source"
+      },
+      {
+        "from": "a1_rV",
+        "fromPort": "value",
+        "to": "a1_brV",
+        "toPort": "condition"
+      },
+      {
+        "from": "a1_rT",
+        "fromPort": "value",
+        "to": "a1_tX",
+        "toPort": "source"
+      },
+      {
+        "from": "a1_rT",
+        "fromPort": "value",
+        "to": "a1_tY",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "a1_mX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "a1_mY",
+        "toPort": "source"
+      },
+      {
+        "from": "a1_d2",
+        "fromPort": "value",
+        "to": "a1_cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "a1_arr",
+        "fromPort": "value",
+        "to": "a1_cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "a1_cmp",
+        "fromPort": "value",
+        "to": "a1_br",
+        "toPort": "condition"
+      },
+      {
+        "from": "a1_rT",
+        "fromPort": "value",
+        "to": "a1_reGo",
+        "toPort": "target"
+      },
+      {
+        "from": "a1_tX",
+        "fromPort": "value",
+        "to": "a1_reGo",
+        "toPort": "a"
+      },
+      {
+        "from": "a1_tY",
+        "fromPort": "value",
+        "to": "a1_reGo",
+        "toPort": "b"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "savePh2",
+        "toPort": "source"
+      },
+      {
+        "from": "twoI",
+        "fromPort": "value",
+        "to": "savePh2",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveT60",
+        "toPort": "source"
+      },
+      {
+        "from": "load60",
+        "fromPort": "value",
+        "to": "saveT60",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "tks",
+        "toPort": "source"
+      },
+      {
+        "from": "tz",
+        "fromPort": "value",
+        "to": "tGt0",
+        "toPort": "a"
+      },
+      {
+        "from": "tks",
+        "fromPort": "value",
+        "to": "tGt0",
+        "toPort": "b"
+      },
+      {
+        "from": "tGt0",
+        "fromPort": "value",
+        "to": "brT",
+        "toPort": "condition"
+      },
+      {
+        "from": "tks",
+        "fromPort": "value",
+        "to": "tNext",
+        "toPort": "a"
+      },
+      {
+        "from": "tneg",
+        "fromPort": "value",
+        "to": "tNext",
+        "toPort": "b"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveTn",
+        "toPort": "source"
+      },
+      {
+        "from": "tNext",
+        "fromPort": "value",
+        "to": "saveTn",
+        "toPort": "value"
+      },
+      {
+        "from": "oneC",
+        "fromPort": "value",
+        "to": "hasSink",
+        "toPort": "a"
+      },
+      {
+        "from": "cnt",
+        "fromPort": "value",
+        "to": "hasSink",
+        "toPort": "b"
+      },
+      {
+        "from": "hasSink",
+        "fromPort": "value",
+        "to": "brSink",
+        "toPort": "condition"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "value",
+        "to": "sinkGet",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveSink",
+        "toPort": "source"
+      },
+      {
+        "from": "sinkGet",
+        "fromPort": "value",
+        "to": "saveSink",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "savePh3",
+        "toPort": "source"
+      },
+      {
+        "from": "threeI",
+        "fromPort": "value",
+        "to": "savePh3",
+        "toPort": "value"
+      },
+      {
+        "from": "sinkGet",
+        "fromPort": "value",
+        "to": "kX",
+        "toPort": "source"
+      },
+      {
+        "from": "sinkGet",
+        "fromPort": "value",
+        "to": "kY",
+        "toPort": "source"
+      },
+      {
+        "from": "sinkGet",
+        "fromPort": "value",
+        "to": "goSink",
+        "toPort": "target"
+      },
+      {
+        "from": "kX",
+        "fromPort": "value",
+        "to": "goSink",
+        "toPort": "a"
+      },
+      {
+        "from": "kY",
+        "fromPort": "value",
+        "to": "goSink",
+        "toPort": "b"
+      },
+      {
+        "from": "a3_tX",
+        "fromPort": "value",
+        "to": "a3_ftx",
+        "toPort": "a"
+      },
+      {
+        "from": "a3_tY",
+        "fromPort": "value",
+        "to": "a3_fty",
+        "toPort": "a"
+      },
+      {
+        "from": "a3_mX",
+        "fromPort": "value",
+        "to": "a3_fmx",
+        "toPort": "a"
+      },
+      {
+        "from": "a3_mY",
+        "fromPort": "value",
+        "to": "a3_fmy",
+        "toPort": "a"
+      },
+      {
+        "from": "a3_fmx",
+        "fromPort": "value",
+        "to": "a3_dx",
+        "toPort": "a"
+      },
+      {
+        "from": "a3_ftx",
+        "fromPort": "value",
+        "to": "a3_dx",
+        "toPort": "b"
+      },
+      {
+        "from": "a3_fmy",
+        "fromPort": "value",
+        "to": "a3_dy",
+        "toPort": "a"
+      },
+      {
+        "from": "a3_fty",
+        "fromPort": "value",
+        "to": "a3_dy",
+        "toPort": "b"
+      },
+      {
+        "from": "a3_dx",
+        "fromPort": "value",
+        "to": "a3_dx2",
+        "toPort": "a"
+      },
+      {
+        "from": "a3_dx",
+        "fromPort": "value",
+        "to": "a3_dx2",
+        "toPort": "b"
+      },
+      {
+        "from": "a3_dy",
+        "fromPort": "value",
+        "to": "a3_dy2",
+        "toPort": "a"
+      },
+      {
+        "from": "a3_dy",
+        "fromPort": "value",
+        "to": "a3_dy2",
+        "toPort": "b"
+      },
+      {
+        "from": "a3_dx2",
+        "fromPort": "value",
+        "to": "a3_d2",
+        "toPort": "a"
+      },
+      {
+        "from": "a3_dy2",
+        "fromPort": "value",
+        "to": "a3_d2",
+        "toPort": "b"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "a3_rT",
+        "toPort": "source"
+      },
+      {
+        "from": "a3_rT",
+        "fromPort": "value",
+        "to": "a3_rV",
+        "toPort": "source"
+      },
+      {
+        "from": "a3_rV",
+        "fromPort": "value",
+        "to": "a3_brV",
+        "toPort": "condition"
+      },
+      {
+        "from": "a3_rT",
+        "fromPort": "value",
+        "to": "a3_tX",
+        "toPort": "source"
+      },
+      {
+        "from": "a3_rT",
+        "fromPort": "value",
+        "to": "a3_tY",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "a3_mX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "a3_mY",
+        "toPort": "source"
+      },
+      {
+        "from": "a3_d2",
+        "fromPort": "value",
+        "to": "a3_cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "a3_arr",
+        "fromPort": "value",
+        "to": "a3_cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "a3_cmp",
+        "fromPort": "value",
+        "to": "a3_br",
+        "toPort": "condition"
+      },
+      {
+        "from": "a3_rT",
+        "fromPort": "value",
+        "to": "a3_reGo",
+        "toPort": "target"
+      },
+      {
+        "from": "a3_tX",
+        "fromPort": "value",
+        "to": "a3_reGo",
+        "toPort": "a"
+      },
+      {
+        "from": "a3_tY",
+        "fromPort": "value",
+        "to": "a3_reGo",
+        "toPort": "b"
+      },
+      {
+        "from": "a3_rT",
+        "fromPort": "value",
+        "to": "credit",
+        "toPort": "target"
+      },
+      {
+        "from": "cargo",
+        "fromPort": "value",
+        "to": "credit",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "savePh0",
+        "toPort": "source"
+      },
+      {
+        "from": "zeroI",
+        "fromPort": "value",
+        "to": "savePh0",
+        "toPort": "value"
+      }
+    ]
+  }
+]

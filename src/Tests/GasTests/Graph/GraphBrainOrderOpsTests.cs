@@ -39,33 +39,36 @@ namespace Ludots.Tests.GAS
                 world, api, actor, actor,
                 new GraphInstruction[]
                 {
-                    new() { Op = (ushort)GraphNodeOp.LoadEntityPosX, A = 0, Dst = 3 },
-                    new() { Op = (ushort)GraphNodeOp.LoadEntityPosY, A = 0, Dst = 4 },
+                    new() { Op = (ushort)GraphNodeOp.LoadEntityPosX, A = 0, Dst = 3, Flags = 2 },
+                    new() { Op = (ushort)GraphNodeOp.LoadEntityPosY, A = 0, Dst = 4, Flags = 3 },
                     new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 3 },
                 },
                 seedEntity: (0, actor));
 
             That(state.I[3], Is.EqualTo(650));
             That(state.I[4], Is.EqualTo(-520));
+            That(state.B[2], Is.EqualTo(1));
+            That(state.B[3], Is.EqualTo(1));
         }
 
         [Test]
-        public void LoadEntityPos_FailsClosedOnMissingPosition()
+        public void LoadEntityPos_GuardsMissingPositionWithFlagZero()
         {
             using var world = World.Create();
             Entity actor = world.Create();
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
-            InvalidOperationException error = Throws<InvalidOperationException>(() => Execute(
+            var state = Execute(
                 world, api, actor, actor,
                 new GraphInstruction[]
                 {
-                    new() { Op = (ushort)GraphNodeOp.LoadEntityPosX, A = 0, Dst = 3 },
+                    new() { Op = (ushort)GraphNodeOp.LoadEntityPosX, A = 0, Dst = 3, Flags = 2 },
                     new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 3 },
                 },
-                seedEntity: (0, actor)))!;
+                seedEntity: (0, actor));
 
-            That(error.Message, Does.Contain("LoadEntityPosSourceInvalid"));
+            That(state.I[3], Is.EqualTo(0));
+            That(state.B[2], Is.EqualTo(0));
         }
 
         [Test]
@@ -433,6 +436,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var programs = new GraphProgramRegistry();
+            GraphIdRegistry.Clear();
             int graphId = GraphIdRegistry.Register("test.brain.halt");
             programs.Register(graphId, new GraphInstruction[] { new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 } }, GraphKind.Script);
             var api = new GasGraphRuntimeApi(world, null, null, null);
@@ -442,7 +446,9 @@ namespace Ludots.Tests.GAS
             Entity actor = world.Create(
                 new GraphActionBrain { ScriptKey = "test.brain.halt", ThinkEveryNTicks = 1 },
                 ActiveOrder(orderId: 3, orderTypeId: 102, target: target),
-                new PlayerOwner { PlayerId = 1 });
+                new PlayerOwner { PlayerId = 1 },
+                new Ludots.Core.Gameplay.GAS.Components.BlackboardIntBuffer(),
+                new Ludots.Core.Gameplay.GAS.Components.BlackboardEntityBuffer());
 
             system.Update(1f / 30f);
             system.Update(1f / 30f);
@@ -459,11 +465,15 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var programs = new GraphProgramRegistry();
+            GraphIdRegistry.Clear();
+            _ = GraphIdRegistry.Register("test.brain.halt");
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             Entity actor = world.Create(
                 new GraphActionBrain { ScriptKey = "test.brain.missing", ThinkEveryNTicks = 1 },
-                new OrderBuffer());
+                new OrderBuffer(),
+                new Ludots.Core.Gameplay.GAS.Components.BlackboardIntBuffer(),
+                new Ludots.Core.Gameplay.GAS.Components.BlackboardEntityBuffer());
             var gated = new GraphActionBrainHostSystem(world, programs, api, new ClosedGate());
             gated.Update(1f / 30f);
 

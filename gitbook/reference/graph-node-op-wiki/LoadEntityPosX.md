@@ -13,7 +13,7 @@
 | 可用图种 | 七种全可用（Effect / Score / Validation / Derived / Query / Script / TriggerGraph） |
 | 返回 | Int → 整数寄存器 |
 | 输入端口（值边 toPort） | `source`（来源实体） |
-| 特殊写法 | 结果写入 dst 寄存器 |
+| 特殊写法 | 结果写入 dst 寄存器；flags 填布尔暂存位编号 |
 
 手册分册（全量字段与语义）：[算术与比较 · gr-op-02](../mod-editor-prd/config/gr-op-02-math.md)
 

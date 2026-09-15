@@ -562,13 +562,15 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
         _tagBinder = new FrontlineTagBinder(Config, tagOps);
         // capabilityId: rts-frontline.tag-binding
         engine.RegisterSystem(new FrontlineTagBindingSystem(engine.World, this, _tagBinder), SystemGroup.RuntimeEntityBinding);
-        // capabilityId: rts-frontline.resource-transport
+        // capabilityId: rts-frontline.graph-brains (issue #1536): attack + transport
+        // behavior now live as Script graphs (rts.frontline.attack / rts.frontline.transport)
+        // driven by the generic order-reactive brain host.
         engine.RegisterSystem(
-            new ResourceTransportSystem(engine.World, orderQueue, orderTypes, this, tagOps),
-            SystemGroup.AbilityActivation);
-        // capabilityId: rts-frontline.direct-attack
-        engine.RegisterSystem(
-            new DirectAttackSystem(engine.World, orderQueue, orderTypes, effectRequests, this),
+            new GraphActionBrainHostSystem(
+                engine.World,
+                engine.GetService(CoreServiceKeys.GraphProgramRegistry),
+                engine.GetService(CoreServiceKeys.GasGraphRuntimeApi),
+                this),
             SystemGroup.AbilityActivation);
         // capabilityId: rts-frontline.death-and-match
         engine.RegisterSystem(
