@@ -137,7 +137,7 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 ## 7 与其他子系统的边界
 
 - 不复制定义 `EntityCollectionStore`、不建平行 entity store；实体查询直读 Arch World。
-- 不把 Browser DOM 拉进 Core：CEF/Web 应用的 DOM 树属 provider 能力，v1 在 `ui.tree` 中标注 browser canvas 节点并列出 surface 元数据；provider 侧 DOM 求值是后续切片（经 `IBrowserMessageBridge`，与 DataPlane 同边界）。
+- 不把 Browser DOM 拉进 Core：CEF/Web 应用的 DOM 树属 provider 能力，v1 在 `ui.tree` 中标注 browser canvas 节点并列出 surface 元数据。后续切片不是 CDP / 内嵌 DevTools，也不是 `ExecuteScriptAsync` 现场扒 DOM；合同见 [RFC-0067](RFC-0067-webui-interactive-inventory.md)（页面上报可点控件清单，投影进查询覆盖层；`ui.click` 走 `UIRoot.HandleInput`）。传输仍经 `IBrowserMessageBridge` / `window.ludotsDataplane`，与 DataPlane 同边界。
 - Agent 工具不改写游戏真相：除 `orders.issue` / `input.inject` / `time.control` 这些显式操控工具外，一切只读。
 
 ## 8 验收
