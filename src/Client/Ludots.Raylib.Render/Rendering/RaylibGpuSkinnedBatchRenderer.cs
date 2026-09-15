@@ -98,9 +98,6 @@ namespace Ludots.Raylib.Render
 
         public double LastPoseComputeGpuMs => _ssbo?.LastPoseComputeGpuMs ?? 0d;
 
-        private bool _mainDirectPrimedThisFrame;
-        private bool _shadowDirectPrimedThisFrame;
-
         private RaylibFrameLighting? _frameLighting;
         private Vector3 _frameViewPos;
         private bool _hasFrameViewPos;
@@ -293,8 +290,6 @@ namespace Ludots.Raylib.Render
             _stableIds?.BeginFrame();
             EnsureDrawTimingQueries();
             ReadBackDrawTiming();
-            _mainDirectPrimedThisFrame = false;
-            _shadowDirectPrimedThisFrame = false;
             _poseRowByKey.Clear();
             _dirtyPoseRows.Clear();
             ResetStats();
@@ -925,6 +920,8 @@ namespace Ludots.Raylib.Render
                 RaylibMaterialDrawState.RequireLaneShaderKey(in skinnedResolved, materialId, "GpuSkinnedInstance");
             }
             RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
+            // 直绘前把 rlgl 立即批次落盘：原始 GL 调用不触发 raylib 批次状态机，先排空再裸绘。
+            Rl.rlDrawRenderBatchActive();
             int boneBaseMain = 0;
             for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
             {
@@ -935,7 +932,8 @@ namespace Ludots.Raylib.Render
                 {
                     RaylibInstancedMaterialPipeline.RequireMeshNormals(in mesh, "GpuSkinnedInstance");
                     if (_materials.TryResolveInstancedModelMaterial(model, meshIndex, materialId, instancingShader, in instancingPbrLocs, skyIbl, _frameShadow, out Material material))
-                    {                        GpuSkinnedMeshSubmission meshSubmission = CalculateMeshSubmission(
+                    {
+                        GpuSkinnedMeshSubmission meshSubmission = CalculateMeshSubmission(
                             batch.Count,
                             mesh.triangleCount,
                             _maxModelInstancesPerDraw);
@@ -947,22 +945,11 @@ namespace Ludots.Raylib.Render
                         // SSBO 蒙皮：骨骼矩阵由 compute 写入姿势 SSBO，实例数据驻实例 SSBO——零逐实例上传
                         SetPoseStrideUniform();
                         SetBoneBaseUniform(boneBaseMain);
-                        fixed (RaylibMatrix* packed = _packedTransforms)
+                        for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
                         {
-                            // NVIDIA GL 驱动对该形态 program 按首次调用模式特化（实验锁定）：
-                            // 直绘前须有一次 raylib DrawMeshInstanced priming，否则几何涂抹。
-                            if (!_mainDirectPrimedThisFrame)
-                            {
-                                _mainDirectPrimedThisFrame = true;
-                                Rl.DrawMeshInstanced(mesh, material, packed + batch.GlobalInstanceBase, 1);
-                            }
-
-                            for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
-                            {
-                                int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
-                                SetInstanceBaseUniform(batch.GlobalInstanceBase + offset);
-                                DrawMeshInstancedSsboDirect(mesh, in material, chunkCount);
-                            }
+                            int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
+                            SetInstanceBaseUniform(batch.GlobalInstanceBase + offset);
+                            DrawMeshInstancedSsboDirect(mesh, in material, chunkCount);
                         }
 
                         drawCalls = checked(drawCalls + meshSubmission.DrawCalls);
@@ -1012,19 +999,15 @@ namespace Ludots.Raylib.Render
                             batch.Count,
                             mesh.triangleCount,
                             _maxModelInstancesPerDraw);
-                        fixed (RaylibMatrix* packedShadow = _packedTransforms)
+                        for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
                         {
-                            for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
-                            {
-                                int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
-                                shadow.DrawSkinnedMeshSsboShadow(
-                                    mesh,
-                                    packedShadow + batch.GlobalInstanceBase + offset,
-                                    chunkCount,
-                                    batch.GlobalInstanceBase + offset,
-                                    boneBase,
-                                    _ssbo.PoseStride);
-                            }
+                            int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
+                            shadow.DrawSkinnedMeshSsboShadow(
+                                mesh,
+                                chunkCount,
+                                batch.GlobalInstanceBase + offset,
+                                boneBase,
+                                _ssbo.PoseStride);
                         }
 
                         drawCalls = checked(drawCalls + meshSubmission.DrawCalls);
@@ -1208,11 +1191,11 @@ namespace Ludots.Raylib.Render
         }
 
         /// <summary>直接 GL 实例化绘制（零逐实例上传）：实例数据全驻 SSBO，
-        /// mvp/纹理槽按 raylib DrawMeshInstanced 内部合同逐位复刻。</summary>
-        /// <summary>直接 GL 实例化绘制（零逐实例上传）：实例数据全驻 SSBO，
-        /// mvp/纹理槽按 raylib DrawMeshInstanced 内部合同逐位复刻。
-        /// NVIDIA GL 对该形态 program 按首次调用模式特化：直绘前须经一次 raylib
-        /// DrawMeshInstanced priming（见 DrawBatch），否则几何涂抹——实验锁定，勿删。</summary>
+        /// mvp/纹理槽按 raylib DrawMeshInstanced 内部合同逐位复刻。VAO 只含逐顶点属性，
+        /// 实例维由着色器经 gl_InstanceID 进 SSBO 取数——本路径既不需要也不允许
+        /// 在 VAO 上挂 divisor 实例属性（挂后再删缓冲会留下悬垂属性引用，驱动内崩溃）。
+        /// 状态合同同样由本路径完整持有：不透明（blend 显式关）+ 材质漫反射色显式下发
+        /// （不经 raylib 材质管线，无人替它设 colDiffuse，缺省 vec4(0) 会整批黑身/alpha 0）。</summary>
         private unsafe void DrawMeshInstancedSsboDirect(Mesh mesh, in Material material, int count)
         {
             if (mesh.vaoId == 0)
@@ -1221,6 +1204,10 @@ namespace Ludots.Raylib.Render
             }
 
             Gl43.UseProgram(material.shader.id);
+            Gl43.Disable(Gl43.GL_BLEND);
+            Color diffuseColor = material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO].color;
+            Vector4 diffuse = new(diffuseColor.r / 255f, diffuseColor.g / 255f, diffuseColor.b / 255f, diffuseColor.a / 255f);
+            Rl.SetShaderValue(_skinningShader, _locSkinningColDiffuse, &diffuse, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
             Rl.SetShaderValueMatrix(_skinningShader, _locMvp, RaylibNativeResources.ComputeDrawMvp());
             BindMaterialTextureSlotsDirect(in material);
             Gl43.BindVertexArray(mesh.vaoId);
@@ -1228,15 +1215,6 @@ namespace Ludots.Raylib.Render
             Gl43.DrawElementsInstanced(Gl43.GL_TRIANGLES, indexCount, Gl43.GL_UNSIGNED_SHORT, IntPtr.Zero, count);
             Gl43.UseProgram(0);
         }
-
-        /// <summary>诊断/兼容：在当前 VAO 上按 raylib DrawMeshInstanced 的实例属性布局
-        /// （location 9..12 组成 mat4、divisor 1）挂一个恒等矩阵假缓冲——着色器不消费该属性，
-        /// 仅复刻其 GL 状态，用于隔离“实例属性状态是否承载绘制正确性”。</summary>
-
-        /// <summary>诊断：按 raylib DrawMeshInstanced 的实例属性布局挂真实变换数据（着色器不消费该属性）。</summary>
-
-        /// <summary>复刻 raylib DrawMeshInstanced 的收尾：删除实例 VBO（VAO 仍引用其属性）。
-        /// 该 create→attach→draw→delete 周期是直绘正确性的承载件（NVIDIA GL 驱动交互，实验锁定）。</summary>
 
         private static void BindMaterialTextureSlotsDirect(in Material material)
         {
