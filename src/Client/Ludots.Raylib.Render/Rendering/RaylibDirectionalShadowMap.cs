@@ -32,7 +32,6 @@ namespace Ludots.Raylib.Render
         private RaylibMatrix _lightProjection;
         private float _depthRange;
         private bool _frameActive;
-        private bool _shadowDirectPrimedThisFrame;
         private bool _disposed;
 
         public RaylibDirectionalShadowMap(RaylibShadowConfig? config = null)
@@ -146,7 +145,6 @@ namespace Ludots.Raylib.Render
             Rl.rlLoadIdentity();
             MultMatrix(ref _lightView);
             _frameActive = true;
-            _shadowDirectPrimedThisFrame = false;
             HasFrame = true;
         }
 
@@ -188,23 +186,19 @@ namespace Ludots.Raylib.Render
             Rl.DrawMeshInstanced(mesh, _depthInstancedMaterial, transforms, count);
         }
 
-        /// <summary>SSBO 蒙皮的深度绘制：姿势/实例 SSBO 由渲染器在派发期绑定（binding 2/3），
-        /// 本方法只设 uniform 并经 raylib DrawMeshInstanced 绘制（实例矩阵属性仅为绘制机械，数据全在 SSBO）
-        /// ——深度与主 pass 的蒙皮位置严格一致。</summary>
+        /// <summary>SSBO 蒙皮的深度直绘：姿势/实例 SSBO 由渲染器在派发期绑定（binding 2/3），
+        /// 本方法只设 uniform 后经 glDrawElementsInstanced 绘制——与主 pass 同一合同：
+        /// VAO 只含逐顶点属性，实例维由着色器经 gl_InstanceID 进 SSBO 取数；
+        /// blend 显式关闭（深度通道不混合，环境混合方程会污染 RGB 打包深度），
+        /// 深度与主 pass 的蒙皮位置严格一致。</summary>
         public void DrawSkinnedMeshSsboShadow(
             Mesh mesh,
-            RaylibMatrix* transforms,
             int count,
             float instanceBase,
             float boneBase,
             float poseStride)
         {
             EnsureFrameActive();
-            if (transforms == null)
-            {
-                throw new ArgumentNullException(nameof(transforms));
-            }
-
             if (count <= 0 || mesh.vaoId == 0 || mesh.indices == null || mesh.triangleCount <= 0)
             {
                 return;
@@ -213,14 +207,8 @@ namespace Ludots.Raylib.Render
             Rl.SetShaderValue(_depthSkinningSsboShader, _locDepthSkinningInstanceBase, &instanceBase, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_depthSkinningSsboShader, _locDepthSkinningBoneBase, &boneBase, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_depthSkinningSsboShader, _locDepthSkinningPoseStride, &poseStride, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-            // 与主 pass 同一驱动合同：先一次 raylib priming（1 实例），其余直接 GL 绘制
-            if (!_shadowDirectPrimedThisFrame)
-            {
-                _shadowDirectPrimedThisFrame = true;
-                Rl.DrawMeshInstanced(mesh, _depthSkinningSsboMaterial, transforms, 1);
-            }
-
             Gl43.UseProgram(_depthSkinningSsboShader.id);
+            Gl43.Disable(Gl43.GL_BLEND);
             Rl.SetShaderValueMatrix(
                 _depthSkinningSsboShader,
                 _depthSkinningSsboShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP],
@@ -229,11 +217,6 @@ namespace Ludots.Raylib.Render
             int indexCount = mesh.indices != null ? checked(mesh.triangleCount * 3) : mesh.vertexCount;
             Gl43.DrawElementsInstanced(Gl43.GL_TRIANGLES, indexCount, Gl43.GL_UNSIGNED_SHORT, IntPtr.Zero, count);
             Gl43.UseProgram(0);
-        }
-
-        internal void ResetDirectPriming()
-        {
-            _shadowDirectPrimedThisFrame = false;
         }
 
         /// <summary>模型深度：换装深度材质经 DrawModelEx 原生路径绘制后还原。</summary>

@@ -29,6 +29,10 @@ namespace Ludots.Presentation.Skia
         private const int TextBatchBucketsPerBlob = 256;
         private const int TextChurnSampleCount = 32;
         private const byte TextSpritePromotionStableFrames = 3;
+
+        /// <summary>文本精灵烘焙的左内边距（防负 left bearing 被精灵边缘裁剪）；
+        /// 所有把精灵贴到 item.X 的消费点都必须减去它，否则比直绘右偏 1px。</summary>
+        private const float TextSpriteBakePaddingX = 1f;
         private static readonly PresentationOverlayItemKind[] RenderOrder =
         {
             PresentationOverlayItemKind.Rect,
@@ -1482,7 +1486,7 @@ namespace Ludots.Presentation.Skia
                 TextSpriteBatchBucket bucket = _textSpriteBatchBuckets[bucketIndex];
                 if (bucket.Count == 1)
                 {
-                    canvas.DrawImage(bucket.Sprite.Image, bucket.X[0], bucket.Y[0]);
+                    canvas.DrawImage(bucket.Sprite.Image, bucket.X[0] - TextSpriteBakePaddingX, bucket.Y[0]);
                     continue;
                 }
 
@@ -1590,7 +1594,7 @@ namespace Ludots.Presentation.Skia
                 for (int instanceIndex = 0; instanceIndex < count; instanceIndex++)
                 {
                     drawSprites[writeIndex] = spriteRect;
-                    drawTransforms[writeIndex] = new SKRotationScaleMatrix(1f, 0f, positionsX[instanceIndex], positionsY[instanceIndex]);
+                    drawTransforms[writeIndex] = new SKRotationScaleMatrix(1f, 0f, positionsX[instanceIndex] - TextSpriteBakePaddingX, positionsY[instanceIndex]);
                     writeIndex++;
                 }
             }
@@ -2016,7 +2020,7 @@ namespace Ludots.Presentation.Skia
                 CachedTextRun run = layout.Runs[runIndex];
                 if (run.Blob != null)
                 {
-                    spriteCanvas.DrawText(run.Blob, 1f + run.XOffset, baselineY, _textPaint);
+                    spriteCanvas.DrawText(run.Blob, TextSpriteBakePaddingX + run.XOffset, baselineY, _textPaint);
                 }
             }
 
@@ -3278,7 +3282,7 @@ namespace Ludots.Presentation.Skia
                 _x[Count] = x;
                 _y[Count] = y;
                 _sprites[Count] = _spriteRect;
-                _transforms[Count] = SKRotationScaleMatrix.CreateTranslation(x, y);
+                _transforms[Count] = SKRotationScaleMatrix.CreateTranslation(x - TextSpriteBakePaddingX, y);
                 Count++;
             }
 
@@ -3297,7 +3301,7 @@ namespace Ludots.Presentation.Skia
                 for (int i = 0; i < Count; i++)
                 {
                     _sprites[i] = _spriteRect;
-                    _transforms[i] = SKRotationScaleMatrix.CreateTranslation(_x[i], _y[i]);
+                    _transforms[i] = SKRotationScaleMatrix.CreateTranslation(_x[i] - TextSpriteBakePaddingX, _y[i]);
                 }
             }
 
