@@ -43,18 +43,35 @@ public sealed class RaylibVfxRendererTests
     }
 
     [Test]
-    public void Draw_UnknownEffectAssetId_ThrowsContractError()
+    public void Draw_UnknownEffectAssetId_WarnsOnceAndSkipsWithoutPlaceholder()
     {
         var meshes = new MeshAssetRegistry();
         PrimitiveDrawItem visual = CreateVfxItem(effectAssetId: 707, stableId: 31);
+        var warnings = new List<string>();
+        RenderDiagnostics.WarnSink = warnings.Add;
         var renderer = new RaylibVfxRenderer();
-        renderer.BeginFrame();
+        try
+        {
+            renderer.BeginFrame();
+            Assert.That(() => renderer.Draw(in visual, meshes, CreateCamera(), timeSeconds: 0d), Throws.Nothing);
+            renderer.EndFrame();
+            renderer.BeginFrame();
+            Assert.That(() => renderer.Draw(in visual, meshes, CreateCamera(), timeSeconds: 0d), Throws.Nothing);
+            renderer.EndFrame();
 
-        Assert.That(
-            () => renderer.Draw(in visual, meshes, CreateCamera(), timeSeconds: 0d),
-            Throws.InvalidOperationException.With.Message.Contains("unknown effect asset id 707"));
-        Assert.That(renderer.LastDrawnVfxCount, Is.EqualTo(0));
-        Assert.That(renderer.TotalDrawnVfxCount, Is.EqualTo(0));
+            Assert.That(renderer.LastDrawnVfxCount, Is.EqualTo(0));
+            Assert.That(renderer.TotalDrawnVfxCount, Is.EqualTo(0));
+            Assert.That(warnings, Has.Count.EqualTo(1));
+            Assert.That(warnings[0], Does.Contain("effectAssetId=707"));
+            Assert.That(warnings[0], Does.Contain("stableId=31"));
+            Assert.That(warnings[0], Does.Contain("is not a registered mesh asset"));
+            Assert.That(warnings[0], Does.Contain("No placeholder VFX is drawn"));
+        }
+        finally
+        {
+            RenderDiagnostics.WarnSink = null;
+            renderer.Dispose();
+        }
     }
 
     [Test]

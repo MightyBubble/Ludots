@@ -85,14 +85,14 @@ namespace Ludots.Raylib.Render
 
             if (!effectAssets.TryGetDescriptor(visual.MeshAssetId, out MeshAssetDescriptor descriptor))
             {
-                throw new InvalidOperationException(
-                    $"VFX item stableId={visual.StableId} references unknown effect asset id {visual.MeshAssetId}.");
+                WarnMissingVfxSkipped(visual.MeshAssetId, visual.StableId, "is not a registered mesh asset");
+                return;
             }
 
             VfxAssetData effect = descriptor.VfxData;
             if (!effect.IsValid || effect.ParticleSystem is null)
             {
-                WarnMissingVfxSkipped(visual.MeshAssetId, visual.StableId);
+                WarnMissingVfxSkipped(visual.MeshAssetId, visual.StableId, "has no registered Quarks particle VFX");
                 return;
             }
 
@@ -369,7 +369,7 @@ namespace Ludots.Raylib.Render
             return new RaylibVfxKey(stableId, effectAssetId);
         }
 
-        private void WarnMissingVfxSkipped(int effectAssetId, int stableId)
+        private void WarnMissingVfxSkipped(int effectAssetId, int stableId, string reason)
         {
             if (!_reportedMissingVfx.Add(effectAssetId))
             {
@@ -378,7 +378,7 @@ namespace Ludots.Raylib.Render
 
             string stableText = stableId > 0 ? $" stableId={stableId}" : string.Empty;
             RenderDiagnostics.Warn(
-                $"Raylib renderer skipped VFX draw{stableText}: effectAssetId={effectAssetId} has no registered Quarks particle VFX. No placeholder VFX is drawn.");
+                $"Raylib renderer skipped VFX draw{stableText}: effectAssetId={effectAssetId} {reason}. No placeholder VFX is drawn.");
         }
 
         private static Vector4 ModulateColor(Vector4 authored, Vector4 tint)
