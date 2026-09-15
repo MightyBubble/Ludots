@@ -3,7 +3,7 @@
 ## Header
 - build: GasTests / Show6Workflow_ControlSchemeHotSwitchEnablesWasdAxisMoveThroughOrderBuffer
 - seed: interaction_showcase_hub deterministic headless run
-- execution timestamp UTC: 2026-09-15T16:26:19.0675518+00:00
+- execution timestamp UTC: 2026-09-15T17:35:07.1526451+00:00
 
 ## Scenario Card
 - Player goal: hot-switch from mouse/default command scheme to a WASD movement scheme and hold D.

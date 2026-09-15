@@ -2836,13 +2836,13 @@
         "toPort": "value"
       },
       {
-        "from": "oneC",
+        "from": "cnt",
         "fromPort": "value",
         "to": "hasSink",
         "toPort": "a"
       },
       {
-        "from": "cnt",
+        "from": "oneC",
         "fromPort": "value",
         "to": "hasSink",
         "toPort": "b"

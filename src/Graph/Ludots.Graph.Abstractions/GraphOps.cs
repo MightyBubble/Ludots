@@ -405,9 +405,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         SqrtFloat = 504,     // F[Dst] = sqrt(F[A]); negative input fails closed
         /// <summary>
         /// Behavior-side order submission: the acting unit enqueues an assigned order into
-        /// the OrderQueue. Imm = order type id (semantic key resolved at patch time),
-        /// I[A] = xCm, I[B] = yCm, E[C] = optional target entity (0xFF = none). Script slice
-        /// hosts only; the input-side SubmitCommandIntent intent-buffer contract is separate.
+        /// the OrderQueue. Imm = order type id (semantic key resolved at patch time);
+        /// E[A] = target entity; I[B] = xCm; I[C] = yCm. Script slice hosts only; the
+        /// input-side SubmitCommandIntent intent-buffer contract is separate.
         /// </summary>
         /// <summary>E[A] = source; B[Dst] = 1 when the entity is alive and has a WorldPositionCm, 0 otherwise (edge-readable guard companion of LoadEntityPosX/Y).</summary>
         LoadEntityPosValid = 508,

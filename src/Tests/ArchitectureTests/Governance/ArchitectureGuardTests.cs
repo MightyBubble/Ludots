@@ -67,6 +67,13 @@ namespace Ludots.Tests.Architecture.Governance
                 .ToArray();
             Assert.That(resurrected, Is.Empty,
                 "Core/Gameplay must not reintroduce ActionLoop systems; author behavior as Script graphs driven by GraphActionBrainHostSystem (issue #1536).");
+
+            string[] bannedTypes = { "DirectAttackSystem", "ResourceTransportSystem", "DirectAttackProfile", "ResourceTransportProfile" };
+            string[] typeResurrections = Directory.GetFiles(coreRoot, "*.cs", SearchOption.AllDirectories)
+                .Where(file => bannedTypes.Any(banned => File.ReadAllText(file).Contains($"class {banned}", StringComparison.Ordinal)))
+                .ToArray();
+            Assert.That(typeResurrections, Is.Empty,
+                "Core/Gameplay must not resurrect the deleted behavior-loop types by class declaration (issue #1536).");
         }
 
         [Test]

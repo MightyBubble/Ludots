@@ -472,6 +472,7 @@ namespace Ludots.Tests.GAS
             Entity actor = world.Create(
                 new GraphActionBrain { ScriptKey = "test.brain.missing", ThinkEveryNTicks = 1 },
                 new OrderBuffer(),
+                new Ludots.Core.Gameplay.Components.PlayerOwner { PlayerId = 1 },
                 new Ludots.Core.Gameplay.GAS.Components.BlackboardIntBuffer(),
                 new Ludots.Core.Gameplay.GAS.Components.BlackboardEntityBuffer());
             var gated = new GraphActionBrainHostSystem(world, programs, api, new ClosedGate());
@@ -591,5 +592,41 @@ namespace Ludots.Tests.GAS
                 },
             },
         };
+    [Test]
+    public void CompiledLoadEntityPosOpsGetDistinctAllocatedBoolScratches()
+    {
+        var cfg = new GraphControlFlowDocument
+        {
+            Id = "Test.Brain.PosScratch",
+            Kind = "Script",
+            Entry = "self",
+            Nodes =
+            {
+                new GraphControlFlowNode { Id = "self", Op = "LoadCaster" },
+                new GraphControlFlowNode { Id = "posX", Op = "LoadEntityPosX" },
+                new GraphControlFlowNode { Id = "posY", Op = "LoadEntityPosY" },
+                new GraphControlFlowNode { Id = "halt", Op = "HaltReturnInt" },
+            },
+            ControlEdges =
+            {
+                new("self", GraphControlFlowPorts.Next, "posX"),
+                new("posX", GraphControlFlowPorts.Next, "posY"),
+                new("posY", GraphControlFlowPorts.Next, "halt"),
+            },
+            ValueEdges =
+            {
+                new("self", GraphControlFlowPorts.Value, "posX", GraphControlFlowPorts.Source),
+                new("self", GraphControlFlowPorts.Value, "posY", GraphControlFlowPorts.Source),
+                new("posX", GraphControlFlowPorts.Value, "halt", GraphControlFlowPorts.Value),
+            },
+        };
+
+        var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
+        That(diags, Is.Empty);
+        GraphInstruction posX = pkg!.Value.Program.First(i => i.Op == (ushort)GraphNodeOp.LoadEntityPosX);
+        GraphInstruction posY = pkg.Value.Program.First(i => i.Op == (ushort)GraphNodeOp.LoadEntityPosY);
+        That(posX.Flags, Is.Not.EqualTo(posY.Flags),
+            "the guarded valid flags must land in distinct allocated bool scratches, not the unset default");
     }
+}
 }

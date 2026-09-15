@@ -1,13 +1,13 @@
 A,N_topo,G,I,T_ai_ms,notes
 500,8,1,0,0.040,AlwaysSuccess sequence gate
-500,16,1,0,0.081,AlwaysSuccess sequence gate
+500,16,1,0,0.079,AlwaysSuccess sequence gate
 500,32,1,0,0.140,AlwaysSuccess sequence gate
-500,64,1,0,0.264,AlwaysSuccess sequence gate
-2000,8,1,0,0.151,AlwaysSuccess sequence gate
-2000,16,1,0,0.317,AlwaysSuccess sequence gate
-2000,32,1,0,0.546,AlwaysSuccess sequence gate
-2000,64,1,0,1.028,AlwaysSuccess sequence gate
-10000,8,1,0,0.772,AlwaysSuccess sequence gate
-10000,16,1,0,1.478,AlwaysSuccess sequence gate
-10000,32,1,0,2.784,AlwaysSuccess sequence gate
-10000,64,1,0,5.239,AlwaysSuccess sequence gate
+500,64,1,0,0.258,AlwaysSuccess sequence gate
+2000,8,1,0,0.150,AlwaysSuccess sequence gate
+2000,16,1,0,0.279,AlwaysSuccess sequence gate
+2000,32,1,0,0.511,AlwaysSuccess sequence gate
+2000,64,1,0,0.979,AlwaysSuccess sequence gate
+10000,8,1,0,0.748,AlwaysSuccess sequence gate
+10000,16,1,0,1.403,AlwaysSuccess sequence gate
+10000,32,1,0,2.683,AlwaysSuccess sequence gate
+10000,64,1,0,5.193,AlwaysSuccess sequence gate

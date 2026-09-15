@@ -25,9 +25,9 @@
 
 ## Summary Stats
 - snapshots captured: `8`
-- median headless tick: `0.613ms`
-- p95 headless tick: `7.987ms`
-- max headless tick: `56.572ms`
+- median headless tick: `0.377ms`
+- p95 headless tick: `4.667ms`
+- max headless tick: `24.574ms`
 - tick note: acceptance timings include map startup, UI sync, evidence capture staging, and action frames; the dedicated production pressure loop is reported in the benchmark artifact.
 - final selected count: `4`
 - final threat max: `112`

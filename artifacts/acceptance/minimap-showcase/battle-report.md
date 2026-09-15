@@ -20,5 +20,5 @@
 
 ## Summary Stats
 - marker_pool: 20
-- median_tick_ms: 0.550
-- max_tick_ms: 1.386
+- median_tick_ms: 0.707
+- max_tick_ms: 2.033

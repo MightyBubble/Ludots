@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -15,18 +16,19 @@ namespace Ludots.Core.Gameplay.GraphBrains;
 
 /// <summary>
 /// Order-driven graph brain host (issue #1536): one resident Script-graph execution
-/// frame per entity carrying a <see cref="GraphActionBrain"/>. Each think tick feeds
-/// the order glue contract (I[0] = active order type id, B[0] = has active, B[1] =
-/// has pending, E[0] = self, caster = self), then runs one slice with the production
-/// runtime API so behavior graphs can submit orders, complete them, and apply
-/// effects through the existing pipelines. Halted frames restart from the program
-/// root on the next think tick; suspended frames (Yield/budget) resume in place.
-/// Slots are entity-keyed and swept when an entity leaves the query.
+/// frame per entity carrying a <see cref="GraphActionBrain"/>. Each think tick
+/// refreshes the <see cref="OrderGlueKeys"/> entity-blackboard values (active order
+/// type/spatial/target, player id, pending flag), sets the slice caster to the actor,
+/// then runs one slice with the production runtime API so behavior graphs can submit
+/// orders, complete them, and apply effects through the existing pipelines. Halted
+/// frames restart from the program root on the next think tick; suspended frames
+/// (Yield/budget) resume in place. Slots are entity-keyed and swept when an entity
+/// leaves the query.
 /// </summary>
 public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
 {
     private static readonly QueryDescription BrainQuery = new QueryDescription()
-        .WithAll<GraphActionBrain, OrderBuffer, BlackboardIntBuffer, BlackboardEntityBuffer>();
+        .WithAll<GraphActionBrain, OrderBuffer, PlayerOwner, BlackboardIntBuffer, BlackboardEntityBuffer>();
 
     private readonly GraphProgramRegistry _programs;
     private readonly IGraphRuntimeApi _api;

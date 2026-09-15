@@ -4,7 +4,7 @@
 - command: `dotnet test src/Tests/GasTests/GasTests.csproj --filter EntityQueryTactics_ProductionBenchmark_WritesReport --no-restore`
 - runtime: `.NET 9.0.14`
 - os: `Microsoft Windows 10.0.26220`
-- generated UTC: `2026-09-15T16:20:33.2899131Z`
+- generated UTC: `2026-09-15T17:29:30.9314538Z`
 - preset: `entity_query_tactics_raylib`
 - plan fingerprint: `fb6554124ca4387151eeb944bb071370c690dff91b7c52ec4ae723c98f4a021c`
 - ordered mods: `LudotsCoreMod -> CoreInputMod -> CameraProfilesMod -> NarrativeFrontendMod -> EntityQueryTacticsShowcaseMod`
@@ -35,18 +35,18 @@
 ## Hot Path Measurements
 | path | iterations | total ms | per iteration us | allocated bytes |
 |---|---:|---:|---:|---:|
-| GraphReturnWriter execute x3 stable inputs | 20000 | 1165.818 | 58.291 | 0 |
-| GraphReturnWriter execute `entityquery.tactics.graph.selectedFriendliesFromUiBox` only | 20000 | 351.723 | 17.586 | 0 |
-| GraphReturnWriter execute `entityquery.tactics.graph.hostileThreatBoard` only | 20000 | 468.170 | 23.408 | 0 |
-| GraphReturnWriter execute `entityquery.tactics.graph.formationCache` only | 20000 | 331.471 | 16.574 | 0 |
-| Retained diff execute x3 stable inputs | 2000 | 150.310 | 75.155 | 0 |
-| Relationship AddMetric + graph execute x3 | 1000 | 67.596 | 67.596 | 0 |
+| GraphReturnWriter execute x3 stable inputs | 20000 | 494.877 | 24.744 | 0 |
+| GraphReturnWriter execute `entityquery.tactics.graph.selectedFriendliesFromUiBox` only | 20000 | 153.678 | 7.684 | 0 |
+| GraphReturnWriter execute `entityquery.tactics.graph.hostileThreatBoard` only | 20000 | 203.462 | 10.173 | 0 |
+| GraphReturnWriter execute `entityquery.tactics.graph.formationCache` only | 20000 | 142.028 | 7.101 | 0 |
+| Retained diff execute x3 stable inputs | 2000 | 50.384 | 25.192 | 0 |
+| Relationship AddMetric + graph execute x3 | 1000 | 27.353 | 27.353 | 0 |
 - stable allocation sample attempts: graph x3 `1`, single graphs `entityquery.tactics.graph.selectedFriendliesFromUiBox:1, entityquery.tactics.graph.hostileThreatBoard:1, entityquery.tactics.graph.formationCache:1`, retained diff `1`, pressure `1`
 
 ## Production Tick Loop
 | path | frames | action frames | total ms | median ms | p95 ms | max ms | allocated bytes |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| PlayerInputHandler + GameEngine.Tick + showcase systems | 360 | 150 | 510.397 | 0.487 | 4.316 | 7.330 | 117964576 |
+| PlayerInputHandler + GameEngine.Tick + showcase systems | 360 | 150 | 185.379 | 0.145 | 1.412 | 2.943 | 117964576 |
 - production pressure summary: `entityquery.summary.threat.max` `95` -> `605` during the tick loop.
 
 ## Retained Diff

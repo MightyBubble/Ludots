@@ -1795,6 +1795,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Flags = boolScratches[nodeIndex];
                     break;
 
                 case GraphNodeOp.IntToFloat:
