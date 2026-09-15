@@ -4966,7 +4966,7 @@
     {
       "id": "mass_navigation",
       "path": "mods/capabilities/navigation/MassNavigationMod",
-      "projectPath": "MassNavigationMod.csproj",
+      "projectPath": null,
       "title": "大规模导航能力包",
       "summary": "提供大规模导航资产、配置包与可选调参面板；MassNavigation runtime 由 core 提供。",
       "tier": "T2",
