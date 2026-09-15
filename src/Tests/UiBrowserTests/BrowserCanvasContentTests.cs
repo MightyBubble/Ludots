@@ -227,6 +227,125 @@ public sealed class BrowserCanvasContentTests
 	}
 
 	[Test]
+	public void HitTest_AlphaMode_CaptureEnabled_HitsTransparentPixels()
+	{
+		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
+		var surface = new TestBrowserSurface(frame);
+		var content = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
+		UiScene scene = UiSceneComposer.Compose(
+			new SkiaTextMeasurer(),
+			new SkiaImageSizeProvider(),
+			Ui.Canvas(content).Width(200).Height(100));
+		scene.Layout(200, 100);
+
+		surface.RaisePageMessage(new BrowserScriptMessage(BrowserMessageChannels.HitTestCapture, "true"));
+
+		UiNode? transparentHit = scene.HitTest(40, 50);
+		UiNode? opaqueHit = scene.HitTest(160, 50);
+
+		Assert.That(transparentHit?.TagName, Is.EqualTo("canvas"));
+		Assert.That(opaqueHit?.TagName, Is.EqualTo("canvas"));
+	}
+
+	[Test]
+	public void HitTest_AlphaMode_CaptureDisabled_RestoresTransparentPassthrough()
+	{
+		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
+		var surface = new TestBrowserSurface(frame);
+		var content = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
+		UiScene scene = UiSceneComposer.Compose(
+			new SkiaTextMeasurer(),
+			new SkiaImageSizeProvider(),
+			Ui.Canvas(content).Width(200).Height(100));
+		scene.Layout(200, 100);
+
+		surface.RaisePageMessage(new BrowserScriptMessage(BrowserMessageChannels.HitTestCapture, "true"));
+		surface.RaisePageMessage(new BrowserScriptMessage(BrowserMessageChannels.HitTestCapture, "false"));
+
+		UiNode? transparentHit = scene.HitTest(40, 50);
+		UiNode? opaqueHit = scene.HitTest(160, 50);
+
+		Assert.That(transparentHit?.TagName, Is.Not.EqualTo("canvas"));
+		Assert.That(opaqueHit?.TagName, Is.EqualTo("canvas"));
+	}
+
+	[Test]
+	public void HandleInput_AlphaMode_CaptureEnabled_DownOnTransparentPixel_SendsBrowserInput()
+	{
+		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
+		var surface = new TestBrowserSurface(frame);
+		var content = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 200, 100);
+
+		surface.RaisePageMessage(new BrowserScriptMessage(BrowserMessageChannels.HitTestCapture, "true"));
+		bool handled = root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Down,
+			Button = PointerButton.Left,
+			X = 40,
+			Y = 50
+		});
+
+		Assert.That(handled, Is.True);
+		Assert.That(surface.InputEvents.Count, Is.EqualTo(2));
+		Assert.That(surface.InputEvents[0], Is.TypeOf<BrowserFocusEvent>());
+		Assert.That(surface.InputEvents[1], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Down, 0, 40, 50, BrowserPointerButton.Left, true)));
+	}
+
+	[Test]
+	public void HitTestCapture_EmptyPayload_Throws()
+	{
+		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
+		var surface = new TestBrowserSurface(frame);
+		_ = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
+
+		Assert.Throws<InvalidOperationException>(() =>
+			surface.RaisePageMessage(new BrowserScriptMessage(BrowserMessageChannels.HitTestCapture, string.Empty)));
+	}
+
+	[Test]
+	public void HitTestCapture_InvalidPayload_Throws()
+	{
+		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
+		var surface = new TestBrowserSurface(frame);
+		_ = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
+
+		Assert.Throws<InvalidOperationException>(() =>
+			surface.RaisePageMessage(new BrowserScriptMessage(BrowserMessageChannels.HitTestCapture, "yes")));
+	}
+
+	[Test]
+	public void HitTestCapture_AfterDispose_DoesNotThrow()
+	{
+		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
+		var surface = new TestBrowserSurface(frame);
+		var content = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
+		content.Dispose();
+
+		Assert.DoesNotThrow(() =>
+			surface.RaisePageMessage(new BrowserScriptMessage(BrowserMessageChannels.HitTestCapture, "true")));
+	}
+
+	[Test]
+	public void HitTest_AlphaMode_ApplicationMessage_DoesNotEnableCapture()
+	{
+		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
+		var surface = new TestBrowserSurface(frame);
+		var content = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
+		UiScene scene = UiSceneComposer.Compose(
+			new SkiaTextMeasurer(),
+			new SkiaImageSizeProvider(),
+			Ui.Canvas(content).Width(200).Height(100));
+		scene.Layout(200, 100);
+
+		surface.RaisePageMessage(new BrowserScriptMessage(BrowserMessageChannels.Application, "true"));
+
+		UiNode? transparentHit = scene.HitTest(40, 50);
+		Assert.That(transparentHit?.TagName, Is.Not.EqualTo("canvas"));
+	}
+
+	[Test]
 	public void HandleInput_AlphaMode_DownOnTransparentPixel_DoesNotSendBrowserInput()
 	{
 		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
@@ -447,6 +566,12 @@ public sealed class BrowserCanvasContentTests
 
 		public IBrowserMessageBridge Messages { get; }
 
+		public void RaisePageMessage(BrowserScriptMessage message)
+		{
+			ArgumentNullException.ThrowIfNull(message);
+			((TestBrowserMessageBridge)Messages).Raise(message);
+		}
+
 		public List<BrowserInputEvent> InputEvents { get; }
 
 		public List<BrowserViewport> ResizeEvents { get; }
@@ -522,9 +647,14 @@ public sealed class BrowserCanvasContentTests
 	{
 		public event EventHandler<BrowserScriptMessage>? MessageReceived;
 
-		public ValueTask PostMessageAsync(BrowserScriptMessage message, CancellationToken cancellationToken = default)
+		public void Raise(BrowserScriptMessage message)
 		{
 			MessageReceived?.Invoke(this, message);
+		}
+
+		public ValueTask PostMessageAsync(BrowserScriptMessage message, CancellationToken cancellationToken = default)
+		{
+			Raise(message);
 			return ValueTask.CompletedTask;
 		}
 

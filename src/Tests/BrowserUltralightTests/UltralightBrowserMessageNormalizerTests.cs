@@ -40,4 +40,14 @@ public sealed class UltralightBrowserMessageNormalizerTests
 		Assert.That(message.Channel, Is.EqualTo(BrowserMessageChannels.Application));
 		Assert.That(message.Payload, Is.EqualTo("not-json"));
 	}
+
+	[Test]
+	public void Normalize_HitTestCaptureEnvelope_UsesHitTestCaptureChannel()
+	{
+		BrowserScriptMessage message = UltralightBrowserMessageNormalizer.Normalize(
+			"""{"channel":"ludots.browser.hit-test-capture","payload":true}""");
+
+		Assert.That(message.Channel, Is.EqualTo(BrowserMessageChannels.HitTestCapture));
+		Assert.That(message.Payload, Is.EqualTo("true"));
+	}
 }

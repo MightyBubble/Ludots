@@ -62,4 +62,17 @@ public sealed class CefBrowserMessageNormalizerTests
 		Assert.That(message.Channel, Is.EqualTo(BrowserMessageChannels.Application));
 		Assert.That(message.Payload, Does.Contain("browser-ui-showcase"));
 	}
+
+	[Test]
+	public void Normalize_WhenPayloadIsHitTestCaptureEnvelope_UsesHitTestCaptureChannel()
+	{
+		BrowserScriptMessage message = CefBrowserMessageNormalizer.Normalize(new
+		{
+			channel = BrowserMessageChannels.HitTestCapture,
+			payload = true
+		});
+
+		Assert.That(message.Channel, Is.EqualTo(BrowserMessageChannels.HitTestCapture));
+		Assert.That(message.Payload, Is.EqualTo("true"));
+	}
 }
