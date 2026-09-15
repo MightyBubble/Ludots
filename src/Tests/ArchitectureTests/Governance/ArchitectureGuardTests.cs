@@ -53,6 +53,22 @@ namespace Ludots.Tests.Architecture.Governance
             nameof(SystemGroup.ClearPresentationFlags)
         };
 
+
+        [Test]
+        public void Core_MustNotContainConcreteGameplayActionLoops()
+        {
+            // issue #1536: behavior loops live as mod graph data on the generic
+            // GraphActionBrainHostSystem; a Core resurrection of a named behavior
+            // loop (attack/transport/...) is an architecture regression.
+            string coreRoot = Path.Combine(FindRepoRootForGuards(), "src", "Core", "Gameplay");
+            Assert.That(Directory.Exists(coreRoot), Is.True);
+            string[] resurrected = Directory.GetFiles(coreRoot, "*.cs", SearchOption.AllDirectories)
+                .Where(file => file.Contains("ActionLoop", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            Assert.That(resurrected, Is.Empty,
+                "Core/Gameplay must not reintroduce ActionLoop systems; author behavior as Script graphs driven by GraphActionBrainHostSystem (issue #1536).");
+        }
+
         [Test]
         public void LODLevel_DoesNotEncodeCameraVisibility()
         {
@@ -2764,7 +2780,18 @@ namespace Ludots.Tests.Architecture.Governance
                 {
                     twoByteOpCodes[value & 0xFF] = opCode;
                 }
+             }
+        }
+
+        private static string FindRepoRootForGuards()
+        {
+            string dir = AppContext.BaseDirectory;
+            while (dir != null && !File.Exists(Path.Combine(dir, "showcase.registry.json")))
+            {
+                dir = Path.GetDirectoryName(dir);
             }
+
+            return dir ?? throw new InvalidOperationException("Repo root not found.");
         }
     }
 }

@@ -30,7 +30,7 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
 
     private readonly GraphProgramRegistry _programs;
     private readonly IGraphRuntimeApi _api;
-    private readonly IGameplayActionLoopGate _gate;
+    private readonly IGameplayAdvanceGate _gate;
     private readonly int _budgetStepsPerTick;
     private readonly Dictionary<int, BrainPool> _poolsByGraphId = new();
     private readonly Dictionary<string, int> _graphIdByScriptKey = new(StringComparer.Ordinal);
@@ -41,7 +41,7 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
         World world,
         GraphProgramRegistry programs,
         IGraphRuntimeApi api,
-        IGameplayActionLoopGate gate,
+        IGameplayAdvanceGate gate,
         int budgetStepsPerTick = 256) : base(world)
     {
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
@@ -73,7 +73,7 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
                 Entity actor = Unsafe.Add(ref first, index);
                 ref readonly GraphActionBrain brain = ref brains[index];
                 BrainPool pool = ResolvePool(brain.ScriptKey);
-                int slot = pool.EnsureSlot(actor, _tick);
+                int slot = pool.EnsureSlot(actor, _tick, in brain);
                 if ((_tick % Math.Max(1, brain.ThinkEveryNTicks)) != 0)
                 {
                     continue;
@@ -96,6 +96,7 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
             pool.ClearRegisters(slot);
             ref BlackboardIntBuffer ints = ref World.Get<BlackboardIntBuffer>(actor);
             ref BlackboardEntityBuffer entities = ref World.Get<BlackboardEntityBuffer>(actor);
+            ints.Set(OrderGlueKeys.PlayerId, World.Get<Ludots.Core.Gameplay.Components.PlayerOwner>(actor).PlayerId);
             if (buffer.HasActive)
             {
                 ref readonly Order order = ref buffer.ActiveOrder.Order;
@@ -158,6 +159,7 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
         if (!_poolsByGraphId.TryGetValue(graphId, out BrainPool? pool))
         {
             pool = new BrainPool(
+                this,
                 scriptKey,
                 _programs.RequireProgramArray(graphId, GraphKind.Script, nameof(GraphActionBrainHostSystem)));
             _poolsByGraphId[graphId] = pool;
@@ -187,6 +189,27 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
         }
     }
 
+
+        private static void WriteBirthState(World world, Entity actor, in GraphActionBrain brain)
+        {
+            if (brain.BlackboardIntDefaults != null)
+            {
+                ref BlackboardIntBuffer buffer = ref world.Get<BlackboardIntBuffer>(actor);
+                foreach ((string key, int value) in brain.BlackboardIntDefaults)
+                {
+                    buffer.Set(Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(key), value);
+                }
+            }
+
+            if (brain.BlackboardEntityDefaults != null)
+            {
+                ref BlackboardEntityBuffer entities = ref world.Get<BlackboardEntityBuffer>(actor);
+                foreach (string key in brain.BlackboardEntityDefaults)
+                {
+                    entities.Set(Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(key), Entity.Null);
+                }
+            }
+        }
     /// <summary>Total graph steps executed since construction (metrics/diagnostics surface).</summary>
     public long TotalSteps
     {
@@ -215,6 +238,7 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
         public const string HasActiveName = "Order.HasActive";
         public const string HasPendingName = "Order.HasPending";
         public const string ActiveTargetName = "Order.ActiveTarget";
+        public const string PlayerIdName = "Order.PlayerId";
 
         public static readonly int ActiveTypeId = ConfigKeyRegistry.Register(ActiveTypeIdName);
         public static readonly int SpatialXCm = ConfigKeyRegistry.Register(SpatialXCmName);
@@ -222,6 +246,7 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
         public static readonly int HasActive = ConfigKeyRegistry.Register(HasActiveName);
         public static readonly int HasPending = ConfigKeyRegistry.Register(HasPendingName);
         public static readonly int ActiveTarget = ConfigKeyRegistry.Register(ActiveTargetName);
+        public static readonly int PlayerId = ConfigKeyRegistry.Register(PlayerIdName);
     }
 
     private sealed class BrainPool
@@ -242,10 +267,12 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
         public int[] Stamps = new int[InitialCapacity];
         public long Steps;
         private readonly List<int> _freeSlots = new();
+        private readonly GraphActionBrainHostSystem _owner;
         private int _capacity = InitialCapacity;
 
-        public BrainPool(string scriptKey, GraphInstruction[] program)
+        public BrainPool(GraphActionBrainHostSystem owner, string scriptKey, GraphInstruction[] program)
         {
+            _owner = owner;
             ScriptKey = scriptKey;
             Program = program;
         }
@@ -257,7 +284,7 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
         public Span<Entity> TargetRow(int slot) => Targets.AsSpan(slot * GraphVmLimits.MaxTargets, GraphVmLimits.MaxTargets);
         public Span<int> CallStackRow(int slot) => CallStacks.AsSpan(slot * GraphVmLimits.MaxCallStackDepth, GraphVmLimits.MaxCallStackDepth);
 
-        public int EnsureSlot(Entity actor, int tick)
+        public int EnsureSlot(Entity actor, int tick, in GraphActionBrain brain)
         {
             if (Slots.TryGetValue(actor, out int slot))
             {
@@ -281,6 +308,7 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
 
             Cursors[slot].Reset();
             ClearRegisters(slot);
+            WriteBirthState(_owner.World, actor, in brain);
             Slots[actor] = slot;
             Stamps[slot] = tick;
             return slot;

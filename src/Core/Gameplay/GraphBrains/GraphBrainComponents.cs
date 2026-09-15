@@ -13,4 +13,13 @@ public struct GraphActionBrain
 {
     public string ScriptKey;
     public int ThinkEveryNTicks;
+
+    /// <summary>
+    /// Birth state for the entity blackboard, written by the host when the brain slot is
+    /// allocated (ConfigKeyRegistry space, same buffer the graph ops use). Not a parallel
+    /// variable system: graphs keep reading/writing these keys through the normal ops;
+    /// the defaults only guarantee first-tick reads succeed.
+    /// </summary>
+    public (string Key, int Value)[] BlackboardIntDefaults;
+    public string[] BlackboardEntityDefaults;
 }

@@ -1918,6 +1918,15 @@
       {
         "id": "a3_dy2",
         "op": "MulFloat"
+      },
+      {
+        "id": "gPid",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Order.PlayerId"
+      },
+      {
+        "id": "qTeam",
+        "op": "QueryFilterTeam"
       }
     ],
     "controlEdges": [
@@ -2222,19 +2231,9 @@
         "to": "haltLoad"
       },
       {
-        "from": "brT",
-        "fromPort": "false",
-        "to": "qAll"
-      },
-      {
         "from": "qAll",
         "fromPort": "next",
         "to": "qSink"
-      },
-      {
-        "from": "qSink",
-        "fromPort": "next",
-        "to": "cnt"
       },
       {
         "from": "cnt",
@@ -2435,6 +2434,26 @@
         "from": "savePh0",
         "fromPort": "next",
         "to": "haltDone"
+      },
+      {
+        "from": "brT",
+        "fromPort": "false",
+        "to": "gPid"
+      },
+      {
+        "from": "gPid",
+        "fromPort": "next",
+        "to": "qAll"
+      },
+      {
+        "from": "qSink",
+        "fromPort": "next",
+        "to": "qTeam"
+      },
+      {
+        "from": "qTeam",
+        "fromPort": "next",
+        "to": "cnt"
       }
     ],
     "valueEdges": [
@@ -3079,6 +3098,18 @@
         "fromPort": "value",
         "to": "savePh0",
         "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gPid",
+        "toPort": "source"
+      },
+      {
+        "from": "gPid",
+        "fromPort": "value",
+        "to": "qTeam",
+        "toPort": "teamId"
       }
     ]
   }

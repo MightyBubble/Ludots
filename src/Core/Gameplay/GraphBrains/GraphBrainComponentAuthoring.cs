@@ -22,10 +22,10 @@ internal static class GraphBrainComponentAuthoring
 
         foreach (var property in obj)
         {
-            if (property.Key is not ("Script" or "ThinkEveryNTicks"))
+            if (property.Key is not ("Script" or "ThinkEveryNTicks" or "BlackboardInts" or "BlackboardEntities"))
             {
                 throw new InvalidOperationException(
-                    $"{context} authoring does not accept property '{property.Key}'; allowed: Script, ThinkEveryNTicks.");
+                    $"{context} authoring does not accept property '{property.Key}'; allowed: Script, ThinkEveryNTicks, BlackboardInts, BlackboardEntities.");
             }
         }
 
@@ -51,10 +51,50 @@ internal static class GraphBrainComponentAuthoring
             }
         }
 
+        var intDefaults = new List<(string Key, int Value)>();
+        if (obj.TryGetPropertyValue("BlackboardInts", out JsonNode? intNode) && intNode is JsonObject ints)
+        {
+            foreach (var entry in ints)
+            {
+                if (entry.Value is not JsonValue v || !v.TryGetValue<int>(out int value))
+                {
+                    throw new InvalidOperationException($"{context}.BlackboardInts['{entry.Key}'] must be an integer.");
+                }
+
+                intDefaults.Add((RequireCanonicalKey(entry.Key, context), value));
+            }
+        }
+
+        var entityDefaults = new List<string>();
+        if (obj.TryGetPropertyValue("BlackboardEntities", out JsonNode? entityNode) && entityNode is JsonObject entities)
+        {
+            foreach (var entry in entities)
+            {
+                if (entry.Value is JsonValue)
+                {
+                    throw new InvalidOperationException($"{context}.BlackboardEntities['{entry.Key}'] must be null (birth state clears the key).");
+                }
+
+                entityDefaults.Add(RequireCanonicalKey(entry.Key, context));
+            }
+        }
+
         entity.Add(new GraphActionBrain
         {
             ScriptKey = script,
             ThinkEveryNTicks = thinkEveryNTicks,
+            BlackboardIntDefaults = intDefaults.ToArray(),
+            BlackboardEntityDefaults = entityDefaults.ToArray(),
         });
     }
+
+        private static string RequireCanonicalKey(string key, string context)
+        {
+            if (string.IsNullOrWhiteSpace(key) || key.Length != key.Trim().Length)
+            {
+                throw new InvalidOperationException($"{context} blackboard keys must be non-empty canonical strings.");
+            }
+
+            return key;
+        }
 }

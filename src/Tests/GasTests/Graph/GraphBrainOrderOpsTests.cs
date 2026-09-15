@@ -420,13 +420,13 @@ namespace Ludots.Tests.GAS
         //  GraphActionBrainHostSystem
         // ════════════════════════════════════════════════════════════════════
 
-        private sealed class OpenGate : IGameplayActionLoopGate
+        private sealed class OpenGate : IGameplayAdvanceGate
         {
             public static readonly OpenGate Instance = new();
             public bool CanAdvanceGameplay => true;
         }
 
-        private sealed class ClosedGate : IGameplayActionLoopGate
+        private sealed class ClosedGate : IGameplayAdvanceGate
         {
             public bool CanAdvanceGameplay => false;
         }

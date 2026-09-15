@@ -149,11 +149,6 @@
         "SideIndex": -1
       },
       "FrontlineCore": {},
-      "ResourceSinkProfile": {
-        "ResourceAttribute": "Crystals",
-        "DockOffsetXCm": 0,
-        "DockOffsetYCm": 0
-      },
       "FrontlineCoreState": {},
       "FrontlineDeathState": {},
       "FrontlineTagBindingState": {}
@@ -257,7 +252,15 @@
       "FrontlineTagBindingState": {},
       "GraphActionBrain": {
         "Script": "rts.frontline.transport",
-        "ThinkEveryNTicks": 1
+        "ThinkEveryNTicks": 1,
+        "BlackboardInts": {
+          "Brain.Transport.Phase": 0,
+          "Brain.Transport.Ticks": 0
+        },
+        "BlackboardEntities": {
+          "Brain.Transport.Source": null,
+          "Brain.Transport.Sink": null
+        }
       }
     }
   },
@@ -357,7 +360,15 @@
       "FrontlineTagBindingState": {},
       "GraphActionBrain": {
         "Script": "rts.frontline.attack",
-        "ThinkEveryNTicks": 1
+        "ThinkEveryNTicks": 1,
+        "BlackboardInts": {
+          "Brain.Attack.Cooldown": 0,
+          "Brain.Attack.DirX": 0,
+          "Brain.Attack.DirY": 0
+        },
+        "BlackboardEntities": {
+          "Brain.Attack.Target": null
+        }
       }
     }
   },
@@ -419,9 +430,6 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "FrontlineCrystalNode": {},
-      "ResourceSourceProfile": {
-        "ResourceAttribute": "Crystals"
-      },
       "FrontlineTagBindingState": {}
     }
   }

@@ -1,0 +1,14 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="468" viewBox="0 0 1600 468">
+  <rect width="1600" height="468" fill="#081018" />
+  <text x="24" y="40" fill="#ffffff" font-size="28" font-family="Consolas, monospace">RTS command panel evidence timeline</text>
+  <text x="56" y="76" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">001 001_peasant_build_palette</text>
+  <text x="460" y="76" fill="#ffffff" font-size="20" font-family="Consolas, monospace">focus=Peasant | slots=4 | statuses=0 | queue=0 | preview=core_input_preview_build_site</text>
+  <text x="56" y="148" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">002 002_barracks_training_queue</text>
+  <text x="460" y="148" fill="#ffffff" font-size="20" font-family="Consolas, monospace">focus=Barracks | slots=3 | statuses=1 | queue=1 | preview=none</text>
+  <text x="56" y="220" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">003 003_gateway_research_status</text>
+  <text x="460" y="220" fill="#ffffff" font-size="20" font-family="Consolas, monospace">focus=Gateway | slots=4 | statuses=1 | queue=1 | preview=none</text>
+  <text x="56" y="292" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">004 004_warpgate_preview</text>
+  <text x="460" y="292" fill="#ffffff" font-size="20" font-family="Consolas, monospace">focus=Gateway | slots=4 | statuses=0 | queue=0 | preview=core_input_preview_warp_site</text>
+  <text x="56" y="364" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">005 005_drone_morph_preview</text>
+  <text x="460" y="364" fill="#ffffff" font-size="20" font-family="Consolas, monospace">focus=Drone | slots=1 | statuses=0 | queue=0 | preview=core_input_preview_morph_site</text>
+</svg>

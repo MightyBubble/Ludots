@@ -5,7 +5,6 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.ActionLoops;
 using Ludots.Core.Gameplay.GraphBrains;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -49,7 +48,7 @@ public readonly record struct FrontlineOpeningViewSnapshot(
     bool IsReady,
     int ReadyVisibilityRevision);
 
-public sealed class FrontlineRuntime : IGameplayActionLoopGate
+public sealed class FrontlineRuntime : IGameplayAdvanceGate
 {
     private readonly IModContext _context;
     private readonly bool[] _connected = { true, true };

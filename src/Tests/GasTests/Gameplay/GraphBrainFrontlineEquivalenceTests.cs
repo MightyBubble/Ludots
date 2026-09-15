@@ -35,7 +35,7 @@ namespace Ludots.Tests.GAS
         private const int Gather = 172;
         private static int SinkTemplateKeyId;
 
-        private sealed class OpenGate : IGameplayActionLoopGate
+        private sealed class OpenGate : IGameplayAdvanceGate
         {
             public static readonly OpenGate Instance = new();
             public bool CanAdvanceGameplay => true;
