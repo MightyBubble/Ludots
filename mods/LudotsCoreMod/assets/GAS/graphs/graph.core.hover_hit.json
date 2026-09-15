@@ -1,0 +1,103 @@
+[
+  {
+    "id": "graph.core.hover_hit",
+    "kind": "Query",
+    "entry": "rep",
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "pointer_x",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "pointer_y",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "candidates",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "hover_hits",
+        "op": "ScreenRegionToEntities"
+      },
+      {
+        "id": "first",
+        "op": "QueryLimit",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "pointer_x"
+      },
+      {
+        "from": "pointer_x",
+        "fromPort": "next",
+        "to": "pointer_y"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "next",
+        "to": "candidates"
+      },
+      {
+        "from": "candidates",
+        "fromPort": "next",
+        "to": "hover_hits"
+      },
+      {
+        "from": "hover_hits",
+        "fromPort": "next",
+        "to": "first"
+      },
+      {
+        "from": "first",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "pointer_x",
+        "fromPort": "value",
+        "to": "hover_hits",
+        "toPort": "a"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "value",
+        "to": "hover_hits",
+        "toPort": "b"
+      },
+      {
+        "from": "pointer_x",
+        "fromPort": "value",
+        "to": "hover_hits",
+        "toPort": "c"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "value",
+        "to": "hover_hits",
+        "toPort": "max"
+      },
+      {
+        "from": "hover_hits",
+        "fromPort": "list",
+        "to": "first",
+        "toPort": "list"
+      }
+    ]
+  }
+]
