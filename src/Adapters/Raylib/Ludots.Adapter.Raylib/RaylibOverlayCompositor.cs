@@ -24,6 +24,8 @@ namespace Ludots.Adapter.Raylib
         private RaylibSkiaFramebufferOverlaySurface? _framebufferTopOverlaySurface;
 
         private bool _underlayHadContent;
+        private static readonly bool OverlayTraceEnabled = ReadEnvBool("LUDOTS_OVERLAY_TRACE");
+        private int _traceFrame;
         private bool _overlayHadContent;
         private bool _uiHadContent;
         private bool _compositeHadContent;
@@ -95,6 +97,22 @@ namespace Ludots.Adapter.Raylib
             if (framebufferDirectUnderlay && hasUnderlay)
             {
                 refreshUnderlay = true;
+            }
+
+            if (OverlayTraceEnabled && (_traceFrame++ % 30) == 0)
+            {
+                int underUiTexts = 0, underUiBars = 0, topMost = 0;
+                if (scene != null)
+                {
+                    underUiTexts = scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text).Length;
+                    underUiBars = scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar).Length;
+                    topMost = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.MinimapMarker).Length +
+                        scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text).Length;
+                }
+
+                Ludots.Core.Diagnostics.Log.Info(
+                    in Ludots.Core.Diagnostics.LogChannels.Presentation,
+                    $"[overlay-trace] f={_traceFrame} underlay={hasUnderlay} top={hasTopOverlay} fbDirect={framebufferDirectUnderlay} refreshU={refreshUnderlay} uText={underUiTexts} uBar={underUiBars} top={topMost} verU={currentUnderlayVersion}/{_underlayLayerVersion}");
             }
 
             bool underlayCanvasChanged = false;

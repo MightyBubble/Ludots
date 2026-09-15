@@ -708,6 +708,7 @@ namespace Ludots.Adapter.Raylib
                             cameraPresenter.Update(ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine), cameraAlpha, renderCameraDebug);
                         }
                         hudProjection?.Update(dt);
+                        OverlayTraceProbe.TraceHudAnchorState(engine);
                         benchmarkRenderer?.PrepareFrame(
                             presentationTiming,
                             lastW,
