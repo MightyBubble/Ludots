@@ -1,0 +1,225 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Numerics;
+using Arch.Core;
+using Ludots.Core.Client;
+using Ludots.Core.Engine;
+using Ludots.Core.Input.Runtime;
+using Ludots.Core.Map;
+using Ludots.Core.Scripting;
+using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Systems;
+using Ludots.Platform.Abstractions;
+using Ludots.Tests.TestCommon;
+using NUnit.Framework;
+
+namespace Ludots.Tests.Presentation
+{
+    /// <summary>
+    /// 保留 lane 世界文本的幽灵生命周期合同：属主被整体剔除后再回屏，其值绑定文本
+    /// （血条 current/base）必须以属主当前位置重新锚定——锚点冻结即残留（#用户观测：
+    /// 镜头拉远后 HUD 文本铺满没有单位的空地）。
+    /// </summary>
+    [TestFixture]
+    public sealed class MassNavigationHudGhostLifecycleTests
+    {
+        private static readonly string[] Mods =
+        {
+            "LudotsCoreMod", "CoreInputMod", "SelectionInteractionMod",
+            "MassNavigationMod", "CapabilityStandardMassNavigationLargeWorld10kMod"
+        };
+
+        [Test]
+        public void HealthTextAnchorsRetrackOwnersAfterCullCycle()
+        {
+            var backend = new TestInputBackend();
+            var focusOverride = new CameraCullingFocusOverride();
+            using GameEngine engine = CreateEngine(backend, focusOverride);
+            WorldHudToScreenSystem hudProjection = CreateHudProjection(engine);
+            engine.LoadMap(new MapLoadRequest(new MapId("mass_navigation"),
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, null) })));
+
+            Tick(engine, hudProjection, 60);
+
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
+                ?? throw new InvalidOperationException("PresentationWorldHudBuffer missing.");
+            Assert.That(worldHud.Count, Is.GreaterThan(0), "agents near the default camera must emit world HUD texts");
+
+            // 采样：每个属主一条文本，记录锚点与属主实时位置。
+            Dictionary<Entity, Vector3> anchorsByOwner = new();
+            foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
+            {
+                if (item.Kind != WorldHudItemKind.Text || anchorsByOwner.Count >= 12)
+                {
+                    continue;
+                }
+
+                if (!anchorsByOwner.TryAdd(item.Owner, item.WorldPosition))
+                {
+                    continue;
+                }
+            }
+
+            Assert.That(anchorsByOwner.Count, Is.GreaterThan(0), "sampling must capture at least one health text owner");
+            int baselineCount = worldHud.Count;
+
+            // 剔除阶段：把剔除焦点指到远离人群的角落、窄视场，全员 ForceCull；
+            // 仿真继续，属主继续行走。
+            focusOverride.Enabled = true;
+            focusOverride.TargetCm = new Vector2(90000f, 90000f);
+            focusOverride.DistanceCm = 800f;
+            focusOverride.Yaw = 0f;
+            focusOverride.Pitch = 45f;
+            focusOverride.FovYDeg = 4f;
+            Tick(engine, hudProjection, 150);
+            int culledCount = worldHud.Count;
+            Console.WriteLine($"worldHud count: baseline={baselineCount} culled={culledCount}");
+
+            // 回屏阶段：恢复自然相机，属主重新可见；文本条目必须重新锚定到属主当前位置。
+            focusOverride.Enabled = false;
+            Tick(engine, hudProjection, 45);
+
+            Dictionary<Entity, Vector3> retracked = new();
+            foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
+            {
+                if (item.Kind == WorldHudItemKind.Text)
+                {
+                    retracked[item.Owner] = item.WorldPosition;
+                }
+            }
+
+            Console.WriteLine($"worldHud count after restore: {worldHud.Count} (owners sampled: {anchorsByOwner.Count}, retracked owners: {retracked.Count})");
+
+            var query = new QueryDescription().WithAll<VisualTransform>();
+            int verified = 0;
+            int stale = 0;
+            engine.World.Query(in query, (Entity owner, ref VisualTransform visual) =>
+            {
+                if (!anchorsByOwner.TryGetValue(owner, out Vector3 frozenAnchor) ||
+                    !retracked.TryGetValue(owner, out Vector3 currentAnchor))
+                {
+                    return;
+                }
+
+                float ownerDrift = Vector3.Distance(visual.Position, frozenAnchor);
+                if (ownerDrift < 1.5f)
+                {
+                    return; // 没走远的属主无法区分冻结与跟踪
+                }
+
+                verified++;
+                // 锚点合同：文本必须挂在属主当前位置的附件偏移处（XZ 跟随 + 1.4~1.8m 挂高）。
+                Vector2 ownerXz = new(visual.Position.X, visual.Position.Z);
+                Vector2 anchorXz = new(currentAnchor.X, currentAnchor.Z);
+                float anchorError = Vector2.Distance(ownerXz, anchorXz);
+                if (anchorError > 0.5f)
+                {
+                    stale++;
+                    Console.WriteLine(
+                        $"STALE owner={owner.Id} ownerPos=({visual.Position.X:F2},{visual.Position.Y:F2},{visual.Position.Z:F2}) " +
+                        $"anchor=({currentAnchor.X:F2},{currentAnchor.Y:F2},{currentAnchor.Z:F2}) error={anchorError:F2}m drift={ownerDrift:F2}m");
+                }
+            });
+
+            Console.WriteLine($"verified={verified} stale={stale}");
+            Assert.That(verified, Is.GreaterThan(0),
+                "cull cycle must leave walkable sampled owners to verify anchor tracking");
+            Assert.That(stale, Is.EqualTo(0),
+                $"{stale}/{verified} health texts kept frozen anchors across the cull cycle (ghost remnant contract)");
+        }
+
+        private static GameEngine CreateEngine(TestInputBackend backend, CameraCullingFocusOverride focusOverride)
+        {
+            string repoRoot = FindRepoRoot();
+            var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(RepoModPaths.ResolveExplicit(repoRoot, Mods), Path.Combine(repoRoot, "assets"));
+            var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
+            var handler = new PlayerInputHandler(backend, inputConfig);
+            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
+            {
+                handler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
+            }
+
+            engine.SetService(CoreServiceKeys.InputHandler, handler);
+            engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
+            engine.SetService(CoreServiceKeys.ViewController, (IViewController)new HeadlessViewController(1280f, 720f));
+            HeadlessPresentationTestHost.Install(engine, focusOverride);
+            engine.Start();
+            return engine;
+        }
+
+        private static WorldHudToScreenSystem CreateHudProjection(GameEngine engine)
+        {
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
+                ?? throw new InvalidOperationException("PresentationWorldHudBuffer missing.");
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)
+                ?? throw new InvalidOperationException("PresentationScreenHudBuffer missing.");
+            var strings = engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+                ?? throw new InvalidOperationException("ScreenProjector missing.");
+            var view = engine.GetService(CoreServiceKeys.ViewController)
+                ?? throw new InvalidOperationException("ViewController missing.");
+            var timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+            return new WorldHudToScreenSystem(engine.World, worldHud, strings, projector, view, screenHud, timings);
+        }
+
+        private static void Tick(GameEngine engine, WorldHudToScreenSystem hudProjection, int frames)
+        {
+            for (int i = 0; i < frames; i++)
+            {
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
+                engine.Tick(1f / 60f);
+                HeadlessPresentationTestHost.UpdateCamera(engine);
+                hudProjection.Update(1f / 60f);
+            }
+        }
+
+        private static string FindRepoRoot()
+        {
+            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            for (int i = 0; i < 12 && dir != null; i++)
+            {
+                if (File.Exists(Path.Combine(dir.FullName, "src", "Core", "Ludots.Core.csproj")) &&
+                    Directory.Exists(Path.Combine(dir.FullName, "mods")))
+                {
+                    return dir.FullName;
+                }
+
+                dir = dir.Parent;
+            }
+
+            throw new InvalidOperationException("repo root not found");
+        }
+
+        private sealed class HeadlessViewController : IViewController
+        {
+            public HeadlessViewController(float width, float height) { Resolution = new Vector2(width, height); }
+            public Vector2 Resolution { get; }
+            public float Fov => 50f;
+            public float AspectRatio => Resolution.X / Resolution.Y;
+        }
+
+        private sealed class TestInputBackend : IInputBackend
+        {
+            private readonly HashSet<string> _buttons = new(StringComparer.Ordinal);
+            public Vector2 MousePosition { get; set; }
+            public void SetMousePosition(Vector2 v) => MousePosition = v;
+            public float GetAxis(string devicePath) => 0f;
+            public bool GetButton(string devicePath) => _buttons.Contains(devicePath);
+            public Vector2 GetMousePosition() => MousePosition;
+            public float GetMouseWheel() => 0f;
+            public void EnableIME(bool enable) { }
+            public void SetIMECandidatePosition(int x, int y) { }
+            public string GetCharBuffer() => string.Empty;
+            public void SetButton(string devicePath, bool down)
+            {
+                if (down) _buttons.Add(devicePath);
+                else _buttons.Remove(devicePath);
+            }
+        }
+    }
+}
