@@ -308,11 +308,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.LoadTextKey, ScriptAndTriggerGraph, GraphValueType.Text, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.StartDialogue, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             // ── Order-driven graph brains (issue #1536) ──
-            Add(rows, GraphNodeOp.LoadEntityPosX, ScriptAndTriggerGraph, GraphValueType.Int, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int);
-            Add(rows, GraphNodeOp.LoadEntityPosY, ScriptAndTriggerGraph, GraphValueType.Int, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int);
-            Add(rows, GraphNodeOp.IntToFloat, ScriptAndTriggerGraph, GraphValueType.Float, portA, scriptPorts: portA, scriptOut: GraphValueType.Float);
-            Add(rows, GraphNodeOp.FloatToInt, ScriptAndTriggerGraph, GraphValueType.Int, portA, scriptPorts: portA, scriptOut: GraphValueType.Int);
-            Add(rows, GraphNodeOp.SqrtFloat, ScriptAndTriggerGraph, GraphValueType.Float, portA, scriptPorts: portA, scriptOut: GraphValueType.Float);
+            Add(rows, GraphNodeOp.LoadEntityPosX, LinearQueryScript, GraphValueType.Int, portSource, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int);
+            Add(rows, GraphNodeOp.LoadEntityPosY, LinearQueryScript, GraphValueType.Int, portSource, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int);
+            Add(rows, GraphNodeOp.IntToFloat, LinearQueryScript, GraphValueType.Float, portA, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Float);
+            Add(rows, GraphNodeOp.FloatToInt, LinearQueryScript, GraphValueType.Int, portA, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Int);
+            Add(rows, GraphNodeOp.SqrtFloat, LinearQueryScript, GraphValueType.Float, portA, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.SubmitAssignedOrder, ScriptAndTriggerGraph, GraphValueType.Void, portApplyTemplate, scriptPorts: portApplyTemplate, imm: GraphOperandRole.SymbolImm, scriptSliceOnly: true, worldSideEffect: true);
             Add(rows, GraphNodeOp.CompleteActiveOrder, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: noPorts, scriptSliceOnly: true, worldSideEffect: true);
 

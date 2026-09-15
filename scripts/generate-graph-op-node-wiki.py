@@ -46,6 +46,7 @@ DRIVER_LABELS = {
     "placedRegion": "放置区域名册",
     "sandbox": "组合短剧",
     "collectionWrite": "集合写入",
+    "order": "订单与行为",
 }
 
 HANDBOOK_BY_DRIVER = {
@@ -66,6 +67,7 @@ HANDBOOK_BY_DRIVER = {
     "sandbox": ("gr-02-document.md", "图文档写法 · gr-02"),
     "aimsource": ("gr-op-06-spatial.md", "空间圈人 · gr-op-06"),
     "collectionWrite": ("map-02-triggers.md", "地图触发器 · map-02"),
+    "order": ("gr-op-14-control-flow.md", "脚本控制流 · gr-op-14"),
 }
 
 ALL_KINDS = [
