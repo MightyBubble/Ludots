@@ -49,7 +49,7 @@ CapabilityStandardPresenterCommandShowcaseMod/
 
 ## 详情
 
-- 规则全部是数据（presenters 分片 JSON），按钮只写 `PresentationEventStream`，Mod 代码不直接操作 presenter 实例。
+- 规则全部是数据（presenters 分片 JSON），按钮只写 `PresentationEventStream`（含 B 站 SinkParamToAsset 刷新）。安装期可直写一次 CreatePresenter 建树；玩法指令不得程序化直发。
 - 站点 D 的 create/destroy 规则放在无实例的 `pcmd.field_director` 上，避免 ExistingInstances/Scoped 路由对 owner definition 实例的隐式扇出。
 - 靶标用「每靶标独立 owner + 共享 scope」的形态：`_scopedInstances` 以 (def, owner, scope) 为键不会去重，`_byScope` 又能按 scope 整域清场。
 
@@ -57,7 +57,7 @@ CapabilityStandardPresenterCommandShowcaseMod/
 
 - builtin 指令不得携带 extension route。
 - SinkParamToAsset 只接受 paramKey/paramLane 刷新 selector，不接受值 payload。
-- 按钮不得绕过 `PresenterCommandBuffer` / `PresenterRuntimeSystem` 直接改实例状态。
+- 按钮不得绕过事件流直接往 `PresenterCommandBuffer` 塞内建玩法指令；`SinkParamToAsset` 必须由 presenters 规则编译（创建初始树允许安装期直写 CreatePresenter）。
 
 ## UAT
 
@@ -84,7 +84,8 @@ Feature: 玩家用按钮驱动四个站点的 presenter 指令
 
   Scenario: B 站强制刷新对照柱
     When 我点击 `B·强制刷新对照柱`
-    Then 对照柱不写值也产生一次重 emit
+    Then 刷新由 presenters 规则编译为 SinkParamToAsset
+    And 对照柱不写值也产生一次重 emit
 
   Scenario: C 站烟囱开关
     When 我点击 `C·烟囱开关`

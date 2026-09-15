@@ -5,7 +5,7 @@ presentation 域的全部作者面能力，逐条可看。每条回答四件事�
 | 分组 | 条目数 | 页面 |
 |---|---|---|
 | 资产类型 AssetKind | 10 条 | [asset-kinds.md](asset-kinds.md) |
-| 行为 BehaviorKind | 13 条（含标准生产配置） | [behaviors.md](behaviors.md) |
+| 行为 BehaviorKind | 14 条（含 TrailMesh；含标准生产配置） | [behaviors.md](behaviors.md) |
 | 渲染车道 VisualRenderPath | 6 条 + LOD/裁剪 | [render-lanes.md](render-lanes.md) |
 | 环境与光照 | 11 条 | [environment.md](environment.md) |
 | 指令 PresenterCommandKind | 11 条 + Extension | [commands.md](commands.md) |

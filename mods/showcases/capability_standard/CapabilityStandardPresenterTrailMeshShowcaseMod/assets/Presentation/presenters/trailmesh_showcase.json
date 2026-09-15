@@ -1,0 +1,53 @@
+[
+  {
+    "id": "trailmesh_showcase.blade",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.18, 0.18, 1.4]
+        },
+        "style": {
+          "color": [0.85, 0.88, 0.95, 1.0]
+        }
+      },
+      {
+        "slot": "trail",
+        "kind": "TrailMesh",
+        "activeByDefault": true,
+        "trailMesh": {
+          "baseOffset": [0, 0, -0.7],
+          "tipOffset": [0, 0, 0.7],
+          "maxSamples": 20,
+          "sampleIntervalSeconds": 0.012,
+          "sampleLifetimeSeconds": 0.35,
+          "headColor": [0.7, 0.9, 1.0, 0.9],
+          "tailColor": [0.2, 0.4, 1.0, 0.0]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "trailmesh_showcase.trail.on" },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "trail"
+        }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "trailmesh_showcase.trail.off" },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "trail"
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "Id": "capability_standard_presenter_trailmesh_showcase",
+  "Tags": ["showcase", "capability-standard", "presenter", "trailmesh"],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 120,
+    "DistanceCm": 14000,
+    "Pitch": 45,
+    "Yaw": 200,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

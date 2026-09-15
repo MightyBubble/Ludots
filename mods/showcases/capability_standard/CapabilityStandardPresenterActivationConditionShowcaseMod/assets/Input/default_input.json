@@ -1,0 +1,17 @@
+{
+  "actions": [
+    { "id": "ActivationConditionShowcase.RespawnFalseWithTransform", "name": "ActivationConditionShowcase_RespawnFalseWithTransform", "type": "Button" },
+    { "id": "ActivationConditionShowcase.RespawnFalseWithoutTransform", "name": "ActivationConditionShowcase_RespawnFalseWithoutTransform", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "ActivationConditionShowcase.Controls",
+      "name": "Activation Condition Showcase Controls",
+      "priority": 140,
+      "bindings": [
+        { "actionId": "ActivationConditionShowcase.RespawnFalseWithTransform", "path": "<Keyboard>/1" },
+        { "actionId": "ActivationConditionShowcase.RespawnFalseWithoutTransform", "path": "<Keyboard>/2" }
+      ]
+    }
+  ]
+}

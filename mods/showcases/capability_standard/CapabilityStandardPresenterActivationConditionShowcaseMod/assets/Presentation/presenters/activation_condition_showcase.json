@@ -1,0 +1,45 @@
+[
+  {
+    "id": "activation_condition_showcase.station_marker",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [1.2, 0.15, 1.2]
+        },
+        "style": {
+          "color": [0.35, 0.35, 0.4, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "activation_condition_showcase.beacon",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": false,
+        "activationCondition": { "inline": "SourceHasVisualTransform" },
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.9, 0.9, 0.9]
+        },
+        "style": {
+          "color": [1.0, 0.92, 0.35, 1.0]
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "name": "CapabilityStandardPresenterActivationConditionShowcaseMod",
+  "version": "1.0.0",
+  "description": "Capability-standard showcase for BehaviorSlot.activationCondition: a glow AssetBinding lights only when SourceHasVisualTransform holds at PresenterCreated.",
+  "main": "bin/net8.0/CapabilityStandardPresenterActivationConditionShowcaseMod.dll",
+  "priority": -2000,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "capability-standard", "presenter", "activation-condition"]
+}

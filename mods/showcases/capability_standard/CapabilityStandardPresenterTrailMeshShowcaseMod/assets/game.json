@@ -1,0 +1,12 @@
+{
+  "startupMapId": "capability_standard_presenter_trailmesh_showcase",
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "TrailMeshShowcase.Controls"
+  ],
+  "windowTitle": "Ludots Engine - Capability Standard Presenter TrailMesh Showcase",
+  "targetFps": 0,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}
