@@ -288,7 +288,7 @@ public sealed class GraphOpsStageVisuals
         }
 
         AttributeMutationOps.SetBase(_world, entity, _healthAttrId, healthMax, _tagOps);
-        AttributeMutationOps.SetCurrent(_world, entity, _healthAttrId, Math.Clamp(health, 0f, healthMax), _tagOps);
+        AttributeMutationOps.SetCurrent(_world, entity, _healthAttrId, Math.Clamp(health, 0f, healthMax), _tagOps, Entity.Null);
     }
 
     public void SetPosition(Entity entity, float xMeters, float yMeters)

@@ -2174,17 +2174,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RejectDerivedAttributeSideEffect(nameof(ModifyAttributeAdd));
             if (_effectSideEffects != null)
             {
-                _effectSideEffects.StageAttributeAdd(target, attributeId, delta);
+                _effectSideEffects.StageAttributeAdd(target, attributeId, delta, caster);
                 return;
             }
-            AttributeMutationOps.AddCurrent(_world, target, attributeId, delta, RequireTagOps());
+            AttributeMutationOps.AddCurrent(_world, target, attributeId, delta, RequireTagOps(), caster);
         }
 
         public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value)
         {
             if (_effectSideEffects != null)
             {
-                _effectSideEffects.StageAttributeSet(target, attributeId, value);
+                _effectSideEffects.StageAttributeSet(target, attributeId, value, caster);
                 return;
             }
 
@@ -2200,7 +2200,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 return;
             }
 
-            AttributeMutationOps.SetCurrent(_world, target, attributeId, value, RequireTagOps());
+            AttributeMutationOps.SetCurrent(_world, target, attributeId, value, RequireTagOps(), caster);
         }
 
         public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude)

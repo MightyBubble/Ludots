@@ -171,7 +171,8 @@ public sealed class ResourceTransportSystem : BaseSystem<World, float>
                     destination,
                     profile.ResourceAttributeId,
                     destinationAttributes.GetCurrent(profile.ResourceAttributeId) + profile.CargoAmount,
-                    _tagOps);
+                    _tagOps,
+                    actor);
                 state = default;
             }
         }

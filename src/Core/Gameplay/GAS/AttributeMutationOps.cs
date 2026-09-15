@@ -9,7 +9,7 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public static class AttributeMutationOps
     {
-        public static void AddCurrent(World world, Entity target, int attributeId, float delta, TagOps tagOps)
+        public static void AddCurrent(World world, Entity target, int attributeId, float delta, TagOps tagOps, Entity source)
         {
             if (!world.IsAlive(target) || !world.Has<AttributeBuffer>(target))
             {
@@ -17,10 +17,10 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(target);
-            SetCurrent(world, target, attributeId, attributes.GetCurrent(attributeId) + delta, tagOps);
+            SetCurrent(world, target, attributeId, attributes.GetCurrent(attributeId) + delta, tagOps, source);
         }
 
-        public static void SetCurrent(World world, Entity target, int attributeId, float value, TagOps tagOps)
+        public static void SetCurrent(World world, Entity target, int attributeId, float value, TagOps tagOps, Entity source)
         {
             if (!world.IsAlive(target) || !world.Has<AttributeBuffer>(target))
             {
@@ -42,7 +42,7 @@ namespace Ludots.Core.Gameplay.GAS
 
             try
             {
-                world.Get<DirtyFlags>(target).MarkAttributeDirty(attributeId);
+                world.Get<DirtyFlags>(target).RecordAttributeSource(attributeId, source);
                 tagOps.MarkDirtyEntity(world, target);
                 MarkAttributeAggregateDirty(world, target, tagOps);
             }
@@ -56,14 +56,14 @@ namespace Ludots.Core.Gameplay.GAS
             MarkPresentationChanged(world, target, attributeId);
         }
 
-        public static void ReplaceCurrentFromCap(World world, Entity target, int attributeId, TagOps tagOps)
+        public static void ReplaceCurrentFromCap(World world, Entity target, int attributeId, TagOps tagOps, Entity source)
         {
             if (!world.IsAlive(target) || !world.Has<AttributeBuffer>(target))
             {
                 return;
             }
 
-            SetCurrent(world, target, attributeId, world.Get<AttributeBuffer>(target).GetCap(attributeId), tagOps);
+            SetCurrent(world, target, attributeId, world.Get<AttributeBuffer>(target).GetCap(attributeId), tagOps, source);
         }
 
         public static void SetBase(World world, Entity target, int attributeId, float value, TagOps tagOps)
@@ -104,7 +104,7 @@ namespace Ludots.Core.Gameplay.GAS
             MarkPresentationChanged(world, target, attributeId);
         }
 
-        public static void ApplyModifiers(World world, Entity target, in EffectModifiers modifiers, TagOps tagOps)
+        public static void ApplyModifiers(World world, Entity target, in EffectModifiers modifiers, TagOps tagOps, Entity source)
         {
             if (!world.IsAlive(target) || !world.Has<AttributeBuffer>(target))
             {
@@ -160,7 +160,7 @@ namespace Ludots.Core.Gameplay.GAS
                     hasDirty = true;
                 }
 
-                world.Get<DirtyFlags>(target).MarkAttributeDirty(attributeId);
+                world.Get<DirtyFlags>(target).RecordAttributeSource(attributeId, source);
                 changedMask |= bit;
             }
 

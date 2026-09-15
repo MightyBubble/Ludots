@@ -338,7 +338,8 @@ internal sealed class FrontlineTrainingAdmissionSystem : BaseSystem<World, float
                     core,
                     _crystalAttributeId,
                     crystals - _runtime.Config.TrainCostCrystals,
-                    _tagOps);
+                    _tagOps,
+                    core);
                 coreStates[index].LastTrainResult = FrontlineTrainResult.Accepted;
             }
         }

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Registry;
 
@@ -9,6 +10,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
     public struct AttributeChangedTrigger
     {
         public Entity Target;
+        public Entity Source;
         public int AttributeId;
         public float OldValue;
         public float NewValue;
@@ -43,10 +45,17 @@ namespace Ludots.Core.Gameplay.GAS.Components
     {
         public const int MAX_ATTRS = AttributeRegistry.MaxAttributes;
         public const int TAG_DIRTY_BYTES = 32; // 256 tags / 8
+
+        [InlineArray(MAX_ATTRS)]
+        public struct AttributeSourceSlots
+        {
+            private Entity _element;
+        }
         
         public ulong AttributeDirtyMask;
         public byte DeferredTriggerQueued;
         public fixed byte TagDirty[TAG_DIRTY_BYTES];
+        public AttributeSourceSlots AttributeSources;
         
         /// <summary>
         /// 标记属性为脏（需要延迟触发）
@@ -57,6 +66,25 @@ namespace Ludots.Core.Gameplay.GAS.Components
             {
                 AttributeDirtyMask |= 1UL << attrId;
             }
+        }
+
+        public void RecordAttributeSource(int attrId, Entity source)
+        {
+            if (attrId >= 0 && attrId < MAX_ATTRS)
+            {
+                AttributeDirtyMask |= 1UL << attrId;
+                AttributeSources[attrId] = source;
+            }
+        }
+
+        public Entity GetAttributeSource(int attrId)
+        {
+            if (attrId < 0 || attrId >= MAX_ATTRS)
+            {
+                return Entity.Null;
+            }
+
+            return AttributeSources[attrId];
         }
         
         /// <summary>
@@ -108,6 +136,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
             {
                 TagDirty[i] = 0;
             }
+
+            AttributeSources = default;
         }
 
         public bool IsAnyAttributeDirty()
@@ -132,6 +162,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
             if (attrId >= 0 && attrId < MAX_ATTRS)
             {
                 AttributeDirtyMask &= ~(1UL << attrId);
+                AttributeSources[attrId] = Entity.Null;
             }
         }
         

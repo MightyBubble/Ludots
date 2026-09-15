@@ -26,6 +26,7 @@ namespace Ludots.Tests.GAS
             queue.EnqueueAttributeChanged(new AttributeChangedTrigger
             {
                 Target = target,
+                Source = target,
                 AttributeId = healthId,
                 OldValue = 10f,
                 NewValue = 20f
@@ -40,6 +41,38 @@ namespace Ludots.Tests.GAS
             That(bus.Events[0].Source, Is.EqualTo(target));
             That(bus.Events[0].Target, Is.EqualTo(target));
             That(bus.Events[0].Magnitude, Is.EqualTo(20f));
+        }
+
+        [Test]
+        public void DeferredTriggerProcessSystem_AttributeChanged_PublishesTriggerSourceNotTarget()
+        {
+            using var world = World.Create();
+            var bus = new GameplayEventBus();
+            var queue = new DeferredTriggerQueue();
+
+            int healthId = AttributeRegistry.Register("Health.SourcePassthrough");
+            int evtTagId = TagRegistry.Register("Event.Attribute.Health.SourcePassthrough.Changed");
+            AttributeEventTagRegistry.Register(healthId, evtTagId);
+
+            var target = world.Create();
+            var caster = world.Create();
+            queue.EnqueueAttributeChanged(new AttributeChangedTrigger
+            {
+                Target = target,
+                Source = caster,
+                AttributeId = healthId,
+                OldValue = 10f,
+                NewValue = 0f
+            });
+
+            var system = new DeferredTriggerProcessSystem(world, queue, bus);
+            system.Update(0.016f);
+            bus.Update();
+
+            That(bus.Events.Count, Is.EqualTo(1));
+            That(bus.Events[0].Source, Is.EqualTo(caster));
+            That(bus.Events[0].Target, Is.EqualTo(target));
+            That(bus.Events[0].Source, Is.Not.EqualTo(target));
         }
 
         [Test]

@@ -71,10 +71,10 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             switch (operation.AttributeMutation)
             {
                 case ActorAttributeMutationKind.Set:
-                    AttributeMutationOps.SetCurrent(_world, target, attributeId, value, _tagOps);
+                    AttributeMutationOps.SetCurrent(_world, target, attributeId, value, _tagOps, target);
                     break;
                 case ActorAttributeMutationKind.Add:
-                    AttributeMutationOps.AddCurrent(_world, target, attributeId, value, _tagOps);
+                    AttributeMutationOps.AddCurrent(_world, target, attributeId, value, _tagOps, target);
                     break;
                 default:
                     throw new InvalidOperationException(
