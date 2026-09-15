@@ -1284,24 +1284,43 @@ namespace Ludots.Tests.Presentation
             int[] requiredAttributes = [healthAttributeId];
 
             Assert.That(behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out _), Is.True);
+            // 分层 JIT/PGO 升级与静态惰性初始化发生在头几千次调用：合同测的是稳态，
+            // 预热不足会把一次性开销记进预算（曾以恒定 24B 假红出现）。
+            for (int warmup = 0; warmup < 4096; warmup++)
+            {
+                behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out _);
+            }
+
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
-            GC.GetAllocatedBytesForCurrentThread();
+            var allocationReport = new System.Text.StringBuilder(64);
             long before = GC.GetAllocatedBytesForCurrentThread();
 
             int projectedCount = 0;
+            long after = before;
             for (int i = 0; i < 128; i++)
             {
+                long callBefore = GC.GetAllocatedBytesForCurrentThread();
                 if (behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out _))
                 {
                     projectedCount++;
                 }
+
+                after = GC.GetAllocatedBytesForCurrentThread();
+                long callDelta = after - callBefore;
+                if (callDelta != 0)
+                {
+                    allocationReport.Append("call#").Append(i).Append(":+").Append(callDelta).Append("B ");
+                }
             }
 
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            // 收尾读数复用循环内最后一次采样：GC.GetAllocatedBytesForCurrentThread 在
+            // GC.Collect 后的首次调用自身可能懒分配（24B），不能进被测窗口。
+            long allocated = after - before;
             Assert.That(projectedCount, Is.EqualTo(128));
-            Assert.That(allocated, Is.EqualTo(0));
+            Assert.That(allocated, Is.EqualTo(0),
+                $"steady-state projection must not allocate; per-call: {allocationReport}");
         }
 
         [Test]
