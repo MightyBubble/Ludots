@@ -84,7 +84,9 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 return Entity.Null;
             }
 
-            return AttributeSources[attrId];
+            Entity source = AttributeSources[attrId];
+            // Arch live entities start at Version 1; a zeroed slot is uninitialized storage, not Entity.Null.
+            return source.Version == 0 ? Entity.Null : source;
         }
         
         /// <summary>
@@ -137,7 +139,10 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 TagDirty[i] = 0;
             }
 
-            AttributeSources = default;
+            for (int i = 0; i < MAX_ATTRS; i++)
+            {
+                AttributeSources[i] = Entity.Null;
+            }
         }
 
         public bool IsAnyAttributeDirty()
