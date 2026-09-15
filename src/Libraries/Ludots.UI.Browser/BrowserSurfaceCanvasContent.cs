@@ -11,7 +11,6 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 	private PointerButton? _activePointerButton;
 	private bool _focused;
 	private bool _disposed;
-	private volatile bool _captureAllPointerInput;
 	private bool _hasPointerMapping;
 	private UiRect _pointerMappingContentRect;
 	private BrowserViewport _pointerMappingViewport;
@@ -27,7 +26,6 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 		_surface = surface ?? throw new ArgumentNullException(nameof(surface));
 		_hitTestOptions = hitTestOptions ?? BrowserSurfaceHitTestOptions.Bounds;
 		_hitTestOptions.Validate();
-		_surface.Messages.MessageReceived += OnBrowserMessageReceived;
 	}
 
 	public IBrowserSurface Surface => _surface;
@@ -45,9 +43,7 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 			return false;
 		}
 
-		if (_activePointerButton.HasValue ||
-			_captureAllPointerInput ||
-			_hitTestOptions.Mode == BrowserSurfaceHitTestMode.Bounds)
+		if (_activePointerButton.HasValue || _hitTestOptions.Mode == BrowserSurfaceHitTestMode.Bounds)
 		{
 			return true;
 		}
@@ -204,9 +200,8 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 			return;
 		}
 
-		_disposed = true;
-		_surface.Messages.MessageReceived -= OnBrowserMessageReceived;
 		TryClearBrowserFocus();
+		_disposed = true;
 	}
 
 	public virtual UiRect GetContentRect(UiNode node)
@@ -304,28 +299,6 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 		var desiredViewport = new BrowserViewport(desiredWidth, desiredHeight, viewport.DeviceScaleFactor);
 		_ = _surface.ResizeAsync(desiredViewport);
 		return desiredViewport;
-	}
-
-	private void OnBrowserMessageReceived(object? sender, BrowserScriptMessage message)
-	{
-		if (_disposed)
-		{
-			return;
-		}
-
-		ArgumentNullException.ThrowIfNull(message);
-		if (!string.Equals(message.Channel, BrowserMessageChannels.HitTestCapture, StringComparison.Ordinal))
-		{
-			return;
-		}
-
-		if (!bool.TryParse(message.Payload, out bool capture))
-		{
-			throw new InvalidOperationException(
-				$"Browser hit-test capture payload must be a boolean. Payload: '{message.Payload}'.");
-		}
-
-		_captureAllPointerInput = capture;
 	}
 
 	private void SetBrowserFocus(bool isFocused)
