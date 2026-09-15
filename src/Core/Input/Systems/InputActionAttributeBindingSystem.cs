@@ -71,7 +71,7 @@ namespace Ludots.Core.Input.Systems
                     ? 0f
                     : ReadValue(input, entry);
 
-                AttributeMutationOps.SetCurrent(World, target, entry.AttributeId, value, _tagOps);
+                AttributeMutationOps.SetCurrent(World, target, entry.AttributeId, value, _tagOps, target);
             }
         }
 

@@ -777,9 +777,9 @@ namespace Ludots.Tests.GAS
             setup.EntityQueries.BindCollection(setup.Collections, entity, key, new GraphProgramRegistration(program, GraphKind.Query));
             var source = setup.Collections.RequireSource(entity, key);
             Assert.That(source.Contains(entity), Is.True);
-            AttributeMutationOps.SetCurrent(world, entity, health, 70, setup.TagOps);
+            AttributeMutationOps.SetCurrent(world, entity, health, 70, setup.TagOps, Entity.Null);
             Assert.That(source.Contains(entity), Is.False);
-            AttributeMutationOps.SetCurrent(world, entity, health, 30, setup.TagOps);
+            AttributeMutationOps.SetCurrent(world, entity, health, 30, setup.TagOps, Entity.Null);
             Assert.That(source.Contains(entity), Is.True);
             setup.TagOps.AddTag(world, entity, blocked);
             Assert.That(source.Contains(entity), Is.False);

@@ -722,7 +722,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             if (target != Entity.Null)
             {
-                _phaseTransaction.StageAttributeAdd(target, program.AttributeId, delta);
+                _phaseTransaction.StageAttributeAdd(target, program.AttributeId, delta, entry.Context.Source);
             }
 
             return true;

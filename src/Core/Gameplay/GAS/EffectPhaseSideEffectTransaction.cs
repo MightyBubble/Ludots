@@ -38,6 +38,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly AttributeBuffer[] _attributeOriginalValues;
     private readonly AttributeBuffer[] _attributeValues;
     private readonly ulong[] _attributeChangedMasks;
+    private readonly DirtyFlags.AttributeSourceSlots[] _attributeWriteSources;
     private readonly GameplayAttributeChangedBits[] _attributeChangedOriginalValues;
     private readonly GameplayAttributeChangedBits[] _attributeChangedValues;
     private readonly bool[] _attributeChangedExisted;
@@ -204,6 +205,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _attributeOriginalValues = new AttributeBuffer[attributeEntityCapacity];
         _attributeValues = new AttributeBuffer[attributeEntityCapacity];
         _attributeChangedMasks = new ulong[attributeEntityCapacity];
+        _attributeWriteSources = new DirtyFlags.AttributeSourceSlots[attributeEntityCapacity];
         _attributeChangedOriginalValues = new GameplayAttributeChangedBits[attributeEntityCapacity];
         _attributeChangedValues = new GameplayAttributeChangedBits[attributeEntityCapacity];
         _attributeChangedExisted = new bool[attributeEntityCapacity];
@@ -757,9 +759,10 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         return false;
     }
 
-    public void StageAttributeAdd(Entity target, int attributeId, float delta)
+    public void StageAttributeAdd(Entity target, int attributeId, float delta, Entity source)
     {
         int index = GetOrAddAttributeEntity(target);
+        float before = _attributeValues[index].GetCurrent(attributeId);
         var modifiers = new EffectModifiers();
         if (!modifiers.Add(attributeId, ModifierOp.Add, delta))
         {
@@ -769,11 +772,13 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         EffectModifierOps.Apply(in modifiers, ref _attributeValues[index]);
         RefreshAttributeChanged(index, attributeId);
+        RecordStagedAttributeSource(index, attributeId, source, before);
     }
 
-    public void StageAttributeSet(Entity target, int attributeId, float value)
+    public void StageAttributeSet(Entity target, int attributeId, float value, Entity source)
     {
         int index = GetOrAddAttributeEntity(target);
+        float before = _attributeValues[index].GetCurrent(attributeId);
         var modifiers = new EffectModifiers();
         if (!modifiers.Add(attributeId, ModifierOp.Override, value))
         {
@@ -783,15 +788,34 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         EffectModifierOps.Apply(in modifiers, ref _attributeValues[index]);
         RefreshAttributeChanged(index, attributeId);
+        RecordStagedAttributeSource(index, attributeId, source, before);
     }
 
-    public void StageModifiers(Entity target, in EffectModifiers modifiers)
+    public void StageModifiers(Entity target, in EffectModifiers modifiers, Entity source)
     {
         int index = GetOrAddAttributeEntity(target);
+        Span<float> beforeValues = stackalloc float[AttributeBuffer.MAX_ATTRS];
+        ulong touchedMask = 0UL;
+        for (int i = 0; i < modifiers.Count; i++)
+        {
+            int attributeId = modifiers.Get(i).AttributeId;
+            AttributeBuffer.ValidateAttributeId(attributeId);
+            ulong bit = 1UL << attributeId;
+            if ((touchedMask & bit) != 0UL)
+            {
+                continue;
+            }
+
+            touchedMask |= bit;
+            beforeValues[attributeId] = _attributeValues[index].GetCurrent(attributeId);
+        }
+
         EffectModifierOps.Apply(in modifiers, ref _attributeValues[index]);
         for (int i = 0; i < modifiers.Count; i++)
         {
-            RefreshAttributeChanged(index, modifiers.Get(i).AttributeId);
+            int attributeId = modifiers.Get(i).AttributeId;
+            RefreshAttributeChanged(index, attributeId);
+            RecordStagedAttributeSource(index, attributeId, source, beforeValues[attributeId]);
         }
     }
 
@@ -1303,7 +1327,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                     !_attributeChangedExisted[i],
                     _attributeChangedValues[i],
                     ref _attributeValues[i],
-                    ref _attributeOriginalValues[i]);
+                    ref _attributeOriginalValues[i],
+                    in _attributeWriteSources[i]);
             }
             for (int i = 0; i < _tagEntityCount; i++)
             {
@@ -1510,6 +1535,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _attributeOriginalValues[index] = _world.Get<AttributeBuffer>(entity);
         _attributeValues[index] = _attributeOriginalValues[index];
         _attributeChangedMasks[index] = 0UL;
+        _attributeWriteSources[index] = default;
         StageDirtyEntity(entity);
         return index;
     }
@@ -1669,6 +1695,16 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private int FindAttributeEntity(Entity entity) => FindIndex(_attributeIndex, entity);
 
+    private void RecordStagedAttributeSource(int index, int attributeId, Entity source, float before)
+    {
+        if (before == _attributeValues[index].GetCurrent(attributeId))
+        {
+            return;
+        }
+
+        _attributeWriteSources[index][attributeId] = source;
+    }
+
     private void RefreshAttributeChanged(int index, int attributeId)
     {
         if ((uint)attributeId >= AttributeBuffer.MAX_ATTRS)
@@ -1711,7 +1747,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         bool changedBitsNeedsAttach,
         GameplayAttributeChangedBits stagedChangedBits,
         ref AttributeBuffer staged,
-        ref AttributeBuffer original)
+        ref AttributeBuffer original,
+        in DirtyFlags.AttributeSourceSlots writeSources)
     {
         if (!_world.IsAlive(entity) || !_world.Has<AttributeBuffer>(entity))
         {
@@ -1754,7 +1791,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 continue;
             }
 
-            dirty.MarkAttributeDirty(attributeId);
+            dirty.RecordAttributeSource(attributeId, writeSources[attributeId]);
             if (!_world.Has<GameplayAttributeChangedBits>(entity))
             {
                 // World.Add 触发结构迁移，缓存的组件 ref 必须重取。

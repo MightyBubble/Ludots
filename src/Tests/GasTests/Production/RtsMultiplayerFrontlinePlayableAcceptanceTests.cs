@@ -441,7 +441,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Entity core = FindNamed(world, "Northern Command Core");
         int crystalAttributeId = RequireAttribute("Crystals");
         TagOps tagOps = RequireTagOps(engine);
-        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f, tagOps);
+        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f, tagOps, Entity.Null);
         int startingInfantry = CountNamed(world, "Infantry");
         OrderSubmitResult firstOutcome;
         OrderSubmitResult secondOutcome;
@@ -497,7 +497,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         World world = engine.World;
         Entity core = FindNamed(world, "Northern Command Core");
         int crystalAttributeId = RequireAttribute("Crystals");
-        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 120f, RequireTagOps(engine));
+        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 120f, RequireTagOps(engine), Entity.Null);
         List<Entity> startingInfantryEntities = FindTemplateEntities(engine, "rts_frontline_infantry");
         int startingInfantry = startingInfantryEntities.Count;
         OrderSubmitResult firstResult;
@@ -591,7 +591,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         World world = engine.World;
         Entity core = FindNamed(world, "Northern Command Core");
         int crystalAttributeId = RequireAttribute("Crystals");
-        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f, RequireTagOps(engine));
+        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f, RequireTagOps(engine), Entity.Null);
         int startingInfantry = CountNamed(world, "Infantry");
 
         EnqueueCastAbility(engine, core, playerId: 1, slot: 0);
@@ -632,7 +632,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         World world = engine.World;
         Entity core = FindNamed(world, "Southern Command Core");
         int crystalAttributeId = RequireAttribute("Crystals");
-        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f, RequireTagOps(engine));
+        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f, RequireTagOps(engine), Entity.Null);
         FrontlineConfig config = GetFrontlineConfig(engine);
         int startingInfantry = CountTemplateEntities(engine, "rts_frontline_infantry");
 
@@ -1809,7 +1809,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             entity,
             RequireAttribute("Health"),
             health,
-            RequireTagOps(engine));
+            RequireTagOps(engine),
+            Entity.Null);
 
     private static float DistanceCm(in WorldPositionCm a, in WorldPositionCm b)
     {

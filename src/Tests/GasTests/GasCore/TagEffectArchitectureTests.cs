@@ -2379,7 +2379,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             var queue = new DeferredTriggerQueue();
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             using var deferred = new DeferredTriggerCollectionSystem(world, queue, tagOps);
-            AttributeMutationOps.AddCurrent(world, first, durabilityId, -2f, tagOps);
+            AttributeMutationOps.AddCurrent(world, first, durabilityId, -2f, tagOps, Entity.Null);
             deferred.Update(0.016f);
 
             That(queue.AttributeTriggerCount, Is.EqualTo(1));
