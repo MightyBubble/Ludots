@@ -6,6 +6,8 @@ public interface IUiBrowserCanvasContent
 {
 	IBrowserSurface Surface { get; }
 
+	BrowserHitMaskColor? VisualHitMask { get; }
+
 	UiRect GetContentRect(UiNode node);
 
 	void EnsureSurfaceViewport(float width, float height);

@@ -15,10 +15,15 @@ public sealed class SkiaBrowserFrameRenderer : IDisposable
 	};
 
 	private BrowserFrame? _cachedFrame;
+	private BrowserHitMaskColor? _cachedHitMask;
 	private SKImage? _cachedImage;
 	private bool _disposed;
 
-	public void DrawFrame(SKCanvas canvas, SKRect destination, BrowserFrame frame)
+	public void DrawFrame(
+		SKCanvas canvas,
+		SKRect destination,
+		BrowserFrame frame,
+		BrowserHitMaskColor? hitMask = null)
 	{
 		ArgumentNullException.ThrowIfNull(canvas);
 		ArgumentNullException.ThrowIfNull(frame);
@@ -28,7 +33,7 @@ public sealed class SkiaBrowserFrameRenderer : IDisposable
 			return;
 		}
 
-		SKImage image = GetImage(frame);
+		SKImage image = GetImage(frame, hitMask);
 		canvas.DrawImage(image, destination, BrowserSampling, _paint);
 	}
 
@@ -44,26 +49,42 @@ public sealed class SkiaBrowserFrameRenderer : IDisposable
 		_disposed = true;
 	}
 
-	private SKImage GetImage(BrowserFrame frame)
+	private SKImage GetImage(BrowserFrame frame, BrowserHitMaskColor? hitMask)
 	{
-		if (ReferenceEquals(_cachedFrame, frame) && _cachedImage != null)
+		if (ReferenceEquals(_cachedFrame, frame) &&
+			_cachedImage != null &&
+			Nullable.Equals(_cachedHitMask, hitMask))
 		{
 			return _cachedImage;
 		}
 
 		ReleaseCachedImage();
 		_cachedFrame = frame;
-		_cachedImage = CreateImage(frame);
+		_cachedHitMask = hitMask;
+		_cachedImage = CreateImage(frame, hitMask);
 		return _cachedImage;
 	}
 
-	private static SKImage CreateImage(BrowserFrame frame)
+	private static SKImage CreateImage(BrowserFrame frame, BrowserHitMaskColor? hitMask)
 	{
 		SKImageInfo imageInfo = new SKImageInfo(
 			frame.Viewport.Width,
 			frame.Viewport.Height,
 			ToColorType(frame.PixelFormat),
 			SKAlphaType.Premul);
+
+		if (hitMask is { } mask)
+		{
+			byte[] visualPixels = frame.Pixels.ToArray();
+			BrowserHitMaskComposite.ApplyToPremultipliedBuffer(
+				visualPixels,
+				frame.RowBytes,
+				frame.Viewport.Width,
+				frame.Viewport.Height,
+				frame.PixelFormat,
+				mask);
+			return SKImage.FromPixelCopy(imageInfo, visualPixels, frame.RowBytes);
+		}
 
 		if (!MemoryMarshal.TryGetArray(frame.Pixels, out ArraySegment<byte> segment) || segment.Array == null)
 		{
@@ -94,6 +115,7 @@ public sealed class SkiaBrowserFrameRenderer : IDisposable
 		_cachedImage?.Dispose();
 		_cachedImage = null;
 		_cachedFrame = null;
+		_cachedHitMask = null;
 	}
 
 	private void ThrowIfDisposed()
