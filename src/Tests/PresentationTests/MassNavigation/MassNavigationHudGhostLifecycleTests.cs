@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using Arch.Core;
@@ -31,6 +32,104 @@ namespace Ludots.Tests.Presentation
             "LudotsCoreMod", "CoreInputMod", "SelectionInteractionMod",
             "MassNavigationMod", "CapabilityStandardMassNavigationLargeWorld10kMod"
         };
+
+        [Test]
+        public void HudPipelineBaselineBenchmark()
+        {
+            var backend = new TestInputBackend();
+            var focusOverride = new CameraCullingFocusOverride();
+            using GameEngine engine = CreateEngine(backend, focusOverride);
+            WorldHudToScreenSystem hudProjection = CreateHudProjection(engine);
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)
+                ?? throw new InvalidOperationException("PresentationScreenHudBuffer missing.");
+            var builder = new PresentationOverlaySceneBuilder(
+                screenHud,
+                engine.GetService(CoreServiceKeys.PresentationWorldHudStrings),
+                engine.GetService(CoreServiceKeys.PresentationTextCatalog),
+                engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection),
+                engine.GetService(CoreServiceKeys.ScreenOverlayBuffer),
+                engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer));
+            var scene = new PresentationOverlayScene(screenHud.Capacity + ScreenOverlayBuffer.MaxItems);
+            var sync = RequirePresentationSystem<Ludots.Core.Presentation.Systems.PresenterEntityTransformSyncSystem>(engine);
+            var emit = RequirePresentationSystem<Ludots.Core.Presentation.Systems.PresenterEmitSystem>(engine);
+
+            engine.LoadMap(new MapLoadRequest(new MapId("mass_navigation"),
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, null) })));
+            TickWithOverlay(engine, hudProjection, builder, scene, 90);
+
+            const int Samples = 60;
+            var syncMs = new double[Samples];
+            var emitMs = new double[Samples];
+            var projMs = new double[Samples];
+            var buildMs = new double[Samples];
+            for (int frame = 0; frame < 16 + Samples; frame++)
+            {
+                for (int i = 0; i < 100; i++)
+                {
+                    engine.World.Get<VisualTransform>(CollectAgent(engine, i)).Position.X += 0.01f;
+                }
+
+                long a = Stopwatch.GetTimestamp();
+                sync.Update(1f / 60f);
+                long b = Stopwatch.GetTimestamp();
+                emit.Update(1f / 60f);
+                long c = Stopwatch.GetTimestamp();
+                hudProjection.Update(1f / 60f);
+                long d = Stopwatch.GetTimestamp();
+                builder.Build(scene);
+                long e = Stopwatch.GetTimestamp();
+                if (frame >= 16)
+                {
+                    syncMs[frame - 16] = (b - a) * 1000d / Stopwatch.Frequency;
+                    emitMs[frame - 16] = (c - b) * 1000d / Stopwatch.Frequency;
+                    projMs[frame - 16] = (d - c) * 1000d / Stopwatch.Frequency;
+                    buildMs[frame - 16] = (e - d) * 1000d / Stopwatch.Frequency;
+                }
+            }
+
+            Console.WriteLine($"hud-baseline sync={Median(syncMs):F3}ms emit={Median(emitMs):F3}ms proj={Median(projMs):F3}ms build={Median(buildMs):F3}ms worldHud={screenHud.TextCount + screenHud.BarCount}");
+            Assert.That(screenHud.TextCount + screenHud.BarCount, Is.GreaterThan(0), "benchmark requires live HUD items");
+        }
+
+        private static Entity CollectAgent(GameEngine engine, int index)
+        {
+            int count = 0;
+            var query = new QueryDescription().WithAll<VisualTransform, CullState>();
+            Entity found = default;
+            engine.World.Query(in query, (Entity entity, ref VisualTransform _, ref CullState cull) =>
+            {
+                if (cull.IsVisible && count++ == index)
+                {
+                    found = entity;
+                }
+            });
+            return found;
+        }
+
+        private static double Median(double[] values)
+        {
+            Array.Sort(values);
+            return values[values.Length / 2];
+        }
+
+        private static T RequirePresentationSystem<T>(GameEngine engine)
+            where T : class, Arch.System.ISystem<float>
+        {
+            var field = typeof(GameEngine).GetField(
+                "_presentationSystems",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("GameEngine presentation systems field is unavailable.");
+            var systems = (List<Arch.System.ISystem<float>>)field.GetValue(engine)!;
+            foreach (var system in systems)
+            {
+                if (system is T match)
+                {
+                    return match;
+                }
+            }
+
+            throw new InvalidOperationException($"Presentation system {typeof(T).Name} is not registered.");
+        }
 
         [Test]
         public void HealthTextAnchorsRetrackOwnersAfterCullCycle()
