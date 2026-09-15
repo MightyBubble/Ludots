@@ -199,23 +199,31 @@ namespace Ludots.Raylib.Render
             float poseStride)
         {
             EnsureFrameActive();
-            if (count <= 0 || mesh.vaoId == 0 || mesh.indices == null || mesh.triangleCount <= 0)
+            if (count <= 0 || mesh.vaoId == 0 || mesh.triangleCount <= 0)
             {
                 return;
             }
 
+            Gl43.UseProgram(_depthSkinningSsboShader.id);
+            Gl43.Disable(Gl43.GL_BLEND);
             Rl.SetShaderValue(_depthSkinningSsboShader, _locDepthSkinningInstanceBase, &instanceBase, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_depthSkinningSsboShader, _locDepthSkinningBoneBase, &boneBase, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_depthSkinningSsboShader, _locDepthSkinningPoseStride, &poseStride, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-            Gl43.UseProgram(_depthSkinningSsboShader.id);
-            Gl43.Disable(Gl43.GL_BLEND);
             Rl.SetShaderValueMatrix(
                 _depthSkinningSsboShader,
                 _depthSkinningSsboShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP],
                 RaylibNativeResources.ComputeDrawMvp());
             Gl43.BindVertexArray(mesh.vaoId);
-            int indexCount = mesh.indices != null ? checked(mesh.triangleCount * 3) : mesh.vertexCount;
-            Gl43.DrawElementsInstanced(Gl43.GL_TRIANGLES, indexCount, Gl43.GL_UNSIGNED_SHORT, IntPtr.Zero, count);
+            if (mesh.indices != null)
+            {
+                int indexCount = checked(mesh.triangleCount * 3);
+                Gl43.DrawElementsInstanced(Gl43.GL_TRIANGLES, indexCount, Gl43.GL_UNSIGNED_SHORT, IntPtr.Zero, count);
+            }
+            else
+            {
+                // 无索引网格没有元素缓冲绑定，DrawElements 的 indices=NULL 会被驱动当作客户端指针解引用。
+                Gl43.DrawArraysInstanced(Gl43.GL_TRIANGLES, 0, mesh.vertexCount, count);
+            }
             Gl43.UseProgram(0);
         }
 
