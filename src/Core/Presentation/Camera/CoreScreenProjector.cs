@@ -11,8 +11,11 @@ namespace Ludots.Core.Presentation.Camera
     /// Uses the smoothed render state from <see cref="CameraPresenter"/> when available,
     /// ensuring HUD projection matches the actual 3D camera (no smoothing desync).
     /// Falls back to computing from logical <see cref="CameraState"/> if no presenter is set.
+    /// 实现 IProjectionRevisionProvider：相机姿态哈希未变时 revision 稳定，
+    /// WorldHudToScreenSystem 的三档轻路径（0 成本早退/内容增量/位置增量）得以激活——
+    /// 静止相机帧不再全量重建 2 万条 HUD 条目。
     /// </summary>
-    public sealed class CoreScreenProjector : IScreenProjector, IProjectionSnapshotProvider, IPresentationCameraSnapshotScope
+    public sealed class CoreScreenProjector : IScreenProjector, IProjectionSnapshotProvider, IProjectionRevisionProvider, IPresentationCameraSnapshotScope
     {
         private CameraManager _cameraManager;
         private IViewController _view;
