@@ -105,6 +105,8 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 
 **订单驱动图脑（issue #1536，已落地）。** Core 的具体行为循环（DirectAttackSystem / ResourceTransportSystem，PR #711 混入的 RTS 玩法）已删除：行为改成 mod 侧 Script 图数据，由通用 `GraphActionBrainHostSystem`（实体查询、订单黑板胶水 `Order.*` 固定键、常驻帧）驱动。配套新 op：`LoadEntityPosX/Y(500/501)`、`IntToFloat(502)`、`FloatToInt(503)`、`SqrtFloat(504)`、`SubmitAssignedOrder(505)`、`CompleteActiveOrder(506)`、`LoadOrderTypeId(507)`、`LoadEntityPosValid(508)`（484-499 留给输入线重编号）；浮点算术族与 `WriteBlackboardEntity`/`ApplyEffectTemplate`/`ModifyAttributeAdd` 按 ActionLib 合同扩到 Script 方言（kind 策略 carve-out 有名单）。订单引用一律语义键，patch 期 `ResolveOrderType` 走运行时 OrderTypeRegistry。敌我关系判定不在行为图里重做——门在输入侧 `command_intent_profiles.json` 的 stance 过滤（下单时已限定敌对目标；`order_types.json` 的 validationGraph 仍为 none，可作后续收紧点）。前线 `rts.frontline.attack`（standoff 环槽数学在图内可见）与 `rts.frontline.transport` 对拍等价；ArchitectureGuard 禁止 Core/Gameplay 再出现 ActionLoop。→ https://github.com/MightyBubble/Ludots/issues/1536
 
+**已顶寄存器预算的图（issue #1536 对抗审核笔记）**：`rts.frontline.transport`（运矿）已用满 GraphVmLimits 的 32 寄存器预算，今后加分支必爆预算——把寄存器预算当作显式硬线；若需新分支，先删再增或重构成跨拍分派。attack 图同理接近上限。
+
 **分层：架子有了，墙没有。**  
 工程里多了两份薄的契约，核心工程还是一大坨。展厅大多还能一把抓住整台引擎。把空间、输入、画面、结算真正拆开，以及不许再抓整台引擎，这两步没做。要做就单独开活，对照 `docs/audits/s14_layering_physicalization_design.md`，别和修演示、修构建捆在一起。没拆完之前，总规矩继续写「修复中」。
 
