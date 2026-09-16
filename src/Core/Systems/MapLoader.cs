@@ -719,6 +719,9 @@ namespace Ludots.Core.Systems
                     PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
                     MountInitialInteractionContext(created[i], activeBatchTemplateId, activeBatchTemplate);
                     BufferEntityTriggerGraphs(created[i], activeBatchTemplateId, activeBatchTemplate);
+                    // 注意：batch lane 不展开 children——TemplateSpawnDescriptor.Create 按合同
+                    // 把带 children 的模板判为 Incompatible（逐子挂接只能走单实体 lane），
+                    // 因此能进本 flush 的模板必无 children，无需在此展开。
                 }
 
                 if (hasDirectBootstrap)
@@ -767,6 +770,16 @@ namespace Ludots.Core.Systems
                 {
                     throw new InvalidOperationException(
                         $"Map '{mapConfig.Id}' references unknown entity template '{entityData.Template}'.");
+                }
+
+                // 可寻址路径 = 摆放实例根 instanceId + localId 链；缺 instanceId 的后代会
+                // 落进根名字空间与兄弟撞名。此门必须盖住 batch 与非 batch 两条路径（S3-a）。
+                if (string.IsNullOrWhiteSpace(entityData.InstanceId) &&
+                    EntityTemplate.HasAddressableDescendant(templates[entityData.Template].Children, TemplateRegistry))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' entity template '{entityData.Template}' has addressable descendants (localId) but no InstanceId; " +
+                        "the placed instance root must declare a non-empty, trimmed InstanceId to prefix addressable paths.");
                 }
 
                 bool isBatchCompatible = _templateBatchSpawner.IsBatchCompatible(entityData.Template, templates[entityData.Template]);

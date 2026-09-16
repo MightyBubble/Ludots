@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using System.Text.Json.Nodes;
@@ -44,6 +45,61 @@ namespace Ludots.Core.Config
         public List<EntityTemplateChild>? Children { get; set; }
 
         // 切D 预留：资产级 relations 段（路径对 + 关系类型），本切只留形状不物化。
+
+        /// <summary>
+        /// 子树里是否存在带 localId 的可寻址节点（含被引用模板自身的 children 与内联 children）。
+        /// 可寻址路径 = 实例根 instanceId + "." + localId 链；无实例根的子树没有命名空间可挂。
+        /// 遍历序 = 声明序，仅做存在性判定（不依赖字典序）；装载期已验证 children 图无环。
+        /// </summary>
+        public static bool HasAddressableDescendant(
+            IReadOnlyList<EntityTemplateChild>? children,
+            DataRegistry<EntityTemplate> registry)
+        {
+            return HasAddressableDescendant(children, registry, new HashSet<string>(StringComparer.Ordinal));
+        }
+
+        private static bool HasAddressableDescendant(
+            IReadOnlyList<EntityTemplateChild>? children,
+            DataRegistry<EntityTemplate> registry,
+            HashSet<string> visitedTemplates)
+        {
+            if (children == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < children.Count; i++)
+            {
+                EntityTemplateChild child = children[i];
+                if (child == null)
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(child.LocalId))
+                {
+                    return true;
+                }
+
+                if (HasAddressableDescendant(child.Children, registry, visitedTemplates))
+                {
+                    return true;
+                }
+
+                if (string.IsNullOrWhiteSpace(child.Template) || !visitedTemplates.Add(child.Template))
+                {
+                    continue;
+                }
+
+                EntityTemplate? referenced = registry?.Get(child.Template);
+                if (referenced != null && HasAddressableDescendant(referenced.Children, registry, visitedTemplates))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     public sealed class EntityTemplateChild

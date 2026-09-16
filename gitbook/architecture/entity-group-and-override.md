@@ -70,17 +70,23 @@ ADR / 计划 SSOT：GitHub `#1540`；本页是实体组覆盖合同的文档正�
 ## 4. 摆放实例（最简）
 
 ```jsonc
-// Maps/harbor.json -> entities[]
-{ "instanceId": "mule.harbor", "template": "ds.mule.camp",
-  "position": { "x": 1200, "y": -800, "facingDeg": 90 } }
+// Maps/eg_camp_site.json -> entities[]（字段名与教科书 showcase 可运行样例一致）
+{ "instanceId": "mule.harbor", "template": "eg.camp",
+  "positionXCm": 1200, "positionYCm": -800 }
 ```
 
-- `instanceId`（全局唯一命名空间根）+ `template` 必填；`position` 可选，默认 (0,0)。
+- `instanceId`（全局唯一命名空间根）+ `template` 必填；**带 localId 后代时 `instanceId` 强制**（缺失/空白/首尾空白均装载期 fail-fast）。`positionXCm`/`positionYCm` 可选、成对声明（锚点兜底：模板与 override 均未写 WorldPositionCm 时才落地）。
 - 摆营地就是摆任何普通模板：**无新增 `group` 字段**。
 
 ## 5. 实例变体：封闭 5 种路径 override
 
-所有引用一律按**绝对 localId 路径**（穿模板，"爷爷可改到底"）。对**某一处**的修改全平铺在**该实例的 overrides**里，深合并，不外散到每层模板。
+overrides 只有一个封闭开放集（5 种），一律按**绝对 localId 路径**（穿模板，"爷爷可改到底"）寻址，deep-merge，不外散到每层模板。所有修改全平铺在**该实例的 override 段落**里。
+
+**两个作用域，不是两套系统**：
+- **自身（overrides）**——改的是这个实例自己的字段（根组件整替换），见 5a–5e。
+- **后代（overridePaths）**——改的是"别人模板里长出来"的字段，必然要一个**绝对路径**穿透到底，见 5a–5e 的 `path` 一律指绝对 localId 路径。
+
+两者都是"这个实例的一份差异"，区别只是**命中的目标是谁**（自身 vs 后代）。这是同一套差别账的两个抽屉，不是第二套模板类型、不是双轨。
 
 ### 5a. 改字段（Property modification，deep-merge）
 

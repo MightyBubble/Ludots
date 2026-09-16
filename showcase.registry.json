@@ -10007,8 +10007,8 @@
         "prefab-like",
         "textbook"
       ],
-      "binding": "entity_group_textbook",
-      "preset": "entity_group_textbook_raylib",
+      "binding": null,
+      "preset": null,
       "docsPath": "gitbook/architecture/entity-group-and-override.md",
       "readmePath": null,
       "acceptanceTest": "EntityGroupTextbookAcceptanceTests",
