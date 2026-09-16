@@ -80,6 +80,45 @@ namespace Ludots.Core.Config
             return this;
         }
 
+        /// <summary>
+        /// Deep-merges <paramref name="set"/> field JSON onto the component's effective
+        /// data (an explicit override first, else the active template's component) and
+        /// installs the merged result as a whole-component override. A component absent
+        /// from both is written as authored — the template-added case. Scalars and arrays
+        /// follow <see cref="ConfigPipeline.DeepMerge"/> set semantics; objects recurse.
+        /// </summary>
+        public EntityBuilder WithMergedOverride(string componentName, JsonNode set)
+        {
+            if (string.IsNullOrWhiteSpace(componentName))
+            {
+                throw new System.InvalidOperationException("EntityBuilder merged override requires a non-empty component name.");
+            }
+
+            if (set == null)
+            {
+                throw new System.InvalidOperationException($"EntityBuilder merged override '{componentName}' requires non-null data.");
+            }
+
+            JsonNode baseData = null;
+            if (_overrides.TryGetValue(componentName, out JsonNode existing))
+            {
+                baseData = existing;
+            }
+            else if (_activeTemplate != null && _activeTemplate.Components.TryGetValue(componentName, out JsonNode templateData))
+            {
+                baseData = templateData;
+            }
+
+            if (baseData is JsonObject baseObject && set is JsonObject setObject)
+            {
+                var merged = (JsonObject)baseObject.DeepClone();
+                ConfigPipeline.DeepMerge(merged, setObject);
+                return WithOverride(componentName, merged);
+            }
+
+            return WithOverride(componentName, set.DeepClone());
+        }
+
         public Entity Build()
         {
             var entity = _world.Create();

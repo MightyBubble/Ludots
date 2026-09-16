@@ -152,8 +152,31 @@ namespace Ludots.Core.Config
         /// </summary>
         public int? PositionXCm { get; set; }
         public int? PositionYCm { get; set; }
+        /// <summary>
+        /// Whole-component replacement applied to this placed entity itself.
+        /// Descendant field edits belong to <see cref="OverridePaths"/>.
+        /// </summary>
         public Dictionary<string, JsonNode> Overrides { get; set; }
+
+        /// <summary>
+        /// Path-scoped field deep-merge into descendant entities of this placement
+        /// ("grandfather edits all the way down"). Distinct from <see cref="Overrides"/>,
+        /// which only replaces components on the placed entity itself.
+        /// </summary>
+        public List<PathOverrideEntry> OverridePaths { get; set; }
         public List<ParamOverrideData> PresenterParamOverrides { get; set; } = new List<ParamOverrideData>();
+    }
+
+    /// <summary>
+    /// One path-scoped override: <see cref="Path"/> addresses a descendant entity
+    /// (relative to the placement's InstanceId, or already instance-prefixed), and
+    /// <see cref="Set"/> deep-merges component field JSON onto that descendant's
+    /// template component.
+    /// </summary>
+    public sealed class PathOverrideEntry
+    {
+        public string Path { get; set; }
+        public Dictionary<string, JsonNode> Set { get; set; }
     }
 
     public class TeamBindingData

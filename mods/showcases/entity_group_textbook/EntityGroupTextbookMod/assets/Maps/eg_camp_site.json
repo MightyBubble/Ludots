@@ -15,15 +15,19 @@
       "template": "eg.camp",
       "positionXCm": 1200,
       "positionYCm": -800,
-      "overrides": {
-        "Name": { "Value": "Mule Harbor Camp" }
-      }
+      "overridePaths": [
+        { "path": "hq.chest.cargo", "set": { "Health": { "Max": 12 } } },
+        { "path": "tower.light", "set": { "Health": { "Current": 3, "Max": 3 } } }
+      ]
     },
     {
       "instanceId": "mule.alpine",
       "template": "eg.camp",
       "positionXCm": 500,
-      "positionYCm": 2400
+      "positionYCm": 2400,
+      "overridePaths": [
+        { "path": "mule.alpine.guard", "set": { "Health": { "Max": 50 } } }
+      ]
     }
   ]
 }

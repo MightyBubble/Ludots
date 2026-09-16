@@ -82,7 +82,22 @@ ADR / 计划 SSOT：GitHub `#1540`；本页是实体组覆盖合同的文档正�
 
 所有引用一律按**绝对 localId 路径**（穿模板，"爷爷可改到底"）。对**某一处**的修改全平铺在**该实例的 overrides**里，深合并，不外散到每层模板。
 
-### 5a. 改字段（Property modification，deep-merge）
+override 分**两个明确、不同作用范围**的通道（不是两套重复机制，是"自身 vs 后代"两个作用点）：
+- **`overrides`**（对象）：仅作用于**当前实体自身**的整组件替换（既有用法，保留）。
+- **`overridePaths`**（数组）：**路径化作用于后代实体**的字段 deep-merge。是 `set` 的正式载体，下面 5a–5e 以它为准。
+
+```jsonc
+"overridePaths": [
+  { "path": "hq.chest.cargo", "set": { "loot": { "count": 12 } } },   // 深后代字段深合并
+  { "path": "guard",           "set": { "weapon": { "kind": "musket" } } }
+]
+```
+
+`path` 是**后代实体的局部路径**（可含实例根前缀，也可不写前缀由引擎自动拼接），`set` 的 key 才是**组件名**，值是该组件的字段 JSON（deep-merge，不整替换；模板无该组件时作为新组件写入）。找不到的 path 装载期抛错。
+
+### 5a-a. 改字段（Property modification，deep-merge）—— 见上 overridePaths
+
+### 5b. 加子物体
 
 ```jsonc
 { "path": "hq.chest.cargo.loot", "set": { "count": 12 } },

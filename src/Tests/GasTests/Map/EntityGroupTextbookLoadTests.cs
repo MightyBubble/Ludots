@@ -49,6 +49,17 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<Name>(guard2).Value, Is.EqualTo("Mule Guard"));
             Assert.That(world.Get<Name>(barricade).Value, Is.EqualTo("Barricade"));
 
+            // 切B：overridePaths 向后代做字段 deep-merge（未覆盖字段保留），模板无组件时作为新组件写入。
+            Assert.That(world.Get<Health>(cargo).Current, Is.EqualTo(8), "harbor path set keeps the unset deep field");
+            Assert.That(world.Get<Health>(cargo).Max, Is.EqualTo(12), "harbor path set overwrites only the set field");
+            Assert.That(index.TryGetByLocalPath("mule.harbor.tower.light", out Entity harborLight), Is.True);
+            Assert.That(world.Get<Health>(harborLight).Current, Is.EqualTo(3), "path set writes Health as a new component on the spotlight");
+            Assert.That(world.Get<Health>(harborLight).Max, Is.EqualTo(3));
+
+            Assert.That(index.TryGetByLocalPath("mule.alpine.guard", out Entity alpineGuard), Is.True);
+            Assert.That(world.Get<Health>(alpineGuard).Current, Is.EqualTo(30), "alpine absolute path set keeps the unset deep field");
+            Assert.That(world.Get<Health>(alpineGuard).Max, Is.EqualTo(50), "alpine absolute path set overwrites only the set field");
+
             // Parent before child: the deep cargo entity was spawned after its hq.chest ancestor.
             Assert.That(index.TryGetByLocalPath("mule.harbor.hq.chest", out Entity chest), Is.True);
             Assert.That(chest.Id, Is.LessThan(cargo.Id));

@@ -770,12 +770,20 @@ namespace Ludots.Core.Systems
                 }
 
                 bool isBatchCompatible = _templateBatchSpawner.IsBatchCompatible(entityData.Template, templates[entityData.Template]);
+                var pathOverrides = BuildPathOverrideTable(mapConfig.Id, entityData);
                 if (isBatchCompatible && TryBuildBatchRequest(mapConfig.Id, entityData, mapEntityTag, out var batchRequest))
                 {
                     if (!string.Equals(activeBatchTemplateId, entityData.Template, StringComparison.Ordinal) ||
                         pendingBatchRequests.Count >= _templateBatchSpawner.ScratchCapacity)
                     {
                         FlushPendingTemplateBatch();
+                    }
+
+                    // Batch-compatible templates carry no children, so a path override can never
+                    // resolve here; fail closed with the unmatched paths instead of dropping them.
+                    if (pathOverrides is { Count: > 0 })
+                    {
+                        ThrowUnresolvedPathOverrides(mapConfig.Id, entityData, pathOverrides);
                     }
 
                     activeBatchTemplateId = entityData.Template;
@@ -844,7 +852,13 @@ namespace Ludots.Core.Systems
                     entity,
                     mapEntityTag,
                     entityIndex,
-                    string.IsNullOrWhiteSpace(entityData.InstanceId) ? null : entityData.InstanceId);
+                    string.IsNullOrWhiteSpace(entityData.InstanceId) ? null : entityData.InstanceId,
+                    pathOverrides);
+
+                if (pathOverrides is { Count: > 0 })
+                {
+                    ThrowUnresolvedPathOverrides(mapConfig.Id, entityData, pathOverrides);
+                }
             }
 
             FlushPendingTemplateBatch();
@@ -893,7 +907,8 @@ namespace Ludots.Core.Systems
             Entity parent,
             MapEntity mapEntityTag,
             MapLoadEntityIndex entityIndex,
-            string? parentLocalPath)
+            string? parentLocalPath,
+            Dictionary<string, List<(string Component, JsonNode Set)>>? pathOverrides)
         {
             EntityTemplate parentTemplate = templates[parentTemplateId];
             SpawnTemplateChildNodes(
@@ -905,7 +920,8 @@ namespace Ludots.Core.Systems
                 parent,
                 mapEntityTag,
                 entityIndex,
-                parentLocalPath);
+                parentLocalPath,
+                pathOverrides);
         }
 
         private void SpawnTemplateChildNodes(
@@ -917,7 +933,8 @@ namespace Ludots.Core.Systems
             Entity parent,
             MapEntity mapEntityTag,
             MapLoadEntityIndex entityIndex,
-            string? parentLocalPath)
+            string? parentLocalPath,
+            Dictionary<string, List<(string Component, JsonNode Set)>>? pathOverrides)
         {
             if (children is not { Count: > 0 })
             {
@@ -928,6 +945,15 @@ namespace Ludots.Core.Systems
             {
                 EntityTemplateChild child = children[i];
                 string context = $"Map template children '{ownerTemplateId}'[{i}] '{child.Template}'";
+
+                string? childLocalPath = null;
+                if (!string.IsNullOrWhiteSpace(child.LocalId))
+                {
+                    childLocalPath = string.IsNullOrEmpty(parentLocalPath)
+                        ? child.LocalId
+                        : parentLocalPath + "." + child.LocalId;
+                }
+
                 builder
                     .UseTemplate(child.Template)
                     .WithEntityContext(context);
@@ -939,18 +965,18 @@ namespace Ludots.Core.Systems
                     }
                 }
 
+                // Path-scoped field sets target this child when its absolute localPath matches;
+                // deeper paths stay in the table and are re-checked as recursion descends.
+                ApplyPathOverrides(builder, pathOverrides, childLocalPath);
+
                 var childEntity = builder.Build();
                 TryApplyTemplateKey(childEntity, child.Template);
                 _world.Add(childEntity, mapEntityTag);
                 PublishTemplateOnSpawnEffect(childEntity, child.Template);
                 BufferEntityTriggerGraphs(childEntity, child.Template, templates[child.Template]);
 
-                string? childLocalPath = null;
-                if (!string.IsNullOrWhiteSpace(child.LocalId))
+                if (childLocalPath != null)
                 {
-                    childLocalPath = string.IsNullOrEmpty(parentLocalPath)
-                        ? child.LocalId
-                        : parentLocalPath + "." + child.LocalId;
                     entityIndex.RegisterLocalPath(mapId, childLocalPath, childEntity);
                 }
 
@@ -971,7 +997,8 @@ namespace Ludots.Core.Systems
                     childEntity,
                     mapEntityTag,
                     entityIndex,
-                    childLocalPath);
+                    childLocalPath,
+                    pathOverrides);
                 SpawnTemplateChildNodes(
                     builder,
                     templates,
@@ -981,8 +1008,119 @@ namespace Ludots.Core.Systems
                     childEntity,
                     mapEntityTag,
                     entityIndex,
-                    childLocalPath);
+                    childLocalPath,
+                    pathOverrides);
             }
+        }
+
+        /// <summary>
+        /// 将实例根下的 overridePaths 预展开成“绝对路径 → 组件 set”表。
+        /// 作者可写相对路径（自动拼 InstanceId 前缀）或已带实例根的绝对路径。
+        /// 每条必须是非空 trimmed 的后代路径且 set 至少声明一个对象型组件载荷。
+        /// </summary>
+        private static Dictionary<string, List<(string Component, JsonNode Set)>>? BuildPathOverrideTable(
+            string mapId,
+            EntitySpawnData entityData)
+        {
+            if (entityData.OverridePaths == null || entityData.OverridePaths.Count == 0)
+            {
+                return null;
+            }
+
+            string instanceId = entityData.InstanceId;
+            if (string.IsNullOrWhiteSpace(instanceId))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' entity '{ResolveMapEntityContextId(entityData)}' authors overridePaths but has no InstanceId to root descendant paths.");
+            }
+
+            instanceId = instanceId.Trim();
+            var table = new Dictionary<string, List<(string Component, JsonNode Set)>>(StringComparer.Ordinal);
+            for (int i = 0; i < entityData.OverridePaths.Count; i++)
+            {
+                PathOverrideEntry entry = entityData.OverridePaths[i];
+                string context = $"Map '{mapId}' entity '{instanceId}' overridePaths[{i}]";
+                if (entry == null)
+                {
+                    throw new InvalidOperationException($"{context}: entry must not be null.");
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.Path) ||
+                    !string.Equals(entry.Path, entry.Path.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"{context}: path must be a trimmed non-empty descendant path.");
+                }
+
+                if (entry.Set == null || entry.Set.Count == 0)
+                {
+                    throw new InvalidOperationException($"{context} '{entry.Path}': set must declare at least one component.");
+                }
+
+                string absolutePath = entry.Path;
+                if (!string.Equals(absolutePath, instanceId, StringComparison.Ordinal) &&
+                    !absolutePath.StartsWith(instanceId + ".", StringComparison.Ordinal))
+                {
+                    absolutePath = instanceId + "." + absolutePath;
+                }
+
+                if (!table.TryGetValue(absolutePath, out var componentSets))
+                {
+                    componentSets = new List<(string Component, JsonNode Set)>();
+                    table.Add(absolutePath, componentSets);
+                }
+
+                foreach (var kvp in entry.Set)
+                {
+                    if (string.IsNullOrWhiteSpace(kvp.Key) ||
+                        !string.Equals(kvp.Key, kvp.Key.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"{context} '{entry.Path}': set component names must be trimmed non-empty.");
+                    }
+
+                    if (kvp.Value is not JsonObject)
+                    {
+                        throw new InvalidOperationException(
+                            $"{context} '{entry.Path}' component '{kvp.Key}': set payload must be a JSON object of component fields.");
+                    }
+
+                    componentSets.Add((kvp.Key, kvp.Value));
+                }
+            }
+
+            return table;
+        }
+
+        private static void ApplyPathOverrides(
+            EntityBuilder builder,
+            Dictionary<string, List<(string Component, JsonNode Set)>>? pathOverrides,
+            string? localPath)
+        {
+            if (pathOverrides == null || localPath == null)
+            {
+                return;
+            }
+
+            if (!pathOverrides.TryGetValue(localPath, out var componentSets))
+            {
+                return;
+            }
+
+            for (int i = 0; i < componentSets.Count; i++)
+            {
+                builder.WithMergedOverride(componentSets[i].Component, componentSets[i].Set);
+            }
+
+            pathOverrides.Remove(localPath);
+        }
+
+        private static void ThrowUnresolvedPathOverrides(
+            string mapId,
+            EntitySpawnData entityData,
+            Dictionary<string, List<(string Component, JsonNode Set)>> pathOverrides)
+        {
+            throw new InvalidOperationException(
+                $"Map '{mapId}' entity '{ResolveMapEntityContextId(entityData)}' overridePaths did not match any addressable descendant: {string.Join(", ", pathOverrides.Keys)}.");
         }
 
         private static bool TryBuildBatchRequest(

@@ -80,7 +80,7 @@
   { "id": "eg.struct.tent", "components": { "Name": { "Value": "Tent" } } },
   { "id": "eg.item.radio", "components": { "Name": { "Value": "Radio" } } },
   { "id": "eg.item.lootbox", "components": { "Name": { "Value": "Lootbox" } } },
-  { "id": "eg.item.rope", "components": { "Name": { "Value": "Rope" } } },
+  { "id": "eg.item.rope", "components": { "Name": { "Value": "Rope" }, "Health": { "Current": 8, "Max": 8 } } },
   { "id": "eg.struct.sentry", "components": { "Name": { "Value": "Sentry" } } },
   { "id": "eg.prop.spotlight", "components": { "Name": { "Value": "Spotlight" } } },
   { "id": "eg.struct.jersey", "components": { "Name": { "Value": "Barricade" } } },
@@ -88,5 +88,5 @@
   { "id": "eg.item.pot", "components": { "Name": { "Value": "Pot" } } },
   { "id": "eg.prop.parking_spot", "components": { "Name": { "Value": "Parking" } } },
   { "id": "eg.vehicle.mule_bike", "components": { "Name": { "Value": "Mule Bike" } } },
-  { "id": "eg.unit.mule", "components": { "Name": { "Value": "Mule Guard" }, "Team": { "Id": 3 } } }
+  { "id": "eg.unit.mule", "components": { "Name": { "Value": "Mule Guard" }, "Team": { "Id": 3 }, "Health": { "Current": 30, "Max": 30 } } }
 ]
