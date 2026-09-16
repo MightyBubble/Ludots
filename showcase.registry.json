@@ -9992,6 +9992,29 @@
       "artifactDir": null,
       "screenshot": null,
       "status": "active"
+    },
+    {
+      "id": "entity_group_textbook",
+      "path": "mods/showcases/entity_group_textbook/EntityGroupTextbookMod",
+      "title": "Entity Group 教科书",
+      "summary": "实体组教科书（#1540）：营地作为普通 EntityTemplate（递归 children + localId + attach + relations）可复用、可实例化变异、可被组件内相对路径引用；同一营地摆到两个区域并分别用 5 种路径 override + 关系覆盖做差异；示范黑板 @相对路径指向三名哨兵；零 showcase 代码。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "entity-group",
+        "override",
+        "relation",
+        "prefab-like",
+        "textbook"
+      ],
+      "binding": "entity_group_textbook",
+      "preset": "entity_group_textbook_raylib",
+      "docsPath": "gitbook/architecture/entity-group-and-override.md",
+      "readmePath": null,
+      "acceptanceTest": "EntityGroupTextbookAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
     }
   ],
   "pathExemptions": [

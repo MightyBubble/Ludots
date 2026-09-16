@@ -146,12 +146,6 @@ namespace Ludots.Core.Config
         public string Template { get; set; }
 
         /// <summary>
-        /// Entity group template id: placing a group instance expands into prefixed
-        /// slot entities at load. Mutually exclusive with <see cref="Template"/>.
-        /// </summary>
-        public string Group { get; set; }
-
-        /// <summary>
         /// Placement anchor of last resort (cm): lands as WorldPositionCm only when
         /// neither the template nor an explicit override supplies one. Both axes must
         /// be authored together.

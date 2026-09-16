@@ -470,7 +470,7 @@ namespace GasTests
                 Directory.CreateDirectory(Path.Combine(root, "Entities"));
                 File.WriteAllText(
                     Path.Combine(root, "config_catalog.json"),
-                    @"[{ ""Path"": ""Entities/templates.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }, { ""Path"": ""Entities/groups.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+                    @"[{ ""Path"": ""Entities/templates.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 string dynamicHeightComponent = includeDynamicHeightSampling
                     ? """
                           "ContinuousHeightmapSampleState": {},
