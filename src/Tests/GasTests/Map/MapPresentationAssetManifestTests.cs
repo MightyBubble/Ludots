@@ -37,7 +37,8 @@ public sealed class MapPresentationAssetManifestTests
                 Path.Combine(root, "config_catalog.json"),
                 """
                 [
-                  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" }
+                  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
+                  { "Path": "Entities/groups.json", "Policy": "ArrayById", "IdField": "id" }
                 ]
                 """);
             File.WriteAllText(
@@ -63,6 +64,20 @@ public sealed class MapPresentationAssetManifestTests
                   {
                     "id": "manifest.child",
                     "components": { "Name": { "Value": "Manifest Child" } }
+                  },
+                  {
+                    "id": "manifest.group-standalone",
+                    "components": { "Name": { "Value": "Group Standalone" } }
+                  }
+                ]
+                """);
+            File.WriteAllText(
+                Path.Combine(root, "Entities", "groups.json"),
+                """
+                [
+                  {
+                    "id": "manifest.group",
+                    "slots": [ { "localId": "solo", "template": "manifest.group-standalone" } ]
                   }
                 ]
                 """);
@@ -113,6 +128,9 @@ public sealed class MapPresentationAssetManifestTests
             int lateInstanceOverrideMeshId = meshes.Register(
                 "manifest.late-instance-override.mesh",
                 MeshAssetDescriptor.Model(0, "mod:late-instance-override.glb"));
+            int groupSlotMeshId = meshes.Register(
+                "manifest.group-slot.mesh",
+                MeshAssetDescriptor.Model(0, "mod:group-slot.glb"));
 
             var batches = new InstancedBatchAssetRegistry();
             int batchAssetId = batches.Register(
@@ -230,6 +248,18 @@ public sealed class MapPresentationAssetManifestTests
                     ],
                     Rules = [CreateOnSpawn(childTemplateKey, childDefinitionId)],
                 });
+            int groupStandaloneTemplateKey = loader.EntityTemplateKeys.GetId("manifest.group-standalone");
+            int groupStandaloneDefinitionId = definitions.GetOrRegisterId("manifest.presenter-group-standalone");
+            definitions.Register(
+                "manifest.presenter-group-standalone",
+                new PresenterDefinition
+                {
+                    Behaviors =
+                    [
+                        AssetBehavior(0, AssetKind.Mesh, groupSlotMeshId, VisualRenderPath.StaticMesh),
+                    ],
+                    Rules = [CreateOnSpawn(groupStandaloneTemplateKey, groupStandaloneDefinitionId)],
+                });
 
             loader.SetPresentationRuntime(
                 new PresentationStableIdAllocator(),
@@ -254,11 +284,18 @@ public sealed class MapPresentationAssetManifestTests
                     },
                 ],
             });
+            map.Entities.Add(new EntitySpawnData
+            {
+                InstanceId = "camp1",
+                Group = "manifest.group",
+                PositionXCm = 400,
+                PositionYCm = 0,
+            });
 
             MapPresentationAssetManifest manifest = loader.BuildPresentationAssetManifest(map);
 
             Assert.That(manifest.IsSealed, Is.True);
-            Assert.That(manifest.Count, Is.EqualTo(11));
+            Assert.That(manifest.Count, Is.EqualTo(12));
             Assert.That(CollectAssetIds(manifest), Is.EquivalentTo(new[]
             {
                 rootMeshId,
@@ -272,6 +309,7 @@ public sealed class MapPresentationAssetManifestTests
                 instanceOverrideMeshId,
                 instanceChildMeshId,
                 lateInstanceOverrideMeshId,
+                groupSlotMeshId,
             }));
         }
         finally

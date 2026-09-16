@@ -39,6 +39,12 @@ public static class NavObstacleAuthoringAdapter
         {
             EntitySpawnData entityData = map.Entities[i]
                 ?? throw new InvalidOperationException($"Map '{map.Id}' contains null entity entry at index {i}.");
+            if (!string.IsNullOrWhiteSpace(entityData.Group))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{map.Id}' entity[{i}] declares group placement '{entityData.Group}'; runtime nav obstacle authoring does not support group placements yet.");
+            }
+
             if (string.IsNullOrWhiteSpace(entityData.Template))
             {
                 throw new InvalidOperationException($"Map '{map.Id}' entity[{i}] requires a template.");

@@ -272,6 +272,12 @@
     "AllowEmpty": true
   },
   {
+    "Path": "Entities/groups.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
     "Path": "Presentation/presenters.json",
     "Policy": "ArrayById",
     "IdField": "id",

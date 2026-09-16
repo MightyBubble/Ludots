@@ -1,61 +1,61 @@
 ## GAS Composition Gate — Self Review
 
-- **Task / Issue**: MightyBubble/Ludots#1507（周期效果编译内核 + HUD 值绑定）
-- **Date**: 2026-09-13
-- **Agent / Author**: ZCode（分支 codex/gpu-skinned-commercial）
+- **Task / Issue**: MightyBubble/Ludots#1540 切1（实体组模板 schema + 装载校验 + 地图摆放展开）
+- **Date**: 2026-09-16
+- **Agent / Author**: ZCode（分支 poi-entity-group-design，基准 origin/main f36773a2f5）
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A**（对既有图程序做加载期静态判定与等价编译执行；HUD 值读取时机迁移；不新增 graph 节点类型、不新增 op）
+新变体主要交付物是（A/B/C/D）: **A**（组合既有 EntityTemplate 的作者面容器资产；物化路径完全复用 map 装载 lane）
 
 结论: **PASS**
 
-一句话理由: 交付物是"同一批既有 op 的等价快车道执行 + HUD 值的投影期现读"，组合面（effect template / graph / presenter 定义 JSON）零扩展，下一个 Mod 变体仍然只改连线与配置。
+一句话理由: 组模板之于实体模板，等同 graph 之于 op——是组合层声明，不新增行为 enum/preset 开关，不新建第二条物化管线；展开产物是合成 EntitySpawnData，走既有实体循环（EntityBuilder/ComponentRegistry/TemplateBatchSpawner）。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| OnPeriod 纯属性增量判定器（加载期静态证明） | 0（纯函数，职责单一：判定+编译） | `EffectPeriodKernel`（新，GAS 命名空间），由 `EffectExecutionPlanCompiler.FinalizeAll` 既有加载终点驱动 |
-| 到期批执行（求值 + staging 直写） | 2 复用 1 | `EffectLifetimeSystem` PeriodGraphs 阶段逐条路由；写路径复用 `EffectPhaseSideEffectTransaction.StageAttributeAdd`（Layer 1 原子性壳，不新建事务） |
-| HUD 值绑定声明 | 2（Mod 配置面不变：既有 attributeBinding + worldText 组合即触发） | presenter 定义编译期从同定义 `CompiledBindings` 解析属性源 |
-| 屏幕值现读刷新 | 0 | `ScreenHudBatchBuffer.RefreshAttributeBoundTexts`（Hud 层纯数据刷新），`WorldHudToScreenSystem` 一行调用 |
+| 组模板 schema + 装载（Entities/groups.json，ArrayById） | 2（作者面数据） | `DataRegistry<EntityGroupTemplate>`（泛型装载器实例化，非平行 loader） |
+| 装载期校验（localId 唯一 / template XOR group / 嵌套环） | 2 | 纯函数校验，先例 `ValidateTemplateChildrenGraph` |
+| 组摆放展开 → 合成 EntitySpawnData | 2 | 纯配置层变换 `EntityGroupPlacement`，产出进既有实体循环 |
+| 槽位 override 递归合并 | 0（既有） | `ConfigPipeline.DeepMerge`（JSON 组装层合并；组件层整组件替换合同不动） |
+| 实体物化 | 0（既有） | MapLoader 单实体/batch lane 原样消费 |
 
 ### 3. Reuse list
 
-- Handlers: `BuiltinHandlers.HandleApplyModifiers`（仅静态证明"空修饰符 → no-op"，不复制实现）
-- Queues / Systems: `EffectDueWheel`（due 出桶，不改）、`EffectLifetimeSystem`（PeriodGraphs 阶段）、`AttributeAggregatorSystem`（消费侧不改）、`ClearPresentationFlagsSystem`（不改）
-- Resolvers / Registries: `EffectTemplateRegistry`（内核表宿主，与 execution plans 同生命周期）、`GraphProgramRegistry`、`PresetTypeRegistry`、`BuiltinHandlerRegistry`、`GlobalPhaseListenerRegistry`（经 `EffectPhaseExecutor` 只读查询）
-- 事务: `EffectPhaseSideEffectTransaction.StageAttributeAdd` / `Commit` / `Rollback`（零新增事务 API）
-- RNG: `EffectLifetimeSystem.BuildExecutionSeed` + `EffectPhaseExecutor.BuildRandomSeed`（改 internal static 复用，保证与解释 VM 逐位同种子）
-- HUD: `WorldHudBatchBuffer.TryAdd`（serial 稳定性天然去重）、`ScreenHudBatchBuffer` 脏文本增量、`PresentationOverlaySceneBuilder` 数值格式化车道、`HudItemIdentity` serial 组合
+- Handlers: 无新增（无 GAS handler 变更）
+- Queues / Systems: `MapLoader.LoadEntitiesAndIndex` 既有循环消费展开结果；`TemplateBatchSpawner` 不改
+- Resolvers / Registries: `DataRegistry<T>`、`ConfigPipeline.RequireEntry/MergeArrayByIdFromCatalog/DeepMerge`、`MapLoadEntityIndex`（前缀化 InstanceId 复用唯一性 fail-fast）
+- Existing presets / graphs: `EntityTemplate`/`EntityTemplateLocalPose`（localPose 类型直接复用）
 
 ### 4. New Layer 0 ops (if any)
 
-| Op 名 | 单一职责 | 为何不能组合现有 op |
-|-------|----------|---------------------|
-| `EffectPeriodKernel`（判定器+求值器） | 加载期把已验证指令流编译为稠密内核程序并在 due 时求值 | 它是图 VM 的等价快车道，不是新 op；组合既有 op 恰是被替代对象（每事件 ~15µs 解释税） |
-| `ScreenHudBatchBuffer.RefreshAttributeBoundTexts` | 屏幕文本 HUD 的绑定值现读刷新 | 投影层新数据源（AttributeBuffer 现读），无既有等价物 |
+N/A——无新 op、无新 handler、无新 enum。
 
 ### 5. Transaction boundary
 
-批执行原子性沿用现相位事务：内核条目经 `StageAttributeAdd` 进同一 `EffectPhaseSideEffectTransaction`，slice 中止 → 既有 `Rollback` 整体恢复；提交 → 既有单次 `Commit` flush（批量脏标/聚合/表现位均在既有提交循环内，同批去重由 `AttributeAggregateDirtyRegistry` 与 `DirtyEntityQueue` 内建去重承担）。
-
-守卫取舍：路由期预检（目标存活 / `AttributeBuffer` / `DirtyFlags` 齐备 + 无 Phase Listener 干涉），预检不过的条目落回逐事件解释路径重放——解释路径对同一失败面抛出与改造前完全一致的错误；预检通过后批内无剩余失败面（单线程 slice 内世界状态不变），无需批中途回滚。
+切1 无新事务边界：map 装载本就是同步 fail-fast lane（任一实体失败整图装载失败），组展开不改变该语义。组级原子性（组级 preflight + 整组回滚）属切3（RuntimeEntitySpawnQueue 侧），届时复用 `WriteCheckpoint/RollbackWrites` 既有事务设施。
 
 ### 6. Config SSOT
 
-行为配置落在: `mods/**/assets/GAS/effects.json` + `graphs.json`；HUD 绑定声明落在 `mods/**/assets/Presentation/presenters.json`（既有 worldText + attributeBinding 组合，无新字段）。
+行为配置落在: `Entities/groups.json`（config_catalog.json 声明 ArrayById/id，Core+Mods 分片合并，与 Entities/templates.json 同合同）。
 
-是否新增 JSON schema: **NO**
+是否新增 JSON schema: **YES** — 组模板是多实体摆放的组合容器，组合对象（EntityTemplate、地图摆放）都在 graph/effect 之前的作者层，无法用 effect template（单实体语义）或 graph（运行时行为）表达；且它不携带行为开关，只有槽位声明与组件 JSON 合并。装载复用 `DataRegistry<T>` 泛型管线，不新建平行加载器。
 
 ### 7. Red flag scan
 
 - [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback——不可证明纯增量的 OnPeriod 留解释 VM 是双车道健全性边界（合同写在 `EffectPeriodKernel` 类型注释），不是 fallback
+- [x] 未新建与 spawn 平行的物化管线（展开产物走既有实体循环）
+- [x] 未把 placement 校验塞进 lifecycle op（校验在装载期作者面）
+- [x] 未添加「说不清的」默认 fallback（组摆放缺 InstanceId / 同时声明 template / 带 Overrides 一律 fail-fast）
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**（例如漂移上限加 ClampFloat 节点、再加纯算术节点——判定器白名单自动覆盖；超出白名单自动留解释 VM，无需 Core enum 变更）。
+「下一个 Mod 变体」（新 POI 组、改槽位组件、嵌套更深）将修改: **Entities/groups.json 数据**；无需触碰 Core enum。
+
+### 附：护栏对照
+
+- RFC-0065：组槽位的 Team/PlayerOwner 约束沿用 spawn 管线既有级联（多来源 Team 冲突即抛），切1 不放宽不收紧。
+- MovementParticipation：组槽位是逻辑成员，允许移动单位（与 template child 的结构件禁令分线）。
+- 确定性：展开序 = 地图声明序 × 槽位声明序 × 深度优先，无字典序依赖。

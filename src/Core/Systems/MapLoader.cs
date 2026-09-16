@@ -55,6 +55,7 @@ namespace Ludots.Core.Systems
         
         // New Registry
         public DataRegistry<EntityTemplate> TemplateRegistry { get; private set; }
+        public DataRegistry<EntityGroupTemplate> GroupTemplateRegistry { get; private set; }
         public EntityTemplateKeyRegistry EntityTemplateKeys { get; }
         private readonly Dictionary<string, string> _templateSources = new Dictionary<string, string>(StringComparer.Ordinal);
 
@@ -63,6 +64,7 @@ namespace Ludots.Core.Systems
             _world = world;
             _worldMap = worldMap;
             TemplateRegistry = new DataRegistry<EntityTemplate>(pipeline);
+            GroupTemplateRegistry = new DataRegistry<EntityGroupTemplate>(pipeline);
             EntityTemplateKeys = new EntityTemplateKeyRegistry();
             _templateBatchSpawner = new TemplateEntityBatchSpawner(world, EntityTemplateKeys, scratchCapacity: TemplateBatchScratchCapacity);
         }
@@ -147,14 +149,19 @@ namespace Ludots.Core.Systems
                 return manifest;
             }
 
+            // Slot entities of a group placement participate in the presentation asset
+            // manifest like any other map-authored template; expand before collecting.
+            List<EntitySpawnData> expandedEntities =
+                EntityGroupPlacement.Expand(mapConfig, GroupTemplateRegistry, TemplateRegistry);
+
             var visitedTemplates = new HashSet<string>(StringComparer.Ordinal);
             var visitedDefinitions = new HashSet<int>();
             var reachableDefinitionIds = new List<int>();
             var instanceAssetIds = new Dictionary<int, HashSet<int>>();
 
-            for (int i = 0; i < mapConfig.Entities.Count; i++)
+            for (int i = 0; i < expandedEntities.Count; i++)
             {
-                EntitySpawnData? entity = mapConfig.Entities[i];
+                EntitySpawnData? entity = expandedEntities[i];
                 if (entity?.PresenterParamOverrides == null)
                 {
                     continue;
@@ -172,9 +179,9 @@ namespace Ludots.Core.Systems
                 }
             }
 
-            for (int i = 0; i < mapConfig.Entities.Count; i++)
+            for (int i = 0; i < expandedEntities.Count; i++)
             {
-                EntitySpawnData? entity = mapConfig.Entities[i];
+                EntitySpawnData? entity = expandedEntities[i];
                 if (entity == null || string.IsNullOrWhiteSpace(entity.Template))
                 {
                     continue;
@@ -426,6 +433,7 @@ namespace Ludots.Core.Systems
             // This loads "Entities/templates.json" from Core and all Mods
             // Merging them with priority
             TemplateRegistry.Load("Entities/templates.json", catalog, report);
+            GroupTemplateRegistry.Load("Entities/groups.json", catalog, report);
             EntityTemplateKeys.Clear();
             _templateSources.Clear();
             var templateIds = new HashSet<string>(StringComparer.Ordinal);
@@ -436,6 +444,7 @@ namespace Ludots.Core.Systems
                 templateIds.Add(template.Id);
             }
             ValidateTemplateChildrenGraph(templateIds);
+            EntityGroupPlacement.Validate(GroupTemplateRegistry, TemplateRegistry);
             foreach (var template in TemplateRegistry.GetAll())
             {
                 EntityTemplateKeys.Register(template.Id);
@@ -596,6 +605,7 @@ namespace Ludots.Core.Systems
             }
 
             ValidateInstanceExposure(mapConfig);
+            List<EntitySpawnData> expandedEntities = EntityGroupPlacement.Expand(mapConfig, GroupTemplateRegistry, TemplateRegistry);
 
             // We need to extract the dictionary from the registry to pass to EntityBuilder
             // Or better, update EntityBuilder to accept DataRegistry or just the Interface.
@@ -720,7 +730,7 @@ namespace Ludots.Core.Systems
                 activeBatchTemplateId = null;
             }
             
-            foreach (var entityData in mapConfig.Entities)
+            foreach (var entityData in expandedEntities)
             {
                 if (entityData == null)
                 {
