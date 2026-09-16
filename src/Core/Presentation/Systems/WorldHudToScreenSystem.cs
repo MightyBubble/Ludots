@@ -36,6 +36,11 @@ namespace Ludots.Core.Presentation.Systems
         private int _lastProjectionRevision = -1;
         private int _lastCullVisibilityRevision = -1;
 
+        private static readonly bool HudGateTraceEnabled =
+            Environment.GetEnvironmentVariable("LUDOTS_HUD_GATE_TRACE") is "1" or "true" or "yes" or "on";
+
+        private static int _gateTraceFrame;
+
         public const int ProjectionMarginPixels = 200;
         public const float ProjectionCoarseMarginCm = 600f;
         private readonly HudOwnerFrameSnapshot _ownerSnapshot = new();
@@ -103,11 +108,17 @@ namespace Ludots.Core.Presentation.Systems
             bool projectionChanged = worldHudProjectionRevision != _lastWorldHudProjectionRevision;
             bool contentChanged = worldHudRevision != _lastWorldHudRevision;
 
+            if (HudGateTraceEnabled && (_gateTraceFrame++ % 30) == 0)
+            {
+                Ludots.Core.Diagnostics.Log.Info(
+                    in Ludots.Core.Diagnostics.LogChannels.Presentation,
+                    $"[hudgate] f={_gateTraceFrame} rev proj={projectionRevision}/{_lastProjectionRevision} cameraStill={cameraStill} terrainUnchanged={terrainUnchanged} projChanged={projectionChanged} contentChanged={contentChanged} posChanged={positionsChanged} structChanged={structuralChanged} span={_worldHud.Count}");
+            }
+
             // 属主快照按存储序单趟拉取；仅在有值绑定文本要刷新或本帧确有投影工作时付费，
             // 纯静帧早退保持零成本。值刷新先于一切早退判定，静帧也保持数值鲜活。
             bool needsValueRefresh = _screenHud.HasAttributeBoundTexts;
             bool earlyExitEligible = cameraStill && terrainUnchanged &&
-                cullVisibilityRevision == _lastCullVisibilityRevision &&
                 !projectionChanged && !contentChanged;
             if (needsValueRefresh || !earlyExitEligible)
             {
@@ -119,8 +130,11 @@ namespace Ludots.Core.Presentation.Systems
                 _screenHud.RefreshAttributeBoundTexts(_ownerSnapshot, World);
             }
 
-            // 相机/地形/粗 cull 未变时的三档轻路径；任何几何或结构变化都落全量重建。
-            if (cameraStill && terrainUnchanged && cullVisibilityRevision == _lastCullVisibilityRevision)
+            // 相机/地形未变时的三档轻路径。属主剔除/LOD 翻转不再作废轻路径：条目增删由
+            // 发射侧保留 lane 处理（Remove/TryAdd 经 removed/dirty 增量流入 tier 2/3），
+            // 投影层的 IsOwnerVisible 全量核对只是相机几何变化时的兜底——10K 移动单位每帧
+            // 都有 LOD 跨界者，把 cull 版本腿留在门控里会让全量重建（2 万条×4.6ms）永不休眠。
+            if (cameraStill && terrainUnchanged)
             {
                 // 1) 什么都没变 → 0 成本早退。
                 if (!projectionChanged && !contentChanged)
