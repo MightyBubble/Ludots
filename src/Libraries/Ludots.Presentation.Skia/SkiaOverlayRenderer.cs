@@ -109,19 +109,9 @@ namespace Ludots.Presentation.Skia
         public int TextSpriteCacheCount => _textSpriteCache.Count;
         public int MarkerSpriteCacheCount => _markerSpriteCache.Count;
 
-        /// <summary>本次更新中文本 full-rebuild 次数（非 fast-path 位置更新）——移动跳动的取证。</summary>
-        public int TextRebuildCount { get; set; }
-
-        /// <summary>绘制端是否曾写出非整数像素坐标（应为 false）——文字亚像素抖动的取证。</summary>
-        public bool SubpixelTextDrawObserved { get; set; }
-
-        private static readonly bool HudTraceEnabled =
-            Environment.GetEnvironmentVariable("LUDOTS_HUD_TRACE") is "1" or "true" or "yes" or "on";
-
         public void ResetFrameStats()
         {
             RebuiltLaneCountLastFrame = 0;
-            TextRebuildCount = 0;
             LastUnderUiBarMs = 0d;
             LastUnderUiTextMs = 0d;
             LastBarBatchBuildMs = 0d;
@@ -1517,12 +1507,6 @@ namespace Ludots.Presentation.Skia
             {
                 if (!TryUpdateRetainedTextSpriteLanePositions(state, laneVersion, span))
                 {
-                    TextRebuildCount++;
-                    if (HudTraceEnabled)
-                    {
-                        System.Console.WriteLine($"[text-rebuild] laneVersion={laneVersion} prev={state.LastVersion} itemCount={span.Length}");
-                    }
-
                     UpdateRetainedTextSpriteLane(state, laneVersion, span);
                 }
             }
@@ -1614,14 +1598,6 @@ namespace Ludots.Presentation.Skia
                     // text 是独立 sprite 实例），像素对齐后免抖。bake 内边距是常值，取整仍保留。
                     float snappedX = MathF.Round(positionsX[instanceIndex] - TextSpriteBakePaddingX);
                     float snappedY = MathF.Round(positionsY[instanceIndex]);
-                    if (HudTraceEnabled && !SubpixelTextDrawObserved &&
-                        (positionsX[instanceIndex] != MathF.Floor(positionsX[instanceIndex]) ||
-                         positionsY[instanceIndex] != MathF.Floor(positionsY[instanceIndex])))
-                    {
-                        SubpixelTextDrawObserved = true;
-                        System.Console.WriteLine(
-                            $"[text-snap] BEFORE round bucket={bucketIndex} x={positionsX[instanceIndex]} y={positionsY[instanceIndex]}");
-                    }
                     drawTransforms[writeIndex] = new SKRotationScaleMatrix(1f, 0f, snappedX, snappedY);
                     writeIndex++;
                 }
@@ -1692,9 +1668,8 @@ namespace Ludots.Presentation.Skia
                     orderEntry.DirtySerial == item.DirtySerial)
                 {
                     RetainedTextSpriteBatchBucket orderBucket = state.Buckets[orderEntry.BucketIndex];
-                    float orderDrawX = MathF.Round(item.X);
-                    float orderDrawY = MathF.Round((item.Y + fontSize) - state.BucketBaselines[orderEntry.BucketIndex]);
-                    orderBucket.AddVisible(orderDrawX, orderDrawY);
+                    float orderDrawY = (item.Y + fontSize) - state.BucketBaselines[orderEntry.BucketIndex];
+                    orderBucket.AddVisible(item.X, orderDrawY);
                     continue;
                 }
 
@@ -1706,9 +1681,8 @@ namespace Ludots.Presentation.Skia
                         : entry.Key.Equals(new TextBatchKey(item.Text, fontSize, ToColorKey(ToSkColor(item.Color0))))))
                 {
                     RetainedTextSpriteBatchBucket bucket = state.Buckets[entry.BucketIndex];
-                    float drawX = MathF.Round(item.X);
-                    float drawY = MathF.Round((item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex]);
-                    bucket.AddVisible(drawX, drawY);
+                    float drawY = (item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex];
+                    bucket.AddVisible(item.X, drawY);
                     entry.SeenStamp = stamp;
                     entry.DirtySerial = item.DirtySerial;
                     entry.FontSize = fontSize;
@@ -1772,11 +1746,8 @@ namespace Ludots.Presentation.Skia
 
                 RetainedTextSpriteBatchBucket bucket = state.Buckets[entry.BucketIndex];
                 int fontSize = state.OrderFontSizes[i];
-                // 位置喂入端也取整：绘制端对齐不足以根治——bucket 里仍是亚像素 drawY，
-                // 会反复微移成抖动。在此真正浮点画一绝，写入即像素化，后绘制亦稳。
-                float drawY = MathF.Round((item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex]);
-                float drawX = MathF.Round(item.X);
-                bucket.AddVisible(drawX, drawY);
+                float drawY = (item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex];
+                bucket.AddVisible(item.X, drawY);
             }
 
             state.LastVersion = laneVersion;
