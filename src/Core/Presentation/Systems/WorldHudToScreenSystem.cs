@@ -630,7 +630,9 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
-                if (item.Width <= 0f || float.IsNaN(item.Width))
+                // 宽度兜底只适用于 Bar：文本 Width 恒为 0，全量路径按锚点（screen.X）投影，
+                // 这里若按 16px 居中会左移 8px，与全量路径交替写入时表现为左右抖动。
+                if (item.Kind == WorldHudItemKind.Bar && (item.Width <= 0f || float.IsNaN(item.Width)))
                 {
                     item.Width = 16f;
                 }
