@@ -11,6 +11,7 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
     private readonly GraphProgramRegistry _programs;
     private readonly World? _world;
     private readonly IGraphRuntimeApi? _api;
+    private readonly int _budgetSteps;
     private readonly int[] _ints = new int[GraphVmLimits.MaxIntRegisters];
     private readonly byte[] _bools = new byte[GraphVmLimits.MaxBoolRegisters];
     private readonly float[] _floats = new float[GraphVmLimits.MaxFloatRegisters];
@@ -21,26 +22,63 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
     private readonly int[] _cachedVersions = new int[ScriptCacheCapacity];
     private readonly GraphInstruction[]?[] _cachedPrograms = new GraphInstruction[ScriptCacheCapacity][];
     private int _nextCacheSlot;
+    private Entity[] _agentCasters = Array.Empty<Entity>();
 
     public GraphProgramHfsmHost(
         GraphProgramRegistry programs,
         World? world = null,
-        IGraphRuntimeApi? api = null)
+        IGraphRuntimeApi? api = null,
+        int budgetSteps = 64)
     {
+        if (budgetSteps <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(budgetSteps));
+        }
+
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
         _world = world;
         _api = api;
+        _budgetSteps = budgetSteps;
+    }
+
+    /// <summary>
+    /// Sets the world entity each agent acts on (caster for its lifecycle/condition graphs).
+    /// Agents with no bound entity (unset or out-of-range) resolve to <see cref="Entity.Null"/>,
+    /// preserving the legacy register-only behavior of the showcase hosts.
+    /// </summary>
+    public void EnsureAgentCasterCapacity(int capacity)
+    {
+        if (capacity < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(capacity));
+        }
+
+        if (capacity <= _agentCasters.Length)
+        {
+            return;
+        }
+
+        var next = new Entity[capacity];
+        _agentCasters.AsSpan().CopyTo(next);
+        _agentCasters = next;
+    }
+
+    /// <summary>Binds an agent slot to the world entity it acts on (its graphs' caster).</summary>
+    public void SetAgentCaster(int agentIndex, Entity entity)
+    {
+        EnsureAgentCasterCapacity(agentIndex + 1);
+        _agentCasters[agentIndex] = entity;
     }
 
     public bool EvalCondition(int agentIndex, int conditionGraphId)
     {
-        GraphSliceResult result = ExecuteHalt(conditionGraphId, "状态机条件");
+        GraphSliceResult result = ExecuteHalt(conditionGraphId, "状态机条件", CasterFor(agentIndex));
         return result.ReturnInt != 0;
     }
 
     public void RunAction(int agentIndex, int actionGraphId)
     {
-        GraphSliceResult result = ExecuteHalt(actionGraphId, "状态机生命周期");
+        GraphSliceResult result = ExecuteHalt(actionGraphId, "状态机生命周期", CasterFor(agentIndex));
         if (!result.Halted)
         {
             throw new InvalidOperationException(
@@ -48,7 +86,10 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
         }
     }
 
-    private GraphSliceResult ExecuteHalt(int graphId, string hostLabel)
+    private Entity CasterFor(int agentIndex)
+        => (uint)agentIndex < _agentCasters.Length ? _agentCasters[agentIndex] : Entity.Null;
+
+    private GraphSliceResult ExecuteHalt(int graphId, string hostLabel, Entity caster)
     {
         GraphInstruction[] program = ResolveScriptProgram(graphId, hostLabel);
         if (TryExecuteImmediateHalt(program, out int immediateReturn))
@@ -66,8 +107,9 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
         GraphSliceResult result = GraphExecutor.ExecuteResolvedRegisteredScriptSlice(
             _programs, program, _floats, _ints, _bools, _entities, _targets, _callStack,
             ref cursor,
-            budgetSteps: 64,
+            budgetSteps: _budgetSteps,
             _world,
+            caster: caster,
             api: _api);
         if (!result.Halted)
         {
