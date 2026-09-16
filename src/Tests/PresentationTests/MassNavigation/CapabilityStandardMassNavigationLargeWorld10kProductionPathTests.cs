@@ -40,6 +40,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -162,6 +163,92 @@ namespace Ludots.Tests.Presentation
             Assert.That(minimapMarkers.DroppedTotal, Is.Zero, diagnostics);
             Assert.That(minimapScreenMarkers.DroppedTotal, Is.Zero, diagnostics);
             AssertFixedAnchorChain(engine, simulation, sampleCount: 64, toleranceCm: 25f);
+        }
+
+        [Test]
+        public void Showcase_NavigationStepPrecedesSpatialPartitionUpdate()
+        {
+            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
+
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+
+            List<ISystem<float>> postMovement = RequireSystemGroup(engine, SystemGroup.PostMovement);
+            int preStepIndex = postMovement.FindIndex(system => system is MassNavigationPreSimulationStepSystem);
+            int simStepIndex = postMovement.FindIndex(system => system is MassNavigationSimulationStepSystem);
+            int partitionIndex = postMovement.FindIndex(system => system is SpatialPartitionUpdateSystem);
+            Assert.That(preStepIndex, Is.GreaterThanOrEqualTo(0), "MassNavigationPreSimulationStepSystem must be installed in PostMovement.");
+            Assert.That(simStepIndex, Is.GreaterThanOrEqualTo(0), "MassNavigationSimulationStepSystem must be installed in PostMovement.");
+            Assert.That(partitionIndex, Is.GreaterThanOrEqualTo(0), "SpatialPartitionUpdateSystem must be installed in PostMovement.");
+            Assert.That(simStepIndex, Is.LessThan(partitionIndex),
+                "Simulation step writes WorldPositionCm; if SpatialPartitionUpdateSystem runs first, its Previous==Current movement gate never fires and partition memberships freeze at the spawn cell.");
+            Assert.That(preStepIndex, Is.LessThan(simStepIndex),
+                "Pre-simulation step must stay anchored before the simulation step.");
+        }
+
+        [Test]
+        public void Showcase_MovingAgentMembershipTracksLivePosition()
+        {
+            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
+
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
+            var hudProjection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, hudProjection, simulation, ExpectedAgentCount);
+
+            Entity[] agents = CollectMassNavigationAgents(engine, ExpectedAgentCount);
+            var startPositions = new Vector2[agents.Length];
+            for (int i = 0; i < agents.Length; i++)
+            {
+                var value = engine.World.Get<WorldPositionCm>(agents[i]).Value;
+                startPositions[i] = new Vector2(value.X.ToFloat(), value.Y.ToFloat());
+            }
+
+            // 生成后的拥堵走位期内 agent 会自行移动（同 SteadyStateSimTickBudget 的 settled 语义）。
+            // 阈值必须明显大于查询半径 + 网格尺寸（100cm），否则冻结在出生格的成员关系仍落在
+            // 查询覆盖的邻格里，测不出脱节。
+            const float movementThresholdCm = 1000f;
+            Entity movedAgent = Entity.Null;
+            Vector2 movedTo = default;
+            AdvanceFixedClockUntil(
+                engine,
+                hudProjection,
+                maxFixedTicks: 3600,
+                () =>
+                {
+                    for (int i = 0; i < agents.Length; i++)
+                    {
+                        var value = engine.World.Get<WorldPositionCm>(agents[i]).Value;
+                        var now = new Vector2(value.X.ToFloat(), value.Y.ToFloat());
+                        if (Vector2.DistanceSquared(now, startPositions[i]) >= movementThresholdCm * movementThresholdCm)
+                        {
+                            movedAgent = agents[i];
+                            movedTo = now;
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                () => $"No mass nav agent moved >= {movementThresholdCm}cm within the observation window; the scenario congestion walk did not happen.");
+
+            var buffer = new Entity[512];
+            SpatialQueryResult result = engine.SpatialQueries.QueryRadius(
+                new WorldCmInt2((int)MathF.Round(movedTo.X), (int)MathF.Round(movedTo.Y)),
+                200,
+                buffer);
+            bool found = false;
+            for (int i = 0; i < result.Count; i++)
+            {
+                if (buffer[i] == movedAgent)
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            Assert.That(found, Is.True,
+                $"Moved agent {movedAgent.Id} at live position ({movedTo.X:F0},{movedTo.Y:F0}) must be returned by spatial queries at that position; a membership frozen at the spawn cell would miss it.");
         }
 
         [Test]
@@ -827,6 +914,17 @@ namespace Ludots.Tests.Presentation
             }
 
             throw new InvalidOperationException($"System {typeof(TSystem).Name} is not registered in group {group}.");
+        }
+
+        private static List<ISystem<float>> RequireSystemGroup(GameEngine engine, SystemGroup group)
+        {
+            FieldInfo field = typeof(GameEngine).GetField("_systemGroups", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("GameEngine system groups field is unavailable.");
+            var groups = field.GetValue(engine) as Dictionary<SystemGroup, List<ISystem<float>>>
+                ?? throw new InvalidOperationException("GameEngine system groups could not be inspected.");
+            return groups.TryGetValue(group, out List<ISystem<float>>? systems)
+                ? systems
+                : throw new InvalidOperationException($"System group {group} is not registered.");
         }
 
         private static TSystem RequirePresentationSystem<TSystem>(GameEngine engine)
