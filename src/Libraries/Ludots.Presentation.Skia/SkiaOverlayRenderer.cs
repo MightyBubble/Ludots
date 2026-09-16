@@ -1594,7 +1594,11 @@ namespace Ludots.Presentation.Skia
                 for (int instanceIndex = 0; instanceIndex < count; instanceIndex++)
                 {
                     drawSprites[writeIndex] = spriteRect;
-                    drawTransforms[writeIndex] = new SKRotationScaleMatrix(1f, 0f, positionsX[instanceIndex] - TextSpriteBakePaddingX, positionsY[instanceIndex]);
+                    // 实例坐标取整到像素：亚像素基线会让文字逐帧微移而抖动（bar 走整数平移稳定，
+                    // text 是独立 sprite 实例），像素对齐后免抖。bake 内边距是常值，取整仍保留。
+                    float snappedX = MathF.Round(positionsX[instanceIndex] - TextSpriteBakePaddingX);
+                    float snappedY = MathF.Round(positionsY[instanceIndex]);
+                    drawTransforms[writeIndex] = new SKRotationScaleMatrix(1f, 0f, snappedX, snappedY);
                     writeIndex++;
                 }
             }
