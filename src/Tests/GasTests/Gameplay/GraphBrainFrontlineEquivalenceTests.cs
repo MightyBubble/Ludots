@@ -5,6 +5,8 @@ using System.Text.Json.Nodes;
 using System.Linq;
 using Arch.Core;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Config;
+using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -13,23 +15,26 @@ using Ludots.Core.Gameplay.GraphBrains;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// Equivalence suite for the frontline graph brains (issue #1536 切B): the mod's
-    /// rts.frontline.attack / rts.frontline.transport Script graphs, driven by the generic
-    /// GraphActionBrainHostSystem, reproduce the behavioral contracts the deleted Core
-    /// ActionLoop systems carried (order consumption, pursuit routing, standoff ring slot,
-    /// cooldown firing, dead-target parking, gather/load/haul/credit).
+    /// Equivalence suite for the frontline graph brains (issue #1536 migration): the mod's
+    /// hfsm.rts.attack / hfsm.rts.transport HFSM definitions (states/transitions bound to
+    /// ActionLib graphs), driven per entity by the generic HfsmWorld + GraphProgramHfsmHost
+    /// adapter, reproduce the behavioral contracts the deleted Core ActionLoop systems carried
+    /// (order consumption, pursuit routing, standoff ring slot, cooldown firing, dead-target
+    /// parking, gather/load/haul/credit).
     /// </summary>
     [TestFixture, NonParallelizable]
     public class GraphBrainFrontlineEquivalenceTests
     {
-        private const string AttackScript = "rts.frontline.attack";
-        private const string TransportScript = "rts.frontline.transport";
+        private const string AttackHfsm = "hfsm.rts.attack";
+        private const string TransportHfsm = "hfsm.rts.transport";
         private const int MoveTo = 101;
         private const int AttackTarget = 102;
         private const int Gather = 172;
@@ -41,7 +46,7 @@ namespace Ludots.Tests.GAS
             public bool CanAdvanceGameplay => true;
         }
 
-        private static (GraphProgramRegistry Programs, GasGraphRuntimeApi Api) CompileFrontlineBrains(
+        private static (GraphProgramRegistry Programs, GasGraphRuntimeApi Api, GraphBehaviorCatalog Behavior) CompileFrontlineBrains(
             World world, EffectRequestQueue effects, OrderQueue orders, OrderTypeRegistry orderTypes)
         {
             GraphIdRegistry.Clear();
@@ -93,6 +98,8 @@ namespace Ludots.Tests.GAS
                 GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, resolver);
             }
 
+            GraphBehaviorCatalog behavior = LoadModHfsmAndActionLib(programs);
+
             var tagOps = new Ludots.Core.Gameplay.GAS.TagOps(
                 new Ludots.Core.Gameplay.GAS.DirtyEntityQueue(8), new Ludots.Core.Gameplay.GAS.TagRuleRegistry());
             var relationships = new Ludots.Core.Gameplay.Relationships.RelationshipRuntime(
@@ -112,7 +119,29 @@ namespace Ludots.Tests.GAS
                 entityQueries: entityQueries);
             api.BindOrderPipeline(orders, orderTypes);
             SinkTemplateKeyId = templateKeys.GetId("rts_frontline_core");
-            return (programs, api);
+            return (programs, api, behavior);
+        }
+
+        // Loads the mod's AI/hfsm.json and GAS/action_lib.json through the production catalog
+        // loaders (the same path the game engine uses), so the equivalence suite exercises the
+        // real HFSM/action bindings rather than a hand-rolled registry stub.
+        private static GraphBehaviorCatalog LoadModHfsmAndActionLib(GraphProgramRegistry programs)
+        {
+            string modRoot = Path.Combine(
+                FindRepoRoot(),
+                "mods/showcases/rts_multiplayer_frontline/RtsMultiplayerFrontlineMod");
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("RtsMultiplayerFrontlineMod", modRoot);
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            modLoader.LoadedModIds.Add("RtsMultiplayerFrontlineMod");
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var catalog = new ConfigCatalog();
+            catalog.Add(new ConfigCatalogEntry("GAS/action_lib.json", ConfigMergePolicy.ArrayById, "name"));
+            catalog.Add(new ConfigCatalogEntry("AI/hfsm.json", ConfigMergePolicy.ArrayById, "id"));
+
+            var actions = new GraphActionCatalog();
+            new GraphActionCatalogLoader(pipeline, actions, programs, new GraphFunctionCatalog()).Load(catalog);
+            return new GraphBehaviorDefinitionLoader(pipeline, actions).Load(catalog);
         }
 
         private static string FindRepoRoot()
@@ -161,6 +190,27 @@ namespace Ludots.Tests.GAS
             },
         };
 
+        // Mirrors the template birth state (Entities/templates.json) so behavior graphs can
+        // read their Brain.* keys from the first tick.
+        private static GraphActionBrain AttackBrain() => new()
+        {
+            HfsmId = AttackHfsm,
+            ThinkEveryNTicks = 1,
+            BlackboardIntDefaults = new[]
+            {
+                ("Brain.Attack.Cooldown", 0), ("Brain.Attack.DirX", 0), ("Brain.Attack.DirY", 0),
+            },
+            BlackboardEntityDefaults = new[] { "Brain.Attack.Target" },
+        };
+
+        private static GraphActionBrain TransportBrain() => new()
+        {
+            HfsmId = TransportHfsm,
+            ThinkEveryNTicks = 1,
+            BlackboardIntDefaults = new[] { ("Brain.Transport.Ticks", 0) },
+            BlackboardEntityDefaults = new[] { "Brain.Transport.Source", "Brain.Transport.Sink" },
+        };
+
         [Test]
         public void AttackBrain_AcceptsOrder_RoutesToStandoffSlot_AndCompletesTheOrder()
         {
@@ -168,16 +218,17 @@ namespace Ludots.Tests.GAS
             var effects = new EffectRequestQueue(16);
             var orderTypes = CreateOrderTypes();
             var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-            var (programs, api) = CompileFrontlineBrains(world, effects, orders, orderTypes);
-            var host = new GraphActionBrainHostSystem(world, programs, api, OpenGate.Instance);
+            var (programs, api, behavior) = CompileFrontlineBrains(world, effects, orders, orderTypes);
+            var host = new HfsmBrainHostSystem(world, programs, api, OpenGate.Instance, behavior);
 
             Entity enemy = world.Create(
                 Ludots.Core.Components.WorldPositionCm.FromCm(1000, 0),
                 new Team { Id = 2 });
             Entity actor = world.Create(
-                new GraphActionBrain { ScriptKey = AttackScript, ThinkEveryNTicks = 1 },
+                AttackBrain(),
                 ActiveOrder(7, AttackTarget, enemy),
                 new PlayerOwner { PlayerId = 1 },
+                new HfsmState(),
                 new Team { Id = 1 },
                 Ludots.Core.Components.WorldPositionCm.FromCm(0, 0),
                 new BlackboardIntBuffer(),
@@ -188,6 +239,8 @@ namespace Ludots.Tests.GAS
             // order consumed: buffer released + terminal result published
             That(world.Get<OrderBuffer>(actor).ActiveIndex, Is.EqualTo(-1));
             That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            That(host.TryGetLeafStateName(actor, out string routeState) && routeState == "pursuit", Is.True,
+                "accepting an attack order enters the pursuit state");
 
             // pursuit move routed to the standoff ring slot: 1000 - 520 = 480cm on X
             That(orders.TryDequeue(out Order move), Is.True);
@@ -206,17 +259,18 @@ namespace Ludots.Tests.GAS
             var effects = new EffectRequestQueue(16);
             var orderTypes = CreateOrderTypes();
             var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-            var (programs, api) = CompileFrontlineBrains(world, effects, orders, orderTypes);
-            var host = new GraphActionBrainHostSystem(world, programs, api, OpenGate.Instance);
+            var (programs, api, behavior) = CompileFrontlineBrains(world, effects, orders, orderTypes);
+            var host = new HfsmBrainHostSystem(world, programs, api, OpenGate.Instance, behavior);
 
             Entity enemy = world.Create(
                 Ludots.Core.Components.WorldPositionCm.FromCm(1000, 0),
                 new Team { Id = 2 },
                 new AttributeBuffer());
             Entity actor = world.Create(
-                new GraphActionBrain { ScriptKey = AttackScript, ThinkEveryNTicks = 1 },
+                AttackBrain(),
                 ActiveOrder(7, AttackTarget, enemy),
                 new PlayerOwner { PlayerId = 1 },
+                new HfsmState(),
                 new Team { Id = 1 },
                 Ludots.Core.Components.WorldPositionCm.FromCm(600, 0),
                 new BlackboardIntBuffer(),
@@ -244,6 +298,48 @@ namespace Ludots.Tests.GAS
             }
 
             That(effects.Count, Is.EqualTo(2), "dead target parks the brain without firing");
+            That(host.TryGetLeafStateName(actor, out string parkedState) && parkedState == "wait", Is.True,
+                "a dead target parks the brain back in wait");
+        }
+
+        [Test]
+        public void AttackBrain_ParksOnPlayerMoveOrder_AndResumesTheRememberedTarget()
+        {
+            using var world = World.Create();
+            var effects = new EffectRequestQueue(16);
+            var orderTypes = CreateOrderTypes();
+            var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
+            var (programs, api, behavior) = CompileFrontlineBrains(world, effects, orders, orderTypes);
+            var host = new HfsmBrainHostSystem(world, programs, api, OpenGate.Instance, behavior);
+
+            Entity enemy = world.Create(
+                Ludots.Core.Components.WorldPositionCm.FromCm(1000, 0),
+                new Team { Id = 2 },
+                new AttributeBuffer());
+            Entity actor = world.Create(
+                AttackBrain(),
+                ActiveOrder(7, AttackTarget, enemy),
+                new PlayerOwner { PlayerId = 1 },
+                new HfsmState(),
+                new Team { Id = 1 },
+                Ludots.Core.Components.WorldPositionCm.FromCm(0, 0),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer());
+
+            host.Update(1f / 30f); // accept + standoff routing
+            host.Update(1f / 30f); // out of range → persistent tracking
+            That(host.TryGetLeafStateName(actor, out string trackingState) && trackingState == "track", Is.True,
+                "out-of-range pursuit settles into the tracking state");
+
+            world.Set(actor, ActiveOrder(8, MoveTo, Entity.Null));
+            host.Update(1f / 30f);
+            That(host.TryGetLeafStateName(actor, out string moveParksState) && moveParksState == "wait", Is.True,
+                "a player move order parks the attack brain instead of fighting the move");
+
+            world.Set(actor, new OrderBuffer { ActiveIndex = -1 });
+            host.Update(1f / 30f);
+            That(host.TryGetLeafStateName(actor, out string resumedState) && resumedState == "track", Is.True,
+                "once the move order clears, the remembered target is resumed");
         }
 
         [Test]
@@ -253,8 +349,8 @@ namespace Ludots.Tests.GAS
             var effects = new EffectRequestQueue(16);
             var orderTypes = CreateOrderTypes();
             var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-            var (programs, api) = CompileFrontlineBrains(world, effects, orders, orderTypes);
-            var host = new GraphActionBrainHostSystem(world, programs, api, OpenGate.Instance);
+            var (programs, api, behavior) = CompileFrontlineBrains(world, effects, orders, orderTypes);
+            var host = new HfsmBrainHostSystem(world, programs, api, OpenGate.Instance, behavior);
 
             var sinkAttributes = default(AttributeBuffer);
             Entity source = world.Create(
@@ -266,11 +362,13 @@ namespace Ludots.Tests.GAS
                 Ludots.Core.Components.WorldPositionCm.FromCm(600, -200),
                 sinkAttributes,
                 new PlayerOwner { PlayerId = 1 },
+                new HfsmState(),
                 new Ludots.Core.Gameplay.GAS.Components.DirtyFlags());
             Entity actor = world.Create(
-                new GraphActionBrain { ScriptKey = TransportScript, ThinkEveryNTicks = 1 },
+                TransportBrain(),
                 ActiveOrder(9, Gather, source),
                 new PlayerOwner { PlayerId = 1 },
+                new HfsmState(),
                 Ludots.Core.Components.WorldPositionCm.FromCm(0, 0),
                 new BlackboardIntBuffer(),
                 new BlackboardEntityBuffer());
@@ -284,10 +382,12 @@ namespace Ludots.Tests.GAS
             world.Set(actor, Ludots.Core.Components.WorldPositionCm.FromCm(1000, 0));
             host.Update(1f / 30f);
             var bb = world.Get<BlackboardIntBuffer>(actor);
-            int phaseKey = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register("Brain.Transport.Phase");
             int ticksKey = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register("Brain.Transport.Ticks");
-            That(bb.TryGet(phaseKey, out int phase) && phase == 2, Is.True, "arrival at source starts loading");
-            That(bb.TryGet(ticksKey, out int ticks) && ticks == 60, Is.True);
+            That(host.TryGetLeafStateName(actor, out string arrivedState) && arrivedState == "loading", Is.True,
+                "arrival at source enters the loading state");
+            // loading.enter seeds 60 ticks; the HFSM entry tick also runs the leaf onTick, which
+            // consumes the first tick, so the counter reads 59 while loading still spans 60 ticks.
+            That(bb.TryGet(ticksKey, out int ticks) && ticks == 59, Is.True);
 
             for (int i = 0; i < 61; i++)
             {
@@ -303,12 +403,14 @@ namespace Ludots.Tests.GAS
                 Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId("Crystals")), Is.EqualTo(0f),
                 "no credit before docking");
 
-            // teleport to the dock → credit 20 crystals, phase resets
+            // teleport to the dock → credit 20 crystals, then the state machine parks back in idle
             world.Set(actor, Ludots.Core.Components.WorldPositionCm.FromCm(600, -200));
             host.Update(1f / 30f);
             That(world.Get<AttributeBuffer>(sink).GetCurrent(
                 Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId("Crystals")), Is.EqualTo(20f));
-            That(world.Get<BlackboardIntBuffer>(actor).TryGet(phaseKey, out phase) && phase == 0, Is.True);
+            host.Update(1f / 30f);
+            That(host.TryGetLeafStateName(actor, out string parkedState) && parkedState == "idle", Is.True,
+                "a completed haul returns the harvester to idle");
         }
     }
 }

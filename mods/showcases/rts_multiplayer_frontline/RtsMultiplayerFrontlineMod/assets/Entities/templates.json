@@ -251,17 +251,17 @@
       "FrontlineDeathState": {},
       "FrontlineTagBindingState": {},
       "GraphActionBrain": {
-        "Script": "rts.frontline.transport",
+        "HfsmId": "hfsm.rts.transport",
         "ThinkEveryNTicks": 1,
         "BlackboardInts": {
-          "Brain.Transport.Phase": 0,
           "Brain.Transport.Ticks": 0
         },
         "BlackboardEntities": {
           "Brain.Transport.Source": null,
           "Brain.Transport.Sink": null
         }
-      }
+      },
+      "HfsmState": {}
     }
   },
   {
@@ -359,7 +359,6 @@
       "FrontlineDeathState": {},
       "FrontlineTagBindingState": {},
       "GraphActionBrain": {
-        "Script": "rts.frontline.attack",
         "ThinkEveryNTicks": 1,
         "BlackboardInts": {
           "Brain.Attack.Cooldown": 0,
@@ -368,8 +367,10 @@
         },
         "BlackboardEntities": {
           "Brain.Attack.Target": null
-        }
-      }
+        },
+        "HfsmId": "hfsm.rts.attack"
+      },
+      "HfsmState": {}
     }
   },
   {

@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.AI.Config;
@@ -17,30 +17,26 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Gameplay.GraphBrains;
 
 /// <summary>
-/// Entity-driven HFSM brain host. For every entity carrying a <see cref="GraphActionBrain"/>
-/// with an <see cref="GraphActionBrain.HfsmId"/>, one agent of the named HFSM is kept alive
-/// and ticked through the existing <see cref="HfsmWorld"/> + <see cref="GraphProgramHfsmHost"/>.
+/// Per-entity HFSM behavior driver, following the component-carried FSM pattern that
+/// animator already establishes (see <c>Presentation.Components.AnimatorRuntimeState</c>):
+/// each behavior entity carries its own <see cref="HfsmState"/> component; the system
+/// queries those entities directly and advances each from its own leaf using the shared
+/// <see cref="HfsmDefinition"/> transition table. Entity lifecycle is entirely ECS —
+/// adding the component binds behavior, removing it (entity death) drops the state with no
+/// agent pool, no index, no release, no private registry.
 ///
-/// Engine-side the system keeps ONE SoA slot-pool per HFSM definition, shared by all entities
-/// that instantiate that definition; author-side each entity still owns its own FSM instance
-/// (its own agent slot, caster, birth blackboard) — SoA layout never leaks into the authoring
-/// model. The system owns only entity/agent binding and the order glue: it refreshes
-/// OrderGlueKeys entity-blackboard values, points the agent's caster at the entity, and calls
-/// <see cref="HfsmWorld.TickAll"/>. State lives in the HFSM stack; counters live on the
-/// entity blackboard; the state machine itself is never re-implemented here.
-///
-/// Dynamic RTS lifecycles are handled through slot reuse: <see cref="HfsmWorld"/> is
-/// constructed with <c>reuseSlots: true</c>, entities released on death return their slot
-/// to the pool (running OnExit), and new entities re-acquire it. This keeps one SoA world
-/// per definition without leaking agent slots as units come and go.
+/// Author-side each unit still "owns one FSM"; engine-side we never recreate an entity
+/// lifecycle manager — Arch already provides it. The legacy HfsmWorld (a self-contained
+/// SoA multi-agent engine) remains available for showcase / stress driving, but is not
+/// used to manage per-entity behavior state here.
 /// </summary>
 public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
 {
     private static readonly QueryDescription BrainQuery = new QueryDescription()
-        .WithAll<GraphActionBrain, OrderBuffer, PlayerOwner, BlackboardIntBuffer, BlackboardEntityBuffer>();
+        .WithAll<GraphActionBrain, HfsmState, OrderBuffer, PlayerOwner, BlackboardIntBuffer, BlackboardEntityBuffer>();
 
     /// <summary>
-    /// Per-lifecycle step budget. State graphs that mirror a legacy monolithic behavior slice
+    /// Per-lifecycle step budget. State graphs mirroring a legacy monolithic behavior slice
     /// (e.g. standoff pursuit routing) can legitimately reach ~85 instructions, so the HFSM
     /// default of 64 is raised here while still guarding against runaway graphs.
     /// </summary>
@@ -51,10 +47,6 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
     private readonly IGameplayAdvanceGate _gate;
     private readonly GraphBehaviorCatalog _behavior;
     private readonly Dictionary<string, HfsmDefinition> _definitionsByHfsmId = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, DefinitionPool> _poolsByHfsmId = new(StringComparer.Ordinal);
-    private readonly Dictionary<Entity, EntityAgent> _agents = new();
-    private readonly List<Entity> _sweepRemovals = new();
-    private int _tick;
 
     public HfsmBrainHostSystem(
         World world,
@@ -76,10 +68,11 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
             return;
         }
 
-        _tick++;
+        ActiveCount = 0;
         foreach (ref Chunk chunk in World.Query(in BrainQuery))
         {
             Span<GraphActionBrain> brains = chunk.GetSpan<GraphActionBrain>();
+            Span<HfsmState> states = chunk.GetSpan<HfsmState>();
             Span<OrderBuffer> buffers = chunk.GetSpan<OrderBuffer>();
             ref Entity first = ref chunk.Entity(0);
             foreach (int index in chunk)
@@ -91,36 +84,35 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
                     continue;
                 }
 
+                ref HfsmState state = ref states[index];
                 WriteOrderGlue(actor, in buffers[index]);
-                EntityAgent slot = ResolveSlot(actor, in brain);
-                slot.Stamp = _tick;
-                if ((_tick % Math.Max(1, brain.ThinkEveryNTicks)) != 0)
+                if (!state.Bound)
                 {
-                    continue;
+                    // Bind on first sight: enter the definition's default leaf path.
+                    WriteBirthState(actor, in brain);
+                    state.LeafIndex = EnterDefaultPath(actor, brain.HfsmId);
+                    ActiveCount++;
+                    state.Bound = true;
+                    state.StateTicks = 0;
+                    // fall through so an active order on the bind frame transitions same-tick
                 }
+
+                Advance(actor, in brain, ref state);
+                state.StateTicks++;
             }
         }
-
-        // Tick each shared per-definition world once (author-side each entity still has its own
-        // agent slot; engine-side SoA pool is advanced in one pass per definition).
-        foreach (KeyValuePair<string, DefinitionPool> pair in _poolsByHfsmId)
-        {
-            DefinitionPool pool = pair.Value;
-            pool.World.TickAll(pool.Host);
-        }
-
-        SweepStaleSlots();
     }
 
-    /// <summary>Number of entities currently bound to an HFSM agent.</summary>
-    public int AgentCount => _agents.Count;
-
-    /// <summary>Current leaf state name for an entity's HFSM agent (diagnostics / acceptance assertions).</summary>
+    /// <summary>Current leaf state name for an entity (diagnostics / acceptance assertions).</summary>
     public bool TryGetLeafStateName(Entity actor, out string stateName)
     {
-        if (_agents.TryGetValue(actor, out EntityAgent slot))
+        if (World.TryGet<GraphActionBrain>(actor, out var brain) &&
+            !string.IsNullOrEmpty(brain.HfsmId) &&
+            World.TryGet<HfsmState>(actor, out var state) &&
+            state.LeafIndex != HfsmState.NoState)
         {
-            stateName = slot.Pool.World.GetLeafStateName(slot.AgentIndex);
+            HfsmDefinition definition = ResolveDefinition(brain.HfsmId);
+            stateName = definition.States[state.LeafIndex].Name;
             return true;
         }
 
@@ -128,38 +120,142 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
         return false;
     }
 
-    private EntityAgent ResolveSlot(Entity actor, in GraphActionBrain brain)
-    {
-        if (_agents.TryGetValue(actor, out EntityAgent existing))
-        {
-            return existing;
-        }
+    /// <summary>How many entities currently carry an HFSM behavior (diagnostics).</summary>
+    public int ActiveCount { get; private set; }
 
-        DefinitionPool pool = ResolvePool(brain.HfsmId);
-        int agentIndex = pool.World.AcquireAgent(pool.Host);
-        pool.Host.SetAgentCaster(agentIndex, actor);
-        WriteBirthState(actor, in brain);
-        var slot = new EntityAgent(pool, agentIndex);
-        _agents.Add(actor, slot);
-        return slot;
+    private int EnterDefaultPath(Entity actor, string hfsmId)
+    {
+        HfsmDefinition definition = ResolveDefinition(hfsmId);
+        int leaf = definition.ResolveDefaultLeaf(definition.RootIndex);
+        RunEnterPath(actor, leaf, definition, Array.Empty<int>()); // from root (no prior path)
+        ActiveCount++;
+        return leaf;
     }
 
-    private DefinitionPool ResolvePool(string hfsmId)
+    private void Advance(Entity actor, in GraphActionBrain brain, ref HfsmState state)
     {
-        if (_poolsByHfsmId.TryGetValue(hfsmId, out DefinitionPool? existing))
+        HfsmDefinition definition = ResolveDefinition(brain.HfsmId);
+        int oldLeaf = state.LeafIndex;
+        if (TryPickTransition(actor, oldLeaf, definition, out HfsmTransition? chosen))
         {
-            return existing;
+            int[] priorPath = PathToTarget(oldLeaf, definition);
+            state.LeafIndex = chosen.Value.ToState;
+            RunEnterPath(actor, state.LeafIndex, definition, priorPath);
+            state.StateTicks = 0;
+            RunTickCallbacks(actor, state.LeafIndex, definition);
+            return;
         }
 
-        HfsmDefinition definition = ResolveDefinition(hfsmId);
-        // One SoA world per definition; capacity is pooled and re-acquired as units come and go.
-        int capacity = DefinitionPool.AgentCapacityPerDefinition;
-        var world = new HfsmWorld(definition, capacity: capacity, reuseSlots: true);
+        // No transition from the leaf: walk ancestors and try their transitions.
+        int parent = definition.States[oldLeaf].ParentIndex;
+        while (parent >= 0)
+        {
+            if (TryPickTransition(actor, parent, definition, out chosen))
+            {
+                int[] priorPath = PathToTarget(oldLeaf, definition);
+                state.LeafIndex = chosen.Value.ToState;
+                RunEnterPath(actor, state.LeafIndex, definition, priorPath);
+                state.StateTicks = 0;
+                RunTickCallbacks(actor, state.LeafIndex, definition);
+                return;
+            }
+
+            parent = definition.States[parent].ParentIndex;
+        }
+
+        RunTickCallbacks(actor, state.LeafIndex, definition);
+    }
+
+    private bool TryPickTransition(Entity actor, int fromState, HfsmDefinition definition, out HfsmTransition? chosen)
+    {
         var host = new GraphProgramHfsmHost(_programs, World, _api, budgetSteps: LifecycleStepBudget);
-        host.EnsureAgentCasterCapacity(capacity);
-        var pool = new DefinitionPool(hfsmId, world, host);
-        _poolsByHfsmId[hfsmId] = pool;
-        return pool;
+        host.SetAgentCaster(0, actor);
+        ReadOnlySpan<HfsmTransition> span = definition.GetTransitionsFromState(fromState);
+        int bestPriority = int.MinValue;
+        int best = -1;
+        for (int i = 0; i < span.Length; i++)
+        {
+            HfsmTransition tr = span[i];
+            if (tr.ConditionGraphId > 0 && !host.EvalCondition(0, tr.ConditionGraphId))
+            {
+                continue;
+            }
+
+            if (best < 0 || tr.Priority >= bestPriority)
+            {
+                bestPriority = tr.Priority;
+                best = i;
+            }
+        }
+
+        chosen = best < 0 ? null : span[best];
+        return chosen != null;
+    }
+
+    private void RunEnterPath(Entity actor, int toLeaf, HfsmDefinition definition, int[] priorPath)
+    {
+        var host = new GraphProgramHfsmHost(_programs, World, _api, budgetSteps: LifecycleStepBudget);
+        host.SetAgentCaster(0, actor);
+        int[] target = PathToTarget(toLeaf, definition);
+        // Enter only states not already present in the prior path (deep to shallow).
+        int enterAt = 0;
+        while (enterAt < target.Length && enterAt < priorPath.Length && target[enterAt] == priorPath[enterAt])
+        {
+            enterAt++;
+        }
+
+        for (int i = target.Length - 1; i >= enterAt; i--)
+        {
+            int enterGraph = definition.States[target[i]].OnEnterGraphId;
+            if (enterGraph > 0)
+            {
+                host.RunAction(0, enterGraph);
+            }
+        }
+    }
+
+    private void ExitUpTo(Entity actor, int fromLeaf, HfsmDefinition definition)
+    {
+        var host = new GraphProgramHfsmHost(_programs, World, _api, budgetSteps: LifecycleStepBudget);
+        host.SetAgentCaster(0, actor);
+        int[] path = PathToTarget(fromLeaf, definition);
+        for (int i = path.Length - 1; i >= 0; i--)
+        {
+            int exitGraph = definition.States[path[i]].OnExitGraphId;
+            if (exitGraph > 0)
+            {
+                host.RunAction(0, exitGraph);
+            }
+        }
+    }
+
+    private void RunTickCallbacks(Entity actor, int leaf, HfsmDefinition definition)
+    {
+        var host = new GraphProgramHfsmHost(_programs, World, _api, budgetSteps: LifecycleStepBudget);
+        host.SetAgentCaster(0, actor);
+        int[] path = PathToTarget(leaf, definition);
+        for (int i = path.Length - 1; i >= 0; i--)
+        {
+            int tickGraph = definition.States[path[i]].OnTickGraphId;
+            if (tickGraph > 0)
+            {
+                host.RunAction(0, tickGraph);
+            }
+        }
+    }
+
+    private static int[] PathToTarget(int leaf, HfsmDefinition definition)
+    {
+        var path = new List<int>();
+        int current = leaf;
+        while (current >= 0)
+        {
+            path.Add(current);
+            current = definition.States[current].ParentIndex;
+        }
+
+        path.Reverse();
+        return path.ToArray();
     }
 
     private HfsmDefinition ResolveDefinition(string hfsmId)
@@ -172,6 +268,27 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
         definition = _behavior.RequireHfsm(hfsmId);
         _definitionsByHfsmId[hfsmId] = definition;
         return definition;
+    }
+
+    private void WriteBirthState(Entity actor, in GraphActionBrain brain)
+    {
+        if (brain.BlackboardIntDefaults != null)
+        {
+            ref BlackboardIntBuffer buffer = ref World.Get<BlackboardIntBuffer>(actor);
+            foreach ((string key, int value) in brain.BlackboardIntDefaults)
+            {
+                buffer.Set(ConfigKeyRegistry.Register(key), value);
+            }
+        }
+
+        if (brain.BlackboardEntityDefaults != null)
+        {
+            ref BlackboardEntityBuffer entities = ref World.Get<BlackboardEntityBuffer>(actor);
+            foreach (string key in brain.BlackboardEntityDefaults)
+            {
+                entities.Set(ConfigKeyRegistry.Register(key), Entity.Null);
+            }
+        }
     }
 
     private void WriteOrderGlue(Entity actor, in OrderBuffer buffer)
@@ -198,81 +315,5 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
         }
 
         ints.Set(GraphActionBrainHostSystem.OrderGlueKeys.HasPending, buffer.HasPending ? 1 : 0);
-    }
-
-    private void WriteBirthState(Entity actor, in GraphActionBrain brain)
-    {
-        if (brain.BlackboardIntDefaults != null)
-        {
-            ref BlackboardIntBuffer buffer = ref World.Get<BlackboardIntBuffer>(actor);
-            foreach ((string key, int value) in brain.BlackboardIntDefaults)
-            {
-                buffer.Set(ConfigKeyRegistry.Register(key), value);
-            }
-        }
-
-        if (brain.BlackboardEntityDefaults != null)
-        {
-            ref BlackboardEntityBuffer entities = ref World.Get<BlackboardEntityBuffer>(actor);
-            foreach (string key in brain.BlackboardEntityDefaults)
-            {
-                entities.Set(ConfigKeyRegistry.Register(key), Entity.Null);
-            }
-        }
-    }
-
-    private void SweepStaleSlots()
-    {
-        if (_agents.Count == 0)
-        {
-            return;
-        }
-
-        _sweepRemovals.Clear();
-        foreach (KeyValuePair<Entity, EntityAgent> entry in _agents)
-        {
-            if (entry.Value.Stamp != _tick)
-            {
-                _sweepRemovals.Add(entry.Key);
-            }
-        }
-
-        for (int i = 0; i < _sweepRemovals.Count; i++)
-        {
-            Entity actor = _sweepRemovals[i];
-            if (_agents.Remove(actor, out EntityAgent? slot))
-            {
-                slot.Pool.World.ReleaseAgent(slot.AgentIndex, slot.Pool.Host);
-            }
-        }
-    }
-
-    private sealed class DefinitionPool
-    {
-        public const int AgentCapacityPerDefinition = 128;
-
-        public DefinitionPool(string hfsmId, HfsmWorld world, GraphProgramHfsmHost host)
-        {
-            HfsmId = hfsmId;
-            World = world;
-            Host = host;
-        }
-
-        public string HfsmId { get; }
-        public HfsmWorld World { get; }
-        public GraphProgramHfsmHost Host { get; }
-    }
-
-    private sealed class EntityAgent
-    {
-        public EntityAgent(DefinitionPool pool, int agentIndex)
-        {
-            Pool = pool;
-            AgentIndex = agentIndex;
-        }
-
-        public DefinitionPool Pool { get; }
-        public int AgentIndex { get; }
-        public int Stamp;
     }
 }

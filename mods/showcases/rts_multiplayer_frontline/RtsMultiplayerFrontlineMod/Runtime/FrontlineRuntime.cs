@@ -562,14 +562,16 @@ public sealed class FrontlineRuntime : IGameplayAdvanceGate
         // capabilityId: rts-frontline.tag-binding
         engine.RegisterSystem(new FrontlineTagBindingSystem(engine.World, this, _tagBinder), SystemGroup.RuntimeEntityBinding);
         // capabilityId: rts-frontline.graph-brains (issue #1536): attack + transport
-        // behavior now live as Script graphs (rts.frontline.attack / rts.frontline.transport)
-        // driven by the generic order-reactive brain host.
+        // behavior now live as HFSM definitions (hfsm.rts.attack / hfsm.rts.transport) whose
+        // states/transitions bind ActionLib graphs, driven per entity by the generic
+        // HfsmWorld + GraphProgramHfsmHost adapter.
         engine.RegisterSystem(
-            new GraphActionBrainHostSystem(
+            new HfsmBrainHostSystem(
                 engine.World,
                 engine.GetService(CoreServiceKeys.GraphProgramRegistry),
                 engine.GetService(CoreServiceKeys.GasGraphRuntimeApi),
-                this),
+                this,
+                engine.AiRuntime.Behavior),
             SystemGroup.AbilityActivation);
         // capabilityId: rts-frontline.death-and-match
         engine.RegisterSystem(

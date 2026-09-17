@@ -37,7 +37,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
 {
     private const string FrontlineRuntimeContextKey = "rts.multiplayer.frontline.runtime";
 
-    // Mirrors the per-haul credit constant authored in rts.frontline.transport (issue #1536).
+    // Mirrors the per-haul credit constant authored in the transport dock action (rts.transport.dock.credit).
     private const float CargoCrystalsPerTrip = 20f;
 
     private static readonly QueryDescription ClientCoreQuery = new QueryDescription()

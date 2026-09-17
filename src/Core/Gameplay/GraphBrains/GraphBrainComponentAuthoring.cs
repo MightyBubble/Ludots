@@ -10,6 +10,7 @@ internal static class GraphBrainComponentAuthoring
     public static void Register()
     {
         AuthoringRegistry.Register<GraphActionBrain>(nameof(GraphActionBrain), SetGraphActionBrain);
+        AuthoringRegistry.Register<HfsmState>(nameof(HfsmState), SetHfsmState);
     }
 
     private static void SetGraphActionBrain(Entity entity, JsonNode data)
@@ -22,23 +23,25 @@ internal static class GraphBrainComponentAuthoring
 
         foreach (var property in obj)
         {
-            if (property.Key is not ("Script" or "ThinkEveryNTicks" or "BlackboardInts" or "BlackboardEntities"))
+            if (property.Key is not ("HfsmId" or "Script" or "ThinkEveryNTicks" or "BlackboardInts" or "BlackboardEntities"))
             {
                 throw new InvalidOperationException(
-                    $"{context} authoring does not accept property '{property.Key}'; allowed: Script, ThinkEveryNTicks, BlackboardInts, BlackboardEntities.");
+                    $"{context} authoring does not accept property '{property.Key}'; allowed: HfsmId, Script, ThinkEveryNTicks, BlackboardInts, BlackboardEntities.");
             }
         }
 
-        string? script = null;
-        if (obj.TryGetPropertyValue("Script", out JsonNode? scriptNode))
-        {
-            script = scriptNode?.GetValue<string>();
-        }
-
-        if (string.IsNullOrWhiteSpace(script) || script!.Length != script.Trim().Length)
+        string? hfsmId = ReadOptionalCanonicalKey(obj, "HfsmId", context);
+        string? script = ReadOptionalCanonicalKey(obj, "Script", context);
+        if (hfsmId == null && script == null)
         {
             throw new InvalidOperationException(
-                $"{context}.Script must be a non-empty canonical graph key (no leading/trailing whitespace).");
+                $"{context} requires exactly one of HfsmId (AI/hfsm.json) or Script (GAS graphs).");
+        }
+
+        if (hfsmId != null && script != null)
+        {
+            throw new InvalidOperationException(
+                $"{context} accepts HfsmId or Script, not both; an entity carries one behavior source.");
         }
 
         int thinkEveryNTicks = 1;
@@ -81,12 +84,30 @@ internal static class GraphBrainComponentAuthoring
 
         entity.Add(new GraphActionBrain
         {
-            ScriptKey = script,
+            HfsmId = hfsmId ?? string.Empty,
+            ScriptKey = script ?? string.Empty,
             ThinkEveryNTicks = thinkEveryNTicks,
             BlackboardIntDefaults = intDefaults.ToArray(),
             BlackboardEntityDefaults = entityDefaults.ToArray(),
         });
     }
+
+        private static string? ReadOptionalCanonicalKey(JsonObject obj, string property, string context)
+        {
+            if (!obj.TryGetPropertyValue(property, out JsonNode? node) || node is null)
+            {
+                return null;
+            }
+
+            string? value = node.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(value) || value.Length != value.Trim().Length)
+            {
+                throw new InvalidOperationException(
+                    $"{context}.{property} must be a non-empty canonical key (no leading/trailing whitespace).");
+            }
+
+            return value;
+        }
 
         private static string RequireCanonicalKey(string key, string context)
         {
@@ -97,4 +118,9 @@ internal static class GraphBrainComponentAuthoring
 
             return key;
         }
+    private static void SetHfsmState(Entity entity, System.Text.Json.Nodes.JsonNode data)
+    {
+        entity.Add(new HfsmState { LeafIndex = HfsmState.NoState });
+    }
+
 }
