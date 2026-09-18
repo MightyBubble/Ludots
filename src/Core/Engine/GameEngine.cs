@@ -1510,15 +1510,11 @@ namespace Ludots.Core.Engine
                     return 0;
                 }
 
-                // 双源 VFX：带 Quarks 粒子数据（VfxData）走通用粒子渲染；
-                // 带宿主 SourceUris（如 ue5.niagara:）的由宿主端直接生成（UE5IsmRenderer 双源分流）。
-                // 两者皆缺才是非法声明。
                 if (!meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor) ||
-                    (!descriptor.VfxData.IsValid &&
-                     (descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)))
+                    !descriptor.VfxData.IsValid)
                 {
                     throw new InvalidOperationException(
-                        $"Presenter behavior VFX asset '{key}' must declare VFX particle data or host source URIs.");
+                        $"Presenter behavior VFX asset '{key}' must declare VFX particle data.");
                 }
 
                 return assetId;
