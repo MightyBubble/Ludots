@@ -243,6 +243,7 @@ namespace Ludots.Core.Engine
         private GasGraphRuntimeApi _gasGraphRuntimeApi;
         private Ludots.Platform.Abstractions.GroundOverlayBuffer _groundOverlayBuffer;
         private Ludots.Platform.Abstractions.SplineRibbonBuffer _splineRibbonBuffer;
+        private Ludots.Platform.Abstractions.WeatherRegionBuffer _weatherRegionBuffer;
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
@@ -1306,6 +1307,9 @@ namespace Ludots.Core.Engine
             var navMeshPresentationBuffer = new Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer(
                 presentationConfig.NavMeshTileCapacity);
             var splineRibbonBuffer = new SplineRibbonBuffer(presentationConfig.SplineRibbonCapacity);
+            var weatherRegionBuffer = new Ludots.Platform.Abstractions.WeatherRegionBuffer(
+                presentationConfig.WeatherRegionCapacity > 0 ? presentationConfig.WeatherRegionCapacity : 32,
+                presentationConfig.WeatherRegionVertexCapacity > 0 ? presentationConfig.WeatherRegionVertexCapacity : 4096);
             var soundRequestBuffer = new SoundRequestBuffer();
             var trailMeshBuffer = new TrailMeshBuffer(presentationConfig.TrailMeshCapacity);
             var worldHudBuffer = new WorldHudBatchBuffer(presentationConfig.WorldHudCapacity);
@@ -2044,6 +2048,7 @@ namespace Ludots.Core.Engine
             _gasPresentationEvents = gasPresentationEvents;
             _groundOverlayBuffer = groundOverlayBuffer;
             _splineRibbonBuffer = splineRibbonBuffer;
+            _weatherRegionBuffer = weatherRegionBuffer;
             _worldHudBuffer = worldHudBuffer;
             SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, primitiveDrawBuffer);
             SetService(CoreServiceKeys.PresentationFrameReceiptBuffer, presentationFrameReceiptBuffer);
@@ -2088,6 +2093,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GlobalPresentationEventBuffer, globalPresentationEvents);
             SetService(CoreServiceKeys.GroundOverlayBuffer, groundOverlayBuffer);
             SetService(CoreServiceKeys.SplineRibbonBuffer, splineRibbonBuffer);
+            SetService(CoreServiceKeys.WeatherRegionBuffer, weatherRegionBuffer);
             SetService(CoreServiceKeys.SoundRequestBuffer, soundRequestBuffer);
             SetService(CoreServiceKeys.TrailMeshBuffer, trailMeshBuffer);
             SetService(CoreServiceKeys.PresenterDefinitionRegistry, presenterDefinitions);
@@ -4936,6 +4942,8 @@ namespace Ludots.Core.Engine
             _gasPresentationEvents = null;
             _groundOverlayBuffer = null;
             _splineRibbonBuffer = null;
+            _weatherRegionBuffer?.Clear();
+            _weatherRegionBuffer = null;
             _worldHudBuffer = null;
             _physics2DController = null;
             _gasController = null;

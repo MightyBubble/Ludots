@@ -29,6 +29,8 @@ namespace Ludots.Core.Presentation
         private int? _globalFieldVisualDirtyRectCapacity;
         private int? _groundOverlayCapacity;
         private int? _splineRibbonCapacity;
+    private int? _weatherRegionCapacity;
+    private int? _weatherRegionVertexCapacity;
         private int? _worldHudCapacity;
         private int? _screenHudCapacity;
         private int? _worldHudTerrainOcclusionCacheCapacity;
@@ -68,6 +70,8 @@ namespace Ludots.Core.Presentation
         public int GlobalFieldVisualDirtyRectCapacity { get => _globalFieldVisualDirtyRectCapacity ?? 0; set => _globalFieldVisualDirtyRectCapacity = value; }
         public int GroundOverlayCapacity { get => _groundOverlayCapacity ?? 0; set => _groundOverlayCapacity = value; }
         public int SplineRibbonCapacity { get => _splineRibbonCapacity ?? 0; set => _splineRibbonCapacity = value; }
+        public int WeatherRegionCapacity { get => _weatherRegionCapacity ?? 0; set => _weatherRegionCapacity = value; }
+        public int WeatherRegionVertexCapacity { get => _weatherRegionVertexCapacity ?? 0; set => _weatherRegionVertexCapacity = value; }
         public int WorldHudCapacity { get => _worldHudCapacity ?? 0; set => _worldHudCapacity = value; }
         public int ScreenHudCapacity { get => _screenHudCapacity ?? 0; set => _screenHudCapacity = value; }
 
