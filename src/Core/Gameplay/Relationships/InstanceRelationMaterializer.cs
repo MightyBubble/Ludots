@@ -69,11 +69,29 @@ namespace Ludots.Core.Gameplay.Relationships
                         throw new InvalidOperationException($"{context} requires non-empty 'to' and 'type'.");
                     }
 
-                    if (!entityIndex.TryGet(relation.To, out Entity target) &&
-                        !entityIndex.TryGetByLocalPath(relation.To, out target))
+                    bool byInstanceId = entityIndex.TryGet(relation.To, out Entity target);
+                    bool byLocalPath = entityIndex.TryGetByLocalPath(relation.To, out Entity pathTarget);
+                    if (byInstanceId && byLocalPath && target != pathTarget)
+                    {
+                        throw new InvalidOperationException(
+                            $"{context} target '{relation.To}' is ambiguous: it names both a placed InstanceId and an addressable local path; rename one side.");
+                    }
+
+                    if (!byInstanceId && !byLocalPath)
                     {
                         throw new InvalidOperationException(
                             $"{context} references unknown relation target '{relation.To}'; to must be a placed InstanceId or an addressable local path.");
+                    }
+
+                    if (!byInstanceId)
+                    {
+                        target = pathTarget;
+                    }
+
+                    if (target == source)
+                    {
+                        throw new InvalidOperationException(
+                            $"{context} targets the relation owner itself; self-edges are not authored through instance relations.");
                     }
 
                     if (!types.TryGetId(relation.Type, out int typeId))

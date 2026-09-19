@@ -11,11 +11,18 @@ namespace Ludots.Core.Map
     {
         private readonly List<(string MapId, string InstanceId, string Source)> _deletions = new();
         private readonly List<(string MapId, string InstanceId, string Source)> _deletionsNotFound = new();
+        private readonly List<(string MapId, string InstanceId, string Source)> _winners = new();
         private readonly List<(string MapId, int EntityIndex, string Source)> _anonymousNonBaseFragments = new();
 
         public IReadOnlyList<(string MapId, string InstanceId, string Source)> Deletions => _deletions;
         public IReadOnlyList<(string MapId, string InstanceId, string Source)> DeletionsNotFound => _deletionsNotFound;
+        public IReadOnlyList<(string MapId, string InstanceId, string Source)> Winners => _winners;
         public IReadOnlyList<(string MapId, int EntityIndex, string Source)> AnonymousNonBaseFragments => _anonymousNonBaseFragments;
+
+        public void RecordWinner(string mapId, string instanceId, string source)
+        {
+            _winners.Add((mapId, instanceId, source));
+        }
 
         public void RecordDeletion(string mapId, string instanceId, string source)
         {
@@ -36,6 +43,7 @@ namespace Ludots.Core.Map
         {
             _deletions.Clear();
             _deletionsNotFound.Clear();
+            _winners.Clear();
             _anonymousNonBaseFragments.Clear();
         }
 

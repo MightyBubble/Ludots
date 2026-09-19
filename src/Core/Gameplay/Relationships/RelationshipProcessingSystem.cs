@@ -48,8 +48,23 @@ namespace Ludots.Core.Gameplay.Relationships
 
             if (_changeBuffer.Count > 0)
             {
-                _callbackProcessor.Process(_engine, catalogRuntime, _changeBuffer.GetSpan());
-                PublishChangeEvents(_changeBuffer.GetSpan());
+                // 前缀分批：图在事件回调里重入建边/改值会产生新记录，追加分批继续处理，
+                // 不得被一次 Clear 吞掉（重入变更是本能力的主用法）。上限防自激环。
+                int processed = 0;
+                int guard = _changeBuffer.Count * 8 + 1024;
+                while (processed < _changeBuffer.Count)
+                {
+                    ReadOnlySpan<RelationshipChangeRecord> batch = _changeBuffer.GetSpan().Slice(processed);
+                    _callbackProcessor.Process(_engine, catalogRuntime, batch);
+                    PublishChangeEvents(batch);
+                    processed = _changeBuffer.Count;
+                    if (processed > guard)
+                    {
+                        throw new InvalidOperationException(
+                            "Relationship change reentrancy exceeded guard (" + guard + "); a graph is likely self-triggering relation mutations without refire limits.");
+                    }
+                }
+
                 _changeBuffer.Clear();
             }
 
@@ -100,6 +115,22 @@ namespace Ludots.Core.Gameplay.Relationships
                     continue;
                 }
 
+                EventKey eventKey = change.Kind switch
+                {
+                    RelationshipChangeKind.LinkAdded => GameEvents.RelationLinkAdded,
+                    RelationshipChangeKind.LinkRemoved => GameEvents.RelationLinkRemoved,
+                    RelationshipChangeKind.MetricChanged => GameEvents.RelationMetricChanged,
+                    RelationshipChangeKind.FlagChanged => GameEvents.RelationFlagChanged,
+                    _ => throw new InvalidOperationException($"Unknown relationship change kind '{change.Kind}'."),
+                };
+
+                // 零订阅早退：每条记录的 CreateContext + schema 校验是固定成本，
+                // 大图装载/所有权 churn 在无人订阅 Relation* 事件时必须免付。
+                if (!_engine.TriggerManager.HasMapEventSubscribers(session.MapId, eventKey))
+                {
+                    continue;
+                }
+
                 ScriptContext context = _engine.CreateContext();
                 context.Set(CoreServiceKeys.MapId, session.MapId);
                 context.Set(CoreServiceKeys.MapSession, session);
@@ -107,29 +138,17 @@ namespace Ludots.Core.Gameplay.Relationships
                 context.Set(MapTriggerEventPayloadKeys.SourceEntity, change.Source);
                 context.Set(MapTriggerEventPayloadKeys.TargetEntity, change.Target);
                 context.Set(MapTriggerEventPayloadKeys.RelationTypeId, change.TypeId);
-
-                EventKey eventKey;
                 switch (change.Kind)
                 {
-                    case RelationshipChangeKind.LinkAdded:
-                        eventKey = GameEvents.RelationLinkAdded;
-                        break;
-                    case RelationshipChangeKind.LinkRemoved:
-                        eventKey = GameEvents.RelationLinkRemoved;
-                        break;
                     case RelationshipChangeKind.MetricChanged:
                         context.Set(MapTriggerEventPayloadKeys.RelationMetricId, change.MetricId);
                         context.Set(MapTriggerEventPayloadKeys.OldValueInt, (int)change.OldValue);
                         context.Set(MapTriggerEventPayloadKeys.VarValueInt, (int)change.NewValue);
-                        eventKey = GameEvents.RelationMetricChanged;
                         break;
                     case RelationshipChangeKind.FlagChanged:
                         context.Set(MapTriggerEventPayloadKeys.OldValueInt, (int)change.OldFlags);
                         context.Set(MapTriggerEventPayloadKeys.VarValueInt, (int)change.NewFlags);
-                        eventKey = GameEvents.RelationFlagChanged;
                         break;
-                    default:
-                        throw new InvalidOperationException($"Unknown relationship change kind '{change.Kind}'.");
                 }
 
                 _engine.TriggerManager.FireMapEvent(session.MapId, eventKey, context);

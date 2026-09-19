@@ -68,9 +68,12 @@ namespace Ludots.Core.Map
 
         public MapConfig LoadMap(MapId mapId)
         {
+            LastMergeReport.Clear();
             var visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var chain = new List<string>(8);
-            return LoadMapInternal(mapId, visiting, chain);
+            MapConfig config = LoadMapInternal(mapId, visiting, chain);
+            ResolvePendingEntityTombstones(config);
+            return config;
         }
 
         private MapConfig LoadMapInternal(MapId mapId, HashSet<string> visiting, List<string> chain)
@@ -85,7 +88,6 @@ namespace Ludots.Core.Map
                 throw new InvalidOperationException($"Cyclic map inheritance detected: {cycle}");
             }
             chain.Add(mapIdValue);
-            LastMergeReport.Clear();
             
             try
             {
@@ -242,6 +244,12 @@ namespace Ludots.Core.Map
                 }
             }
             if (source.Entities != null) MergeEntityFragments(target, source);
+
+            if (source.PendingEntityTombstones != null && source.PendingEntityTombstones.Count > 0)
+            {
+                target.PendingEntityTombstones ??= new List<(string, string)>();
+                target.PendingEntityTombstones.AddRange(source.PendingEntityTombstones);
+            }
             if (source.Teams != null) target.Teams.AddRange(source.Teams);
             if (source.Players != null) target.Players.AddRange(source.Players);
             if (source.ParticipantRelationships != null)
@@ -374,6 +382,32 @@ namespace Ludots.Core.Map
         }
 
         /// <summary>
+        /// 墓碑在继承链展开后才消化：TryRemove 命中记 Deleted、未命中记 DeletionsNotFound。
+        /// 此时父图实体已合入，子图墓碑可正确命中父图实例（继承方向的删除语义）。
+        /// </summary>
+        private void ResolvePendingEntityTombstones(MapConfig config)
+        {
+            if (config.PendingEntityTombstones == null || config.PendingEntityTombstones.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var (instanceId, sourceLabel) in config.PendingEntityTombstones)
+            {
+                if (TryRemoveEntityById(config, instanceId))
+                {
+                    LastMergeReport.RecordDeletion(config.Id, instanceId, sourceLabel);
+                }
+                else
+                {
+                    LastMergeReport.RecordDeletionNotFound(config.Id, instanceId, sourceLabel);
+                }
+            }
+
+            config.PendingEntityTombstones.Clear();
+        }
+
+        /// <summary>
         /// 地图实体跨片段合并：键 = instanceId（ordinal 精确匹配，不 trim——未 trim 的写法由
         /// 装载期 Register 的 trim 校验 fail-fast，合并层不做静默归一）。同 id 字段级深合并、
         /// 后写赢；__delete 墓碑删实例（与资产层 ConfigMerger 同键，更晚片段可复活）；匿名
@@ -383,6 +417,7 @@ namespace Ludots.Core.Map
         {
             string sourceLabel = MapMergeReport.DescribeSource(source.MergeSourceUri, "<unknown-fragment>");
             bool isBaseFragment = target.Entities.Count == 0;
+            var seenInFragment = new HashSet<string>(StringComparer.Ordinal);
 
             for (int i = 0; i < source.Entities.Count; i++)
             {
@@ -390,6 +425,15 @@ namespace Ludots.Core.Map
                 if (incoming == null)
                 {
                     continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(incoming.InstanceId))
+                {
+                    if (!seenInFragment.Add(incoming.InstanceId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{target.Id}' fragment '{sourceLabel}' declares duplicate InstanceId '{incoming.InstanceId}' within the same fragment; intra-fragment duplicates are authoring errors.");
+                    }
                 }
 
                 if (incoming.Delete == true)
@@ -400,15 +444,14 @@ namespace Ludots.Core.Map
                             $"Map '{target.Id}' fragment '{sourceLabel}' authors __delete on an entity without InstanceId; tombstones must target an addressable instance.");
                     }
 
-                    if (TryRemoveEntityById(target, incoming.InstanceId))
+                    if (!string.Equals(incoming.InstanceId, incoming.InstanceId.Trim(), StringComparison.Ordinal))
                     {
-                        LastMergeReport.RecordDeletion(target.Id, incoming.InstanceId, sourceLabel);
-                    }
-                    else
-                    {
-                        LastMergeReport.RecordDeletionNotFound(target.Id, incoming.InstanceId, sourceLabel);
+                        throw new InvalidOperationException(
+                            $"Map '{target.Id}' fragment '{sourceLabel}' tombstone InstanceId '{incoming.InstanceId}' must be trimmed.");
                     }
 
+                    target.PendingEntityTombstones ??= new List<(string, string)>();
+                    target.PendingEntityTombstones.Add((incoming.InstanceId, sourceLabel));
                     continue;
                 }
 
@@ -423,14 +466,19 @@ namespace Ludots.Core.Map
                     continue;
                 }
 
+                // 同 id 重新声明即撤销先前墓碑（复活）；跨片段同 id = 深合并。
+                target.PendingEntityTombstones?.RemoveAll(t => string.Equals(t.InstanceId, incoming.InstanceId, StringComparison.Ordinal));
+
                 int existingIndex = FindEntityIndex(target, incoming.InstanceId);
                 if (existingIndex < 0)
                 {
                     target.Entities.Add(incoming);
+                    LastMergeReport.RecordWinner(target.Id, incoming.InstanceId, sourceLabel);
                     continue;
                 }
 
                 MergeEntityData(target.Entities[existingIndex], incoming);
+                LastMergeReport.RecordWinner(target.Id, incoming.InstanceId, sourceLabel);
             }
         }
 
@@ -538,7 +586,15 @@ namespace Ludots.Core.Map
 
                     if (index >= 0)
                     {
-                        target.Relations[index] = relation;
+                        EntityRelationAuthoring existing = target.Relations[index];
+                        if (relation.Metric != null)
+                        {
+                            existing.Metric ??= new Dictionary<string, int>();
+                            foreach (var metricKvp in relation.Metric)
+                            {
+                                existing.Metric[metricKvp.Key] = metricKvp.Value;
+                            }
+                        }
                     }
                     else
                     {

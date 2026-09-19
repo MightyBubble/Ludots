@@ -20,6 +20,13 @@ namespace Ludots.Core.Config
         [JsonIgnore]
         public string? MergeSourceUri { get; set; }
 
+        /// <summary>
+        /// 装载管线内部的待决实体墓碑（id + 来源标注，不参与序列化）。墓碑在继承链
+        /// 展开前不消费——子图墓碑必须能命中父图实例；最终在 LoadMap 出口统一消化。
+        /// </summary>
+        [JsonIgnore]
+        public List<(string InstanceId, string Source)>? PendingEntityTombstones { get; set; }
+
         public string ParentId { get; set; }
         public Dictionary<string, string> Dependencies { get; set; } = new Dictionary<string, string>();
         public string ContinuousHeightmapAsset { get; set; }

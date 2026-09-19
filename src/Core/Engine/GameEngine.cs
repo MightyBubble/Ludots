@@ -3041,6 +3041,7 @@ namespace Ludots.Core.Engine
             var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
             session.EntityIndex = entityIndex;
             BakeRegionVolumesForSession(session);
+            MaterializeInstanceRelations(session, mapConfig, entityIndex);
             SetSessionParticipants(
                 session,
                 ParticipantBindingResolver.Resolve(
