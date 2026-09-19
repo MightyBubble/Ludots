@@ -318,11 +318,13 @@ public static class NavObstacleAuthoringCatalog
             Load(byId[loadOrder[i]].RootPath);
         }
 
-        return templates.ToDictionary(
+        var mergedTemplates = templates.ToDictionary(
             kvp => kvp.Key,
             kvp => kvp.Value.Deserialize<EntityTemplate>(JsonOptions)
                 ?? throw new InvalidOperationException($"Entity template '{kvp.Key}' could not be deserialized."),
             StringComparer.Ordinal);
+        EntityTemplateInheritance.ExpandAll(mergedTemplates);
+        return mergedTemplates;
     }
 
     private static void MergeMap(MapConfig target, MapConfig source)
