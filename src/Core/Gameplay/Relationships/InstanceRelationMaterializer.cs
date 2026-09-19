@@ -10,8 +10,8 @@ namespace Ludots.Core.Gameplay.Relationships
     /// 实例 relations 物化（MapLoaded 前的装载站，与参与者绑定同批）：把合并后的
     /// entity.relations 解析成实体对并写入 RelationshipRuntime。to 支持绝对 instanceId
     /// 与组内可寻址路径（两层命名空间共用 MapLoadEntityIndex）；type/metric 必须已在
-    /// 对称（isSymmetric）类型只写 from→to 单向，需要双向边请显式写两条；
-    /// Relationships catalog 注册，未知即装载期 fail-fast。变更走 EnsureLink/SetMetric，
+    /// Relationships catalog 注册，未知即装载期 fail-fast；对称（isSymmetric）类型只写
+    /// from→to 单向，需要双向边请显式写两条。变更走 EnsureLink/SetMetric，
     /// 天然进关系变更缓冲，下一拍以 Relation* 事件暴露给 trigger 图——初始边与运行时
     /// 变更同一条事件路径。
     /// </summary>
