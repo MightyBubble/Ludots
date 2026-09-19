@@ -427,6 +427,36 @@ namespace Ludots.Core.Map
                 throw new InvalidOperationException(
                     $"Map '{mapId}' has boards and must declare World; invalid fields: {string.Join(", ", invalid)}. Boards no longer define the world (#1567).");
             }
+
+            foreach (var board in config.Boards)
+            {
+                ValidateBoardPlacement(board, world!, mapId);
+            }
+        }
+
+        private static void ValidateBoardPlacement(BoardConfig board, WorldConfig world, MapId mapId)
+        {
+            bool hasX = board.OriginXCm.HasValue;
+            bool hasY = board.OriginYCm.HasValue;
+            if (hasX != hasY)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' must author OriginXCm and OriginYCm together.");
+            }
+
+            if (hasX && (board.OriginXCm!.Value != 0 || board.OriginYCm!.Value != 0))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' declares non-zero origin; board placement leaves the centered default only after #1567 slice 2b unifies SpatialCoordinateConverter origin semantics.");
+            }
+
+            long boardWidthCm = (long)board.WidthCells * board.GridCellSizeCm;
+            long boardHeightCm = (long)board.HeightCells * board.GridCellSizeCm;
+            if (boardWidthCm > world.WidthCm || boardHeightCm > world.HeightCm)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds World {world.WidthCm}x{world.HeightCm}cm; boards must fit inside the world (#1567).");
+            }
         }
 
         private static void RejectLegacyWorldExtentKeys(JsonNode fragment, string jsonPath)

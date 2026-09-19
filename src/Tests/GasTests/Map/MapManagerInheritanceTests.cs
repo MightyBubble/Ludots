@@ -125,6 +125,129 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadMap_WhenBoardExceedsWorld_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "oversize", """
+                {
+                  "id": "oversize",
+                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
+                  "boards": [
+                    {
+                      "name": "default",
+                      "widthCells": 1024,
+                      "heightCells": 256,
+                      "gridCellSizeCm": 100
+                    }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("oversize"));
+                Assert.That(ex!.Message, Does.Contain("exceeds World"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardOriginAxesMismatch_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "halforigin", """
+                {
+                  "id": "halforigin",
+                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
+                  "boards": [
+                    {
+                      "name": "default",
+                      "widthCells": 256,
+                      "heightCells": 256,
+                      "gridCellSizeCm": 100,
+                      "originXCm": 1000
+                    }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("halforigin"));
+                Assert.That(ex!.Message, Does.Contain("OriginXCm and OriginYCm together"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardDeclaresNonZeroOrigin_FailsClosedUntilSlice2b()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "placed", """
+                {
+                  "id": "placed",
+                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
+                  "boards": [
+                    {
+                      "name": "default",
+                      "widthCells": 256,
+                      "heightCells": 256,
+                      "gridCellSizeCm": 100,
+                      "originXCm": 1000,
+                      "originYCm": 2000
+                    }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("placed"));
+                Assert.That(ex!.Message, Does.Contain("slice 2b"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardExactlyMatchesWorld_Loads()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "exact", """
+                {
+                  "id": "exact",
+                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
+                  "boards": [
+                    {
+                      "name": "default",
+                      "widthCells": 512,
+                      "heightCells": 512,
+                      "gridCellSizeCm": 100
+                    }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("exact");
+                Assert.That(cfg, Is.Not.Null);
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
         public void LoadMap_WhenChildOmitsContinuousHeightmapAsset_InheritsParentDeclaration()
         {
             var tempRoot = CreateTempDir();
