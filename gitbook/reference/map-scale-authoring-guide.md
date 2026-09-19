@@ -39,7 +39,7 @@ boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在世界哪里，缺省�
 | `assets/Maps/<map>.json` | `Boards[].WidthCells` / `HeightCells` + `CellSizeCm` | Grid 板范围与格边 |
 | `assets/Maps/<map>.json` | `Boards[].WidthHexes` / `HeightHexes` + `HexEdgeLengthCm` | Hex 板范围与 hex 边长 |
 | `assets/Maps/<map>.json` | `Boards[].OriginXCm` / `OriginYCm` | 板摆在世界坐标哪里，缺省居中（#1567 切 2 引入） |
-| `assets/Maps/<map>.json` | `World.Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | 世界层分区与 streaming 预算，缺省由引擎推导（#1567 切 4 引入） |
+| `assets/Maps/<map>.json` | `World.Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | 世界层分区与 streaming 预算；声明后为唯一预算，容量回填未声明的板（#1567 切 4 已落地，缺省自动推导随切 4b） |
 | `assets/Navigation/navmesh.json` | `boards.<name>.source` / `tileWorldWidthCm` / `tileWorldHeightCm` | nav 烘焙源与瓦片颗粒度（#1567 切 3 引入） |
 | `assets/Navigation/navmesh.json` | `mode` / `algorithm` / `profiles[].maxClimbCm` / `maxSlopeDeg` | bake/runtime incremental 的导航网格参数 |
 | Mod-local assets/game.json | `startupMapId` | 启动地图 id |
