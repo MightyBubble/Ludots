@@ -14,7 +14,9 @@
       "Name": "default",
       "SpatialType": "Grid",
       "DataFile": "level_1.bin",
-      "LoadedChunkCapacity": 256
+      "LoadedChunkCapacity": 256,
+      "WidthCells": 16384,
+      "HeightCells": 16384
     }
   ],
   "TriggerTypes": [

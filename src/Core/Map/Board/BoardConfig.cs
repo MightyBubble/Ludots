@@ -21,10 +21,10 @@ namespace Ludots.Core.Map.Board
         /// <summary>Board height in topology cells (#1567: authored directly; world size lives in MapConfig.World).</summary>
         public int HeightCells { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles * SpatialScaleDefaults.MacroTileCells;
 
-        /// <summary>Board placement in world coordinates, X axis; null = centered on the world (#1567 slice 2).</summary>
+        /// <summary>Board AABB min-corner anchor in world coordinates, X axis; null = centered on the world (#1567 slice 2). Same anchor semantics as NavTileGridConfig.OriginXcm.</summary>
         public int? OriginXCm { get; set; }
 
-        /// <summary>Board placement in world coordinates, Y axis; null = centered on the world (#1567 slice 2). Both axes must be authored together.</summary>
+        /// <summary>Board AABB min-corner anchor in world coordinates, Y axis; null = centered on the world. Both axes must be authored together.</summary>
         public int? OriginYCm { get; set; }
 
         /// <summary>Grid cell size in centimeters.</summary>

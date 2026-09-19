@@ -22,7 +22,9 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "DataFile": "ra2_shoreline.hex"
+      "DataFile": "ra2_shoreline.hex",
+      "WidthCells": 16384,
+      "HeightCells": 16384
     }
   ],
   "Entities": [

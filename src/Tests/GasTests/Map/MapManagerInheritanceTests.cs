@@ -318,6 +318,28 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadMap_WhenBoardDeclaresZeroOriginAlsoFailsClosed()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "zeroplace", """
+                {
+                  "id": "zeroplace",
+                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
+                  "boards": [
+                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "originXCm": 0, "originYCm": 0 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("zeroplace"));
+                Assert.That(ex!.Message, Does.Contain("slice 2b"));
+            }
+            finally { TryDelete(tempRoot); }
+        }
+
+        [Test]
         public void LoadMap_WhenBoardExactlyMatchesWorld_Loads()
         {
             var tempRoot = CreateTempDir();

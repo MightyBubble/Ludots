@@ -4983,12 +4983,8 @@ static class EditorRepo
                 CellSizeCm = cellSizeCm
             };
         }
-        else if (checked(widthCells * cellSizeCm) > worldDecl.WidthCm || checked(heightCells * cellSizeCm) > worldDecl.HeightCm)
-        {
-            throw new InvalidOperationException(
-                $"Board extent {checked(widthCells * cellSizeCm)}x{checked(heightCells * cellSizeCm)}cm exceeds World {worldDecl.WidthCm}x{worldDecl.HeightCm}cm; enlarge World.WidthCm/HeightCm first (#1567).");
-        }
 
+        EnsureBoardFitsWorld(map, board);
         map.Boards.Add(board);
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
@@ -5047,6 +5043,7 @@ static class EditorRepo
             board.NavigationEnabled = request.NavigationEnabled.Value;
         }
 
+        EnsureBoardFitsWorld(map, board);
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
         var boardInfo = DescribeBoard(ctx, mapId, board);
@@ -5334,6 +5331,22 @@ static class EditorRepo
                 throw new InvalidOperationException($"Board '{name}' already exists.");
             if (string.Equals(board.Name, name, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException($"Board name '{name}' conflicts with existing board '{board.Name}'. Board names are case-sensitive.");
+        }
+    }
+
+    private static void EnsureBoardFitsWorld(Ludots.Core.Config.MapConfig map, Ludots.Core.Map.Board.BoardConfig board)
+    {
+        if (map.World is not { } worldDecl || worldDecl.WidthCm <= 0 || worldDecl.HeightCm <= 0)
+        {
+            return;
+        }
+
+        long boardWidthCm = (long)board.WidthCells * board.GridCellSizeCm;
+        long boardHeightCm = (long)board.HeightCells * board.GridCellSizeCm;
+        if (boardWidthCm > worldDecl.WidthCm || boardHeightCm > worldDecl.HeightCm)
+        {
+            throw new InvalidOperationException(
+                $"Board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds World {worldDecl.WidthCm}x{worldDecl.HeightCm}cm; enlarge World.WidthCm/HeightCm first (#1567).");
         }
     }
 

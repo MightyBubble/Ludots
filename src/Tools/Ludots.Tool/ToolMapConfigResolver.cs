@@ -411,7 +411,7 @@ namespace Ludots.Tool
         {
             foreach (KeyValuePair<string, JsonNode?> kvp in obj)
             {
-                if (string.Equals(kvp.Key, key, StringComparison.Ordinal))
+                if (string.Equals(kvp.Key, key, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }

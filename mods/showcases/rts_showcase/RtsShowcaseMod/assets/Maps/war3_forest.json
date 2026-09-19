@@ -22,7 +22,9 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "DataFile": "war3_forest.hex"
+      "DataFile": "war3_forest.hex",
+      "WidthCells": 16384,
+      "HeightCells": 16384
     }
   ],
   "Entities": [

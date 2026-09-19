@@ -25,7 +25,9 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "DataFile": "sc2_highlands.hex"
+      "DataFile": "sc2_highlands.hex",
+      "WidthCells": 16384,
+      "HeightCells": 16384
     }
   ],
   "Entities": [

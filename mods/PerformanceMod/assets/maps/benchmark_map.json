@@ -9,7 +9,9 @@
     {
       "Name": "default",
       "DataFile": "benchmark.bin",
-      "LoadedChunkCapacity": 256
+      "LoadedChunkCapacity": 256,
+      "WidthCells": 16384,
+      "HeightCells": 16384
     }
   ],
   "Dependencies": [

@@ -497,10 +497,16 @@ namespace Ludots.Core.Map
                     $"Map '{mapId}' board '{board.Name}' must author OriginXCm and OriginYCm together.");
             }
 
-            if (hasX && (board.OriginXCm!.Value != 0 || board.OriginYCm!.Value != 0))
+            if (hasX)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' board '{board.Name}' declares non-zero origin; board placement leaves the centered default only after #1567 slice 2b unifies SpatialCoordinateConverter origin semantics.");
+                    $"Map '{mapId}' board '{board.Name}' declares OriginXCm/OriginYCm; declared placement (min-corner anchor, cm) stays fail-closed until #1567 slice 2b unifies SpatialCoordinateConverter origin semantics. Omit both fields for the centered default.");
+            }
+
+            if (board.WidthCells <= 0 || board.HeightCells <= 0 || board.GridCellSizeCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' requires positive WidthCells/HeightCells/GridCellSizeCm.");
             }
 
             long boardWidthCm = (long)board.WidthCells * board.GridCellSizeCm;
