@@ -19,6 +19,9 @@ namespace Ludots.Core.Map
         private readonly ModLoader _modLoader;
         private ConfigPipeline _configPipeline;
 
+        /// <summary>最近一次 LoadMap 的跨 mod 片段合并报告（纯记录型；每次 LoadMap 重置）。</summary>
+        public MapMergeReport LastMergeReport { get; } = new MapMergeReport();
+
         // Registry for Map Definitions (Code-First)
         private readonly Dictionary<MapId, MapDefinition> _definitions = new Dictionary<MapId, MapDefinition>();
         private readonly Dictionary<Type, MapDefinition> _typeToDefinition = new Dictionary<Type, MapDefinition>();
@@ -82,6 +85,7 @@ namespace Ludots.Core.Map
                 throw new InvalidOperationException($"Cyclic map inheritance detected: {cycle}");
             }
             chain.Add(mapIdValue);
+            LastMergeReport.Clear();
             
             try
             {
@@ -105,24 +109,28 @@ namespace Ludots.Core.Map
                 if (_configPipeline == null)
                     throw new InvalidOperationException("MapManager requires ConfigPipeline. Call SetConfigPipeline before LoadMap.");
 
-                var fragments = _configPipeline.CollectFragments(jsonPath);
+                var fragments = _configPipeline.CollectFragmentsWithSources(jsonPath);
                 var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 for (int fi = 0; fi < fragments.Count; fi++)
                 {
                     try
                     {
-                        var jsonStr = fragments[fi].ToJsonString();
-                        RejectLegacyWorldExtentKeys(fragments[fi], jsonPath);
-                        RejectLegacyTriggerGraphMountKey(fragments[fi], jsonPath);
-                        ValidateHeartbeatIntervalTicks(fragments[fi], jsonPath);
+                        var jsonStr = fragments[fi].Node.ToJsonString();
+                        RejectLegacyWorldExtentKeys(fragments[fi].Node, jsonPath);
+                        RejectLegacyTriggerGraphMountKey(fragments[fi].Node, jsonPath);
+                        ValidateHeartbeatIntervalTicks(fragments[fi].Node, jsonPath);
                         _ = MapVariableDeclarations.Parse(
-                            fragments[fi] is JsonObject fragmentRoot &&
+                            fragments[fi].Node is JsonObject fragmentRoot &&
                             TryGetPropertyCaseInsensitive(fragmentRoot, "Variables", out JsonNode variablesNode)
                                 ? variablesNode
                                 : null,
                             mapId.Value);
                         var config = JsonSerializer.Deserialize<MapConfig>(jsonStr, jsonOptions);
-                        if (config != null) configs.Add(config);
+                        if (config != null)
+                        {
+                            config.MergeSourceUri = fragments[fi].SourceUri;
+                            configs.Add(config);
+                        }
                     }
                     catch (JsonException ex)
                     {
@@ -233,7 +241,7 @@ namespace Ludots.Core.Map
                     target.Dependencies[kvp.Key] = kvp.Value;
                 }
             }
-            if (source.Entities != null) target.Entities.AddRange(source.Entities);
+            if (source.Entities != null) MergeEntityFragments(target, source);
             if (source.Teams != null) target.Teams.AddRange(source.Teams);
             if (source.Players != null) target.Players.AddRange(source.Players);
             if (source.ParticipantRelationships != null)
@@ -360,6 +368,181 @@ namespace Ludots.Core.Map
                     else
                     {
                         target.Variables.Add(sourceVariable);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 地图实体跨片段合并：键 = instanceId（ordinal 精确匹配，不 trim——未 trim 的写法由
+        /// 装载期 Register 的 trim 校验 fail-fast，合并层不做静默归一）。同 id 字段级深合并、
+        /// 后写赢；__delete 墓碑删实例（与资产层 ConfigMerger 同键，更晚片段可复活）；匿名
+        /// 实体纯追加，非首片段的匿名实体记入合并报告。继承链与跨 mod 片段共用本语义。
+        /// </summary>
+        private void MergeEntityFragments(MapConfig target, MapConfig source)
+        {
+            string sourceLabel = MapMergeReport.DescribeSource(source.MergeSourceUri, "<unknown-fragment>");
+            bool isBaseFragment = target.Entities.Count == 0;
+
+            for (int i = 0; i < source.Entities.Count; i++)
+            {
+                EntitySpawnData incoming = source.Entities[i];
+                if (incoming == null)
+                {
+                    continue;
+                }
+
+                if (incoming.Delete == true)
+                {
+                    if (string.IsNullOrWhiteSpace(incoming.InstanceId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{target.Id}' fragment '{sourceLabel}' authors __delete on an entity without InstanceId; tombstones must target an addressable instance.");
+                    }
+
+                    if (TryRemoveEntityById(target, incoming.InstanceId))
+                    {
+                        LastMergeReport.RecordDeletion(target.Id, incoming.InstanceId, sourceLabel);
+                    }
+                    else
+                    {
+                        LastMergeReport.RecordDeletionNotFound(target.Id, incoming.InstanceId, sourceLabel);
+                    }
+
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(incoming.InstanceId))
+                {
+                    if (!isBaseFragment)
+                    {
+                        LastMergeReport.RecordAnonymousNonBaseFragment(target.Id, i, sourceLabel);
+                    }
+
+                    target.Entities.Add(incoming);
+                    continue;
+                }
+
+                int existingIndex = FindEntityIndex(target, incoming.InstanceId);
+                if (existingIndex < 0)
+                {
+                    target.Entities.Add(incoming);
+                    continue;
+                }
+
+                MergeEntityData(target.Entities[existingIndex], incoming);
+            }
+        }
+
+        private static bool TryRemoveEntityById(MapConfig target, string instanceId)
+        {
+            for (int i = 0; i < target.Entities.Count; i++)
+            {
+                if (string.Equals(target.Entities[i]?.InstanceId, instanceId, StringComparison.Ordinal))
+                {
+                    target.Entities.RemoveAt(i);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int FindEntityIndex(MapConfig target, string instanceId)
+        {
+            for (int i = 0; i < target.Entities.Count; i++)
+            {
+                if (string.Equals(target.Entities[i]?.InstanceId, instanceId, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static void MergeEntityData(EntitySpawnData target, EntitySpawnData source)
+        {
+            if (!string.IsNullOrWhiteSpace(source.Template))
+            {
+                target.Template = source.Template;
+            }
+
+            if (source.PositionXCm.HasValue)
+            {
+                target.PositionXCm = source.PositionXCm;
+            }
+
+            if (source.PositionYCm.HasValue)
+            {
+                target.PositionYCm = source.PositionYCm;
+            }
+
+            if (source.Overrides != null)
+            {
+                target.Overrides ??= new Dictionary<string, JsonNode>();
+                foreach (var kvp in source.Overrides)
+                {
+                    if (target.Overrides.TryGetValue(kvp.Key, out JsonNode? existing) &&
+                        existing is JsonObject existingObject &&
+                        kvp.Value is JsonObject incomingObject)
+                    {
+                        ConfigMerger.MergeObject(existingObject, incomingObject, Array.Empty<string>());
+                        continue;
+                    }
+
+                    target.Overrides[kvp.Key] = kvp.Value?.DeepClone();
+                }
+            }
+
+            if (source.PresenterParamOverrides != null)
+            {
+                foreach (var incoming in source.PresenterParamOverrides)
+                {
+                    int index = target.PresenterParamOverrides.FindIndex(p =>
+                        string.Equals(p.ParamKey, incoming.ParamKey, StringComparison.Ordinal) &&
+                        p.Lane == incoming.Lane);
+                    if (index >= 0)
+                    {
+                        target.PresenterParamOverrides[index] = incoming;
+                    }
+                    else
+                    {
+                        target.PresenterParamOverrides.Add(incoming);
+                    }
+                }
+            }
+
+            if (source.Relations != null)
+            {
+                target.Relations ??= new List<EntityRelationAuthoring>();
+                foreach (var relation in source.Relations)
+                {
+                    if (relation == null)
+                    {
+                        continue;
+                    }
+
+                    int index = target.Relations.FindIndex(r =>
+                        string.Equals(r?.To, relation.To, StringComparison.Ordinal) &&
+                        string.Equals(r?.Type, relation.Type, StringComparison.Ordinal));
+                    if (relation.Delete == true)
+                    {
+                        if (index >= 0)
+                        {
+                            target.Relations.RemoveAt(index);
+                        }
+
+                        continue;
+                    }
+
+                    if (index >= 0)
+                    {
+                        target.Relations[index] = relation;
+                    }
+                    else
+                    {
+                        target.Relations.Add(relation);
                     }
                 }
             }

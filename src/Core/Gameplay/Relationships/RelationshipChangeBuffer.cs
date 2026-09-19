@@ -3,6 +3,15 @@ using Arch.Core;
 
 namespace Ludots.Core.Gameplay.Relationships
 {
+    /// <summary>关系变更种类：决定缓冲消费侧（回调规则 / trigger 事件键）如何路由一条记录。</summary>
+    public enum RelationshipChangeKind : byte
+    {
+        LinkAdded = 0,
+        LinkRemoved = 1,
+        MetricChanged = 2,
+        FlagChanged = 3,
+    }
+
     public readonly struct RelationshipChangeRecord
     {
         public RelationshipChangeRecord(
@@ -14,7 +23,7 @@ namespace Ludots.Core.Gameplay.Relationships
             short newValue,
             uint oldFlags,
             uint newFlags)
-            : this(source, target, typeId: 0, metricId, reasonId, oldValue, newValue, oldFlags, newFlags)
+            : this(source, target, typeId: 0, RelationshipChangeKind.MetricChanged, metricId, reasonId, oldValue, newValue, oldFlags, newFlags)
         {
         }
 
@@ -28,10 +37,26 @@ namespace Ludots.Core.Gameplay.Relationships
             short newValue,
             uint oldFlags,
             uint newFlags)
+            : this(source, target, typeId, RelationshipChangeKind.MetricChanged, metricId, reasonId, oldValue, newValue, oldFlags, newFlags)
+        {
+        }
+
+        public RelationshipChangeRecord(
+            Entity source,
+            Entity target,
+            int typeId,
+            RelationshipChangeKind kind,
+            int metricId,
+            int reasonId,
+            short oldValue,
+            short newValue,
+            uint oldFlags,
+            uint newFlags)
         {
             Source = source;
             Target = target;
             TypeId = typeId;
+            Kind = kind;
             MetricId = metricId;
             ReasonId = reasonId;
             OldValue = oldValue;
@@ -43,6 +68,7 @@ namespace Ludots.Core.Gameplay.Relationships
         public Entity Source { get; }
         public Entity Target { get; }
         public int TypeId { get; }
+        public RelationshipChangeKind Kind { get; }
         public int MetricId { get; }
         public int ReasonId { get; }
         public short OldValue { get; }

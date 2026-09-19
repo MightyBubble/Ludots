@@ -15,6 +15,11 @@ namespace Ludots.Core.Config
     public class MapConfig
     {
         public string Id { get; set; }
+
+        /// <summary>装载管线内部使用的片段来源标注（不参与序列化），供合并报告引用。</summary>
+        [JsonIgnore]
+        public string? MergeSourceUri { get; set; }
+
         public string ParentId { get; set; }
         public Dictionary<string, string> Dependencies { get; set; } = new Dictionary<string, string>();
         public string ContinuousHeightmapAsset { get; set; }
@@ -154,6 +159,28 @@ namespace Ludots.Core.Config
         public int? PositionYCm { get; set; }
         public Dictionary<string, JsonNode> Overrides { get; set; }
         public List<ParamOverrideData> PresenterParamOverrides { get; set; } = new List<ParamOverrideData>();
+
+        /// <summary>
+        /// 实例对外关系 authoring 段：from 即本实例，to 为绝对 instanceId 或组内可寻址路径。
+        /// 跨 mod 合并按 (to, type) 后写赢；__delete 删边（合并层消化）。物化发生在地图装载站。
+        /// </summary>
+        public List<EntityRelationAuthoring>? Relations { get; set; }
+
+        /// <summary>跨 mod 合并墓碑：与资产层 ConfigMerger 同键；只认 __delete，不引入 Disabled。</summary>
+        [JsonPropertyName("__delete")]
+        public bool? Delete { get; set; }
+    }
+
+    public class EntityRelationAuthoring
+    {
+        public string To { get; set; }
+
+        public string Type { get; set; }
+
+        public Dictionary<string, int>? Metric { get; set; }
+
+        [JsonPropertyName("__delete")]
+        public bool? Delete { get; set; }
     }
 
     public class TeamBindingData
