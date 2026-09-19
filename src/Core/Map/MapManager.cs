@@ -222,7 +222,12 @@ namespace Ludots.Core.Map
                 }
             }
 
-            if (source.World is { } sourceWorld && (sourceWorld.WidthCm > 0 || sourceWorld.HeightCm > 0))
+            // A fragment World with only CellSizeCm == CellCm default is indistinguishable
+            // from an absent node and must not override the parent.
+            if (source.World is { } sourceWorld &&
+                (sourceWorld.WidthCm > 0 ||
+                 sourceWorld.HeightCm > 0 ||
+                 sourceWorld.CellSizeCm != Ludots.Core.Spatial.SpatialScaleDefaults.CellCm))
             {
                 target.World = sourceWorld.Clone();
             }
@@ -413,10 +418,14 @@ namespace Ludots.Core.Map
             }
 
             var world = config.World;
-            if (world == null || world.WidthCm <= 0 || world.HeightCm <= 0 || world.CellSizeCm <= 0)
+            var invalid = new List<string>();
+            if (world == null || world.WidthCm <= 0) invalid.Add("WidthCm");
+            if (world == null || world.HeightCm <= 0) invalid.Add("HeightCm");
+            if (world == null || world.CellSizeCm <= 0) invalid.Add("CellSizeCm");
+            if (invalid.Count > 0)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' has boards and must declare World (WidthCm/HeightCm/CellSizeCm > 0); boards no longer define the world (#1567).");
+                    $"Map '{mapId}' has boards and must declare World; invalid fields: {string.Join(", ", invalid)}. Boards no longer define the world (#1567).");
             }
         }
 
@@ -429,6 +438,8 @@ namespace Ludots.Core.Map
 
             RejectLegacyKey(root, "WidthInTiles", "World.WidthCm", jsonPath);
             RejectLegacyKey(root, "HeightInTiles", "World.HeightCm", jsonPath);
+            RejectLegacyKey(root, "WidthInMacroTiles", "World.WidthCm", jsonPath);
+            RejectLegacyKey(root, "HeightInMacroTiles", "World.HeightCm", jsonPath);
 
             if (!TryGetPropertyCaseInsensitive(root, "boards", out JsonNode boardsNode) ||
                 boardsNode is not JsonArray boards)

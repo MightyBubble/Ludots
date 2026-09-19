@@ -41,8 +41,8 @@ namespace GasTests
             {
                 Name = "battle",
                 SpatialType = "Hex",
-                WidthCells = 128,
-                HeightCells = 128,
+                WidthCells = 32768,
+                HeightCells = 16384,
                 GridCellSizeCm = 200,
                 HexEdgeLengthCm = 600,
                 ChunkSizeCells = 32,
@@ -54,8 +54,8 @@ namespace GasTests
 
             Assert.That(config.Name, Is.EqualTo("battle"));
             Assert.That(config.SpatialType, Is.EqualTo("Hex"));
-            Assert.That(config.WidthCells, Is.EqualTo(128));
-            Assert.That(config.HeightCells, Is.EqualTo(128));
+            Assert.That(config.WidthCells, Is.EqualTo(32768));
+            Assert.That(config.HeightCells, Is.EqualTo(16384));
             Assert.That(config.GridCellSizeCm, Is.EqualTo(200));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));

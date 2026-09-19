@@ -1,6 +1,6 @@
 # 空间尺度配置查表
 
-本页是 `gitbook/architecture/spatial-scale-and-resolution-ssot.md` 的快速查表入口。权威概念、owner 与现状映射以架构页为准；本页只解释“看到某个配置/常量时，它是什么意思、用在哪里、不能和什么混用”。主表描述现状（[#1567](https://github.com/MightyBubble/Ludots/issues/1567) 四域归位切 1 落地前的键位），目标键位见文末[「四域归位目标键位」](#四域归位目标键位1567)。
+本页是 `gitbook/architecture/spatial-scale-and-resolution-ssot.md` 的快速查表入口。权威概念、owner 与映射以架构页为准；本页只解释“看到某个配置/常量时，它是什么意思、用在哪里、不能和什么混用”。主表中带「#1567 切 1 已迁移」标注的行是历史键位，现行键位见文末[「四域归位目标键位」](#四域归位目标键位1567)。
 
 交互式关系图见 [`spatial-scale-explorer.html`](spatial-scale-explorer.html)，用于点击查看“谁用谁做单位”、哪些尺度必需、哪些尺度可配置。Mod 作者地图尺度入门见 [`map-scale-authoring-guide.md`](map-scale-authoring-guide.md) 与 [`map-scale-authoring-starter.html`](map-scale-authoring-starter.html)。
 
@@ -70,10 +70,10 @@ flowchart TD
 | `BoardConfig.GridCellSizeCm` | `CellCm` | cm | 100 | board authoring 输入，决定 grid board 每个 sim cell 的厘米边长，并进入 `WorldExtentSpec`。 | 仍保留历史字段名；语义按 `CellCm` 解释。 |
 | `BoardConfig.HexEdgeLengthCm` | `HexEdgeLengthCm` | cm | 400 | HexGrid board 的 hex 边长，影响 `HexMetrics`、HexGrid 坐标/查询/渲染布局。 | 仅 HexGrid 生效；Grid / NodeGraph 不受它影响，必须 > 0。 |
 | `MapTile.Size` | `MacroTileCells` | cells | 256 | 256-cell IO/寻址宏块。世界大小的 `WidthInMacroTiles` / `HeightInMacroTiles` 以它为倍率。 | `MapTile.Size` 是 owner；`SpatialScaleDefaults.MacroTileCells` 只引用它。 |
-| `BoardConfig.WidthInMacroTiles` | `WorldExtent` width | macro tiles | 64 | board/world 宽度 authoring 数量，不是 TerrainChunk 数量，也不是 NavTile 数量。 | #283 正名；旧 `WidthInTiles` fail-fast。 |
-| `BoardConfig.HeightInMacroTiles` | `WorldExtent` height | macro tiles | 64 | board/world 高度 authoring 数量，不是 TerrainChunk 数量，也不是 NavTile 数量。 | #283 正名；旧 `HeightInTiles` fail-fast。 |
-| `WorldExtentSpec` | `WorldExtent` | cells / cm | derived | 用 `WidthInMacroTiles * MacroTileCells * CellCm` 计算世界范围，产出 runtime `WorldSizeSpec`。 | 是计算对象，不替换 `WorldSizeSpec`。 |
-| `BoardConfig.ChunkSizeCells` | `PartitionChunkCells` | cells | 64 | 空间分区、AOI、query backend 的分区块边长。只描述查询分区，不描述地形或 navmesh。 | 必须 > 0 且为 2 的幂。 |
+| `BoardConfig.WidthInMacroTiles`（#1567 切 1 已迁移） | 历史键 | macro tiles | 64 | 曾是 board/world 宽度 authoring 数量；切 1 起加载即 fail-fast。 | 现行写法：map `World.WidthCm` + `Boards[].WidthCells`。 |
+| `BoardConfig.HeightInMacroTiles`（#1567 切 1 已迁移） | 历史键 | macro tiles | 64 | 曾是 board/world 高度 authoring 数量；切 1 起加载即 fail-fast。 | 现行写法：map `World.HeightCm` + `Boards[].HeightCells`。 |
+| `WorldExtentSpec` | `WorldExtent` | cm | derived | 由 `World.WidthCm/HeightCm/CellSizeCm` 直构（#1567 切 1），宏块数为派生 IO 细节，产出 runtime `WorldSizeSpec`。 | 是计算对象，不替换 `WorldSizeSpec`。 |
+| `BoardConfig.ChunkSizeCells` | `PartitionChunkCells` | cells | 64 | 空间分区、AOI、query backend 的分区块边长。只描述查询分区，不描述地形或 navmesh。#1567 切 4 将迁入 `World.Tuning`。 | 必须 > 0 且为 2 的幂。 |
 | `VertexChunk.ChunkSize` | `TerrainChunkCells` | cells | 64 | 逻辑地形块边长。当前 navmesh tile footprint 等于 `TerrainChunk` footprint。 | 当前固定；#286 已把 grid/hex 地形输入统一到 `LogicTerrainField`。 |
 | Nav bake tile footprint | `TerrainChunk` footprint | cells / cm | 64 cells | navmesh `.ntil` 的 tile 覆盖一个 `TerrainChunk`。 | 不再单独命名为尺度 owner；不要把 `NavTile` 当第二个 chunk 尺度。 |
 | streaming / loaded graph window | `StreamingChunk` | cells / cm | derived | 流式加载、loaded graph rebuild 的空间窗口。 | 从 board 分区或显式配置推导；禁止私有 loader fallback。 |
@@ -86,9 +86,9 @@ flowchart TD
 
 迁移规则：
 
-- `WidthInTiles` / `HeightInTiles` 是历史字段名；实际含义是 `WidthInMacroTiles` / `HeightInMacroTiles`。
+- `WidthInTiles` / `HeightInTiles` 与 `WidthInMacroTiles` / `HeightInMacroTiles` 都是历史字段名（#283 / #1567 切 1）；出现即 fail-fast，现行写法是 `World.WidthCm/HeightCm` + `Boards[].WidthCells/HeightCells`。
 - #283 进行破坏式迁移，旧键出现即 fail-fast，不提供别名兼容。
-- Authoring UI 可以让作者输入目标米数，但写入 MapConfig 时必须显式反推为 `WidthInMacroTiles` / `HeightInMacroTiles`；不要让作者手填 TerrainChunk/NavTile 个数。
+- Authoring UI 让作者输入目标米数，落盘为分配后的 `World.WidthCm/HeightCm` 与 `Boards[].WidthCells/HeightCells`；不要让作者手填 TerrainChunk/NavTile 个数。
 - `WorldExtentSpec` 是 authoring/计算对象，产出既有 `WorldSizeSpec`；不要替换 `WorldSizeSpec`。
 - `HexEdgeLengthCm` 只用于 HexGrid board 的 hex 几何；不要拿它解释 Grid board cell、FlowCell 或 NavTile footprint。
 - `NavTile footprint` 是 `TerrainChunk` 的用途，不是独立尺度 owner。

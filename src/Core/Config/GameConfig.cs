@@ -85,8 +85,6 @@ namespace Ludots.Core.Config
 
         public GasRuntimeCapacityConfig GasRuntimeCapacity { get; set; } = null!;
 
-        public int GridCellSizeCm { get; set; } = 100;
-
         /// <summary>Engine-boot world declaration (#1567): replaced on map load by the map's World.</summary>
         public WorldConfig World { get; set; } = WorldConfig.CreateEngineBootDefault();
 

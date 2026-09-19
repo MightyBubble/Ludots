@@ -2,7 +2,7 @@
 
 本页写给要做真实地图的 Mod 作者。它不替代 [空间尺度与分辨率 SSOT](../architecture/spatial-scale-and-resolution-ssot.md)，而是把 SSOT 翻译成“我要做多大的地图、要多细的地形/导航/避障/表现，该从哪些配置入口下手”。
 
-> **状态**：本页“先分四域”起的 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的目标态合同。切 1 合入 main 之前，`assets/Maps/<map>.json` 仍使用现状键（`Boards[].WidthInMacroTiles` 等），旧键与新键的对照见文末[迁移对照](#迁移对照1567)。概念、owner 与约束以 SSOT 层级表为准。
+> **状态**：本页 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的合同，切 0（文档）与切 1（世界/板 schema 与全量资产迁移）已随本 PR 落地；板摆放 `OriginXCm/OriginYCm`（切 2）、nav 声明归位（切 3）、`World.Tuning`（切 4）仍是目标态。旧键对照见文末[迁移对照](#迁移对照1567)。概念、owner 与约束以 SSOT 层级表为准。
 
 交互式入门页见 [`map-scale-authoring-starter.html`](map-scale-authoring-starter.html)。如果你只想先调几个数看世界有多大、网格有多密、FlowWindow 会不会整除、全量/局部 nav bake 大概要多少操作和时间，先打开 HTML；真正落配置前再回到本页查 owner 和约束。Terrain/obstacle/area/agent/bake/editor/Raylib debug 的完整工具链设计见 [`navmesh-authoring-bake-toolchain.md`](navmesh-authoring-bake-toolchain.md)。
 
@@ -238,7 +238,7 @@ Runtime incremental 起点：
 
 ## 迁移对照（#1567）
 
-切 1 合入前，`assets/Maps/<map>.json` 仍是现状键。对照与迁移动作：
+对照与迁移动作（切 1 已执行，旧键现行加载即 fail-fast）：
 
 | 现状键 | 目标键 | 迁移动作 |
 |---|---|---|

@@ -4974,6 +4974,21 @@ static class EditorRepo
             }
         }
 
+        if (map.World is not { } worldDecl || worldDecl.WidthCm <= 0 || worldDecl.HeightCm <= 0)
+        {
+            map.World = new Ludots.Core.Config.WorldConfig
+            {
+                WidthCm = checked(widthCells * cellSizeCm),
+                HeightCm = checked(heightCells * cellSizeCm),
+                CellSizeCm = cellSizeCm
+            };
+        }
+        else if (checked(widthCells * cellSizeCm) > worldDecl.WidthCm || checked(heightCells * cellSizeCm) > worldDecl.HeightCm)
+        {
+            throw new InvalidOperationException(
+                $"Board extent {checked(widthCells * cellSizeCm)}x{checked(heightCells * cellSizeCm)}cm exceeds World {worldDecl.WidthCm}x{worldDecl.HeightCm}cm; enlarge World.WidthCm/HeightCm first (#1567).");
+        }
+
         map.Boards.Add(board);
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
@@ -5362,8 +5377,8 @@ static class EditorRepo
 
     public static byte[] CreateEmptyReactTerrainHeader(Ludots.Core.Map.Board.BoardConfig board)
     {
-        int widthChunks = checked(board.WidthCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
-        int heightChunks = checked(board.HeightCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
+        int widthChunks = checked((board.WidthCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
+        int heightChunks = checked((board.HeightCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
         using var ms = new MemoryStream(9);
         using var bw = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true);
         bw.Write(widthChunks);
@@ -5383,8 +5398,8 @@ static class EditorRepo
     private static void CreateEmptyTerrainDataFile(Ludots.Core.Map.Board.BoardConfig board, string outFile)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
-        int widthChunks = checked(board.WidthCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
-        int heightChunks = checked(board.HeightCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
+        int widthChunks = checked((board.WidthCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
+        int heightChunks = checked((board.HeightCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
 
         string tempReactPath = Path.Combine(Path.GetTempPath(), $"ludots_empty_board_{Guid.NewGuid():N}.bin");
         try
