@@ -15,11 +15,15 @@ namespace Ludots.Core.Config
 
         public int CellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
 
+        /// <summary>World-level spatial budget (#1567 slice 4); null entries mean not authored.</summary>
+        public WorldTuningConfig Tuning { get; set; } = new WorldTuningConfig();
+
         public WorldConfig Clone() => new()
         {
             WidthCm = WidthCm,
             HeightCm = HeightCm,
-            CellSizeCm = CellSizeCm
+            CellSizeCm = CellSizeCm,
+            Tuning = Tuning.Clone()
         };
 
         public static WorldConfig CreateEngineBootDefault() => new()

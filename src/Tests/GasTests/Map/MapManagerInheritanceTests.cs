@@ -125,6 +125,106 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadMap_WhenWorldTuningDeclaresCapacity_BoardsInheritSingleBudget()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "tuned", """
+                {
+                  "id": "tuned",
+                  "world": {
+                    "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100,
+                    "tuning": { "loadedChunkCapacity": 64 }
+                  },
+                  "boards": [
+                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("tuned");
+                Assert.That(cfg!.Boards[0].LoadedChunkCapacity, Is.EqualTo(64));
+            }
+            finally { TryDelete(tempRoot); }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardCapacityConflictsWithWorldTuning_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "conflict", """
+                {
+                  "id": "conflict",
+                  "world": {
+                    "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100,
+                    "tuning": { "loadedChunkCapacity": 64 }
+                  },
+                  "boards": [
+                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "loadedChunkCapacity": 32 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("conflict"));
+                Assert.That(ex!.Message, Does.Contain("single world budget"));
+            }
+            finally { TryDelete(tempRoot); }
+        }
+
+        [Test]
+        public void LoadMap_WhenWorldTuningPartitionIsNotPowerOfTwo_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "oddpart", """
+                {
+                  "id": "oddpart",
+                  "world": {
+                    "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100,
+                    "tuning": { "partitionChunkCells": 48 }
+                  },
+                  "boards": [
+                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("oddpart"));
+                Assert.That(ex!.Message, Does.Contain("power of two"));
+            }
+            finally { TryDelete(tempRoot); }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardPartitionConflictsWithWorldTuning_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "partconflict", """
+                {
+                  "id": "partconflict",
+                  "world": {
+                    "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100,
+                    "tuning": { "partitionChunkCells": 128 }
+                  },
+                  "boards": [
+                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "chunkSizeCells": 32 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("partconflict"));
+                Assert.That(ex!.Message, Does.Contain("ChunkSizeCells=32, conflicting"));
+            }
+            finally { TryDelete(tempRoot); }
+        }
+
+        [Test]
         public void LoadMap_WhenBoardExceedsWorld_Throws()
         {
             var tempRoot = CreateTempDir();
@@ -292,6 +392,9 @@ namespace GasTests
                   "boards": [
                     {
                       "name": "default",
+                      "widthCells": 256,
+                      "heightCells": 256,
+                      "gridCellSizeCm": 100,
                       "continuousHeightmapAsset": "terrain/board.height"
                     }
                   ]

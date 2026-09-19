@@ -186,8 +186,17 @@ namespace GasTests
                         continue;
                     }
 
-                    if (!TryGetPropertyCaseInsensitive(board, "LoadedChunkCapacity", out JsonNode? capacityNode) ||
-                        !TryGetPositiveInt(capacityNode, out int _))
+                    bool worldDeclaresCapacity =
+                        TryGetPropertyCaseInsensitive(root, "World", out JsonNode? worldNode) &&
+                        worldNode is JsonObject worldObj &&
+                        TryGetPropertyCaseInsensitive(worldObj, "Tuning", out JsonNode? tuningNode) &&
+                        tuningNode is JsonObject tuningObj &&
+                        TryGetPropertyCaseInsensitive(tuningObj, "LoadedChunkCapacity", out JsonNode? tuningCapacity) &&
+                        TryGetPositiveInt(tuningCapacity, out int _);
+
+                    if (!worldDeclaresCapacity &&
+                        (!TryGetPropertyCaseInsensitive(board, "LoadedChunkCapacity", out JsonNode? capacityNode) ||
+                        !TryGetPositiveInt(capacityNode, out int _)))
                     {
                         string relativePath = Path.GetRelativePath(repoRoot, file);
                         string boardName = TryGetString(board, "Name") ?? "default";

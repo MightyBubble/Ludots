@@ -3,7 +3,10 @@
   "World": {
     "WidthCm": 900652032,
     "HeightCm": 514658304,
-    "CellSizeCm": 125649
+    "CellSizeCm": 125649,
+    "Tuning": {
+      "LoadedChunkCapacity": 512
+    }
   },
   "ParentId": null,
   "Dependencies": {},

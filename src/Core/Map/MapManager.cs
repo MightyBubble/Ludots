@@ -432,6 +432,59 @@ namespace Ludots.Core.Map
             {
                 ValidateBoardPlacement(board, world!, mapId);
             }
+
+            ApplyWorldTuning(config, world!, mapId);
+        }
+
+        private static void ApplyWorldTuning(MapConfig config, WorldConfig world, MapId mapId)
+        {
+            var tuning = world.Tuning;
+            if (tuning is null || !tuning.IsAuthored)
+            {
+                return;
+            }
+
+            if (tuning.PartitionChunkCells is int partition &&
+                (partition <= 0 || (partition & (partition - 1)) != 0))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' World.Tuning.PartitionChunkCells must be positive and a power of two; got {partition}.");
+            }
+
+            if (tuning.LoadedChunkCapacity is int capacity && capacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' World.Tuning.LoadedChunkCapacity must be positive; got {capacity}.");
+            }
+
+            foreach (var board in config.Boards)
+            {
+                if (tuning.PartitionChunkCells is int partitionValue &&
+                    board.ChunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.PartitionChunkCells &&
+                    board.ChunkSizeCells != partitionValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' declares ChunkSizeCells={board.ChunkSizeCells}, conflicting with World.Tuning.PartitionChunkCells={partitionValue}; remove the board-level field or align it (single world budget, #1567).");
+                }
+
+                if (tuning.LoadedChunkCapacity is int capacityValue &&
+                    board.LoadedChunkCapacity > 0 &&
+                    board.LoadedChunkCapacity != capacityValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' declares LoadedChunkCapacity={board.LoadedChunkCapacity}, conflicting with World.Tuning.LoadedChunkCapacity={capacityValue}; remove the board-level field or align it (single world budget, #1567).");
+                }
+
+                if (tuning.PartitionChunkCells is int applyPartition)
+                {
+                    board.ChunkSizeCells = applyPartition;
+                }
+
+                if (tuning.LoadedChunkCapacity is int applyCapacity)
+                {
+                    board.LoadedChunkCapacity = applyCapacity;
+                }
+            }
         }
 
         private static void ValidateBoardPlacement(BoardConfig board, WorldConfig world, MapId mapId)
