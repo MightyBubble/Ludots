@@ -82,8 +82,9 @@ namespace Ludots.Core.Presentation.Requests
                         {
                             hasTransientVisualProxy = true;
                         }
-                        else
+                        else if (proxy.Visibility == VisualVisibility.Visible || _stableDrawCache.Contains(proxy.StableId))
                         {
+                            // 只有可见快照分配新槽;Hidden/Culled 仅更新曾可见条目,never-visible 静态不占缓存。
                             _stableDrawCache.Upsert(in proxy);
                         }
 
