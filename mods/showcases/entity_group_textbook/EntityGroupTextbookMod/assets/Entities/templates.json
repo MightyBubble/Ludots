@@ -1,0 +1,92 @@
+[
+  {
+    "id": "eg.camp",
+    "components": {
+      "Name": { "Value": "Mule Camp" }
+    },
+    "children": [
+      {
+        "localId": "hq", "template": "eg.struct.tent", "attach": true,
+        "localPose": { "offsetXCm": 0, "offsetYCm": 0, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" },
+        "children": [
+          {
+            "localId": "radio", "template": "eg.item.radio",
+            "localPose": { "offsetXCm": 40, "offsetYCm": 40, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" }
+          },
+          {
+            "localId": "chest", "template": "eg.item.lootbox",
+            "localPose": { "offsetXCm": -40, "offsetYCm": 40, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" },
+            "children": [
+              {
+                "localId": "cargo", "template": "eg.item.rope",
+                "localPose": { "offsetXCm": 0, "offsetYCm": 20, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "localId": "tower", "template": "eg.struct.sentry", "attach": true,
+        "localPose": { "offsetXCm": 240, "offsetYCm": 0, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" },
+        "children": [
+          {
+            "localId": "light", "template": "eg.prop.spotlight",
+            "localPose": { "offsetXCm": 0, "offsetYCm": 60, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" }
+          }
+        ]
+      },
+      {
+        "localId": "barricade", "template": "eg.struct.jersey", "attach": true,
+        "localPose": { "offsetXCm": -240, "offsetYCm": 0, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" }
+      },
+      {
+        "localId": "campfire", "template": "eg.prop.campfire", "attach": true,
+        "localPose": { "offsetXCm": 0, "offsetYCm": -80, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" },
+        "children": [
+          {
+            "localId": "pot", "template": "eg.item.pot",
+            "localPose": { "offsetXCm": 0, "offsetYCm": 20, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" }
+          }
+        ]
+      },
+      {
+        "localId": "parking", "template": "eg.prop.parking_spot", "attach": true,
+        "localPose": { "offsetXCm": 180, "offsetYCm": -160, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" },
+        "children": [
+          {
+            "localId": "bike", "template": "eg.vehicle.mule_bike",
+            "localPose": { "offsetXCm": 0, "offsetYCm": 0, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" }
+          }
+        ]
+      },
+      {
+        "localId": "guard", "template": "eg.unit.mule", "attach": false,
+        "localPose": { "offsetXCm": 0, "offsetYCm": 120, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" }
+      },
+      {
+        "localId": "guard2", "template": "eg.unit.mule", "attach": false,
+        "localPose": { "offsetXCm": 360, "offsetYCm": 120, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" }
+      }
+    ],
+    "relations": [
+      { "from": "hq", "to": "hq.chest", "type": "Owns" },
+      { "from": "hq", "to": "hq.radio", "type": "Owns" },
+      { "from": "tower", "to": "tower.light", "type": "Controls" },
+      { "from": "guard", "to": "campfire", "type": "WorksAt", "metric": { "Loyalty": 80 } },
+      { "from": "guard2", "to": "campfire", "type": "WorksAt", "metric": { "Loyalty": 60 } }
+    ]
+  },
+
+  { "id": "eg.struct.tent", "components": { "Name": { "Value": "Tent" } } },
+  { "id": "eg.item.radio", "components": { "Name": { "Value": "Radio" } } },
+  { "id": "eg.item.lootbox", "components": { "Name": { "Value": "Lootbox" } } },
+  { "id": "eg.item.rope", "components": { "Name": { "Value": "Rope" } } },
+  { "id": "eg.struct.sentry", "components": { "Name": { "Value": "Sentry" } } },
+  { "id": "eg.prop.spotlight", "components": { "Name": { "Value": "Spotlight" } } },
+  { "id": "eg.struct.jersey", "components": { "Name": { "Value": "Barricade" } } },
+  { "id": "eg.prop.campfire", "components": { "Name": { "Value": "Campfire" } } },
+  { "id": "eg.item.pot", "components": { "Name": { "Value": "Pot" } } },
+  { "id": "eg.prop.parking_spot", "components": { "Name": { "Value": "Parking" } } },
+  { "id": "eg.vehicle.mule_bike", "components": { "Name": { "Value": "Mule Bike" } } },
+  { "id": "eg.unit.mule", "components": { "Name": { "Value": "Mule Guard" }, "Team": { "Id": 3 } } }
+]
