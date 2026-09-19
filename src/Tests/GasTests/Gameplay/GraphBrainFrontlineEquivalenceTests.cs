@@ -15,6 +15,7 @@ using Ludots.Core.Gameplay.GraphBrains;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -139,9 +140,12 @@ namespace Ludots.Tests.GAS
             catalog.Add(new ConfigCatalogEntry("GAS/action_lib.json", ConfigMergePolicy.ArrayById, "name"));
             catalog.Add(new ConfigCatalogEntry("AI/hfsm.json", ConfigMergePolicy.ArrayById, "id"));
 
+            var functions = new GraphFunctionCatalog();
+            catalog.Add(new ConfigCatalogEntry("GAS/func_lib.json", ConfigMergePolicy.ArrayById, "name"));
+            new GraphFunctionCatalogLoader(pipeline, functions, programs).Load(catalog);
             var actions = new GraphActionCatalog();
-            new GraphActionCatalogLoader(pipeline, actions, programs, new GraphFunctionCatalog()).Load(catalog);
-            return new GraphBehaviorDefinitionLoader(pipeline, actions).Load(catalog);
+            new GraphActionCatalogLoader(pipeline, actions, programs, functions).Load(catalog);
+            return new GraphBehaviorDefinitionLoader(pipeline, actions, functions).Load(catalog);
         }
 
         private static string FindRepoRoot()

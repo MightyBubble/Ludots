@@ -16,5 +16,11 @@
     "graph": "Graph.Ability.Bash",
     "kind": "Script",
     "purity": "pure"
+  },
+  {
+    "name": "hfsm.cond.alwaysTrue",
+    "graph": "Graph.HFSM.Cond.AlwaysTrue",
+    "kind": "Script",
+    "purity": "pure"
   }
 ]

@@ -55,7 +55,7 @@ namespace Ludots.Tests.Gas.Graph
             new GraphFunctionCatalogLoader(pipeline, catalog, programs).Load(configCatalog);
             graphConfigLoader.ResolveFuncLibInvokes(graphPackages, catalog);
             new GraphActionCatalogLoader(pipeline, actions, programs, catalog).Load(configCatalog);
-            behavior = new GraphBehaviorDefinitionLoader(pipeline, actions).Load(configCatalog);
+            behavior = new GraphBehaviorDefinitionLoader(pipeline, actions, catalog).Load(configCatalog);
 
             return programs;
         }

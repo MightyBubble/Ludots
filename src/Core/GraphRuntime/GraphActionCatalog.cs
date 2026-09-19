@@ -32,12 +32,12 @@ namespace Ludots.Core.GraphRuntime
                     "Action catalog accepts Script only.");
             }
 
-            if (host == GraphActionHost.None || !Enum.IsDefined(typeof(GraphActionHost), host))
+            if (!Enum.IsDefined(typeof(GraphActionHost), host))
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(host),
                     host,
-                    "Action catalog requires an explicit supported host.");
+                    "Action catalog host must be a defined GraphActionHost value.");
             }
 
             string key = name.Trim();
@@ -90,7 +90,9 @@ namespace Ludots.Core.GraphRuntime
                     "Action lookup requires an explicit supported host.");
             }
 
-            if (entry.Host != expectedHost)
+            // Assets registered without a host (GraphActionHost.None) are consumer-neutral:
+            // any consumer may bind them. Explicitly hosted entries must match the consumer.
+            if (entry.Host != GraphActionHost.None && entry.Host != expectedHost)
             {
                 throw new InvalidOperationException(
                     $"Graph action '{name}' is registered for host '{entry.Host}', but '{expectedHost}' is required.");

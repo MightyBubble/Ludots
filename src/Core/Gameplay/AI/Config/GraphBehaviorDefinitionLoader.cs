@@ -12,11 +12,13 @@ namespace Ludots.Core.Gameplay.AI.Config
     {
         private readonly ConfigPipeline? _pipeline;
         private readonly GraphActionCatalog? _actions;
+        private readonly GraphFunctionCatalog? _functions;
 
-        public GraphBehaviorDefinitionLoader(ConfigPipeline pipeline, GraphActionCatalog? actions)
+        public GraphBehaviorDefinitionLoader(ConfigPipeline pipeline, GraphActionCatalog? actions, GraphFunctionCatalog? functions = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _actions = actions;
+            _functions = functions;
         }
 
         private GraphBehaviorDefinitionLoader(GraphActionCatalog actions)
@@ -389,7 +391,7 @@ namespace Ludots.Core.Gameplay.AI.Config
                     packedOfAuthored[toAuthored],
                     ParsePredicate(RequireString(tr, "predicate", path), path),
                     priority,
-                    ResolveOptionalAction(ReadOptionalString(tr, "condition"), $"{path}.condition"));
+                    ResolveOptionalCondition(ReadOptionalString(tr, "condition"), $"{path}.condition"));
             }
 
             return transitions;
@@ -412,6 +414,32 @@ namespace Ludots.Core.Gameplay.AI.Config
 
         private int ResolveOptionalAction(string? name, string path)
             => string.IsNullOrWhiteSpace(name) ? 0 : RequireAction(name, GraphActionHost.Hfsm, path);
+
+        /// <summary>
+        /// Transition conditions resolve from FuncLib (pure functions), not ActionLib —
+        /// conditions compare already-obtained data and must not carry side effects.
+        /// Consumer-side validation per the asset-neutrality contract.
+        /// </summary>
+        private int ResolveOptionalCondition(string? name, string path)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return 0;
+            }
+
+            if (_functions == null)
+            {
+                throw Fail(path, $"Condition '{name}' requires a FuncLib catalog (GAS/func_lib.json).");
+            }
+
+            GraphFunctionEntry entry = _functions.Require(name);
+            if (entry.Kind != GraphKind.Script)
+            {
+                throw Fail(path, $"Condition '{name}' must be a Script-kind func_lib entry (got {entry.Kind}).");
+            }
+
+            return entry.GraphId;
+        }
 
         private static ConfigCatalogEntry GetEntry(ConfigCatalog catalog, string relativePath)
         {

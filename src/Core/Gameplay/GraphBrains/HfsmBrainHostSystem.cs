@@ -47,6 +47,9 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
     private readonly IGameplayAdvanceGate _gate;
     private readonly GraphBehaviorCatalog _behavior;
     private readonly Dictionary<string, HfsmDefinition> _definitionsByHfsmId = new(StringComparer.Ordinal);
+    /// <summary>Single shared host for all entities' lifecycle/condition graphs (reused, no per-call allocation).</summary>
+    private readonly GraphProgramHfsmHost _host;
+    private int _tick;
 
     public HfsmBrainHostSystem(
         World world,
@@ -59,6 +62,7 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
         _api = api ?? throw new ArgumentNullException(nameof(api));
         _gate = gate ?? throw new ArgumentNullException(nameof(gate));
         _behavior = behavior ?? throw new ArgumentNullException(nameof(behavior));
+        _host = new GraphProgramHfsmHost(_programs, World, _api, budgetSteps: LifecycleStepBudget);
     }
 
     public override void Update(in float dt)
@@ -68,6 +72,7 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
             return;
         }
 
+        _tick++;
         ActiveCount = 0;
         foreach (ref Chunk chunk in World.Query(in BrainQuery))
         {
@@ -80,6 +85,12 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
                 Entity actor = Unsafe.Add(ref first, index);
                 ref readonly GraphActionBrain brain = ref brains[index];
                 if (string.IsNullOrEmpty(brain.HfsmId))
+                {
+                    continue;
+                }
+
+                // ThinkEveryNTicks: skip entities not scheduled to think this tick.
+                if ((_tick % Math.Max(1, brain.ThinkEveryNTicks)) != 0)
                 {
                     continue;
                 }
@@ -168,15 +179,14 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
 
     private bool TryPickTransition(Entity actor, int fromState, HfsmDefinition definition, out HfsmTransition? chosen)
     {
-        var host = new GraphProgramHfsmHost(_programs, World, _api, budgetSteps: LifecycleStepBudget);
-        host.SetAgentCaster(0, actor);
+                _host.SetAgentCaster(0, actor);
         ReadOnlySpan<HfsmTransition> span = definition.GetTransitionsFromState(fromState);
         int bestPriority = int.MinValue;
         int best = -1;
         for (int i = 0; i < span.Length; i++)
         {
             HfsmTransition tr = span[i];
-            if (tr.ConditionGraphId > 0 && !host.EvalCondition(0, tr.ConditionGraphId))
+            if (tr.ConditionGraphId > 0 && !_host.EvalCondition(0, tr.ConditionGraphId))
             {
                 continue;
             }
@@ -194,8 +204,7 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
 
     private void RunEnterPath(Entity actor, int toLeaf, HfsmDefinition definition, int[] priorPath)
     {
-        var host = new GraphProgramHfsmHost(_programs, World, _api, budgetSteps: LifecycleStepBudget);
-        host.SetAgentCaster(0, actor);
+                _host.SetAgentCaster(0, actor);
         int[] target = PathToTarget(toLeaf, definition);
         // Enter only states not already present in the prior path (deep to shallow).
         int enterAt = 0;
@@ -209,37 +218,35 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
             int enterGraph = definition.States[target[i]].OnEnterGraphId;
             if (enterGraph > 0)
             {
-                host.RunAction(0, enterGraph);
+                _host.RunAction(0, enterGraph);
             }
         }
     }
 
     private void ExitUpTo(Entity actor, int fromLeaf, HfsmDefinition definition)
     {
-        var host = new GraphProgramHfsmHost(_programs, World, _api, budgetSteps: LifecycleStepBudget);
-        host.SetAgentCaster(0, actor);
+                _host.SetAgentCaster(0, actor);
         int[] path = PathToTarget(fromLeaf, definition);
         for (int i = path.Length - 1; i >= 0; i--)
         {
             int exitGraph = definition.States[path[i]].OnExitGraphId;
             if (exitGraph > 0)
             {
-                host.RunAction(0, exitGraph);
+                _host.RunAction(0, exitGraph);
             }
         }
     }
 
     private void RunTickCallbacks(Entity actor, int leaf, HfsmDefinition definition)
     {
-        var host = new GraphProgramHfsmHost(_programs, World, _api, budgetSteps: LifecycleStepBudget);
-        host.SetAgentCaster(0, actor);
+                _host.SetAgentCaster(0, actor);
         int[] path = PathToTarget(leaf, definition);
         for (int i = path.Length - 1; i >= 0; i--)
         {
             int tickGraph = definition.States[path[i]].OnTickGraphId;
             if (tickGraph > 0)
             {
-                host.RunAction(0, tickGraph);
+                _host.RunAction(0, tickGraph);
             }
         }
     }
