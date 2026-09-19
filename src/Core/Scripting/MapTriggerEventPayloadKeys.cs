@@ -18,6 +18,8 @@ namespace Ludots.Core.Scripting
         public const string OldValueFloat = "MapTrigger.OldValueFloat";    // float
         public const string OldValueInt = "MapTrigger.OldValueInt";        // int
         public const string TargetEntity = "MapTrigger.TargetEntity";      // Entity
+        public const string RelationTypeId = "MapTrigger.RelationTypeId";  // int
+        public const string RelationMetricId = "MapTrigger.RelationMetricId"; // int
         public const string TagId = "MapTrigger.TagId";                    // int
         public const string Magnitude = "MapTrigger.Magnitude";            // float
         public const string AbilityId = "MapTrigger.AbilityId";            // int

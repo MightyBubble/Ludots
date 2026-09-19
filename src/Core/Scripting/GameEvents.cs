@@ -137,6 +137,31 @@ namespace Ludots.Core.Scripting
         /// its discrete-id field region. Payload: SourceEntity, RegionId, FieldLayer.
         /// </summary>
         public static readonly EventKey FieldRegionExited = new EventKey("FieldRegionExited");
+        /// <summary>
+        /// Map-scoped: fired when a relationship edge is created (relationship change buffer,
+        /// one tick after the mutation). Payload: SourceEntity, TargetEntity, RelationTypeId.
+        /// </summary>
+        public static readonly EventKey RelationLinkAdded = new EventKey("RelationLinkAdded");
+
+        /// <summary>
+        /// Map-scoped: fired when a relationship edge is removed (relationship change buffer,
+        /// one tick after the mutation). Payload: SourceEntity, TargetEntity, RelationTypeId.
+        /// </summary>
+        public static readonly EventKey RelationLinkRemoved = new EventKey("RelationLinkRemoved");
+
+        /// <summary>
+        /// Map-scoped: fired when a relationship metric changes (relationship change buffer,
+        /// one tick after the mutation). Payload: SourceEntity, TargetEntity, RelationTypeId,
+        /// RelationMetricId, OldValueInt, NewValueInt.
+        /// </summary>
+        public static readonly EventKey RelationMetricChanged = new EventKey("RelationMetricChanged");
+
+        /// <summary>
+        /// Map-scoped: fired when a relationship flag changes (relationship change buffer,
+        /// one tick after the mutation). Payload: SourceEntity, TargetEntity, RelationTypeId,
+        /// RelationMetricId (-1); OldValueInt/NewValueInt carry flag words.
+        /// </summary>
+        public static readonly EventKey RelationFlagChanged = new EventKey("RelationFlagChanged");
 
         public static bool IsMapScoped(string eventName)
         {
@@ -153,7 +178,11 @@ namespace Ludots.Core.Scripting
                 eventName == RegionExited.Value ||
                 eventName == MapVariableChanged.Value ||
                 eventName == FieldRegionEntered.Value ||
-                eventName == FieldRegionExited.Value;
+                eventName == FieldRegionExited.Value ||
+                eventName == RelationLinkAdded.Value ||
+                eventName == RelationLinkRemoved.Value ||
+                eventName == RelationMetricChanged.Value ||
+                eventName == RelationFlagChanged.Value;
         }
     }
 }
