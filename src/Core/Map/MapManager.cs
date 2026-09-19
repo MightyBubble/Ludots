@@ -67,7 +67,11 @@ namespace Ludots.Core.Map
         {
             var visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var chain = new List<string>(8);
-            return LoadMapInternal(mapId, visiting, chain);
+            var config = LoadMapInternal(mapId, visiting, chain);
+            // Backfill runs once at the top level only: parent configs must stay
+            // un-backfilled so child conflict checks compare authored values (#1567).
+            ApplyWorldTuningToBoards(config);
+            return config;
         }
 
         private MapConfig LoadMapInternal(MapId mapId, HashSet<string> visiting, List<string> chain)
@@ -187,6 +191,7 @@ namespace Ludots.Core.Map
                     }
                 }
                 
+                ValidateWorldDeclaration(finalConfig, mapId);
                 Log.Info(in LogChannels.Map, $"Map '{mapId}' loaded.");
                 return finalConfig;
             }
@@ -219,6 +224,28 @@ namespace Ludots.Core.Map
                 {
                     target.ContinuousHeightmapAsset = target.ContinuousHeightmap.Asset;
                 }
+            }
+
+            // Field-level merge: a child that only re-declares size keeps the parent's
+            // Tuning, and a Tuning-only fragment still applies (#1567 slice 4 audit).
+            if (source.World is { } sourceWorld &&
+                (sourceWorld.WidthCm > 0 ||
+                 sourceWorld.HeightCm > 0 ||
+                 sourceWorld.CellSizeCm != Ludots.Core.Spatial.SpatialScaleDefaults.CellCm ||
+                 (sourceWorld.Tuning is { } fragTuning && fragTuning.IsAuthored)))
+            {
+                var merged = new Ludots.Core.Config.WorldConfig
+                {
+                    WidthCm = sourceWorld.WidthCm > 0 ? sourceWorld.WidthCm : target.World.WidthCm,
+                    HeightCm = sourceWorld.HeightCm > 0 ? sourceWorld.HeightCm : target.World.HeightCm,
+                    CellSizeCm = sourceWorld.CellSizeCm != Ludots.Core.Spatial.SpatialScaleDefaults.CellCm
+                        ? sourceWorld.CellSizeCm
+                        : target.World.CellSizeCm,
+                    Tuning = sourceWorld.Tuning is { } st && st.IsAuthored
+                        ? st.Clone()
+                        : target.World.Tuning?.Clone() ?? new Ludots.Core.Config.WorldTuningConfig()
+                };
+                target.World = merged;
             }
 
             if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
@@ -399,6 +426,133 @@ namespace Ludots.Core.Map
             }
         }
 
+        private static void ValidateWorldDeclaration(MapConfig config, MapId mapId)
+        {
+            ValidateWorldTuningValues(config.World, mapId);
+
+            if (config.Boards is not { Count: > 0 })
+            {
+                return;
+            }
+
+            var world = config.World;
+            var invalid = new List<string>();
+            if (world == null || world.WidthCm <= 0) invalid.Add("WidthCm");
+            if (world == null || world.HeightCm <= 0) invalid.Add("HeightCm");
+            if (world == null || world.CellSizeCm <= 0) invalid.Add("CellSizeCm");
+            if (invalid.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has boards and must declare World; invalid fields: {string.Join(", ", invalid)}. Boards no longer define the world (#1567).");
+            }
+
+            foreach (var board in config.Boards)
+            {
+                ValidateBoardPlacement(board, world!, mapId);
+                ValidateBoardAgainstWorldTuning(board, world!.Tuning, mapId);
+            }
+
+        }
+
+        private static void ValidateWorldTuningValues(WorldConfig world, MapId mapId)
+        {
+            var tuning = world?.Tuning;
+            if (tuning is null || !tuning.IsAuthored)
+            {
+                return;
+            }
+
+            if (tuning.PartitionChunkCells is int partition &&
+                (partition <= 0 || (partition & (partition - 1)) != 0))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' World.Tuning.PartitionChunkCells must be positive and a power of two; got {partition}.");
+            }
+
+            if (tuning.LoadedChunkCapacity is int capacity && capacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' World.Tuning.LoadedChunkCapacity must be positive; got {capacity}.");
+            }
+        }
+
+        private static void ApplyWorldTuningToBoards(MapConfig config)
+        {
+            var tuning = config?.World?.Tuning;
+            if (config?.Boards is not { Count: > 0 } || tuning is null || !tuning.IsAuthored)
+            {
+                return;
+            }
+
+            foreach (var board in config.Boards)
+            {
+                if (tuning.PartitionChunkCells is int applyPartition)
+                {
+                    board.ChunkSizeCells = applyPartition;
+                }
+
+                if (tuning.LoadedChunkCapacity is int applyCapacity)
+                {
+                    board.LoadedChunkCapacity = applyCapacity;
+                }
+            }
+        }
+
+        private static void ValidateBoardAgainstWorldTuning(BoardConfig board, Ludots.Core.Config.WorldTuningConfig tuning, MapId mapId)
+        {
+            if (tuning is null || !tuning.IsAuthored)
+            {
+                return;
+            }
+
+            if (tuning.PartitionChunkCells is int partitionValue &&
+                board.ChunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.PartitionChunkCells &&
+                board.ChunkSizeCells != partitionValue)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' declares ChunkSizeCells={board.ChunkSizeCells}, conflicting with World.Tuning.PartitionChunkCells={partitionValue}; remove the board-level field or align it (single world budget, #1567).");
+            }
+
+            if (tuning.LoadedChunkCapacity is int capacityValue &&
+                board.LoadedChunkCapacity > 0 &&
+                board.LoadedChunkCapacity != capacityValue)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' declares LoadedChunkCapacity={board.LoadedChunkCapacity}, conflicting with World.Tuning.LoadedChunkCapacity={capacityValue}; remove the board-level field or align it (single world budget, #1567).");
+            }
+        }
+
+        private static void ValidateBoardPlacement(BoardConfig board, WorldConfig world, MapId mapId)
+        {
+            bool hasX = board.OriginXCm.HasValue;
+            bool hasY = board.OriginYCm.HasValue;
+            if (hasX != hasY)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' must author OriginXCm and OriginYCm together.");
+            }
+
+            if (hasX)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' declares OriginXCm/OriginYCm; declared placement (min-corner anchor, cm) stays fail-closed until #1567 slice 2b unifies SpatialCoordinateConverter origin semantics. Omit both fields for the centered default.");
+            }
+
+            if (board.WidthCells <= 0 || board.HeightCells <= 0 || board.GridCellSizeCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' requires positive WidthCells/HeightCells/GridCellSizeCm.");
+            }
+
+            long boardWidthCm = (long)board.WidthCells * board.GridCellSizeCm;
+            long boardHeightCm = (long)board.HeightCells * board.GridCellSizeCm;
+            if (boardWidthCm > world.WidthCm || boardHeightCm > world.HeightCm)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds World {world.WidthCm}x{world.HeightCm}cm; boards must fit inside the world (#1567).");
+            }
+        }
+
         private static void RejectLegacyWorldExtentKeys(JsonNode fragment, string jsonPath)
         {
             if (fragment is not JsonObject root)
@@ -406,8 +560,10 @@ namespace Ludots.Core.Map
                 return;
             }
 
-            RejectLegacyKey(root, "WidthInTiles", "widthInMacroTiles", jsonPath);
-            RejectLegacyKey(root, "HeightInTiles", "heightInMacroTiles", jsonPath);
+            RejectLegacyKey(root, "WidthInTiles", "World.WidthCm", jsonPath);
+            RejectLegacyKey(root, "HeightInTiles", "World.HeightCm", jsonPath);
+            RejectLegacyKey(root, "WidthInMacroTiles", "World.WidthCm", jsonPath);
+            RejectLegacyKey(root, "HeightInMacroTiles", "World.HeightCm", jsonPath);
 
             if (!TryGetPropertyCaseInsensitive(root, "boards", out JsonNode boardsNode) ||
                 boardsNode is not JsonArray boards)
@@ -422,8 +578,10 @@ namespace Ludots.Core.Map
                     continue;
                 }
 
-                RejectLegacyKey(board, "WidthInTiles", "widthInMacroTiles", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "HeightInTiles", "heightInMacroTiles", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInTiles", "Boards[].WidthCells + World.WidthCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInTiles", "Boards[].HeightCells + World.HeightCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInMacroTiles", "Boards[].WidthCells + World.WidthCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInMacroTiles", "Boards[].HeightCells + World.HeightCm", $"{jsonPath}.boards[{i}]");
             }
         }
 

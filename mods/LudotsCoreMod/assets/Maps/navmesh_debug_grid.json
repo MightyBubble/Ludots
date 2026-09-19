@@ -1,5 +1,10 @@
 {
   "Id": "navmesh_debug_grid",
+  "World": {
+    "WidthCm": 102400,
+    "HeightCm": 102400,
+    "CellSizeCm": 100
+  },
   "Tags": [
     "showcase",
     "navmesh",
@@ -11,8 +16,8 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 4,
-      "HeightInMacroTiles": 4,
+      "WidthCells": 1024,
+      "HeightCells": 1024,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 256,

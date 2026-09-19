@@ -35,9 +35,12 @@ namespace Ludots.Tests.Gas
             JsonObject gameConfig = JsonNode.Parse(File.ReadAllText(gameConfigPath))?.AsObject()
                 ?? throw new InvalidOperationException("Copied core game.json must contain a JSON object.");
             gameConfig["startupMapId"] = "outer_map";
-            gameConfig["worldWidthInMacroTiles"] = 16;
-            gameConfig["worldHeightInMacroTiles"] = 16;
-            gameConfig["gridCellSizeCm"] = 100;
+            gameConfig["world"] = new JsonObject
+            {
+                ["widthCm"] = 409600,
+                ["heightCm"] = 409600,
+                ["cellSizeCm"] = 100
+            };
             File.WriteAllText(gameConfigPath, gameConfig.ToJsonString());
 
             File.WriteAllText(Path.Combine(_coreRoot, "Navigation", "agent_profiles.json"), """
@@ -332,9 +335,13 @@ namespace Ludots.Tests.Gas
             {
               "id": "outer_map",
               "continuousHeightmapAsset": "assets/terrain/map.height",
+              "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
               "boards": [
                 {
                   "name": "default",
+                  "widthCells": 256,
+                  "heightCells": 256,
+                  "gridCellSizeCm": 100,
                   "continuousHeightmapAsset": "assets/terrain/board.height"
                 }
               ]

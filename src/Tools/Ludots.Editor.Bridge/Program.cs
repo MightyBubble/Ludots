@@ -4581,13 +4581,8 @@ static class EditorRepo
         int chunkSizeCells = board.ChunkSizeCells > 0
             ? board.ChunkSizeCells
             : Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
-        int widthChunks = checked(board.WidthInMacroTiles * (Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells));
-        int heightChunks = checked(board.HeightInMacroTiles * (Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells));
-        if (chunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells)
-        {
-            widthChunks = checked((board.WidthInMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells) / chunkSizeCells);
-            heightChunks = checked((board.HeightInMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells) / chunkSizeCells);
-        }
+        int widthChunks = checked((board.WidthCells + chunkSizeCells - 1) / chunkSizeCells);
+        int heightChunks = checked((board.HeightCells + chunkSizeCells - 1) / chunkSizeCells);
 
         string? spatialType = null;
         string? topologyError = null;
@@ -4929,12 +4924,12 @@ static class EditorRepo
         map.Boards ??= new List<Ludots.Core.Map.Board.BoardConfig>();
         EnsureNoBoardNameConflict(map, name);
 
-        int widthMacroTiles = request.WidthInMacroTiles > 0
-            ? request.WidthInMacroTiles
-            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultWorldWidthMacroTiles;
-        int heightMacroTiles = request.HeightInMacroTiles > 0
-            ? request.HeightInMacroTiles
-            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultWorldHeightMacroTiles;
+        int widthCells = request.WidthCells > 0
+            ? request.WidthCells
+            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultWorldWidthMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells;
+        int heightCells = request.HeightCells > 0
+            ? request.HeightCells
+            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultWorldHeightMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells;
         int chunkSizeCells = request.ChunkSizeCells > 0
             ? request.ChunkSizeCells
             : Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
@@ -4942,7 +4937,7 @@ static class EditorRepo
             ? request.CellSizeCm
             : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm;
 
-        ValidateBoardDimensions(widthMacroTiles, heightMacroTiles, chunkSizeCells);
+        ValidateBoardDimensions(widthCells, heightCells, chunkSizeCells);
         string dataFile = string.IsNullOrWhiteSpace(request.DataFile)
             ? BuildDefaultBoardDataFile(mapId, name, spatialType)
             : request.DataFile.Trim();
@@ -4951,8 +4946,8 @@ static class EditorRepo
         {
             Name = name,
             SpatialType = spatialType,
-            WidthInMacroTiles = widthMacroTiles,
-            HeightInMacroTiles = heightMacroTiles,
+            WidthCells = widthCells,
+            HeightCells = heightCells,
             GridCellSizeCm = cellSizeCm,
             HexEdgeLengthCm = request.HexEdgeLengthCm > 0 ? request.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
             ChunkSizeCells = chunkSizeCells,
@@ -4979,6 +4974,17 @@ static class EditorRepo
             }
         }
 
+        if (map.World is not { } worldDecl || worldDecl.WidthCm <= 0 || worldDecl.HeightCm <= 0)
+        {
+            map.World = new Ludots.Core.Config.WorldConfig
+            {
+                WidthCm = checked(widthCells * cellSizeCm),
+                HeightCm = checked(heightCells * cellSizeCm),
+                CellSizeCm = cellSizeCm
+            };
+        }
+
+        EnsureBoardFitsWorld(map, board);
         map.Boards.Add(board);
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
@@ -5037,6 +5043,7 @@ static class EditorRepo
             board.NavigationEnabled = request.NavigationEnabled.Value;
         }
 
+        EnsureBoardFitsWorld(map, board);
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
         var boardInfo = DescribeBoard(ctx, mapId, board);
@@ -5327,14 +5334,35 @@ static class EditorRepo
         }
     }
 
-    private static void ValidateBoardDimensions(int widthMacroTiles, int heightMacroTiles, int chunkSizeCells)
+    private static void EnsureBoardFitsWorld(Ludots.Core.Config.MapConfig map, Ludots.Core.Map.Board.BoardConfig board)
     {
-        if (widthMacroTiles <= 0) throw new InvalidOperationException("WidthInMacroTiles must be positive.");
-        if (heightMacroTiles <= 0) throw new InvalidOperationException("HeightInMacroTiles must be positive.");
+        if (map.World is not { } worldDecl || worldDecl.WidthCm <= 0 || worldDecl.HeightCm <= 0)
+        {
+            return;
+        }
+
+        long boardWidthCm = (long)board.WidthCells * board.GridCellSizeCm;
+        long boardHeightCm = (long)board.HeightCells * board.GridCellSizeCm;
+        if (boardWidthCm > worldDecl.WidthCm || boardHeightCm > worldDecl.HeightCm)
+        {
+            throw new InvalidOperationException(
+                $"Board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds World {worldDecl.WidthCm}x{worldDecl.HeightCm}cm; enlarge World.WidthCm/HeightCm first (#1567).");
+        }
+    }
+
+    private static void ValidateBoardDimensions(int widthCells, int heightCells, int chunkSizeCells)
+    {
+        if (widthCells <= 0) throw new InvalidOperationException("WidthCells must be positive.");
+        if (heightCells <= 0) throw new InvalidOperationException("HeightCells must be positive.");
         if (chunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells)
         {
             throw new InvalidOperationException(
                 $"React terrain editor creates boards with ChunkSizeCells={Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells}; requested {chunkSizeCells}.");
+        }
+        if (widthCells % chunkSizeCells != 0 || heightCells % chunkSizeCells != 0)
+        {
+            throw new InvalidOperationException(
+                $"Board extent in cells must align to ChunkSizeCells={chunkSizeCells}; got {widthCells}x{heightCells}.");
         }
     }
 
@@ -5348,7 +5376,7 @@ static class EditorRepo
     {
         if (string.IsNullOrWhiteSpace(mapId)) return false;
         if (string.IsNullOrWhiteSpace(board.DataFile)) return false;
-        if (board.WidthInMacroTiles <= 0 || board.HeightInMacroTiles <= 0) return false;
+        if (board.WidthCells <= 0 || board.HeightCells <= 0) return false;
         string spatialType = NormalizeSpatialType(board);
         if (!string.Equals(spatialType, "Grid", StringComparison.Ordinal) &&
             !string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
@@ -5362,9 +5390,8 @@ static class EditorRepo
 
     public static byte[] CreateEmptyReactTerrainHeader(Ludots.Core.Map.Board.BoardConfig board)
     {
-        int chunksPerMacro = Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
-        int widthChunks = checked(board.WidthInMacroTiles * chunksPerMacro);
-        int heightChunks = checked(board.HeightInMacroTiles * chunksPerMacro);
+        int widthChunks = checked((board.WidthCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
+        int heightChunks = checked((board.HeightCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
         using var ms = new MemoryStream(9);
         using var bw = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true);
         bw.Write(widthChunks);
@@ -5376,16 +5403,16 @@ static class EditorRepo
 
     private static bool ShouldCreateFullEmptyTerrainDataFile(Ludots.Core.Map.Board.BoardConfig board)
     {
-        return board.WidthInMacroTiles <= EagerEmptyTerrainFileMacroTileLimit &&
-            board.HeightInMacroTiles <= EagerEmptyTerrainFileMacroTileLimit;
+        int eagerCellLimit = EagerEmptyTerrainFileMacroTileLimit * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells;
+        return board.WidthCells <= eagerCellLimit &&
+            board.HeightCells <= eagerCellLimit;
     }
 
     private static void CreateEmptyTerrainDataFile(Ludots.Core.Map.Board.BoardConfig board, string outFile)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
-        int chunksPerMacro = Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
-        int widthChunks = checked(board.WidthInMacroTiles * chunksPerMacro);
-        int heightChunks = checked(board.HeightInMacroTiles * chunksPerMacro);
+        int widthChunks = checked((board.WidthCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
+        int heightChunks = checked((board.HeightCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
 
         string tempReactPath = Path.Combine(Path.GetTempPath(), $"ludots_empty_board_{Guid.NewGuid():N}.bin");
         try
@@ -5815,8 +5842,8 @@ sealed class BoardCreateRequest
 {
     public string Name { get; set; } = string.Empty;
     public string SpatialType { get; set; } = "Grid";
-    public int WidthInMacroTiles { get; set; }
-    public int HeightInMacroTiles { get; set; }
+    public int WidthCells { get; set; }
+    public int HeightCells { get; set; }
     public int CellSizeCm { get; set; }
     public int HexEdgeLengthCm { get; set; }
     public int ChunkSizeCells { get; set; }

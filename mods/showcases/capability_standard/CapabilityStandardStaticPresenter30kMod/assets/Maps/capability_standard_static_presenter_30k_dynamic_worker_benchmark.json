@@ -1,6 +1,18 @@
 {
   "Id": "capability_standard_static_presenter_30k_dynamic_worker_benchmark",
-  "Tags": ["showcase", "presenter", "benchmark", "dynamic", "skinned", "animator"],
+  "World": {
+    "WidthCm": 128000,
+    "HeightCm": 128000,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "showcase",
+    "presenter",
+    "benchmark",
+    "dynamic",
+    "skinned",
+    "animator"
+  ],
   "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_dynamic_worker_hills.height",
   "Metadata": {
     "capabilityStandardStaticPresenter30k": {
@@ -16,8 +28,8 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 5,
-      "HeightInMacroTiles": 5,
+      "WidthCells": 1280,
+      "HeightCells": 1280,
       "GridCellSizeCm": 100,
       "LoadedChunkCapacity": 256
     }

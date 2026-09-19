@@ -1,6 +1,15 @@
 {
   "Id": "rts_war3_training",
-  "Tags": ["rts_showcase", "rts_training", "war3"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "rts_showcase",
+    "rts_training",
+    "war3"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Rts",
     "TargetXCm": 7600,
@@ -11,38 +20,76 @@
     "FovYDeg": 60
   },
   "Boards": [
-    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "war3_forest.hex" }
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "DataFile": "war3_forest.hex",
+      "WidthCells": 16384,
+      "HeightCells": 16384
+    }
   ],
   "Entities": [
     {
       "Template": "rts_war3_barracks",
       "InstanceId": "war3_training_barracks",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 6700, "Y": 4700 } },
-        "Name": { "Value": "Barracks" }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6700,
+            "Y": 4700
+          }
+        },
+        "Name": {
+          "Value": "Barracks"
+        }
       }
     },
     {
       "Template": "rts_war3_footman",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 7400, "Y": 5480 } },
-        "Name": { "Value": "Line Infantry" }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7400,
+            "Y": 5480
+          }
+        },
+        "Name": {
+          "Value": "Line Infantry"
+        }
       }
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "war3_training_barracks" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "war3_training_barracks"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "war3_training_barracks" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "war3_training_barracks"
+    }
   ],
   "ParticipantRelationships": {
     "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "RtsDemo.Participant", "Attitude": "Friendly", "Symmetric": true }
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "RtsDemo.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      }
     ],
     "Players": [],
     "PlayerTeams": [
-      { "PlayerId": 1, "TeamId": 1, "TypeId": "RtsDemo.Participant", "Symmetric": false }
+      {
+        "PlayerId": 1,
+        "TeamId": 1,
+        "TypeId": "RtsDemo.Participant",
+        "Symmetric": false
+      }
     ]
   }
 }

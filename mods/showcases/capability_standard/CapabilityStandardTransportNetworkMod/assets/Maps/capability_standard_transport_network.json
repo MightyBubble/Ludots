@@ -1,12 +1,21 @@
 {
   "Id": "capability_standard_transport_network",
-  "Tags": ["capability_standard", "transport_network", "node_graph"],
+  "World": {
+    "WidthCm": 51200,
+    "HeightCm": 51200,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "capability_standard",
+    "transport_network",
+    "node_graph"
+  ],
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "NodeGraph",
-      "WidthInMacroTiles": 2,
-      "HeightInMacroTiles": 2,
+      "WidthCells": 512,
+      "HeightCells": 512,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 64

@@ -15,11 +15,17 @@ namespace Ludots.Core.Map.Board
         /// <summary>Spatial type: "Grid", "HexGrid", or "NodeGraph".</summary>
         public string SpatialType { get; set; } = "Grid";
 
-        /// <summary>Board width in 256-cell macro tiles.</summary>
-        public int WidthInMacroTiles { get; set; } = SpatialScaleDefaults.DefaultWorldWidthMacroTiles;
+        /// <summary>Board width in topology cells (#1567: authored directly; world size lives in MapConfig.World).</summary>
+        public int WidthCells { get; set; } = SpatialScaleDefaults.DefaultWorldWidthMacroTiles * SpatialScaleDefaults.MacroTileCells;
 
-        /// <summary>Board height in 256-cell macro tiles.</summary>
-        public int HeightInMacroTiles { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles;
+        /// <summary>Board height in topology cells (#1567: authored directly; world size lives in MapConfig.World).</summary>
+        public int HeightCells { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles * SpatialScaleDefaults.MacroTileCells;
+
+        /// <summary>Board AABB min-corner anchor in world coordinates, X axis; null = centered on the world (#1567 slice 2). Same anchor semantics as NavTileGridConfig.OriginXcm.</summary>
+        public int? OriginXCm { get; set; }
+
+        /// <summary>Board AABB min-corner anchor in world coordinates, Y axis; null = centered on the world. Both axes must be authored together.</summary>
+        public int? OriginYCm { get; set; }
 
         /// <summary>Grid cell size in centimeters.</summary>
         public int GridCellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
@@ -70,8 +76,10 @@ namespace Ludots.Core.Map.Board
             {
                 Name = Name,
                 SpatialType = SpatialType,
-                WidthInMacroTiles = WidthInMacroTiles,
-                HeightInMacroTiles = HeightInMacroTiles,
+                WidthCells = WidthCells,
+                HeightCells = HeightCells,
+                OriginXCm = OriginXCm,
+                OriginYCm = OriginYCm,
                 GridCellSizeCm = GridCellSizeCm,
                 HexEdgeLengthCm = HexEdgeLengthCm,
                 ChunkSizeCells = ChunkSizeCells,

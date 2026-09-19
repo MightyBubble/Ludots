@@ -1,5 +1,13 @@
 {
   "Id": "east_asia_grid",
+  "World": {
+    "WidthCm": 900652032,
+    "HeightCm": 514658304,
+    "CellSizeCm": 125649,
+    "Tuning": {
+      "LoadedChunkCapacity": 512
+    }
+  },
   "ParentId": null,
   "Dependencies": {},
   "ContinuousHeightmapAsset": "assets/samples/LudotsSample/east_asia/east_asia_continuous.height",
@@ -33,8 +41,8 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 28,
-      "HeightInMacroTiles": 16,
+      "WidthCells": 7168,
+      "HeightCells": 4096,
       "GridCellSizeCm": 125649,
       "HexEdgeLengthCm": 400,
       "ChunkSizeCells": 64,

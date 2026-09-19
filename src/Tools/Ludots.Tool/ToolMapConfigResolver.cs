@@ -384,10 +384,11 @@ namespace Ludots.Tool
                 return;
             }
 
-            if (ContainsKey(root, "WidthInTiles") || ContainsKey(root, "HeightInTiles"))
+            if (ContainsKey(root, "WidthInTiles") || ContainsKey(root, "HeightInTiles") ||
+                ContainsKey(root, "WidthInMacroTiles") || ContainsKey(root, "HeightInMacroTiles"))
             {
                 throw new InvalidOperationException(
-                    $"Map config '{path}' uses legacy WidthInTiles/HeightInTiles. Use WidthInMacroTiles/HeightInMacroTiles.");
+                    $"Map config '{path}' uses legacy tile-count world keys. Use World.WidthCm/HeightCm + Boards[].WidthCells/HeightCells.");
             }
 
             if (TryGetObjectArray(root, "boards", out JsonArray? boards) && boards != null)
@@ -396,10 +397,11 @@ namespace Ludots.Tool
                 {
                     JsonNode? boardNode = boards[i];
                     if (boardNode is JsonObject board &&
-                        (ContainsKey(board, "WidthInTiles") || ContainsKey(board, "HeightInTiles")))
+                        (ContainsKey(board, "WidthInTiles") || ContainsKey(board, "HeightInTiles") ||
+                         ContainsKey(board, "WidthInMacroTiles") || ContainsKey(board, "HeightInMacroTiles")))
                     {
                         throw new InvalidOperationException(
-                            $"Map config '{path}' board[{i}] uses legacy WidthInTiles/HeightInTiles. Use WidthInMacroTiles/HeightInMacroTiles.");
+                            $"Map config '{path}' board[{i}] uses legacy tile-count extent keys. Use Boards[].WidthCells/HeightCells + World.WidthCm/HeightCm.");
                     }
                 }
             }
@@ -409,7 +411,7 @@ namespace Ludots.Tool
         {
             foreach (KeyValuePair<string, JsonNode?> kvp in obj)
             {
-                if (string.Equals(kvp.Key, key, StringComparison.Ordinal))
+                if (string.Equals(kvp.Key, key, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }

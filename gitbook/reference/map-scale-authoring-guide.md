@@ -2,37 +2,46 @@
 
 本页写给要做真实地图的 Mod 作者。它不替代 [空间尺度与分辨率 SSOT](../architecture/spatial-scale-and-resolution-ssot.md)，而是把 SSOT 翻译成“我要做多大的地图、要多细的地形/导航/避障/表现，该从哪些配置入口下手”。
 
+> **状态**：本页 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的合同，切 0（文档）与切 1（世界/板 schema 与全量资产迁移）已随本 PR 落地；板摆放 `OriginXCm/OriginYCm`（切 2）、nav 声明归位（切 3）、`World.Tuning`（切 4）仍是目标态。旧键对照见文末[迁移对照](#迁移对照1567)。概念、owner 与约束以 SSOT 层级表为准。
+
 交互式入门页见 [`map-scale-authoring-starter.html`](map-scale-authoring-starter.html)。如果你只想先调几个数看世界有多大、网格有多密、FlowWindow 会不会整除、全量/局部 nav bake 大概要多少操作和时间，先打开 HTML；真正落配置前再回到本页查 owner 和约束。Terrain/obstacle/area/agent/bake/editor/Raylib debug 的完整工具链设计见 [`navmesh-authoring-bake-toolchain.md`](navmesh-authoring-bake-toolchain.md)。
 
-## 先分三层
+## 先分四域
 
-| 层 | 你在问什么 | 主要配置 | 不要混用 |
+配置分四个域，每个域一份声明、一个家。写地图时按这个顺序问自己：
+
+| 域 | 你在问什么 | 主要配置 | 不要混用 |
 |---|---|---|---|
-| 世界范围 | 地图到底有多大，坐标能走到哪里 | map `Boards[].WidthInMacroTiles` / `HeightInMacroTiles` / `GridCellSizeCm` | 不要拿 `FlowWindow` 或 `TerrainChunk` 当世界大小 |
-| 拓扑几何 | Grid/Hex/NodeGraph 的几何语义是什么 | `SpatialType`、Grid 的 `GridCellSizeCm`、HexGrid 的 `HexEdgeLengthCm` | 不要把 Hex edge 当 Grid cell，也不要把 NodeGraph 节点间距塞进 CellCm |
-| 空间组织 | 查询、地形、bake、streaming 的块多粗 | `ChunkSizeCells`、`TerrainChunkCells` owner、`Navigation/navmesh.json`、streaming/window 配置 | `PartitionChunk` 不是 navmesh tile，`NavTile footprint` 不是新尺度 owner |
+| 世界 | 世界到底多大，坐标能走到哪里 | map `World.WidthCm` / `World.HeightCm` | 世界尺寸是唯一的，不由任何板决定；不要拿 `FlowWindow` 或板范围当世界大小 |
+| 板 | 世界上有几块业务区域，各是什么拓扑、多大、摆在哪 | `Boards[].SpatialType`、`WidthCells`/`WidthHexes`、`CellSizeCm`/`HexEdgeLengthCm`、`OriginXCm`/`OriginYCm` | 板是业务区域（战棋区、hex 港口、路网层），不是性能分区；分区块数不是板的属性 |
+| 导航 | 可行走网从哪来、瓦片多粗 | `Navigation/navmesh.json`：source（.height/.grid/.hex）、`tileWorldWidthCm`/`tileWorldHeightCm`、profiles/layers | 瓦片颗粒度是 nav 自己的预算，不从板或地形块推导 |
 | 运行精度 | 单位移动、避障、路径、表现更新多细 | `MassNavigationConfig.json` solver/cadence/agent profiles、`Navigation/agent_profiles.json`、`Navigation/pathing.json` | `FlowCell` 默认可等于 `CellCm`，但不是 board cell 的别名 |
 
-核心公式：
+核心公式（#1567 目标态）：
 
 ```text
-worldWidthCm  = WidthInMacroTiles  * MacroTileCells(256) * GridCellSizeCm
-worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
+worldWidthCm  = World.WidthCm                  # 世界唯一尺寸，直接写
+boardWidthCm  = WidthCells * CellSizeCm        # Grid 板：格子数 × 格边
+boardWidthCm  = WidthHexes * hex 足迹          # Hex 板：hex 数 × HexMetrics 派生
+boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在世界哪里，缺省居中
 ```
 
-`GridCellSizeCm = 100` 时，1 个 `MacroTile` 是 `256m x 256m`。`WidthInMacroTiles = 250` 的地图宽度约为 `64km`。
+作者请求的米数是编辑器 UI 的输入；JSON 里存的是分配后的尺寸，磁盘即运行时真相。宏块（MacroTile = 256 cells）是世界 IO 的内部寻址单位，由引擎从世界尺寸派生，作者不需要知道它。
 
-编辑器里的正式 board 创建入口不要求作者填写 chunk 数量，也不要求作者直接填写 `WidthInMacroTiles`。作者输入“目标米数 + `GridCellSizeCm` / `HexEdgeLengthCm` 等尺度参数”，编辑器按 `MacroTileCells` 向上对齐分配范围，再派生出 grid cells、`WidthInMacroTiles` / `HeightInMacroTiles` 与 Terrain/NavTile 数量。`assets/Maps/<map>.json` 仍保存 `WidthInMacroTiles` / `HeightInMacroTiles`，因为这是 runtime 与 IO 的配置真相；米数只是 authoring UI。
+编辑器里的正式 board 创建入口不要求作者填写 chunk 数量或宏块数量。作者输入“目标米数 + `CellSizeCm` / `HexEdgeLengthCm` 等尺度参数”，编辑器按预算规则分配范围并预览（分配后世界尺寸、板摆放、nav 瓦片数与内存），再派生出 grid cells 与 Terrain/NavTile 数量落盘。
 
 ## 配置入口速查
 
 | 文件 | 字段 | 作用 |
 |---|---|---|
-| `assets/Maps/<map>.json` | `Boards[].SpatialType` | `Grid` / `HexGrid` / `NodeGraph`，决定地图 board 类型 |
-| `assets/Maps/<map>.json` | `Boards[].WidthInMacroTiles` / `HeightInMacroTiles` | 世界范围，单位是 256-cell MacroTile 数量 |
-| `assets/Maps/<map>.json` | `Boards[].GridCellSizeCm` | `CellCm` 输入，决定每个 sim cell 的厘米边长 |
-| `assets/Maps/<map>.json` | `Boards[].HexEdgeLengthCm` | HexGrid 专属 hex 边长；Grid / NodeGraph 不受它影响 |
-| `assets/Maps/<map>.json` | `Boards[].ChunkSizeCells` | `PartitionChunkCells`，只控制 spatial query/AOI 分区 |
+| `assets/Maps/<map>.json` | `World.WidthCm` / `World.HeightCm` | 世界唯一尺寸（#1567 切 1 引入） |
+| `assets/Maps/<map>.json` | `Boards[].SpatialType` | `Grid` / `HexGrid` / `NodeGraph`，决定板拓扑 |
+| `assets/Maps/<map>.json` | `Boards[].WidthCells` / `HeightCells` + `CellSizeCm` | Grid 板范围与格边 |
+| `assets/Maps/<map>.json` | `Boards[].WidthHexes` / `HeightHexes` + `HexEdgeLengthCm` | Hex 板范围与 hex 边长 |
+| `assets/Maps/<map>.json` | `Boards[].OriginXCm` / `OriginYCm` | 板摆在世界坐标哪里，缺省居中（#1567 切 2 引入） |
+| `assets/Maps/<map>.json` | `World.Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | 世界层分区与 streaming 预算；声明后为唯一预算，容量回填未声明的板（#1567 切 4 已落地，缺省自动推导随切 4b） |
+| `assets/Navigation/navmesh.json` | `boards.<name>.source` / `tileWorldWidthCm` / `tileWorldHeightCm` | nav 烘焙源与瓦片颗粒度（#1567 切 3 引入） |
+| `assets/Navigation/navmesh.json` | `mode` / `algorithm` / `profiles[].maxClimbCm` / `maxSlopeDeg` | bake/runtime incremental 的导航网格参数 |
 | Mod-local assets/game.json | `startupMapId` | 启动地图 id |
 | Mod-local assets/game.json | `presentation.*Capacity` | 表现层容量，跟实体/marker/overlay 数量相关 |
 | Mod-local assets/game.json | `presentation.cameraCulling.*DistanceCm` | 近中远 LOD 裁剪距离 |
@@ -42,23 +51,20 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 | Mod-local assets/MassNavigationConfig.json | `solver.flowCellSizeCm` | FlowCell 分辨率，单位 cm |
 | Mod-local assets/MassNavigationConfig.json | `solver.separationHashCellSizeCm` / `hardResolveHashCellSizeCm` | 避障 hash 分辨率，单位 cm |
 | `assets/Navigation/agent_profiles.json` | `radiusCm` / `heightCm` / `clearanceCm` / `draftCm` / `beamCm` / `mass` / `layer` | agent 几何、避障身份与 NodeGraph 运输容量 SSOT |
-| `assets/Navigation/navmesh.json` | `mode` / `algorithm` / `profiles[].maxClimbCm` / `maxSlopeDeg` | bake/runtime incremental 的导航网格参数 |
 | `assets/Navigation/pathing.json` | `agentTypes[].profileId` / `selection.mode` | 哪些 profile 走精确 route，哪些继续 MassNavigationFlow |
 
-生产 Mod 建议在 map `Boards[]` 里显式写 board 尺度。极小 demo 可以沿用默认，但一旦涉及导航、streaming、minimap 或性能验收，就不要靠隐式默认。
+生产 Mod 建议在 map 里显式写 `World` 尺寸与板声明。极小 demo 可以沿用默认，但一旦涉及导航、streaming、minimap 或性能验收，就不要靠隐式默认。
 
 ## 设计流程
 
-1. 定玩家尺度：玩家同屏看到 50m、500m、5km，还是整个大陆？
-2. 定 `GridCellSizeCm`：1 cell 是 1m、2m、5m，还是更粗。越小越精细，cells 总数越大。
-3. 定拓扑几何：Grid 用 `GridCellSizeCm` 做 cell 边长；HexGrid 另用 `HexEdgeLengthCm` 做 hex 边长；NodeGraph 的节点/边由图数据表达。
-4. 定世界范围：用 `WidthInMacroTiles * 256 * GridCellSizeCm` 算出世界厘米/米/公里。
-5. 定分区粒度：`ChunkSizeCells` 影响 spatial query/AOI，不改变世界大小。当前默认 64 cells，必须为 2 的幂。
-6. 定导航粒度：agent 半径、clearance、`maxClimbCm`、`maxSlopeDeg` 决定哪些地方可走。
-6. 估 bake 预算：用 [`nav-bake-budget-and-estimation.md`](nav-bake-budget-and-estimation.md) 或 HTML 入门页算 full/dirty/window target tiles、layer/profile 乘数、Recast voxel 粒度和耗时区间。
-7. 定执行窗口：MassNavigationFlow 不是全世界每格都算，通常用 `FlowWindow` 覆盖当前战区、相机焦点或热区。
-8. 定运行精度：`flowCellSizeCm` 控流场网格，hash cell 控拥挤/硬解析邻居搜索。
-9. 定表现容量：大地图不等于所有 presenter 都常驻；用 camera culling、view residency、minimap 策略控制看见什么。
+1. 定世界：这个世界多大？玩家活动范围是 50m、500m、5km 还是整个大陆？写 `World.WidthCm` / `World.HeightCm`。
+2. 定玩家尺度：同屏看到什么量级的对抗？由此定 Grid 板的 `CellSizeCm`（1 cell 是 1m、2m、5m 还是更粗）或 Hex 板的 `HexEdgeLengthCm`。越小越精细，cells 总数越大。
+3. 摆板：世界上需要几块业务区域？每块什么拓扑、多少格子、origin 在哪？战棋区、hex 港口、战略路网各一块板；对齐世界格是配置选择，不是系统要求。
+4. 定导航：从哪张源数据烘焙（.height 直采或某板的 .grid/.hex）？瓦片颗粒度多大？agent 半径、clearance、`maxClimbCm`、`maxSlopeDeg` 决定哪些地方可走。
+5. 估 bake 预算：用 [`nav-bake-budget-and-estimation.md`](nav-bake-budget-and-estimation.md) 或 HTML 入门页算 full/dirty/window target tiles、layer/profile 乘数、Recast voxel 粒度和耗时区间。
+6. 定执行窗口：MassNavigationFlow 不是全世界每格都算，通常用 `FlowWindow` 覆盖当前战区、相机焦点或热区。
+7. 定运行精度：`flowCellSizeCm` 控流场网格，hash cell 控拥挤/硬解析邻居搜索。
+8. 定表现容量：大地图不等于所有 presenter 都常驻；用 camera culling、view residency、minimap 策略控制看见什么。
 
 ## RTS / 战场型
 
@@ -66,26 +72,25 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 
 常见思路：
 
-- `GridCellSizeCm = 100`：1 cell = 1m，适合人/士兵/小车级别。
-- `WidthInMacroTiles` / `HeightInMacroTiles` 可很大，例如 MassNavigation 示例使用 `250 x 250`，约 `64km x 64km`。
-- `ChunkSizeCells = 64`：1 个 PartitionChunk 约 `64m`，适合作为空间查询分区起点。
+- `CellSizeCm = 100`：1 cell = 1m，适合人/士兵/小车级别。
+- 世界可很大，例如 `World.WidthCm = 6400000`（64km）；战区板放在行军走廊上。
 - `MassNavigationConfig.world.solverWindowWidthCm` / `HeightCm` 和 `solver.fieldWidthCm` / `fieldHeightCm` 先取 `10000cm` 到 `48000cm` 这类战区窗口，而不是全图。
 - `flowCellSizeCm = 100` 常作为 1m 流场；密集微操可降到 50cm，但 grid 数量会翻倍。
 - `hardResolveHashCellSizeCm = 50` 用于硬解析细邻居，允许小于 `CellCm`，但必须显式配置并整除 FlowWindow。
 - 需要小队/道路/门洞等精确移动时，用 `Navigation/pathing.json` 只让特定 profile 走 `PreferGraph` / `PreferMesh`；大军继续 MassNavigationFlow。
 
-配置片段：
+配置片段（#1567 目标态）：
 
 ```json
 {
+  "World": { "WidthCm": 6400000, "HeightCm": 6400000 },
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 250,
-      "HeightInMacroTiles": 250,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64
+      "WidthCells": 400,
+      "HeightCells": 400,
+      "CellSizeCm": 100
     }
   ]
 }
@@ -120,25 +125,24 @@ MassNavigationFlow 起点：
 
 常见思路：
 
-- 世界可以仍用 `GridCellSizeCm = 100` 保持 cm 坐标一致，但“玩法格”不一定等于 engine cell。
-- 地块、城市、道路节点可以是业务数据或 NodeGraph，不要为了 4X 地块把 `CellCm` 改成 10km。
-- `WidthInMacroTiles` 可以按大陆范围定；如果只做菜单/棋盘 demo，可以不急着开巨大 board。
+- 世界用 `World.WidthCm` 按大陆范围定。
+- 玩法域分层摆板：地块、城市、道路节点用 NodeGraph 板表达，局部战棋对决用 Grid/Hex 板；“玩法格”不等于 engine cell，不要为了 4X 地块把 `CellSizeCm` 改成 10km。
 - 重点调 `Navigation/pathing.json`：商队、军队、船只可按 profile 选择 `PreferGraph` 或 `AutoCheapest`。
 - MassNavigationFlow 通常只用于局部战斗或拥挤区域，不要把整个大陆做成单个 FlowWindow。
 - 小地图一般用 full-map preset，表现容量按城市/军队/marker 数量估算。
 
-配置片段：
+配置片段（#1567 目标态）：
 
 ```json
 {
+  "World": { "WidthCm": 16384000, "HeightCm": 16384000 },
   "Boards": [
     {
       "Name": "strategic",
       "SpatialType": "NodeGraph",
-      "WidthInMacroTiles": 64,
-      "HeightInMacroTiles": 64,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64
+      "WidthCells": 64,
+      "HeightCells": 64,
+      "CellSizeCm": 100
     }
   ]
 }
@@ -170,24 +174,24 @@ Routing 起点：
 常见思路：
 
 - 先定世界范围，再定玩家活动半径。不要让每个系统都尝试覆盖整张地图。
-- `StreamingChunk` 应由正式配置或 board 分区推导；禁止私有 loader fallback。
-- `MassNavigationConfig.world.streamingChunkSizeCm` 可从 `ChunkSizeCells * GridCellSizeCm` 起步，例如 64 cells * 100cm = `6400cm`。
+- streaming 预算挂世界层（`World.Tuning`），缺省由引擎按世界尺寸推导；禁止私有 loader fallback。
+- `MassNavigationConfig.world.streamingChunkSizeCm` 可从分区尺寸起步，例如 64 cells × 100cm = `6400cm`。
 - `streamingRadiusCm` 覆盖相机/玩家周围几圈 streaming chunk。
 - 动态门、桥、建筑等持久结构变化走 `Navigation/navmesh.json` 的 `runtime-incremental` + `cdt`，并给实体加 `RuntimeNavMeshStructuralObstacle`。
 - 临时人群拥堵、短寿命 blocker 仍归 MassNavigationFlow runtime avoidance，不应触发 navmesh rebuild。
 
-Board 起点：
+Board 起点（#1567 目标态）：
 
 ```json
 {
+  "World": { "WidthCm": 6400000, "HeightCm": 6400000 },
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 250,
-      "HeightInMacroTiles": 250,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
+      "WidthCells": 400,
+      "HeightCells": 400,
+      "CellSizeCm": 100,
       "NavigationEnabled": true
     }
   ]
@@ -214,8 +218,7 @@ Runtime incremental 起点：
 
 | 你想变得更细 | 改哪里 | 代价 |
 |---|---|---|
-| 世界坐标/地形采样更细 | 降低 `GridCellSizeCm` | 同样米数下 cells 变多，board/query/bake 负担变大 |
-| 空间查询更细 | 降低 `ChunkSizeCells`，仍必须为 2 的幂 | chunk 数量增加，query 管理开销增加 |
+| 世界坐标/地形采样更细 | 降低板的 `CellSizeCm` | 同样米数下 cells 变多，board/query/bake 负担变大 |
 | 流场更细 | 降低 `flowCellSizeCm` | Flow grid 宽高增加，流场迭代成本增加 |
 | 避障邻居更细 | 降低 `separationHashCellSizeCm` / `hardResolveHashCellSizeCm` | hash bucket 增加，邻居搜索/硬解析成本增加 |
 | navmesh / NodeGraph 通过性更细 | 调 `agent_profiles.radiusCm/clearanceCm/draftCm/beamCm` 与 `navmesh.profiles[].maxClimbCm/maxSlopeDeg` | bake 产物或 graph 容量可达性变化，需要重新验证 |
@@ -223,16 +226,30 @@ Runtime incremental 起点：
 
 ## 必须遵守的边界
 
-- `WidthInMacroTiles` / `HeightInMacroTiles` 统计 MacroTile 数量，不是 `TerrainChunk` 或 NavTile 数量。
-- full nav bake 的目标 tile 数按 `ceil(worldCells / TerrainChunkCells)` 计算；不要把 MacroTile 数当 NavTile 数。
-- `WorldExtentSpec` 产出 `WorldSizeSpec`；不要新增第二套世界范围对象。
-- `PartitionChunk` 只用于 spatial query/AOI；不要拿它解释 terrain/navmesh tile。
-- `TerrainChunk` 当前等于 NavTile footprint；`NavTile footprint` 不是独立尺度 owner。
+- 世界尺寸只在 map `World` 节声明一次；不要从板推导世界，也不要在 game.json 里写第二份世界尺寸。
+- 板范围 = 格子数 × 拓扑度量；板与世界的对齐是配置选择，板伸出世界边界在加载期 fail-fast。
+- nav 瓦片颗粒度在 `Navigation/navmesh.json` 显式声明；不要从板的 cell/chunk 推导，也不要把 `PartitionChunk` 当 navmesh tile。
+- `PartitionChunk` 只用于世界层空间分区/AOI；`TerrainChunk` 是逻辑地形块，两者都不是 nav 瓦片尺度。
 - `FlowCell` / `AvoidanceHashCell` / `PhysicsBroadphaseCell` 默认可等于 `CellCm`，但 owner 独立。
 - MassNavigationFlow `world.solverWindowWidthCm/HeightCm` 必须匹配 `solver.fieldWidthCm/fieldHeightCm`。
 - `FlowWindow` 必须能被 `flowCellSizeCm`、`separationHashCellSizeCm`、`hardResolveHashCellSizeCm` 整除。
 - 所有 profile id、routing mode、navmesh mode/algorithm 的大小写都严格；不要写别名兼容。
 - 缺字段、坏 casing、未知 profile/layer 应 fail-fast，不要在 Mod 私有逻辑里补 fallback。
+
+## 迁移对照（#1567）
+
+对照与迁移动作（切 1 已执行，旧键现行加载即 fail-fast）：
+
+| 现状键 | 目标键 | 迁移动作 |
+|---|---|---|
+| `Boards[].WidthInMacroTiles` / `HeightInMacroTiles` + `GridCellSizeCm` | `World.WidthCm` / `World.HeightCm` | 机器迁移：`World = 宏块数 × 256 × GridCellSizeCm`，居中语义不变 |
+| 板恒居中（无 origin 字段） | `Boards[].OriginXCm` / `OriginYCm` | 迁移期缺省居中，等价现状 |
+| `Boards[].WidthInMacroTiles` × 256 / `GridCellSizeCm` 个 cell | `Boards[].WidthCells` / `HeightCells` | 板范围改为格子数直写 |
+| `Boards[].ChunkSizeCells` / `LoadedChunkCapacity` | `World.Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | 切 4 迁入世界层，缺省可推导 |
+| `Boards[].NavTileGrid`（含 `originXcm/originZcm`、`widthChunks/heightChunks`） | `Navigation/navmesh.json` `boards.<name>` 条目 | 切 3 迁出；瓦片颗粒度显式 `tileWorldWidthCm/HeightCm` |
+| game.json `gridCellSizeCm` / `worldWidthInMacroTiles` / `worldHeightInMacroTiles` | map `World` 节 | 切 1 升格迁入，消灭第二真相源 |
+
+旧键在新键生效后加载即 fail-fast 并指向新键（沿用 #283 的 `RejectLegacyWorldExtentKeys` 模式），不提供别名兼容。存量 67 张图的迁移由脚本按上表规则完成，迁移后世界边界、板行为、导航与迁移前一致（#1567 切 1 验收）。
 
 ## 推荐阅读顺序
 

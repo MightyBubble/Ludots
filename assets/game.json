@@ -30,11 +30,10 @@
     "attachmentPositionSyncScratchCapacity": 8192,
     "effectRequestQueueCapacity": 4096
   },
-  "gridCellSizeCm": 100,
-  "worldWidthInMacroTiles": 64,
-  "worldHeightInMacroTiles": 64,
   "commandSource": {
-    "targetFilter": { "relationFilter": "All" },
+    "targetFilter": {
+      "relationFilter": "All"
+    },
     "clickPickRadiusPixels": 20,
     "dragThresholdPixels": 8
   },
@@ -43,5 +42,10 @@
     "channelLevels": {},
     "fileLogging": false,
     "logFilePath": "ludots.log"
+  },
+  "world": {
+    "widthCm": 1638400,
+    "heightCm": 1638400,
+    "cellSizeCm": 100
   }
 }

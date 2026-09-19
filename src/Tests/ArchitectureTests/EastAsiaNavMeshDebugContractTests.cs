@@ -28,8 +28,8 @@ public sealed class EastAsiaNavMeshDebugContractTests
             map.ContinuousHeightmap.Asset,
             Is.EqualTo("assets/samples/LudotsSample/east_asia/east_asia_continuous.height"));
         Assert.That(map.Tags, Does.Contain("Feature.NavMesh:On"));
-        Assert.That(board.WidthInMacroTiles, Is.EqualTo(7));
-        Assert.That(board.HeightInMacroTiles, Is.EqualTo(4));
+        Assert.That(board.WidthCells, Is.EqualTo(7 * 256));
+        Assert.That(board.HeightCells, Is.EqualTo(4 * 256));
         Assert.That(board.GridCellSizeCm, Is.EqualTo(3571));
         Assert.That(board.ChunkSizeCells, Is.EqualTo(64));
         Assert.That(board.LoadedChunkCapacity, Is.EqualTo(512));

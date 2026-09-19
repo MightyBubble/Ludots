@@ -49,8 +49,8 @@ export interface BoardInfo {
 export interface BoardCreateRequest {
     name: string;
     spatialType: BoardTopology;
-    widthInMacroTiles: number;
-    heightInMacroTiles: number;
+    widthCells: number;
+    heightCells: number;
     cellSizeCm: number;
     hexEdgeLengthCm?: number;
     navigationEnabled: boolean;
@@ -570,8 +570,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             body: JSON.stringify({
                 name: request.name,
                 spatialType: request.spatialType,
-                widthInMacroTiles: request.widthInMacroTiles,
-                heightInMacroTiles: request.heightInMacroTiles,
+                widthCells: request.widthCells,
+                heightCells: request.heightCells,
                 cellSizeCm: request.cellSizeCm,
                 hexEdgeLengthCm: request.hexEdgeLengthCm ?? DEFAULT_BOARD_METRICS.hexEdgeLengthCm,
                 chunkSizeCells: DEFAULT_BOARD_METRICS.chunkSizeCells,

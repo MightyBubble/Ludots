@@ -1,14 +1,16 @@
 {
   "startupMapId": "capability_standard_virtual_camera",
+  "world": {
+    "widthCm": 51200,
+    "heightCm": 51200,
+    "cellSizeCm": 100
+  },
   "startupInputContexts": [
     "Default_Gameplay",
     "CapabilityStandard.VirtualCamera.Controls"
   ],
   "windowTitle": "Ludots Engine - Capability Standard Virtual Camera",
   "targetFps": 0,
-  "worldWidthInMacroTiles": 2,
-  "worldHeightInMacroTiles": 2,
-  "gridCellSizeCm": 100,
   "presentation": {
     "presenterInstanceCapacity": 256,
     "presentationEventStreamCapacity": 256,

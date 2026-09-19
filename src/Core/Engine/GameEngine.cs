@@ -537,17 +537,14 @@ namespace Ludots.Core.Engine
             try
             {
                 // 4. Setup ECS & Session using merged config values
-                InitializeWorld(MergedConfig.WorldWidthInMacroTiles, MergedConfig.WorldHeightInMacroTiles);
+                var bootWorldExtent = WorldExtentSpec.FromWorld(MergedConfig.World);
+                InitializeWorld(bootWorldExtent.WidthInMacroTiles, bootWorldExtent.HeightInMacroTiles);
                 SetService(CoreServiceKeys.World, World);
-                WorldMap = new WorldMap(MergedConfig.WorldWidthInMacroTiles, MergedConfig.WorldHeightInMacroTiles);
+                WorldMap = new WorldMap(bootWorldExtent.WidthInMacroTiles, bootWorldExtent.HeightInMacroTiles);
                 SetService(CoreServiceKeys.WorldMap, WorldMap);
                 GameSession = new GameSession();
                 SetService(CoreServiceKeys.GameSession, GameSession);
-                int gridCellSizeCm = MergedConfig.GridCellSizeCm;
-                WorldSizeSpec = new WorldExtentSpec(
-                    MergedConfig.WorldWidthInMacroTiles,
-                    MergedConfig.WorldHeightInMacroTiles,
-                    gridCellSizeCm).ToWorldSizeSpec();
+                WorldSizeSpec = bootWorldExtent.ToWorldSizeSpec();
                 SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
                 _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
                 SpatialQueries = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
@@ -3579,8 +3576,8 @@ namespace Ludots.Core.Engine
 
                     if (board is GridBoard gridBoard && boardConfig != null)
                     {
-                        int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
-                        int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+                        int widthCells = boardConfig.WidthCells;
+                        int heightCells = boardConfig.HeightCells;
                         LogicTerrainField? projected = TryProjectContinuousHeightmapToGrid(
                             session,
                             widthCells,
