@@ -185,7 +185,6 @@ namespace Ludots.Core.Gameplay.AI.Config
                 {
                     graphId = RequireAction(
                         src.Action,
-                        GraphActionHost.BehaviorTree,
                         $"AI/behavior_trees.json:{treeId}.{src.Id}.action");
                 }
                 else if (!string.IsNullOrWhiteSpace(src.Action))
@@ -397,7 +396,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             return transitions;
         }
 
-        private int RequireAction(string? name, GraphActionHost expectedHost, string path)
+        private int RequireAction(string? name, string path)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -409,11 +408,11 @@ namespace Ludots.Core.Gameplay.AI.Config
                 throw Fail(path, "ActionLib catalog is required to resolve behavior bindings.");
             }
 
-            return _actions.Require(name, expectedHost);
+            return _actions.Require(name);
         }
 
         private int ResolveOptionalAction(string? name, string path)
-            => string.IsNullOrWhiteSpace(name) ? 0 : RequireAction(name, GraphActionHost.Hfsm, path);
+            => string.IsNullOrWhiteSpace(name) ? 0 : RequireAction(name, path);
 
         /// <summary>
         /// Transition conditions resolve from FuncLib (pure functions), not ActionLib —

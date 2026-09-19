@@ -94,34 +94,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             $"ActionLib '{name}' graph '{graphKey}' has no registered program.");
                     }
 
-                    // Host is optional per the asset-neutrality contract: assets don't declare
-                    // their consumers. Omitted → unrestricted (GraphActionHost.None); consumer-side
-                    // Require() accepts unrestricted entries for any host. Explicitly hosted entries
-                    // are still validated against consumers at bind time.
-                    GraphActionHost host = GraphActionHost.None;
-                    if (obj.TryGetPropertyValue("host", out JsonNode? hostNode) && hostNode is JsonValue hostVal)
-                    {
-                        string hostText = hostVal.GetValue<string>();
-                        if (!GraphActionHostYieldPolicy.TryParse(hostText, out host))
-                        {
-                            throw new InvalidOperationException(
-                                $"ActionLib '{name}' host '{hostText}' must be BehaviorTree, Hfsm, Script, or TriggerGraph.");
-                        }
-
-                        if (!GraphActionHostYieldPolicy.AllowsYield(host) &&
-                            !GraphYieldPurityValidator.TryValidateNoReachableYield(
-                                _programs,
-                                graphId,
-                                $"ActionLib '{name}' graph '{graphKey}'",
-                                ResolveFuncLibTarget,
-                                out string diagnostic))
-                        {
-                            throw new InvalidOperationException(
-                                $"ActionLib '{name}' host '{host}' cannot bind a program that reaches Yield. Path: {diagnostic}");
-                        }
-                    }
-
-                    _catalog.Register(name, graphId, GraphKind.Script, host);
+                    // Assets are consumer-neutral: no host field is read, no yield check here.
+                    // Consumers validate their own constraints (Yield purity, etc.) at bind time.
+                    _catalog.Register(name, graphId, GraphKind.Script);
                 }
                 catch (Exception ex)
                 {

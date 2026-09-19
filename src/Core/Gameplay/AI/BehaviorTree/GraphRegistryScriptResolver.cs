@@ -54,7 +54,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                 throw new ArgumentException("Action name is required.", nameof(actionName));
             }
 
-            return catalog.Require(actionName, expectedHost);
+            return catalog.Require(actionName);
         }
     }
 }

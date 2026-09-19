@@ -45,15 +45,6 @@ namespace Ludots.Tests.GasTests.AI
                     }]
                     """,
                     "Graph action 'missing' is not registered"),
-                (
-                    """
-                    [{
-                      "id": "bt.wrong-host",
-                      "root": "root",
-                      "nodes": [{ "id": "root", "kind": "Action", "leaf": "ScriptSlice", "action": "hfsm.action" }]
-                    }]
-                    """,
-                    "'BehaviorTree' is required"),
             };
 
         private static readonly IReadOnlyList<(string Json, string Error)> HfsmFailures =
@@ -78,15 +69,6 @@ namespace Ludots.Tests.GasTests.AI
                     }]
                     """,
                     "Graph action 'missing' is not registered"),
-                (
-                    """
-                    [{
-                      "id": "hfsm.wrong-host",
-                      "root": "idle",
-                      "states": [{ "id": "idle", "kind": "Leaf", "onTick": "bt.action" }]
-                    }]
-                    """,
-                    "'Hfsm' is required"),
             };
 
         [Test]
@@ -146,8 +128,8 @@ namespace Ludots.Tests.GasTests.AI
         private static GraphActionCatalog CreateActions()
         {
             var actions = new GraphActionCatalog();
-            actions.Register("bt.action", 1, GraphKind.Script, GraphActionHost.BehaviorTree);
-            actions.Register("hfsm.action", 2, GraphKind.Script, GraphActionHost.Hfsm);
+            actions.Register("bt.action", 1, GraphKind.Script);
+            actions.Register("hfsm.action", 2, GraphKind.Script);
             return actions;
         }
 
