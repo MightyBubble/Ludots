@@ -176,7 +176,7 @@ namespace Ludots.Core.Presentation.Hud
             }
 
             // 同帧"值变化→出画"的条目会同时出现在 dirty 与 removed 流里：dirty 快照不因移除失效，
-            // 若不跳过会把刚移除的条目复活成永生孤儿（边缘刮过的 HUD 黸滞残留根因）。
+            // 若不跳过会把刚移除的条目复活成永生孤儿（边缘刮过的 HUD 黏滞残留根因）。
             // 复用集合零分配：仅在本帧确有 removed 且 dirty 非空时启用。
             bool guardRemoved = removedStableIds.Length > 0 && (dirtyBars.Length > 0 || dirtyTexts.Length > 0);
             HashSet<int> removedThisFrame = _removedThisFrame;
