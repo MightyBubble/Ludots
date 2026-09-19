@@ -198,6 +198,7 @@ namespace Ludots.Core.Presentation.Systems
             ProcessDirtyStaticEmitEntities();
             ProcessDirtyRetainedPresentationRequestEntities();
             ProcessRetainedPresentationRequestLifecycleEntities(deltaTime);
+            ProcessInlineHudPresenters();
 
             for (int i = 0; i < _pendingDestroy.Count; i++)
             {
@@ -224,6 +225,17 @@ namespace Ludots.Core.Presentation.Systems
             {
                 ref PresenterEmitCache emitCache = ref World.Get<PresenterEmitCache>(presenter);
                 RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
+            }
+
+            if (_worldHudBuffer != null &&
+                World.IsAlive(presenter) &&
+                World.TryGet<PresenterInlineHud>(presenter, out PresenterInlineHud inline))
+            {
+                foreach (PresenterInlineHudDescriptor descriptor in inline.Descriptors)
+                {
+                    _worldHudBuffer.Remove(HudItemIdentity.ComposePresenterStableId(
+                        state.StableId, descriptor.Kind, descriptor.DefinitionId, descriptor.SlotIndex));
+                }
             }
 
             _visualStableIds?.ReleasePresenter(state.StableId);
@@ -979,6 +991,156 @@ namespace Ludots.Core.Presentation.Systems
         private static bool IsWithinMaxLod(LODLevel lod, in AssetBindingConfig asset)
         {
             return !asset.HasMaxLod || lod <= asset.MaxLod;
+        }
+
+        /// <summary>
+        /// HUD 内联专 lane：父 presenter 上的内联描述符直接合成 worldHud 条目（位置=父位置+
+        /// 附件偏移按父旋转，值=属主 AttributeBuffer 现读）。可见性吃父剔除状态；父死亡时随
+        /// ReleaseDestroyedPresenterVisualStableIds 的内联清理移除。v1 范围：不做知识投影门控
+        /// （massnav 的 RequiredAttributeIds 为空且无 reveal hidden 语义）；LOD 门控未接。
+        /// </summary>
+        internal int InlineHudComposedLastUpdate;
+        internal int InlineHudSkippedLastUpdate;
+
+        private void ProcessInlineHudPresenters()
+        {
+            if (!PresenterInlineHudFeature.Enabled || _worldHudBuffer == null)
+            {
+                return;
+            }
+
+            InlineHudComposedLastUpdate = 0;
+            InlineHudSkippedLastUpdate = 0;
+            var query = new QueryDescription().WithAll<PresenterState, PresenterCullState, PresenterWorldPosition, PresenterWorldRotation, PresenterInlineHud>();
+            foreach (ref var chunk in World.Query(in query))
+            {
+                var states = chunk.GetSpan<PresenterState>();
+                var culls = chunk.GetSpan<PresenterCullState>();
+                var positions = chunk.GetSpan<PresenterWorldPosition>();
+                var rotations = chunk.GetSpan<PresenterWorldRotation>();
+                var inlines = chunk.GetSpan<PresenterInlineHud>();
+                ref Entity entityFirst = ref chunk.Entity(0);
+                foreach (int index in chunk)
+                {
+                    ref readonly PresenterState state = ref states[index];
+                    if (state.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(state.OwnerEntity))
+                    {
+                        continue;
+                    }
+
+                    bool visible = culls[index].OwnerCullVisible;
+                    ref readonly PresenterWorldPosition position = ref positions[index];
+                    Quaternion rotation = rotations[index].Value;
+                    PresenterInlineHud inlineHud = inlines[index];
+                    bool descriptorsDirty = false;
+                    bool attributesResolved = false;
+                    ref AttributeBuffer ownerAttributes = ref Unsafe.NullRef<AttributeBuffer>();
+                    for (int descriptorIndex = 0; descriptorIndex < inlineHud.Descriptors.Length; descriptorIndex++)
+                    {
+                        ref PresenterInlineHudDescriptor descriptor = ref inlineHud.Descriptors[descriptorIndex];
+                        byte presentState = (byte)(visible ? 1 : 0);
+                        if (presentState == descriptor.LastPresent &&
+                            descriptor.LastAnchor == position.Value &&
+                            descriptor.LastRotation == rotation &&
+                            inlineHud.AttributeDirty == 0)
+                        {
+                            // 稳态快路径：可见性/锚点/属性脏位全未变——纯结构体比对，零实体查表。
+                            InlineHudSkippedLastUpdate++;
+                            continue;
+                        }
+
+                        if (!attributesResolved)
+                        {
+                            attributesResolved = true;
+                            ownerAttributes = ref World.IsAlive(state.OwnerEntity) && World.Has<AttributeBuffer>(state.OwnerEntity)
+                                ? ref World.Get<AttributeBuffer>(state.OwnerEntity)
+                                : ref Unsafe.NullRef<AttributeBuffer>();
+                        }
+
+                        int stableId = HudItemIdentity.ComposePresenterStableId(
+                            state.StableId, descriptor.Kind, descriptor.DefinitionId, descriptor.SlotIndex);
+                        float current;
+                        float baseValue;
+                        if (!visible ||
+                            Unsafe.IsNullRef(ref ownerAttributes))
+                        {
+                            if (descriptor.LastPresent != 0)
+                            {
+                                _worldHudBuffer.Remove(stableId);
+                            }
+
+                            descriptor.LastPresent = 0;
+                            descriptor.LastAnchor = position.Value;
+                            descriptor.LastRotation = rotation;
+                            descriptorsDirty = true;
+                            continue;
+                        }
+
+                        current = ownerAttributes.GetCurrent(descriptor.BoundAttributeId);
+                        baseValue = ownerAttributes.GetBase(descriptor.BoundAttributeId);
+
+                        Vector3 anchor = position.Value + Vector3.Transform(descriptor.Offset, rotation);
+                        WorldHudItem item = default;
+                        item.StableId = stableId;
+                        item.Kind = descriptor.Kind;
+                        item.WorldPosition = anchor;
+                        item.Owner = state.OwnerEntity;
+                        if (descriptor.Kind == WorldHudItemKind.Text)
+                        {
+                            item.FontSize = descriptor.FontSize;
+                            item.Color0 = descriptor.Color;
+                            item.Id1 = (int)descriptor.ValueMode;
+                            item.Value0 = current;
+                            item.Value1 = baseValue;
+                            item.ValueBound = 1;
+                            item.BoundAttributeId = descriptor.BoundAttributeId;
+                            item.DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
+                                descriptor.FontSize, 0, (int)descriptor.ValueMode, current, baseValue, descriptor.Color, default, valueBound: true);
+                        }
+                        else
+                        {
+                            float ratio = baseValue > 0f ? Math.Clamp(current / baseValue, 0f, 1f) : 1f;
+                            item.Width = descriptor.Width;
+                            item.Height = descriptor.Height;
+                            item.Value0 = ratio;
+                            item.Color0 = new Vector4(0.2f, 0.2f, 0.2f, descriptor.Color.W);
+                            item.Color1 = descriptor.Color;
+                            item.DirtySerial = HudItemIdentity.ComposeBarDirtySerial(
+                                descriptor.Width, descriptor.Height, ratio, item.Color0, descriptor.Color);
+                        }
+
+                        _worldHudBuffer.TryAdd(in item);
+                        descriptor.LastPresent = 1;
+                        descriptor.LastAnchor = position.Value;
+                        descriptor.LastRotation = rotation;
+                        descriptor.LastCurrent = current;
+                        descriptor.LastBase = baseValue;
+                        descriptorsDirty = true;
+                        InlineHudComposedLastUpdate++;
+                    }
+
+                    if (descriptorsDirty || inlineHud.AttributeDirty != 0)
+                    {
+                        inlineHud.AttributeDirty = 0;
+                        inlines[index] = inlineHud;
+                    }
+                }
+            }
+        }
+
+        private bool TryReadOwnerAttributes(Entity owner, int attributeId, out float current, out float baseValue)
+        {
+            current = 0f;
+            baseValue = 0f;
+            if (attributeId < 0 || !World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner))
+            {
+                return false;
+            }
+
+            ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(owner);
+            current = attributes.GetCurrent(attributeId);
+            baseValue = attributes.GetBase(attributeId);
+            return true;
         }
 
         private void ProcessDirtyStaticEmitEntities()

@@ -40,6 +40,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -60,8 +61,11 @@ namespace Ludots.Tests.Presentation
         private const int HudStabilityObservationFrames = 12;
         private const float CommandTargetOffsetWindowScale = 0.25f;
         private const float MovementEpsilonCm = 1f;
-        private const string MouseLeftButtonPath = "<Mouse>/LeftButton";
-        private const string MouseRightButtonPath = "<Mouse>/RightButton";
+        private const int BoxSelectPressFrames = 6;
+        private const int BoxSelectDragFrames = 6;
+        private const int BoxSelectReleaseFrames = 30;
+        private const string MouseLeftButtonPath = "<Mouse>/leftButton";
+        private const string MouseRightButtonPath = "<Mouse>/rightButton";
         private const string LightCommandMarkerPresenterId = "presenter.case_e.selection_marker";
         private const string HeavyCommandMarkerPresenterId = "presenter.case_e.selection_marker";
 
@@ -137,8 +141,13 @@ namespace Ludots.Tests.Presentation
             Assert.That(minimapRuntime.Preset, Is.EqualTo(MinimapPreset.RtsFullMap), diagnostics);
             Assert.That(sample.MinimapSnapshot.ZoomBand, Is.EqualTo(MinimapZoomBand.Strategic), diagnostics);
             Assert.That(minimapMarkers.Count, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
-            Assert.That(minimapScreenMarkers.Count, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
-            Assert.That(sample.MinimapSnapshot.VisibleMarkerCount, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
+            Assert.That(minimapScreenMarkers.Count, Is.GreaterThan(0), diagnostics);
+            Assert.That(minimapScreenMarkers.Count, Is.LessThanOrEqualTo(expectedAgents), diagnostics);
+            Assert.That(sample.MinimapSnapshot.VisibleMarkerCount, Is.GreaterThan(0), diagnostics);
+            Assert.That(
+                sample.MinimapSnapshot.VisibleMarkerCount,
+                Is.LessThanOrEqualTo(minimapRuntime.FieldSize * minimapRuntime.FieldSize),
+                diagnostics);
             Assert.That(sample.WorldHudBars, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(sample.WorldHudText, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(screenHud.BarCount, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
@@ -152,6 +161,92 @@ namespace Ludots.Tests.Presentation
             Assert.That(minimapMarkers.DroppedTotal, Is.Zero, diagnostics);
             Assert.That(minimapScreenMarkers.DroppedTotal, Is.Zero, diagnostics);
             AssertFixedAnchorChain(engine, simulation, sampleCount: 64, toleranceCm: 25f);
+        }
+
+        [Test]
+        public void Showcase_NavigationStepPrecedesSpatialPartitionUpdate()
+        {
+            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
+
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+
+            List<ISystem<float>> postMovement = RequireSystemGroup(engine, SystemGroup.PostMovement);
+            int preStepIndex = postMovement.FindIndex(system => system is MassNavigationPreSimulationStepSystem);
+            int simStepIndex = postMovement.FindIndex(system => system is MassNavigationSimulationStepSystem);
+            int partitionIndex = postMovement.FindIndex(system => system is SpatialPartitionUpdateSystem);
+            Assert.That(preStepIndex, Is.GreaterThanOrEqualTo(0), "MassNavigationPreSimulationStepSystem must be installed in PostMovement.");
+            Assert.That(simStepIndex, Is.GreaterThanOrEqualTo(0), "MassNavigationSimulationStepSystem must be installed in PostMovement.");
+            Assert.That(partitionIndex, Is.GreaterThanOrEqualTo(0), "SpatialPartitionUpdateSystem must be installed in PostMovement.");
+            Assert.That(simStepIndex, Is.LessThan(partitionIndex),
+                "Simulation step writes WorldPositionCm; if SpatialPartitionUpdateSystem runs first, its Previous==Current movement gate never fires and partition memberships freeze at the spawn cell.");
+            Assert.That(preStepIndex, Is.LessThan(simStepIndex),
+                "Pre-simulation step must stay anchored before the simulation step.");
+        }
+
+        [Test]
+        public void Showcase_MovingAgentMembershipTracksLivePosition()
+        {
+            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
+
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
+            var hudProjection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, hudProjection, simulation, ExpectedAgentCount);
+
+            Entity[] agents = CollectMassNavigationAgents(engine, ExpectedAgentCount);
+            var startPositions = new Vector2[agents.Length];
+            for (int i = 0; i < agents.Length; i++)
+            {
+                var value = engine.World.Get<WorldPositionCm>(agents[i]).Value;
+                startPositions[i] = new Vector2(value.X.ToFloat(), value.Y.ToFloat());
+            }
+
+            // 生成后的拥堵走位期内 agent 会自行移动（同 SteadyStateSimTickBudget 的 settled 语义）。
+            // 阈值必须明显大于查询半径 + 网格尺寸（100cm），否则冻结在出生格的成员关系仍落在
+            // 查询覆盖的邻格里，测不出脱节。
+            const float movementThresholdCm = 1000f;
+            Entity movedAgent = Entity.Null;
+            Vector2 movedTo = default;
+            AdvanceFixedClockUntil(
+                engine,
+                hudProjection,
+                maxFixedTicks: 3600,
+                () =>
+                {
+                    for (int i = 0; i < agents.Length; i++)
+                    {
+                        var value = engine.World.Get<WorldPositionCm>(agents[i]).Value;
+                        var now = new Vector2(value.X.ToFloat(), value.Y.ToFloat());
+                        if (Vector2.DistanceSquared(now, startPositions[i]) >= movementThresholdCm * movementThresholdCm)
+                        {
+                            movedAgent = agents[i];
+                            movedTo = now;
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                () => $"No mass nav agent moved >= {movementThresholdCm}cm within the observation window; the scenario congestion walk did not happen.");
+
+            var buffer = new Entity[512];
+            SpatialQueryResult result = engine.SpatialQueries.QueryRadius(
+                new WorldCmInt2((int)MathF.Round(movedTo.X), (int)MathF.Round(movedTo.Y)),
+                200,
+                buffer);
+            bool found = false;
+            for (int i = 0; i < result.Count; i++)
+            {
+                if (buffer[i] == movedAgent)
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            Assert.That(found, Is.True,
+                $"Moved agent {movedAgent.Id} at live position ({movedTo.X:F0},{movedTo.Y:F0}) must be returned by spatial queries at that position; a membership frozen at the spawn cell would miss it.");
         }
 
         [Test]
@@ -290,8 +385,10 @@ namespace Ludots.Tests.Presentation
             double projectionMean = Mean(projectionMs);
             TestContext.Out.WriteLine(
                 $"Steady-state budget over {observationFrames} ticks: minimapProjection median={projectionMs[observationFrames / 2]:F3}ms mean={projectionMean:F3}ms p95={projectionMs[(int)(observationFrames * 0.95)]:F3}ms max={projectionMs[^1]:F3}ms (reprojected median={Median(reprojectedCounts)}, retained median={Median(retainedCounts)}, fullRebuilds={minimapRuntime.FullProjectionRebuildCount}); attributeAggregator median={aggregatorMs[observationFrames / 2]:F3}ms p95={aggregatorMs[(int)(observationFrames * 0.95)]:F3}ms max={aggregatorMs[^1]:F3}ms (dirtyEntities median={Median(aggregatorProcessed)}, max={Maximum(aggregatorProcessed)}); screenMarkers min={Minimum(screenMarkerCounts)}");
-            Assert.That(Minimum(screenMarkerCounts), Is.GreaterThanOrEqualTo(ExpectedAgentCount),
-                "Steady-state ticks must retain every agent minimap screen marker.");
+            Assert.That(Minimum(screenMarkerCounts), Is.GreaterThan(0),
+                "Steady-state ticks must keep the minimap screen buffer populated.");
+            Assert.That(Maximum(screenMarkerCounts), Is.LessThanOrEqualTo(minimapRuntime.FieldSize * minimapRuntime.FieldSize),
+                "The one-marker-per-field-pixel cap bounds staged screen markers to occupied field pixels.");
             Assert.That(projectionMs[observationFrames / 2], Is.LessThanOrEqualTo(0.5d),
                 $"Minimap projection median {projectionMs[observationFrames / 2]:F3}ms exceeds the 0.5ms steady-state budget.");
             Assert.That(projectionMean, Is.LessThanOrEqualTo(0.6d),
@@ -520,6 +617,12 @@ namespace Ludots.Tests.Presentation
 
             var hudProjection = CreateHudProjection(engine);
             _ = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
+            AdvanceFixedClockUntil(
+                engine,
+                hudProjection,
+                MaxWarmupFrames,
+                () => CountAgentsMissingPeriodicEffect(engine, expectedAgents) == 0,
+                () => $"{CountAgentsMissingPeriodicEffect(engine, expectedAgents)} of {expectedAgents} agents have not attached their periodic spawn effect yet.");
             AssertScreenHudIdentityStableAcrossProjectionFrames(engine, hudProjection, HudStabilityObservationFrames);
 
             Dictionary<int, AgentHealthSample> before = CaptureAgentHealth(engine, expectedAgents);
@@ -646,7 +749,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(before.EligibleIntersecting, Is.GreaterThan(0), before.ToString());
 
             DriveCommandSourceBoxAcquisition(engine, hudProjection, backend, gesture);
-            TickProjectionFrames(engine, hudProjection, 2);
 
             Entity[] commandActors = SnapshotCommandSource(engine);
             CommandSourceDiagnostics after = CaptureCommandSourceDiagnostics(engine, gesture.Marquee);
@@ -672,7 +774,6 @@ namespace Ludots.Tests.Presentation
             var backend = RequireMutableInputBackend(engine);
             CommandSourceDragGesture gesture = ResolveVisibleAgentDragGesture(engine);
             DriveCommandSourceBoxAcquisition(engine, hudProjection, backend, gesture);
-            TickProjectionFrames(engine, hudProjection, 2);
 
             Entity[] commandActors = SnapshotCommandSource(engine);
             CommandSourceDiagnostics commandSourceDiagnostics = CaptureCommandSourceDiagnostics(engine, gesture.Marquee);
@@ -813,6 +914,17 @@ namespace Ludots.Tests.Presentation
             throw new InvalidOperationException($"System {typeof(TSystem).Name} is not registered in group {group}.");
         }
 
+        private static List<ISystem<float>> RequireSystemGroup(GameEngine engine, SystemGroup group)
+        {
+            FieldInfo field = typeof(GameEngine).GetField("_systemGroups", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("GameEngine system groups field is unavailable.");
+            var groups = field.GetValue(engine) as Dictionary<SystemGroup, List<ISystem<float>>>
+                ?? throw new InvalidOperationException("GameEngine system groups could not be inspected.");
+            return groups.TryGetValue(group, out List<ISystem<float>>? systems)
+                ? systems
+                : throw new InvalidOperationException($"System group {group} is not registered.");
+        }
+
         private static TSystem RequirePresentationSystem<TSystem>(GameEngine engine)
             where TSystem : class, ISystem<float>
         {
@@ -883,8 +995,8 @@ namespace Ludots.Tests.Presentation
                 lastSample = CaptureProjectionSample(engine, simulation);
                 if (simulation.NavigationAgentCount == expectedAgents &&
                     lastSample.MinimapSnapshot.ZoomBand == MinimapZoomBand.Strategic &&
-                    lastSample.MinimapScreenMarkers >= expectedAgents &&
-                    lastSample.MinimapSnapshot.VisibleMarkerCount >= expectedAgents &&
+                    lastSample.MinimapSnapshot.MarkerCount >= expectedAgents &&
+                    lastSample.MinimapSnapshot.VisibleMarkerCount > 0 &&
                     lastSample.WorldHudBars >= expectedAgents &&
                     lastSample.WorldHudText >= expectedAgents &&
                     lastSample.ScreenHudBars >= expectedAgents &&
@@ -999,12 +1111,32 @@ namespace Ludots.Tests.Presentation
             IClock clock = RequireService(engine, CoreServiceKeys.Clock);
             int startTick = clock.Now(ClockDomainId.FixedFrame);
             int hostFrames = 0;
+            int hostFrameLimit = Math.Max(ticks * 8, MaxWarmupFrames);
             while (clock.Now(ClockDomainId.FixedFrame) - startTick < ticks)
             {
                 TickProjectionFrames(engine, hudProjection, 1);
-                Assert.That(++hostFrames, Is.LessThanOrEqualTo(ticks * 8),
+                Assert.That(++hostFrames, Is.LessThanOrEqualTo(hostFrameLimit),
                     "MassNavigation simulation did not advance the requested FixedFrame window.");
             }
+        }
+
+        private static void AdvanceFixedClockUntil(
+            GameEngine engine,
+            WorldHudToScreenSystem hudProjection,
+            int maxFixedTicks,
+            Func<bool> condition,
+            Func<string> failure)
+        {
+            for (int tick = 0; tick < maxFixedTicks; tick++)
+            {
+                AdvanceFixedClock(engine, hudProjection, 1);
+                if (condition())
+                {
+                    return;
+                }
+            }
+
+            Assert.Fail(failure());
         }
 
         private static void DriveCommandSourceBoxAcquisition(
@@ -1013,18 +1145,44 @@ namespace Ludots.Tests.Presentation
             MutableInputBackend backend,
             in CommandSourceDragGesture gesture)
         {
-            backend.SetMousePosition(gesture.Start);
+            Entity player = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            Vector2 start = gesture.Start;
+            Vector2 end = gesture.End;
+            ScreenRect marquee = gesture.Marquee;
+            engine.SimulationBudgetMsPerFrame = int.MaxValue;
+            engine.SimulationMaxSlicesPerLogicFrame = 1000;
+            var handler = RequireService(engine, CoreServiceKeys.InputHandler);
+            Assert.That(handler.HasContext("CaseE.Controls"), Is.True,
+                "battle context must project CaseE.Controls before the marquee starts.");
+            Assert.That(
+                engine.World.TryGet(player, out InteractionContextInstance battle) && battle.ContextId > 0,
+                Is.True,
+                "local player must carry the battle interaction context before the marquee starts.");
+
+            backend.SetMousePosition(start);
             backend.SetButton(MouseLeftButtonPath, false);
-            TickProjectionFrames(engine, hudProjection, 1);
+            AdvanceFixedClock(engine, hudProjection, 1);
 
             backend.SetButton(MouseLeftButtonPath, true);
-            TickProjectionFrames(engine, hudProjection, 1);
+            AdvanceFixedClockUntil(
+                engine,
+                hudProjection,
+                BoxSelectPressFrames,
+                () => engine.World.TryGet(player, out InteractionContextInstances boxing) && boxing.Count > 0,
+                () => "pressing must activate the boxing context (box_begin graph mount). " +
+                      $"BoxSelectBegin down={handler.IsDown("CaseE.BoxSelectBegin")}.");
 
-            backend.SetMousePosition(gesture.End);
-            TickProjectionFrames(engine, hudProjection, 1);
+            backend.SetMousePosition(end);
+            AdvanceFixedClock(engine, hudProjection, BoxSelectDragFrames);
 
             backend.SetButton(MouseLeftButtonPath, false);
-            TickProjectionFrames(engine, hudProjection, 1);
+            AdvanceFixedClockUntil(
+                engine,
+                hudProjection,
+                BoxSelectReleaseFrames,
+                () => SnapshotCommandSource(engine).Length > 0,
+                () => "releasing must commit rectangle hits into selected. " +
+                      CaptureCommandSourceDiagnostics(engine, marquee));
         }
 
         private static int DriveRightClickCommandFrame(
@@ -1041,11 +1199,11 @@ namespace Ludots.Tests.Presentation
             Assert.That(context.CommandIntentProfileId, Is.GreaterThan(0));
             backend.SetMousePosition(position);
             backend.SetButton(MouseRightButtonPath, false);
-            TickProjectionFrames(engine, hudProjection, 1);
+            AdvanceFixedClock(engine, hudProjection, 1);
 
             backend.SetButton(MouseRightButtonPath, true);
             int applied = 0;
-            TickProjectionFrames(engine, hudProjection, 2);
+            AdvanceFixedClock(engine, hudProjection, 2);
             applied += RequireMassNavigationSimulation(engine).CommandCountFrame;
             Assert.That(RequireService(engine, CoreServiceKeys.InputHandler).IsDown("Command"), Is.True);
             var localOrderMapping = RequireService(engine, CoreServiceKeys.ActiveInputOrderMapping);
@@ -1055,7 +1213,7 @@ namespace Ludots.Tests.Presentation
             backend.SetButton(MouseRightButtonPath, false);
             for (int frame = 0; frame < 4; frame++)
             {
-                TickProjectionFrames(engine, hudProjection, 1);
+                AdvanceFixedClock(engine, hudProjection, 1);
                 applied += RequireMassNavigationSimulation(engine).CommandCountFrame;
             }
             return applied;
@@ -1622,6 +1780,23 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(samples.Count, Is.EqualTo(expectedAgents));
             return samples;
+        }
+
+        private static int CountAgentsMissingPeriodicEffect(GameEngine engine, int expectedAgents)
+        {
+            int missing = 0;
+            var query = new QueryDescription().WithAll<MassNavigationAgent, ActiveEffectContainer>();
+            int agents = 0;
+            engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _, ref ActiveEffectContainer effects) =>
+            {
+                agents++;
+                if (effects.Count == 0)
+                {
+                    missing++;
+                }
+            });
+
+            return agents == expectedAgents ? missing : int.MaxValue;
         }
 
         private static Dictionary<int, int> CaptureAgentEffectTicks(GameEngine engine, int expectedAgents)
