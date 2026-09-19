@@ -226,7 +226,9 @@ overrides 只有一个封闭开放集（5 种），一律按**绝对 localId 路
 | 切D | 资产 `relations` + 实例 `relationOverrides` remap | 关系 |
 | 切E | `attach:false` → 独立实体 + MemberOf 出生路径 | 可动成员 |
 | 切F | 可寻址实体路径命名空间（MapLoadEntityIndex 升格）+ 组件相对引用 | 统一引用 |
-| 切G | 实例生命周期账本 + 存档 round-trip | 记录（原切2） |
+| 切G | 成组 spawn（GroupSpawnRequest 展开器 + 组根实体 + 组原子性） | 成组出生 |
+| 切H | 路径实体（WaypointCm/RouteCm + OrderArgs.Spatial 实体引用 kind + PatrolOrder） | 路径点线面 |
+| 切I | 实例生命周期账本 + 存档 round-trip（#1199 双登记） | 记录 |
 
 ## 12. 一张总表（对照需求）
 
@@ -240,5 +242,7 @@ overrides 只有一个封闭开放集（5 种），一律按**绝对 localId 路
 | 组件引用兄弟实例（黑板→3哨兵） | 统一可寻址实体路径 + 组件相对引用 | 切F |
 | 实例变体（复用换改） | 实例 overrides（唯一 5 种） | 切A–C |
 | mod 改默认 | ArrayById 资产编辑（两轴之一） | 切A 底子 |
-| 增删改有记录 | 实例生命周期账本（原切2） | 切G |
+| 成组出生（POI 一键投放/回收） | GroupSpawnRequest 展开器 + 组根 + 组原子性 | 切G |
+| 路径点线面（巡逻） | WaypointCm/RouteCm 实体化 + PatrolOrder 实体引用 | 切H |
+| 增删改有记录 | 实例生命周期账本 + 存档 round-trip | 切I |
 | 无两套 | 单一路径模型，无 prefab/组模板/槽位表/duplicate | 全域 |
