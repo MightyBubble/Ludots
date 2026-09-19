@@ -85,7 +85,6 @@ namespace Ludots.Tests.Presentation
         {
             for (int i = 0; i < frames; i++)
             {
-                RebindHeadlessCullingPass(engine);
                 engine.Tick(1f / 60f);
                 UpdateHeadlessCamera(engine);
             }
@@ -112,29 +111,10 @@ namespace Ludots.Tests.Presentation
         {
             for (int i = 0; i < frames; i++)
             {
-                RebindHeadlessCullingPass(engine);
                 engine.Tick(1f / 60f);
                 UpdateHeadlessCamera(engine);
                 hudProjection.Update(1f / 60f);
             }
-        }
-
-        /// <summary>
-        /// 装图时 PublishLocalSeats 会重建 LogicView 相机（seat 视图新相机、bootstrap 视图被清），
-        /// culling pass 构造期持有的相机实例随即失效——大世界图内容远离原点时整屏被错误剔除。
-        /// 与实机 host 的 pre-tick arming 同一合同：每 tick 把 culling pass 重挂到当前 authority 相机。
-        /// </summary>
-        private static void RebindHeadlessCullingPass(GameEngine engine)
-        {
-            if (!engine.GlobalContext.TryGetValue("Tests.PresenterBlacksmith.HeadlessCamera", out object? runtimeObj) ||
-                runtimeObj is not HeadlessCameraRuntime runtime ||
-                runtime.Culling == null ||
-                runtime.PresentView == null)
-            {
-                return;
-            }
-
-            runtime.Culling.RebindPresentBinding(engine.AuthorityCamera(), runtime.PresentView);
         }
 
         internal static int EnqueueScatter(
@@ -215,9 +195,7 @@ namespace Ludots.Tests.Presentation
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext["Tests.PresenterBlacksmith.HeadlessCamera"] = new HeadlessCameraRuntime(
                 cameraPresenter,
-                engine.GetService(CoreServiceKeys.PresentationFrameSetup),
-                culling,
-                view);
+                engine.GetService(CoreServiceKeys.PresentationFrameSetup));
         }
 
         internal static UIRoot InstallHeadlessUi(GameEngine engine, float width = 1280f, float height = 720f)
@@ -275,25 +253,15 @@ namespace Ludots.Tests.Presentation
 
         private sealed class HeadlessCameraRuntime
         {
-            public HeadlessCameraRuntime(
-                CameraPresenter cameraPresenter,
-                PresentationFrameSetupSystem? presentationFrameSetup,
-                CameraCullingSystem? culling,
-                IViewController? presentView)
+            public HeadlessCameraRuntime(CameraPresenter cameraPresenter, PresentationFrameSetupSystem? presentationFrameSetup)
             {
                 CameraPresenter = cameraPresenter;
                 PresentationFrameSetup = presentationFrameSetup;
-                Culling = culling;
-                PresentView = presentView;
             }
 
             public CameraPresenter CameraPresenter { get; }
 
             public PresentationFrameSetupSystem? PresentationFrameSetup { get; }
-
-            public CameraCullingSystem? Culling { get; }
-
-            public IViewController? PresentView { get; }
         }
     }
 }
