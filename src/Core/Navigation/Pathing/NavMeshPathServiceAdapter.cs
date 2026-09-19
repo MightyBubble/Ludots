@@ -16,6 +16,10 @@ namespace Ludots.Core.Navigation.Pathing
 
         public bool TrySolve(in PathRequest request, out PathResult result)
         {
+            // Strict explicit contract: this adapter serves PathDomain.NavMesh requests only.
+            // PathDomain.Auto (the generic world-target routing contract used by the
+            // MassNavigation route sink) is handled by AutoPathService, which resolves the
+            // request's agent type to its nav layer/profile/area costs per request.
             if (request.Domain != PathDomain.NavMesh)
             {
                 result = new PathResult(request.RequestId, request.Actor, PathStatus.InvalidRequest, default, 0, errorCode: 2);

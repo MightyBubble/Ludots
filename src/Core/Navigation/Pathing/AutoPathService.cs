@@ -43,21 +43,7 @@ namespace Ludots.Core.Navigation.Pathing
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            (_agents, _defaultAgent) = CompileAgents(config);
         }
 
         public AutoPathService(LoadedGraphRuntime graphRuntime, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
@@ -71,21 +57,7 @@ namespace Ludots.Core.Navigation.Pathing
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            (_agents, _defaultAgent) = CompileAgents(config);
         }
 
         public AutoPathService(NodeGraph graph, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
@@ -99,21 +71,7 @@ namespace Ludots.Core.Navigation.Pathing
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = false;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            (_agents, _defaultAgent) = CompileAgents(config);
         }
 
         public AutoPathService(LoadedGraphRuntime graphRuntime, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
@@ -127,21 +85,31 @@ namespace Ludots.Core.Navigation.Pathing
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = false;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
+            (_agents, _defaultAgent) = CompileAgents(config);
+        }
 
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+        /// <summary>
+        /// NavMesh-only mode for maps without a node-graph board. PathDomain.Auto requests
+        /// resolve the request's agent type and select its nav layer/profile/area costs per
+        /// request, instead of pinning the whole map to the first configured agent profile.
+        /// </summary>
+        public AutoPathService(
+            NavQueryServiceRegistry navRegistry,
+            NavMeshProfileRegistry navProfiles,
+            AgentProfileRegistry agentProfiles,
+            PathStore store,
+            PathingConfig config)
+        {
+            _graphRuntime = null;
+            _graph = null;
+            _graphIndex = null;
+            _navRegistry = navRegistry ?? throw new ArgumentNullException(nameof(navRegistry));
+            _navProfiles = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
+            _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
+            _store = store ?? throw new ArgumentNullException(nameof(store));
+            _edgeOverlay = null;
+            _navMeshAvailable = true;
+            (_agents, _defaultAgent) = CompileAgents(config);
         }
 
         public bool TrySolve(in PathRequest request, out PathResult result)
@@ -155,11 +123,25 @@ namespace Ludots.Core.Navigation.Pathing
             var agent = ResolveAgent(request.AgentTypeId);
             if (agent.Selection.Mode == PathSelectionMode.PreferGraph)
             {
+                if (!HasGraph)
+                {
+                    // NavMesh-only service has no node-graph board; a graph-preferring agent
+                    // has no graph domain to route on and must fail explicitly, not fall back.
+                    result = new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, 0, errorCode: 23);
+                    return true;
+                }
                 TrySolveGraph(in request, in agent, out result, out _);
                 return true;
             }
             if (agent.Selection.Mode == PathSelectionMode.PreferMesh)
             {
+                TrySolveMesh(in request, in agent, out result, out _);
+                return true;
+            }
+
+            if (!HasGraph)
+            {
+                // NavMesh-only service: the mesh is the only available domain.
                 TrySolveMesh(in request, in agent, out result, out _);
                 return true;
             }
@@ -194,6 +176,28 @@ namespace Ludots.Core.Navigation.Pathing
         public bool TryCopyPath(in PathHandle handle, Span<int> xcmOut, Span<int> ycmOut, out int count)
         {
             return _store.TryCopy(in handle, xcmOut, ycmOut, out count);
+        }
+
+        private bool HasGraph => _graph != null || _graphRuntime != null;
+
+        private (Dictionary<string, CompiledAgentType> Agents, CompiledAgentType DefaultAgent) CompileAgents(PathingConfig config)
+        {
+            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
+
+            var agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
+            var defaultAgent = default(CompiledAgentType);
+            for (int i = 0; i < config.AgentTypes.Count; i++)
+            {
+                var a = config.AgentTypes[i];
+                if (a == null) continue;
+                var compiled = CompileAgent(a);
+                agents[compiled.Id] = compiled;
+                if (i == 0) defaultAgent = compiled;
+            }
+
+            if (defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            return (agents, defaultAgent);
         }
 
         private CompiledAgentType ResolveAgent(string agentTypeId)
@@ -397,9 +401,12 @@ namespace Ludots.Core.Navigation.Pathing
         {
             AgentProfileConfig agentProfile = _agentProfiles.Require(cfg.ProfileId, $"PathingConfig.agentTypes[{cfg.Id}]");
             int profileIndex = -1;
-            if (_navMeshAvailable && (_navProfiles == null || !_navProfiles.TryGetIndex(cfg.ProfileId, out profileIndex)))
+            if (_navMeshAvailable && _navProfiles != null)
             {
-                throw new InvalidOperationException($"Unknown navmesh profileId: {cfg.ProfileId}");
+                if (!_navProfiles.TryGetIndex(cfg.ProfileId, out profileIndex) && MeshProfileRequired(cfg))
+                {
+                    throw new InvalidOperationException($"Unknown navmesh profileId: {cfg.ProfileId}");
+                }
             }
 
             var areaCosts = BuildAreaCosts(cfg.NavMesh);
@@ -423,6 +430,21 @@ namespace Ludots.Core.Navigation.Pathing
                 agentDraftCm: agentProfile.DraftCm,
                 agentBeamCm: agentProfile.BeamCm,
                 selection: cfg.Selection ?? new PathingSelectionConfig());
+        }
+
+        private bool MeshProfileRequired(PathingAgentTypeConfig cfg)
+        {
+            // Graph-capable services keep the established strict contract: every agent
+            // declared alongside nav services must map to a baked navmesh profile.
+            if (HasGraph)
+            {
+                return true;
+            }
+
+            // NavMesh-only service: only mesh-capable agents need a baked profile; Direct and
+            // graph-preferring agents fail per request instead of failing the whole bootstrap.
+            return cfg.Selection?.Mode == PathSelectionMode.PreferMesh
+                || cfg.Selection?.Mode == PathSelectionMode.AutoCheapest;
         }
 
         private static NavAreaCostTable BuildAreaCosts(PathingNavMeshConfig cfg)
