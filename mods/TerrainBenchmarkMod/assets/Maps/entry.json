@@ -1,5 +1,10 @@
 {
   "Id": "entry",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
   "ParentId": null,
   "Dependencies": {},
   "Tags": [
@@ -53,8 +58,8 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthInMacroTiles": 64,
-      "HeightInMacroTiles": 64,
+      "WidthCells": 16384,
+      "HeightCells": 16384,
       "GridCellSizeCm": 100,
       "HexEdgeLengthCm": 400,
       "ChunkSizeCells": 64,

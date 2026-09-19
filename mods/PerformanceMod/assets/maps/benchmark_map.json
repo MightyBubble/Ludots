@@ -1,10 +1,22 @@
 {
   "Id": "benchmark_map",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
   "Boards": [
-    { "Name": "default", "DataFile": "benchmark.bin", "LoadedChunkCapacity": 256 }
+    {
+      "Name": "default",
+      "DataFile": "benchmark.bin",
+      "LoadedChunkCapacity": 256
+    }
   ],
   "Dependencies": [
-    { "Id": "PerformanceMod", "MinVersion": "1.0.0" }
+    {
+      "Id": "PerformanceMod",
+      "MinVersion": "1.0.0"
+    }
   ],
   "Entities": []
 }

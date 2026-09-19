@@ -1,6 +1,16 @@
 {
   "Id": "vfx_forge_raylib_showcase",
-  "Tags": ["showcase", "raylib", "vfx", "quarks"],
+  "World": {
+    "WidthCm": 25600,
+    "HeightCm": 25600,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "showcase",
+    "raylib",
+    "vfx",
+    "quarks"
+  ],
   "Metadata": {
     "vfxForge": {
       "effectCount": 9,
@@ -12,8 +22,8 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
+      "WidthCells": 256,
+      "HeightCells": 256,
       "GridCellSizeCm": 100,
       "LoadedChunkCapacity": 16
     }
@@ -28,18 +38,32 @@
     "FovYDeg": 55
   },
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "vfx_forge_anchor_01" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "vfx_forge_anchor_01"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "vfx_forge_anchor_01" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "vfx_forge_anchor_01"
+    }
   ],
   "Entities": [
     {
       "Template": "vfx_forge_anchor",
       "InstanceId": "vfx_forge_anchor_01",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-        "FacingDirection": { "AngleRad": 0.0 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.0
+        }
       }
     }
   ]

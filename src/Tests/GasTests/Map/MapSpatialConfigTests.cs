@@ -24,8 +24,8 @@ namespace GasTests
             var config = new BoardConfig();
             Assert.That(config.Name, Is.EqualTo("default"));
             Assert.That(config.SpatialType, Is.EqualTo("Grid"));
-            Assert.That(config.WidthInMacroTiles, Is.EqualTo(64));
-            Assert.That(config.HeightInMacroTiles, Is.EqualTo(64));
+            Assert.That(config.WidthCells, Is.EqualTo(16384));
+            Assert.That(config.HeightCells, Is.EqualTo(16384));
             Assert.That(config.GridCellSizeCm, Is.EqualTo(100));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(400));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(64));
@@ -41,8 +41,8 @@ namespace GasTests
             {
                 Name = "battle",
                 SpatialType = "Hex",
-                WidthInMacroTiles = 128,
-                HeightInMacroTiles = 128,
+                WidthCells = 128,
+                HeightCells = 128,
                 GridCellSizeCm = 200,
                 HexEdgeLengthCm = 600,
                 ChunkSizeCells = 32,
@@ -54,8 +54,8 @@ namespace GasTests
 
             Assert.That(config.Name, Is.EqualTo("battle"));
             Assert.That(config.SpatialType, Is.EqualTo("Hex"));
-            Assert.That(config.WidthInMacroTiles, Is.EqualTo(128));
-            Assert.That(config.HeightInMacroTiles, Is.EqualTo(128));
+            Assert.That(config.WidthCells, Is.EqualTo(128));
+            Assert.That(config.HeightCells, Is.EqualTo(128));
             Assert.That(config.GridCellSizeCm, Is.EqualTo(200));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
@@ -72,7 +72,7 @@ namespace GasTests
             {
                 Name = "world",
                 SpatialType = "Hex",
-                WidthInMacroTiles = 256,
+                WidthCells = 256,
                 LoadedChunkCapacity = 128,
                 DataFile = "terrain.hex",
                 ContinuousHeightmapAsset = "terrain.height"
@@ -81,15 +81,15 @@ namespace GasTests
             var clone = original.Clone();
             Assert.That(clone.Name, Is.EqualTo("world"));
             Assert.That(clone.SpatialType, Is.EqualTo("Hex"));
-            Assert.That(clone.WidthInMacroTiles, Is.EqualTo(256));
+            Assert.That(clone.WidthCells, Is.EqualTo(256));
             Assert.That(clone.LoadedChunkCapacity, Is.EqualTo(128));
             Assert.That(clone.DataFile, Is.EqualTo("terrain.hex"));
             Assert.That(clone.ContinuousHeightmapAsset, Is.EqualTo("terrain.height"));
 
             // Modify clone, original unchanged
-            clone.WidthInMacroTiles = 512;
+            clone.WidthCells = 512;
             clone.ContinuousHeightmapAsset = "other.height";
-            Assert.That(original.WidthInMacroTiles, Is.EqualTo(256));
+            Assert.That(original.WidthCells, Is.EqualTo(256));
             Assert.That(original.ContinuousHeightmapAsset, Is.EqualTo("terrain.height"));
         }
 
@@ -100,8 +100,8 @@ namespace GasTests
             {
                 "name": "strategic",
                 "spatialType": "Hex",
-                "widthInMacroTiles": 128,
-                "heightInMacroTiles": 128,
+                "widthCells": 32768,
+                "heightCells": 32768,
                 "hexEdgeLengthCm": 600,
                 "chunkSizeCells": 32,
                 "navigationEnabled": true,
@@ -113,8 +113,8 @@ namespace GasTests
             Assert.That(config, Is.Not.Null);
             Assert.That(config!.Name, Is.EqualTo("strategic"));
             Assert.That(config.SpatialType, Is.EqualTo("Hex"));
-            Assert.That(config.WidthInMacroTiles, Is.EqualTo(128));
-            Assert.That(config.HeightInMacroTiles, Is.EqualTo(128));
+            Assert.That(config.WidthCells, Is.EqualTo(32768));
+            Assert.That(config.HeightCells, Is.EqualTo(32768));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
             Assert.That(config.NavigationEnabled, Is.True);
@@ -128,8 +128,8 @@ namespace GasTests
             {
                 "name": "roads",
                 "spatialType": "NodeGraph",
-                "widthInMacroTiles": 2,
-                "heightInMacroTiles": 2,
+                "widthCells": 512,
+                "heightCells": 512,
                 "gridCellSizeCm": 100,
                 "chunkSizeCells": 64,
                 "loadedChunkCapacity": 37
@@ -174,8 +174,10 @@ namespace GasTests
                         continue;
                     }
 
-                    RejectLegacyKey(repoRoot, file, i, board, "WidthInTiles", "WidthInMacroTiles", violations);
-                    RejectLegacyKey(repoRoot, file, i, board, "HeightInTiles", "HeightInMacroTiles", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "WidthInTiles", "WidthCells", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "HeightInTiles", "HeightCells", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "WidthInMacroTiles", "WidthCells", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "HeightInMacroTiles", "HeightCells", violations);
 
                     string spatialType = TryGetString(board, "SpatialType") ?? "Grid";
                     if (!spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase) &&
@@ -202,17 +204,83 @@ namespace GasTests
         }
 
         [Test]
-        public void WorldExtentSpec_ConvertsMacroTilesIntoWorldSizeSpec()
+        public void WorldExtentSpec_ConvertsCentimetersIntoWorldSizeSpec()
         {
-            var extent = new WorldExtentSpec(widthInMacroTiles: 2, heightInMacroTiles: 3, cellCm: 100);
+            var extent = new WorldExtentSpec(widthCm: 51_200, heightCm: 76_800, cellCm: 100);
 
             var worldSize = extent.ToWorldSizeSpec();
 
             Assert.That(extent.WidthInCells, Is.EqualTo(512));
             Assert.That(extent.HeightInCells, Is.EqualTo(768));
+            Assert.That(extent.WidthInMacroTiles, Is.EqualTo(2));
+            Assert.That(extent.HeightInMacroTiles, Is.EqualTo(3));
             Assert.That(worldSize.GridCellSizeCm, Is.EqualTo(100));
             Assert.That(worldSize.Bounds.Width, Is.EqualTo(51_200));
             Assert.That(worldSize.Bounds.Height, Is.EqualTo(76_800));
+        }
+
+        [Test]
+        public void WorldExtentSpec_RejectsNonIntegralCellExtent()
+        {
+            Assert.That(
+                () => new WorldExtentSpec(widthCm: 51_250, heightCm: 76_800, cellCm: 100),
+                Throws.ArgumentException);
+        }
+
+        [Test]
+        public void BoardExtentSpec_ConvertsCellsIntoCenteredWorldSizeSpec()
+        {
+            var extent = new BoardExtentSpec(widthCells: 40, heightCells: 40, cellSizeCm: 100);
+
+            var worldSize = extent.ToWorldSizeSpec();
+
+            Assert.That(extent.WidthCm, Is.EqualTo(4_000));
+            Assert.That(worldSize.GridCellSizeCm, Is.EqualTo(100));
+            Assert.That(worldSize.Bounds.Width, Is.EqualTo(4_000));
+            Assert.That(worldSize.Bounds.Left, Is.EqualTo(-2_000));
+            Assert.That(worldSize.Bounds.Top, Is.EqualTo(-2_000));
+        }
+
+        [Test]
+        public void MapAssets_DeclarePositiveWorld()
+        {
+            string repoRoot = FindRepoRoot();
+            var violations = new List<string>();
+
+            foreach (string file in EnumerateMapJsonFiles(repoRoot))
+            {
+                JsonNode? node = JsonNode.Parse(File.ReadAllText(file));
+                if (node is not JsonObject root ||
+                    !TryGetPropertyCaseInsensitive(root, "boards", out JsonNode? boardsNode) ||
+                    boardsNode is not JsonArray)
+                {
+                    continue;
+                }
+
+                if (!TryGetPropertyCaseInsensitive(root, "world", out JsonNode? worldNode) ||
+                    worldNode is not JsonObject world)
+                {
+                    violations.Add($"{Path.GetRelativePath(repoRoot, file)}: map with Boards must declare World.");
+                    continue;
+                }
+
+                if (!TryGetPositiveInt(TryGetProperty(world, "WidthCm"), out int _) ||
+                    !TryGetPositiveInt(TryGetProperty(world, "HeightCm"), out int _))
+                {
+                    violations.Add($"{Path.GetRelativePath(repoRoot, file)}: World.WidthCm/HeightCm must be positive.");
+                }
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "Maps declare the world directly (#1567); boards no longer imply it:" +
+                string.Join("\n", violations));
+        }
+
+        private static JsonNode? TryGetProperty(JsonObject obj, string name)
+        {
+            return TryGetPropertyCaseInsensitive(obj, name, out JsonNode? node) ? node : null;
         }
 
         private static IEnumerable<string> EnumerateMapJsonFiles(string repoRoot)

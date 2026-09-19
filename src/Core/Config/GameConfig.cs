@@ -87,8 +87,8 @@ namespace Ludots.Core.Config
 
         public int GridCellSizeCm { get; set; } = 100;
 
-        public int WorldWidthInMacroTiles { get; set; } = 64;
-        public int WorldHeightInMacroTiles { get; set; } = 64;
+        /// <summary>Engine-boot world declaration (#1567): replaced on map load by the map's World.</summary>
+        public WorldConfig World { get; set; } = WorldConfig.CreateEngineBootDefault();
 
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 

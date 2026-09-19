@@ -1,6 +1,14 @@
 {
   "Id": "audit_inner",
-  "Tags": [ "audit_demo", "audit_inner" ],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "audit_demo",
+    "audit_inner"
+  ],
   "Boards": [
     {
       "Name": "default",
@@ -16,13 +24,23 @@
     {
       "Template": "orc_grunt",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 900, "Y": 0 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 900,
+            "Y": 0
+          }
+        }
       }
     },
     {
       "Template": "tree_pine",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1200, "Y": 200 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1200,
+            "Y": 200
+          }
+        }
       }
     }
   ]

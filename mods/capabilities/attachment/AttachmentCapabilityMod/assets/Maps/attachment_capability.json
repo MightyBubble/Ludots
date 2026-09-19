@@ -1,5 +1,10 @@
 {
   "Id": "attachment_capability",
+  "World": {
+    "WidthCm": 102400,
+    "HeightCm": 102400,
+    "CellSizeCm": 100
+  },
   "Tags": [
     "attachment.capability"
   ],
@@ -7,8 +12,8 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 4,
-      "HeightInMacroTiles": 4,
+      "WidthCells": 1024,
+      "HeightCells": 1024,
       "GridCellSizeCm": 100,
       "LoadedChunkCapacity": 16
     }

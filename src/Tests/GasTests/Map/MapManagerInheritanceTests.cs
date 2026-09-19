@@ -22,12 +22,13 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "parent", """
                 {
                   "id": "parent",
+                  "world": { "widthCm": 6553600, "heightCm": 3276800, "cellSizeCm": 200 },
                   "boards": [
                     {
                       "name": "default",
                       "spatialType": "Hex",
-                      "widthInMacroTiles": 128,
-                      "heightInMacroTiles": 64,
+                      "widthCells": 32768,
+                      "heightCells": 16384,
                       "gridCellSizeCm": 200,
                       "hexEdgeLengthCm": 900,
                       "chunkSizeCells": 32
@@ -51,7 +52,8 @@ namespace GasTests
                 Assert.That(cfg.Boards.Count, Is.EqualTo(1));
                 var board = cfg.Boards[0];
                 Assert.That(board.SpatialType, Is.EqualTo("Hex"));
-                Assert.That(board.WidthInMacroTiles, Is.EqualTo(128));
+                Assert.That(board.WidthCells, Is.EqualTo(32768));
+                Assert.That(cfg.World.WidthCm, Is.EqualTo(6553600));
                 Assert.That(board.HexEdgeLengthCm, Is.EqualTo(900));
             }
             finally
@@ -99,11 +101,12 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "legacy", """
                 {
                   "id": "legacy",
+                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
                   "boards": [
                     {
                       "name": "default",
                       "widthInTiles": 2,
-                      "heightInMacroTiles": 2
+                      "heightCells": 512
                     }
                   ]
                 }
@@ -113,7 +116,7 @@ namespace GasTests
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("legacy"));
 
                 Assert.That(ex!.Message, Does.Contain("legacy key 'widthInTiles'"));
-                Assert.That(ex.Message, Does.Contain("widthInMacroTiles"));
+                Assert.That(ex.Message, Does.Contain("WidthCells"));
             }
             finally
             {
@@ -162,6 +165,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "board_map", """
                 {
                   "id": "board_map",
+                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
                   "boards": [
                     {
                       "name": "default",

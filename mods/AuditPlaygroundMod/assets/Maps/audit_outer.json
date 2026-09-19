@@ -1,6 +1,14 @@
 {
   "Id": "audit_outer",
-  "Tags": [ "audit_demo", "audit_outer" ],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "audit_demo",
+    "audit_outer"
+  ],
   "Boards": [
     {
       "Name": "default",
@@ -16,19 +24,34 @@
     {
       "Template": "orc_grunt",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        }
       }
     },
     {
       "Template": "orc_grunt",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 500, "Y": 250 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 500,
+            "Y": 250
+          }
+        }
       }
     },
     {
       "Template": "tree_pine",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -500, "Y": -300 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": -500,
+            "Y": -300
+          }
+        }
       }
     }
   ]

@@ -1,12 +1,21 @@
 {
   "Id": "nav_editor_grid",
-  "Tags": ["nav_editor", "grid", "navigation"],
+  "World": {
+    "WidthCm": 409600,
+    "HeightCm": 409600,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "nav_editor",
+    "grid",
+    "navigation"
+  ],
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
+      "WidthCells": 256,
+      "HeightCells": 256,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 16,
@@ -16,8 +25,8 @@
     {
       "Name": "board_2",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 16,
-      "HeightInMacroTiles": 16,
+      "WidthCells": 4096,
+      "HeightCells": 4096,
       "GridCellSizeCm": 100,
       "HexEdgeLengthCm": 100,
       "ChunkSizeCells": 64,

@@ -1,6 +1,17 @@
 {
   "Id": "capability_standard_static_presenter_30k_mesh_ism_benchmark",
-  "Tags": ["showcase", "presenter", "benchmark", "mesh", "ism"],
+  "World": {
+    "WidthCm": 25600,
+    "HeightCm": 25600,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "showcase",
+    "presenter",
+    "benchmark",
+    "mesh",
+    "ism"
+  ],
   "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_showcase_flat.height",
   "Metadata": {
     "capabilityStandardStaticPresenter30k": {
@@ -15,8 +26,8 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
+      "WidthCells": 256,
+      "HeightCells": 256,
       "GridCellSizeCm": 100,
       "LoadedChunkCapacity": 16
     }

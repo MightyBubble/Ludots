@@ -187,6 +187,7 @@ namespace Ludots.Core.Map
                     }
                 }
                 
+                ValidateWorldDeclaration(finalConfig, mapId);
                 Log.Info(in LogChannels.Map, $"Map '{mapId}' loaded.");
                 return finalConfig;
             }
@@ -219,6 +220,11 @@ namespace Ludots.Core.Map
                 {
                     target.ContinuousHeightmapAsset = target.ContinuousHeightmap.Asset;
                 }
+            }
+
+            if (source.World is { } sourceWorld && (sourceWorld.WidthCm > 0 || sourceWorld.HeightCm > 0))
+            {
+                target.World = sourceWorld.Clone();
             }
 
             if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
@@ -399,6 +405,21 @@ namespace Ludots.Core.Map
             }
         }
 
+        private static void ValidateWorldDeclaration(MapConfig config, MapId mapId)
+        {
+            if (config.Boards is not { Count: > 0 })
+            {
+                return;
+            }
+
+            var world = config.World;
+            if (world == null || world.WidthCm <= 0 || world.HeightCm <= 0 || world.CellSizeCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has boards and must declare World (WidthCm/HeightCm/CellSizeCm > 0); boards no longer define the world (#1567).");
+            }
+        }
+
         private static void RejectLegacyWorldExtentKeys(JsonNode fragment, string jsonPath)
         {
             if (fragment is not JsonObject root)
@@ -406,8 +427,8 @@ namespace Ludots.Core.Map
                 return;
             }
 
-            RejectLegacyKey(root, "WidthInTiles", "widthInMacroTiles", jsonPath);
-            RejectLegacyKey(root, "HeightInTiles", "heightInMacroTiles", jsonPath);
+            RejectLegacyKey(root, "WidthInTiles", "World.WidthCm", jsonPath);
+            RejectLegacyKey(root, "HeightInTiles", "World.HeightCm", jsonPath);
 
             if (!TryGetPropertyCaseInsensitive(root, "boards", out JsonNode boardsNode) ||
                 boardsNode is not JsonArray boards)
@@ -422,8 +443,10 @@ namespace Ludots.Core.Map
                     continue;
                 }
 
-                RejectLegacyKey(board, "WidthInTiles", "widthInMacroTiles", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "HeightInTiles", "heightInMacroTiles", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInTiles", "Boards[].WidthCells + World.WidthCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInTiles", "Boards[].HeightCells + World.HeightCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInMacroTiles", "Boards[].WidthCells + World.WidthCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInMacroTiles", "Boards[].HeightCells + World.HeightCm", $"{jsonPath}.boards[{i}]");
             }
         }
 

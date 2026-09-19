@@ -1,7 +1,10 @@
 {
   "startupMapId": "fog_vision_decay_showcase",
-  "worldWidthInMacroTiles": 360,
-  "worldHeightInMacroTiles": 180,
+  "world": {
+    "widthCm": 9216000,
+    "heightCm": 4608000,
+    "cellSizeCm": 100
+  },
   "presentation": {
     "minimap": {
       "minZoomExtentMode": "ExplicitCm",

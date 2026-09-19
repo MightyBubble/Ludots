@@ -1,5 +1,10 @@
 {
   "Id": "deterministic_replay",
+  "World": {
+    "WidthCm": 25600,
+    "HeightCm": 25600,
+    "CellSizeCm": 100
+  },
   "Tags": [
     "showcase",
     "replay",
@@ -9,8 +14,8 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
+      "WidthCells": 256,
+      "HeightCells": 256,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 16,

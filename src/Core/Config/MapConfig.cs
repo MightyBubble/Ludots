@@ -35,6 +35,12 @@ namespace Ludots.Core.Config
         public bool StructureAwareNavigation { get; set; }
         public List<string> Tags { get; set; } = new List<string>();
         public Dictionary<string, JsonNode> Metadata { get; set; } = new Dictionary<string, JsonNode>();
+
+        /// <summary>
+        /// World declaration: the single authority for world size (#1567). Macro-tile
+        /// and chunk counts are derived at load; boards no longer define the world.
+        /// </summary>
+        public WorldConfig World { get; set; } = new WorldConfig();
         public List<EntitySpawnData> Entities { get; set; } = new List<EntitySpawnData>();
         public List<TeamBindingData> Teams { get; set; } = new List<TeamBindingData>();
         public List<PlayerBindingData> Players { get; set; } = new List<PlayerBindingData>();

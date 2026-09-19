@@ -1,5 +1,10 @@
 {
   "Id": "animation_acceptance_entry",
+  "World": {
+    "WidthCm": 25600,
+    "HeightCm": 25600,
+    "CellSizeCm": 100
+  },
   "Tags": [
     "animation.acceptance",
     "animation.acceptance.layered"
@@ -8,8 +13,8 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
+      "WidthCells": 256,
+      "HeightCells": 256,
       "GridCellSizeCm": 100,
       "LoadedChunkCapacity": 16
     }

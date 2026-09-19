@@ -15,11 +15,11 @@ namespace Ludots.Core.Map.Board
         /// <summary>Spatial type: "Grid", "HexGrid", or "NodeGraph".</summary>
         public string SpatialType { get; set; } = "Grid";
 
-        /// <summary>Board width in 256-cell macro tiles.</summary>
-        public int WidthInMacroTiles { get; set; } = SpatialScaleDefaults.DefaultWorldWidthMacroTiles;
+        /// <summary>Board width in topology cells (#1567: authored directly; world size lives in MapConfig.World).</summary>
+        public int WidthCells { get; set; } = SpatialScaleDefaults.DefaultWorldWidthMacroTiles * SpatialScaleDefaults.MacroTileCells;
 
-        /// <summary>Board height in 256-cell macro tiles.</summary>
-        public int HeightInMacroTiles { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles;
+        /// <summary>Board height in topology cells (#1567: authored directly; world size lives in MapConfig.World).</summary>
+        public int HeightCells { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles * SpatialScaleDefaults.MacroTileCells;
 
         /// <summary>Grid cell size in centimeters.</summary>
         public int GridCellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
@@ -70,8 +70,8 @@ namespace Ludots.Core.Map.Board
             {
                 Name = Name,
                 SpatialType = SpatialType,
-                WidthInMacroTiles = WidthInMacroTiles,
-                HeightInMacroTiles = HeightInMacroTiles,
+                WidthCells = WidthCells,
+                HeightCells = HeightCells,
                 GridCellSizeCm = GridCellSizeCm,
                 HexEdgeLengthCm = HexEdgeLengthCm,
                 ChunkSizeCells = ChunkSizeCells,

@@ -607,8 +607,8 @@ export const Toolbar: React.FC = () => {
         const request: BoardCreateRequest = {
             name: newBoardName.trim(),
             spatialType: newBoardTopology,
-            widthInMacroTiles: newBoardAllocation.widthMacroTiles,
-            heightInMacroTiles: newBoardAllocation.heightMacroTiles,
+            widthCells: newBoardAllocation.allocatedWidthCells,
+            heightCells: newBoardAllocation.allocatedHeightCells,
             cellSizeCm: Math.max(1, Math.floor(newBoardCellSizeCmValue)),
             navigationEnabled: newBoardNavigationEnabled,
         };
