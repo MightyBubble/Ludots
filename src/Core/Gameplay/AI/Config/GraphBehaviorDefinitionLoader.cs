@@ -12,11 +12,13 @@ namespace Ludots.Core.Gameplay.AI.Config
     {
         private readonly ConfigPipeline? _pipeline;
         private readonly GraphActionCatalog? _actions;
+        private readonly GraphFunctionCatalog? _functions;
 
-        public GraphBehaviorDefinitionLoader(ConfigPipeline pipeline, GraphActionCatalog? actions)
+        public GraphBehaviorDefinitionLoader(ConfigPipeline pipeline, GraphActionCatalog? actions, GraphFunctionCatalog? functions = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _actions = actions;
+            _functions = functions;
         }
 
         private GraphBehaviorDefinitionLoader(GraphActionCatalog actions)
@@ -181,10 +183,19 @@ namespace Ludots.Core.Gameplay.AI.Config
                 int graphId = 0;
                 if (src.Leaf == BehaviorTreeLeafBinding.ScriptSlice)
                 {
-                    graphId = RequireAction(
-                        src.Action,
-                        GraphActionHost.BehaviorTree,
-                        $"AI/behavior_trees.json:{treeId}.{src.Id}.action");
+                    // Condition nodes resolve from FuncLib (pure); Action nodes from ActionLib.
+                    if (src.Kind == BehaviorTreeNodeKind.Condition)
+                    {
+                        graphId = ResolveOptionalCondition(
+                            src.Action,
+                            $"AI/behavior_trees.json:{treeId}.{src.Id}.condition");
+                    }
+                    else
+                    {
+                        graphId = RequireAction(
+                            src.Action,
+                            $"AI/behavior_trees.json:{treeId}.{src.Id}.action");
+                    }
                 }
                 else if (!string.IsNullOrWhiteSpace(src.Action))
                 {
@@ -389,13 +400,13 @@ namespace Ludots.Core.Gameplay.AI.Config
                     packedOfAuthored[toAuthored],
                     ParsePredicate(RequireString(tr, "predicate", path), path),
                     priority,
-                    ResolveOptionalAction(ReadOptionalString(tr, "condition"), $"{path}.condition"));
+                    ResolveOptionalCondition(ReadOptionalString(tr, "condition"), $"{path}.condition"));
             }
 
             return transitions;
         }
 
-        private int RequireAction(string? name, GraphActionHost expectedHost, string path)
+        private int RequireAction(string? name, string path)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -407,11 +418,37 @@ namespace Ludots.Core.Gameplay.AI.Config
                 throw Fail(path, "ActionLib catalog is required to resolve behavior bindings.");
             }
 
-            return _actions.Require(name, expectedHost);
+            return _actions.Require(name);
         }
 
         private int ResolveOptionalAction(string? name, string path)
-            => string.IsNullOrWhiteSpace(name) ? 0 : RequireAction(name, GraphActionHost.Hfsm, path);
+            => string.IsNullOrWhiteSpace(name) ? 0 : RequireAction(name, path);
+
+        /// <summary>
+        /// Transition conditions resolve from FuncLib (pure functions), not ActionLib —
+        /// conditions compare already-obtained data and must not carry side effects.
+        /// Consumer-side validation per the asset-neutrality contract.
+        /// </summary>
+        private int ResolveOptionalCondition(string? name, string path)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return 0;
+            }
+
+            if (_functions == null)
+            {
+                throw Fail(path, $"Condition '{name}' requires a FuncLib catalog (GAS/func_lib.json).");
+            }
+
+            GraphFunctionEntry entry = _functions.Require(name);
+            if (entry.Kind != GraphKind.Script)
+            {
+                throw Fail(path, $"Condition '{name}' must be a Script-kind func_lib entry (got {entry.Kind}).");
+            }
+
+            return entry.GraphId;
+        }
 
         private static ConfigCatalogEntry GetEntry(ConfigCatalog catalog, string relativePath)
         {

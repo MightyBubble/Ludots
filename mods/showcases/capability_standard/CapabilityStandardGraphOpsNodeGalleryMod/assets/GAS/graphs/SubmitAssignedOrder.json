@@ -1,0 +1,84 @@
+[
+  {
+    "id": "showcase.graph_op.SubmitAssignedOrder",
+    "kind": "Script",
+    "entry": "self",
+    "nodes": [
+      {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "aim",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "px",
+        "op": "ConstInt",
+        "intValue": 650
+      },
+      {
+        "id": "py",
+        "op": "ConstInt",
+        "intValue": 520
+      },
+      {
+        "id": "submit",
+        "op": "SubmitAssignedOrder",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self",
+        "fromPort": "next",
+        "to": "aim"
+      },
+      {
+        "from": "aim",
+        "fromPort": "next",
+        "to": "px"
+      },
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "aim",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "target"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "b"
+      }
+    ]
+  }
+]

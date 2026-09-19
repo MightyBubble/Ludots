@@ -83,7 +83,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 if (metadata.Kind == EffectOperationKind.GasTransactional &&
                     ((kind == GraphKind.TriggerGraph && op == GraphNodeOp.ModifyAttributeSet) ||
                      op == GraphNodeOp.WriteBlackboardFloat ||
-                     op == GraphNodeOp.WriteBlackboardInt))
+                     op == GraphNodeOp.WriteBlackboardInt ||
+                     op == GraphNodeOp.WriteBlackboardEntity ||
+                     op == GraphNodeOp.ApplyEffectTemplate ||
+                     op == GraphNodeOp.ModifyAttributeAdd))
                 {
                     return true;
                 }

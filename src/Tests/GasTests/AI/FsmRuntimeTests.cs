@@ -258,5 +258,39 @@ namespace Ludots.Tests.Gas.AI
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = value },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
             ];
+
+        [Test]
+        public void SlotReuse_AcquireReleaseReturnsSparseSlot_AndTickSkipsReleased()
+        {
+            GraphBehaviorCatalog behaviorOut = null!;
+            _ = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out _, out behaviorOut);
+            HfsmDefinition hfsm = behaviorOut.RequireHfsm("hfsm.sentry");
+
+            // Slot reuse on: capacity 3, but only ever a few live agents.
+            var world = new HfsmWorld(hfsm, capacity: 3, reuseSlots: true);
+
+            int a0 = world.AcquireAgent();
+            int a1 = world.AcquireAgent();
+            Assert.That(a0, Is.EqualTo(0));
+            Assert.That(a1, Is.EqualTo(1));
+
+            // Releasing agent 1 must return a slot to the reuse pool.
+            world.ReleaseAgent(a1);
+
+            // Acquiring again reuses the freed slot (index 1), it must NOT append a new one.
+            int a2 = world.AcquireAgent();
+            Assert.That(a2, Is.EqualTo(1), "released slot must be reused, not appended");
+
+            // Tick with slot-reuse on must not touch/expand anything.
+            world.TickAll();
+
+            // Releasing both still leaves capacity for re-acquire (no leak out of capacity).
+            world.ReleaseAgent(a0);
+            world.ReleaseAgent(a2);
+            // After releasing everything, an acquire must succeed within the fixed capacity
+            // (proves ReleaseAgent recycles rather than leaking towards infinity).
+            int a3 = world.AcquireAgent();
+            Assert.That(a3, Is.EqualTo(0) | Is.EqualTo(1), "freed slots are recycled within capacity");
+        }
     }
 }

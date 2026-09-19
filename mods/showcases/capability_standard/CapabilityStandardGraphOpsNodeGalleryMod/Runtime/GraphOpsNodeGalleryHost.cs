@@ -56,6 +56,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
 
     public World World => _world ?? throw new InvalidOperationException("Gallery host is not bootstrapped.");
     public GasGraphRuntimeApi Api { get; private set; } = null!;
+    public Ludots.Core.Gameplay.GAS.Orders.OrderQueue Orders { get; private set; } = null!;
+    public Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry OrderTypes { get; private set; } = null!;
     public MapLoadEntityIndex EntityIndex { get; private set; } = null!;
     public EntityTemplateKeyRegistry Templates { get; private set; } = null!;
     public bool OwnsSimulationWorld => _ownsWorld;
@@ -170,6 +172,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             FeaturedDest = featuredDest,
             SimWorld = World,
             Api = Api,
+            Orders = Orders,
+            OrderTypes = OrderTypes,
             Metrics = metrics,
             Stage = stage,
             EffectRequests = EffectRequests,
@@ -259,6 +263,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         _templateRegistry = engine.MapLoader.TemplateRegistry;
         _effectTemplates = RequireEngineService(engine, CoreServiceKeys.EffectTemplateRegistry);
         Api = RequireEngineService(engine, CoreServiceKeys.GasGraphRuntimeApi);
+        Orders = RequireEngineService(engine, CoreServiceKeys.OrderQueue);
+        OrderTypes = RequireEngineService(engine, CoreServiceKeys.OrderTypeRegistry);
         EnsureGalleryRelationshipCatalog();
         EnsureDispatchPreset();
         RegisterCollectionKeys();
@@ -290,7 +296,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             DispatchPresets,
             graphTablesDir == null ? null : GraphOpsNodeGallerySymbolResolver.LoadLookupTables(graphTablesDir),
             rngPicks,
-            presentationTextCatalog);
+            presentationTextCatalog,
+            OrderTypes);
     }
 
     private Entity[] BindMapActors(GraphOpsNodeVignette vignette, string mapId)

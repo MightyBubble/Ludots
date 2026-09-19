@@ -1,0 +1,64 @@
+[
+  {
+    "id": "showcase.graph_op.LoadEntityPosValid",
+    "kind": "Effect",
+    "entry": "explicit",
+    "nodes": [
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "valid",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "damage",
+        "op": "ConstFloat",
+        "floatValue": -12
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "valid"
+      },
+      {
+        "from": "valid",
+        "fromPort": "next",
+        "to": "damage"
+      },
+      {
+        "from": "damage",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "valid",
+        "toPort": "source"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "damage",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      }
+    ]
+  }
+]

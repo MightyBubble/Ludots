@@ -2,9 +2,7 @@
 
 图里点好的终选集，一声事件按 key 递出去，账房照单写进集合。
 
-<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_WriteCollection/poster.png" src="artifacts/evidence/capability_standard_graph_op_WriteCollection/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_WriteCollection/play.mp4。
-</video>
+本页演示录像尚未录制，可用下方启动命令运行场景。
 
 ## 作者写法
 
@@ -12,10 +10,10 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Script / TriggerGraph / Query |
+| 可用图种 | Script / TriggerGraph |
 | 返回 | 无（副作用节点） |
-| 输入端口（值边 toPort） | `value`（数值） |
-| 特殊写法 | dst 填符号名（编译期解析）；imm 填符号名（编译期解析） |
+| 输入端口（值边 toPort） | `source`（来源实体）、`value`（数值） |
+| 特殊写法 | imm 填符号名（编译期解析） |
 
 手册分册（全量字段与语义）：[地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)
 
@@ -33,7 +31,7 @@
 
 ## 这场是怎么搭出来的
 
-上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/WriteCollection.json`，共 3 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
+这场演示使用画廊里的作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/WriteCollection.json`，共 3 个节点。下列调用顺序可供编写自己的图时参考：
 
 ConstInt → **WriteCollection**（本篇） → HaltReturnInt
 
@@ -43,7 +41,7 @@ ConstInt → **WriteCollection**（本篇） → HaltReturnInt
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Query / Script / TriggerGraph；Effect / Score / Validation / Derived 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Script / TriggerGraph；Effect / Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：见手册分册的场景节。
 ## 怎么进

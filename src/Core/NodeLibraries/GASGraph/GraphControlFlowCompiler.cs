@@ -2551,7 +2551,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (ops[i].NodeOp == GraphNodeOp.TargetListGet)
+                if (ops[i].NodeOp == GraphNodeOp.TargetListGet ||
+                    ops[i].NodeOp == GraphNodeOp.LoadEntityPosX ||
+                    ops[i].NodeOp == GraphNodeOp.LoadEntityPosY)
                 {
                     boolScratches[i] = registers.AllocScratch(GraphValueType.Bool, graphId, nodes[i].Id, diagnostics);
                     continue;

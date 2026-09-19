@@ -543,6 +543,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("Graph knowledge runtime is not available.");
         }
+
+        /// <summary>
+        /// Behavior-side order submission (issue #1536): the acting unit enqueues an assigned
+        /// order. Separate contract from the input-side command-intent buffer.
+        /// </summary>
+        void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)
+        {
+            throw new InvalidOperationException("Graph order pipeline is not available.");
+        }
+
+        /// <summary>Publishes the acting unit's terminal outcome for its active order.</summary>
+        void CompleteActiveOrder(Entity actor)
+        {
+            throw new InvalidOperationException("Graph order pipeline is not available.");
+        }
+
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId);
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args);
         void FanOutDispatchEffect(Entity source, Entity target, Entity targetContext, ReadOnlySpan<Entity> targets, int templateId, int payloadPresetId)
@@ -716,6 +732,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
+        int ResolveOrderType(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references order type '{name}', but no OrderTypeRegistry resolver is available.");
+        }
         int ResolveAbility(string name)
         {
             throw new InvalidOperationException(

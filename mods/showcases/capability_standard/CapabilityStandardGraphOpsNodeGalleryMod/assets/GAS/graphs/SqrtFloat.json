@@ -1,0 +1,79 @@
+[
+  {
+    "id": "showcase.graph_op.SqrtFloat",
+    "kind": "Effect",
+    "entry": "base",
+    "nodes": [
+      {
+        "id": "base",
+        "op": "ConstFloat",
+        "floatValue": 81
+      },
+      {
+        "id": "root",
+        "op": "SqrtFloat"
+      },
+      {
+        "id": "flip",
+        "op": "NegFloat"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "base",
+        "fromPort": "next",
+        "to": "root"
+      },
+      {
+        "from": "root",
+        "fromPort": "next",
+        "to": "flip"
+      },
+      {
+        "from": "flip",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "base",
+        "fromPort": "value",
+        "to": "root",
+        "toPort": "a"
+      },
+      {
+        "from": "root",
+        "fromPort": "value",
+        "to": "flip",
+        "toPort": "value"
+      },
+      {
+        "from": "flip",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      }
+    ]
+  }
+]

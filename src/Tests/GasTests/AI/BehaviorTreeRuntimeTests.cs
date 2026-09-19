@@ -3,6 +3,7 @@ using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Tests;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Tests.Gas.Graph;
 using NUnit.Framework;
 
@@ -237,10 +238,10 @@ namespace Ludots.Tests.Gas.AI
 
             public ScriptedSensors(GraphActionCatalog actions)
             {
-                _see = GraphRegistryScriptResolver.RequireActionId(actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
-                _range = GraphRegistryScriptResolver.RequireActionId(actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
-                _chase = GraphRegistryScriptResolver.RequireActionId(actions, "bt.chase", GraphActionHost.BehaviorTree);
-                _attack = GraphRegistryScriptResolver.RequireActionId(actions, "bt.attack", GraphActionHost.BehaviorTree);
+                _see = GraphIdRegistry.GetId("Graph.BT.Leaf.SeeEnemy");
+                _range = GraphIdRegistry.GetId("Graph.BT.Leaf.InAttackRange");
+                _chase = GraphRegistryScriptResolver.RequireActionId(actions, "bt.chase");
+                _attack = GraphRegistryScriptResolver.RequireActionId(actions, "bt.attack");
             }
 
             public void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools)

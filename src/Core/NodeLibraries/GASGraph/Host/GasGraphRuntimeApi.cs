@@ -115,6 +115,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly ISpatialCoordinateConverter? _coords;
         private readonly GameplayEventBus? _eventBus;
         private readonly EffectRequestQueue? _effectRequests;
+        private Ludots.Core.Gameplay.GAS.Orders.OrderQueue? _orderQueue;
+        private Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
         private readonly TagOps? _tagOps;
         private readonly RelationshipRuntime? _relationshipRuntime;
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
@@ -2021,6 +2023,68 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private int CurrentStepTick()
         {
             return _clock?.Now(ClockDomainId.Step) ?? 0;
+        }
+
+        /// <summary>
+        /// Binds the order pipeline for behavior-side order ops (SubmitAssignedOrder /
+        /// CompleteActiveOrder). Order submission stays fail-closed until this is bound.
+        /// </summary>
+        public void BindOrderPipeline(
+            Ludots.Core.Gameplay.GAS.Orders.OrderQueue orders,
+            Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry orderTypes)
+        {
+            _orderQueue = orders ?? throw new ArgumentNullException(nameof(orders));
+            _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
+        }
+
+        public void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)
+        {
+            if (_orderQueue == null || _orderTypes == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingOrderPipeline");
+            }
+
+            if (!_orderTypes.IsRegistered(orderTypeId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.UnknownOrderType: SubmitAssignedOrder references unregistered order type {orderTypeId}.");
+            }
+
+            if (!_world.Has<PlayerOwner>(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SubmitAssignedOrderActorMissingOwner: acting entity {actor} has no PlayerOwner.");
+            }
+
+            var order = new Ludots.Core.Gameplay.GAS.Orders.Order
+            {
+                OrderTypeId = orderTypeId,
+                PlayerId = _world.Get<PlayerOwner>(actor).PlayerId,
+                Actor = actor,
+                Target = target,
+                Args = Ludots.Core.Gameplay.GAS.Orders.OrderArgs.CreateSingleWorldCm(
+                    new System.Numerics.Vector3(xCm, 0f, yCm)),
+                SubmitMode = Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode.Immediate,
+            };
+            if (!_orderQueue.TryEnqueueAssigned(ref order))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.OrderQueueFull: SubmitAssignedOrder could not enqueue the pursuit order.");
+            }
+        }
+
+        public void CompleteActiveOrder(Entity actor)
+        {
+            if (_orderTypes == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingOrderPipeline");
+            }
+
+            if (!Ludots.Core.Gameplay.GAS.Orders.OrderSubmitter.NotifyOrderComplete(_world, actor, _orderTypes))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.NoActiveOrderToComplete: acting entity {actor} has no active order to complete.");
+            }
         }
 
         public void ApplyEffectTemplate(Entity caster, Entity target, int templateId)

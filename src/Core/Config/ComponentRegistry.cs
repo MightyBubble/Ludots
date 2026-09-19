@@ -12,8 +12,8 @@ using Ludots.Core.Components;
 using Ludots.Core.Fields;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.AI.Utility;
-using Ludots.Core.Gameplay.ActionLoops;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GraphBrains;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -93,7 +93,7 @@ namespace Ludots.Core.Config
             Register<TimedTagBuffer>("TimedTagBuffer");
             Register<AbilityTagGrantReceiver>("AbilityTagGrantReceiver");
             Register("OrderBuffer", SetOrderBuffer, null, Component<OrderBuffer>.ComponentType);
-            ActionLoopComponentAuthoring.Register();
+            GraphBrainComponentAuthoring.Register();
             Register<OrderSpatialPayloadBuffer>("OrderSpatialPayloadBuffer");
             Register<CommandSourceSelectableTag>("CommandSourceSelectableTag");
             Register("CommandSourceSelectableState", SetCommandSourceSelectableState, null, Component<CommandSourceSelectableState>.ComponentType);
