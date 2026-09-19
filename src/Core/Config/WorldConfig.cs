@@ -23,7 +23,7 @@ namespace Ludots.Core.Config
             WidthCm = WidthCm,
             HeightCm = HeightCm,
             CellSizeCm = CellSizeCm,
-            Tuning = Tuning.Clone()
+            Tuning = Tuning?.Clone() ?? new WorldTuningConfig()
         };
 
         public static WorldConfig CreateEngineBootDefault() => new()

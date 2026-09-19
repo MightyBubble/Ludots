@@ -163,7 +163,7 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 | `Boards[].WidthHexes/HeightHexes`（#1567 目标态） | `BoardExtent` | hexes | > 0 | HexGrid board authoring（切 2 引入） |
 | `Boards[].OriginXCm/OriginYCm`（#1567 目标态） | `BoardOrigin` | cm | 缺省居中；越出世界 fail-fast | board 摆放（切 2 引入） |
 | navmesh.json `tileWorldWidthCm/HeightCm`（#1567 目标态） | `NavTileGranularity` | cm | > 0；不从板推导 | nav authoring（切 3 引入） |
-| `World.Tuning.PartitionChunkCells` / `LoadedChunkCapacity`（#1567 切 4 已落地） | `PartitionChunk` / streaming 容量 | cells / 个 | 可空；声明后为唯一预算，冲突的板级字段 fail-fast，容量回填未声明的板 | world 预算；自动推导缺省随切 4b |
+| `World.Tuning.PartitionChunkCells` / `LoadedChunkCapacity`（#1567 切 4 已落地） | `PartitionChunk` / streaming 容量 | cells / 个 | 可空；声明后为唯一预算，冲突的板级字段 fail-fast，容量回填未声明的板 | world 预算；显式写默认值（ChunkSizeCells=64、LoadedChunkCapacity=0）当前与未声明不可区分，歧义消除随切 4b 的板级字段退役。自动推导缺省随切 4b |
 | `MassNavigationFlowSolverConfig.fieldWidthCm` / `fieldHeightCm` | `FlowWindow` | cm | > 0；被 FlowCell/hash cell 整除 | MassNavigationFlow solver |
 | `MassNavigationFlowSolverConfig.flowCellSizeCm` | `FlowCell` | cm | > 0 | MassNavigationFlow solver |
 | `MassNavigationFlowSolverConfig.separationHashCellSizeCm` | `AvoidanceHashCell` | cm | > 0 | MassNavigationFlow solver |

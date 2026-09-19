@@ -67,7 +67,11 @@ namespace Ludots.Core.Map
         {
             var visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var chain = new List<string>(8);
-            return LoadMapInternal(mapId, visiting, chain);
+            var config = LoadMapInternal(mapId, visiting, chain);
+            // Backfill runs once at the top level only: parent configs must stay
+            // un-backfilled so child conflict checks compare authored values (#1567).
+            ApplyWorldTuningToBoards(config);
+            return config;
         }
 
         private MapConfig LoadMapInternal(MapId mapId, HashSet<string> visiting, List<string> chain)
@@ -222,14 +226,26 @@ namespace Ludots.Core.Map
                 }
             }
 
-            // A fragment World with only CellSizeCm == CellCm default is indistinguishable
-            // from an absent node and must not override the parent.
+            // Field-level merge: a child that only re-declares size keeps the parent's
+            // Tuning, and a Tuning-only fragment still applies (#1567 slice 4 audit).
             if (source.World is { } sourceWorld &&
                 (sourceWorld.WidthCm > 0 ||
                  sourceWorld.HeightCm > 0 ||
-                 sourceWorld.CellSizeCm != Ludots.Core.Spatial.SpatialScaleDefaults.CellCm))
+                 sourceWorld.CellSizeCm != Ludots.Core.Spatial.SpatialScaleDefaults.CellCm ||
+                 (sourceWorld.Tuning is { } fragTuning && fragTuning.IsAuthored)))
             {
-                target.World = sourceWorld.Clone();
+                var merged = new Ludots.Core.Config.WorldConfig
+                {
+                    WidthCm = sourceWorld.WidthCm > 0 ? sourceWorld.WidthCm : target.World.WidthCm,
+                    HeightCm = sourceWorld.HeightCm > 0 ? sourceWorld.HeightCm : target.World.HeightCm,
+                    CellSizeCm = sourceWorld.CellSizeCm != Ludots.Core.Spatial.SpatialScaleDefaults.CellCm
+                        ? sourceWorld.CellSizeCm
+                        : target.World.CellSizeCm,
+                    Tuning = sourceWorld.Tuning is { } st && st.IsAuthored
+                        ? st.Clone()
+                        : target.World.Tuning?.Clone() ?? new Ludots.Core.Config.WorldTuningConfig()
+                };
+                target.World = merged;
             }
 
             if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
@@ -412,6 +428,8 @@ namespace Ludots.Core.Map
 
         private static void ValidateWorldDeclaration(MapConfig config, MapId mapId)
         {
+            ValidateWorldTuningValues(config.World, mapId);
+
             if (config.Boards is not { Count: > 0 })
             {
                 return;
@@ -431,14 +449,14 @@ namespace Ludots.Core.Map
             foreach (var board in config.Boards)
             {
                 ValidateBoardPlacement(board, world!, mapId);
+                ValidateBoardAgainstWorldTuning(board, world!.Tuning, mapId);
             }
 
-            ApplyWorldTuning(config, world!, mapId);
         }
 
-        private static void ApplyWorldTuning(MapConfig config, WorldConfig world, MapId mapId)
+        private static void ValidateWorldTuningValues(WorldConfig world, MapId mapId)
         {
-            var tuning = world.Tuning;
+            var tuning = world?.Tuning;
             if (tuning is null || !tuning.IsAuthored)
             {
                 return;
@@ -456,25 +474,18 @@ namespace Ludots.Core.Map
                 throw new InvalidOperationException(
                     $"Map '{mapId}' World.Tuning.LoadedChunkCapacity must be positive; got {capacity}.");
             }
+        }
+
+        private static void ApplyWorldTuningToBoards(MapConfig config)
+        {
+            var tuning = config?.World?.Tuning;
+            if (config?.Boards is not { Count: > 0 } || tuning is null || !tuning.IsAuthored)
+            {
+                return;
+            }
 
             foreach (var board in config.Boards)
             {
-                if (tuning.PartitionChunkCells is int partitionValue &&
-                    board.ChunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.PartitionChunkCells &&
-                    board.ChunkSizeCells != partitionValue)
-                {
-                    throw new InvalidOperationException(
-                        $"Map '{mapId}' board '{board.Name}' declares ChunkSizeCells={board.ChunkSizeCells}, conflicting with World.Tuning.PartitionChunkCells={partitionValue}; remove the board-level field or align it (single world budget, #1567).");
-                }
-
-                if (tuning.LoadedChunkCapacity is int capacityValue &&
-                    board.LoadedChunkCapacity > 0 &&
-                    board.LoadedChunkCapacity != capacityValue)
-                {
-                    throw new InvalidOperationException(
-                        $"Map '{mapId}' board '{board.Name}' declares LoadedChunkCapacity={board.LoadedChunkCapacity}, conflicting with World.Tuning.LoadedChunkCapacity={capacityValue}; remove the board-level field or align it (single world budget, #1567).");
-                }
-
                 if (tuning.PartitionChunkCells is int applyPartition)
                 {
                     board.ChunkSizeCells = applyPartition;
@@ -484,6 +495,30 @@ namespace Ludots.Core.Map
                 {
                     board.LoadedChunkCapacity = applyCapacity;
                 }
+            }
+        }
+
+        private static void ValidateBoardAgainstWorldTuning(BoardConfig board, Ludots.Core.Config.WorldTuningConfig tuning, MapId mapId)
+        {
+            if (tuning is null || !tuning.IsAuthored)
+            {
+                return;
+            }
+
+            if (tuning.PartitionChunkCells is int partitionValue &&
+                board.ChunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.PartitionChunkCells &&
+                board.ChunkSizeCells != partitionValue)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' declares ChunkSizeCells={board.ChunkSizeCells}, conflicting with World.Tuning.PartitionChunkCells={partitionValue}; remove the board-level field or align it (single world budget, #1567).");
+            }
+
+            if (tuning.LoadedChunkCapacity is int capacityValue &&
+                board.LoadedChunkCapacity > 0 &&
+                board.LoadedChunkCapacity != capacityValue)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' declares LoadedChunkCapacity={board.LoadedChunkCapacity}, conflicting with World.Tuning.LoadedChunkCapacity={capacityValue}; remove the board-level field or align it (single world budget, #1567).");
             }
         }
 

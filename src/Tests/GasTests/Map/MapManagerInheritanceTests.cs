@@ -150,6 +150,40 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadMap_WhenChildRedeclaresWorldSize_ParentTuningSurvives()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "parent", """
+                {
+                  "id": "parent",
+                  "world": {
+                    "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100,
+                    "tuning": { "loadedChunkCapacity": 64 }
+                  },
+                  "boards": [
+                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
+                  ]
+                }
+                """);
+                WriteMapConfig(tempRoot, "child", """
+                {
+                  "id": "child",
+                  "parentId": "parent",
+                  "world": { "widthCm": 102400, "heightCm": 102400 }
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("child");
+                Assert.That(cfg!.World.WidthCm, Is.EqualTo(102400));
+                Assert.That(cfg.World.Tuning.LoadedChunkCapacity, Is.EqualTo(64));
+                Assert.That(cfg.Boards[0].LoadedChunkCapacity, Is.EqualTo(64));
+            }
+            finally { TryDelete(tempRoot); }
+        }
+
+        [Test]
         public void LoadMap_WhenBoardCapacityConflictsWithWorldTuning_Throws()
         {
             var tempRoot = CreateTempDir();
