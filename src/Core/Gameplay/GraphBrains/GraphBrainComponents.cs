@@ -17,6 +17,9 @@ public struct GraphActionBrain
     /// <summary>HFSM definition id (AI/hfsm.json) this entity runs. Empty when the entity uses <see cref="ScriptKey"/>.</summary>
     public string HfsmId;
 
+    /// <summary>Behavior tree definition id (AI/behavior_trees.json) this entity runs. Empty when using HfsmId or ScriptKey.</summary>
+    public string BtId;
+
     /// <summary>Single Script graph key (GAS graphs) this entity runs. Empty when the entity uses <see cref="HfsmId"/>.</summary>
     public string ScriptKey;
 
@@ -48,3 +51,21 @@ public struct HfsmState
     /// <summary>Ticks the entity has remained in the current leaf (for per-state timing plans).</summary>
     public int StateTicks;
 }
+
+/// <summary>
+/// Per-entity behavior tree runtime state, following the same component-carried pattern
+/// as HfsmState and AnimatorRuntimeState: each entity owns its own BT execution status.
+/// The tree definition is shared (BehaviorTreeDefinition); this component holds only the
+/// per-entity execution state. Lifecycle follows the entity via ECS.
+/// </summary>
+public struct BtState
+{
+    /// <summary>Whether this entity's BT has been bound to its definition's root.</summary>
+    public bool Bound;
+    /// <summary>Last tick's overall tree result (Running/Success/Failure).</summary>
+    public byte Status;
+    /// <summary>Ticks the entity has been bound (for think-interval plans).</summary>
+    public int StateTicks;
+}
+
+

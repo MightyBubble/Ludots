@@ -183,9 +183,19 @@ namespace Ludots.Core.Gameplay.AI.Config
                 int graphId = 0;
                 if (src.Leaf == BehaviorTreeLeafBinding.ScriptSlice)
                 {
-                    graphId = RequireAction(
-                        src.Action,
-                        $"AI/behavior_trees.json:{treeId}.{src.Id}.action");
+                    // Condition nodes resolve from FuncLib (pure); Action nodes from ActionLib.
+                    if (src.Kind == BehaviorTreeNodeKind.Condition)
+                    {
+                        graphId = ResolveOptionalCondition(
+                            src.Action,
+                            $"AI/behavior_trees.json:{treeId}.{src.Id}.condition");
+                    }
+                    else
+                    {
+                        graphId = RequireAction(
+                            src.Action,
+                            $"AI/behavior_trees.json:{treeId}.{src.Id}.action");
+                    }
                 }
                 else if (!string.IsNullOrWhiteSpace(src.Action))
                 {

@@ -1,15 +1,5 @@
 [
   {
-    "name": "bt.seeEnemy",
-    "graph": "Graph.BT.Leaf.SeeEnemy",
-    "kind": "Script"
-  },
-  {
-    "name": "bt.inAttackRange",
-    "graph": "Graph.BT.Leaf.InAttackRange",
-    "kind": "Script"
-  },
-  {
     "name": "bt.chase",
     "graph": "Graph.BT.Leaf.Chase",
     "kind": "Script"

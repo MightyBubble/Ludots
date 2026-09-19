@@ -23,7 +23,7 @@ internal static class GraphBrainComponentAuthoring
 
         foreach (var property in obj)
         {
-            if (property.Key is not ("HfsmId" or "Script" or "ThinkEveryNTicks" or "BlackboardInts" or "BlackboardEntities"))
+            if (property.Key is not ("HfsmId" or "BtId" or "Script" or "ThinkEveryNTicks" or "BlackboardInts" or "BlackboardEntities"))
             {
                 throw new InvalidOperationException(
                     $"{context} authoring does not accept property '{property.Key}'; allowed: HfsmId, Script, ThinkEveryNTicks, BlackboardInts, BlackboardEntities.");
@@ -31,6 +31,7 @@ internal static class GraphBrainComponentAuthoring
         }
 
         string? hfsmId = ReadOptionalCanonicalKey(obj, "HfsmId", context);
+        string? btId = ReadOptionalCanonicalKey(obj, "BtId", context);
         string? script = ReadOptionalCanonicalKey(obj, "Script", context);
         if (hfsmId == null && script == null)
         {
@@ -85,6 +86,7 @@ internal static class GraphBrainComponentAuthoring
         entity.Add(new GraphActionBrain
         {
             HfsmId = hfsmId ?? string.Empty,
+            BtId = btId ?? string.Empty,
             ScriptKey = script ?? string.Empty,
             ThinkEveryNTicks = thinkEveryNTicks,
             BlackboardIntDefaults = intDefaults.ToArray(),

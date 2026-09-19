@@ -86,6 +86,22 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
         }
     }
 
+    /// <summary>
+    /// Runs an action graph and returns its ReturnInt (for hosts that map the return value
+    /// to a status, e.g. BT leaves: non-zero = Success, zero = Failure). Same halt requirement.
+    /// </summary>
+    public int RunActionForReturn(int agentIndex, int actionGraphId)
+    {
+        GraphSliceResult result = ExecuteHalt(actionGraphId, "行为叶子", CasterFor(agentIndex));
+        if (!result.Halted)
+        {
+            throw new InvalidOperationException(
+                $"Behavior leaf graph {actionGraphId} did not halt within budget.");
+        }
+
+        return result.ReturnInt;
+    }
+
     private Entity CasterFor(int agentIndex)
         => (uint)agentIndex < _agentCasters.Length ? _agentCasters[agentIndex] : Entity.Null;
 
