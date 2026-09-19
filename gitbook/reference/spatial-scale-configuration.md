@@ -1,6 +1,6 @@
 # 空间尺度配置查表
 
-本页是 `gitbook/architecture/spatial-scale-and-resolution-ssot.md` 的快速查表入口。权威概念、owner 与现状映射以架构页为准；本页只解释“看到某个配置/常量时，它是什么意思、用在哪里、不能和什么混用”。
+本页是 `gitbook/architecture/spatial-scale-and-resolution-ssot.md` 的快速查表入口。权威概念、owner 与现状映射以架构页为准；本页只解释“看到某个配置/常量时，它是什么意思、用在哪里、不能和什么混用”。主表描述现状（[#1567](https://github.com/MightyBubble/Ludots/issues/1567) 四域归位切 1 落地前的键位），目标键位见文末[「四域归位目标键位」](#四域归位目标键位1567)。
 
 交互式关系图见 [`spatial-scale-explorer.html`](spatial-scale-explorer.html)，用于点击查看“谁用谁做单位”、哪些尺度必需、哪些尺度可配置。Mod 作者地图尺度入门见 [`map-scale-authoring-guide.md`](map-scale-authoring-guide.md) 与 [`map-scale-authoring-starter.html`](map-scale-authoring-starter.html)。
 
@@ -95,3 +95,20 @@ flowchart TD
 - `PartitionChunk` 只用于空间分区/AOI/query；不要拿它解释 terrain/navmesh tile。
 - `MacroTile` 只用于 IO/寻址宏块和世界范围 authoring；不要拿它解释 streaming chunk 或 terrain chunk。
 - 障碍数据源仍使用 `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState`。
+
+## 四域归位目标键位（#1567）
+
+空间配置按世界/板/导航/执行四域归位后，authoring 键位与 owner 如下；各切合入前现状键仍生效，旧键在新键生效后 fail-fast。
+
+| 域 | 目标键 | 单位 | 含义 | 取代的现状键 |
+|---|---|---|---|---|
+| 世界 | map `World.WidthCm` / `World.HeightCm` | cm | 世界唯一尺寸；宏块数由此派生，不再 authoring | `Boards[].WidthInMacroTiles/HeightInMacroTiles` × `GridCellSizeCm`；game.json `worldWidthInMacroTiles` 三件套 |
+| 世界 | `World.Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | cells / 个 | 世界层分区与 streaming 预算，缺省由引擎推导 | `Boards[].ChunkSizeCells` / `LoadedChunkCapacity` |
+| 板 | `Boards[].WidthCells/HeightCells` + `CellSizeCm` | cells | Grid 板范围（格子数直写） | 宏块数 × 256 换算 |
+| 板 | `Boards[].WidthHexes/HeightHexes` + `HexEdgeLengthCm` | hexes | Hex 板范围，世界足迹经 `HexMetrics` 派生 | 同上（含借 `GridCellSizeCm` 算 hex 板足迹的现状做法） |
+| 板 | `Boards[].OriginXCm` / `OriginYCm` | cm | 板摆在世界坐标哪里，缺省居中；越出世界 fail-fast | 板恒居中（无 origin 字段） |
+| 导航 | navmesh.json `boards.<name>.source` | —— | 烘焙源（.height 直采 / .grid / .hex），板是可选源之一 | bake 从板 LogicTerrain 投影的现状链路（#1350 直采方向） |
+| 导航 | navmesh.json `boards.<name>.tileWorldWidthCm/HeightCm` | cm | nav 瓦片颗粒度，显式两轴，不从板或地形块推导 | `Boards[].NavTileGrid`（与 TerrainChunk 64-cell 的焊接） |
+| 执行 | `MassNavigationConfig.json` 各键 | cm | 不变 | —— |
+
+四域边界三句话：世界尺寸不由板决定；板是业务区域不是性能分区；nav 瓦片颗粒度与板无关。
