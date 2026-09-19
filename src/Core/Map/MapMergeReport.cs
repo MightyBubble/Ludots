@@ -34,6 +34,22 @@ namespace Ludots.Core.Map
             _deletionsNotFound.Add((mapId, instanceId, source));
         }
 
+        private readonly List<(string MapId, string Name, string Source)> _variableDeletions = new();
+        private readonly List<(string MapId, string Name, string Source)> _variableDeletionsNotFound = new();
+
+        public IReadOnlyList<(string MapId, string Name, string Source)> VariableDeletions => _variableDeletions;
+        public IReadOnlyList<(string MapId, string Name, string Source)> VariableDeletionsNotFound => _variableDeletionsNotFound;
+
+        public void RecordVariableDeletion(string mapId, string name, string source)
+        {
+            _variableDeletions.Add((mapId, name, source));
+        }
+
+        public void RecordVariableDeletionNotFound(string mapId, string name, string source)
+        {
+            _variableDeletionsNotFound.Add((mapId, name, source));
+        }
+
         public void RecordAnonymousNonBaseFragment(string mapId, int entityIndex, string source)
         {
             _anonymousNonBaseFragments.Add((mapId, entityIndex, source));
@@ -44,6 +60,8 @@ namespace Ludots.Core.Map
             _deletions.Clear();
             _deletionsNotFound.Clear();
             _winners.Clear();
+            _variableDeletions.Clear();
+            _variableDeletionsNotFound.Clear();
             _anonymousNonBaseFragments.Clear();
         }
 

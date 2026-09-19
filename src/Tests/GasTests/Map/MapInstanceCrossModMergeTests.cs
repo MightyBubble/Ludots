@@ -659,6 +659,164 @@ namespace Ludots.Tests.GAS
             Assert.That(span2[0].Kind, Is.EqualTo(RelationshipChangeKind.LinkRemoved), "RemoveLink 落 LinkRemoved 记录");
         }
         [Test]
+        public void CrossMod_VariableTombstone_DeletesAndRevives()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "Ludots_1554_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                WriteMod(root, "ModA",
+                """
+                {
+                  "id": "harbor",
+                  "variables": [
+                    { "name": "killCount", "type": "int", "initial": 0 },
+                    { "name": "morale", "type": "float", "initial": 75.5 }
+                  ],
+                  "entities": []
+                }
+                """);
+                WriteMod(root, "ModC",
+                """
+                {
+                  "id": "harbor",
+                  "variables": [
+                    { "name": "killCount", "__delete": true }
+                  ]
+                }
+                """);
+
+                MapManager manager = CreateManager(root, "ModA", "ModC");
+                MapConfig merged = manager.LoadMap("harbor")!;
+                Assert.That(merged.Variables.Count, Is.EqualTo(1), "变量墓碑删除 killCount");
+                Assert.That(merged.Variables[0].Name, Is.EqualTo("morale"));
+                Assert.That(manager.LastMergeReport.VariableDeletions.Count, Is.EqualTo(1));
+
+                // 复活：更晚片段重新声明
+                WriteMod(root, "ModE",
+                """
+                {
+                  "id": "harbor",
+                  "variables": [
+                    { "name": "killCount", "type": "int", "initial": 10 }
+                  ]
+                }
+                """);
+                MapManager manager2 = CreateManager(root, "ModA", "ModC", "ModE");
+                MapConfig merged2 = manager2.LoadMap("harbor")!;
+                Assert.That(merged2.Variables.Single(v => v.Name == "killCount").Initial, Is.EqualTo(10), "更晚声明 = 撤销墓碑复活");
+                Assert.That(manager2.LastMergeReport.VariableDeletions.Count, Is.EqualTo(0));
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        [Test]
+        public void Inheritance_VariableTombstoneInChild_DeletesParentVariable()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "Ludots_1554_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Maps"));
+                File.WriteAllText(Path.Combine(root, "Maps", "base.json"),
+                """
+                {
+                  "id": "base",
+                  "variables": [ { "name": "killCount", "type": "int", "initial": 0 } ]
+                }
+                """);
+                File.WriteAllText(Path.Combine(root, "Maps", "child.json"),
+                """
+                {
+                  "id": "child",
+                  "parentId": "base",
+                  "variables": [ { "name": "killCount", "__delete": true } ]
+                }
+                """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var trigger = new TriggerManager();
+                var modLoader = new ModLoader(vfs, new FunctionRegistry(), trigger);
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+                var manager = new MapManager(vfs, trigger, modLoader, pipeline);
+
+                MapConfig merged = manager.LoadMap("child")!;
+                Assert.That(merged.Variables.Count, Is.EqualTo(0), "子图变量墓碑命中父图声明");
+                Assert.That(manager.LastMergeReport.VariableDeletions.Count, Is.EqualTo(1));
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        [Test]
+        public void CrossMod_VariableTypeChange_FailsFast()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "Ludots_1554_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                WriteMod(root, "ModA",
+                """
+                {
+                  "id": "harbor",
+                  "variables": [ { "name": "morale", "type": "int", "initial": 75 } ],
+                  "entities": []
+                }
+                """);
+                WriteMod(root, "ModB",
+                """
+                {
+                  "id": "harbor",
+                  "variables": [ { "name": "morale", "type": "float", "initial": 75.5 } ]
+                }
+                """);
+
+                MapManager manager = CreateManager(root, "ModA", "ModB");
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("harbor"))!;
+                Assert.That(ex.Message, Does.Contain("morale"));
+                Assert.That(ex.Message, Does.Contain("type"));
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        [Test]
+        public void CrossMod_VariableSameType_LaterInitialWins()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "Ludots_1554_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                WriteMod(root, "ModA",
+                """
+                {
+                  "id": "harbor",
+                  "variables": [ { "name": "killCount", "type": "int", "initial": 0 } ],
+                  "entities": []
+                }
+                """);
+                WriteMod(root, "ModB",
+                """
+                {
+                  "id": "harbor",
+                  "variables": [ { "name": "killCount", "type": "int", "initial": 42 } ]
+                }
+                """);
+
+                MapManager manager = CreateManager(root, "ModA", "ModB");
+                MapConfig merged = manager.LoadMap("harbor")!;
+                Assert.That(merged.Variables.Single(v => v.Name == "killCount").Initial, Is.EqualTo(42), "同型后写 initial 赢");
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+        [Test]
         public void RelationEvents_RegisteredAsMapScopedPresetEvents()
         {
             Assert.That(GameEvents.IsMapScoped(GameEvents.RelationLinkAdded.Value), Is.True);

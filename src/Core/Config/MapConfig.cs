@@ -27,6 +27,10 @@ namespace Ludots.Core.Config
         [JsonIgnore]
         public List<(string InstanceId, string Source)>? PendingEntityTombstones { get; set; }
 
+        /// <summary>装载管线内部的待决变量墓碑（name + 来源标注）。与实体墓碑同语义：继承链展开后统一消化。</summary>
+        [JsonIgnore]
+        public List<(string Name, string Source)>? PendingVariableTombstones { get; set; }
+
         public string ParentId { get; set; }
         public Dictionary<string, string> Dependencies { get; set; } = new Dictionary<string, string>();
         public string ContinuousHeightmapAsset { get; set; }
@@ -86,19 +90,6 @@ namespace Ludots.Core.Config
         /// load (MapManager); the per-session store is built by MapSession (Ludots.Core.Gameplay.MapTriggers).
         /// </summary>
         public List<MapVariableDeclaration> Variables { get; set; } = new List<MapVariableDeclaration>();
-
-        /// <summary>
-        /// Placed-instance exposure policy for graph authoring (#1108): "all" (default)
-        /// exposes every placed instance; "declared" narrows variable materialization to
-        /// <see cref="WatchedInstances"/>. The declared branch fails closed at map load
-        /// until the HITL threshold decision lands; it never narrows #1106 event subscription.
-        /// </summary>
-        public string InstanceExposure { get; set; }
-
-        /// <summary>
-        /// Watch-list backing the "declared" <see cref="InstanceExposure"/> policy (#1108).
-        /// </summary>
-        public List<string> WatchedInstances { get; set; } = new List<string>();
 
         /// <summary>
         /// Data-declared death rule: when the declared attribute's current value reaches

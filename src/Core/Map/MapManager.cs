@@ -72,7 +72,7 @@ namespace Ludots.Core.Map
             var visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var chain = new List<string>(8);
             MapConfig config = LoadMapInternal(mapId, visiting, chain);
-            ResolvePendingEntityTombstones(config);
+            ResolvePendingTombstones(config);
             return config;
         }
 
@@ -364,13 +364,34 @@ namespace Ludots.Core.Map
             // Merge Variables (later fragment / child map replaces same-name declaration)
             if (source.Variables != null && source.Variables.Count > 0)
             {
+                string varSourceLabel = MapMergeReport.DescribeSource(source.MergeSourceUri, "<unknown-fragment>");
                 foreach (var sourceVariable in source.Variables)
                 {
-                    string name = (sourceVariable.Name ?? string.Empty).Trim();
+                    if (sourceVariable == null)
+                    {
+                        continue;
+                    }
+
+                    string name = sourceVariable.Name ?? string.Empty;
+                    if (sourceVariable.Delete == true)
+                    {
+                        target.PendingVariableTombstones ??= new List<(string, string)>();
+                        target.PendingVariableTombstones.Add((name, varSourceLabel));
+                        continue;
+                    }
+
+                    // 同名重新声明撤销先前变量墓碑（复活）。
+                    target.PendingVariableTombstones?.RemoveAll(t => string.Equals(t.Name, name, StringComparison.Ordinal));
                     int existing = target.Variables.FindIndex(v =>
-                        string.Equals((v.Name ?? string.Empty).Trim(), name, StringComparison.Ordinal));
+                        string.Equals(v.Name ?? string.Empty, name, StringComparison.Ordinal));
                     if (existing >= 0)
                     {
+                        if (target.Variables[existing].Type != sourceVariable.Type)
+                        {
+                            throw new InvalidOperationException(
+                                $"Map '{target.Id}' fragment '{varSourceLabel}' redeclares variable '{name}' with type {sourceVariable.Type} (was {target.Variables[existing].Type}); cross-fragment type changes are contract breaks, delete-then-redeclare instead.");
+                        }
+
                         target.Variables[existing] = sourceVariable;
                     }
                     else
@@ -379,32 +400,56 @@ namespace Ludots.Core.Map
                     }
                 }
             }
+
+            if (source.PendingVariableTombstones != null && source.PendingVariableTombstones.Count > 0)
+            {
+                target.PendingVariableTombstones ??= new List<(string, string)>();
+                target.PendingVariableTombstones.AddRange(source.PendingVariableTombstones);
+            }
         }
 
         /// <summary>
         /// 墓碑在继承链展开后才消化：TryRemove 命中记 Deleted、未命中记 DeletionsNotFound。
         /// 此时父图实体已合入，子图墓碑可正确命中父图实例（继承方向的删除语义）。
         /// </summary>
-        private void ResolvePendingEntityTombstones(MapConfig config)
+        private void ResolvePendingTombstones(MapConfig config)
         {
-            if (config.PendingEntityTombstones == null || config.PendingEntityTombstones.Count == 0)
+            if (config.PendingEntityTombstones != null && config.PendingEntityTombstones.Count > 0)
             {
-                return;
+                foreach (var (instanceId, sourceLabel) in config.PendingEntityTombstones)
+                {
+                    if (TryRemoveEntityById(config, instanceId))
+                    {
+                        LastMergeReport.RecordDeletion(config.Id, instanceId, sourceLabel);
+                    }
+                    else
+                    {
+                        LastMergeReport.RecordDeletionNotFound(config.Id, instanceId, sourceLabel);
+                    }
+                }
+
+                config.PendingEntityTombstones.Clear();
             }
 
-            foreach (var (instanceId, sourceLabel) in config.PendingEntityTombstones)
+            if (config.PendingVariableTombstones != null && config.PendingVariableTombstones.Count > 0)
             {
-                if (TryRemoveEntityById(config, instanceId))
+                foreach (var (name, sourceLabel) in config.PendingVariableTombstones)
                 {
-                    LastMergeReport.RecordDeletion(config.Id, instanceId, sourceLabel);
+                    int index = config.Variables.FindIndex(v =>
+                        string.Equals(v.Name ?? string.Empty, name, StringComparison.Ordinal));
+                    if (index >= 0)
+                    {
+                        config.Variables.RemoveAt(index);
+                        LastMergeReport.RecordVariableDeletion(config.Id, name, sourceLabel);
+                    }
+                    else
+                    {
+                        LastMergeReport.RecordVariableDeletionNotFound(config.Id, name, sourceLabel);
+                    }
                 }
-                else
-                {
-                    LastMergeReport.RecordDeletionNotFound(config.Id, instanceId, sourceLabel);
-                }
-            }
 
-            config.PendingEntityTombstones.Clear();
+                config.PendingVariableTombstones.Clear();
+            }
         }
 
         /// <summary>
