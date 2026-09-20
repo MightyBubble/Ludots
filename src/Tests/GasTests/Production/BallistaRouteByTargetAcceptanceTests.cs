@@ -92,8 +92,26 @@ namespace Ludots.Tests.GAS
             public Entity Resolve(string instanceId)
             {
                 var session = Engine.CurrentMapSession ?? throw new InvalidOperationException("map not loaded");
-                return session.EntityIndex.GetRequired(
+                var e = session.EntityIndex.GetRequired(
                     session.MapId.Value, instanceId, "BallistaRoute");
+                if (instanceId == "ballista_1")
+                {
+                    SeedActiveCollection(e);
+                }
+                return e;
+            }
+
+            private void SeedActiveCollection(Entity ballista)
+            {
+                var store = Engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                    as Ludots.Core.EntityCollections.EntityCollectionStore
+                    ?? throw new InvalidOperationException("collection store missing");
+                int keyId = store.KeyRegistry.Register("collection.command.source");
+                var descriptor = Ludots.Core.EntityCollections.EntityCollectionDescriptor.Create(
+                    "collection.command.source",
+                    Ludots.Core.EntityCollections.EntityCollectionSourceKind.Explicit,
+                    Ludots.Core.EntityCollections.EntityCollectionRoleKind.CommandSource);
+                store.Replace(ballista, keyId, in descriptor, new[] { ballista }, ballista);
             }
 
             public Entity Spawn(string kind, int xCm, int yCm)
@@ -213,6 +231,7 @@ namespace Ludots.Tests.GAS
                 {
                     if (mounts[i] is not Ludots.Core.Gameplay.MapTriggers.TriggerGraphMountTrigger graphMount) continue;
                     var context = new Ludots.Core.Scripting.ScriptContext();
+                    context.Set(CoreServiceKeys.Engine, Engine);
                     context.Set(CoreServiceKeys.MapId, session.MapId);
                     context.Set(CoreServiceKeys.MapSession, session);
                     context.Set(Ludots.Core.Scripting.MapTriggerEventPayloadKeys.Rep, graphMount.Scope);

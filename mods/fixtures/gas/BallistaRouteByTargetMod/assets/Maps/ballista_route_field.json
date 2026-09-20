@@ -49,5 +49,6 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "ballista_1"
     }
-  ]
+  ],
+  "ContinuousHeightmapAsset": "assets/terrain/ballista_flat.height"
 }
