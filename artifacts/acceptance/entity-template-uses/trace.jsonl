@@ -1,0 +1,19 @@
+{"t":0,"event":"load","path":"Entities/templates.json","entries":["test.block.mortal","test.block.selectable","test.tpl.archer","test.tpl.recruit"],"order":"ArrayById同id合并 -> extends/uses折叠 -> 校验"}
+{"t":1,"event":"fold","template":"elite","uses":["block.a","block.b"],"rule":"声明越靠后优先级越高,自身components永远最高","impl":"一次性私有克隆链,注册表共享块只读"}
+{"t":2,"event":"fold.assert","template":"elite","field":"AttributeBuffer.base.Health","writers":"block.a(100) -> block.b(220)","expected":220,"actual":220,"passed":true}
+{"t":3,"event":"fold.assert","template":"elite","field":"AttributeBuffer.current.Health","note":"block.b未提及,留底继承block.a","expected":80,"actual":80,"passed":true}
+{"t":4,"event":"fold.assert","template":"hero","scenario":"extends打底->uses覆盖->自身","field":"AttributeBuffer.base.Health","layers":"unit(50)/block.elite(150)/self(300)","expected":300,"actual":300,"passed":true}
+{"t":5,"event":"fold.assert","template":"champion","scenario":"自身静默","field":"AttributeBuffer.base.Health","expected":150,"note":"块覆盖extends父打底","actual":150,"passed":true}
+{"t":6,"event":"fold.assert","template":"elite","field":"TriggerGraphs","expected":["graph.shared","graph.a","graph.b","graph.elite"],"note":"跨块追加+精确去重","actual":["graph.shared","graph.a","graph.b","graph.elite"],"passed":true}
+{"t":7,"event":"fold.assert","template":"elite","field":"Children","expected":["chassis","flag_bearer","rider"],"note":"块child条目克隆不共享实例","passed":true}
+{"t":8,"event":"replace.marker","case":"block.zone(circle)+block.yard(rect __replace:true)","outcome":"整组件替换,radiusCm不残留,标记剥离","passed":true}
+{"t":9,"event":"fold.guard","case":"未知块","input":"hero uses missing_block","outcome":"启动失败,错误含双方id","passed":true}
+{"t":10,"event":"fold.guard","case":"混合环","input":"a extends b; b uses a | x uses y; y uses x | s uses s","outcome":"启动失败,cycle detected","passed":true}
+{"t":11,"event":"conflict.report","template":"elite","component":"AttributeBuffer","chain":"block.a -> block.b -> self","note":"同组件多源写入留痕;单一写入者不记录","passed":true}
+{"t":12,"event":"idempotency","case":"二次ExpandAll","outcome":"uses已清空,无变化;块内容快照比对不变","passed":true}
+{"t":13,"event":"spawn","template":"test.tpl.archer","Team.Id":9,"note":"自身胜块值2;Name=BlockMortal/WorldPosition/Facing自块继承","passed":true}
+{"t":14,"event":"spawn","template":"test.tpl.recruit","Team.Id":2,"note":"自身静默时块值生效——与逐块merge进template错误实现的分水岭","passed":true}
+{"t":15,"event":"spawn","template":"test.block.mortal","Team":"absent","note":"块不受使用者折叠污染,直接布阵仍可用","passed":true}
+{"t":16,"event":"suite","name":"GasTests.EntityTemplateUsesTests","passed":15,"failed":0}
+{"t":17,"event":"suite","name":"GasTests.EntityTemplateInheritanceTests","passed":12,"failed":0,"note":"#1573不回归"}
+{"t":18,"event":"suite","name":"GasTests.MapTriggerRegionTests","passed":39,"failed":0}
