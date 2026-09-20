@@ -2112,6 +2112,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandIntents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -2240,6 +2241,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -2387,6 +2389,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -2572,6 +2575,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -2704,6 +2708,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -2817,6 +2822,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -2984,6 +2990,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -3119,6 +3126,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -3229,6 +3237,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -3352,6 +3361,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -3380,6 +3390,117 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 "An entity-only route must not attach an unrelated ground target that changes the command shape.");
         }
 
+        [Test]
+        public void CommandIntentRouting_ByAbilityCategorySlot_LandsCastOrderOnCategorySlot()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        IsSkillMapping = false,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create(new Ludots.Core.Gameplay.Components.PlayerIdentity { PlayerId = 1 });
+            Entity hostileOwner = world.Create(new Ludots.Core.Gameplay.Components.PlayerIdentity { PlayerId = 3 });
+            var profileHarness = CommandIntentProfileTests.Harness.Create(world);
+            profileHarness.InstallStandardProfile();
+            profileHarness.Relationships.EnsureLink(localPlayer, hostileOwner, profileHarness.HostileTypeId);
+
+            // Actor: slot 0 is a category-less filler, slot 1 carries the weapon ability —
+            // slot landing must find slot 1, not slot 0.
+            Entity actor = profileHarness.CreateActor(localPlayer, 9999, CommandIntentProfileTests.WeaponAbilityId);
+            Entity target = profileHarness.CreateTaggedEntity(hostileOwner, CommandIntentProfileTests.DestructibleTag);
+
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.CommandActionId = "Command";
+            system.SetSolePossessedActor(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1 : key == "moveTo" ? 2 : 0);
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(100f, 0f, 200f);
+                return true;
+            });
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
+            {
+                list.Add(actor);
+                rejection = OrderSubmitResult.Activated;
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
+            system.SetCommandIntentTargetFactsProvider((InputOrderMapping _, out CommandIntentTargetFacts facts) =>
+            {
+                facts = new CommandIntentTargetFacts(target, HasEntity: true);
+                return true;
+            });
+
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = actor,
+                CommandIntentProfileId = profileHarness.ProfileId(CommandIntentProfileTests.TestProfileId),
+                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+            });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.all_together",
+                Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+            }));
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(localPlayer, in descriptor, new[] { actor }, localPlayer);
+            system.SetCommandIntentRouting(
+                world,
+                contextProfiles,
+                profileHarness.Intents,
+                dispatch,
+                collections,
+                NewLandingAbilityRegistry(),
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
+                });
+            PlantPlayerInteractionPref(world, localPlayer, profileHarness.Intents, dispatch, CommandIntentProfileTests.TestProfileId, "dispatch.all_together");
+
+            system.Update(0f);
+
+            Assert.That(orders, Has.Count.EqualTo(1), "The weapon rule (destructible target) must submit exactly one routed order.");
+            Order order = orders[0];
+            TestContext.Out.WriteLine($"[Q2] order type={order.OrderTypeId} slot(I0)={order.Args.I0} target={order.Target.Id}");
+            Assert.Multiple(() =>
+            {
+                Assert.That(order.OrderTypeId, Is.EqualTo(profileHarness.CastAbilityOrderId), "Routed order type is castAbility.");
+                Assert.That(order.Args.I0, Is.EqualTo(1), "Slot landing must pick the weapon slot (1), skipping the category-less filler at slot 0.");
+                Assert.That(order.Target, Is.EqualTo(target), "Routed order carries the destructible entity target.");
+            });
+        }
+
         private static void SetGroundCommandTargetFactsProvider(InputOrderMappingSystem system)
         {
             system.SetCommandIntentTargetFactsProvider((InputOrderMapping _, out CommandIntentTargetFacts facts) =>
@@ -3406,6 +3527,19 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 intents.ProfileIdRegistry.Register(intentId),
                 dispatch.ProfileIdRegistry.GetId(dispatchProfileId));
             world.Add(rep, pref);
+        }
+
+        /// <summary>
+        /// Ability catalog for byAbilityCategory slot landing in routing tests: the standard
+        /// profile's garrison/weapon categories plus a category-less filler id.
+        /// </summary>
+        private static Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry NewLandingAbilityRegistry()
+        {
+            var abilities = new Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry();
+            CommandIntentProfileTests.Harness.RegisterAbility(abilities, 9999, "ability.catalog.filler_none");
+            CommandIntentProfileTests.Harness.RegisterAbility(abilities, CommandIntentProfileTests.GarrisonAbilityId, CommandIntentProfileTests.GarrisonAbilityTag);
+            CommandIntentProfileTests.Harness.RegisterAbility(abilities, CommandIntentProfileTests.WeaponAbilityId, CommandIntentProfileTests.WeaponAbilityTag);
+            return abilities;
         }
 
         /// <summary>

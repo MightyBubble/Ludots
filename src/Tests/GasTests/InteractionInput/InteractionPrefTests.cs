@@ -431,6 +431,7 @@ namespace Ludots.Tests.GAS
                     intents.Intents,
                     harness.Dispatch,
                     collections,
+                    intents.Abilities,
                     (out Entity owner) =>
                     {
                         owner = rep;
