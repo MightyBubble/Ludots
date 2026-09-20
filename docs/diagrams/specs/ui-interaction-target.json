@@ -1,0 +1,151 @@
+{
+  "name": "ui-interaction-target",
+  "title": "UI 交互链目标态：打开 UI = 激活 context，面板只是哑视图",
+  "subtitle": "统一收口阶段 1/2（#1585 / #1586）· 输入状态与 UI 无关 · 手柄热插拔不乱",
+  "canvas": { "width": 1500, "height": 1220 },
+  "legend": {
+    "title": "角色",
+    "x": 40,
+    "y": 132,
+    "width": 230,
+    "items": [
+      { "label": "刺激（View 侧）", "tint": "steel" },
+      { "label": "门控（实体状态）", "tint": "mauve" },
+      { "label": "图（Controller）", "tint": "teal" },
+      { "label": "落账", "tint": "stone" },
+      { "label": "面板 View", "tint": "sand" },
+      { "label": "只读投影（虚线）", "style": "line", "line": "dashed", "color": "#8a94a3" }
+    ]
+  },
+  "groups": [
+    {
+      "id": "uictx",
+      "title": "UI context 门控（挂 rep 实体）",
+      "x": 60,
+      "y": 430,
+      "w": 1030,
+      "h": 150,
+      "tint": "mauve",
+      "border_style": "dashed"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "btn",
+      "title": "面板按钮",
+      "tint": "steel",
+      "x": 330,
+      "y": 150,
+      "w": 380,
+      "h": 110,
+      "items": ["markup / compose 皮 Button 控件", "命中 → PanelEventDispatcher.FireFromSeat"]
+    },
+    {
+      "id": "pad",
+      "title": "手柄焦点 + 确认",
+      "tint": "steel",
+      "x": 750,
+      "y": 150,
+      "w": 370,
+      "h": 110,
+      "items": ["dpad / 摇杆挪焦点（View 状态）", "确认键才产语义动作（payload 带 focusId）"]
+    },
+    {
+      "id": "mouse",
+      "title": "键鼠 hover + 点击",
+      "tint": "steel",
+      "x": 1140,
+      "y": 150,
+      "w": 310,
+      "h": 110,
+      "items": ["指点 payload（位置）", "与按键 payload 在图内归一"]
+    },
+    {
+      "id": "action",
+      "title": "语义动作（eventId 即 action id · 归因 seat）",
+      "tint": "steel",
+      "x": 400,
+      "y": 300,
+      "w": 700,
+      "h": 90,
+      "items": ["default_input.json 同一张表（source: panel）", "准入 = 面板可见三轴 + 活跃 context bindings"]
+    },
+    {
+      "id": "profile",
+      "title": "UI context profile（定义 · 静）",
+      "tint": "mauve",
+      "x": 100,
+      "y": 470,
+      "w": 480,
+      "h": 90,
+      "items": ["bindings 门控 UI 动作", "指针路由声明（输入语义归状态定义）"]
+    },
+    {
+      "id": "instance",
+      "title": "InteractionContextInstance（实例 · 实体上）",
+      "tint": "mauve",
+      "x": 610,
+      "y": 470,
+      "w": 460,
+      "h": 90,
+      "items": ["唯一交互状态：菜单开着 = 它活着", "定义文件里禁止出现激活边"]
+    },
+    {
+      "id": "host",
+      "title": "宿主（Raylib / Web）",
+      "tint": "graphite",
+      "x": 1160,
+      "y": 420,
+      "w": 300,
+      "h": 170,
+      "items": ["只读投影：查该 seat 活跃链", "最顶层声明指针路由的 context", "UiCaptured / UiWheelCaptured 退役"]
+    },
+    {
+      "id": "graph",
+      "title": "图（Controller）",
+      "tint": "teal",
+      "x": 380,
+      "y": 620,
+      "w": 740,
+      "h": 110,
+      "items": ["打开菜单 = ActivateContext(ui.menu) + ShowPanel（两个现网 op）", "事件消费图（A 支）：写对话选择 / 设置值", "浏览器控件汇入同一事件桥，不开第二准入路"]
+    },
+    {
+      "id": "store",
+      "title": "落账（单写者）",
+      "tint": "stone",
+      "x": 380,
+      "y": 770,
+      "w": 740,
+      "h": 90,
+      "items": ["对话选择 · 设置值 · 集合", "context 退 → scope 整组清，面板无孤儿"]
+    },
+    {
+      "id": "panelview",
+      "title": "面板（View · 只订阅）",
+      "tint": "sand",
+      "x": 380,
+      "y": 910,
+      "w": 740,
+      "h": 100,
+      "items": ["订阅 ContextActivated / 集合成员事件", "按 scheme 重渲染：焦点环 / 轮盘 / hover", "模板不声明交互拓扑，scope 由实例绑定传入"]
+    }
+  ],
+  "edges": [
+    { "from": "btn", "to": "action", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "pad", "to": "action", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "mouse", "to": "action", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "action", "to": "uictx", "route": "elbow", "from_side": "bottom", "to_side": "top", "label": "门控" },
+    { "from": "profile", "to": "instance", "route": "elbow", "from_side": "right", "to_side": "left", "label": "实例引用定义" },
+    { "from": "instance", "to": "host", "route": "elbow", "from_side": "right", "to_side": "left", "style": "dashed", "label": "只读投影" },
+    { "from": "uictx", "to": "graph", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "graph", "to": "store", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "store", "to": "panelview", "route": "elbow", "from_side": "bottom", "to_side": "top", "label": "订阅" },
+    { "from": "graph", "to": "instance", "route": "curve", "rad": -0.25, "style": "dashed", "label": "激活" }
+  ],
+  "notes": [
+    { "text": "热插拔：换 scheme 只重解析「键 → 语义」表；context 实例不动 —— 菜单还开着、选中还在，面板按新 scheme 重画一遍", "x": 70, "y": 1070, "ha": "left" },
+    { "text": "MVC 分工：Model = 世界状态（对话进度/集合/属性）；View = 面板；Controller = 图 + context 激活。输入路由只读实体状态，不读 UI 可见性", "x": 70, "y": 1100, "ha": "left" },
+    { "text": "忘了 ActivateContext 的面板 = 可见但按钮全哑（UI 动作不在 bindings）—— 失败可观察，不需要引擎发明配对校验", "x": 70, "y": 1130, "ha": "left" }
+  ]
+}

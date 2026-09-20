@@ -36,7 +36,8 @@
     { href: "gallery.html", label: "Showcase 画廊", page: "gallery" },
     { href: "tests.html", label: "测试与验收", page: "tests" },
     { href: "diagrams.html", label: "架构图库", page: "diagrams" },
-    { href: "panels.html", label: "面板矩阵", page: "panels" }
+    { href: "panels.html", label: "面板矩阵", page: "panels" },
+    { href: "input-ui.html", label: "输入与 UI", page: "inputui" }
   ];
 
   /* docs 文档页侧栏目录（原 31 页各自硬编码的 navData 收敛于此；
