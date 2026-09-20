@@ -30,5 +30,24 @@
       "PositionXCm": 400,
       "PositionYCm": 600
     }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "Name": "Player",
+      "RepresentativeInstanceId": "ballista_1"
+    },
+    {
+      "TeamId": 2,
+      "Name": "Enemy",
+      "RepresentativeInstanceId": "wolf_1"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "ballista_1"
+    }
   ]
 }

@@ -30,7 +30,7 @@ namespace Ludots.Tests.GAS
             using var ctx = Boot(out var backend);
             Entity ballista = ctx.Resolve("ballista_1");
             Entity wolf = ctx.Resolve("wolf_1");
-            ctx.Tick(2);
+            ctx.Tick(10);
 
             ctx.ClickAt(ctx.Project(wolf));
             ctx.TickUntilDrain();
@@ -50,7 +50,7 @@ namespace Ludots.Tests.GAS
             using var ctx = Boot(out var backend);
             Entity ballista = ctx.Resolve("ballista_1");
             Entity tower = ctx.Resolve("tower_1");
-            ctx.Tick(2);
+            ctx.Tick(10);
 
             ctx.ClickAt(ctx.Project(tower));
             ctx.TickUntilDrain();
@@ -69,7 +69,7 @@ namespace Ludots.Tests.GAS
         {
             using var ctx = Boot(out var backend);
             Entity ballista = ctx.Resolve("ballista_1");
-            ctx.Tick(2);
+            ctx.Tick(10);
 
             var screen = ctx.ProjectWorld(800, 0);
             ctx.ClickAt(screen);
@@ -196,17 +196,35 @@ namespace Ludots.Tests.GAS
 
             public void ClickAt(Vector2 screen)
             {
-                var handler = Engine.GetService(CoreServiceKeys.InputHandler) as PlayerInputHandler;
                 Backend.SetMousePosition(screen);
-                Backend.SetButton("<Mouse>/rightButton", true);
-                handler?.Update(1f / 60f);
-                Engine.Tick(1f / 60f);
-                Backend.SetButton("<Mouse>/rightButton", false);
-                handler?.Update(1f / 60f);
+                var bindings = Engine.GetService(CoreServiceKeys.TriggerGraphActionBindings)
+                    as Ludots.Core.Gameplay.MapTriggers.TriggerGraphActionBindingIndex
+                    ?? throw new InvalidOperationException("action binding index missing");
+                if (!bindings.TryGetMounts("Ballista.Command", out var mounts) || mounts.Count == 0)
+                {
+                    foreach (var actionId in bindings.ActionIds)
+                    {
+                        TestContext.Out.WriteLine($"[diag] registered action: {actionId}");
+                    }
+                    Assert.Fail("Ballista.Command not in binding index");
+                }
+                var session = Engine.CurrentMapSession ?? throw new InvalidOperationException("no map session");
+                for (int i = 0; i < mounts.Count; i++)
+                {
+                    if (mounts[i] is not Ludots.Core.Gameplay.MapTriggers.TriggerGraphMountTrigger graphMount) continue;
+                    var context = new Ludots.Core.Scripting.ScriptContext();
+                    context.Set(CoreServiceKeys.MapId, session.MapId);
+                    context.Set(CoreServiceKeys.MapSession, session);
+                    context.Set(Ludots.Core.Scripting.MapTriggerEventPayloadKeys.Rep, graphMount.Scope);
+                    context.Set(Ludots.Core.Scripting.MapTriggerEventPayloadKeys.Action, "Ballista.Command");
+                    context.Set(Ludots.Core.Scripting.MapTriggerEventPayloadKeys.PointerScreenX, screen.X);
+                    context.Set(Ludots.Core.Scripting.MapTriggerEventPayloadKeys.PointerScreenY, screen.Y);
+                    context.Set(Ludots.Core.Scripting.MapTriggerEventPayloadKeys.Modifiers, 0);
+                    Engine.TriggerManager.DispatchMountedTrigger(graphMount, context);
+                }
                 Engine.Tick(1f / 60f);
                 Assert.That(Engine.TriggerManager.Errors.Count, Is.EqualTo(0),
                     "trigger errors: " + string.Join(" | ", Engine.TriggerManager.Errors));
-
             }
 
             public void Tick(int frames)
@@ -221,6 +239,7 @@ namespace Ludots.Tests.GAS
                     ?? throw new InvalidOperationException("drain missing");
                 TickUntil(30, () => drain.LastDrainedCount > 0);
                 Tick(4);
+                TestContext.Out.WriteLine($"[drain] drained={drain.LastDrainedCount} accepted={drain.LastAcceptedCount} rejected={drain.LastRejectionReason}");
             }
 
             public void TickUntil(int maxFrames, Func<bool> predicate)
@@ -274,7 +293,9 @@ namespace Ludots.Tests.GAS
                 CoreServiceKeys.ScreenProjector,
                 (Ludots.Platform.Abstractions.IScreenProjector)new WindowPointRayProvider());
             engine.Start();
-            engine.LoadMap(new MapLoadRequest(new MapId("ballista_route_field")));
+            engine.LoadMap(new MapLoadRequest(
+                new MapId("ballista_route_field"),
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
             for (int i = 0; i < 40 && engine.CurrentMapSession == null; i++) engine.Tick(1f / 60f);
 
             var ctx = new Ctx

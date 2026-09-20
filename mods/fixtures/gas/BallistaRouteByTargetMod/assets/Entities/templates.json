@@ -26,6 +26,9 @@
       "DirtyFlags": {},
       "PlayerOwner": {
         "PlayerId": 1
+      },
+      "PlayerIdentity": {
+        "PlayerId": 1
       }
     },
     "initialInteractionContext": "interaction.context.ballista"
