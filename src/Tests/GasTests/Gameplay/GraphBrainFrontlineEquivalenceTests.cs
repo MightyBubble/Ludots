@@ -71,7 +71,6 @@ namespace Ludots.Tests.GAS
                 types,
                 new Ludots.Core.Gameplay.Relationships.RelationshipMetricRegistry(),
                 new Ludots.Core.Gameplay.Relationships.RelationshipFlagRegistry(),
-                new Ludots.Core.Gameplay.Relationships.RelationshipReasonRegistry(),
                 new Ludots.Core.Gameplay.GAS.TargetDispatchPresetRegistry(),
                 entityTemplateKeys: templateKeys,
                 orderTypes: orderTypes);

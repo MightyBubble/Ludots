@@ -38,6 +38,8 @@ namespace Ludots.Core.Gameplay.GAS.Registry
 
         public static void Freeze() => Table.Freeze();
 
+        public static int Count => Table.Count;
+
         public static int Register(string name) => Table.Register(name);
 
         public static int GetId(string name) => Table.GetId(name);

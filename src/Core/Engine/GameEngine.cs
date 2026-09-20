@@ -2181,6 +2181,12 @@ namespace Ludots.Core.Engine
                 CoreServiceKeys.StoryPresentationProjector,
                 new StoryPresentationProjector(storyDefinitions));
             AttributeRegistry.Freeze();
+            var gasCapacityPlan = Ludots.Core.Gameplay.GAS.GasLoadTimeCapacityPlan.Freeze(
+                Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Count,
+                Ludots.Core.Gameplay.GAS.Registry.TagRegistry.Count,
+                Ludots.Core.Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS,
+                Ludots.Core.Gameplay.GAS.Components.GameplayTagContainer.MAX_TAG_ID + 1);
+            SetService(CoreServiceKeys.GasLoadTimeCapacityPlan, gasCapacityPlan);
             _cameraRuntimeSystem = new CameraRuntimeSystem(World, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);

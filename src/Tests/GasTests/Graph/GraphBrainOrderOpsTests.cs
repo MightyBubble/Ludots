@@ -281,7 +281,6 @@ namespace Ludots.Tests.GAS
                 new Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry(),
                 new Ludots.Core.Gameplay.Relationships.RelationshipMetricRegistry(),
                 new Ludots.Core.Gameplay.Relationships.RelationshipFlagRegistry(),
-                new Ludots.Core.Gameplay.Relationships.RelationshipReasonRegistry(),
                 new Ludots.Core.Gameplay.GAS.TargetDispatchPresetRegistry(),
                 orderTypes: orderTypes);
 
@@ -296,7 +295,6 @@ namespace Ludots.Tests.GAS
                 new Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry(),
                 new Ludots.Core.Gameplay.Relationships.RelationshipMetricRegistry(),
                 new Ludots.Core.Gameplay.Relationships.RelationshipFlagRegistry(),
-                new Ludots.Core.Gameplay.Relationships.RelationshipReasonRegistry(),
                 new Ludots.Core.Gameplay.GAS.TargetDispatchPresetRegistry());
             InvalidOperationException unboundError = Throws<InvalidOperationException>(
                 () => unbound.ResolveOrderType("moveTo"))!;

@@ -13,6 +13,8 @@ public static class TagRegistry
 
     public static void Freeze() => Table.Freeze();
 
+    public static int Count => Table.Count;
+
     public static void Clear() => ModRegistryAmbient.Current.ReplaceTags();
 
     public static int Register(string name) => Table.Register(name);
