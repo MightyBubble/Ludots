@@ -148,7 +148,7 @@ namespace Ludots.Tests.GAS
                     as Ludots.Core.EntityCollections.EntityCollectionStore
                     ?? throw new InvalidOperationException("collection store missing");
 
-                int contextKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register("interaction.context.ballista.battle");
+                int contextKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register("interaction.context.ballista");
                 runtime.Activate(ballista, contextKeyId, 0);
 
                 int collectionKeyId = store.KeyRegistry.Register("collection.command.source");
@@ -196,10 +196,13 @@ namespace Ludots.Tests.GAS
 
             public void ClickAt(Vector2 screen)
             {
+                var handler = Engine.GetService(CoreServiceKeys.InputHandler) as PlayerInputHandler;
                 Backend.SetMousePosition(screen);
                 Backend.SetButton("<Mouse>/rightButton", true);
+                handler?.Update(1f / 60f);
                 Engine.Tick(1f / 60f);
                 Backend.SetButton("<Mouse>/rightButton", false);
+                handler?.Update(1f / 60f);
                 Engine.Tick(1f / 60f);
                 Assert.That(Engine.TriggerManager.Errors.Count, Is.EqualTo(0),
                     "trigger errors: " + string.Join(" | ", Engine.TriggerManager.Errors));

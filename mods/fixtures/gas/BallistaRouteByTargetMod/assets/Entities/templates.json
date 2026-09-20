@@ -28,7 +28,7 @@
         "PlayerId": 1
       }
     },
-    "initialInteractionContext": "interaction.context.ballista.battle"
+    "initialInteractionContext": "interaction.context.ballista"
   },
   {
     "id": "ballista_wolf",

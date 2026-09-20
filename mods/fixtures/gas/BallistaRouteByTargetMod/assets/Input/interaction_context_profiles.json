@@ -1,11 +1,15 @@
 {
   "profiles": [
     {
-      "id": "interaction.context.ballista.battle",
+      "id": "interaction.context.ballista",
       "activeCollectionKey": "collection.command.source",
-      "bindings": ["Ballista.Command"],
+      "bindings": [
+        "Ballista.Command"
+      ],
       "triggers": [
-        { "trigger": "graph.ballista.route" }
+        {
+          "trigger": "graph.ballista.route"
+        }
       ]
     }
   ]
