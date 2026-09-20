@@ -32,6 +32,7 @@ Each feature has a player-facing authoring showcase. Use these pages when onboar
 
 - [Config Shards](mod-extensible-runtime-showcases/config-shards.md)
 - [Effect Preset Type Code](mod-extensible-runtime-showcases/effect-preset-type-code.md)
+- [Graph Op Extension](mod-extensible-runtime-showcases/graph-op-extension.md)
 - [Presenter Behavior Extension](mod-extensible-runtime-showcases/presenter-behavior-extension.md)
 - [Presenter Command Extension](mod-extensible-runtime-showcases/presenter-command-extension.md)
 

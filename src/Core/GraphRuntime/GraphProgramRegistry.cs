@@ -96,7 +96,18 @@ namespace Ludots.Core.GraphRuntime
     {
         private readonly Dictionary<int, GraphProgramRegistration> _programs = new();
         private readonly Dictionary<int, GraphInstructionSourceMap> _sourceMaps = new();
+        private readonly GasGraphOpHandlerTable _operationHandlers;
         private int _version;
+
+        public GraphProgramRegistry()
+            : this(null)
+        {
+        }
+
+        public GraphProgramRegistry(GasGraphOpHandlerTable? operationHandlers)
+        {
+            _operationHandlers = operationHandlers ?? GasGraphOpHandlerTable.Instance;
+        }
 
         public int Version => _version;
 
@@ -386,12 +397,12 @@ namespace Ludots.Core.GraphRuntime
             }
         }
 
-        private static void EnsureProgramValid(int graphId, GraphInstruction[] program, GraphKind kind)
+        private void EnsureProgramValid(int graphId, GraphInstruction[] program, GraphKind kind)
         {
             GraphKindOperationPolicy.ValidateProgram(
                 kind,
                 program,
-                GasGraphOpHandlerTable.Instance,
+                _operationHandlers,
                 graphId,
                 nameof(GraphProgramRegistry));
         }

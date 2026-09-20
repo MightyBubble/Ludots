@@ -85,7 +85,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EventSchemaRegistry? eventSchemas,
             EntityCollectionStore? entityCollections = null,
             BuiltinHandlerRegistry? builtinHandlers = null,
-            Ludots.Core.Scripting.EnumCatalog? enums = null)
+            Ludots.Core.Scripting.EnumCatalog? enums = null,
+            GasGraphOpRegistry? opRegistry = null)
         {
             if (registry == null) throw new ArgumentNullException(nameof(registry));
             if (documents == null) throw new ArgumentNullException(nameof(documents));
@@ -135,7 +136,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 pair.Value.Sort(CompareHookOrder);
                 WeaveTarget(
                     registry, pair.Key, byId[pair.Key], pair.Value,
-                    symbolResolver, eventSchemas, entityCollections, builtinHandlers, cloneOptions, enums);
+                    symbolResolver, eventSchemas, entityCollections, builtinHandlers, cloneOptions, enums, opRegistry);
             }
         }
 
@@ -374,7 +375,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EntityCollectionStore? entityCollections,
             BuiltinHandlerRegistry? builtinHandlers,
             JsonSerializerOptions cloneOptions,
-            Ludots.Core.Scripting.EnumCatalog? enums = null)
+            Ludots.Core.Scripting.EnumCatalog? enums = null,
+            GasGraphOpRegistry? opRegistry = null)
         {
             // Group hooks by (resolved node, position): every group is one chain on the
             // anchor, ordered by (priority, compile order) as sorted by the caller.
@@ -499,7 +501,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 }
             }
 
-            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(merged, eventSchemas, enums);
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(merged, eventSchemas, enums, opRegistry);
             List<GraphDiagnostic> errors = compiled.Diagnostics.Where(d => d.Severity == GraphDiagnosticSeverity.Error).ToList();
             if (errors.Count > 0 || compiled.Package == null)
             {
