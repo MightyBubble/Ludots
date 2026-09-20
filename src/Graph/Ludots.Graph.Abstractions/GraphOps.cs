@@ -391,7 +391,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         LoadPointerScreenY = 480,
         BindQueryCollection = 481,
         QueryScreenRegionCollection = 482,
-        QueryFilterControllable = 483,
 
         // ── Order-driven graph brains (issue #1536; 484-499 reserved as the
         //    graph-input-order-chain line's renumbering buffer) ──
@@ -430,7 +429,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// order kernel drains the buffer in its own system-group phase: the op never routes,
         /// reads collections, or touches the OrderQueue.
         /// </summary>
-        SubmitCommandIntent = 497,
+        SubmitCommandIntent = 483,
 
         /// <summary>
         /// Submit one cast intent into the order pipeline's per-tick submission buffer
@@ -441,7 +440,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// the rep's active-context-declared active collection members — same §12 resolution as
         /// command intents.
         /// </summary>
-        SubmitCast = 498,
+        SubmitCast = 484,
 
         /// <summary>
         /// TargetList := candidates the viewer E[A] currently has a knowledge projection of

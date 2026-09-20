@@ -62,7 +62,6 @@
 - [全场最低血量](AggMinAttribute.md) — 台面翻出最低一格，亮出的数短得像那条空血条。
 - [全场最高血量](AggMaxAttribute.md) — 台面翻出最高一格，亮出的数顶着满格血条。
 - [全场生命合计](AggSumAttribute.md) — 十三根血条一根根收进台面，台面亮出总数。
-- [只圈你能指挥的](QueryFilterControllable.md) — 满场单位里，被实线指挥的才留下圈，其余退成灰影。
 - [只圈残血的](QueryFilterAttributeRange.md) — 全场先亮一圈，再只剩短血条的留着。
 - [只挑侦察兵](QueryFilterTemplate.md) — 全场先亮一圈，再只剩两个矮个子亮着。
 - [圈出对面十个](QueryFilterTeam.md) — 红的一排留圈，蓝的退成灰影。
