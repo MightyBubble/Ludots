@@ -4206,6 +4206,12 @@ namespace Ludots.Core.Engine
                         $"Map '{mapId}' board '{b.Name}' nav declaration needs positive tileWorldWidthCm/tileWorldHeightCm in Navigation/navmesh.json maps.{mapId}.boards (nav-owned granularity, #1346).");
                 }
 
+                if (b.OriginXCm.HasValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{b.Name}' is placement-anchored and cannot join navigation yet; nav tiles are enumerated in the root board frame until per-board nav tile addressing lands (#1567 slice 2 follow-up).");
+                }
+
                 tileGrids.Add(declared);
             }
 

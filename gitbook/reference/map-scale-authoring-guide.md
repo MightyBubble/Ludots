@@ -2,7 +2,7 @@
 
 本页写给要做真实地图的 Mod 作者。它不替代 [空间尺度与分辨率 SSOT](../architecture/spatial-scale-and-resolution-ssot.md)，而是把 SSOT 翻译成“我要做多大的地图、要多细的地形/导航/避障/表现，该从哪些配置入口下手”。
 
-> **状态**：本页 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的合同。地图可以无板；有板图由根板锚定 host world（`RootBoard` 指定，缺省第一块板），无板图用自己的 `World` 节；预算挂 map 级 `Tuning`；板摆放 `OriginXCm/OriginYCm` 的显式声明在切 2b 前不开放。旧键对照见文末[迁移对照](#迁移对照1567)。
+> **状态**：本页 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的合同。地图可以无板；有板图由根板锚定 host world（`RootBoard` 指定，缺省第一块板），无板图用自己的 `World` 节；预算挂 map 级 `Tuning`；板摆放 `OriginXCm/OriginYCm` 已在切 2b 放开：卫星板声明世界系 min-corner 摆放（缺省仍居中），根板禁用；锚定板参与导航等每板瓦片寻址落地后再开放。旧键对照见文末[迁移对照](#迁移对照1567)。
 
 交互式入门页见 [`map-scale-authoring-starter.html`](map-scale-authoring-starter.html)。如果你只想先调几个数看世界有多大、网格有多密、FlowWindow 会不会整除、全量/局部 nav bake 大概要多少操作和时间，先打开 HTML；真正落配置前再回到本页查 owner 和约束。Terrain/obstacle/area/agent/bake/editor/Raylib debug 的完整工具链设计见 [`navmesh-authoring-bake-toolchain.md`](navmesh-authoring-bake-toolchain.md)。
 
@@ -222,7 +222,7 @@ Runtime incremental 起点：
 ## 必须遵守的边界
 
 - host world 由根板锚定（`RootBoard`，缺省第一块板）；无板图沿用 game.json `world`。
-- 板范围 = 格子数 × 拓扑度量；卫星板越出根板范围在加载期 fail-fast；非零 origin 声明在切 2b 前 fail-closed。
+- 板范围 = 格子数 × 拓扑度量；卫星板越出根板范围在加载期 fail-fast；声明 origin 的卫星板把板内格子系原点钉在该 min-corner（居中板保持 legacy 格子系锚世界 0）。
 - nav 瓦片颗粒度在 `Navigation/navmesh.json` 显式声明；不要从板的 cell/chunk 推导，也不要把 `PartitionChunk` 当 navmesh tile。
 - `PartitionChunk` 只用于世界层空间分区/AOI；`TerrainChunk` 是逻辑地形块，两者都不是 nav 瓦片尺度。
 - `FlowCell` / `AvoidanceHashCell` / `PhysicsBroadphaseCell` 默认可等于 `CellCm`，但 owner 独立。

@@ -14,6 +14,7 @@ namespace Ludots.Core.Map.Board
     {
         public BoardId Id { get; }
         public string Name { get; }
+        public BoardExtentSpec BoardExtent { get; }
         public WorldSizeSpec WorldSize { get; }
         public ISpatialCoordinateConverter CoordinateConverter { get; }
         public ISpatialPartitionWorld SpatialPartition { get; }
@@ -33,11 +34,17 @@ namespace Ludots.Core.Map.Board
             Id = id;
             Name = name;
 
-            WorldSize = new BoardExtentSpec(
+            BoardExtent = new BoardExtentSpec(
                 config.WidthCells,
                 config.HeightCells,
-                config.GridCellSizeCm).ToWorldSizeSpec();
-            CoordinateConverter = new SpatialCoordinateConverter(WorldSize);
+                config.GridCellSizeCm,
+                config.OriginXCm,
+                config.OriginYcm);
+            WorldSize = BoardExtent.ToWorldSizeSpec();
+            CoordinateConverter = new SpatialCoordinateConverter(
+                config.GridCellSizeCm,
+                BoardExtent.OriginXCm ?? 0,
+                BoardExtent.OriginYCm ?? 0);
 
             var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: config.ChunkSizeCells);
             SpatialPartition = partition;

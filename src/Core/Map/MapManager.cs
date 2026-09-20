@@ -864,10 +864,10 @@ namespace Ludots.Core.Map
                     $"Map '{mapId}' board '{board.Name}' must author OriginXCm and OriginYcm together.");
             }
 
-            if (hasX)
+            if (hasX && ReferenceEquals(board, root))
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' board '{board.Name}' declares OriginXCm/OriginYcm; declared placement (min-corner anchor in the root board frame, cm) stays fail-closed until #1567 slice 2b unifies SpatialCoordinateConverter origin semantics. Omit both fields for the centered default.");
+                    $"Map '{mapId}' root board '{board.Name}' anchors the centered world and cannot declare OriginXCm/OriginYcm; placement is satellite-board-only (#1567 slice 2b).");
             }
 
             if (board.WidthCells <= 0 || board.HeightCells <= 0 || board.GridCellSizeCm <= 0)
@@ -889,6 +889,21 @@ namespace Ludots.Core.Map
             {
                 throw new InvalidOperationException(
                     $"Map '{mapId}' board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds root board '{root.Name}' extent {rootWidthCm}x{rootHeightCm}cm; enlarge the root board or shrink the satellite (#1567).");
+            }
+
+            if (hasX)
+            {
+                long minX = board.OriginXCm!.Value;
+                long minY = board.OriginYcm!.Value;
+                long rootMinX = -rootWidthCm / 2;
+                long rootMinY = -rootHeightCm / 2;
+                if (minX < rootMinX || minY < rootMinY ||
+                    minX + boardWidthCm > rootMinX + rootWidthCm ||
+                    minY + boardHeightCm > rootMinY + rootHeightCm)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' anchored AABB ({minX},{minY})+{boardWidthCm}x{boardHeightCm}cm exits the root board frame ({rootMinX},{rootMinY})+{rootWidthCm}x{rootHeightCm}cm; place the satellite fully inside the world (#1567 slice 2b).");
+                }
             }
         }
 
