@@ -83,10 +83,10 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         }
 
         int guards = 6, sentries = 6;
-        _seeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
-        _rangeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
-        _chaseId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.chase", GraphActionHost.BehaviorTree);
-        _attackId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.attack", GraphActionHost.BehaviorTree);
+        _seeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy");
+        _rangeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.inAttackRange");
+        _chaseId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.chase");
+        _attackId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.attack");
         _bt = new BehaviorTreeWorld(_behavior.RequireTree("bt.patrolChaseAttack"), guards);
         _hfsmHost = new GraphProgramHfsmHost(_programs);
         _hfsm = new HfsmWorld(_behavior.RequireHfsm("hfsm.sentry.scripted"), sentries);

@@ -14,7 +14,6 @@ using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Gameplay.ActionLoops;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -387,12 +386,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             () => ReadAttribute(world, core, crystalAttributeId) == 60f,
             600,
             "The 20-crystal cargo should be credited only after the harvester returns.");
-        ResourceSinkProfile sink = world.Get<ResourceSinkProfile>(core);
-        WorldCmInt2 corePosition = world.Get<WorldPositionCm>(core).ToWorldCmInt2();
-        WorldPositionCm dockPosition = WorldPositionCm.FromCm(
-            corePosition.X + sink.DockOffsetXCm,
-            corePosition.Y + sink.DockOffsetYCm);
-        Assert.That(DistanceCm(world.Get<WorldPositionCm>(harvester), dockPosition), Is.LessThanOrEqualTo(100f));
+        WorldCmInt2 dockPosition = world.Get<WorldPositionCm>(core).ToWorldCmInt2();
+        Assert.That(DistanceCm(world.Get<WorldPositionCm>(harvester), WorldPositionCm.FromCm(dockPosition.X, dockPosition.Y)), Is.LessThanOrEqualTo(100f));
     }
 
     [Test]

@@ -40,7 +40,7 @@ namespace Ludots.Tests.GAS
                       "template": {
                         "components": {
                           "AttributeBuffer": { "base": { "{{FatherBondAttribute}}": 80, "{{DutyAttribute}}": 40 } },
-                          "GameplayTagContainer": { "categories": ["{{BloodTag}}", "{{PatriarchTag}}"] }
+                          "GameplayTagContainer": { "tags": ["{{BloodTag}}", "{{PatriarchTag}}"] }
                         }
                       }
                     }
@@ -106,7 +106,7 @@ namespace Ludots.Tests.GAS
                       "template": {
                         "components": {
                           "AttributeBuffer": { "base": { "{{FatherBondAttribute}}": 80 } },
-                          "GameplayTagContainer": { "categories": ["{{BloodTag}}"] }
+                          "GameplayTagContainer": { "tags": ["{{BloodTag}}"] }
                         }
                       }
                     }
@@ -205,7 +205,7 @@ namespace Ludots.Tests.GAS
                       "template": {
                         "components": {
                           "AttributeBuffer": { "base": { "{{FatherBondAttribute}}": 80 } },
-                          "GameplayTagContainer": { "categories": ["{{BloodTag}}"] }
+                          "GameplayTagContainer": { "tags": ["{{BloodTag}}"] }
                         }
                       }
                     }

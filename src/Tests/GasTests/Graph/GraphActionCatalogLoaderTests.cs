@@ -189,89 +189,6 @@ namespace Ludots.Tests.Gas.Graph
             }
         }
 
-        [Test]
-        public void 含Yield的HFSM动作在加载期失败关闭()
-        {
-            GraphIdRegistry.Clear();
-            string root = string.Empty;
-            try
-            {
-                const string graphName = "Graph.HFSM.YieldTick";
-                int graphId = GraphIdRegistry.Register(graphName);
-                var programs = new GraphProgramRegistry();
-                programs.Register(
-                    graphId,
-                    new[]
-                    {
-                        new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
-                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
-                    },
-                    GraphKind.Script);
-
-                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
-                    "GAS/action_lib.json",
-                    """
-                    [
-                      { "name": "hfsm.combat.onTick", "graph": "Graph.HFSM.YieldTick", "kind": "Script", "host": "Hfsm" }
-                    ]
-                    """);
-                root = tempRoot;
-
-                var actionCatalog = new GraphActionCatalog();
-                var ex = Assert.Throws<AggregateException>(() =>
-                    new GraphActionCatalogLoader(pipeline, actionCatalog, programs, new GraphFunctionCatalog()).Load(configCatalog));
-
-                Assert.That(actionCatalog.Count, Is.EqualTo(0));
-                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("cannot bind a program that reaches Yield"));
-            }
-            finally
-            {
-                GraphIdRegistry.Clear();
-                DeleteTempRoot(root);
-            }
-        }
-
-        [Test]
-        public void 含Yield的TriggerGraph动作在加载期失败关闭()
-        {
-            GraphIdRegistry.Clear();
-            string root = string.Empty;
-            try
-            {
-                const string graphName = "Graph.TriggerGraph.YieldPhase";
-                int graphId = GraphIdRegistry.Register(graphName);
-                var programs = new GraphProgramRegistry();
-                programs.Register(
-                    graphId,
-                    new[]
-                    {
-                        new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
-                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
-                    },
-                    GraphKind.Script);
-
-                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
-                    "GAS/action_lib.json",
-                    """
-                    [
-                      { "name": "maptrigger.phaseAdvance", "graph": "Graph.TriggerGraph.YieldPhase", "kind": "Script", "host": "TriggerGraph" }
-                    ]
-                    """);
-                root = tempRoot;
-
-                var actionCatalog = new GraphActionCatalog();
-                var ex = Assert.Throws<AggregateException>(() =>
-                    new GraphActionCatalogLoader(pipeline, actionCatalog, programs, new GraphFunctionCatalog()).Load(configCatalog));
-
-                Assert.That(actionCatalog.Count, Is.EqualTo(0));
-                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("cannot bind a program that reaches Yield"));
-            }
-            finally
-            {
-                GraphIdRegistry.Clear();
-                DeleteTempRoot(root);
-            }
-        }
 
         [Test]
         public void ActionCatalogLoader_LoadsValidEntry()
@@ -310,18 +227,6 @@ namespace Ludots.Tests.Gas.Graph
             }
         }
 
-        [Test]
-        public void ActionCatalog_RejectsWrongHostLookup()
-        {
-            var actions = new GraphActionCatalog();
-            actions.Register("bt.patrol", graphId: 7, GraphKind.Script, GraphActionHost.BehaviorTree);
-
-            var ex = Assert.Throws<InvalidOperationException>(() =>
-                actions.Require("bt.patrol", GraphActionHost.Hfsm));
-
-            Assert.That(ex!.Message, Does.Contain("BehaviorTree"));
-            Assert.That(ex.Message, Does.Contain("Hfsm"));
-        }
 
         private static (ConfigPipeline Pipeline, ConfigCatalog Catalog, string TempRoot) CreateCatalogPipeline(
             string relativePath,

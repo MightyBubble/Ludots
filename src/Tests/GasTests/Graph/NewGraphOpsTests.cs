@@ -405,6 +405,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipSortByMetric, A = 0, Dst = (byte)relationshipSetup.SocialBondTypeId, Imm = relationshipSetup.SupportMetricId, Flags = 1 },
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 99 },
                 new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
 
             GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
@@ -571,6 +572,7 @@ namespace Ludots.Tests.GAS
             var program = new GraphInstruction[]
             {
                 new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
 
             GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
@@ -621,6 +623,7 @@ namespace Ludots.Tests.GAS
             GraphInstruction[] program =
             {
                 new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
 
             relationshipSetup.Api.BeginBuiltinInvocation(
@@ -835,6 +838,11 @@ namespace Ludots.Tests.GAS
             CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
             CallStackCount = 0,
         };
+
+            if (api is GasGraphRuntimeApi concreteApi)
+            {
+                concreteApi.AggregateDirty ??= new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            }
 
             GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
         }

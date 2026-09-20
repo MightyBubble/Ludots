@@ -1088,6 +1088,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 GasGraphOpHandlerTable.Instance,
                 templates);
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            graphApi.AggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
             using var application = new EffectApplicationSystem(
                 world,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
@@ -1149,6 +1150,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 GasGraphOpHandlerTable.Instance,
                 templates);
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            graphApi.AggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
             Entity effect = world.Create();
             Entity source = world.Create();
             Entity target = world.Create();
@@ -1212,6 +1214,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 GasGraphOpHandlerTable.Instance,
                 templates);
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            graphApi.AggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
             var runtime = new BuiltinHandlerExecutionContext();
             Entity effect = world.Create();
             Entity source = world.Create();

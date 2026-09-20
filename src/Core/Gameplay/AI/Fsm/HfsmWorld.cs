@@ -12,9 +12,12 @@ namespace Ludots.Core.Gameplay.AI.Fsm
         private readonly int[] _stack;
         private readonly byte[] _depth;
         private readonly byte[] _stimulus;
+        private readonly bool _reuseSlots;
+        private readonly int[]? _freeList;
+        private int _freeCount;
         private int _count;
 
-        public HfsmWorld(HfsmDefinition hfsm, int capacity)
+        public HfsmWorld(HfsmDefinition hfsm, int capacity, bool reuseSlots = false)
         {
             _hfsm = hfsm ?? throw new ArgumentNullException(nameof(hfsm));
             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
@@ -22,10 +25,16 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             _stack = new int[capacity * HfsmLimits.MaxStackDepth];
             _depth = new byte[capacity];
             _stimulus = new byte[capacity];
+            _reuseSlots = reuseSlots;
+            if (reuseSlots)
+            {
+                _freeList = new int[capacity];
+            }
         }
 
         public HfsmDefinition Definition => _hfsm;
         public int Capacity { get; }
+        /// <summary>Number of currently live agents (active prefix when slot reuse is off).</summary>
         public int Count => _count;
 
         public int AddAgent(IHfsmGraphHost? host = null)
@@ -37,10 +46,81 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             return agent;
         }
 
+        /// <summary>
+        /// Acquires a live agent slot, reusing a previously <see cref="ReleaseAgent"/> slot
+        /// when slot reuse is enabled, otherwise appended to the active prefix. Only legal
+        /// when the world was constructed with <c>reuseSlots: true</c>.
+        /// </summary>
+        public int AcquireAgent(IHfsmGraphHost? host = null)
+        {
+            if (!_reuseSlots)
+            {
+                return AddAgent(host);
+            }
+
+            if (_freeCount > 0)
+            {
+                int agent = _freeList![_freeCount - 1];
+                _freeCount--;
+                EnterDefaultPath(agent, _hfsm.RootIndex, host);
+                _stimulus[agent] = 0;
+                return agent;
+            }
+
+            return AddAgent(host);
+        }
+
+        /// <summary>Releases an agent slot back to the reuse pool (running state OnExits, then resetting its stack). Only legal with slot reuse enabled.</summary>
+        public void ReleaseAgent(int agent, IHfsmGraphHost? host = null)
+        {
+            if (!_reuseSlots)
+            {
+                throw new InvalidOperationException("HfsmWorld.ReleaseAgent requires slot reuse enabled (ctor reuseSlots:true).");
+            }
+
+            if ((uint)agent >= (uint)Capacity)
+            {
+                throw new ArgumentOutOfRangeException(nameof(agent));
+            }
+
+            // Run state OnExit up the full stack so lifecycle stays balanced.
+            ExitUpTo(agent, lca: -1, host);
+            _depth[agent] = 0;
+            _stimulus[agent] = 0;
+            _freeList![_freeCount++] = agent;
+        }
+
         public void LatchStimulus(int agent)
         {
-            if ((uint)agent >= (uint)_count) throw new ArgumentOutOfRangeException(nameof(agent));
+            if ((uint)agent >= (uint)Capacity)
+            {
+                throw new ArgumentOutOfRangeException(nameof(agent));
+            }
+
+            if (IsFree(agent))
+            {
+                return;
+            }
+
             _stimulus[agent] = 1;
+        }
+
+        private bool IsFree(int agent)
+        {
+            if (!_reuseSlots)
+            {
+                return agent >= _count;
+            }
+
+            for (int i = 0; i < _freeCount; i++)
+            {
+                if (_freeList![i] == agent)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public int GetLeafState(int agent)
@@ -61,8 +141,15 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             int predicates = 0;
             int taken = 0;
             int lifecycleRuns = 0;
+            int live = 0;
             for (int agent = 0; agent < _count; agent++)
             {
+                if (_reuseSlots && IsFree(agent))
+                {
+                    continue;
+                }
+
+                live++;
                 if (TryTransition(agent, host, ref predicates))
                 {
                     taken++;
@@ -71,7 +158,7 @@ namespace Ludots.Core.Gameplay.AI.Fsm
                 lifecycleRuns += RunTickCallbacks(agent, host);
             }
 
-            return new HfsmThinkStats(_count, predicates, taken, lifecycleRuns);
+            return new HfsmThinkStats(_reuseSlots ? live : _count, predicates, taken, lifecycleRuns);
         }
 
         private int RunTickCallbacks(int agent, IHfsmGraphHost? host)

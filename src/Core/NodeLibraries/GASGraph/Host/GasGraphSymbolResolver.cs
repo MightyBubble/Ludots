@@ -22,6 +22,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly GraphLookupTableRegistry? _lookupTables;
         private readonly Gameplay.Rng.RngPickService? _rngPicks;
         private readonly PresentationTextCatalog? _presentationTextCatalog;
+        private readonly Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
 
         public GasGraphSymbolResolver(
             RelationshipTypeRegistry types,
@@ -32,7 +33,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
             GraphLookupTableRegistry? lookupTables = null,
             Gameplay.Rng.RngPickService? rngPicks = null,
-            PresentationTextCatalog? presentationTextCatalog = null)
+            PresentationTextCatalog? presentationTextCatalog = null,
+            Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? orderTypes = null)
         {
             _types = types ?? throw new ArgumentNullException(nameof(types));
             _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -43,6 +45,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _lookupTables = lookupTables;
             _rngPicks = rngPicks;
             _presentationTextCatalog = presentationTextCatalog;
+            _orderTypes = orderTypes;
+        }
+
+        public int ResolveOrderType(string name)
+        {
+            if (_orderTypes == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references order type '{name}', but no OrderTypeRegistry was provided.");
+            }
+
+            if (!_orderTypes.TryGetId(name, out int orderTypeId) || orderTypeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references unknown order type '{name}'. Register order types before loading graph programs.");
+            }
+
+            return orderTypeId;
         }
 
         public int ResolveRngDistribution(string name)
