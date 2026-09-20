@@ -181,7 +181,13 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"Presentation default locale '{defaultLocale}' is not defined.");
             }
 
-            return new PresentationTextCatalog(tokenIds, tokenDefinitions, localeIds, localeTables, defaultLocaleId);
+            return new PresentationTextCatalog(
+                tokenIds,
+                tokenDefinitions,
+                localeIds,
+                localeTables,
+                defaultLocaleId,
+                stringPool: new PresentationTextStringPool());
         }
 
         private static byte ParseArgCount(JsonNode node, string tokenKey)
@@ -204,6 +210,8 @@ namespace Ludots.Core.Presentation.Config
             var parts = new List<PresentationTextTemplatePart>(4);
             var literal = new StringBuilder();
             var seenArgs = definition.ArgCount > 0 ? new bool[definition.ArgCount] : Array.Empty<bool>();
+            PresentationTextStyleOverride activeStyle = PresentationTextStyleOverride.None;
+            string? openTagName = null;
 
             for (int i = 0; i < source.Length; i++)
             {
@@ -217,7 +225,7 @@ namespace Ludots.Core.Presentation.Config
                         continue;
                     }
 
-                    FlushLiteral(parts, literal);
+                    FlushLiteral(parts, literal, activeStyle);
                     int closeIndex = source.IndexOf('}', i + 1);
                     if (closeIndex < 0)
                     {
@@ -245,7 +253,11 @@ namespace Ludots.Core.Presentation.Config
                     }
 
                     seenArgs[argIndex] = true;
-                    parts.Add(new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Argument, string.Empty, argIndex));
+                    parts.Add(new PresentationTextTemplatePart(
+                        PresentationTextTemplatePartKind.Argument,
+                        string.Empty,
+                        argIndex,
+                        activeStyle));
                     i = closeIndex;
                     continue;
                 }
@@ -263,10 +275,53 @@ namespace Ludots.Core.Presentation.Config
                         $"Presentation text locale '{localeKey}' token '{definition.Key}' contains an unmatched '}}'.");
                 }
 
+                if (ch == '<')
+                {
+                    if (!TryParseMarkupTag(source, i, out MarkupTag tag, out int tagEnd))
+                    {
+                        throw new InvalidOperationException(
+                            $"Presentation text locale '{localeKey}' token '{definition.Key}' contains invalid markup near index {i}.");
+                    }
+
+                    if (tag.IsClose)
+                    {
+                        if (openTagName == null ||
+                            !string.Equals(openTagName, tag.Name, StringComparison.Ordinal))
+                        {
+                            throw new InvalidOperationException(
+                                $"Presentation text locale '{localeKey}' token '{definition.Key}' has mismatched close tag '</{tag.Name}>'.");
+                        }
+
+                        FlushLiteral(parts, literal, activeStyle);
+                        openTagName = null;
+                        activeStyle = PresentationTextStyleOverride.None;
+                        i = tagEnd;
+                        continue;
+                    }
+
+                    if (openTagName != null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Presentation text locale '{localeKey}' token '{definition.Key}' does not allow nested markup (open '<{openTagName}>', saw '<{tag.Name}>').");
+                    }
+
+                    FlushLiteral(parts, literal, PresentationTextStyleOverride.None);
+                    openTagName = tag.Name;
+                    activeStyle = tag.Style;
+                    i = tagEnd;
+                    continue;
+                }
+
                 literal.Append(ch);
             }
 
-            FlushLiteral(parts, literal);
+            if (openTagName != null)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation text locale '{localeKey}' token '{definition.Key}' has unclosed markup tag '<{openTagName}>'.");
+            }
+
+            FlushLiteral(parts, literal, PresentationTextStyleOverride.None);
             for (int argIndex = 0; argIndex < seenArgs.Length; argIndex++)
             {
                 if (!seenArgs[argIndex])
@@ -277,6 +332,187 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return new PresentationTextTemplate(source, parts.ToArray());
+        }
+
+        private readonly struct MarkupTag
+        {
+            public MarkupTag(string name, bool isClose, PresentationTextStyleOverride style)
+            {
+                Name = name;
+                IsClose = isClose;
+                Style = style;
+            }
+
+            public string Name { get; }
+            public bool IsClose { get; }
+            public PresentationTextStyleOverride Style { get; }
+        }
+
+        private static bool TryParseMarkupTag(
+            string source,
+            int start,
+            out MarkupTag tag,
+            out int endInclusive)
+        {
+            tag = default;
+            endInclusive = start;
+            if (start >= source.Length || source[start] != '<')
+            {
+                return false;
+            }
+
+            int cursor = start + 1;
+            bool isClose = false;
+            if (cursor < source.Length && source[cursor] == '/')
+            {
+                isClose = true;
+                cursor++;
+            }
+
+            int nameStart = cursor;
+            while (cursor < source.Length && IsTagNameChar(source[cursor]))
+            {
+                cursor++;
+            }
+
+            if (cursor == nameStart)
+            {
+                return false;
+            }
+
+            string name = source.Substring(nameStart, cursor - nameStart);
+            while (cursor < source.Length && char.IsWhiteSpace(source[cursor]))
+            {
+                cursor++;
+            }
+
+            PresentationTextStyleOverride style = PresentationTextStyleOverride.None;
+            if (!isClose)
+            {
+                if (string.Equals(name, "b", StringComparison.Ordinal))
+                {
+                    style = PresentationTextStyleOverride.CreateBold();
+                }
+                else if (string.Equals(name, "i", StringComparison.Ordinal))
+                {
+                    style = PresentationTextStyleOverride.CreateItalic();
+                }
+                else if (string.Equals(name, "color", StringComparison.Ordinal))
+                {
+                    if (cursor >= source.Length || source[cursor] != '=')
+                    {
+                        return false;
+                    }
+
+                    cursor++;
+                    if (cursor >= source.Length || source[cursor] != '#')
+                    {
+                        return false;
+                    }
+
+                    int hexStart = cursor;
+                    cursor++;
+                    while (cursor < source.Length && IsHexChar(source[cursor]))
+                    {
+                        cursor++;
+                    }
+
+                    string hex = source.Substring(hexStart, cursor - hexStart);
+                    if (hex.Length != 9 ||
+                        !TryParseAaRrGgBb(hex, out byte a, out byte r, out byte g, out byte b))
+                    {
+                        return false;
+                    }
+
+                    style = PresentationTextStyleOverride.CreateColor(a, r, g, b);
+                    while (cursor < source.Length && char.IsWhiteSpace(source[cursor]))
+                    {
+                        cursor++;
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else if (!(string.Equals(name, "b", StringComparison.Ordinal) ||
+                       string.Equals(name, "i", StringComparison.Ordinal) ||
+                       string.Equals(name, "color", StringComparison.Ordinal)))
+            {
+                return false;
+            }
+
+            if (cursor >= source.Length || source[cursor] != '>')
+            {
+                return false;
+            }
+
+            tag = new MarkupTag(name, isClose, style);
+            endInclusive = cursor;
+            return true;
+        }
+
+        private static bool IsTagNameChar(char ch) =>
+            (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+
+        private static bool IsHexChar(char ch) =>
+            (ch >= '0' && ch <= '9') ||
+            (ch >= 'a' && ch <= 'f') ||
+            (ch >= 'A' && ch <= 'F');
+
+        private static bool TryParseAaRrGgBb(string hexWithHash, out byte a, out byte r, out byte g, out byte b)
+        {
+            a = r = g = b = 0;
+            if (hexWithHash.Length != 9 || hexWithHash[0] != '#')
+            {
+                return false;
+            }
+
+            return TryParseHexByte(hexWithHash.AsSpan(1, 2), out a) &&
+                   TryParseHexByte(hexWithHash.AsSpan(3, 2), out r) &&
+                   TryParseHexByte(hexWithHash.AsSpan(5, 2), out g) &&
+                   TryParseHexByte(hexWithHash.AsSpan(7, 2), out b);
+        }
+
+        private static bool TryParseHexByte(ReadOnlySpan<char> span, out byte value)
+        {
+            value = 0;
+            if (span.Length != 2)
+            {
+                return false;
+            }
+
+            if (!TryHexNibble(span[0], out int hi) || !TryHexNibble(span[1], out int lo))
+            {
+                return false;
+            }
+
+            value = (byte)((hi << 4) | lo);
+            return true;
+        }
+
+        private static bool TryHexNibble(char ch, out int value)
+        {
+            if (ch >= '0' && ch <= '9')
+            {
+                value = ch - '0';
+                return true;
+            }
+
+            if (ch >= 'a' && ch <= 'f')
+            {
+                value = 10 + (ch - 'a');
+                return true;
+            }
+
+            if (ch >= 'A' && ch <= 'F')
+            {
+                value = 10 + (ch - 'A');
+                return true;
+            }
+
+            value = 0;
+            return false;
         }
 
         private void ValidateTokenIdsAreUnique(in ConfigCatalogEntry entry)
@@ -315,15 +551,26 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
-        private static void FlushLiteral(List<PresentationTextTemplatePart> parts, StringBuilder literal)
+        private static void FlushLiteral(
+            List<PresentationTextTemplatePart> parts,
+            StringBuilder literal,
+            PresentationTextStyleOverride style)
         {
             if (literal.Length == 0)
             {
                 return;
             }
 
-            parts.Add(new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, literal.ToString(), -1));
+            PresentationTextTemplatePartKind kind = style.IsEmpty
+                ? PresentationTextTemplatePartKind.Literal
+                : PresentationTextTemplatePartKind.StyledLiteral;
+            parts.Add(new PresentationTextTemplatePart(kind, literal.ToString(), -1, style));
             literal.Clear();
+        }
+
+        private static void FlushLiteral(List<PresentationTextTemplatePart> parts, StringBuilder literal)
+        {
+            FlushLiteral(parts, literal, PresentationTextStyleOverride.None);
         }
 
         private static bool TryGetTokenDefinition(

@@ -1,0 +1,409 @@
+{
+    "schemaVersion":  11,
+    "acceptanceScope":  "three-process-player-input-to-authoritative-frontline-outcome",
+    "status":  "failed",
+    "startedAtUtc":  "2026-08-23T14:27:56.7688251Z",
+    "completedAtUtc":  "2026-08-23T14:29:26.5292361Z",
+    "artifactDirectory":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix",
+    "repository":  {
+                       "commit":  "57c476c3ed89c0b0da61a1223a9912a302c79be6",
+                       "dirty":  false
+                   },
+    "inputs":  {
+                   "profile":  {
+                                   "path":  "C:\\001_AI\\LudotsProd_issue709\\scripts\\acceptance\\rts-multiplayer-frontline-three-process.profile.json",
+                                   "length":  9233,
+                                   "sha256":  "2b36b60ff5e17711d22239abd79726fe490f0d23d606d98ee6058faf9c78ddcc"
+                               },
+                   "acceptancePlan":  {
+                                          "path":  "C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\assets\\RtsMultiplayerFrontlineThreeProcessAcceptancePlan.json",
+                                          "length":  1453,
+                                          "sha256":  "6eb4e583ac52a0c942d3f79cb8a3e0d599f0b25e0e7b35e958e9b951e3357e96"
+                                      },
+                   "frontlineConfig":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_multiplayer_frontline\\RtsMultiplayerFrontlineMod\\assets\\RtsMultiplayerFrontlineConfig.json",
+                                           "length":  6587,
+                                           "sha256":  "c1d0956308b9ed9101df3e4bcbae3773eacd534291d06e43fd2939d97f8c1ef6"
+                                       },
+                   "groupMoveLayoutConfig":  {
+                                                 "path":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_demo\\RtsDemoMod\\assets\\Input\\input_order_mappings.json",
+                                                 "length":  2601,
+                                                 "sha256":  "9c622b77c82baf3efca23841596871984277390977c73ddd51a005522e1f3623"
+                                             },
+                   "networkConfig":  {
+                                         "path":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_multiplayer_frontline\\RtsMultiplayerFrontlineNetworkedMod\\assets\\game.json",
+                                         "length":  2857,
+                                         "sha256":  "522829869ed0654220b03083c5e8d065ec3caeff090d01ea3832b48f73345249"
+                                     },
+                   "sourceLaunchGraph":  {
+                                             "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\launcher-resolved.graph.json",
+                                             "length":  9537,
+                                             "sha256":  "f71ad86a838a35707875fb4187e821ec3215a081a58d37eeb14529497a48ea82"
+                                         },
+                   "roleArtifacts":  [
+                                         {
+                                             "processRole":  "authoritativeServer",
+                                             "graph":  {
+                                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\server\\launcher.graph.json",
+                                                           "length":  17422,
+                                                           "sha256":  "d114f82478df1edb7f0e07b978ad7d063bd4060a3233ba3077f258fe589728c7"
+                                                       },
+                                             "bootstrap":  {
+                                                               "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\server\\launcher.runtime.json",
+                                                               "length":  1757,
+                                                               "sha256":  "277e3c995c413a958b78972d94ec6edcaa86f689f6e0a6d5010d2a649efee706"
+                                                           }
+                                         },
+                                         {
+                                             "processRole":  "replicatedClient",
+                                             "graph":  {
+                                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-a\\launcher.graph.json",
+                                                           "length":  17426,
+                                                           "sha256":  "851dcf410baf099142289cb883289bf2bda77e1cb61bd2c9092018e67cb45c98"
+                                                       },
+                                             "bootstrap":  {
+                                                               "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-a\\launcher.runtime.json",
+                                                               "length":  1911,
+                                                               "sha256":  "06201e3cc44f6c7844c501d6bf3816b9148edf40e4c4cae49d9dc107ae2fe501"
+                                                           }
+                                         },
+                                         {
+                                             "processRole":  "replicatedClient",
+                                             "graph":  {
+                                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-b\\launcher.graph.json",
+                                                           "length":  17426,
+                                                           "sha256":  "67b5f425b73b15a96a5b9f737630ce56ad885b15555d0f354ecc40d0cbb482aa"
+                                                       },
+                                             "bootstrap":  {
+                                                               "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-b\\launcher.runtime.json",
+                                                               "length":  1911,
+                                                               "sha256":  "4c429e53e39510993570579b54e5fde0da775a53574ea80f0cc09bb09f76367a"
+                                                           }
+                                         }
+                                     ],
+                   "assemblies":  [
+                                      {
+                                          "path":  "C:\\001_AI\\LudotsProd_issue709\\src\\Tools\\Ludots.Launcher.Cli\\bin\\Release\\net8.0\\Ludots.Launcher.Cli.dll",
+                                          "length":  39936,
+                                          "sha256":  "23712b71561159d429ff7d0370bbbe385fc95b8b397a87af0df29e3f85cb1e65"
+                                      },
+                                      {
+                                          "path":  "C:\\001_AI\\LudotsProd_issue709\\src\\Apps\\DedicatedServer\\Ludots.App.DedicatedServer\\bin\\Release\\net8.0\\Ludots.App.DedicatedServer.dll",
+                                          "length":  8192,
+                                          "sha256":  "e94a88c4d319be1e2671fd5868460447a6889e93edfd4c13f9c05f17e31fdd7e"
+                                      },
+                                      {
+                                          "path":  "C:\\001_AI\\LudotsProd_issue709\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net8.0\\Ludots.App.Raylib.dll",
+                                          "length":  6144,
+                                          "sha256":  "57a475dd56953ebafc801ddfac8a7a977749e34b03d89b1455cd8ec3e24804d6"
+                                      }
+                                  ]
+               },
+    "effectiveParameters":  {
+                                "host":  "127.0.0.1",
+                                "port":  27777,
+                                "connectionKeySha256":  "bd51bea1d57e190805e44579ec4fc447f03e509025b3ab31017e6cdb3b576685",
+                                "credentialTimeoutSeconds":  60,
+                                "runSeconds":  240,
+                                "monitorIntervalMilliseconds":  250,
+                                "faultProfile":  "normal",
+                                "faultSeeds":  {
+                                                   "server":  70901,
+                                                   "clientOne":  70902,
+                                                   "clientTwo":  70903
+                                               },
+                                "faultConfiguration":  {
+                                                           "transportIdentity":  "LiteNetLib/2.1.4",
+                                                           "profileId":  "normal",
+                                                           "roundTripLatencyMilliseconds":  0,
+                                                           "jitterMilliseconds":  0,
+                                                           "packetLossPermille":  0,
+                                                           "stateReorderPermille":  0,
+                                                           "isEnabled":  false
+                                                       },
+                                "groupMoveTargetLayout":  {
+                                                              "source":  "groupMoveTargetLayout.spacingCm",
+                                                              "modId":  "RtsDemoMod",
+                                                              "mode":  "Grid",
+                                                              "assignment":  "PreserveRelative",
+                                                              "orderTypeKeys":  [
+                                                                                    "moveTo",
+                                                                                    "attackTarget"
+                                                                                ],
+                                                              "spacingCm":  140
+                                                          },
+                                "clientScreenshots":  [
+                                                          {
+                                                              "process":  "client-a",
+                                                              "targetPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\screens\\client-a\\frontline.png",
+                                                              "diagnosticPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-a\\raylib-diagnostic.log",
+                                                              "milestones":  [
+                                                                                 "ready",
+                                                                                 "advancing",
+                                                                                 "engaging",
+                                                                                 "completed"
+                                                                             ]
+                                                          },
+                                                          {
+                                                              "process":  "client-b",
+                                                              "targetPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\screens\\client-b\\frontline.png",
+                                                              "diagnosticPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-b\\raylib-diagnostic.log",
+                                                              "milestones":  [
+                                                                                 "ready",
+                                                                                 "advancing",
+                                                                                 "engaging",
+                                                                                 "completed"
+                                                                             ]
+                                                          }
+                                                      ],
+                                "clientPresentation":  {
+                                                           "minimumVisibleEntities":  1,
+                                                           "minimumActivePerformers":  1,
+                                                           "minimumAuthoredPrimitives":  1,
+                                                           "minimumSubmittedPrimitiveInstances":  1,
+                                                           "minimumSubmittedPrimitiveBatches":  1,
+                                                           "minimumPrefabVisuals":  1
+                                                       },
+                                "requiredFramebufferEvidence":  [
+                                                                    {
+                                                                        "role":  "commandCore",
+                                                                        "perspective":  "all",
+                                                                        "milestones":  [
+                                                                                           "ready"
+                                                                                       ],
+                                                                        "presentationTemplate":  "rts.frontline.core.base",
+                                                                        "acceptedColors":  [
+                                                                                               {
+                                                                                                   "red":  31,
+                                                                                                   "green":  41,
+                                                                                                   "blue":  48
+                                                                                               }
+                                                                                           ],
+                                                                        "maximumChannelDifference":  28,
+                                                                        "minimumPixelsPerInstance":  8,
+                                                                        "minimumPassingInstances":  1,
+                                                                        "regionMarginRatio":  0.08
+                                                                    },
+                                                                    {
+                                                                        "role":  "harvesterCargo",
+                                                                        "perspective":  "all",
+                                                                        "milestones":  [
+                                                                                           "ready"
+                                                                                       ],
+                                                                        "presentationTemplate":  "rts.frontline.harvester.cargo",
+                                                                        "acceptedColors":  [
+                                                                                               {
+                                                                                                   "red":  255,
+                                                                                                   "green":  166,
+                                                                                                   "blue":  31
+                                                                                               }
+                                                                                           ],
+                                                                        "maximumChannelDifference":  55,
+                                                                        "minimumPixelsPerInstance":  3,
+                                                                        "minimumPassingInstances":  1,
+                                                                        "regionMarginRatio":  0.12
+                                                                    },
+                                                                    {
+                                                                        "role":  "infantryBody",
+                                                                        "perspective":  "all",
+                                                                        "milestones":  [
+                                                                                           "ready",
+                                                                                           "completed"
+                                                                                       ],
+                                                                        "presentationTemplate":  "rts.frontline.infantry.body",
+                                                                        "acceptedColors":  [
+                                                                                               {
+                                                                                                   "red":  209,
+                                                                                                   "green":  224,
+                                                                                                   "blue":  230
+                                                                                               }
+                                                                                           ],
+                                                                        "maximumChannelDifference":  48,
+                                                                        "minimumPixelsPerInstance":  5,
+                                                                        "minimumPassingInstances":  1,
+                                                                        "regionMarginRatio":  0.08
+                                                                    },
+                                                                    {
+                                                                        "role":  "battleInfantryBodies",
+                                                                        "perspective":  "all",
+                                                                        "milestones":  [
+                                                                                           "advancing",
+                                                                                           "engaging"
+                                                                                       ],
+                                                                        "presentationTemplate":  "rts.frontline.infantry.body",
+                                                                        "acceptedColors":  [
+                                                                                               {
+                                                                                                   "red":  209,
+                                                                                                   "green":  224,
+                                                                                                   "blue":  230
+                                                                                               }
+                                                                                           ],
+                                                                        "maximumChannelDifference":  48,
+                                                                        "minimumPixelsPerInstance":  5,
+                                                                        "minimumPassingInstances":  2,
+                                                                        "regionMarginRatio":  0.08
+                                                                    },
+                                                                    {
+                                                                        "role":  "damagedCommandCore",
+                                                                        "perspective":  "winner",
+                                                                        "milestones":  [
+                                                                                           "engaging"
+                                                                                       ],
+                                                                        "presentationTemplate":  "rts.frontline.core.base",
+                                                                        "acceptedColors":  [
+                                                                                               {
+                                                                                                   "red":  31,
+                                                                                                   "green":  41,
+                                                                                                   "blue":  48
+                                                                                               }
+                                                                                           ],
+                                                                        "maximumChannelDifference":  28,
+                                                                        "minimumPixelsPerInstance":  8,
+                                                                        "minimumPassingInstances":  1,
+                                                                        "regionMarginRatio":  0.08
+                                                                    },
+                                                                    {
+                                                                        "role":  "crystalField",
+                                                                        "perspective":  "all",
+                                                                        "milestones":  [
+                                                                                           "ready",
+                                                                                           "advancing"
+                                                                                       ],
+                                                                        "presentationTemplate":  "rts.frontline.crystal.center",
+                                                                        "acceptedColors":  [
+                                                                                               {
+                                                                                                   "red":  20,
+                                                                                                   "green":  224,
+                                                                                                   "blue":  255
+                                                                                               }
+                                                                                           ],
+                                                                        "maximumChannelDifference":  52,
+                                                                        "minimumPixelsPerInstance":  5,
+                                                                        "minimumPassingInstances":  1,
+                                                                        "regionMarginRatio":  0.08
+                                                                    }
+                                                                ]
+                            },
+    "planFingerprint":  "a85c40b5f9368bb16069af6231e60161b987b89c77bee7e474f6a7659d064507",
+    "orderedModIds":  [
+                          "LudotsCoreMod",
+                          "CoreInputMod",
+                          "EntityCommandPanelMod",
+                          "RtsDemoMod",
+                          "RtsShowcaseMod",
+                          "RtsMultiplayerFrontlineMod",
+                          "RtsMultiplayerFrontlineNetworkedMod",
+                          "RtsMultiplayerFrontlineThreeProcessAcceptanceMod"
+                      ],
+    "processes":  [
+                      {
+                          "name":  "authoritative-server",
+                          "pid":  27288,
+                          "startedAtUtcTicks":  639230921538312039,
+                          "stdout":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\server\\stdout.log",
+                          "stderr":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\server\\stderr.log"
+                      },
+                      {
+                          "name":  "client-a",
+                          "pid":  79812,
+                          "startedAtUtcTicks":  639230921549278455,
+                          "stdout":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-a\\stdout.log",
+                          "stderr":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-a\\stderr.log"
+                      },
+                      {
+                          "name":  "client-b",
+                          "pid":  52512,
+                          "startedAtUtcTicks":  639230921559623230,
+                          "stdout":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-b\\stdout.log",
+                          "stderr":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-b\\stderr.log"
+                      }
+                  ],
+    "clientCredentials":  [
+                              {
+                                  "clientInstanceId":  1,
+                                  "present":  true,
+                                  "valid":  true,
+                                  "length":  64,
+                                  "sha256":  "cde7b386268f6ff9454d0a0951e5c65ea49a8acc208e3de3ac823da1f3d42443",
+                                  "deleted":  true,
+                                  "temporaryCredentials":  [
+
+                                                           ]
+                              },
+                              {
+                                  "clientInstanceId":  2,
+                                  "present":  true,
+                                  "valid":  true,
+                                  "length":  64,
+                                  "sha256":  "75ed6aa7eca045df99e48618351d382fd3b3bcbdcf059b3d07ec7421e23a98b1",
+                                  "deleted":  true,
+                                  "temporaryCredentials":  [
+
+                                                           ]
+                              }
+                          ],
+    "gameplayEvidence":  [
+
+                         ],
+    "screenshots":  [
+
+                    ],
+    "clientFramebufferEvidence":  [
+
+                                  ],
+    "clientPresentation":  [
+
+                           ],
+    "clientWorldEvidence":  [
+
+                            ],
+    "runtimeLogs":  [
+                        {
+                            "name":  "authoritative-server",
+                            "stdout":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\server\\stdout.log",
+                                           "length":  15044,
+                                           "sha256":  "33185eaf247966869fae6ad84a59a5791c9a0666c115b6d5c6c71f1380ed1b41"
+                                       },
+                            "stderr":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\server\\stderr.log",
+                                           "length":  1114,
+                                           "sha256":  "d5658ab795175c76b6787ade3f81f80017103d704e6c7a5295b76a03db410f6d"
+                                       }
+                        },
+                        {
+                            "name":  "client-a",
+                            "stdout":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-a\\stdout.log",
+                                           "length":  24878,
+                                           "sha256":  "f5a49d5670b54c0f172d49b1675b4a8042e177205d16f2acc72cd0e7bb536ea5"
+                                       },
+                            "stderr":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-a\\stderr.log",
+                                           "length":  0,
+                                           "sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                                       }
+                        },
+                        {
+                            "name":  "client-b",
+                            "stdout":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-b\\stdout.log",
+                                           "length":  25081,
+                                           "sha256":  "76eda098887ff001040472e7e82a8f2b20964a7abc0daaf9da03386bcb5cd2c7"
+                                       },
+                            "stderr":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\client-b\\stderr.log",
+                                           "length":  0,
+                                           "sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                                       }
+                        }
+                    ],
+    "credentialValidation":  "LUDCRD01/64-byte/SHA256/non-empty/distinct",
+    "runtimeErrorEvidence":  {
+                                 "stderrPolicy":  "must-be-empty",
+                                 "runtimeFaultPort":  "gameplayEvidence[].faultCount",
+                                 "structuredFaultPort":  "gameplayEvidence[].networkFaultInjection"
+                             },
+    "failure":  "Gameplay acceptance failed in \u0027authoritative-server\u0027: System.InvalidOperationException: Network runtime reported 1 fault(s); last=TransportClosed.\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.Update(Single\u0026 dt) in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 196. Evidence: C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_visionfix\\server\\gameplay-evidence.json",
+    "cleanup":  "attempted"
+}

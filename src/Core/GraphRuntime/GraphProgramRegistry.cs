@@ -33,9 +33,11 @@ namespace Ludots.Core.GraphRuntime
             TriggerGraphEntry[]? triggerGraphEntries,
             GraphGeneratedExecute? generatedExecute,
             GraphGeneratedExecuteSlice? generatedExecuteSlice,
-            GraphExecutionBackend executionBackend)
+            GraphExecutionBackend executionBackend,
+            IReadOnlyDictionary<int, GraphEntityQueryPlan>? entityQueries = null)
         {
             Program = program ?? Array.Empty<GraphInstruction>();
+            EntityQueries = entityQueries ?? GraphEntityQueryPlan.Compile(Program);
             Kind = kind;
             Symbols = symbols ?? Array.Empty<string>();
             TriggerGraphEntries = triggerGraphEntries ?? Array.Empty<TriggerGraphEntry>();
@@ -46,6 +48,7 @@ namespace Ludots.Core.GraphRuntime
         }
 
         public GraphInstruction[] Program { get; }
+        public IReadOnlyDictionary<int, GraphEntityQueryPlan> EntityQueries { get; }
         public GraphKind Kind { get; }
         public string[] Symbols { get; }
         public IReadOnlyList<TriggerGraphEntry> TriggerGraphEntries { get; }
@@ -70,7 +73,8 @@ namespace Ludots.Core.GraphRuntime
                 entries,
                 execute,
                 executeSlice,
-                backend);
+                backend,
+                EntityQueries);
         }
 
         private static bool ProgramContainsYield(GraphInstruction[] program)
@@ -92,7 +96,18 @@ namespace Ludots.Core.GraphRuntime
     {
         private readonly Dictionary<int, GraphProgramRegistration> _programs = new();
         private readonly Dictionary<int, GraphInstructionSourceMap> _sourceMaps = new();
+        private readonly GasGraphOpHandlerTable _operationHandlers;
         private int _version;
+
+        public GraphProgramRegistry()
+            : this(null)
+        {
+        }
+
+        public GraphProgramRegistry(GasGraphOpHandlerTable? operationHandlers)
+        {
+            _operationHandlers = operationHandlers ?? GasGraphOpHandlerTable.Instance;
+        }
 
         public int Version => _version;
 
@@ -314,10 +329,21 @@ namespace Ludots.Core.GraphRuntime
                             $"Graph program id {graphId} has duplicate TriggerGraph entry label '{label}'.");
                     }
 
-                    if (string.IsNullOrWhiteSpace(entries[i].EventName))
+                    if (string.IsNullOrWhiteSpace(entries[i].ActionId))
+                    {
+                        if (string.IsNullOrWhiteSpace(entries[i].EventName))
+                        {
+                            throw new InvalidOperationException(
+                                $"Graph program id {graphId} TriggerGraph entry '{label}' requires a non-empty event name.");
+                        }
+                    }
+                    else if (!string.Equals(
+                                 entries[i].EventName,
+                                 TriggerGraphEntry.InputActionSchemaEventName,
+                                 StringComparison.Ordinal))
                     {
                         throw new InvalidOperationException(
-                            $"Graph program id {graphId} TriggerGraph entry '{label}' requires a non-empty event name.");
+                            $"Graph program id {graphId} TriggerGraph action-bound entry '{label}' must use event name '{TriggerGraphEntry.InputActionSchemaEventName}' (got '{entries[i].EventName}').");
                     }
 
                     int startPc = entries[i].StartPc;
@@ -385,12 +411,12 @@ namespace Ludots.Core.GraphRuntime
             }
         }
 
-        private static void EnsureProgramValid(int graphId, GraphInstruction[] program, GraphKind kind)
+        private void EnsureProgramValid(int graphId, GraphInstruction[] program, GraphKind kind)
         {
             GraphKindOperationPolicy.ValidateProgram(
                 kind,
                 program,
-                GasGraphOpHandlerTable.Instance,
+                _operationHandlers,
                 graphId,
                 nameof(GraphProgramRegistry));
         }
@@ -457,6 +483,12 @@ namespace Ludots.Core.GraphRuntime
 
             foreach (KeyValuePair<int, GraphProgramRegistration> pair in _programs)
             {
+                foreach (GraphInstruction instruction in pair.Value.Program)
+                {
+                    if (instruction.Op != (ushort)GraphNodeOp.BindQueryCollection) continue;
+                    if (!_programs.TryGetValue(instruction.Imm, out var query) || query.Kind != GraphKind.Query)
+                        throw new InvalidOperationException("ENTITY_QUERY.ERR.ExpectedQueryGraph");
+                }
                 ValidateProgramInvokeGraphTargets(
                     pair.Key,
                     pair.Value,
@@ -604,10 +636,16 @@ namespace Ludots.Core.GraphRuntime
                         $"InvokeGraph target graph id {targetGraphId} is not registered.");
                 }
 
-                if (target.Kind != GraphKind.TriggerGraph)
+                if (target.Kind is not (GraphKind.TriggerGraph or GraphKind.Query))
                 {
                     throw new InvalidOperationException(
-                        $"InvokeGraph target graph id {targetGraphId} must be TriggerGraph, but is '{target.Kind}'.");
+                        $"InvokeGraph target graph id {targetGraphId} must be TriggerGraph or Query (host→function), but is '{target.Kind}'.");
+                }
+
+                if (target.Kind == GraphKind.Query)
+                {
+                    // Query callees start at pc 0; entry-label rewrite is TriggerGraph-only.
+                    continue;
                 }
 
                 if ((ins.Flags & 2) == 0)
@@ -677,6 +715,14 @@ namespace Ludots.Core.GraphRuntime
 
         public bool TryGetRegistration(int graphId, out GraphProgramRegistration registration)
             => _programs.TryGetValue(graphId, out registration);
+
+        /// <summary>Copy of currently registered graph ids (stable snapshot for one-shot scans).</summary>
+        public int[] GetRegisteredGraphIds()
+        {
+            var ids = new int[_programs.Count];
+            _programs.Keys.CopyTo(ids, 0);
+            return ids;
+        }
 
         public GraphKind RequireKind(int graphId, GraphKind expected)
         {

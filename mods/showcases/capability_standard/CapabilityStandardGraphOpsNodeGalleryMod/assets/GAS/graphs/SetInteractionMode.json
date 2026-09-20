@@ -1,0 +1,65 @@
+[
+  {
+    "id": "showcase.graph_op.SetInteractionMode",
+    "kind": "Effect",
+    "entry": "drain",
+    "nodes": [
+      {
+        "id": "drain",
+        "op": "ConstFloat",
+        "floatValue": -2.0
+      },
+      {
+        "id": "switch",
+        "op": "SetInteractionMode",
+        "mode": "mode.targeting"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "drain",
+        "fromPort": "next",
+        "to": "switch"
+      },
+      {
+        "from": "switch",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "drain",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "switch",
+        "toPort": "source"
+      }
+    ]
+  }
+]

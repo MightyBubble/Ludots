@@ -121,6 +121,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(fieldNames, Does.Contain("BehaviorActiveMask"));
             Assert.That(fieldNames, Does.Contain("Version"));
             Assert.That(fieldNames, Does.Contain("StableId"));
+            Assert.That(fieldNames, Does.Contain("OwnerStableId"));
         }
 
         [Test]
@@ -242,6 +243,7 @@ namespace Ludots.Tests.Architecture
                 "MaterialCustomData",
                 "MaterialId",
                 "MeshAssetId",
+                "OwnerStableId",
                 "Position",
                 "RenderPath",
                 "Rotation",

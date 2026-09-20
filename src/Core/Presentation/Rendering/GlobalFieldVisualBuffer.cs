@@ -16,6 +16,7 @@ namespace Ludots.Core.Presentation.Rendering
         Flow = 4,
         Heat = 5,
         Influence = 6,
+        DiscreteOwnership = 7,
     }
 
     public enum GlobalFieldVisualValueKind : byte

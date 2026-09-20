@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 2,
+  "status": "running",
+  "role": "replicatedClient",
+  "failure": null,
+  "startedAtUtc": "2026-07-25T10:52:21.5988408Z",
+  "completedAtUtc": null,
+  "planFingerprint": "052c4fd97d01835f9f322c361fa7c6b852d8be14eec7ffbe999850dd27920315",
+  "contentFingerprint": "80df1baf7fa162f8c0c81504c728186c6244269040a7694248d1e3fb1481d1d5",
+  "sessionEpoch": 1369914567364652542,
+  "playerId": 1,
+  "seatSlot": 0,
+  "faultCount": 0,
+  "seats": [
+    {
+      "seatSlot": 0,
+      "playerId": 1,
+      "connectionState": "Connected",
+      "readyState": "Unready"
+    },
+    {
+      "seatSlot": 1,
+      "playerId": 2,
+      "connectionState": "Connected",
+      "readyState": "Unready"
+    }
+  ],
+  "steps": [
+    {
+      "name": "Connecting",
+      "status": "passed",
+      "startedInputRevision": 0,
+      "completedInputRevision": 12,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-25T10:52:21.6016272Z",
+      "completedAtUtc": "2026-07-25T10:52:23.0122984Z",
+      "detail": "Full snapshot and local player binding are ready."
+    },
+    {
+      "name": "Ready",
+      "status": "passed",
+      "startedInputRevision": 12,
+      "completedInputRevision": 102,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 7,
+      "startedAtUtc": "2026-07-25T10:52:23.0126670Z",
+      "completedAtUtc": "2026-07-25T10:52:27.1215282Z",
+      "detail": "Both commanders readied through input and the match reached InProgress."
+    },
+    {
+      "name": "Gathering",
+      "status": "running",
+      "startedInputRevision": 102,
+      "completedInputRevision": 0,
+      "startedCommittedTick": 7,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-25T10:52:27.1215587Z",
+      "completedAtUtc": null,
+      "detail": null
+    }
+  ],
+  "commands": [],
+  "gameplay": {
+    "initialCrystals": 40,
+    "harvestedCrystals": -1,
+    "postTrainingCrystals": -1,
+    "initialInfantryCount": 2,
+    "trainedInfantryCount": -1,
+    "harvesterHandle": "",
+    "harvesterStartPosition": null,
+    "harvesterEndPosition": null,
+    "selectedInfantryHandles": [],
+    "moveStartPositions": [],
+    "moveEndPositions": [],
+    "initialVisibleEnemyInfantryCount": 0,
+    "initialVisibleEnemyCoreCount": 0,
+    "enemyInfantryEnteredVision": false,
+    "enemyCoreEnteredVision": false,
+    "attackTargetHandle": "",
+    "attackTargetHealthBefore": -1,
+    "attackTargetHealthAfter": -1,
+    "observedCoreHealthBySide": [
+      1000,
+      null
+    ],
+    "observedInfantryCountBySide": [
+      2,
+      null
+    ],
+    "matchPhase": "",
+    "outcome": "",
+    "outcomeSource": "",
+    "winningSideIndex": -1,
+    "committedTick": 0,
+    "committedTickSource": ""
+  },
+  "runtime": {
+    "capturedAtUtc": "2026-07-25T10:52:27.1215597Z",
+    "stage": "Gathering",
+    "substep": 0,
+    "pendingCommandAction": "",
+    "pendingCommandSequence": 0,
+    "selectedActors": [
+      {
+        "handle": "11:1",
+        "isAlive": true,
+        "hasReplicationIdentity": true,
+        "xCm": 7000,
+        "yCm": 15000
+      }
+    ],
+    "hasBattlePoints": false,
+    "meetingPoint": null,
+    "siegePoint": null,
+    "visibleEnemyCoreCount": 0,
+    "committedTick": 7,
+    "matchPhase": "InProgress",
+    "outcome": "InProgress"
+  }
+}

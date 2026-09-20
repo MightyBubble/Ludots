@@ -1,0 +1,63 @@
+Targeted lifecycle, slot, payload, callback and Bridge tests
+dotnet test src/Tests/GasTests/GasTests.csproj --no-build --no-restore --filter "FullyQualifiedName~Ludots.Tests.Gas.Graph.TriggerGraphResumeTests|FullyQualifiedName~TriggerGraphExecutionSlotStoreTests|FullyQualifiedName~TriggerGraphAwaitCallbackTests|FullyQualifiedName~TriggerGraphEntryPayloadTests|FullyQualifiedName~GraphDebugToolTests"
+Source: triggergraph-slots-targeted.log
+1877: mounts=10000; entryMs=103.355; resumeMs=170.383; allocatedBytes=0; mountAndCompanionCreationBytes=7121096; slotsAtYield=10000; slotsAfterHalt=0
+2578: 测试运行成功。
+2579: 测试总数: 47
+2580:      通过数: 47
+
+Release serial mount batch (not a frame benchmark)
+dotnet test src/Tests/GasTests/GasTests.csproj -c Release --no-build --no-restore --filter FullyQualifiedName~Slots_TenThousandMounts
+Source: triggergraph-slots-release-serial.log
+103: mounts=10000; entryMs=17.978; resumeMs=31.320; allocatedBytes=0; mountAndCompanionCreationBytes=7121096; slotsAtYield=10000; slotsAfterHalt=0
+110: 测试运行成功。
+111: 测试总数: 1
+112:      通过数: 1
+
+Serial BT/HFSM acceptance
+dotnet test src/Tests/GasTests/GasTests.csproj --no-build --no-restore --filter "FullyQualifiedName~GraphBehaviorSeparatedShowcaseAcceptanceTests|FullyQualifiedName~GraphBehaviorArenaAcceptanceTests"
+Source: triggergraph-slots-arena-serial.log
+9: waves=25 A=10000 N_topo=8 avg=3.897 p95=4.844 max=4.956 over5ms=0
+14: crowd band no-graph baseline: agents=10000 scriptSlices=0 nodesVisited=80000
+42: crowd band no-graph baseline: agents=10000 lifecycleRuns=0 predicates=10000
+59: 测试运行成功。
+60: 测试总数: 20
+61:      通过数: 20
+
+Expanded regression, including concurrent build load
+Filter: TriggerGraph | GraphDebug | GraphOpsNodeGalleryScriptAcceptanceTests | GraphOpsNodeGalleryEntryPayloadAcceptanceTests | GraphBehaviorSeparatedShowcaseAcceptanceTests | GraphBehaviorArenaAcceptanceTests | GraphEditorContractGuardTests
+Source: triggergraph-slots-regression-final.log
+320: waves=25 A=10000 N_topo=8 avg=13.385 p95=17.014 max=17.535 over5ms=25
+322:   失败 CombinedThinkWaves_60fpsCadence_AiEvery12Frames_StayWithinFrameBudget [1 s]
+325:   1)   Combined think wave exceeded 5ms in 25 of 25 samples
+327:   Expected: not greater than 0
+328:   But was:  25
+330:   2)   Combined think p95 exceeded 15ms: 17.014
+332:   Expected: less than 15.0d
+333:   But was:  17.014199999999999d
+2762:   失败 ProductionGraphsAndMaps_UseRenamedKindAndMountField [4 ms]
+2766:   Expected: False
+2767:   But was:  True
+4440: mounts=10000; entryMs=67.217; resumeMs=83.162; allocatedBytes=0; mountAndCompanionCreationBytes=7121096; slotsAtYield=10000; slotsAfterHalt=0
+5134: crowd band no-graph baseline: agents=10000 scriptSlices=0 nodesVisited=80000
+5252: crowd band no-graph baseline: agents=10000 lifecycleRuns=0 predicates=10000
+5974:   失败 GraphReturnWriter_RejectsRegisteredTriggerGraphKind_FailsClosed [5 ms]
+5977:   Expected: String containing "kind is 'TriggerGraph'"
+5978:   But was:  "Graph program id 1 has no output schema."
+16562: 测试总数: 272
+16563:      通过数: 269
+16564:      失败数: 3
+16565: 测试运行失败。
+
+Clean origin/main 6b177db111 baseline
+Filter: ProductionGraphsAndMaps_UseRenamedKindAndMountField | GraphReturnWriter_RejectsRegisteredTriggerGraphKind_FailsClosed
+Source: triggergraph-slots-main-baseline.log
+2868:   失败 ProductionGraphsAndMaps_UseRenamedKindAndMountField [67 ms]
+2872:   Expected: False
+2873:   But was:  True
+2881:   失败 GraphReturnWriter_RejectsRegisteredTriggerGraphKind_FailsClosed [282 ms]
+2884:   Expected: String containing "kind is 'TriggerGraph'"
+2885:   But was:  "Graph program id 1 has no output schema."
+2894: 测试总数: 2
+2895:      失败数: 2
+2896: 测试运行失败。

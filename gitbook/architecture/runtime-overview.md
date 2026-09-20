@@ -34,7 +34,7 @@
 ## 4 SystemGroup Phase
 
 ```text
-SchemaUpdate → InputCollection → PostMovement → AbilityActivation →
+`SchemaUpdate → InputCollection → PostMovement → AbilityActivation → EffectProcessing → RuntimeEntityBinding → AttributeCalculation → DeferredTriggerCollection → Continuation → Cleanup → EventDispatch → ClearPresentationFlags`
 EffectProcessing → AttributeCalculation → DeferredTriggerCollection →
 Cleanup → EventDispatch → ClearPresentationFlags
 ```

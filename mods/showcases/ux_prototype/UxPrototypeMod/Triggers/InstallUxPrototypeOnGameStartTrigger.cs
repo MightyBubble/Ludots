@@ -48,13 +48,6 @@ internal sealed class InstallUxPrototypeOnGameStartTrigger : Trigger
 
         panelSources.Register(UxPrototypeEntityCommandPanelSource.SourceId, new UxPrototypeEntityCommandPanelSource(engine, _runtime.State));
 
-        if (engine.GetService(CoreServiceKeys.OrderQueue) is OrderQueue orders)
-        {
-            engine.RegisterSystem(
-                new UxPrototypeLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _context),
-                SystemGroup.InputCollection);
-        }
-
         engine.RegisterSystem(new UxPrototypeSimulationSystem(engine, _runtime), SystemGroup.InputCollection);
         engine.RegisterPresentationSystem(new UxPrototypePanelPresentationSystem(engine, _runtime));
         _context.Log("[UxPrototypeMod] Prototype order source, simulation state, and HUD presentation registered.");

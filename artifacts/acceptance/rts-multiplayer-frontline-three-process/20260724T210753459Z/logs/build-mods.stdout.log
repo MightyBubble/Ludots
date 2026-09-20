@@ -1,0 +1,172 @@
+[OK] LudotsCoreMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd_issue709\src\Platform\Ludots.Platform.Abstractions\bin\Release\net8.0\Ludots.Platform.Abstractions.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net8.0\DotRecast.Core.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net8.0\DotRecast.Detour.dll
+  Arch.System -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Ludots.Core -> C:\001_AI\LudotsProd_issue709\src\Core\bin\Release\net8.0\Ludots.Core.dll
+  LudotsCoreMod -> C:\001_AI\LudotsProd_issue709\mods\LudotsCoreMod\bin\net8.0\LudotsCoreMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:06.69
+Exported ref: C:\001_AI\LudotsProd_issue709\mods\LudotsCoreMod\ref\LudotsCoreMod.dll
+
+[OK] CoreInputMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd_issue709\src\Platform\Ludots.Platform.Abstractions\bin\Release\net8.0\Ludots.Platform.Abstractions.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net8.0\DotRecast.Core.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net8.0\DotRecast.Detour.dll
+  Arch.System -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Ludots.Core -> C:\001_AI\LudotsProd_issue709\src\Core\bin\Release\net8.0\Ludots.Core.dll
+  CoreInputMod -> C:\001_AI\LudotsProd_issue709\mods\CoreInputMod\bin\net8.0\CoreInputMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:05.41
+Exported ref: C:\001_AI\LudotsProd_issue709\mods\CoreInputMod\ref\CoreInputMod.dll
+
+[OK] EntityCommandPanelMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd_issue709\src\Platform\Ludots.Platform.Abstractions\bin\Release\net8.0\Ludots.Platform.Abstractions.dll
+  Ludots.UI -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI\bin\Release\net8.0\Ludots.UI.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net8.0\DotRecast.Core.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net8.0\DotRecast.Detour.dll
+  Arch.System -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Ludots.Core -> C:\001_AI\LudotsProd_issue709\src\Core\bin\Release\net8.0\Ludots.Core.dll
+  EntityCommandPanelMod -> C:\001_AI\LudotsProd_issue709\mods\EntityCommandPanelMod\bin\net8.0\EntityCommandPanelMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:03.91
+Exported ref: C:\001_AI\LudotsProd_issue709\mods\EntityCommandPanelMod\ref\EntityCommandPanelMod.dll
+
+[OK] RtsDemoMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd_issue709\src\Platform\Ludots.Platform.Abstractions\bin\Release\net8.0\Ludots.Platform.Abstractions.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net8.0\DotRecast.Core.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net8.0\DotRecast.Detour.dll
+  Arch.System -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Ludots.Core -> C:\001_AI\LudotsProd_issue709\src\Core\bin\Release\net8.0\Ludots.Core.dll
+  CoreInputMod -> C:\001_AI\LudotsProd_issue709\mods\CoreInputMod\bin\net8.0\CoreInputMod.dll
+  RtsDemoMod -> C:\001_AI\LudotsProd_issue709\mods\showcases\rts_demo\RtsDemoMod\bin\net8.0\RtsDemoMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:02.89
+Exported ref: C:\001_AI\LudotsProd_issue709\mods\showcases\rts_demo\RtsDemoMod\ref\RtsDemoMod.dll
+
+[OK] RtsShowcaseMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd_issue709\src\Platform\Ludots.Platform.Abstractions\bin\Release\net8.0\Ludots.Platform.Abstractions.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net8.0\DotRecast.Core.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net8.0\DotRecast.Detour.dll
+  Arch.System -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Ludots.Core -> C:\001_AI\LudotsProd_issue709\src\Core\bin\Release\net8.0\Ludots.Core.dll
+  RtsShowcaseMod -> C:\001_AI\LudotsProd_issue709\mods\showcases\rts_showcase\RtsShowcaseMod\bin\net8.0\RtsShowcaseMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:04.15
+Exported ref: C:\001_AI\LudotsProd_issue709\mods\showcases\rts_showcase\RtsShowcaseMod\ref\RtsShowcaseMod.dll
+
+[OK] RtsMultiplayerFrontlineMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd_issue709\src\Platform\Ludots.Platform.Abstractions\bin\Release\net8.0\Ludots.Platform.Abstractions.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net8.0\DotRecast.Core.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net8.0\DotRecast.Detour.dll
+  Arch.System -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Ludots.Core -> C:\001_AI\LudotsProd_issue709\src\Core\bin\Release\net8.0\Ludots.Core.dll
+  RtsMultiplayerFrontlineMod -> C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\bin\net8.0\RtsMultiplayerFrontlineMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:05.74
+Exported ref: C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\ref\RtsMultiplayerFrontlineMod.dll
+
+[OK] RtsMultiplayerFrontlineNetworkedMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd_issue709\src\Platform\Ludots.Platform.Abstractions\bin\Release\net8.0\Ludots.Platform.Abstractions.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net8.0\DotRecast.Core.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net8.0\DotRecast.Detour.dll
+  Arch.System -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Ludots.Core -> C:\001_AI\LudotsProd_issue709\src\Core\bin\Release\net8.0\Ludots.Core.dll
+  RtsMultiplayerFrontlineMod -> C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\bin\net8.0\RtsMultiplayerFrontlineMod.dll
+  RtsMultiplayerFrontlineNetworkedMod -> C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineNetworkedMod\bin\net8.0\RtsMultiplayerFrontlineNetworkedMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:08.20
+Exported ref: C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineNetworkedMod\ref\RtsMultiplayerFrontlineNetworkedMod.dll
+
+[OK] RtsMultiplayerFrontlineThreeProcessAcceptanceMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd_issue709\src\Platform\Ludots.Platform.Abstractions\bin\Release\net8.0\Ludots.Platform.Abstractions.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net8.0\DotRecast.Core.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net8.0\DotRecast.Detour.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.System -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Ludots.Core -> C:\001_AI\LudotsProd_issue709\src\Core\bin\Release\net8.0\Ludots.Core.dll
+  RtsMultiplayerFrontlineMod -> C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\bin\net8.0\RtsMultiplayerFrontlineMod.dll
+  RtsMultiplayerFrontlineThreeProcessAcceptanceMod -> C:\001_AI\LudotsProd_issue709\mods\fixtures\rts_multiplayer_frontline_three_process\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\bin\net8.0\RtsMultiplayerFrontlineThreeProcessAcceptanceMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:09.76
+Exported ref: C:\001_AI\LudotsProd_issue709\mods\fixtures\rts_multiplayer_frontline_three_process\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\ref\RtsMultiplayerFrontlineThreeProcessAcceptanceMod.dll
+

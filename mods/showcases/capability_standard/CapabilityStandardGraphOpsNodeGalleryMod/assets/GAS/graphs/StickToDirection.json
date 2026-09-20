@@ -1,0 +1,20 @@
+[
+  {
+    "id": "showcase.graph_op.StickToDirection",
+    "kind": "Query",
+    "entry": "x",
+    "nodes": [
+      { "id": "x", "op": "ConstFloat", "floatValue": 0.7 },
+      { "id": "y", "op": "ConstFloat", "floatValue": 0.7 },
+      { "id": "stick", "op": "StickToDirection", "validOutput": "hasDir" }
+    ],
+    "controlEdges": [
+      { "from": "x", "fromPort": "next", "to": "y" },
+      { "from": "y", "fromPort": "next", "to": "stick" }
+    ],
+    "valueEdges": [
+      { "from": "x", "fromPort": "value", "to": "stick", "toPort": "a" },
+      { "from": "y", "fromPort": "value", "to": "stick", "toPort": "b" }
+    ]
+  }
+]

@@ -8,6 +8,7 @@
   "targetFps": 0,
   "simulationBudgetMsPerFrame": 4,
   "simulationMaxSlicesPerLogicFrame": 120,
+  "triggerGraphExecutionCapacity": 1024,
   "gasRuntimeCapacity": {
     "abilityExecSnapshotCapacity": 16384,
     "effectLifetimeSnapshotCapacity": 16384,
@@ -18,6 +19,7 @@
     "orderAdmissionRejectionCapacity": 4096,
     "orderTerminalResultCapacity": 4096,
     "deferredTriggerActiveEntityCapacity": 16384,
+    "deferredTriggerPerFrameCapacity": 1024,
     "projectileCollisionCandidateCapacity": 16384,
     "projectileRuntimeEntityCapacity": 16384,
     "effectPhaseGraphProgramScratchCapacity": 16384,
@@ -28,11 +30,10 @@
     "attachmentPositionSyncScratchCapacity": 8192,
     "effectRequestQueueCapacity": 4096
   },
-  "gridCellSizeCm": 100,
-  "worldWidthInMacroTiles": 64,
-  "worldHeightInMacroTiles": 64,
   "commandSource": {
-    "targetFilter": { "relationFilter": "All" },
+    "targetFilter": {
+      "relationFilter": "All"
+    },
     "clickPickRadiusPixels": 20,
     "dragThresholdPixels": 8
   },

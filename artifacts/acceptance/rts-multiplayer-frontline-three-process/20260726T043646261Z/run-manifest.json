@@ -1,0 +1,271 @@
+{
+    "schemaVersion":  8,
+    "acceptanceScope":  "three-process-player-input-to-authoritative-frontline-outcome",
+    "status":  "failed",
+    "startedAtUtc":  "2026-07-26T04:36:46.3324978Z",
+    "completedAtUtc":  "2026-07-26T04:40:06.0360099Z",
+    "artifactDirectory":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z",
+    "repository":  {
+                       "commit":  "457c5d9c86fcb84d547ece4b5d302676f0211594",
+                       "dirty":  false
+                   },
+    "inputs":  {
+                   "profile":  {
+                                   "path":  "C:\\001_AI\\LudotsProd_issue709\\scripts\\acceptance\\rts-multiplayer-frontline-three-process.profile.json",
+                                   "length":  5663,
+                                   "sha256":  "e7f04ece2840f7039125cb62df9a28647861fa6f57daff3c2538cc4f6c02a4c5"
+                               },
+                   "acceptancePlan":  {
+                                          "path":  "C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\assets\\RtsMultiplayerFrontlineThreeProcessAcceptancePlan.json",
+                                          "length":  1352,
+                                          "sha256":  "db1b86e9199e945f6499ec939c44b878d0fd56e11f14fe0c4d85fc925a66e198"
+                                      },
+                   "frontlineConfig":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_multiplayer_frontline\\RtsMultiplayerFrontlineMod\\assets\\RtsMultiplayerFrontlineConfig.json",
+                                           "length":  6372,
+                                           "sha256":  "860e165c41340fca44818bbf0b18d0b99c964e2f2aa8178e294a39f642936f1c"
+                                       },
+                   "networkConfig":  {
+                                         "path":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_multiplayer_frontline\\RtsMultiplayerFrontlineNetworkedMod\\assets\\game.json",
+                                         "length":  2923,
+                                         "sha256":  "1ceca2bb93d91b0183cc942912e00c739c3ce56cd7040b033661840c45d8de23"
+                                     },
+                   "sourceLaunchGraph":  {
+                                             "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\launcher-resolved.graph.json",
+                                             "length":  9092,
+                                             "sha256":  "62a5d3396f1396359bfc8ab67ec1e721b1bfc0a33da728346f2f501044ce37ff"
+                                         },
+                   "roleArtifacts":  [
+                                         {
+                                             "processRole":  "authoritativeServer",
+                                             "graph":  {
+                                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\server\\launcher.graph.json",
+                                                           "length":  16283,
+                                                           "sha256":  "1e4c92f1aa4637ba9d72d1ecc9f3673d3c44777b11853d4e956ab81544d70e35"
+                                                       },
+                                             "bootstrap":  {
+                                                               "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\server\\launcher.runtime.json",
+                                                               "length":  1757,
+                                                               "sha256":  "a51c118fd54d16a37d094bf7f81fac24fd0b2ea4e3f1544c21d89beb4fe91ce7"
+                                                           }
+                                         },
+                                         {
+                                             "processRole":  "replicatedClient",
+                                             "graph":  {
+                                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-a\\launcher.graph.json",
+                                                           "length":  16287,
+                                                           "sha256":  "c838da4e4287f3743c55f245a4ac28480961e6852f90a37f4717eceebc91f8a4"
+                                                       },
+                                             "bootstrap":  {
+                                                               "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-a\\launcher.runtime.json",
+                                                               "length":  1911,
+                                                               "sha256":  "48270d2c7b73faaa3ed0a8ce65da0a752ec914d803b205417a0820b8cfcb3a0f"
+                                                           }
+                                         },
+                                         {
+                                             "processRole":  "replicatedClient",
+                                             "graph":  {
+                                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-b\\launcher.graph.json",
+                                                           "length":  16287,
+                                                           "sha256":  "c295735697b1689933f892bded3e56a6781af2f50a77dbced192b7dbde80dfa8"
+                                                       },
+                                             "bootstrap":  {
+                                                               "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-b\\launcher.runtime.json",
+                                                               "length":  1911,
+                                                               "sha256":  "90b669d3fac2b3768057053d5dbe68d54ab6c79aca41b972c2ad8c77b333aa6c"
+                                                           }
+                                         }
+                                     ],
+                   "assemblies":  [
+                                      {
+                                          "path":  "C:\\001_AI\\LudotsProd_issue709\\src\\Tools\\Ludots.Launcher.Cli\\bin\\Release\\net8.0\\Ludots.Launcher.Cli.dll",
+                                          "length":  36352,
+                                          "sha256":  "9478c3b30a6c0af41a49bc0fa749a36cf177b41b5886a91438d94eb6ee0794ed"
+                                      },
+                                      {
+                                          "path":  "C:\\001_AI\\LudotsProd_issue709\\src\\Apps\\DedicatedServer\\Ludots.App.DedicatedServer\\bin\\Release\\net8.0\\Ludots.App.DedicatedServer.dll",
+                                          "length":  8192,
+                                          "sha256":  "395f1451a8a3201c9fa28d3f14862cbbcbc637d85d1f38cb5d8e14d8469761ca"
+                                      },
+                                      {
+                                          "path":  "C:\\001_AI\\LudotsProd_issue709\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net8.0\\Ludots.App.Raylib.dll",
+                                          "length":  6144,
+                                          "sha256":  "1f959e9d43e012dd59f0bb487774456973db104fadbabeb9d707f294d266d9d6"
+                                      }
+                                  ]
+               },
+    "effectiveParameters":  {
+                                "host":  "127.0.0.1",
+                                "port":  27777,
+                                "connectionKeySha256":  "bd51bea1d57e190805e44579ec4fc447f03e509025b3ab31017e6cdb3b576685",
+                                "credentialTimeoutSeconds":  60,
+                                "runSeconds":  240,
+                                "monitorIntervalMilliseconds":  250,
+                                "faultProfile":  "normal",
+                                "faultSeeds":  {
+                                                   "server":  70901,
+                                                   "clientOne":  70902,
+                                                   "clientTwo":  70903
+                                               },
+                                "faultConfiguration":  {
+                                                           "transportIdentity":  "LiteNetLib/2.1.4",
+                                                           "profileId":  "normal",
+                                                           "roundTripLatencyMilliseconds":  0,
+                                                           "jitterMilliseconds":  0,
+                                                           "packetLossPermille":  0,
+                                                           "stateReorderPermille":  0,
+                                                           "isEnabled":  false
+                                                       },
+                                "clientScreenshots":  [
+                                                          {
+                                                              "process":  "client-a",
+                                                              "targetPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\screens\\client-a\\frontline.png",
+                                                              "diagnosticPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-a\\raylib-diagnostic.log",
+                                                              "milestones":  [
+                                                                                 "ready",
+                                                                                 "advancing",
+                                                                                 "engaging",
+                                                                                 "completed"
+                                                                             ]
+                                                          },
+                                                          {
+                                                              "process":  "client-b",
+                                                              "targetPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\screens\\client-b\\frontline.png",
+                                                              "diagnosticPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-b\\raylib-diagnostic.log",
+                                                              "milestones":  [
+                                                                                 "ready",
+                                                                                 "advancing",
+                                                                                 "engaging",
+                                                                                 "completed"
+                                                                             ]
+                                                          }
+                                                      ],
+                                "clientPresentation":  {
+                                                           "minimumVisibleEntities":  1,
+                                                           "minimumActivePerformers":  1,
+                                                           "minimumAuthoredPrimitives":  1,
+                                                           "minimumSubmittedPrimitiveInstances":  1,
+                                                           "minimumSubmittedPrimitiveBatches":  1,
+                                                           "minimumPrefabVisuals":  1
+                                                       }
+                            },
+    "planFingerprint":  "052c4fd97d01835f9f322c361fa7c6b852d8be14eec7ffbe999850dd27920315",
+    "orderedModIds":  [
+                          "LudotsCoreMod",
+                          "CoreInputMod",
+                          "EntityCommandPanelMod",
+                          "RtsDemoMod",
+                          "RtsShowcaseMod",
+                          "RtsMultiplayerFrontlineMod",
+                          "RtsMultiplayerFrontlineNetworkedMod",
+                          "RtsMultiplayerFrontlineThreeProcessAcceptanceMod"
+                      ],
+    "processes":  [
+                      {
+                          "name":  "authoritative-server",
+                          "pid":  12816,
+                          "startedAtUtcTicks":  639206374925262364,
+                          "stdout":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\server\\stdout.log",
+                          "stderr":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\server\\stderr.log"
+                      },
+                      {
+                          "name":  "client-a",
+                          "pid":  77000,
+                          "startedAtUtcTicks":  639206374935692705,
+                          "stdout":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-a\\stdout.log",
+                          "stderr":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-a\\stderr.log"
+                      },
+                      {
+                          "name":  "client-b",
+                          "pid":  98960,
+                          "startedAtUtcTicks":  639206374945925844,
+                          "stdout":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-b\\stdout.log",
+                          "stderr":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-b\\stderr.log"
+                      }
+                  ],
+    "clientCredentials":  [
+                              {
+                                  "clientInstanceId":  1,
+                                  "present":  true,
+                                  "valid":  true,
+                                  "length":  64,
+                                  "sha256":  "4597428c07a4e5b026ced55746795a3ebb74a7069b9a41ff3dd22e8cd4ef80ff",
+                                  "deleted":  true,
+                                  "temporaryCredentials":  [
+
+                                                           ]
+                              },
+                              {
+                                  "clientInstanceId":  2,
+                                  "present":  true,
+                                  "valid":  true,
+                                  "length":  64,
+                                  "sha256":  "7a6bc5a141987b53e55d49aa8df3278d5c25f848e04e31e8a1016ca0b43b2fd1",
+                                  "deleted":  true,
+                                  "temporaryCredentials":  [
+
+                                                           ]
+                              }
+                          ],
+    "gameplayEvidence":  [
+
+                         ],
+    "screenshots":  [
+
+                    ],
+    "clientPresentation":  [
+
+                           ],
+    "clientWorldEvidence":  [
+
+                            ],
+    "runtimeLogs":  [
+                        {
+                            "name":  "authoritative-server",
+                            "stdout":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\server\\stdout.log",
+                                           "length":  14415,
+                                           "sha256":  "302a7bf0e1969bce8dd2cfb6c559273c6bcad4ecf0c624a399b8945482e9e784"
+                                       },
+                            "stderr":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\server\\stderr.log",
+                                           "length":  0,
+                                           "sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                                       }
+                        },
+                        {
+                            "name":  "client-a",
+                            "stdout":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-a\\stdout.log",
+                                           "length":  24046,
+                                           "sha256":  "f206f28ae98814959c764c9c137976372094d20549871f3c1a6dd30f4b19e4a3"
+                                       },
+                            "stderr":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-a\\stderr.log",
+                                           "length":  0,
+                                           "sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                                       }
+                        },
+                        {
+                            "name":  "client-b",
+                            "stdout":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-b\\stdout.log",
+                                           "length":  20866,
+                                           "sha256":  "6a8b31b85825efac4b0dc2af67442dac840da3c06320b798bbcc91efbc64a92e"
+                                       },
+                            "stderr":  {
+                                           "path":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-b\\stderr.log",
+                                           "length":  0,
+                                           "sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                                       }
+                        }
+                    ],
+    "credentialValidation":  "LUDCRD01/64-byte/SHA256/non-empty/distinct",
+    "runtimeErrorEvidence":  {
+                                 "stderrPolicy":  "must-be-empty",
+                                 "runtimeFaultPort":  "gameplayEvidence[].faultCount",
+                                 "structuredFaultPort":  "gameplayEvidence[].networkFaultInjection"
+                             },
+    "failure":  "Gameplay acceptance failed in \u0027client-a\u0027: System.TimeoutException: Client player 2 timed out after 100 seconds in stage Gathering, substep 4.\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.EnforceClientStageTimeout() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 1221\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateClient() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 263\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.Update(Single\u0026 dt) in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 188. Evidence: C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\client-a\\gameplay-evidence.json",
+    "cleanup":  "attempted"
+}

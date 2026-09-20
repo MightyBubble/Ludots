@@ -39,6 +39,9 @@ namespace Ludots.Core.Presentation.Config
             var fragments = PresentationAssetConfigIdGuard.CollectUniqueArrayByIdFragments(_configs, in entry);
             var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
 
+            var nodes = new JsonNode[merged.Count];
+            var keys = new string[merged.Count];
+
             for (int i = 0; i < merged.Count; i++)
             {
                 var node = merged[i].Node;
@@ -48,13 +51,45 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException("Presentation/mesh_assets.json entry is missing required 'id'.");
                 }
 
-                var desc = ParseDescriptor(node, key);
+                nodes[i] = node;
+                keys[i] = key;
+                _meshRegistry.GetOrRegisterId(key);
+            }
+
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                var desc = ParseDescriptor(nodes[i], keys[i]);
                 if (desc.Type == MeshAssetType.None)
                 {
-                    throw new InvalidOperationException($"Presentation/mesh_assets.json asset '{key}' resolved to MeshAssetType.None.");
+                    throw new InvalidOperationException($"Presentation/mesh_assets.json asset '{keys[i]}' resolved to MeshAssetType.None.");
                 }
 
-                _meshRegistry.Register(key, in desc);
+                _meshRegistry.Register(keys[i], in desc);
+            }
+
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                JsonNode? lodNode = nodes[i]["gpuSkinnedLod"];
+                if (lodNode == null)
+                {
+                    continue;
+                }
+
+                int assetId = _meshRegistry.GetId(keys[i]);
+                if (!_meshRegistry.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation/mesh_assets.json asset '{keys[i]}' was not registered before GPU-skinned LOD resolution.");
+                }
+
+                if (descriptor.Type != MeshAssetType.Model)
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation/mesh_assets.json asset '{keys[i]}' gpuSkinnedLod is only valid for Model assets.");
+                }
+
+                descriptor.GpuSkinnedLod = ParseGpuSkinnedLod(lodNode, keys[i], assetId);
+                _meshRegistry.Register(keys[i], in descriptor);
             }
         }
 
@@ -184,6 +219,74 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return effect;
+        }
+
+        private GpuSkinnedLodAssetSet ParseGpuSkinnedLod(JsonNode node, string key, int baseAssetId)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation/mesh_assets.json asset '{key}' gpuSkinnedLod must be an object.");
+            }
+
+            foreach (var property in obj)
+            {
+                if (property.Key is not ("main" or "shadow"))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation/mesh_assets.json asset '{key}' gpuSkinnedLod uses unsupported field '{property.Key}'.");
+                }
+            }
+
+            MeshLodAssetIds main = ParseMeshLodAssetIds(obj["main"], key, "main");
+            MeshLodAssetIds shadow = ParseMeshLodAssetIds(obj["shadow"], key, "shadow");
+            if (main.High != baseAssetId)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation/mesh_assets.json asset '{key}' gpuSkinnedLod.main.high must reference itself.");
+            }
+
+            return new GpuSkinnedLodAssetSet(in main, in shadow);
+        }
+
+        private MeshLodAssetIds ParseMeshLodAssetIds(JsonNode? node, string key, string pass)
+        {
+            string label = $"Presentation/mesh_assets.json asset '{key}' gpuSkinnedLod.{pass}";
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{label} must be an object.");
+            }
+
+            foreach (var property in obj)
+            {
+                if (property.Key is not ("high" or "medium" or "low"))
+                {
+                    throw new InvalidOperationException($"{label} uses unsupported field '{property.Key}'.");
+                }
+            }
+
+            int high = ResolveModelAssetId(obj["high"], $"{label}.high");
+            int medium = ResolveModelAssetId(obj["medium"], $"{label}.medium");
+            int low = ResolveModelAssetId(obj["low"], $"{label}.low");
+            return new MeshLodAssetIds(high, medium, low);
+        }
+
+        private int ResolveModelAssetId(JsonNode? node, string label)
+        {
+            string assetKey = ReadRequiredString(node, label);
+            int assetId = _meshRegistry.GetId(assetKey);
+            if (assetId <= 0 || !_meshRegistry.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException($"{label} references unknown mesh asset '{assetKey}'.");
+            }
+
+            if (descriptor.Type != MeshAssetType.Model)
+            {
+                throw new InvalidOperationException(
+                    $"{label} must reference a Model asset; '{assetKey}' has type '{descriptor.Type}'.");
+            }
+
+            return assetId;
         }
 
         private static string ReadRequiredString(JsonNode? node, string label)

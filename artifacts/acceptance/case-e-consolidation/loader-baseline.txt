@@ -1,0 +1,11 @@
+Baseline: fb07451339, C:\001_AI\wt-presenter-release-audit-20260908
+Executed against its existing Release test binary:
+dotnet test src/Tests/PresentationTests/PresentationTests.csproj -c Release --no-build --filter FullyQualifiedName~Load_RejectsBindingsMissingRequiredSourcePayload
+
+Result: 3 tests, 2 passed, 1 failed.
+Failing graph-source case expected a message containing:
+Presenter binding graph.sourceId
+Actual:
+presenters.json[strict_binding_actor].bindings[0] graph.sourceId must be a semantic string.
+
+The same test and error occur in consolidation-possession-final.log (269/270 passed).

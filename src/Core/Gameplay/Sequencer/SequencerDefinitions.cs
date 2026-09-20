@@ -39,7 +39,7 @@ namespace Ludots.Core.Gameplay.Sequencer
     public sealed class SequenceDefinition : IIdentifiable
     {
         public string Id { get; set; } = string.Empty;
-        public string DisplayName { get; set; } = string.Empty;
+        public string DisplayNameToken { get; set; } = string.Empty;
         public bool ClearCameraOnComplete { get; set; } = true;
         public SequenceClockDefinition Clock { get; set; } = new();
         public List<SequenceTrackDefinition> Tracks { get; set; } = new();

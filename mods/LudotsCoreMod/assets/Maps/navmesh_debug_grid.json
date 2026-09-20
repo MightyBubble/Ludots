@@ -1,5 +1,8 @@
 {
   "Id": "navmesh_debug_grid",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "Tags": [
     "showcase",
     "navmesh",
@@ -11,13 +14,10 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 4,
-      "HeightInMacroTiles": 4,
+      "WidthCells": 1024,
+      "HeightCells": 1024,
       "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256,
-      "DataFile": "navmesh_debug_openworld.bin",
-      "NavigationEnabled": true
+      "DataFile": "navmesh_debug_openworld.grid"
     }
   ],
   "Entities": [],
@@ -31,11 +31,11 @@
     "DistanceCm": 65000,
     "FovYDeg": 60
   },
-  "visualHeightmap": {
-    "asset": "assets/terrain/navmesh_debug_grid.vhtm",
-    "renderProfile": {
-      "absoluteColorPeakSpanCm": 1500,
-      "colorContrast": 2.5
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/navmesh_debug_grid.height",
+    "RenderProfile": {
+      "AbsoluteColorPeakSpanCm": 1500,
+      "ColorContrast": 2.5
     }
   }
 }

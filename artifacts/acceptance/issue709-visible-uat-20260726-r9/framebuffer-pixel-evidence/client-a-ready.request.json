@@ -1,0 +1,114 @@
+{
+    "schemaVersion":  1,
+    "imagePath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\issue709-visible-uat-20260726-r9\\screens\\client-a\\frontline_001_ready.png",
+    "expectedWidth":  1280,
+    "expectedHeight":  720,
+    "requirements":  [
+                         {
+                             "role":  "commandCore",
+                             "presentationTemplate":  "rts.frontline.core.base",
+                             "maximumChannelDifference":  28,
+                             "minimumPixelsPerRegion":  8,
+                             "minimumPassingRegions":  1,
+                             "acceptedColors":  [
+                                                    {
+                                                        "red":  31,
+                                                        "green":  41,
+                                                        "blue":  48
+                                                    }
+                                                ],
+                             "regions":  [
+                                             {
+                                                 "id":  "41:20346364",
+                                                 "x":  890,
+                                                 "y":  321,
+                                                 "width":  95,
+                                                 "height":  66
+                                             }
+                                         ]
+                         },
+                         {
+                             "role":  "harvesterCargo",
+                             "presentationTemplate":  "rts.frontline.harvester.cargo",
+                             "maximumChannelDifference":  55,
+                             "minimumPixelsPerRegion":  3,
+                             "minimumPassingRegions":  1,
+                             "acceptedColors":  [
+                                                    {
+                                                        "red":  255,
+                                                        "green":  166,
+                                                        "blue":  31
+                                                    }
+                                                ],
+                             "regions":  [
+                                             {
+                                                 "id":  "47:16910795",
+                                                 "x":  726,
+                                                 "y":  299,
+                                                 "width":  21,
+                                                 "height":  17
+                                             },
+                                             {
+                                                 "id":  "47:18820302",
+                                                 "x":  733,
+                                                 "y":  407,
+                                                 "width":  25,
+                                                 "height":  19
+                                             }
+                                         ]
+                         },
+                         {
+                             "role":  "infantryBody",
+                             "presentationTemplate":  "rts.frontline.infantry.body",
+                             "maximumChannelDifference":  48,
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  1,
+                             "acceptedColors":  [
+                                                    {
+                                                        "red":  209,
+                                                        "green":  224,
+                                                        "blue":  230
+                                                    }
+                                                ],
+                             "regions":  [
+                                             {
+                                                 "id":  "50:13479067",
+                                                 "x":  545,
+                                                 "y":  269,
+                                                 "width":  28,
+                                                 "height":  32
+                                             },
+                                             {
+                                                 "id":  "50:15005135",
+                                                 "x":  535,
+                                                 "y":  376,
+                                                 "width":  32,
+                                                 "height":  34
+                                             }
+                                         ]
+                         },
+                         {
+                             "role":  "crystalField",
+                             "presentationTemplate":  "rts.frontline.crystal.center",
+                             "maximumChannelDifference":  52,
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  1,
+                             "acceptedColors":  [
+                                                    {
+                                                        "red":  20,
+                                                        "green":  224,
+                                                        "blue":  255
+                                                    }
+                                                ],
+                             "regions":  [
+                                             {
+                                                 "id":  "54:10426935",
+                                                 "x":  202,
+                                                 "y":  300,
+                                                 "width":  48,
+                                                 "height":  51
+                                             }
+                                         ]
+                         }
+                     ]
+}

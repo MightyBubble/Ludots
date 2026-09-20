@@ -1,6 +1,15 @@
 {
   "Id": "formation_capability_showcase",
-  "VisualHeightmapAsset": "assets/terrain/formation_capability_showcase_relief.vhtm",
+  "Tuning": {
+    "LoadedChunkCapacity": 512
+  },
+  "TriggerGraphs": [
+    {
+      "graph": "graph.mass_navigation.selection_roster",
+      "scopeInstanceId": "formation.local_player"
+    }
+  ],
+  "ContinuousHeightmapAsset": "assets/terrain/formation_capability_showcase_relief.height",
   "Tags": [
     "mass_navigation",
     "formation_capability_showcase_movement"
@@ -18,11 +27,9 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 250,
-      "HeightInMacroTiles": 250,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 512
+      "WidthCells": 64000,
+      "HeightCells": 64000,
+      "GridCellSizeCm": 100
     }
   ],
   "Entities": [
@@ -142,9 +149,16 @@
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "formation.local_player" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "formation.local_player"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "formation.local_player" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "formation.local_player"
+    }
   ]
 }

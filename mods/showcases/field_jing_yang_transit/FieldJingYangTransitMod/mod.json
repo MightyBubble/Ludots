@@ -1,0 +1,10 @@
+{
+  "name": "FieldJingYangTransitMod",
+  "version": "1.0.0",
+  "description": "荆扬过境：离散归属层物化 + FieldRegion 进出通知 + 区内名单。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  }
+}

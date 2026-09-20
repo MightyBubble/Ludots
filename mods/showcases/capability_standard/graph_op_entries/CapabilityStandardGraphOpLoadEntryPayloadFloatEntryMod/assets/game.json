@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_LoadEntryPayloadFloat",
-  "windowTitle": "Ludots - 落点读数，小数也不丢",
+  "windowTitle": "Ludots - 指针读数，小数也不丢",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

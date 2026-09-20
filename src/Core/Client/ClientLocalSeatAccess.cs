@@ -276,6 +276,49 @@ namespace Ludots.Core.Client
             RequireRegistry(engine).CopyPresentBindings(destination);
         }
 
+        /// <summary>
+        /// Single-viewport camera consumers under multi-binding: first PresentBinding's camera in seat
+        /// order; with no bindings falls back to <see cref="ResolveAuthorityCamera"/>. Per-binding
+        /// draw/pick consumers must enumerate <see cref="CopyPresentBindings"/> instead of relying on
+        /// a single camera for all bindings.
+        /// </summary>
+        public static CameraManager ResolveFirstPresentBindingCamera(GameEngine engine)
+        {
+            ArgumentNullException.ThrowIfNull(engine);
+            ClientLocalSeatRegistry seats = RequireRegistry(engine);
+            IReadOnlyList<string> ids = seats.SeatIds;
+            for (int i = 0; i < ids.Count; i++)
+            {
+                if (seats.TryGet(ids[i], out ClientLocalSeat seat) &&
+                    seat.PresentBinding is PresentBinding present)
+                {
+                    return RequireLogicViews(engine).RequireCamera(present.LogicViewId);
+                }
+            }
+
+            return ResolveAuthorityCamera(engine);
+        }
+
+        /// <summary>Declared PresentBinding layout from the merged GameConfig service; null means fullscreen.</summary>
+        public static string? ResolveDeclaredPresentLayout(IDictionary<string, object> globals)
+        {
+            if (globals != null &&
+                globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out object? configObj) &&
+                configObj is Config.GameConfig config &&
+                !string.IsNullOrWhiteSpace(config.StartupPresentLayout))
+            {
+                return config.StartupPresentLayout.Trim();
+            }
+
+            return null;
+        }
+
+        public static string? ResolveDeclaredPresentLayout(GameEngine engine)
+        {
+            ArgumentNullException.ThrowIfNull(engine);
+            return ResolveDeclaredPresentLayout(engine.GlobalContext);
+        }
+
         public static bool TryResolvePresentCamera(
             GameEngine engine,
             string seatId,

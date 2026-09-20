@@ -1,8 +1,10 @@
 using System;
+using Arch.Core;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
 
 namespace Ludots.Core.Scripting
@@ -41,6 +43,10 @@ namespace Ludots.Core.Scripting
 
         // Map-scoped trigger tracking
         private readonly Dictionary<MapId, List<Trigger>> _mapTriggers = new Dictionary<MapId, List<Trigger>>();
+        // Owner-keyed view over the map tables (entity-domain mounts only). The map tables
+        // stay the single ledger; this index only answers "which mounts did owner X create"
+        // so no feature keeps a parallel shadow list.
+        private readonly Dictionary<Entity, List<OwnedMountRecord>> _ownedMountsBySubject = new();
 
         // Map -> Event -> triggers, maintained in priority order at registration time so
         // steady-state dispatch is a dictionary lookup with zero allocations.
@@ -74,6 +80,17 @@ namespace Ludots.Core.Scripting
 
         private readonly List<TriggerError> _errors = new List<TriggerError>();
         private readonly object _errorsLock = new object();
+        private TriggerGraphActionBindingIndex? _actionBindings;
+
+        /// <summary>
+        /// Optional index of action-bound TriggerGraph mounts. When set, Register/Remove
+        /// of map triggers keeps the index in sync with action-bound mounts.
+        /// </summary>
+        public TriggerGraphActionBindingIndex? ActionBindings
+        {
+            get => _actionBindings;
+            set => _actionBindings = value;
+        }
 
         public IReadOnlyList<TriggerError> Errors
         {
@@ -120,6 +137,30 @@ namespace Ludots.Core.Scripting
 
                 return false;
             }
+        }
+
+        /// <summary>
+        /// True when any map/entity-domain mount registered for the given map carries a
+        /// suspended run. The map resume clock uses this to gate its per-map pulse
+        /// (<see cref="GameEvents.MapTriggerResume"/>) — zero work and zero firing when no
+        /// map-domain run is parked (the retired MapHeartbeat fired unconditionally).
+        /// </summary>
+        public bool HasSuspendedMapTriggers(MapId mapId)
+        {
+            if (!_mapTriggers.TryGetValue(mapId, out List<Trigger>? triggers))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is ITriggerResumeProbe probe && probe.IsSuspended)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
 
@@ -169,12 +210,24 @@ namespace Ludots.Core.Scripting
         public void RegisterMapTriggers(MapId mapId, IReadOnlyList<Trigger> triggers)
         {
             if (triggers == null || triggers.Count == 0) return;
+            if (_mapTriggers.TryGetValue(mapId, out List<Trigger>? previous) && previous.Count > 0)
+                RemoveMapTriggers(mapId, previous.ToArray());
 
             var list = new List<Trigger>(triggers.Count);
             _mapTriggers[mapId] = list;
             _mapEventTriggers[mapId] = new Dictionary<EventKey, List<Trigger>>();
             RegisterIntoMapList(mapId, triggers, list);
             Log.Info(in LogChannels.Engine, $"Registered {list.Count} triggers for map '{mapId}'.");
+        }
+
+        /// <summary>
+        /// True when the map already owns an initial trigger registration (runtime append
+        /// callers like the context trigger gate need this probe to pick between
+        /// <see cref="RegisterMapTriggers"/> and <see cref="AddMapTriggers"/>).
+        /// </summary>
+        public bool OwnsMapTriggers(MapId mapId)
+        {
+            return _mapTriggers.ContainsKey(mapId);
         }
 
         /// <summary>
@@ -210,10 +263,213 @@ namespace Ludots.Core.Scripting
 
             for (int i = 0; i < triggers.Count; i++)
             {
+                if (triggers[i] is TriggerGraphMountTrigger actionMount &&
+                    !string.IsNullOrWhiteSpace(actionMount.ActionId))
+                {
+                    _actionBindings?.Remove(actionMount);
+                }
+
                 list.Remove(triggers[i]);
                 RemoveMapEventTrigger(mapId, triggers[i]);
                 UnregisterTrigger(triggers[i]);
+                ForgetOwnedMount(triggers[i]);
             }
+        }
+
+        /// <summary>Live mounts one owner created (entity-domain mounts only), or false when none.</summary>
+        public bool TryGetOwnedMounts(TriggerMountOwner owner, out IReadOnlyList<Trigger> mounts)
+        {
+            if (_ownedMountsBySubject.TryGetValue(owner.Subject, out List<OwnedMountRecord>? records))
+            {
+                for (int i = 0; i < records.Count; i++)
+                {
+                    if (records[i].Owner == owner && records[i].Triggers.Count > 0)
+                    {
+                        mounts = records[i].Triggers;
+                        return true;
+                    }
+                }
+            }
+
+            mounts = Array.Empty<Trigger>();
+            return false;
+        }
+
+        /// <summary>
+        /// Remove exactly one owner's mounts from its map — the owner-scoped removal path
+        /// features use instead of tracking their own trigger lists.
+        /// </summary>
+        public void RemoveOwnedMounts(TriggerMountOwner owner)
+        {
+            if (!_ownedMountsBySubject.TryGetValue(owner.Subject, out List<OwnedMountRecord>? records))
+            {
+                return;
+            }
+
+            for (int i = 0; i < records.Count; i++)
+            {
+                if (records[i].Owner == owner)
+                {
+                    // Copy: RemoveMapTriggers mutates the record list via ForgetOwnedMount.
+                    Trigger[] snapshot = records[i].Triggers.ToArray();
+                    RemoveMapTriggers(records[i].MapId, snapshot);
+                    return;
+                }
+            }
+        }
+
+        /// <summary>All owned mounts registered for one map (sweep / death dispatch / diagnostics).</summary>
+        public void CollectOwnedMounts(MapId mapId, List<KeyValuePair<TriggerMountOwner, List<Trigger>>> sink)
+        {
+            ArgumentNullException.ThrowIfNull(sink);
+            foreach (List<OwnedMountRecord> records in _ownedMountsBySubject.Values)
+            {
+                for (int i = 0; i < records.Count; i++)
+                {
+                    if (records[i].MapId.Equals(mapId) && records[i].Triggers.Count > 0)
+                    {
+                        sink.Add(new KeyValuePair<TriggerMountOwner, List<Trigger>>(records[i].Owner, records[i].Triggers));
+                    }
+                }
+            }
+        }
+
+        /// <summary>All owned mounts of one subject (any kind) - per-subject queries stay
+        /// O(that subject's mounts), never O(all mounts).</summary>
+        public void CollectOwnedMounts(Entity subject, List<KeyValuePair<TriggerMountOwner, List<Trigger>>> sink)
+        {
+            ArgumentNullException.ThrowIfNull(sink);
+            if (!_ownedMountsBySubject.TryGetValue(subject, out List<OwnedMountRecord>? records))
+            {
+                return;
+            }
+
+            for (int i = 0; i < records.Count; i++)
+            {
+                if (records[i].Triggers.Count > 0)
+                {
+                    sink.Add(new KeyValuePair<TriggerMountOwner, List<Trigger>>(records[i].Owner, records[i].Triggers));
+                }
+            }
+        }
+
+        /// <summary>Distinct subjects with live mounts of one owner kind; test observability.</summary>
+        public int CountOwnedMountSubjects(TriggerMountOwnerKind kind, Func<Entity, bool> subjectAlive)
+        {
+            ArgumentNullException.ThrowIfNull(subjectAlive);
+            int count = 0;
+            foreach (KeyValuePair<Entity, List<OwnedMountRecord>> pair in _ownedMountsBySubject)
+            {
+                if (!subjectAlive(pair.Key))
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < pair.Value.Count; i++)
+                {
+                    if (pair.Value[i].Owner.Kind == kind && pair.Value[i].Triggers.Count > 0)
+                    {
+                        count++;
+                        break;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        private void RememberOwnedMount(MapId mapId, TriggerGraphMountTrigger mount)
+        {
+            if (!_ownedMountsBySubject.TryGetValue(mount.Owner.Subject, out List<OwnedMountRecord>? records))
+            {
+                records = new List<OwnedMountRecord>(2);
+                _ownedMountsBySubject[mount.Owner.Subject] = records;
+            }
+
+            for (int i = 0; i < records.Count; i++)
+            {
+                if (records[i].Owner == mount.Owner)
+                {
+                    if (!records[i].Triggers.Contains(mount))
+                    {
+                        records[i].Triggers.Add(mount);
+                    }
+
+                    return;
+                }
+            }
+
+            OwnedMountRecord record = new(mapId, mount.Owner);
+            record.Triggers.Add(mount);
+            records.Add(record);
+        }
+
+        private void ForgetOwnedMount(Trigger trigger)
+        {
+            if (trigger is not TriggerGraphMountTrigger { Owner.IsOwned: true } mount ||
+                !_ownedMountsBySubject.TryGetValue(mount.Owner.Subject, out List<OwnedMountRecord>? records))
+            {
+                return;
+            }
+
+            for (int i = 0; i < records.Count; i++)
+            {
+                if (records[i].Owner != mount.Owner)
+                {
+                    continue;
+                }
+
+                records[i].Triggers.Remove(mount);
+                if (records[i].Triggers.Count == 0)
+                {
+                    records.RemoveAt(i);
+                }
+
+                break;
+            }
+
+            if (records.Count == 0)
+            {
+                _ownedMountsBySubject.Remove(mount.Owner.Subject);
+            }
+        }
+
+        private void ForgetOwnedMountsForMap(MapId mapId, List<Trigger> mapList)
+        {
+            for (int i = 0; i < mapList.Count; i++)
+            {
+                if (mapList[i] is not TriggerGraphMountTrigger { Owner.IsOwned: true } mount ||
+                    !_ownedMountsBySubject.TryGetValue(mount.Owner.Subject, out List<OwnedMountRecord>? records))
+                {
+                    continue;
+                }
+
+                for (int r = records.Count - 1; r >= 0; r--)
+                {
+                    if (records[r].MapId.Equals(mapId))
+                    {
+                        records.RemoveAt(r);
+                    }
+                }
+
+                if (records.Count == 0)
+                {
+                    _ownedMountsBySubject.Remove(mount.Owner.Subject);
+                }
+            }
+        }
+
+        private sealed class OwnedMountRecord
+        {
+            public OwnedMountRecord(MapId mapId, TriggerMountOwner owner)
+            {
+                MapId = mapId;
+                Owner = owner;
+            }
+
+            public MapId MapId { get; }
+            public TriggerMountOwner Owner { get; }
+            public List<Trigger> Triggers { get; } = new();
         }
 
         private void RegisterIntoMapList(MapId mapId, IReadOnlyList<Trigger> triggers, List<Trigger> list)
@@ -223,6 +479,16 @@ namespace Ludots.Core.Scripting
                 RegisterTrigger(triggers[i]);
                 list.Add(triggers[i]);
                 AddMapEventTrigger(mapId, triggers[i]);
+                if (triggers[i] is TriggerGraphMountTrigger actionMount &&
+                    !string.IsNullOrWhiteSpace(actionMount.ActionId))
+                {
+                    _actionBindings?.Add(actionMount);
+                }
+
+                if (triggers[i] is TriggerGraphMountTrigger ownedMount && ownedMount.Owner.IsOwned)
+                {
+                    RememberOwnedMount(mapId, ownedMount);
+                }
             }
         }
 
@@ -326,6 +592,7 @@ namespace Ludots.Core.Scripting
             for (int i = 0; i < owned.Count; i++)
             {
                 RemoveGlobalEventTrigger(owned[i]);
+                if (owned[i] is TriggerGraphMountTrigger mount) mount.Unregister();
             }
 
             _mapGlobalTriggers.Remove(mapId);
@@ -460,6 +727,7 @@ namespace Ludots.Core.Scripting
                 UnregisterTrigger(list[i]);
             }
 
+            ForgetOwnedMountsForMap(mapId, list);
             _mapTriggers.Remove(mapId);
             _mapEventTriggers.Remove(mapId);
             UnregisterGlobalTriggers(mapId);
@@ -492,6 +760,34 @@ namespace Ludots.Core.Scripting
         /// Triggers are sorted by Priority (lower values execute first).
         /// Also invokes matching EventHandlers.
         /// </summary>
+        /// <summary>
+        /// 廉价判断某 eventKey 是否存在任何消费者（mod 回调/地图触发器/全局触发器）。
+        /// 无消费者时调用方可完全跳过分发（不建 ScriptContext、不拼字符串）。
+        /// </summary>
+        public bool HasDispatchTarget(MapId mapId, string eventKeyValue)
+        {
+            var key = new EventKey(eventKeyValue);
+            if (_eventHandlers.ContainsKey(key))
+            {
+                return true;
+            }
+
+            if (_globalEventTriggers.TryGetValue(key, out List<Trigger>? global) && global != null && global.Count > 0)
+            {
+                return true;
+            }
+
+            if (_mapEventTriggers.TryGetValue(mapId, out Dictionary<EventKey, List<Trigger>>? mapTriggers) &&
+                mapTriggers.TryGetValue(key, out List<Trigger>? matching) &&
+                matching != null &&
+                matching.Count > 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         public void FireMapEvent(MapId mapId, EventKey eventKey, ScriptContext context)
         {
             EventSchemas?.ValidateFirePayload(eventKey, context);
@@ -673,6 +969,26 @@ namespace Ludots.Core.Scripting
             }
         }
 
+        /// <summary>
+        /// Resolve map/entity-domain suspended runs on the given map. Pure
+        /// dispatch to the map's MapTriggerResume subscribers; the clock gates the call on
+        /// <see cref="HasSuspendedMapTriggers"/> so an idle map fires nothing.
+        /// </summary>
+        public void FireMapTriggerResume(MapId mapId, ScriptContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            if (!_mapEventTriggers.TryGetValue(mapId, out Dictionary<EventKey, List<Trigger>>? eventTriggers) ||
+                !eventTriggers.TryGetValue(GameEvents.MapTriggerResume, out List<Trigger>? resumeTriggers))
+            {
+                return;
+            }
+
+            for (int i = 0; i < resumeTriggers.Count; i++)
+            {
+                FireTrigger(resumeTriggers[i], GameEvents.MapTriggerResume, context);
+            }
+        }
+
 
         public Task FireEventAsync(EventKey eventKey, ScriptContext context)
         {
@@ -734,6 +1050,7 @@ namespace Ludots.Core.Scripting
                 }
                 catch (Exception ex)
                 {
+                    RecordError(eventKey, GetEventHandlerName(handlers[i]), ex);
                     Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex.Message}");
                 }
             }
@@ -747,17 +1064,26 @@ namespace Ludots.Core.Scripting
             var tasks = new Task[handlers.Count];
             for (int i = 0; i < handlers.Count; i++)
             {
-                try
-                {
-                    tasks[i] = handlers[i](context);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex.Message}");
-                    tasks[i] = Task.CompletedTask;
-                }
+                tasks[i] = FireEventHandlerAsync(handlers[i], eventKey, context);
             }
             return Task.WhenAll(tasks);
+        }
+
+        private async Task FireEventHandlerAsync(
+            Func<ScriptContext, Task> handler,
+            EventKey eventKey,
+            ScriptContext context)
+        {
+            try
+            {
+                await handler(context);
+            }
+            catch (Exception ex)
+            {
+                RecordError(eventKey, GetEventHandlerName(handler), ex);
+                Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex}");
+                throw;
+            }
         }
 
         // ────────────────────────────────────────────────────────────
@@ -805,6 +1131,22 @@ private async Task ObserveTriggerExecutionAsync(Trigger trigger, EventKey eventK
         }
 
         /// <summary>
+        /// Dispatches one already-mounted trigger outside the event bus (action-bound
+        /// TriggerGraph entries). Uses the same CheckConditions / ExecuteAsync / error
+        /// recording path as map-event fire.
+        /// </summary>
+        public void DispatchMountedTrigger(Trigger trigger, ScriptContext context)
+        {
+            ArgumentNullException.ThrowIfNull(trigger);
+            ArgumentNullException.ThrowIfNull(context);
+            EventKey key = string.IsNullOrEmpty(trigger.EventKey.Value)
+                ? GameEvents.InputAction
+                : trigger.EventKey;
+            EventSchemas?.ValidateFirePayload(key, context);
+            FireTrigger(trigger, key, context);
+        }
+
+        /// <summary>
         /// Synchronous fire path for steady-state dispatch: synchronously-completing
         /// triggers must not allocate a Task per invocation.
         /// </summary>
@@ -844,6 +1186,22 @@ private async Task ObserveTriggerExecutionAsync(Trigger trigger, EventKey eventK
             }
         }
 
+        private void RecordError(EventKey eventKey, string triggerName, Exception exception)
+        {
+            lock (_errorsLock)
+            {
+                _errors.Add(new TriggerError(eventKey, triggerName, exception));
+            }
+        }
+
+        private static string GetEventHandlerName(Func<ScriptContext, Task> handler)
+        {
+            Type? declaringType = handler.Method.DeclaringType;
+            return declaringType == null
+                ? handler.Method.Name
+                : $"{declaringType.FullName}.{handler.Method.Name}";
+        }
+
         private async Task FireTriggerAsync(Trigger trigger, EventKey eventKey, ScriptContext context, bool propagateExceptions)
         {
             ArgumentNullException.ThrowIfNull(trigger);
@@ -863,10 +1221,7 @@ private async Task ObserveTriggerExecutionAsync(Trigger trigger, EventKey eventK
             }
             catch (Exception ex)
             {
-                lock (_errorsLock)
-                {
-                    _errors.Add(new TriggerError(eventKey, trigger.Name, ex));
-                }
+                RecordError(eventKey, trigger?.Name ?? string.Empty, ex);
                 Log.Error(in LogChannels.Engine, $"Error executing trigger {trigger.Name}: {ex}");
                 if (propagateExceptions) throw;
             }
@@ -875,6 +1230,7 @@ private async Task ObserveTriggerExecutionAsync(Trigger trigger, EventKey eventK
         public void UnregisterTrigger(Trigger trigger)
         {
              if (trigger == null) return;
+             if (trigger is TriggerGraphMountTrigger mount) mount.Unregister();
              if (!string.IsNullOrEmpty(trigger.EventKey.Value) && _triggers.TryGetValue(trigger.EventKey, out var list))
              {
                  list.Remove(trigger);

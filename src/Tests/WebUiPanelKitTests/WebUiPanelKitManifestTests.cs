@@ -14,7 +14,7 @@ namespace Ludots.Tests.WebUiPanelKit;
 public sealed class WebUiPanelKitManifestTests
 {
 	[Test]
-	public void LoadSampleManifest_RegistersSixPanels_OnSameUiSurfaceHost()
+	public void LoadSampleManifest_RegistersSevenPanels_OnSameUiSurfaceHost()
 	{
 		using var runtime = new WebUiDataPlaneRuntime();
 		RegisterSampleTopics(runtime);
@@ -23,7 +23,7 @@ public sealed class WebUiPanelKitManifestTests
 			WebUiPanelKitSampleCatalog.SampleManifestPath(),
 			catalog);
 
-		Assert.That(manifest.Panels, Has.Count.EqualTo(6));
+		Assert.That(manifest.Panels, Has.Count.EqualTo(7));
 		Assert.That(manifest.Panels.Select(panel => panel.PanelId), Is.EquivalentTo(new[]
 		{
 			"hud.resource-bar",
@@ -31,14 +31,15 @@ public sealed class WebUiPanelKitManifestTests
 			"hud.objective",
 			"hud.production-overview",
 			"hud.notification",
-			"hud.techtree"
+			"hud.techtree",
+			"hud.activity"
 		}));
 
 		UIRoot root = CreateRoot(out UiSurfaceHost host);
 		using var binder = new WebUiPanelKitSurfaceBinder(host, manifest);
 		binder.Bind();
 
-		Assert.That(binder.BoundPanelIds, Has.Count.EqualTo(6));
+		Assert.That(binder.BoundPanelIds, Has.Count.EqualTo(7));
 		Assert.That(root.Scene, Is.SameAs(host.Scene));
 		Assert.That(root.Scene!.FindByElementId("panel-kit-hud.resource-bar"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.command-deck"), Is.Not.Null);
@@ -46,6 +47,7 @@ public sealed class WebUiPanelKitManifestTests
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.production-overview"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.notification"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.techtree"), Is.Not.Null);
+		Assert.That(root.Scene.FindByElementId("panel-kit-hud.activity"), Is.Not.Null);
 	}
 
 	[Test]

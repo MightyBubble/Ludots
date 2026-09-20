@@ -1,0 +1,13 @@
+{
+  "op": "ScreenPointToGround",
+  "driver": "aimsource",
+  "title": "把光标钉到地上",
+  "beat": "光标点下的地方，落点圈在地图上亮起。",
+  "detailTemplate": "落点钉在东 {x} 米、北 {y} 米。",
+  "assertDetailContains": [
+    "落点钉在"
+  ],
+  "featuredNodeId": "ground",
+  "graphKind": "Query",
+  "field": "aim"
+}

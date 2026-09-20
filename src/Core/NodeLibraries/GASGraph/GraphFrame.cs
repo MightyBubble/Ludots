@@ -64,6 +64,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public Span<Entity> E;
         public Span<Entity> Targets;
         public GraphTargetList TargetList;
+        public Span<int> IntIds;
+        public GraphIntIdList IntIdList;
+        public int SubjectIntId;
         public Span<int> CallStack;
         public GraphTextHeap Text;
         public GraphExecutionCursor Cursor;
@@ -87,6 +90,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> bools,
             Span<Entity> entities,
             Span<Entity> targets,
+            Span<int> intIds,
             Span<int> callStack,
             GraphExecutionCursor cursor = default,
             uint randomSeed = 0,
@@ -94,9 +98,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphDebugTrace? debugTrace = null,
             MapId? mapScope = null,
             GraphEntryPayloadTable? entryPayload = null,
-            GraphEntryPayloadTable? invokeArgs = null)
+            GraphEntryPayloadTable? invokeArgs = null,
+            int subjectIntId = 0)
         {
-            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script))
+            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script or GraphKind.TriggerGraph))
             {
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph frame requires an explicit supported kind.");
             }
@@ -106,6 +111,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 bools.Length < GraphVmLimits.MaxBoolRegisters ||
                 entities.Length < GraphVmLimits.MaxEntityRegisters ||
                 targets.Length < GraphVmLimits.MaxTargets ||
+                intIds.Length < GraphVmLimits.MaxIntIds ||
                 callStack.Length < GraphVmLimits.MaxCallStackDepth)
             {
                 throw new ArgumentException("Graph frame register/call-stack spans are smaller than GraphVmLimits.");
@@ -132,6 +138,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     throw new ArgumentOutOfRangeException(nameof(slot2), slot2.Kind, "Graph frame E[2] preset is not supported.");
             }
 
+            if (cursor.IsSuspended && cursor.TargetSnapshot != null)
+                targets = cursor.TargetSnapshot;
+            var targetList = new GraphTargetList(targets);
+            if (cursor.IsSuspended) targetList.SetCount(cursor.TargetCount);
             return new GraphFrame
             {
                 Kind = kind,
@@ -151,7 +161,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 B = bools,
                 E = entities,
                 Targets = targets,
-                TargetList = new GraphTargetList(targets),
+                TargetList = targetList,
+                IntIds = intIds,
+                IntIdList = new GraphIntIdList(intIds),
+                SubjectIntId = subjectIntId,
                 CallStack = callStack,
                 Text = GraphTextHeap.ForCurrentThread(),
                 Cursor = cursor,
@@ -183,6 +196,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 E = E,
                 Targets = Targets,
                 TargetList = TargetList,
+                IntIds = IntIds,
+                IntIdList = IntIdList,
+                SubjectIntId = SubjectIntId,
                 CallStack = CallStack,
                 Text = Text ?? throw new InvalidOperationException("Graph frame requires a GraphTextHeap."),
                 CallStackCount = Cursor.CallStackCount,
@@ -195,6 +211,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 EntryPayload = EntryPayload,
                 InvokeArgs = InvokeArgs
             };
+        }
+
+        internal void CopyBackExecutionState(ref GraphExecutionState state, bool copyCursor)
+        {
+            if (copyCursor)
+            {
+                Cursor.CallStackCount = state.CallStackCount;
+                Cursor.ReturnInt = state.ReturnInt;
+                Cursor.InvokeDepth = state.InvokeDepth;
+                Cursor.Status = state.Status;
+            }
+
+            TargetList = state.TargetList;
+            Targets = state.Targets;
+            IntIdList = state.IntIdList;
+            SubjectIntId = state.SubjectIntId;
         }
     }
 }

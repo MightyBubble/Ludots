@@ -26,6 +26,11 @@ namespace Ludots.Core.Gameplay.Relationships.Config
             string relativePath = "Relationships/catalog.json")
         {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            // #1570 切6：knowledgeGrants/stance 是迷雾/控制面的投影配置，物理上住在
+            // Relationships/projection.json（catalog 声明同路径，DeepObject 合并）；
+            // catalog.json 只承载关系词汇。
+            var projectionEntry = new ConfigCatalogEntry("Relationships/projection.json", ConfigMergePolicy.DeepObject);
+            var projectionFragments = _pipeline.CollectFragmentsWithSources(in projectionEntry);
             var fragments = _pipeline.CollectFragmentsWithSources(in entry);
             if (report != null)
             {
@@ -41,13 +46,6 @@ namespace Ludots.Core.Gameplay.Relationships.Config
             var metricOrder = new List<string>();
             var flags = new Dictionary<string, RelationshipFlagConfig>(StringComparer.OrdinalIgnoreCase);
             var flagOrder = new List<string>();
-            var bands = new Dictionary<string, RelationshipBandConfig>(StringComparer.OrdinalIgnoreCase);
-            var bandOrder = new List<string>();
-            var reasons = new Dictionary<string, RelationshipReasonConfig>(StringComparer.OrdinalIgnoreCase);
-            var reasonOrder = new List<string>();
-            var callbacks = new Dictionary<string, RelationshipCallbackConfig>(StringComparer.OrdinalIgnoreCase);
-            var callbackOrder = new List<string>();
-            var synergies = new Dictionary<string, RelationshipSynergyConfig>(StringComparer.OrdinalIgnoreCase);
             var synergyOrder = new List<string>();
             var knowledgeGrants = new Dictionary<string, RelationshipKnowledgeGrantConfig>(StringComparer.OrdinalIgnoreCase);
             var knowledgeGrantOrder = new List<string>();
@@ -64,10 +62,16 @@ namespace Ludots.Core.Gameplay.Relationships.Config
                 MergeById(fragment.Types, types, typeOrder, static item => item.Id);
                 MergeById(fragment.Metrics, metrics, metricOrder, static item => item.Id);
                 MergeById(fragment.Flags, flags, flagOrder, static item => item.Id);
-                MergeById(fragment.Bands, bands, bandOrder, static item => item.Id);
-                MergeById(fragment.Reasons, reasons, reasonOrder, static item => item.Id);
-                MergeById(fragment.Callbacks, callbacks, callbackOrder, static item => item.Id);
-                MergeById(fragment.Synergies, synergies, synergyOrder, static item => item.Id);
+            }
+
+            for (int i = 0; i < projectionFragments.Count; i++)
+            {
+                RelationshipCatalogConfig? fragment = projectionFragments[i].Node.Deserialize<RelationshipCatalogConfig>(_options);
+                if (fragment == null)
+                {
+                    continue;
+                }
+
                 MergeById(fragment.KnowledgeGrants, knowledgeGrants, knowledgeGrantOrder, static item => item.Id);
                 if (fragment.Stance != null)
                 {
@@ -80,10 +84,6 @@ namespace Ludots.Core.Gameplay.Relationships.Config
                 Types = Materialize(typeOrder, types),
                 Metrics = Materialize(metricOrder, metrics),
                 Flags = Materialize(flagOrder, flags),
-                Bands = Materialize(bandOrder, bands),
-                Reasons = Materialize(reasonOrder, reasons),
-                Callbacks = Materialize(callbackOrder, callbacks),
-                Synergies = Materialize(synergyOrder, synergies),
                 KnowledgeGrants = Materialize(knowledgeGrantOrder, knowledgeGrants),
                 Stance = stance,
             };

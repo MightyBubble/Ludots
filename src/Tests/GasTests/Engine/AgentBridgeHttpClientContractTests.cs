@@ -17,12 +17,11 @@ namespace Ludots.Tests.Gas
             using var engine = new Ludots.Core.Engine.GameEngine();
             var tools = new AgentToolRegistry();
             var runtime = new AgentBridgeRuntime(engine, tools);
-            BuiltinAgentTools.RegisterAll(
-                tools,
-                runtime,
-                new AgentTimeController(),
-                new RecordingController(),
-                new AgentLogRingBackend());
+            var time = new AgentTimeController();
+            var recording = new RecordingController();
+            var logRing = new AgentLogRingBackend();
+            BuiltinAgentTools.RegisterAll(tools, runtime, time, recording, logRing);
+            string[] expected = AgentBridgeToolCatalogProbe.GetConcreteToolNames(runtime, time, recording, logRing);
 
             string discovery = Path.Combine(Path.GetTempPath(), "ludots-agent-bridge-test-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(discovery);
@@ -44,7 +43,7 @@ namespace Ludots.Tests.Gas
                 Assert.That(health["ok"]!.GetValue<bool>(), Is.True);
 
                 JsonArray catalog = await client.ListToolsAsync();
-                Assert.That(catalog.Count, Is.EqualTo(BuiltinAgentTools.ExpectedNames.Count));
+                Assert.That(catalog.Count, Is.EqualTo(expected.Length));
 
                 var names = catalog
                     .Select(n => n?["name"]?.GetValue<string>())
@@ -52,9 +51,7 @@ namespace Ludots.Tests.Gas
                     .Cast<string>()
                     .OrderBy(n => n, StringComparer.Ordinal)
                     .ToArray();
-                Assert.That(
-                    names,
-                    Is.EqualTo(BuiltinAgentTools.ExpectedNames.OrderBy(n => n, StringComparer.Ordinal).ToArray()));
+                Assert.That(names, Is.EqualTo(expected));
 
                 JsonObject listRpc = await client.CallAsync("ludots.tools.list");
                 Assert.That(listRpc["error"], Is.Null);

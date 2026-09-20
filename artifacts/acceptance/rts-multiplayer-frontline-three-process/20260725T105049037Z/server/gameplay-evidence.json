@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 2,
+  "status": "running",
+  "role": "authoritativeServer",
+  "failure": null,
+  "startedAtUtc": "2026-07-25T10:52:20.1293924Z",
+  "completedAtUtc": null,
+  "planFingerprint": "052c4fd97d01835f9f322c361fa7c6b852d8be14eec7ffbe999850dd27920315",
+  "contentFingerprint": "80df1baf7fa162f8c0c81504c728186c6244269040a7694248d1e3fb1481d1d5",
+  "sessionEpoch": 1369914567364652542,
+  "playerId": 0,
+  "seatSlot": -1,
+  "faultCount": 0,
+  "seats": [
+    {
+      "seatSlot": 0,
+      "playerId": 1,
+      "connectionState": "Connected",
+      "readyState": "Ready"
+    },
+    {
+      "seatSlot": 1,
+      "playerId": 2,
+      "connectionState": "Connected",
+      "readyState": "Ready"
+    }
+  ],
+  "steps": [
+    {
+      "name": "AuthoritativeMatch",
+      "status": "running",
+      "startedInputRevision": 0,
+      "completedInputRevision": 0,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-25T10:52:20.1314593Z",
+      "completedAtUtc": null,
+      "detail": null
+    }
+  ],
+  "commands": [],
+  "gameplay": {
+    "initialCrystals": -1,
+    "harvestedCrystals": -1,
+    "postTrainingCrystals": -1,
+    "initialInfantryCount": -1,
+    "trainedInfantryCount": -1,
+    "harvesterHandle": "",
+    "harvesterStartPosition": null,
+    "harvesterEndPosition": null,
+    "selectedInfantryHandles": [],
+    "moveStartPositions": [],
+    "moveEndPositions": [],
+    "initialVisibleEnemyInfantryCount": -1,
+    "initialVisibleEnemyCoreCount": -1,
+    "enemyInfantryEnteredVision": false,
+    "enemyCoreEnteredVision": false,
+    "attackTargetHandle": "",
+    "attackTargetHealthBefore": -1,
+    "attackTargetHealthAfter": -1,
+    "observedCoreHealthBySide": [
+      1000,
+      1000
+    ],
+    "observedInfantryCountBySide": [
+      2,
+      2
+    ],
+    "matchPhase": "",
+    "outcome": "",
+    "outcomeSource": "",
+    "winningSideIndex": -1,
+    "committedTick": 0,
+    "committedTickSource": ""
+  },
+  "runtime": {
+    "capturedAtUtc": "2026-07-25T10:52:27.7830798Z",
+    "stage": "AuthoritativeMatch",
+    "substep": 0,
+    "pendingCommandAction": "",
+    "pendingCommandSequence": 0,
+    "selectedActors": [],
+    "hasBattlePoints": false,
+    "meetingPoint": null,
+    "siegePoint": null,
+    "visibleEnemyCoreCount": -1,
+    "committedTick": 32,
+    "matchPhase": "InProgress",
+    "outcome": "InProgress"
+  }
+}

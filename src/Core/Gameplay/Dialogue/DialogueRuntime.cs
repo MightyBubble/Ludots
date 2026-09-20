@@ -122,7 +122,97 @@ namespace Ludots.Core.Gameplay.Dialogue
                 return;
             }
 
-            DialogueChoiceDefinition choice = _active.Choices[index];
+            CommitChoice(_active.Choices[index]);
+        }
+
+        public void ChooseByChoiceId(int choiceIntId)
+        {
+            if (_active == null)
+            {
+                throw new InvalidOperationException("ChooseByChoiceId requires an active dialogue session.");
+            }
+
+            if (!DialogueChoiceIdRegistry.TrySplit(choiceIntId, out string dialogueId, out string choiceId))
+            {
+                throw new InvalidOperationException(
+                    $"Choice int id {choiceIntId} is not registered in DialogueChoiceIdRegistry.");
+            }
+
+            if (!string.Equals(dialogueId, _active.Definition.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Choice '{choiceId}' belongs to dialogue '{dialogueId}', but active dialogue is '{_active.Definition.Id}'.");
+            }
+
+            for (int i = 0; i < _active.Choices.Count; i++)
+            {
+                if (string.Equals(_active.Choices[i].Id, choiceId, StringComparison.OrdinalIgnoreCase))
+                {
+                    CommitChoice(_active.Choices[i]);
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Choice '{choiceId}' is not currently available in dialogue '{dialogueId}'.");
+        }
+
+        public int CollectActiveChoiceIds(Span<int> buffer)
+        {
+            if (_active == null || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            string dialogueId = _active.Definition.Id;
+            for (int i = 0; i < _active.Choices.Count && written < buffer.Length; i++)
+            {
+                int id = DialogueChoiceIdRegistry.GetId(dialogueId, _active.Choices[i].Id);
+                if (id == DialogueChoiceIdRegistry.InvalidId)
+                {
+                    throw new InvalidOperationException(
+                        $"Active choice '{_active.Choices[i].Id}' in dialogue '{dialogueId}' is not registered.");
+                }
+
+                buffer[written++] = id;
+            }
+
+            return written;
+        }
+
+        public bool TryResolveChoiceDisplayText(int choiceIntId, out string text)
+        {
+            text = string.Empty;
+            if (_active == null ||
+                !DialogueChoiceIdRegistry.TrySplit(choiceIntId, out string dialogueId, out string choiceId) ||
+                !string.Equals(dialogueId, _active.Definition.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < _active.Choices.Count; i++)
+            {
+                DialogueChoiceDefinition choice = _active.Choices[i];
+                if (!string.Equals(choice.Id, choiceId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                text = ResolveLineText(choice.LineId);
+                return !string.IsNullOrWhiteSpace(text);
+            }
+
+            return false;
+        }
+
+        private void CommitChoice(DialogueChoiceDefinition choice)
+        {
+            if (_active == null)
+            {
+                throw new InvalidOperationException("CommitChoice requires an active dialogue session.");
+            }
+
             Entity subject = ResolveSubject();
             _graphs.ExecuteAction(choice.ActionGraphId, subject);
             // Choice commit is the Dialogue Completer for AwaitCallback(DialogConfirm).
@@ -148,7 +238,6 @@ namespace Ludots.Core.Gameplay.Dialogue
 
         public void Update(float dt)
         {
-            ConsumeInput();
             TickAutoAdvance(dt);
         }
 
@@ -169,83 +258,59 @@ namespace Ludots.Core.Gameplay.Dialogue
                 choices.Add(new DialogueChoiceView(
                     choice.Id,
                     choice.LineId,
-                    ResolveLineText(choice.LineId),
-                    choice.NextNode,
-                    choice.ConditionGraphId,
-                    choice.ActionGraphId));
+                    ResolveLineText(choice.LineId)));
             }
 
             ResolveSpeakerPresentation(
                 line.SpeakerId,
                 out string speakerName,
-                out string portraitSrc,
-                out string standingSrc);
+                out string portraitImageId,
+                out string standingImageId);
             view = new DialogueView(
                 _active.Definition.Id,
-                _active.Definition.DisplayName,
+                string.IsNullOrWhiteSpace(_active.Definition.DisplayToken)
+                    ? _active.Definition.DisplayName
+                    : StoryTextResolution.FormatToken(_textCatalog, _display, _active.Definition.DisplayToken),
                 node.Id,
                 node.LineId,
                 line.SpeakerId,
                 speakerName,
-                portraitSrc,
-                standingSrc,
+                portraitImageId,
+                standingImageId,
                 line.TextToken,
                 ResolveLineText(node.LineId),
                 node.PresentationProfile,
                 node.CameraId,
                 node.AutoAdvanceSeconds,
                 _active.ElapsedSeconds,
-                choices);
+                choices,
+                ResolveLineRuns(node.LineId));
             return true;
         }
 
         private void ResolveSpeakerPresentation(
             string speakerId,
             out string speakerName,
-            out string portraitSrc,
-            out string standingSrc)
+            out string portraitImageId,
+            out string standingImageId)
         {
-            speakerName = speakerId ?? string.Empty;
-            portraitSrc = string.Empty;
-            standingSrc = string.Empty;
-            if (string.IsNullOrWhiteSpace(speakerId) || !_story.TryGetSpeaker(speakerId, out StorySpeakerDefinition speaker))
+            portraitImageId = string.Empty;
+            standingImageId = string.Empty;
+            if (string.IsNullOrWhiteSpace(speakerId))
             {
+                speakerName = string.Empty;
                 return;
             }
 
-            if (_display != null)
+            if (!_story.TryGetSpeaker(speakerId, out StorySpeakerDefinition speaker))
             {
-                speakerName = _display.FormatTokenOrThrow(speaker.DisplayNameToken);
-                if (!string.IsNullOrWhiteSpace(speaker.PortraitImageId))
-                {
-                    portraitSrc = _display.ResolveImageSourceOrThrow(speaker.PortraitImageId);
-                }
-
-                if (!string.IsNullOrWhiteSpace(speaker.StandingImageId))
-                {
-                    standingSrc = _display.ResolveImageSourceOrThrow(speaker.StandingImageId);
-                }
-
-                return;
+                throw new InvalidOperationException(
+                    $"Speaker '{speakerId}' is not registered in Story/speakers.json.");
             }
 
-            if (_textCatalog != null)
-            {
-                int tokenId = _textCatalog.GetTokenId(speaker.DisplayNameToken);
-                if (tokenId > 0)
-                {
-                    var packet = PresentationTextPacket.FromToken(tokenId);
-                    if (PresentationTextFormatter.TryFormat(
-                            _textCatalog,
-                            _textCatalog.DefaultLocaleId,
-                            in packet,
-                            out string formatted) &&
-                        !string.IsNullOrWhiteSpace(formatted))
-                    {
-                        speakerName = formatted;
-                    }
-                }
-            }
+            portraitImageId = speaker.PortraitImageId ?? string.Empty;
+            standingImageId = speaker.StandingImageId ?? string.Empty;
+            speakerName = StoryTextResolution.FormatToken(_textCatalog, _display, speaker.DisplayNameToken);
         }
 
         public DialogueRuntimeSnapshot CaptureSnapshot()
@@ -345,28 +410,6 @@ namespace Ludots.Core.Gameplay.Dialogue
             return available;
         }
 
-        private void ConsumeInput()
-        {
-            var input = _engine.GetService(CoreServiceKeys.AuthoritativeInput);
-            if (input == null || _active == null)
-            {
-                return;
-            }
-
-            if (_active.Choices.Count > 0)
-            {
-                if (input.PressedThisFrame(DialogueInputActionIds.Choice1)) ChooseOption(0);
-                if (input.PressedThisFrame(DialogueInputActionIds.Choice2)) ChooseOption(1);
-                if (input.PressedThisFrame(DialogueInputActionIds.Choice3)) ChooseOption(2);
-                return;
-            }
-
-            if (input.PressedThisFrame(DialogueInputActionIds.Advance))
-            {
-                AdvanceDialogue();
-            }
-        }
-
         private void TickAutoAdvance(float dt)
         {
             if (_active?.CurrentNode == null || _active.Choices.Count > 0)
@@ -425,32 +468,23 @@ namespace Ludots.Core.Gameplay.Dialogue
         private string ResolveLineText(string lineId)
         {
             StoryLineDefinition line = _story.RequireLine(lineId);
-            if (_textCatalog == null)
+            return StoryTextResolution.FormatToken(_textCatalog, _display, line.TextToken, line.Args);
+        }
+
+        private IReadOnlyList<PresentationTextRun>? ResolveLineRuns(string lineId)
+        {
+            StoryLineDefinition line = _story.RequireLine(lineId);
+            IReadOnlyList<PresentationTextRun> runs =
+                StoryTextResolution.FormatTokenRuns(_textCatalog, _display, line.TextToken, line.Args);
+            for (int i = 0; i < runs.Count; i++)
             {
-                return line.TextToken;
+                if (!runs[i].Style.IsEmpty)
+                {
+                    return runs;
+                }
             }
 
-            int tokenId = _textCatalog.GetTokenId(line.TextToken);
-            if (tokenId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Story line '{lineId}' textToken '{line.TextToken}' is not registered in PresentationTextCatalog.");
-            }
-
-            var packet = PresentationTextPacket.FromToken(tokenId);
-            for (int i = 0; i < line.Args.Count; i++)
-            {
-                packet.SetArg(i, line.Args[i]);
-            }
-
-            if (!PresentationTextFormatter.TryFormat(_textCatalog, _textCatalog.DefaultLocaleId, in packet, out string text) ||
-                string.IsNullOrWhiteSpace(text))
-            {
-                throw new InvalidOperationException(
-                    $"Story line '{lineId}' textToken '{line.TextToken}' has no locale template for default locale.");
-            }
-
-            return text;
+            return null;
         }
 
         private void ActivateCamera(string cameraId)

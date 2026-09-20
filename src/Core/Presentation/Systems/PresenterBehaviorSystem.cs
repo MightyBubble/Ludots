@@ -6,10 +6,12 @@ using System.Runtime.CompilerServices;
 using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Client;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Components;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Presentation.Commands;
@@ -56,11 +58,17 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         private readonly PresenterEntityRuntime _runtime;
+        private readonly Dictionary<string, object>? _globals;
+        private Entity _possessedRep = Entity.Null;
+        private bool _possessionInitialized;
+        private int _possessionStructureVersion = -1;
+        private int _possessionRelationVersion = -1;
+        private PresenterDefinition[] _possessionDefinitions = Array.Empty<PresenterDefinition>();
         private readonly PresenterDefinitionRegistry _definitions;
         private readonly PresentationEventStream _events;
         private readonly PresentationOwnerChangeBuffer _ownerChanges;
         private readonly SoundRequestBuffer _soundRequests;
-        private readonly Func<IVisualHeightmap?> _heightmapProvider;
+        private readonly Func<IContinuousHeightmap?> _heightmapProvider;
         private readonly Func<IBoneTransformProvider?> _boneTransformProvider;
         private readonly PresenterBehaviorKindRegistry? _extensionBehaviors;
         private readonly PresenterBehaviorOps _extensionBehaviorOps;
@@ -85,7 +93,7 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<PresenterState, PresenterBootstrapPending>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterWorldPosition, PresenterWorldPlanePosition>()
-            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasGraphParamBinding, PerfHasExtensionBehavior, PerfHasTrailMesh>()
+            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasGraphParamBinding, PerfHasLiveParamBinding, PerfHasInteractionContextBinding, PerfHasExtensionBehavior, PerfHasTrailMesh>()
             .WithNone<PresenterBootstrapPending>();
         private readonly QueryDescription _materialDirtyQuery = new QueryDescription()
             .WithAll<PresenterState, PerfMaterialDirty>()
@@ -124,15 +132,16 @@ namespace Ludots.Core.Presentation.Systems
             PresentationEventStream events,
             PresentationOwnerChangeBuffer ownerChanges,
             SoundRequestBuffer soundRequests,
-            IVisualHeightmap? heightmap = null,
+            IContinuousHeightmap? heightmap = null,
             IBoneTransformProvider? boneTransformProvider = null,
             PresentationTimingDiagnostics? timingDiagnostics = null,
             PresenterBehaviorKindRegistry? extensionBehaviors = null,
             GraphProgramRegistry? graphPrograms = null,
             IGraphRuntimeApi? graphApi = null,
-            TrailMeshBuffer? trailMeshBuffer = null)
+            TrailMeshBuffer? trailMeshBuffer = null,
+            Dictionary<string, object>? globals = null)
             : this(world, runtime, definitions, events, ownerChanges, soundRequests,
-                () => heightmap, () => boneTransformProvider, timingDiagnostics, extensionBehaviors, graphPrograms, graphApi, trailMeshBuffer)
+                () => heightmap, () => boneTransformProvider, timingDiagnostics, extensionBehaviors, graphPrograms, graphApi, trailMeshBuffer, globals)
         {
         }
 
@@ -143,16 +152,18 @@ namespace Ludots.Core.Presentation.Systems
             PresentationEventStream events,
             PresentationOwnerChangeBuffer ownerChanges,
             SoundRequestBuffer soundRequests,
-            Func<IVisualHeightmap?> heightmapProvider,
+            Func<IContinuousHeightmap?> heightmapProvider,
             Func<IBoneTransformProvider?>? boneTransformProvider = null,
             PresentationTimingDiagnostics? timingDiagnostics = null,
             PresenterBehaviorKindRegistry? extensionBehaviors = null,
             GraphProgramRegistry? graphPrograms = null,
             IGraphRuntimeApi? graphApi = null,
-            TrailMeshBuffer? trailMeshBuffer = null)
+            TrailMeshBuffer? trailMeshBuffer = null,
+            Dictionary<string, object>? globals = null)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _globals = globals;
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _ownerChanges = ownerChanges ?? throw new ArgumentNullException(nameof(ownerChanges));
@@ -179,6 +190,7 @@ namespace Ludots.Core.Presentation.Systems
             _runtime.BeginDeferredStructuralChanges(_commandBuffer);
             try
             {
+                RefreshPossessionActivation();
                 ProcessCreatedPresenters(dt);
                 ownerChanges = ProcessOwnerChanges();
                 PlaybackStructuralChanges();
@@ -227,10 +239,56 @@ namespace Ludots.Core.Presentation.Systems
 
         private void RefreshDefinitionIndexes()
         {
+            var possessionDefinitions = new List<PresenterDefinition>();
+            foreach (int id in _definitions.RegisteredIds)
+            {
+                if (_definitions.TryGet(id, out PresenterDefinition definition) && definition.PossessionActivationMask != 0)
+                    possessionDefinitions.Add(definition);
+            }
+            _possessionDefinitions = possessionDefinitions.ToArray();
+            _possessionInitialized = false;
             _ownerAttributeWorkIndex = BuildOwnerAttributeWorkIndex(_definitions);
             _ownerTagWorkIndex = BuildOwnerTagWorkIndex(_definitions);
             EnsureTrailMeshWiring(_definitions);
             _definitionVersion = _definitions.Version;
+        }
+
+        private void RefreshPossessionActivation()
+        {
+            if (_possessionDefinitions.Length == 0) return;
+            if (_globals == null)
+                throw new InvalidOperationException("Presenter possession activation requires the client local seat context.");
+
+            Entity possessed = ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity current) && World.IsAlive(current)
+                ? current : Entity.Null;
+            if (_possessionInitialized && possessed == _possessedRep &&
+                _possessionStructureVersion == _runtime.StructureVersion &&
+                _possessionRelationVersion == _runtime.RelationContextVersion) return;
+            _possessedRep = possessed;
+            _possessionInitialized = true;
+            _possessionStructureVersion = _runtime.StructureVersion;
+            _possessionRelationVersion = _runtime.RelationContextVersion;
+            foreach (PresenterDefinition definition in _possessionDefinitions)
+            {
+                IReadOnlyList<Entity> instances = _runtime.GetActiveByDefinition(definition.Id);
+                for (int i = 0; i < instances.Count; i++)
+                    ApplyPossessionActivation(instances[i], definition);
+            }
+        }
+
+        private void ApplyPossessionActivation(Entity entity, PresenterDefinition definition)
+        {
+            if (!World.IsAlive(entity)) return;
+            Entity owner = World.Get<PresenterState>(entity).OwnerEntity;
+            World.TryGet(entity, out PresenterRelationContext relation);
+            foreach (int index in definition.PossessionActivationBehaviorIndices)
+            {
+                ref readonly BehaviorSlot slot = ref definition.Behaviors[index];
+                Entity subject = slot.ActivationCondition.Inline == InlineConditionKind.SourceIsSolePossessedRep
+                    ? owner : relation.Target;
+                _runtime.SetBehaviorActive(entity, definition, slot.SlotIndex,
+                    _possessedRep != Entity.Null && World.IsAlive(_possessedRep) && subject == _possessedRep);
+            }
         }
 
         private void EnsureTrailMeshWiring(PresenterDefinitionRegistry definitions)
@@ -305,7 +363,7 @@ namespace Ludots.Core.Presentation.Systems
             _bootstrapClearList.Clear();
             _bootstrapGroundingDeferredEntityIds.Clear();
             _bootstrapPassActive = true;
-            IVisualHeightmap? heightmap = _heightmapProvider();
+            IContinuousHeightmap? heightmap = _heightmapProvider();
             try
             {
                 foreach (ref var chunk in World.Query(in _bootstrapPendingQuery))
@@ -374,7 +432,7 @@ namespace Ludots.Core.Presentation.Systems
             Span<PresenterState> states,
             PresenterDefinition definition,
             float tickDt,
-            IVisualHeightmap? heightmap)
+            IContinuousHeightmap? heightmap)
         {
             if (!CanProcessBootstrapChunkFast(definition))
             {
@@ -416,6 +474,7 @@ namespace Ludots.Core.Presentation.Systems
                         definition.Behaviors,
                         chunk))
                 {
+                    PropagateBootstrapParentTransforms(chunk);
                     return true;
                 }
 
@@ -442,7 +501,23 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
+            PropagateBootstrapParentTransforms(chunk);
             return true;
+        }
+
+        private void PropagateBootstrapParentTransforms(Chunk chunk)
+        {
+            ref Entity entityFirst = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                if (World.Has<PresenterChildren>(entity) &&
+                    World.Get<PresenterChildren>(entity).Count != 0)
+                {
+                    _runtime.MarkTransformDrivenEmitDirty(entity);
+                    _runtime.PropagateParentDrivenTransforms(entity);
+                }
+            }
         }
 
         private int ProcessOwnerChanges()
@@ -491,6 +566,7 @@ namespace Ludots.Core.Presentation.Systems
             if (presenters.TryGetSingle(out Entity single))
             {
                 ProcessOwnerAttributeWorkForPresenter(single, attributeId, ref attributes);
+                MarkInlineHudAttributeDirty(single);
                 return;
             }
 
@@ -498,6 +574,19 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < count; i++)
             {
                 ProcessOwnerAttributeWorkForPresenter(presenters.GetAt(i), attributeId, ref attributes);
+                MarkInlineHudAttributeDirty(presenters.GetAt(i));
+            }
+        }
+
+        private void MarkInlineHudAttributeDirty(Entity presenter)
+        {
+            // HUD 内联专 lane：属主属性变更置脏父描述符集，emit 门控据此重读数值。
+            if (World.IsAlive(presenter) &&
+                World.TryGet<PresenterInlineHud>(presenter, out PresenterInlineHud inlineHud) &&
+                inlineHud.AttributeDirty == 0)
+            {
+                inlineHud.AttributeDirty = 1;
+                World.Set(presenter, inlineHud);
             }
         }
 
@@ -613,7 +702,9 @@ namespace Ludots.Core.Presentation.Systems
                 if (batchGrounding &&
                     chunkDefinition!.TickBehaviorsAreGroundingOnly &&
                     !chunkDefinition.HasOwnerFacingBindingWork &&
-                    !chunkDefinition.HasGraphParamBindingWork)
+                    !chunkDefinition.HasGraphParamBindingWork &&
+                    !chunkDefinition.HasLiveParamBindingWork &&
+                    !chunkDefinition.HasOwnerInteractionContextBindingWork)
                 {
                     if (TrySkipOwnerBackedSnapToGroundBatch(
                             states,
@@ -625,7 +716,7 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     }
 
-                    IVisualHeightmap? heightmap = _heightmapProvider();
+                    IContinuousHeightmap? heightmap = _heightmapProvider();
                     if (heightmap == null)
                     {
                         WarnMissingGroundingHeightmap();
@@ -655,6 +746,8 @@ namespace Ludots.Core.Presentation.Systems
                     chunkDefinition != null &&
                     !chunkDefinition.HasOwnerFacingBindingWork &&
                     !chunkDefinition.HasGraphParamBindingWork &&
+                    !chunkDefinition.HasLiveParamBindingWork &&
+                    !chunkDefinition.HasOwnerInteractionContextBindingWork &&
                     TryResolveParentAttachmentOnly(chunkDefinition, out AttachmentConfig attachmentConfig, out int attachmentSlot))
                 {
                     Span<PresenterParent> parents = chunk.GetSpan<PresenterParent>();
@@ -704,7 +797,7 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     }
 
-                    IVisualHeightmap? heightmap = _heightmapProvider();
+                    IContinuousHeightmap? heightmap = _heightmapProvider();
                     if (heightmap == null)
                     {
                         WarnMissingGroundingHeightmap();
@@ -850,6 +943,7 @@ namespace Ludots.Core.Presentation.Systems
             PresenterInstanceBehaviors instanceBehaviors = hasInstanceBehaviors
                 ? World.Get<PresenterInstanceBehaviors>(entity)
                 : default;
+            PresenterTransformSnapshot previousTransform = CaptureWorldTransform(entity);
             ResolveDefaultTransformSource(entity, ref state);
             if (!tickDrivenOnly)
             {
@@ -862,10 +956,15 @@ namespace Ludots.Core.Presentation.Systems
                     applyAttributes: firstFrame || updateAttributeBindings,
                     applyTags: firstFrame || updateTagBindings);
             }
-            else if (definition.HasOwnerFacingBindingWork || definition.HasGraphParamBindingWork)
+            else if (definition.HasOwnerFacingBindingWork ||
+                     definition.HasGraphParamBindingWork ||
+                     definition.HasLiveParamBindingWork ||
+                     definition.HasOwnerInteractionContextBindingWork)
             {
                 ApplyOwnerFacingBindings(entity, owner, definition);
+                ApplyLiveParamBindings(entity, owner, definition);
                 ApplyGraphParamBindings(entity, owner, definition);
+                ApplyOwnerInteractionContextWork(entity, owner, definition, state.BehaviorActiveMask);
             }
 
             bool hasSoundBehavior = definition.HasSoundBehavior || (hasInstanceBehaviors && instanceBehaviors.HasSound);
@@ -1076,6 +1175,7 @@ namespace Ludots.Core.Presentation.Systems
                         tickDt);
                 }
             }
+            PropagateTransformChange(entity, in previousTransform);
         }
 
         private void ProcessExtensionBehaviors(
@@ -1210,8 +1310,75 @@ namespace Ludots.Core.Presentation.Systems
                     case ValueSourceKind.Constant:
                         SetParam(entity, binding.ParamKey, ParamLane.Float, value.ConstantValue, 0, Vector4.Zero);
                         break;
+                    case ValueSourceKind.OwnerBlackboardFloat:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveOwnerBlackboardFloat(owner, value.SourceId, definition.Key, binding.ParamKey, value.Optional), 0, Vector4.Zero);
+                        break;
+                    case ValueSourceKind.PointerScreenX:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolvePointerScreenAxis(axisX: true, definition.Key, binding.ParamKey), 0, Vector4.Zero);
+                        break;
+                    case ValueSourceKind.PointerScreenY:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolvePointerScreenAxis(axisX: false, definition.Key, binding.ParamKey), 0, Vector4.Zero);
+                        break;
                     case ValueSourceKind.Graph:
                         EvaluateGraphParamBinding(entity, owner, definition, i, in binding);
+                        break;
+                }
+            }
+        }
+
+        private float ResolveOwnerBlackboardFloat(Entity owner, int blackboardKeyId, string definitionKey, int paramKey, bool optional = false)
+        {
+            if (!World.IsAlive(owner) ||
+                !World.TryGet<BlackboardFloatBuffer>(owner, out BlackboardFloatBuffer buffer) ||
+                !buffer.TryGet(blackboardKeyId, out float value))
+            {
+                if (optional)
+                {
+                    // Explicit fallback (author wrote optional: true): a transiently absent
+                    // source — e.g. an interaction-context blackboard written only while the
+                    // gesture is live — projects 0 so a hidden presenter never throws.
+                    return 0f;
+                }
+
+                throw new InvalidOperationException(
+                    $"Presenter '{definitionKey}' binding paramKey={paramKey} source=ownerBlackboardFloat keyId={blackboardKeyId} " +
+                    $"requires a readable BlackboardFloatBuffer value on owner {owner.Id}.");
+            }
+
+            return value;
+        }
+
+        private float ResolvePointerScreenAxis(bool axisX, string definitionKey, int paramKey)
+        {
+            if (_graphApi == null || !_graphApi.TryReadLivePointerScreen(out float screenX, out float screenY))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{definitionKey}' binding paramKey={paramKey} source={(axisX ? "pointerScreenX" : "pointerScreenY")} " +
+                    "requires an authoritative live pointer snapshot.");
+            }
+
+            return axisX ? screenX : screenY;
+        }
+
+        private void ApplyLiveParamBindings(Entity entity, Entity owner, PresenterDefinition definition)
+        {
+            int[] liveBindingIndices = definition.LiveParamBindingIndices;
+            PresenterParamBinding[] bindings = definition.Bindings;
+            for (int i = 0; i < liveBindingIndices.Length; i++)
+            {
+                int bindingIndex = liveBindingIndices[i];
+                ref readonly PresenterParamBinding binding = ref bindings[bindingIndex];
+                ValueRef value = binding.Value;
+                switch (value.Source)
+                {
+                    case ValueSourceKind.OwnerBlackboardFloat:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveOwnerBlackboardFloat(owner, value.SourceId, definition.Key, binding.ParamKey, value.Optional), 0, Vector4.Zero);
+                        break;
+                    case ValueSourceKind.PointerScreenX:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolvePointerScreenAxis(axisX: true, definition.Key, binding.ParamKey), 0, Vector4.Zero);
+                        break;
+                    case ValueSourceKind.PointerScreenY:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolvePointerScreenAxis(axisX: false, definition.Key, binding.ParamKey), 0, Vector4.Zero);
                         break;
                 }
             }
@@ -1273,6 +1440,7 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 SeedGraphInputRegisters(entity);
+                Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
                 GraphFrame frame = GraphFrame.Bind(
                     GraphKind.Score,
                     GraphEntityPreset.None,
@@ -1287,6 +1455,7 @@ namespace Ludots.Core.Presentation.Systems
                     _graphBoolRegs,
                     _graphEntityRegs,
                     _graphTargets,
+                    intIds,
                     _graphCallStack);
                 GraphExecutor.Execute(ref frame, program);
                 result = _graphFloatRegs[0];
@@ -1430,6 +1599,16 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
+            // Interaction context bindings are snapshot-resolved: the owner's mounted
+            // InteractionContextInstances component is the single source of truth (save
+            // round-trips preserve it), so bindings are resolved from that component here
+            // on every pass — context transitions are low-frequency and SetParam no-ops on
+            // unchanged values, so no dirty channel is needed (unlike attribute/tag work).
+            if (definition.HasOwnerInteractionContextBindingWork && World.IsAlive(owner))
+            {
+                ApplyOwnerInteractionContextWork(entity, owner, definition, activeMask);
+            }
+
             bool ownerAlive = World.IsAlive(owner);
             bool hasAttributes = applyAttributes && ownerAlive && World.Has<AttributeBuffer>(owner);
             bool hasTags = applyTags && ownerAlive && World.Has<GameplayTagContainer>(owner);
@@ -1550,6 +1729,43 @@ namespace Ludots.Core.Presentation.Systems
         private void ApplyCompiledTagBinding(Entity entity, in CompiledBinding binding, bool tagActive)
         {
             SetParam(entity, binding.TargetParamKey, ParamLane.Int, 0f, binding.ResolveTagInt(tagActive), Vector4.Zero);
+        }
+
+        /// <summary>
+        /// Snapshot-resolves every interaction-context binding of a definition from the
+        /// owner's mounted <see cref="InteractionContextInstances"/> component. Runs on the
+        /// main presentation pass; SetParam no-ops when the value is unchanged, so context
+        /// transitions (low-frequency) never cost a dirty write when the state holds.
+        /// </summary>
+        private void ApplyOwnerInteractionContextWork(
+            Entity entity,
+            Entity owner,
+            PresenterDefinition definition,
+            uint activeMask)
+        {
+            CompiledBinding[] compiled = definition.CompiledBindings;
+            bool ownerHasContext = World.TryGet<InteractionContextInstances>(owner, out InteractionContextInstances instances) &&
+                                   instances.Count > 0;
+            bool ownerBase = World.TryGet<InteractionContextInstance>(owner, out InteractionContextInstance baseContext) &&
+                             baseContext.ContextId > 0;
+
+            for (int i = 0; i < compiled.Length; i++)
+            {
+                ref readonly CompiledBinding binding = ref compiled[i];
+                if (!binding.IsInteractionContextBound ||
+                    !IsBehaviorActive(activeMask, binding.SlotIndex))
+                {
+                    continue;
+                }
+
+                bool active = ownerHasContext && instances.IndexOf(binding.SourceInteractionContextProfileId) >= 0;
+                if (!active && ownerBase && baseContext.ContextId == binding.SourceInteractionContextProfileId)
+                {
+                    active = true;
+                }
+
+                SetParam(entity, binding.TargetParamKey, ParamLane.Int, 0f, binding.ResolveInteractionContextInt(active), Vector4.Zero);
+            }
         }
 
         private void ApplyMaterialBinding(Entity entity, in MaterialConfig config)
@@ -1922,7 +2138,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            IVisualHeightmap? heightmap = _heightmapProvider();
+            IContinuousHeightmap? heightmap = _heightmapProvider();
             bool requireResolvedSample = config.UpdatePolicy == GroundingUpdatePolicy.Once;
             if (heightmap == null)
             {
@@ -1969,7 +2185,7 @@ namespace Ludots.Core.Presentation.Systems
         private static bool TrySnapToGroundSingle(
             ref Vector3 position,
             float offsetMeters,
-            IVisualHeightmap heightmap,
+            IContinuousHeightmap heightmap,
             bool requireResolvedSample)
         {
             const float metersToCm = 100f;
@@ -1997,7 +2213,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Log.Warn(in LogChannels.Presentation, "Presenter grounding requested VisualHeightmap, but none is registered; one-shot grounding remains pending and every-frame grounding uses offset height.");
+            Log.Warn(in LogChannels.Presentation, "Presenter grounding requested ContinuousHeightmap, but none is registered; one-shot grounding remains pending and every-frame grounding uses offset height.");
             _warnedMissingGroundingHeightmap = true;
         }
 
@@ -2081,6 +2297,7 @@ namespace Ludots.Core.Presentation.Systems
             BehaviorSlot[] behaviors,
             Chunk chunk)
         {
+            ref Entity entityFirst = ref chunk.Entity(0);
             for (int behaviorIndex = 0; behaviorIndex < tickBehaviorIndices.Length; behaviorIndex++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[tickBehaviorIndices[behaviorIndex]];
@@ -2097,7 +2314,15 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     }
 
+                    if (positions[index].Value.Y == slot.Grounding.Offset)
+                    {
+                        continue;
+                    }
+
                     positions[index].Value.Y = slot.Grounding.Offset;
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    _runtime.MarkTransformDrivenEmitDirty(entity);
+                    _runtime.PropagateParentDrivenTransforms(entity);
                 }
             }
         }
@@ -2111,7 +2336,7 @@ namespace Ludots.Core.Presentation.Systems
                 config.Offset != 0f ||
                 state.AnchorKind != PresentationAnchorKind.Entity ||
                 transformSource != TransformSource.EntityTransform ||
-                !OwnerHasResolvedVisualHeightSample(state.OwnerEntity))
+                !OwnerHasResolvedContinuousHeightSample(state.OwnerEntity))
             {
                 return false;
             }
@@ -2129,7 +2354,7 @@ namespace Ludots.Core.Presentation.Systems
                 state.AnchorKind != PresentationAnchorKind.Entity ||
                 !World.Has<PresenterTransformSource>(presenter) ||
                 World.Get<PresenterTransformSource>(presenter).Value != TransformSource.EntityTransform ||
-                !OwnerHasResolvedVisualHeightSample(state.OwnerEntity))
+                !OwnerHasResolvedContinuousHeightSample(state.OwnerEntity))
             {
                 return false;
             }
@@ -2172,7 +2397,7 @@ namespace Ludots.Core.Presentation.Systems
                     }
 
                     if (!CanSkipOwnerBackedSnapToGroundPresenter(in states[index], transformSources[index].Value) ||
-                        !OwnerHasResolvedVisualHeightSample(states[index].OwnerEntity))
+                        !OwnerHasResolvedContinuousHeightSample(states[index].OwnerEntity))
                     {
                         return false;
                     }
@@ -2199,12 +2424,12 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool OwnerHasResolvedVisualHeightSample(Entity owner)
+        private bool OwnerHasResolvedContinuousHeightSample(Entity owner)
         {
             return owner != Entity.Null &&
                    World.IsAlive(owner) &&
-                   World.Has<VisualHeightmapSampleState>(owner) &&
-                   World.Get<VisualHeightmapSampleState>(owner).Sampled != 0;
+                   World.Has<ContinuousHeightmapSampleState>(owner) &&
+                   World.Get<ContinuousHeightmapSampleState>(owner).Sampled != 0;
         }
 
         private void ApplyGroundingBatch(
@@ -2213,7 +2438,7 @@ namespace Ludots.Core.Presentation.Systems
             Span<PresenterState> states,
             int[] tickBehaviorIndices,
             BehaviorSlot[] behaviors,
-            IVisualHeightmap heightmap,
+            IContinuousHeightmap heightmap,
             Chunk chunk)
         {
             if (tickBehaviorIndices.Length == 0)
@@ -2221,6 +2446,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
+            ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int behaviorIndex in tickBehaviorIndices)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
@@ -2279,8 +2505,17 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < count; i++)
                 {
                     int index = _groundingIndices[i];
+                    bool changed =
+                        positions[index].Value != _groundingPositions[i] ||
+                        rotations[index].Value != _groundingRotations[i];
                     positions[index].Value = _groundingPositions[i];
                     rotations[index].Value = _groundingRotations[i];
+                    if (changed)
+                    {
+                        Entity entity = Unsafe.Add(ref entityFirst, index);
+                        _runtime.MarkTransformDrivenEmitDirty(entity);
+                        _runtime.PropagateParentDrivenTransforms(entity);
+                    }
                 }
             }
         }
@@ -2295,7 +2530,7 @@ namespace Ludots.Core.Presentation.Systems
             Span<PresenterState> states,
             int[] behaviorIndices,
             BehaviorSlot[] behaviors,
-            IVisualHeightmap heightmap,
+            IContinuousHeightmap heightmap,
             Chunk chunk)
         {
             bool resolved = true;
@@ -2383,8 +2618,17 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < count; i++)
                 {
                     int index = _groundingIndices[i];
+                    bool changed =
+                        positions[index].Value != _groundingPositions[i] ||
+                        rotations[index].Value != _groundingRotations[i];
                     positions[index].Value = _groundingPositions[i];
                     rotations[index].Value = _groundingRotations[i];
+                    if (changed)
+                    {
+                        Entity entity = Unsafe.Add(ref entityFirst, index);
+                        _runtime.MarkTransformDrivenEmitDirty(entity);
+                        _runtime.PropagateParentDrivenTransforms(entity);
+                    }
                 }
             }
 
@@ -2397,7 +2641,7 @@ namespace Ludots.Core.Presentation.Systems
         /// </returns>
         private bool ApplySnapToGroundBatch(
             int count,
-            IVisualHeightmap heightmap,
+            IContinuousHeightmap heightmap,
             bool requireResolvedSample,
             out bool anyUnresolved)
         {
@@ -2522,7 +2766,9 @@ namespace Ludots.Core.Presentation.Systems
                 rotations[index].Value = resolvedRotation;
                 facings[index] = resolvedFacing;
                 scales[index].Value = resolvedScale;
-                _runtime.MarkTransformDrivenEmitDirty(Unsafe.Add(ref entityFirst, index));
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                _runtime.MarkTransformDrivenEmitDirty(entity);
+                _runtime.PropagateParentDrivenTransforms(entity);
             }
         }
 
@@ -2902,6 +3148,44 @@ namespace Ludots.Core.Presentation.Systems
             return World.Has<PresenterInstanceTransformOverride>(entity)
                 ? World.Get<PresenterInstanceTransformOverride>(entity)
                 : PresenterInstanceTransformOverride.Identity;
+        }
+
+        private PresenterTransformSnapshot CaptureWorldTransform(Entity entity)
+        {
+            return new PresenterTransformSnapshot
+            {
+                WorldPosition = World.Has<PresenterWorldPosition>(entity)
+                    ? World.Get<PresenterWorldPosition>(entity).Value
+                    : Vector3.Zero,
+                WorldRotation = World.Has<PresenterWorldRotation>(entity)
+                    ? World.Get<PresenterWorldRotation>(entity).Value
+                    : Quaternion.Identity,
+                WorldScale = World.Has<PresenterWorldScale>(entity)
+                    ? World.Get<PresenterWorldScale>(entity).Value
+                    : Vector3.One,
+                WorldFacing = World.Has<PresenterWorldFacing>(entity)
+                    ? World.Get<PresenterWorldFacing>(entity)
+                    : default,
+                TransformSource = World.Has<PresenterTransformSource>(entity)
+                    ? World.Get<PresenterTransformSource>(entity).Value
+                    : TransformSource.WorldFixed,
+            };
+        }
+
+        private void PropagateTransformChange(Entity entity, in PresenterTransformSnapshot previous)
+        {
+            PresenterTransformSnapshot current = CaptureWorldTransform(entity);
+            if (current.WorldPosition == previous.WorldPosition &&
+                current.WorldRotation == previous.WorldRotation &&
+                current.WorldScale == previous.WorldScale &&
+                current.WorldFacing.AngleRad == previous.WorldFacing.AngleRad &&
+                current.WorldFacing.HasValue == previous.WorldFacing.HasValue)
+            {
+                return;
+            }
+
+            _runtime.MarkTransformDrivenEmitDirty(entity);
+            _runtime.PropagateParentDrivenTransforms(entity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

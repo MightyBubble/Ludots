@@ -14,16 +14,6 @@ namespace Ludots.Tests.Gas
         [Test]
         public void BuiltinCatalog_RegistersEveryConcreteIAgentTool_ExactlyOnce()
         {
-            Type toolInterface = typeof(IAgentTool);
-            Type[] concreteTools = typeof(IAgentTool).Assembly
-                .GetTypes()
-                .Where(t => t.IsClass && !t.IsAbstract && toolInterface.IsAssignableFrom(t))
-                .OrderBy(t => t.FullName, StringComparer.Ordinal)
-                .ToArray();
-
-            Assert.That(concreteTools.Length, Is.EqualTo(BuiltinAgentTools.ExpectedNames.Count),
-                "Update BuiltinAgentTools when adding/removing IAgentTool implementations.");
-
             using var engine = new Ludots.Core.Engine.GameEngine();
             var tools = new AgentToolRegistry();
             var runtime = new AgentBridgeRuntime(engine, tools);
@@ -33,24 +23,24 @@ namespace Ludots.Tests.Gas
 
             BuiltinAgentTools.RegisterAll(tools, runtime, time, recording, logRing);
 
-            Assert.That(tools.Tools.Count, Is.EqualTo(BuiltinAgentTools.ExpectedNames.Count));
-
-            var registeredNames = tools.Tools.Keys.OrderBy(n => n, StringComparer.Ordinal).ToArray();
-            var expected = BuiltinAgentTools.ExpectedNames.OrderBy(n => n, StringComparer.Ordinal).ToArray();
-            Assert.That(registeredNames, Is.EqualTo(expected));
-
-            var reflectedNames = new List<string>(concreteTools.Length);
-            foreach (Type type in concreteTools)
+            (Type Type, string Name)[] concreteTools =
+                AgentBridgeToolCatalogProbe.GetConcreteTools(runtime, time, recording, logRing);
+            foreach ((Type type, string name) in concreteTools)
             {
-                IAgentTool instance = CreateProbeInstance(type, runtime, time, recording, logRing);
-                reflectedNames.Add(instance.Name);
-                Assert.That(tools.TryGet(instance.Name, out _), Is.True,
-                    $"Concrete tool {type.Name} ({instance.Name}) is not registered by BuiltinAgentTools.");
+                Assert.That(tools.TryGet(name, out _), Is.True,
+                    $"Concrete tool {type.Name} ({name}) is not registered by BuiltinAgentTools.");
             }
 
-            Assert.That(
-                reflectedNames.OrderBy(n => n, StringComparer.Ordinal).ToArray(),
-                Is.EqualTo(expected));
+            string[] expected = concreteTools
+                .Select(tool => tool.Name)
+                .OrderBy(n => n, StringComparer.Ordinal)
+                .ToArray();
+            Assert.That(expected, Is.Unique,
+                "two concrete IAgentTool implementations share one wire name; the registry would shadow one of them");
+
+            string[] registeredNames = tools.Tools.Keys.OrderBy(n => n, StringComparer.Ordinal).ToArray();
+            Assert.That(registeredNames, Is.EqualTo(expected),
+                "BuiltinAgentTools must expose exactly the concrete IAgentTool set: no missing tool, no extra registration.");
         }
 
         [Test]
@@ -72,53 +62,26 @@ namespace Ludots.Tests.Gas
             using var engine = new Ludots.Core.Engine.GameEngine();
             var tools = new AgentToolRegistry();
             var runtime = new AgentBridgeRuntime(engine, tools);
-            BuiltinAgentTools.RegisterAll(tools, runtime, new AgentTimeController(), new RecordingController(), new AgentLogRingBackend());
+            var time = new AgentTimeController();
+            var recording = new RecordingController();
+            var logRing = new AgentLogRingBackend();
+            BuiltinAgentTools.RegisterAll(tools, runtime, time, recording, logRing);
+            string[] expected = AgentBridgeToolCatalogProbe.GetConcreteToolNames(runtime, time, recording, logRing);
 
             JsonArray catalog = tools.DescribeAll();
-            Assert.That(catalog.Count, Is.EqualTo(BuiltinAgentTools.ExpectedNames.Count));
+            Assert.That(catalog.Count, Is.EqualTo(expected.Length));
+
+            var describedNames = new List<string>(catalog.Count);
             foreach (JsonNode? node in catalog)
             {
                 Assert.That(node?["name"]?.GetValue<string>(), Is.Not.Null.And.Not.Empty);
                 Assert.That(node?["description"]?.GetValue<string>(), Is.Not.Null.And.Not.Empty);
-            }
-        }
-
-        private static IAgentTool CreateProbeInstance(
-            Type type,
-            AgentBridgeRuntime runtime,
-            AgentTimeController time,
-            RecordingController recording,
-            AgentLogRingBackend logRing)
-        {
-            if (type == typeof(SessionInfoTool)
-                || type == typeof(InputStateTool)
-                || type == typeof(InputInjectTool)
-                || type == typeof(ScreenshotTool))
-            {
-                return (IAgentTool)Activator.CreateInstance(type, runtime)!;
+                describedNames.Add(node!["name"]!.GetValue<string>());
             }
 
-            if (type == typeof(TimeGetTool) || type == typeof(TimeControlTool))
-            {
-                return (IAgentTool)Activator.CreateInstance(type, time)!;
-            }
-
-            if (type == typeof(RecordingStartTool))
-            {
-                return (IAgentTool)Activator.CreateInstance(type, recording, runtime)!;
-            }
-
-            if (type == typeof(RecordingStopTool))
-            {
-                return (IAgentTool)Activator.CreateInstance(type, recording)!;
-            }
-
-            if (type == typeof(LogsTailTool))
-            {
-                return (IAgentTool)Activator.CreateInstance(type, logRing)!;
-            }
-
-            return (IAgentTool)Activator.CreateInstance(type)!;
+            describedNames.Sort(StringComparer.Ordinal);
+            Assert.That(describedNames, Is.EqualTo(expected),
+                "the self-describing catalog must advertise exactly the concrete IAgentTool set");
         }
     }
 }

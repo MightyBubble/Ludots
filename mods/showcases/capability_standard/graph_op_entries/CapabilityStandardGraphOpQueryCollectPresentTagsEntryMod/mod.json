@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardGraphOpQueryCollectPresentTagsEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for GraphNodeOp QueryCollectPresentTags player gallery.",
+  "main": "bin/net9.0/CapabilityStandardGraphOpQueryCollectPresentTagsEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ]
+}

@@ -52,7 +52,8 @@ namespace ModdingTest
             // 2. Create game.json (Launcher Responsibility)
             var gameConfig = new GameConfig
             {
-                ModPaths = new List<string> { testModPath, inputPatchModPath }
+                ModPaths = new List<string> { testModPath, inputPatchModPath },
+                StartupMapId = "smoke_world"
             };
 
             string gameJsonPath = Path.Combine(rootDir, "game.json");
@@ -184,11 +185,11 @@ namespace ModdingTest
 
                 backend.MousePos = new Vector2(100, 100);
                 backend.MiddleDown = true;
-                inputHandler.Update();
+                inputHandler.Update(1f / 60f);
                 engine.Tick(0.016f);
 
                 backend.MousePos = new Vector2(140, 100);
-                inputHandler.Update();
+                inputHandler.Update(1f / 60f);
                 engine.Tick(0.016f);
 
                 var yaw = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.Yaw;
@@ -239,6 +240,9 @@ namespace ModdingTest
             Directory.CreateDirectory(modPath);
             File.WriteAllText(Path.Combine(modPath, "mod.json"), 
                 @"{ ""name"": ""PipelineTestMod"", ""version"": ""1.0.0"" }");
+            Directory.CreateDirectory(Path.Combine(modPath, "assets", "Maps"));
+            File.WriteAllText(Path.Combine(modPath, "assets", "Maps", "smoke_world.json"),
+                @"{ ""Id"": ""smoke_world"", ""World"": { ""WidthCm"": 1638400, ""HeightCm"": 1638400, ""CellSizeCm"": 100 } }");
             
             string entitiesDir = Path.Combine(modPath, "assets", "Entities");
             Directory.CreateDirectory(entitiesDir);

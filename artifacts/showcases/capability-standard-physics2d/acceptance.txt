@@ -1,0 +1,3 @@
+binding=capability_standard_physics2d
+map=capability_standard_physics2d
+framesToSpawn=3

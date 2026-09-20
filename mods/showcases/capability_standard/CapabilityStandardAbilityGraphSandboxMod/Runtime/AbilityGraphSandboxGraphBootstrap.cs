@@ -38,7 +38,6 @@ public sealed class AbilityGraphSandboxBundle
     public required RelationshipTypeRegistry Types { get; init; }
     public required RelationshipMetricRegistry Metrics { get; init; }
     public required RelationshipFlagRegistry Flags { get; init; }
-    public required RelationshipReasonRegistry Reasons { get; init; }
     public int InspiredTagId { get; init; }
     public int MarkedTagId { get; init; }
     public int SocialBondTypeId { get; init; }
@@ -53,18 +52,15 @@ internal sealed class AbilityGraphSandboxSymbolResolver : IGraphSymbolResolver
     private readonly RelationshipTypeRegistry _types;
     private readonly RelationshipMetricRegistry _metrics;
     private readonly RelationshipFlagRegistry _flags;
-    private readonly RelationshipReasonRegistry _reasons;
 
     public AbilityGraphSandboxSymbolResolver(
         RelationshipTypeRegistry types,
         RelationshipMetricRegistry metrics,
-        RelationshipFlagRegistry flags,
-        RelationshipReasonRegistry reasons)
+        RelationshipFlagRegistry flags)
     {
         _types = types;
         _metrics = metrics;
         _flags = flags;
-        _reasons = reasons;
     }
 
     public int ResolveTag(string name) => TagRegistry.Register(name);
@@ -73,7 +69,6 @@ internal sealed class AbilityGraphSandboxSymbolResolver : IGraphSymbolResolver
     public int ResolveRelationshipType(string name) => _types.Register(name);
     public int ResolveRelationshipMetric(string name) => _metrics.Register(name, -100, 100, 0);
     public int ResolveRelationshipFlag(string name) => _flags.Register(name);
-    public int ResolveRelationshipReason(string name) => _reasons.Register(name);
     public int ResolveTargetDispatchPreset(string name) => ConfigKeyRegistry.Register($"targetDispatch.{name}");
     public int ResolveEntityTemplate(string name) => ConfigKeyRegistry.Register($"entityTemplate.{name}");
 }
@@ -104,16 +99,14 @@ public static class AbilityGraphSandboxGraphBootstrap
         var types = new RelationshipTypeRegistry();
         var metrics = new RelationshipMetricRegistry();
         var flags = new RelationshipFlagRegistry();
-        var reasons = new RelationshipReasonRegistry();
         int socialBondTypeId = types.Register("SocialBond");
         int loyaltyMetricId = metrics.Register("Loyalty", -100, 100, 0);
         int trustedFlagId = flags.Register("Trusted");
-        reasons.Register("Scenario.Setup");
 
         var programs = new GraphProgramRegistry();
         var graphIds = new Dictionary<string, int>(StringComparer.Ordinal);
         int nextGraphId = 1;
-        var resolver = new AbilityGraphSandboxSymbolResolver(types, metrics, flags, reasons);
+        var resolver = new AbilityGraphSandboxSymbolResolver(types, metrics, flags);
         JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
         using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(graphsPath));
 
@@ -161,7 +154,6 @@ public static class AbilityGraphSandboxGraphBootstrap
             Types = types,
             Metrics = metrics,
             Flags = flags,
-            Reasons = reasons,
             InspiredTagId = inspiredTagId,
             MarkedTagId = markedTagId,
             SocialBondTypeId = socialBondTypeId,

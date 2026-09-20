@@ -27,17 +27,19 @@ namespace Ludots.Core.GraphRuntime
     {
         public string Label { get; set; } = string.Empty;
         public string Event { get; set; } = string.Empty;
+        /// <summary>Semantic input action id; mutually exclusive with <see cref="Event"/>.</summary>
+        public string Action { get; set; } = string.Empty;
         public string Start { get; set; } = string.Empty;
         public bool Once { get; set; }
         public string? Refire { get; set; }
-        /// <summary>Dispatch priority within one event key (#1124): ascending, negative earlier, default 0.</summary>
+        /// <summary>Dispatch priority within one event key: ascending, negative earlier, default 0.</summary>
         public int Priority { get; set; }
         public TriggerGraphEntryFiltersConfig? Filters { get; set; }
-        /// <summary>Authoring shape of <c>hookAnchor: { graphId, anchor, position }</c> (#1124).</summary>
+        /// <summary>Authoring shape of <c>hookAnchor: { graphId, anchor, position }</c>.</summary>
         public TriggerGraphHookAnchorConfig? HookAnchor { get; set; }
-        /// <summary>Authoring shape of <c>hookNodeBefore: { graphId, nodeId }</c> (#1124).</summary>
+        /// <summary>Authoring shape of <c>hookNodeBefore: { graphId, nodeId }</c>.</summary>
         public TriggerGraphHookNodeConfig? HookNodeBefore { get; set; }
-        /// <summary>Authoring shape of <c>hookNodeAfter: { graphId, nodeId }</c> (#1124).</summary>
+        /// <summary>Authoring shape of <c>hookNodeAfter: { graphId, nodeId }</c>.</summary>
         public TriggerGraphHookNodeConfig? HookNodeAfter { get; set; }
         /// <summary>Compiled filter struct produced by entry validation; default when no filters are authored.</summary>
         public TriggerGraphEntryFilters ParsedFilters { get; set; }
@@ -63,7 +65,7 @@ namespace Ludots.Core.GraphRuntime
     }
 
     /// <summary>
-    /// Normalized hook target of a TriggerGraph entry (#1124): the entry body is a
+    /// Normalized hook target of a TriggerGraph entry: the entry body is a
     /// fragment woven into another graph at compile time instead of dispatching on
     /// its own event. Exactly one of Anchor / NodeId is set.
     /// </summary>
@@ -182,6 +184,7 @@ namespace Ludots.Core.GraphRuntime
         public string? FunctionName { get; set; }
         public string? Attribute { get; set; }
         public string? Tag { get; set; }
+        public string? Ability { get; set; }
         public string? LookupTable { get; set; }
         public string? LookupField { get; set; }
         /// <summary>Distribution id symbol for WeightedPick; resolved to a key id at patch time.</summary>
@@ -189,11 +192,13 @@ namespace Ludots.Core.GraphRuntime
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
         public string? EffectTemplate { get; set; }
+        /// <summary>Order type key symbol for SubmitAssignedOrder; resolved to an order type id at patch time.</summary>
+        public string? OrderType { get; set; }
         public string? PayloadPreset { get; set; }
         public string? BuiltinHandler { get; set; }
         public string? BlackboardKey { get; set; }
         public string? ConfigKey { get; set; }
-        /// <summary>Panel type symbol for ShowPanel/HidePanel/CreatePanel/DestroyPanel ops (#1014).</summary>
+        /// <summary>Panel type symbol for ShowPanel/HidePanel/CreatePanel/DestroyPanel ops.</summary>
         public string? PanelType { get; set; }
         /// <summary>Placement anchor symbol for CreatePanel (surface-side region id).</summary>
         public string? PanelAnchor { get; set; }
@@ -201,6 +206,8 @@ namespace Ludots.Core.GraphRuntime
         public string? PanelSkin { get; set; }
         /// <summary>Viewport Z-order for CreatePanel; maps to surface lease priority. Default 100.</summary>
         public float? PanelZOrder { get; set; }
+        /// <summary>Seat id symbol for SetPanelAudience; omitted clears the override back to the declared audience.</summary>
+        public string? PanelSeat { get; set; }
         /// <summary>Map variable name symbol for ReadMapVarInt/ReadMapVarFloat/WriteMapVarInt/WriteMapVarFloat.</summary>
         public string? Var { get; set; }
         public string? RelationshipType { get; set; }
@@ -211,27 +218,43 @@ namespace Ludots.Core.GraphRuntime
         public int Slot { get; set; }
         /// <summary>Named event payload key (a MapTriggerEventPayloadKeys constant) for LoadEntryPayload* ops.</summary>
         public string? PayloadKey { get; set; }
-        /// <summary>Placed InstanceId for LoadPlacedEntity / LoadPlacedRegion / LoadPlacedAnchor (#1108); validated fail-closed against the mounting map's catalog at mount time.</summary>
+        /// <summary>Placed InstanceId for LoadPlacedEntity / LoadPlacedRegion / LoadPlacedAnchor; validated fail-closed against the mounting map's catalog at mount time.</summary>
         public string? InstanceId { get; set; }
         /// <summary>Optional TriggerGraph entry label for InvokeGraph; omitted → target entry table [0].</summary>
         public string? EntryLabel { get; set; }
         /// <summary>Event name for DispatchMapEvent; must resolve in the EventSchemaRegistry.</summary>
         public string? Event { get; set; }
-        /// <summary>Dispatch domain for DispatchMapEvent: "map" (default), "self", or "global" (#1123).</summary>
+        /// <summary>Dispatch domain for DispatchMapEvent: "map" (default), "self", or "global".</summary>
         public string? Scope { get; set; }
-        /// <summary>#1126 AwaitCallback catalog name (Imm symbol); required on AwaitCallback nodes.</summary>
+        /// <summary>AwaitCallback catalog name (Imm symbol); required on AwaitCallback nodes.</summary>
         public string? CallbackType { get; set; }
         /// <summary>Literal / FormatText template for formal text ops (ConstText Imm → Symbols; FormatText brace scan).</summary>
         public string? Text { get; set; }
         /// <summary>Presentation TextToken key for LoadTextKey; patched to token id at load.</summary>
         public string? TextKey { get; set; }
+        /// <summary>Dialogue definition id for StartDialogue; patched to config key id at load.</summary>
+        public string? DialogueId { get; set; }
         /// <summary>Presentation surface for SinkPresentationText: "Subtitle" or "Dialogue".</summary>
         public string? PresentationSurface { get; set; }
         /// <summary>InvokeArgs staging key for StoreArgInt/Float/Entity and the InvokeGraph call contract.</summary>
         public string? ArgKey { get; set; }
+        /// <summary>Interaction mode id symbol for SetInteractionMode; resolved against the installed interaction mode map at run time.</summary>
+        public string? Mode { get; set; }
+        /// <summary>Interaction context profile id symbol for ActivateContext/DeactivateContext; resolved against the installed context profiles at run time.</summary>
+        public string? Context { get; set; }
+        /// <summary>Optional parent interaction context profile id symbol for ActivateContext; omit for a root-level derived context.</summary>
+        public string? ParentContext { get; set; }
+        /// <summary>Seat id symbol for the aimsource family (ScreenPointToGround/ScreenPointToEntity/ScreenRegionToEntities); the answer is given under that seat's present binding.</summary>
+        public string? Seat { get; set; }
+        /// <summary>Pick radius in pixels for ScreenPointToEntity (authored literal).</summary>
+        public float PickRadiusPx { get; set; }
         public string? QueryCapacityPolicy { get; set; }
         public string? DroppedOutput { get; set; }
         public string? ValidOutput { get; set; }
+        /// <summary>Activity definition id symbol for OfferActivity (Imm: string symbol; resolved against the registry at execution time).</summary>
+        public string? ActivityId { get; set; }
+        /// <summary>Task definition id symbol for OfferTask (Imm: string symbol; resolved against the registry at execution time).</summary>
+        public string? TaskId { get; set; }
         public float RadiusCm { get; set; }
         public float RangeCm { get; set; }
         public int DirectionDeg { get; set; }
@@ -255,7 +278,7 @@ namespace Ludots.Core.GraphRuntime
         /// </summary>
         public string? DecoratorKind { get; set; }
         /// <summary>
-        /// Named hook point (#1124): another mod's TriggerGraph entry with a matching
+        /// Named hook point: another mod's TriggerGraph entry with a matching
         /// hookAnchor weaves its body before/after this node at compile time. Anchor
         /// names must be unique within one graph; empty means "no anchor".
         /// </summary>
@@ -331,6 +354,7 @@ namespace Ludots.Core.GraphRuntime
         public const string Max = "max";
         public const string A = "a";
         public const string B = "b";
+        public const string C = "c";
         public const string Condition = "condition";
         /// <summary>Int selector input for SwitchInt compile-time sugar.</summary>
         public const string Selector = "selector";

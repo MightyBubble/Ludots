@@ -72,8 +72,10 @@
 - `OverlayDialogue`
 - `DialogueBubble`
 - `SubtitleBubble`
-- `ChoiceList`
 - `TransmissionOverlay`
+- `StandingPortrait`
+
+选项列表不走 NarrativeFrontend surface：查询图写出 `DialogueChoiceCollection`，由 PanelHost `panel.narrative.choices` 呈现。
 
 对应代码：
 
@@ -107,7 +109,7 @@ Narrative showcase：
 
 - 读取 quest / dialogue / cinematic / variable / log
 - 根据 frontend json 决定哪些 surface 激活
-- 把 transmission、overlay dialogue、bubble、subtitle、choice 同时投影到一个 scene
+- 把 transmission、overlay dialogue、bubble、subtitle 投影到一个 scene；可回话走 PanelHost
 
 Relationship showcase：
 
@@ -149,7 +151,7 @@ Relationship showcase：
 当前 surface 组合已经覆盖以下方向：
 
 - 策略指挥：`PromptRibbon + StatusPanel + ThreatBanner + FlowReview`
-- 分支抉择调查：`OverlayDialogue + ChoiceList + VariablesPanel/Notebook + HistoryJournal`
+- 分支抉择调查：`OverlayDialogue` + PanelHost 选项面板 + `VariablesPanel/Notebook` + `HistoryJournal`
 - 解谜旁白：`DialogueBubble + SubtitleBubble + EventCard/InspectPanel + FlowReview`
 
 扩展原则：

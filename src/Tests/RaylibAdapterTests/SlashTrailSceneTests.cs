@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
-using Ludots.App.RaylibEngineGallery;
-using Ludots.App.RaylibEngineGallery.Scenes;
+using Ludots.Content.EngineGallery;
+using Ludots.Content.EngineGallery.Scenes;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 

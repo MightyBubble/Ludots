@@ -28,6 +28,10 @@
 
 派生属性仍走已有围栏：`BeginDerivedAttributeWrites` / `EndDerivedAttributeWrites` / `RejectDerivedAttributeSideEffect`。该围栏是对的，本页不改它的语义。派生图对 current 的显式写入会保留；聚合修正本身不会覆盖 current。
 
+## TriggerGraph 属性写边界
+
+`ModifyAttributeSet` 在 TriggerGraph 中只作为权威属性写入口使用：图可以决定目标和值，但最终仍由 `GasGraphRuntimeApi` 调用 `AttributeMutationOps`，不会绕过 GAS 结算或另建一套存储。TriggerGraph 放行是为了让地图事件、面板按钮等运行时触发器能执行确定的属性写入；Script 图继续保持 Pure-only，不开放这个有副作用的操作。Effect 图的既有放行不变。
+
 ## 强制手段
 
 `AttributeBuffer.SetBase` / `SetCurrent` / `SetAggregatedCurrent` 不是玩法写入面。Core 与展厅程序集里只有白名单类型可以调用它们：
@@ -48,7 +52,8 @@
 - `RequireId(name)` 找不到时抛异常并点名该属性名。
 - `GetCurrent` / `SetCurrent` / `SetBase` / `GetCap` 遇到非法或越界 id 抛 `ArgumentOutOfRangeException`。禁止静默返回 `0` 或丢掉写入。
 
-容量常量只在 `AttributeRegistry.MaxAttributes` 定义一处；`AttributeBuffer` 与 `DirtyFlags` 引用它。
+容量常量只在 `AttributeRegistry.MaxAttributes` 定义一处；`AttributeBuffer` 与 `DirtyFlags` 引用它。  
+把编译期 64/256 硬顶改成「装载期按本局内容定容」是提案 [RFC-0067](../../docs/rfcs/RFC-0067-gas-loadtime-capacity-world-store.md)，接受并回写本页之前，实现仍以本页的 64 槽合同为准。
 
 ## 注册表约定与 Freeze
 

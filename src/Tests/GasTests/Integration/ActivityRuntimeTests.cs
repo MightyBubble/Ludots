@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
@@ -67,6 +68,7 @@ namespace Ludots.Tests.GAS.Integration
 
             Entity activity = runtime.OfferOrActivate("activity.border_incident", scope);
             Assert.That(activity, Is.Not.EqualTo(Entity.Null));
+            Assert.That(world.Get<Name>(activity).Value, Is.EqualTo("Border Incident"));
             Assert.That(runtime.TryGetState(activity, out ActivityInstanceState state, out string id), Is.True);
             Assert.That(state, Is.EqualTo(ActivityInstanceState.Active));
             Assert.That(id, Is.EqualTo("activity.border_incident"));

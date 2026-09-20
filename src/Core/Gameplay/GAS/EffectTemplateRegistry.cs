@@ -419,8 +419,12 @@ namespace Ludots.Core.Gameplay.GAS
         private readonly System.Collections.Generic.Dictionary<int, string> _registrationSource = new();
         private Ludots.Core.Modding.RegistrationConflictReport _conflictReport;
         private bool _executionPlansFinalized;
+        private EffectPeriodKernelTable? _periodKernelTable;
 
         public bool AreExecutionPlansFinalized => _executionPlansFinalized;
+
+        /// <summary>OnPeriod 纯属性增量内核表；FinalizeAll 编译产物，未编译时为 null（全解释车道）。</summary>
+        public EffectPeriodKernelTable? PeriodKernelTable => _periodKernelTable;
 
         public void SetConflictReport(Ludots.Core.Modding.RegistrationConflictReport report)
         {
@@ -435,6 +439,7 @@ namespace Ludots.Core.Gameplay.GAS
             Array.Clear(_finalizedPlanBits, 0, _finalizedPlanBits.Length);
             _registrationSource.Clear();
             _executionPlansFinalized = false;
+            _periodKernelTable = null;
         }
 
         public void Register(int templateId, in EffectTemplateData data, string modId = null)
@@ -748,6 +753,18 @@ namespace Ludots.Core.Gameplay.GAS
             Array.Copy(executionPlans, _executionPlans, MaxTemplates);
             Array.Copy(_hasBits, _finalizedPlanBits, _hasBits.Length);
             _executionPlansFinalized = true;
+        }
+
+        internal void SetPeriodKernelTable(EffectPeriodKernelTable table)
+        {
+            ArgumentNullException.ThrowIfNull(table);
+            if (!_executionPlansFinalized)
+            {
+                throw new InvalidOperationException(
+                    $"{UnfinalizedRegistryError}: the period kernel table is compiled alongside execution plan finalization.");
+            }
+
+            _periodKernelTable = table;
         }
 
         public void RequireFinalized()

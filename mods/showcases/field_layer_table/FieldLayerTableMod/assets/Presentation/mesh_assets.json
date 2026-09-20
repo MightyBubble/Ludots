@@ -1,0 +1,12 @@
+[
+  {
+    "id": "field_table.agent",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "field_table.marker",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  }
+]

@@ -258,7 +258,7 @@ namespace Ludots.Core.Presentation.Config
                 "assetUri",
                 "setId",
                 "instanceCount",
-                "groundToVisualHeightmap");
+                "groundToContinuousHeightmap");
 
             string format = RequireString(obj["format"], $"Instanced batch '{batchKey}' group '{groupId}' source.format");
             string assetUri = RequireString(obj["assetUri"], $"Instanced batch '{batchKey}' group '{groupId}' source.assetUri");
@@ -270,11 +270,11 @@ namespace Ludots.Core.Presentation.Config
                     $"Instanced batch '{batchKey}' group '{groupId}' source.instanceCount must be positive.");
             }
 
-            bool groundToVisualHeightmap = ParseOptionalBool(
-                obj["groundToVisualHeightmap"],
+            bool groundToContinuousHeightmap = ParseOptionalBool(
+                obj["groundToContinuousHeightmap"],
                 defaultValue: false,
-                $"Instanced batch '{batchKey}' group '{groupId}' source.groundToVisualHeightmap");
-            return new InstancedBatchInstanceSource(format, assetUri, setId, instanceCount, groundToVisualHeightmap);
+                $"Instanced batch '{batchKey}' group '{groupId}' source.groundToContinuousHeightmap");
+            return new InstancedBatchInstanceSource(format, assetUri, setId, instanceCount, groundToContinuousHeightmap);
         }
 
         private InstancedBatchCustomDataChannel[] ParseCustomDataChannels(JsonNode? node, string batchKey)

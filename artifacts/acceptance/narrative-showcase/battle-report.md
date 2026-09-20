@@ -3,7 +3,7 @@
 ## Header
 - scenario: `narrative-showcase`
 - build: `GameEngine 1.0.0.0`
-- execution_timestamp_utc: `2026-08-26T03:02:10.8477416+00:00`
+- execution_timestamp_utc: `2026-09-15T17:30:36.1818324+00:00`
 - map: `narrative_showcase_hub`
 - clock: `fixed 1/60s`
 
@@ -55,7 +55,7 @@
 - [T+003] Took the lore branch via StoryChoice1, wrote MapVariableStore trust/lore, and advanced TaskRuntime into the trial beat.
 - [T+004] Placed Arcweaver near the shrine and started TrialReveal through SequencerRuntime via StoryInteract.
 - [T+005] Skipped the reveal sequence, let the completed callback emit the spawn signal, and observed the beast arrive through the runtime entity queue.
-- [T+006] SkillQ probe did not land in headless (HP stayed 220); continuing with deterministic GAS finisher.
+- [T+006] Used Arcweaver's inherited combat input on the spawned beast; HP 220 -> 202.
 - [T+007] Finished the encounter through GAS effects; TaskRuntime advanced into the return beat via signal tracking.
 - [T+007a] Return beat opened on story.standing_portrait with a half-screen standing figure for the warden.
 - [T+008] Returned to the elder, unlocked Mercy through lore-gated StoryChoice2, completed TaskRuntime, and received the trigger-driven GAS blessing reward.
@@ -64,12 +64,12 @@
 - success: yes
 - final task: `Task.Narrative.AshenOath.Return:Completed,Task.Narrative.AshenOath.Trial:Completed,Task.Narrative.AshenOath.Briefing:Completed`
 - final variables: `trust=4,lore=1,ending=2,trial_phase=1`
-- final dialogue card: `Dialogue.Narrative.Return/return_mercy_outro:Then the valley keeps a memory instead of a scar.`
+- final dialogue card: `Dialogue.Narrative.Return/return_mercy_outro:那么山谷留下的是记忆，而不是伤疤。`
 - reason: the showcase stayed on `ConfigPipeline`, `DialogueRuntime`, `SequencerRuntime`, `TaskRuntimeService`, `TriggerManager`, `RuntimeEntitySpawnQueue`, `EffectRequestQueue`, `PlayerInputHandler`, `EntityCollectionContextRuntime`, and the shared `NarrativeFrontendMod` scene owner.
 
 ## Summary Stats
 - total_actions: `10`
 - snapshots captured: `10`
-- median headless tick: `0.388ms`
-- max headless tick: `198.574ms`
-- final_ui_excerpt: `灰烬谷 | 试炼结束了：回到守望者米蕾勒身边，选一个结局。 | 附近 | Warden Mirelle`
+- median headless tick: `0.975ms`
+- max headless tick: `29.459ms`
+- final_ui_excerpt: `你 | 织弧者 | 守望者 | 米蕾勒`

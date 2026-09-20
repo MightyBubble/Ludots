@@ -8,7 +8,7 @@
     "pitch": 42,
     "fovYDeg": 55,
     "yaw": 45,
-    "targetHeightMode": "VisualHeightmap",
+    "targetHeightMode": "ContinuousHeightmap",
     "targetHeightLayerIndex": 0,
     "targetHeightOffsetCm": 0,
     "minDistanceCm": 2500,

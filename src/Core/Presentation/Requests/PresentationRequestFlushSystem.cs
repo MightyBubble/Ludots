@@ -63,15 +63,12 @@ namespace Ludots.Core.Presentation.Requests
         {
             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
             _stableDrawCache.BeginFrame();
-            bool hasTransientVisualProxy = HasTransientVisualProxy(_requests);
-            bool projectionTargetsCleared = false;
-            if (hasTransientVisualProxy || _hadTransientVisualProjection)
+            if (_hadTransientVisualProjection)
             {
-                _visualProxyEmitter.ClearProjectionTargets();
-                projectionTargetsCleared = true;
+                _visualProxyEmitter.ClearTransientProjection();
             }
-            _hadTransientVisualProjection = hasTransientVisualProxy;
 
+            bool hasTransientVisualProxy = false;
             ReadOnlySpan<PresentationRequestOp> ops = _requests.Ops;
             for (int i = 0; i < ops.Length; i++)
             {
@@ -79,8 +76,19 @@ namespace Ludots.Core.Presentation.Requests
                 switch (op.Channel)
                 {
                     case PresentationRequestChannel.VisualProxy:
-                        EmitVisualProxy(in _requests.VisualProxyAt(op.Slot).VisualProxy);
+                    {
+                        ref readonly PresentationVisualProxy proxy = ref _requests.VisualProxyAt(op.Slot).VisualProxy;
+                        if (IsTransientVisualProxy(in proxy))
+                        {
+                            hasTransientVisualProxy = true;
+                        }
+                        else
+                        {
+                            _stableDrawCache.Upsert(in proxy);
+                        }
+
                         break;
+                    }
 
                     case PresentationRequestChannel.GroundOverlay:
                         if (!_groundOverlays.Upsert(_requests.GroundOverlayAt(op.Slot).Item))
@@ -110,6 +118,7 @@ namespace Ludots.Core.Presentation.Requests
                         break;
 
                     case PresentationRequestChannel.ClearTransient:
+                        hasTransientVisualProxy = true;
                         break;
 
                     case PresentationRequestChannel.Removal:
@@ -121,20 +130,22 @@ namespace Ludots.Core.Presentation.Requests
                 }
             }
 
+            if (hasTransientVisualProxy && !_hadTransientVisualProjection)
+            {
+                _visualProxyEmitter.ClearTransientProjection();
+            }
+
             int contentRevision = _stableDrawCache.ContentRevision;
             int nonStaticRevision = _stableDrawCache.NonStaticContentRevision;
             int targetGeneration = _targetGeneration?.Generation ?? 0;
-            bool needsFullProjection = projectionTargetsCleared ||
+            bool needsFullProjection =
                 _lastProjectedTargetGeneration != targetGeneration ||
                 _lastProjectedNonStaticRevision != nonStaticRevision;
             if (needsFullProjection)
             {
-                if (!projectionTargetsCleared)
-                {
-                    _visualProxyEmitter.ClearProjectionTargets();
-                }
-
+                _visualProxyEmitter.ClearProjectionTargets();
                 _stableDrawCache.Project(_visualProxyEmitter, evictUntouched: false);
+                _visualProxyEmitter.MarkStaticProjectionBoundary();
                 PublishStaticProjectionState(contentRevision, nonStaticRevision, targetGeneration);
             }
             else if (_lastProjectedRevision != contentRevision)
@@ -144,6 +155,26 @@ namespace Ludots.Core.Presentation.Requests
                     _stableDrawCache.StaticMeshRemovedStableIds);
                 PublishStaticProjectionState(contentRevision, nonStaticRevision, targetGeneration);
             }
+
+            if (hasTransientVisualProxy)
+            {
+                for (int i = 0; i < ops.Length; i++)
+                {
+                    PresentationRequestOp op = ops[i];
+                    if (op.Channel != PresentationRequestChannel.VisualProxy)
+                    {
+                        continue;
+                    }
+
+                    ref readonly PresentationVisualProxy proxy = ref _requests.VisualProxyAt(op.Slot).VisualProxy;
+                    if (IsTransientVisualProxy(in proxy))
+                    {
+                        _visualProxyEmitter.Emit(in proxy);
+                    }
+                }
+            }
+
+            _hadTransientVisualProjection = hasTransientVisualProxy;
             _requests.Clear();
 
             if (_timingDiagnostics != null)
@@ -185,36 +216,6 @@ namespace Ludots.Core.Presentation.Requests
                 default:
                     throw new InvalidOperationException($"Unknown PresentationRequestKind '{removal.Kind}' on removal channel.");
             }
-        }
-
-        private void EmitVisualProxy(in PresentationVisualProxy proxy)
-        {
-            if (IsTransientVisualProxy(in proxy))
-            {
-                _visualProxyEmitter.Emit(proxy);
-                return;
-            }
-
-            _stableDrawCache.Upsert(proxy);
-        }
-
-        private static bool HasTransientVisualProxy(PresentationRequestBuffer requests)
-        {
-            if (requests.ClearTransientCount > 0)
-            {
-                return true;
-            }
-
-            ReadOnlySpan<VisualProxyChannelItem> visualProxies = requests.VisualProxies;
-            for (int i = 0; i < visualProxies.Length; i++)
-            {
-                if (IsTransientVisualProxy(in visualProxies[i].VisualProxy))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private static bool IsTransientVisualProxy(in PresentationVisualProxy proxy)

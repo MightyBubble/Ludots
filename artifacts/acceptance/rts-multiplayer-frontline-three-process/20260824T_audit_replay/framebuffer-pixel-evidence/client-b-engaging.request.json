@@ -1,0 +1,82 @@
+{
+    "schemaVersion":  1,
+    "imagePath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260824T_audit_replay\\screens\\client-b\\frontline_003_engaging.png",
+    "expectedWidth":  1280,
+    "expectedHeight":  720,
+    "requirements":  [
+                         {
+                             "role":  "battleInfantryBodies",
+                             "presentationTemplate":  "rts.frontline.infantry.body",
+                             "maximumChannelDifference":  48,
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  2,
+                             "acceptedColors":  [
+                                                    {
+                                                        "red":  209,
+                                                        "green":  224,
+                                                        "blue":  230
+                                                    }
+                                                ],
+                             "regions":  [
+                                             {
+                                                 "id":  "51:17673833",
+                                                 "x":  632,
+                                                 "y":  310,
+                                                 "width":  27,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "51:31791884",
+                                                 "x":  607,
+                                                 "y":  329,
+                                                 "width":  28,
+                                                 "height":  34
+                                             },
+                                             {
+                                                 "id":  "51:34844020",
+                                                 "x":  608,
+                                                 "y":  310,
+                                                 "width":  27,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "51:48195193",
+                                                 "x":  552,
+                                                 "y":  306,
+                                                 "width":  29,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "51:54682904",
+                                                 "x":  599,
+                                                 "y":  309,
+                                                 "width":  27,
+                                                 "height":  34
+                                             }
+                                         ]
+                         },
+                         {
+                             "role":  "damagedCommandCore",
+                             "presentationTemplate":  "rts.frontline.core.base",
+                             "maximumChannelDifference":  28,
+                             "minimumPixelsPerRegion":  8,
+                             "minimumPassingRegions":  1,
+                             "acceptedColors":  [
+                                                    {
+                                                        "red":  31,
+                                                        "green":  41,
+                                                        "blue":  48
+                                                    }
+                                                ],
+                             "regions":  [
+                                             {
+                                                 "id":  "42:51247320",
+                                                 "x":  549,
+                                                 "y":  321,
+                                                 "width":  81,
+                                                 "height":  66
+                                             }
+                                         ]
+                         }
+                     ]
+}

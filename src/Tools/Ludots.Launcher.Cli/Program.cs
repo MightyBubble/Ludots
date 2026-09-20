@@ -63,6 +63,12 @@ try
                 Console.WriteLine($"bootstrap={result.BootstrapPath}");
             }
 
+            foreach (LauncherStartedProcess process in result.Processes)
+            {
+                Console.WriteLine(
+                    $"process={process.Id} role={process.ProcessRole} pid={process.Pid} bootstrap={process.BootstrapPath}");
+            }
+
             if (result.Plan != null)
             {
                 Console.WriteLine($"rootMods={string.Join(", ", result.Plan.RootModIds)}");
@@ -75,6 +81,52 @@ try
                 Console.WriteLine(result.Url);
             }
 
+            return 0;
+        }
+        case "artifacts" when command.Secondary == "process-group":
+        {
+            var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
+            LauncherProcessGroupArtifacts artifacts = service.WriteProcessGroupArtifacts(selectors, command.BuildMode);
+            if (command.Json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(artifacts, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            else
+            {
+                Console.WriteLine($"preset={artifacts.PresetId}");
+                Console.WriteLine($"artifactDirectory={artifacts.ArtifactDirectory}");
+                foreach (LauncherNetworkRoleArtifact process in artifacts.Processes)
+                {
+                    Console.WriteLine(
+                        $"process={process.ProcessId} role={process.ProcessRole} app={process.ApplicationId} bootstrap={process.BootstrapPath}");
+                }
+            }
+
+            return 0;
+        }
+        case "evidence" when command.Secondary == "inspect-framebuffer":
+        {
+            if (command.Operands.Count != 1)
+            {
+                throw new InvalidOperationException("evidence inspect-framebuffer requires exactly one request JSON path.");
+            }
+
+            string requestPath = Path.GetFullPath(command.Operands[0]);
+            if (!File.Exists(requestPath))
+            {
+                throw new FileNotFoundException("Framebuffer inspection request does not exist.", requestPath);
+            }
+
+            var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            FramebufferPixelInspectionRequest request = JsonSerializer.Deserialize<FramebufferPixelInspectionRequest>(
+                File.ReadAllText(requestPath),
+                jsonOptions) ?? throw new InvalidOperationException("Framebuffer inspection request is empty.");
+            FramebufferPixelInspectionResult result = FramebufferPixelEvidenceInspector.Inspect(request);
+            Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            }));
             return 0;
         }
         case "build" when command.Secondary == "app":
@@ -609,6 +661,8 @@ Commands
   build [selectors...] [--adapter raylib|web] [--browser-provider cef|ultralight] [--build auto|always|never]
   build app [--adapter raylib|web]
   launch [selectors...] [--adapter raylib|web] [--browser-provider cef|ultralight] [--build auto|always|never] [--record <artifactDir>]
+  artifacts process-group preset:<id> [--build auto|always|never] [--json]
+  evidence inspect-framebuffer <request.json>
   adapter list
   adapter select --adapter raylib|web
   workspace list
@@ -758,6 +812,8 @@ internal sealed class CliCommand
             "workspace" => secondary is "list" or "add",
             "binding" => secondary is "list" or "set" or "delete",
             "preset" => secondary is "list" or "save" or "select" or "delete",
+            "artifacts" => secondary is "process-group",
+            "evidence" => secondary is "inspect-framebuffer",
             "sdk" => secondary is "export",
             "mod" => secondary is "create" or "fix-project" or "solution",
             _ => false

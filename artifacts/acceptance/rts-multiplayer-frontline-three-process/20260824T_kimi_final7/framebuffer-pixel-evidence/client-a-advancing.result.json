@@ -1,0 +1,94 @@
+{
+    "schemaVersion":  1,
+    "imagePath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260824T_kimi_final7\\screens\\client-a\\frontline_002_advancing.png",
+    "width":  1280,
+    "height":  720,
+    "passed":  true,
+    "requirements":  [
+                         {
+                             "role":  "battleInfantryBodies",
+                             "presentationTemplate":  "rts.frontline.infantry.body",
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  2,
+                             "passingRegions":  5,
+                             "matchingPixels":  1485,
+                             "passed":  true,
+                             "regions":  [
+                                             {
+                                                 "id":  "51:16147765",
+                                                 "x":  639,
+                                                 "y":  329,
+                                                 "width":  27,
+                                                 "height":  34,
+                                                 "matchingPixels":  323,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:17673833",
+                                                 "x":  639,
+                                                 "y":  310,
+                                                 "width":  26,
+                                                 "height":  33,
+                                                 "matchingPixels":  149,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:31791884",
+                                                 "x":  568,
+                                                 "y":  331,
+                                                 "width":  29,
+                                                 "height":  33,
+                                                 "matchingPixels":  362,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:34844020",
+                                                 "x":  600,
+                                                 "y":  310,
+                                                 "width":  27,
+                                                 "height":  33,
+                                                 "matchingPixels":  316,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:38275751",
+                                                 "x":  727,
+                                                 "y":  320,
+                                                 "width":  30,
+                                                 "height":  33,
+                                                 "matchingPixels":  335,
+                                                 "passed":  true
+                                             }
+                                         ]
+                         },
+                         {
+                             "role":  "crystalField",
+                             "presentationTemplate":  "rts.frontline.crystal.center",
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  1,
+                             "passingRegions":  2,
+                             "matchingPixels":  1398,
+                             "passed":  true,
+                             "regions":  [
+                                             {
+                                                 "id":  "55:19199905",
+                                                 "x":  813,
+                                                 "y":  300,
+                                                 "width":  34,
+                                                 "height":  51,
+                                                 "matchingPixels":  663,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "55:20725973",
+                                                 "x":  541,
+                                                 "y":  300,
+                                                 "width":  26,
+                                                 "height":  51,
+                                                 "matchingPixels":  735,
+                                                 "passed":  true
+                                             }
+                                         ]
+                         }
+                     ]
+}

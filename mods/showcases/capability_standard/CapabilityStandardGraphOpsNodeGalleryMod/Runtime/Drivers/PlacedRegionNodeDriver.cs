@@ -93,7 +93,7 @@ public sealed class PlacedRegionNodeDriver : IGraphOpsNodeDriver
             _callStack,
             ref cursor,
             SliceBudget,
-            GraphKind.Script,
+            GraphKind.TriggerGraph,
             mapScope: RequireMapId(ctx));
         if (!result.Halted)
         {

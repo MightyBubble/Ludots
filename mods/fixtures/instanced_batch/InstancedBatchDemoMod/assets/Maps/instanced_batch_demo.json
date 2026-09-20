@@ -1,5 +1,8 @@
 {
   "Id": "instanced_batch_demo",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
   "Tags": [
     "fixture",
     "instanced-batch",
@@ -9,10 +12,9 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 16
+      "WidthCells": 256,
+      "HeightCells": 256,
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

@@ -24,6 +24,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public bool BoolValue { get; set; }
 
         public string? Tag { get; set; }
+        public string? Ability { get; set; }
         public string? Attribute { get; set; }
         /// <summary>GraphLookupTable id for ResolveTableRow / TableRead*.</summary>
         public string? LookupTable { get; set; }

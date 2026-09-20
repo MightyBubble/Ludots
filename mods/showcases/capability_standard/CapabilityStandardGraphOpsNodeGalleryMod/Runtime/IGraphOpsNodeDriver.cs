@@ -4,6 +4,7 @@ using Ludots.Core.Association;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Knowledge;
@@ -31,6 +32,8 @@ public sealed class GraphOpsNodeDriverContext
     public required byte FeaturedDest { get; init; }
     public required World SimWorld { get; init; }
     public required GasGraphRuntimeApi Api { get; init; }
+    public required Ludots.Core.Gameplay.GAS.Orders.OrderQueue Orders { get; init; }
+    public required Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry OrderTypes { get; init; }
     public required GraphShowcaseMetrics Metrics { get; init; }
     public GraphOpsStageVisuals? Stage { get; set; }
     public EffectRequestQueue? EffectRequests { get; set; }
@@ -45,8 +48,11 @@ public sealed class GraphOpsNodeDriverContext
     public OwnershipResolver? Ownership { get; set; }
     public KnowledgeProjectionStore? Knowledge { get; set; }
     public ISpatialCoordinateConverter? Coords { get; set; }
+    public ISpatialQueryService? SpatialQueries { get; set; }
     public BuiltinHandlerRegistry? BuiltinHandlers { get; set; }
     public EffectTemplateRegistry? EffectTemplates { get; set; }
+    public ItemDefinitionRegistry? ItemDefinitions { get; set; }
+    public InventoryRuntimeService? InventoryRuntime { get; set; }
     public BuiltinHandlerExecutionContext? BuiltinRuntime { get; set; }
     public int ConfigEffectTemplateId { get; set; }
     public bool OwnsSimulationWorld { get; set; }
@@ -56,6 +62,9 @@ public sealed class GraphOpsNodeDriverContext
     public Entity TargetContext { get; set; } = Entity.Null;
     public Entity Viewer { get; set; } = Entity.Null;
     public GraphProgramRegistry? Programs { get; set; }
+
+    /// <summary>Registration id for Programs when the harness registers the featured program (symbol-bearing ops read Symbols[Imm] through it).</summary>
+    public int FeaturedGraphId { get; set; }
     public GraphEventPayload EventPayload { get; set; }
     public IntVector2 TargetPosCm { get; set; }
     public bool HasTargetPosCm { get; set; }
@@ -102,6 +111,7 @@ public sealed class GraphOpsNodeDriverContext
             BuiltinHandlers,
             EffectTemplates,
             BuiltinRuntime,
+            Caster,
             ConfigEffectTemplateId,
             in effectContext,
             in template.ConfigParams);
@@ -128,8 +138,10 @@ public sealed class GraphOpsNodeDriverContext
         Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
         Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
         Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+        Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
         Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
         var targetList = new GraphTargetList(targets);
+        var intIdList = new GraphIntIdList(intIds);
         entities[0] = Caster;
         entities[1] = Target;
         entities[2] = Viewer != Entity.Null ? Viewer : TargetContext;
@@ -160,12 +172,15 @@ public sealed class GraphOpsNodeDriverContext
             TargetPosCm = HasTargetPosCm ? TargetPosCm : default,
             Api = Api,
             Programs = Programs,
+            CurrentGraphId = FeaturedGraphId,
             F = floats,
             I = ints,
             B = bools,
             E = entities,
             Targets = targets,
             TargetList = targetList,
+            IntIds = intIds,
+            IntIdList = intIdList,
             CallStack = callStack,
             RandomSeed = (uint)(0xA5A5A5A5u ^ (uint)Wave),
             Status = GraphExecutionStatus.Running
@@ -198,7 +213,8 @@ public sealed class GraphOpsNodeDriverContext
             dest < bools.Length && bools[dest] != 0,
             dest < entities.Length ? entities[dest] : Entity.Null,
             state.ReturnInt,
-            state.TargetList.Count);
+            state.TargetList.Count,
+            state.IntIdList.Count);
     }
 }
 
@@ -208,4 +224,5 @@ public readonly record struct GraphOpsNodeExecuteResult(
     bool BoolValue,
     Entity EntityValue,
     int ReturnInt,
-    int TargetCount);
+    int TargetCount,
+    int IntIdCount = 0);

@@ -13,7 +13,7 @@ namespace Ludots.Core.Gameplay.Camera
     /// </summary>
     public class CameraManager
     {
-        private const int VisualHeightmapFootprintConfinePasses = 3;
+        private const int ContinuousHeightmapFootprintConfinePasses = 3;
         private const float TargetConfineEpsilonSq = 0.0001f;
 
         private CameraBehaviorInputState? _behaviorInput;
@@ -23,7 +23,7 @@ namespace Ludots.Core.Gameplay.Camera
         private CameraImpulseRuntime? _impulseRuntime;
         private string _controllerCameraId = string.Empty;
         private Func<WorldAabbCm>? _targetBoundsProvider;
-        private Func<IVisualHeightmap?>? _visualHeightmapProvider;
+        private Func<IContinuousHeightmap?>? _continuousHeightmapProvider;
 
         /// <summary>
         /// The current fixed-step logic state of the camera.
@@ -55,12 +55,12 @@ namespace Ludots.Core.Gameplay.Camera
             CameraBehaviorInputState behaviorInput,
             Presentation.Camera.IViewController view,
             Func<WorldAabbCm>? targetBoundsProvider = null,
-            Func<IVisualHeightmap?>? visualHeightmapProvider = null)
+            Func<IContinuousHeightmap?>? continuousHeightmapProvider = null)
         {
             _behaviorInput = behaviorInput ?? throw new ArgumentNullException(nameof(behaviorInput));
             _runtimeContext = new CameraBehaviorContext(_behaviorInput, view ?? throw new ArgumentNullException(nameof(view)));
             _targetBoundsProvider = targetBoundsProvider;
-            _visualHeightmapProvider = visualHeightmapProvider;
+            _continuousHeightmapProvider = continuousHeightmapProvider;
             InvalidateController();
             CopyState(State, PreviousState);
         }
@@ -347,10 +347,10 @@ namespace Ludots.Core.Gameplay.Camera
             candidate.TargetCm = ClampTargetToBounds(candidate.TargetCm, in bounds);
             bool changed = Vector2.DistanceSquared(candidate.TargetCm, state.TargetCm) > TargetConfineEpsilonSq;
 
-            if (definition.TargetHeightMode == VirtualCameraTargetHeightMode.VisualHeightmap)
+            if (definition.TargetHeightMode == VirtualCameraTargetHeightMode.ContinuousHeightmap)
             {
                 candidate.TargetHeightCm = ResolveTargetHeight(definition, candidate.TargetCm);
-                if (TryResolveVisualHeightmapFootprintConfine(
+                if (TryResolveContinuousHeightmapFootprintConfine(
                         definition,
                         in bounds,
                         candidate,
@@ -402,7 +402,7 @@ namespace Ludots.Core.Gameplay.Camera
             });
         }
 
-        private bool TryResolveVisualHeightmapFootprintConfine(
+        private bool TryResolveContinuousHeightmapFootprintConfine(
             VirtualCameraDefinition definition,
             in WorldAabbCm bounds,
             CameraStateSnapshot initialState,
@@ -412,9 +412,9 @@ namespace Ludots.Core.Gameplay.Camera
             var candidate = initialState;
             bool changed = false;
 
-            for (int pass = 0; pass < VisualHeightmapFootprintConfinePasses; pass++)
+            for (int pass = 0; pass < ContinuousHeightmapFootprintConfinePasses; pass++)
             {
-                ResolveVisualHeightmapFootprintAabb(
+                ResolveContinuousHeightmapFootprintAabb(
                     definition,
                     in candidate,
                     out float minX,
@@ -445,7 +445,7 @@ namespace Ludots.Core.Gameplay.Camera
             return changed;
         }
 
-        private void ResolveVisualHeightmapFootprintAabb(
+        private void ResolveContinuousHeightmapFootprintAabb(
             VirtualCameraDefinition definition,
             in CameraStateSnapshot state,
             out float minX,
@@ -453,11 +453,11 @@ namespace Ludots.Core.Gameplay.Camera
             out float maxX,
             out float maxY)
         {
-            IVisualHeightmap heightmap = RequireVisualHeightmap(definition);
+            IContinuousHeightmap heightmap = RequireContinuousHeightmap(definition);
             if (_runtimeContext == null)
             {
                 throw new InvalidOperationException(
-                    $"Virtual camera '{definition.Id}' requires a configured camera viewport to clamp VisualHeightmap look footprint.");
+                    $"Virtual camera '{definition.Id}' requires a configured camera viewport to clamp ContinuousHeightmap look footprint.");
             }
 
             Vector2 resolution = _runtimeContext.Viewport.Resolution;
@@ -467,14 +467,14 @@ namespace Ludots.Core.Gameplay.Camera
                 resolution.Y <= 0f)
             {
                 throw new InvalidOperationException(
-                    $"Virtual camera '{definition.Id}' cannot clamp VisualHeightmap look footprint because the active viewport resolution is invalid.");
+                    $"Virtual camera '{definition.Id}' cannot clamp ContinuousHeightmap look footprint because the active viewport resolution is invalid.");
             }
 
             float aspectRatio = _runtimeContext.Viewport.AspectRatio;
             if (!float.IsFinite(aspectRatio) || aspectRatio <= 0f)
             {
                 throw new InvalidOperationException(
-                    $"Virtual camera '{definition.Id}' cannot clamp VisualHeightmap look footprint because the active viewport aspect ratio is invalid.");
+                    $"Virtual camera '{definition.Id}' cannot clamp ContinuousHeightmap look footprint because the active viewport aspect ratio is invalid.");
             }
 
             CameraRenderState3D camera = CameraViewportUtil.StateToRenderState(in state);
@@ -487,7 +487,7 @@ namespace Ludots.Core.Gameplay.Camera
             maxY = float.NegativeInfinity;
             int hitCount = 0;
 
-            if (TryAccumulateVisualHeightmapFootprintCorner(
+            if (TryAccumulateContinuousHeightmapFootprintCorner(
                 definition,
                 heightmap,
                 in camera,
@@ -502,7 +502,7 @@ namespace Ludots.Core.Gameplay.Camera
                 hitCount++;
             }
 
-            if (TryAccumulateVisualHeightmapFootprintCorner(
+            if (TryAccumulateContinuousHeightmapFootprintCorner(
                 definition,
                 heightmap,
                 in camera,
@@ -517,7 +517,7 @@ namespace Ludots.Core.Gameplay.Camera
                 hitCount++;
             }
 
-            if (TryAccumulateVisualHeightmapFootprintCorner(
+            if (TryAccumulateContinuousHeightmapFootprintCorner(
                 definition,
                 heightmap,
                 in camera,
@@ -532,7 +532,7 @@ namespace Ludots.Core.Gameplay.Camera
                 hitCount++;
             }
 
-            if (TryAccumulateVisualHeightmapFootprintCorner(
+            if (TryAccumulateContinuousHeightmapFootprintCorner(
                 definition,
                 heightmap,
                 in camera,
@@ -550,13 +550,13 @@ namespace Ludots.Core.Gameplay.Camera
             if (hitCount == 0)
             {
                 throw new InvalidOperationException(
-                    $"Virtual camera '{definition.Id}' could not raycast any VisualHeightmap look footprint sample on layer {definition.TargetHeightLayerIndex}.");
+                    $"Virtual camera '{definition.Id}' could not raycast any ContinuousHeightmap look footprint sample on layer {definition.TargetHeightLayerIndex}.");
             }
         }
 
-        private bool TryAccumulateVisualHeightmapFootprintCorner(
+        private bool TryAccumulateContinuousHeightmapFootprintCorner(
             VirtualCameraDefinition definition,
-            IVisualHeightmap heightmap,
+            IContinuousHeightmap heightmap,
             in CameraRenderState3D camera,
             Vector2 resolution,
             float aspectRatio,
@@ -596,7 +596,7 @@ namespace Ludots.Core.Gameplay.Camera
             float targetHeightCm = definition.TargetHeightMode switch
             {
                 VirtualCameraTargetHeightMode.Flat => definition.TargetHeightOffsetCm,
-                VirtualCameraTargetHeightMode.VisualHeightmap => SampleRequiredVisualHeightmapHeight(definition, targetCm) + definition.TargetHeightOffsetCm,
+                VirtualCameraTargetHeightMode.ContinuousHeightmap => SampleRequiredContinuousHeightmapHeight(definition, targetCm) + definition.TargetHeightOffsetCm,
                 _ => throw new InvalidOperationException($"Virtual camera '{definition.Id}' declares unsupported target height mode '{definition.TargetHeightMode}'."),
             };
 
@@ -608,9 +608,9 @@ namespace Ludots.Core.Gameplay.Camera
             return targetHeightCm;
         }
 
-        private float SampleRequiredVisualHeightmapHeight(VirtualCameraDefinition definition, Vector2 targetCm)
+        private float SampleRequiredContinuousHeightmapHeight(VirtualCameraDefinition definition, Vector2 targetCm)
         {
-            IVisualHeightmap heightmap = RequireVisualHeightmap(definition);
+            IContinuousHeightmap heightmap = RequireContinuousHeightmap(definition);
 
             if (!heightmap.TrySampleHeightCm(
                     targetCm.X,
@@ -619,19 +619,19 @@ namespace Ludots.Core.Gameplay.Camera
                     definition.TargetHeightLayerIndex))
             {
                 throw new InvalidOperationException(
-                    $"Virtual camera '{definition.Id}' could not sample VisualHeightmap target height at ({targetCm.X}, {targetCm.Y}) cm on layer {definition.TargetHeightLayerIndex}.");
+                    $"Virtual camera '{definition.Id}' could not sample ContinuousHeightmap target height at ({targetCm.X}, {targetCm.Y}) cm on layer {definition.TargetHeightLayerIndex}.");
             }
 
             return heightCm;
         }
 
-        private IVisualHeightmap RequireVisualHeightmap(VirtualCameraDefinition definition)
+        private IContinuousHeightmap RequireContinuousHeightmap(VirtualCameraDefinition definition)
         {
-            IVisualHeightmap? heightmap = _visualHeightmapProvider?.Invoke();
+            IContinuousHeightmap? heightmap = _continuousHeightmapProvider?.Invoke();
             if (heightmap == null)
             {
                 throw new InvalidOperationException(
-                    $"Virtual camera '{definition.Id}' requires CoreServiceKeys.VisualHeightmap for target height, but no focused map visual heightmap service is bound.");
+                    $"Virtual camera '{definition.Id}' requires CoreServiceKeys.ContinuousHeightmap for target height, but no focused map visual heightmap service is bound.");
             }
 
             return heightmap;
@@ -648,7 +648,7 @@ namespace Ludots.Core.Gameplay.Camera
         {
             if (!float.IsFinite(min) || !float.IsFinite(max))
             {
-                throw new InvalidOperationException("Camera VisualHeightmap footprint resolved non-finite bounds.");
+                throw new InvalidOperationException("Camera ContinuousHeightmap footprint resolved non-finite bounds.");
             }
 
             float span = max - min;

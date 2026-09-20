@@ -48,7 +48,13 @@ namespace Ludots.Core.Movement.Physics2DBridge
             engine.SetService(MovementPhysics2DBridgeKeys.KinematicPoseFeedSystem, feedSystem);
 
             var router = new ContactEventRouter2D(kinematicConfig.ContactEventEmitterLayers);
-            engine.RegisterSystem(new ContactEventRoutingSystem2D(contactEvents, router), SystemGroup.InputCollection);
+            var emissionTap = new ContactEmissionTap(
+                engine.World,
+                engine.TriggerManager,
+                () => engine.MapSessions,
+                engine.CreateContext);
+            engine.RegisterSystem(
+                new ContactEventRoutingSystem2D(contactEvents, router, emissionTap), SystemGroup.InputCollection);
             engine.SetService(MovementPhysics2DBridgeKeys.ContactEventRouter, router);
         }
     }

@@ -133,12 +133,21 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < assetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
+                ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
                 if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
                 {
+                    // Multi-slot StaticMesh: sibling slots may still emit, so the outer
+                    // "nothing emitted → clear all" fallback never runs. Inactive slots must
+                    // Remove their own retained entries (same as cull/visibility below).
+                    if (TryGetVisualStableId(in state, slot.SlotIndex, asset.AssetKind, state.DefId, out int inactiveStableId))
+                    {
+                        stableDrawCache.Remove(inactiveStableId);
+                        removedAny = true;
+                    }
+
                     continue;
                 }
 
-                ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
                 if (!ownerCullVisible ||
                     !IsWithinMaxLod(lod, in asset) ||
                     !ResolveAssetVisibility(entity, in asset))
@@ -167,6 +176,7 @@ namespace Ludots.Core.Presentation.Systems
                     Rotation = rotation,
                     Scale = scale,
                     Color = color,
+                    OwnerStableId = state.OwnerStableId,
                     StableId = stableId,
                     MaterialId = ResolveMaterialId(entity, in asset),
                     TemplateId = state.DefId,
@@ -564,12 +574,16 @@ namespace Ludots.Core.Presentation.Systems
             WorldHudValueMode valueMode = slot.WorldText.Mode;
             int fontSize = slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16;
             int stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
-            PresentationTextPacket packet = PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
+            bool valueBound = slot.WorldText.BoundAttributeId != WorldTextConfig.UnboundAttributeId &&
+                (valueMode == WorldHudValueMode.AttributeCurrentOverBase || valueMode == WorldHudValueMode.AttributeCurrent);
+            PresentationTextPacket packet = valueBound
+                ? default
+                : PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
 
             WorldHudItem item = new WorldHudItem
             {
                 StableId = HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Text, definitionId, slot.SlotIndex),
-                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, (int)valueMode, value0, value1, color, packet),
+                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, (int)valueMode, value0, value1, color, packet, valueBound),
                 Kind = WorldHudItemKind.Text,
                 WorldPosition = position,
                 Value0 = value0,
@@ -578,6 +592,9 @@ namespace Ludots.Core.Presentation.Systems
                 Id1 = (int)valueMode,
                 FontSize = fontSize,
                 Color0 = color,
+                Owner = state.OwnerEntity,
+                ValueBound = valueBound ? (byte)1 : (byte)0,
+                BoundAttributeId = valueBound ? slot.WorldText.BoundAttributeId : 0,
                 Text = packet,
             };
             _requests.AddWorldHud(state.OwnerEntity, in item, phaseResult.LOD);
@@ -887,6 +904,7 @@ namespace Ludots.Core.Presentation.Systems
                 Rotation = ResolveRotation(in asset, presenterWorldRotation),
                 Scale = ResolveScale(entity, in asset, presenterWorldScale),
                 Color = ApplyAlpha(ResolveColor(entity, in asset, ResolveAuthoredColor(in slot)), alpha),
+                OwnerStableId = state.OwnerStableId,
                 StableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId),
                 MaterialId = ResolveMaterialId(entity, in asset),
                 TemplateId = state.DefId,

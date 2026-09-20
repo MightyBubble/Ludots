@@ -273,14 +273,14 @@ namespace CameraAcceptanceMod.Runtime
         {
             string? activeMapId = engine.CurrentMapSession?.MapId.Value;
             if (!CameraAcceptanceIds.IsAcceptanceMap(activeMapId) ||
-                engine.GetService(CoreServiceKeys.VisualHeightmap) != null)
+                engine.GetService(CoreServiceKeys.ContinuousHeightmap) != null)
             {
                 return;
             }
 
-            var heightmap = new FlatVisualHeightmap();
-            engine.CurrentMapSession!.VisualHeightmap = heightmap;
-            engine.SetService(CoreServiceKeys.VisualHeightmap, heightmap);
+            var heightmap = new FlatContinuousHeightmap();
+            engine.CurrentMapSession!.ContinuousHeightmap = heightmap;
+            engine.SetService(CoreServiceKeys.ContinuousHeightmap, heightmap);
         }
 
         internal static void SyncMapScopedInputOwnership(GameEngine engine)

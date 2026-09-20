@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `ribbon_overlay` |
 | preset | `engine_raylib_ribbon_overlay` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/RibbonOverlayScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/RibbonOverlayScene.cs` |
 | 承接渲染器 | `RaylibWorldOverlayRenderer`（绘制核唯一实现） |
 | 注册表条目 | `engine_raylib_ribbon_overlay`（`showcase.registry.json`，tier T1） |
 

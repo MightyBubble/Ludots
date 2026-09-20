@@ -58,10 +58,6 @@ namespace Ludots.Core.Scripting
 
         private static readonly EventSchema[] BuiltinSchemas =
         {
-            new(GameEvents.MapHeartbeat.Value, EventScope.Map, new EventParamSchema[]
-            {
-                new("heartbeatIndex", EventParamType.Int, MapTriggerEventPayloadKeys.HeartbeatIndex),
-            }),
             new(GameEvents.EntitySpawned.Value, EventScope.Map, new EventParamSchema[]
             {
                 new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
@@ -88,13 +84,25 @@ namespace Ludots.Core.Scripting
                 new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
                 new("regionId", EventParamType.String, MapTriggerEventPayloadKeys.RegionId),
             }),
-            new(GameEvents.InputActionFired.Value, EventScope.Map, new EventParamSchema[]
+            new(GameEvents.FieldRegionEntered.Value, EventScope.Map, new EventParamSchema[]
             {
                 new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
-                new("inputAction", EventParamType.String, MapTriggerEventPayloadKeys.InputAction),
-                new("groundXCm", EventParamType.Float, MapTriggerEventPayloadKeys.GroundXCm),
-                new("groundYCm", EventParamType.Float, MapTriggerEventPayloadKeys.GroundYCm),
-                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity, Optional: true),
+                new("regionId", EventParamType.String, MapTriggerEventPayloadKeys.RegionId),
+                new("fieldLayer", EventParamType.String, MapTriggerEventPayloadKeys.FieldLayer),
+            }),
+            new(GameEvents.FieldRegionExited.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("regionId", EventParamType.String, MapTriggerEventPayloadKeys.RegionId),
+                new("fieldLayer", EventParamType.String, MapTriggerEventPayloadKeys.FieldLayer),
+            }),
+            new(GameEvents.InputAction.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("rep", EventParamType.Entity, MapTriggerEventPayloadKeys.Rep),
+                new("action", EventParamType.String, MapTriggerEventPayloadKeys.Action),
+                new("pointerScreenX", EventParamType.Float, MapTriggerEventPayloadKeys.PointerScreenX),
+                new("pointerScreenY", EventParamType.Float, MapTriggerEventPayloadKeys.PointerScreenY),
+                new("modifiers", EventParamType.Int, MapTriggerEventPayloadKeys.Modifiers),
             }),
             new(GameEvents.MapVariableChanged.Value, EventScope.Map, new EventParamSchema[]
             {
@@ -103,6 +111,35 @@ namespace Ludots.Core.Scripting
                 new("newValueFloat", EventParamType.Float, MapTriggerEventPayloadKeys.VarValueFloat, Optional: true),
                 new("oldValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.OldValueInt, Optional: true),
                 new("oldValueFloat", EventParamType.Float, MapTriggerEventPayloadKeys.OldValueFloat, Optional: true),
+            }),
+            new(GameEvents.RelationLinkAdded.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+                new("relationTypeId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationTypeId),
+            }),
+            new(GameEvents.RelationLinkRemoved.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+                new("relationTypeId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationTypeId),
+            }),
+            new(GameEvents.RelationMetricChanged.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+                new("relationTypeId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationTypeId),
+                new("metricId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationMetricId),
+                new("newValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.VarValueInt),
+                new("oldValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.OldValueInt),
+            }),
+            new(GameEvents.RelationFlagChanged.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+                new("relationTypeId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationTypeId),
+                new("oldFlags", EventParamType.Int, MapTriggerEventPayloadKeys.OldValueInt),
+                new("newFlags", EventParamType.Int, MapTriggerEventPayloadKeys.VarValueInt),
             }),
             // Mod-domain mount pulse (main domain expansion): not MapTrigger.* namespaced —
             // FireEvent path stamps ModId for filter matching on RegisterModTriggers mounts.

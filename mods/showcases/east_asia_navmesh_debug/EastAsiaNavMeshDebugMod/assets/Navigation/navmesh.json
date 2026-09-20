@@ -1,0 +1,41 @@
+{
+  "mode": "offline",
+  "algorithm": "recast",
+  "profiles": [
+    {
+      "id": "Small",
+      "maxClimbCm": 40,
+      "maxSlopeDeg": 45
+    }
+  ],
+  "layers": [
+    {
+      "id": "Ground",
+      "layer": 0
+    }
+  ],
+  "areas": [
+    {
+      "id": "Default",
+      "areaId": 0,
+      "cost": 1.0
+    }
+  ],
+  "runtimeIncremental": {
+    "tileBudgetPerFixedTick": 1,
+    "includeNeighborTiles": true,
+    "heightScaleMeters": 1.0,
+    "minWalkableUpDot": 0.6,
+    "cliffHeightThreshold": 1
+  },
+  "maps": {
+    "east_asia_visual_heightmap": {
+      "boards": {
+        "default": {
+          "tileWorldWidthCm": 228544,
+          "tileWorldHeightCm": 228544
+        }
+      }
+    }
+  }
+}

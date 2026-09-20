@@ -1,5 +1,8 @@
 {
   "Id": "navmesh_debug_openworld",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
   "Tags": [
     "showcase",
     "navmesh",
@@ -11,13 +14,10 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthInMacroTiles": 4,
-      "HeightInMacroTiles": 4,
+      "WidthCells": 1024,
+      "HeightCells": 1024,
       "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 16,
-      "DataFile": "navmesh_debug_openworld.vertexmap.bin",
-      "NavigationEnabled": true,
+      "DataFile": "navmesh_debug_openworld.hex",
       "HexEdgeLengthCm": 100
     }
   ],

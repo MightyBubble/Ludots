@@ -6,30 +6,43 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Spatial
 {
+    /// <summary>
+    /// Board-local topology coordinates to world cm. Anchored boards (#1567 slice 2b)
+    /// carry their declared min-corner as the grid/hex frame origin; centered boards
+    /// keep the legacy frame pinned at world 0 for zero drift.
+    /// </summary>
     public sealed class SpatialCoordinateConverter : ISpatialCoordinateConverter
     {
         public int GridCellSizeCm { get; }
+        public int OriginXCm { get; }
+        public int OriginYCm { get; }
 
         public SpatialCoordinateConverter(WorldSizeSpec spec)
         {
             GridCellSizeCm = spec.GridCellSizeCm;
         }
 
-        public SpatialCoordinateConverter(int gridCellSizeCm = 100)
+        public SpatialCoordinateConverter(int gridCellSizeCm = 100, int originXCm = 0, int originYCm = 0)
         {
             if (gridCellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(gridCellSizeCm));
             GridCellSizeCm = gridCellSizeCm;
+            OriginXCm = originXCm;
+            OriginYCm = originYCm;
         }
 
         public WorldCmInt2 GridToWorld(in IntVector2 grid)
         {
             int half = GridCellSizeCm / 2;
-            return new WorldCmInt2(grid.X * GridCellSizeCm + half, grid.Y * GridCellSizeCm + half);
+            return new WorldCmInt2(
+                OriginXCm + grid.X * GridCellSizeCm + half,
+                OriginYCm + grid.Y * GridCellSizeCm + half);
         }
 
         public IntVector2 WorldToGrid(in WorldCmInt2 world)
         {
-            return new IntVector2(MathUtil.FloorDiv(world.X, GridCellSizeCm), MathUtil.FloorDiv(world.Y, GridCellSizeCm));
+            return new IntVector2(
+                MathUtil.FloorDiv(world.X - OriginXCm, GridCellSizeCm),
+                MathUtil.FloorDiv(world.Y - OriginYCm, GridCellSizeCm));
         }
 
         public WorldCmInt2 HexToWorld(in HexCoordinates hex)
@@ -37,13 +50,12 @@ namespace Ludots.Core.Spatial
             Vector3 p = hex.ToWorldPositionCm();
             int xCm = (int)MathF.Round(p.X);
             int yCm = (int)MathF.Round(p.Z);
-            return new WorldCmInt2(xCm, yCm);
+            return new WorldCmInt2(OriginXCm + xCm, OriginYCm + yCm);
         }
 
         public HexCoordinates WorldToHex(in WorldCmInt2 world)
         {
-            return HexCoordinates.FromWorldPositionCm(new Vector3(world.X, 0f, world.Y));
+            return HexCoordinates.FromWorldPositionCm(new Vector3(world.X - OriginXCm, 0f, world.Y - OriginYCm));
         }
-
     }
 }

@@ -37,7 +37,7 @@ namespace Ludots.Core.Navigation.NavMesh
         public readonly ulong Checksum;
 
         public readonly int OriginXcm;
-        public readonly int OriginZcm;
+        public readonly int OriginYcm;
 
         public readonly int[] VertexXcm;
         public readonly int[] VertexYcm;
@@ -120,7 +120,7 @@ namespace Ludots.Core.Navigation.NavMesh
             BuildConfigHash = buildConfigHash;
             Checksum = checksum;
             OriginXcm = originXcm;
-            OriginZcm = originZcm;
+            OriginYcm = originZcm;
             VertexXcm = vertexXcm ?? throw new ArgumentNullException(nameof(vertexXcm));
             VertexYcm = vertexYcm ?? throw new ArgumentNullException(nameof(vertexYcm));
             VertexZcm = vertexZcm ?? throw new ArgumentNullException(nameof(vertexZcm));
@@ -196,7 +196,8 @@ namespace Ludots.Core.Navigation.NavMesh
         SerializationFailed = 4,
         ContourFailed = 5,
         PolygonFailed = 6,
-        TriangulateFailed = 7
+        TriangulateFailed = 7,
+        VoxelBudgetExceeded = 8
     }
 
     public readonly struct NavBakeArtifact

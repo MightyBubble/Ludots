@@ -394,7 +394,6 @@ namespace Ludots.Tests.Gas.Graph
             public int ResolveRelationshipType(string name) => throw new InvalidOperationException(name);
             public int ResolveRelationshipMetric(string name) => throw new InvalidOperationException(name);
             public int ResolveRelationshipFlag(string name) => throw new InvalidOperationException(name);
-            public int ResolveRelationshipReason(string name) => throw new InvalidOperationException(name);
             public int ResolveTargetDispatchPreset(string name) => throw new InvalidOperationException(name);
             public int ResolveEntityTemplate(string name) => throw new InvalidOperationException(name);
         }
@@ -407,14 +406,12 @@ namespace Ludots.Tests.Gas.Graph
         private const string EngineScopeInstanceId = "fsm_probe_scope";
 
         [Test]
-        public void SentryGraphs_DeHollowed_AndFsmHostDrivesPhaseCycle()
+        public void HfsmLeafScripts_DeHollowed_AndSugarFixtureDrivesPhaseCycle()
         {
-            // 4 张旧壳图去空心后的形状锁：不再是 ConstInt→HaltReturnInt 两指令立即 halt 壳。
+            // L1 HFSM leaf Scripts must stay real (not ConstInt→HaltReturnInt shells).
+            // Whole-machine Script shells are no longer production SSOT — phase cycle uses
+            // the test-only GraphFsmHost sugar fixture (GraphFsmHostTests).
             GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out _, out _);
-            foreach (var (idx, ins) in programs.RequireProgramArray(GraphIdRegistry.GetId("Graph.FSM.Sentry"), GraphKind.Script, "dump").Select((x, i) => (i, x)))
-            {
-                TestContext.WriteLine($"{idx,3}: {(GraphNodeOp)ins.Op} dst={ins.Dst} a={ins.A} b={ins.B} imm={ins.Imm}");
-            }
             foreach (string name in new[]
             {
                 "Graph.HFSM.Cond.AlwaysTrue",
@@ -431,10 +428,9 @@ namespace Ludots.Tests.Gas.Graph
                 Assert.That(ops, Does.Contain(GraphNodeOp.JumpIfFalse), $"{name} must lower BranchBool");
             }
 
-            // Graph.FSM.Sentry 经 GraphFsmHost 的相位环：近距离 100cm 逐波 Idle→Alert→Combat（保持），
-            // 远距离 Retreat→Idle。
+            int sugarId = GraphFsmHostTests.RegisterSentrySugarFixture(programs);
             using var host = new Ludots.Core.Gameplay.AI.Fsm.GraphFsmHost(
-                programs, GraphIdRegistry.GetId("Graph.FSM.Sentry"), capacity: 1, "sentry.phase");
+                programs, sugarId, capacity: 1, "sentry.phase");
             int agent = host.AddAgent();
             var feed = new StaticDistanceFeed(100);
 
@@ -483,7 +479,6 @@ namespace Ludots.Tests.Gas.Graph
                 new RelationshipTypeRegistry(),
                 new RelationshipMetricRegistry(),
                 new RelationshipFlagRegistry(),
-                new RelationshipReasonRegistry(),
                 new TargetDispatchPresetRegistry(),
                 new EntityTemplateKeyRegistry());
             GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, resolver);

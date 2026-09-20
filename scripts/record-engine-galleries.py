@@ -20,8 +20,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-GALLERY_PROJECT = "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Ludots.App.RaylibEngineGallery.csproj"
-GALLERY_EXE = "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/bin/Debug/net9.0/Ludots.App.RaylibEngineGallery.exe"
+GALLERY_PROJECT = "src/Apps/Raylib/Ludots.App.RaylibPlayer/Ludots.App.RaylibPlayer.csproj"
+GALLERY_ENGINE_PROJECT = "projects/engine_gallery"
+GALLERY_EXE = "src/Apps/Raylib/Ludots.App.RaylibPlayer/bin/Debug/net9.0/Ludots.App.RaylibPlayer.exe"
 EVIDENCE_PREFIX = "engine_raylib_"
 
 # 通用节拍：起手稳 2 张 -> 动作段密集采样 -> 收尾定格。帧号 1 起。
@@ -96,7 +97,7 @@ def record_one(repo: Path, scene: str, exe: Path, out: Path) -> None:
     env["LUDOTS_TAKE_SCREENSHOT_PATH"] = str(screens / "still.png")
     env["LUDOTS_TAKE_SCREENSHOT_FRAMES"] = ",".join(str(frame) for frame, _ in plan)
     log_path = out / "launch.log"
-    cmd = [str(exe), "--scene", scene, "--frames", str(frames)]
+    cmd = [str(exe), "--project", GALLERY_ENGINE_PROJECT, "--scene", scene, "--frames", str(frames)]
     with log_path.open("w", encoding="utf-8") as stream:
         stream.write(f"$ {' '.join(cmd)}\n")
         stream.flush()
@@ -132,14 +133,16 @@ def main() -> int:
 
     repo = Path(args.repo).resolve()
     sys.path.insert(0, str(repo / "scripts"))
-    # 场景清单单一事实源：SceneCatalog 注册表。
-    catalog = repo / "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/SceneCatalog.cs"
-    text = catalog.read_text(encoding="utf-8")
-    import re
+    # 场景清单单一事实源：引擎工程运行时目录 catalog.json。
+    import json
 
-    scenes = args.scene or re.findall(r'new\("([a-z0-9_]+)",', text)
+    catalog_path = repo / "projects/engine_gallery/catalog.json"
+    scenes = args.scene or [
+        entry["id"]
+        for entry in json.loads(catalog_path.read_text(encoding="utf-8"))["scenes"]
+    ]
     if not scenes:
-        print("No scenes found in SceneCatalog.", file=sys.stderr)
+        print(f"No scenes found in {catalog_path}.", file=sys.stderr)
         return 1
 
     exe = repo / GALLERY_EXE

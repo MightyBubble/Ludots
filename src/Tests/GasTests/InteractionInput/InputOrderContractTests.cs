@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,6 +6,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Arch.Core;
+using CoreInputMod.Systems;
 using Ludots.Tests.TestCommon;
 using Ludots.Core.Association;
 using Ludots.Core.Config;
@@ -22,9 +23,11 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using MobaDemoMod.Systems;
 using NUnit.Framework;
 
@@ -64,11 +67,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetSolePossessedActor(world.Create(), 1);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             backend.Buttons["<Keyboard>/a"] = false;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             accumulator.BuildTickSnapshot(snapshot);
@@ -78,6 +81,55 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             Assert.That(ex!.Message, Does.Contain("beam.Start"));
             Assert.That(orders, Is.Empty);
+        }
+
+        [Test]
+        public void HeldStartEnd_TargetlessOrders_EmitCanonicalOptionalEntityReferences()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Beam", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Beam",
+                        Trigger = InputTriggerType.Held,
+                        HeldPolicy = HeldPolicy.StartEnd,
+                        OrderTypeKey = "beam",
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var submitted = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetSolePossessedActor(actor, 1);
+            system.SetOrderTypeKeyResolver(key => key switch
+            {
+                "beam" => 100,
+                "beam.Start" => 101,
+                "beam.End" => 102,
+                _ => 0,
+            });
+            system.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });
+
+            system.Update(0f);
+            input.SetActionState("Beam", Vector3.Zero, isDown: false, pressedThisFrame: false, releasedThisFrame: true);
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(submitted[0].OrderTypeId, Is.EqualTo(101));
+                Assert.That(submitted[1].OrderTypeId, Is.EqualTo(102));
+            });
+            AssertCanonicalOptionalEntityReferences(submitted[0]);
+            AssertCanonicalOptionalEntityReferences(submitted[1]);
         }
 
         [Test]
@@ -110,6 +162,166 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             Assert.That(ex!.Message, Does.Contain("typoOrder"));
             Assert.That(ex.Message, Does.Contain("orderTypeKey"));
+        }
+
+        [Test]
+        public void QueueOnModifier_NormalCommandIsImmediateAndShiftCommandIsQueued()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        TargetType = OrderTargetType.Position,
+                        RequireTarget = true,
+                        ModifierBehavior = ModifierSubmitBehavior.QueueOnModifier,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var submitted = new List<Order>();
+            bool shiftHeld = false;
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetSolePossessedActor(actor, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
+            system.SetGroundPositionProvider((out Vector3 worldCm) =>
+            {
+                worldCm = new Vector3(100f, 0f, 200f);
+                return true;
+            });
+            system.SetQueueModifierProvider(() => shiftHeld);
+            system.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });
+
+            system.Update(0f);
+            shiftHeld = true;
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(submitted[0].SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
+                Assert.That(submitted[1].SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
+            });
+        }
+
+        [Test]
+        public void PersistentQueueOnModifier_NormalCommandIsImmediateAndShiftCommandIsPersistentQueued()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
+                        ModifierBehavior = ModifierSubmitBehavior.PersistentQueueOnModifier,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var submitted = new List<Order>();
+            bool shiftHeld = false;
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetSolePossessedActor(actor, 1);
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
+            system.SetQueueModifierProvider(() => shiftHeld);
+            system.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });
+
+            system.Update(0f);
+            shiftHeld = true;
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(submitted[0].SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
+                Assert.That(submitted[1].SubmitMode, Is.EqualTo(OrderSubmitMode.PersistentQueued));
+            });
+        }
+
+        [Test]
+        public void ImmediateNoneTarget_EmitsCanonicalOptionalEntityReferences()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Stop", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Stop",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "stop",
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var submitted = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetSolePossessedActor(actor, 1);
+            system.SetOrderTypeKeyResolver(key => key == "stop" ? 103 : 0);
+            system.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });
+
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(1));
+            Assert.That(submitted[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None));
+            AssertCanonicalOptionalEntityReferences(submitted[0]);
+        }
+
+        [Test]
+        public void UnknownModifierSubmitBehavior_IsRejectedInsteadOfFallingBackToImmediate()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
+                        ModifierBehavior = (ModifierSubmitBehavior)999,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetSolePossessedActor(actor, 1);
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
+            system.SetOrderSubmitHandler((in Order _) => OrderSubmitResult.Queued);
+
+            Assert.That(
+                () => system.Update(0f),
+                Throws.TypeOf<InvalidOperationException>()
+                    .With.Message.Contains("Unsupported modifier submit behavior '999'"));
         }
 
         [Test]
@@ -228,6 +440,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(mappingConfig.Mappings.Any(ReferencesOrderTypeKey("moveTo")),
                 Is.True,
                 "RTS local command path must resolve to an explicit move order.");
+            Assert.Multiple(() =>
+            {
+                Assert.That(mappingConfig.GroupMoveTargetLayout.Mode, Is.EqualTo(GroupMoveTargetLayoutMode.Grid));
+                Assert.That(mappingConfig.GroupMoveTargetLayout.Assignment, Is.EqualTo(GroupMoveTargetAssignmentMode.PreserveRelative));
+                Assert.That(mappingConfig.GroupMoveTargetLayout.SpacingCm, Is.EqualTo(140));
+                Assert.That(mappingConfig.GroupMoveTargetLayout.OrderTypeKeys, Is.EqualTo(new[] { "moveTo", "attackTarget" }));
+            });
 
             using var gameDoc = JsonDocument.Parse(File.ReadAllText(gamePath));
             var startupContexts = gameDoc.RootElement.GetProperty("startupInputContexts")
@@ -243,6 +462,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             string repoRoot = FindRepoRoot();
             string profilePath = Path.Combine(repoRoot, "assets", "Input", "command_intent_profiles.json");
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            options.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
             CommandIntentProfilesConfig config = JsonSerializer.Deserialize<CommandIntentProfilesConfig>(
                     File.ReadAllText(profilePath),
                     options)
@@ -253,13 +473,15 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(
                 profile.Rules.Any(rule =>
                     rule.Target?.HasEntity == false &&
-                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal)),
+                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal) &&
+                    rule.Route.TargetShape == CommandIntentTargetShape.WorldPositionCm),
                 Is.True,
                 "Default command must keep explicit ground movement.");
             Assert.That(
                 profile.Rules.Any(rule =>
                     rule.Target?.HasEntity == true &&
-                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal)),
+                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal) &&
+                    rule.Route.TargetShape == CommandIntentTargetShape.WorldPositionCm),
                 Is.True,
                 "Default command must explicitly treat an inspectable entity under the pointer as a valid move destination, so right-clicking neutral showcase props is not silently dropped.");
         }
@@ -599,15 +821,15 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetSolePossessedActor(world.Create(), 1);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             system.Update(0.10f);
 
             backend.Buttons["<Keyboard>/a"] = false;
-            handler.Update();
+            handler.Update(1f / 60f);
             system.Update(0.05f);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             system.Update(0.10f);
 
             Assert.That(orders.Count, Is.EqualTo(1));
@@ -622,7 +844,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -688,7 +910,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -735,13 +957,274 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void AutoTargetProvider_ReturningTrueWithUninitializedTarget_Throws()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = CastModeType.SmartCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        TargetType = OrderTargetType.Entity,
+                        RequireTarget = true,
+                        IsSkillMapping = true,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetRangeCm = 500,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetSolePossessedActor(actor, 1);
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 101 : 0);
+            system.SetAutoTargetProvider((Entity _, AutoTargetPolicy _, int _, out Entity target) =>
+            {
+                target = default;
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order _) =>
+            {
+                Assert.Fail("Invalid target must not be submitted.");
+                return OrderSubmitResult.RejectedValidation;
+            });
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            Assert.That(error.Message, Does.Contain("Auto-target provider"));
+            Assert.That(error.Message, Does.Contain("default(Entity)"));
+        }
+
+        [Test]
+        public void ActorProvider_ReturningTrueWithUninitializedActor_Throws()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Stop", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Stop",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "stop",
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
+                        IsSkillMapping = false,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetSolePossessedActor(world.Create(), 1);
+            system.SetOrderTypeKeyResolver(key => key == "stop" ? 102 : 0);
+            system.SetActorProvider((out Entity actor) =>
+            {
+                actor = default;
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order _) =>
+            {
+                Assert.Fail("Invalid actor must not be submitted.");
+                return OrderSubmitResult.RejectedValidation;
+            });
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            Assert.That(error.Message, Does.Contain("Input actor provider"));
+            Assert.That(error.Message, Does.Contain("default(Entity)"));
+        }
+
+        [Test]
+        public void SkillMappingOverride_SmartCastNone_EmitsCanonicalTargetlessOrder()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = CastModeType.AimCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.Position,
+                        IsSkillMapping = true,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var submitted = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetSolePossessedActor(actor, 1);
+            system.SetActorProvider((out Entity resolved) =>
+            {
+                resolved = actor;
+                return true;
+            });
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
+            system.SetSkillMappingOverrideProvider((Entity resolved, InputOrderMapping mapping, out InputOrderMapping overridden) =>
+            {
+                Assert.That(resolved, Is.EqualTo(actor));
+                overridden = mapping.Clone();
+                overridden.CastModeOverride = CastModeType.SmartCast;
+                overridden.TargetType = OrderTargetType.None;
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });
+
+            system.Update(0f);
+
+            Assert.That(system.IsAiming, Is.False);
+            Assert.That(submitted, Has.Count.EqualTo(1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(submitted[0].Actor, Is.EqualTo(actor));
+                Assert.That(submitted[0].Target, Is.EqualTo(Entity.Null));
+                Assert.That(submitted[0].TargetContext, Is.EqualTo(Entity.Null));
+                Assert.That(submitted[0].CommandSource, Is.EqualTo(Entity.Null));
+                Assert.That(submitted[0].Args.I0, Is.Zero);
+                Assert.That(submitted[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None));
+                Assert.That(submitted[0].Args.Spatial.Mode, Is.EqualTo(OrderCollectionMode.None));
+            });
+        }
+
+        [Test]
+        public void VectorTargetOrder_EmitsCanonicalOptionalEntityReferences()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("SkillE", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = CastModeType.SmartCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillE",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 2 },
+                        TargetType = OrderTargetType.Vector,
+                        RequireTarget = true,
+                        IsSkillMapping = true,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            Vector3 cursorWorldCm = new(100f, 0f, 200f);
+            var submitted = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config)
+            {
+                ConfirmActionId = "Confirm",
+                CancelActionId = "Cancel",
+                CommandActionId = "Command",
+            };
+            system.SetSolePossessedActor(actor, 1);
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 104 : 0);
+            system.SetGroundPositionProvider((out Vector3 worldCm) =>
+            {
+                worldCm = cursorWorldCm;
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });
+
+            system.Update(0f);
+            input.SetActionState("SkillE", Vector3.Zero, isDown: false, pressedThisFrame: false, releasedThisFrame: false);
+            input.SetActionState("Confirm", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            system.Update(0f);
+            cursorWorldCm = new Vector3(400f, 0f, 600f);
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(submitted[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
+                Assert.That(submitted[0].Args.Spatial.Mode, Is.EqualTo(OrderCollectionMode.List));
+                Assert.That(submitted[0].Args.Spatial.PointCount, Is.EqualTo(2));
+            });
+            AssertCanonicalOptionalEntityReferences(submitted[0]);
+        }
+
+        [Test]
+        public void CoreInputSkillOverride_PersistentQueueOnModifier_EmitsPersistentQueuedOrder()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
+                        IsSkillMapping = true,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            var abilities = new AbilityStateBuffer();
+            abilities.AddAbility(abilityId: 77);
+            Entity actor = world.Create(abilities);
+            var definitions = new AbilityDefinitionRegistry();
+            var definition = new AbilityDefinition
+            {
+                HasInputBindingOverride = true,
+                InputBindingOverride = new AbilityInputBindingOverride
+                {
+                    HasModifierBehavior = true,
+                    ModifierBehavior = ModifierSubmitBehavior.PersistentQueueOnModifier,
+                },
+            };
+            definitions.Register(77, in definition);
+
+            var resolver = new LocalOrderSourceHelper.SkillMappingOverrideResolver(world, definitions);
+            var submitted = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetSolePossessedActor(actor, playerId: 1);
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
+            system.SetQueueModifierProvider(() => true);
+            system.SetSkillMappingOverrideProvider(resolver.TryResolve);
+            system.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });
+
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(1));
+            Assert.That(submitted[0].SubmitMode, Is.EqualTo(OrderSubmitMode.PersistentQueued));
+        }
+
+        [Test]
         public void InputOrderMappingSystem_RejectsEntityCursorTargetPolicyInsteadOfIgnoringIt()
         {
             var input = new FrozenInputActionReader();
 
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -1041,6 +1524,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "moveTo" },
                 },
@@ -1119,6 +1603,98 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Is.GreaterThan(50f));
         }
 
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        public void PreserveRelative_InvalidPositionContract_RejectsWholeBatchBeforeSubmission(int failureMode)
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Move", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.PreserveRelative,
+                    SpacingCm = 140,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Move",
+                        ActorCollectionKey = "actors",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity first = world.Create();
+            Entity second = world.Create();
+            int batchSubmissions = 0;
+            int singleSubmissions = 0;
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetSolePossessedActor(first, 1);
+            system.SetActorProvider((out Entity actor) => { actor = first; return true; });
+            system.SetCollectionEntityListProvider((string _, List<Entity> actors, int _, out OrderSubmitResult rejection) =>
+            {
+                actors.Add(first);
+                actors.Add(second);
+                rejection = OrderSubmitResult.Activated;
+                return true;
+            });
+            system.SetGroundPositionProvider((out Vector3 position) =>
+            {
+                position = new Vector3(1000f, 0f, 1000f);
+                return true;
+            });
+            system.SetOrderTypeKeyResolver(_ => 101);
+            system.SetActivationActorValidator((actor, playerId) =>
+                playerId == 1 && (actor == first || actor == second));
+            system.SetOrderSubmitHandler((in Order _) =>
+            {
+                singleSubmissions++;
+                return OrderSubmitResult.Queued;
+            });
+            system.SetOrderBatchSubmitHandler((Span<Order> _) =>
+            {
+                batchSubmissions++;
+                return OrderSubmitResult.Queued;
+            });
+            if (failureMode != 0)
+            {
+                system.SetActorWorldPositionProvider((Entity actor, out WorldCmInt2 position) =>
+                {
+                    if (failureMode == 2)
+                    {
+                        position = actor == first
+                            ? new WorldCmInt2(900, 1000)
+                            : new WorldCmInt2(1100, 1000);
+                        return true;
+                    }
+
+                    position = actor == first ? new WorldCmInt2(0, 0) : default;
+                    return actor == first;
+                });
+            }
+
+            system.Update(0f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(singleSubmissions, Is.Zero);
+                Assert.That(batchSubmissions, Is.Zero);
+                Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
+                Assert.That(system.LastActivationResult.OrderId, Is.Zero);
+                Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedValidation));
+            });
+        }
+
         [Test]
         public void ActorOrderRouting_SkillMapping_IsRejectedByLoader()
         {
@@ -1166,6 +1742,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "MoveTo" },
                 },
@@ -1237,6 +1814,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
                     SpacingCm = 120,
                 },
                 Mappings = new List<InputOrderMapping>
@@ -1259,6 +1837,35 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void GroupMoveTargetLayout_GridMode_RequiresExplicitAssignment()
+        {
+            var config = new InputOrderMappingConfig
+            {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                    },
+                },
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                InputOrderMappingLoader.Validate(config, "test.json"));
+            Assert.That(ex!.Message, Does.Contain("groupMoveTargetLayout.assignment"));
+        }
+
+        [Test]
         public void GroupMoveTargetLayout_GridMode_RejectsNonPositiveSpacing()
         {
             var config = new InputOrderMappingConfig
@@ -1266,6 +1873,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
                     SpacingCm = 0,
                     OrderTypeKeys = new List<string> { "moveTo" },
                 },
@@ -1310,7 +1918,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         ModifierBehavior = ModifierSubmitBehavior.AlwaysQueued,
                         IsSkillMapping = false,
                         HeldPolicy = HeldPolicy.EveryFrame,
-                        CastModeOverride = InteractionModeType.AimCast,
+                        CastModeOverride = CastModeType.AimCast,
                         AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
                         AutoTargetRangeCm = 640,
                         ActorOrderRouting = new ActorOrderRoutingSettings
@@ -1365,7 +1973,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(remapped.TargetType, Is.EqualTo(OrderTargetType.Position));
                 Assert.That(remapped.ModifierBehavior, Is.EqualTo(ModifierSubmitBehavior.AlwaysQueued));
                 Assert.That(remapped.HeldPolicy, Is.EqualTo(HeldPolicy.EveryFrame));
-                Assert.That(remapped.CastModeOverride, Is.EqualTo(InteractionModeType.AimCast));
+                Assert.That(remapped.CastModeOverride, Is.EqualTo(CastModeType.AimCast));
                 Assert.That(remapped.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
                 Assert.That(remapped.AutoTargetRangeCm, Is.EqualTo(640));
                 Assert.That(remapped.ActorOrderRouting, Is.Not.Null);
@@ -1476,14 +2084,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             SetGroundCommandTargetFactsProvider(system);
 
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                "interaction.context.ability.test",
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = actor,
+                CommandIntentProfileId = 0,
+            });
             var commandIntents = CommandIntentProfileTests.Harness.Create(world).Intents;
-            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
-            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101 });
             var dispatch = new CastDispatchProfileRegistry(
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
@@ -1493,12 +2100,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandIntents,
-                dispatch,
-                orderTypes);
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
                 EntityCollectionKeys.CommandSource,
@@ -1507,8 +2108,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, new[] { actor }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandIntents,
                 dispatch,
                 collections,
@@ -1516,6 +2116,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.Update(0f);
@@ -1527,6 +2132,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [TestCase(1, 16, true)]
+        [TestCase(4, 16, true)]
         [TestCase(16, 16, true)]
         [TestCase(17, 16, false)]
         [TestCase(
@@ -1546,6 +2152,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
             var config = new InputOrderMappingConfig
             {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -1598,11 +2211,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 },
             }));
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
             var dispatch = new CastDispatchProfileRegistry(
@@ -1614,28 +2223,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.capacity",
-                            CastDispatchProfileId = "dispatch.all_together",
-                        },
-                    }
-                },
-            });
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.capacity", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(
                 collectionKeys,
@@ -1648,8 +2236,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, actors, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -1657,6 +2244,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
             system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
             {
@@ -1674,9 +2266,30 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             if (expectSubmitted)
             {
                 Assert.That(submitted.Count, Is.EqualTo(selectionCount));
+                Assert.That(submitted.Select(order => order.Args.Spatial.WorldCm).Distinct().Count(), Is.EqualTo(selectionCount),
+                    "Every actor in a shared move command must receive its own stable grid target.");
                 Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted));
                 Assert.That(system.LastActivationResult.OrderId, Is.EqualTo(submitted[0].OrderId));
                 Assert.That(submitted.Select(static order => order.OrderId), Is.Unique);
+                Assert.That(system.LastActivationResult.Target, Is.EqualTo(Entity.Null),
+                    "A position-only shared command must not report an entity target.");
+
+                if (selectionCount == 1)
+                {
+                    Assert.That(submitted[0].Args.Spatial.WorldCm, Is.EqualTo(new Vector3(100f, 0f, 200f)));
+                }
+                else if (selectionCount == 4)
+                {
+                    Assert.That(
+                        submitted.Select(order => order.Args.Spatial.WorldCm),
+                        Is.EquivalentTo(new[]
+                        {
+                            new Vector3(40f, 0f, 140f),
+                            new Vector3(160f, 0f, 140f),
+                            new Vector3(40f, 0f, 260f),
+                            new Vector3(160f, 0f, 260f),
+                        }));
+                }
             }
             else
             {
@@ -1684,6 +2297,322 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
                 Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
             }
+        }
+
+        [Test]
+        public void CommandIntentRouting_NonSharedParallelFanOut_AppliesGroupLayoutBeforePerActorSubmission()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        IsSkillMapping = false,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity firstActor = world.Create();
+            Entity secondActor = world.Create();
+            var submitted = new List<Order>(capacity: 2);
+            int nextOrderId = 100;
+            var system = new InputOrderMappingSystem(input, config);
+            system.CommandActionId = "Command";
+            system.SetSolePossessedActor(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
+            system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = nextOrderId++);
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(1000f, 0f, 2000f);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                submitted.Add(order);
+                return OrderSubmitResult.Queued;
+            });
+            SetGroundCommandTargetFactsProvider(system);
+
+            var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = "intent.command.parallel_layout",
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
+                },
+            }));
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.parallel_per_actor",
+                Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = false },
+            }));
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.parallel_layout", "dispatch.parallel_per_actor");
+
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(localPlayer, in descriptor, new[] { firstActor, secondActor }, localPlayer);
+            system.SetCommandIntentRouting(
+                world,
+                contextProfiles,
+                commandHarness.Intents,
+                dispatch,
+                collections,
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
+                });
+
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(submitted.Select(order => order.OrderId).Distinct().Count(), Is.EqualTo(2),
+                    "A non-shared parallel command keeps independent order identities.");
+                Assert.That(submitted.Select(order => order.Args.Spatial.WorldCm), Is.EquivalentTo(new[]
+                {
+                    new Vector3(940f, 0f, 2000f),
+                    new Vector3(1060f, 0f, 2000f),
+                }));
+                Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted));
+                Assert.That(system.LastActivationResult.OrderId, Is.EqualTo(101));
+            });
+        }
+
+        [Test]
+        public void CommandIntentRouting_SharedMixedBatch_AppliesGroupLayoutOnlyToMoveOrders()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.PreserveRelative,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        IsSkillMapping = false,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity targetOwner = world.Create(new PlayerIdentity { PlayerId = 2 });
+            var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            Entity firstMoveActor = commandHarness.CreateActor(localPlayer);
+            Entity attackActor = commandHarness.CreateActor(localPlayer, 2);
+            Entity secondMoveActor = commandHarness.CreateActor(localPlayer);
+            Entity clickedTarget = commandHarness.CreateTaggedEntity(targetOwner, "destructible");
+            var positionQueries = new List<Entity>(capacity: 2);
+
+            commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = "intent.command.mixed_layout",
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    new()
+                    {
+                        Priority = 20,
+                        Actor = new CommandIntentActorPredicateDefinition
+                        {
+                            HasAbilityWithCategory = "ability.catalog.weapon",
+                        },
+                        Target = new CommandIntentTargetPredicateDefinition { HasEntity = true },
+                        Route = new CommandIntentRouteDefinition
+                        {
+                            OrderTypeKey = "castAbility",
+                            Slot = "byAbilityCategory:ability.catalog.weapon",
+                            TargetShape = CommandIntentTargetShape.Entity,
+                        },
+                    },
+                    new()
+                    {
+                        Priority = 10,
+                        Route = new CommandIntentRouteDefinition
+                        {
+                            OrderTypeKey = "moveTo",
+                            TargetShape = CommandIntentTargetShape.WorldPositionCm,
+                        },
+                    },
+                },
+            }));
+
+            var submitted = new List<Order>(capacity: 3);
+            var system = new InputOrderMappingSystem(input, config);
+            system.CommandActionId = "Command";
+            system.SetSolePossessedActor(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key switch
+            {
+                "castAbility" => 1,
+                "moveTo" => 2,
+                _ => 0,
+            });
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(1000f, 0f, 2000f);
+                return true;
+            });
+            system.SetActorWorldPositionProvider((Entity actor, out WorldCmInt2 position) =>
+            {
+                positionQueries.Add(actor);
+                if (actor == firstMoveActor)
+                {
+                    position = new WorldCmInt2(0, 2000);
+                    return true;
+                }
+
+                if (actor == secondMoveActor)
+                {
+                    position = new WorldCmInt2(100, 2000);
+                    return true;
+                }
+
+                position = default;
+                return false;
+            });
+            system.SetCommandIntentTargetFactsProvider((InputOrderMapping _, out CommandIntentTargetFacts facts) =>
+            {
+                facts = new CommandIntentTargetFacts(clickedTarget, HasEntity: true);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order _) =>
+            {
+                Assert.Fail("A shared mixed command must use the atomic batch submit handler.");
+                return OrderSubmitResult.RejectedValidation;
+            });
+            system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    batch[i].OrderId = 5150;
+                    submitted.Add(batch[i]);
+                }
+
+                return OrderSubmitResult.Queued;
+            });
+
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 1 });
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.all_together",
+                Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+            }));
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.mixed_layout", "dispatch.all_together");
+
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(
+                localPlayer,
+                in descriptor,
+                new[] { firstMoveActor, attackActor, secondMoveActor },
+                localPlayer);
+            system.SetCommandIntentRouting(
+                world,
+                contextProfiles,
+                commandHarness.Intents,
+                dispatch,
+                collections,
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
+                });
+
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(3));
+            Assert.That(submitted.Select(order => order.OrderId), Is.All.EqualTo(5150));
+
+            Order firstMove = submitted.Single(order => order.Actor == firstMoveActor);
+            Order attack = submitted.Single(order => order.Actor == attackActor);
+            Order secondMove = submitted.Single(order => order.Actor == secondMoveActor);
+            Assert.Multiple(() =>
+            {
+                Assert.That(firstMove.OrderTypeId, Is.EqualTo(2));
+                Assert.That(firstMove.Target, Is.EqualTo(Entity.Null));
+                Assert.That(firstMove.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
+                Assert.That(firstMove.Args.Spatial.WorldCm, Is.EqualTo(new Vector3(940f, 0f, 2000f)));
+
+                Assert.That(secondMove.OrderTypeId, Is.EqualTo(2));
+                Assert.That(secondMove.Target, Is.EqualTo(Entity.Null));
+                Assert.That(secondMove.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
+                Assert.That(secondMove.Args.Spatial.WorldCm, Is.EqualTo(new Vector3(1060f, 0f, 2000f)));
+
+                Assert.That(attack.OrderTypeId, Is.EqualTo(1));
+                Assert.That(attack.Target, Is.EqualTo(clickedTarget));
+                Assert.That(attack.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None));
+                Assert.That(positionQueries, Is.EqualTo(new[] { firstMoveActor, secondMoveActor }));
+
+                Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted));
+                Assert.That(system.LastActivationResult.OrderId, Is.EqualTo(5150));
+                Assert.That(system.LastActivationResult.Target, Is.EqualTo(Entity.Null),
+                    "A mixed batch must not report one shared entity target when only its attack order owns that target.");
+            });
         }
 
         [Test]
@@ -1749,11 +2678,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 },
             }));
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
             var dispatch = new CastDispatchProfileRegistry(
@@ -1765,28 +2690,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.programmatic",
-                            CastDispatchProfileId = "dispatch.all_together",
-                        },
-                    }
-                },
-            });
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.programmatic", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -1796,8 +2700,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, new[] { commandActor }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -1805,6 +2708,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.SetActivationActorValidator((actor, _) => world.IsAlive(actor));
@@ -1820,6 +2728,120 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(orders, Has.Count.EqualTo(1));
             Assert.That(orders[0].Actor, Is.EqualTo(commandActor));
             Assert.That(orders[0].OrderTypeId, Is.EqualTo(2));
+            Assert.That(orders[0].Target, Is.EqualTo(Entity.Null));
+            Assert.That(orders[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
+            Assert.That(orders[0].Args.Spatial.WorldCm, Is.EqualTo(new Vector3(100f, 0f, 200f)));
+        }
+
+        [Test]
+        public void CommandIntentRouting_NoneTargetRoute_EmitsCanonicalOptionalEntityReferences()
+        {
+            var input = new FrozenInputActionReader();
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity commandActor = world.Create();
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config)
+            {
+                CommandActionId = "Command",
+            };
+            system.SetSolePossessedActor(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(100f, 0f, 200f);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
+            system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 43);
+            SetGroundCommandTargetFactsProvider(system);
+
+            var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            commandHarness.Ownership.EnsureOwnership(localPlayer, commandActor);
+            commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = "intent.command.none_target",
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    new()
+                    {
+                        Priority = 10,
+                        Target = new CommandIntentTargetPredicateDefinition { HasEntity = false },
+                        Route = new CommandIntentRouteDefinition
+                        {
+                            OrderTypeKey = "moveTo",
+                            TargetShape = CommandIntentTargetShape.None,
+                        },
+                    },
+                },
+            }));
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.all_together",
+                Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+            }));
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.none_target", "dispatch.all_together");
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(localPlayer, in descriptor, new[] { commandActor }, localPlayer);
+            system.SetCommandIntentRouting(
+                world,
+                contextProfiles,
+                commandHarness.Intents,
+                dispatch,
+                collections,
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
+                });
+
+            system.SetActivationActorValidator((actor, _) => world.IsAlive(actor));
+            InputOrderActivationResult activation = system.ActivateMappedAction(
+                "Command",
+                new InputOrderActivationContext(commandActor, playerId: 1));
+
+            Assert.That(activation.State, Is.EqualTo(InputOrderActivationState.Submitted));
+            Assert.That(orders, Has.Count.EqualTo(1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(orders[0].Actor, Is.EqualTo(commandActor));
+                Assert.That(orders[0].OrderTypeId, Is.EqualTo(2));
+                Assert.That(orders[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None));
+            });
+            AssertCanonicalOptionalEntityReferences(orders[0]);
         }
 
         [Test]
@@ -1829,6 +2851,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
             var config = new InputOrderMappingConfig
             {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.PreserveRelative,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -1848,12 +2877,14 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity firstSource = world.Create();
             Entity secondSource = world.Create();
             Entity firstMember = world.Create();
+            Entity firstMemberB = world.Create();
             Entity secondMember = world.Create();
+            Entity secondMemberB = world.Create();
             var admissionResults = new OrderAdmissionResultBuffer(128, 128);
             var queue = new OrderQueue(capacity: 64, admissionResults);
-            for (int i = 0; i < 63; i++)
+            for (int i = 0; i < 61; i++)
             {
-                var filler = new Order { OrderTypeId = 2 };
+                var filler = new Order { OrderTypeId = 2, Actor = localPlayer };
                 Assert.That(queue.TryEnqueue(in filler), Is.True);
             }
 
@@ -1866,6 +2897,25 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 groundPos = new Vector3(100f, 0f, 200f);
                 return true;
             });
+            var positionQueries = new List<Entity>(capacity: 2);
+            system.SetActorWorldPositionProvider((Entity actor, out WorldCmInt2 position) =>
+            {
+                positionQueries.Add(actor);
+                if (actor == firstSource)
+                {
+                    position = new WorldCmInt2(0, 200);
+                    return true;
+                }
+
+                if (actor == secondSource)
+                {
+                    position = new WorldCmInt2(20, 200);
+                    return true;
+                }
+
+                position = default;
+                return false;
+            });
             system.SetOrderSubmitHandler((in Order _) =>
             {
                 Assert.Fail("Expanded command intent must use the clustered batch submit handler.");
@@ -1876,12 +2926,21 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.Fail("Expanded command intent must not use the shared batch handler.");
                 return OrderSubmitResult.RejectedValidation;
             });
-            system.SetOrderClusterBatchSubmitHandler((Span<Order> orders) => queue.TryEnqueueClusteredBatch(orders));
-            var expander = new TestCommandActorExpander(
-                new Dictionary<Entity, Entity>
+            var expandedOrders = new List<Order>(capacity: 4);
+            system.SetOrderClusterBatchSubmitHandler((Span<Order> orders) =>
+            {
+                for (int i = 0; i < orders.Length; i++)
                 {
-                    [firstSource] = firstMember,
-                    [secondSource] = secondMember,
+                    expandedOrders.Add(orders[i]);
+                }
+
+                return queue.TryEnqueueClusteredBatch(orders);
+            });
+            var expander = new TestCommandActorExpander(
+                new Dictionary<Entity, Entity[]>
+                {
+                    [firstSource] = new[] { firstMember, firstMemberB },
+                    [secondSource] = new[] { secondMember, secondMemberB },
                 });
             system.SetCommandActorExpander(expander);
             SetGroundCommandTargetFactsProvider(system);
@@ -1899,11 +2958,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 },
             }));
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
             var dispatch = new CastDispatchProfileRegistry(
@@ -1915,28 +2970,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.atomic_batch",
-                            CastDispatchProfileId = "dispatch.all_together",
-                        },
-                    }
-                },
-            });
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_batch", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -1946,8 +2980,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, new[] { firstSource, secondSource }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -1955,12 +2988,17 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             Assert.DoesNotThrow(() => system.Update(0f));
 
-            Assert.That(queue.Count, Is.EqualTo(63),
-                "The expanded fan-out must be rejected as one batch when the OrderQueue has only one free slot.");
+            Assert.That(queue.Count, Is.EqualTo(61),
+                "The expanded fan-out must be rejected as one batch when the OrderQueue has only three free slots.");
             Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
             Assert.That(system.LastActivationResult.OrderId, Is.GreaterThan(0));
             Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
@@ -1970,6 +3008,18 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
             Assert.That(expander.ExpandCallCount, Is.EqualTo(2),
                 "CastDispatch must select the two sources before the command router expands either source into members.");
+            Assert.Multiple(() =>
+            {
+                Assert.That(expandedOrders, Has.Count.EqualTo(4));
+                Assert.That(expandedOrders[0].CommandSource, Is.EqualTo(firstSource));
+                Assert.That(expandedOrders[1].CommandSource, Is.EqualTo(firstSource));
+                Assert.That(expandedOrders[2].CommandSource, Is.EqualTo(secondSource));
+                Assert.That(expandedOrders[3].CommandSource, Is.EqualTo(secondSource));
+                Assert.That(expandedOrders[0].Args.Spatial.WorldCm, Is.EqualTo(expandedOrders[1].Args.Spatial.WorldCm));
+                Assert.That(expandedOrders[2].Args.Spatial.WorldCm, Is.EqualTo(expandedOrders[3].Args.Spatial.WorldCm));
+                Assert.That(expandedOrders[0].Args.Spatial.WorldCm, Is.Not.EqualTo(expandedOrders[2].Args.Spatial.WorldCm));
+                Assert.That(positionQueries, Is.EqualTo(new[] { firstSource, secondSource }));
+            });
         }
 
         [Test]
@@ -2028,17 +3078,17 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         Priority = 10,
                         Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithCategory = "ability.catalog.weapon" },
                         Target = new CommandIntentTargetPredicateDefinition { HasEntity = false },
-                        Route = new CommandIntentRouteDefinition { OrderTypeKey = "moveTo" },
+                        Route = new CommandIntentRouteDefinition
+                        {
+                            OrderTypeKey = "moveTo",
+                            TargetShape = CommandIntentTargetShape.WorldPositionCm,
+                        },
                     },
                 },
             }));
 
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
             var dispatch = new CastDispatchProfileRegistry(
@@ -2055,28 +3105,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.routed_only",
-                            CastDispatchProfileId = "dispatch.nearest_one",
-                        },
-                    }
-                },
-            });
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.routed_only", "dispatch.nearest_one");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2086,8 +3115,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, new[] { unroutedNearActor, routedFarActor }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -2095,6 +3123,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.Update(0f);
@@ -2170,11 +3203,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             }));
 
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
             var dispatch = new CastDispatchProfileRegistry(
@@ -2186,28 +3215,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.atomic_authorization",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.atomic_authorization",
-                            CastDispatchProfileId = "dispatch.atomic_authorization",
-                        },
-                    },
-                },
-            });
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_authorization", "dispatch.atomic_authorization");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2217,8 +3225,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             collections.Replace(localPlayer, in descriptor, new[] { authorizedActor, foreignActor }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -2226,6 +3233,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.Update(0f);
@@ -2235,11 +3247,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
             Assert.That(system.LastActivationResult.Actor, Is.EqualTo(foreignActor));
             Assert.That(system.LastActivationResult.OrderId, Is.Zero);
+            Assert.That(system.LastActivationResult.Target, Is.EqualTo(Entity.Null));
             Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
         }
 
-        [Test]
-        public void CommandIntentRouting_EntityTargetFactsDriveEntityRouteBeforeGroundRule()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void CommandIntentRouting_EntityTargetFactsDriveEntityRouteBeforeGroundRule(bool divergeSubmittedTargets)
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
@@ -2264,7 +3278,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity targetOwner = world.Create(new PlayerIdentity { PlayerId = 2 });
             var commandHarness = CommandIntentProfileTests.Harness.Create(world);
             Entity commandActor = commandHarness.CreateActor(localPlayer, 1);
+            Entity secondCommandActor = commandHarness.CreateActor(localPlayer, 1);
             Entity clickedTarget = commandHarness.CreateTaggedEntity(targetOwner, "structure.garrisonable");
+            Entity alternateTarget = commandHarness.CreateTaggedEntity(targetOwner, "structure.garrisonable");
             commandHarness.InstallStandardProfile();
 
             var orders = new List<Order>();
@@ -2282,7 +3298,25 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 groundPos = new Vector3(250f, 0f, 400f);
                 return true;
             });
-            system.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
+            system.SetOrderSubmitHandler((in Order _) =>
+            {
+                Assert.Fail("A shared entity-target command must use the atomic batch submit handler.");
+                return OrderSubmitResult.RejectedValidation;
+            });
+            system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    batch[i].OrderId = 777;
+                    if (divergeSubmittedTargets && i == 1)
+                    {
+                        batch[i].Target = alternateTarget;
+                    }
+                    orders.Add(batch[i]);
+                }
+
+                return OrderSubmitResult.Queued;
+            });
             system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 777);
             system.SetCommandIntentTargetFactsProvider((InputOrderMapping _, out CommandIntentTargetFacts facts) =>
             {
@@ -2291,11 +3325,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             });
 
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                EntityCollectionKeys.CommandSource,
-                "view.test.command"));
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 1 });
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
@@ -2308,39 +3338,17 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Selector = new CastDispatchSelectorDefinition { Kind = "all" },
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
-            var schemes = new ControlSchemeRuntime(
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                commandHarness.Intents,
-                dispatch,
-                orderTypes);
-            schemes.Install(new ControlSchemesConfig
-            {
-                Schemes = new List<ControlSchemeDefinition>
-                {
-                    new()
-                    {
-                        Id = "scheme.test",
-                        InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.command.test",
-                            CastDispatchProfileId = "dispatch.all_together",
-                        },
-                    }
-                },
-            });
+            PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.test", "dispatch.all_together");
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
                 EntityCollectionKeys.CommandSource,
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
-            collections.Replace(localPlayer, in descriptor, new[] { commandActor }, localPlayer);
+            collections.Replace(localPlayer, in descriptor, new[] { commandActor, secondCommandActor }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
-                stack,
-                schemes,
+                contextProfiles,
                 commandHarness.Intents,
                 dispatch,
                 collections,
@@ -2348,14 +3356,28 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                     owner = localPlayer;
                     return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
                 });
 
             system.Update(0f);
 
-            Assert.That(orders, Has.Count.EqualTo(1));
+            Assert.That(orders, Has.Count.EqualTo(2));
             Assert.That(orders[0].Actor, Is.EqualTo(commandActor));
+            Assert.That(orders[1].Actor, Is.EqualTo(secondCommandActor));
             Assert.That(orders[0].OrderTypeId, Is.EqualTo(1),
                 "An entity target fact must hit the entity rule before the ground move rule.");
+            Assert.That(orders[0].Target, Is.EqualTo(clickedTarget),
+                "The winning entity route must preserve the player's clicked target in the submitted order.");
+            Assert.That(
+                system.LastActivationResult.Target,
+                Is.EqualTo(divergeSubmittedTargets ? Entity.Null : clickedTarget),
+                "The activation result must expose only an entity target shared by the submitted batch.");
+            Assert.That(orders[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None),
+                "An entity-only route must not attach an unrelated ground target that changes the command shape.");
         }
 
         private static void SetGroundCommandTargetFactsProvider(InputOrderMappingSystem system)
@@ -2364,6 +3386,59 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 facts = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
                 return false;
+            });
+        }
+
+        /// <summary>
+        /// Plant the player-level InteractionPref on the possessed representative, mirroring the
+        /// production map-binding seed (game-instance defaults from Input/interaction_prefs.json).
+        /// </summary>
+        private static void PlantPlayerInteractionPref(
+            World world,
+            Entity rep,
+            CommandIntentProfileRegistry intents,
+            CastDispatchProfileRegistry dispatch,
+            string intentId,
+            string dispatchProfileId)
+        {
+            InteractionPref pref = default;
+            pref.SetPlayerDefault(
+                intents.ProfileIdRegistry.Register(intentId),
+                dispatch.ProfileIdRegistry.GetId(dispatchProfileId));
+            world.Add(rep, pref);
+        }
+
+        /// <summary>
+        /// Standalone interaction context profile registry carrying the steady-state default
+        /// profile (command.source anchor), mirroring the engine's root asset wiring.
+        /// </summary>
+        private static InteractionContextProfileRegistry NewSteadyStateProfiles(StringIntRegistry collectionKeys)
+        {
+            var contextProfiles = new InteractionContextProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            contextProfiles.Install(new InteractionContextProfilesConfig
+            {
+                Profiles = new List<InteractionContextProfileDefinition>
+                {
+                    new()
+                    {
+                        Id = InteractionContextIds.Default,
+                        ActiveCollectionKey = EntityCollectionKeys.CommandSource,
+                    },
+                },
+            }, collectionKeys,
+               new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+               new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            return contextProfiles;
+        }
+
+        private static void AssertCanonicalOptionalEntityReferences(Order order)
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(order.Target, Is.EqualTo(Entity.Null));
+                Assert.That(order.TargetContext, Is.EqualTo(Entity.Null));
+                Assert.That(order.CommandSource, Is.EqualTo(Entity.Null));
             });
         }
 
@@ -2410,22 +3485,30 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
         private sealed class TestCommandActorExpander : ICommandActorExpander
         {
-            private readonly IReadOnlyDictionary<Entity, Entity> _membersBySource;
+            private readonly IReadOnlyDictionary<Entity, Entity[]> _membersBySource;
+            private readonly int _maxExpandedActorsPerSource;
+            private readonly int _maxExpandedActorCount;
 
-            public TestCommandActorExpander(IReadOnlyDictionary<Entity, Entity> membersBySource)
+            public TestCommandActorExpander(IReadOnlyDictionary<Entity, Entity[]> membersBySource)
             {
                 _membersBySource = membersBySource;
+                foreach (Entity[] members in membersBySource.Values)
+                {
+                    _maxExpandedActorsPerSource = Math.Max(_maxExpandedActorsPerSource, members.Length);
+                    _maxExpandedActorCount += members.Length;
+                }
             }
 
-            public int MaxExpandedActorsPerSource => 1;
-            public int MaxExpandedActorCount => _membersBySource.Count;
+            public int MaxExpandedActorsPerSource => _maxExpandedActorsPerSource;
+            public int MaxExpandedActorCount => _maxExpandedActorCount;
             public int ExpandCallCount { get; private set; }
 
             public int Expand(Entity source, Span<Entity> destination)
             {
                 ExpandCallCount++;
-                destination[0] = _membersBySource[source];
-                return 1;
+                Entity[] members = _membersBySource[source];
+                members.CopyTo(destination);
+                return members.Length;
             }
         }
 
@@ -2461,7 +3544,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -2582,7 +3665,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity secondActor = world.Create();
             var admissionResults = new OrderAdmissionResultBuffer(8, 8);
             var queue = new OrderQueue(capacity: 1, admissionResults);
-            var seed = new Order { OrderTypeId = 8 };
+            var seed = new Order { Actor = firstActor, OrderTypeId = 8 };
             Assert.That(queue.TryEnqueue(in seed), Is.True);
             var system = new InputOrderMappingSystem(input, config);
             system.SetSolePossessedActor(firstActor, 1);
@@ -2691,7 +3774,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.AimCast,
+                InteractionMode = CastModeType.AimCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -2745,7 +3828,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.AimCast,
+                InteractionMode = CastModeType.AimCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -3059,7 +4142,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.AimCast,
+                InteractionMode = CastModeType.AimCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -3109,7 +4192,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -3156,7 +4239,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -3218,7 +4301,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.SmartCast,
+                InteractionMode = CastModeType.SmartCast,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()

@@ -201,11 +201,16 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             if (string.Equals(text, "global", StringComparison.Ordinal))
             {
-                return TriggerGraphMountRoute.Global;
+                // route:global never drove FireMapEvent fan-out; cross-map dispatch is
+                // FireGlobalEvent / FireCrossMapEvent via event schema Scope (#1411).
+                throw new InvalidOperationException(
+                    $"{context} field '{RouteField}' value 'global' is retired; " +
+                    "cross-map dispatch uses FireGlobalEvent / FireCrossMapEvent (event schema Scope), not mount route. " +
+                    "Use \"local\" or omit the field.");
             }
 
             throw new InvalidOperationException(
-                $"{context} field '{RouteField}' value '{text}' is not a route; expected \"local\" or \"global\".");
+                $"{context} field '{RouteField}' value '{text}' is not a route; expected \"local\".");
         }
 
         private static string ReadRequiredTrimmedString(JsonObject obj, string field, string context)

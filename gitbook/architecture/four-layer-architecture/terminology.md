@@ -5,7 +5,7 @@
 仓库内 "client" 只保留两个精确义：
 
 1. **client-local 前缀** = 本机（如 `ClientLocalSeatRegistry` 中的 Client）
-2. **ReplicatedClient** = 网络客户端角色（待 #711 联机线合入 main）
+2. **ReplicatedClient** = 网络客户端角色（#711 联机线已合入 main，是现状）
 
 **禁止第四义**：client 不指机器。说机器就用 Machine/机器。
 

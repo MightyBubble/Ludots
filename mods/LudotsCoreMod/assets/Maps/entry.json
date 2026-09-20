@@ -1,6 +1,13 @@
 {
   "Id": "entry",
-  "Tags": ["moba_demo"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "moba_demo"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Moba",
     "Pitch": 45,
@@ -11,67 +18,156 @@
       "Template": "moba_hero",
       "InstanceId": "entry_hero",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        }
       }
     },
     {
       "Template": "moba_dummy",
       "InstanceId": "entry_enemy_1",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 700, "Y": 50 } },
-        "Name": { "Value": "Enemy1" }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 700,
+            "Y": 50
+          }
+        },
+        "Name": {
+          "Value": "Enemy1"
+        }
       }
     },
     {
       "Template": "moba_dummy",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 650, "Y": -180 } },
-        "Name": { "Value": "Enemy2" }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 650,
+            "Y": -180
+          }
+        },
+        "Name": {
+          "Value": "Enemy2"
+        }
       }
     },
     {
       "Template": "moba_dummy",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 980, "Y": -260 } },
-        "Name": { "Value": "Enemy3" }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 980,
+            "Y": -260
+          }
+        },
+        "Name": {
+          "Value": "Enemy3"
+        }
       }
     },
     {
       "Template": "moba_dummy",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1220, "Y": 80 } },
-        "Name": { "Value": "Enemy4" }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1220,
+            "Y": 80
+          }
+        },
+        "Name": {
+          "Value": "Enemy4"
+        }
       }
     },
     {
       "Template": "moba_dummy",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 450, "Y": -220 } },
-        "Team": { "Id": 1 },
-        "Name": { "Value": "Ally1" }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 450,
+            "Y": -220
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Ally1"
+        }
       }
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "entry_hero" },
-    { "TeamId": 2, "RepresentativeInstanceId": "entry_enemy_1" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "entry_hero"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "entry_enemy_1"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "entry_hero" },
-    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "entry_enemy_1" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "entry_hero"
+    },
+    {
+      "PlayerId": 2,
+      "TeamId": 2,
+      "RepresentativeInstanceId": "entry_enemy_1"
+    }
   ],
   "ParticipantRelationships": {
     "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 2, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 2, "TypeId": "LudotsCore.Participant", "Attitude": "Hostile", "Symmetric": true }
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      }
     ],
     "Players": [
-      { "PlayerA": 1, "PlayerB": 2, "TypeId": "LudotsCore.Participant", "Symmetric": true }
+      {
+        "PlayerA": 1,
+        "PlayerB": 2,
+        "TypeId": "LudotsCore.Participant",
+        "Symmetric": true
+      }
     ],
     "PlayerTeams": [
-      { "PlayerId": 1, "TeamId": 1, "TypeId": "LudotsCore.Participant", "Symmetric": false },
-      { "PlayerId": 2, "TeamId": 2, "TypeId": "LudotsCore.Participant", "Symmetric": false }
+      {
+        "PlayerId": 1,
+        "TeamId": 1,
+        "TypeId": "LudotsCore.Participant",
+        "Symmetric": false
+      },
+      {
+        "PlayerId": 2,
+        "TeamId": 2,
+        "TypeId": "LudotsCore.Participant",
+        "Symmetric": false
+      }
     ]
   }
 }

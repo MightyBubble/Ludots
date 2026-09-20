@@ -6,19 +6,29 @@
       {
         "label": "on_map_loaded",
         "event": "MapLoaded",
-        "start": "beat"
+        "start": "team"
       }
     ],
     "nodes": [
+      {
+        "id": "team",
+        "op": "ConstInt",
+        "intValue": 1
+      },
       {
         "id": "beat",
         "op": "ConstInt",
         "intValue": 5
       },
       {
+        "id": "delta",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
         "id": "fire",
         "op": "DispatchMapEvent",
-        "event": "MapHeartbeat"
+        "event": "EntityAliveCountChanged"
       },
       {
         "id": "done",
@@ -27,7 +37,17 @@
     ],
     "controlEdges": [
       {
+        "from": "team",
+        "fromPort": "next",
+        "to": "beat"
+      },
+      {
         "from": "beat",
+        "fromPort": "next",
+        "to": "delta"
+      },
+      {
+        "from": "delta",
         "fromPort": "next",
         "to": "fire"
       },
@@ -39,10 +59,22 @@
     ],
     "valueEdges": [
       {
+        "from": "team",
+        "fromPort": "value",
+        "to": "fire",
+        "toPort": "sourceTeamId"
+      },
+      {
         "from": "beat",
         "fromPort": "value",
         "to": "fire",
-        "toPort": "heartbeatIndex"
+        "toPort": "count"
+      },
+      {
+        "from": "delta",
+        "fromPort": "value",
+        "to": "fire",
+        "toPort": "delta"
       }
     ]
   }

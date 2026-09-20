@@ -31,6 +31,14 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class MudPhaseGraphDemoTests
     {
+        [SetUp]
+        public void ResetRegistries()
+        {
+            // Engine-booting fixtures freeze the shared ambient; these demos register
+            // their own attributes lazily, so start from a fresh unfrozen table.
+            AttributeRegistry.Clear();
+        }
+
         // Attribute & BB key constants
         private const string AttrHealthName = "tests.mud.phase.health";
         private const int BbKeyActualDamage = 2;    // float: 实际伤害值

@@ -1,0 +1,19 @@
+[
+  {
+    "id": "graph.mass_navigation.selection_candidates",
+    "kind": "Query",
+    "entry": "map",
+    "nodes": [
+      { "id": "map", "op": "QueryAllMapEntities" },
+      { "id": "commandable", "op": "QueryFilterTagAny", "tag": "Unit.Commandable" },
+      { "id": "halt", "op": "HaltReturnInt", "intValue": 1 }
+    ],
+    "controlEdges": [
+      { "from": "map", "fromPort": "next", "to": "commandable" },
+      { "from": "commandable", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "map", "fromPort": "list", "to": "commandable", "toPort": "list" }
+    ]
+  }
+]

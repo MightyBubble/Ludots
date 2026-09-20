@@ -36,7 +36,7 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
         document.PaintWorld(13_000, 6_000);
         document.Update();
 
-        var runtime = (ChunkedVisualHeightmapRuntime)document.HeightmapRuntime;
+        var runtime = (ChunkedContinuousHeightmapRuntime)document.HeightmapRuntime;
         for (int chunkX = 0; chunkX < 2; chunkX++)
         {
             Assert.That(document.TryGetChunkProceduralMesh(chunkX, 0, out var proceduralMesh), Is.True);
@@ -120,9 +120,9 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
                     renderColumnsPerChunk: 9,
                     renderRowsPerChunk: 9,
                     defaultHeight01: 0.45f,
-                    storageLayout: VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
-                    interpolationMode: VisualHeightmapInterpolationMode.TriangleHeightfield,
-                    sampleScale: VisualHeightSampleScale.IdentityCentimeters),
+                    storageLayout: ContinuousHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
+                    interpolationMode: ContinuousHeightmapInterpolationMode.TriangleHeightfield,
+                    sampleScale: ContinuousHeightSampleScale.IdentityCentimeters),
                 defaultMaterialAssetId: 1);
 
             document.EnsureChunkWindowLoaded(centerChunkX: 0, centerChunkY: 0, radius: 2);

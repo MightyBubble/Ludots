@@ -113,7 +113,7 @@ namespace Ludots.App.RaylibAssetAcceptance
             int exitCode = RunLoop(frames, screenshotPath);
 
             UnloadAsset();
-            Rl.UnloadMesh(_refSphere);
+            RaylibNativeResources.UnloadMesh(_refSphere);
             _modelLit.Dispose();
             _propsLit.Dispose();
             _shadowMap.Dispose();
@@ -136,7 +136,7 @@ namespace Ludots.App.RaylibAssetAcceptance
                 Rl.UnloadModelAnimations(_asset.Animations, _asset.AnimCount);
             }
 
-            Rl.UnloadModel(_asset.Model);
+            RaylibNativeResources.UnloadModel(_asset.Model);
             _asset = null;
         }
 
@@ -147,7 +147,7 @@ namespace Ludots.App.RaylibAssetAcceptance
             _shadowMap = new RaylibDirectionalShadowMap();
             _propsLit = new RaylibLitModel();
             _modelLit = new RaylibFileModelLit();
-            _refSphere = Rl.GenMeshSphere(0.5f, 24, 16);
+            _refSphere = RaylibNativeResources.GenMeshSphere(0.5f, 24, 16);
         }
 
         private static int RunLoop(int frames, string? screenshotPath)
@@ -161,19 +161,9 @@ namespace Ludots.App.RaylibAssetAcceptance
             string? stillDirectory = stillSequence
                 ? Path.GetDirectoryName(Path.GetFullPath(stillBasePath!))
                 : null;
-            var stillMoves = new List<(string Source, string Target)>();
+            var stillTargets = new List<string>();
 
             bool headless = screenshotPath != null || stillSequence;
-
-            if (screenshotPath != null)
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(screenshotPath))!);
-            }
-
-            if (stillDirectory != null)
-            {
-                Directory.CreateDirectory(stillDirectory);
-            }
 
             int drawn = 0;
             double total = 0.0;
@@ -208,16 +198,18 @@ namespace Ludots.App.RaylibAssetAcceptance
 
                 if (screenshotPath != null && drawn == frames - 1)
                 {
+                    // 直读帧缓冲（DPI 无假黑边）前先冲刷 rl 渲染批次，Skia 文字已由 Flush 入批。
                     Rl.rlDrawRenderBatchActive();
-                    Rl.TakeScreenshot(Path.GetFileName(screenshotPath));
+                    RaylibFramebufferCapture.WriteFramebufferPng(screenshotPath);
                 }
 
                 if (stillSequence && stillIndex < stillFrames.Length && drawn == stillFrames[stillIndex] - 1)
                 {
                     Rl.rlDrawRenderBatchActive();
-                    string stillName = BuildStillFileName(stillBasePath!, stillIndex, stillFrames[stillIndex]);
-                    Rl.TakeScreenshot(stillName);
-                    stillMoves.Add((stillName, Path.Combine(stillDirectory!, stillName)));
+                    string stillTarget = Path.Combine(
+                        stillDirectory!, BuildStillFileName(stillBasePath!, stillIndex, stillFrames[stillIndex]));
+                    RaylibFramebufferCapture.WriteFramebufferPng(stillTarget);
+                    stillTargets.Add(stillTarget);
                     stillIndex++;
                 }
 
@@ -231,19 +223,11 @@ namespace Ludots.App.RaylibAssetAcceptance
                 Rl.EndDrawing();
             }
 
-            foreach ((string source, string target) in stillMoves)
+            foreach (string target in stillTargets)
             {
-                string workingPath = Path.Combine(Environment.CurrentDirectory, source);
-                if (!File.Exists(workingPath))
+                if (!File.Exists(target))
                 {
-                    Console.Error.WriteLine($"Failed to write still '{source}'.");
-                    continue;
-                }
-
-                if (!string.Equals(workingPath, target, StringComparison.OrdinalIgnoreCase))
-                {
-                    File.Copy(workingPath, target, overwrite: true);
-                    File.Delete(workingPath);
+                    Console.Error.WriteLine($"Failed to write still '{target}'.");
                 }
             }
 
@@ -252,17 +236,7 @@ namespace Ludots.App.RaylibAssetAcceptance
                 return 0;
             }
 
-            string fullScreenshotPath = Path.GetFullPath(screenshotPath);
-            string workingShot = Path.Combine(Environment.CurrentDirectory, Path.GetFileName(screenshotPath));
-            if (File.Exists(workingShot))
-            {
-                if (!string.Equals(workingShot, fullScreenshotPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    File.Copy(workingShot, fullScreenshotPath, overwrite: true);
-                    File.Delete(workingShot);
-                }
-            }
-            else
+            if (!File.Exists(Path.GetFullPath(screenshotPath)))
             {
                 Console.Error.WriteLine($"Failed to write screenshot '{screenshotPath}'.");
                 return 3;
@@ -521,7 +495,7 @@ namespace Ludots.App.RaylibAssetAcceptance
                 // native LoadModel 会 AccessViolation，转换失败在此 fail-loud 成错误面板）。
                 string loadablePath = RaylibModelFileLoader.PrepareNativeLoadable(path);
 
-                Model model = Rl.LoadModel(loadablePath);
+                Model model = RaylibNativeResources.LoadModel(loadablePath);
                 attempt = new LoadedAsset { Model = model };
                 if (model.meshCount <= 0)
                 {
@@ -586,7 +560,7 @@ namespace Ludots.App.RaylibAssetAcceptance
                         Rl.UnloadModelAnimations(attempt.Animations, attempt.AnimCount);
                     }
 
-                    Rl.UnloadModel(attempt.Model);
+                    RaylibNativeResources.UnloadModel(attempt.Model);
                 }
 
                 _error = $"装载失败：{ex.Message}";

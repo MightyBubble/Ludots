@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `vegetation_cutout` |
 | preset | `engine_raylib_vegetation_cutout` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/VegetationCutoutScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/VegetationCutoutScene.cs` |
 | 承接渲染器 | billboard 资产（`MeshAssetDescriptor.Billboard`）+ `vegetation_cutout` 着色器 |
 | 注册表条目 | `engine_raylib_vegetation_cutout`（`showcase.registry.json`，tier T1） |
 

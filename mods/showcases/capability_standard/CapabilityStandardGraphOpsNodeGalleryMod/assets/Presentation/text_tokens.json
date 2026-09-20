@@ -1,6 +1,5 @@
 [
-  {
-    "id": "gallery.hello",
-    "argCount": 0
-  }
+  { "id": "gallery.hello", "argCount": 0 },
+  { "id": "gallery.start_dialogue.speaker", "argCount": 0 },
+  { "id": "gallery.start_dialogue.open", "argCount": 0 }
 ]

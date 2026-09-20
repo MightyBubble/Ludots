@@ -8,7 +8,7 @@
 |----|----|
 | scene id | `slash_trail` |
 | preset | `engine_raylib_slash_trail` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/SlashTrailScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/SlashTrailScene.cs` |
 | 承接渲染器 | `RaylibTrailMeshRenderer` + `TrailMeshGeometry` |
 | 注册表条目 | `engine_raylib_slash_trail`（`showcase.registry.json`，tier T1） |
 

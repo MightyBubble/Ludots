@@ -154,22 +154,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             GraphExecutionState state = frame.CreateState();
-            if (TryExecuteGenerated(ref frame, ref state))
+            frame.Api?.BeginEntityQueryExecution();
+            try
             {
-                frame.Cursor.CallStackCount = state.CallStackCount;
-                frame.Cursor.ReturnInt = state.ReturnInt;
-                frame.Cursor.InvokeDepth = state.InvokeDepth;
-                frame.Cursor.Status = state.Status;
-                frame.TargetList = state.TargetList;
-                return;
+                if (!TryExecuteGenerated(ref frame, ref state))
+                    GasGraphOpHandlerTable.Execute(ref state, program, table);
+                frame.CopyBackExecutionState(ref state, copyCursor: true);
             }
-
-            GasGraphOpHandlerTable.Execute(ref state, program, table);
-            frame.Cursor.CallStackCount = state.CallStackCount;
-            frame.Cursor.ReturnInt = state.ReturnInt;
-            frame.Cursor.InvokeDepth = state.InvokeDepth;
-            frame.Cursor.Status = state.Status;
-            frame.TargetList = state.TargetList;
+            finally { frame.Api?.EndEntityQueryExecution(); }
         }
 
         public static GraphSliceResult ExecuteSlice(
@@ -178,10 +170,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int budgetSteps,
             bool programAlreadyValidated = false)
         {
-            if (frame.Kind != GraphKind.Script)
+            if (frame.Kind is not (GraphKind.Script or GraphKind.TriggerGraph))
             {
                 throw new InvalidOperationException(
-                    $"{GraphKindOperationPolicy.KindMismatchError}: ExecuteSlice 只接受 Script，收到的种类是「{frame.Kind}」。");
+                    $"{GraphKindOperationPolicy.KindMismatchError}: ExecuteSlice 只接受 Script 或 TriggerGraph，收到的种类是「{frame.Kind}」。");
             }
 
             if (!programAlreadyValidated)
@@ -194,20 +186,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             GraphExecutionState state = frame.CreateState();
-            if (TryExecuteGeneratedSlice(ref frame, ref state, budgetSteps, out GraphSliceResult generated))
+            frame.Api?.BeginEntityQueryExecution();
+            try
             {
-                frame.TargetList = state.TargetList;
-                return generated;
+                GraphSliceResult result;
+                if (TryExecuteGeneratedSlice(ref frame, ref state, budgetSteps, out GraphSliceResult generated))
+                    result = generated;
+                else
+                    result = GasGraphOpHandlerTable.ExecuteSlice(
+                        ref state, program, GasGraphOpHandlerTable.Instance, ref frame.Cursor, budgetSteps);
+                frame.CopyBackExecutionState(ref state, copyCursor: false);
+                if (result.Yielded || result.BudgetSuspended)
+                    frame.Cursor.SaveTargets(state.TargetList.Span);
+                else
+                    frame.Cursor.TargetCount = 0;
+                return result;
             }
-
-            GraphSliceResult result = GasGraphOpHandlerTable.ExecuteSlice(
-                ref state,
-                program,
-                GasGraphOpHandlerTable.Instance,
-                ref frame.Cursor,
-                budgetSteps);
-            frame.TargetList = state.TargetList;
-            return result;
+            finally { frame.Api?.EndEntityQueryExecution(); }
         }
 
         private static bool TryExecuteGenerated(ref GraphFrame frame, ref GraphExecutionState state)
@@ -354,6 +349,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             IGraphRuntimeApi? api = null,
             int graphId = 0)
         {
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             GraphFrame frame = GraphFrame.Bind(
                 GraphKind.Script,
                 GraphEntityPreset.None,
@@ -368,6 +364,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 bools,
                 entities,
                 targets,
+                intIds,
                 callStack,
                 cursor);
             frame.GraphId = graphId;
@@ -399,7 +396,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphEntryPayloadTable? entryPayload = null,
             GraphEntryPayloadTable? invokeArgs = null)
         {
-            RequireKind(kind, GraphKind.Script, nameof(ExecuteScriptSlice));
+            if (kind is not (GraphKind.Script or GraphKind.TriggerGraph))
+            {
+                throw new InvalidOperationException(
+                    $"{GraphKindOperationPolicy.KindMismatchError}: ExecuteScriptSlice 只接受 Script 或 TriggerGraph，收到的种类是「{kind}」。");
+            }
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             GraphFrame frame = GraphFrame.Bind(
                 kind,
                 GraphEntityPreset.None,
@@ -414,6 +416,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 bools,
                 entities,
                 targets,
+                intIds,
                 callStack,
                 cursor,
                 debugTrace: debugTrace,
@@ -452,6 +455,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             GraphFrame frame = GraphFrame.Bind(
                 kind,
@@ -467,6 +471,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 b,
                 e,
                 targets,
+                intIds,
                 callStack);
             Execute(ref frame, program, handlers: handlers);
         }
@@ -488,6 +493,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             b[0] = 0;
             GraphFrame frame = GraphFrame.Bind(
@@ -504,6 +510,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 b,
                 e,
                 targets,
+                intIds,
                 callStack);
             Execute(ref frame, program, handlers: handlers);
             return frame.B[0] != 0;
@@ -526,6 +533,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             GraphFrame frame = GraphFrame.Bind(
                 kind,
@@ -541,6 +549,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 b,
                 e,
                 targets,
+                intIds,
                 callStack);
             Execute(ref frame, program, handlers: handlers);
             return frame.F[0];

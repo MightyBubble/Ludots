@@ -1,7 +1,6 @@
 [
   {
     "id": "Sequence.Narrative.Intro",
-    "displayName": "Ashen Oath Intro",
     "clearCameraOnComplete": true,
     "clock": {
       "rate": 1.0,
@@ -17,7 +16,7 @@
       {
         "type": "Subtitle",
         "lineId": "line.warden.intro.elder",
-        "presentationProfile": "story.immersive_subtitle",
+        "presentationProfile": "story.transmission",
         "start": 0.0,
         "duration": 1.8
       },
@@ -30,15 +29,15 @@
       {
         "type": "Subtitle",
         "lineId": "line.warden.intro.shrine",
-        "presentationProfile": "story.immersive_subtitle",
+        "presentationProfile": "story.transmission",
         "start": 2.0,
         "duration": 1.8
       }
-    ]
+    ],
+    "displayNameToken": "story.sequence.narrative.intro"
   },
   {
     "id": "Sequence.Narrative.TrialReveal",
-    "displayName": "Ashen Oath Trial Reveal",
     "clearCameraOnComplete": true,
     "clock": {
       "rate": 1.0,
@@ -64,11 +63,11 @@
         "actionGraphId": "Graph.Narrative.Action.SignalAck",
         "start": 0.35
       }
-    ]
+    ],
+    "displayNameToken": "story.sequence.narrative.trial_reveal"
   },
   {
     "id": "Sequence.Demo.Overture",
-    "displayName": "纯演出：镜头过场",
     "clearCameraOnComplete": true,
     "clock": {
       "rate": 1.0,
@@ -114,6 +113,7 @@
         "start": 4.5,
         "duration": 1.8
       }
-    ]
+    ],
+    "displayNameToken": "story.sequence.demo.overture"
   }
 ]

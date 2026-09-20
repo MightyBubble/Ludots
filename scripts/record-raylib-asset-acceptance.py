@@ -25,7 +25,7 @@ from pathlib import Path
 
 APP_PROJECT = "src/Apps/Raylib/Ludots.App.RaylibAssetAcceptance/Ludots.App.RaylibAssetAcceptance.csproj"
 APP_EXE = "src/Apps/Raylib/Ludots.App.RaylibAssetAcceptance/bin/Debug/net9.0/Ludots.App.RaylibAssetAcceptance.exe"
-MANNEQUIN = "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/assets/Models/mannequin_large_walk.glb"
+MANNEQUIN = "projects/engine_gallery/Models/mannequin_large_walk.glb"
 CRASH_OBJ = "mods/capabilities/navigation/MassNavigationMod/assets/Models/mass_navigation_blocker_rock.obj"
 EVIDENCE_PREFIX = "raylib_asset_acceptance_"
 

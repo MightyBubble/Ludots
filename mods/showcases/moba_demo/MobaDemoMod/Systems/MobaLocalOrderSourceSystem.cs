@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
@@ -15,6 +16,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
@@ -178,6 +180,22 @@ namespace MobaDemoMod.Systems
             // via GAS -> PresentationEvent bridge; no mod-level marker logic needed.
             _inputOrderMapping.SetOrderSubmitHandler((in Order order) =>
             {
+                if (IsReplicatedClient())
+                {
+                    if (!_globals.TryGetValue(CoreServiceKeys.ReplicatedClientCommandPort.Name, out object? portValue) ||
+                        portValue is not IReplicatedClientCommandPort port)
+                    {
+                        throw new InvalidOperationException(
+                            "Replicated-client MOBA input requires the platform-neutral client command port.");
+                    }
+
+                    ReplicatedClientCommandSubmitResult networkResult = port.Submit(in order);
+                    _globals[LocalOrderSourceHelper.LastNetworkSubmitResultDebugKey] = networkResult;
+                    return networkResult == ReplicatedClientCommandSubmitResult.Submitted
+                        ? OrderSubmitResult.Queued
+                        : OrderSubmitResult.RejectedByRule;
+                }
+
                 return _orders.Submit(in order);
             });
 
@@ -263,6 +281,10 @@ namespace MobaDemoMod.Systems
             playerId = seat.PossessedPlayerId;
             return true;
         }
+
+        private bool IsReplicatedClient() =>
+            _globals.TryGetValue(CoreServiceKeys.NetworkProcessRole.Name, out object? roleValue) &&
+            roleValue is NetworkProcessRole.ReplicatedClient;
 
         private Entity GetControlledActor(int playerId)
         {
@@ -406,19 +428,19 @@ namespace MobaDemoMod.Systems
         {
             if (input.PressedThisFrame("ModeWoW"))
             {
-                mapping.SetInteractionMode(InteractionModeType.TargetFirst);
+                mapping.SetInteractionMode(CastModeType.TargetFirst);
             }
             else if (input.PressedThisFrame("ModeLoL"))
             {
-                mapping.SetInteractionMode(InteractionModeType.SmartCast);
+                mapping.SetInteractionMode(CastModeType.SmartCast);
             }
             else if (input.PressedThisFrame("ModeSC2"))
             {
-                mapping.SetInteractionMode(InteractionModeType.AimCast);
+                mapping.SetInteractionMode(CastModeType.AimCast);
             }
             else if (input.PressedThisFrame("ModeIndicator"))
             {
-                mapping.SetInteractionMode(InteractionModeType.SmartCastWithIndicator);
+                mapping.SetInteractionMode(CastModeType.SmartCastWithIndicator);
             }
         }
 
@@ -438,14 +460,14 @@ namespace MobaDemoMod.Systems
             overlay.AddText(16, 42, "F1 WoW(TargetFirst) | F2 LoL(SmartCast) | F3 SC2(AimCast) | F4 Indicator", 16, new Vector4(0.78f, 0.92f, 1f, 1f));
         }
 
-        private static string ToModeLabel(InteractionModeType mode)
+        private static string ToModeLabel(CastModeType mode)
         {
             return mode switch
             {
-                InteractionModeType.TargetFirst => "WoW / target first",
-                InteractionModeType.SmartCast => "LoL / smart cast",
-                InteractionModeType.AimCast => "SC2 / aim then confirm",
-                InteractionModeType.SmartCastWithIndicator => "LoL Indicator / hold to show, release to cast",
+                CastModeType.TargetFirst => "WoW / target first",
+                CastModeType.SmartCast => "LoL / smart cast",
+                CastModeType.AimCast => "SC2 / aim then confirm",
+                CastModeType.SmartCastWithIndicator => "LoL Indicator / hold to show, release to cast",
                 _ => mode.ToString()
             };
         }

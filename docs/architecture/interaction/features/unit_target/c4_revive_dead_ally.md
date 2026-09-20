@@ -48,7 +48,7 @@ InputOrderMapping:
 | 组件 | 状态 |
 |------|------|
 | InputOrderMapping.Entity | ✅ 已有 |
-| InteractionModeType (4种) | ✅ 已有 |
+| CastModeType (4种) | ✅ 已有 |
 | Entity Tag System | ✅ 已有 |
 | HasTag/RemoveTag Graph ops | ✅ 已有 |
 | SetAttribute Graph op | ✅ 已有 |

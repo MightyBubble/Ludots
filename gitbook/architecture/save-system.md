@@ -68,6 +68,7 @@ Arch.Persistence 的 contractless 反射不能正确覆盖 Ludots 的 fixed buff
 | 含托管引用的 ECS 组件（`string`、数组、集合、引用类型字段） | 否。写入闸门 fail-fast | 手写 `IMessagePackFormatter<T>` 并实现 `ILudotsPersistenceComponentFormatter`，在 `LudotsCorePersistenceFormatters.CreateFormatters()` 显式注册 | 补 round-trip 测试与缺 formatter fail-fast 测试，防止回退到 contractless |
 | 含 `Entity` 引用的 ECS 组件或 buffer | formatter 规则同上：unmanaged 自动、managed 显式 | 除 formatter 外，还必须在 `SaveEntityReferenceValidator` 登记有效性校验，并在 `SaveEntityWorldIdNormalizer` 登记读回 WorldId 归一化 | 覆盖引用实体 alive、Id / Version 保真、WorldId 归一化、引用被排除实体时 fail-fast |
 | 非 ECS 域状态（clock、session、registry 外的运行时服务状态） | 否，不进入 `world.bin` | 实现 `ISaveParticipant`，通过 `SaveParticipantRegistry` 贡献 `domains.json`；domain key 必须唯一，不新建平行存档管线 | 补 participant capture / restore 测试，覆盖未知 domain、缺失 domain、重复 domain fail-fast |
+| 玩家面存档 UI（槽位/存/读/删/autosave） | 不适用 | 挂载 `SavePanelMod`（依赖或 launcher binding）即可；面板走 `CoreServiceKeys.SaveStorage` + `SaveSlotStore`，图可用 `ShowPanel("SavePanel")` 触发，快捷键 F5 | 面板可见性/槽位操作由 showcase UAT 覆盖（见 #1205） |
 | 不应进入存档的实体或瞬时事件实体 | 否，被策略排除 | 给实体挂 `SaveExcludedTag`，或使用既有排除类型：`GameplayEvent`、`SimulationBudgetFuseEvent`、`PresentationDestroyPending` | 补 inclusion policy 或引用校验测试，确保 persistent 实体不能引用被排除实体 |
 
 ## 非 ECS 域
@@ -85,20 +86,56 @@ public interface ISaveParticipant
 
 `SaveParticipantRegistry` 要求 domain key 唯一，读档时拒绝未知 domain，也拒绝缺失已注册 domain。Core 引擎初始化时注册这些 domain：
 
-- `activity`
+- `activities`
 - `clock`
+- `dialogue`
+- `fields`
 - `gameSession`
 - `inventory`
 - `mapSessions`
-- `dialogue`
-- `sequencer`
 - `relationships`
 - `rng`
-- `task`
+- `sequencer`
+- `tasks`
 - `teams`
 - `timeFlow`
 
 `inventory` 是空 domain 占位，用来固定存档合同；`relationships` 的 runtime 索引由 world 里的关系实体在 restore 后重建（`RebuildEntityIndexFromWorld`），capture 为空。真正 runtime 状态接入时必须在同一 domain 下深化 participant，不新建平行存档管线。
+
+### 15 分钟接入：最小 ISaveParticipant
+
+```csharp
+// 1) 实现 participant：CaptureState 导出状态，RestoreState 读回（不对称即写错）
+public sealed class MoneySaveParticipant : ISaveParticipant
+{
+    private readonly MoneyRuntimeService _money;
+    public MoneySaveParticipant(MoneyRuntimeService money) => _money = money;
+
+    public string DomainKey => "money";
+    public JsonNode CaptureState() => new JsonObject { ["gold"] = _money.Gold };
+    public void RestoreState(JsonNode state)
+    {
+        if (state["gold"] is not JsonObject && state["gold"] is not JsonValue)
+            throw new SaveContextException("money domain: gold is required.");
+        _money.SetGold(state["gold"]!.GetValue<int>());
+    }
+}
+
+// 2) 注册（引擎初始化后任意时机；domain key 全局唯一，重复注册抛异常）
+engine.GetService(CoreServiceKeys.SaveParticipants)
+       .Register(new MoneySaveParticipant(moneyService));
+
+// 3) 触发一次存/读（槽位落盘走引擎 ISaveStorage，见下文落盘归属）
+var snapshot = new WorldSnapshotService().Capture(engine,
+    SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
+new SaveSlotStore(engine.GetService(CoreServiceKeys.SaveStorage)!)
+    .WriteSlot(SaveSlotId.Manual("quickstart"), snapshot);
+var restored = new SaveSlotStore(engine.GetService(CoreServiceKeys.SaveStorage)!)
+    .ReadSlot(SaveSlotId.Manual("quickstart"));
+new WorldRestoreService().Restore(engine, restored);
+```
+
+验证：`SaveParticipantRegistryTests`（domain 唯一/未知/缺失 fail-fast）与 `SaveSystemUatTests` 是现成的参照测试；跑起来看用 `preset:save_load_showcase_raylib`。
 
 ## 容器、槽位与平台边界
 
@@ -172,3 +209,4 @@ UAT 证据输出到 `artifacts/acceptance/save-system/`。
 - `src/Platform/Ludots.Platform.Abstractions/ISaveStorage.cs`
 - `src/Platform/Ludots.Platform.Desktop/DesktopSaveStorage.cs`
 - `src/Tests/PersistenceTests/`
+

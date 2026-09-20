@@ -195,6 +195,7 @@ def parse_prd_catalog(readme_path: Path) -> dict:
 # ---------------------------------------------------------------------------
 
 GRAPH_OP_WIKI_DIR = GITBOOK_DIR / "reference" / "graph-node-op-wiki"
+ENGINE_MANUAL_DIR = GITBOOK_DIR / "reference" / "engine-manual"
 ENGINE_GALLERY_WIKI_DIR = GITBOOK_DIR / "reference" / "engine-gallery-wiki"
 WIKI_FAMILY_HEADING = re.compile(r"^## (.+?)\s*$")
 WIKI_OP_ITEM = re.compile(r"^-\s+\[(?P<title>[^\]]+)\]\((?P<file>[^)]+?\.md)\)\s*(?:—|-)\s*(?P<desc>.*)$")
@@ -543,6 +544,13 @@ def build(out_dir: Path) -> int:
         **parse_wiki_catalog(ENGINE_GALLERY_WIKI_DIR / "README.md", "engine-gallery-wiki"),
     }
 
+    print("-- 解析 engine-manual/README.md 手册目录 -> engine-manual-nav.js")
+    engine_manual_nav = {
+        "generatedAt": now,
+        "source": "gitbook/reference/engine-manual/README.md",
+        **parse_wiki_catalog(ENGINE_MANUAL_DIR / "README.md", "engine-manual"),
+    }
+
     print("-- 解析 panel-cases/README.md 家族目录 -> panels-nav.js")
     panels_nav = {
         "generatedAt": now,
@@ -592,6 +600,7 @@ def build(out_dir: Path) -> int:
     write_js(out_dir / "site-assets" / "prd-nav.js", "PRD_NAV", prd_nav)
     write_js(out_dir / "site-assets" / "graph-op-nav.js", "GRAPH_OP_NAV", graph_op_nav)
     write_js(out_dir / "site-assets" / "engine-gallery-nav.js", "ENGINE_GALLERY_NAV", engine_gallery_nav)
+    write_js(out_dir / "site-assets" / "engine-manual-nav.js", "ENGINE_MANUAL_NAV", engine_manual_nav)
     write_js(out_dir / "site-assets" / "gallery-data.js", "GALLERY_DATA", gallery_data)
     write_js(out_dir / "site-assets" / "evidence-data.js", "EVIDENCE_DATA", evidence_data)
 
@@ -602,11 +611,12 @@ def build(out_dir: Path) -> int:
     print("-- 结构自验")
     required = [
         "index.html", "gallery.html", "tests.html", "diagrams.html", "panels.html",
-        "graph-op-wiki.html", "raylib-engine.html", "agent-bridge.html",
+        "graph-op-wiki.html", "raylib-engine.html", "engine-manual.html", "agent-bridge.html",
         "site-assets/site.css", "site-assets/site.js",
         "site-assets/docs-nav.js", "site-assets/prd-nav.js", "site-assets/graph-op-nav.js",
         "site-assets/panels-nav.js",
         "site-assets/engine-gallery-nav.js",
+        "site-assets/engine-manual-nav.js",
         "site-assets/gallery-data.js", "site-assets/evidence-data.js",
         ".nojekyll",
     ]
@@ -638,6 +648,7 @@ def build(out_dir: Path) -> int:
     print('  PRD 手册篇目        : {}/{} 已写（{} 卷）'.format(prd_nav['written'], prd_nav['total'], len(prd_nav['volumes'])))
     print('  Graph 节点 Wiki op  : {}（{} 家族）'.format(graph_op_nav['total'], len(graph_op_nav['families'])))
     print('  引擎画廊 Wiki 场景  : {}（{} 家族）'.format(engine_gallery_nav['total'], len(engine_gallery_nav['families'])))
+    print('  引擎手册篇目        : {}（{} 章）'.format(engine_manual_nav['total'], len(engine_manual_nav['families'])))
     print(f"  注册 showcase       : {len(showcases)}")
     print(f"  验收证据条目        : {len(evidence)}（目录 {sum(1 for e in evidence if e['kind'] == 'dir')} + 散装报告 {sum(1 for e in evidence if e['kind'] == 'report')}）")
     print(f"  diagrams SVG        : {svg_count}")

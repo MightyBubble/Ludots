@@ -1,0 +1,33 @@
+fast-release-before.log
+  失败 FastBoxRelease_ClearsGestureAndPreview(1,False) [6 s]
+  失败 FastBoxRelease_ClearsGestureAndPreview(2,False) [281 ms]
+  已通过 FastBoxRelease_ClearsGestureAndPreview(3,False) [264 ms]
+  已通过 FastBoxRelease_ClearsGestureAndPreview(6,False) [200 ms]
+  失败 FastBoxRelease_ClearsGestureAndPreview(1,True) [298 ms]
+  失败 FastBoxRelease_ClearsGestureAndPreview(2,True) [208 ms]
+  已通过 FastBoxRelease_ClearsGestureAndPreview(3,True) [340 ms]
+  失败 FastBoxRelease_ClearsGestureAndPreview(6,True) [235 ms]
+测试总数: 8
+     通过数: 3
+     失败数: 5
+总时间: 11.4225 秒
+fast-release-regression-complete.log
+  失败 ProductionGraphsAndMaps_UseRenamedKindAndMountField [22 ms]
+  已通过 FastBoxRelease_ClearsGestureAndPreview(1,False) [384 ms]
+  已通过 FastBoxRelease_ClearsGestureAndPreview(2,False) [412 ms]
+  已通过 FastBoxRelease_ClearsGestureAndPreview(3,False) [850 ms]
+  已通过 FastBoxRelease_ClearsGestureAndPreview(6,False) [413 ms]
+  已通过 FastBoxRelease_ClearsGestureAndPreview(1,True) [409 ms]
+  已通过 FastBoxRelease_ClearsGestureAndPreview(2,True) [430 ms]
+  已通过 FastBoxRelease_ClearsGestureAndPreview(3,True) [452 ms]
+  已通过 FastBoxRelease_ClearsGestureAndPreview(6,True) [457 ms]
+  已通过 RepeatedFastGestures_EndWithNoResiduals(1,1,False) [488 ms]
+  已通过 RepeatedFastGestures_EndWithNoResiduals(1,2,False) [509 ms]
+  已通过 RepeatedFastGestures_EndWithNoResiduals(2,1,False) [1 s]
+  已通过 RepeatedFastGestures_EndWithNoResiduals(3,1,False) [580 ms]
+  已通过 RepeatedFastGestures_EndWithNoResiduals(2,1,True) [570 ms]
+  已通过 RepeatedFastGestures_EndWithNoResiduals(3,1,True) [534 ms]
+测试总数: 285
+     通过数: 284
+     失败数: 1
+总时间: 25.3700 秒

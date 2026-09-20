@@ -18,6 +18,17 @@ public sealed class CapabilityStandardHfsmSentryArenaModEntry : IMod
     {
         context.Log("[CapabilityStandardHfsmSentryArenaMod] Loaded (HFSM-only showcase)");
         var runtime = new HfsmSentryArenaRuntime();
+        var panel = new GraphShowcasePanelController(
+            runtime.BuildControlState,
+            runtime.TogglePaused,
+            runtime.Step,
+            runtime.ToggleL2,
+            runtime.ToggleStimulus,
+            runtime.IncreaseAlertRadius,
+            runtime.DecreaseAlertRadius,
+            runtime.IncreaseThinkPeriod,
+            runtime.DecreaseThinkPeriod,
+            runtime.ResetScenario);
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
             GameEngine? engine = ctx.GetEngine();
@@ -30,10 +41,15 @@ public sealed class CapabilityStandardHfsmSentryArenaModEntry : IMod
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
             engine.RegisterSystem(new HfsmSentryArenaSimulationSystem(engine, runtime), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new HfsmSentryArenaPresentationSystem(runtime, debugDraw));
+            engine.RegisterPresentationSystem(new HfsmSentryArenaPresentationSystem(engine, runtime, debugDraw, panel));
             return Task.CompletedTask;
         });
         context.OnEvent(GameEvents.MapLoaded, _ => { runtime.EnsureWorld(); return Task.CompletedTask; });
+        context.OnEvent(GameEvents.MapUnloaded, _ =>
+        {
+            panel.Clear();
+            return Task.CompletedTask;
+        });
     }
 
     public void OnUnload() { }

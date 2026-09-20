@@ -1,0 +1,85 @@
+{
+    "schemaVersion":  1,
+    "imagePath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260824T_kimi_final8\\screens\\client-a\\frontline_003_engaging.png",
+    "width":  1280,
+    "height":  720,
+    "passed":  true,
+    "requirements":  [
+                         {
+                             "role":  "battleInfantryBodies",
+                             "presentationTemplate":  "rts.frontline.infantry.body",
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  2,
+                             "passingRegions":  5,
+                             "matchingPixels":  1509,
+                             "passed":  true,
+                             "regions":  [
+                                             {
+                                                 "id":  "51:17673833",
+                                                 "x":  639,
+                                                 "y":  310,
+                                                 "width":  26,
+                                                 "height":  33,
+                                                 "matchingPixels":  325,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:31791884",
+                                                 "x":  614,
+                                                 "y":  329,
+                                                 "width":  27,
+                                                 "height":  34,
+                                                 "matchingPixels":  385,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:34844020",
+                                                 "x":  615,
+                                                 "y":  310,
+                                                 "width":  26,
+                                                 "height":  33,
+                                                 "matchingPixels":  142,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:48195193",
+                                                 "x":  556,
+                                                 "y":  309,
+                                                 "width":  28,
+                                                 "height":  33,
+                                                 "matchingPixels":  358,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:54682904",
+                                                 "x":  596,
+                                                 "y":  306,
+                                                 "width":  27,
+                                                 "height":  34,
+                                                 "matchingPixels":  299,
+                                                 "passed":  true
+                                             }
+                                         ]
+                         },
+                         {
+                             "role":  "damagedCommandCore",
+                             "presentationTemplate":  "rts.frontline.core.base",
+                             "minimumPixelsPerRegion":  8,
+                             "minimumPassingRegions":  1,
+                             "passingRegions":  1,
+                             "matchingPixels":  943,
+                             "passed":  true,
+                             "regions":  [
+                                             {
+                                                 "id":  "42:51247320",
+                                                 "x":  549,
+                                                 "y":  321,
+                                                 "width":  81,
+                                                 "height":  66,
+                                                 "matchingPixels":  943,
+                                                 "passed":  true
+                                             }
+                                         ]
+                         }
+                     ]
+}

@@ -1,0 +1,232 @@
+[
+  {
+    "id": "hfsm.rts.transport",
+    "root": "transport",
+    "states": [
+      {
+        "id": "transport",
+        "kind": "Compound",
+        "children": [
+          "idle",
+          "toSource",
+          "loading",
+          "toSink",
+          "dock"
+        ],
+        "defaultChild": "idle"
+      },
+      {
+        "id": "idle",
+        "kind": "Leaf"
+      },
+      {
+        "id": "toSource",
+        "kind": "Leaf",
+        "onEnter": "rts.transport.toSource.enter",
+        "onTick": "rts.transport.toSource.tick"
+      },
+      {
+        "id": "loading",
+        "kind": "Leaf",
+        "onEnter": "rts.transport.loading.enter",
+        "onTick": "rts.transport.loading.tick"
+      },
+      {
+        "id": "toSink",
+        "kind": "Leaf",
+        "onEnter": "rts.transport.toSink.enter",
+        "onTick": "rts.transport.toSink.tick"
+      },
+      {
+        "id": "dock",
+        "kind": "Leaf",
+        "onEnter": "rts.transport.dock.credit"
+      }
+    ],
+    "transitions": [
+      {
+        "from": "idle",
+        "to": "toSource",
+        "predicate": "Always",
+        "condition": "rts.transport.idle.guardGather"
+      },
+      {
+        "from": "toSource",
+        "to": "loading",
+        "predicate": "Always",
+        "condition": "rts.transport.toSource.atSource"
+      },
+      {
+        "from": "loading",
+        "to": "toSource",
+        "predicate": "Always",
+        "priority": 40,
+        "condition": "rts.transport.idle.guardGather"
+      },
+      {
+        "from": "loading",
+        "to": "toSink",
+        "predicate": "Always",
+        "condition": "rts.transport.loading.loaded"
+      },
+      {
+        "from": "toSink",
+        "to": "toSource",
+        "predicate": "Always",
+        "priority": 40,
+        "condition": "rts.transport.idle.guardGather"
+      },
+      {
+        "from": "toSink",
+        "to": "dock",
+        "predicate": "Always",
+        "condition": "rts.transport.toSink.atSink"
+      },
+      {
+        "from": "toSink",
+        "to": "idle",
+        "predicate": "Always",
+        "condition": "rts.transport.toSink.sinkLost"
+      },
+      {
+        "from": "dock",
+        "to": "toSource",
+        "predicate": "Always",
+        "priority": 40,
+        "condition": "rts.transport.idle.guardGather"
+      },
+      {
+        "from": "dock",
+        "to": "idle",
+        "predicate": "Always"
+      }
+    ]
+  },
+  {
+    "id": "hfsm.rts.attack",
+    "root": "attack",
+    "states": [
+      {
+        "id": "attack",
+        "kind": "Compound",
+        "children": [
+          "wait",
+          "pursuit",
+          "track",
+          "engage"
+        ],
+        "defaultChild": "wait"
+      },
+      {
+        "id": "wait",
+        "kind": "Leaf"
+      },
+      {
+        "id": "pursuit",
+        "kind": "Leaf",
+        "onEnter": "rts.attack.pursuit.enter",
+        "onTick": "rts.attack.pursuit.route"
+      },
+      {
+        "id": "track",
+        "kind": "Leaf",
+        "onTick": "rts.attack.pursuit.route"
+      },
+      {
+        "id": "engage",
+        "kind": "Leaf",
+        "onTick": "rts.attack.engage.cooldown"
+      }
+    ],
+    "transitions": [
+      {
+        "from": "wait",
+        "to": "pursuit",
+        "predicate": "Always",
+        "priority": 10,
+        "condition": "rts.attack.idle.guardAttack"
+      },
+      {
+        "from": "wait",
+        "to": "track",
+        "predicate": "Always",
+        "condition": "rts.attack.wait.resumeTarget"
+      },
+      {
+        "from": "pursuit",
+        "to": "engage",
+        "predicate": "Always",
+        "priority": 20,
+        "condition": "rts.attack.pursuit.inRange"
+      },
+      {
+        "from": "pursuit",
+        "to": "wait",
+        "predicate": "Always",
+        "priority": 20,
+        "condition": "rts.attack.cond.targetLost"
+      },
+      {
+        "from": "pursuit",
+        "to": "track",
+        "predicate": "Always"
+      },
+      {
+        "from": "track",
+        "to": "pursuit",
+        "predicate": "Always",
+        "priority": 40,
+        "condition": "rts.attack.idle.guardAttack"
+      },
+      {
+        "from": "track",
+        "to": "wait",
+        "predicate": "Always",
+        "priority": 30,
+        "condition": "rts.attack.cond.moveOrdered"
+      },
+      {
+        "from": "track",
+        "to": "wait",
+        "predicate": "Always",
+        "priority": 20,
+        "condition": "rts.attack.cond.targetLost"
+      },
+      {
+        "from": "track",
+        "to": "engage",
+        "predicate": "Always",
+        "priority": 20,
+        "condition": "rts.attack.pursuit.inRange"
+      },
+      {
+        "from": "engage",
+        "to": "pursuit",
+        "predicate": "Always",
+        "priority": 40,
+        "condition": "rts.attack.idle.guardAttack"
+      },
+      {
+        "from": "engage",
+        "to": "wait",
+        "predicate": "Always",
+        "priority": 30,
+        "condition": "rts.attack.cond.moveOrdered"
+      },
+      {
+        "from": "engage",
+        "to": "wait",
+        "predicate": "Always",
+        "priority": 20,
+        "condition": "rts.attack.cond.targetLost"
+      },
+      {
+        "from": "engage",
+        "to": "track",
+        "predicate": "Always",
+        "priority": 20,
+        "condition": "rts.attack.engage.outOfRange"
+      }
+    ]
+  }
+]

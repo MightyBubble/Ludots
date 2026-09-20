@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 2,
+  "status": "failed",
+  "role": "replicatedClient",
+  "failure": "System.InvalidOperationException: Command Gather sequence 1 was rejected at NetworkIntake: NetworkTargetTickTooFarAhead.\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.TryCompletePendingCommand() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 1113\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateGathering() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 405\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateClient() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 247\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.Update(Single\u0026 dt) in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 179",
+  "startedAtUtc": "2026-07-25T10:52:21.6048955Z",
+  "completedAtUtc": "2026-07-25T10:52:27.6640498Z",
+  "planFingerprint": "052c4fd97d01835f9f322c361fa7c6b852d8be14eec7ffbe999850dd27920315",
+  "contentFingerprint": "80df1baf7fa162f8c0c81504c728186c6244269040a7694248d1e3fb1481d1d5",
+  "sessionEpoch": 1369914567364652542,
+  "playerId": 2,
+  "seatSlot": 1,
+  "faultCount": 0,
+  "seats": [
+    {
+      "seatSlot": 0,
+      "playerId": 1,
+      "connectionState": "Connected",
+      "readyState": "Unready"
+    },
+    {
+      "seatSlot": 1,
+      "playerId": 2,
+      "connectionState": "Connected",
+      "readyState": "Unready"
+    }
+  ],
+  "steps": [
+    {
+      "name": "Connecting",
+      "status": "passed",
+      "startedInputRevision": 0,
+      "completedInputRevision": 13,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-25T10:52:21.6073339Z",
+      "completedAtUtc": "2026-07-25T10:52:23.0818158Z",
+      "detail": "Full snapshot and local player binding are ready."
+    },
+    {
+      "name": "Ready",
+      "status": "passed",
+      "startedInputRevision": 13,
+      "completedInputRevision": 97,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 7,
+      "startedAtUtc": "2026-07-25T10:52:23.0824249Z",
+      "completedAtUtc": "2026-07-25T10:52:27.2351332Z",
+      "detail": "Both commanders readied through input and the match reached InProgress."
+    },
+    {
+      "name": "Gathering",
+      "status": "failed",
+      "startedInputRevision": 97,
+      "completedInputRevision": 0,
+      "startedCommittedTick": 7,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-25T10:52:27.2351668Z",
+      "completedAtUtc": "2026-07-25T10:52:27.6640564Z",
+      "detail": "Command Gather sequence 1 was rejected at NetworkIntake: NetworkTargetTickTooFarAhead."
+    }
+  ],
+  "commands": [],
+  "gameplay": {
+    "initialCrystals": 40,
+    "harvestedCrystals": -1,
+    "postTrainingCrystals": -1,
+    "initialInfantryCount": 2,
+    "trainedInfantryCount": -1,
+    "harvesterHandle": "6:1",
+    "harvesterStartPosition": {
+      "handle": "6:1",
+      "xCm": 21800,
+      "yCm": 15800
+    },
+    "harvesterEndPosition": null,
+    "selectedInfantryHandles": [],
+    "moveStartPositions": [],
+    "moveEndPositions": [],
+    "initialVisibleEnemyInfantryCount": 0,
+    "initialVisibleEnemyCoreCount": 0,
+    "enemyInfantryEnteredVision": false,
+    "enemyCoreEnteredVision": false,
+    "attackTargetHandle": "",
+    "attackTargetHealthBefore": -1,
+    "attackTargetHealthAfter": -1,
+    "observedCoreHealthBySide": [
+      null,
+      1000
+    ],
+    "observedInfantryCountBySide": [
+      null,
+      2
+    ],
+    "matchPhase": "",
+    "outcome": "",
+    "outcomeSource": "",
+    "winningSideIndex": -1,
+    "committedTick": 0,
+    "committedTickSource": ""
+  },
+  "runtime": {
+    "capturedAtUtc": "2026-07-25T10:52:27.6578068Z",
+    "stage": "Gathering",
+    "substep": 3,
+    "pendingCommandAction": "Gather",
+    "pendingCommandSequence": 1,
+    "selectedActors": [
+      {
+        "handle": "6:1",
+        "isAlive": true,
+        "hasReplicationIdentity": true,
+        "xCm": 21800,
+        "yCm": 15800
+      }
+    ],
+    "hasBattlePoints": false,
+    "meetingPoint": null,
+    "siegePoint": null,
+    "visibleEnemyCoreCount": 0,
+    "committedTick": 19,
+    "matchPhase": "InProgress",
+    "outcome": "InProgress"
+  }
+}

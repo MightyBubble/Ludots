@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -69,6 +70,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var q = new EffectRequestQueue();
             var api = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: q);
+            if (api is GasGraphRuntimeApi concreteApi) concreteApi.AggregateDirty ??= new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
 
             var target = world.Create();
 
@@ -90,6 +92,75 @@ namespace Ludots.Tests.GAS
             req.CallerParams.TryGetFloat(Ludots.Core.Gameplay.GAS.EffectParamKeys.ForceYAttribute, out float f1);
             That(f0, Is.EqualTo(12.5f));
             That(f1, Is.EqualTo(-7.0f));
+        }
+
+        [Test]
+        public void GraphExecutor_ApplyEffectTemplate_InEffectContext_InheritsRootId()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            var api = new GasGraphRuntimeApi(world, effectRequests: requests);
+            if (api is GasGraphRuntimeApi concreteApi) concreteApi.AggregateDirty ??= new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var effectEntity = world.Create();
+            var caster = world.Create();
+            var target = world.Create();
+            var context = new EffectContext
+            {
+                RootId = 47,
+                Source = caster,
+                Target = target,
+            };
+            EffectConfigParams mergedParams = default;
+
+            api.BeginBuiltinInvocation(
+                new BuiltinHandlerRegistry(),
+                new EffectTemplateRegistry(),
+                builtinRuntime: null,
+                effectEntity,
+                effectTemplateId: 1,
+                in context,
+                in mergedParams);
+            try
+            {
+                GraphInstruction[] program =
+                {
+                    new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 1, Imm = 123 },
+                    new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                };
+
+                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+            }
+            finally
+            {
+                api.EndBuiltinInvocation();
+            }
+
+            That(requests.Count, Is.EqualTo(1));
+            That(requests[0].RootId, Is.EqualTo(47));
+        }
+
+        [Test]
+        public void GraphExecutor_ApplyEffectTemplate_WithoutEffectContext_AssignsDistinctRoots()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            var api = new GasGraphRuntimeApi(world, effectRequests: requests);
+            if (api is GasGraphRuntimeApi concreteApi) concreteApi.AggregateDirty ??= new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var caster = world.Create();
+            var target = world.Create();
+            GraphInstruction[] program =
+            {
+                new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 1, Imm = 123 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            };
+
+            GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+            GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+
+            That(requests.Count, Is.EqualTo(2));
+            That(requests[0].RootId, Is.GreaterThan(0));
+            That(requests[1].RootId, Is.GreaterThan(0));
+            That(requests[1].RootId, Is.Not.EqualTo(requests[0].RootId));
         }
     }
 }

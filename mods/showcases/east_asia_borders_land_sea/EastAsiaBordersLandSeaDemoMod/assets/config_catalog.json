@@ -1,0 +1,4 @@
+[
+  { "Path": "MassNavigationConfig.json", "Policy": "DeepObject" },
+  { "Path": "Navigation/pathing.json", "Policy": "DeepObject" }
+]

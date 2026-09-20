@@ -1,7 +1,13 @@
 {
   "Id": "capability_standard_static_presenter_30k_showcase",
-  "Tags": ["showcase", "presenter"],
-  "VisualHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_showcase_flat.vhtm",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
+  "Tags": [
+    "showcase",
+    "presenter"
+  ],
+  "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_showcase_flat.height",
   "Metadata": {
     "capabilityStandardStaticPresenter30k": {
       "scatterInitialTarget": 30000,
@@ -15,10 +21,9 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 16
+      "WidthCells": 256,
+      "HeightCells": 256,
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {
@@ -29,7 +34,12 @@
     {
       "Template": "capability_static_presenter_building",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        }
       }
     }
   ]

@@ -13,7 +13,11 @@ namespace Ludots.Core.Gameplay.GAS
         public bool HasHeldPolicy;
         public HeldPolicy HeldPolicy;
         public bool HasCastModeOverride;
-        public InteractionModeType CastModeOverride;
+        public CastModeType CastModeOverride;
+        public bool HasTargetType;
+        public OrderTargetType TargetType;
+        public bool HasModifierBehavior;
+        public ModifierSubmitBehavior ModifierBehavior;
         public bool HasAutoTargetPolicy;
         public AutoTargetPolicy AutoTargetPolicy;
         public bool HasAutoTargetRangeCm;

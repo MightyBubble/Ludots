@@ -42,8 +42,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.LoadTextKey:
                         ins.Imm = symbolResolver.ResolveTextToken(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.SubmitAssignedOrder:
+                    case GraphNodeOp.LoadOrderTypeId:
+                        ins.Imm = symbolResolver.ResolveOrderType(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.StartDialogue:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.OfferActivity:
+                    case GraphNodeOp.OfferTask:
+                        _ = ResolveSymbol(symbols, ins.Imm);
+                        break;
                     case GraphNodeOp.LoadAttribute:
                     case GraphNodeOp.ModifyAttributeAdd:
+                    case GraphNodeOp.ModifyAttributeSet:
                     case GraphNodeOp.QueryFilterAttributeRange:
                     case GraphNodeOp.QuerySortByAttribute:
                     case GraphNodeOp.AggSumAttribute:
@@ -59,6 +71,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.QueryFilterTemplate:
                     case GraphNodeOp.SpawnTemplate:
                         ins.Imm = symbolResolver.ResolveEntityTemplate(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.QueryCollectAbilityHolders:
+                        ins.Imm = symbolResolver.ResolveAbility(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.ResolveTableRow:
                         ins.Imm = symbolResolver.ResolveGraphLookupTable(ResolveSymbol(symbols, ins.Imm));
@@ -78,6 +93,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.ReadMapVarFloat:
                     case GraphNodeOp.WriteMapVarInt:
                     case GraphNodeOp.WriteMapVarFloat:
+                    case GraphNodeOp.SetInteractionMode:
                     case GraphNodeOp.LoadEntryPayloadEntity:
                     case GraphNodeOp.LoadEntryPayloadInt:
                     case GraphNodeOp.LoadEntryPayloadFloat:
@@ -109,8 +125,50 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.DestroyPanel:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.ActivateContext:
+                        ins.Imm = ContextOpEncoding.Pack(
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
+                            ins.Dst == byte.MaxValue
+                                ? 0
+                                : ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
+                        ins.Dst = 0;
+                        break;
+                    case GraphNodeOp.DeactivateContext:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+
+                    case GraphNodeOp.WriteCollection:
+                        // The collection key resolves in the EntityCollectionStore key space,
+                        // same space QueryFromCollection reads.
+                        ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.SetPanelAudience:
+                        ins.Imm = UI.PanelHosting.PanelOpEncoding.PackAudience(
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
+                            ins.Dst == byte.MaxValue
+                                ? 0
+                                : ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
+                        ins.Dst = 0;
+                        break;
                     case GraphNodeOp.QueryFromCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.QueryScreenRegionCollection:
+                        ins.ImmF = BitConverter.Int32BitsToSingle(ResolveEntityCollectionKey(entityCollections,
+                            ResolveSymbol(symbols, BitConverter.SingleToInt32Bits(ins.ImmF))));
+                        ins.Imm = ins.Imm >= 0 ? ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)) : 0;
+                        break;
+                    case GraphNodeOp.BindQueryCollection:
+                        ins.Imm = GraphIdRegistry.GetId(ResolveSymbol(symbols, ins.Imm));
+                        if (ins.Imm <= 0) throw new InvalidOperationException("ENTITY_QUERY.ERR.QueryGraphUnknown");
+                        ins.ImmF = BitConverter.Int32BitsToSingle(ResolveEntityCollectionKey(entityCollections,
+                            ResolveSymbol(symbols, BitConverter.SingleToInt32Bits(ins.ImmF))));
+                        break;
+                    case GraphNodeOp.ScreenPointToEntity:
+                        if (ins.Imm >= 0)
+                        {
+                            ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        }
                         break;
                     case GraphNodeOp.SnapToNearestInCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
@@ -174,7 +232,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         if ((op == GraphNodeOp.RelationshipSetMetric || op == GraphNodeOp.RelationshipAddMetric) &&
                             ins.Dst != byte.MaxValue)
                         {
-                            ins.Dst = checked((byte)symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
                         }
 
                         if (ins.Flags != byte.MaxValue)
@@ -204,7 +261,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                         if (op == GraphNodeOp.RelationshipSetFlag && ins.Dst != byte.MaxValue)
                         {
-                            ins.Dst = checked((byte)symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
                         }
 
                         if (op == GraphNodeOp.RelationshipSetFlag || op == GraphNodeOp.RelationshipHasFlag)

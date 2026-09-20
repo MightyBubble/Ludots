@@ -7,8 +7,18 @@
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
     "CoreInputMod": "^1.0.0",
+    "SelectionInteractionMod": "^1.0.0",
     "MassNavigationMod": "^1.0.0"
   },
   "author": "Ludots Team",
-  "tags": ["showcase", "capability-standard", "mass-navigation", "large-world", "presenter", "hudbar", "hudtext", "minimap"]
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "mass-navigation",
+    "large-world",
+    "presenter",
+    "hudbar",
+    "hudtext",
+    "minimap"
+  ]
 }

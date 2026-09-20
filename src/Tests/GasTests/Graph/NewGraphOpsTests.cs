@@ -272,7 +272,6 @@ namespace Ludots.Tests.GAS
             ExecuteProgram(world, api, caster: Entity.Null, target, program);
 
             That(world.Get<GameplayEffect>(effect).CancelRequested, Is.True);
-            That(world.Has<AttributeAggregateDirty>(target), Is.True);
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -317,9 +316,9 @@ namespace Ludots.Tests.GAS
             var high = world.Create();
             var mid = world.Create();
 
-            relationshipSetup.Runtime.SetMetric(source, low, relationshipSetup.SocialBondTypeId, relationshipSetup.LoyaltyMetricId, 20, reasonId: 0);
-            relationshipSetup.Runtime.SetMetric(source, high, relationshipSetup.SocialBondTypeId, relationshipSetup.LoyaltyMetricId, 70, reasonId: 0);
-            relationshipSetup.Runtime.SetMetric(source, mid, relationshipSetup.SocialBondTypeId, relationshipSetup.LoyaltyMetricId, 45, reasonId: 0);
+            relationshipSetup.Runtime.SetMetric(source, low, relationshipSetup.SocialBondTypeId, relationshipSetup.LoyaltyMetricId, 20);
+            relationshipSetup.Runtime.SetMetric(source, high, relationshipSetup.SocialBondTypeId, relationshipSetup.LoyaltyMetricId, 70);
+            relationshipSetup.Runtime.SetMetric(source, mid, relationshipSetup.SocialBondTypeId, relationshipSetup.LoyaltyMetricId, 45);
             relationshipSetup.Runtime.SetFlag(source, low, relationshipSetup.SocialBondTypeId, relationshipSetup.TrustedFlagId, true);
             relationshipSetup.Runtime.SetFlag(source, high, relationshipSetup.SocialBondTypeId, relationshipSetup.TrustedFlagId, true);
 
@@ -357,8 +356,8 @@ namespace Ludots.Tests.GAS
             var allyA = world.Create();
             var allyB = world.Create();
 
-            relationshipSetup.Runtime.SetMetric(source, allyA, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 55, reasonId: 0);
-            relationshipSetup.Runtime.SetMetric(source, allyB, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 80, reasonId: 0);
+            relationshipSetup.Runtime.SetMetric(source, allyA, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 55);
+            relationshipSetup.Runtime.SetMetric(source, allyB, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 80);
 
             var state = CreateState(world, relationshipSetup.Api, source, allyA);
             var program = new GraphInstruction[]
@@ -396,8 +395,8 @@ namespace Ludots.Tests.GAS
             var allyA = world.Create();
             var allyB = world.Create();
 
-            relationshipSetup.Runtime.SetMetric(source, allyA, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 55, reasonId: 0);
-            relationshipSetup.Runtime.SetMetric(source, allyB, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 80, reasonId: 0);
+            relationshipSetup.Runtime.SetMetric(source, allyA, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 55);
+            relationshipSetup.Runtime.SetMetric(source, allyB, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 80);
 
             var state = CreateState(world, relationshipSetup.Api, source, anchor);
             var program = new GraphInstruction[]
@@ -406,6 +405,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipSortByMetric, A = 0, Dst = (byte)relationshipSetup.SocialBondTypeId, Imm = relationshipSetup.SupportMetricId, Flags = 1 },
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 99 },
                 new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
 
             GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
@@ -451,7 +451,7 @@ namespace Ludots.Tests.GAS
             var source = world.Create();
             var target = world.Create();
 
-            relationshipSetup.Runtime.SetMetric(source, target, relationshipSetup.SocialBondTypeId, relationshipSetup.LoyaltyMetricId, 10, reasonId: 0);
+            relationshipSetup.Runtime.SetMetric(source, target, relationshipSetup.SocialBondTypeId, relationshipSetup.LoyaltyMetricId, 10);
 
             var state = CreateState(world, relationshipSetup.Api, source, target);
             var program = new GraphInstruction[]
@@ -474,8 +474,8 @@ namespace Ludots.Tests.GAS
             var sourceA = world.Create();
             var sourceB = world.Create();
 
-            relationshipSetup.Runtime.SetMetric(sourceA, target, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 15, reasonId: 0);
-            relationshipSetup.Runtime.SetMetric(sourceB, target, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 30, reasonId: 0);
+            relationshipSetup.Runtime.SetMetric(sourceA, target, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 15);
+            relationshipSetup.Runtime.SetMetric(sourceB, target, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 30);
 
             var state = CreateState(world, relationshipSetup.Api, target, sourceA);
             var program = new GraphInstruction[]
@@ -500,11 +500,11 @@ namespace Ludots.Tests.GAS
             var mutual = world.Create();
             var outsider = world.Create();
 
-            relationshipSetup.Runtime.SetMetric(first, mutual, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 20, reasonId: 0);
-            relationshipSetup.Runtime.SetMetric(mutual, second, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 35, reasonId: 0);
-            relationshipSetup.Runtime.SetMetric(second, mutual, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 40, reasonId: 0);
-            relationshipSetup.Runtime.SetMetric(first, outsider, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 10, reasonId: 0);
-            relationshipSetup.Runtime.SetMetric(outsider, second, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 10, reasonId: 0);
+            relationshipSetup.Runtime.SetMetric(first, mutual, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 20);
+            relationshipSetup.Runtime.SetMetric(mutual, second, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 35);
+            relationshipSetup.Runtime.SetMetric(second, mutual, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 40);
+            relationshipSetup.Runtime.SetMetric(first, outsider, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 10);
+            relationshipSetup.Runtime.SetMetric(outsider, second, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 10);
 
             var state = CreateState(world, relationshipSetup.Api, first, second);
             var program = new GraphInstruction[]
@@ -526,8 +526,8 @@ namespace Ludots.Tests.GAS
             var source = world.Create();
             var target = world.Create();
 
-            relationshipSetup.Runtime.SetMetric(source, target, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 10, reasonId: 0);
-            relationshipSetup.Runtime.SetMetric(target, source, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 20, reasonId: 0);
+            relationshipSetup.Runtime.SetMetric(source, target, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 10);
+            relationshipSetup.Runtime.SetMetric(target, source, relationshipSetup.SocialBondTypeId, relationshipSetup.SupportMetricId, 20);
 
             var state = CreateState(world, relationshipSetup.Api, source, target);
             var program = new GraphInstruction[]
@@ -572,6 +572,7 @@ namespace Ludots.Tests.GAS
             var program = new GraphInstruction[]
             {
                 new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
 
             GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
@@ -584,6 +585,67 @@ namespace Ludots.Tests.GAS
             That(requests[1].Source, Is.EqualTo(anchor));
             That(requests[1].Target, Is.EqualTo(allyB));
             That(requests[1].TargetContext, Is.EqualTo(caster));
+            That(requests[0].RootId, Is.GreaterThan(0));
+            That(requests[1].RootId, Is.GreaterThan(0));
+            That(requests[1].RootId, Is.Not.EqualTo(requests[0].RootId));
+        }
+
+        [Test]
+        public void GraphOps_FanOutDispatchEffectDynamic_InEffectContext_InheritsRootId()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            var presetRegistry = new TargetDispatchPresetRegistry();
+            int presetId = presetRegistry.Register("SourceToResolved", new TargetResolverContextMapping
+            {
+                PayloadSource = ContextSlot.OriginalSource,
+                PayloadTarget = ContextSlot.ResolvedEntity,
+                PayloadTargetContext = ContextSlot.OriginalTarget,
+            });
+            RelationshipApiSetup relationshipSetup = CreateRelationshipApi(world, requests, presetRegistry);
+            var effectEntity = world.Create();
+            var caster = world.Create();
+            var anchor = world.Create();
+            var allyA = world.Create();
+            var allyB = world.Create();
+            var context = new EffectContext
+            {
+                RootId = 73,
+                Source = caster,
+                Target = anchor,
+            };
+            EffectConfigParams mergedParams = default;
+            var state = CreateState(world, relationshipSetup.Api, caster, anchor);
+            state.Targets[0] = allyA;
+            state.Targets[1] = allyB;
+            state.TargetList.SetCount(2);
+            state.I[0] = 99;
+            GraphInstruction[] program =
+            {
+                new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            };
+
+            relationshipSetup.Api.BeginBuiltinInvocation(
+                new BuiltinHandlerRegistry(),
+                new EffectTemplateRegistry(),
+                builtinRuntime: null,
+                effectEntity,
+                effectTemplateId: 1,
+                in context,
+                in mergedParams);
+            try
+            {
+                GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            }
+            finally
+            {
+                relationshipSetup.Api.EndBuiltinInvocation();
+            }
+
+            That(requests.Count, Is.EqualTo(2));
+            That(requests[0].RootId, Is.EqualTo(73));
+            That(requests[1].RootId, Is.EqualTo(73));
         }
 
         [Test]
@@ -777,6 +839,11 @@ namespace Ludots.Tests.GAS
             CallStackCount = 0,
         };
 
+            if (api is GasGraphRuntimeApi concreteApi)
+            {
+                concreteApi.AggregateDirty ??= new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            }
+
             GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
         }
 
@@ -829,7 +896,6 @@ namespace Ludots.Tests.GAS
             var typeRegistry = new RelationshipTypeRegistry();
             var metricRegistry = new RelationshipMetricRegistry();
             var flagRegistry = new RelationshipFlagRegistry();
-            var reasonRegistry = new RelationshipReasonRegistry();
             var bandRegistry = new RelationshipBandRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
             var runtime = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer, new RelationshipReverseIndex(world));
@@ -851,7 +917,6 @@ namespace Ludots.Tests.GAS
                 typeRegistry: typeRegistry,
                 metricRegistry: metricRegistry,
                 flagRegistry: flagRegistry,
-                reasonRegistry: reasonRegistry,
                 targetDispatchPresets: targetDispatchPresets,
                 entityQueries: entityQueries);
 

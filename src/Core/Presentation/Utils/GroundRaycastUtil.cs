@@ -37,7 +37,7 @@ namespace Ludots.Core.Presentation.Utils
             return true;
         }
 
-        public static bool TryGetGroundWorldCm(in ScreenRay ray, IVisualHeightmap heightmap, out WorldCmInt2 worldCm)
+        public static bool TryGetGroundWorldCm(in ScreenRay ray, IContinuousHeightmap heightmap, out WorldCmInt2 worldCm)
         {
             worldCm = default;
             if (heightmap == null)
@@ -62,7 +62,7 @@ namespace Ludots.Core.Presentation.Utils
             return TryGetGroundWorldCmBounded(in ray, worldSize.Bounds, out worldCm, out _);
         }
 
-        public static bool TryGetGroundWorldCmBounded(in ScreenRay ray, IVisualHeightmap heightmap, in WorldSizeSpec worldSize, out WorldCmInt2 worldCm)
+        public static bool TryGetGroundWorldCmBounded(in ScreenRay ray, IContinuousHeightmap heightmap, in WorldSizeSpec worldSize, out WorldCmInt2 worldCm)
         {
             return TryGetGroundWorldCmBounded(in ray, heightmap, worldSize.Bounds, out worldCm, out _);
         }
@@ -72,7 +72,7 @@ namespace Ludots.Core.Presentation.Utils
             return TryGetGroundWorldCmBounded(in ray, worldSize.Bounds, out worldCm, out wasClamped);
         }
 
-        public static bool TryGetGroundWorldCmBounded(in ScreenRay ray, IVisualHeightmap heightmap, in WorldSizeSpec worldSize, out WorldCmInt2 worldCm, out bool wasClamped)
+        public static bool TryGetGroundWorldCmBounded(in ScreenRay ray, IContinuousHeightmap heightmap, in WorldSizeSpec worldSize, out WorldCmInt2 worldCm, out bool wasClamped)
         {
             return TryGetGroundWorldCmBounded(in ray, heightmap, worldSize.Bounds, out worldCm, out wasClamped);
         }
@@ -90,7 +90,7 @@ namespace Ludots.Core.Presentation.Utils
             return true;
         }
 
-        public static bool TryGetGroundWorldCmBounded(in ScreenRay ray, IVisualHeightmap heightmap, in WorldAabbCm bounds, out WorldCmInt2 worldCm, out bool wasClamped)
+        public static bool TryGetGroundWorldCmBounded(in ScreenRay ray, IContinuousHeightmap heightmap, in WorldAabbCm bounds, out WorldCmInt2 worldCm, out bool wasClamped)
         {
             worldCm = default;
             wasClamped = false;
@@ -132,7 +132,7 @@ namespace Ludots.Core.Presentation.Utils
             return true;
         }
 
-        public static bool TryGetGroundVisualMeters(in ScreenRay ray, IVisualHeightmap heightmap, out Vector3 hitMeters)
+        public static bool TryGetGroundVisualMeters(in ScreenRay ray, IContinuousHeightmap heightmap, out Vector3 hitMeters)
         {
             hitMeters = default;
             if (heightmap == null)

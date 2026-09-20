@@ -15,6 +15,26 @@ namespace Ludots.Tests.Gas.Production;
 public sealed class GraphOpsNodeGalleryAcceptanceTests
 {
     [Test]
+    public void DerivedQueryOps_ExecuteThroughGalleryRuntime()
+    {
+        using (var bind = new GraphOpsNodeGalleryRuntime())
+        {
+            bind.BindOp("BindQueryCollection");
+            bind.EnsureWorld();
+            bind.Tick(0.35f);
+            Assert.That(bind.Metrics.Detail, Does.Contain("敌军"));
+        }
+
+        using (var screen = new GraphOpsNodeGalleryRuntime())
+        {
+            screen.BindOp("QueryScreenRegionCollection");
+            screen.EnsureWorld();
+            screen.Tick(0.35f);
+            Assert.That(screen.Metrics.Detail, Does.Contain("敌军"));
+        }
+    }
+
+    [Test]
     public void ConstFloat_SettlesAuthoredConstantThroughGraphTail()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();
@@ -234,13 +254,21 @@ public sealed class GraphOpsNodeGalleryAcceptanceTests
             Assert.That(File.Exists(mapPath), Is.True, op);
             using JsonDocument map = JsonDocument.Parse(File.ReadAllText(mapPath));
             JsonElement entities = map.RootElement.GetProperty("Entities");
-            Assert.That(entities.GetArrayLength(), Is.EqualTo(vignette.Actors.Length), op);
             var ids = new HashSet<string>(StringComparer.Ordinal);
             foreach (JsonElement entity in entities.EnumerateArray())
             {
+                // Region volume placements (#1461) are the only sanctioned non-actor
+                // entities on generated gallery maps; actors still map one-to-one.
+                if (entity.TryGetProperty("Template", out JsonElement template) &&
+                    template.GetString() == "GraphOps.RegionVolumeAnchor")
+                {
+                    continue;
+                }
+
                 ids.Add(entity.GetProperty("InstanceId").GetString()!);
             }
 
+            Assert.That(ids.Count, Is.EqualTo(vignette.Actors.Length), op);
             foreach (GraphOpsNodeActor actor in vignette.Actors)
             {
                 Assert.That(ids, Does.Contain(actor.Id), $"{op} map missing {actor.Id}");

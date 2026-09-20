@@ -78,7 +78,7 @@
     "components": {
       "Name": { "Value": "CapabilityStaticPresenterDynamicWorker" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "AttributeBuffer": {
         "base": {}
@@ -94,7 +94,7 @@
     "components": {
       "Name": { "Value": "CapabilityStaticPresenterMinimapMarkerBall" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "AttributeBuffer": {
         "base": {

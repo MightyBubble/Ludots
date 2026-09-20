@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ReactFlow,
   Background,
@@ -22,7 +22,6 @@ import '@xyflow/react/dist/style.css';
 import { GraphCatalogTree, type CatalogMod } from './gas-graph-editor/GraphCatalogTree';
 import {
   GraphVariablePanel,
-  collectionTypeError,
   decodeMapVarDrag,
   decodePlacedVarDrag,
   emptyVariableDraft,
@@ -33,18 +32,53 @@ import {
   type MapVariableScalarType,
 } from './gas-graph-editor/GraphVariablePanel';
 import { GasNode, isPureValueOp, type EventSchemaView } from './gas-graph-editor/GasNode';
+import { gasEdgeTypes } from './gas-graph-editor/GasEdges';
+import { GAS_GRAPH_THEME } from './gas-graph-editor/gasGraphTheme';
+import { STUDIO_CHROME } from './authoring-studio/authoringTheme';
 import { authoredFieldsForOp, type AuthoredFieldKey } from './gas-graph-editor/authoredFields';
+import {
+  catalogGraphMatchesDialect,
+  dialectPath,
+  dialectTitle,
+  isFunctionGraphPortalOp,
+  isOpAllowedInDialect,
+  preferredDialectForGraphId,
+  type GraphEditorDialect,
+} from './gas-graph-editor/graphEditorDialect';
 import { computeAutoLayout, eventEntryNodeId, isEventEntryNodeId } from './gas-graph-editor/autoLayout';
-import { EventEntryInspector } from './gas-graph-editor/EventEntryInspector';
+import { EventEntryInspector, type InputActionView } from './gas-graph-editor/EventEntryInspector';
 import { GraphCodegenPanel } from './gas-graph-editor/GraphCodegenPanel';
 import {
   collectEventEntries,
   createEmptyEventEntry,
+  describeEntryProblem,
   entryLabelsFromNodes,
+  entryTriggerName,
   eventThenEdgeId,
   uniqueEventLabel,
   type EventEntryConfig,
 } from './gas-graph-editor/eventEntry';
+import {
+  applyLiveDebugToEdges,
+  applyLiveDebugToNodes,
+  applyWatchFocusToEdges,
+  applyWatchFocusToNodes,
+  computeLiveControlEdgeHeat,
+  computeLiveNodeHeat,
+  computeLivePinValues,
+  computeLiveValueEdgeHeat,
+  computeWatchedEntryFocus,
+  LIVE_HEAT_TTL_MS,
+  type LiveDebugEvent,
+} from './gas-graph-editor/liveVisualDebug';
+import {
+  EMPTY_GRAPH_ANNOTATIONS,
+  lookupEntryStory,
+  parseGraphAnnotations,
+  resolveWalkedGroups,
+  type GraphAnnotations,
+} from './gas-graph-editor/graphAnnotations';
+import { LiveDebugEntryPicker } from './gas-graph-editor/LiveDebugEntryPicker';
 import './gas-graph-editor/editor.css';
 
 type GraphNodeConfig = {
@@ -107,6 +141,7 @@ type GraphNodeConfig = {
   text?: string | null;
   textKey?: string | null;
   presentationSurface?: string | null;
+  decoratorKind?: string | null;
   pinRegister?: number;
 };
 
@@ -118,6 +153,11 @@ type GasNodeData = GraphNodeConfig & {
   descriptor?: GraphDescriptor;
   sugar?: GraphSugarDescriptor;
   controlOutputPorts?: string[];
+  liveDebug?: {
+    intensity: number;
+    current: boolean;
+    pins: { pinIndex: number; value: string }[];
+  };
 };
 
 type GraphDescriptor = {
@@ -141,6 +181,8 @@ type GraphSugarDescriptor = {
   valueInputPorts: string[];
   outputType: string;
   lowersTo: string;
+  childArms?: boolean;
+  functionGraphPortal?: boolean;
 };
 
 type EnumTypeView = {
@@ -159,6 +201,7 @@ type TextKeyView = {
 type EditorLayout = {
   nodes?: Record<string, { x: number; y: number; collapsed?: boolean }>;
   viewport?: { x: number; y: number; zoom: number };
+  annotations?: unknown;
 };
 
 type DebugMount = {
@@ -172,15 +215,7 @@ type DebugMount = {
   cursor: { pc: number; steps: number; status: string; suspended: boolean };
 };
 
-type DebugEvent = {
-  sequence: number;
-  event: string;
-  nodeId?: string | null;
-  op?: string | null;
-  pinIndex?: number;
-  value?: number | boolean;
-  steps: number;
-};
+type DebugEvent = LiveDebugEvent;
 
 type GraphControlEdgeConfig = {
   from: string;
@@ -198,6 +233,9 @@ type GraphValueEdgeConfig = {
 type GasEdgeData = {
   kind: 'control' | 'value';
   synthetic?: boolean;
+  live?: boolean;
+  intensity?: number;
+  liveValue?: string | null;
 };
 
 type GraphOutputConfig = {
@@ -210,7 +248,8 @@ type GraphOutputConfig = {
 
 type GraphEntryConfig = {
   label: string;
-  event: string;
+  event?: string;
+  action?: string;
   start: string;
   once?: boolean;
   refire?: string | null;
@@ -252,9 +291,32 @@ type ValidateResponse = {
 };
 
 const DEFAULT_MOD_ID = 'UiPlayerAggregateGraphMvpShowcaseMod';
-const DEFAULT_GRAPH_ID = 'ui.panel.player.resource.aggregate';
+const DEFAULT_FUNC_GRAPH_ID = 'ui.panel.player.resource.aggregate';
+const DEFAULT_BT_GRAPH_ID = 'Graph.BT.Leaf.SeeEnemy';
+const DEFAULT_FSM_GRAPH_ID = 'Graph.HFSM.Combat.OnTick';
+
+function defaultGraphIdForDialect(dialect: GraphEditorDialect): string {
+  if (dialect === 'bt') return DEFAULT_BT_GRAPH_ID;
+  if (dialect === 'fsm') return DEFAULT_FSM_GRAPH_ID;
+  return DEFAULT_FUNC_GRAPH_ID;
+}
 
 const nodeTypes = { gas: GasNode };
+const edgeTypes = gasEdgeTypes;
+
+function themedEdge(
+  kind: 'control' | 'value',
+  stroke: string,
+  strokeWidth = 2,
+  extras: Partial<Edge<GasEdgeData>> = {},
+): Pick<Edge<GasEdgeData>, 'type' | 'style' | 'data'> & Partial<Edge<GasEdgeData>> {
+  return {
+    type: kind === 'value' ? 'gasValue' : 'gasControl',
+    style: { stroke, strokeWidth, strokeDasharray: undefined },
+    data: { kind },
+    ...extras,
+  };
+}
 
 function omitUndefined<T extends Record<string, unknown>>(value: T): T {
   const out: Record<string, unknown> = {};
@@ -325,6 +387,7 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     text: n.text ?? undefined,
     textKey: n.textKey ?? undefined,
     presentationSurface: n.presentationSurface ?? undefined,
+    decoratorKind: n.decoratorKind ?? undefined,
     pinRegister: n.pinRegister,
   });
 }
@@ -419,12 +482,12 @@ function graphToFlow(
   layout: EditorLayout = {},
   schemaFor: (event: string) => EventSchemaView | null = () => null,
 ): { nodes: Node<GasNodeData>[]; edges: Edge<GasEdgeData>[] } {
-  const switchPorts = new Map<string, string[]>();
+  const dynamicControlPorts = new Map<string, string[]>();
   for (const edge of graph.controlEdges ?? []) {
-    if (!edge.fromPort.startsWith('case:')) continue;
-    const ports = switchPorts.get(edge.from) ?? [];
+    if (!edge.fromPort.startsWith('case:') && !edge.fromPort.startsWith('child:')) continue;
+    const ports = dynamicControlPorts.get(edge.from) ?? [];
     if (!ports.includes(edge.fromPort)) ports.push(edge.fromPort);
-    switchPorts.set(edge.from, ports);
+    dynamicControlPorts.set(edge.from, ports);
   }
   const nodes: Node<GasNodeData>[] = graph.nodes.map((n, index) => {
     const dispatchSugar = dispatchParamPorts(n.op, n.event, schemaFor);
@@ -442,7 +505,7 @@ function graphToFlow(
       sugar: dynamicSugar ?? sugars[n.op],
       controlOutputPorts: dynamicSugar
         ? dynamicSugar.controlOutputPorts
-        : [...resolveControlOutputPorts(n.op, descriptors[n.op], sugars[n.op]), ...(switchPorts.get(n.id) ?? [])],
+        : [...resolveControlOutputPorts(n.op, descriptors[n.op], sugars[n.op]), ...(dynamicControlPorts.get(n.id) ?? [])],
     },
   };
   });
@@ -464,8 +527,8 @@ function graphToFlow(
         op: 'Event',
         role: 'event-entry',
         entry,
-        schema: schemaFor(entry.event),
-        label: entry.event,
+        schema: schemaFor(entry.event ?? ''),
+        label: entryTriggerName(entry) || entry.label,
         controlOutputPorts: ['exec'],
       },
     });
@@ -483,8 +546,9 @@ function graphToFlow(
       target: entry.start,
       targetHandle: 'control-in',
       markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: '#fb7185', strokeWidth: 2 },
-      data: { kind: 'control', synthetic: true },
+      ...themedEdge('control', GAS_GRAPH_THEME.eventAccent, 2, {
+        data: { kind: 'control', synthetic: true },
+      }),
     });
   }
 
@@ -497,8 +561,7 @@ function graphToFlow(
         target: edge.to,
         targetHandle: 'control-in',
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#38bdf8', strokeWidth: 2 },
-        data: { kind: 'control' },
+        ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2),
       });
     }
 
@@ -510,8 +573,11 @@ function graphToFlow(
         target: edge.to,
         targetHandle: edge.toPort,
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: edge.fromPort === 'list' ? '#34d399' : '#a78bfa', strokeWidth: 2 },
-        data: { kind: 'value' },
+        ...themedEdge(
+          'value',
+          edge.fromPort === 'list' ? GAS_GRAPH_THEME.listAccent : GAS_GRAPH_THEME.dataIdle,
+          1.5,
+        ),
       });
     }
 
@@ -526,8 +592,7 @@ function graphToFlow(
       target: n.next,
       markerEnd: { type: MarkerType.ArrowClosed },
       label: 'next',
-      style: { stroke: '#64748b' },
-      data: { kind: 'control' },
+      ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2),
     });
   }
 
@@ -582,10 +647,11 @@ function toDisplayEdges(nodes: Node<GasNodeData>[], edges: Edge<GasEdgeData>[]):
         target: terminal,
         targetHandle: 'control-in',
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#38bdf8', strokeWidth: 2 },
         deletable: false,
         selectable: false,
-        data: { kind: 'control', synthetic: true },
+        ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2, {
+          data: { kind: 'control', synthetic: true },
+        }),
       });
     }
   }
@@ -608,6 +674,8 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
       delete created.role;
       delete created.entry;
       delete created.schema;
+      delete created.liveDebug;
+      delete created.controlOutputPorts;
       return toWireNode({ ...created, id: flowNode.id, op: edited.op });
     }
     const rest = { ...edited };
@@ -618,6 +686,7 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
     delete rest.role;
     delete rest.entry;
     delete rest.schema;
+    delete rest.liveDebug;
     return toWireNode({
       ...n,
       ...rest,
@@ -667,22 +736,26 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
   };
 }
 
-function readEditorSelection(): { modId: string; graphId: string } {
+function readEditorSelection(dialect: GraphEditorDialect): { modId: string; graphId: string } {
   const params = new URLSearchParams(window.location.search);
   return {
     modId: params.get('mod')?.trim() || DEFAULT_MOD_ID,
-    graphId: params.get('graph')?.trim() || DEFAULT_GRAPH_ID,
+    graphId: params.get('graph')?.trim() || defaultGraphIdForDialect(dialect),
   };
 }
 
-export const GasGraphEditorPage: React.FC = () => {
-  const initialSelection = React.useMemo(() => readEditorSelection(), []);
+export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({ dialect = 'func' }) => {
+  const navigate = useNavigate();
+  const titles = dialectTitle(dialect);
+  const initialSelection = React.useMemo(() => readEditorSelection(dialect), [dialect]);
   const [modId, setModId] = React.useState(initialSelection.modId);
   const [graphId, setGraphId] = React.useState(initialSelection.graphId);
   const [graph, setGraph] = React.useState<GraphConfig | null>(null);
   const [descriptors, setDescriptors] = React.useState<Record<string, GraphDescriptor>>({});
   const [sugars, setSugars] = React.useState<Record<string, GraphSugarDescriptor>>({});
   const [panelAnchors, setPanelAnchors] = React.useState<string[]>([]);
+  const [annotations, setAnnotations] = React.useState<GraphAnnotations>(EMPTY_GRAPH_ANNOTATIONS);
+  const [inputActions, setInputActions] = React.useState<InputActionView[]>([]);
   const [payloadKeys, setPayloadKeys] = React.useState<string[]>([]);
   const [eventSchemas, setEventSchemas] = React.useState<EventSchemaView[]>([]);
   const [enumCatalog, setEnumCatalog] = React.useState<EnumTypeView[]>([]);
@@ -703,8 +776,15 @@ export const GasGraphEditorPage: React.FC = () => {
   const [debugEvents, setDebugEvents] = React.useState<DebugEvent[]>([]);
   const [debugSince, setDebugSince] = React.useState(0);
   const [debugStatus, setDebugStatus] = React.useState('Bridge idle');
+  /** Ticks while Watching so heat / edges cool off without new drain traffic. */
+  const [debugClockMs, setDebugClockMs] = React.useState(() => Date.now());
+  /** Half-screen (game|editor) needs the canvas, not twin sidebars. */
+  const [leftRailCollapsed, setLeftRailCollapsed] = React.useState(false);
+  const [rightRailCollapsed, setRightRailCollapsed] = React.useState(false);
+  const railsBeforeWatch = React.useRef<{ left: boolean; right: boolean } | null>(null);
   const [switchCaseValue, setSwitchCaseValue] = React.useState('0');
   const [switchCaseTarget, setSwitchCaseTarget] = React.useState('');
+  const [btChildTarget, setBtChildTarget] = React.useState('');
   const [catalog, setCatalog] = React.useState<CatalogMod[]>([]);
   const [catalogStatus, setCatalogStatus] = React.useState('Loading catalog…');
   const [paletteMenu, setPaletteMenu] = React.useState<{ clientX: number; clientY: number; flowX: number; flowY: number } | null>(null);
@@ -784,8 +864,6 @@ export const GasGraphEditorPage: React.FC = () => {
       ? {
           name: rows[0].name,
           kind: rows[0].type,
-          elementType: 'int',
-          keyType: 'int',
           initial: String(rows[0].initial),
         }
       : emptyVariableDraft());
@@ -823,6 +901,26 @@ export const GasGraphEditorPage: React.FC = () => {
   React.useEffect(() => {
     void loadEventSchemas();
   }, [loadEventSchemas]);
+
+  // Semantic input action vocabulary for action-bound TriggerGraph entries, so the
+  // inspector offers registered ids instead of taking a typed guess.
+  const loadInputActions = React.useCallback(async () => {
+    try {
+      const res = await fetch(`/api/graph/input-actions/${encodeURIComponent(modId)}`);
+      const payload = await res.json();
+      if (!res.ok || !payload.ok || !Array.isArray(payload.actions)) {
+        throw new Error(payload.error ?? `Input action load failed (${res.status})`);
+      }
+      setInputActions(payload.actions as InputActionView[]);
+    } catch (err) {
+      setInputActions([]);
+      setStatus(`Input actions unavailable: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [modId]);
+
+  React.useEffect(() => {
+    void loadInputActions();
+  }, [loadInputActions]);
 
   // #1125: launcher-wide enum vocabulary — feeds the SwitchInt enumType picker and the
   // case:{member} dropdown once a node is bound.
@@ -965,12 +1063,14 @@ export const GasGraphEditorPage: React.FC = () => {
       const missingDescriptor = loaded.nodes.find((node) => !nextDescriptors[node.op] && !nextSugars[node.op]);
       if (missingDescriptor) throw new Error(`Descriptor missing for graph op '${missingDescriptor.op}'.`);
       const nextLayout = (layoutPayload.layout ?? {}) as EditorLayout;
+      const nextAnnotations = parseGraphAnnotations(nextLayout.annotations);
       if (descriptorPayload.panelAnchors != null && !Array.isArray(descriptorPayload.panelAnchors)) {
         throw new Error('Descriptor response is missing panel anchors.');
       }
       const nextAnchors = (descriptorPayload.panelAnchors ?? []) as string[];
       setDescriptors(nextDescriptors);
       setSugars(nextSugars);
+      setAnnotations(nextAnnotations);
       setPanelAnchors(nextAnchors);
       setPayloadKeys(Array.isArray(descriptorPayload.payloadKeys) ? descriptorPayload.payloadKeys as string[] : []);
       setGraph(loaded);
@@ -992,13 +1092,20 @@ export const GasGraphEditorPage: React.FC = () => {
       setSelectedEdgeId(null);
       setSelectedVariable(null);
       setStatus(`Loaded ${loaded.id} (${loaded.kind})`);
-      await loadMapVariables(loaded.id);
+      try {
+        await loadMapVariables(loaded.id);
+      } catch (mapVarErr) {
+        setDeclaredVariables([]);
+        setVariableMapId(null);
+        setVariableStatus(mapVarErr instanceof Error ? mapVarErr.message : String(mapVarErr));
+      }
     } catch (err) {
       setGraph(null);
       setNodes([]);
       setEdges([]);
       setDeclaredVariables([]);
       setVariableMapId(null);
+      setAnnotations(EMPTY_GRAPH_ANNOTATIONS);
       setStatus(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
@@ -1016,6 +1123,13 @@ export const GasGraphEditorPage: React.FC = () => {
     const next = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, '', next);
   }, [graphId, modId]);
+
+  React.useEffect(() => {
+    const preferred = preferredDialectForGraphId(graphId);
+    if (preferred === dialect) return;
+    const params = new URLSearchParams({ mod: modId, graph: graphId });
+    navigate(`${dialectPath(preferred)}?${params.toString()}`, { replace: true });
+  }, [dialect, graphId, modId, navigate]);
 
   const loadCatalog = React.useCallback(async () => {
     try {
@@ -1110,6 +1224,26 @@ export const GasGraphEditorPage: React.FC = () => {
     );
   };
 
+  const openFunctionGraphPortal = React.useCallback((node: Node<GasNodeData>) => {
+    const portal = sugars[node.data.op]?.functionGraphPortal
+      || isFunctionGraphPortalOp(node.data.op);
+    if (!portal) return;
+    const target = (node.data.functionName ?? '').trim();
+    if (!target) {
+      setStatus(`${node.data.op} needs a function graph id before you can open it.`);
+      return;
+    }
+    // BT/FSM editors jump into the Func Graph editor; Func editor stays in-place.
+    if (dialect === 'bt' || dialect === 'fsm') {
+      const params = new URLSearchParams({ mod: modId, graph: target });
+      navigate(`/gas-graphs?${params.toString()}`);
+      setStatus(`Opened Func Graph ${target} in Graph Editor.`);
+      return;
+    }
+    setGraphId(target);
+    setStatus(`Opened function graph ${target}.`);
+  }, [dialect, modId, navigate, sugars]);
+
   const onNodesChange = React.useCallback((changes: NodeChange<Node<GasNodeData>>[]) => {
     setNodes((prev) => applyNodeChanges(changes, prev));
     const removed = new Set(changes.filter((change) => change.type === 'remove').map((change) => change.id));
@@ -1191,8 +1325,7 @@ export const GasGraphEditorPage: React.FC = () => {
           target: connection.target,
           targetHandle: connection.targetHandle,
           markerEnd: { type: MarkerType.ArrowClosed },
-          style: { stroke: '#a78bfa', strokeWidth: 2 },
-          data: { kind: 'value' },
+          ...themedEdge('value', GAS_GRAPH_THEME.dataIdle, 1.5),
         }, prev));
         setSelectedNodeId(nodeId);
         setStatus(`Placed ${pin.op}${pin.payloadKey ? ` for ${pin.payloadKey}` : ''}.`);
@@ -1206,8 +1339,9 @@ export const GasGraphEditorPage: React.FC = () => {
         target: connection.target,
         targetHandle: 'control-in',
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#fb7185', strokeWidth: 2 },
-        data: { kind: 'control', synthetic: true },
+        ...themedEdge('control', GAS_GRAPH_THEME.eventAccent, 2, {
+          data: { kind: 'control', synthetic: true },
+        }),
       }, prev.filter((edge) => !(edge.source === connection.source && edge.sourceHandle === 'exec'))));
       setNodes((previous) => previous.map((node) => (
         node.id === connection.source && node.data.entry
@@ -1220,8 +1354,11 @@ export const GasGraphEditorPage: React.FC = () => {
       ...connection,
       id: `${kind}:${connection.source}:${connection.sourceHandle}:${connection.target}:${connection.targetHandle}`,
       markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: kind === 'control' ? '#38bdf8' : '#a78bfa', strokeWidth: 2 },
-      data: { kind },
+      ...themedEdge(
+        kind,
+        kind === 'control' ? GAS_GRAPH_THEME.execIdle : GAS_GRAPH_THEME.dataIdle,
+        kind === 'control' ? 2 : 1.5,
+      ),
     }, prev));
   }, [nodes, descriptors, sugars]);
 
@@ -1289,7 +1426,7 @@ export const GasGraphEditorPage: React.FC = () => {
       targetHandle: 'control-in',
       markerEnd: { type: MarkerType.ArrowClosed },
       label: sourceHandle,
-      data: { kind: 'control' },
+      ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2),
     }, previous));
     setNodes((previous) => previous.map((node) => node.id !== selectedNodeId
       ? node
@@ -1297,19 +1434,68 @@ export const GasGraphEditorPage: React.FC = () => {
     setStatus(`Added ${op} ${sourceHandle} -> ${switchCaseTarget}.`);
   }, [edges, enumCatalog, graph, nodes, selectedData?.enumType, selectedData?.op, selectedNodeId, switchCaseTarget, switchCaseValue]);
 
+  const addBtChildArm = React.useCallback(() => {
+    if (!selectedNodeId || !graph || !isControlFlowGraph(graph)) return;
+    const op = selectedData?.op;
+    if (!op || !sugars[op]?.childArms) return;
+    if (!btChildTarget || !nodes.some((node) => node.id === btChildTarget)) {
+      setStatus(`${op} child arm requires an existing target node.`);
+      return;
+    }
+    let nextIndex = 0;
+    for (const port of selectedData.controlOutputPorts ?? []) {
+      if (!port.startsWith('child:')) continue;
+      const parsed = Number.parseInt(port.slice('child:'.length), 10);
+      if (Number.isInteger(parsed) && parsed >= nextIndex) nextIndex = parsed + 1;
+    }
+    const sourceHandle = `child:${nextIndex}`;
+    if (edges.some((edge) => edge.source === selectedNodeId && edge.sourceHandle === sourceHandle)) {
+      setStatus(`${op} ${sourceHandle} already exists.`);
+      return;
+    }
+    setEdges((previous) => addEdge({
+      id: `control:${selectedNodeId}:${sourceHandle}:${btChildTarget}:control-in`,
+      source: selectedNodeId,
+      sourceHandle,
+      target: btChildTarget,
+      targetHandle: 'control-in',
+      markerEnd: { type: MarkerType.ArrowClosed },
+      label: sourceHandle,
+      ...themedEdge('control', GAS_GRAPH_THEME.execIdle, 2),
+    }, previous));
+    setNodes((previous) => previous.map((node) => node.id !== selectedNodeId
+      ? node
+      : { ...node, data: { ...node.data, controlOutputPorts: [...new Set([...(node.data.controlOutputPorts ?? []), sourceHandle])] } }));
+    setStatus(`Added ${op} ${sourceHandle} -> ${btChildTarget}.`);
+  }, [btChildTarget, edges, graph, nodes, selectedData?.controlOutputPorts, selectedData?.op, selectedNodeId, sugars]);
+
   const availableNodes = React.useMemo(() => {
     const entries = [
-      ...Object.values(descriptors).map((descriptor) => ({ op: descriptor.op, descriptor, sugar: undefined })),
-      ...Object.values(sugars).map((sugar) => ({ op: sugar.op, descriptor: undefined, sugar })),
+      ...Object.values(descriptors).map((descriptor) => ({ op: descriptor.op, descriptor, sugar: undefined as GraphSugarDescriptor | undefined })),
+      ...Object.values(sugars).map((sugar) => ({ op: sugar.op, descriptor: undefined as GraphDescriptor | undefined, sugar })),
     ];
     const query = nodeSearch.trim().toLocaleLowerCase();
     return entries
+      .filter((entry) => isOpAllowedInDialect(entry.op, dialect))
       .filter((entry) => !query || entry.op.toLocaleLowerCase().includes(query))
       .sort((a, b) => a.op.localeCompare(b.op));
-  }, [descriptors, nodeSearch, sugars]);
+  }, [descriptors, dialect, nodeSearch, sugars]);
+
+  const catalogModsForDialect = React.useMemo(() => {
+    return catalog
+      .map((mod) => ({
+        ...mod,
+        graphs: (mod.graphs ?? []).filter((graph) => catalogGraphMatchesDialect(graph.id, graph.kind, dialect)),
+      }))
+      .filter((mod) => (mod.graphs?.length ?? 0) > 0);
+  }, [catalog, dialect]);
 
   const addAuthoringNode = React.useCallback((op: string, position?: { x: number; y: number }, extras?: { var?: string; instanceId?: string }) => {
     if (!graph) return;
+    if (!isOpAllowedInDialect(op, dialect)) {
+      setStatus(`Cannot add '${op}' in the ${dialect} editor — open the matching editor.`);
+      return;
+    }
     if (!descriptors[op] && !sugars[op]) {
       setStatus(`Cannot add '${op}': this graph kind has no runtime descriptor for it.`);
       return;
@@ -1343,7 +1529,7 @@ export const GasGraphEditorPage: React.FC = () => {
     setPaletteMenu(null);
     setVarDropMenu(null);
     setStatus(extras?.var ?? extras?.instanceId ? `Added ${op} for ${extras.var ?? extras.instanceId}.` : `Added ${op}; wire its pins before validation.`);
-  }, [descriptors, graph, nodes, sugars]);
+  }, [descriptors, dialect, graph, nodes, sugars]);
 
   const addEventEntry = React.useCallback((position?: { x: number; y: number }) => {
     if (!graph || graph.kind !== 'TriggerGraph') {
@@ -1374,6 +1560,22 @@ export const GasGraphEditorPage: React.FC = () => {
     setStatus('Added Event. Fill Event name, then wire Then to the first node.');
   }, [graph, nodes]);
 
+  const removeSelectedGraphNode = React.useCallback(() => {
+    if (!selectedNodeId) return;
+    setNodes((prev) => prev.filter((node) => node.id !== selectedNodeId));
+    setEdges((prev) => prev.filter((edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId));
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+    setStatus(`Deleted node ${selectedNodeId}.`);
+  }, [selectedNodeId]);
+
+  const removeSelectedGraphEdge = React.useCallback(() => {
+    if (!selectedEdgeId) return;
+    setEdges((prev) => prev.filter((edge) => edge.id !== selectedEdgeId));
+    setSelectedEdgeId(null);
+    setStatus('Deleted edge.');
+  }, [selectedEdgeId]);
+
   const updateSelectedEntry = (nextEntry: EventEntryConfig) => {
     if (!selectedNodeId || !graph) return;
     const selected = nodes.find((node) => node.id === selectedNodeId);
@@ -1401,7 +1603,7 @@ export const GasGraphEditorPage: React.FC = () => {
           id: nextId,
           label: nextLabel,
           entry: { ...nextEntry, label: nextLabel, start: nextStart },
-          schema: schemaFor(nextEntry.event),
+          schema: schemaFor(nextEntry.event ?? ''),
         },
       };
     }));
@@ -1440,8 +1642,9 @@ export const GasGraphEditorPage: React.FC = () => {
           target: nextStart,
           targetHandle: 'control-in',
           markerEnd: { type: MarkerType.ArrowClosed },
-          style: { stroke: '#fb7185', strokeWidth: 2 },
-          data: { kind: 'control', synthetic: true },
+          ...themedEdge('control', GAS_GRAPH_THEME.eventAccent, 2, {
+            data: { kind: 'control', synthetic: true },
+          }),
         }, without);
       });
     }
@@ -1510,6 +1713,13 @@ export const GasGraphEditorPage: React.FC = () => {
 
   const onSave = async () => {
     if (!currentGraph) return;
+    const entryProblem = (currentGraph.entries ?? [])
+      .map((entry) => describeEntryProblem(entry))
+      .find((problem) => problem != null);
+    if (entryProblem) {
+      setStatus(`Save refused: ${entryProblem}`);
+      return;
+    }
     setBusy(true);
     setStatus('Validating before save…');
     try {
@@ -1579,7 +1789,11 @@ export const GasGraphEditorPage: React.FC = () => {
       const result = await bridgeRpc('ludots.graph.debug', {
         action: 'drain', graphId, entryLabel: debugEntryLabel, since: debugSince, max: 128,
       });
-      const incoming = (result.events ?? []) as DebugEvent[];
+      const receivedAt = Date.now();
+      const incoming = ((result.events ?? []) as DebugEvent[]).map((event) => ({
+        ...event,
+        atMs: receivedAt,
+      }));
       if (result.gap) setDebugEvents([]);
       const latestSequence = Number(result.latestSequence ?? debugSince);
       if (incoming.length > 0) {
@@ -1602,43 +1816,128 @@ export const GasGraphEditorPage: React.FC = () => {
     return () => window.clearInterval(timer);
   }, [debugEnabled, pollDebug, refreshDebugMounts]);
 
+  React.useEffect(() => {
+    if (!debugEnabled) return undefined;
+    setDebugClockMs(Date.now());
+    const timer = window.setInterval(() => setDebugClockMs(Date.now()), 100);
+    return () => window.clearInterval(timer);
+  }, [debugEnabled]);
+
   const toggleDebug = async () => {
     try {
       const entry = debugEntryLabel || debugMounts[0]?.entryLabel;
       if (!entry) throw new Error('No mounted entry selected. Refresh the bridge mount list first.');
-      await bridgeRpc('ludots.graph.debug', { action: 'configure', graphId, entryLabel: entry, mode: debugEnabled ? 'off' : 'nodeAndPins' });
+      const turningOn = !debugEnabled;
+      await bridgeRpc('ludots.graph.debug', { action: 'configure', graphId, entryLabel: entry, mode: turningOn ? 'nodeAndPins' : 'off' });
       setDebugEntryLabel(entry);
       setDebugSince(0);
       setDebugEvents([]);
-      setDebugEnabled(!debugEnabled);
-      setDebugStatus(debugEnabled ? 'Live debug off' : 'Live debug armed');
+      setDebugEnabled(turningOn);
+      setDebugStatus(turningOn ? 'Live debug armed' : 'Live debug off');
+      if (turningOn) {
+        railsBeforeWatch.current = { left: leftRailCollapsed, right: rightRailCollapsed };
+        setLeftRailCollapsed(true);
+        setRightRailCollapsed(true);
+      } else if (railsBeforeWatch.current) {
+        setLeftRailCollapsed(railsBeforeWatch.current.left);
+        setRightRailCollapsed(railsBeforeWatch.current.right);
+        railsBeforeWatch.current = null;
+      }
     } catch (err) {
       setDebugStatus(err instanceof Error ? err.message : String(err));
     }
   };
 
   const activeDebugNodes = React.useMemo(() => {
-    const ids = new Set<string>();
-    const latestEvent = debugEvents[debugEvents.length - 1];
-    if (latestEvent?.nodeId) ids.add(latestEvent.nodeId);
-    return ids;
-  }, [debugEvents]);
+    if (!debugEnabled || debugEvents.length === 0) {
+      return {
+        heat: new Map(),
+        pins: new Map(),
+        controlHeat: new Map(),
+        valueHeat: new Map(),
+        hotEdges: new Set<string>(),
+      };
+    }
+    const now = debugClockMs;
+    const heat = computeLiveNodeHeat(debugEvents, now);
+    const pins = computeLivePinValues(debugEvents, now);
+    const controlHeat = computeLiveControlEdgeHeat(debugEvents, edges, now);
+    const valueHeat = computeLiveValueEdgeHeat(debugEvents, edges, now);
+    const hotEdges = new Set<string>([...controlHeat.keys(), ...valueHeat.keys()]);
+    return { heat, pins, controlHeat, valueHeat, hotEdges };
+  }, [debugClockMs, debugEnabled, debugEvents, edges]);
 
-  const displayNodes = React.useMemo(() => nodes.map((node) => {
-    const debug = activeDebugNodes.has(node.id);
-    const usesVar = selectedVariable != null && node.data.var === selectedVariable;
-    if (!debug && !usesVar) return node;
-    return {
-      ...node,
-      style: {
-        ...node.style,
-        border: debug ? '2px solid #facc15' : '2px solid #fbbf24',
-        boxShadow: debug ? '0 0 18px rgba(250,204,21,.45)' : '0 0 14px rgba(251,191,36,.35)',
-      },
-    };
-  }), [activeDebugNodes, nodes, selectedVariable]);
+  const entryStory = React.useMemo(
+    () => (debugEntryLabel ? lookupEntryStory(annotations, debugEntryLabel) : null),
+    [annotations, debugEntryLabel],
+  );
 
-  const displayEdges = React.useMemo(() => toDisplayEdges(nodes, edges), [edges, nodes]);
+  const walkedGroups = React.useMemo(
+    () => (debugEnabled
+      ? resolveWalkedGroups(annotations, debugEvents, debugClockMs, LIVE_HEAT_TTL_MS)
+      : []),
+    [annotations, debugClockMs, debugEnabled, debugEvents],
+  );
+
+  const watchFocus = React.useMemo(() => {
+    if (!debugEnabled || !debugEntryLabel) {
+      return { nodeIds: new Set<string>(), edgeIds: new Set<string>() };
+    }
+    return computeWatchedEntryFocus(nodes, edges, debugEntryLabel, eventEntryNodeId);
+  }, [debugEnabled, debugEntryLabel, edges, nodes]);
+
+  React.useEffect(() => {
+    if (!debugEnabled || watchFocus.nodeIds.size === 0) return;
+    const focusIds = [...watchFocus.nodeIds];
+    const timer = window.setTimeout(() => {
+      reactFlowRef.current?.fitView({
+        nodes: focusIds.map((id) => ({ id })),
+        padding: 0.18,
+        duration: 280,
+        minZoom: 0.55,
+        maxZoom: 1.85,
+      });
+    }, 160);
+    return () => window.clearTimeout(timer);
+  }, [debugEnabled, debugEntryLabel, watchFocus.nodeIds.size, leftRailCollapsed, rightRailCollapsed]);
+
+  const displayNodes = React.useMemo(() => {
+    let next = nodes as Node<GasNodeData & Record<string, unknown>>[];
+    if (debugEnabled) {
+      next = applyLiveDebugToNodes(next, activeDebugNodes.heat, activeDebugNodes.pins);
+      next = applyWatchFocusToNodes(next, watchFocus.nodeIds);
+    }
+    if (selectedVariable == null) return next as Node<GasNodeData>[];
+    return next.map((node) => {
+      const usesVar = node.data.var === selectedVariable;
+      if (!usesVar) return node as Node<GasNodeData>;
+      return {
+        ...node,
+        style: {
+          ...node.style,
+          outline: `2px solid ${GAS_GRAPH_THEME.execLive}`,
+          outlineOffset: '2px',
+        },
+      } as Node<GasNodeData>;
+    });
+  }, [activeDebugNodes, debugEnabled, nodes, selectedVariable, watchFocus.nodeIds]);
+
+  const displayEdges = React.useMemo(() => {
+    let base = toDisplayEdges(nodes, edges);
+    if (!debugEnabled) {
+      return base.map((edge) => ({
+        ...edge,
+        type: edge.data?.kind === 'value' ? 'gasValue' : 'gasControl',
+      }));
+    }
+    base = applyLiveDebugToEdges(
+      base,
+      activeDebugNodes.controlHeat,
+      activeDebugNodes.valueHeat,
+      activeDebugNodes.pins,
+    ) as Edge<GasEdgeData>[];
+    return applyWatchFocusToEdges(base, watchFocus.edgeIds, activeDebugNodes.hotEdges) as Edge<GasEdgeData>[];
+  }, [activeDebugNodes.controlHeat, activeDebugNodes.hotEdges, activeDebugNodes.pins, activeDebugNodes.valueHeat, debugEnabled, edges, nodes, watchFocus.edgeIds]);
 
   const mapVariables = React.useMemo<GraphVariableRow[]>(() => {
     const rows = new Map<string, GraphVariableRow>();
@@ -1670,8 +1969,6 @@ export const GasGraphEditorPage: React.FC = () => {
       setVariableDraft({
         name: declared.name,
         kind: declared.type,
-        elementType: 'int',
-        keyType: 'int',
         initial: String(declared.initial),
       });
     }
@@ -1712,11 +2009,6 @@ export const GasGraphEditorPage: React.FC = () => {
   };
 
   const createMapVariable = async () => {
-    const blocked = collectionTypeError(variableDraft.kind);
-    if (blocked) {
-      setVariableStatus(blocked);
-      return;
-    }
     try {
       setVariableBusy(true);
       const name = variableDraft.name.trim();
@@ -1743,11 +2035,6 @@ export const GasGraphEditorPage: React.FC = () => {
   };
 
   const updateMapVariable = async () => {
-    const blocked = collectionTypeError(variableDraft.kind);
-    if (blocked) {
-      setVariableStatus(blocked);
-      return;
-    }
     if (!selectedVariable) {
       setVariableStatus('Select a variable to update.');
       return;
@@ -1850,37 +2137,51 @@ export const GasGraphEditorPage: React.FC = () => {
     addAuthoringNode(op, position, { instanceId });
   };
 
+  const dialectNavClass = (target: GraphEditorDialect) =>
+    target === dialect
+      ? 'rounded-md border border-studio-blue bg-studio-blue/15 px-2 py-1 text-xs font-semibold text-studio-blue'
+      : 'rounded-md border border-studio-elevated px-2 py-1 text-xs text-studio-muted hover:bg-studio-elevated';
+
   return (
-    <div className="flex h-screen w-screen flex-col bg-slate-950 text-slate-100">
-      <header className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3">
+    <div className="flex h-full w-full flex-col bg-studio-bg text-studio-label">
+      <header className="flex flex-wrap items-center gap-3 border-b border-studio-elevated bg-studio-surface px-4 py-3">
         <div className="min-w-40">
-          <div className="text-sm font-semibold text-white">Ludots Graph Editor</div>
-          <div className="text-[10px] text-slate-500">Author contract · compiler diagnostics · live execution</div>
+          <div className="text-sm font-semibold text-studio-label">{titles.title}</div>
+          <div className="text-[10px] text-studio-muted">{titles.subtitle}</div>
         </div>
-        <Link to="/" className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800">
-          Map Editor
+        <Link to="/" className="rounded-md border border-studio-elevated px-2 py-1 text-xs text-studio-secondary hover:bg-studio-elevated">
+          工作室
         </Link>
-        <label className="flex items-center gap-2 text-xs text-slate-400">
+        <Link to={dialectPath('func')} className={dialectNavClass('func')}>
+          Graph Editor
+        </Link>
+        <Link to={dialectPath('bt')} className={dialectNavClass('bt')}>
+          BT Editor
+        </Link>
+        <Link to={dialectPath('fsm')} className={dialectNavClass('fsm')}>
+          FSM Editor
+        </Link>
+        <label className="flex items-center gap-2 text-xs text-studio-muted">
           modId
           <input
             value={modId}
             onChange={(e) => setModId(e.target.value)}
-            className="w-72 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
+            className="w-72 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
           />
         </label>
-        <label className="flex items-center gap-2 text-xs text-slate-400">
+        <label className="flex items-center gap-2 text-xs text-studio-muted">
           graphId
           <input
             value={graphId}
             onChange={(e) => setGraphId(e.target.value)}
-            className="w-80 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
+            className="w-80 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
           />
         </label>
         <button
           type="button"
           disabled={busy}
           onClick={() => void loadGraph()}
-          className="rounded bg-slate-700 px-3 py-1 text-xs font-semibold hover:bg-slate-600 disabled:opacity-50"
+          className="rounded bg-studio-fill px-3 py-1 text-xs font-semibold hover:bg-studio-elevated disabled:opacity-50"
         >
           Load
         </button>
@@ -1888,7 +2189,7 @@ export const GasGraphEditorPage: React.FC = () => {
           type="button"
           disabled={busy || !currentGraph}
           onClick={() => void onValidate()}
-          className="rounded bg-sky-700 px-3 py-1 text-xs font-semibold hover:bg-sky-600 disabled:opacity-50"
+          className="rounded bg-studio-blue px-3 py-1 text-xs font-semibold hover:brightness-110 disabled:opacity-50"
         >
           Validate
         </button>
@@ -1896,7 +2197,7 @@ export const GasGraphEditorPage: React.FC = () => {
           type="button"
           disabled={busy || !currentGraph}
           onClick={() => void onSave()}
-          className="rounded bg-emerald-700 px-3 py-1 text-xs font-semibold hover:bg-emerald-600 disabled:opacity-50"
+          className="rounded bg-studio-blue px-3 py-1 text-xs font-semibold hover:brightness-110 disabled:opacity-50"
         >
           Save
         </button>
@@ -1904,7 +2205,7 @@ export const GasGraphEditorPage: React.FC = () => {
           type="button"
           disabled={busy || nodes.length === 0}
           onClick={applyAutoLayout}
-          className="rounded bg-indigo-700 px-3 py-1 text-xs font-semibold hover:bg-indigo-600 disabled:opacity-50"
+          className="rounded bg-studio-fill px-3 py-1 text-xs font-semibold hover:bg-studio-elevated disabled:opacity-50"
         >
           Auto Layout
         </button>
@@ -1912,36 +2213,79 @@ export const GasGraphEditorPage: React.FC = () => {
           type="button"
           disabled={busy || !currentGraph}
           onClick={() => void saveLayout()}
-          className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated disabled:opacity-50"
         >
           Save Layout
         </button>
         <button
           type="button"
           onClick={() => void loadCatalog()}
-          className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800"
+          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated"
         >
           Refresh Tree
         </button>
         <button
           type="button"
           onClick={() => void refreshDebugMounts()}
-          className="rounded border border-amber-700 px-3 py-1 text-xs font-semibold text-amber-200 hover:bg-amber-950"
+          className="rounded border border-studio-yellow/50 px-3 py-1 text-xs font-semibold text-studio-yellow hover:bg-studio-yellow/15"
         >
           Refresh Live
         </button>
-        <div className="text-xs text-slate-400">{status}</div>
+        <button
+          type="button"
+          onClick={() => setLeftRailCollapsed((v) => !v)}
+          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated"
+          title="Toggle catalog / variables rail"
+        >
+          {leftRailCollapsed ? 'Show Tree' : 'Hide Tree'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setRightRailCollapsed((v) => !v)}
+          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated"
+          title="Toggle inspector rail"
+        >
+          {rightRailCollapsed ? 'Show Inspector' : 'Hide Inspector'}
+        </button>
+        <div className="text-xs text-studio-muted">{status}</div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[260px_1fr_320px]">
-        <div className="flex min-h-0 flex-col border-r border-slate-800">
+      <div
+        className={[
+          'grid min-h-0 flex-1',
+          leftRailCollapsed && rightRailCollapsed
+            ? 'grid-cols-[32px_minmax(0,1fr)_32px]'
+            : leftRailCollapsed
+              ? 'grid-cols-[32px_minmax(0,1fr)_240px]'
+              : rightRailCollapsed
+                ? 'grid-cols-[220px_minmax(0,1fr)_32px]'
+                : 'grid-cols-[220px_minmax(0,1fr)_280px]',
+        ].join(' ')}
+      >
+        {leftRailCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setLeftRailCollapsed(false)}
+            className="flex min-h-0 flex-col items-center justify-start gap-2 border-r border-studio-elevated bg-studio-bg/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-studio-muted hover:bg-studio-surface hover:text-studio-label"
+            title="Show catalog and variables"
+          >
+            <span className="[writing-mode:vertical-rl] rotate-180">Tree</span>
+          </button>
+        ) : (
+        <div className="flex min-h-0 flex-col border-r border-studio-elevated">
           <div className="min-h-0 flex-[3] overflow-hidden [&_aside]:h-full [&_aside]:border-r-0">
             <GraphCatalogTree
-              mods={catalog}
+              mods={catalogModsForDialect}
               selectedModId={modId}
               selectedGraphId={graphId}
               status={catalogStatus}
               onSelect={(nextModId, nextGraphId) => {
+                const preferred = preferredDialectForGraphId(nextGraphId);
+                if (preferred !== dialect) {
+                  const params = new URLSearchParams({ mod: nextModId, graph: nextGraphId });
+                  navigate(`${dialectPath(preferred)}?${params.toString()}`);
+                  return;
+                }
                 setModId(nextModId);
                 setGraphId(nextGraphId);
                 setSelectedVariable(null);
@@ -1963,14 +2307,23 @@ export const GasGraphEditorPage: React.FC = () => {
             onDelete={() => void deleteMapVariable()}
           />
         </div>
+        )}
         <div className="min-h-0">
           {graph ? (
-            <div className="relative h-full" onDragOver={onVariableDragOver} onDrop={onVariableDrop}>
+            <div
+              className={[
+                'relative h-full',
+                (debugEnabled || rightRailCollapsed) ? 'pb-[10.5rem]' : '',
+              ].join(' ')}
+              onDragOver={onVariableDragOver}
+              onDrop={onVariableDrop}
+            >
               <ReactFlow
                 className="gas-graph-flow"
                 nodes={displayNodes}
                 edges={displayEdges}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 onInit={(instance) => { reactFlowRef.current = instance; }}
                 onPaneClick={() => {
                   setPaletteMenu(null);
@@ -1984,9 +2337,16 @@ export const GasGraphEditorPage: React.FC = () => {
                   event.preventDefault();
                   openPaletteAt(event.clientX, event.clientY);
                 }}
+                onNodeDoubleClick={(_, node) => openFunctionGraphPortal(node)}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
+                onNodesDelete={(deleted) => {
+                  setStatus(`Deleted ${deleted.length} node${deleted.length === 1 ? '' : 's'}.`);
+                }}
+                onEdgesDelete={(deleted) => {
+                  setStatus(`Deleted ${deleted.length} edge${deleted.length === 1 ? '' : 's'}.`);
+                }}
                 onSelectionChange={({ nodes: selected, edges: selectedEdges }) => {
                   setSelectedNodeId(selected[0]?.id ?? null);
                   setSelectedEdgeId(selectedEdges[0]?.id ?? null);
@@ -2000,35 +2360,109 @@ export const GasGraphEditorPage: React.FC = () => {
                 fitView
                 proOptions={{ hideAttribution: true }}
               >
-                <Background gap={16} color="#334155" />
+                <Background gap={18} color={GAS_GRAPH_THEME.canvasDot} />
                 <Controls />
                 <MiniMap
                   pannable
                   zoomable
-                  bgColor="#020617"
-                  maskColor="rgba(2, 6, 23, 0.35)"
-                  nodeStrokeColor="#94a3b8"
+                  bgColor={GAS_GRAPH_THEME.minimapBg}
+                  maskColor={GAS_GRAPH_THEME.minimapMask}
+                  nodeStrokeColor={GAS_GRAPH_THEME.nodeMuted}
                   nodeColor={(node) => {
-                    if (node.data.role === 'event-entry') return '#fb7185';
-                    if (node.data.op === 'SwitchInt' || node.data.op === 'FsmState') return '#f59e0b';
-                    return '#38bdf8';
+                    if (node.data.role === 'event-entry') return GAS_GRAPH_THEME.eventAccent;
+                    if (node.data.op === 'SwitchInt' || node.data.op === 'FsmState') return GAS_GRAPH_THEME.execLiveHot;
+                    if (sugars[node.data.op as string]?.childArms || node.data.op === 'BtDecorator') return GAS_GRAPH_THEME.eventAccent;
+                    if (isPureValueOp(String(node.data.op ?? ''))) return GAS_GRAPH_THEME.valueAccent;
+                    return GAS_GRAPH_THEME.dataLive;
                   }}
                 />
               </ReactFlow>
-              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-slate-800 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-400">
+              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-studio-elevated bg-studio-bg/80 px-2 py-1 text-[10px] text-studio-muted">
                 Middle-drag to pan · Left-drag to box-select · Right-click to add a node
               </div>
+              {(debugEnabled || rightRailCollapsed) ? (
+                <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-studio-yellow/30 bg-studio-bg/95 px-3 py-2 shadow-[0_-8px_24px_rgba(0,0,0,.45)]">
+                  <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-studio-yellow">
+                    <span>
+                      Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
+                        ?? debugMounts[0]?.executionBackend
+                        ?? 'Interpret'}
+                    </span>
+                    <span className="font-normal normal-case tracking-normal text-studio-muted">
+                      amber flow = control · value on wire/pin · heat ~2s
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <LiveDebugEntryPicker
+                      mounts={debugMounts}
+                      annotations={annotations}
+                      value={debugEntryLabel}
+                      onChange={(entryLabel) => { setDebugEntryLabel(entryLabel); setDebugSince(0); setDebugEvents([]); }}
+                    />
+                    <button type="button" onClick={() => void toggleDebug()} className="rounded bg-studio-yellow px-2 py-1 font-semibold text-studio-bg hover:brightness-110">
+                      {debugEnabled ? 'Stop' : 'Watch'}
+                    </button>
+                  </div>
+                  <div className="mt-1 text-[10px] text-studio-muted">{debugStatus}</div>
+                  {debugEnabled ? (
+                    <div className="mt-1 rounded border border-studio-yellow/40 bg-studio-yellow/10 px-2 py-1.5 text-[11px] leading-4 text-studio-label">
+                      <div className="font-semibold text-studio-yellow">
+                        {entryStory ? entryStory.title : (debugEntryLabel || '—')}
+                        <span className="ml-2 font-normal text-studio-muted">
+                          {entryStory
+                            ? entryStory.summary
+                            : `${watchFocus.nodeIds.size} nodes framed; other chains hidden.`}
+                        </span>
+                      </div>
+                      {walkedGroups.length > 0 ? (
+                        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                          {walkedGroups.map((group, index) => (
+                            <React.Fragment key={group.id}>
+                              {index > 0 ? <span className="text-studio-yellow">›</span> : null}
+                              <span
+                                className={index === walkedGroups.length - 1
+                                  ? 'rounded bg-studio-yellow/30 px-1.5 py-0.5 font-semibold text-studio-bg'
+                                  : 'rounded bg-studio-yellow/10 px-1.5 py-0.5 text-studio-secondary'}
+                              >
+                                {group.text}
+                              </span>
+                            </React.Fragment>
+                          ))}
+                          <span className="ml-1 text-[10px] text-studio-muted">
+                            {annotations.groups.length > 0 ? '这一趟走到这里为止' : null}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="mt-0.5 text-studio-secondary">
+                          {annotations.groups.length > 0
+                            ? '等游戏里发生对应事件——左边战场，右边这条链会亮起来。'
+                            : '等这个入口被触发；链路上的节点和控制边会亮起来。给节点分组写说明，这里就会用人话讲这一趟。'}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                  <div className="mt-1 max-h-16 overflow-auto rounded border border-studio-elevated bg-studio-bg p-1.5 font-mono text-[10px]">
+                    {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-16).map((event) => (
+                      <div key={event.sequence} className={event.nodeId ? 'text-studio-blue' : 'text-studio-muted'}>
+                        #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
+                        {event.controlPort ? ` →${event.controlPort}` : ''}
+                        {event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {paletteMenu ? (
                 <div
-                  className="fixed z-50 w-72 rounded border border-slate-700 bg-slate-950/95 p-2 shadow-xl"
+                  className="fixed z-50 w-72 rounded border border-studio-fill bg-studio-bg/95 p-2 shadow-xl"
                   style={{
                     left: Math.min(paletteMenu.clientX, window.innerWidth - 300),
                     top: Math.min(paletteMenu.clientY, window.innerHeight - 360),
                   }}
                   onMouseDown={(event) => event.stopPropagation()}
                 >
-                  <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-                    <Search size={14} className="text-slate-500" aria-hidden="true" />
+                  <div className="flex items-center gap-2 border-b border-studio-elevated pb-2">
+                    <Search size={14} className="text-studio-muted" aria-hidden="true" />
                     <input
                       autoFocus
                       value={nodeSearch}
@@ -2041,20 +2475,20 @@ export const GasGraphEditorPage: React.FC = () => {
                       }}
                       placeholder="Find node"
                       aria-label="Find graph node"
-                      className="min-w-0 flex-1 bg-transparent text-xs text-slate-100 outline-none placeholder:text-slate-600"
+                      className="min-w-0 flex-1 bg-transparent text-xs text-studio-label outline-none placeholder:text-studio-muted"
                     />
-                    <span className="text-[10px] text-slate-600">Enter</span>
+                    <span className="text-[10px] text-studio-muted">Enter</span>
                   </div>
                   <div className="mt-2 max-h-64 overflow-auto">
                     {graph.kind === 'TriggerGraph' && (!nodeSearch.trim() || 'event'.includes(nodeSearch.trim().toLocaleLowerCase())) ? (
                       <button
                         type="button"
                         onClick={() => addEventEntry({ x: paletteMenu.flowX, y: paletteMenu.flowY })}
-                        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-rose-100 hover:bg-rose-950"
+                        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-studio-label hover:bg-studio-red/20"
                       >
-                        <Plus size={12} className="text-rose-400" aria-hidden="true" />
+                        <Plus size={12} className="text-studio-red" aria-hidden="true" />
                         <span className="font-mono">Event</span>
-                        <span className="ml-auto text-[10px] text-rose-300">entry</span>
+                        <span className="ml-auto text-[10px] text-studio-red">entry</span>
                       </button>
                     ) : null}
                     {availableNodes.slice(0, 24).map((entry) => (
@@ -2062,27 +2496,27 @@ export const GasGraphEditorPage: React.FC = () => {
                         key={entry.op}
                         type="button"
                         onClick={() => addAuthoringNode(entry.op, { x: paletteMenu.flowX, y: paletteMenu.flowY })}
-                        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-800"
+                        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-studio-secondary hover:bg-studio-elevated"
                       >
-                        <Plus size={12} className="text-emerald-400" aria-hidden="true" />
+                        <Plus size={12} className="text-studio-blue" aria-hidden="true" />
                         <span className="font-mono">{entry.op}</span>
-                        {entry.sugar ? <span className="ml-auto text-[10px] text-amber-300">sugar</span> : null}
+                        {entry.sugar ? <span className="ml-auto text-[10px] text-studio-yellow">sugar</span> : null}
                       </button>
                     ))}
-                    {availableNodes.length === 0 ? <div className="px-2 py-2 text-xs text-slate-600">No runtime node matches.</div> : null}
+                    {availableNodes.length === 0 ? <div className="px-2 py-2 text-xs text-studio-muted">No runtime node matches.</div> : null}
                   </div>
                 </div>
               ) : null}
               {varDropMenu ? (
                 <div
-                  className="fixed z-50 w-56 rounded border border-amber-800 bg-slate-950/95 p-2 shadow-xl"
+                  className="fixed z-50 w-56 rounded border border-studio-yellow/40 bg-studio-bg/95 p-2 shadow-xl"
                   style={{
                     left: Math.min(varDropMenu.clientX, window.innerWidth - 240),
                     top: Math.min(varDropMenu.clientY, window.innerHeight - 160),
                   }}
                   onMouseDown={(event) => event.stopPropagation()}
                 >
-                  <div className="mb-2 px-1 text-[11px] text-amber-100">
+                  <div className="mb-2 px-1 text-[11px] text-studio-label">
                     Place <span className="font-mono">{varDropMenu.name}</span>
                   </div>
                   {varDropMenu.placed ? (
@@ -2092,10 +2526,10 @@ export const GasGraphEditorPage: React.FC = () => {
                         { x: varDropMenu.flowX, y: varDropMenu.flowY },
                         varDropMenu.name,
                         varDropMenu.placedKind ?? 'entity')}
-                      className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
+                      className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-studio-label hover:bg-studio-elevated"
                     >
                       <span>Get</span>
-                      <span className="font-mono text-[10px] text-slate-500">
+                      <span className="font-mono text-[10px] text-studio-muted">
                         {(varDropMenu.placedKind ?? 'entity') === 'region'
                           ? 'LoadPlacedRegion'
                           : (varDropMenu.placedKind ?? 'entity') === 'anchor'
@@ -2108,20 +2542,20 @@ export const GasGraphEditorPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => placeVariableAccess('get', { x: varDropMenu.flowX, y: varDropMenu.flowY }, varDropMenu.name, varDropMenu.type)}
-                        className="mb-1 flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
+                        className="mb-1 flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-studio-label hover:bg-studio-elevated"
                       >
                         <span>Get</span>
-                        <span className="font-mono text-[10px] text-slate-500">
+                        <span className="font-mono text-[10px] text-studio-muted">
                           {varDropMenu.type === 'float' ? 'ReadMapVarFloat' : 'ReadMapVarInt'}
                         </span>
                       </button>
                       <button
                         type="button"
                         onClick={() => placeVariableAccess('set', { x: varDropMenu.flowX, y: varDropMenu.flowY }, varDropMenu.name, varDropMenu.type)}
-                        className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
+                        className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-studio-label hover:bg-studio-elevated"
                       >
                         <span>Set</span>
-                        <span className="font-mono text-[10px] text-slate-500">
+                        <span className="font-mono text-[10px] text-studio-muted">
                           {varDropMenu.type === 'float' ? 'WriteMapVarFloat' : 'WriteMapVarInt'}
                         </span>
                       </button>
@@ -2131,14 +2565,24 @@ export const GasGraphEditorPage: React.FC = () => {
               ) : null}
             </div>
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+            <div className="flex h-full items-center justify-center text-sm text-studio-muted">
               Select a graph in the left tree. Bridge must be running on :5299.
             </div>
           )}
         </div>
 
-        <aside className="flex min-h-0 flex-col border-l border-slate-800 bg-slate-900/80">
-          <div className="border-b border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        {rightRailCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setRightRailCollapsed(false)}
+            className="flex min-h-0 flex-col items-center justify-start gap-2 border-l border-studio-elevated bg-studio-bg/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-studio-muted hover:bg-studio-surface hover:text-studio-label"
+            title="Show inspector"
+          >
+            <span className="[writing-mode:vertical-rl]">Inspector</span>
+          </button>
+        ) : (
+        <aside className="flex min-h-0 flex-col border-l border-studio-elevated bg-studio-surface/80">
+          <div className="border-b border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-muted">
             Inspector
           </div>
           <div className="space-y-3 overflow-auto p-3 text-xs">
@@ -2147,6 +2591,8 @@ export const GasGraphEditorPage: React.FC = () => {
                 {selectedData.role === 'event-entry' && selectedData.entry ? (
                   <EventEntryInspector
                     entry={selectedData.entry}
+                    eventSchemas={eventSchemas}
+                    inputActions={inputActions}
                     startOptions={nodes.filter((node) => node.data.role !== 'event-entry').map((node) => node.id)}
                     instanceOptions={mapInstances.map((instance) => instance.instanceId)}
                     variableOptions={declaredVariables.map((variable) => variable.name)}
@@ -2156,12 +2602,12 @@ export const GasGraphEditorPage: React.FC = () => {
                 ) : (
                   <>
                 <div>
-                  <div className="text-slate-500">Id</div>
-                  <div className="font-mono text-slate-100">{selectedData.id}</div>
+                  <div className="text-studio-muted">Id</div>
+                  <div className="font-mono text-studio-label">{selectedData.id}</div>
                 </div>
                 <div>
-                  <div className="text-slate-500">Op</div>
-                  <div className="font-mono text-sky-300">{selectedData.op}</div>
+                  <div className="text-studio-muted">Op</div>
+                  <div className="font-mono text-studio-blue">{selectedData.op}</div>
                 </div>
                 {authoredFieldsForOp(selectedData.op).map((field) => {
                   const raw = selectedData[field.key];
@@ -2173,7 +2619,7 @@ export const GasGraphEditorPage: React.FC = () => {
                           checked={Boolean(raw)}
                           onChange={(event) => updateSelectedField(field.key, event.target.checked)}
                         />
-                        <span className="text-slate-400">{field.label}</span>
+                        <span className="text-studio-muted">{field.label}</span>
                       </label>
                     );
                   }
@@ -2184,11 +2630,11 @@ export const GasGraphEditorPage: React.FC = () => {
                           : panelAnchors;
                         return (
                           <label key={field.key} className="block">
-                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <div className="mb-1 text-studio-muted">{field.label}</div>
                             <select
                               value={current}
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Select anchor</option>
                               {options.map((anchor) => (
@@ -2205,11 +2651,11 @@ export const GasGraphEditorPage: React.FC = () => {
                           : payloadKeys;
                         return (
                           <label key={field.key} className="block">
-                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <div className="mb-1 text-studio-muted">{field.label}</div>
                             <select
                               value={current}
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Select payload key</option>
                               {options.map((key) => (
@@ -2226,11 +2672,11 @@ export const GasGraphEditorPage: React.FC = () => {
                           : enumCatalog.map((candidate) => candidate.name);
                         return (
                           <label key={field.key} className="block">
-                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <div className="mb-1 text-studio-muted">{field.label}</div>
                             <select
                               value={current}
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Unbound (raw case ints)</option>
                               {options.map((name) => (
@@ -2247,11 +2693,11 @@ export const GasGraphEditorPage: React.FC = () => {
                           : textKeyCatalog.map((candidate) => candidate.id);
                         return (
                           <label key={field.key} className="block">
-                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <div className="mb-1 text-studio-muted">{field.label}</div>
                             <select
                               value={current}
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Select text key</option>
                               {options.map((id) => {
@@ -2284,11 +2730,11 @@ export const GasGraphEditorPage: React.FC = () => {
                           : instanceIds;
                         return (
                           <label key={field.key} className="block">
-                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <div className="mb-1 text-studio-muted">{field.label}</div>
                             <select
                               value={current}
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Select placed instance</option>
                               {options.map((id) => (
@@ -2298,30 +2744,50 @@ export const GasGraphEditorPage: React.FC = () => {
                           </label>
                         );
                       }
+                      if (field.key === 'decoratorKind') {
+                        const current = raw == null ? '' : String(raw);
+                        const known = ['inverter', 'forceSuccess', 'forceFailure'];
+                        const options = current && !known.includes(current) ? [...known, current] : known;
+                        return (
+                          <label key={field.key} className="block">
+                            <div className="mb-1 text-studio-muted">{field.label}</div>
+                            <select
+                              value={current}
+                              onChange={(event) => updateSelectedField(field.key, event.target.value)}
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
+                            >
+                              <option value="">Select kind</option>
+                              {options.map((kind) => (
+                                <option key={kind} value={kind}>{kind}</option>
+                              ))}
+                            </select>
+                          </label>
+                        );
+                      }
                   return (
                     <label key={field.key} className="block">
-                      <div className="mb-1 text-slate-500">{field.label}</div>
+                      <div className="mb-1 text-studio-muted">{field.label}</div>
                       <input
                         type={field.kind === 'string' ? 'text' : 'number'}
                         step={field.kind === 'int' ? '1' : undefined}
                         value={raw == null ? '' : String(raw)}
                         onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                        className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                       />
                     </label>
                   );
                 })}
                 {selectedData.descriptor ? (
-                  <div className="rounded border border-slate-800 bg-slate-950/70 p-2">
-                    <div className="mb-1 text-slate-500">Descriptor ports</div>
-                    <div className="font-mono text-[10px] text-emerald-300">
+                  <div className="rounded border border-studio-elevated bg-studio-bg/80 p-2">
+                    <div className="mb-1 text-studio-muted">Descriptor ports</div>
+                    <div className="font-mono text-[10px] text-studio-blue">
                       in: {[...new Set([
                         ...selectedData.descriptor.linearInputPorts,
                         ...selectedData.descriptor.queryInputPorts,
                         ...selectedData.descriptor.scriptInputPorts,
                       ])].join(', ') || 'none'}
                     </div>
-                    <div className="font-mono text-[10px] text-violet-300">
+                    <div className="font-mono text-[10px] text-studio-red">
                       out: {selectedData.descriptor.queryOutputType !== 'Void'
                         ? selectedData.descriptor.queryOutputType
                         : selectedData.descriptor.linearOutputType}
@@ -2329,15 +2795,15 @@ export const GasGraphEditorPage: React.FC = () => {
                   </div>
                 ) : null}
                 {(selectedData.op === 'SwitchInt' || selectedData.op === 'FsmState') && graph && isControlFlowGraph(graph) ? (
-                  <div className="space-y-2 rounded border border-sky-900 bg-sky-950/30 p-2">
-                    <div className="text-sky-300">{selectedData.op === 'FsmState' ? 'FsmState case arms' : 'Switch cases'}</div>
+                  <div className="space-y-2 rounded border border-studio-blue/40 bg-studio-blue/10 p-2">
+                    <div className="text-studio-blue">{selectedData.op === 'FsmState' ? 'FsmState case arms' : 'Switch cases'}</div>
                     {(() => {
                       const boundEnum = selectedData.enumType
                         ? enumCatalog.find((candidate) => candidate.name === selectedData.enumType)
                         : null;
                       if (selectedData.op === 'FsmState' && !boundEnum) {
                         return (
-                          <div className="text-[11px] text-amber-300">
+                          <div className="text-[11px] text-studio-yellow">
                             Bind enumType before adding case arms (FsmState fails closed without it).
                           </div>
                         );
@@ -2345,11 +2811,11 @@ export const GasGraphEditorPage: React.FC = () => {
                       if (boundEnum) {
                         return (
                           <label className="block">
-                            <div className="mb-1 text-slate-500">Case member ({boundEnum.name})</div>
+                            <div className="mb-1 text-studio-muted">Case member ({boundEnum.name})</div>
                             <select
                               value={boundEnum.members.some((member) => member.name === switchCaseValue) ? switchCaseValue : ''}
                               onChange={(event) => setSwitchCaseValue(event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Select member</option>
                               {boundEnum.members.map((member) => (
@@ -2361,23 +2827,23 @@ export const GasGraphEditorPage: React.FC = () => {
                       }
                       return (
                         <label className="block">
-                          <div className="mb-1 text-slate-500">Case value</div>
+                          <div className="mb-1 text-studio-muted">Case value</div>
                           <input
                             type="number"
                             step="1"
                             value={switchCaseValue}
                             onChange={(event) => setSwitchCaseValue(event.target.value)}
-                            className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                            className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                           />
                         </label>
                       );
                     })()}
                     <label className="block">
-                      <div className="mb-1 text-slate-500">Target node</div>
+                      <div className="mb-1 text-studio-muted">Target node</div>
                       <select
                         value={switchCaseTarget}
                         onChange={(event) => setSwitchCaseTarget(event.target.value)}
-                        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                        className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                       >
                         <option value="">Select target</option>
                         {nodes.filter((node) => node.id !== selectedNodeId).map((node) => (
@@ -2388,74 +2854,116 @@ export const GasGraphEditorPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={addSwitchCase}
-                      className="w-full rounded bg-sky-700 px-2 py-1 font-semibold text-sky-50 hover:bg-sky-600"
+                      className="w-full rounded bg-studio-blue px-2 py-1 font-semibold text-studio-label hover:brightness-110"
                     >
                       Add case edge
                     </button>
                   </div>
                 ) : null}
+                {selectedData.op && sugars[selectedData.op]?.childArms && graph && isControlFlowGraph(graph) ? (
+                  <div className="space-y-2 rounded border border-studio-red/40 bg-studio-red/10 p-2">
+                    <div className="text-studio-red">{selectedData.op} child arms</div>
+                    <div className="font-mono text-[10px] text-studio-secondary">
+                      {(selectedData.controlOutputPorts ?? []).filter((port) => port.startsWith('child:')).join(', ') || 'none yet'}
+                    </div>
+                    <label className="block">
+                      <div className="mb-1 text-studio-muted">Target node</div>
+                      <select
+                        value={btChildTarget}
+                        onChange={(event) => setBtChildTarget(event.target.value)}
+                        className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
+                      >
+                        <option value="">Select target</option>
+                        {nodes.filter((node) => node.id !== selectedNodeId).map((node) => (
+                          <option key={node.id} value={node.id}>{node.id}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addBtChildArm}
+                      className="w-full rounded bg-studio-red px-2 py-1 font-semibold text-studio-label hover:brightness-110"
+                    >
+                      Add child edge
+                    </button>
+                  </div>
+                ) : null}
                 {!graph || !isControlFlowGraph(graph) ? (
                   <label className="block">
-                    <div className="mb-1 text-slate-500">Next</div>
+                    <div className="mb-1 text-studio-muted">Next</div>
                     <input
                       value={selectedData.next ?? ''}
                       onChange={(e) => updateSelectedField('next', e.target.value)}
-                      className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                      className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                     />
                   </label>
                 ) : null}
                   </>
                 )}
+                <button
+                  type="button"
+                  onClick={removeSelectedGraphNode}
+                  className={`w-full ${STUDIO_CHROME.btnDanger}`}
+                >
+                  删除此节点
+                </button>
               </>
             ) : selectedEdge ? (
               <>
                 <div>
-                  <div className="text-slate-500">Edge</div>
-                  <div className="font-mono text-slate-100">{selectedEdge.data?.kind ?? 'edge'}</div>
+                  <div className="text-studio-muted">Edge</div>
+                  <div className="font-mono text-studio-label">{selectedEdge.data?.kind ?? 'edge'}</div>
                 </div>
                 <label className="block">
-                  <div className="mb-1 text-slate-500">From node</div>
+                  <div className="mb-1 text-studio-muted">From node</div>
                   <input
                     value={selectedEdge.source}
                     onChange={(e) => updateSelectedEdgeField('source', e.target.value)}
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                    className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                   />
                 </label>
                 <label className="block">
-                  <div className="mb-1 text-slate-500">From port</div>
+                  <div className="mb-1 text-studio-muted">From port</div>
                   <input
                     value={selectedEdge.sourceHandle ?? ''}
                     onChange={(e) => updateSelectedEdgeField('sourceHandle', e.target.value)}
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                    className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                   />
                 </label>
                 <label className="block">
-                  <div className="mb-1 text-slate-500">To node</div>
+                  <div className="mb-1 text-studio-muted">To node</div>
                   <input
                     value={selectedEdge.target}
                     onChange={(e) => updateSelectedEdgeField('target', e.target.value)}
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                    className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                   />
                 </label>
                 {selectedEdge.data?.kind === 'value' ? (
                   <label className="block">
-                    <div className="mb-1 text-slate-500">To port</div>
+                    <div className="mb-1 text-studio-muted">To port</div>
                     <input
                       value={selectedEdge.targetHandle ?? ''}
                       onChange={(e) => updateSelectedEdgeField('targetHandle', e.target.value)}
-                      className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                      className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                     />
                   </label>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={removeSelectedGraphEdge}
+                  className={`w-full ${STUDIO_CHROME.btnDanger}`}
+                >
+                  删除此连线
+                </button>
               </>
             ) : (
               <div className="space-y-2">
-                <div className="text-slate-500">Select a node or an Event card.</div>
+                <div className="text-studio-muted">Select a node or an Event card.</div>
                 {graph?.kind === 'TriggerGraph' ? (
                   <button
                     type="button"
                     onClick={() => addEventEntry()}
-                    className="w-full rounded bg-rose-800 px-2 py-1 font-semibold text-rose-50 hover:bg-rose-700"
+                    className="w-full rounded bg-studio-red px-2 py-1 font-semibold text-studio-label hover:brightness-110"
                   >
                     Add Event
                   </button>
@@ -2464,10 +2972,10 @@ export const GasGraphEditorPage: React.FC = () => {
             )}
           </div>
 
-          <div className="border-t border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <div className="border-t border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-muted">
             Diagnostics
           </div>
-          <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap p-3 font-mono text-[11px] text-amber-200">
+          <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap p-3 font-mono text-[11px] text-studio-yellow">
             {diagnosticsText || 'Validate or Save to run the Bridge compiler.'}
           </pre>
 
@@ -2484,35 +2992,44 @@ export const GasGraphEditorPage: React.FC = () => {
             />
           ) : null}
 
-          <div className="border-t border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-300">
+          {debugEnabled ? (
+            <div className="border-t border-studio-elevated px-3 py-2 text-[10px] leading-4 text-studio-muted">
+              Live Debug is docked under the canvas while Watching — keeps the node chain readable on a half screen.
+            </div>
+          ) : (
+            <>
+          <div className="border-t border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-yellow">
             Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
               ?? debugMounts[0]?.executionBackend
               ?? 'Interpret'}
           </div>
-          <div className="space-y-2 border-t border-slate-800 p-3 text-xs">
+          <div className="space-y-2 border-t border-studio-elevated p-3 text-xs">
             <div className="flex items-center gap-2">
-              <select
+              <LiveDebugEntryPicker
+                mounts={debugMounts}
+                annotations={annotations}
                 value={debugEntryLabel}
-                onChange={(event) => { setDebugEntryLabel(event.target.value); setDebugSince(0); setDebugEvents([]); }}
-                className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[11px]"
-              >
-                <option value="">Select mounted entry</option>
-                {debugMounts.map((mount) => <option key={`${mount.graphName}:${mount.entryLabel}`} value={mount.entryLabel}>{mount.entryLabel} · {mount.event}</option>)}
-              </select>
-              <button type="button" onClick={() => void toggleDebug()} className="rounded bg-amber-700 px-2 py-1 font-semibold text-amber-50 hover:bg-amber-600">
+                onChange={(entryLabel) => { setDebugEntryLabel(entryLabel); setDebugSince(0); setDebugEvents([]); }}
+              />
+              <button type="button" onClick={() => void toggleDebug()} className="rounded bg-studio-yellow px-2 py-1 font-semibold text-studio-bg hover:brightness-110">
                 {debugEnabled ? 'Stop' : 'Watch'}
               </button>
             </div>
-            <div className="text-[10px] text-slate-400">{debugStatus}</div>
-            <div className="max-h-40 overflow-auto rounded border border-slate-800 bg-slate-950 p-2 font-mono text-[10px]">
-              {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-40).map((event) => (
-                <div key={event.sequence} className={event.nodeId ? 'text-amber-200' : 'text-slate-400'}>
-                  #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}{event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}
+            <div className="text-[10px] text-studio-muted">{debugStatus}</div>
+            <div className="max-h-28 overflow-auto rounded border border-studio-elevated bg-studio-bg p-2 font-mono text-[10px]">
+              {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-24).map((event) => (
+                <div key={event.sequence} className={event.nodeId ? 'text-studio-blue' : 'text-studio-muted'}>
+                  #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
+                  {event.controlPort ? ` →${event.controlPort}` : ''}
+                  {event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}
                 </div>
               ))}
             </div>
           </div>
+            </>
+          )}
         </aside>
+        )}
       </div>
     </div>
   );

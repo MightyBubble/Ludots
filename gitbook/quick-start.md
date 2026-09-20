@@ -35,7 +35,19 @@ Windows（PowerShell）：
 # Windows：产品化 GUI launcher（会 npm ci，需要网络）
 .\scripts\run-mod-launcher.cmd
 
-# 任意平台：直接调已构建的 CLI
+# 作者工作室：蓝图 / 行为树 / 状态机 / 对话 / 时间轴
+.\scripts\run-authoring-studio.cmd
+```
+
+Linux / macOS：
+
+```bash
+./scripts/run-authoring-studio.sh
+```
+
+任意平台：直接调已构建的 CLI
+
+```powershell
 dotnet src/Tools/Ludots.Launcher.Cli/bin/Release/net9.0/Ludots.Launcher.Cli.dll launch camera_acceptance --adapter raylib
 ```
 

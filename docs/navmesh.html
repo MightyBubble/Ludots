@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NavMesh 功能目录 — Ludots</title>
+<meta name="description" content="Ludots NavMesh 体系总合同与独立功能设计，覆盖编辑器、工具、Runtime、Showcase 和待办状态。">
+<link rel="stylesheet" href="site-assets/site.css">
+<style>
+  .docs-layout { display:grid; grid-template-columns:320px 1fr; gap:26px; align-items:start; }
+  .docs-tree { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px 14px; max-height:74vh; overflow-y:auto; position:sticky; top:84px; }
+  .docs-tree .tree-title { font-size:13px; font-weight:700; color:var(--muted); padding:0 10px 10px; letter-spacing:1px; }
+  .docs-tree a { display:block; padding:6px 10px; border-radius:var(--radius-sm); color:var(--fg); font-size:13.5px; line-height:1.55; }
+  .docs-tree a:hover, .docs-tree a.active { background:var(--accent-light); color:var(--accent); text-decoration:none; }
+  .docs-tree a.active { font-weight:600; }
+  .docs-tree a[hidden] { display:none; }
+  .docs-tree .children { margin-left:14px; border-left:1px solid var(--border); padding-left:6px; }
+  .docs-view { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:36px 44px; min-height:400px; overflow-x:hidden; }
+  .docs-view .doc-path { font-size:12.5px; color:var(--faint); margin-bottom:18px; font-family:var(--mono); }
+  .md-body h1 { font-size:26px; border-bottom:2px solid var(--border); padding-bottom:10px; margin:0 0 18px; }
+  .md-body h2 { font-size:21px; margin-top:34px; border-bottom:1px solid var(--border); padding-bottom:7px; }
+  .md-body img { max-width:100%; height:auto; }
+  .docs-view { min-width:0; }
+  .md-body a, .md-body code { overflow-wrap:anywhere; }
+  .docs-tree input { box-sizing:border-box; width:100%; margin-bottom:12px; padding:8px 10px; color:var(--fg); background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius-sm); }
+  .md-body h3 { font-size:17px; margin-top:26px; }
+  .md-body p { margin:12px 0; }
+  .md-body ul, .md-body ol { margin:12px 0; padding-left:24px; }
+  .md-body li { margin:4px 0; }
+  .md-body table { width:100%; border-collapse:collapse; margin:16px 0; font-size:13.5px; display:block; overflow-x:auto; }
+  .md-body th, .md-body td { border:1px solid var(--border); padding:7px 12px; text-align:left; }
+  .md-body th { background:var(--bg-soft); font-weight:600; }
+  .md-body blockquote { border-left:3px solid var(--accent); margin:16px 0; padding:8px 16px; background:var(--bg-soft); color:var(--muted); }
+  .md-body pre { background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; overflow-x:auto; font-size:13px; }
+  .md-body code { font-family:var(--mono); font-size:.92em; background:var(--bg-soft); border-radius:4px; padding:1px 5px; }
+  .md-body pre code { background:none; padding:0; }
+  .docs-loading { color:var(--faint); padding:40px 0; text-align:center; }
+  @media (max-width:960px) { .docs-layout { grid-template-columns:1fr; } .docs-tree { position:static; max-height:320px; } .docs-view { padding:24px 20px; } }
+</style>
+</head>
+<body data-page="navmesh">
+<header id="topbar"></header>
+<main class="page">
+  <div class="docs-layout" style="margin-top:22px;">
+    <aside class="docs-tree" id="navmesh-tree"><div class="tree-title">目录加载中…</div></aside>
+    <article class="docs-view">
+      <div class="doc-path" id="doc-path"></div>
+      <div class="md-body" id="doc-body"><div class="docs-loading">文档加载中…</div></div>
+    </article>
+  </div>
+</main>
+<footer class="site-footer"><div class="inner"><span>Ludots NavMesh 功能目录 · 写作源 gitbook/navmesh-features/</span><span>总合同见 NavMesh 导航体系 SSOT · 发布于 GitHub Pages</span></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="site-assets/site.js"></script>
+<script src="site-assets/docs-nav.js"></script>
+<script>
+(function () {
+  "use strict";
+  var esc = LudotsSite.esc;
+  var PREFIX = "navmesh-features/";
+  var SSOT_DOC = "navmesh-ssot.md";
+  var DEFAULT_DOC = SSOT_DOC;
+  var navDocs = [];
+  var currentDoc = null;
+
+  function collect(nodes, out) {
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (n.type === "md" && (n.path === SSOT_DOC || n.path.indexOf(PREFIX) === 0)) out.push(n);
+      if (n.children && n.children.length) collect(n.children, out);
+    }
+    return out;
+  }
+
+  function buildTree() {
+    var host = document.getElementById("navmesh-tree");
+    var docs = window.DOCS_NAV && DOCS_NAV.tree ? collect(DOCS_NAV.tree, []) : [];
+    navDocs = docs;
+    if (!docs.length) { host.innerHTML = '<div class="tree-title">目录不可用</div><div class="docs-loading">请先运行 python scripts/build-site.py 重建站点。</div>'; return; }
+    var count = docs.filter(function (doc) { return doc.path.indexOf(PREFIX) === 0 && doc.path !== PREFIX + 'README.md'; }).length;
+    var html = '<div class="tree-title">NavMesh · ' + count + ' 个功能</div>';
+    html += '<input type="search" id="navmesh-filter" aria-label="筛选 NavMesh 文档" placeholder="搜索功能名称">';
+    for (var i = 0; i < docs.length; i++) {
+      html += '<a data-doc="' + esc(docs[i].path) + '" href="#doc/' + encodeURIComponent(docs[i].path) + '">' + esc(docs[i].title) + '</a>';
+    }
+    host.innerHTML = html;
+    document.getElementById("navmesh-filter").addEventListener("input", function (event) {
+      var query = event.target.value.trim().toLowerCase();
+      host.querySelectorAll("a[data-doc]").forEach(function (a) { a.hidden = a.textContent.toLowerCase().indexOf(query) < 0; });
+    });
+  }
+
+  function rewriteLinks(container, docPath) {
+    var docUrl = new URL("gitbook/" + docPath, LudotsSite.SITE_BASE);
+    container.querySelectorAll("a[href]").forEach(function (a) {
+      var href = a.getAttribute("href");
+      if (!href || /^(?:[a-z][a-z0-9+.-]*:|#|\/\/)/i.test(href)) return;
+      var resolved = new URL(href, docUrl);
+      var gitbookRoot = new URL("gitbook/", LudotsSite.SITE_BASE).pathname;
+      var path = decodeURIComponent(resolved.pathname.slice(gitbookRoot.length));
+      if (resolved.pathname.indexOf(gitbookRoot) === 0 && /\.md$/i.test(path)) {
+        var isNav = navDocs.some(function (doc) { return doc.path === path; });
+        a.setAttribute("href", isNav ? "#doc/" + encodeURIComponent(path) : LudotsSite.SITE_BASE + "index.html#docs/" + path);
+      } else {
+        a.setAttribute("href", resolved.href);
+      }
+    });
+    container.querySelectorAll("img[src]").forEach(function (img) {
+      img.setAttribute("src", new URL(img.getAttribute("src"), docUrl).href);
+    });
+  }
+
+  function loadDoc(path) {
+    currentDoc = path;
+    document.getElementById("doc-path").textContent = "gitbook/" + path;
+    document.getElementById("doc-body").innerHTML = '<div class="docs-loading">加载中…</div>';
+    LudotsSite.fetchText("gitbook/" + path).then(function (md) {
+      if (currentDoc !== path) return;
+      document.getElementById("doc-body").innerHTML = marked.parse(md);
+      document.title = (navDocs.find(function (doc) { return doc.path === path; }) || {title: "NavMesh"}).title + " — Ludots";
+      rewriteLinks(document.getElementById("doc-body"), path);
+      document.querySelectorAll("#navmesh-tree a[data-doc]").forEach(function (a) { a.classList.toggle("active", a.getAttribute("data-doc") === path); });
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }).catch(function () { if (currentDoc !== path) return; currentDoc = null; document.getElementById("doc-body").innerHTML = '<div class="docs-loading">无法加载 <code>' + esc(path) + '</code></div>'; });
+  }
+
+  function route() {
+    var h = window.location.hash || "";
+    var path;
+    try { path = h.indexOf("#doc/") === 0 ? decodeURIComponent(h.slice(5)) : DEFAULT_DOC; }
+    catch (error) {
+      document.getElementById("doc-body").textContent = "文档地址编码无效，请从目录重新选择。";
+      currentDoc = null;
+      return;
+    }
+    if (!navDocs.some(function (doc) { return doc.path === path; })) {
+      document.getElementById("doc-body").textContent = "目录中没有这篇文档，请选择有效页面。";
+      currentDoc = null;
+      return;
+    }
+    if (path !== currentDoc) loadDoc(path);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () { buildTree(); route(); });
+  window.addEventListener("hashchange", route);
+}());
+</script>
+</body>
+</html>

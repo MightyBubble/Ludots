@@ -20,6 +20,18 @@ TransportNetwork/transport_network.json
       -> SurfaceSplineSegment ribbon chunks
 ```
 
+Optional navmesh carve projection (opt-in via sink config, not a second obstacle authoring SSOT):
+
+```text
+TransportNetwork/transport_network.json
+  + Navigation/transport_nav_obstacle_sink.json
+  -> TransportNavObstacleSink
+  -> NavObstacleSet polygons (merged beside map-authored obstacles)
+  -> Recast/CDT carve by layerId
+```
+
+Corridor width for carve must come from `segments[].widthCm`. `visualWidthMeters` stays presentation-only. Lake-style filled rings use `geometry: FilledRing` and authored ring points. Per-agent traversal cost remains in `Navigation/pathing.json` `areaCosts` / tag cost rules — the sink does not invent a parallel cost table.
+
 No mod should author `.graph` as an independent source when this transport asset exists. The derived graph and ribbon must not drift.
 
 ## Reuse List

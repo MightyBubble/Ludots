@@ -104,6 +104,17 @@ namespace Ludots.Core.Input.Config
                     throw new InvalidOperationException(
                         $"LUDOTS_INPUT_ACTION_ID_DUPLICATE: {path}.id duplicates input action '{action.Id}'.");
                 }
+
+                string firesOn = string.IsNullOrWhiteSpace(action.FiresOn)
+                    ? InputActionDef.FiresOnPress
+                    : action.FiresOn;
+                if (firesOn != InputActionDef.FiresOnPress && firesOn != InputActionDef.FiresOnRelease)
+                {
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_ACTION_FIRES_ON_INVALID: {path}.firesOn must be '{InputActionDef.FiresOnPress}' or '{InputActionDef.FiresOnRelease}' (got '{action.FiresOn}').");
+                }
+
+                action.FiresOn = firesOn;
             }
         }
 

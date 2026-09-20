@@ -43,6 +43,66 @@ namespace Ludots.Core.Client
         public static PresentBinding FullScreen(string logicViewId, Vector2 presentResolutionPx) =>
             new(logicViewId, new Vector4(0f, 0f, 1f, 1f), presentResolutionPx);
 
+        public const string FullScreenLayoutId = "fullscreen";
+        public const string HorizontalEqualSplitLayoutId = "horizontal-equal-split";
+        public const string VerticalEqualSplitLayoutId = "vertical-equal-split";
+
+        public static readonly string[] DeclaredLayoutIds =
+        {
+            FullScreenLayoutId,
+            HorizontalEqualSplitLayoutId,
+            VerticalEqualSplitLayoutId,
+        };
+
+        /// <summary>
+        /// Data-declared layout entry point: the layout id from game config selects the rect factory;
+        /// switching between split orientations is a data change with no code branch at call sites.
+        /// Takes the host surface resolution and derives the binding-local present resolution from the
+        /// laid-out rect. Unknown ids fail fast with the id named.
+        /// </summary>
+        public static PresentBinding FromDeclaredLayout(
+            string? layoutId,
+            string logicViewId,
+            int index,
+            int count,
+            Vector2 hostResolutionPx)
+        {
+            string normalized = NormalizeDeclaredLayoutId(layoutId);
+            Vector4 rect = normalized switch
+            {
+                HorizontalEqualSplitLayoutId => EqualSplitRect(index, count, horizontal: true),
+                VerticalEqualSplitLayoutId => EqualSplitRect(index, count, horizontal: false),
+                _ => new Vector4(0f, 0f, 1f, 1f),
+            };
+            return new PresentBinding(logicViewId, rect, PresentResolutionForHost(hostResolutionPx, rect));
+        }
+
+        public static void ValidateDeclaredLayout(string? layoutId) => _ = NormalizeDeclaredLayoutId(layoutId);
+
+        /// <summary>Binding-local pixel resolution for a normalized rect on a host surface.</summary>
+        public static Vector2 PresentResolutionForHost(Vector2 hostResolutionPx, Vector4 normalizedScreenRect) =>
+            new(hostResolutionPx.X * normalizedScreenRect.Z, hostResolutionPx.Y * normalizedScreenRect.W);
+
+        private static string NormalizeDeclaredLayoutId(string? layoutId)
+        {
+            if (string.IsNullOrWhiteSpace(layoutId))
+            {
+                return FullScreenLayoutId;
+            }
+
+            string trimmed = layoutId.Trim();
+            for (int i = 0; i < DeclaredLayoutIds.Length; i++)
+            {
+                if (string.Equals(DeclaredLayoutIds[i], trimmed, StringComparison.Ordinal))
+                {
+                    return trimmed;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Unknown PresentBinding layout '{trimmed}'; declared layouts are [{string.Join(", ", DeclaredLayoutIds)}].");
+        }
+
         /// <summary>
         /// Equal horizontal strip layout (left→right). Multi-split foundation — host still syncs metrics per seat.
         /// </summary>
@@ -52,12 +112,8 @@ namespace Ludots.Core.Client
             int count,
             Vector2 presentResolutionPx)
         {
-            ValidateSplitIndex(index, count);
-            float width = 1f / count;
-            return new PresentBinding(
-                logicViewId,
-                new Vector4(index * width, 0f, width, 1f),
-                presentResolutionPx);
+            Vector4 rect = EqualSplitRect(index, count, horizontal: true);
+            return new PresentBinding(logicViewId, rect, presentResolutionPx);
         }
 
         /// <summary>
@@ -69,12 +125,17 @@ namespace Ludots.Core.Client
             int count,
             Vector2 presentResolutionPx)
         {
+            Vector4 rect = EqualSplitRect(index, count, horizontal: false);
+            return new PresentBinding(logicViewId, rect, presentResolutionPx);
+        }
+
+        private static Vector4 EqualSplitRect(int index, int count, bool horizontal)
+        {
             ValidateSplitIndex(index, count);
-            float height = 1f / count;
-            return new PresentBinding(
-                logicViewId,
-                new Vector4(0f, index * height, 1f, height),
-                presentResolutionPx);
+            float slice = 1f / count;
+            return horizontal
+                ? new Vector4(index * slice, 0f, slice, 1f)
+                : new Vector4(0f, index * slice, 1f, slice);
         }
 
         private static void ValidateSplitIndex(int index, int count)

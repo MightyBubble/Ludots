@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -12,6 +14,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -21,7 +24,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Story
 {
     /// <summary>
-    /// Cucumber-style Story Runtime modernization coverage for #1083 fail-closed migration paths
+    /// Cucumber-style Story Runtime modernization coverage for fail-closed migration paths
     /// and focused Sequencer section/signal behavior.
     /// </summary>
     [TestFixture]
@@ -210,11 +213,148 @@ namespace Ludots.Tests.GAS.Story
         }
 
         [Test]
+        public void StoryConfigLoader_RejectsUnknownPresentationProfileFields()
+        {
+            string root = CreateTempRoot(out ConfigPipeline pipeline);
+            try
+            {
+                WriteStoryCatalogAndAssets(root, """
+                [
+                  {
+                    "id": "story.invalid",
+                    "surfaceKind": "OverlayDialogue",
+                    "layoutId": "layout.story.invalid",
+                    "anchor": "BottomCenter",
+                    "width": 640,
+                    "imageSize": 96,
+                    "unexpected": true
+                  }
+                ]
+                """);
+
+                ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
+                var loader = new StoryConfigLoader(pipeline, new StoryDefinitionRegistry());
+
+                Assert.That(
+                    () => loader.Load(catalog),
+                    Throws.TypeOf<JsonException>().With.Message.Contains("unexpected"));
+            }
+            finally
+            {
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void StoryConfigLoader_RejectsMissingRequiredPresentationProfileFields()
+        {
+            string root = CreateTempRoot(out ConfigPipeline pipeline);
+            try
+            {
+                WriteStoryCatalogAndAssets(root, """
+                [
+                  {
+                    "id": "story.missing.backend",
+                    "surfaceKind": "OverlayDialogue",
+                    "layoutId": "layout.story.invalid",
+                    "anchor": "BottomCenter",
+                    "width": 640,
+                    "imageSize": 96,
+                    "zIndex": 60
+                  }
+                ]
+                """);
+
+                ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
+                var loader = new StoryConfigLoader(pipeline, new StoryDefinitionRegistry());
+
+                Assert.That(
+                    () => loader.Load(catalog),
+                    Throws.TypeOf<JsonException>().With.Message.Contains("backend"));
+            }
+            finally
+            {
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void StoryConfigLoader_AcceptsEmptyStoryArrayRoots()
+        {
+            string root = CreateTempRoot(out ConfigPipeline pipeline);
+            try
+            {
+                WriteStoryCatalogAndAssets(root, "[]");
+                ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
+                var registry = new StoryDefinitionRegistry();
+
+                Assert.DoesNotThrow(() => new StoryConfigLoader(pipeline, registry).Load(catalog));
+                Assert.That(registry.Lines, Is.Empty);
+                Assert.That(registry.Profiles, Is.Empty);
+                Assert.That(registry.Speakers, Is.Empty);
+            }
+            finally
+            {
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void StoryPresentationProfileRegistration_RejectsMissingRequiredAndBackdropCombination()
+        {
+            AssertInvalidProfile(profile => profile.Id = string.Empty, "id");
+            AssertInvalidProfile(profile => profile.SurfaceKind = string.Empty, "surfaceKind");
+            AssertInvalidProfile(profile => profile.LayoutId = string.Empty, "layoutId");
+            AssertInvalidProfile(profile => profile.Anchor = string.Empty, "anchor");
+            AssertInvalidProfile(profile => profile.Width = 0f, "width > 0");
+            AssertInvalidProfile(profile => profile.ImageSize = 0f, "imageSize > 0");
+            AssertInvalidProfile(profile => profile.DimBackdrop = true, "backdropHex");
+            AssertInvalidProfile(
+                profile => profile.Backend = StoryPresentationBackend.WorldProjected,
+                "worldHeadOffsetYCm");
+        }
+
+        [Test]
+        public void StoryPresentationProjector_WorldProjectedAddsAuthoredOffsets()
+        {
+            var story = new StoryDefinitionRegistry();
+            StoryPresentationProfileDefinition profile = CreateValidPresentationProfile();
+            profile.Backend = StoryPresentationBackend.WorldProjected;
+            profile.OffsetX = 28f;
+            profile.OffsetY = 12f;
+            profile.WorldHeadOffsetYCm = 140f;
+            profile.WorldScreenHeadOffsetPx = 96f;
+            story.Register(profile);
+
+            StoryPresentationFrame frame = new StoryPresentationProjector(story)
+                .ProjectDialogue(CreateDialogueView(profile.Id), worldScreenX: 400f, worldScreenY: 300f);
+
+            Assert.That(frame.Surfaces[0].OffsetX, Is.EqualTo(428f));
+            Assert.That(frame.Surfaces[0].OffsetY, Is.EqualTo(216f));
+        }
+
+        [Test]
+        public void StoryPresentationProjector_DoesNotEmitChoiceListCompanion()
+        {
+            var story = new StoryDefinitionRegistry();
+            StoryPresentationProfileDefinition profile = CreateValidPresentationProfile();
+            story.Register(profile);
+            DialogueView view = CreateDialogueView(
+                profile.Id,
+                new[] { new DialogueChoiceView("continue", "line.choice", "Continue") });
+
+            StoryPresentationFrame frame = new StoryPresentationProjector(story).ProjectDialogue(view);
+            Assert.That(frame.Surfaces.Count, Is.EqualTo(1));
+            Assert.That(frame.Surfaces[0].SurfaceKind, Is.Not.EqualTo("ChoiceList"));
+        }
+
+        [Test]
         public void DialogueRuntime_ChoiceWithoutConditionGraph_IsAvailableAndAdvanceClearsSession()
         {
             using GameEngine engine = CreateCoreEngine();
             var dialogues = new DialogueDefinitionRegistry();
             var story = new StoryDefinitionRegistry();
+            RegisterUnitSpeakers(story);
             DialogueRuntime dialogue = CreateIsolatedDialogueRuntime(engine, dialogues, story);
 
             story.Register(new StoryLineDefinition
@@ -240,7 +380,11 @@ namespace Ludots.Tests.GAS.Story
                 Id = "story.dialogue_overlay",
                 Backend = StoryPresentationBackend.ScreenOverlay,
                 SurfaceKind = "OverlayDialogue",
-                Anchor = "BottomCenter"
+                LayoutId = "layout.narrative.overlay-dialogue",
+                Anchor = "BottomCenter",
+                Width = 760f,
+                ImageSize = 112f,
+                ZIndex = 60
             });
             dialogues.Register(new DialogueDefinition
             {
@@ -275,8 +419,25 @@ namespace Ludots.Tests.GAS.Story
             dialogue.StartDialogue("dialogue.unit.choice");
             Assert.That(dialogue.TryGetActiveView(out DialogueView open), Is.True);
             Assert.That(open.Choices.Count, Is.EqualTo(1));
-            Assert.That(open.Choices[0].ConditionGraphId, Is.EqualTo(string.Empty));
-            Assert.That(open.Choices[0].ActionGraphId, Is.EqualTo(string.Empty));
+            Assert.That(open.Choices[0].ChoiceId, Is.EqualTo("go"));
+            Assert.That(open.Choices[0].LineId, Is.EqualTo("line.unit.choice"));
+            Assert.That(open.PortraitImageId, Is.Not.Null);
+            Assert.That(open.StandingImageId, Is.Not.Null);
+
+            var projector = new StoryPresentationProjector(story);
+            StoryPresentationFrame frame = projector.ProjectDialogue(open);
+            Assert.That(frame.Handle.IsValid, Is.True);
+            Assert.That(frame.Handle.StreamId, Is.EqualTo("dialogue.unit.choice"));
+            Assert.That(frame.Surfaces.Count, Is.EqualTo(1));
+            Assert.That(frame.Surfaces[0].Body, Is.EqualTo("story.unit.hello").Or.Not.Empty);
+            Assert.That(frame.Surfaces[0].LayoutId, Is.EqualTo("layout.narrative.overlay-dialogue"));
+            Assert.That(frame.Surfaces.Any(static s => s.SurfaceKind == "ChoiceList"), Is.False);
+
+            Span<int> choiceIds = stackalloc int[4];
+            Assert.That(dialogue.CollectActiveChoiceIds(choiceIds), Is.EqualTo(1));
+            Assert.That(
+                DialogueChoiceIdRegistry.GetId("dialogue.unit.choice", "go"),
+                Is.EqualTo(choiceIds[0]));
 
             dialogue.ChooseOption(0);
             Assert.That(dialogue.TryGetActiveView(out DialogueView afterChoice), Is.True);
@@ -295,6 +456,7 @@ namespace Ludots.Tests.GAS.Story
                 ?? throw new InvalidOperationException("GraphCallbackService missing.");
             var dialogues = new DialogueDefinitionRegistry();
             var story = new StoryDefinitionRegistry();
+            RegisterUnitSpeakers(story);
             DialogueRuntime dialogue = CreateIsolatedDialogueRuntime(engine, dialogues, story);
 
             story.Register(new StoryLineDefinition
@@ -314,7 +476,11 @@ namespace Ludots.Tests.GAS.Story
                 Id = "story.dialogue_overlay",
                 Backend = StoryPresentationBackend.ScreenOverlay,
                 SurfaceKind = "OverlayDialogue",
-                Anchor = "BottomCenter"
+                LayoutId = "layout.narrative.overlay-dialogue",
+                Anchor = "BottomCenter",
+                Width = 760f,
+                ImageSize = 112f,
+                ZIndex = 60
             });
             dialogues.Register(new DialogueDefinition
             {
@@ -384,6 +550,7 @@ namespace Ludots.Tests.GAS.Story
 
             var sequences = new SequenceDefinitionRegistry();
             var story = new StoryDefinitionRegistry();
+            RegisterUnitSpeakers(story);
             SequencerRuntime sequencer = CreateIsolatedSequencerRuntime(engine, sequences, story);
 
             story.Register(new StoryLineDefinition
@@ -396,7 +563,7 @@ namespace Ludots.Tests.GAS.Story
             sequences.Register(new SequenceDefinition
             {
                 Id = "Sequence.Unit.CameraSubtitleSignal",
-                DisplayName = "Unit Sequence",
+                DisplayNameToken = "story.unit.sequence.main",
                 ClearCameraOnComplete = false,
                 Clock = new SequenceClockDefinition { Rate = 1f },
                 Tracks =
@@ -453,7 +620,7 @@ namespace Ludots.Tests.GAS.Story
             Assert.That(sequencer.TryGetActiveView(out SequenceView atStart), Is.True);
             Assert.That(atStart.ActiveCameraProfile, Is.EqualTo("Camera.Unit.Close"));
             Assert.That(atStart.ActiveSubtitles.Count, Is.EqualTo(1));
-            Assert.That(atStart.ActiveSubtitles[0].ResolvedText, Is.EqualTo("story.unit.subtitle"));
+            Assert.That(atStart.ActiveSubtitles[0].ResolvedText, Is.EqualTo("字幕轨"));
             Assert.That(sectionEntered, Is.EqualTo(2));
             Assert.That(engine.GetService(CoreServiceKeys.VirtualCameraRequest)?.Id, Is.EqualTo("Camera.Unit.Close"));
             Assert.That(lastCameraProfile, Is.EqualTo("Camera.Unit.Close"));
@@ -476,12 +643,13 @@ namespace Ludots.Tests.GAS.Story
 
             var sequences = new SequenceDefinitionRegistry();
             var story = new StoryDefinitionRegistry();
+            RegisterUnitSpeakers(story);
             SequencerRuntime sequencer = CreateIsolatedSequencerRuntime(engine, sequences, story);
 
             sequences.Register(new SequenceDefinition
             {
                 Id = "Sequence.Unit.ClockControls",
-                DisplayName = "Clock Controls",
+                DisplayNameToken = "story.unit.sequence.clock",
                 ClearCameraOnComplete = false,
                 Clock = new SequenceClockDefinition { Rate = 1f },
                 Tracks =
@@ -559,6 +727,7 @@ namespace Ludots.Tests.GAS.Story
 
             var dialogues = new DialogueDefinitionRegistry();
             var story = new StoryDefinitionRegistry();
+            RegisterUnitSpeakers(story);
             DialogueRuntime dialogue = CreateIsolatedDialogueRuntime(engine, dialogues, story);
 
             story.Register(new StoryLineDefinition
@@ -628,6 +797,69 @@ namespace Ludots.Tests.GAS.Story
             return engine;
         }
 
+
+        private static void RegisterUnitSpeakers(StoryDefinitionRegistry story)
+        {
+            story.Register(new StorySpeakerDefinition
+            {
+                Id = "speaker.guide",
+                DisplayNameToken = "story.unit.speaker.guide",
+                PortraitImageId = "image.unit.guide.portrait",
+                StandingImageId = "image.unit.guide.standing"
+            });
+            story.Register(new StorySpeakerDefinition
+            {
+                Id = "speaker.player",
+                DisplayNameToken = "story.unit.speaker.player",
+                PortraitImageId = "image.unit.player.portrait",
+                StandingImageId = "image.unit.player.standing"
+            });
+        }
+
+        private static PresentationTextCatalog CreateUnitTextCatalog()
+        {
+            var templates = new (string Token, string Text)[]
+            {
+                ("story.unit.speaker.guide", "单元向导"),
+                ("story.unit.speaker.player", "单元玩家"),
+                ("story.unit.hello", "向导打招呼"),
+                ("story.unit.choice", "选择离开"),
+                ("story.unit.exit", "道别"),
+                ("story.unit.subtitle", "字幕轨"),
+                ("story.unit.gate", "闸门开放"),
+                ("story.unit.locked", "闸门锁定"),
+                ("story.unit.open", "闸门开启"),
+                ("story.unit.sequence.main", "单元演出"),
+                ("story.unit.sequence.clock", "时钟控制"),
+                ("story.unit.sequence.gated", "闸控"),
+            };
+
+            var tokenIds = new Ludots.Core.Registry.StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var tokens = new PresentationTextTokenDefinition[64];
+            foreach (var (token, _) in templates)
+            {
+                int tokenId = tokenIds.Register(token);
+                tokens[tokenId] = new PresentationTextTokenDefinition { TokenId = tokenId, Key = token, ArgCount = 0 };
+            }
+            tokenIds.Freeze();
+
+            var localeIds = new Ludots.Core.Registry.StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            int localeId = localeIds.Register("zh-CN");
+            localeIds.Freeze();
+            var localeTemplates = new PresentationTextTemplate[64];
+            foreach (var (token, text) in templates)
+            {
+                int tokenId = tokenIds.GetId(token);
+                localeTemplates[tokenId] = new PresentationTextTemplate(
+                    text,
+                    new[] { new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, text, 0) });
+            }
+            var locales = new PresentationTextLocaleTable[2];
+            locales[localeId] = new PresentationTextLocaleTable(localeId, "zh-CN", localeTemplates);
+
+            return new PresentationTextCatalog(tokenIds, tokens, localeIds, locales, defaultLocaleId: localeId);
+        }
+
         private static DialogueRuntime CreateIsolatedDialogueRuntime(
             GameEngine engine,
             DialogueDefinitionRegistry dialogues,
@@ -637,7 +869,7 @@ namespace Ludots.Tests.GAS.Story
                 ?? throw new InvalidOperationException("TaskRuntimeService missing.");
             StoryGraphInvoker graphs = engine.GetService(CoreServiceKeys.StoryGraphInvoker)
                 ?? new StoryGraphInvoker(engine);
-            return new DialogueRuntime(engine, dialogues, story, graphs, tasks, textCatalog: null);
+            return new DialogueRuntime(engine, dialogues, story, graphs, tasks, CreateUnitTextCatalog());
         }
 
         private static SequencerRuntime CreateIsolatedSequencerRuntime(
@@ -649,7 +881,7 @@ namespace Ludots.Tests.GAS.Story
                 ?? throw new InvalidOperationException("TaskRuntimeService missing.");
             StoryGraphInvoker graphs = engine.GetService(CoreServiceKeys.StoryGraphInvoker)
                 ?? new StoryGraphInvoker(engine);
-            return new SequencerRuntime(engine, sequences, story, graphs, tasks, textCatalog: null);
+            return new SequencerRuntime(engine, sequences, story, graphs, tasks, CreateUnitTextCatalog());
         }
 
         private static void RegisterHaltTriggerGraph(GameEngine engine, string graphName)
@@ -686,6 +918,67 @@ namespace Ludots.Tests.GAS.Story
                 : null;
             engine.GetService(CoreServiceKeys.GraphProgramRegistry)!
                 .Register(graphId, program, kind, GraphInstructionSourceMap.Empty, null, entries);
+        }
+
+        private static void AssertInvalidProfile(
+            Action<StoryPresentationProfileDefinition> invalidate,
+            string expectedMessage)
+        {
+            StoryPresentationProfileDefinition profile = CreateValidPresentationProfile();
+            invalidate(profile);
+
+            Assert.That(
+                () => new StoryDefinitionRegistry().Register(profile),
+                Throws.InvalidOperationException.With.Message.Contains(expectedMessage));
+        }
+
+        private static StoryPresentationProfileDefinition CreateValidPresentationProfile()
+        {
+            return new StoryPresentationProfileDefinition
+            {
+                Id = "story.unit.profile",
+                SurfaceKind = "DialogueBubble",
+                LayoutId = "layout.story.unit",
+                Anchor = "TopLeft",
+                Width = 520f,
+                ImageSize = 84f
+            };
+        }
+
+        private static DialogueView CreateDialogueView(
+            string presentationProfile,
+            DialogueChoiceView[]? choices = null)
+        {
+            return new DialogueView(
+                DialogueId: "dialogue.unit.projector",
+                DisplayName: "Projector",
+                NodeId: "root",
+                LineId: "line.unit.projector",
+                SpeakerId: "speaker.unit",
+                ResolvedSpeakerName: "Speaker",
+                PortraitImageId: string.Empty,
+                StandingImageId: string.Empty,
+                TextToken: "story.unit.projector",
+                ResolvedText: "Text",
+                PresentationProfile: presentationProfile,
+                CameraId: string.Empty,
+                AutoAdvanceSeconds: 0f,
+                ElapsedSeconds: 0f,
+                Choices: choices ?? Array.Empty<DialogueChoiceView>());
+        }
+
+        private static void WriteStoryCatalogAndAssets(string root, string profiles)
+        {
+            WriteCatalog(root, """
+            [
+              { "Path": "Story/lines.json", "Policy": "ArrayById", "IdField": "id" },
+              { "Path": "Story/presentation_profiles.json", "Policy": "ArrayById", "IdField": "id" },
+              { "Path": "Story/speakers.json", "Policy": "ArrayById", "IdField": "id" }
+            ]
+            """);
+            WriteAsset(root, StoryConfigLoader.LinesPath, "[]");
+            WriteAsset(root, StoryConfigLoader.ProfilesPath, profiles);
+            WriteAsset(root, StoryConfigLoader.SpeakersPath, "[]");
         }
 
         private static string CreateTempRoot(out ConfigPipeline pipeline)

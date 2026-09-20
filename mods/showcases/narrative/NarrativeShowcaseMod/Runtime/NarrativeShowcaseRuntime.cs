@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
@@ -38,6 +37,8 @@ namespace NarrativeShowcaseMod.Runtime
     {
         private const int ShowcaseLocalPlayerId = 1;
         private const float UiMargin = 24f;
+        private const float NameplateLiftPx = 52f;
+        private const string ThemeAssetRoot = "NarrativeShowcaseMod:assets/PanelThemes";
         private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<CommandSourceSelectableTag, MapEntity>();
 
         private readonly IModContext _context;
@@ -46,15 +47,15 @@ namespace NarrativeShowcaseMod.Runtime
         private bool _narrativeInputActive;
         private bool _interactionInputActive;
         private bool _taskHookInstalled;
+        private readonly NarrativeShowcaseWorldEffects _worldEffects;
         private int _historySerial;
-        private string _panelFrameSrc = string.Empty;
-        private string _choiceFrameSrc = string.Empty;
 
         internal NarrativeShowcaseRuntime(IModContext context)
         {
             _context = context;
             using var stream = context.GetResource($"{context.ModId}:assets/Frontend/narrative_frontend.json");
             _frontendConfig = NarrativeShowcaseFrontendConfig.Load(stream);
+            _worldEffects = new NarrativeShowcaseWorldEffects(_frontendConfig, (eng, text) => AppendHistory(text));
             if (ReferenceEquals(_frontendConfig.DialogueBubble, _frontendConfig.OverlayDialogue) ||
                 ReferenceEquals(_frontendConfig.DialogueBubble, _frontendConfig.StandingPortrait))
             {
@@ -98,6 +99,7 @@ namespace NarrativeShowcaseMod.Runtime
             {
                 ActivateInputContexts(input);
                 EnsureViewMode(engine);
+                EnsurePlayerLocale(engine);
                 RequireShowcaseSolePossessedRep(engine, activeMapId);
                 PublishShowcaseKnowledge(engine, activeMapId);
                 EnsureBootstrapped(engine);
@@ -146,11 +148,8 @@ namespace NarrativeShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            AppendHistory(_frontendConfig.Templates.DialogueEntered, new Dictionary<string, string>
-            {
-                ["speaker"] = ResolveSpeakerDisplay(engine, context.Get(DialogueServiceKeys.SpeakerId) ?? string.Empty),
-                ["bodyText"] = context.Get(DialogueServiceKeys.BodyText) ?? string.Empty,
-            });
+            AppendHistory(
+                $"{ResolveSpeakerDisplay(engine, context.Get(DialogueServiceKeys.SpeakerId) ?? string.Empty)}{Tr(engine, "story.ui.punct.colon")}{context.Get(DialogueServiceKeys.BodyText) ?? string.Empty}");
             RefreshPanel(engine);
             return Task.CompletedTask;
         }
@@ -162,10 +161,7 @@ namespace NarrativeShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            AppendHistory(_frontendConfig.Templates.DialogueChoiceCommitted, new Dictionary<string, string>
-            {
-                ["bodyText"] = context.Get(DialogueServiceKeys.BodyText) ?? string.Empty,
-            });
+            AppendHistory($"{Tr(engine, _frontendConfig.Templates.DialogueChoiceCommittedPrefix)}{context.Get(DialogueServiceKeys.BodyText) ?? string.Empty}");
 
             string choiceId = context.Get(DialogueServiceKeys.DialogueChoiceId) ?? string.Empty;
             if (engine.GetService(CoreServiceKeys.TaskRuntimeService) is TaskRuntimeService tasks)
@@ -194,11 +190,7 @@ namespace NarrativeShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            AppendHistory(_frontendConfig.Templates.SequenceEntered, new Dictionary<string, string>
-            {
-                ["speaker"] = string.Empty,
-                ["bodyText"] = context.Get(SequencerServiceKeys.BodyText) ?? string.Empty,
-            });
+            AppendHistory($"{context.Get(SequencerServiceKeys.BodyText) ?? string.Empty}");
             RefreshPanel(engine);
             return Task.CompletedTask;
         }
@@ -211,10 +203,7 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             string eventId = context.Get(SequencerServiceKeys.EventId) ?? string.Empty;
-            AppendHistory(_frontendConfig.Templates.Signal, new Dictionary<string, string>
-            {
-                ["signalId"] = eventId,
-            });
+            AppendHistory(eventId);
             RefreshPanel(engine);
             return Task.CompletedTask;
         }
@@ -274,63 +263,8 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             RebindEntities(engine);
-            ResolveThemeFrames(engine);
+            NarrativeDialogueChoicePanels.SyncVisibility(engine, dialogue);
             frontend.Publish(BuildPage(engine, dialogue, sequencer, tasks));
-        }
-
-        private void ResolveThemeFrames(GameEngine engine)
-        {
-            string themeId = engine.MergedConfig?.PanelTheme?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(themeId))
-            {
-                _panelFrameSrc = string.Empty;
-                _choiceFrameSrc = string.Empty;
-                return;
-            }
-
-            _panelFrameSrc = ResolveThemeImage(engine, themeId, "panel_frame.png");
-            _choiceFrameSrc = ResolveThemeImage(engine, themeId, "choice_frame.png");
-        }
-
-        private static string ResolveThemeImage(GameEngine engine, string themeId, string fileName)
-        {
-            string vfsPath = $"NarrativeShowcaseMod:assets/PanelThemes/{themeId}/images/{fileName}";
-            if (engine.VFS != null &&
-                engine.VFS.TryResolveFullPath(vfsPath, out string resolved) &&
-                File.Exists(resolved))
-            {
-                return resolved;
-            }
-
-            return string.Empty;
-        }
-
-        /// <summary>
-        /// panelTheme 目录下可选覆盖说话人立绘/半身像（standing_*.png / portrait_*.png），证明换皮数据驱动。
-        /// </summary>
-        private static string? ResolveThemeSpeakerImage(GameEngine engine, string speakerId, bool standing)
-        {
-            string themeId = engine.MergedConfig?.PanelTheme?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(themeId) || string.IsNullOrWhiteSpace(speakerId))
-            {
-                return null;
-            }
-
-            string alias = speakerId;
-            const string speakerPrefix = "speaker.";
-            if (alias.StartsWith(speakerPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                alias = alias.Substring(speakerPrefix.Length);
-            }
-
-            if (string.IsNullOrWhiteSpace(alias))
-            {
-                return null;
-            }
-
-            string fileName = standing ? $"standing_{alias}.png" : $"portrait_{alias}.png";
-            string resolved = ResolveThemeImage(engine, themeId, fileName);
-            return string.IsNullOrWhiteSpace(resolved) ? null : resolved;
         }
 
         internal void RebindEntities(GameEngine engine)
@@ -366,6 +300,23 @@ namespace NarrativeShowcaseMod.Runtime
         internal bool BeastDefeated(GameEngine engine)
             => engine.GlobalContext.TryGetValue(NarrativeShowcaseIds.BeastDefeatedKey, out var value) && value is bool defeated && defeated;
 
+        internal float WardenInteractRangeCm => _frontendConfig.Interact.WardenRangeCm;
+
+        internal float ShrineInteractRangeCm => _frontendConfig.Interact.ShrineRangeCm;
+
+        internal bool IsNearNamed(GameEngine engine, string name, float rangeCm)
+        {
+            if (!TryFindEntityByName(engine.World, NarrativeShowcaseIds.PlayerName, out Entity player) ||
+                !engine.World.TryGet(player, out WorldPositionCm playerPos) ||
+                !TryFindEntityByName(engine.World, name, out Entity target) ||
+                !engine.World.TryGet(target, out WorldPositionCm targetPos))
+            {
+                return false;
+            }
+
+            return IsNear(playerPos, targetPos, rangeCm);
+        }
+
         internal void MarkBeastDefeated(GameEngine engine)
         {
             engine.GlobalContext[NarrativeShowcaseIds.BeastDefeatedKey] = true;
@@ -379,18 +330,15 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             tasks.EmitSignal(signalId);
-            AppendHistory(_frontendConfig.Templates.Signal, new Dictionary<string, string>
-            {
-                ["signalId"] = signalId,
-            });
+            AppendHistory(signalId);
 
             if (string.Equals(signalId, NarrativeShowcaseIds.SpawnBeastSignal, StringComparison.OrdinalIgnoreCase))
             {
-                SpawnBeast(engine);
+                _worldEffects.SpawnBeast(engine);
             }
             else if (string.Equals(signalId, NarrativeShowcaseIds.RewardSignal, StringComparison.OrdinalIgnoreCase))
             {
-                ApplyReward(engine);
+                _worldEffects.ApplyReward(engine);
             }
         }
 
@@ -403,77 +351,231 @@ namespace NarrativeShowcaseMod.Runtime
             bool dialogueActive = dialogue.TryGetActiveView(out DialogueView dialogueView);
             bool sequenceActive = sequencer.TryGetActiveView(out SequenceView sequence);
             NarrativeShowcaseStageHudConfig hud = _frontendConfig.StageHud ?? new NarrativeShowcaseStageHudConfig();
+            bool standingPortrait = dialogueActive &&
+                string.Equals(
+                    dialogueView.PresentationProfile,
+                    NarrativeShowcaseIds.PresentationStandingPortrait,
+                    StringComparison.OrdinalIgnoreCase);
+            bool showPanels = !standingPortrait || !hud.HidePanelsDuringStandingPortrait;
 
-            var surfaces = new List<NarrativeFrontendSurfaceModel>(6)
+            var surfaces = new List<NarrativeFrontendSurfaceModel>(6);
+            if ((!dialogueActive || hud.ShowPromptWithDialogue) &&
+                (!sequenceActive || hud.ShowPromptWithSequence))
             {
-                BuildPromptSurface(engine, dialogue, sequencer),
-            };
+                surfaces.Add(BuildPromptSurface(engine, dialogue, sequencer));
+            }
 
-            bool showObjective = (!dialogueActive || hud.ShowObjectiveWithDialogue)
+            bool showObjective = showPanels
+                && (!dialogueActive || hud.ShowObjectiveWithDialogue)
                 && (!sequenceActive || hud.ShowObjectiveWithSequence);
             if (showObjective)
             {
-                surfaces.Add(BuildObjectiveSurface(tasks));
+                surfaces.Add(BuildObjectiveSurface(engine, tasks));
             }
 
-            if (hud.ShowHistoryAlways)
+            if (showPanels && hud.ShowHistoryAlways)
             {
-                surfaces.Add(BuildHistorySurface());
+                surfaces.Add(BuildHistorySurface(engine));
             }
 
-            if (hud.ShowVariablesAlways)
+            if (showPanels &&
+                (hud.ShowVariablesAlways || (hud.ShowVariablesWhenNonZero && HasNonZeroStoryVariable(engine))))
             {
                 surfaces.Add(BuildVariablesSurface(engine));
             }
 
+            if (showPanels && _history.Count > 0)
+            {
+                surfaces.Add(BuildNotificationSurface(engine));
+            }
+
+            if (!hud.HideCastDuringStandingPortrait || !standingPortrait)
+            {
+                AddCastNameplates(engine, surfaces);
+            }
+
             if (sequenceActive)
             {
-                surfaces.Add(BuildSequenceSurface(engine, sequence));
+                StoryPresentationProjector projector = RequireProjector(engine);
+                StoryPresentationFrame frame = projector.ProjectSequence(sequence);
+                AppendStoryFrame(engine, surfaces, frame);
             }
 
             if (dialogueActive)
             {
-                surfaces.Add(BuildDialogueSurface(engine, dialogue, dialogueView));
-                if (dialogueView.Choices.Count > 0)
+                StoryPresentationProjector projector = RequireProjector(engine);
+                float? worldX = null;
+                float? worldY = null;
+                if (engine.GetService(CoreServiceKeys.StoryDefinitions) is StoryDefinitionRegistry story &&
+                    story.TryGetProfile(dialogueView.PresentationProfile, out StoryPresentationProfileDefinition profile) &&
+                    profile.Backend == StoryPresentationBackend.WorldProjected)
                 {
-                    surfaces.Add(BuildChoiceSurface(dialogueView));
+                    if (!TryProjectSpeaker(engine, dialogue, dialogueView.SpeakerId, out float screenX, out float screenY))
+                    {
+                        throw new InvalidOperationException(
+                            $"Presentation profile '{dialogueView.PresentationProfile}' requires IScreenProjector and a bound speaker entity with WorldPositionCm. Speaker '{dialogueView.SpeakerId}' could not be projected.");
+                    }
+
+                    worldX = screenX;
+                    worldY = screenY;
                 }
+
+                StoryPresentationFrame frame = projector.ProjectDialogue(dialogueView, worldX, worldY);
+                AppendStoryFrame(engine, surfaces, frame);
             }
 
             surfaces.RemoveAll(static surface => !surface.Visible);
 
             return new NarrativeFrontendPageState(
                 _frontendConfig.OwnerId,
-                BuildSignature(engine, dialogue, sequencer, tasks, surfaces.Count),
+                BuildSignature(engine, dialogue, sequencer, tasks, surfaces),
                 true,
                 _frontendConfig.BackdropHex,
                 surfaces);
         }
+
+        private static StoryPresentationProjector RequireProjector(GameEngine engine)
+        {
+            return engine.GetService(CoreServiceKeys.StoryPresentationProjector)
+                ?? throw new InvalidOperationException(
+                    "Narrative showcase requires StoryPresentationProjector engine service.");
+        }
+
+        private void AppendStoryFrame(
+            GameEngine engine,
+            List<NarrativeFrontendSurfaceModel> surfaces,
+            StoryPresentationFrame frame)
+        {
+            PresentationDisplayResolver? display = engine.GetService(CoreServiceKeys.PresentationDisplayResolver);
+            NarrativeFrontendPageState page = StoryPresentationFrontendAdapter.ToPage(
+                _frontendConfig.OwnerId,
+                frame,
+                display,
+                frameImageSrc: string.Empty);
+            if (page.Surfaces == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < page.Surfaces.Count; i++)
+            {
+                surfaces.Add(ApplyFrontendChrome(engine, page.Surfaces[i]));
+            }
+        }
+
+        /// <summary>
+        /// Content comes from the Core string bag; layout / eyebrow / footer come from frontend config.
+        /// World-projected bubbles keep projected TopLeft offsets and only take width/chrome from config.
+        /// </summary>
+        private NarrativeFrontendSurfaceModel ApplyFrontendChrome(
+            GameEngine engine,
+            NarrativeFrontendSurfaceModel surface)
+        {
+            // Geometry and colors are profile-owned (single writer, Core projector).
+            // Chrome contributes skin text only: eyebrow / footer.
+            NarrativeShowcaseSurfaceConfig? config = ResolveChromeConfig(surface.Kind);
+            if (config == null)
+            {
+                return surface with
+                {
+                    FrameImageSrc = ResolveFrameImageSrc(engine, surface.Kind)
+                };
+            }
+
+            string title = surface.Title;
+
+            string footer;
+            if (surface.Kind is NarrativeFrontendSurfaceKind.SubtitleBubble
+                or NarrativeFrontendSurfaceKind.TransmissionOverlay)
+            {
+                footer = Tr(engine, _frontendConfig.Hints.SkipPrompt);
+            }
+            else if (surface.CountdownSeconds > 0f &&
+                     !string.IsNullOrWhiteSpace(_frontendConfig.Hints.AutoAdvancePrompt))
+            {
+                footer = Tr(engine, _frontendConfig.Hints.AutoAdvancePrompt);
+            }
+            else if (!string.IsNullOrWhiteSpace(surface.Footer))
+            {
+                footer = surface.Footer;
+            }
+            else
+            {
+                footer = Tr(engine, config.Footer);
+            }
+
+            return surface with
+            {
+                Title = title,
+                Subtitle = string.IsNullOrWhiteSpace(surface.Subtitle) ? Tr(engine, config.Eyebrow) : surface.Subtitle,
+                Footer = footer,
+                FrameImageSrc = ResolveFrameImageSrc(engine, surface.Kind)
+            };
+        }
+
+        /// <summary>
+        /// Ornate nine-slice frames belong on dialogue surfaces only.
+        /// PromptRibbon and chrome panels already have theme.css skins; wrapping them
+        /// in panel_frame stacks a second dialog-looking bar behind OverlayDialogue.
+        /// </summary>
+        private static string ResolveFrameImageSrc(
+            GameEngine engine,
+            NarrativeFrontendSurfaceKind kind)
+        {
+            return NarrativeFrontendThemeResolver.ResolveFrameImageSource(
+                engine,
+                ThemeAssetRoot,
+                kind);
+        }
+
+        private NarrativeShowcaseSurfaceConfig? ResolveChromeConfig(NarrativeFrontendSurfaceKind kind)
+        {
+            return kind switch
+            {
+                NarrativeFrontendSurfaceKind.OverlayDialogue => _frontendConfig.OverlayDialogue,
+                NarrativeFrontendSurfaceKind.DialogueBubble => _frontendConfig.DialogueBubble,
+                NarrativeFrontendSurfaceKind.StandingPortrait => _frontendConfig.StandingPortrait,
+                NarrativeFrontendSurfaceKind.SubtitleBubble => _frontendConfig.SubtitleBubble,
+                NarrativeFrontendSurfaceKind.TransmissionOverlay => _frontendConfig.TransmissionOverlay,
+                _ => null
+            };
+        }
+
+        /// <summary>Frontend config text fields are TextToken ids — resolve through the catalog at use sites.</summary>
+        private string Tr(GameEngine engine, string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return string.Empty;
+            }
+
+            return StoryTextResolution.FormatToken(
+                engine.GetService(CoreServiceKeys.PresentationTextCatalog),
+                engine.GetService(CoreServiceKeys.PresentationDisplayResolver),
+                token);
+        }
+
+        private static string FirstNonEmpty(string primary, string fallback) =>
+            string.IsNullOrWhiteSpace(primary) ? fallback ?? string.Empty : primary;
 
         private NarrativeFrontendSurfaceModel BuildPromptSurface(
             GameEngine engine,
             DialogueRuntime dialogue,
             SequencerRuntime sequencer)
         {
-            string body = BeastDefeated(engine)
-                ? _frontendConfig.Hints.ReturnPrompt
-                : BeastSpawned(engine)
-                    ? _frontendConfig.Hints.CombatPrompt
-                    : dialogue.TryGetActiveView(out DialogueView activeDialogue) && activeDialogue.Choices.Count > 0
-                        ? _frontendConfig.Hints.ChoicePrompt
-                        : _frontendConfig.Hints.ExplorePrompt;
+            string body = ResolvePromptBody(engine, dialogue, sequencer);
             string footer = sequencer.HasActiveSequence
-                ? _frontendConfig.Hints.SkipPrompt
+                ? Tr(engine, _frontendConfig.Hints.SkipPrompt)
                 : string.Empty;
             return CreateSurface(
                 _frontendConfig.PromptRibbon,
                 NarrativeFrontendSurfaceKind.PromptRibbon,
-                _frontendConfig.Hints.PromptTitle,
+                Tr(engine, _frontendConfig.Hints.PromptTitle),
                 body,
                 footer);
         }
 
-        private NarrativeFrontendSurfaceModel BuildObjectiveSurface(TaskRuntimeService tasks)
+        private NarrativeFrontendSurfaceModel BuildObjectiveSurface(GameEngine engine, TaskRuntimeService tasks)
         {
             IReadOnlyList<TaskView> taskViews = tasks.CaptureViews();
             TaskView? activeTask = null;
@@ -491,15 +593,12 @@ namespace NarrativeShowcaseMod.Runtime
                 return CreateSurface(
                     _frontendConfig.ObjectiveTracker,
                     NarrativeFrontendSurfaceKind.ObjectiveTracker,
-                    _frontendConfig.ObjectiveTracker.Title,
-                    BuildObjectiveSummary(taskViews));
+                    Tr(engine, _frontendConfig.ObjectiveTracker.Title),
+                    BuildObjectiveSummary(engine, taskViews));
             }
 
             TaskObjectiveProgressView objective = ResolveCurrentObjective(activeTask.Value);
-            string title = ReplaceTokens(_frontendConfig.Templates.ObjectiveTitleFormat, new Dictionary<string, string>
-            {
-                ["task"] = activeTask.Value.DisplayName,
-            });
+            string title = activeTask.Value.DisplayName;
             return CreateSurface(
                 _frontendConfig.ObjectiveTracker,
                 NarrativeFrontendSurfaceKind.ObjectiveTracker,
@@ -521,7 +620,7 @@ namespace NarrativeShowcaseMod.Runtime
             return task.Objectives.Count > 0 ? task.Objectives[0] : default;
         }
 
-        private NarrativeFrontendSurfaceModel BuildHistorySurface()
+        private NarrativeFrontendSurfaceModel BuildHistorySurface(GameEngine engine)
         {
             var items = new List<NarrativeFrontendSurfaceItem>(_history.Count);
             for (int i = _history.Count - 1; i >= 0; i--)
@@ -534,9 +633,9 @@ namespace NarrativeShowcaseMod.Runtime
             return CreateSurface(
                 _frontendConfig.HistoryJournal,
                 NarrativeFrontendSurfaceKind.HistoryJournal,
-                _frontendConfig.HistoryJournal.Title,
+                Tr(engine, _frontendConfig.HistoryJournal.Title),
                 string.Empty,
-                _frontendConfig.HistoryJournal.Footer,
+                Tr(engine, _frontendConfig.HistoryJournal.Footer),
                 items);
         }
 
@@ -547,15 +646,11 @@ namespace NarrativeShowcaseMod.Runtime
             for (int i = 0; i < _frontendConfig.Variables.Length; i++)
             {
                 NarrativeShowcaseVariableConfig variable = _frontendConfig.Variables[i];
-                string display = FormatVariable(variables, variable.VariableId);
+                string display = FormatVariable(engine, variables, variable.VariableId);
                 items.Add(new NarrativeFrontendSurfaceItem(
-                    Label: variable.Label,
+                    Label: Tr(engine, variable.Label),
                     Value: display,
-                    Caption: ReplaceTokens(_frontendConfig.Templates.VariableCaptionFormat, new Dictionary<string, string>
-                    {
-                        ["label"] = variable.Label,
-                        ["value"] = display,
-                    }),
+                    Caption: $"{Tr(engine, variable.Label)}{Tr(engine, "story.ui.punct.colon")}{display}",
                     AccentHex: variable.AccentHex,
                     Active: !string.IsNullOrWhiteSpace(display)));
             }
@@ -563,159 +658,10 @@ namespace NarrativeShowcaseMod.Runtime
             return CreateSurface(
                 _frontendConfig.VariablesPanel,
                 NarrativeFrontendSurfaceKind.StatusPanel,
-                _frontendConfig.VariablesPanel.Title,
+                Tr(engine, _frontendConfig.VariablesPanel.Title),
                 string.Empty,
-                _frontendConfig.VariablesPanel.Footer,
+                Tr(engine, _frontendConfig.VariablesPanel.Footer),
                 items);
-        }
-
-        private NarrativeFrontendSurfaceModel BuildDialogueSurface(
-            GameEngine engine,
-            DialogueRuntime dialogue,
-            DialogueView dialogueView)
-        {
-            string speaker = string.IsNullOrWhiteSpace(dialogueView.ResolvedSpeakerName)
-                ? dialogueView.SpeakerId
-                : dialogueView.ResolvedSpeakerName;
-            string profile = dialogueView.PresentationProfile ?? string.Empty;
-            bool standingPortrait = string.Equals(
-                profile,
-                NarrativeShowcaseIds.PresentationStandingPortrait,
-                StringComparison.OrdinalIgnoreCase);
-            bool worldBubble = string.Equals(profile, NarrativeShowcaseIds.PresentationWorldBubble, StringComparison.OrdinalIgnoreCase);
-            bool overlay = string.Equals(profile, NarrativeShowcaseIds.PresentationDialogueOverlay, StringComparison.OrdinalIgnoreCase)
-                || (!worldBubble && !standingPortrait && dialogueView.Choices.Count > 0);
-
-            NarrativeShowcaseSurfaceConfig config = standingPortrait
-                ? _frontendConfig.StandingPortrait
-                : overlay
-                    ? _frontendConfig.OverlayDialogue
-                    : _frontendConfig.DialogueBubble;
-            NarrativeFrontendSurfaceKind kind = standingPortrait
-                ? NarrativeFrontendSurfaceKind.StandingPortrait
-                : overlay
-                    ? NarrativeFrontendSurfaceKind.OverlayDialogue
-                    : NarrativeFrontendSurfaceKind.DialogueBubble;
-            string footer = dialogueView.AutoAdvance
-                ? _frontendConfig.Hints.AutoAdvancePrompt
-                : config.Footer;
-
-            float offsetX = config.OffsetX;
-            float offsetY = config.OffsetY;
-            NarrativeFrontendAnchor anchor = config.ResolveAnchor();
-            if (worldBubble)
-            {
-                if (!TryProjectSpeaker(engine, dialogue, dialogueView.SpeakerId, out float screenX, out float screenY))
-                {
-                    throw new InvalidOperationException(
-                        $"Presentation profile '{NarrativeShowcaseIds.PresentationWorldBubble}' requires IScreenProjector and a bound speaker entity with WorldPositionCm. Speaker '{dialogueView.SpeakerId}' could not be projected.");
-                }
-
-
-                anchor = NarrativeFrontendAnchor.TopLeft;
-                offsetX = screenX - UiMargin;
-                offsetY = screenY - UiMargin - 96f;
-                engine.GlobalContext["NarrativeShowcase.LastWorldBubble"] =
-                    $"{kind}|{config.Width}|{anchor}|{offsetX:0.###}|{offsetY:0.###}|{config.Eyebrow}";
-            }
-
-            string portraitSrc = ResolveThemeSpeakerImage(
-                engine,
-                dialogueView.SpeakerId,
-                standingPortrait)
-                ?? (standingPortrait ? dialogueView.StandingImageSrc : dialogueView.PortraitImageSrc);
-            if (standingPortrait && string.IsNullOrWhiteSpace(portraitSrc))
-            {
-                throw new InvalidOperationException(
-                    $"Presentation profile '{NarrativeShowcaseIds.PresentationStandingPortrait}' requires speaker '{dialogueView.SpeakerId}' to declare standingImageId with a resolvable image asset.");
-            }
-
-
-            return new NarrativeFrontendSurfaceModel(
-                SurfaceId: $"{_frontendConfig.OwnerId}.{kind}.{anchor}",
-                Kind: kind,
-                Anchor: anchor,
-                Title: speaker,
-                Subtitle: config.Eyebrow,
-                Body: dialogueView.ResolvedText,
-                Footer: string.IsNullOrWhiteSpace(footer) ? config.Footer : footer,
-                Width: config.Width,
-                OffsetX: offsetX,
-                OffsetY: offsetY,
-                ZIndex: config.ZIndex,
-                WaitForInput: dialogueView.WaitForInput,
-                Skippable: false,
-                Progress01: dialogueView.Progress01,
-                CountdownSeconds: dialogueView.AutoAdvanceSeconds > 0f
-                    ? Math.Max(0f, dialogueView.AutoAdvanceSeconds - dialogueView.ElapsedSeconds)
-                    : 0f,
-                AccentHex: config.AccentHex,
-                BackgroundHex: config.BackgroundHex,
-                BorderHex: config.BorderHex,
-                ForegroundHex: config.ForegroundHex,
-                MutedHex: config.MutedHex,
-                PortraitSrc: portraitSrc,
-                PortraitSize: standingPortrait ? 980f : overlay ? 112f : 84f,
-                FrameImageSrc: _panelFrameSrc);
-        }
-
-        private NarrativeFrontendSurfaceModel BuildChoiceSurface(DialogueView dialogue)
-        {
-            var items = new List<NarrativeFrontendSurfaceItem>(dialogue.Choices.Count);
-            for (int i = 0; i < dialogue.Choices.Count; i++)
-            {
-                DialogueChoiceView choice = dialogue.Choices[i];
-                items.Add(new NarrativeFrontendSurfaceItem(
-                    Label: choice.ResolvedText,
-                    Caption: choice.ChoiceId,
-                    Active: i == 0,
-                    Shortcut: (i + 1).ToString()));
-            }
-
-            return CreateSurface(
-                _frontendConfig.ChoiceList,
-                NarrativeFrontendSurfaceKind.ChoiceList,
-                _frontendConfig.ChoiceList.Title,
-                string.Empty,
-                _frontendConfig.ChoiceList.Footer,
-                items);
-        }
-
-        private NarrativeFrontendSurfaceModel BuildSequenceSurface(GameEngine engine, SequenceView sequence)
-        {
-            SequenceSubtitleView? subtitle = sequence.ActiveSubtitles.Count > 0
-                ? sequence.ActiveSubtitles[0]
-                : null;
-            bool transmission = ContainsId(_frontendConfig.Routing.TransmissionSequenceIds, sequence.SequenceId);
-            NarrativeShowcaseSurfaceConfig config = transmission
-                ? _frontendConfig.TransmissionOverlay
-                : _frontendConfig.SubtitleBubble;
-            NarrativeFrontendSurfaceKind kind = transmission
-                ? NarrativeFrontendSurfaceKind.TransmissionOverlay
-                : NarrativeFrontendSurfaceKind.SubtitleBubble;
-
-            string title = subtitle != null
-                ? ResolveSpeakerDisplay(engine, subtitle.SpeakerId)
-                : sequence.DisplayName;
-            string body = subtitle?.ResolvedText ?? string.Empty;
-            float progress01 = subtitle != null && subtitle.Duration > 0f
-                ? Math.Clamp(subtitle.LocalElapsed / subtitle.Duration, 0f, 1f)
-                : 0f;
-            float countdown = subtitle != null
-                ? Math.Max(0f, subtitle.Duration - subtitle.LocalElapsed)
-                : 0f;
-
-            return CreateSurface(
-                config,
-                kind,
-                title,
-                body,
-                _frontendConfig.Hints.SkipPrompt,
-                null,
-                false,
-                true,
-                progress01,
-                countdown);
         }
 
         private string ResolveSpeakerDisplay(GameEngine engine, string speakerId)
@@ -725,14 +671,13 @@ namespace NarrativeShowcaseMod.Runtime
                 return string.Empty;
             }
 
-            if (engine.GetService(CoreServiceKeys.PresentationDisplayResolver) is PresentationDisplayResolver display &&
-                engine.GetService(CoreServiceKeys.StoryDefinitions) is StoryDefinitionRegistry story &&
-                story.TryGetSpeaker(speakerId, out StorySpeakerDefinition speaker))
-            {
-                return display.FormatTokenOrThrow(speaker.DisplayNameToken);
-            }
-
-            return _frontendConfig.ResolveSpeakerLabel(speakerId);
+            var story = engine.GetService(CoreServiceKeys.StoryDefinitions) as StoryDefinitionRegistry
+                ?? throw new InvalidOperationException("Narrative showcase requires StoryDefinitionRegistry for speaker names.");
+            return StoryTextResolution.ResolveSpeakerDisplayName(
+                story,
+                engine.GetService(CoreServiceKeys.PresentationTextCatalog),
+                engine.GetService(CoreServiceKeys.PresentationDisplayResolver),
+                speakerId);
         }
 
         private NarrativeFrontendSurfaceModel CreateSurface(
@@ -747,6 +692,12 @@ namespace NarrativeShowcaseMod.Runtime
             float progress01 = -1f,
             float countdownSeconds = 0f)
         {
+            if (string.IsNullOrWhiteSpace(config.LayoutId))
+            {
+                throw new InvalidOperationException(
+                    $"Narrative frontend surface '{kind}' requires layoutId.");
+            }
+
             return new NarrativeFrontendSurfaceModel(
                 SurfaceId: $"{_frontendConfig.OwnerId}.{kind}.{config.ResolveAnchor()}",
                 Kind: kind,
@@ -769,9 +720,8 @@ namespace NarrativeShowcaseMod.Runtime
                 BorderHex: config.BorderHex,
                 ForegroundHex: config.ForegroundHex,
                 MutedHex: config.MutedHex,
-                FrameImageSrc: kind == NarrativeFrontendSurfaceKind.ChoiceList
-                    ? _choiceFrameSrc
-                    : _panelFrameSrc);
+                LayoutId: config.LayoutId,
+                StyleClass: config.StyleClass);
         }
 
         private void EnsureBootstrapped(GameEngine engine)
@@ -848,70 +798,14 @@ namespace NarrativeShowcaseMod.Runtime
                     objectiveText = definition.Objectives[0].Title;
                 }
 
-                AppendHistory(_frontendConfig.Templates.TaskActivated, new Dictionary<string, string>
-                {
-                    ["bodyText"] = objectiveText,
-                });
+                AppendHistory($"{Tr(engine, _frontendConfig.Templates.TaskActivatedPrefix)}{objectiveText}");
             }
             else if (change.State == TaskInstanceState.Completed)
             {
-                AppendHistory(_frontendConfig.Templates.TaskCompleted, new Dictionary<string, string>
-                {
-                    ["taskId"] = change.TaskId,
-                });
+                AppendHistory(Tr(engine, _frontendConfig.Templates.TaskCompleted));
             }
 
             RefreshPanel(engine);
-        }
-
-        private void SpawnBeast(GameEngine engine)
-        {
-            if (BeastSpawned(engine) || engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue queue)
-            {
-                return;
-            }
-
-            queue.TryEnqueue(new RuntimeEntitySpawnRequest
-            {
-                Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = "interaction_enemy_bruiser",
-                MapId = new Ludots.Core.Map.MapId(NarrativeShowcaseIds.MapId),
-                HasWorldPosition = 1,
-                WorldPositionCm = Fix64Vec2.FromInt(1960, 940),
-                HasFacing = 1,
-                FacingAngleRad = 3.14159f
-            });
-            engine.GlobalContext[NarrativeShowcaseIds.BeastSpawnedKey] = true;
-            AppendHistory(_frontendConfig.Templates.BeastSpawned, null);
-        }
-
-        private void ApplyReward(GameEngine engine)
-        {
-            if (engine.GlobalContext.TryGetValue(NarrativeShowcaseIds.RewardAppliedKey, out var rewardObj) && rewardObj is bool rewardApplied && rewardApplied)
-            {
-                return;
-            }
-
-            if (engine.GetService(CoreServiceKeys.EffectRequestQueue) is not EffectRequestQueue queue ||
-                !TryFindEntityByName(engine.World, NarrativeShowcaseIds.PlayerName, out Entity player))
-            {
-                return;
-            }
-
-            int healEffectId = EffectTemplateIdRegistry.GetId("Effect.Narrative.BlessingHeal");
-            int speedEffectId = EffectTemplateIdRegistry.GetId("Effect.Narrative.BlessingSpeed");
-            if (healEffectId > 0)
-            {
-                queue.Publish(new EffectRequest { Source = player, Target = player, TemplateId = healEffectId });
-            }
-
-            if (speedEffectId > 0)
-            {
-                queue.Publish(new EffectRequest { Source = player, Target = player, TemplateId = speedEffectId });
-            }
-
-            engine.GlobalContext[NarrativeShowcaseIds.RewardAppliedKey] = true;
-            AppendHistory(_frontendConfig.Templates.RewardApplied, null);
         }
 
         private void ActivateInputContexts(Ludots.Core.Input.Runtime.PlayerInputHandler input)
@@ -1025,6 +919,8 @@ namespace NarrativeShowcaseMod.Runtime
             {
                 frontend.Clear(_frontendConfig.OwnerId);
             }
+
+            NarrativeDialogueChoicePanels.Hide(engine);
         }
 
         private void BindByName(GameEngine engine, DialogueRuntime dialogue, string alias, string name)
@@ -1042,7 +938,7 @@ namespace NarrativeShowcaseMod.Runtime
                 return false;
             }
 
-            if (TryFindEntityByName(engine.World, NarrativeShowcaseIds.SpawnedBeastTemplateName, out Entity entity) && engine.World.TryGet(entity, out Name name))
+            if (TryFindEntityByName(engine.World, NarrativeShowcaseIds.SpawnedBeastEntityName, out Entity entity) && engine.World.TryGet(entity, out Name name))
             {
                 name.Value = NarrativeShowcaseIds.BeastName;
                 engine.World.Set(entity, name);
@@ -1058,16 +954,16 @@ namespace NarrativeShowcaseMod.Runtime
             _historySerial = 0;
         }
 
-        private void AppendHistory(string template, IReadOnlyDictionary<string, string>? values)
+        private void AppendHistory(string text)
         {
-            if (string.IsNullOrWhiteSpace(template))
+            if (string.IsNullOrWhiteSpace(text))
             {
                 return;
             }
 
             _historySerial++;
-            _history.Add($"[{_historySerial:00}] {ReplaceTokens(template, values)}");
-            if (_history.Count > 14)
+            _history.Add($"[{_historySerial:00}] {text}");
+            if (_history.Count > _frontendConfig.Bootstrap.HistoryCapacity)
             {
                 _history.RemoveAt(0);
             }
@@ -1078,10 +974,10 @@ namespace NarrativeShowcaseMod.Runtime
             DialogueRuntime dialogue,
             SequencerRuntime sequencer,
             TaskRuntimeService tasks,
-            int surfaceCount)
+            IReadOnlyList<NarrativeFrontendSurfaceModel> surfaces)
         {
             string dialogueSig = dialogue.TryGetActiveView(out DialogueView dialogueView)
-                ? $"{dialogueView.DialogueId}|{dialogueView.NodeId}|{dialogueView.Choices.Count}|{dialogueView.Progress01:0.00}|{dialogueView.PresentationProfile}|{dialogueView.StandingImageSrc}|{dialogueView.PortraitImageSrc}"
+                ? $"{dialogueView.DialogueId}|{dialogueView.NodeId}|{dialogueView.Choices.Count}|{dialogueView.Progress01:0.00}|{dialogueView.PresentationProfile}|{dialogueView.StandingImageId}|{dialogueView.PortraitImageId}"
                 : string.Empty;
             string sequenceSig = sequencer.TryGetActiveView(out SequenceView sequence)
                 ? $"{sequence.SequenceId}|{sequence.Time:0.00}|{sequence.ActiveSubtitles.Count}|{sequence.Paused}"
@@ -1091,13 +987,28 @@ namespace NarrativeShowcaseMod.Runtime
                 BuildVariableSummary(engine),
                 dialogueSig,
                 sequenceSig,
-                surfaceCount,
+                BuildSurfaceLayoutSignature(surfaces),
                 _historySerial,
                 BeastSpawned(engine),
-                BeastDefeated(engine));
+                BeastDefeated(engine),
+                BuildCastSignature(engine));
         }
 
-        private string FormatVariable(MapVariableStore? variables, string variableId)
+        private static string BuildSurfaceLayoutSignature(
+            IReadOnlyList<NarrativeFrontendSurfaceModel> surfaces)
+        {
+            var parts = new string[surfaces.Count];
+            for (int i = 0; i < surfaces.Count; i++)
+            {
+                NarrativeFrontendSurfaceModel surface = surfaces[i];
+                parts[i] =
+                    $"{surface.SurfaceId}:{surface.Anchor}:{surface.Width:0.###}:{surface.OffsetX:0.###}:{surface.OffsetY:0.###}:{surface.ZIndex}";
+            }
+
+            return string.Join(",", parts);
+        }
+
+        private string FormatVariable(GameEngine engine, MapVariableStore? variables, string variableId)
         {
             if (variables == null || !variables.Contains(variableId))
             {
@@ -1107,7 +1018,7 @@ namespace NarrativeShowcaseMod.Runtime
             int value = variables.ReadInt(variableId);
             if (string.Equals(variableId, NarrativeShowcaseIds.EndingVariableId, StringComparison.OrdinalIgnoreCase))
             {
-                return _frontendConfig.ResolveEndingLabel(value);
+                return Tr(engine, _frontendConfig.ResolveEndingLabel(value));
             }
 
             return value.ToString();
@@ -1125,7 +1036,7 @@ namespace NarrativeShowcaseMod.Runtime
             return string.Join(",", parts);
         }
 
-        private static string BuildObjectiveSummary(IReadOnlyList<TaskView> views)
+        private string BuildObjectiveSummary(GameEngine engine, IReadOnlyList<TaskView> views)
         {
             for (int i = 0; i < views.Count; i++)
             {
@@ -1135,7 +1046,7 @@ namespace NarrativeShowcaseMod.Runtime
                 }
             }
 
-            return "No active objective.";
+            return Tr(engine, "story.ui.objective.empty");
         }
 
         private string BuildVariableSummary(GameEngine engine)
@@ -1176,7 +1087,7 @@ namespace NarrativeShowcaseMod.Runtime
                 return false;
             }
 
-            float headOffsetYCm = 140f;
+            float headOffsetYCm = NarrativeShowcaseCastDefaults.HeadOffsetYCm;
             if (engine.GetService(CoreServiceKeys.StoryDefinitions) is StoryDefinitionRegistry story &&
                 story.TryGetProfile(NarrativeShowcaseIds.PresentationWorldBubble, out StoryPresentationProfileDefinition profile))
             {
@@ -1228,6 +1139,211 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             return result;
+        }
+
+        private void EnsurePlayerLocale(GameEngine engine)
+        {
+            if (string.IsNullOrWhiteSpace(_frontendConfig.PlayerLocale))
+            {
+                return;
+            }
+
+            if (engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection) is PresentationTextLocaleSelection locale
+                && !string.Equals(locale.ActiveLocaleKey, _frontendConfig.PlayerLocale, StringComparison.OrdinalIgnoreCase))
+            {
+                locale.SetActiveLocale(_frontendConfig.PlayerLocale);
+            }
+        }
+
+        private string ResolvePromptBody(GameEngine engine, DialogueRuntime dialogue, SequencerRuntime sequencer)
+        {
+            NarrativeShowcaseHintConfig hints = _frontendConfig.Hints;
+            if (sequencer.HasActiveSequence)
+            {
+                if (sequencer.TryGetActiveView(out SequenceView sequence) &&
+                    string.Equals(sequence.SequenceId, NarrativeShowcaseIds.TrialRevealSequenceId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Tr(engine, FirstNonEmpty(hints.SkipPrompt, hints.IntroPrompt));
+                }
+
+                return Tr(engine, FirstNonEmpty(hints.IntroPrompt, hints.SkipPrompt));
+            }
+
+            if (dialogue.TryGetActiveView(out DialogueView activeDialogue))
+            {
+                return activeDialogue.Choices.Count > 0
+                    ? FirstNonEmpty(hints.ChoicePrompt, hints.ContinuePrompt)
+                    : FirstNonEmpty(hints.ContinuePrompt, hints.ChoicePrompt);
+            }
+
+            if (BeastSpawned(engine) && !BeastDefeated(engine))
+            {
+                return Tr(engine, hints.CombatPrompt);
+            }
+
+            bool nearWarden = IsNearNamed(engine, NarrativeShowcaseIds.ElderName, WardenInteractRangeCm);
+            bool nearShrine = IsNearNamed(engine, NarrativeShowcaseIds.ShrineName, ShrineInteractRangeCm);
+
+            if (BeastDefeated(engine))
+            {
+                return nearWarden
+                    ? Tr(engine, FirstNonEmpty(hints.ReturnNearPrompt, hints.ReturnPrompt))
+                    : Tr(engine, hints.ReturnPrompt);
+            }
+
+            if (engine.GetService(CoreServiceKeys.TaskRuntimeService) is TaskRuntimeService tasks)
+            {
+                if (tasks.TryGetState(NarrativeShowcaseIds.TrialTaskId, out TaskInstanceState trialState) &&
+                    trialState == TaskInstanceState.Active)
+                {
+                    return nearShrine
+                        ? Tr(engine, FirstNonEmpty(hints.ExploreShrineNearPrompt, hints.ExploreShrinePrompt))
+                        : Tr(engine, FirstNonEmpty(hints.ExploreShrinePrompt, hints.ExplorePrompt));
+                }
+
+                if (tasks.TryGetState(NarrativeShowcaseIds.BriefingTaskId, out TaskInstanceState briefingState) &&
+                    briefingState == TaskInstanceState.Active)
+                {
+                    return nearWarden
+                        ? Tr(engine, FirstNonEmpty(hints.ExploreWardenNearPrompt, hints.ExploreWardenPrompt))
+                        : Tr(engine, FirstNonEmpty(hints.ExploreWardenPrompt, hints.ExplorePrompt));
+                }
+            }
+
+            return Tr(engine, FirstNonEmpty(hints.ExploreWardenPrompt, hints.ExplorePrompt));
+        }
+
+        private NarrativeFrontendSurfaceModel BuildNotificationSurface(GameEngine engine)
+        {
+            int take = Math.Min(2, _history.Count);
+            var items = new List<NarrativeFrontendSurfaceItem>(take);
+            for (int i = 0; i < take; i++)
+            {
+                string line = _history[_history.Count - 1 - i];
+                items.Add(new NarrativeFrontendSurfaceItem(
+                    Label: i == 0 ? Tr(engine, "story.ui.notification.now") : Tr(engine, "story.ui.notification.earlier"),
+                    Value: line,
+                    Active: i == 0));
+            }
+
+            return CreateSurface(
+                _frontendConfig.NotificationStack,
+                NarrativeFrontendSurfaceKind.NotificationStack,
+                _frontendConfig.NotificationStack.Title,
+                string.Empty,
+                _frontendConfig.NotificationStack.Footer,
+                items);
+        }
+
+        private void AddCastNameplates(GameEngine engine, List<NarrativeFrontendSurfaceModel> surfaces)
+        {
+            NarrativeShowcaseCastMemberConfig[] cast = _frontendConfig.Cast;
+            for (int i = 0; i < cast.Length; i++)
+            {
+                NarrativeShowcaseCastMemberConfig member = cast[i];
+                if (string.IsNullOrWhiteSpace(member.EntityName) ||
+                    !TryProjectNamedEntity(engine, member.EntityName, member.HeadOffsetYCm, out float screenX, out float screenY))
+                {
+                    continue;
+                }
+
+                NarrativeShowcaseSurfaceConfig plate = _frontendConfig.Nameplate;
+                surfaces.Add(new NarrativeFrontendSurfaceModel(
+                    SurfaceId: $"{_frontendConfig.OwnerId}.nameplate.{member.EntityName}",
+                    Kind: NarrativeFrontendSurfaceKind.WorldNameplate,
+                    Anchor: NarrativeFrontendAnchor.TopLeft,
+                    Title: Tr(engine, member.Title),
+                    Subtitle: Tr(engine, member.Role),
+                    Width: plate.Width,
+                    OffsetX: screenX - UiMargin - (plate.Width * 0.5f),
+                    OffsetY: screenY - UiMargin - NameplateLiftPx,
+                    ZIndex: plate.ZIndex,
+                    AccentHex: FirstNonEmpty(member.AccentHex, plate.AccentHex),
+                    BackgroundHex: plate.BackgroundHex,
+                    BorderHex: plate.BorderHex,
+                    ForegroundHex: plate.ForegroundHex,
+                    MutedHex: plate.MutedHex,
+                    LayoutId: plate.LayoutId,
+                    StyleClass: plate.StyleClass));
+            }
+        }
+
+        private bool HasNonZeroStoryVariable(GameEngine engine)
+        {
+            MapVariableStore? variables = engine.CurrentMapSession?.Variables;
+            if (variables == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < _frontendConfig.Variables.Length; i++)
+            {
+                string variableId = _frontendConfig.Variables[i].VariableId;
+                if (variables.Contains(variableId) && variables.ReadInt(variableId) != 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private string BuildCastSignature(GameEngine engine)
+        {
+            if (!TryFindEntityByName(engine.World, NarrativeShowcaseIds.PlayerName, out Entity player) ||
+                !engine.World.TryGet(player, out WorldPositionCm playerPos))
+            {
+                return string.Empty;
+            }
+
+            Vector2 pos = playerPos.Value.ToVector2();
+            return string.Join("|",
+                $"{pos.X:0}",
+                $"{pos.Y:0}",
+                IsNearNamed(engine, NarrativeShowcaseIds.ElderName, WardenInteractRangeCm),
+                IsNearNamed(engine, NarrativeShowcaseIds.ShrineName, ShrineInteractRangeCm));
+        }
+
+        private bool TryProjectNamedEntity(GameEngine engine, string name, float headOffsetYCm, out float screenX, out float screenY)
+        {
+            screenX = 0f;
+            screenY = 0f;
+            if (engine.GetService(CoreServiceKeys.ScreenProjector) is not IScreenProjector projector ||
+                !TryFindEntityByName(engine.World, name, out Entity entity) ||
+                !engine.World.TryGet(entity, out WorldPositionCm worldPos))
+            {
+                return false;
+            }
+
+            Vector2 world = worldPos.Value.ToVector2();
+            Vector2 screen;
+            try
+            {
+                screen = projector.WorldToScreen(new Vector3(
+                    world.X / 100f,
+                    headOffsetYCm / 100f,
+                    world.Y / 100f));
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return false;
+            }
+
+            if (float.IsNaN(screen.X) || float.IsNaN(screen.Y))
+            {
+                return false;
+            }
+
+            screenX = screen.X;
+            screenY = screen.Y;
+            return true;
+        }
+
+        private static bool IsNear(WorldPositionCm a, WorldPositionCm b, float rangeCm)
+        {
+            Vector2 va = a.Value.ToVector2();
+            Vector2 vb = b.Value.ToVector2();
+            return Vector2.Distance(va, vb) <= rangeCm;
         }
 
         private static bool TryFindEntityByName(World world, string name, out Entity result)

@@ -1,0 +1,8 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.gallery.aim",
+      "activeCollectionKey": "gallery.aim"
+    }
+  ]
+}

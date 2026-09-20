@@ -980,7 +980,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     $"Ability '{id}' in '{path}' field '{fieldPath}' must use a non-empty interaction mode key.");
             }
 
-            if (!Enum.TryParse(modeKey, ignoreCase: true, out InteractionModeType parsed))
+            if (!Enum.TryParse(modeKey, ignoreCase: true, out CastModeType parsed))
             {
                 throw new InvalidOperationException(
                     $"Ability '{id}' in '{path}' field '{fieldPath}' uses unknown interaction mode '{modeKey}'.");
@@ -1025,7 +1025,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (inputObj["castModeOverride"] is JsonValue castModeNode)
             {
                 string rawCastMode = castModeNode.GetValue<string>();
-                if (!Enum.TryParse(rawCastMode, ignoreCase: true, out InteractionModeType castMode))
+                if (!Enum.TryParse(rawCastMode, ignoreCase: true, out CastModeType castMode))
                 {
                     throw new InvalidOperationException(
                         $"Ability '{id}' in '{path}' input.castModeOverride uses unknown value '{rawCastMode}'.");
@@ -1033,6 +1033,35 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
                 result.CastModeOverride = castMode;
                 result.HasCastModeOverride = true;
+                hasAny = true;
+            }
+
+            if (inputObj["targetType"] is JsonValue targetTypeNode)
+            {
+                string rawTargetType = targetTypeNode.GetValue<string>();
+                if (!Enum.TryParse(rawTargetType, ignoreCase: true, out OrderTargetType targetType))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' input.targetType uses unsupported value '{rawTargetType}'.");
+                }
+
+                result.TargetType = targetType;
+                result.HasTargetType = true;
+                hasAny = true;
+            }
+
+            if (inputObj["modifierBehavior"] is JsonValue modifierBehaviorNode)
+            {
+                string rawModifierBehavior = modifierBehaviorNode.GetValue<string>();
+                if (!Enum.TryParse(rawModifierBehavior, ignoreCase: true, out ModifierSubmitBehavior modifierBehavior) ||
+                    !Enum.IsDefined(modifierBehavior))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' input.modifierBehavior uses unsupported value '{rawModifierBehavior}'.");
+                }
+
+                result.ModifierBehavior = modifierBehavior;
+                result.HasModifierBehavior = true;
                 hasAny = true;
             }
 

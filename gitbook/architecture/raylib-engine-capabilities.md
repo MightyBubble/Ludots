@@ -9,7 +9,7 @@ Ludots 的 Raylib 桌面引擎适配器（`src/Client/Ludots.Raylib.Render` + `s
 | 静态实例化合批（ISM） | 大量静态网格（植被、道具群） | `instancing.vs/fs` | `PrimitiveDrawItem` → `RaylibPrimitiveRenderer` |
 | GPU 骨骼蒙皮实例化 | 人群/军队同模型动画 | `skinning_instanced` | `ISkinnedVisualBatchSnapshot` → `RaylibGpuSkinnedBatchRenderer` |
 | 单物体带光照 | 少量模型、编辑器道具 | `model_lit` | `RaylibLitModel` |
-| 地形 | 高度图 / 平面 surface | `terrain.fs` | `RaylibVisualHeightmapRenderer` / `RaylibTerrainRenderer` |
+| 地形 | 高度图 / 平面 surface | `terrain.fs` | `RaylibContinuousHeightmapRenderer` / `RaylibTerrainRenderer` |
 | 植被 billboard | 镂空贴图植物 | `vegetation_cutout` | `MeshAssetType.Billboard` + Cutout 材质 |
 | 投影贴花 | 脚印、弹坑、标记 | `decal_project` | `AssetKind.Decal` → `RaylibDecalProjectorRenderer` |
 | 天空 | 昼夜渐变 / 程序化天空盒 | `sky_daynight` / `skybox` | `RaylibSkyEnvironment` / `RaylibSkyboxRenderer` |

@@ -24,7 +24,7 @@ namespace Ludots.Tests.ThreeC
             backend.EnqueuePointerMessage(CreatePointerMessage(PointerAction.Up, 0, 640f, 360f));
 
             backend.AdvanceFrameInput();
-            handler.Update();
+            handler.Update(1f / 60f);
 
             Assert.Multiple(() =>
             {
@@ -35,7 +35,7 @@ namespace Ludots.Tests.ThreeC
             });
 
             backend.AdvanceFrameInput();
-            handler.Update();
+            handler.Update(1f / 60f);
 
             Assert.Multiple(() =>
             {
@@ -57,12 +57,12 @@ namespace Ludots.Tests.ThreeC
             backend.ApplyStateMessage(CreateInputStateMessage(buttonMask: 0, mouseX: 640f, mouseY: 360f, mouseWheel: 0f, keyBits: 0));
 
             backend.AdvanceFrameInput();
-            handler.Update();
+            handler.Update(1f / 60f);
             Assert.That(handler.PressedThisFrame("MoveUp"), Is.True);
             Assert.That(handler.IsDown("MoveUp"), Is.True);
 
             backend.AdvanceFrameInput();
-            handler.Update();
+            handler.Update(1f / 60f);
             Assert.That(handler.ReleasedThisFrame("MoveUp"), Is.True);
             Assert.That(handler.IsDown("MoveUp"), Is.False);
         }

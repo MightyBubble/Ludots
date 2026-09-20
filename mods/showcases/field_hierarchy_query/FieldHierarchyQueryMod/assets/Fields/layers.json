@@ -1,0 +1,12 @@
+[
+  {
+    "id": "ownership.zones",
+    "kind": "discreteId",
+    "cellSizeCm": 100,
+    "chunkSizeCells": 8,
+    "default": 0,
+    "writerDomain": "map.field.ownership.zones",
+    "maxRegionIds": 16,
+    "persistent": true
+  }
+]

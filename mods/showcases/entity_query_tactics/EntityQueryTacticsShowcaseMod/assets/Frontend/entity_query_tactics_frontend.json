@@ -2,6 +2,7 @@
   "ownerId": "EntityQueryTactics",
   "backdropHex": "#071014D8",
   "promptRibbon": {
+    "layoutId": "layout.narrative.prompt-ribbon",
     "anchor": "TopLeft",
     "width": 760,
     "offsetX": 24,
@@ -17,6 +18,8 @@
     "mutedHex": "#93A4A7"
   },
   "selectionPanel": {
+    "layoutId": "layout.narrative.card",
+    "styleClass": "story-status",
     "anchor": "TopLeft",
     "width": 430,
     "offsetX": 24,
@@ -32,9 +35,11 @@
     "mutedHex": "#9FB3C8"
   },
   "queryBoard": {
+    "layoutId": "layout.narrative.card",
+    "styleClass": "story-inspect",
     "anchor": "TopRight",
     "width": 420,
-    "offsetX": -340,
+    "offsetX": 340,
     "offsetY": 150,
     "zIndex": 92,
     "eyebrow": "Friendly query",
@@ -47,10 +52,12 @@
     "mutedHex": "#C5B98E"
   },
   "relationBoard": {
+    "layoutId": "layout.narrative.card",
+    "styleClass": "story-threat-banner",
     "anchor": "BottomRight",
     "width": 430,
-    "offsetX": -340,
-    "offsetY": -420,
+    "offsetX": 340,
+    "offsetY": 420,
     "zIndex": 93,
     "eyebrow": "Enemy threat",
     "title": "Enemy Threat Board",
@@ -62,10 +69,12 @@
     "mutedHex": "#D5A2AA"
   },
   "cachePanel": {
+    "layoutId": "layout.narrative.card",
+    "styleClass": "story-flow-review",
     "anchor": "BottomLeft",
     "width": 430,
     "offsetX": 24,
-    "offsetY": -300,
+    "offsetY": 300,
     "zIndex": 94,
     "eyebrow": "Cache reused",
     "title": "Formation Cache",

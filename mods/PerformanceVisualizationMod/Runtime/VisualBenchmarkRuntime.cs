@@ -117,9 +117,31 @@ namespace PerformanceVisualizationMod.Runtime
                 _status = "Skia hotpath direct-screen benchmark active.";
             }
 
+            EnsureSoleBenchmarkSeat(engine);
             ConfigureCamera(engine, _scenario);
             RefreshPanel(engine);
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// The benchmark maps carry no authored participants: the benchmark audience seat is runtime-owned.
+        /// Bind seat.0 to a spawned observer so knowledge projection has a sole viewer without map Players data.
+        /// </summary>
+        private static void EnsureSoleBenchmarkSeat(GameEngine engine)
+        {
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity existing) &&
+                engine.World.IsAlive(existing))
+            {
+                return;
+            }
+
+            Entity observer = engine.World.Create(
+                new Name { Value = "Benchmark Audience" },
+                new MapEntity { MapId = engine.CurrentMapSession!.MapId });
+            ClientLocalSeatBindings.BindSoleSeat(
+                engine, observer, playerId: 1, "seat.0",
+                presentResolutionPx: new Vector2(1280f, 720f));
+            ClientLocalSeatAccess.RequireSolePossessedRep(engine);
         }
 
         public Task HandleMapUnloadedAsync(ScriptContext context)

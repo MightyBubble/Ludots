@@ -75,7 +75,19 @@ namespace Ludots.AgentBridge.Tools
                 entries.Add(MountSnapshot(mounts[i], programs));
             }
 
-            return new JsonObject { ["mounts"] = entries, ["count"] = mounts.Count };
+            TriggerGraphExecutionSlotStore slots = context.Engine.GetService(CoreServiceKeys.TriggerGraphExecutionSlots)
+                ?? throw new AgentToolException(AgentBridgeErrorCodes.ServiceUnavailable, "TriggerGraph execution slots are unavailable.");
+            return new JsonObject
+            {
+                ["mounts"] = entries,
+                ["count"] = mounts.Count,
+                ["executionSlots"] = new JsonObject
+                {
+                    ["capacity"] = slots.Capacity,
+                    ["inUseCount"] = slots.InUseCount,
+                    ["highWaterMark"] = slots.HighWaterMark,
+                },
+            };
         }
 
         private static JsonObject Configure(JsonObject? args, IReadOnlyList<TriggerGraphMountTrigger> mounts, AgentToolContext context)
@@ -174,6 +186,7 @@ namespace Ludots.AgentBridge.Tools
                 ["executionBackend"] = executionBackend,
                 ["mode"] = mount.DebugTrace.Mode.ToString(),
                 ["capacity"] = mount.DebugTrace.Capacity,
+                ["allocatedCapacity"] = mount.DebugTrace.AllocatedCapacity,
                 ["latestSequence"] = mount.DebugTrace.LatestSequence,
                 ["droppedCount"] = mount.DebugTrace.DroppedCount,
                 ["cursor"] = new JsonObject
@@ -199,6 +212,7 @@ namespace Ludots.AgentBridge.Tools
                 ["steps"] = record.Steps,
                 ["nodeId"] = string.IsNullOrWhiteSpace(source.NodeId) ? null : source.NodeId,
                 ["op"] = string.IsNullOrWhiteSpace(source.Op) ? null : source.Op,
+                ["controlPort"] = string.IsNullOrWhiteSpace(source.ControlPort) ? null : source.ControlPort,
             };
 
             if (record.EventKind == GraphDebugTraceEvent.PinInt || record.EventKind == GraphDebugTraceEvent.PinBool)

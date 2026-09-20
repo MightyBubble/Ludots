@@ -648,7 +648,6 @@ namespace Ludots.Tests.GAS
                         eventTagId: 2000 + i + 1,
                         priority: 0), Is.True);
                 }
-
                 var api = new GasGraphRuntimeApi(world, eventBus: eventBus);
                 using var transaction = new EffectPhaseSideEffectTransaction(
                     world,

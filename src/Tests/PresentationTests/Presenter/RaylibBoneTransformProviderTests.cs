@@ -112,6 +112,65 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void TryGetBoneWorldTransform_ColdSkinnedAssetReturnsFalseWithoutBlockingResolver()
+        {
+            const int PresenterStableId = 7200;
+            var fixture = CreateAsyncLookupFixture(PresenterStableId, "mod:cold-knight.glb");
+            bool synchronousResolverCalled = false;
+            var provider = new RaylibBoneTransformProvider(
+                fixture.Batch,
+                fixture.Definitions,
+                fixture.Meshes,
+                (_, _) =>
+                {
+                    synchronousResolverCalled = true;
+                    throw new InvalidOperationException("synchronous resolver must not run");
+                },
+                (int _, MeshAssetDescriptor _, out RaylibGpuSkinnedModelCache.Entry entry, out string? status) =>
+                {
+                    entry = default;
+                    status = "Preparing";
+                    return RaylibGpuSkinnedModelAcquireOutcome.InFlight;
+                });
+
+            bool resolved = provider.TryGetBoneWorldTransform(
+                PresenterStableId,
+                1,
+                out _,
+                out _,
+                out _);
+
+            Assert.That(resolved, Is.False);
+            Assert.That(synchronousResolverCalled, Is.False);
+        }
+
+        [Test]
+        public void TryGetBoneWorldTransform_FailedSkinnedAssetReportsIdentityUriAndReason()
+        {
+            const int PresenterStableId = 7210;
+            const string SourceUri = "mod:broken-knight.glb";
+            var fixture = CreateAsyncLookupFixture(PresenterStableId, SourceUri);
+            var provider = new RaylibBoneTransformProvider(
+                fixture.Batch,
+                fixture.Definitions,
+                fixture.Meshes,
+                (_, _) => throw new InvalidOperationException("synchronous resolver must not run"),
+                (int _, MeshAssetDescriptor _, out RaylibGpuSkinnedModelCache.Entry entry, out string? status) =>
+                {
+                    entry = default;
+                    status = "animation bone mismatch";
+                    return RaylibGpuSkinnedModelAcquireOutcome.Failed;
+                });
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                provider.TryGetBoneWorldTransform(PresenterStableId, 1, out _, out _, out _))!;
+
+            Assert.That(error.Message, Does.Contain($"meshAssetId={fixture.MeshAssetId}"));
+            Assert.That(error.Message, Does.Contain(SourceUri));
+            Assert.That(error.Message, Does.Contain("animation bone mismatch"));
+        }
+
+        [Test]
         public void Attachment_FollowsKnightBoneAcrossAnimationFrames()
         {
             LoadKnightAnimations();
@@ -288,6 +347,52 @@ namespace Ludots.Tests.Presentation
                 definitions,
                 meshAssets,
                 entryResolver ?? ((_, _) => throw new InvalidOperationException("测试 entry 源不应被触碰。")));
+        }
+
+        private static (
+            SkinnedVisualBatchBuffer Batch,
+            PresenterDefinitionRegistry Definitions,
+            MeshAssetRegistry Meshes,
+            int MeshAssetId) CreateAsyncLookupFixture(int presenterStableId, string sourceUri)
+        {
+            var definitions = new PresenterDefinitionRegistry();
+            var definition = new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.SkinnedMesh,
+                            RenderPath = VisualRenderPath.GpuSkinnedInstance,
+                        },
+                    },
+                ],
+            };
+            int definitionId = definitions.Register("boneprovider.async", definition);
+            var meshes = new MeshAssetRegistry();
+            int meshAssetId = meshes.Register(
+                "boneprovider.async.mesh",
+                MeshAssetDescriptor.Model(0, sourceUri));
+            int visualStableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(
+                presenterStableId,
+                0,
+                AssetKind.SkinnedMesh,
+                definitionId);
+            var batch = new SkinnedVisualBatchBuffer(1);
+            Assert.That(batch.TryAdd(new SkinnedVisualBatchItem
+            {
+                StableId = visualStableId,
+                MeshAssetId = meshAssetId,
+                RenderPath = VisualRenderPath.GpuSkinnedInstance,
+                AssetKind = AssetKind.SkinnedMesh,
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One,
+            }), Is.True);
+            return (batch, definitions, meshes, meshAssetId);
         }
 
         private void SubmitSkinnedItem(

@@ -7,7 +7,7 @@ using Ludots.Core.Presentation.Hud;
 namespace Ludots.Core.Presentation
 {
     /// <summary>
-    /// Shared display resolver for semantic text maps and 2D image assets (#128).
+    /// Shared display resolver for semantic text maps and 2D image assets.
     /// Text always exits through PresentationTextCatalog; images resolve via VFS.
     /// </summary>
     public sealed class PresentationDisplayResolver
@@ -88,6 +88,52 @@ namespace Ludots.Core.Presentation
                 $"Presentation text token '{textToken}' is not resolvable in the active locale.");
         }
 
+        public bool TryFormatTokenRuns(
+            string textToken,
+            IReadOnlyList<PresentationTextArg>? args,
+            out IReadOnlyList<PresentationTextRun> runs)
+        {
+            runs = Array.Empty<PresentationTextRun>();
+            if (string.IsNullOrWhiteSpace(textToken))
+            {
+                return false;
+            }
+
+            int tokenId = _textCatalog.GetTokenId(textToken);
+            if (tokenId <= 0)
+            {
+                return false;
+            }
+
+            int localeId = _localeSelection.ActiveLocaleId > 0
+                ? _localeSelection.ActiveLocaleId
+                : _textCatalog.DefaultLocaleId;
+            var packet = PresentationTextPacket.FromToken(tokenId);
+            if (args != null)
+            {
+                for (int i = 0; i < args.Count; i++)
+                {
+                    packet.SetArg(i, args[i]);
+                }
+            }
+
+            return PresentationTextFormatter.TryFormatRuns(_textCatalog, localeId, in packet, out runs)
+                && runs.Count > 0;
+        }
+
+        public IReadOnlyList<PresentationTextRun> FormatTokenRunsOrThrow(
+            string textToken,
+            IReadOnlyList<PresentationTextArg>? args = null)
+        {
+            if (TryFormatTokenRuns(textToken, args, out IReadOnlyList<PresentationTextRun> runs))
+            {
+                return runs;
+            }
+
+            throw new InvalidOperationException(
+                $"Presentation text token '{textToken}' has no locale template runs for the active locale.");
+        }
+
         public bool TryResolveImageSource(string imageId, out string source)
         {
             source = string.Empty;
@@ -138,6 +184,12 @@ namespace Ludots.Core.Presentation
                 $"Presentation image asset '{imageId}' could not be resolved.");
         }
 
+        // Placeholder glyph chrome for assets authored with glyphFallback only — infra placeholder,
+        // not player-content skin; single definition here.
+        private const string GlyphBackdropHex = "#121A24";
+        private const string GlyphBorderHex = "#F6C56B";
+        private const string GlyphTextHex = "#F8FAFC";
+
         private string BuildGlyphDataUri(string glyph)
         {
             string normalized = glyph.Trim();
@@ -148,8 +200,8 @@ namespace Ludots.Core.Presentation
 
             string svg =
                 "<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'>" +
-                "<rect x='4' y='4' width='88' height='88' rx='22' fill='#121A24' stroke='#F6C56B' stroke-width='3'/>" +
-                $"<text x='48' y='56' text-anchor='middle' font-family='Segoe UI, sans-serif' font-size='28' font-weight='700' fill='#F8FAFC'>{EscapeXml(normalized)}</text>" +
+                $"<rect x='4' y='4' width='88' height='88' rx='22' fill='{GlyphBackdropHex}' stroke='{GlyphBorderHex}' stroke-width='3'/>" +
+                $"<text x='48' y='56' text-anchor='middle' font-family='Segoe UI, sans-serif' font-size='28' font-weight='700' fill='{GlyphTextHex}'>{EscapeXml(normalized)}</text>" +
                 "</svg>";
             string uri = "data:image/svg+xml;utf8," + Uri.EscapeDataString(svg);
             _glyphCache[normalized] = uri;

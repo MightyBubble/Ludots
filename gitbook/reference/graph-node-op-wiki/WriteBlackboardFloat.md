@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 仅 Effect |
+| 可用图种 | Effect / Script / TriggerGraph |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `source`（来源实体）、`value`（数值） |
 | 特殊写法 | imm 填符号名（编译期解析） |
@@ -44,7 +44,7 @@ LoadContextSource → ConstFloat → **WriteBlackboardFloat**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect；Score / Validation / Derived / Query / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Script / TriggerGraph；Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：跨节点跨图传值、决策记忆（记住要盯的人）、按名册配置出招。
 ## 怎么进

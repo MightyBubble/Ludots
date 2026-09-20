@@ -376,16 +376,24 @@ namespace Ludots.Tests.GAS
                 new GasGraphOpHandlerTable(),
                 templates);
             var runtime = new BuiltinHandlerExecutionContext { Relationships = relationships };
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = captor,
+                Target = captive,
+                TargetContext = Entity.Null
+            };
 
+            EffectPhaseGraphBindings relationBehavior = default;
             executor.ExecutePhase(
                 world,
                 new GasGraphRuntimeApi(world, null, null, null),
-                captor,
-                captive,
-                Entity.Null,
+                context.Source,
+                context.Target,
+                context.TargetContext,
                 default,
                 EffectPhaseId.OnApply,
-                default,
+                in relationBehavior,
                 EffectPresetType.Relation,
                 effectCategoryId: 0,
                 effectTemplateId: templateId,
@@ -589,7 +597,8 @@ namespace Ludots.Tests.GAS
                 stream,
                 new GameSession(),
                 gasEvents,
-                new PresentationOwnerChangeBuffer(8));
+                new PresentationOwnerChangeBuffer(8),
+                enabled: true);
             Entity actor = world.Create();
             Entity target = world.Create();
             gasEvents.Publish(new GasPresentationEvent { Kind = GasPresentationEventKind.CastStarted, Actor = actor, Target = target, AbilitySlot = 1, AbilityId = 11 });

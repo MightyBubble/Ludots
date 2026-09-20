@@ -17,10 +17,21 @@ namespace Ludots.Core.Input.Config
     /// </summary>
     public class InputActionDef
     {
+        public const string FiresOnPress = "press";
+        public const string FiresOnRelease = "release";
+
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; }
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public InputActionType Type { get; set; } = InputActionType.Button;
+
+        /// <summary>
+        /// When a TriggerGraph entry binds this action: which moment fires it —
+        /// <see cref="FiresOnPress"/> (default, press started) or
+        /// <see cref="FiresOnRelease"/> (release completed). Timing belongs on the
+        /// action definition, not on the graph entry.
+        /// </summary>
+        public string FiresOn { get; set; } = FiresOnPress;
     }
 
     /// <summary>

@@ -234,6 +234,98 @@ namespace Ludots.Tests.Presentation
             Assert.That(item.VisualProxy.RenderPath, Is.EqualTo(renderPath));
             Assert.That(item.VisualProxy.Position, Is.EqualTo(new Vector3(4f, 5f, 6f)));
             Assert.That(item.VisualProxy.Scale, Is.EqualTo(new Vector3(1.5f, 2f, 2.5f)));
+            Assert.That(item.VisualProxy.OwnerStableId, Is.EqualTo(7001));
+            Assert.That(item.VisualProxy.OwnerStableId, Is.Not.EqualTo(9100 + (int)assetKind));
+            Assert.That(item.VisualProxy.StableId, Is.Not.EqualTo(item.VisualProxy.OwnerStableId));
+        }
+
+        [Test]
+        public void ChildVisual_UsesGameplayOwnerIdentity_NotRootOrChildPerformerIdentity()
+        {
+            const int gameplayOwnerStableId = 7301;
+            const int rootPerformerStableId = 9301;
+            const int childPerformerStableId = 9302;
+            using var world = World.Create();
+            Entity owner = world.Create(
+                new PresentationStableId { Value = gameplayOwnerStableId },
+                VisualTransform.Default,
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+
+            int childDefId = definitions.Register("owner.identity.child", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1001,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                        },
+                    },
+                ],
+            });
+            int rootDefId = definitions.Register("owner.identity.root", new PresenterDefinition
+            {
+                Children =
+                [
+                    new ChildPresenterRef { DefinitionId = childDefId, ScopeTag = 1 },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+
+            Entity root = instances.CreateHierarchy(
+                definitions,
+                rootDefId,
+                owner,
+                scopeId: 0,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                rootPerformerStableId,
+                Entity.Null,
+                definitions.Get(rootDefId),
+                () => childPerformerStableId);
+            Entity child = world.Get<PresenterChildren>(root).Get(0);
+
+            using var system = new PresenterEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates: null!,
+                soundRequests: null!);
+            system.Update(0.016f);
+
+            PresenterState rootState = world.Get<PresenterState>(root);
+            PresenterState childState = world.Get<PresenterState>(child);
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.VisualProxy));
+            PresentationVisualProxy proxy = requests.VisualProxyAt(0).VisualProxy;
+            Assert.Multiple(() =>
+            {
+                Assert.That(rootState.OwnerStableId, Is.EqualTo(gameplayOwnerStableId));
+                Assert.That(rootState.StableId, Is.EqualTo(rootPerformerStableId));
+                Assert.That(childState.OwnerStableId, Is.EqualTo(gameplayOwnerStableId));
+                Assert.That(childState.StableId, Is.EqualTo(childPerformerStableId));
+                Assert.That(proxy.OwnerStableId, Is.EqualTo(gameplayOwnerStableId));
+                Assert.That(proxy.OwnerStableId, Is.Not.EqualTo(rootPerformerStableId));
+                Assert.That(proxy.OwnerStableId, Is.Not.EqualTo(childPerformerStableId));
+                Assert.That(proxy.StableId, Is.Not.EqualTo(gameplayOwnerStableId));
+                Assert.That(proxy.StableId, Is.Not.EqualTo(rootPerformerStableId));
+                Assert.That(proxy.StableId, Is.Not.EqualTo(childPerformerStableId));
+            });
         }
 
         [Test]
@@ -1105,7 +1197,9 @@ namespace Ludots.Tests.Presentation
         public void StaticStableVisual_CacheableSubtype_EmitsOnlyWhenDirty_AndRemovesWhenDeactivated(AssetKind assetKind)
         {
             using var world = World.Create();
-            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity owner = world.Create(
+                new PresentationStableId { Value = 7002 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
             var instances = new PresenterEntityRuntime(world);
             var definitions = new PresenterDefinitionRegistry();
             var requests = new PresentationRequestBuffer();
@@ -1162,6 +1256,12 @@ namespace Ludots.Tests.Presentation
                 PresenterBehaviorRuntimeUtility.ComposeVisualStableKey(9801, 0, assetKind, defId),
                 out int stableId), Is.True);
             Assert.That(cache.Contains(stableId), Is.True);
+            var projected = new PrimitiveDrawBuffer(capacity: 4);
+            cache.Project(new PresentationVisualProxyEmitter(projected), evictUntouched: false);
+            Assert.That(projected.Count, Is.EqualTo(1));
+            Assert.That(projected.GetSpan()[0].OwnerStableId, Is.EqualTo(7002));
+            Assert.That(projected.GetSpan()[0].OwnerStableId, Is.Not.EqualTo(9801));
+            Assert.That(projected.GetSpan()[0].StableId, Is.EqualTo(stableId));
             Assert.That(requests.Count, Is.EqualTo(0), "Static stable visual subtypes must write directly into StableDrawCache, not spam PresentationRequest.");
             int revisionAfterFirstEmit = cache.ContentRevision;
 
@@ -1214,6 +1314,96 @@ namespace Ludots.Tests.Presentation
             Assert.That(visualStableIds.TryGet(
                 PresenterBehaviorRuntimeUtility.ComposeVisualStableKey(9801, 0, assetKind, defId),
                 out _), Is.False, "Presenter destroy releases semantic visual keys; adapter handles remain non-reused by the allocator.");
+        }
+
+        [Test]
+        public void StaticStableVisual_MultiSlot_DeactivateAttachmentRemovesOnlyThatCacheEntry()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            var cache = new StableDrawCache(8);
+            var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PresenterVisualStableIdTable(stableIds, capacity: 8);
+
+            int defId = definitions.Register("asset.mesh.dual_static", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1100,
+                            MaterialId = 2100,
+                            Mobility = VisualMobility.Static,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            LocalScale = Vector3.One,
+                            MaterialParamKey = -1,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = false,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1101,
+                            MaterialId = 2101,
+                            Mobility = VisualMobility.Static,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            LocalScale = Vector3.One,
+                            MaterialParamKey = -1,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                        },
+                    },
+                ],
+            });
+
+            PresenterDefinition definition = definitions.Get(defId);
+            Entity presenter = instances.Create(
+                defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 9901, Entity.Null, definition);
+            // body + attachment both active (Case E select-ring pattern)
+            world.Get<PresenterState>(presenter).BehaviorActiveMask = 3u;
+
+            using var system = new PresenterEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates: null!,
+                soundRequests: null!,
+                stableDrawCache: cache,
+                visualStableIds: visualStableIds);
+
+            system.Update(0.016f);
+            Assert.That(visualStableIds.TryGet(
+                PresenterBehaviorRuntimeUtility.ComposeVisualStableKey(9901, 0, AssetKind.Mesh, defId),
+                out int bodyStableId), Is.True);
+            Assert.That(visualStableIds.TryGet(
+                PresenterBehaviorRuntimeUtility.ComposeVisualStableKey(9901, 1, AssetKind.Mesh, defId),
+                out int ringStableId), Is.True);
+            Assert.That(cache.Contains(bodyStableId), Is.True);
+            Assert.That(cache.Contains(ringStableId), Is.True);
+
+            instances.SetBehaviorActive(presenter, definition, 1, active: false);
+            system.Update(0.016f);
+
+            Assert.That(cache.Contains(bodyStableId), Is.True, "Sibling body slot must stay retained.");
+            Assert.That(cache.Contains(ringStableId), Is.False,
+                "Deactivating one StaticMesh slot must Remove its retained entry even when siblings still emit.");
         }
 
         [Test]

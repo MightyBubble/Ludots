@@ -8,6 +8,7 @@ namespace Ludots.Core.Gameplay.Sequencer
         string PresentationProfile,
         string ResolvedText,
         string SpeakerId,
+        string ResolvedSpeakerName,
         float Start,
         float Duration,
         float LocalElapsed);

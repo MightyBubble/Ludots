@@ -34,7 +34,7 @@
       "items": ["Fix64Vec2.Lerp -> float"] },
     { "id": "terrain", "title": "TerrainHeightSyncSystem", "tint": "sand",
       "x": 500, "y": 442, "w": 480, "h": 104,
-      "items": ["VisualHeightmap Sample"] },
+      "items": ["ContinuousHeightmap Sample"] },
     { "id": "projection", "title": "GameplayPresentationProjectionSystem", "tint": "sand",
       "x": 500, "y": 568, "w": 480, "h": 104,
       "items": ["GAS -> EventStream"] },

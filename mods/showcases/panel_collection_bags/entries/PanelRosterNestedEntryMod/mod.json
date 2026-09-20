@@ -1,0 +1,15 @@
+{
+  "name": "PanelRosterNestedEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for typed collection panel showcase: 编队档案",
+  "priority": 0,
+  "dependencies": {
+    "PanelCollectionBagsShowcaseMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "panel",
+    "typed-collection",
+    "roster_nested"
+  ]
+}

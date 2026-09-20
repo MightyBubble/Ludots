@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
+using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Orders
@@ -70,6 +71,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     {
         public readonly int OrderId;
         public readonly int OrderTypeId;
+        public readonly int PlayerId;
+        public readonly Entity Actor;
+        public readonly int AdmissionBatchId;
+        public readonly ushort AdmissionBatchSize;
+        public readonly ushort AdmissionBatchIndex;
         public readonly OrderAdmissionStage Stage;
         public readonly OrderSubmitResult Result;
 
@@ -77,6 +83,27 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         {
             OrderId = orderId;
             OrderTypeId = orderTypeId;
+            PlayerId = 0;
+            Actor = default;
+            AdmissionBatchId = 0;
+            AdmissionBatchSize = 0;
+            AdmissionBatchIndex = 0;
+            Stage = stage;
+            Result = result;
+        }
+
+        public OrderAdmissionOutcome(
+            in Order order,
+            OrderAdmissionStage stage,
+            OrderSubmitResult result)
+        {
+            OrderId = order.OrderId;
+            OrderTypeId = order.OrderTypeId;
+            PlayerId = order.PlayerId;
+            Actor = order.Actor;
+            AdmissionBatchId = order.AdmissionBatchId;
+            AdmissionBatchSize = order.AdmissionBatchSize;
+            AdmissionBatchIndex = order.AdmissionBatchIndex;
             Stage = stage;
             Result = result;
         }
@@ -123,6 +150,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private bool _logicStepActive;
         private bool _entityIntakeOpen;
         private string? _terminalFaultMessage;
+
+        public OrderAdmissionResultBuffer(int capacity) : this(capacity, capacity)
+        {
+        }
 
         public OrderAdmissionResultBuffer(int capacity, int rejectionCapacity)
         {
@@ -367,8 +398,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             for (int i = 0; i < orders.Length; i++)
             {
                 rejections[count++] = new OrderAdmissionOutcome(
-                    orders[i].OrderId,
-                    orders[i].OrderTypeId,
+                    in orders[i],
                     stage,
                     OrderSubmitResult.RejectedAdmissionCapacity);
                 _observedByResult[(int)OrderSubmitResult.RejectedAdmissionCapacity]++;
@@ -705,14 +735,16 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         }
 
         /// <summary>
-        /// Aborts all volatile admission work after the authoritative world is replaced.
-        /// Order ids remain monotonic so callers cannot confuse post-restore submissions with
-        /// outcomes observed before the restore boundary.
+        /// Aborts all volatile admission work after the authoritative world is replaced and rewinds
+        /// the order-id counter to the snapshot boundary. Monotonic ids across a restore would leak
+        /// the pre-restore tick count into every post-restore Order.OrderId byte, which is persisted
+        /// world state — determinism requires the counter to follow the checkpoint, not the wall.
         /// </summary>
         public void ResetForWorldRestore()
         {
             _currentCount = 0;
             _pendingCount = 0;
+            _nextOrderId = 1;
             _currentRejectionCount = 0;
             _pendingRejectionCount = 0;
             _currentReserved = 0;

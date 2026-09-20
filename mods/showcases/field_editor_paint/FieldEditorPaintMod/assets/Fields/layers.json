@@ -1,0 +1,12 @@
+[
+  {
+    "id": "ownership.paint",
+    "kind": "discreteId",
+    "cellSizeCm": 100,
+    "chunkSizeCells": 8,
+    "default": 0,
+    "writerDomain": "map.field.ownership.paint",
+    "maxRegionIds": 16,
+    "persistent": true
+  }
+]

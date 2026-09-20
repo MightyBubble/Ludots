@@ -60,7 +60,7 @@ namespace Ludots.Core.GraphRuntime
 
             if (filters.Action != null)
             {
-                if (!TryGetPayloadString(context, MapTriggerEventPayloadKeys.InputAction, out string actionId) ||
+                if (!TryGetPayloadString(context, MapTriggerEventPayloadKeys.Action, out string actionId) ||
                     !string.Equals(actionId, filters.Action, StringComparison.Ordinal))
                 {
                     return false;

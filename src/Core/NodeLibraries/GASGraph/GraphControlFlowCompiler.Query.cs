@@ -27,6 +27,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ConstFloat:
                 case GraphNodeOp.ConstInt:
                 case GraphNodeOp.LoadCaster:
+                case GraphNodeOp.LoadPointerScreenX:
+                case GraphNodeOp.LoadPointerScreenY:
                 case GraphNodeOp.QueryAllMapEntities:
                     break;
                 case GraphNodeOp.LoadSelfAttribute:
@@ -41,12 +43,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     }
 
                     break;
+                case GraphNodeOp.ReadBlackboardFloat:
+                    RequireNonEmpty(node.BlackboardKey, "blackboardKey", node, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
                 case GraphNodeOp.QueryRadius:
                     RequireSpatialCapacityPolicy(node, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QuerySortStable:
                 case GraphNodeOp.QueryLimit:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.QueryFilterControllable:
+                    RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
                 case GraphNodeOp.AggMinByDistance:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -59,6 +69,35 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             $"Node '{node.Id}' requires a non-empty collectionKey.", node.Id));
                     }
 
+                    break;
+                case GraphNodeOp.QueryCollectActiveEffects:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.QueryCollectEffectTemplates:
+                case GraphNodeOp.QueryCollectItemDefinitions:
+                case GraphNodeOp.QueryCollectActiveDialogueChoices:
+                    break;
+                case GraphNodeOp.QueryCollectAbilitySlots:
+                case GraphNodeOp.QueryCollectInventoryItems:
+                case GraphNodeOp.QueryCollectPresentTags:
+                case GraphNodeOp.QueryCollectActiveTasks:
+                case GraphNodeOp.QueryCollectActiveActivities:
+                case GraphNodeOp.QueryCollectProgressionNodes:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.QueryCollectAbilityHolders:
+                    RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (string.IsNullOrWhiteSpace(node.Ability))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"Node '{node.Id}' requires a non-empty ability.", node.Id));
+                    }
+
+                    break;
+                case GraphNodeOp.LoadEffectTiming:
+                    RequireEffectTimingAttribute(node, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.LoadEffectStack:
                     break;
                 case GraphNodeOp.QueryFilterTeam:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -106,6 +145,50 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.CompareEqEntity:
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.ScreenPointToGround:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.ScreenPointToEntity:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.List)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    if (node.PickRadiusPx <= 0f)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"Node '{node.Id}' requires a positive pickRadiusPx.", node.Id));
+                    }
+
+                    break;
+                case GraphNodeOp.QueryScreenRegionCollection:
+                case GraphNodeOp.ScreenRegionToEntities:
+                    if (op.NodeOp == GraphNodeOp.QueryScreenRegionCollection)
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                        RequireNonEmpty(node.CollectionKey, "collectionKey", node, graphId, diagnostics);
+                    }
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.List)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.C, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Max, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.PointToDirection:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.StickToDirection:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QueryFilterAttributeRange:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -324,10 +407,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ReadMapVarFloat:
                     instruction.Imm = RequireSymbol(node.Var, "var", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
+                case GraphNodeOp.ReadBlackboardFloat:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
                 case GraphNodeOp.ConstInt:
                     instruction.Imm = node.IntValue;
                     break;
                 case GraphNodeOp.LoadCaster:
+                case GraphNodeOp.LoadPointerScreenX:
+                case GraphNodeOp.LoadPointerScreenY:
                 case GraphNodeOp.QueryAllMapEntities:
                     break;
                 case GraphNodeOp.QueryRadius:
@@ -348,6 +439,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
+                case GraphNodeOp.QueryCollectActiveEffects:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.QueryCollectEffectTemplates:
+                case GraphNodeOp.QueryCollectItemDefinitions:
+                case GraphNodeOp.QueryCollectActiveDialogueChoices:
+                    break;
+                case GraphNodeOp.QueryCollectAbilitySlots:
+                case GraphNodeOp.QueryCollectInventoryItems:
+                case GraphNodeOp.QueryCollectPresentTags:
+                case GraphNodeOp.QueryCollectActiveTasks:
+                case GraphNodeOp.QueryCollectActiveActivities:
+                case GraphNodeOp.QueryCollectProgressionNodes:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.QueryCollectAbilityHolders:
+                    instruction.Imm = RequireSymbol(node.Ability, "ability", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.LoadEffectTiming:
+                    instruction.Flags = ResolveEffectTimingFlags(node, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.LoadEffectStack:
+                    break;
                 case GraphNodeOp.QueryFilterTeam:
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.TeamId)))
                     {
@@ -366,6 +484,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.QueryFilterTemplate:
                     instruction.Imm = RequireSymbol(node.Template, "template", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
+                case GraphNodeOp.QueryFilterControllable:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
                 case GraphNodeOp.QueryFilterTagAny:
                 case GraphNodeOp.QueryFilterTagNone:
                     instruction.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, graphId, diagnostics);
@@ -383,6 +506,66 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.B, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.ScreenPointToGround:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = InternOptional(symbolToIndex, symbols, node.Seat);
+                    break;
+                case GraphNodeOp.ScreenPointToEntity:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = InternOptional(symbolToIndex, symbols, node.Seat);
+                    instruction.ImmF = node.PickRadiusPx;
+                    break;
+                case GraphNodeOp.QueryScreenRegionCollection:
+                case GraphNodeOp.ScreenRegionToEntities:
+                    if (op.NodeOp == GraphNodeOp.QueryScreenRegionCollection)
+                    {
+                        instruction.Dst = ResolveValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                        instruction.ImmF = BitConverter.Int32BitsToSingle(RequireSymbol(node.CollectionKey, "collectionKey", node,
+                            symbolToIndex, symbols, graphId, diagnostics));
+                    }
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.C, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Flags = ResolveValueInput(
+                        node, GraphControlFlowPorts.Max, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = InternOptional(symbolToIndex, symbols, node.Seat);
+                    break;
+                case GraphNodeOp.PointToDirection:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Flags = boolScratches[nodeIndex];
+                    break;
+                case GraphNodeOp.StickToDirection:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Flags = boolScratches[nodeIndex];
                     break;
                 case GraphNodeOp.QueryFilterAttributeRange:
                     instruction.B = ResolveValueInput(
@@ -612,6 +795,48 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             return EncodeByteSymbol(symbol, symbolToIndex, symbols, graphId, nodeId, diagnostics);
+        }
+
+        private static void RequireEffectTimingAttribute(
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(node.Attribute))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' requires attribute RemainingTicks or TotalTicks.", node.Id));
+                return;
+            }
+
+            string attr = node.Attribute.Trim();
+            if (!string.Equals(attr, "RemainingTicks", StringComparison.Ordinal) &&
+                !string.Equals(attr, "TotalTicks", StringComparison.Ordinal))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' attribute '{attr}' is unknown (allowed: RemainingTicks, TotalTicks).", node.Id));
+            }
+        }
+
+        private static byte ResolveEffectTimingFlags(
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            string attr = node.Attribute?.Trim() ?? string.Empty;
+            if (string.Equals(attr, "RemainingTicks", StringComparison.Ordinal))
+            {
+                return 0;
+            }
+
+            if (string.Equals(attr, "TotalTicks", StringComparison.Ordinal))
+            {
+                return 1;
+            }
+
+            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                $"Node '{node.Id}' attribute '{attr}' is unknown (allowed: RemainingTicks, TotalTicks).", node.Id));
+            return 0;
         }
     }
 }

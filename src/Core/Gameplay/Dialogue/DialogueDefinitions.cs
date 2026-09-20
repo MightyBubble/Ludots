@@ -30,6 +30,8 @@ namespace Ludots.Core.Gameplay.Dialogue
     {
         public string Id { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
+
+        public string DisplayToken { get; set; } = string.Empty;
         public string EntryNode { get; set; } = string.Empty;
         public List<DialogueNodeDefinition> Nodes { get; set; } = new();
     }
@@ -40,7 +42,11 @@ namespace Ludots.Core.Gameplay.Dialogue
 
         public IReadOnlyCollection<DialogueDefinition> Dialogues => _dialogues.Values;
 
-        public void Clear() => _dialogues.Clear();
+        public void Clear()
+        {
+            _dialogues.Clear();
+            DialogueChoiceIdRegistry.ResetForReload();
+        }
 
         public void Register(DialogueDefinition definition)
         {
@@ -60,6 +66,7 @@ namespace Ludots.Core.Gameplay.Dialogue
                 throw new InvalidOperationException($"Dialogue '{definition.Id}' requires at least one node.");
             }
 
+            var choiceIdsInDialogue = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < definition.Nodes.Count; i++)
             {
                 DialogueNodeDefinition node = definition.Nodes[i];
@@ -79,6 +86,7 @@ namespace Ludots.Core.Gameplay.Dialogue
                 }
 
                 RejectLegacyNarrativeFields(definition.Id, node);
+                RegisterChoiceIds(definition.Id, node, choiceIdsInDialogue);
             }
 
             if (definition.Nodes.Find(n => string.Equals(n.Id, definition.EntryNode, StringComparison.OrdinalIgnoreCase)) == null)
@@ -119,6 +127,24 @@ namespace Ludots.Core.Gameplay.Dialogue
                 {
                     throw new InvalidOperationException($"Dialogue '{dialogueId}' choice '{choice.Id}' requires lineId.");
                 }
+            }
+        }
+
+        private static void RegisterChoiceIds(
+            string dialogueId,
+            DialogueNodeDefinition node,
+            HashSet<string> choiceIdsInDialogue)
+        {
+            for (int i = 0; i < node.Choices.Count; i++)
+            {
+                DialogueChoiceDefinition choice = node.Choices[i];
+                if (!choiceIdsInDialogue.Add(choice.Id))
+                {
+                    throw new InvalidOperationException(
+                        $"Dialogue '{dialogueId}' reuses choice id '{choice.Id}' across nodes; choice ids must be unique within a dialogue.");
+                }
+
+                DialogueChoiceIdRegistry.Register(dialogueId, choice.Id);
             }
         }
     }

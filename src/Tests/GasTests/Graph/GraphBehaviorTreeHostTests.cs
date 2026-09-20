@@ -84,6 +84,25 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void ResetAgent_ClearsEntityRegisters()
+        {
+            GraphControlFlowCompileResult compiled = CompileTree(SugarSequenceSelectorTreeJson());
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            var programs = new GraphProgramRegistry();
+            int graphId = RegisterProgram(programs, compiled, 1412);
+            var host = new GraphBehaviorTreeHost(programs, graphId, capacity: 1);
+            int agent = host.AddAgent();
+
+            using var world = World.Create();
+            Entity poison = world.Create();
+            host.SetEntityRegister(agent, 0, poison);
+            Assert.That(host.EntityRegisterAt(agent, 0), Is.EqualTo(poison));
+
+            host.ResetAgent(agent);
+            Assert.That(host.EntityRegisterAt(agent, 0), Is.EqualTo(Entity.Null));
+        }
+
+        [Test]
         public void 消融对照_装饰反转糖与手写等价图逐波一致()
         {
             GraphControlFlowCompileResult sugarCompiled = CompileTree(SugarInverterTreeJson());

@@ -1,0 +1,59 @@
+{
+    "schemaVersion":  1,
+    "imagePath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\issue709-visible-uat-20260726-r11\\screens\\client-a\\frontline_003_engaging.png",
+    "expectedWidth":  1280,
+    "expectedHeight":  720,
+    "requirements":  [
+                         {
+                             "role":  "infantryBody",
+                             "presentationTemplate":  "rts.frontline.infantry.body",
+                             "maximumChannelDifference":  48,
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  1,
+                             "acceptedColors":  [
+                                                    {
+                                                        "red":  209,
+                                                        "green":  224,
+                                                        "blue":  230
+                                                    }
+                                                ],
+                             "regions":  [
+                                             {
+                                                 "id":  "50:13479067",
+                                                 "x":  656,
+                                                 "y":  318,
+                                                 "width":  27,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "50:28356308",
+                                                 "x":  627,
+                                                 "y":  320,
+                                                 "width":  26,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "50:29882376",
+                                                 "x":  627,
+                                                 "y":  320,
+                                                 "width":  26,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "50:31791883",
+                                                 "x":  304,
+                                                 "y":  325,
+                                                 "width":  38,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "50:33697546",
+                                                 "x":  283,
+                                                 "y":  321,
+                                                 "width":  39,
+                                                 "height":  33
+                                             }
+                                         ]
+                         }
+                     ]
+}

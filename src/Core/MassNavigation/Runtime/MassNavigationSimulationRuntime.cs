@@ -173,6 +173,28 @@ public sealed class MassNavigationSimulationRuntime
     public float SimStepMs => Telemetry.SimStepMs;
     public float HardResolveMs => Telemetry.HardResolveMs;
     public float EntitySyncMs => Telemetry.EntitySyncMs;
+    public float LastGroupTargetUpdateMs => Telemetry.LastGroupTargetUpdateMs;
+    public float LastFlowFieldRebuildMs => Telemetry.LastFlowFieldRebuildMs;
+    public float LastStepPrepMs => Telemetry.LastStepPrepMs;
+    public float LastLocalSteeringMs => Telemetry.LastLocalSteeringMs;
+    public float LastSimStepMs => Telemetry.LastSimStepMs;
+    public float LastHardResolveMs => Telemetry.LastHardResolveMs;
+    public int LastHardResolveCandidateAgentCount => MassNavigationFlow.LastHardResolveCandidateAgentCount;
+    public int LastSteppingAgentCount => MassNavigationFlow.LastSteppingAgentCount;
+    public int LastHardResolveOwnerAgentCount => MassNavigationFlow.LastHardResolveOwnerAgentCount;
+    public int LastEntitySyncAgentCount => MassNavigationFlow.LastEntitySyncAgentCount;
+    public int LastFlowRefreshStateCount => MassNavigationFlow.LastFlowRefreshStateCount;
+    public int CadenceAgentSliceCount => Cadence.AgentSliceCount;
+    public int LastHardResolveFallbackProbeAgentCount => MassNavigationFlow.LastHardResolveFallbackProbeAgentCount;
+    public long LastHardResolveFallbackPairCheckCount => MassNavigationFlow.LastHardResolveFallbackPairCheckCount;
+    public long LastHardResolvePairCheckCount => MassNavigationFlow.LastHardResolvePairCheckCount;
+    public int LastHardResolvePenetratingPairCount => MassNavigationFlow.LastHardResolvePenetratingPairCount;
+    public int LastHardResolveSeparateCount => MassNavigationFlow.LastHardResolveSeparateCount;
+    public int LastHardResolveWindowCellVisitCount => MassNavigationFlow.LastHardResolveWindowCellVisitCount;
+    public double LastHardResolveBuildHashMs => MassNavigationFlow.LastHardResolveBuildHashMs;
+    public double LastHardResolvePairLoopMs => MassNavigationFlow.LastHardResolvePairLoopMs;
+    public double LastHardResolveTotalMs => MassNavigationFlow.LastHardResolveTotalMs;
+    public float LastEntitySyncMs => Telemetry.LastEntitySyncMs;
     public float PresenterCommandMs => Telemetry.PresenterCommandMs;
     public float ControlHzObserved => Telemetry.ControlHzObserved;
     public float CommandHzObserved => Telemetry.CommandHzObserved;
@@ -270,13 +292,16 @@ public sealed class MassNavigationSimulationRuntime
         MassNavigationFlow.PreallocateDomainRelationshipCapacity(config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity);
         MassNavigationFlow.PreallocateDisplacedAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.DisplacedAgentCapacity);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
-        MassNavigationHotZoneConfig activeHotZone = WorldConfig.GetRequiredHotZone(WorldConfig.ActiveHotZoneId);
-        _activeHotZoneId = activeHotZone.Id;
-        _activeHotZoneLabel = activeHotZone.Label;
-        _activeHotZoneCenterXCm = activeHotZone.CenterXCm;
-        _activeHotZoneCenterYCm = activeHotZone.CenterYCm;
-        _activeHotZoneWidthCm = activeHotZone.WidthCm;
-        _activeHotZoneHeightCm = activeHotZone.HeightCm;
+        if (WorldConfig.HotZones.Length > 0)
+        {
+            MassNavigationHotZoneConfig activeHotZone = WorldConfig.GetRequiredHotZone(WorldConfig.ActiveHotZoneId);
+            _activeHotZoneId = activeHotZone.Id;
+            _activeHotZoneLabel = activeHotZone.Label;
+            _activeHotZoneCenterXCm = activeHotZone.CenterXCm;
+            _activeHotZoneCenterYCm = activeHotZone.CenterYCm;
+            _activeHotZoneWidthCm = activeHotZone.WidthCm;
+            _activeHotZoneHeightCm = activeHotZone.HeightCm;
+        }
         Cadence = config.Cadence;
         CadenceScheduler = new MassNavigationCadenceScheduler(Cadence);
         _loadedChunkCapacity = config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity;
@@ -830,6 +855,12 @@ public sealed class MassNavigationSimulationRuntime
         return MassNavigationFlow.GetBodyRadiusCm(agentIndex);
     }
 
+    public bool IsAgentSettled(int agentIndex)
+    {
+        RequireAgentIndex(agentIndex);
+        return MassNavigationFlow.IsUnitSettled(agentIndex);
+    }
+
     public MassNavigationObstacleSnapshot GetObstacleWorldSnapshot(int obstacleIndex)
     {
         RequireObstacleIndex(obstacleIndex);
@@ -1357,7 +1388,7 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         float previousOriginX = MassNavigationFlow.WorldOriginXCm;
-        float previousOriginY = MassNavigationFlow.WorldOriginYCm;
+        float previousOriginY = MassNavigationFlow.WorldOriginYcm;
         _simWindowCenterXCm = nextCenterX;
         _simWindowCenterYCm = nextCenterY;
         float nextOriginX = SolverWindowMinXCm;

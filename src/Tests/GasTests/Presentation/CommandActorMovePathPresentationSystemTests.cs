@@ -10,7 +10,6 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
@@ -234,9 +233,14 @@ namespace Ludots.Tests.GAS
                 };
                 var collectionKeys = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var collections = new EntityCollectionStore(collectionKeys);
-                Entity viewer = world.Create();
+                Entity viewer = world.Create(new Ludots.Core.Input.Interaction.InteractionContextInstance
+                {
+                    ActiveCollectionKeyId = collectionKeys.Register("selected"),
+                });
 
                 var events = new PresentationEventStream(512);
+                PresentationEventKeyRegistry.Register(CommandActorMovePathPresentationSystem.LineEventKey);
+                PresentationEventKeyRegistry.Register(CommandActorMovePathPresentationSystem.WaypointEventKey);
                 var globals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.PresentationEventStream.Name] = events,
@@ -267,7 +271,7 @@ namespace Ludots.Tests.GAS
             {
                 Entity actor = World.Create(position, OrderBuffer.CreateEmpty(), new OrderSpatialPayloadBuffer());
                 var descriptor = EntityCollectionDescriptor.Create(
-                    EntityCollectionKeys.CommandSource,
+                    "selected",
                     EntityCollectionSourceKind.Explicit,
                     EntityCollectionRoleKind.CommandSource,
                     contextEntity: _viewer,
@@ -280,7 +284,7 @@ namespace Ludots.Tests.GAS
 
             public PresentationEvent[] EventsOf(PresentationEventKind kind, string key)
             {
-                int keyId = TagRegistry.GetId(key);
+                int keyId = PresentationEventKeyRegistry.GetId(key);
                 Assert.That(keyId, Is.GreaterThan(0), $"Event key '{key}' was not registered.");
                 return Events.GetSpan().ToArray()
                     .Where(evt => evt.Kind == kind && evt.KeyId == keyId)

@@ -61,12 +61,12 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
-            _cubeMesh = Rl.GenMeshSphere(0.5f, 64, 32);
+            _cubeMesh = RaylibNativeResources.GenMeshSphere(0.5f, 64, 32);
 
             string baseDir = AppContext.BaseDirectory;
             _shader = RaylibShaderLoader.Load(baseDir, "skybox.vs", "skybox.fs", "skybox");
 
-            _material = Rl.LoadMaterialDefault();
+            _material = RaylibNativeResources.LoadMaterialDefault();
             _material.shader = _shader;
 
             int locMvp = RaylibShaderBindingGuard.RequireUniform(_shader, "mvp", "skybox");
@@ -130,12 +130,12 @@ namespace Ludots.Raylib.Render
 
             if (_cubeMesh.vertexCount > 0)
             {
-                Rl.UnloadMesh(_cubeMesh);
+                RaylibNativeResources.UnloadMesh(_cubeMesh);
             }
 
             _material.shader = default;
-            Rl.UnloadMaterial(_material);
-            Rl.UnloadShader(_shader);
+            RaylibNativeResources.UnloadMaterial(_material);
+            RaylibNativeResources.UnloadShader(_shader);
             _initialized = false;
         }
     }

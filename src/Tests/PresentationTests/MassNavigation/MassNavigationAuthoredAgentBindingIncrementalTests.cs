@@ -66,6 +66,43 @@ namespace Ludots.Tests.Presentation
             Assert.That(world.Has<MassNavigationAgentIndex>(newAgent), Is.True);
         }
 
+        /// <summary>稀疏探测组件：只制造 archetype 迁移，无任何系统消费。</summary>
+        private struct SparseProbeMarker
+        {
+            public int Value;
+        }
+
+        [Test]
+        public void AuthoredAgentBindingSystem_ExtraComponentBeforeBinding_KeepsAgentIndexOrderStable()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
+
+            harness.Engine.World.Add(harness.Agent0, new SparseProbeMarker { Value = 1 });
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(harness.Engine.World.TryGet(harness.Agent0, out MassNavigationAgentIndex agent0Index), Is.True);
+            Assert.That(harness.Engine.World.TryGet(harness.Agent1, out MassNavigationAgentIndex agent1Index), Is.True);
+            Assert.That(agent0Index.Value, Is.EqualTo(0),
+                "A bare component add moves the agent to a new archetype that the binding query visits last; agent indices must stay anchored to entity creation order instead of archetype topology.");
+            Assert.That(agent1Index.Value, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AuthoredAgentBindingSystem_ExtraComponentBeforeRebuild_KeepsAgentIndexOrderStable()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
+            harness.BindingSystem.Update(0f);
+            Assert.That(harness.Engine.World.Get<MassNavigationAgentIndex>(harness.Agent0).Value, Is.EqualTo(0));
+
+            harness.Engine.World.Add(harness.Agent0, new SparseProbeMarker { Value = 1 });
+            harness.Engine.World.Remove<MassNavigationAgentIndex>(harness.Agent1);
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(harness.Engine.World.Get<MassNavigationAgentIndex>(harness.Agent0).Value, Is.EqualTo(0),
+                "A rebuild pass reassigns every agent index; the reassigned order must stay anchored to entity creation order instead of archetype topology.");
+            Assert.That(harness.Engine.World.Get<MassNavigationAgentIndex>(harness.Agent1).Value, Is.EqualTo(1));
+        }
+
         [Test]
         public void AuthoredAgentBindingSystem_IncrementalInsert_PreservesActiveMoveGroupState()
         {

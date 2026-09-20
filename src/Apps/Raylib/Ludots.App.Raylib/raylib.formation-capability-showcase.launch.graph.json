@@ -5,6 +5,7 @@
     "LudotsCoreMod",
     "CoreInputMod",
     "CameraProfilesMod",
+    "SelectionInteractionMod",
     "MassNavigationMod",
     "FormationCapabilityShowcaseMod"
   ],
@@ -20,6 +21,10 @@
     {
       "id": "CameraProfilesMod",
       "rootPath": "../../../../../../../mods/capabilities/camera/CameraProfilesMod"
+    },
+    {
+      "id": "SelectionInteractionMod",
+      "rootPath": "../../../../../../../mods/capabilities/input/SelectionInteractionMod"
     },
     {
       "id": "MassNavigationMod",

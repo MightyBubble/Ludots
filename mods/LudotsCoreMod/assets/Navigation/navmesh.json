@@ -1,0 +1,28 @@
+{
+  "maps": {
+    "navmesh_debug_grid": {
+      "boards": {
+        "default": {
+          "tileWorldWidthCm": 6400,
+          "tileWorldHeightCm": 6400
+        }
+      }
+    },
+    "navmesh_debug_openworld": {
+      "boards": {
+        "default": {
+          "tileWorldWidthCm": 25600,
+          "tileWorldHeightCm": 25600
+        }
+      }
+    },
+    "navmesh_debug_vhtm": {
+      "boards": {
+        "default": {
+          "tileWorldWidthCm": 6400,
+          "tileWorldHeightCm": 6400
+        }
+      }
+    }
+  }
+}

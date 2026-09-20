@@ -34,7 +34,6 @@
     "teams": [
       {
         "teamId": 1,
-        "styleId": "blue",
         "lightTemplateId": "crowd_arena_agent_azure_light",
         "heavyTemplateId": "crowd_arena_agent_azure_heavy",
         "lightPresenterId": "mass_navigation_agent_azure_light",
@@ -42,7 +41,6 @@
       },
       {
         "teamId": 2,
-        "styleId": "red",
         "lightTemplateId": "crowd_arena_agent_crimson_light",
         "heavyTemplateId": "crowd_arena_agent_crimson_heavy",
         "lightPresenterId": "mass_navigation_agent_crimson_light",

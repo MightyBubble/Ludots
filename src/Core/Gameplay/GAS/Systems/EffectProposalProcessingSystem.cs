@@ -74,6 +74,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly ResponseChainOrderTypes _responseChainOrderTypes;
         private readonly GasPresentationEventBuffer? _presentationEvents;
         private readonly TagOps? _tagOps;
+        private readonly AttributeAggregateDirtyRegistry? _aggregateDirty;
 
         // Phase Graph execution (optional)
         private readonly EffectPhaseExecutor? _phaseExecutor;
@@ -317,7 +318,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget? budget = null, EffectTemplateRegistry? templates = null, InputRequestQueue? inputRequests = null, OrderQueue? chainOrders = null, ResponseChainTelemetryBuffer? telemetry = null, OrderRequestQueue? orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer? presentationEvents = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null)
+        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget? budget = null, EffectTemplateRegistry? templates = null, InputRequestQueue? inputRequests = null, OrderQueue? chainOrders = null, ResponseChainTelemetryBuffer? telemetry = null, OrderRequestQueue? orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer? presentationEvents = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null, Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? aggregateDirty = null)
             : base(world)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
@@ -337,6 +338,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 nameof(EffectProposalProcessingSystem));
             _presentationEvents = presentationEvents;
             _tagOps = tagOps;
+            _aggregateDirty = aggregateDirty;
             _phaseExecutor = phaseExecutor;
             _graphApi = graphApi;
             _graphApiHost = graphApi;
@@ -348,7 +350,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 presentationEvents,
                 Math.Max(1, fanOutCommandCapacity),
                 _fanOutBudget,
-                poseAuthorityArbiter);
+                poseAuthorityArbiter,
+                aggregateDirty);
             _builtinRuntime.SpatialQueries = spatialQueries;
             _builtinRuntime.FanOutBudget = _fanOutBudget;
             _builtinRuntime.FanOutCommands = _instantFanOutCommands;
@@ -1578,12 +1581,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             float before = primaryAttributeId >= 0
-                ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
+                ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(World, proposal.Target, primaryAttributeId)
                 : 0f;
             TagOps tagOps = _tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
             AttributeMutationOps.ApplyModifiers(World, proposal.Target, in proposal.Modifiers, tagOps);
             float after = primaryAttributeId >= 0
-                ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
+                ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(World, proposal.Target, primaryAttributeId)
                 : 0f;
             PublishInstantApplied(in proposal, primaryAttributeId, after - before);
         }
@@ -1779,10 +1782,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return;
             }
 
-            if (!World.Has<AttributeAggregateDirty>(target))
-            {
-                World.Add(target, new AttributeAggregateDirty());
-            }
+            _aggregateDirty?.MarkDirty(target);
         }
 
         /// <summary>
@@ -1876,12 +1876,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _instantFanOutCommands.Clear();
         }
 
+
         public override void Dispose()
         {
             _instantPhaseTransaction.Dispose();
             base.Dispose();
         }
-
         private EffectConfigParams BuildMergedConfig(in EffectTemplateData tpl, in EffectProposal proposal)
         {
             if (proposal.HasCallerParams)

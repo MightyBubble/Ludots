@@ -47,7 +47,7 @@ namespace Ludots.Adapter.Raylib.Rendering
                 lane.Visible);
         }
 
-        public void ApplyRequests(ReadOnlySpan<InstancedBatchRequest> requests, InstancedBatchAssetRegistry registry, IVisualHeightmap? visualHeightmap)
+        public void ApplyRequests(ReadOnlySpan<InstancedBatchRequest> requests, InstancedBatchAssetRegistry registry, IContinuousHeightmap? continuousHeightmap)
         {
             if (registry == null) throw new ArgumentNullException(nameof(registry));
 
@@ -58,7 +58,7 @@ namespace Ludots.Adapter.Raylib.Rendering
                 switch (request.Kind)
                 {
                     case InstancedBatchRequestKind.CreateOrUpdate:
-                        ApplyCreateOrUpdate(in request, registry, visualHeightmap);
+                        ApplyCreateOrUpdate(in request, registry, continuousHeightmap);
                         break;
                     case InstancedBatchRequestKind.Remove:
                         ApplyRemove(in request);
@@ -70,7 +70,7 @@ namespace Ludots.Adapter.Raylib.Rendering
             }
         }
 
-        private void ApplyCreateOrUpdate(in InstancedBatchRequest request, InstancedBatchAssetRegistry registry, IVisualHeightmap? visualHeightmap)
+        private void ApplyCreateOrUpdate(in InstancedBatchRequest request, InstancedBatchAssetRegistry registry, IContinuousHeightmap? continuousHeightmap)
         {
             if (!registry.TryGet(request.BatchAssetId, out InstancedBatchAsset asset))
             {
@@ -81,7 +81,7 @@ namespace Ludots.Adapter.Raylib.Rendering
             InstancedBatchGroup group = ResolveGroup(asset, in request);
             if (group.Source.IsValid)
             {
-                ApplyExternalSourceCreateOrUpdate(asset, in group, in request, visualHeightmap);
+                ApplyExternalSourceCreateOrUpdate(asset, in group, in request, continuousHeightmap);
                 return;
             }
 
@@ -107,7 +107,7 @@ namespace Ludots.Adapter.Raylib.Rendering
             InstancedBatchAsset asset,
             in InstancedBatchGroup group,
             in InstancedBatchRequest request,
-            IVisualHeightmap? visualHeightmap)
+            IContinuousHeightmap? continuousHeightmap)
         {
             InstancedBatchFactorizedSource? factorized = group.FactorizedSource;
             if (factorized == null)
@@ -123,14 +123,14 @@ namespace Ludots.Adapter.Raylib.Rendering
             }
 
             // Core-authored source flag is the SSOT; the loaded factorized copy must match it.
-            bool grounded = group.Source.GroundToVisualHeightmap;
-            if (grounded != factorized.GroundToVisualHeightmap)
+            bool grounded = group.Source.GroundToContinuousHeightmap;
+            if (grounded != factorized.GroundToContinuousHeightmap)
             {
                 throw new InvalidOperationException(
-                    $"RaylibInstancedBatchLaneStore external source batch '{asset.Key}' group '{group.Id}' factorized groundToVisualHeightmap {factorized.GroundToVisualHeightmap} diverges from Core-authored {group.Source.GroundToVisualHeightmap}; the authored source flag is the SSOT.");
+                    $"RaylibInstancedBatchLaneStore external source batch '{asset.Key}' group '{group.Id}' factorized groundToContinuousHeightmap {factorized.GroundToContinuousHeightmap} diverges from Core-authored {group.Source.GroundToContinuousHeightmap}; the authored source flag is the SSOT.");
             }
 
-            if (grounded && visualHeightmap == null)
+            if (grounded && continuousHeightmap == null)
             {
                 throw new InvalidOperationException(
                     $"RaylibInstancedBatchLaneStore cannot ground batch '{asset.Key}' group '{group.Id}' because the Core visual heightmap service is unavailable; the adapter must not substitute its own ground height truth.");
@@ -145,7 +145,7 @@ namespace Ludots.Adapter.Raylib.Rendering
                     factorized.Rotation[index],
                     factorized.Scale[index],
                     grounded,
-                    visualHeightmap);
+                    continuousHeightmap);
             }
 
             FinishChunk(lane, in request);
@@ -225,7 +225,7 @@ namespace Ludots.Adapter.Raylib.Rendering
 
         private static Matrix4x4 BuildMatrix(in InstancedBatchTransform transform)
         {
-            return BuildMatrix(transform.PositionCm, transform.Rotation, transform.Scale, grounded: false, visualHeightmap: null);
+            return BuildMatrix(transform.PositionCm, transform.Rotation, transform.Scale, grounded: false, continuousHeightmap: null);
         }
 
         private static Matrix4x4 BuildMatrix(
@@ -233,11 +233,11 @@ namespace Ludots.Adapter.Raylib.Rendering
             Quaternion rotation,
             Vector3 scale,
             bool grounded,
-            IVisualHeightmap? visualHeightmap)
+            IContinuousHeightmap? continuousHeightmap)
         {
             if (grounded)
             {
-                if (visualHeightmap == null)
+                if (continuousHeightmap == null)
                 {
                     throw new InvalidOperationException(
                         "RaylibInstancedBatchLaneStore cannot ground a transform without the Core visual heightmap service.");
@@ -246,7 +246,7 @@ namespace Ludots.Adapter.Raylib.Rendering
                 // Core-owned visual height truth: sample the ground under the authored X/Z and
                 // replace only the ground axis. Out-of-bounds samples keep the authored height;
                 // the adapter never substitutes its own terrain truth.
-                if (visualHeightmap.TrySampleHeightCm(positionCm.X, positionCm.Z, out float heightCm))
+                if (continuousHeightmap.TrySampleHeightCm(positionCm.X, positionCm.Z, out float heightCm))
                 {
                     positionCm.Y = heightCm;
                 }

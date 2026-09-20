@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "status": "failed",
+  "role": "authoritativeServer",
+  "failure": "System.InvalidOperationException: Network runtime reported 1 fault(s); last=TransportClosed.\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.Update(Single\u0026 dt) in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 167",
+  "startedAtUtc": "2026-07-24T23:40:59.9980107Z",
+  "completedAtUtc": "2026-07-24T23:41:22.0325845Z",
+  "planFingerprint": "052c4fd97d01835f9f322c361fa7c6b852d8be14eec7ffbe999850dd27920315",
+  "contentFingerprint": "4f8faaee6f897dd667b8b4c74222abbe6cf418954b9b067290447df0686dc245",
+  "sessionEpoch": 16027357132129939278,
+  "playerId": 0,
+  "seatSlot": -1,
+  "faultCount": 1,
+  "seats": [
+    {
+      "seatSlot": 0,
+      "playerId": 1,
+      "connectionState": "Connected",
+      "readyState": "Ready"
+    },
+    {
+      "seatSlot": 1,
+      "playerId": 2,
+      "connectionState": "Connected",
+      "readyState": "Ready"
+    }
+  ],
+  "steps": [
+    {
+      "name": "AuthoritativeMatch",
+      "status": "failed",
+      "startedInputRevision": 0,
+      "completedInputRevision": 0,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-24T23:41:00.0014830Z",
+      "completedAtUtc": "2026-07-24T23:41:22.0325919Z",
+      "detail": "Network runtime reported 1 fault(s); last=TransportClosed."
+    }
+  ],
+  "commands": [],
+  "gameplay": {
+    "initialCrystals": -1,
+    "harvestedCrystals": -1,
+    "postTrainingCrystals": -1,
+    "initialInfantryCount": -1,
+    "trainedInfantryCount": -1,
+    "harvesterHandle": "",
+    "harvesterStartPosition": null,
+    "harvesterEndPosition": null,
+    "selectedInfantryHandles": [],
+    "moveStartPositions": [],
+    "moveEndPositions": [],
+    "initialVisibleEnemyInfantryCount": -1,
+    "initialVisibleEnemyCoreCount": -1,
+    "enemyInfantryEnteredVision": false,
+    "enemyCoreEnteredVision": false,
+    "attackTargetHandle": "",
+    "attackTargetHealthBefore": -1,
+    "attackTargetHealthAfter": -1,
+    "observedCoreHealthBySide": [
+      1000,
+      1000
+    ],
+    "observedInfantryCountBySide": [
+      2,
+      2
+    ],
+    "matchPhase": "",
+    "outcome": "",
+    "outcomeSource": "",
+    "winningSideIndex": -1,
+    "committedTick": 0,
+    "committedTickSource": ""
+  }
+}

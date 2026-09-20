@@ -1,0 +1,69 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Raylib-cs -> C:\001_AI\LudotsProd_issue709\src\Libraries\Raylib-cs\bin\Release\net8.0\Raylib-cs.dll
+  Ludots.UI -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI\bin\Release\net8.0\Ludots.UI.dll
+  Ludots.Platform.Abstractions -> C:\001_AI\LudotsProd_issue709\src\Platform\Ludots.Platform.Abstractions\bin\Release\net8.0\Ludots.Platform.Abstractions.dll
+  SkiaSharp -> C:\001_AI\LudotsProd_issue709\src\Libraries\SkiaSharp\SkiaSharp\bin\Release\net8.0\SkiaSharp.dll
+  LiteNetLib -> C:\001_AI\LudotsProd_issue709\src\Libraries\LiteNetLib\bin\Release\net8.0\LiteNetLib.dll
+  ExCSS -> C:\001_AI\LudotsProd_issue709\src\Libraries\ExCSS\bin\Release\net8.0\ExCSS.dll
+  DotRecast.Core -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net8.0\DotRecast.Core.dll
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Ludots.UI.Browser -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.Browser\bin\Release\net8.0\Ludots.UI.Browser.dll
+  DotRecast.Detour -> C:\001_AI\LudotsProd_issue709\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net8.0\DotRecast.Detour.dll
+  ShimSkiaSharp -> C:\001_AI\LudotsProd_issue709\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Release\net8.0\ShimSkiaSharp.dll
+  正在确定要还原的项目…
+  Arch -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.System -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch.Persistence -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\LudotsProd_issue709\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  所有项目均是最新的，无法还原。
+  Svg.Generators -> C:\001_AI\LudotsProd_issue709\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Release\net9.0\Svg.Generators.dll
+  Svg.Custom -> C:\001_AI\LudotsProd_issue709\src\Libraries\Svg.Skia\Svg.Custom\bin\Release\net8.0\Svg.Custom.dll
+  Ludots.Core -> C:\001_AI\LudotsProd_issue709\src\Core\bin\Release\net8.0\Ludots.Core.dll
+  Svg.Model -> C:\001_AI\LudotsProd_issue709\src\Libraries\Svg.Skia\Svg.Model\bin\Release\net8.0\Svg.Model.dll
+  Ludots.Physics.Broadphase -> C:\001_AI\LudotsProd_issue709\src\Core\Ludots.Physics.Broadphase\bin\Release\net8.0\Ludots.Physics.Broadphase.dll
+C:\001_AI\LudotsProd_issue709\src\Client\Ludots.Client.Raylib\Rendering\RaylibTerrainRenderer.cs(19,43): warning CS8618: 在退出构造函数时，不可为 null 的 字段 "_builder" 必须包含非 null 值。请考虑添加 "required" 修饰符或将该 字段 声明为可为 null。 [C:\001_AI\LudotsProd_issue709\src\Client\Ludots.Client.Raylib\Ludots.Client.Raylib.csproj]
+C:\001_AI\LudotsProd_issue709\src\Client\Ludots.Client.Raylib\Input\RaylibInputBackend.cs(10,24): warning CS0414: 字段“RaylibInputBackend._charBuffer”已被赋值，但从未使用过它的值 [C:\001_AI\LudotsProd_issue709\src\Client\Ludots.Client.Raylib\Ludots.Client.Raylib.csproj]
+  Ludots.Client.Raylib -> C:\001_AI\LudotsProd_issue709\src\Client\Ludots.Client.Raylib\bin\Release\net8.0\Ludots.Client.Raylib.dll
+  Ludots.Adapter.LiteNetLib -> C:\001_AI\LudotsProd_issue709\src\Adapters\Networking\Ludots.Adapter.LiteNetLib\bin\Release\net8.0\Ludots.Adapter.LiteNetLib.dll
+  Svg.Skia -> C:\001_AI\LudotsProd_issue709\src\Libraries\Svg.Skia\Svg.Skia\bin\Release\net8.0\Svg.Skia.dll
+  Ludots.UI.Skia -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.Skia\bin\Release\net8.0\Ludots.UI.Skia.dll
+  Ludots.Physics2D -> C:\001_AI\LudotsProd_issue709\src\Core\Ludots.Physics2D\bin\Release\net8.0\Ludots.Physics2D.dll
+  Ludots.Presentation.Skia -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.Presentation.Skia\bin\Release\net8.0\Ludots.Presentation.Skia.dll
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\UiMarkupLoader.cs(22,30): warning CS8604: “UiElement UiMarkupLoader.BuildRoot(IElement body)”中的形参“body”可能传入 null 引用实参。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\MarkupBinder.cs(24,17): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\MarkupBinder.cs(34,18): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\MarkupBinder.cs(48,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\MarkupBinder.cs(67,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\UiMarkupLoader.cs(63,43): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\UiMarkupLoader.cs(65,11): warning CS8603: 可能返回 null 引用。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\MarkupBinder.cs(85,17): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\MarkupBinder.cs(94,16): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\UiMarkupLoader.cs(137,22): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\External\AngleSharp\src\Io\DefaultHttpRequester.cs(131,41): warning SYSLIB0014: “WebRequest.Create(Uri)”已过时:“WebRequest, HttpWebRequest, ServicePoint, and WebClient are obsolete. Use HttpClient instead.” (https://aka.ms/dotnet-warnings/SYSLIB0014) [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\UiCssParser.cs(249,38): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+  Ludots.UI.HtmlEngine -> C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\bin\Release\net8.0\Ludots.UI.HtmlEngine.dll
+  Ludots.Adapter.Raylib -> C:\001_AI\LudotsProd_issue709\src\Adapters\Raylib\Ludots.Adapter.Raylib\bin\Release\net8.0\Ludots.Adapter.Raylib.dll
+  Ludots.App.Raylib -> C:\001_AI\LudotsProd_issue709\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\Ludots.App.Raylib.dll
+
+已成功生成。
+
+C:\001_AI\LudotsProd_issue709\src\Client\Ludots.Client.Raylib\Rendering\RaylibTerrainRenderer.cs(19,43): warning CS8618: 在退出构造函数时，不可为 null 的 字段 "_builder" 必须包含非 null 值。请考虑添加 "required" 修饰符或将该 字段 声明为可为 null。 [C:\001_AI\LudotsProd_issue709\src\Client\Ludots.Client.Raylib\Ludots.Client.Raylib.csproj]
+C:\001_AI\LudotsProd_issue709\src\Client\Ludots.Client.Raylib\Input\RaylibInputBackend.cs(10,24): warning CS0414: 字段“RaylibInputBackend._charBuffer”已被赋值，但从未使用过它的值 [C:\001_AI\LudotsProd_issue709\src\Client\Ludots.Client.Raylib\Ludots.Client.Raylib.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\UiMarkupLoader.cs(22,30): warning CS8604: “UiElement UiMarkupLoader.BuildRoot(IElement body)”中的形参“body”可能传入 null 引用实参。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\MarkupBinder.cs(24,17): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\MarkupBinder.cs(34,18): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\MarkupBinder.cs(48,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\MarkupBinder.cs(67,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\UiMarkupLoader.cs(63,43): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\UiMarkupLoader.cs(65,11): warning CS8603: 可能返回 null 引用。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\MarkupBinder.cs(85,17): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\MarkupBinder.cs(94,16): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\UiMarkupLoader.cs(137,22): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\External\AngleSharp\src\Io\DefaultHttpRequester.cs(131,41): warning SYSLIB0014: “WebRequest.Create(Uri)”已过时:“WebRequest, HttpWebRequest, ServicePoint, and WebClient are obsolete. Use HttpClient instead.” (https://aka.ms/dotnet-warnings/SYSLIB0014) [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Markup\UiCssParser.cs(249,38): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj]
+    14 个警告
+    0 个错误
+
+已用时间 00:00:14.83
+

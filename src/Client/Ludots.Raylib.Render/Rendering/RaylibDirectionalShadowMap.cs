@@ -18,13 +18,15 @@ namespace Ludots.Raylib.Render
         private readonly RenderTexture2D _rt;
         private readonly Shader _depthShader;
         private readonly Shader _depthInstancedShader;
-        private readonly Shader _depthSkinningInstancedShader;
+        private readonly Shader _depthSkinningSsboShader;
         private readonly Shader _depthCutoutShader;
         private Material _depthMaterial;
         private Material _depthInstancedMaterial;
-        private Material _depthSkinningInstancedMaterial;
+        private Material _depthSkinningSsboMaterial;
         private Material _depthCutoutMaterial;
-        private readonly int _locDepthSkinningBoneMatrices;
+        private readonly int _locDepthSkinningInstanceBase;
+        private readonly int _locDepthSkinningBoneBase;
+        private readonly int _locDepthSkinningPoseStride;
         private readonly int _locCutoutAlphaCutoff;
         private RaylibMatrix _lightView;
         private RaylibMatrix _lightProjection;
@@ -38,30 +40,30 @@ namespace Ludots.Raylib.Render
             MapSize = effective.MapSize;
             ReceiverBiasWorld = effective.ReceiverBiasWorld;
 
-            _rt = Rl.LoadRenderTexture(MapSize, MapSize);
+            _rt = RaylibNativeResources.LoadRenderTexture(MapSize, MapSize);
             Rl.SetTextureFilter(_rt.texture, Rl.TextureFilter.TEXTURE_FILTER_POINT);
             Rl.SetTextureWrap(_rt.texture, Rl.TextureWrap.TEXTURE_WRAP_CLAMP);
             string baseDir = AppContext.BaseDirectory;
             string fsPath = System.IO.Path.Combine(baseDir, "shadow_depth.fs");
-            _depthShader = Rl.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth.vs"), fsPath);
+            _depthShader = RaylibNativeResources.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth.vs"), fsPath);
             if (_depthShader.id == 0)
             {
                 throw new InvalidOperationException("Failed to load shadow_depth shader (shader.id == 0).");
             }
 
-            _depthInstancedShader = Rl.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth_instanced.vs"), fsPath);
+            _depthInstancedShader = RaylibNativeResources.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth_instanced.vs"), fsPath);
             if (_depthInstancedShader.id == 0)
             {
                 throw new InvalidOperationException("Failed to load shadow_depth_instanced shader (shader.id == 0).");
             }
 
-            _depthSkinningInstancedShader = Rl.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth_skinning_instanced.vs"), fsPath);
-            if (_depthSkinningInstancedShader.id == 0)
+            _depthSkinningSsboShader = RaylibNativeResources.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth_skinning_ssbo.vs"), fsPath);
+            if (_depthSkinningSsboShader.id == 0)
             {
-                throw new InvalidOperationException("Failed to load shadow_depth_skinning_instanced shader (shader.id == 0).");
+                throw new InvalidOperationException("Failed to load shadow_depth_skinning_ssbo shader (shader.id == 0).");
             }
 
-            _depthCutoutShader = Rl.LoadShader(
+            _depthCutoutShader = RaylibNativeResources.LoadShader(
                 System.IO.Path.Combine(baseDir, "shadow_depth_cutout.vs"),
                 System.IO.Path.Combine(baseDir, "shadow_depth_cutout.fs"));
             if (_depthCutoutShader.id == 0)
@@ -71,18 +73,19 @@ namespace Ludots.Raylib.Render
 
             ConfigureDepthShader(_depthShader, "shadow_depth");
             ConfigureInstancedDepthShader(_depthInstancedShader, "shadow_depth_instanced");
-            _locDepthSkinningBoneMatrices = ConfigureSkinningInstancedDepthShader(
-                _depthSkinningInstancedShader,
-                "shadow_depth_skinning_instanced");
+            (_locDepthSkinningInstanceBase, _locDepthSkinningBoneBase, _locDepthSkinningPoseStride) =
+                ConfigureSsboSkinningDepthShader(
+                    _depthSkinningSsboShader,
+                    "shadow_depth_skinning_ssbo");
             _locCutoutAlphaCutoff = ConfigureCutoutDepthShader(_depthCutoutShader, "shadow_depth_cutout");
 
-            _depthMaterial = Rl.LoadMaterialDefault();
+            _depthMaterial = RaylibNativeResources.LoadMaterialDefault();
             _depthMaterial.shader = _depthShader;
-            _depthInstancedMaterial = Rl.LoadMaterialDefault();
+            _depthInstancedMaterial = RaylibNativeResources.LoadMaterialDefault();
             _depthInstancedMaterial.shader = _depthInstancedShader;
-            _depthSkinningInstancedMaterial = Rl.LoadMaterialDefault();
-            _depthSkinningInstancedMaterial.shader = _depthSkinningInstancedShader;
-            _depthCutoutMaterial = Rl.LoadMaterialDefault();
+            _depthSkinningSsboMaterial = RaylibNativeResources.LoadMaterialDefault();
+            _depthSkinningSsboMaterial.shader = _depthSkinningSsboShader;
+            _depthCutoutMaterial = RaylibNativeResources.LoadMaterialDefault();
             _depthCutoutMaterial.shader = _depthCutoutShader;
         }
 
@@ -183,28 +186,45 @@ namespace Ludots.Raylib.Render
             Rl.DrawMeshInstanced(mesh, _depthInstancedMaterial, transforms, count);
         }
 
-        public void DrawSkinnedMeshInstancedShadow(Mesh mesh, RaylibMatrix* transforms, int count)
+        /// <summary>SSBO 蒙皮的深度直绘：姿势/实例 SSBO 由渲染器在派发期绑定（binding 2/3），
+        /// 本方法只设 uniform 后经 glDrawElementsInstanced 绘制——与主 pass 同一合同：
+        /// VAO 只含逐顶点属性，实例维由着色器经 gl_InstanceID 进 SSBO 取数；
+        /// blend 显式关闭（深度通道不混合，环境混合方程会污染 RGB 打包深度），
+        /// 深度与主 pass 的蒙皮位置严格一致。</summary>
+        public void DrawSkinnedMeshSsboShadow(
+            Mesh mesh,
+            int count,
+            float instanceBase,
+            float boneBase,
+            float poseStride)
         {
             EnsureFrameActive();
-            if (transforms == null)
-            {
-                throw new ArgumentNullException(nameof(transforms));
-            }
-
-            if (count <= 0)
+            if (count <= 0 || mesh.vaoId == 0 || mesh.triangleCount <= 0)
             {
                 return;
             }
 
-            if (mesh.boneMatrices == null || mesh.boneCount <= 0)
+            Gl43.UseProgram(_depthSkinningSsboShader.id);
+            Gl43.Disable(Gl43.GL_BLEND);
+            Rl.SetShaderValue(_depthSkinningSsboShader, _locDepthSkinningInstanceBase, &instanceBase, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_depthSkinningSsboShader, _locDepthSkinningBoneBase, &boneBase, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_depthSkinningSsboShader, _locDepthSkinningPoseStride, &poseStride, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValueMatrix(
+                _depthSkinningSsboShader,
+                _depthSkinningSsboShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP],
+                RaylibNativeResources.ComputeDrawMvp());
+            Gl43.BindVertexArray(mesh.vaoId);
+            if (mesh.indices != null)
             {
-                throw new InvalidOperationException(
-                    $"{nameof(DrawSkinnedMeshInstancedShadow)} requires mesh boneMatrices before drawing skinned depth.");
+                int indexCount = checked(mesh.triangleCount * 3);
+                Gl43.DrawElementsInstanced(Gl43.GL_TRIANGLES, indexCount, Gl43.GL_UNSIGNED_SHORT, IntPtr.Zero, count);
             }
-
-            Rl.rlEnableShader(_depthSkinningInstancedShader.id);
-            Rl.rlSetUniformMatrices(_locDepthSkinningBoneMatrices, mesh.boneMatrices, mesh.boneCount);
-            Rl.DrawMeshInstanced(mesh, _depthSkinningInstancedMaterial, transforms, count);
+            else
+            {
+                // 无索引网格没有元素缓冲绑定，DrawElements 的 indices=NULL 会被驱动当作客户端指针解引用。
+                Gl43.DrawArraysInstanced(Gl43.GL_TRIANGLES, 0, mesh.vertexCount, count);
+            }
+            Gl43.UseProgram(0);
         }
 
         /// <summary>模型深度：换装深度材质经 DrawModelEx 原生路径绘制后还原。</summary>
@@ -256,17 +276,17 @@ namespace Ludots.Raylib.Render
             EndFrame();
             _depthMaterial.shader = default;
             _depthInstancedMaterial.shader = default;
-            _depthSkinningInstancedMaterial.shader = default;
+            _depthSkinningSsboMaterial.shader = default;
             _depthCutoutMaterial.shader = default;
-            Rl.UnloadMaterial(_depthMaterial);
-            Rl.UnloadMaterial(_depthInstancedMaterial);
-            Rl.UnloadMaterial(_depthSkinningInstancedMaterial);
-            Rl.UnloadMaterial(_depthCutoutMaterial);
-            Rl.UnloadShader(_depthShader);
-            Rl.UnloadShader(_depthInstancedShader);
-            Rl.UnloadShader(_depthSkinningInstancedShader);
-            Rl.UnloadShader(_depthCutoutShader);
-            Rl.UnloadRenderTexture(_rt);
+            RaylibNativeResources.UnloadMaterial(_depthMaterial);
+            RaylibNativeResources.UnloadMaterial(_depthInstancedMaterial);
+            RaylibNativeResources.UnloadMaterial(_depthSkinningSsboMaterial);
+            RaylibNativeResources.UnloadMaterial(_depthCutoutMaterial);
+            RaylibNativeResources.UnloadShader(_depthShader);
+            RaylibNativeResources.UnloadShader(_depthInstancedShader);
+            RaylibNativeResources.UnloadShader(_depthSkinningSsboShader);
+            RaylibNativeResources.UnloadShader(_depthCutoutShader);
+            RaylibNativeResources.UnloadRenderTexture(_rt);
             _disposed = true;
         }
 
@@ -319,15 +339,19 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        private static int ConfigureSkinningInstancedDepthShader(Shader shader, string name)
+        private static (int InstanceBase, int BoneBase, int PoseStride)
+            ConfigureSsboSkinningDepthShader(Shader shader, string name)
         {
-            ConfigureInstancedDepthShader(shader, name);
+            ConfigureDepthShader(shader, name);
             int locBoneIds = Rl.GetShaderLocationAttrib(shader, "vertexBoneIds");
             int locBoneWeights = Rl.GetShaderLocationAttrib(shader, "vertexBoneWeights");
-            int locBoneMatrices = Rl.GetShaderLocation(shader, "boneMatrices");
+            int locInstanceBase = Rl.GetShaderLocation(shader, "uInstanceBase");
+            int locBoneBase = Rl.GetShaderLocation(shader, "uBoneBase");
+            int locPoseStride = Rl.GetShaderLocation(shader, "uPoseStride");
             shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEIDS] = locBoneIds;
             shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEWEIGHTS] = locBoneWeights;
-            shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_BONE_MATRICES] = locBoneMatrices;
+            // SSBO 路径实例变换驻实例表（binding 3）；置 9 让 raylib 实例矩阵属性管线合法（属性仅作绘制机械）
+            shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = 9;
             if (locBoneIds < 0)
             {
                 throw new InvalidOperationException($"{name} shader attrib 'vertexBoneIds' not found.");
@@ -338,12 +362,22 @@ namespace Ludots.Raylib.Render
                 throw new InvalidOperationException($"{name} shader attrib 'vertexBoneWeights' not found.");
             }
 
-            if (locBoneMatrices < 0)
+            if (locInstanceBase < 0)
             {
-                throw new InvalidOperationException($"{name} shader uniform 'boneMatrices' not found.");
+                throw new InvalidOperationException($"{name} shader uniform 'uInstanceBase' not found.");
             }
 
-            return locBoneMatrices;
+            if (locBoneBase < 0)
+            {
+                throw new InvalidOperationException($"{name} shader uniform 'uBoneBase' not found.");
+            }
+
+            if (locPoseStride < 0)
+            {
+                throw new InvalidOperationException($"{name} shader uniform 'uPoseStride' not found.");
+            }
+
+            return (locInstanceBase, locBoneBase, locPoseStride);
         }
 
         private static int ConfigureCutoutDepthShader(Shader shader, string name)

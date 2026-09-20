@@ -259,7 +259,11 @@ public sealed class WorldSnapshotOrchestrationTests
         Assert.That(admission.TryGet(beforeRestore.OrderId, OrderAdmissionStage.EntityIntake, out _), Is.False);
         var afterRestore = new Order { OrderTypeId = 3 };
         orderQueue.EnsureOrderId(ref afterRestore);
-        Assert.That(afterRestore.OrderId, Is.GreaterThan(beforeRestore.OrderId));
+        // Post-restore ids restart from the checkpoint boundary: both orders were the first
+        // allocation after their respective restore/capture points, so they must collide — a
+        // monotonic counter would leak pre-restore tick history into persisted Order.OrderId
+        // bytes and break replay determinism.
+        Assert.That(afterRestore.OrderId, Is.EqualTo(beforeRestore.OrderId));
         Assert.DoesNotThrow(admission.BeginLogicStep);
         admission.EndEntityIntake();
         admission.EndLogicStep();

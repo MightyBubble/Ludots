@@ -56,6 +56,18 @@ namespace Ludots.Core.Presentation.Presenters
         /// convert it to degrees.
         /// </summary>
         FacingDegrees = 7,
+
+        /// <summary>
+        /// Read a float from the owner entity's <c>BlackboardFloatBuffer</c>.
+        /// <see cref="ValueRef.SourceId"/> is the ConfigKeyRegistry id of the blackboard key.
+        /// </summary>
+        OwnerBlackboardFloat = 9,
+
+        /// <summary>Read the live authoritative pointer screen X (window px).</summary>
+        PointerScreenX = 10,
+
+        /// <summary>Read the live authoritative pointer screen Y (window px).</summary>
+        PointerScreenY = 11,
     }
 
     /// <summary>
@@ -78,6 +90,16 @@ namespace Ludots.Core.Presentation.Presenters
 
         /// <summary>The literal value when Source == Constant.</summary>
         public float ConstantValue;
+
+        /// <summary>
+        /// Explicit opt-in for source-missing tolerance (author-facing <c>optional: true</c>;
+        /// never a silent default). When set, a source that cannot be resolved right now
+        /// (e.g. an owner blackboard key not yet written because the driving state has not
+        /// occurred) projects 0 instead of throwing — the consumer decides what absent data
+        /// means (e.g. ScreenRect visibility hides the render). Without it, a missing source
+        /// remains a hard fail-fast contract error.
+        /// </summary>
+        public bool Optional;
 
         public static ValueRef FromConstant(float value) => new()
         {
@@ -111,6 +133,22 @@ namespace Ludots.Core.Presentation.Presenters
         public static ValueRef FromFacingDegrees() => new()
         {
             Source = ValueSourceKind.FacingDegrees
+        };
+
+        public static ValueRef FromOwnerBlackboardFloat(int blackboardKeyId) => new()
+        {
+            Source = ValueSourceKind.OwnerBlackboardFloat,
+            SourceId = blackboardKeyId
+        };
+
+        public static ValueRef FromPointerScreenX() => new()
+        {
+            Source = ValueSourceKind.PointerScreenX
+        };
+
+        public static ValueRef FromPointerScreenY() => new()
+        {
+            Source = ValueSourceKind.PointerScreenY
         };
     }
 }

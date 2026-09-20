@@ -28,6 +28,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     /// </summary>
     public sealed class EffectPhaseExecutor
     {
+        private bool _graphExecuting;
         public const string PhaseListenerDispatchCapacityExceededError = "GAS.PHASE_LISTENER.ERR.DispatchCapacityExceeded";
         public const string ExternalAtomicListenerConflictError = "GAS.EFFECT_PLAN.ERR.ExternalAtomicListenerConflict";
         public const string GraphProgramScratchCapacityExceededError = "GAS.EFFECT_PHASE.ERR.GraphProgramScratchCapacityExceeded";
@@ -791,7 +792,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ref byte validationResult,
             bool requireListenerCompatibility = false)
         {
+            if (_graphExecuting)
+            {
+                throw new InvalidOperationException(
+                    "EffectPhaseExecutor does not support reentrant execution; a nested synchronous ExecuteGraph from inside a graph handler is rejected before nested execution.");
+            }
+
             if (graphProgramId <= 0) return;
+
             if (!_programs.TryGetProgram(graphProgramId, out var program))
             {
                 throw new InvalidOperationException(
@@ -842,6 +850,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _entityRegs[2] = targetContext;
 
             Array.Clear(_callStack, 0, _callStack.Length);
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             GraphFrame frame = GraphFrame.Bind(
                 expectedKind,
                 GraphEntityPreset.TargetContext(targetContext),
@@ -856,6 +865,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _boolRegs,
                 _entityRegs,
                 _targets,
+                intIds,
                 _callStack,
                 randomSeed: BuildRandomSeed(caster, target, targetContext, graphProgramId, effectTemplateId, phase, randomSeed));
 
@@ -873,12 +883,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _builtinHandlers,
                     _templates,
                     builtinRuntime,
+                    Entity.Null,
                     effectTemplateId,
                     new EffectContext { RootId = rootId, Source = caster, Target = target, TargetContext = targetContext },
                     in builtinParams);
                 ownsBuiltinInvocation = true;
             }
 
+            _graphExecuting = true;
             try
             {
                 GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true);
@@ -890,6 +902,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
             finally
             {
+                _graphExecuting = false;
                 if (ownsBuiltinInvocation)
                 {
                     graphHost!.EndBuiltinInvocation();
@@ -931,6 +944,26 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, effectTemplateId);
             hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, (int)phase);
             return Ludots.Core.Engine.Randomization.RngSeed.Finalize(hash);
+        }
+
+        /// <summary>周期内核与解释 VM 的 RNG 种子链共享点：同输入必得同种子。</summary>
+        internal static uint BuildRandomSeedForKernel(
+            Entity caster,
+            Entity target,
+            Entity targetContext,
+            int graphProgramId,
+            int effectTemplateId,
+            EffectPhaseId phase,
+            uint executionSeed)
+        {
+            return BuildRandomSeed(caster, target, targetContext, graphProgramId, effectTemplateId, phase, executionSeed);
+        }
+
+        /// <summary>全局 Phase Listener 匹配查询，供周期内核路由判定干涉。</summary>
+        internal bool HasGlobalPhaseListener(EffectPhaseId phase, int effectCategoryId, int effectTemplateId)
+        {
+            return _globalListeners != null &&
+                _globalListeners.HasMatch(phase, effectCategoryId, effectTemplateId);
         }
 
         private ScratchUsage GetScratchUsage(int graphProgramId, ReadOnlySpan<GraphInstruction> program)

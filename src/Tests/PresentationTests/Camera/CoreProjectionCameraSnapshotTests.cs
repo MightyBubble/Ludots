@@ -41,9 +41,6 @@ namespace Ludots.Tests.Presentation
             var rayProvider = new CoreScreenRayProvider(manager, view);
             projector.BindPresenter(presenter);
             rayProvider.BindPresenter(presenter);
-            projector.BindPresentationAlphaProvider(() => 1f);
-            rayProvider.BindPresentationAlphaProvider(() => 1f);
-
             Vector2 presenterTargetScreen = projector.WorldToScreen(
                 WorldUnits.WorldCmToVisualMeters(WorldCmInt2.Zero, yMeters: 0f));
             Assert.That(float.IsFinite(presenterTargetScreen.X) && float.IsFinite(presenterTargetScreen.Y), Is.True);
@@ -53,6 +50,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(GroundRaycastUtil.TryGetGroundWorldCm(in presenterRay, out WorldCmInt2 presenterHitWorldCm), Is.True);
             Assert.That(presenterHitWorldCm.X, Is.EqualTo(0).Within(1));
             Assert.That(presenterHitWorldCm.Y, Is.EqualTo(0).Within(1));
+
+            projector.BindPresentationAlphaProvider(() => 1f);
+            rayProvider.BindPresentationAlphaProvider(() => 1f);
 
             BeginPresentationFrame(projector);
             BeginPresentationFrame(rayProvider);

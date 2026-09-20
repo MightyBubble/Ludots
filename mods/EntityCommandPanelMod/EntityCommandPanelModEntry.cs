@@ -4,6 +4,7 @@ using EntityCommandPanelMod.Systems;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -89,12 +90,19 @@ namespace EntityCommandPanelMod
                     engine, collections, gasSource, collectionQueries, aggregationProfiles, DefaultAggregationProfileId));
 
             var runtime = new EntityCommandPanelRuntime(engine, sources, handles);
-            var controller = new EntityCommandPanelController(engine, runtime);
 
             engine.SetService(CoreServiceKeys.EntityCommandPanelSourceRegistry, sources);
             engine.SetService(CoreServiceKeys.EntityCommandPanelCollectionQueryConfigRegistry, collectionQueries);
             engine.SetService(CoreServiceKeys.EntityCommandPanelHandleStore, handles);
             engine.SetService(CoreServiceKeys.EntityCommandPanelService, runtime);
+
+            if (engine.GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer)
+            {
+                modContext.Log("[EntityCommandPanelMod] Installed GAS entity command panel runtime without presentation for authoritative server.");
+                return Task.CompletedTask;
+            }
+
+            var controller = new EntityCommandPanelController(engine, runtime);
             engine.RegisterPresentationSystem(new EntityCommandPanelPresentationSystem(engine, runtime, controller));
 
             modContext.Log("[EntityCommandPanelMod] Installed GAS entity command panel runtime.");

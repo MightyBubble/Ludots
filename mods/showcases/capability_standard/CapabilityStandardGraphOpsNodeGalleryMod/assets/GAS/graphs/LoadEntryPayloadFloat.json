@@ -5,15 +5,15 @@
     "entries": [
       {
         "label": "on_input_action",
-        "event": "InputActionFired",
-        "start": "readGroundX"
+        "action": "GraphOps.Probe",
+        "start": "readPointerX"
       }
     ],
     "nodes": [
       {
-        "id": "readGroundX",
+        "id": "readPointerX",
         "op": "LoadEntryPayloadFloat",
-        "payloadKey": "MapTrigger.GroundXCm"
+        "payloadKey": "MapTrigger.PointerScreenX"
       },
       {
         "id": "done",
@@ -22,7 +22,7 @@
     ],
     "controlEdges": [
       {
-        "from": "readGroundX",
+        "from": "readPointerX",
         "fromPort": "next",
         "to": "done"
       }

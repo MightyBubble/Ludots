@@ -1,9 +1,34 @@
+.gas-graph-flow {
+  --gas-canvas-bg: var(--studio-bg);
+  --gas-canvas-dot: var(--studio-fill);
+  --gas-node-bg: var(--studio-surface);
+  --gas-node-header: var(--studio-elevated);
+  --gas-node-border: var(--studio-fill);
+  --gas-node-border-selected: var(--studio-muted);
+  --gas-node-text: var(--studio-label);
+  --gas-node-muted: var(--studio-muted);
+  --gas-event-header: color-mix(in srgb, var(--studio-red) 42%, var(--studio-bg));
+  --gas-event-accent: var(--studio-red);
+  --gas-event-border: var(--studio-red);
+  --gas-value-header: color-mix(in srgb, var(--studio-blue) 42%, var(--studio-bg));
+  --gas-value-accent: var(--studio-blue);
+  --gas-value-border: var(--studio-blue);
+  --gas-exec: var(--studio-yellow);
+  --gas-exec-idle: var(--studio-muted);
+  --gas-data: var(--studio-blue);
+  --gas-data-idle: var(--studio-muted);
+  --gas-list: var(--studio-blue);
+  --gas-live-current: var(--studio-yellow);
+  --gas-live-hot: var(--studio-yellow);
+  background: var(--gas-canvas-bg);
+}
+
 .gas-graph-flow .react-flow__handle {
   width: 10px;
   height: 10px;
-  background: #020617;
+  background: var(--studio-bg);
   border: 2px solid currentColor;
-  box-shadow: 0 0 0 1px #020617;
+  box-shadow: 0 0 0 1px var(--studio-bg);
 }
 
 .gas-graph-flow .gas-pin {
@@ -29,50 +54,365 @@
   border: 0;
 }
 
+.gas-graph-flow .gas-pin-kind-exec {
+  color: var(--gas-exec);
+}
+
+.gas-graph-flow .gas-pin-kind-value {
+  color: var(--gas-value-accent);
+}
+
+.gas-graph-flow .gas-pin-kind-list {
+  color: var(--gas-list);
+}
+
 .gas-graph-flow .react-flow__handle-connecting,
 .gas-graph-flow .react-flow__handle-valid {
-  background: #020617;
+  background: var(--studio-bg);
 }
 
 .gas-graph-flow .react-flow__edge-textbg {
-  fill: #0f172a;
+  fill: var(--studio-surface);
 }
 
 .gas-graph-flow .react-flow__edge-text {
-  fill: #e2e8f0;
+  fill: var(--studio-label);
 }
 
 .gas-graph-flow .react-flow__edgelabel-renderer {
-  color: #e2e8f0;
+  color: var(--studio-label);
 }
 
 .gas-graph-flow .react-flow__edge-label {
-  background: #0f172a;
-  color: #e2e8f0;
-  border: 1px solid #334155;
+  background: var(--studio-surface);
+  color: var(--studio-label);
+  border: 1px solid var(--studio-fill);
   border-radius: 4px;
   padding: 1px 6px;
   font-size: 10px;
 }
 
+.gas-value-edge-label {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: var(--studio-secondary);
+  background: color-mix(in srgb, var(--studio-surface) 92%, transparent);
+  border: 1px solid var(--studio-fill);
+  border-radius: 3px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gas-value-edge-label.is-live {
+  color: var(--studio-label);
+  border-color: var(--studio-blue);
+  background: color-mix(in srgb, var(--studio-bg) 92%, transparent);
+}
+
+.gas-control-bead {
+  pointer-events: none;
+}
+
 .gas-graph-flow .react-flow__minimap {
-  background-color: #020617 !important;
-  border: 1px solid #334155;
-  --xy-minimap-background-color-props: #020617;
-  --xy-minimap-mask-background-color-props: rgba(2, 6, 23, 0.35);
-  --xy-minimap-node-background-color: #38bdf8;
+  background-color: var(--studio-bg) !important;
+  border: 1px solid var(--studio-fill);
+  --xy-minimap-background-color-props: var(--studio-bg);
+  --xy-minimap-mask-background-color-props: color-mix(in srgb, var(--studio-bg) 55%, transparent);
+  --xy-minimap-node-background-color: var(--studio-blue);
 }
 
 .gas-graph-flow .react-flow__minimap-mask {
-  fill: rgba(2, 6, 23, 0.35) !important;
+  fill: color-mix(in srgb, var(--studio-bg) 55%, transparent) !important;
 }
 
 .gas-graph-flow .react-flow__selection {
-  background: rgb(56 189 248 / 0.14);
-  border: 1px solid #38bdf8;
+  background: color-mix(in srgb, var(--studio-yellow) 12%, transparent);
+  border: 1px solid var(--studio-yellow);
 }
 
 .gas-graph-flow .react-flow__nodesselection-rect {
-  background: rgb(56 189 248 / 0.08);
-  border: 1px solid #7dd3fc;
+  background: color-mix(in srgb, var(--studio-yellow) 8%, transparent);
+  border: 1px solid var(--studio-yellow);
+}
+
+/* —— Node chrome —— */
+.gas-node {
+  min-width: 210px;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--gas-node-border);
+  background: var(--gas-node-bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color: var(--gas-node-text);
+  transition: border-color 120ms ease, box-shadow 160ms ease, opacity 200ms ease;
+}
+
+.gas-node--value {
+  min-width: 140px;
+}
+
+.gas-node--event {
+  min-width: 220px;
+  border-color: var(--gas-event-border);
+}
+
+.gas-node--value {
+  border-color: var(--gas-value-border);
+}
+
+.gas-node.is-selected {
+  border-color: var(--gas-node-border-selected);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--studio-muted) 45%, transparent), 0 10px 28px color-mix(in srgb, var(--studio-bg) 70%, transparent);
+}
+
+.gas-node.is-live-current {
+  border-color: var(--gas-live-current);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--studio-yellow) 35%, transparent), 0 0 18px color-mix(in srgb, var(--studio-yellow) 18%, transparent);
+}
+
+.gas-node.is-live-hot {
+  border-color: var(--gas-live-hot);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--studio-yellow) 14%, transparent);
+}
+
+.gas-node.is-live-trail {
+  border-color: var(--studio-muted);
+  opacity: 0.92;
+}
+
+.gas-node__header {
+  background: var(--gas-node-header);
+  padding: 6px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--studio-fill) 85%, transparent);
+}
+
+.gas-node--event .gas-node__header {
+  background: var(--gas-event-header);
+  border-bottom-color: color-mix(in srgb, var(--studio-red) 35%, transparent);
+}
+
+.gas-node--value .gas-node__header {
+  background: var(--gas-value-header);
+  border-bottom-color: color-mix(in srgb, var(--studio-blue) 35%, transparent);
+}
+
+.gas-node__eyebrow-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gas-node__eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--studio-secondary);
+}
+
+.gas-node__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--studio-label);
+  line-height: 1.25;
+}
+
+.gas-node__caption {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--gas-node-muted);
+}
+
+.gas-node__caption--accent {
+  color: var(--studio-yellow);
+}
+
+.gas-node__body {
+  position: relative;
+  padding: 8px 12px;
+}
+
+.gas-node__literal {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--studio-blue);
+  margin-bottom: 8px;
+}
+
+.gas-node__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.gas-node__chip {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--studio-red) 35%, var(--studio-bg));
+  padding: 1px 5px;
+  font-size: 9px;
+  color: var(--studio-label);
+}
+
+.gas-node__ports {
+  padding: 8px 12px;
+}
+
+.gas-node__ports--stack {
+  padding: 0;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gas-node__ports--split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 24px;
+}
+
+.gas-node__port-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gas-node__port-col--out {
+  align-items: stretch;
+}
+
+.gas-port {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 20px;
+  font-size: 10px;
+  font-weight: 500;
+  gap: 4px;
+}
+
+.gas-port--out {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.gas-port--then {
+  margin-top: 10px;
+}
+
+.gas-port__type {
+  margin-left: 4px;
+  font-size: 8px;
+  text-transform: uppercase;
+  color: var(--studio-muted);
+}
+
+.gas-port-live-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--studio-yellow);
+  background: color-mix(in srgb, var(--studio-yellow) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--studio-yellow) 35%, transparent);
+  border-radius: 3px;
+  padding: 0 4px;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gas-port.gas-pin-kind-value .gas-port-live-value,
+.gas-port.gas-pin-kind-list .gas-port-live-value {
+  color: var(--studio-blue);
+  background: color-mix(in srgb, var(--studio-blue) 12%, transparent);
+  border-color: color-mix(in srgb, var(--studio-blue) 35%, transparent);
+}
+
+.gas-graph-flow .react-flow__node.gas-live-current {
+  z-index: 8 !important;
+}
+
+.gas-graph-flow .react-flow__node.gas-watch-dim {
+  pointer-events: none;
+}
+
+.gas-graph-flow .react-flow__node.gas-watch-focus {
+  z-index: 5 !important;
+}
+
+.gas-graph-flow .react-flow__edge.gas-live-edge-control path {
+  stroke: var(--gas-exec) !important;
+}
+
+.gas-graph-flow .react-flow__edge.gas-live-edge-value path {
+  stroke: var(--gas-data) !important;
+  stroke-dasharray: none !important;
+  filter: none !important;
+}
+
+.gas-live-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--studio-yellow) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--studio-yellow) 55%, transparent);
+  color: var(--studio-yellow);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 1px 5px;
+}
+
+.gas-live-badge-hot {
+  background: color-mix(in srgb, var(--studio-yellow) 14%, transparent);
+  border-color: color-mix(in srgb, var(--studio-yellow) 45%, transparent);
+  color: var(--studio-yellow);
+}
+
+.gas-live-badge-trail {
+  background: color-mix(in srgb, var(--studio-muted) 12%, transparent);
+  border-color: color-mix(in srgb, var(--studio-muted) 40%, transparent);
+  color: var(--studio-secondary);
+}
+
+.gas-live-pin-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 12px 10px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--studio-fill) 80%, transparent);
+}
+
+.gas-node__body .gas-live-pin-strip {
+  margin: 8px 0 0;
+}
+
+.gas-live-pin-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 3px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-fill);
+  color: var(--studio-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  line-height: 1.2;
+  padding: 1px 5px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

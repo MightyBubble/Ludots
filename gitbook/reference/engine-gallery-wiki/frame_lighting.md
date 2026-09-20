@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `frame_lighting` |
 | preset | `engine_raylib_frame_lighting` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/FrameLightingScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/FrameLightingScene.cs` |
 | 承接渲染器 | `RaylibFrameLighting`（光照总线）+ `RaylibPrimitiveRenderer`（Immediate 车道消费） |
 | 注册表条目 | `engine_raylib_frame_lighting`（`showcase.registry.json`，tier T1） |
 

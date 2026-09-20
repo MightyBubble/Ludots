@@ -1,0 +1,38 @@
+{
+  "op": "DeactivateContext",
+  "driver": "linear",
+  "title": "图内收走瞄准 context",
+  "beat": "前一脚挂起的瞄准 context，后一脚原地收走，作用域整组清干净。",
+  "detailTemplate": "图内收走落地——木桩血量{healthBefore}→{healthAfter}。",
+  "assertDetailContains": [
+    "图内收走落地"
+  ],
+  "featuredNodeId": "deactivate",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "graphSettled"
+  }
+}

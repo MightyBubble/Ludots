@@ -146,15 +146,17 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void ParseObject_GlobalRoute_IsExplicitAndMapScoped()
+        public void ParseObject_GlobalRoute_FailsClosed_PointsToFireGlobalEvent()
         {
-            TriggerGraphMount mount = TriggerGraphMount.ParseObject(
-                (JsonObject)JsonNode.Parse(
-                    """{ "graph": "Graph.Probe", "route": "global" }""")!,
-                "map probe");
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                TriggerGraphMount.ParseObject(
+                    (JsonObject)JsonNode.Parse(
+                        """{ "graph": "Graph.Probe", "route": "global" }""")!,
+                    "map probe"))!;
 
-            Assert.That(mount.Domain, Is.EqualTo(TriggerGraphMountDomain.Map));
-            Assert.That(mount.Route, Is.EqualTo(TriggerGraphMountRoute.Global));
+            Assert.That(error.Message, Does.Contain("route"));
+            Assert.That(error.Message, Does.Contain("global"));
+            Assert.That(error.Message, Does.Contain("FireGlobalEvent"));
         }
 
         [Test]
@@ -353,7 +355,7 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(mounts[1].Name, Is.EqualTo($"TriggerGraph:{GraphName}:close"));
             Assert.That(mounts[1].EventKey, Is.EqualTo(GameEvents.MapUnloaded));
             Assert.That(resumes.Count, Is.EqualTo(2), "Each entry gets a think-wave resume companion.");
-            Assert.That(resumes[0].EventKey, Is.EqualTo(GameEvents.MapHeartbeat));
+            Assert.That(resumes[0].EventKey, Is.EqualTo(GameEvents.MapTriggerResume));
         }
 
         [Test]

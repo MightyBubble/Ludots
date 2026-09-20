@@ -81,10 +81,10 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(registry.TryGet(CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId, out var tps), Is.True);
             Assert.That(registry.TryGet(CapabilityStandardVirtualCameraShowcaseIds.FpsCameraId, out var fps), Is.True);
             Assert.That(registry.TryGet(CapabilityStandardVirtualCameraShowcaseIds.RevealShotCameraId, out var shot), Is.True);
-            Assert.That(engine.GetService(CoreServiceKeys.VisualHeightmap), Is.Not.Null);
+            Assert.That(engine.GetService(CoreServiceKeys.ContinuousHeightmap), Is.Not.Null);
             Assert.That(tactical.AllowUserInput, Is.True);
             Assert.That(behaviorOrbit!.RotateRequiresHold, Is.True);
-            Assert.That(heightmapOrbit!.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.VisualHeightmap));
+            Assert.That(heightmapOrbit!.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.ContinuousHeightmap));
             Assert.That(heightmapOrbit.RotateRequiresHold, Is.True);
             Assert.That(tps!.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
             Assert.That(tps.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
@@ -198,8 +198,8 @@ namespace Ludots.Tests.GAS.Production
 
             var manager = engine.GetService(CoreInputServiceKeys.ViewModeManager)
                 ?? throw new InvalidOperationException("ViewModeManager is required.");
-            var heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
-                ?? throw new InvalidOperationException("VisualHeightmap is required.");
+            var heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap)
+                ?? throw new InvalidOperationException("ContinuousHeightmap is required.");
             var input = engine.GetService(CoreServiceKeys.InputHandler)
                 ?? throw new InvalidOperationException("InputHandler is required.");
             var localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
@@ -221,7 +221,7 @@ namespace Ludots.Tests.GAS.Production
             var brain = engine.AuthorityCamera().VirtualCameraBrain
                 ?? throw new InvalidOperationException("VirtualCameraBrain is required.");
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitCameraId));
-            Assert.That(brain.ActiveDefinition?.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.VisualHeightmap));
+            Assert.That(brain.ActiveDefinition?.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.ContinuousHeightmap));
             Assert.That(heightmap.TrySampleHeightCm(5000f, 5000f, out float terrainHeightCm, layerIndex: 0), Is.True);
             Assert.That(
                 engine.AuthorityCamera().State.TargetHeightCm,
@@ -431,7 +431,7 @@ namespace Ludots.Tests.GAS.Production
                 behaviorInput,
                 view,
                 () => engine.WorldSizeSpec.Bounds,
-                () => engine.GetService(CoreServiceKeys.VisualHeightmap));
+                () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
             return engine;
         }
 

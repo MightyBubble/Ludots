@@ -36,11 +36,28 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
     private readonly Entity[] _projectedEntitiesByAgentIndex;
     private readonly Entity[] _projectedDomainsByAgentIndex;
     private readonly byte[] _projectedDomainValidByAgentIndex;
+    private readonly int[] _registrationOrderScratch;
+    private readonly int[] _registrationKeyScratch;
+    private readonly Entity[] _registrationEntityScratch;
+    private readonly MassNavigationAgentSeed[] _registrationSeedScratch;
+    private readonly bool[] _registrationControllableScratch;
+    private readonly int[] _scanEntityHashAgentIndices;
+    private readonly long[] _scanEntityHashes;
+    private long[] _sliceScanXor = Array.Empty<long>();
+    private long[] _sliceScanSum = Array.Empty<long>();
+    private long[] _sliceScanRotatedSum = Array.Empty<long>();
+    private int[] _sliceScanCounts = Array.Empty<int>();
     private MassNavigationSimulationRuntime? _lastSimulation;
     private long _lastAuthoringSignature;
     private uint _projectedRelationshipRevision = uint.MaxValue;
+    private bool _sliceScanReady;
+    private int _sliceScanCursor;
+    private int _sliceScanTotalBoundAgents;
+    private long[] _sliceScanSignatures = Array.Empty<long>();
 
     internal int DomainResolutionCount { get; private set; }
+    internal int LastSliceScanAgentCount { get; private set; }
+    internal int LastSliceScanSliceCount { get; private set; }
 
     public MassNavigationAuthoredAgentBindingSystem(GameEngine engine, MassNavigationConfig config)
     {
@@ -63,6 +80,13 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         _projectedEntitiesByAgentIndex = new Entity[_agentCapacity];
         _projectedDomainsByAgentIndex = new Entity[_agentCapacity];
         _projectedDomainValidByAgentIndex = new byte[_agentCapacity];
+        _registrationOrderScratch = new int[_agentCapacity];
+        _registrationKeyScratch = new int[_agentCapacity];
+        _registrationEntityScratch = new Entity[_agentCapacity];
+        _registrationSeedScratch = new MassNavigationAgentSeed[_agentCapacity];
+        _registrationControllableScratch = new bool[_agentCapacity];
+        _scanEntityHashAgentIndices = new int[_agentCapacity];
+        _scanEntityHashes = new long[_agentCapacity];
     }
 
     public void Initialize() { }
@@ -82,10 +106,20 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             _lastSimulation = simulation;
             _lastAuthoringSignature = 0L;
             _projectedRelationshipRevision = uint.MaxValue;
+            _sliceScanReady = false;
+            _sliceScanCursor = 0;
+            _sliceScanTotalBoundAgents = 0;
             ClearProjectedDomains();
         }
 
         uint relationshipRevision = ResolveRelationshipRevision();
+        if (TrySkipFullScanViaAgentSlice(simulation, relationshipRevision))
+        {
+            _projectedRelationshipRevision = relationshipRevision;
+            CompleteAgentBindingPass(simulation);
+            return;
+        }
+
         bool refreshRelationshipProjection = relationshipRevision != _projectedRelationshipRevision;
         AuthoredAgentBindingScan scan = ScanAuthoredAgentBindingState(refreshRelationshipProjection);
         if (scan.AuthoredCount <= 0)
@@ -96,6 +130,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
                 simulation.ClearAuthoredRuntimeBindings(_engine.World);
                 simulation.MarkStructuralChange();
                 _lastAuthoringSignature = 0L;
+                _sliceScanReady = false;
                 ClearProjectedDomains();
             }
 
@@ -116,6 +151,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             _lastAuthoringSignature == scan.AuthoringSignature)
         {
             _projectedRelationshipRevision = relationshipRevision;
+            StoreAgentSliceScanSignatures(in scan);
             CompleteAgentBindingPass(simulation);
             return;
         }
@@ -124,6 +160,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         {
             _lastAuthoringSignature = scan.AuthoringSignature;
             _projectedRelationshipRevision = relationshipRevision;
+            _sliceScanReady = false;
             CompleteAgentBindingPass(simulation);
             return;
         }
@@ -131,7 +168,95 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         RebuildAuthoredAgents(simulation);
         _lastAuthoringSignature = scan.AuthoringSignature;
         _projectedRelationshipRevision = relationshipRevision;
+        _sliceScanReady = false;
         CompleteAgentBindingPass(simulation);
+    }
+
+    /// <summary>
+    /// 分片绑定扫描：稳态下每 tick 只对一个 agent 索引窗口做 authoring 哈希，
+    /// 窗口签名一致即跳过全量扫描（绑定决策只走全量扫描，语义不变）；
+    /// 窗口错开落在不同 fixed tick 上，摊销 10K 量级的逐实体哈希。
+    /// 任何不一致（未绑定实体、签名漂移、关系 revision 变化、数量漂移）都回落全量路径。
+    /// </summary>
+    private bool TrySkipFullScanViaAgentSlice(MassNavigationSimulationRuntime simulation, uint relationshipRevision)
+    {
+        int sliceCount = simulation.Cadence.AgentSliceCount;
+        LastSliceScanSliceCount = sliceCount;
+        if (sliceCount <= 1 ||
+            !_sliceScanReady ||
+            _sliceScanSignatures.Length != sliceCount ||
+            relationshipRevision != _projectedRelationshipRevision)
+        {
+            LastSliceScanAgentCount = 0;
+            return false;
+        }
+
+        int boundTotal = simulation.AgentState.TotalAgents;
+        if (boundTotal <= 0 || boundTotal != _sliceScanTotalBoundAgents)
+        {
+            LastSliceScanAgentCount = 0;
+            return false;
+        }
+
+        int sliceStart = (int)(((long)boundTotal * _sliceScanCursor) / sliceCount);
+        int sliceEnd = (int)(((long)boundTotal * (_sliceScanCursor + 1)) / sliceCount);
+        long xor = 0L;
+        long sum = 0L;
+        long rotatedSum = 0L;
+        int windowAgentCount = 0;
+        int unboundCount = 0;
+        foreach (ref var chunk in _engine.World.Query(in AuthoredAgentsQuery))
+        {
+            ref Entity entityFirst = ref chunk.Entity(0);
+            Span<MassNavigationAgent> agents = chunk.GetSpan<MassNavigationAgent>();
+            bool chunkIsBound = chunk.Has<MassNavigationAgentIndex>();
+            Span<MassNavigationAgentIndex> agentIndices = chunkIsBound
+                ? chunk.GetSpan<MassNavigationAgentIndex>()
+                : default;
+            foreach (int index in chunk)
+            {
+                if (!chunkIsBound)
+                {
+                    unboundCount++;
+                    continue;
+                }
+
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                int agentIndex = agentIndices[index].Value;
+                if ((uint)agentIndex >= (uint)boundTotal)
+                {
+                    unboundCount++;
+                    continue;
+                }
+
+                if (agentIndex < sliceStart || agentIndex >= sliceEnd)
+                {
+                    continue;
+                }
+
+                MassNavigationAgent agent = agents[index];
+                long entityHash = ComputeEntityAuthoringHash(entity, in agent, RequireProjectedDomain(entity, agentIndex));
+                xor ^= entityHash;
+                sum += entityHash;
+                rotatedSum += RotateLeft(entityHash, 17);
+                windowAgentCount++;
+            }
+        }
+
+        LastSliceScanAgentCount = windowAgentCount;
+        if (unboundCount > 0)
+        {
+            return false;
+        }
+
+        long windowSignature = FinalizeAuthoringSignature(windowAgentCount, xor, sum, rotatedSum);
+        if (windowSignature != _sliceScanSignatures[_sliceScanCursor])
+        {
+            return false;
+        }
+
+        _sliceScanCursor = (_sliceScanCursor + 1) % sliceCount;
+        return true;
     }
 
     private void CompleteAgentBindingPass(MassNavigationSimulationRuntime simulation)
@@ -188,6 +313,8 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             return false;
         }
 
+        SortCollectedAgentsByEntityId();
+
         simulation.AppendAuthoredAgents(
             _engine.World,
             CollectionsMarshal.AsSpan(_entities),
@@ -209,6 +336,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         int unboundCount = 0;
         int boundCount = 0;
         bool projectedDomainChanged = false;
+        int scanHashCount = 0;
         foreach (ref var chunk in _engine.World.Query(in AuthoredAgentsQuery))
         {
             ref Entity entityFirst = ref chunk.Entity(0);
@@ -251,6 +379,12 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
                     boundSum += entityHash;
                     boundRotatedSum += RotateLeft(entityHash, 17);
                     boundCount++;
+                    if (scanHashCount < _scanEntityHashAgentIndices.Length)
+                    {
+                        _scanEntityHashAgentIndices[scanHashCount] = agentIndices[index].Value;
+                        _scanEntityHashes[scanHashCount] = entityHash;
+                        scanHashCount++;
+                    }
                 }
                 else
                 {
@@ -265,7 +399,70 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             boundCount,
             projectedDomainChanged,
             FinalizeAuthoringSignature(authoredCount, xor, sum, rotatedSum),
-            FinalizeAuthoringSignature(boundCount, boundXor, boundSum, boundRotatedSum));
+            FinalizeAuthoringSignature(boundCount, boundXor, boundSum, boundRotatedSum),
+            _scanEntityHashAgentIndices,
+            _scanEntityHashes,
+            scanHashCount);
+    }
+
+    private void StoreAgentSliceScanSignatures(in AuthoredAgentBindingScan scan)
+    {
+        int sliceCount = _lastSimulation?.Cadence.AgentSliceCount ?? 1;
+        int boundTotal = scan.BoundCount;
+        if (sliceCount <= 1 || boundTotal <= 0)
+        {
+            _sliceScanReady = false;
+            return;
+        }
+
+        if (_sliceScanSignatures.Length != sliceCount)
+        {
+            _sliceScanSignatures = new long[sliceCount];
+        }
+
+        if (_sliceScanXor.Length != sliceCount)
+        {
+            _sliceScanXor = new long[sliceCount];
+            _sliceScanSum = new long[sliceCount];
+            _sliceScanRotatedSum = new long[sliceCount];
+            _sliceScanCounts = new int[sliceCount];
+        }
+
+        Array.Clear(_sliceScanXor, 0, sliceCount);
+        Array.Clear(_sliceScanSum, 0, sliceCount);
+        Array.Clear(_sliceScanRotatedSum, 0, sliceCount);
+        Array.Clear(_sliceScanCounts, 0, sliceCount);
+        ReadOnlySpan<int> agentIndices = scan.BoundAgentIndicesAsSpan;
+        ReadOnlySpan<long> entityHashes = scan.BoundEntityHashesAsSpan;
+        for (int i = 0; i < agentIndices.Length; i++)
+        {
+            int agentIndex = agentIndices[i];
+            if ((uint)agentIndex >= (uint)boundTotal)
+            {
+                _sliceScanReady = false;
+                return;
+            }
+
+            int slice = (int)(((long)agentIndex * sliceCount) / boundTotal);
+            long entityHash = entityHashes[i];
+            _sliceScanXor[slice] ^= entityHash;
+            _sliceScanSum[slice] += entityHash;
+            _sliceScanRotatedSum[slice] += RotateLeft(entityHash, 17);
+            _sliceScanCounts[slice]++;
+        }
+
+        for (int slice = 0; slice < sliceCount; slice++)
+        {
+            _sliceScanSignatures[slice] = FinalizeAuthoringSignature(
+                _sliceScanCounts[slice],
+                _sliceScanXor[slice],
+                _sliceScanSum[slice],
+                _sliceScanRotatedSum[slice]);
+        }
+
+        _sliceScanTotalBoundAgents = boundTotal;
+        _sliceScanCursor = 0;
+        _sliceScanReady = true;
     }
 
     private long ComputeEntityAuthoringHash(Entity entity, in MassNavigationAgent agent, Entity domainRep)
@@ -372,6 +569,8 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             }
         }
 
+        SortCollectedAgentsByEntityId();
+
         simulation.RebuildFromAuthoredAgents(
             _engine.World,
             CollectionsMarshal.AsSpan(_entities),
@@ -379,6 +578,43 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             CollectionsMarshal.AsSpan(_controllableFlags));
         ClearProjectedDomains();
         StoreProjectedDomainsForBoundEntities(_entities, _seeds);
+    }
+
+    /// <summary>
+    /// 代理索引是引擎可见状态（实体上的 <see cref="MassNavigationAgentIndex"/>、求解器右行序、
+    /// 路由与命令组的成员键）。查询顺序随 archetype 拓扑变化——对代理实体挂任何组件都会把它
+    /// 挪到新 archetype、落到迭代末尾——因此注册顺序必须锚定在实体 id 上，让与 massnav 无关的
+    /// 结构变更无法重排代理索引。
+    /// </summary>
+    private void SortCollectedAgentsByEntityId()
+    {
+        int count = _entities.Count;
+        if (count <= 1)
+        {
+            return;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            _registrationOrderScratch[i] = i;
+            _registrationKeyScratch[i] = _entities[i].Id;
+        }
+
+        Array.Sort(_registrationKeyScratch, _registrationOrderScratch, 0, count);
+        for (int i = 0; i < count; i++)
+        {
+            _registrationEntityScratch[i] = _entities[i];
+            _registrationSeedScratch[i] = _seeds[i];
+            _registrationControllableScratch[i] = _controllableFlags[i];
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            int sourceIndex = _registrationOrderScratch[i];
+            _entities[i] = _registrationEntityScratch[sourceIndex];
+            _seeds[i] = _registrationSeedScratch[sourceIndex];
+            _controllableFlags[i] = _registrationControllableScratch[sourceIndex];
+        }
     }
 
     private MassNavigationAgentSeed CreateSeed(
@@ -541,7 +777,10 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             int boundCount,
             bool projectedDomainChanged,
             long authoringSignature,
-            long boundAuthoringSignature)
+            long boundAuthoringSignature,
+            int[] boundAgentIndices,
+            long[] boundEntityHashes,
+            int boundHashCount)
         {
             AuthoredCount = authoredCount;
             UnboundCount = unboundCount;
@@ -549,6 +788,9 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             ProjectedDomainChanged = projectedDomainChanged;
             AuthoringSignature = authoringSignature;
             BoundAuthoringSignature = boundAuthoringSignature;
+            BoundAgentIndices = boundAgentIndices;
+            BoundEntityHashes = boundEntityHashes;
+            BoundHashCount = boundHashCount;
         }
 
         public int AuthoredCount { get; }
@@ -557,5 +799,10 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         public bool ProjectedDomainChanged { get; }
         public long AuthoringSignature { get; }
         public long BoundAuthoringSignature { get; }
+        private int[] BoundAgentIndices { get; }
+        private long[] BoundEntityHashes { get; }
+        private int BoundHashCount { get; }
+        public ReadOnlySpan<int> BoundAgentIndicesAsSpan => BoundAgentIndices.AsSpan(0, BoundHashCount);
+        public ReadOnlySpan<long> BoundEntityHashesAsSpan => BoundEntityHashes.AsSpan(0, BoundHashCount);
     }
 }

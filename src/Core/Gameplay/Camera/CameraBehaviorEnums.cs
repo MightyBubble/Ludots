@@ -62,6 +62,6 @@ namespace Ludots.Core.Gameplay.Camera
     public enum VirtualCameraTargetHeightMode
     {
         Flat,
-        VisualHeightmap
+        ContinuousHeightmap
     }
 }

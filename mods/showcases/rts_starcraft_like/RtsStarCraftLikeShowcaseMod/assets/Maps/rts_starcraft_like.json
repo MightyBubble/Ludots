@@ -1,6 +1,12 @@
 {
   "Id": "rts_starcraft_like",
-  "Tags": ["rts", "rts_showcase", "rts_production", "starcraft_like", "sc2"],
+  "Tags": [
+    "rts",
+    "rts_showcase",
+    "rts_production",
+    "starcraft_like",
+    "sc2"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Rts",
     "TargetXCm": 6200,
@@ -11,101 +17,257 @@
     "FovYDeg": 60
   },
   "Boards": [
-    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "sc2_highlands.vtxm" }
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "DataFile": "sc2_highlands.hex",
+      "WidthCells": 16384,
+      "HeightCells": 16384
+    }
   ],
   "Entities": [
     {
       "Template": "rts_war3_peasant",
       "InstanceId": "terran_scv",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 5200, "Y": 5900 } },
-        "Name": { "Value": "Terran SCV Primitive" },
-        "Team": { "Id": 1 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5200,
+            "Y": 5900
+          }
+        },
+        "Name": {
+          "Value": "Terran SCV Primitive"
+        },
+        "Team": {
+          "Id": 1
+        }
       }
     },
     {
       "Template": "rts_war3_barracks",
       "InstanceId": "terran_barracks",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 6000, "Y": 6200 } },
-        "Name": { "Value": "Terran Barracks Primitive" },
-        "Team": { "Id": 1 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6000,
+            "Y": 6200
+          }
+        },
+        "Name": {
+          "Value": "Terran Barracks Primitive"
+        },
+        "Team": {
+          "Id": 1
+        }
       }
     },
     {
       "Template": "rts_sc2_gateway",
       "InstanceId": "protoss_gateway",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 9200, "Y": 8200 } },
-        "Name": { "Value": "Protoss Gateway" },
-        "Team": { "Id": 3 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9200,
+            "Y": 8200
+          }
+        },
+        "Name": {
+          "Value": "Protoss Gateway"
+        },
+        "Team": {
+          "Id": 3
+        }
       }
     },
     {
       "Template": "rts_sc2_probe",
       "InstanceId": "protoss_probe",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 8500, "Y": 7600 } },
-        "Name": { "Value": "Protoss Probe" },
-        "Team": { "Id": 3 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8500,
+            "Y": 7600
+          }
+        },
+        "Name": {
+          "Value": "Protoss Probe"
+        },
+        "Team": {
+          "Id": 3
+        }
       }
     },
     {
       "Template": "rts_sc2_zealot",
       "InstanceId": "protoss_zealot",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 9800, "Y": 8600 } },
-        "Name": { "Value": "Protoss Zealot" },
-        "Team": { "Id": 3 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9800,
+            "Y": 8600
+          }
+        },
+        "Name": {
+          "Value": "Protoss Zealot"
+        },
+        "Team": {
+          "Id": 3
+        }
       }
     },
     {
       "Template": "rts_zerg_drone",
       "InstanceId": "zerg_drone",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 3000, "Y": 9000 } },
-        "Name": { "Value": "Zerg Drone" },
-        "Team": { "Id": 2 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3000,
+            "Y": 9000
+          }
+        },
+        "Name": {
+          "Value": "Zerg Drone"
+        },
+        "Team": {
+          "Id": 2
+        }
       }
     },
     {
       "Template": "rts_zerg_spawning_pool",
       "InstanceId": "zerg_pool",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 3800, "Y": 9800 } },
-        "Name": { "Value": "Zerg Spawning Pool" },
-        "Team": { "Id": 2 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3800,
+            "Y": 9800
+          }
+        },
+        "Name": {
+          "Value": "Zerg Spawning Pool"
+        },
+        "Team": {
+          "Id": 2
+        }
       }
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "terran_scv" },
-    { "TeamId": 2, "RepresentativeInstanceId": "zerg_drone" },
-    { "TeamId": 3, "RepresentativeInstanceId": "protoss_probe" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "terran_scv"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "zerg_drone"
+    },
+    {
+      "TeamId": 3,
+      "RepresentativeInstanceId": "protoss_probe"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "terran_scv" },
-    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "zerg_drone" },
-    { "PlayerId": 3, "TeamId": 3, "RepresentativeInstanceId": "protoss_probe" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "terran_scv"
+    },
+    {
+      "PlayerId": 2,
+      "TeamId": 2,
+      "RepresentativeInstanceId": "zerg_drone"
+    },
+    {
+      "PlayerId": 3,
+      "TeamId": 3,
+      "RepresentativeInstanceId": "protoss_probe"
+    }
   ],
   "ParticipantRelationships": {
     "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "RtsStarCraftLike.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 2, "TypeId": "RtsStarCraftLike.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 3, "TeamB": 3, "TypeId": "RtsStarCraftLike.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 2, "TypeId": "RtsStarCraftLike.Participant", "Attitude": "Hostile", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 3, "TypeId": "RtsStarCraftLike.Participant", "Attitude": "Hostile", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 3, "TypeId": "RtsStarCraftLike.Participant", "Attitude": "Hostile", "Symmetric": true }
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "RtsStarCraftLike.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "RtsStarCraftLike.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 3,
+        "TeamB": 3,
+        "TypeId": "RtsStarCraftLike.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "RtsStarCraftLike.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 3,
+        "TypeId": "RtsStarCraftLike.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 3,
+        "TypeId": "RtsStarCraftLike.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      }
     ],
     "Players": [
-      { "PlayerA": 1, "PlayerB": 2, "TypeId": "RtsStarCraftLike.Participant", "Symmetric": true },
-      { "PlayerA": 1, "PlayerB": 3, "TypeId": "RtsStarCraftLike.Participant", "Symmetric": true },
-      { "PlayerA": 2, "PlayerB": 3, "TypeId": "RtsStarCraftLike.Participant", "Symmetric": true }
+      {
+        "PlayerA": 1,
+        "PlayerB": 2,
+        "TypeId": "RtsStarCraftLike.Participant",
+        "Symmetric": true
+      },
+      {
+        "PlayerA": 1,
+        "PlayerB": 3,
+        "TypeId": "RtsStarCraftLike.Participant",
+        "Symmetric": true
+      },
+      {
+        "PlayerA": 2,
+        "PlayerB": 3,
+        "TypeId": "RtsStarCraftLike.Participant",
+        "Symmetric": true
+      }
     ],
     "PlayerTeams": [
-      { "PlayerId": 1, "TeamId": 1, "TypeId": "RtsStarCraftLike.Participant", "Symmetric": false },
-      { "PlayerId": 2, "TeamId": 2, "TypeId": "RtsStarCraftLike.Participant", "Symmetric": false },
-      { "PlayerId": 3, "TeamId": 3, "TypeId": "RtsStarCraftLike.Participant", "Symmetric": false }
+      {
+        "PlayerId": 1,
+        "TeamId": 1,
+        "TypeId": "RtsStarCraftLike.Participant",
+        "Symmetric": false
+      },
+      {
+        "PlayerId": 2,
+        "TeamId": 2,
+        "TypeId": "RtsStarCraftLike.Participant",
+        "Symmetric": false
+      },
+      {
+        "PlayerId": 3,
+        "TeamId": 3,
+        "TypeId": "RtsStarCraftLike.Participant",
+        "Symmetric": false
+      }
     ]
   }
 }

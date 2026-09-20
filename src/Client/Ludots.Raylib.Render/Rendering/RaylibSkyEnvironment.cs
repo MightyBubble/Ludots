@@ -344,9 +344,9 @@ namespace Ludots.Raylib.Render
             _shader = RaylibShaderLoader.Load(_shaderBaseDirectory, "sky_daynight.vs", "sky_daynight.fs", "sky_daynight");
 
             EnsureShaderLocations();
-            _material = Rl.LoadMaterialDefault();
+            _material = RaylibNativeResources.LoadMaterialDefault();
             _material.shader = _shader;
-            _cubeMesh = Rl.GenMeshSphere(1f, 64, 32);
+            _cubeMesh = RaylibNativeResources.GenMeshSphere(1f, 64, 32);
             if (_cubeMesh.vertexCount <= 0)
             {
                 throw new InvalidOperationException($"{nameof(RaylibSkyEnvironment)} GenMeshSphere failed.");
@@ -480,12 +480,12 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibSkyEnvironment)} sky gradient file missing: uri='{gradientUri}' fullPath='{fullPath}'.");
             }
 
-            Texture2D texture = Rl.LoadTexture(fullPath);
+            Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
             if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
             {
                 if (texture.id != 0)
                 {
-                    Rl.UnloadTexture(texture);
+                    RaylibNativeResources.UnloadTexture(texture);
                 }
 
                 throw new InvalidOperationException(
@@ -494,7 +494,7 @@ namespace Ludots.Raylib.Render
 
             if (!descriptor.ClearRgb.HasValue && descriptor.GradientStops.Count == 0)
             {
-                Rl.UnloadTexture(texture);
+                RaylibNativeResources.UnloadTexture(texture);
                 throw new InvalidOperationException(
                     $"{nameof(RaylibSkyEnvironment)} sky '{descriptor.Id}' uses gradientUri and must also declare clearRgb or gradientStops for ClearBackground sampling.");
             }
@@ -519,13 +519,13 @@ namespace Ludots.Raylib.Render
             byte[] pixels = BakeCpuGradientPixels(descriptor, width, height);
 
             Image image = Rl.GenImageColor(width, height, new Color(0, 0, 0, 255));
-            Texture2D texture = Rl.LoadTextureFromImage(image);
+            Texture2D texture = RaylibNativeResources.LoadTextureFromImage(image);
             Rl.UnloadImage(image);
             if (texture.id == 0 || texture.width != width || texture.height != height)
             {
                 if (texture.id != 0)
                 {
-                    Rl.UnloadTexture(texture);
+                    RaylibNativeResources.UnloadTexture(texture);
                 }
 
                 throw new InvalidOperationException(
@@ -643,7 +643,7 @@ namespace Ludots.Raylib.Render
         {
             if (_gradientTexture.id != 0)
             {
-                Rl.UnloadTexture(_gradientTexture);
+                RaylibNativeResources.UnloadTexture(_gradientTexture);
                 _gradientTexture = default;
             }
 
@@ -654,20 +654,20 @@ namespace Ludots.Raylib.Render
 
             if (_cubeMesh.vertexCount > 0)
             {
-                Rl.UnloadMesh(_cubeMesh);
+                RaylibNativeResources.UnloadMesh(_cubeMesh);
                 _cubeMesh = default;
             }
 
             if (_material.maps != null)
             {
                 _material.shader = default;
-                Rl.UnloadMaterial(_material);
+                RaylibNativeResources.UnloadMaterial(_material);
                 _material = default;
             }
 
             if (_shader.id != 0)
             {
-                Rl.UnloadShader(_shader);
+                RaylibNativeResources.UnloadShader(_shader);
                 _shader = default;
             }
 

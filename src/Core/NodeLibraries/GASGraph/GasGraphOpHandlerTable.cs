@@ -10,6 +10,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
@@ -65,6 +66,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             if (extensions == null) throw new ArgumentNullException(nameof(extensions));
             extensions.InstallHandlers(Handlers);
+            for (int opCode = GasGraphOpRegistry.FirstModOpCode; opCode < Handlers.Length; opCode++)
+            {
+                if (!extensions.TryGet(opCode, out GasGraphOpDefinition definition))
+                {
+                    continue;
+                }
+
+                _descriptions[opCode] = definition.Key;
+                _operationMetadata[opCode] = EffectOperationMetadata.Pure(definition.Key);
+            }
         }
 
         /// <summary>
@@ -166,6 +177,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.FanOutDispatchEffect or
                 GraphNodeOp.FanOutDispatchEffectDynamic or
                 GraphNodeOp.ModifyAttributeAdd or
+                GraphNodeOp.ModifyAttributeSet or
                 GraphNodeOp.SendEvent or
                 GraphNodeOp.WriteBlackboardFloat or
                 GraphNodeOp.WriteBlackboardInt or
@@ -251,7 +263,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.RelationshipAggAverageMetric or
                 GraphNodeOp.QueryAllMapEntities or
                 GraphNodeOp.QueryFromCollection or
+                GraphNodeOp.QueryScreenRegionCollection or
+                GraphNodeOp.QueryCollectActiveEffects or
+                GraphNodeOp.QueryCollectEffectTemplates or
+                GraphNodeOp.QueryCollectAbilitySlots or
+                GraphNodeOp.QueryCollectInventoryItems or
+                GraphNodeOp.QueryCollectItemDefinitions or
+                GraphNodeOp.QueryCollectPresentTags or
+                GraphNodeOp.QueryCollectActiveTasks or
+                GraphNodeOp.QueryCollectActiveActivities or
+                GraphNodeOp.QueryCollectProgressionNodes or
+                GraphNodeOp.QueryCollectAbilityHolders or
+                GraphNodeOp.QueryCollectActiveDialogueChoices or
+                GraphNodeOp.LoadEffectTiming or
+                GraphNodeOp.LoadEffectStack or
                 GraphNodeOp.QueryFilterTeam or
+                GraphNodeOp.QueryFilterControllable or
                 GraphNodeOp.QueryFilterTemplate or
                 GraphNodeOp.QueryFilterAttributeRange or
                 GraphNodeOp.QueryFilterTagAny or
@@ -305,19 +332,45 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.WriteMapVarFloat or
                 GraphNodeOp.SpawnTemplate or
                 GraphNodeOp.SetWorldPosition or
+                GraphNodeOp.SetInteractionMode or
+                GraphNodeOp.SetPanelAudience or
                 GraphNodeOp.InvokeGraph or
                 GraphNodeOp.StoreArgInt or
                 GraphNodeOp.StoreArgFloat or
                 GraphNodeOp.StoreArgEntity or
                 GraphNodeOp.DispatchMapEvent or
+                GraphNodeOp.OfferActivity or
+                GraphNodeOp.OfferTask or
                 GraphNodeOp.AwaitCallback or
                 GraphNodeOp.ConstText or
                 GraphNodeOp.ConcatText or
                 GraphNodeOp.IntToText or
                 GraphNodeOp.FloatToText or
                 GraphNodeOp.SinkPresentationText or
-                GraphNodeOp.LoadTextKey
+                GraphNodeOp.LoadTextKey or
+                GraphNodeOp.StartDialogue or
+                GraphNodeOp.LoadEntityPosX or
+                GraphNodeOp.LoadEntityPosY or
+                GraphNodeOp.IntToFloat or
+                GraphNodeOp.FloatToInt or
+                GraphNodeOp.SqrtFloat or
+                GraphNodeOp.LoadOrderTypeId or
+                GraphNodeOp.LoadEntityPosValid or
+                GraphNodeOp.ScreenPointToGround or
+                GraphNodeOp.ScreenPointToEntity or
+                GraphNodeOp.ScreenRegionToEntities or
+                GraphNodeOp.PointToDirection or
+                GraphNodeOp.StickToDirection or
+                GraphNodeOp.LoadPointerScreenX or
+                GraphNodeOp.LoadPointerScreenY or
+                GraphNodeOp.ActivateContext or
+                GraphNodeOp.DeactivateContext or
+                GraphNodeOp.WriteCollection or GraphNodeOp.BindQueryCollection
                     => EffectOperationMetadata.Pure(description),
+
+                GraphNodeOp.SubmitAssignedOrder or
+                GraphNodeOp.CompleteActiveOrder
+                    => EffectOperationMetadata.Unsupported(EffectAtomicDomain.Order, description),
 
                 _ => throw new InvalidOperationException(
                     $"Executable graph opcode '{op}' is missing explicit effect operation metadata."),
@@ -341,6 +394,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         internal static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers, int startPc = 0)
         {
+            ArgumentNullException.ThrowIfNull(handlers);
+
             if (state.CallStack.Length < GraphVmLimits.MaxCallStackDepth)
             {
                 throw new InvalidOperationException(
@@ -747,14 +802,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.QueryLine, HandleQueryLine, "QueryLine graph opcode.");
             Register(GraphNodeOp.QueryFilterNotEntity, HandleQueryFilterNotEntity, "QueryFilterNotEntity graph opcode.");
             Register(GraphNodeOp.QueryFilterLayer, HandleQueryFilterLayer, "QueryFilterLayer graph opcode.");
+            Register(GraphNodeOp.QueryFilterControllable, HandleQueryFilterControllable, "QueryFilterControllable graph opcode.");
             Register(GraphNodeOp.QueryFilterRelationship, HandleQueryFilterRelationship, "QueryFilterRelationship graph opcode.");
             Register(GraphNodeOp.AggCount, HandleAggCount, "AggCount graph opcode.");
             Register(GraphNodeOp.AggMinByDistance, HandleAggMinByDistance, "AggMinByDistance graph opcode.");
             Register(GraphNodeOp.TargetListGet, HandleTargetListGet, "TargetListGet graph opcode.");
             Register(GraphNodeOp.ApplyEffectTemplate, HandleApplyEffectTemplate, "ApplyEffectTemplate graph opcode.");
+            Register(GraphNodeOp.SubmitAssignedOrder, HandleSubmitAssignedOrder, "SubmitAssignedOrder graph opcode.");
+            Register(GraphNodeOp.LoadOrderTypeId, HandleLoadOrderTypeId, "LoadOrderTypeId graph opcode.");
+            Register(GraphNodeOp.LoadEntityPosValid, HandleLoadEntityPosValid, "LoadEntityPosValid graph opcode.");
+            Register(GraphNodeOp.CompleteActiveOrder, HandleCompleteActiveOrder, "CompleteActiveOrder graph opcode.");
             Register(GraphNodeOp.FanOutApplyEffect, HandleFanOutApplyEffect, "FanOutApplyEffect graph opcode.");
             Register(GraphNodeOp.RemoveEffectTemplate, HandleRemoveEffectTemplate, "RemoveEffectTemplate graph opcode.");
             Register(GraphNodeOp.ModifyAttributeAdd, HandleModifyAttributeAdd, "ModifyAttributeAdd graph opcode.");
+            Register(GraphNodeOp.ModifyAttributeSet, HandleModifyAttributeSet, "ModifyAttributeSet graph opcode.");
             Register(GraphNodeOp.SendEvent, HandleSendEvent, "SendEvent graph opcode.");
             Register(GraphNodeOp.RelationshipEnsureLink, HandleRelationshipEnsureLink, "RelationshipEnsureLink graph opcode.");
             Register(GraphNodeOp.RelationshipRemoveLink, HandleRelationshipRemoveLink, "RelationshipRemoveLink graph opcode.");
@@ -778,6 +839,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.RelationshipAggMinEntityByMetric, HandleRelationshipAggMinEntityByMetric, "RelationshipAggMinEntityByMetric graph opcode.");
             Register(GraphNodeOp.QueryAllMapEntities, HandleQueryAllMapEntities, "QueryAllMapEntities graph opcode.");
             Register(GraphNodeOp.QueryFromCollection, HandleQueryFromCollection, "QueryFromCollection graph opcode.");
+            Register(GraphNodeOp.QueryScreenRegionCollection, HandleQueryScreenRegionCollection, "QueryScreenRegionCollection graph opcode.");
+            Register(GraphNodeOp.QueryCollectActiveEffects, HandleQueryCollectActiveEffects, "QueryCollectActiveEffects graph opcode.");
+            Register(GraphNodeOp.QueryCollectEffectTemplates, HandleQueryCollectEffectTemplates, "QueryCollectEffectTemplates graph opcode.");
+            Register(GraphNodeOp.QueryCollectAbilitySlots, HandleQueryCollectAbilitySlots, "QueryCollectAbilitySlots graph opcode.");
+            Register(GraphNodeOp.QueryCollectInventoryItems, HandleQueryCollectInventoryItems, "QueryCollectInventoryItems graph opcode.");
+            Register(GraphNodeOp.QueryCollectItemDefinitions, HandleQueryCollectItemDefinitions, "QueryCollectItemDefinitions graph opcode.");
+            Register(GraphNodeOp.QueryCollectPresentTags, HandleQueryCollectPresentTags, "QueryCollectPresentTags graph opcode.");
+            Register(GraphNodeOp.QueryCollectActiveTasks, HandleQueryCollectActiveTasks, "QueryCollectActiveTasks graph opcode.");
+            Register(GraphNodeOp.QueryCollectActiveActivities, HandleQueryCollectActiveActivities, "QueryCollectActiveActivities graph opcode.");
+            Register(GraphNodeOp.QueryCollectProgressionNodes, HandleQueryCollectProgressionNodes, "QueryCollectProgressionNodes graph opcode.");
+            Register(GraphNodeOp.QueryCollectAbilityHolders, HandleQueryCollectAbilityHolders, "QueryCollectAbilityHolders graph opcode.");
+            Register(GraphNodeOp.QueryCollectActiveDialogueChoices, HandleQueryCollectActiveDialogueChoices, "QueryCollectActiveDialogueChoices graph opcode.");
+            Register(GraphNodeOp.ScreenPointToGround, HandleScreenPointToGround, "ScreenPointToGround graph opcode.");
+            Register(GraphNodeOp.ScreenPointToEntity, HandleScreenPointToEntity, "ScreenPointToEntity graph opcode.");
+            Register(GraphNodeOp.ScreenRegionToEntities, HandleScreenRegionToEntities, "ScreenRegionToEntities graph opcode.");
+            Register(GraphNodeOp.PointToDirection, HandlePointToDirection, "PointToDirection graph opcode.");
+            Register(GraphNodeOp.StickToDirection, HandleStickToDirection, "StickToDirection graph opcode.");
+            Register(GraphNodeOp.LoadPointerScreenX, HandleLoadPointerScreenX, "LoadPointerScreenX graph opcode.");
+            Register(GraphNodeOp.LoadPointerScreenY, HandleLoadPointerScreenY, "LoadPointerScreenY graph opcode.");
+            Register(GraphNodeOp.LoadEffectTiming, HandleLoadEffectTiming, "LoadEffectTiming graph opcode.");
+            Register(GraphNodeOp.LoadEffectStack, HandleLoadEffectStack, "LoadEffectStack graph opcode.");
             Register(GraphNodeOp.QueryFilterTeam, HandleQueryFilterTeam, "QueryFilterTeam graph opcode.");
             Register(GraphNodeOp.QueryFilterTemplate, HandleQueryFilterTemplate, "QueryFilterTemplate graph opcode.");
             Register(GraphNodeOp.QueryFilterAttributeRange, HandleQueryFilterAttributeRange, "QueryFilterAttributeRange graph opcode.");
@@ -859,6 +941,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.CreatePanel, HandleCreatePanel, "CreatePanel graph opcode.");
         Register(GraphNodeOp.SpawnTemplate, HandleSpawnTemplate, "SpawnTemplate graph opcode.");
         Register(GraphNodeOp.SetWorldPosition, HandleSetWorldPosition, "SetWorldPosition graph opcode.");
+            Register(GraphNodeOp.SetInteractionMode, HandleSetInteractionMode, "SetInteractionMode graph opcode.");
+            Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
+            Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
+            Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
+            Register(GraphNodeOp.BindQueryCollection, HandleBindQueryCollection, "BindQueryCollection graph opcode.");
+        Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
             Register(GraphNodeOp.ReadMapVarInt, HandleReadMapVarInt, "ReadMapVarInt graph opcode.");
@@ -875,8 +963,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.ConcatText, HandleConcatText, "ConcatText graph opcode.");
             Register(GraphNodeOp.IntToText, HandleIntToText, "IntToText graph opcode.");
             Register(GraphNodeOp.FloatToText, HandleFloatToText, "FloatToText graph opcode.");
+            Register(GraphNodeOp.LoadEntityPosX, HandleLoadEntityPosX, "LoadEntityPosX graph opcode.");
+            Register(GraphNodeOp.LoadEntityPosY, HandleLoadEntityPosY, "LoadEntityPosY graph opcode.");
+            Register(GraphNodeOp.IntToFloat, HandleIntToFloat, "IntToFloat graph opcode.");
+            Register(GraphNodeOp.FloatToInt, HandleFloatToInt, "FloatToInt graph opcode.");
+            Register(GraphNodeOp.SqrtFloat, HandleSqrtFloat, "SqrtFloat graph opcode.");
             Register(GraphNodeOp.SinkPresentationText, HandleSinkPresentationText, "SinkPresentationText graph opcode.");
             Register(GraphNodeOp.LoadTextKey, HandleLoadTextKey, "LoadTextKey graph opcode.");
+            Register(GraphNodeOp.OfferActivity, HandleOfferActivity, "OfferActivity graph opcode.");
+            Register(GraphNodeOp.OfferTask, HandleOfferTask, "OfferTask graph opcode.");
+            Register(GraphNodeOp.StartDialogue, HandleStartDialogue, "StartDialogue graph opcode.");
         }
 
         // ── Value Ops ──
@@ -959,6 +1055,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleLoadTextKey(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             RequireTextHeap(ref s).Write(ins.Dst, s.Api.ResolvePresentationTextKey(ins.Imm));
+        }
+
+
+        private static void HandleStartDialogue(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.StartDialogue(ins.Imm);
         }
 
         private static GraphTextHeap RequireTextHeap(ref GraphExecutionState s)
@@ -1081,8 +1183,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             var targetList = new GraphTargetList(targets);
+            var intIdList = new GraphIntIdList(intIds);
             e[0] = s.Caster;
             e[1] = s.ExplicitTarget;
             e[2] = s.E.Length > 2 ? s.E[2] : default;
@@ -1109,6 +1213,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     E = e,
                     Targets = targets,
                     TargetList = targetList,
+                    IntIds = intIds,
+                    IntIdList = intIdList,
+                    SubjectIntId = s.SubjectIntId,
                     CallStack = callStack,
                     Text = text,
                     Status = GraphExecutionStatus.Running,
@@ -1134,7 +1241,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.I[ins.Dst] = s.I[ins.A];
         }
 
-        // ── TriggerGraph subgraph reuse + structured dispatch (#1116/#1115) ──
+        // ── TriggerGraph subgraph reuse + structured dispatch ──
 
         private static void HandleStoreArgInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
@@ -1182,7 +1289,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int graphId = ins.Imm;
             if (graphId <= 0)
             {
-                throw new InvalidOperationException("InvokeGraph requires a positive TriggerGraph graph id in Imm.");
+                throw new InvalidOperationException("InvokeGraph requires a positive graph id in Imm.");
             }
 
             if ((ins.Flags & GraphInstructionFlags.FuncLibName) != 0)
@@ -1191,7 +1298,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     "GAS.GRAPH.ERR.InvokeGraphGraphKeyUnresolved: InvokeGraph.functionName was never patched to a graph id at load time.");
             }
 
-            s.Programs.RequireKind(graphId, GraphKind.TriggerGraph);
+            if (!s.Programs.TryGetKind(graphId, out GraphKind childKind) ||
+                childKind is not (GraphKind.TriggerGraph or GraphKind.Query))
+            {
+                throw new InvalidOperationException(
+                    $"InvokeGraph target graph id {graphId} must be TriggerGraph or Query (host→function); got '{childKind}'.");
+            }
+
             if (!s.Programs.TryGetRegistration(graphId, out GraphProgramRegistration childRegistration))
             {
                 throw new InvalidOperationException($"InvokeGraph target graph id {graphId} is not registered.");
@@ -1203,7 +1316,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"InvokeGraph target graph id {graphId} contains Yield; nested Yield is not supported in this slice.");
             }
 
-            int startPc = ResolveInvokeGraphEntry(in ins, childRegistration, graphId);
+            int startPc = childKind == GraphKind.TriggerGraph
+                ? ResolveInvokeGraphEntry(in ins, childRegistration, graphId)
+                : 0;
             ReadOnlySpan<GraphInstruction> childProgram = childRegistration.Program;
 
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
@@ -1211,8 +1326,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             var targetList = new GraphTargetList(targets);
+            var intIdList = new GraphIntIdList(intIds);
             e[0] = s.Caster;
             e[1] = s.ExplicitTarget;
 
@@ -1239,6 +1356,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     E = e,
                     Targets = targets,
                     TargetList = targetList,
+                    IntIds = intIds,
+                    IntIdList = intIdList,
+                    SubjectIntId = s.SubjectIntId,
                     CallStack = callStack,
                     Text = text,
                     Status = GraphExecutionStatus.Running,
@@ -1252,6 +1372,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Execute(ref child, childProgram, Instance, startPc);
                 s.TreeSteps = child.TreeSteps;
                 s.I[ins.Dst] = child.ReturnInt;
+                // Query (and Trigger) callees may leave a TargetList; copy back so the host can
+                // WriteCollection / continue without re-running the hit chain.
+                int hitCount = child.TargetList.Count;
+                if (hitCount > s.Targets.Length)
+                {
+                    s.Targets = s.Api.GetEntityQueryBuffer(s.InvokeDepth, hitCount);
+                    s.TargetList = new GraphTargetList(s.Targets);
+                }
+
+                child.Targets.Slice(0, hitCount).CopyTo(s.Targets);
+                s.TargetList.SetCount(hitCount);
                 s.InvokeArgs?.Clear();
             }
             finally
@@ -1305,7 +1436,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     : s.MapScope.Value;
             if (globalScope)
             {
-                // Global dispatch (#1123): the origin map rides the context as transport
+                // Global dispatch: the origin map rides the context as transport
                 // metadata; an unmapped caster only means no origin stamp, not an error.
                 s.Api.FireGlobalEventPayload(ins.Imm, mapId, s.InvokeArgs);
                 s.InvokeArgs?.Clear();
@@ -1329,6 +1460,42 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.InvokeArgs?.Clear();
         }
 
+        private static void HandleOfferActivity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (s.Programs == null ||
+                !s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration))
+            {
+                throw new InvalidOperationException(
+                    "OfferActivity requires a registered program so Symbols[Imm] can supply the activity id.");
+            }
+
+            if ((uint)ins.Imm >= (uint)registration.Symbols.Length)
+            {
+                throw new InvalidOperationException(
+                    $"OfferActivity Imm {ins.Imm} is outside program symbol table length {registration.Symbols.Length}.");
+            }
+
+            s.Api.OfferActivity(registration.Symbols[ins.Imm], s.E[ins.A]);
+        }
+
+        private static void HandleOfferTask(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (s.Programs == null ||
+                !s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration))
+            {
+                throw new InvalidOperationException(
+                    "OfferTask requires a registered program so Symbols[Imm] can supply the task id.");
+            }
+
+            if ((uint)ins.Imm >= (uint)registration.Symbols.Length)
+            {
+                throw new InvalidOperationException(
+                    $"OfferTask Imm {ins.Imm} is outside program symbol table length {registration.Symbols.Length}.");
+            }
+
+            s.Api.OfferTask(registration.Symbols[ins.Imm], s.E[ins.A]);
+        }
+
         private static MapId ResolveMapOfEntity(ref GraphExecutionState s, Entity entity)
         {
             return s.World != null && s.World.IsAlive(entity) && s.World.TryGet<MapEntity>(entity, out MapEntity mapEntity)
@@ -1336,7 +1503,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 : new MapId(string.Empty);
         }
 
-        // ── Generic lookup tables (#881) ──
+        // ── Generic lookup tables ──
 
         private static void HandleResolveTableRow(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
@@ -1352,7 +1519,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleShowPanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // Panel show request; the UI records the decision without orchestrating (#1014).
+            // Panel show request; the UI records the decision without orchestrating.
             s.Api.ShowPanel(ins.Imm);
         }
 
@@ -1382,6 +1549,52 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
             s.Api.SetWorldPosition(target, s.I[ins.B], s.I[ins.C]);
+        }
+
+        private static void HandleSetInteractionMode(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.SetInteractionMode(target, ins.Imm);
+        }
+
+        private static void HandleActivateContext(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.ActivateContext(
+                target,
+                ContextOpEncoding.UnpackContext(ins.Imm),
+                ContextOpEncoding.UnpackParent(ins.Imm));
+        }
+
+        private static void HandleDeactivateContext(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.DeactivateContext(target, ContextOpEncoding.UnpackContext(ins.Imm));
+        }
+
+        private static void HandleWriteCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // Optional source resolves the owner entity; absent, the writing rep (caster).
+            Entity owner = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.WriteCollection(
+                ins.Imm,
+                s.I[ins.B],
+                owner,
+                s.Targets,
+                s.TargetList.Count);
+        }
+
+        private static void HandleBindQueryCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.BindQueryCollection(s.E[ins.A], BitConverter.SingleToInt32Bits(ins.ImmF), ins.Imm,
+                s.Programs ?? throw new InvalidOperationException("ENTITY_QUERY.ERR.ProgramRegistryMissing"));
+        }
+
+        private static void HandleSetPanelAudience(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SetPanelAudience(
+                UI.PanelHosting.PanelOpEncoding.UnpackTemplate(ins.Imm),
+                UI.PanelHosting.PanelOpEncoding.UnpackAudienceSeat(ins.Imm));
         }
 
         private static void HandleSpawnTemplate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1569,6 +1782,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.TargetList.SetCount(s.Api.FilterLayer(s.Targets, s.TargetList.Count, unchecked((uint)ins.Imm)));
         }
 
+        private static void HandleQueryFilterControllable(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.FilterControllable(s.Targets, s.TargetList.Count, s.E[ins.A]));
+        }
+
         private static void HandleQueryFilterRelationship(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.TargetList.SetCount(s.Api.FilterTeamRelationship(
@@ -1614,6 +1832,89 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
         }
 
+        private static void HandleSubmitAssignedOrder(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SubmitAssignedOrder(s.Caster, s.E[ins.A], ins.Imm, s.I[ins.B], s.I[ins.C]);
+        }
+
+        private static void HandleCompleteActiveOrder(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.CompleteActiveOrder(s.Caster);
+        }
+
+        private static void HandleLoadEntityPosX(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (TryResolveEntityPositionCm(ref s, ins.A, out WorldCmInt2 position))
+            {
+                s.I[ins.Dst] = position.X;
+                s.B[ins.Flags] = 1;
+            }
+            else
+            {
+                s.I[ins.Dst] = 0;
+                s.B[ins.Flags] = 0;
+            }
+        }
+
+        private static void HandleLoadEntityPosY(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (TryResolveEntityPositionCm(ref s, ins.A, out WorldCmInt2 position))
+            {
+                s.I[ins.Dst] = position.Y;
+                s.B[ins.Flags] = 1;
+            }
+            else
+            {
+                s.I[ins.Dst] = 0;
+                s.B[ins.Flags] = 0;
+            }
+        }
+
+        private static void HandleLoadOrderTypeId(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = ins.Imm;
+        }
+
+        private static void HandleLoadEntityPosValid(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.B[ins.Dst] = TryResolveEntityPositionCm(ref s, ins.A, out _) ? (byte)1 : (byte)0;
+        }
+
+        private static bool TryResolveEntityPositionCm(ref GraphExecutionState s, byte entityRegister, out WorldCmInt2 position)
+        {
+            var entity = s.E[entityRegister];
+            if (!s.World.IsAlive(entity) || !s.World.Has<WorldPositionCm>(entity))
+            {
+                position = default;
+                return false;
+            }
+
+            position = s.World.Get<WorldPositionCm>(entity).ToWorldCmInt2();
+            return true;
+        }
+
+        private static void HandleIntToFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.F[ins.Dst] = s.I[ins.A];
+        }
+
+        private static void HandleFloatToInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = (int)MathF.Round(s.F[ins.A], MidpointRounding.AwayFromZero);
+        }
+
+        private static void HandleSqrtFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            float value = s.F[ins.A];
+            if (value < 0f)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SqrtNegativeInput: SqrtFloat on F[{ins.A}]={value}.");
+            }
+
+            s.F[ins.Dst] = MathF.Sqrt(value);
+        }
+
         private static void HandleModifyAttributeAdd(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             var target = s.E[ins.A];
@@ -1621,6 +1922,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 s.Api.ModifyAttributeAdd(s.Caster, target, ins.Imm, s.F[ins.B]);
             }
+        }
+
+        private static void HandleModifyAttributeSet(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = s.E[ins.A];
+            if (!s.World.IsAlive(target))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ModifyAttributeSetTargetDead: target entity {target} is not alive.");
+            }
+
+            if (!s.World.Has<AttributeBuffer>(target))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ModifyAttributeSetTargetMissingAttributes: target entity {target} has no AttributeBuffer.");
+            }
+
+            s.Api.ModifyAttributeSet(s.Caster, target, ins.Imm, s.F[ins.B]);
         }
 
         private static void HandleRemoveEffectTemplate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1697,16 +2016,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleRelationshipSetMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            int reasonId = ins.Dst == byte.MaxValue ? 0 : ins.Dst;
             int typeId = RequireExplicitRelationshipTypeId(ins.Flags);
-            s.Api.SetRelationshipMetric(s.E[ins.A], s.E[ins.B], ins.Imm, s.I[ins.C], reasonId, typeId);
+            s.Api.SetRelationshipMetric(s.E[ins.A], s.E[ins.B], ins.Imm, s.I[ins.C], typeId);
         }
 
         private static void HandleRelationshipAddMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            int reasonId = ins.Dst == byte.MaxValue ? 0 : ins.Dst;
             int typeId = RequireExplicitRelationshipTypeId(ins.Flags);
-            s.Api.AddRelationshipMetric(s.E[ins.A], s.E[ins.B], ins.Imm, s.I[ins.C], reasonId, typeId);
+            s.Api.AddRelationshipMetric(s.E[ins.A], s.E[ins.B], ins.Imm, s.I[ins.C], typeId);
         }
 
         private static void HandleRelationshipGetMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1721,9 +2038,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleRelationshipSetFlag(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            int reasonId = ins.Dst == byte.MaxValue ? 0 : ins.Dst;
             int typeId = RequireExplicitRelationshipTypeId(ins.Flags);
-            s.Api.SetRelationshipFlag(s.E[ins.A], s.E[ins.B], ins.Imm, s.B[ins.C] != 0, reasonId, typeId);
+            s.Api.SetRelationshipFlag(s.E[ins.A], s.E[ins.B], ins.Imm, s.B[ins.C] != 0, typeId);
         }
 
         private static void HandleRelationshipQueryOutgoing(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1849,12 +2165,255 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleQueryAllMapEntities(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.CollectMapEntities(s.Targets));
+            GraphEntityQueryPlan? plan = null;
+            if (s.Programs != null && s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration) &&
+                registration.EntityQueries.TryGetValue(s.CurrentInstructionPc, out GraphEntityQueryPlan? compiled))
+            {
+                plan = compiled;
+            }
+            Span<Entity> result = s.Api.QueryMapEntities(plan, s.MapScope, s.I, s.F, s.InvokeDepth);
+            SetQueryResult(ref s, result);
         }
 
         private static void HandleQueryFromCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.CopyEntityCollection(s.E[ins.A], ins.Imm, s.Targets));
+            Span<Entity> result = s.Api.QueryCollection(s.E[ins.A], ins.Imm, s.InvokeDepth);
+            SetQueryResult(ref s, result);
+        }
+
+        private static void SetQueryResult(ref GraphExecutionState s, Span<Entity> result)
+        {
+            if (result.Length > s.Targets.Length)
+                s.Targets = s.Api.GetEntityQueryBuffer(s.InvokeDepth, result.Length);
+            result.CopyTo(s.Targets);
+            s.TargetList = new GraphTargetList(s.Targets);
+            s.TargetList.SetCount(result.Length);
+        }
+
+        private static void HandleQueryCollectActiveEffects(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.CollectActiveEffects(s.E[ins.A], s.Targets));
+        }
+
+        private static void HandleScreenPointToGround(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string? seatId = ResolveSeatSymbol(ins.Imm, nameof(GraphNodeOp.ScreenPointToGround));
+            if (s.Api.TryScreenPointToGround(s.F[ins.A], s.F[ins.B], seatId, out IntVector2 groundCm))
+            {
+                s.B[ins.Dst] = 1;
+                s.TargetPosCm = groundCm;
+            }
+            else
+            {
+                s.B[ins.Dst] = 0;
+            }
+        }
+
+        private static void HandleScreenPointToEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string? seatId = ResolveSeatSymbol(ins.Imm, nameof(GraphNodeOp.ScreenPointToEntity));
+            s.E[ins.Dst] = s.Api.PickScreenPointEntity(
+                s.Targets,
+                s.TargetList.Count,
+                s.E[ins.A],
+                seatId,
+                s.F[ins.B],
+                s.F[ins.C],
+                ins.ImmF);
+        }
+
+        private static void HandleScreenRegionToEntities(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string? seatId = ResolveSeatSymbol(ins.Imm, nameof(GraphNodeOp.ScreenRegionToEntities));
+            var rect = ScreenRect.FromPoints(
+                new System.Numerics.Vector2(s.F[ins.A], s.F[ins.B]),
+                new System.Numerics.Vector2(s.F[ins.C], s.F[ins.Flags]));
+            s.TargetList.SetCount(s.Api.FilterScreenRegionEntities(s.Targets, s.TargetList.Count, in rect, seatId));
+        }
+
+        private static void HandleQueryScreenRegionCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string? seat = ResolveSeatSymbol(ins.Imm, nameof(GraphNodeOp.QueryScreenRegionCollection));
+            var rect = ScreenRect.FromPoints(new System.Numerics.Vector2(s.F[ins.A], s.F[ins.B]),
+                new System.Numerics.Vector2(s.F[ins.C], s.F[ins.Flags]));
+            SetQueryResult(ref s, s.Api.QueryScreenRegionCollection(s.E[ins.Dst], BitConverter.SingleToInt32Bits(ins.ImmF),
+                rect, seat, s.InvokeDepth));
+        }
+
+        private static string? ResolveSeatSymbol(int seatKeyId, string operation)
+        {
+            string? seatId = seatKeyId > 0
+                ? Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(seatKeyId)
+                : null;
+            if (seatKeyId > 0 && string.IsNullOrWhiteSpace(seatId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.AimSourceSeatKey: {operation} references unregistered seat key id {seatKeyId}.");
+            }
+
+            return seatId;
+        }
+
+        private static void HandlePointToDirection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (ins.Flags != byte.MaxValue)
+            {
+                s.B[ins.Flags] = 0;
+            }
+
+            s.F[ins.Dst] = 0f;
+            Entity rep = s.E[ins.A];
+            if (s.World == null ||
+                !s.World.IsAlive(rep) ||
+                !s.World.TryGet<WorldPositionCm>(rep, out WorldPositionCm position))
+            {
+                return;
+            }
+
+            float dx = s.TargetPosCm.X - position.Value.X.ToFloat();
+            float dy = s.TargetPosCm.Y - position.Value.Y.ToFloat();
+            if (dx == 0f && dy == 0f)
+            {
+                return;
+            }
+
+            if (ins.Flags != byte.MaxValue)
+            {
+                s.B[ins.Flags] = 1;
+            }
+
+            s.F[ins.Dst] = MathF.Atan2(dy, dx) * (180f / MathF.PI);
+        }
+
+        private static void HandleStickToDirection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            const float DeadzoneSquared = 1e-6f;
+            if (ins.Flags != byte.MaxValue)
+            {
+                s.B[ins.Flags] = 0;
+            }
+
+            s.F[ins.Dst] = 0f;
+            float x = s.F[ins.A];
+            float y = s.F[ins.B];
+            if ((x * x) + (y * y) < DeadzoneSquared)
+            {
+                return;
+            }
+
+            if (ins.Flags != byte.MaxValue)
+            {
+                s.B[ins.Flags] = 1;
+            }
+
+            s.F[ins.Dst] = MathF.Atan2(y, x) * (180f / MathF.PI);
+        }
+
+        private static void HandleLoadPointerScreenX(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (!s.Api.TryReadLivePointerScreen(out float screenX, out _))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.LivePointerUnavailable: LoadPointerScreenX requires an authoritative pointer snapshot.");
+            }
+
+            s.F[ins.Dst] = screenX;
+        }
+
+        private static void HandleLoadPointerScreenY(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (!s.Api.TryReadLivePointerScreen(out _, out float screenY))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.LivePointerUnavailable: LoadPointerScreenY requires an authoritative pointer snapshot.");
+            }
+
+            s.F[ins.Dst] = screenY;
+        }
+
+        private static void HandleQueryCollectEffectTemplates(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.IntIdList.SetCount(s.Api.CollectEffectTemplateIds(s.IntIds));
+        }
+
+        private static void HandleQueryCollectAbilitySlots(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.IntIdList.SetCount(s.Api.CollectAbilitySlots(s.E[ins.A], s.IntIds));
+        }
+
+        private static void HandleQueryCollectInventoryItems(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.CollectInventoryItems(s.E[ins.A], s.Targets));
+        }
+
+        private static void HandleQueryCollectItemDefinitions(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.IntIdList.SetCount(s.Api.CollectItemDefinitionIds(s.IntIds));
+        }
+
+        private static void HandleQueryCollectPresentTags(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.IntIdList.SetCount(s.Api.CollectPresentTags(s.E[ins.A], s.IntIds));
+        }
+
+        private static void HandleQueryCollectActiveTasks(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.CollectActiveTasks(s.E[ins.A], s.Targets));
+        }
+
+        private static void HandleQueryCollectActiveActivities(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.CollectActiveActivities(s.E[ins.A], s.Targets));
+        }
+
+        private static void HandleQueryCollectProgressionNodes(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.IntIdList.SetCount(s.Api.CollectProgressionNodes(s.E[ins.A], s.IntIds));
+        }
+
+        private static void HandleQueryCollectActiveDialogueChoices(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.IntIdList.SetCount(s.Api.CollectActiveDialogueChoices(s.IntIds));
+        }
+
+        private static void HandleQueryCollectAbilityHolders(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Span<Entity> candidates = s.TargetList.Span;
+            Span<Entity> scratch = stackalloc Entity[GraphVmLimits.MaxTargets];
+            int count = s.Api.CollectAbilityHolders(ins.Imm, candidates, scratch);
+            scratch.Slice(0, count).CopyTo(s.Targets);
+            s.TargetList.SetCount(count);
+        }
+
+        private static void HandleLoadEffectTiming(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // Flags: 0 = RemainingTicks, 1 = TotalTicks. Scope is caster (panel element = effect instance).
+            if (!s.World.IsAlive(s.Caster) || !s.World.Has<GameplayEffect>(s.Caster))
+            {
+                s.F[ins.Dst] = 0f;
+                return;
+            }
+
+            ref GameplayEffect effect = ref s.World.Get<GameplayEffect>(s.Caster);
+            s.F[ins.Dst] = ins.Flags == 1 ? effect.TotalTicks : effect.RemainingTicks;
+        }
+
+        private static void HandleLoadEffectStack(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // Scope is caster (panel element = effect instance). Missing EffectStack ⇒ single layer.
+            if (!s.World.IsAlive(s.Caster))
+            {
+                s.F[ins.Dst] = 1f;
+                return;
+            }
+
+            if (!s.World.Has<EffectStack>(s.Caster))
+            {
+                s.F[ins.Dst] = 1f;
+                return;
+            }
+
+            s.F[ins.Dst] = s.World.Get<EffectStack>(s.Caster).Count;
         }
 
         private static void HandleQueryFilterTeam(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -2039,11 +2598,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"GAS.GRAPH.ERR.EntryPayloadSymbolUnknown: payload key id {keyId} has no registered symbol.");
         }
 
-        // ── Placed-entity variable reads (#1108) ──
+        // ── Placed-entity variable reads ──
 
         private static void HandleLoadPlacedEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // A miss is a readable value, not a throw (#1108 contract): unregistered ids and
+            // A miss is a readable value, not a throw: unregistered ids and
             // destroyed entities both write Entity.Null so downstream ops branch on it.
             MapId mapId = RequireMapVariableScopeMap(ref s, s.Caster, nameof(GraphNodeOp.LoadPlacedEntity));
             s.E[ins.Dst] = s.Api.TryGetPlacedEntity(ins.Imm, mapId, out Entity entity) && s.World.IsAlive(entity)

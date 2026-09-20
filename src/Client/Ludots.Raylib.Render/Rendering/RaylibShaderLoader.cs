@@ -6,7 +6,7 @@ using Rl = Raylib_cs.Raylib;
 
 namespace Ludots.Raylib.Render
 {
-    internal static class RaylibShaderLoader
+    public static class RaylibShaderLoader
     {
         private const int MaxIncludeDepth = 4;
 
@@ -27,7 +27,7 @@ namespace Ludots.Raylib.Render
                 fsFileName,
                 depth: 0);
 
-            Shader shader = Rl.LoadShaderFromMemory(vsText, fsText);
+            Shader shader = RaylibNativeResources.LoadShaderFromMemory(vsText, fsText);
             if (shader.id == 0)
             {
                 throw new InvalidOperationException(

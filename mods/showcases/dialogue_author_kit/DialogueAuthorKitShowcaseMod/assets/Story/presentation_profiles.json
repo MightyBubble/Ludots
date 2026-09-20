@@ -1,0 +1,21 @@
+[
+  {
+    "id": "author_kit.dialogue_overlay",
+    "backend": "ScreenOverlay",
+    "surfaceKind": "OverlayDialogue",
+    "layoutId": "layout.narrative.overlay-dialogue",
+    "anchor": "BottomCenter",
+    "width": 760,
+    "offsetY": 28,
+    "waitForInput": true,
+    "dimBackdrop": true,
+    "accentHex": "#F6C56B",
+    "backgroundHex": "#08111BEF",
+    "borderHex": "#5AD7E9FF",
+    "foregroundHex": "#F8FAFC",
+    "mutedHex": "#C6D3DE",
+    "zIndex": 60,
+    "imageSize": 112,
+    "backdropHex": "#00000099"
+  }
+]

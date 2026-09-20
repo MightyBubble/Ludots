@@ -144,16 +144,13 @@ namespace Ludots.Tests.GasTests.Production
         }
 
         [Test]
-        public void AgentBridgeModEntry_RegistersPresenterObservabilityTools()
+        public void AgentBridgeModEntry_RegistersToolsThroughBuiltinCatalog()
         {
             string entryPath = Path.Combine(FindRepoRoot(), "mods", "AgentBridgeMod", "AgentBridgeModEntry.cs");
             string source = File.ReadAllText(entryPath);
-            Assert.That(source, Does.Contain("new PresentersQueryTool()"),
-                "ludots.presenters.query must stay registered for GET /tools (#1062)");
-            Assert.That(source, Does.Contain("new PresentersDesyncTool()"),
-                "ludots.presenters.desync must stay registered for GET /tools (#1062)");
-            Assert.That(source, Does.Contain("new PresentersScreenTool()"),
-                "ludots.presenters.screen must stay registered for GET /tools (#1062)");
+            Assert.That(source, Does.Contain("BuiltinAgentTools.RegisterAll"),
+                "the mod entry must wire the shared builtin catalog; hand-rolling a partial tool list here would " +
+                "silently drop tools (presenter observability included) from GET /tools while catalog tests stay green");
         }
 
         private static GameEngine CreateEngine()

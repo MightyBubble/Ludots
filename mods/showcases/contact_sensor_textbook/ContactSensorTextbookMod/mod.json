@@ -1,0 +1,10 @@
+{
+  "name": "ContactSensorTextbookMod",
+  "version": "1.0.0",
+  "description": "接触触发教科书（#1480/#1469）：压力板与滚球全部模板数据建体（Position2D/Collider2D/Mass2D 授权），接触 Begin/End 经 RegionVolumeEmissionCm 发射合同进触发线，图监听自定义事件计数；全程零 showcase 代码",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  }
+}

@@ -1,0 +1,11 @@
+[
+  {
+    "id": "raylib_backend_scene_demo.environment",
+    "enabled": true,
+    "mapIds": ["instanced_batch_demo"],
+    "sourceUris": ["RaylibPlatformMeshesMod:assets/Models/building_blacksmith_blue.gltf"],
+    "position": [0, 0, -6],
+    "rotation": [0, 0, 0, 1],
+    "scale": [1.5, 1.5, 1.5]
+  }
+]

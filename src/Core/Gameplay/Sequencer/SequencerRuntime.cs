@@ -26,6 +26,7 @@ namespace Ludots.Core.Gameplay.Sequencer
         private readonly StoryGraphInvoker _graphs;
         private readonly TaskRuntimeService _tasks;
         private readonly PresentationTextCatalog? _textCatalog;
+        private readonly Ludots.Core.Presentation.PresentationDisplayResolver? _display;
         private ActiveSequenceSession? _active;
 
         public SequencerRuntime(
@@ -34,7 +35,8 @@ namespace Ludots.Core.Gameplay.Sequencer
             StoryDefinitionRegistry story,
             StoryGraphInvoker graphs,
             TaskRuntimeService tasks,
-            PresentationTextCatalog? textCatalog)
+            PresentationTextCatalog? textCatalog,
+            Ludots.Core.Presentation.PresentationDisplayResolver? display = null)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _sequences = sequences ?? throw new ArgumentNullException(nameof(sequences));
@@ -42,10 +44,13 @@ namespace Ludots.Core.Gameplay.Sequencer
             _graphs = graphs ?? throw new ArgumentNullException(nameof(graphs));
             _tasks = tasks ?? throw new ArgumentNullException(nameof(tasks));
             _textCatalog = textCatalog;
+            _display = display;
             _tasks.TaskStateChanged += HandleTaskStateChanged;
         }
 
         public bool HasActiveSequence => _active != null;
+
+        public bool IsPaused => _active?.Paused ?? false;
 
         public void ResetState() => _active = null;
 
@@ -115,7 +120,6 @@ namespace Ludots.Core.Gameplay.Sequencer
 
         public void Update(float dt)
         {
-            ConsumeInput();
             if (_active == null || _active.Paused)
             {
                 return;
@@ -161,6 +165,7 @@ namespace Ludots.Core.Gameplay.Sequencer
                         track.PresentationProfile,
                         ResolveLineText(track.LineId),
                         line.SpeakerId,
+                        StoryTextResolution.ResolveSpeakerDisplayName(_story, _textCatalog, _display, line.SpeakerId),
                         track.Start,
                         track.Duration,
                         Math.Max(0f, _active.Time - track.Start)));
@@ -169,7 +174,7 @@ namespace Ludots.Core.Gameplay.Sequencer
 
             view = new SequenceView(
                 _active.Definition.Id,
-                _active.Definition.DisplayName,
+                StoryTextResolution.FormatToken(_textCatalog, _display, _active.Definition.DisplayNameToken),
                 _active.Time,
                 _active.Rate,
                 _active.Paused,
@@ -327,32 +332,6 @@ namespace Ludots.Core.Gameplay.Sequencer
             });
         }
 
-        private void ConsumeInput()
-        {
-            var input = _engine.GetService(CoreServiceKeys.AuthoritativeInput);
-            if (input == null || _active == null)
-            {
-                return;
-            }
-
-            if (input.PressedThisFrame(DialogueInputActionIds.Skip))
-            {
-                Skip();
-                return;
-            }
-
-            if (input.PressedThisFrame(DialogueInputActionIds.Advance))
-            {
-                if (_active.Paused)
-                {
-                    Resume();
-                }
-                else
-                {
-                    Pause();
-                }
-            }
-        }
 
         private void HandleTaskStateChanged(TaskStateChangedInfo change)
         {
@@ -396,32 +375,7 @@ namespace Ludots.Core.Gameplay.Sequencer
         private string ResolveLineText(string lineId)
         {
             StoryLineDefinition line = _story.RequireLine(lineId);
-            if (_textCatalog == null)
-            {
-                return line.TextToken;
-            }
-
-            int tokenId = _textCatalog.GetTokenId(line.TextToken);
-            if (tokenId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Story line '{lineId}' textToken '{line.TextToken}' is not registered in PresentationTextCatalog.");
-            }
-
-            var packet = PresentationTextPacket.FromToken(tokenId);
-            for (int i = 0; i < line.Args.Count; i++)
-            {
-                packet.SetArg(i, line.Args[i]);
-            }
-
-            if (!PresentationTextFormatter.TryFormat(_textCatalog, _textCatalog.DefaultLocaleId, in packet, out string text) ||
-                string.IsNullOrWhiteSpace(text))
-            {
-                throw new InvalidOperationException(
-                    $"Story line '{lineId}' textToken '{line.TextToken}' has no locale template for default locale.");
-            }
-
-            return text;
+            return StoryTextResolution.FormatToken(_textCatalog, _display, line.TextToken, line.Args);
         }
 
         private void FireEvent(EventKey eventKey, Action<ScriptContext> populate)

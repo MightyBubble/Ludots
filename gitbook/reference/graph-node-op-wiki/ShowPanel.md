@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 七种全可用（Effect / Score / Validation / Derived / Query / Script / TriggerGraph） |
+| 可用图种 | Effect / Script / TriggerGraph |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | 无（不收值边，靠 imm/自身上下文） |
 | 特殊写法 | imm 填符号名（编译期解析） |
@@ -37,7 +37,7 @@ ConstFloat → **ShowPanel**（本篇） → LoadExplicitTarget → ModifyAttrib
 
 ## 边界与更多用法
 
-- 图种边界：七种图全都能用，不必为它挑图种。
+- 图种边界：可用于 Effect / Script / TriggerGraph；Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
 - 不接值边：输入来自 imm 与运行时上下文（施法者、显式目标等）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：伤害公式的缩放与浮动、斩杀线/格挡线这类阈值判断、把读数换算成另一个数。

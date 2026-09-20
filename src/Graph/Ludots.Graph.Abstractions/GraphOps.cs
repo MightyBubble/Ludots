@@ -11,6 +11,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Entity = 4,
         TargetList = 5,
         Text = 6,
+        IntIdList = 7,
     }
 
     public enum GraphNodeOp : ushort
@@ -133,6 +134,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         RelationshipAggMaxEntityByMetric = 395,
         RelationshipAggMinEntityByMetric = 396,
         RelationshipHasLink = 397,          // B[Dst] = HasLink(E[A], E[B], type=Flags symbol)
+        QueryCollectActiveEffects = 398,    // TargetList = active effect instances on E[A]
+        LoadEffectTiming = 399,             // F[Dst] = RemainingTicks|TotalTicks on caster (Flags)
+        LoadEffectStack = 429,              // F[Dst] = EffectStack.Count on caster (missing → 1)
 
         // ── Entity lifecycle composition (400-401) ──
         BeginLifecycleTransaction = 400,
@@ -146,6 +150,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         SnapToNearestInCollection = 406,
         SnapToNearestGraphEdge = 407,
 
+        // ── Typed collection collectors (408-409, 419, 423-427) ──
+        QueryCollectEffectTemplates = 408,  // IntIdList = registered effect template ids
+        QueryCollectAbilitySlots = 409,     // IntIdList = resolved ability slot indices on E[A]
+        // 410-418 occupied
+        QueryCollectInventoryItems = 419,   // TargetList = owned item instance entities for E[A]
+        // 420-422 occupied
+        QueryCollectItemDefinitions = 423,  // IntIdList = registered item definition ids
+        QueryCollectPresentTags = 424,      // IntIdList = present tag ids on E[A]
+        QueryCollectActiveTasks = 425,      // TargetList = task instances scoped to E[A]
+        QueryCollectProgressionNodes = 426, // IntIdList = progression ids on E[A]
+        QueryCollectAbilityHolders = 427,   // TargetList = TargetList candidates holding Imm ability
+        QueryCollectActiveActivities = 428, // TargetList = activity instances scoped to E[A]
+
         // ── Event evaluation context (410-412, RFC-0065 PROV-4b) ──
         LoadViewer           = 410,  // E[Dst] = state.Viewer (fixed register 2)
         LoadEventPayloadInt  = 411,  // I[Dst] = presenter EventPayload int slot (Imm: 0=PayloadA, 1=PayloadB)
@@ -157,7 +174,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         LoadEntryPayloadInt    = 414, // I[Dst] = entry payload (Imm: payload key symbol id)
         LoadEntryPayloadFloat  = 415, // F[Dst] = entry payload (Imm: payload key symbol id)
 
-        // ── Placed-entity / region / anchor variable reads (#1108) ──
+        // ── Placed-entity / region / anchor variable reads ──
         // E[Dst] = entity registered under the placed InstanceId (Imm: instance id key id)
         // on the mounted map. Unregistered or destroyed instances write Entity.Null —
         // unlike LoadEntryPayload*, a miss is a readable value, not a throw. Compile-time
@@ -184,7 +201,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         InvokeScript = 434,    // run Script graph Imm to halt (callee must not Yield)
         MoveInt = 435,         // I[Dst] = I[A]
 
-        // ── Generic lookup-table reads (436-438, #881) ──
+        // ── Generic lookup-table reads (436-438) ──
         /// <summary>I[Dst] = ResolveTableRow(Imm=tableId, I[A]=key).</summary>
         ResolveTableRow = 436,
         /// <summary>I[Dst] = TableReadInt(Imm=fieldId, I[A]=rowHandle). TextToken columns return token id.</summary>
@@ -192,7 +209,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>F[Dst] = TableReadFloat(Imm=fieldId, I[A]=rowHandle).</summary>
         TableReadFloat = 438,
 
-        // ── Panel visibility control (#1014, contract five) ──
+        // ── Panel visibility control (contract five) ──
         /// <summary>Request the named panel type to become visible. Imm = panel type symbol.</summary>
         ShowPanel = 439,
         /// <summary>Request the named panel type to become hidden. Imm = panel type symbol.</summary>
@@ -224,7 +241,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>Pick an integer outcome from a named deterministic distribution. Imm = distribution symbol; I[A] = stream salt.</summary>
         WeightedPick = 449,
 
-        // ── TriggerGraph subgraph reuse + structured event dispatch (#1116/#1115) ──
+        // ── TriggerGraph subgraph reuse + structured event dispatch ──
         // InvokeGraph encoding: Imm = target graph id at run time; Dst = int register
         // receiving the child's HaltReturnInt. Authoring has two modes mirroring InvokeScript:
         // literal graphId (Flags 0) or a graph-key functionName resolved and patched to the id
@@ -246,7 +263,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>Assemble a ScriptContext from the InvokeArgs staging per the event schema (Imm: event name symbol id) and fire it map-scoped; Flags 0 = map domain, 1 = self domain.</summary>
         DispatchMapEvent = 454,
         /// <summary>
-        /// #1126 AwaitCallback: register a named callback handle (Imm: callbackType symbol id),
+        /// AwaitCallback: register a named callback handle (Imm: callbackType symbol id),
         /// park the slice (Yielded), and on Complete write confirmed into B[Dst] then resume
         /// in the Continuation phase (registration order).
         /// </summary>
@@ -269,6 +286,140 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Zero-arg tokens only in this slice; argCount&gt;0 fails closed.
         /// </summary>
         LoadTextKey = 461,
+
+        StartDialogue = 462,
+
+        /// Set the target entity's interaction mode: add/replace the sparse
+        /// InteractionMode component, or remove it when the mode is the reserved mode.normal.
+        /// E[A] = target entity (A=0xFF → caster); Imm = mode id symbol, patched to a
+        /// ConfigKeyRegistry id and resolved against the installed interaction mode map —
+        /// dead targets and unknown mode ids fail closed by name.
+        /// </summary>
+        SetInteractionMode = 463,
+
+        /// <summary>
+        /// Override a panel type's audience with one seat (hotseat turn handoff), or
+        /// clear the override when no seat symbol is declared — the template's declared
+        /// audience rules again. Imm packs the panelType and seat key ids (seat 0 = clear);
+        /// event admission and surface placement both consume the recorded override.
+        /// </summary>
+        SetPanelAudience = 464,
+
+        /// <summary>
+        /// Set the selected target entity's current attribute value through the
+        /// AttributeMutationOps authority. E[A] = target entity; F[B] = value;
+        /// Imm = attribute symbol patched at load time.
+        /// </summary>
+        ModifyAttributeSet = 465,
+        /// <summary>Offer the activity named by Symbols[Imm] to E[A] as scope host via ActivityRuntimeService.</summary>
+        OfferActivity = 466,
+        /// <summary>Offer the task named by Symbols[Imm] to E[A] as scope host via TaskRuntimeService.</summary>
+        OfferTask = 467,
+        /// <summary>IntIdList = currently available DialogueRuntime choice ids.</summary>
+        QueryCollectActiveDialogueChoices = 468,
+
+        // ── Aimsource pure helpers (input/command chain; stateless utility kernels the
+        // aim graphs compose — screen point to ground, pointer pick, region filter,
+        // world/stick to direction). All Query-kind read-only. ──
+        /// <summary>
+        /// B[Dst] = screen point (F[A]=x px, F[B]=y px) resolved against the authoritative
+        /// ground; on success TargetPosCm := the ground point (read via LoadTargetPosX/Y).
+        /// </summary>
+        ScreenPointToGround = 469,
+        /// <summary>
+        /// E[Dst] = knowledge-gated pick under the screen point among the current TargetList
+        /// candidates (explicit candidate set, no world scan). E[A] = inspecting owner rep;
+        /// F[B]/F[C] = pointer x/y px; ImmF = pick radius px; Imm = seat key symbol whose
+        /// binding-local screen space the pointer answers under.
+        /// </summary>
+        ScreenPointToEntity = 470,
+        /// <summary>
+        /// TargetList := TargetList candidates whose projected bounds intersect the screen
+        /// rect (F[A]=minX, F[B]=minY, F[C]=maxX, F[Flags]=maxY px); candidate order is
+        /// preserved, so the result order stays deterministic.
+        /// </summary>
+        ScreenRegionToEntities = 471,
+        /// <summary>
+        /// F[Dst] = direction angle in degrees (0 = +X) from the rep E[A]'s world position to
+        /// the frame's TargetPosCm; B[Flags] = 0 and F[Dst] = 0 when either position is absent.
+        /// </summary>
+        PointToDirection = 472,
+        /// <summary>
+        /// F[Dst] = direction angle in degrees (0 = +X) of the stick vector (F[A]=x, F[B]=y,
+        /// numeric processors already applied upstream); B[Flags] = 1 when the vector clears
+        /// the deadzone, 0 with F[Dst] = 0 otherwise.
+        /// </summary>
+        StickToDirection = 473,
+
+        // ── Derived interaction context ops (constitution §8.2/§8.3). The
+        // entity-mounted context set is world state; these ops are its only derived-context
+        // writers. Scope lifecycle (presenter Create/DestroyScope) rides the presenter
+        // command pipeline; activation/deactivation publish ContextActivated/Deactivated
+        // presentation events keyed by the context profile id. ──
+        /// <summary>
+        /// Activate a derived interaction context on E[A] (A=0xFF → caster). Imm = context
+        /// profile symbol; Dst = optional parent context profile symbol (0xFF → no parent
+        /// constraint). Idempotent-failure: an already-active context or an inactive declared
+        /// parent fails fast by name.
+        /// </summary>
+        ActivateContext = 474,
+        /// <summary>
+        /// Deactivate an interaction context instance (and its descendants transitively) on
+        /// E[A] (A=0xFF → caster). Imm = context profile symbol. Fails fast when the context
+        /// is not mounted as an instance; the instance's presenter scope is destroyed
+        /// wholesale through the presenter command pipeline.
+        /// </summary>
+        DeactivateContext = 475,
+        /// <summary>
+        /// Direct owned-collection write: owner = caster (the writing rep), entity list = the
+        /// graph's current query result set (s.Targets), I[B] = op (0=replace, 1=add,
+        /// 2=subtract, computed in-graph), Imm = collection key symbol patched to its key id.
+        /// Set semantics execute in the CollectionWrite primitive; membership change events
+        /// fire from the store's presentation diff like any other writer.
+        /// </summary>
+        WriteCollection = 477,
+        /// <summary>
+        /// Live pointer screen X (window px) for the authoritative PointerPos action.
+        /// Pure float read; fail closed when the input snapshot is unavailable.
+        /// </summary>
+        LoadPointerScreenX = 479,
+        /// <summary>
+        /// Live pointer screen Y (window px) for the authoritative PointerPos action.
+        /// Pure float read; fail closed when the input snapshot is unavailable.
+        /// </summary>
+        LoadPointerScreenY = 480,
+        BindQueryCollection = 481,
+        QueryScreenRegionCollection = 482,
+        QueryFilterControllable = 483,
+
+        // ── Order-driven graph brains (issue #1536; 484-499 reserved as the
+        //    graph-input-order-chain line's renumbering buffer) ──
+
+        /// <summary>Read an entity's world X in int centimeters. E[A] = source; I[Dst] = xCm; B[Flags] = 0 when the entity is dead or has no WorldPositionCm (routine guard, brains branch on it).</summary>
+        LoadEntityPosX = 500,
+        /// <summary>Read an entity's world Y in int centimeters. E[A] = source; I[Dst] = yCm; B[Flags] = 0 when the entity is dead or has no WorldPositionCm (routine guard, brains branch on it).</summary>
+        LoadEntityPosY = 501,
+        IntToFloat = 502,    // F[Dst] = I[A]
+        /// <summary>Float→Int with round-half-away-from-zero, matching the world-centimeter rounding convention.</summary>
+        FloatToInt = 503,
+        SqrtFloat = 504,     // F[Dst] = sqrt(F[A]); negative input fails closed
+        /// <summary>
+        /// Behavior-side order submission: the acting unit enqueues an assigned order into
+        /// the OrderQueue. Imm = order type id (semantic key resolved at patch time);
+        /// E[A] = target entity; I[B] = xCm; I[C] = yCm. Script slice hosts only; the
+        /// input-side SubmitCommandIntent intent-buffer contract is separate.
+        /// </summary>
+        /// <summary>E[A] = source; B[Dst] = 1 when the entity is alive and has a WorldPositionCm, 0 otherwise (edge-readable guard companion of LoadEntityPosX/Y).</summary>
+        LoadEntityPosValid = 508,
+        /// <summary>Load an order type id from its semantic key (Imm resolved at patch time) into I[Dst]. Pure register materialization for order-type dispatch in behavior graphs.</summary>
+        LoadOrderTypeId = 507,
+        SubmitAssignedOrder = 505,
+        /// <summary>
+        /// Publish the acting unit's terminal outcome for its active order through the
+        /// OrderTerminalResultBuffer. Caster = the acting unit. Script slice hosts only.
+        /// </summary>
+        CompleteActiveOrder = 506,
+
     }
 
     public static class GraphNodeOpParser

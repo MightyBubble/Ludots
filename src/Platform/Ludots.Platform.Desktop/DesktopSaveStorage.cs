@@ -20,6 +20,8 @@ namespace Ludots.Platform.Desktop
             _rootDirectory = Path.GetFullPath(rootDirectory);
         }
 
+        public string RootDirectory => _rootDirectory;
+
         public IReadOnlyList<string> ListFileKeys(string prefix)
         {
             if (prefix == null) throw new ArgumentNullException(nameof(prefix));
@@ -98,3 +100,4 @@ namespace Ludots.Platform.Desktop
         }
     }
 }
+

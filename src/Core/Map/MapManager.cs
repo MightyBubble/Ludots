@@ -19,6 +19,9 @@ namespace Ludots.Core.Map
         private readonly ModLoader _modLoader;
         private ConfigPipeline _configPipeline;
 
+        /// <summary>最近一次 LoadMap 的跨 mod 片段合并报告（纯记录型；每次 LoadMap 重置）。</summary>
+        public MapMergeReport LastMergeReport { get; } = new MapMergeReport();
+
         // Registry for Map Definitions (Code-First)
         private readonly Dictionary<MapId, MapDefinition> _definitions = new Dictionary<MapId, MapDefinition>();
         private readonly Dictionary<Type, MapDefinition> _typeToDefinition = new Dictionary<Type, MapDefinition>();
@@ -65,9 +68,18 @@ namespace Ludots.Core.Map
 
         public MapConfig LoadMap(MapId mapId)
         {
+            LastMergeReport.Clear();
             var visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var chain = new List<string>(8);
-            return LoadMapInternal(mapId, visiting, chain);
+            MapConfig? config = LoadMapInternal(mapId, visiting, chain);
+            if (config != null)
+            {
+                ResolvePendingTombstones(mapId.Value, config);
+                // Backfill runs once at the top level only: parent configs must stay
+                // un-backfilled so child conflict checks compare authored values (#1567).
+                ApplyWorldTuningToBoards(config);
+            }
+            return config;
         }
 
         private MapConfig LoadMapInternal(MapId mapId, HashSet<string> visiting, List<string> chain)
@@ -105,24 +117,28 @@ namespace Ludots.Core.Map
                 if (_configPipeline == null)
                     throw new InvalidOperationException("MapManager requires ConfigPipeline. Call SetConfigPipeline before LoadMap.");
 
-                var fragments = _configPipeline.CollectFragments(jsonPath);
+                var fragments = _configPipeline.CollectFragmentsWithSources(jsonPath);
                 var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 for (int fi = 0; fi < fragments.Count; fi++)
                 {
                     try
                     {
-                        var jsonStr = fragments[fi].ToJsonString();
-                        RejectLegacyWorldExtentKeys(fragments[fi], jsonPath);
-                        RejectLegacyTriggerGraphMountKey(fragments[fi], jsonPath);
-                        ValidateHeartbeatIntervalTicks(fragments[fi], jsonPath);
+                        var jsonStr = fragments[fi].Node.ToJsonString();
+                        RejectLegacyWorldExtentKeys(fragments[fi].Node, jsonPath);
+                        RejectLegacyTriggerGraphMountKey(fragments[fi].Node, jsonPath);
+                        ValidateHeartbeatIntervalTicks(fragments[fi].Node, jsonPath);
                         _ = MapVariableDeclarations.Parse(
-                            fragments[fi] is JsonObject fragmentRoot &&
+                            fragments[fi].Node is JsonObject fragmentRoot &&
                             TryGetPropertyCaseInsensitive(fragmentRoot, "Variables", out JsonNode variablesNode)
                                 ? variablesNode
                                 : null,
                             mapId.Value);
                         var config = JsonSerializer.Deserialize<MapConfig>(jsonStr, jsonOptions);
-                        if (config != null) configs.Add(config);
+                        if (config != null)
+                        {
+                            config.MergeSourceUri = fragments[fi].SourceUri;
+                            configs.Add(config);
+                        }
                     }
                     catch (JsonException ex)
                     {
@@ -182,11 +198,13 @@ namespace Ludots.Core.Map
                     if (parentConfig != null)
                     {
                         var childConfig = finalConfig;
+                        childConfig.MergeSourceUri ??= $"map:{mapIdValue}";
                         finalConfig = parentConfig; 
                         MergeMapConfig(finalConfig, childConfig); 
                     }
                 }
                 
+                ValidateSpatialDeclaration(finalConfig, mapId);
                 Log.Info(in LogChannels.Map, $"Map '{mapId}' loaded.");
                 return finalConfig;
             }
@@ -203,24 +221,40 @@ namespace Ludots.Core.Map
         private void MergeMapConfig(MapConfig target, MapConfig source)
         {
             if (!string.IsNullOrEmpty(source.ParentId)) target.ParentId = source.ParentId;
-            if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset))
+            if (!string.IsNullOrWhiteSpace(source.ContinuousHeightmapAsset))
             {
-                target.VisualHeightmapAsset = source.VisualHeightmapAsset;
-                if (target.VisualHeightmap != null && source.VisualHeightmap == null)
+                target.ContinuousHeightmapAsset = source.ContinuousHeightmapAsset;
+                if (target.ContinuousHeightmap != null && source.ContinuousHeightmap == null)
                 {
-                    target.VisualHeightmap.Asset = string.Empty;
+                    target.ContinuousHeightmap.Asset = string.Empty;
                 }
             }
 
-            if (source.VisualHeightmap != null)
+            if (source.ContinuousHeightmap != null)
             {
-                target.VisualHeightmap = source.VisualHeightmap.Clone();
-                if (!string.IsNullOrWhiteSpace(target.VisualHeightmap.Asset))
+                target.ContinuousHeightmap = source.ContinuousHeightmap.Clone();
+                if (!string.IsNullOrWhiteSpace(target.ContinuousHeightmap.Asset))
                 {
-                    target.VisualHeightmapAsset = target.VisualHeightmap.Asset;
+                    target.ContinuousHeightmapAsset = target.ContinuousHeightmap.Asset;
                 }
             }
 
+            if (!string.IsNullOrWhiteSpace(source.RootBoard))
+            {
+                target.RootBoard = source.RootBoard;
+            }
+
+            if (source.World is { } srcWorld && (srcWorld.WidthCm > 0 || srcWorld.HeightCm > 0))
+            {
+                target.World = srcWorld.Clone();
+            }
+
+            if (source.Tuning is { } srcTuning && srcTuning.IsAuthored)
+            {
+                target.Tuning = srcTuning.Clone();
+            }
+
+            if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
             if (!string.IsNullOrWhiteSpace(source.StructureCollisionAsset)) target.StructureCollisionAsset = source.StructureCollisionAsset;
             if (source.StructureAwareGrounding) target.StructureAwareGrounding = true;
             if (source.StructureAwareNavigation) target.StructureAwareNavigation = true;
@@ -232,7 +266,13 @@ namespace Ludots.Core.Map
                     target.Dependencies[kvp.Key] = kvp.Value;
                 }
             }
-            if (source.Entities != null) target.Entities.AddRange(source.Entities);
+            if (source.Entities != null) MergeEntityFragments(target, source);
+
+            if (source.PendingEntityTombstones != null && source.PendingEntityTombstones.Count > 0)
+            {
+                target.PendingEntityTombstones ??= new List<(string, string)>();
+                target.PendingEntityTombstones.AddRange(source.PendingEntityTombstones);
+            }
             if (source.Teams != null) target.Teams.AddRange(source.Teams);
             if (source.Players != null) target.Players.AddRange(source.Players);
             if (source.ParticipantRelationships != null)
@@ -326,24 +366,11 @@ namespace Ludots.Core.Map
                 }
             }
 
-            // Merge Regions (append region objects)
-            if (source.Regions != null)
-            {
-                if (target.Regions is JsonArray targetRegionArray && source.Regions is JsonArray sourceRegionArray)
-                {
-                    for (int i = 0; i < sourceRegionArray.Count; i++)
-                    {
-                        targetRegionArray.Add(sourceRegionArray[i]?.DeepClone());
-                    }
-                }
-                else
-                {
-                    target.Regions = source.Regions.DeepClone();
-                }
-            }
-
             // Merge DefaultCamera (source wins)
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
+
+            // Merge Fields (source wins; the enabled-layer list replaces as a whole)
+            if (source.Fields != null) target.Fields = source.Fields;
 
             // Merge DeathRule (source wins)
             if (source.DeathRule != null)
@@ -360,18 +387,294 @@ namespace Ludots.Core.Map
             // Merge Variables (later fragment / child map replaces same-name declaration)
             if (source.Variables != null && source.Variables.Count > 0)
             {
+                string varSourceLabel = MapMergeReport.DescribeSource(source.MergeSourceUri, "<unknown-fragment>");
                 foreach (var sourceVariable in source.Variables)
                 {
-                    string name = (sourceVariable.Name ?? string.Empty).Trim();
+                    if (sourceVariable == null)
+                    {
+                        continue;
+                    }
+
+                    string name = sourceVariable.Name ?? string.Empty;
+                    if (!string.Equals(name, name.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map {target.Id} fragment {varSourceLabel} variable name {name} must be trimmed.");
+                    }
+
+                    if (sourceVariable.Delete == true)
+                    {
+                        target.PendingVariableTombstones ??= new List<(string, string)>();
+                        target.PendingVariableTombstones.Add((name, varSourceLabel));
+                        continue;
+                    }
+
+                    // 同名重新声明撤销先前变量墓碑（复活）；墓碑标记过的 stale 条目允许改型替换
+                    // （delete-then-redeclare 的 redeclare 半边），未墓碑的活条目改型仍 fail-fast。
+                    bool wasTombstoned = (target.PendingVariableTombstones?.RemoveAll(
+                        t => string.Equals(t.Name, name, StringComparison.Ordinal)) ?? 0) > 0;
                     int existing = target.Variables.FindIndex(v =>
-                        string.Equals((v.Name ?? string.Empty).Trim(), name, StringComparison.Ordinal));
+                        string.Equals(v.Name ?? string.Empty, name, StringComparison.Ordinal));
                     if (existing >= 0)
                     {
+                        if (target.Variables[existing].Type != sourceVariable.Type && !wasTombstoned)
+                        {
+                            throw new InvalidOperationException(
+                                $"Map {target.Id} fragment {varSourceLabel} redeclares variable {name} with type {sourceVariable.Type} (was {target.Variables[existing].Type}); live variables cannot change type, __delete first then redeclare.");
+                        }
+
                         target.Variables[existing] = sourceVariable;
                     }
                     else
                     {
                         target.Variables.Add(sourceVariable);
+                    }
+                }
+            }
+
+            if (source.PendingVariableTombstones != null && source.PendingVariableTombstones.Count > 0)
+            {
+                target.PendingVariableTombstones ??= new List<(string, string)>();
+                target.PendingVariableTombstones.AddRange(source.PendingVariableTombstones);
+            }
+        }
+
+        /// <summary>
+        /// 墓碑在继承链展开后才消化：TryRemove 命中记 Deleted、未命中记 DeletionsNotFound。
+        /// 此时父图实体已合入，子图墓碑可正确命中父图实例（继承方向的删除语义）。
+        /// </summary>
+        private void ResolvePendingTombstones(string requestedMapId, MapConfig config)
+        {
+            if (config.PendingEntityTombstones != null && config.PendingEntityTombstones.Count > 0)
+            {
+                foreach (var (instanceId, sourceLabel) in config.PendingEntityTombstones)
+                {
+                    if (TryRemoveEntityById(config, instanceId))
+                    {
+                        LastMergeReport.RecordDeletion(requestedMapId, instanceId, sourceLabel);
+                    }
+                    else
+                    {
+                        LastMergeReport.RecordDeletionNotFound(requestedMapId, instanceId, sourceLabel);
+                    }
+                }
+
+                config.PendingEntityTombstones.Clear();
+            }
+
+            if (config.PendingVariableTombstones != null && config.PendingVariableTombstones.Count > 0)
+            {
+                foreach (var (name, sourceLabel) in config.PendingVariableTombstones)
+                {
+                    int index = config.Variables.FindIndex(v =>
+                        string.Equals(v.Name ?? string.Empty, name, StringComparison.Ordinal));
+                    if (index >= 0)
+                    {
+                        config.Variables.RemoveAt(index);
+                        LastMergeReport.RecordVariableDeletion(requestedMapId, name, sourceLabel);
+                    }
+                    else
+                    {
+                        LastMergeReport.RecordVariableDeletionNotFound(requestedMapId, name, sourceLabel);
+                    }
+                }
+
+                config.PendingVariableTombstones.Clear();
+            }
+        }
+
+        /// <summary>
+        /// 地图实体跨片段合并：键 = instanceId（ordinal 精确匹配，不 trim——未 trim 的写法由
+        /// 装载期 Register 的 trim 校验 fail-fast，合并层不做静默归一）。同 id 字段级深合并、
+        /// 后写赢；__delete 墓碑删实例（与资产层 ConfigMerger 同键，更晚片段可复活）；匿名
+        /// 实体纯追加，非首片段的匿名实体记入合并报告。继承链与跨 mod 片段共用本语义。
+        /// </summary>
+        private void MergeEntityFragments(MapConfig target, MapConfig source)
+        {
+            string sourceLabel = MapMergeReport.DescribeSource(source.MergeSourceUri, "<unknown-fragment>");
+            bool isBaseFragment = target.Entities.Count == 0;
+            var seenInFragment = new HashSet<string>(StringComparer.Ordinal);
+
+            for (int i = 0; i < source.Entities.Count; i++)
+            {
+                EntitySpawnData incoming = source.Entities[i];
+                if (incoming == null)
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(incoming.InstanceId))
+                {
+                    if (!seenInFragment.Add(incoming.InstanceId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{target.Id}' fragment '{sourceLabel}' declares duplicate InstanceId '{incoming.InstanceId}' within the same fragment; intra-fragment duplicates are authoring errors.");
+                    }
+                }
+
+                if (incoming.Delete == true)
+                {
+                    if (string.IsNullOrWhiteSpace(incoming.InstanceId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{target.Id}' fragment '{sourceLabel}' authors __delete on an entity without InstanceId; tombstones must target an addressable instance.");
+                    }
+
+                    if (!string.Equals(incoming.InstanceId, incoming.InstanceId.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{target.Id}' fragment '{sourceLabel}' tombstone InstanceId '{incoming.InstanceId}' must be trimmed.");
+                    }
+
+                    target.PendingEntityTombstones ??= new List<(string, string)>();
+                    target.PendingEntityTombstones.Add((incoming.InstanceId, sourceLabel));
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(incoming.InstanceId))
+                {
+                    if (!isBaseFragment)
+                    {
+                        LastMergeReport.RecordAnonymousNonBaseFragment(target.Id, i, sourceLabel);
+                    }
+
+                    target.Entities.Add(incoming);
+                    continue;
+                }
+
+                // 同 id 重新声明即撤销先前墓碑（复活）；跨片段同 id = 深合并。
+                target.PendingEntityTombstones?.RemoveAll(t => string.Equals(t.InstanceId, incoming.InstanceId, StringComparison.Ordinal));
+
+                int existingIndex = FindEntityIndex(target, incoming.InstanceId);
+                if (existingIndex < 0)
+                {
+                    target.Entities.Add(incoming);
+                    LastMergeReport.RecordWinner(target.Id, incoming.InstanceId, sourceLabel);
+                    continue;
+                }
+
+                MergeEntityData(target.Entities[existingIndex], incoming);
+                LastMergeReport.RecordWinner(target.Id, incoming.InstanceId, sourceLabel);
+            }
+        }
+
+        private static bool TryRemoveEntityById(MapConfig target, string instanceId)
+        {
+            for (int i = 0; i < target.Entities.Count; i++)
+            {
+                if (string.Equals(target.Entities[i]?.InstanceId, instanceId, StringComparison.Ordinal))
+                {
+                    target.Entities.RemoveAt(i);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int FindEntityIndex(MapConfig target, string instanceId)
+        {
+            for (int i = 0; i < target.Entities.Count; i++)
+            {
+                if (string.Equals(target.Entities[i]?.InstanceId, instanceId, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static void MergeEntityData(EntitySpawnData target, EntitySpawnData source)
+        {
+            if (!string.IsNullOrWhiteSpace(source.Template))
+            {
+                target.Template = source.Template;
+            }
+
+            if (source.PositionXCm.HasValue)
+            {
+                target.PositionXCm = source.PositionXCm;
+            }
+
+            if (source.PositionYCm.HasValue)
+            {
+                target.PositionYCm = source.PositionYCm;
+            }
+
+            if (source.Overrides != null)
+            {
+                target.Overrides ??= new Dictionary<string, JsonNode>();
+                foreach (var kvp in source.Overrides)
+                {
+                    if (target.Overrides.TryGetValue(kvp.Key, out JsonNode? existing) &&
+                        existing is JsonObject existingObject &&
+                        kvp.Value is JsonObject incomingObject)
+                    {
+                        ConfigMerger.MergeObject(existingObject, incomingObject, Array.Empty<string>());
+                        continue;
+                    }
+
+                    target.Overrides[kvp.Key] = kvp.Value?.DeepClone();
+                }
+            }
+
+            if (source.PresenterParamOverrides != null)
+            {
+                foreach (var incoming in source.PresenterParamOverrides)
+                {
+                    int index = target.PresenterParamOverrides.FindIndex(p =>
+                        string.Equals(p.ParamKey, incoming.ParamKey, StringComparison.Ordinal) &&
+                        p.Lane == incoming.Lane);
+                    if (index >= 0)
+                    {
+                        target.PresenterParamOverrides[index] = incoming;
+                    }
+                    else
+                    {
+                        target.PresenterParamOverrides.Add(incoming);
+                    }
+                }
+            }
+
+            if (source.Relations != null)
+            {
+                target.Relations ??= new List<EntityRelationAuthoring>();
+                foreach (var relation in source.Relations)
+                {
+                    if (relation == null)
+                    {
+                        continue;
+                    }
+
+                    int index = target.Relations.FindIndex(r =>
+                        string.Equals(r?.To, relation.To, StringComparison.Ordinal) &&
+                        string.Equals(r?.Type, relation.Type, StringComparison.Ordinal));
+                    if (relation.Delete == true)
+                    {
+                        if (index >= 0)
+                        {
+                            target.Relations.RemoveAt(index);
+                        }
+
+                        continue;
+                    }
+
+                    if (index >= 0)
+                    {
+                        EntityRelationAuthoring existing = target.Relations[index];
+                        if (relation.Metric != null)
+                        {
+                            existing.Metric ??= new Dictionary<string, int>();
+                            foreach (var metricKvp in relation.Metric)
+                            {
+                                existing.Metric[metricKvp.Key] = metricKvp.Value;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        target.Relations.Add(relation);
                     }
                 }
             }
@@ -411,6 +714,218 @@ namespace Ludots.Core.Map
             }
         }
 
+        public static void ValidateSpatialDeclaration(MapConfig config, MapId mapId)
+        {
+            ValidateTuningValues(config.Tuning, mapId);
+
+            if (config.Boards is not { Count: > 0 })
+            {
+                // Boardless maps are first-class; they may declare the host world directly
+                // (nothing else anchors it) but are not required to (non-spatial maps).
+                var boardless = config.World;
+                if (boardless is { } bw && (bw.WidthCm > 0 || bw.HeightCm > 0 || bw.CellSizeCm != Ludots.Core.Spatial.SpatialScaleDefaults.CellCm))
+                {
+                    if (bw.WidthCm <= 0 || bw.HeightCm <= 0 || bw.CellSizeCm <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{mapId}' declares a partial World; WidthCm/HeightCm/CellSizeCm must all be positive or all omitted (#1567).");
+                    }
+                }
+
+                return;
+            }
+
+            if (config.World is { } declared && (declared.WidthCm > 0 || declared.HeightCm > 0))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has boards and a World declaration; board-bearing maps root the host world on RootBoard, World is boardless-only (#1567).");
+            }
+
+            foreach (var board in config.Boards)
+            {
+                string spatialType = (board.SpatialType ?? "Grid").Trim();
+                if (!spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase) &&
+                    !spatialType.Equals("HexGrid", StringComparison.OrdinalIgnoreCase) &&
+                    !spatialType.Equals("Hex", StringComparison.OrdinalIgnoreCase) &&
+                    !spatialType.Equals("Hybrid", StringComparison.OrdinalIgnoreCase) &&
+                    !spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' has unknown SpatialType '{spatialType}'; use Grid/HexGrid/NodeGraph.");
+                }
+            }
+
+            BoardConfig root = ResolveRootBoard(config, mapId);
+
+            foreach (var board in config.Boards)
+            {
+                ValidateBoardPlacement(board, root, mapId);
+                ValidateBoardAgainstWorldTuning(board, config.Tuning, mapId);
+            }
+        }
+
+        public static BoardConfig ResolveRootBoardFor(MapConfig config, string mapId)
+        {
+            return ResolveRootBoard(config, new MapId(mapId));
+        }
+
+        internal static BoardConfig ResolveRootBoard(MapConfig config, MapId mapId)
+        {
+            string rootDesignation = config.RootBoard?.Trim();
+            if (!string.IsNullOrWhiteSpace(rootDesignation))
+            {
+                foreach (var board in config.Boards)
+                {
+                    if (string.Equals(board.Name, rootDesignation, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return board;
+                    }
+                }
+
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' RootBoard '{rootDesignation}' matches no board; fix the designation or omit it to root the first board (#1567).");
+            }
+
+            return config.Boards[0];
+        }
+
+        private static void ValidateTuningValues(Ludots.Core.Config.WorldTuningConfig tuning, MapId mapId)
+        {
+            if (tuning is null || !tuning.IsAuthored)
+            {
+                return;
+            }
+
+            if (tuning.PartitionChunkCells is int partition &&
+                (partition <= 0 || (partition & (partition - 1)) != 0))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' Tuning.PartitionChunkCells must be positive and a power of two; got {partition}.");
+            }
+
+            if (tuning.LoadedChunkCapacity is int capacity && capacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' Tuning.LoadedChunkCapacity must be positive; got {capacity}.");
+            }
+        }
+
+        public static void ApplyWorldTuningToBoards(MapConfig config)
+        {
+            if (config?.Boards is not { Count: > 0 })
+            {
+                return;
+            }
+
+            var tuning = config.Tuning;
+            int partition = tuning?.PartitionChunkCells
+                ?? Ludots.Core.Spatial.SpatialScaleDefaults.PartitionChunkCells;
+            int capacity = tuning?.LoadedChunkCapacity
+                ?? Ludots.Core.Spatial.SpatialScaleDefaults.DefaultLoadedChunkCapacity;
+
+            foreach (var board in config.Boards)
+            {
+                board.ChunkSizeCells = partition;
+                board.LoadedChunkCapacity = capacity;
+            }
+        }
+
+        private static void ValidateBoardAgainstWorldTuning(BoardConfig board, Ludots.Core.Config.WorldTuningConfig tuning, MapId mapId)
+        {
+            if (tuning is null || !tuning.IsAuthored)
+            {
+                return;
+            }
+
+            if (tuning.PartitionChunkCells is int partitionValue &&
+                board.ChunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.PartitionChunkCells &&
+                board.ChunkSizeCells != partitionValue)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' declares ChunkSizeCells={board.ChunkSizeCells}, conflicting with Tuning.PartitionChunkCells={partitionValue}; remove the board-level field or align it (single world budget, #1567).");
+            }
+
+            if (tuning.LoadedChunkCapacity is int capacityValue &&
+                board.LoadedChunkCapacity > 0 &&
+                board.LoadedChunkCapacity != capacityValue)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' declares LoadedChunkCapacity={board.LoadedChunkCapacity}, conflicting with Tuning.LoadedChunkCapacity={capacityValue}; remove the board-level field or align it (single world budget, #1567).");
+            }
+        }
+
+        private static string spatialTypeOf(BoardConfig board) =>
+            (board.SpatialType ?? "Grid").Trim();
+
+        private static void ValidateBoardPlacement(BoardConfig board, BoardConfig root, MapId mapId)
+        {
+            bool hasX = board.OriginXCm.HasValue;
+            bool hasY = board.OriginYcm.HasValue;
+            if (hasX != hasY)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' must author OriginXCm and OriginYcm together.");
+            }
+
+            if (hasX && ReferenceEquals(board, root))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' root board '{board.Name}' anchors the centered world and cannot declare OriginXCm/OriginYcm; placement is satellite-board-only (#1567 slice 2b).");
+            }
+
+            if (board.WidthCells <= 0 || board.HeightCells <= 0 || board.GridCellSizeCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' requires positive WidthCells/HeightCells/GridCellSizeCm.");
+            }
+
+            bool hasHexes = board.WidthHexes.HasValue || board.HeightHexes.HasValue;
+            if (hasHexes)
+            {
+                bool isHex = spatialTypeOf(board) is "HexGrid" or "Hex";
+                if (!isHex)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' declares WidthHexes/HeightHexes but SpatialType is '{board.SpatialType}'; hex metrics are HexGrid-only (#1567 slice 2).");
+                }
+                if (board.WidthHexes is not > 0 || board.HeightHexes is not > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' must author positive WidthHexes/HeightHexes together; hexes take precedence over WidthCells when authored (#1567 slice 2).");
+                }
+            }
+
+            if (ReferenceEquals(board, root))
+            {
+                return;
+            }
+
+            long boardWidthCm = board.ResolveExtent().WidthCm;
+            long boardHeightCm = board.ResolveExtent().HeightCm;
+            long rootWidthCm = root.ResolveExtent().WidthCm;
+            long rootHeightCm = root.ResolveExtent().HeightCm;
+            if (boardWidthCm > rootWidthCm || boardHeightCm > rootHeightCm)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds root board '{root.Name}' extent {rootWidthCm}x{rootHeightCm}cm; enlarge the root board or shrink the satellite (#1567).");
+            }
+
+            if (hasX)
+            {
+                long minX = board.OriginXCm!.Value;
+                long minY = board.OriginYcm!.Value;
+                long rootMinX = -rootWidthCm / 2;
+                long rootMinY = -rootHeightCm / 2;
+                if (minX < rootMinX || minY < rootMinY ||
+                    minX + boardWidthCm > rootMinX + rootWidthCm ||
+                    minY + boardHeightCm > rootMinY + rootHeightCm)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' anchored AABB ({minX},{minY})+{boardWidthCm}x{boardHeightCm}cm exits the root board frame ({rootMinX},{rootMinY})+{rootWidthCm}x{rootHeightCm}cm; place the satellite fully inside the world (#1567 slice 2b).");
+                }
+            }
+        }
+
         private static void RejectLegacyWorldExtentKeys(JsonNode fragment, string jsonPath)
         {
             if (fragment is not JsonObject root)
@@ -418,8 +933,10 @@ namespace Ludots.Core.Map
                 return;
             }
 
-            RejectLegacyKey(root, "WidthInTiles", "widthInMacroTiles", jsonPath);
-            RejectLegacyKey(root, "HeightInTiles", "heightInMacroTiles", jsonPath);
+            RejectLegacyKey(root, "WidthInTiles", "Boards[].WidthCells", jsonPath);
+            RejectLegacyKey(root, "HeightInTiles", "Boards[].HeightCells", jsonPath);
+            RejectLegacyKey(root, "WidthInMacroTiles", "Boards[].WidthCells", jsonPath);
+            RejectLegacyKey(root, "HeightInMacroTiles", "Boards[].HeightCells", jsonPath);
 
             if (!TryGetPropertyCaseInsensitive(root, "boards", out JsonNode boardsNode) ||
                 boardsNode is not JsonArray boards)
@@ -434,8 +951,13 @@ namespace Ludots.Core.Map
                     continue;
                 }
 
-                RejectLegacyKey(board, "WidthInTiles", "widthInMacroTiles", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "HeightInTiles", "heightInMacroTiles", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInTiles", "Boards[].WidthCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInTiles", "Boards[].HeightCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInMacroTiles", "Boards[].WidthCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInMacroTiles", "Boards[].HeightCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "ChunkSizeCells", "Tuning.PartitionChunkCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "LoadedChunkCapacity", "Tuning.LoadedChunkCapacity", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "NavTileGrid", "Navigation/navmesh.json maps.<mapId>.boards.<name>", $"{jsonPath}.boards[{i}]");
             }
         }
 

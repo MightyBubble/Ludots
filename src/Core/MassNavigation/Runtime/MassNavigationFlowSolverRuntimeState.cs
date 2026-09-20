@@ -97,5 +97,13 @@ public sealed partial class MassNavigationFlowSolverState
         public uint CategoryMask { get; }
         public uint InteractionMask { get; }
         public float[] Flow { get; }
+
+        /// <summary>
+        /// 纯缓存：无 crowd stamp 预算时，场的输入只有 static cost revision 与 team target；
+        /// 两者未变则刷新结果与现存场逐位相同，可跳过 grid 级重算。
+        /// </summary>
+        public int LastComputedCostRevision { get; set; } = -1;
+        public float LastComputedTargetX { get; set; } = float.NaN;
+        public float LastComputedTargetY { get; set; } = float.NaN;
     }
 }

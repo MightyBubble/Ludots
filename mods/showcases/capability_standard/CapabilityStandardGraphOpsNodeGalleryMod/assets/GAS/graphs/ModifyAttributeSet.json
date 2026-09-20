@@ -1,0 +1,24 @@
+[
+  {
+    "id": "showcase.graph_op.ModifyAttributeSet",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "value" }
+    ],
+    "nodes": [
+      { "id": "value", "op": "ConstFloat", "floatValue": 42.0 },
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "write", "op": "ModifyAttributeSet", "attribute": "Health" },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "value", "fromPort": "next", "to": "target" },
+      { "from": "target", "fromPort": "next", "to": "write" },
+      { "from": "write", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "value", "fromPort": "value", "to": "write", "toPort": "value" },
+      { "from": "target", "fromPort": "value", "to": "write", "toPort": "target" }
+    ]
+  }
+]

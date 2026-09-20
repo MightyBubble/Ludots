@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Text;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -21,6 +23,105 @@ namespace Ludots.Tests.GasTests.UI
           ]
         }
         """;
+
+        [Test]
+        public void LayoutTemplateLoader_LoadsNestedDataSourceNeutralControls()
+        {
+            const string json = """
+            [{
+              "id": "layout.tests.card",
+              "bindings": ["title", "portrait", "size"],
+              "root": {
+                "type": "row",
+                "gap": 8,
+                "children": [
+                  { "type": "image", "bind": "portrait", "widthBind": "size", "heightBind": "size", "objectFit": "contain" },
+                  { "type": "label", "bind": "title", "class": "title", "fontSize": 18, "bold": true }
+                ]
+              }
+            }]
+            """;
+
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+            PanelLayoutTemplate template = PanelLayoutTemplateLoader.LoadCatalog(stream).Require("layout.tests.card");
+
+            Assert.That(template.Root.Type, Is.EqualTo(PanelLayoutControlType.Row));
+            Assert.That(template.Root.Children.Count, Is.EqualTo(2));
+            Assert.That(template.Root.Children[0].Type, Is.EqualTo(PanelLayoutControlType.Image));
+            Assert.That(template.Root.Children[1].Bind, Is.EqualTo("title"));
+        }
+
+        [Test]
+        public void LayoutTemplateLoader_UnknownBinding_FailsClosed()
+        {
+            const string json = """
+            [{
+              "id": "layout.tests.bad",
+              "bindings": ["title"],
+              "root": { "type": "label", "bind": "missing" }
+            }]
+            """;
+
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+            Assert.That(
+                () => PanelLayoutTemplateLoader.LoadCatalog(stream),
+                Throws.InvalidOperationException.With.Message.Contains("missing"));
+        }
+
+        [Test]
+        public void LayoutTemplateLoader_PreservesRichTextAndRepeaterTree()
+        {
+            const string json = """
+            [{
+              "id": "layout.tests.narrative",
+              "bindings": ["body", "runs", "choices", "choiceText"],
+              "root": {
+                "type": "column",
+                "children": [
+                  { "type": "richText", "bind": "body", "textRunsBind": "runs" },
+                  {
+                    "type": "repeater",
+                    "bind": "choices",
+                    "children": [
+                      {
+                        "type": "row",
+                        "children": [
+                          { "type": "label", "bind": "choiceText" }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }]
+            """;
+
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+            PanelLayoutControl root =
+                PanelLayoutTemplateLoader.LoadCatalog(stream).Require("layout.tests.narrative").Root;
+
+            Assert.That(root.Type, Is.EqualTo(PanelLayoutControlType.Column));
+            Assert.That(root.Children[0].Type, Is.EqualTo(PanelLayoutControlType.RichText));
+            Assert.That(root.Children[1].Type, Is.EqualTo(PanelLayoutControlType.Repeater));
+            Assert.That(root.Children[1].Children[0].Type, Is.EqualTo(PanelLayoutControlType.Row));
+        }
+
+        [Test]
+        public void LayoutTemplateLoader_PanelOnlyListType_FailsClosed()
+        {
+            const string json = """
+            [{
+              "id": "layout.tests.list",
+              "bindings": ["items"],
+              "root": { "type": "list", "bind": "items" }
+            }]
+            """;
+
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+            Assert.That(
+                () => PanelLayoutTemplateLoader.LoadCatalog(stream),
+                Throws.InvalidOperationException.With.Message.Contains("does not allow type 'list'"));
+        }
 
         [Test]
         public void Load_ValidTemplate_CarriesGraphAndPins()
@@ -176,6 +277,7 @@ namespace Ludots.Tests.GasTests.UI
               "collections": [
                 {
                   "name": "units",
+                  "source": "selfGraph",
                   "collectionKey": "tests.collection.units",
                   "template": "panel.unit.roster"
                 }
@@ -194,6 +296,199 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(template.Collections[0].TemplateId, Is.EqualTo("panel.unit.roster"));
             Assert.That(template.Subject, Is.EqualTo(PanelSubjectKind.None));
             Assert.That(template.Layout!.Controls[1].Type, Is.EqualTo(PanelLayoutControlType.List));
+        }
+
+        [Test]
+        public void Load_AggregatePresentMode_ParsesOnListControl()
+        {
+            PanelTemplate template = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.aggregate",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "effects",
+                  "source": "selfGraph",
+                  "collectionKey": "effects",
+                  "template": "panel.effect.chip"
+                }
+              ],
+              "layout": {
+                "controls": [
+                  {
+                    "type": "list",
+                    "bind": "effects",
+                    "present": "aggregate",
+                    "aggregate": { "count": { "from": "totalCount", "prefix": "×" } }
+                  }
+                ]
+              }
+            }
+            """);
+
+            Assert.That(
+                template.Layout!.Controls[0].Present,
+                Is.EqualTo(PanelPresentMode.Aggregate));
+            Assert.That(template.Layout.Controls[0].AggregateCount, Is.Not.Null);
+            Assert.That(template.Layout.Controls[0].AggregateCount!.Prefix, Is.EqualTo("×"));
+        }
+
+        [Test]
+        public void Load_GridPresent_RequiresColumns()
+        {
+            Assert.That(
+                () => PanelTemplateLoader.Load("""
+                {
+                  "id": "tests.panel.grid",
+                  "graph": "g",
+                  "pins": [ { "name": "n", "key": "k" } ],
+                  "collections": [
+                    {
+                      "name": "effects",
+                      "source": "selfGraph",
+                      "collectionKey": "effects",
+                      "template": "panel.effect.chip"
+                    }
+                  ],
+                  "layout": {
+                    "controls": [
+                      { "type": "list", "bind": "effects", "present": "grid" }
+                    ]
+                  }
+                }
+                """),
+                Throws.TypeOf<InvalidOperationException>().With.Message.Contains("columns"));
+        }
+
+        [Test]
+        public void Load_GridPresent_ParsesColumns()
+        {
+            PanelTemplate template = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.grid.ok",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "effects",
+                  "source": "selfGraph",
+                  "collectionKey": "effects",
+                  "template": "panel.effect.chip"
+                }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "list", "bind": "effects", "present": "grid", "columns": 3, "itemExtent": 64 }
+                ]
+              }
+            }
+            """);
+
+            Assert.That(template.Layout!.Controls[0].Present, Is.EqualTo(PanelPresentMode.Grid));
+            Assert.That(template.Layout.Controls[0].Columns, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Load_ColumnPresent_Parses()
+        {
+            PanelTemplate template = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.column.ok",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "effects",
+                  "source": "selfGraph",
+                  "collectionKey": "effects",
+                  "template": "panel.effect.chip"
+                }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "list", "bind": "effects", "present": "column", "itemExtent": 48 }
+                ]
+              }
+            }
+            """);
+
+            Assert.That(template.Layout!.Controls[0].Present, Is.EqualTo(PanelPresentMode.Column));
+        }
+
+        [Test]
+        public void Load_ImageControl_RequiresSrcOrBindAndSize()
+        {
+            Assert.That(
+                () => PanelTemplateLoader.Load("""
+                {
+                  "id": "tests.panel.image.bad",
+                  "subject": "EffectInstance",
+                  "graph": "g",
+                  "pins": [ { "name": "n", "key": "k" } ],
+                  "layout": {
+                    "controls": [
+                      { "type": "image", "bind": "imageId" }
+                    ]
+                  }
+                }
+                """),
+                Throws.TypeOf<InvalidOperationException>().With.Message.Contains("width"));
+
+            PanelTemplate ok = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.image.ok",
+              "subject": "EffectInstance",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "layout": {
+                "controls": [
+                  { "type": "image", "bind": "imageId", "width": 28, "height": 28 }
+                ]
+              }
+            }
+            """);
+            Assert.That(ok.Layout!.Controls[0].Type, Is.EqualTo(PanelLayoutControlType.Image));
+            Assert.That(ok.Layout.Controls[0].Bind, Is.EqualTo("imageId"));
+            Assert.That(ok.Layout.Controls[0].Width, Is.EqualTo(28f));
+        }
+
+        [Test]
+        public void Load_ImageControl_PreservesLiteralSource()
+        {
+            PanelTemplate template = PanelTemplateLoader.Load("""
+            {
+              "id": "tests.panel.image.literal",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "layout": {
+                "controls": [
+                  { "type": "image", "src": "icons.health", "width": 24, "height": 24 }
+                ]
+              }
+            }
+            """);
+
+            Assert.That(template.Layout!.Controls[0].Src, Is.EqualTo("icons.health"));
+            Assert.That(template.Layout.Controls[0].Bind, Is.Null);
+        }
+
+        [TestCase("""{ "type": "badge", "bind": "flag" }""")]
+        [TestCase("""{ "type": "badge", "text": "Ready" }""")]
+        public void Load_BadgeWithoutTextOrBind_FailsClosed(string control)
+        {
+            string json = $$"""
+            {
+              "id": "tests.panel.badge.invalid",
+              "graph": "g",
+              "pins": [ { "name": "flag", "key": "k" } ],
+              "layout": { "controls": [ {{control}} ] }
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("requires bind and text"));
         }
 
         [Test]
@@ -221,6 +516,28 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(element.Collections.Count, Is.EqualTo(0));
         }
 
+        [TestCase("ItemInstance", PanelSubjectKind.ItemInstance)]
+        [TestCase("ItemDefinition", PanelSubjectKind.ItemDefinition)]
+        [TestCase("AbilitySlot", PanelSubjectKind.AbilitySlot)]
+        [TestCase("AbilityDefinition", PanelSubjectKind.AbilityDefinition)]
+        [TestCase("Activity", PanelSubjectKind.Activity)]
+        [TestCase("Tag", PanelSubjectKind.Tag)]
+        [TestCase("ProgressionNode", PanelSubjectKind.ProgressionNode)]
+        public void Load_TypedCollectionSubject_Parses(string subject, PanelSubjectKind expected)
+        {
+            string json = $$"""
+            {
+              "id": "panel.typed.subject",
+              "subject": "{{subject}}",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "layout": { "controls": [ { "type": "label", "bind": "displayName" } ] }
+            }
+            """;
+
+            Assert.That(PanelTemplateLoader.Load(json).Subject, Is.EqualTo(expected));
+        }
+
         [Test]
         public void Load_UnknownSubject_FailsClosed()
         {
@@ -239,6 +556,64 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
+        public void Load_UnknownPresentMode_FailsClosed()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.bad-present",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "units",
+                  "source": "selfGraph",
+                  "collectionKey": "units",
+                  "template": "panel.unit"
+                }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "list", "bind": "units", "present": "grid" }
+                ]
+              }
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("grid"));
+        }
+
+        [Test]
+        public void Load_EmptyPresentMode_FailsClosed()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.empty-present",
+              "graph": "g",
+              "pins": [ { "name": "n", "key": "k" } ],
+              "collections": [
+                {
+                  "name": "units",
+                  "source": "selfGraph",
+                  "collectionKey": "units",
+                  "template": "panel.unit"
+                }
+              ],
+              "layout": {
+                "controls": [
+                  { "type": "list", "bind": "units", "present": "" }
+                ]
+              }
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("present"));
+        }
+
+        [Test]
         public void Load_InlineItemControls_FailsClosed()
         {
             const string json = """
@@ -247,7 +622,7 @@ namespace Ludots.Tests.GasTests.UI
               "graph": "g",
               "pins": [ { "name": "n", "key": "k" } ],
               "collections": [
-                { "name": "units", "collectionKey": "c", "template": "panel.unit.roster" }
+                { "name": "units", "source": "selfGraph", "collectionKey": "c", "template": "panel.unit.roster" }
               ],
               "layout": {
                 "controls": [
@@ -323,7 +698,7 @@ namespace Ludots.Tests.GasTests.UI
               "graph": "g",
               "pins": [ { "name": "n", "key": "k" } ],
               "collections": [
-                { "name": "units", "collectionKey": "c", "template": "panel.unit.roster" }
+                { "name": "units", "source": "selfGraph", "collectionKey": "c", "template": "panel.unit.roster" }
               ],
               "layout": { "controls": [ { "type": "list", "bind": "units" } ] }
             }

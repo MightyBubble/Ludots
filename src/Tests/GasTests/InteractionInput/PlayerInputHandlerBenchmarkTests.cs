@@ -26,7 +26,7 @@ namespace Ludots.Tests.GAS
 
             for (int i = 0; i < 256; i++)
             {
-                handler.Update();
+                handler.Update(1f / 60f);
             }
 
             GC.Collect();
@@ -39,7 +39,7 @@ namespace Ludots.Tests.GAS
             var sw = Stopwatch.StartNew();
             for (int i = 0; i < iterations; i++)
             {
-                handler.Update();
+                handler.Update(1f / 60f);
             }
             sw.Stop();
             long after = GC.GetAllocatedBytesForCurrentThread();

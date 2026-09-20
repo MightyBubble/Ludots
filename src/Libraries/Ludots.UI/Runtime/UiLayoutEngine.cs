@@ -884,6 +884,15 @@ public sealed class UiLayoutEngine
 	{
 		UiStyle style = node.Style;
 		string textContent = node.TextContent;
+		if (node.TextRuns is { Count: > 0 })
+		{
+			float availableWidth = ((widthMode == MeasureMode.Undefined) ? float.PositiveInfinity : Math.Max(0f, width - style.Padding.Horizontal));
+			UiTextLayoutResult uiTextLayoutResult = _textMeasurer.Measure(node.TextRuns, style, availableWidth, widthMode != MeasureMode.Undefined);
+			float measured = uiTextLayoutResult.Width + style.Padding.Horizontal;
+			float measured2 = uiTextLayoutResult.Height + style.Padding.Vertical;
+			return new Size(ResolveMeasuredAxis(measured, width, widthMode), ResolveMeasuredAxis(measured2, height, heightMode));
+		}
+
 		if (!string.IsNullOrWhiteSpace(textContent))
 		{
 			float availableWidth = ((widthMode == MeasureMode.Undefined) ? float.PositiveInfinity : Math.Max(0f, width - style.Padding.Horizontal));

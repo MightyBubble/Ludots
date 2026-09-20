@@ -303,7 +303,8 @@ namespace Ludots.Core.Presentation.Hud
                     {
                         lane.AverageTranslationX = lane.WorkingTranslationX / lane.WorkingTranslationCount;
                         lane.AverageTranslationY = lane.WorkingTranslationY / lane.WorkingTranslationCount;
-                        lane.HasUniformTranslation = lane.WorkingHasUniformTranslation && lane.WorkingUniformTranslationSet;
+                        lane.HasUniformTranslation = lane.WorkingHasUniformTranslation && lane.WorkingUniformTranslationSet &&
+                            lane.WorkingTranslationCount == lane.Count;
                         lane.UniformTranslationX = lane.WorkingUniformTranslationX;
                         lane.UniformTranslationY = lane.WorkingUniformTranslationY;
                     }
@@ -350,7 +351,6 @@ namespace Ludots.Core.Presentation.Hud
                 LaneState lane = _lanes[GetLaneIndex(layer, (PresentationOverlayItemKind)kindValue)];
                 if (lane.Count <= 0)
                 {
-                    ResetLaneBuildDeltas(lane);
                     continue;
                 }
 
@@ -434,7 +434,8 @@ namespace Ludots.Core.Presentation.Hud
                     {
                         lane.AverageTranslationX = lane.WorkingTranslationX / lane.WorkingTranslationCount;
                         lane.AverageTranslationY = lane.WorkingTranslationY / lane.WorkingTranslationCount;
-                        lane.HasUniformTranslation = lane.WorkingHasUniformTranslation && lane.WorkingUniformTranslationSet;
+                        lane.HasUniformTranslation = lane.WorkingHasUniformTranslation && lane.WorkingUniformTranslationSet &&
+                            lane.WorkingTranslationCount == lane.Count;
                         lane.UniformTranslationX = lane.WorkingUniformTranslationX;
                         lane.UniformTranslationY = lane.WorkingUniformTranslationY;
                     }
@@ -845,6 +846,31 @@ namespace Ludots.Core.Presentation.Hud
             return TryAppend(in item);
         }
 
+        /// <summary>取证计数：RemoveStable 按 stableId 查索引未命中而静默跳过的次数。</summary>
+        public int RemoveStableMisses { get; private set; }
+
+        /// <summary>UnderUi 屏幕 HUD lane 是否持有条目（append-only 决策用）。</summary>
+        public bool HasUnderUiHudContent =>
+            GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text).Length > 0 ||
+            GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar).Length > 0;
+
+        /// <summary>取证：UnderUi 文本 lane 中 StableId>0 但不在稳定索引里的条数（索引失同步直接读数）。</summary>
+        public int CountUnderUiTextOrphansWithoutIndex()
+        {
+            LaneState lane = _lanes[GetLaneIndex(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text)];
+            int orphans = 0;
+            for (int i = 0; i < lane.Count; i++)
+            {
+                int id = lane.Items[i].StableId;
+                if (id > 0 && !lane.StableIndexById.ContainsKey(id))
+                {
+                    orphans++;
+                }
+            }
+
+            return orphans;
+        }
+
         public void RemoveStable(PresentationOverlayLayer layer, PresentationOverlayItemKind kind, int stableId)
         {
             if (stableId <= 0)
@@ -856,6 +882,7 @@ namespace Ludots.Core.Presentation.Hud
             LaneState lane = _lanes[laneIndex];
             if (!lane.StableIndexById.TryGetValue(stableId, out int index))
             {
+                RemoveStableMisses++;
                 return;
             }
 
@@ -923,6 +950,13 @@ namespace Ludots.Core.Presentation.Hud
             LaneState lane = _lanes[laneIndex];
             EnsureLaneCapacity(lane, lane.Count + 1);
             lane.Items[lane.Count++] = item;
+            // 稳定 id 条目必须登记索引：RemoveStable 只认 StableIndexById，漏登记即永生孤儿
+            // （#HUD 残留：边缘刮过的文本黏屏）。
+            if (item.StableId > 0)
+            {
+                lane.StableIndexById[item.StableId] = lane.Count - 1;
+            }
+
             _count++;
             return true;
         }
@@ -1012,7 +1046,7 @@ namespace Ludots.Core.Presentation.Hud
             float translationX = 0f;
             float translationY = 0f;
             bool uniformSet = false;
-            bool uniform = true;
+            bool uniform = items.Length == lane.Count;
             float uniformX = 0f;
             float uniformY = 0f;
 
@@ -1021,9 +1055,11 @@ namespace Ludots.Core.Presentation.Hud
                 ref readonly ScreenHudBarItem source = ref items[i];
                 if (!TryResolveStableLaneIndex(lane, i, source.StableId, out int index))
                 {
+                    uniform = false;
                     continue;
                 }
 
+                uniform &= index == i;
                 ref PresentationOverlayItem item = ref lane.Items[index];
                 TrackPositionUpdate(ref item, source.ScreenX, source.ScreenY, ref changedCount, ref translationX, ref translationY, ref uniformSet, ref uniform, ref uniformX, ref uniformY);
             }
@@ -1044,7 +1080,7 @@ namespace Ludots.Core.Presentation.Hud
             float translationX = 0f;
             float translationY = 0f;
             bool uniformSet = false;
-            bool uniform = true;
+            bool uniform = items.Length == lane.Count;
             float uniformX = 0f;
             float uniformY = 0f;
             int end = Math.Min(items.Length, start + count);
@@ -1067,6 +1103,7 @@ namespace Ludots.Core.Presentation.Hud
                 ref PresentationOverlayItem item = ref lane.Items[i];
                 if (item.StableId != source.StableId)
                 {
+                    uniform = false;
                     if (!TryResolveStableLaneIndex(lane, i, source.StableId, out int resolvedIndex))
                     {
                         continue;
@@ -1092,7 +1129,7 @@ namespace Ludots.Core.Presentation.Hud
             float translationX = 0f;
             float translationY = 0f;
             bool uniformSet = false;
-            bool uniform = true;
+            bool uniform = items.Length == lane.Count;
             float uniformX = 0f;
             float uniformY = 0f;
 
@@ -1101,9 +1138,11 @@ namespace Ludots.Core.Presentation.Hud
                 ref readonly ScreenHudTextItem source = ref items[i];
                 if (!TryResolveStableLaneIndex(lane, i, source.StableId, out int index))
                 {
+                    uniform = false;
                     continue;
                 }
 
+                uniform &= index == i;
                 ref PresentationOverlayItem item = ref lane.Items[index];
                 TrackPositionUpdate(ref item, source.ScreenX, source.ScreenY, ref changedCount, ref translationX, ref translationY, ref uniformSet, ref uniform, ref uniformX, ref uniformY);
             }
@@ -1124,7 +1163,7 @@ namespace Ludots.Core.Presentation.Hud
             float translationX = 0f;
             float translationY = 0f;
             bool uniformSet = false;
-            bool uniform = true;
+            bool uniform = items.Length == lane.Count;
             float uniformX = 0f;
             float uniformY = 0f;
             int end = Math.Min(items.Length, start + count);
@@ -1147,6 +1186,7 @@ namespace Ludots.Core.Presentation.Hud
                 ref PresentationOverlayItem item = ref lane.Items[i];
                 if (item.StableId != source.StableId)
                 {
+                    uniform = false;
                     if (!TryResolveStableLaneIndex(lane, i, source.StableId, out int resolvedIndex))
                     {
                         continue;
@@ -1231,14 +1271,18 @@ namespace Ludots.Core.Presentation.Hud
                 return;
             }
 
+            uniform &= !lane.Dirty && changedCount == lane.Count;
             if (!lane.Dirty)
             {
                 DirtyLaneCount++;
             }
 
             lane.Dirty = true;
-            lane.MutationKind = PresentationOverlayLaneMutationKind.PositionOnly;
-            lane.WorkingMutationKind = PresentationOverlayLaneMutationKind.PositionOnly;
+            if (lane.WorkingMutationKind != PresentationOverlayLaneMutationKind.Content)
+            {
+                lane.MutationKind = PresentationOverlayLaneMutationKind.PositionOnly;
+                lane.WorkingMutationKind = PresentationOverlayLaneMutationKind.PositionOnly;
+            }
             lane.AverageTranslationX = translationX / changedCount;
             lane.AverageTranslationY = translationY / changedCount;
             lane.HasUniformTranslation = uniform;
@@ -1337,8 +1381,12 @@ namespace Ludots.Core.Presentation.Hud
             }
 
             lane.Dirty = true;
-            lane.MutationKind = mutationKind;
-            lane.WorkingMutationKind = mutationKind;
+            bool wasDirty = lane.WorkingMutationKind != PresentationOverlayLaneMutationKind.None;
+            if (lane.WorkingMutationKind != PresentationOverlayLaneMutationKind.Content)
+            {
+                lane.MutationKind = mutationKind;
+                lane.WorkingMutationKind = mutationKind;
+            }
             lane.AverageTranslationX = 0f;
             lane.AverageTranslationY = 0f;
             lane.HasUniformTranslation = false;
@@ -1348,7 +1396,7 @@ namespace Ludots.Core.Presentation.Hud
             {
                 lane.AverageTranslationX = deltaX;
                 lane.AverageTranslationY = deltaY;
-                lane.HasUniformTranslation = true;
+                lane.HasUniformTranslation = !wasDirty && lane.Count == 1;
                 lane.UniformTranslationX = deltaX;
                 lane.UniformTranslationY = deltaY;
             }

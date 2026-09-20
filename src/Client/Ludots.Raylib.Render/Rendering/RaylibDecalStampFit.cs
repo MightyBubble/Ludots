@@ -19,7 +19,7 @@ namespace Ludots.Raylib.Render
             float yawRad,
             in Vector2 stampSizeMeters,
             int stableId,
-            IVisualHeightmap heightmap,
+            IContinuousHeightmap heightmap,
             string receiverName)
         {
             if (!float.IsFinite(stampSizeMeters.X) || !float.IsFinite(stampSizeMeters.Y) ||

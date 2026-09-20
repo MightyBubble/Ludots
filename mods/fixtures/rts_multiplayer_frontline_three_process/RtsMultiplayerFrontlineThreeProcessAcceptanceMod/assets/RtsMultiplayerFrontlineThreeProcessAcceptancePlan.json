@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 3,
+  "evidenceSchemaVersion": 10,
+  "evidenceFileName": "gameplay-evidence.json",
+  "evidenceCheckpointSeconds": 1,
+  "overallTimeoutSeconds": 220,
+  "stageTimeoutSeconds": {
+    "connect": 30,
+    "ready": 30,
+    "gather": 100,
+    "train": 60,
+    "move": 35,
+    "attack": 100
+  },
+  "expected": {
+    "initialCrystals": 40,
+    "harvestedCrystals": 120,
+    "postTrainingCrystals": 0,
+    "initialHarvesterCount": 2,
+    "initialInfantryCount": 2,
+    "trainedInfantryCount": 4,
+    "winningSideIndex": 0,
+    "winnerMinimumAttackers": 2,
+    "winnerCasualtiesBeforeSiege": 1,
+    "loserAttackers": 1
+  },
+  "battle": {
+    "meetingOffsetCm": 300,
+    "siegeBeyondFarResourceCm": 1500,
+    "arrivalToleranceCm": 300,
+    "minimumObservedMoveCm": 500,
+    "winnerHoldAtMeetingSeconds": 2,
+    "completionCameraToleranceCm": 25,
+    "completionWitnessRadiusCm": 2200,
+    "minimumCompletionWinnerInfantry": 1
+  },
+  "presentation": {
+    "title": "FRONTLINE LIVE MATCH CHECK",
+    "connecting": "Commanders are joining the battlefield",
+    "ready": "Both commanders are readying up",
+    "gathering": "Harvesters are bringing crystals home",
+    "training": "Reinforcements are training",
+    "advancing": "Infantry are advancing to the frontline",
+    "engaging": "Both commanders have entered combat",
+    "completed": "The northern commander has broken the opposing core",
+    "failed": "The live match check stopped"
+  }
+}

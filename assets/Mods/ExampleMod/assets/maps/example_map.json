@@ -1,10 +1,21 @@
 {
   "Id": "example_map",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "Boards": [
-    { "Name": "default", "DataFile": "example_map.bin", "LoadedChunkCapacity": 256 }
+    {
+      "Name": "default",
+      "DataFile": "example_map.bin",
+      "WidthCells": 16384,
+      "HeightCells": 16384
+    }
   ],
   "Dependencies": [
-    { "Id": "ExampleMod", "MinVersion": "1.0.0" }
+    {
+      "Id": "ExampleMod",
+      "MinVersion": "1.0.0"
+    }
   ],
   "Entities": []
 }

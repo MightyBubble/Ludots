@@ -222,6 +222,8 @@ public sealed class SaveSystemUatTests
     private static GameEngine CreateRtsTrainingEngine(string repoRoot)
     {
         var engine = new GameEngine();
+        engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new Ludots.UI.Skia.SkiaTextMeasurer());
+        engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new Ludots.UI.Skia.SkiaImageSizeProvider());
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, new[]
             {

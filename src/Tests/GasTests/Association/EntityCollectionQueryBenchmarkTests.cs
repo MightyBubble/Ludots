@@ -250,7 +250,7 @@ namespace Ludots.Tests.GAS
         {
             var mapping = new InputOrderMappingSystem(new FrozenInputActionReader(), new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     CreateSkillMapping("SkillQ", 0),

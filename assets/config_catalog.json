@@ -48,7 +48,9 @@
     "Path": "Enums/enums.json",
     "Policy": "ArrayById",
     "IdField": "id",
-    "ArrayAppendFields": [ "members" ],
+    "ArrayAppendFields": [
+      "members"
+    ],
     "AllowEmpty": true
   },
   {
@@ -222,6 +224,16 @@
     "IdField": "id"
   },
   {
+    "Path": "Fields/layers.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Fields/hierarchies.json",
+    "Policy": "ArrayById",
+    "IdField": "parent"
+  },
+  {
     "Path": "Progression/scopes.json",
     "Policy": "ArrayById",
     "IdField": "id"
@@ -319,6 +331,12 @@
     "IdField": "id"
   },
   {
+    "Path": "Presentation/raylib_scenes.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
     "Path": "Presentation/instanced_batches.json",
     "Policy": "ArrayById",
     "IdField": "id",
@@ -401,6 +419,11 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "Relationships/projection.json",
+    "Policy": "DeepObject",
+    "AllowEmpty": true
+  },
+  {
     "Path": "Input/default_input.json",
     "Policy": "DeepObject"
   },
@@ -439,7 +462,15 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "Input/interaction_modes.json",
+    "Policy": "DeepObject"
+  },
+  {
     "Path": "Input/control_schemes.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Input/interaction_prefs.json",
     "Policy": "DeepObject"
   },
   {

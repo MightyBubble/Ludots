@@ -1,16 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod.Systems;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Client;
@@ -59,15 +62,24 @@ namespace CoreInputMod.Triggers
             var commandSourceAcquisitionConfig = engine.GetService(CoreServiceKeys.CommandSourceAcquisitionConfig)
                 ?? throw new InvalidOperationException("CommandSourceAcquisitionConfig must be registered before CoreInputMod installs.");
 
-            var commandSourceAcquisition = new CommandSourceAcquisitionSystem(
-                engine.World,
-                engine.GlobalContext,
-                (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner));
-            commandSourceAcquisition.OnEntityAcquired = (worldCm, entity) =>
+            if (commandSourceAcquisitionConfig.Acquisition.Enabled)
             {
-                foreach (var cb in commandSourceAcquiredCallbacks) cb(worldCm, entity);
-            };
-            engine.InsertSystemBeforeRequired<AxisMoveOrderSystem>(commandSourceAcquisition, SystemGroup.InputCollection);
+                var commandSourceAcquisition = new CommandSourceAcquisitionSystem(
+                    engine.World,
+                    engine.GlobalContext,
+                    (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner));
+                commandSourceAcquisition.OnEntityAcquired = (worldCm, entity) =>
+                {
+                    foreach (var cb in commandSourceAcquiredCallbacks) cb(worldCm, entity);
+                };
+                // Replicated clients execute only LocalInput, before pointer edges are consumed.
+                engine.InsertSystemBeforeRequired<AxisMoveOrderSystem>(commandSourceAcquisition, SystemGroup.LocalInput);
+                engine.RegisterPresentationSystem(new CommandSourceDragOverlaySystem(
+                    engine.World,
+                    engine.GlobalContext,
+                    (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner),
+                    commandSourceAcquisitionConfig));
+            }
 
             engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
             engine.RegisterSystem(new AbilityExecAimSyncSystem(engine.World, new InputInteractionContextAccessor(engine.World, engine.GlobalContext)), SystemGroup.InputCollection);
@@ -75,25 +87,64 @@ namespace CoreInputMod.Triggers
                 engine.World,
                 engine.GlobalContext,
                 (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner)));
-            engine.RegisterPresentationSystem(new CommandSourceDragOverlaySystem(
-                engine.World,
-                engine.GlobalContext,
-                (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner),
-                commandSourceAcquisitionConfig));
             engine.InsertPresentationSystemBefore<EntityCollectionPresentationEventSystem>(new AbilityAimPresentationProjectionSystem(engine.World, engine.GlobalContext));
             engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new CommandActorMovePathPresentationSystem(
                 engine.World,
                 engine.GlobalContext,
                 (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner)));
-            engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
+            engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.LocalInput);
 
             var vmManager = new ViewModeManager(engine.World, engine.GlobalContext);
             engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
             RegisterLoadedModViewModes(engine);
-            engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
+            engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.LocalInput);
 
-            _ctx.Log("[CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered");
+            InstallDeclaredLocalOrderSources(engine);
+
+            _ctx.Log($"[CoreInputMod] Acquisition enabled: {commandSourceAcquisitionConfig.Acquisition.Enabled}; input and presentation systems registered.");
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Standard local order sources are config-declared: every loaded mod shipping
+        /// assets/Input/local_order_source.json gets LocalOrderSourceSystem installed against its
+        /// own input_order_mappings.json, replacing per-mod wrapper systems. Local order sources
+        /// exist only where local presentation exists; authoritative servers skip them.
+        /// </summary>
+        private void InstallDeclaredLocalOrderSources(GameEngine engine)
+        {
+            if (engine.ModLoader?.LoadedModIds == null ||
+                engine.GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer)
+            {
+                return;
+            }
+
+            OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
+                ?? throw new InvalidOperationException("Declared local order sources require OrderQueue.");
+            IReadOnlyList<string> modIds = engine.ModLoader.LoadedModIds;
+            for (int i = 0; i < modIds.Count; i++)
+            {
+                string modId = modIds[i];
+                string uri = $"{modId}:assets/Input/local_order_source.json";
+                if (!_ctx.VFS.TryResolveFullPath(uri, out string? fullPath) || !File.Exists(fullPath))
+                {
+                    continue;
+                }
+
+                LocalOrderSourceConfig config;
+                using (var stream = File.OpenRead(fullPath))
+                {
+                    config = LocalOrderSourceConfig.LoadFromStream(stream);
+                }
+
+                var group = string.Equals(config.SystemGroup, "LocalInput", StringComparison.Ordinal)
+                    ? SystemGroup.LocalInput
+                    : SystemGroup.InputCollection;
+                engine.RegisterSystem(
+                    new LocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx, config, modId),
+                    group);
+                _ctx.Log($"[CoreInputMod] Installed declared local order source for {modId} ({config.SystemGroup}).");
+            }
         }
 
         private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
@@ -112,8 +163,9 @@ namespace CoreInputMod.Triggers
 
         private static bool TryResolveMinimapFocusCollection(GameEngine engine, out Entity owner, out string collectionKey)
         {
-            collectionKey = EntityCollectionKeys.CommandSource;
-            return TryResolveLocalCommandSourceOwner(engine, out owner);
+            bool found = TryResolveLocalCommandSourceOwner(engine, out owner);
+            collectionKey = InputInteractionContextAccessor.RequireActiveActorCollectionKey(engine.World, engine.GlobalContext, owner);
+            return found;
         }
 
         private void RegisterLoadedModViewModes(GameEngine engine)

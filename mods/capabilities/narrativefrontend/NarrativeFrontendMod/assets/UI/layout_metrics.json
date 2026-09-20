@@ -1,0 +1,7 @@
+{
+  "safeAreaMargin": 24,
+  "bottomLaneGap": 24,
+  "standingImageAspect": 0.6666667,
+  "standingCardGap": 28,
+  "standingCardMinWidth": 420
+}

@@ -7,7 +7,10 @@ namespace NarrativeShowcaseMod
         public const string ElderName = "WardenMirelle";
         public const string ShrineName = "EmberShrine";
         public const string BeastName = "AshenBeast";
-        public const string SpawnedBeastTemplateName = "EnemyBruiser";
+        public const string BlessingSpeedEffectId = "Effect.Narrative.BlessingSpeed";
+        public const string BlessingHealEffectId = "Effect.Narrative.BlessingHeal";
+        public const string SpawnedBeastTemplateId = "interaction_enemy_bruiser";
+        public const string SpawnedBeastEntityName = "EnemyBruiser";
 
         public const string PlayerAlias = "player";
         public const string ElderAlias = "elder";

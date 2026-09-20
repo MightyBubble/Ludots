@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `skia_overlay` |
 | preset | `engine_raylib_skia_overlay` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/SkiaOverlayScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/SkiaOverlayScene.cs` |
 | 承接渲染器 | `RaylibSkiaRenderer` + `SkiaRasterLayer`（分层光栅） |
 | 注册表条目 | `engine_raylib_skia_overlay`（`showcase.registry.json`，tier T1） |
 

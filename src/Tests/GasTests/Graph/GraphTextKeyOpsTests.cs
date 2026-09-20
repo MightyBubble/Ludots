@@ -240,7 +240,6 @@ namespace Ludots.Tests.GAS
             public int ResolveRelationshipType(string name) => throw Unsupported(name);
             public int ResolveRelationshipMetric(string name) => throw Unsupported(name);
             public int ResolveRelationshipFlag(string name) => throw Unsupported(name);
-            public int ResolveRelationshipReason(string name) => throw Unsupported(name);
             public int ResolveTargetDispatchPreset(string name) => throw Unsupported(name);
             public int ResolveEntityTemplate(string name) => throw Unsupported(name);
 

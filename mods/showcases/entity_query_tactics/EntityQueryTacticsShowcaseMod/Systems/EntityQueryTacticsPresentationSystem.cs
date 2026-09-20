@@ -175,6 +175,12 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             string footer = "",
             IReadOnlyList<NarrativeFrontendSurfaceItem>? items = null)
         {
+            if (string.IsNullOrWhiteSpace(config.LayoutId))
+            {
+                throw new InvalidOperationException(
+                    $"Entity query tactics surface '{kind}' requires layoutId.");
+            }
+
             return new NarrativeFrontendSurfaceModel(
                 SurfaceId: $"{Frontend.OwnerId}.{kind}.{config.ResolveAnchor()}",
                 Kind: kind,
@@ -192,7 +198,9 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 BackgroundHex: config.BackgroundHex,
                 BorderHex: config.BorderHex,
                 ForegroundHex: config.ForegroundHex,
-                MutedHex: config.MutedHex);
+                MutedHex: config.MutedHex,
+                LayoutId: config.LayoutId,
+                StyleClass: config.StyleClass);
         }
 
         private string BuildSelectedFilterSummary()

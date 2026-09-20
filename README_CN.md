@@ -51,8 +51,9 @@ Ludots 是一个现代化的 C# 游戏框架，专为高性能游戏逻辑设计
 脚本位于 `scripts/` 目录下：
 
 ```bash
-# 运行可视化编辑器 (Web + Bridge)
-.\scripts\run-editor.cmd
+# 作者工作室（蓝图 / 行为树 / 状态机 / 对话 / 时间轴）
+./scripts/run-authoring-studio.sh          # Linux / macOS
+.\scripts\run-authoring-studio.cmd         # Windows
 
 # 运行 Mod 启动器
 .\scripts\run-mod-launcher.cmd

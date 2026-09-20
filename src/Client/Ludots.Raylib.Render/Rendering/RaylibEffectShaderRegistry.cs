@@ -50,7 +50,7 @@ namespace Ludots.Raylib.Render
                     fsPath);
             }
 
-            Shader shader = Rl.LoadShader(vsPath, fsPath);
+            Shader shader = RaylibNativeResources.LoadShader(vsPath, fsPath);
             if (shader.id == 0)
             {
                 throw new InvalidOperationException(
@@ -66,37 +66,37 @@ namespace Ludots.Raylib.Render
 
             if (locVertexPosition < 0)
             {
-                Rl.UnloadShader(shader);
+                RaylibNativeResources.UnloadShader(shader);
                 throw new InvalidOperationException($"Effect shader '{key}' is missing required attrib 'vertexPosition'.");
             }
 
             if (locMvp < 0)
             {
-                Rl.UnloadShader(shader);
+                RaylibNativeResources.UnloadShader(shader);
                 throw new InvalidOperationException($"Effect shader '{key}' is missing required uniform 'mvp'.");
             }
 
             if (locModel < 0)
             {
-                Rl.UnloadShader(shader);
+                RaylibNativeResources.UnloadShader(shader);
                 throw new InvalidOperationException($"Effect shader '{key}' is missing required uniform 'matModel'.");
             }
 
             if (locTint < 0)
             {
-                Rl.UnloadShader(shader);
+                RaylibNativeResources.UnloadShader(shader);
                 throw new InvalidOperationException($"Effect shader '{key}' is missing required uniform 'tint'.");
             }
 
             if (locTime < 0)
             {
-                Rl.UnloadShader(shader);
+                RaylibNativeResources.UnloadShader(shader);
                 throw new InvalidOperationException($"Effect shader '{key}' is missing required uniform 'uTime'.");
             }
 
             if (locColDiffuse < 0)
             {
-                Rl.UnloadShader(shader);
+                RaylibNativeResources.UnloadShader(shader);
                 throw new InvalidOperationException($"Effect shader '{key}' is missing required uniform 'colDiffuse'.");
             }
 
@@ -127,7 +127,7 @@ namespace Ludots.Raylib.Render
             {
                 if (entry.Effect.Shader.id != 0)
                 {
-                    Rl.UnloadShader(entry.Effect.Shader);
+                    RaylibNativeResources.UnloadShader(entry.Effect.Shader);
                 }
             }
 
