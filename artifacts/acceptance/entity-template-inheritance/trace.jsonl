@@ -1,0 +1,14 @@
+{"t":0,"event":"load","path":"Entities/templates.json","entries":["test.tpl.grunt","test.tpl.hero"],"order":"ArrayById同id合并 -> extends展开 -> 校验"}
+{"t":1,"event":"expand","template":"test.tpl.hero","extends":"test.tpl.grunt","result":"components字段级深合并; children/TriggerGraphs追加; 标量子代非空才覆盖"}
+{"t":2,"event":"expand.assert","template":"test.tpl.hero","field":"AttributeBuffer.base.Health","expected":250,"actual":250,"passed":true}
+{"t":3,"event":"expand.assert","template":"test.tpl.hero","field":"AttributeBuffer.current.Health","expected":80,"inherited_from":"grunt","actual":80,"passed":true}
+{"t":4,"event":"expand.assert","template":"test.tpl.hero","field":"TriggerGraphs","expected":["graph.shared","graph.grunt","graph.hero"],"note":"精确去重","passed":true}
+{"t":5,"event":"expand.guard","case":"未知父模板","input":"hero extends missing_parent","outcome":"启动失败,错误含双方id","passed":true}
+{"t":6,"event":"expand.guard","case":"继承环","input":"self/self; a<->b","outcome":"启动失败,cycle detected","passed":true}
+{"t":6.5,"event":"replace.marker","layer":"extends+override","case":"RegionVolumeCm circle->rect with __replace:true","outcome":"整组件替换,radiusCm不残留,标记剥离","passed":true}
+{"t":7,"event":"spawn","template":"test.tpl.hero","lane":"batch(expanded descriptor)","Team.Id":9,"Name":"Template:InheritanceGrunt","inherited_components":["WorldPositionCm","FacingDirection","AttributeBuffer"],"passed":true}
+{"t":8,"event":"spawn","template":"test.tpl.grunt","Team.Id":1,"note":"父模板不受展开影响","passed":true}
+{"t":9,"event":"spawn.override","template":"test.tpl.partial.unit","lane":"single(EntityBuilder)","overrides":{"Team":{"Id":2},"WorldPositionCm":{"Value":{"X":900}}},"resolved_position":"(900,20)","note":"Y继承模板值","passed":true}
+{"t":10,"event":"idempotency","case":"二次ExpandAll","outcome":"extends已清空,无变化","passed":true}
+{"t":11,"event":"suite","name":"GasTests.EntityTemplateInheritanceTests","passed":12,"failed":0}
+{"t":12,"event":"suite","name":"GasTests.MapTriggerRegionTests","passed":39,"failed":0,"note":"含Override_ReplacesShape_WholeComponent迁移至__replace标记"}
