@@ -285,7 +285,6 @@ namespace Ludots.Tests.GAS
                 var flags = new RelationshipFlagRegistry();
                 var bands = new RelationshipBandRegistry();
                 var changes = new RelationshipChangeBuffer();
-                metrics.RegisterAliasAttribute(metrics.GetId("Loyalty"), "Loyalty");
                 var runtime = new RelationshipRuntime(world, types, metrics, flags, bands, changes, new RelationshipReverseIndex(world));
                 runtime.InstallTagOps(new Ludots.Core.Gameplay.GAS.TagOps(new Ludots.Core.Gameplay.GAS.DirtyEntityQueue(1024), new Ludots.Core.Gameplay.GAS.TagRuleRegistry(), new Ludots.Core.Gameplay.GAS.GasBudget(), new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry()));
                 return new RelationHarness { World = world, Runtime = runtime, Types = types, Metrics = metrics, Flags = flags, Changes = changes };

@@ -46,8 +46,6 @@ namespace Ludots.Core.Gameplay.Relationships.Config
             var metricOrder = new List<string>();
             var flags = new Dictionary<string, RelationshipFlagConfig>(StringComparer.OrdinalIgnoreCase);
             var flagOrder = new List<string>();
-            var reasons = new Dictionary<string, RelationshipReasonConfig>(StringComparer.OrdinalIgnoreCase);
-            var reasonOrder = new List<string>();
             var synergyOrder = new List<string>();
             var knowledgeGrants = new Dictionary<string, RelationshipKnowledgeGrantConfig>(StringComparer.OrdinalIgnoreCase);
             var knowledgeGrantOrder = new List<string>();
@@ -64,7 +62,6 @@ namespace Ludots.Core.Gameplay.Relationships.Config
                 MergeById(fragment.Types, types, typeOrder, static item => item.Id);
                 MergeById(fragment.Metrics, metrics, metricOrder, static item => item.Id);
                 MergeById(fragment.Flags, flags, flagOrder, static item => item.Id);
-                MergeById(fragment.Reasons, reasons, reasonOrder, static item => item.Id);
             }
 
             for (int i = 0; i < projectionFragments.Count; i++)
@@ -87,7 +84,6 @@ namespace Ludots.Core.Gameplay.Relationships.Config
                 Types = Materialize(typeOrder, types),
                 Metrics = Materialize(metricOrder, metrics),
                 Flags = Materialize(flagOrder, flags),
-                Reasons = Materialize(reasonOrder, reasons),
                 KnowledgeGrants = Materialize(knowledgeGrantOrder, knowledgeGrants),
                 Stance = stance,
             };

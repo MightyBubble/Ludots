@@ -836,7 +836,6 @@ namespace Ludots.Core.Engine
             var relationshipMetricRegistry = new RelationshipMetricRegistry();
             var relationshipFlagRegistry = new RelationshipFlagRegistry();
             var relationshipBandRegistry = new RelationshipBandRegistry();
-            var relationshipReasonRegistry = new RelationshipReasonRegistry();
             var relationshipChangeBuffer = new RelationshipChangeBuffer();
             var relationshipRuntime = new RelationshipRuntime(World, relationshipTypeRegistry, relationshipMetricRegistry, relationshipFlagRegistry, relationshipBandRegistry, relationshipChangeBuffer, new RelationshipReverseIndex(World));
             var gasRuntimeCapacity = config.GasRuntimeCapacity
@@ -863,7 +862,6 @@ namespace Ludots.Core.Engine
                 relationshipMetricRegistry,
                 relationshipFlagRegistry,
                 relationshipBandRegistry,
-                relationshipReasonRegistry,
                 entityCollectionStore);
             relationshipRuntime.InstallTypeTemplates(relationshipCatalog);
             // Control-plane relationship types must ship in the default relationship catalog (RFC-0065 DEC-1/DEC-3); GetId fails fast when missing.
@@ -979,7 +977,6 @@ namespace Ludots.Core.Engine
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
                 relationshipFlagRegistry,
-                relationshipReasonRegistry,
                 targetDispatchPresetRegistry,
                 MapLoader.EntityTemplateKeys,
                 lookupTables: graphLookupTables,
@@ -1107,7 +1104,6 @@ namespace Ludots.Core.Engine
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
                 relationshipFlagRegistry,
-                relationshipReasonRegistry,
                 targetDispatchPresetRegistry,
                 entityCollectionStore,
                 entitySetQueryRuntime,
@@ -1998,7 +1994,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.RelationshipMetricRegistry, relationshipMetricRegistry);
             SetService(CoreServiceKeys.RelationshipFlagRegistry, relationshipFlagRegistry);
             SetService(CoreServiceKeys.RelationshipBandRegistry, relationshipBandRegistry);
-            SetService(CoreServiceKeys.RelationshipReasonRegistry, relationshipReasonRegistry);
             SetService(CoreServiceKeys.RelationshipChangeBuffer, relationshipChangeBuffer);
             SetService(CoreServiceKeys.RelationshipRuntime, relationshipRuntime);
             SetService(CoreServiceKeys.RelationshipCatalogConfig, relationshipCatalog);

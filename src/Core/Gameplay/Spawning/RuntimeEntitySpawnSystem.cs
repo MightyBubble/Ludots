@@ -1113,15 +1113,12 @@ namespace Ludots.Core.Gameplay.Spawning
                 team = World.Get<Team>(request.Source);
             }
 
-            // #1570 真相源反转：先建 MemberOf(unit→teamEntity) 边（唯一真相）再写组件（投影）。
-            if (_relationships != null && _memberOfTypeId >= 0 && _teamLookup != null)
+            // #1570 真相源反转：可解析时先建 MemberOf(unit→teamEntity) 边再写组件（投影）。
+            // 不 fail-fast：出生期 teamRep 可能尚未进 lookup（参与者绑定在实体装载后完成），
+            // 拓扑由 ParticipantBindingResolver 在绑定时补齐——出生侧 best-effort，装载站收口。
+            if (_relationships != null && _memberOfTypeId >= 0 && _teamLookup != null &&
+                _teamLookup.TryGet(team.Id, out Entity teamEntity) && World.IsAlive(teamEntity))
             {
-                if (!_teamLookup.TryGet(team.Id, out Entity teamEntity) || !World.IsAlive(teamEntity))
-                {
-                    throw new InvalidOperationException(
-                        $"SPAWN.RUNTIME.ERR.TeamEntityMissing: teamId={team.Id}——Team 投影必须有 MemberOf 边真相可依。");
-                }
-
                 _relationships.EnsureLink(entity, teamEntity, _memberOfTypeId);
             }
 

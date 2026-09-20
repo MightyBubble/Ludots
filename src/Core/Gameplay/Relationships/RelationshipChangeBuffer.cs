@@ -18,12 +18,11 @@ namespace Ludots.Core.Gameplay.Relationships
             Entity source,
             Entity target,
             int metricId,
-            int reasonId,
             short oldValue,
             short newValue,
             uint oldFlags,
             uint newFlags)
-            : this(source, target, typeId: 0, RelationshipChangeKind.MetricChanged, metricId, reasonId, oldValue, newValue, oldFlags, newFlags)
+            : this(source, target, typeId: 0, RelationshipChangeKind.MetricChanged, metricId, oldValue, newValue, oldFlags, newFlags)
         {
         }
 
@@ -32,12 +31,11 @@ namespace Ludots.Core.Gameplay.Relationships
             Entity target,
             int typeId,
             int metricId,
-            int reasonId,
             short oldValue,
             short newValue,
             uint oldFlags,
             uint newFlags)
-            : this(source, target, typeId, RelationshipChangeKind.MetricChanged, metricId, reasonId, oldValue, newValue, oldFlags, newFlags)
+            : this(source, target, typeId, RelationshipChangeKind.MetricChanged, metricId, oldValue, newValue, oldFlags, newFlags)
         {
         }
 
@@ -47,7 +45,6 @@ namespace Ludots.Core.Gameplay.Relationships
             int typeId,
             RelationshipChangeKind kind,
             int metricId,
-            int reasonId,
             short oldValue,
             short newValue,
             uint oldFlags,
@@ -58,7 +55,6 @@ namespace Ludots.Core.Gameplay.Relationships
             TypeId = typeId;
             Kind = kind;
             MetricId = metricId;
-            ReasonId = reasonId;
             OldValue = oldValue;
             NewValue = newValue;
             OldFlags = oldFlags;
@@ -70,7 +66,6 @@ namespace Ludots.Core.Gameplay.Relationships
         public int TypeId { get; }
         public RelationshipChangeKind Kind { get; }
         public int MetricId { get; }
-        public int ReasonId { get; }
         public short OldValue { get; }
         public short NewValue { get; }
         public uint OldFlags { get; }

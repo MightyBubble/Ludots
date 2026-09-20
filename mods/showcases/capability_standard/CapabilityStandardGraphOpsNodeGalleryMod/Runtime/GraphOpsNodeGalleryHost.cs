@@ -63,7 +63,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     public RelationshipTypeRegistry RelationshipTypes { get; private set; } = null!;
     public RelationshipMetricRegistry RelationshipMetrics { get; private set; } = null!;
     public RelationshipFlagRegistry RelationshipFlags { get; private set; } = null!;
-    public RelationshipReasonRegistry RelationshipReasons { get; private set; } = null!;
     public EntityCollectionStore Collections { get; private set; } = null!;
     public EffectRequestQueue EffectRequests { get; private set; } = null!;
         public TagOps TagOps { get; private set; } = null!;
@@ -251,7 +250,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         RelationshipTypes = RequireEngineService(engine, CoreServiceKeys.RelationshipTypeRegistry);
         RelationshipMetrics = RequireEngineService(engine, CoreServiceKeys.RelationshipMetricRegistry);
         RelationshipFlags = RequireEngineService(engine, CoreServiceKeys.RelationshipFlagRegistry);
-        RelationshipReasons = RequireEngineService(engine, CoreServiceKeys.RelationshipReasonRegistry);
         DispatchPresets = RequireEngineService(engine, CoreServiceKeys.TargetDispatchPresetRegistry);
         Collections = RequireEngineService(engine, CoreServiceKeys.EntityCollectionStore);
         Knowledge = RequireEngineService(engine, CoreServiceKeys.KnowledgeProjectionStore);
@@ -286,7 +284,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             RelationshipTypes,
             RelationshipMetrics,
             RelationshipFlags,
-            RelationshipReasons,
             DispatchPresets,
             graphTablesDir == null ? null : GraphOpsNodeGallerySymbolResolver.LoadLookupTables(graphTablesDir),
             rngPicks,
@@ -424,7 +421,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             if (!string.IsNullOrWhiteSpace(link.Metric))
             {
                 int metricId = RelationshipMetrics.Register(link.Metric, -100, 100, 0);
-                Relationships.SetMetric(from, to, typeId, metricId, link.MetricValue, reasonId: 0);
+                Relationships.SetMetric(from, to, typeId, metricId, link.MetricValue);
             }
 
             if (link.Flags == null)
@@ -490,7 +487,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         _ = RelationshipMetrics.Register("Loyalty", -100, 100, 0);
         _ = RelationshipFlags.Register("Trusted");
         _ = RelationshipFlags.Register("Estranged");
-        _ = RelationshipReasons.Register("Scenario.Setup");
     }
 
     private void EnsureDispatchPreset()

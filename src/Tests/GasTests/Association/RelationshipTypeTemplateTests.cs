@@ -49,7 +49,7 @@ namespace Ludots.Tests.GAS
                 """);
             using var world = World.Create();
             RelationshipRuntime runtime = CreateRuntime(world, out RelationshipTypeRegistry types);
-            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, new RelationshipMetricRegistry(), new RelationshipFlagRegistry(), new RelationshipBandRegistry(), new RelationshipReasonRegistry());
+            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, new RelationshipMetricRegistry(), new RelationshipFlagRegistry(), new RelationshipBandRegistry());
             runtime.InstallTypeTemplates(catalog);
 
             int fatherSonTypeId = types.GetId(TemplatedTypeName);
@@ -115,7 +115,7 @@ namespace Ludots.Tests.GAS
                 """);
             using var world = World.Create();
             RelationshipRuntime runtime = CreateRuntime(world, out RelationshipTypeRegistry types);
-            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, new RelationshipMetricRegistry(), new RelationshipFlagRegistry(), new RelationshipBandRegistry(), new RelationshipReasonRegistry());
+            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, new RelationshipMetricRegistry(), new RelationshipFlagRegistry(), new RelationshipBandRegistry());
             runtime.InstallTypeTemplates(catalog);
             int fatherSonTypeId = types.GetId(TemplatedTypeName);
             Entity source = world.Create();
@@ -149,7 +149,7 @@ namespace Ludots.Tests.GAS
             RelationshipCatalogConfig catalog = LoadCatalog($$"""{ "types": [ { "id": "{{UntemplatedTypeName}}", "isSymmetric": false } ] }""");
             using var world = World.Create();
             RelationshipRuntime runtime = CreateRuntime(world, out RelationshipTypeRegistry types);
-            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, new RelationshipMetricRegistry(), new RelationshipFlagRegistry(), new RelationshipBandRegistry(), new RelationshipReasonRegistry());
+            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, new RelationshipMetricRegistry(), new RelationshipFlagRegistry(), new RelationshipBandRegistry());
             runtime.InstallTypeTemplates(catalog);
             int untemplatedTypeId = types.GetId(UntemplatedTypeName);
             Entity source = world.Create();
@@ -183,7 +183,7 @@ namespace Ludots.Tests.GAS
                 """);
             using var world = World.Create();
             RelationshipRuntime runtime = CreateRuntime(world, out RelationshipTypeRegistry types);
-            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, new RelationshipMetricRegistry(), new RelationshipFlagRegistry(), new RelationshipBandRegistry(), new RelationshipReasonRegistry());
+            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, new RelationshipMetricRegistry(), new RelationshipFlagRegistry(), new RelationshipBandRegistry());
 
             InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => runtime.InstallTypeTemplates(catalog));
             Assert.That(ex!.Message, Does.Contain("runtime-owned"));
@@ -215,7 +215,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             RelationshipRuntime runtime = CreateRuntime(world, out RelationshipTypeRegistry types);
             var flags = new RelationshipFlagRegistry();
-            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, new RelationshipMetricRegistry(), flags, new RelationshipBandRegistry(), new RelationshipReasonRegistry());
+            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, new RelationshipMetricRegistry(), flags, new RelationshipBandRegistry());
             runtime.InstallTypeTemplates(catalog);
             int fatherSonTypeId = types.GetId(TemplatedTypeName);
             int kinshipFlagId = flags.Register("Tests.Kinship.Flag");

@@ -223,7 +223,7 @@ namespace Ludots.Core.Gameplay.Relationships
             SeedMetricDefaults(relationshipEntity);
             _changes.TryAdd(new RelationshipChangeRecord(
                 source, target, validatedTypeId, RelationshipChangeKind.LinkAdded,
-                metricId: -1, reasonId: 0, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));
+                metricId: -1, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));
         }
 
         public void RemoveLink(Entity source, Entity target, int typeId)
@@ -258,7 +258,7 @@ namespace Ludots.Core.Gameplay.Relationships
             _reverseIndex.OnLinkRemoved(source, target, validatedTypeId);
             _changes.TryAdd(new RelationshipChangeRecord(
                 source, target, validatedTypeId, RelationshipChangeKind.LinkRemoved,
-                metricId: -1, reasonId: 0, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));
+                metricId: -1, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));
         }
 
         public bool TryGetMetric(Entity source, Entity target, int typeId, int metricId, out short value)
@@ -285,7 +285,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 : _metrics.Get(metricId).DefaultValue;
         }
 
-        public short SetMetric(Entity source, Entity target, int typeId, int metricId, int value, int reasonId = 0)
+        public short SetMetric(Entity source, Entity target, int typeId, int metricId, int value)
         {
             EnsureLink(source, target, typeId);
             _metrics.Get(metricId);
@@ -329,14 +329,14 @@ namespace Ludots.Core.Gameplay.Relationships
             edge.Version++;
             set.Set(validatedTypeId, edge);
             _world.SetRelationship(source, target, set);
-            _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, RelationshipChangeKind.MetricChanged, metricId, reasonId, oldValue, clamped, oldFlags, edge.Flags));
+            _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, RelationshipChangeKind.MetricChanged, metricId, oldValue, clamped, oldFlags, edge.Flags));
             return clamped;
         }
 
-        public short AddMetric(Entity source, Entity target, int typeId, int metricId, int delta, int reasonId = 0)
+        public short AddMetric(Entity source, Entity target, int typeId, int metricId, int delta)
         {
             short current = GetMetric(source, target, typeId, metricId);
-            return SetMetric(source, target, typeId, metricId, current + delta, reasonId);
+            return SetMetric(source, target, typeId, metricId, current + delta);
         }
 
         public bool HasFlag(Entity source, Entity target, int typeId, int flagId)
@@ -356,7 +356,7 @@ namespace Ludots.Core.Gameplay.Relationships
             return true;
         }
 
-        public void SetFlag(Entity source, Entity target, int typeId, int flagId, bool enabled, int reasonId = 0)
+        public void SetFlag(Entity source, Entity target, int typeId, int flagId, bool enabled)
         {
             EnsureLink(source, target, typeId);
 
@@ -384,7 +384,7 @@ namespace Ludots.Core.Gameplay.Relationships
             edge.Version++;
             set.Set(validatedTypeId, edge);
             _world.SetRelationship(source, target, set);
-            _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, RelationshipChangeKind.FlagChanged, metricId: -1, reasonId, oldValue: 0, newValue: 0, oldFlags, newFlags));
+            _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, RelationshipChangeKind.FlagChanged, metricId: -1, oldValue: 0, newValue: 0, oldFlags, newFlags));
         }
 
         public bool TryGetHighestMetricTarget(Entity source, ReadOnlySpan<Entity> candidates, int typeId, int metricId, out Entity target, out short value)

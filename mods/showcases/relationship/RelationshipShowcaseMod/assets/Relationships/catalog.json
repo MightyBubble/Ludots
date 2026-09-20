@@ -63,19 +63,5 @@
     {
       "id": "FocusTarget"
     }
-  ],
-  "reasons": [
-    {
-      "id": "Scenario.Setup"
-    },
-    {
-      "id": "Doctrine.Benevolence"
-    },
-    {
-      "id": "Bond.OathDrill"
-    },
-    {
-      "id": "Combat.Taunt"
-    }
   ]
 }

@@ -139,7 +139,6 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
             typeRegistry: _bundle.Types,
             metricRegistry: _bundle.Metrics,
             flagRegistry: _bundle.Flags,
-            reasonRegistry: _bundle.Reasons,
             entityQueries: entityQueries);
 
         _caster = SpawnCombatant(0, 0, CasterTeamId, CasterLayer, inspired: false);

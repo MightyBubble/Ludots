@@ -10,7 +10,6 @@ namespace Ludots.Core.Gameplay.Relationships.Config
         public List<RelationshipTypeConfig> Types { get; set; } = new();
         public List<RelationshipMetricConfig> Metrics { get; set; } = new();
         public List<RelationshipFlagConfig> Flags { get; set; } = new();
-        public List<RelationshipReasonConfig> Reasons { get; set; } = new();
         public List<RelationshipKnowledgeGrantConfig> KnowledgeGrants { get; set; } = new();
         public DomainStanceConfig? Stance { get; set; }
     }
@@ -57,10 +56,6 @@ namespace Ludots.Core.Gameplay.Relationships.Config
     }
 
 
-    public sealed class RelationshipReasonConfig : IIdentifiable
-    {
-        public string Id { get; set; } = string.Empty;
-    }
 
 
 

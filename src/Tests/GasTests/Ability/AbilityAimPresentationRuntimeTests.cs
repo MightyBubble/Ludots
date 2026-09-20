@@ -792,7 +792,6 @@ namespace Ludots.Tests.GAS
             var typeRegistry = new RelationshipTypeRegistry();
             var metricRegistry = new RelationshipMetricRegistry();
             var flagRegistry = new RelationshipFlagRegistry();
-            var reasonRegistry = new RelationshipReasonRegistry();
             var bandRegistry = new RelationshipBandRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
             var relationships = new RelationshipRuntime(
@@ -814,7 +813,6 @@ namespace Ludots.Tests.GAS
                 typeRegistry: typeRegistry,
                 metricRegistry: metricRegistry,
                 flagRegistry: flagRegistry,
-                reasonRegistry: reasonRegistry,
                 entityQueries: entityQueries);
 
             return new RelationshipGraphRuntimeSetup(api, relationships, assistTypeId, priorityMetricId);

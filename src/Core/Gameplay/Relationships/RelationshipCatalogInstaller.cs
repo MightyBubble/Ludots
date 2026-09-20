@@ -12,7 +12,6 @@ namespace Ludots.Core.Gameplay.Relationships
             RelationshipMetricRegistry metrics,
             RelationshipFlagRegistry flags,
             RelationshipBandRegistry bands,
-            RelationshipReasonRegistry reasons,
             EntityCollectionStore collections)
         {
             ArgumentNullException.ThrowIfNull(catalog);
@@ -20,10 +19,9 @@ namespace Ludots.Core.Gameplay.Relationships
             ArgumentNullException.ThrowIfNull(metrics);
             ArgumentNullException.ThrowIfNull(flags);
             ArgumentNullException.ThrowIfNull(bands);
-            ArgumentNullException.ThrowIfNull(reasons);
             ArgumentNullException.ThrowIfNull(collections);
 
-            RegisterCatalog(catalog, types, metrics, flags, bands, reasons);
+            RegisterCatalog(catalog, types, metrics, flags, bands);
             return RelationshipCatalogRuntime.Compile(catalog, types, metrics, collections);
         }
 
@@ -32,15 +30,13 @@ namespace Ludots.Core.Gameplay.Relationships
             RelationshipTypeRegistry types,
             RelationshipMetricRegistry metrics,
             RelationshipFlagRegistry flags,
-            RelationshipBandRegistry bands,
-            RelationshipReasonRegistry reasons)
+            RelationshipBandRegistry bands)
         {
             ArgumentNullException.ThrowIfNull(catalog);
             ArgumentNullException.ThrowIfNull(types);
             ArgumentNullException.ThrowIfNull(metrics);
             ArgumentNullException.ThrowIfNull(flags);
             ArgumentNullException.ThrowIfNull(bands);
-            ArgumentNullException.ThrowIfNull(reasons);
 
             for (int i = 0; i < catalog.Types.Count; i++)
             {
@@ -62,7 +58,6 @@ namespace Ludots.Core.Gameplay.Relationships
             {
                 RelationshipMetricConfig metric = catalog.Metrics[i];
                 metrics.Register(metric.Id, metric.MinValue, metric.MaxValue, metric.DefaultValue);
-                metrics.RegisterAliasAttribute(metrics.GetId(metric.Id), metric.Id);
             }
 
             for (int i = 0; i < catalog.Flags.Count; i++)
@@ -70,10 +65,6 @@ namespace Ludots.Core.Gameplay.Relationships
                 flags.Register(catalog.Flags[i].Id);
             }
 
-            for (int i = 0; i < catalog.Reasons.Count; i++)
-            {
-                reasons.Register(catalog.Reasons[i].Id);
-            }
-        }
+                   }
     }
 }

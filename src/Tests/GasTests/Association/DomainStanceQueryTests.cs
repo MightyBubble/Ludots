@@ -170,8 +170,7 @@ namespace Ludots.Tests.GAS
                     types,
                     metrics,
                     new RelationshipFlagRegistry(),
-                    new RelationshipBandRegistry(),
-                    new RelationshipReasonRegistry());
+                    new RelationshipBandRegistry());
 
                 int memberOfTypeId = types.GetId(catalog.Types[0].Id);
                 return new Harness

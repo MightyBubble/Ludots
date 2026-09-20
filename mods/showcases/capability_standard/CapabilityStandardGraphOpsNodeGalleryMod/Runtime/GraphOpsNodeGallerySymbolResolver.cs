@@ -28,7 +28,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
     private readonly RelationshipTypeRegistry _types;
     private readonly RelationshipMetricRegistry _metrics;
     private readonly RelationshipFlagRegistry _flags;
-    private readonly RelationshipReasonRegistry _reasons;
     private readonly TargetDispatchPresetRegistry _dispatchPresets;
     private readonly GraphLookupTableRegistry? _lookupTables;
     private readonly PresentationTextCatalog? _presentationTextCatalog;
@@ -39,7 +38,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         RelationshipTypeRegistry types,
         RelationshipMetricRegistry metrics,
         RelationshipFlagRegistry flags,
-        RelationshipReasonRegistry reasons,
         TargetDispatchPresetRegistry dispatchPresets,
         GraphLookupTableRegistry? lookupTables = null,
         Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null,
@@ -49,7 +47,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         _types = types ?? throw new ArgumentNullException(nameof(types));
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
         _flags = flags ?? throw new ArgumentNullException(nameof(flags));
-        _reasons = reasons ?? throw new ArgumentNullException(nameof(reasons));
         _dispatchPresets = dispatchPresets ?? throw new ArgumentNullException(nameof(dispatchPresets));
         _lookupTables = lookupTables;
         _rngPicks = rngPicks;
@@ -85,8 +82,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         var flags = new RelationshipFlagRegistry();
         flags.Register("Trusted");
         flags.Register("Estranged");
-        var reasons = new RelationshipReasonRegistry();
-        reasons.Register("Scenario.Setup");
         var presets = new TargetDispatchPresetRegistry();
         presets.Register(
             TargetToResolvedPreset,
@@ -102,7 +97,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
             types,
             metrics,
             flags,
-            reasons,
             presets,
             LoadLookupTables(Path.Combine(assetsRoot, "GraphTables")),
             LoadDistributionPicks(assetsRoot),
@@ -398,16 +392,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
     public int ResolveRelationshipType(string name) => _types.GetId(name);
     public int ResolveRelationshipMetric(string name) => _metrics.GetId(name);
     public int ResolveRelationshipFlag(string name) => _flags.GetId(name);
-
-    public int ResolveRelationshipReason(string name)
-    {
-        if (!_reasons.TryGetId(name, out int id) || id <= 0)
-        {
-            throw new InvalidOperationException($"Graph references unknown relationship reason '{name}'.");
-        }
-
-        return id;
-    }
 
     public int ResolveTargetDispatchPreset(string name) => _dispatchPresets.GetId(name);
 

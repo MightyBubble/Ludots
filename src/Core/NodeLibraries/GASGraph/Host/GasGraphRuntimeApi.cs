@@ -48,7 +48,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipTypeRegistry typeRegistry,
             RelationshipMetricRegistry metricRegistry,
             RelationshipFlagRegistry flagRegistry,
-            RelationshipReasonRegistry reasonRegistry,
             TargetDispatchPresetRegistry targetDispatchPresets,
             EntityCollectionStore entityCollections,
             EntitySetQueryRuntime entityQueries,
@@ -69,7 +68,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TypeRegistry = typeRegistry ?? throw new ArgumentNullException(nameof(typeRegistry));
             MetricRegistry = metricRegistry ?? throw new ArgumentNullException(nameof(metricRegistry));
             FlagRegistry = flagRegistry ?? throw new ArgumentNullException(nameof(flagRegistry));
-            ReasonRegistry = reasonRegistry ?? throw new ArgumentNullException(nameof(reasonRegistry));
             TargetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             EntityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
             EntityQueries = entityQueries ?? throw new ArgumentNullException(nameof(entityQueries));
@@ -91,7 +89,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public RelationshipTypeRegistry TypeRegistry { get; }
         public RelationshipMetricRegistry MetricRegistry { get; }
         public RelationshipFlagRegistry FlagRegistry { get; }
-        public RelationshipReasonRegistry ReasonRegistry { get; }
         public TargetDispatchPresetRegistry TargetDispatchPresets { get; }
         public EntityCollectionStore EntityCollections { get; }
         public GraphLookupTableRegistry? LookupTables { get; }
@@ -195,7 +192,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 RequireService(services, CoreServiceKeys.RelationshipTypeRegistry),
                 RequireService(services, CoreServiceKeys.RelationshipMetricRegistry),
                 RequireService(services, CoreServiceKeys.RelationshipFlagRegistry),
-                RequireService(services, CoreServiceKeys.RelationshipReasonRegistry),
                 RequireService(services, CoreServiceKeys.TargetDispatchPresetRegistry),
                 RequireService(services, CoreServiceKeys.EntityCollectionStore),
                 RequireService(services, CoreServiceKeys.EntitySetQueryRuntime),
@@ -224,7 +220,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.TypeRegistry,
                 services.MetricRegistry,
                 services.FlagRegistry,
-                services.ReasonRegistry,
                 services.TargetDispatchPresets,
                 services.EntityCollections,
                 services.EntityQueries,
@@ -366,7 +361,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipTypeRegistry? typeRegistry = null,
             RelationshipMetricRegistry? metricRegistry = null,
             RelationshipFlagRegistry? flagRegistry = null,
-            RelationshipReasonRegistry? reasonRegistry = null,
             TargetDispatchPresetRegistry? targetDispatchPresets = null,
             EntityCollectionStore? entityCollections = null,
             EntitySetQueryRuntime? entityQueries = null,
@@ -390,7 +384,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _ = typeRegistry;
             _ = metricRegistry;
             _ = flagRegistry;
-            _ = reasonRegistry;
         }
 
         private TagOps RequireTagOps()
@@ -1933,27 +1926,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RejectNonTransactionalEffectSideEffect(nameof(RemoveRelationshipLink));
             RequireRelationshipRuntime().RemoveLink(source, target, typeId);
         }
-        public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
+        public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(SetRelationshipMetric));
             RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipMetric));
-            return RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value, reasonId);
+            return RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value);
         }
-        public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
+        public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(AddRelationshipMetric));
             RejectNonTransactionalEffectSideEffect(nameof(AddRelationshipMetric));
-            return RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta, reasonId);
+            return RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta);
         }
         public short GetRelationshipMetric(Entity source, Entity target, int metricId, int typeId)
             => RequireRelationshipRuntime().GetMetric(source, target, typeId, metricId);
         public bool HasRelationshipFlag(Entity source, Entity target, int flagId, int typeId)
             => RequireRelationshipRuntime().HasFlag(source, target, typeId, flagId);
-        public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
+        public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(SetRelationshipFlag));
             RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipFlag));
-            RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled, reasonId);
+            RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled);
         }
         public RelationshipQueryResult CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {

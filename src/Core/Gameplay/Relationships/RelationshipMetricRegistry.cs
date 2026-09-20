@@ -43,18 +43,23 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public bool TryGetId(string name, out int id) => _ids.TryGetId(name, out id);
 
-        /// <summary>#1570 单轨化：metric 词汇是 AttributeRegistry 的别名——注册同名属性，
-        /// metricId→attributeId 的映射供写穿边实体 AttributeBuffer（唯一真相）使用。</summary>
-        private readonly Dictionary<int, int> _attributeIds = new();
+        public string? GetName(int id) => _ids.GetName(id);
 
-        public void RegisterAliasAttribute(int metricId, string name)
-        {
-            int attributeId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register(name);
-            _attributeIds[metricId] = attributeId;
-        }
-
+        /// <summary>#1570：metric 词汇按名惰性映射到 AttributeRegistry（同名同 id）。
+        /// 不做注册副作用——静态属性表属于引擎装配/测试重置生命周期，缓存 id 会随
+        /// ReplaceAttributes 失效成陈旧映射；每次按名解析，未知则放弃写穿。</summary>
         public bool TryGetAttributeId(int metricId, out int attributeId)
-            => _attributeIds.TryGetValue(metricId, out attributeId!);
+        {
+            string? name = GetName(metricId);
+            if (string.IsNullOrEmpty(name))
+            {
+                attributeId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.InvalidId;
+                return false;
+            }
+
+            attributeId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId(name);
+            return attributeId != Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.InvalidId;
+        }
 
         public int GetId(string name)
         {
