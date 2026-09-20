@@ -154,12 +154,13 @@ namespace Ludots.Core.Config
 
                 if (entity.Has<T>())
                 {
-                    throw new InvalidOperationException(
-                        $"Component '{name}' is already present on entity {entity.Id}. " +
-                        "Templates must not declare both 'GameplayTagContainer.tags' (derives the count container) and an explicit 'TagCountContainer'."); // 诊断：双挂组件名定位（main 存量断言根因调查）
+                    // Overrides and re-authoring replace the whole component.
+                    entity.Set<T>(component);
                 }
-
-                entity.Add<T>(component);
+                else
+                {
+                    entity.Add<T>(component);
+                }
             }, modId, Component<T>.ComponentType);
         }
 
@@ -214,9 +215,10 @@ namespace Ludots.Core.Config
         /// </summary>
         public static void RegisterAuthoring<T>(
             string name,
-            ComponentSetterWithContext setter)
+            ComponentSetterWithContext setter,
+            string modId = null)
         {
-            Register(name, setter, null, Component<T>.ComponentType);
+            Register(name, setter, modId, Component<T>.ComponentType);
         }
 
         private static void Register(string name, ComponentSetter setter, string modId, ComponentType? componentType)
@@ -1339,6 +1341,12 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
 
         private static void SetGameplayTagContainer(Entity entity, JsonNode data)
         {
+            if (entity.Has<TagCountContainer>())
+            {
+                throw new InvalidOperationException(
+                    "Templates must not declare both 'GameplayTagContainer.tags' (derives the count container) and an explicit 'TagCountContainer'.");
+            }
+
             if (data is not JsonObject obj)
             {
                 throw new InvalidOperationException("GameplayTagContainer requires an object payload.");
