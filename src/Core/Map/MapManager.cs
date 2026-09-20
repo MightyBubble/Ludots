@@ -569,7 +569,6 @@ namespace Ludots.Core.Map
             RejectLegacyKey(root, "HeightInTiles", "Boards[].HeightCells", jsonPath);
             RejectLegacyKey(root, "WidthInMacroTiles", "Boards[].WidthCells", jsonPath);
             RejectLegacyKey(root, "HeightInMacroTiles", "Boards[].HeightCells", jsonPath);
-            RejectLegacyKey(root, "World", "RootBoard (host world is rooted by the root board)", jsonPath);
 
             if (!TryGetPropertyCaseInsensitive(root, "boards", out JsonNode boardsNode) ||
                 boardsNode is not JsonArray boards)

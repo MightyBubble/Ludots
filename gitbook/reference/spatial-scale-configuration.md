@@ -70,9 +70,9 @@ flowchart TD
 | `BoardConfig.GridCellSizeCm` | `CellCm` | cm | 100 | board authoring 输入，决定 grid board 每个 sim cell 的厘米边长，并进入 `WorldExtentSpec`。 | 仍保留历史字段名；语义按 `CellCm` 解释。 |
 | `BoardConfig.HexEdgeLengthCm` | `HexEdgeLengthCm` | cm | 400 | HexGrid board 的 hex 边长，影响 `HexMetrics`、HexGrid 坐标/查询/渲染布局。 | 仅 HexGrid 生效；Grid / NodeGraph 不受它影响，必须 > 0。 |
 | `MapTile.Size` | `MacroTileCells` | cells | 256 | 256-cell IO/寻址宏块。世界大小的 `WidthInMacroTiles` / `HeightInMacroTiles` 以它为倍率。 | `MapTile.Size` 是 owner；`SpatialScaleDefaults.MacroTileCells` 只引用它。 |
-| `BoardConfig.WidthInMacroTiles`（#1567 切 1 已迁移） | 历史键 | macro tiles | 64 | 曾是 board/world 宽度 authoring 数量；切 1 起加载即 fail-fast。 | 现行写法：`Boards[].WidthCells`（host world 由根板锚定，rootboard 裁决）。 |
-| `BoardConfig.HeightInMacroTiles`（#1567 切 1 已迁移） | 历史键 | macro tiles | 64 | 曾是 board/world 高度 authoring 数量；切 1 起加载即 fail-fast。 | 现行写法：`Boards[].HeightCells`（host world 由根板锚定，rootboard 裁决）。 |
-| `WorldExtentSpec` | `WorldExtent` | cm | derived | 运行时由根板 `BoardExtentSpec` 直构、boot 由 `GameConfig.World` 直构（#1567 rootboard 裁决），宏块数为派生 IO 细节，产出 runtime `WorldSizeSpec`。 | 是计算对象，不替换 `WorldSizeSpec`。 |
+| `BoardConfig.WidthInMacroTiles`（#1567 切 1 已迁移） | 历史键 | macro tiles | 64 | 曾是 board/world 宽度 authoring 数量；切 1 起加载即 fail-fast。 | 现行写法：`Boards[].WidthCells`（host world 由根板锚定）。 |
+| `BoardConfig.HeightInMacroTiles`（#1567 切 1 已迁移） | 历史键 | macro tiles | 64 | 曾是 board/world 高度 authoring 数量；切 1 起加载即 fail-fast。 | 现行写法：`Boards[].HeightCells`（host world 由根板锚定）。 |
+| `WorldExtentSpec` | `WorldExtent` | cm | derived | 运行时由根板 `BoardExtentSpec` 直构、boot 由 `GameConfig.World` 直构（#1567），宏块数为派生 IO 细节，产出 runtime `WorldSizeSpec`。 | 是计算对象，不替换 `WorldSizeSpec`。 |
 | `BoardConfig.ChunkSizeCells` | `PartitionChunkCells` | cells | 64 | 空间分区、AOI、query backend 的分区块边长。只描述查询分区，不描述地形或 navmesh。`World.Tuning.PartitionChunkCells` 声明后为唯一预算（#1567 切 4 已落地），板级字段仅在未声明 Tuning 时生效，退役随切 4b。 | 必须 > 0 且为 2 的幂。 |
 | `VertexChunk.ChunkSize` | `TerrainChunkCells` | cells | 64 | 逻辑地形块边长。当前 navmesh tile footprint 等于 `TerrainChunk` footprint。 | 当前固定；#286 已把 grid/hex 地形输入统一到 `LogicTerrainField`。 |
 | Nav bake tile footprint | `TerrainChunk` footprint | cells / cm | 64 cells | navmesh `.ntil` 的 tile 覆盖一个 `TerrainChunk`。 | 不再单独命名为尺度 owner；不要把 `NavTile` 当第二个 chunk 尺度。 |
@@ -102,7 +102,7 @@ flowchart TD
 
 | 域 | 目标键 | 单位 | 含义 | 取代的现状键 |
 |---|---|---|---|---|
-| 世界（host world） | map `RootBoard`（缺省第一块板） | 板名 | 有板图根板锚定；无板图沿用 game.json `world`（boot 世界持续生效，host world 永远存在） | 独立 `World` 尺寸节点（rootboard 裁决后废弃）；宏块数量键 |
+| 世界（host world） | map `RootBoard`（缺省第一块板） | 板名 | 有板图根板锚定；无板图 game.json `world` | 宏块数量键 |
 | map | `Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | cells / 个 | map 级分区与 streaming 预算，缺省由引擎推导（4b） | `Boards[].ChunkSizeCells` / `LoadedChunkCapacity` |
 | 板 | `Boards[].WidthCells/HeightCells` + `CellSizeCm` | cells | Grid 板范围（格子数直写） | 宏块数 × 256 换算 |
 | 板 | `Boards[].WidthHexes/HeightHexes` + `HexEdgeLengthCm` | hexes | Hex 板范围，世界足迹经 `HexMetrics` 派生 | 同上（含借 `GridCellSizeCm` 算 hex 板足迹的现状做法） |
