@@ -6,7 +6,7 @@
 [叠层] extends 父打底 → uses 覆盖 → 自身最后：unit H=50 → block.elite H=150 → hero H=300；champion 自身静默 → 150（块胜父），Mana=40/Team=1（父打底继承）
 [钩子] onSpawnEffect/initialInteractionContext 后应用且非空才覆盖：recruit 取后块 Effect.B；hero 自身 Effect.Hero 最高
 [块链] 块自身带 extends：block.tough 先展开自己的继承链（H=100→200, Team 随链）再参与折叠
-[追加] children/TriggerGraphs 跨块追加：chassis→flag_bearer→rider；graph.shared 精确去重（同图双挂不是合法组合）
+[追加] children/triggerGraphs 跨块追加：chassis→flag_bearer→rider；graph.shared 精确去重（同图双挂不是合法组合）
 [整替] 块组合下 "__replace": true：block.zone 圆形 + block.yard 矩形整替 → radiusCm 不残留嵌合体，标记装载期剥离
 [失败分支] uses 未知块 'missing_block' → 启动失败指明双方 id；uses+extends 混合环(a extends b, b uses a) / 块互 uses(x↔y) / 自 uses → 启动失败 cycle detected
 [幂等] 展开后 uses 清空，二次展开无变化；被引用块内容不被折叠污染（mortal 直接布阵无 Team，selectable 的值不回流进块）

@@ -4,7 +4,7 @@
 {"t":3,"event":"fold.assert","template":"elite","field":"AttributeBuffer.current.Health","note":"block.b未提及,留底继承block.a","expected":80,"actual":80,"passed":true}
 {"t":4,"event":"fold.assert","template":"hero","scenario":"extends打底->uses覆盖->自身","field":"AttributeBuffer.base.Health","layers":"unit(50)/block.elite(150)/self(300)","expected":300,"actual":300,"passed":true}
 {"t":5,"event":"fold.assert","template":"champion","scenario":"自身静默","field":"AttributeBuffer.base.Health","expected":150,"note":"块覆盖extends父打底","actual":150,"passed":true}
-{"t":6,"event":"fold.assert","template":"elite","field":"TriggerGraphs","expected":["graph.shared","graph.a","graph.b","graph.elite"],"note":"跨块追加+精确去重","actual":["graph.shared","graph.a","graph.b","graph.elite"],"passed":true}
+{"t":6,"event":"fold.assert","template":"elite","field":"triggerGraphs","expected":["graph.shared","graph.a","graph.b","graph.elite"],"note":"跨块追加+精确去重","actual":["graph.shared","graph.a","graph.b","graph.elite"],"passed":true}
 {"t":7,"event":"fold.assert","template":"elite","field":"Children","expected":["chassis","flag_bearer","rider"],"note":"块child条目克隆不共享实例","passed":true}
 {"t":8,"event":"replace.marker","case":"block.zone(circle)+block.yard(rect __replace:true)","outcome":"整组件替换,radiusCm不残留,标记剥离","passed":true}
 {"t":9,"event":"fold.guard","case":"未知块","input":"hero uses missing_block","outcome":"启动失败,错误含双方id","passed":true}

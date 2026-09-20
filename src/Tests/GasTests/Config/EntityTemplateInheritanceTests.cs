@@ -84,6 +84,31 @@ namespace GasTests
         }
 
         [Test]
+        public void ExpandAll_InheritedChildren_PreserveLocalIdAttachAndNestedChildren()
+        {
+            var inherited = new EntityTemplateChild
+            {
+                LocalId = "turret",
+                Template = "turret",
+                Attach = false,
+                Children = new List<EntityTemplateChild> { new() { LocalId = "barrel", Template = "barrel" } },
+            };
+            var templates = new Dictionary<string, EntityTemplate>
+            {
+                ["tank"] = Template("tank", components: "{}", children: new List<EntityTemplateChild> { inherited }),
+                ["hero_tank"] = Template("hero_tank", extends: "tank", components: "{}"),
+            };
+
+            EntityTemplateInheritance.ExpandAll(templates);
+
+            EntityTemplateChild clone = templates["hero_tank"].Children![0];
+            That(clone.LocalId, Is.EqualTo("turret"), "克隆保留 localId");
+            That(clone.Attach, Is.EqualTo(false), "克隆保留 attach 语义标记");
+            That(clone.Children![0].LocalId, Is.EqualTo("barrel"), "克隆递归保留嵌套 children");
+            That(inherited.Children![0], Is.Not.SameAs(clone.Children![0]), "嵌套条目同样不共享可变实例");
+        }
+
+        [Test]
         public void ExpandAll_AppendsTriggerGraphs_DeduplicatesExactDuplicates()
         {
             var templates = new Dictionary<string, EntityTemplate>

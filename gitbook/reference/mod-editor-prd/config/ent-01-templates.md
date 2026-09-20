@@ -32,7 +32,7 @@
     "AttributeBuffer": { "base": { "Health": 100 } } } },
   { "id": "MyMod.Hero", "extends": "MyMod.Grunt",
     "components": { "AttributeBuffer": { "base": { "Health": 250, "Mana": 40 } } },
-    "TriggerGraphs": [ "MyMod.HeroAura" ] } ]
+    "triggerGraphs": [ "MyMod.HeroAura" ] } ]
 ```
 
 组件组组装的形态（`uses`，推荐范式——能力拼装 = 列表加一项）：
@@ -54,8 +54,8 @@
 | 字段 | 这样配会产生什么效果 |
 |---|---|
 | `id` | 模板唯一名；地图布阵与造单位效果按名引用 |
-| `uses` | 装载期组件组组装（推荐范式）：按序引用一组块模板 id（可跨 mod，折叠发生在同 id 合并之后）。折叠优先级一条规则——声明越靠后优先级越高，自身 components 永远最高：`extends` 父模板打底 → uses 逐个覆盖 → 自身最后。合并合同与 `extends` 同一族（components 字段级深合并、children / TriggerGraphs 追加去重、onSpawnEffect / initialInteractionContext 非空才覆盖、`"__replace": true` 整替）。块自身带 `extends` 时先展开自己的继承链再参与折叠。同一组件被多个源写入时，覆盖链（如 `block.mortal -> block.tank -> self`）记入配置冲突报告 |
-| `extends` | 装载期继承，分类/单亲链通道：引用另一模板 id（可跨 mod，展开发生在同 id 合并之后）。components 按字段级深合并——子代字段胜，未提及字段继承父代，数组整体替换；children / TriggerGraphs 追加（TriggerGraphs 精确去重，同图双挂不是合法组合）；onSpawnEffect / initialInteractionContext 子代非空才覆盖。子代组件顶层 `"__replace": true` 时整组件替换父代值（变体形状组件通道）。物化只消费展开后的合并结果 |
+| `uses` | 装载期组件组组装（推荐范式）：按序引用一组块模板 id（可跨 mod，折叠发生在同 id 合并之后）。折叠优先级一条规则——声明越靠后优先级越高，自身 components 永远最高：`extends` 父模板打底 → uses 逐个覆盖 → 自身最后。合并合同与 `extends` 同一族（components 字段级深合并、children / triggerGraphs 追加去重、onSpawnEffect / initialInteractionContext 非空才覆盖、`"__replace": true` 整替）。块自身带 `extends` 时先展开自己的继承链再参与折叠。同一组件被多个源写入时，覆盖链（如 `block.mortal -> block.tank -> self`）记入配置冲突报告 |
+| `extends` | 装载期继承，分类/单亲链通道：引用另一模板 id（可跨 mod，展开发生在同 id 合并之后）。components 按字段级深合并——子代字段胜，未提及字段继承父代，数组整体替换；children / triggerGraphs 追加（triggerGraphs 精确去重，同图双挂不是合法组合）；onSpawnEffect / initialInteractionContext 子代非空才覆盖。子代组件顶层 `"__replace": true` 时整组件替换父代值（变体形状组件通道）。物化只消费展开后的合并结果 |
 | `onSpawnEffect` | 该模板实例化时自动施放的效果模板（经济建筑挂产出 buff 的通道） |
 | `components` | 开放映射：组件名 → 初始值 JSON。引擎组件清单即合法键集；值形状由该组件自身决定（如 `AttributeBuffer` 的 base/current、`Team` 的 Id） |
 
@@ -67,7 +67,7 @@
 
 ## 4. 运行时加载效果
 
-启动期随表加载注册（名字→模板），装载顺序：同 id 合并 → extends/uses 折叠 → 模板校验（children 引用图、TriggerGraphs、出生效果引用）；折叠时同一组件被多个源写入的覆盖链记入 `ConfigConflictReport`（字段拼写错误导致静默回退底值靠此定位）。地图加载时逐布阵条目实例化（模板组件 + 实例覆盖深合并）；效果造单位（cfg 卷 5 的 CreateUnit）同走模板实例化，出生效果在实例化后施放。离线烘焙侧（导航障碍目录）接入同一展开器，与运行时看到同一份模板。
+启动期随表加载注册（名字→模板），装载顺序：同 id 合并 → extends/uses 折叠 → 模板校验（children 引用图、triggerGraphs、出生效果引用）；折叠时同一组件被多个源写入的覆盖链记入 `ConfigConflictReport`（字段拼写错误导致静默回退底值靠此定位）。地图加载时逐布阵条目实例化（模板组件 + 实例覆盖深合并）；效果造单位（cfg 卷 5 的 CreateUnit）同走模板实例化，出生效果在实例化后施放。离线烘焙侧（导航障碍目录）接入同一展开器，与运行时看到同一份模板。
 
 ## 5. 异常处理
 

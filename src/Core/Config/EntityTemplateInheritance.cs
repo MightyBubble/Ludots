@@ -294,7 +294,15 @@ namespace Ludots.Core.Config
 
             if (child is not { Count: > 0 })
             {
-                return new List<EntityTemplateChild>(parent);
+                // 父代条目一律克隆：装载期校验会就地改写内联 children，
+                // 共享实例会把派生模板的改写漏回父模板。
+                var inherited = new List<EntityTemplateChild>(parent.Count);
+                for (int i = 0; i < parent.Count; i++)
+                {
+                    inherited.Add(CloneChild(parent[i]));
+                }
+
+                return inherited;
             }
 
             var merged = new List<EntityTemplateChild>(parent.Count + child.Count);
