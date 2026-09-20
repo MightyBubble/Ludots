@@ -1,10 +1,5 @@
 {
   "Id": "raylib_client_parity_showcase",
-  "World": {
-    "WidthCm": 51200,
-    "HeightCm": 51200,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "showcase",
     "raylib",

@@ -4974,17 +4974,7 @@ static class EditorRepo
             }
         }
 
-        if (map.World is not { } worldDecl || worldDecl.WidthCm <= 0 || worldDecl.HeightCm <= 0)
-        {
-            map.World = new Ludots.Core.Config.WorldConfig
-            {
-                WidthCm = checked(widthCells * cellSizeCm),
-                HeightCm = checked(heightCells * cellSizeCm),
-                CellSizeCm = cellSizeCm
-            };
-        }
-
-        EnsureBoardFitsWorld(map, board);
+        EnsureBoardFitsRoot(map, board);
         map.Boards.Add(board);
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
@@ -5043,7 +5033,7 @@ static class EditorRepo
             board.NavigationEnabled = request.NavigationEnabled.Value;
         }
 
-        EnsureBoardFitsWorld(map, board);
+        EnsureBoardFitsRoot(map, board);
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
         var boardInfo = DescribeBoard(ctx, mapId, board);
@@ -5334,19 +5324,37 @@ static class EditorRepo
         }
     }
 
-    private static void EnsureBoardFitsWorld(Ludots.Core.Config.MapConfig map, Ludots.Core.Map.Board.BoardConfig board)
+    private static void EnsureBoardFitsRoot(Ludots.Core.Config.MapConfig map, Ludots.Core.Map.Board.BoardConfig board)
     {
-        if (map.World is not { } worldDecl || worldDecl.WidthCm <= 0 || worldDecl.HeightCm <= 0)
+        // The first board on a boardless map becomes the root; nothing to check.
+        if (map.Boards is not { Count: > 0 })
         {
             return;
         }
 
+        Ludots.Core.Map.Board.BoardConfig? root = null;
+        if (!string.IsNullOrWhiteSpace(map.RootBoard))
+        {
+            foreach (var existing in map.Boards)
+            {
+                if (string.Equals(existing.Name, map.RootBoard, StringComparison.OrdinalIgnoreCase))
+                {
+                    root = existing;
+                    break;
+                }
+            }
+        }
+
+        root ??= map.Boards[0];
+
         long boardWidthCm = (long)board.WidthCells * board.GridCellSizeCm;
         long boardHeightCm = (long)board.HeightCells * board.GridCellSizeCm;
-        if (boardWidthCm > worldDecl.WidthCm || boardHeightCm > worldDecl.HeightCm)
+        long rootWidthCm = (long)root.WidthCells * root.GridCellSizeCm;
+        long rootHeightCm = (long)root.HeightCells * root.GridCellSizeCm;
+        if (boardWidthCm > rootWidthCm || boardHeightCm > rootHeightCm)
         {
             throw new InvalidOperationException(
-                $"Board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds World {worldDecl.WidthCm}x{worldDecl.HeightCm}cm; enlarge World.WidthCm/HeightCm first (#1567).");
+                $"Board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds root board '{root.Name}' extent {rootWidthCm}x{rootHeightCm}cm; enlarge the root board or shrink the satellite (#1567).");
         }
     }
 

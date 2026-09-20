@@ -1,10 +1,5 @@
 {
   "Id": "progression_scope_showcase",
-  "World": {
-    "WidthCm": 819200,
-    "HeightCm": 819200,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "progression_scope_showcase"
   ],

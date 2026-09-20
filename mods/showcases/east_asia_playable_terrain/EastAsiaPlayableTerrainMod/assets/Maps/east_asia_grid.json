@@ -1,13 +1,5 @@
 {
   "Id": "east_asia_grid",
-  "World": {
-    "WidthCm": 900652032,
-    "HeightCm": 514658304,
-    "CellSizeCm": 125649,
-    "Tuning": {
-      "LoadedChunkCapacity": 512
-    }
-  },
   "ParentId": null,
   "Dependencies": {},
   "ContinuousHeightmapAsset": "assets/samples/LudotsSample/east_asia/east_asia_continuous.height",
@@ -64,5 +56,8 @@
     "Pitch": 50,
     "DistanceCm": 985000000,
     "FovYDeg": 55
+  },
+  "Tuning": {
+    "LoadedChunkCapacity": 512
   }
 }

@@ -1,10 +1,5 @@
 {
   "Id": "raylib_visual_atmosphere_showcase",
-  "World": {
-    "WidthCm": 3276800,
-    "HeightCm": 3276800,
-    "CellSizeCm": 100
-  },
   "ContinuousHeightmap": {
     "Asset": "assets/terrain/tropical_island.height",
     "RenderProfile": {

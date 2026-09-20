@@ -186,15 +186,13 @@ namespace GasTests
                         continue;
                     }
 
-                    bool worldDeclaresCapacity =
-                        TryGetPropertyCaseInsensitive(root, "World", out JsonNode? worldNode) &&
-                        worldNode is JsonObject worldObj &&
-                        TryGetPropertyCaseInsensitive(worldObj, "Tuning", out JsonNode? tuningNode) &&
+                    bool mapDeclaresCapacity =
+                        TryGetPropertyCaseInsensitive(root, "Tuning", out JsonNode? tuningNode) &&
                         tuningNode is JsonObject tuningObj &&
                         TryGetPropertyCaseInsensitive(tuningObj, "LoadedChunkCapacity", out JsonNode? tuningCapacity) &&
                         TryGetPositiveInt(tuningCapacity, out int _);
 
-                    if (!worldDeclaresCapacity &&
+                    if (!mapDeclaresCapacity &&
                         (!TryGetPropertyCaseInsensitive(board, "LoadedChunkCapacity", out JsonNode? capacityNode) ||
                         !TryGetPositiveInt(capacityNode, out int _)))
                     {
@@ -251,7 +249,7 @@ namespace GasTests
         }
 
         [Test]
-        public void MapAssets_DeclarePositiveWorld()
+        public void MapAssets_RootBoardDesignation_MatchesExistingBoard()
         {
             string repoRoot = FindRepoRoot();
             var violations = new List<string>();
@@ -261,36 +259,43 @@ namespace GasTests
                 JsonNode? node = JsonNode.Parse(File.ReadAllText(file));
                 if (node is not JsonObject root ||
                     !TryGetPropertyCaseInsensitive(root, "boards", out JsonNode? boardsNode) ||
-                    boardsNode is not JsonArray)
+                    boardsNode is not JsonArray boards ||
+                    boards.Count == 0)
                 {
                     continue;
                 }
 
-                if (!TryGetPropertyCaseInsensitive(root, "world", out JsonNode? worldNode) ||
-                    worldNode is not JsonObject world)
+                if (TryGetPropertyCaseInsensitive(root, "rootBoard", out JsonNode? rootNode) &&
+                    rootNode is JsonValue rootValue &&
+                    rootValue.TryGetValue<string>(out string? designated) &&
+                    !string.IsNullOrWhiteSpace(designated))
                 {
-                    violations.Add($"{Path.GetRelativePath(repoRoot, file)}: map with Boards must declare World.");
-                    continue;
-                }
+                    bool matches = false;
+                    foreach (var board in boards)
+                    {
+                        if (board is JsonObject boardObj &&
+                            TryGetString(boardObj, "Name") is { } name &&
+                            string.Equals(name, designated, StringComparison.OrdinalIgnoreCase))
+                        {
+                            matches = true;
+                            break;
+                        }
+                    }
 
-                if (!TryGetPositiveInt(TryGetProperty(world, "WidthCm"), out int _) ||
-                    !TryGetPositiveInt(TryGetProperty(world, "HeightCm"), out int _))
-                {
-                    violations.Add($"{Path.GetRelativePath(repoRoot, file)}: World.WidthCm/HeightCm must be positive.");
+                    if (!matches)
+                    {
+                        violations.Add($"{Path.GetRelativePath(repoRoot, file)}: RootBoard '{designated}' matches no board.");
+                    }
                 }
             }
 
             Assert.That(
                 violations,
                 Is.Empty,
-                "Maps declare the world directly (#1567); boards no longer imply it:" +
+                "RootBoard designations must reference an existing board (#1567):" +
                 string.Join("\n", violations));
         }
 
-        private static JsonNode? TryGetProperty(JsonObject obj, string name)
-        {
-            return TryGetPropertyCaseInsensitive(obj, name, out JsonNode? node) ? node : null;
-        }
 
         private static IEnumerable<string> EnumerateMapJsonFiles(string repoRoot)
         {

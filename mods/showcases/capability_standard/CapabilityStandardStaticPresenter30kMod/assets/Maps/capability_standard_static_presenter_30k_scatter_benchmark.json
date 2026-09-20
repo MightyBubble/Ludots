@@ -1,10 +1,5 @@
 {
   "Id": "capability_standard_static_presenter_30k_scatter_benchmark",
-  "World": {
-    "WidthCm": 25600,
-    "HeightCm": 25600,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "showcase",
     "presenter",

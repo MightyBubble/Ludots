@@ -1,10 +1,5 @@
 {
   "Id": "nav_editor_grid",
-  "World": {
-    "WidthCm": 409600,
-    "HeightCm": 409600,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "nav_editor",
     "grid",
@@ -45,5 +40,6 @@
     "Pitch": 50,
     "DistanceCm": 24000,
     "FovYDeg": 60
-  }
+  },
+  "RootBoard": "board_2"
 }

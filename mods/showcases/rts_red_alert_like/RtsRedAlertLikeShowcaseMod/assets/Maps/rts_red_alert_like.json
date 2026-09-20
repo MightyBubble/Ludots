@@ -1,10 +1,5 @@
 {
   "Id": "rts_red_alert_like",
-  "World": {
-    "WidthCm": 6553600,
-    "HeightCm": 6553600,
-    "CellSizeCm": 400
-  },
   "Tags": [
     "rts",
     "rts_showcase",

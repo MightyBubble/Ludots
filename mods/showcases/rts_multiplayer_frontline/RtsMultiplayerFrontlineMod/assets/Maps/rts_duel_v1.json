@@ -1,10 +1,5 @@
 {
   "Id": "rts_duel_v1",
-  "World": {
-    "WidthCm": 1638400,
-    "HeightCm": 1638400,
-    "CellSizeCm": 100
-  },
   "ContinuousHeightmapAsset": "assets/terrain/rts_duel_v1_flat.vhtm",
   "TerrainPresentation": {
     "Source": "BoardTerrain",

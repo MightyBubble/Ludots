@@ -35,7 +35,7 @@
 
 | 域 | 管什么 | 配置的家 | 与 board 的关系 |
 |---|---|---|---|
-| 世界 | 唯一尺寸、坐标基准；实体空间分区、AOI/streaming、越界边界、相机/minimap 全图 | map JSON `World` 节 | 无 |
+| 世界（host world） | 坐标基准；实体空间分区、AOI/streaming、越界边界、相机/minimap 全图 | 根板锚定：map `RootBoard`（缺省第一块板）；无板图无世界；引擎 boot 占位在 `GameConfig.World` | 根板即自己 |
 | 板 | 业务区域：拓扑、度量、摆放（世界系 origin）、格子语义 | map JSON `Boards[]` | 就是自己 |
 | 导航 | 烘焙源选择、瓦片颗粒度（显式两轴）、层/profile/语义/障碍 | `Navigation/navmesh.json` | board 只是可选源 + 寻址 scope |
 | 执行 | FlowWindow/FlowCell/避障 hash | `MassNavigationConfig.json` | 无 |
@@ -69,9 +69,9 @@ Out of scope：
 | `NavTileGranularity`（#1567 目标态） | 由声明值与世界 cm 决定 | `tileWorldWidthCm` × `tileWorldHeightCm` | `Navigation/navmesh.json` 每板寻址条目 | nav 烘焙/重烤的瓦片颗粒度预算，独立于板与地形块 | 是 | 必须 > 0；不从 `CellSizeCm × ChunkSizeCells` 推导；hex 两轴（如 44340×38400）由此表达 |
 | `MacroTile` | `MacroTileCells` = `MapTile.Size` = 256 | `MacroTileCells * CellCm` | `MapTile.Size` / `SpatialScaleDefaults.MacroTileCells` | 世界层 IO/寻址宏块；#1567 目标态为派生值（由 `World.WidthCm/HeightCm` 换算），不再进 authoring | 否，数量可配 | `MacroTileCells` 引用 `MapTile.Size`；数量键 `WidthInMacroTiles` / `HeightInMacroTiles` 自 #1567 切 1 起 fail-fast |
 | `StreamingChunk` | N x `PartitionChunk` | N x `PartitionChunkCells * CellCm` | streaming/loaded chunk owner；NodeGraph 当前通过 `WorldGridLoadedChunks` 消费；#1567 目标态容量归 `World.Tuning` | 流式加载、loaded graph rebuild | 是 | 必须显式配置或由分区推导；禁止私有 loader fallback |
-| `WorldExtent` | `WidthCm / CellCm` | cm 直构 | `WorldExtentSpec`（由 map `World` 节 / GameConfig boot World 直构，#1567 切 1），产出既有 `WorldSizeSpec` | 世界范围、坐标转换、minimap/full-map bounds、越界校验 | 是 | `WidthCm`/`HeightCm` 必须为 `CellSizeCm` 整数倍；旧宏块数量键 fail-fast，无别名兼容 |
+| `WorldExtent` | 根板 `WidthCells × CellSizeCm` / boot `WidthCm / CellCm` | cm 直构 | 运行时 host world = 根板 `BoardExtentSpec`；引擎 boot 占位 = `GameConfig.World`（`WorldExtentSpec`，#1567 rootboard 裁决） | 世界范围、坐标转换、minimap/full-map bounds、越界校验 | 是 | 旧宏块数量键 fail-fast，无别名兼容 |
 | `BoardExtent`（#1567 目标态） | 格子数 × 拓扑度量 | `WidthCells × CellCm` 或 `WidthHexes × HexMetrics 足迹` | map JSON `Boards[]`（`WidthCells/HeightCells`、`WidthHexes/HeightHexes`） | 板业务区域范围，精确整数派生，无宏块对齐 | 是 | 必须 > 0；hex 板世界足迹经 `HexMetrics` 派生，不再借 `GridCellSizeCm` |
-| `BoardOrigin`（#1567 目标态） | —— | `OriginXCm` / `OriginYCm` | map JSON `Boards[]` | 板在世界坐标系的摆放；世界坐标入口减板 origin 换算一次 | 是 | 缺省 = 居中于世界（authoring 默认值）；板越出 `WorldExtent` 加载期 fail-fast |
+| `BoardOrigin`（#1567 切 2a 已落地 schema，2b 放开） | —— | `OriginXCm` / `OriginYCm` | map JSON `Boards[]` | 板在根板坐标系（host world frame）的摆放；世界坐标入口减板 origin 换算一次 | 是 | 缺省 = 居中；任何显式声明在切 2b 前 fail-closed；卫星板越出根板范围加载期 fail-fast |
 | `FlowWindow` | `FieldWidthCm / CellCm` by `FieldHeightCm / CellCm` | `FieldWidthCm` x `FieldHeightCm` | MassNavigationFlow solver config | 执行层滑窗/工作区 | 是 | 宽高必须 > 0；必须能被 `FlowCell`、`AvoidanceHashCell` 整除 |
 | `FlowCell` | `FlowCellSizeCm / CellCm` | 默认 100 | MassNavigationFlow solver `flowCellSizeCm` / `SpatialScaleDefaults.FlowCellCm` | 流场网格 cell | 是 | 必须 > 0；`FlowWindow` 宽高必须整除它 |
 | `AvoidanceHashCell` | `separationHashCellSizeCm / CellCm` 或 `hardResolveHashCellSizeCm / CellCm` | separation 默认 100；hard-resolve 默认 50 | MassNavigationFlow solver / `SpatialScaleDefaults.Avoidance*HashCellCm` | 分离邻居哈希、硬解析候选哈希 | 是 | 必须 > 0；`FlowWindow` 宽高必须整除它 |
@@ -158,12 +158,12 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 | `BoardConfig.WidthInMacroTiles` | `WidthInMacroTiles`（#1567 切 1 前） | macro tiles | 旧键 `WidthInTiles` fail-fast | board/world extent authoring |
 | `BoardConfig.HeightInMacroTiles` | `HeightInMacroTiles`（#1567 切 1 前） | macro tiles | 旧键 `HeightInTiles` fail-fast | board/world extent authoring |
 | `BoardConfig.ChunkSizeCells` | `PartitionChunkCells`（#1567 切 4 前） | cells | > 0 且 2 的幂 | spatial partition |
-| map `World.WidthCm` / `World.HeightCm`（#1567 目标态） | `WorldExtent` | cm | > 0；世界唯一尺寸声明 | world authoring（切 1 引入） |
+| map `RootBoard`（#1567 rootboard 裁决） | host world 锚定 | 板名 | 缺省第一块板；必须匹配存在的板 | world authoring |
 | `Boards[].WidthCells/HeightCells`（#1567 目标态） | `BoardExtent` | cells | > 0 | Grid board authoring（切 1 引入） |
 | `Boards[].WidthHexes/HeightHexes`（#1567 目标态） | `BoardExtent` | hexes | > 0 | HexGrid board authoring（切 2 引入） |
 | `Boards[].OriginXCm/OriginYCm`（#1567 目标态） | `BoardOrigin` | cm | 缺省居中；越出世界 fail-fast | board 摆放（切 2 引入） |
 | navmesh.json `tileWorldWidthCm/HeightCm`（#1567 目标态） | `NavTileGranularity` | cm | > 0；不从板推导 | nav authoring（切 3 引入） |
-| `World.Tuning.PartitionChunkCells` / `LoadedChunkCapacity`（#1567 切 4 已落地） | `PartitionChunk` / streaming 容量 | cells / 个 | 可空；声明后为唯一预算，冲突的板级字段 fail-fast，容量回填未声明的板 | world 预算；显式写默认值（ChunkSizeCells=64、LoadedChunkCapacity=0）当前与未声明不可区分，歧义消除随切 4b 的板级字段退役。自动推导缺省随切 4b |
+| map `Tuning.PartitionChunkCells` / `LoadedChunkCapacity`（#1567 切 4 已落地，rootboard 裁决后挂 map 级） | `PartitionChunk` / streaming 容量 | cells / 个 | 可空；声明后为唯一预算，冲突的板级字段 fail-fast，容量回填未声明的板 | map 级预算；显式写默认值当前与未声明不可区分，歧义消除随切 4b |
 | `MassNavigationFlowSolverConfig.fieldWidthCm` / `fieldHeightCm` | `FlowWindow` | cm | > 0；被 FlowCell/hash cell 整除 | MassNavigationFlow solver |
 | `MassNavigationFlowSolverConfig.flowCellSizeCm` | `FlowCell` | cm | > 0 | MassNavigationFlow solver |
 | `MassNavigationFlowSolverConfig.separationHashCellSizeCm` | `AvoidanceHashCell` | cm | > 0 | MassNavigationFlow solver |

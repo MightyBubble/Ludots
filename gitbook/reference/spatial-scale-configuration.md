@@ -102,8 +102,8 @@ flowchart TD
 
 | 域 | 目标键 | 单位 | 含义 | 取代的现状键 |
 |---|---|---|---|---|
-| 世界 | map `World.WidthCm` / `World.HeightCm` | cm | 世界唯一尺寸；宏块数由此派生，不再 authoring | `Boards[].WidthInMacroTiles/HeightInMacroTiles` × `GridCellSizeCm`；game.json `worldWidthInMacroTiles` 三件套 |
-| 世界 | `World.Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | cells / 个 | 世界层分区与 streaming 预算，缺省由引擎推导 | `Boards[].ChunkSizeCells` / `LoadedChunkCapacity` |
+| 世界（host world） | map `RootBoard`（缺省第一块板） | 板名 | 根板锚定 host world；无板图无世界；boot 占位在 game.json `world` | 独立 `World` 尺寸节点（rootboard 裁决后废弃）；宏块数量键 |
+| map | `Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | cells / 个 | map 级分区与 streaming 预算，缺省由引擎推导（4b） | `Boards[].ChunkSizeCells` / `LoadedChunkCapacity` |
 | 板 | `Boards[].WidthCells/HeightCells` + `CellSizeCm` | cells | Grid 板范围（格子数直写） | 宏块数 × 256 换算 |
 | 板 | `Boards[].WidthHexes/HeightHexes` + `HexEdgeLengthCm` | hexes | Hex 板范围，世界足迹经 `HexMetrics` 派生 | 同上（含借 `GridCellSizeCm` 算 hex 板足迹的现状做法） |
 | 板 | `Boards[].OriginXCm` / `OriginYCm` | cm | 板摆在世界坐标哪里，缺省居中；越出世界 fail-fast | 板恒居中（无 origin 字段） |

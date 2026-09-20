@@ -335,7 +335,6 @@ namespace Ludots.Tests.Gas
             {
               "id": "outer_map",
               "continuousHeightmapAsset": "assets/terrain/map.height",
-              "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
               "boards": [
                 {
                   "name": "default",

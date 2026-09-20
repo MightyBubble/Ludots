@@ -1,10 +1,5 @@
 {
   "Id": "navmesh_debug_openworld",
-  "World": {
-    "WidthCm": 102400,
-    "HeightCm": 102400,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "showcase",
     "navmesh",

@@ -53,7 +53,6 @@ namespace GasTests
                 var board = cfg.Boards[0];
                 Assert.That(board.SpatialType, Is.EqualTo("Hex"));
                 Assert.That(board.WidthCells, Is.EqualTo(32768));
-                Assert.That(cfg.World.WidthCm, Is.EqualTo(6553600));
                 Assert.That(board.HexEdgeLengthCm, Is.EqualTo(900));
             }
             finally
@@ -101,7 +100,6 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "legacy", """
                 {
                   "id": "legacy",
-                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
                   "boards": [
                     {
                       "name": "default",
@@ -133,10 +131,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "tuned", """
                 {
                   "id": "tuned",
-                  "world": {
-                    "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100,
-                    "tuning": { "loadedChunkCapacity": 64 }
-                  },
+                  "tuning": { "loadedChunkCapacity": 64 },
                   "boards": [
                     { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
                   ]
@@ -150,7 +145,7 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenChildRedeclaresWorldSize_ParentTuningSurvives()
+        public void LoadMap_WhenChildAddsNoOverrides_ParentTuningSurvives()
         {
             var tempRoot = CreateTempDir();
             try
@@ -158,10 +153,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "parent", """
                 {
                   "id": "parent",
-                  "world": {
-                    "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100,
-                    "tuning": { "loadedChunkCapacity": 64 }
-                  },
+                  "tuning": { "loadedChunkCapacity": 64 },
                   "boards": [
                     { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
                   ]
@@ -170,14 +162,12 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "child", """
                 {
                   "id": "child",
-                  "parentId": "parent",
-                  "world": { "widthCm": 102400, "heightCm": 102400 }
+                  "parentId": "parent"
                 }
                 """);
                 var manager = CreateMapManager(tempRoot);
                 var cfg = manager.LoadMap("child");
-                Assert.That(cfg!.World.WidthCm, Is.EqualTo(102400));
-                Assert.That(cfg.World.Tuning.LoadedChunkCapacity, Is.EqualTo(64));
+                Assert.That(cfg.Tuning.LoadedChunkCapacity, Is.EqualTo(64));
                 Assert.That(cfg.Boards[0].LoadedChunkCapacity, Is.EqualTo(64));
             }
             finally { TryDelete(tempRoot); }
@@ -192,10 +182,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "conflict", """
                 {
                   "id": "conflict",
-                  "world": {
-                    "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100,
-                    "tuning": { "loadedChunkCapacity": 64 }
-                  },
+                  "tuning": { "loadedChunkCapacity": 64 },
                   "boards": [
                     { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "loadedChunkCapacity": 32 }
                   ]
@@ -217,10 +204,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "oddpart", """
                 {
                   "id": "oddpart",
-                  "world": {
-                    "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100,
-                    "tuning": { "partitionChunkCells": 48 }
-                  },
+                  "tuning": { "partitionChunkCells": 48 },
                   "boards": [
                     { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
                   ]
@@ -242,10 +226,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "partconflict", """
                 {
                   "id": "partconflict",
-                  "world": {
-                    "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100,
-                    "tuning": { "partitionChunkCells": 128 }
-                  },
+                  "tuning": { "partitionChunkCells": 128 },
                   "boards": [
                     { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "chunkSizeCells": 32 }
                   ]
@@ -259,7 +240,7 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenBoardExceedsWorld_Throws()
+        public void LoadMap_WhenSatelliteBoardExceedsRootBoard_Throws()
         {
             var tempRoot = CreateTempDir();
             try
@@ -267,20 +248,40 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "oversize", """
                 {
                   "id": "oversize",
-                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
                   "boards": [
-                    {
-                      "name": "default",
-                      "widthCells": 1024,
-                      "heightCells": 256,
-                      "gridCellSizeCm": 100
-                    }
+                    { "name": "root", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 },
+                    { "name": "default", "widthCells": 1024, "heightCells": 256, "gridCellSizeCm": 100 }
                   ]
                 }
                 """);
                 var manager = CreateMapManager(tempRoot);
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("oversize"));
-                Assert.That(ex!.Message, Does.Contain("exceeds World"));
+                Assert.That(ex!.Message, Does.Contain("exceeds root board 'root'"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenRootBoardDesignationMatchesNoBoard_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "badroot", """
+                {
+                  "id": "badroot",
+                  "rootBoard": "ghost",
+                  "boards": [
+                    { "name": "root", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("badroot"));
+                Assert.That(ex!.Message, Does.Contain("RootBoard 'ghost' matches no board"));
             }
             finally
             {
@@ -297,7 +298,6 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "halforigin", """
                 {
                   "id": "halforigin",
-                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
                   "boards": [
                     {
                       "name": "default",
@@ -328,7 +328,6 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "placed", """
                 {
                   "id": "placed",
-                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
                   "boards": [
                     {
                       "name": "default",
@@ -360,7 +359,6 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "zeroplace", """
                 {
                   "id": "zeroplace",
-                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
                   "boards": [
                     { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "originXCm": 0, "originYCm": 0 }
                   ]
@@ -374,7 +372,7 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenBoardExactlyMatchesWorld_Loads()
+        public void LoadMap_WhenSingleBoardIsRoot_Loads()
         {
             var tempRoot = CreateTempDir();
             try
@@ -382,7 +380,6 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "exact", """
                 {
                   "id": "exact",
-                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
                   "boards": [
                     {
                       "name": "default",
@@ -444,7 +441,6 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "board_map", """
                 {
                   "id": "board_map",
-                  "world": { "widthCm": 51200, "heightCm": 51200, "cellSizeCm": 100 },
                   "boards": [
                     {
                       "name": "default",

@@ -1,10 +1,5 @@
 {
   "Id": "presenter_blacksmith_dynamic_worker_benchmark",
-  "World": {
-    "WidthCm": 128000,
-    "HeightCm": 128000,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "showcase",
     "presenter",

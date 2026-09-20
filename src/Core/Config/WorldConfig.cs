@@ -3,9 +3,9 @@ using Ludots.Core.Spatial;
 namespace Ludots.Core.Config
 {
     /// <summary>
-    /// World declaration: the single authority for world size. Map JSON carries the
-    /// authored world; the engine boot config carries the pre-map-load default.
-    /// Macro-tile counts are derived from these centimeter values, never authored.
+    /// Engine-boot world declaration: the pre-map-load placeholder replaced on map
+    /// load by the root board's frame. Macro-tile counts are derived from these
+    /// centimeter values, never authored.
     /// </summary>
     public class WorldConfig
     {
@@ -15,15 +15,11 @@ namespace Ludots.Core.Config
 
         public int CellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
 
-        /// <summary>World-level spatial budget (#1567 slice 4); null entries mean not authored.</summary>
-        public WorldTuningConfig Tuning { get; set; } = new WorldTuningConfig();
-
         public WorldConfig Clone() => new()
         {
             WidthCm = WidthCm,
             HeightCm = HeightCm,
-            CellSizeCm = CellSizeCm,
-            Tuning = Tuning?.Clone() ?? new WorldTuningConfig()
+            CellSizeCm = CellSizeCm
         };
 
         public static WorldConfig CreateEngineBootDefault() => new()

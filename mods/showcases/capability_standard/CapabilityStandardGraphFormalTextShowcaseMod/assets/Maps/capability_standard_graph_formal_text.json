@@ -1,10 +1,5 @@
 {
   "Id": "capability_standard_graph_formal_text",
-  "World": {
-    "WidthCm": 819200,
-    "HeightCm": 819200,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "capability_standard_graph_formal_text",
     "graph_formal_text",

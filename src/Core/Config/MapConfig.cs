@@ -37,10 +37,18 @@ namespace Ludots.Core.Config
         public Dictionary<string, JsonNode> Metadata { get; set; } = new Dictionary<string, JsonNode>();
 
         /// <summary>
-        /// World declaration: the single authority for world size (#1567). Macro-tile
-        /// and chunk counts are derived at load; boards no longer define the world.
+        /// Root board designation (#1567): the root board's extent anchors the host
+        /// world frame and its services become the engine-level spatial services.
+        /// Empty/omitted = first board. Boardless maps have no root and no host world.
         /// </summary>
-        public WorldConfig World { get; set; } = new WorldConfig();
+        public string RootBoard { get; set; }
+
+        /// <summary>
+        /// Map-level spatial budget (#1567): partition granularity and streaming
+        /// capacity for the whole map. Authored values are the single budget every
+        /// board runs on; board-level fields retire in slice 4b.
+        /// </summary>
+        public WorldTuningConfig Tuning { get; set; } = new WorldTuningConfig();
         public List<EntitySpawnData> Entities { get; set; } = new List<EntitySpawnData>();
         public List<TeamBindingData> Teams { get; set; } = new List<TeamBindingData>();
         public List<PlayerBindingData> Players { get; set; } = new List<PlayerBindingData>();

@@ -1,10 +1,5 @@
 {
   "Id": "east_asia_hex",
-  "World": {
-    "WidthCm": 900652032,
-    "HeightCm": 514658304,
-    "CellSizeCm": 125649
-  },
   "ParentId": null,
   "Dependencies": {},
   "ContinuousHeightmapAsset": "assets/samples/LudotsSample/east_asia/east_asia_continuous.height",

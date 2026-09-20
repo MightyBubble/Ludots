@@ -1,10 +1,5 @@
 {
   "Id": "spline_surface_uat",
-  "World": {
-    "WidthCm": 51200,
-    "HeightCm": 51200,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "showcase",
     "uat",

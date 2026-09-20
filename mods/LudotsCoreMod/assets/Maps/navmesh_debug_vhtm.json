@@ -1,10 +1,5 @@
 {
   "Id": "navmesh_debug_vhtm",
-  "World": {
-    "WidthCm": 25600,
-    "HeightCm": 25600,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "showcase",
     "navmesh",

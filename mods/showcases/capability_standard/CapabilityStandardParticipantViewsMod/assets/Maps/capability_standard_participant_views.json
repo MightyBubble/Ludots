@@ -1,10 +1,5 @@
 {
   "Id": "capability_standard_participant_views",
-  "World": {
-    "WidthCm": 6400000,
-    "HeightCm": 6400000,
-    "CellSizeCm": 100
-  },
   "ContinuousHeightmapAsset": "assets/terrain/mass_navigation_large_world_relief.height",
   "Tags": [
     "capability_standard_participant_views",

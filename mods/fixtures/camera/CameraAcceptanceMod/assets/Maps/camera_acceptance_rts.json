@@ -1,10 +1,5 @@
 {
   "Id": "camera_acceptance_rts",
-  "World": {
-    "WidthCm": 25600,
-    "HeightCm": 25600,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "camera.acceptance",
     "camera.acceptance.behaviors",

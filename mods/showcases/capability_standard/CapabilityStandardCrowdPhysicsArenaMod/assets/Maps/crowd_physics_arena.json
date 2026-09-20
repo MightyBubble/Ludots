@@ -1,10 +1,5 @@
 {
   "Id": "crowd_physics_arena",
-  "World": {
-    "WidthCm": 6400000,
-    "HeightCm": 6400000,
-    "CellSizeCm": 100
-  },
   "ContinuousHeightmapAsset": "assets/terrain/crowd_physics_arena_flat.height",
   "Tags": [
     "crowd_physics_arena"

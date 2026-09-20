@@ -191,7 +191,7 @@ namespace Ludots.Core.Map
                     }
                 }
                 
-                ValidateWorldDeclaration(finalConfig, mapId);
+                ValidateSpatialDeclaration(finalConfig, mapId);
                 Log.Info(in LogChannels.Map, $"Map '{mapId}' loaded.");
                 return finalConfig;
             }
@@ -226,26 +226,14 @@ namespace Ludots.Core.Map
                 }
             }
 
-            // Field-level merge: a child that only re-declares size keeps the parent's
-            // Tuning, and a Tuning-only fragment still applies (#1567 slice 4 audit).
-            if (source.World is { } sourceWorld &&
-                (sourceWorld.WidthCm > 0 ||
-                 sourceWorld.HeightCm > 0 ||
-                 sourceWorld.CellSizeCm != Ludots.Core.Spatial.SpatialScaleDefaults.CellCm ||
-                 (sourceWorld.Tuning is { } fragTuning && fragTuning.IsAuthored)))
+            if (!string.IsNullOrWhiteSpace(source.RootBoard))
             {
-                var merged = new Ludots.Core.Config.WorldConfig
-                {
-                    WidthCm = sourceWorld.WidthCm > 0 ? sourceWorld.WidthCm : target.World.WidthCm,
-                    HeightCm = sourceWorld.HeightCm > 0 ? sourceWorld.HeightCm : target.World.HeightCm,
-                    CellSizeCm = sourceWorld.CellSizeCm != Ludots.Core.Spatial.SpatialScaleDefaults.CellCm
-                        ? sourceWorld.CellSizeCm
-                        : target.World.CellSizeCm,
-                    Tuning = sourceWorld.Tuning is { } st && st.IsAuthored
-                        ? st.Clone()
-                        : target.World.Tuning?.Clone() ?? new Ludots.Core.Config.WorldTuningConfig()
-                };
-                target.World = merged;
+                target.RootBoard = source.RootBoard;
+            }
+
+            if (source.Tuning is { } srcTuning && srcTuning.IsAuthored)
+            {
+                target.Tuning = srcTuning.Clone();
             }
 
             if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
@@ -426,37 +414,46 @@ namespace Ludots.Core.Map
             }
         }
 
-        private static void ValidateWorldDeclaration(MapConfig config, MapId mapId)
+        private static void ValidateSpatialDeclaration(MapConfig config, MapId mapId)
         {
-            ValidateWorldTuningValues(config.World, mapId);
+            ValidateTuningValues(config.Tuning, mapId);
 
+            // Boardless maps are first-class: no boards, no host world, nothing to validate.
             if (config.Boards is not { Count: > 0 })
             {
                 return;
             }
 
-            var world = config.World;
-            var invalid = new List<string>();
-            if (world == null || world.WidthCm <= 0) invalid.Add("WidthCm");
-            if (world == null || world.HeightCm <= 0) invalid.Add("HeightCm");
-            if (world == null || world.CellSizeCm <= 0) invalid.Add("CellSizeCm");
-            if (invalid.Count > 0)
-            {
-                throw new InvalidOperationException(
-                    $"Map '{mapId}' has boards and must declare World; invalid fields: {string.Join(", ", invalid)}. Boards no longer define the world (#1567).");
-            }
+            BoardConfig root = ResolveRootBoard(config, mapId);
 
             foreach (var board in config.Boards)
             {
-                ValidateBoardPlacement(board, world!, mapId);
-                ValidateBoardAgainstWorldTuning(board, world!.Tuning, mapId);
+                ValidateBoardPlacement(board, root, mapId);
+                ValidateBoardAgainstWorldTuning(board, config.Tuning, mapId);
             }
-
         }
 
-        private static void ValidateWorldTuningValues(WorldConfig world, MapId mapId)
+        internal static BoardConfig ResolveRootBoard(MapConfig config, MapId mapId)
         {
-            var tuning = world?.Tuning;
+            if (!string.IsNullOrWhiteSpace(config.RootBoard))
+            {
+                foreach (var board in config.Boards)
+                {
+                    if (string.Equals(board.Name, config.RootBoard, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return board;
+                    }
+                }
+
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' RootBoard '{config.RootBoard}' matches no board; fix the designation or omit it to root the first board (#1567).");
+            }
+
+            return config.Boards[0];
+        }
+
+        private static void ValidateTuningValues(Ludots.Core.Config.WorldTuningConfig tuning, MapId mapId)
+        {
             if (tuning is null || !tuning.IsAuthored)
             {
                 return;
@@ -478,7 +475,7 @@ namespace Ludots.Core.Map
 
         private static void ApplyWorldTuningToBoards(MapConfig config)
         {
-            var tuning = config?.World?.Tuning;
+            var tuning = config?.Tuning;
             if (config?.Boards is not { Count: > 0 } || tuning is null || !tuning.IsAuthored)
             {
                 return;
@@ -522,7 +519,7 @@ namespace Ludots.Core.Map
             }
         }
 
-        private static void ValidateBoardPlacement(BoardConfig board, WorldConfig world, MapId mapId)
+        private static void ValidateBoardPlacement(BoardConfig board, BoardConfig root, MapId mapId)
         {
             bool hasX = board.OriginXCm.HasValue;
             bool hasY = board.OriginYCm.HasValue;
@@ -535,7 +532,7 @@ namespace Ludots.Core.Map
             if (hasX)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' board '{board.Name}' declares OriginXCm/OriginYCm; declared placement (min-corner anchor, cm) stays fail-closed until #1567 slice 2b unifies SpatialCoordinateConverter origin semantics. Omit both fields for the centered default.");
+                    $"Map '{mapId}' board '{board.Name}' declares OriginXCm/OriginYCm; declared placement (min-corner anchor in the root board frame, cm) stays fail-closed until #1567 slice 2b unifies SpatialCoordinateConverter origin semantics. Omit both fields for the centered default.");
             }
 
             if (board.WidthCells <= 0 || board.HeightCells <= 0 || board.GridCellSizeCm <= 0)
@@ -544,12 +541,19 @@ namespace Ludots.Core.Map
                     $"Map '{mapId}' board '{board.Name}' requires positive WidthCells/HeightCells/GridCellSizeCm.");
             }
 
+            if (ReferenceEquals(board, root))
+            {
+                return;
+            }
+
             long boardWidthCm = (long)board.WidthCells * board.GridCellSizeCm;
             long boardHeightCm = (long)board.HeightCells * board.GridCellSizeCm;
-            if (boardWidthCm > world.WidthCm || boardHeightCm > world.HeightCm)
+            long rootWidthCm = (long)root.WidthCells * root.GridCellSizeCm;
+            long rootHeightCm = (long)root.HeightCells * root.GridCellSizeCm;
+            if (boardWidthCm > rootWidthCm || boardHeightCm > rootHeightCm)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds World {world.WidthCm}x{world.HeightCm}cm; boards must fit inside the world (#1567).");
+                    $"Map '{mapId}' board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds root board '{root.Name}' extent {rootWidthCm}x{rootHeightCm}cm; enlarge the root board or shrink the satellite (#1567).");
             }
         }
 

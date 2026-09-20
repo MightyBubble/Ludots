@@ -1,10 +1,5 @@
 {
   "Id": "team_research_showcase",
-  "World": {
-    "WidthCm": 819200,
-    "HeightCm": 819200,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "team_research_showcase",
     "participant_view_showcase"

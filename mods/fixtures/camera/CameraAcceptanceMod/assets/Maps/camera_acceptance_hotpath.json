@@ -1,10 +1,5 @@
 {
   "Id": "camera_acceptance_hotpath",
-  "World": {
-    "WidthCm": 51200,
-    "HeightCm": 51200,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "camera.acceptance",
     "camera.acceptance.hotpath"

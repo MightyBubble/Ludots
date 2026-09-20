@@ -2,7 +2,7 @@
 
 本页写给要做真实地图的 Mod 作者。它不替代 [空间尺度与分辨率 SSOT](../architecture/spatial-scale-and-resolution-ssot.md)，而是把 SSOT 翻译成“我要做多大的地图、要多细的地形/导航/避障/表现，该从哪些配置入口下手”。
 
-> **状态**：本页 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的合同，切 0（文档）与切 1（世界/板 schema 与全量资产迁移）已随本 PR 落地；板摆放 `OriginXCm/OriginYCm`（切 2）、nav 声明归位（切 3）、`World.Tuning`（切 4）仍是目标态。旧键对照见文末[迁移对照](#迁移对照1567)。概念、owner 与约束以 SSOT 层级表为准。
+> **状态**：本页 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的合同。rootboard 裁决后：地图可以**无板**；host world 由**根板**锚定（`RootBoard` 指定，缺省第一块板），独立 `World` 尺寸节点已废弃；预算挂 map 级 `Tuning`；板摆放 `OriginXCm/OriginYCm` 已有 schema、显式声明在切 2b 前 fail-closed。旧键对照见文末[迁移对照](#迁移对照1567)。
 
 交互式入门页见 [`map-scale-authoring-starter.html`](map-scale-authoring-starter.html)。如果你只想先调几个数看世界有多大、网格有多密、FlowWindow 会不会整除、全量/局部 nav bake 大概要多少操作和时间，先打开 HTML；真正落配置前再回到本页查 owner 和约束。Terrain/obstacle/area/agent/bake/editor/Raylib debug 的完整工具链设计见 [`navmesh-authoring-bake-toolchain.md`](navmesh-authoring-bake-toolchain.md)。
 
@@ -20,10 +20,9 @@
 核心公式（#1567 目标态）：
 
 ```text
-worldWidthCm  = World.WidthCm                  # 世界唯一尺寸，直接写
-boardWidthCm  = WidthCells * CellSizeCm        # Grid 板：格子数 × 格边
-boardWidthCm  = WidthHexes * hex 足迹          # Hex 板：hex 数 × HexMetrics 派生
-boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在世界哪里，缺省居中
+hostWorld     = 根板范围                        # RootBoard 指定，缺省第一块板；无板图无世界
+boardWidthCm  = WidthCells * CellSizeCm        # 板：格子数 × 格边
+boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在根板坐标系哪里，缺省居中
 ```
 
 作者请求的米数是编辑器 UI 的输入；JSON 里存的是分配后的尺寸，磁盘即运行时真相。宏块（MacroTile = 256 cells）是世界 IO 的内部寻址单位，由引擎从世界尺寸派生，作者不需要知道它。
@@ -34,12 +33,12 @@ boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在世界哪里，缺省�
 
 | 文件 | 字段 | 作用 |
 |---|---|---|
-| `assets/Maps/<map>.json` | `World.WidthCm` / `World.HeightCm` | 世界唯一尺寸（#1567 切 1 引入） |
+| `assets/Maps/<map>.json` | `RootBoard` | host world 根板指定，缺省第一块板（#1567 rootboard 裁决） |
 | `assets/Maps/<map>.json` | `Boards[].SpatialType` | `Grid` / `HexGrid` / `NodeGraph`，决定板拓扑 |
 | `assets/Maps/<map>.json` | `Boards[].WidthCells` / `HeightCells` + `CellSizeCm` | Grid 板范围与格边 |
 | `assets/Maps/<map>.json` | `Boards[].WidthHexes` / `HeightHexes` + `HexEdgeLengthCm` | Hex 板范围与 hex 边长 |
 | `assets/Maps/<map>.json` | `Boards[].OriginXCm` / `OriginYCm` | 板摆在世界坐标哪里，缺省居中（#1567 切 2 引入） |
-| `assets/Maps/<map>.json` | `World.Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | 世界层分区与 streaming 预算；声明后为唯一预算，容量回填未声明的板（#1567 切 4 已落地，缺省自动推导随切 4b） |
+| `assets/Maps/<map>.json` | `Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | map 级分区与 streaming 预算；声明后为唯一预算，容量回填未声明的板（#1567 切 4 已落地，缺省自动推导随切 4b） |
 | `assets/Navigation/navmesh.json` | `boards.<name>.source` / `tileWorldWidthCm` / `tileWorldHeightCm` | nav 烘焙源与瓦片颗粒度（#1567 切 3 引入） |
 | `assets/Navigation/navmesh.json` | `mode` / `algorithm` / `profiles[].maxClimbCm` / `maxSlopeDeg` | bake/runtime incremental 的导航网格参数 |
 | Mod-local assets/game.json | `startupMapId` | 启动地图 id |
@@ -226,8 +225,8 @@ Runtime incremental 起点：
 
 ## 必须遵守的边界
 
-- 世界尺寸只在 map `World` 节声明一次；不要从板推导世界，也不要在 game.json 里写第二份世界尺寸。
-- 板范围 = 格子数 × 拓扑度量；板与世界的对齐是配置选择，板伸出世界边界在加载期 fail-fast。
+- host world 由根板锚定（`RootBoard`，缺省第一块板）；地图可以无板（无板即无 host world）；不要在 game.json 里写第二份世界尺寸（boot 占位除外）。
+- 板范围 = 格子数 × 拓扑度量；卫星板越出根板范围在加载期 fail-fast；非零 origin 声明在切 2b 前 fail-closed。
 - nav 瓦片颗粒度在 `Navigation/navmesh.json` 显式声明；不要从板的 cell/chunk 推导，也不要把 `PartitionChunk` 当 navmesh tile。
 - `PartitionChunk` 只用于世界层空间分区/AOI；`TerrainChunk` 是逻辑地形块，两者都不是 nav 瓦片尺度。
 - `FlowCell` / `AvoidanceHashCell` / `PhysicsBroadphaseCell` 默认可等于 `CellCm`，但 owner 独立。

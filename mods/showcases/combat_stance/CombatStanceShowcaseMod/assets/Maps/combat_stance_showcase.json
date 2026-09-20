@@ -1,10 +1,5 @@
 {
   "Id": "combat_stance_showcase",
-  "World": {
-    "WidthCm": 819200,
-    "HeightCm": 819200,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "combat_stance_showcase",
     "utility_ai",

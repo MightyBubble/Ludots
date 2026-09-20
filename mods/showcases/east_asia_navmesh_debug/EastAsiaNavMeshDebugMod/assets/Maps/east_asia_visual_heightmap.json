@@ -1,10 +1,5 @@
 {
   "Id": "east_asia_visual_heightmap",
-  "World": {
-    "WidthCm": 6399232,
-    "HeightCm": 3656704,
-    "CellSizeCm": 3571
-  },
   "Tags": [
     "Feature.NavMesh:On",
     "navmesh",

@@ -1,10 +1,5 @@
 {
   "Id": "audit_inner",
-  "World": {
-    "WidthCm": 1638400,
-    "HeightCm": 1638400,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "audit_demo",
     "audit_inner"

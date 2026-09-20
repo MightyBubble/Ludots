@@ -1,10 +1,5 @@
 {
   "Id": "road_network_showcase_chunked",
-  "World": {
-    "WidthCm": 51200,
-    "HeightCm": 51200,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "road_network_showcase",
     "showcase",

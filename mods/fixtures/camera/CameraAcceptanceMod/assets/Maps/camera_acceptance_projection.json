@@ -1,10 +1,5 @@
 {
   "Id": "camera_acceptance_projection",
-  "World": {
-    "WidthCm": 25600,
-    "HeightCm": 25600,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "camera.acceptance",
     "camera.acceptance.projection"

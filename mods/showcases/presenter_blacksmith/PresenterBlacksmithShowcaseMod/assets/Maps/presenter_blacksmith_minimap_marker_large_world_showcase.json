@@ -1,10 +1,5 @@
 {
   "Id": "presenter_blacksmith_minimap_marker_large_world_showcase",
-  "World": {
-    "WidthCm": 6553600,
-    "HeightCm": 6553600,
-    "CellSizeCm": 100
-  },
   "ContinuousHeightmapAsset": "assets/terrain/presenter_blacksmith_minimap_marker_large_world_relief.height",
   "ContinuousHeightmap": {
     "Asset": "assets/terrain/presenter_blacksmith_minimap_marker_large_world_relief.height",

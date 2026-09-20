@@ -1,10 +1,5 @@
 {
   "Id": "vfx_forge_raylib_showcase",
-  "World": {
-    "WidthCm": 25600,
-    "HeightCm": 25600,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "showcase",
     "raylib",

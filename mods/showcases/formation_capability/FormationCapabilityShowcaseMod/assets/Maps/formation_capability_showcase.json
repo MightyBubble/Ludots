@@ -1,10 +1,5 @@
 {
   "Id": "formation_capability_showcase",
-  "World": {
-    "WidthCm": 6400000,
-    "HeightCm": 6400000,
-    "CellSizeCm": 100
-  },
   "TriggerGraphs": [
     {
       "graph": "graph.mass_navigation.selection_roster",

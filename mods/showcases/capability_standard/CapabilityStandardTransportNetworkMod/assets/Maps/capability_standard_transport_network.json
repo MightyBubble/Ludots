@@ -1,10 +1,5 @@
 {
   "Id": "capability_standard_transport_network",
-  "World": {
-    "WidthCm": 51200,
-    "HeightCm": 51200,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "capability_standard",
     "transport_network",

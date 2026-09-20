@@ -1,10 +1,5 @@
 {
   "Id": "utility_autocast_showcase",
-  "World": {
-    "WidthCm": 819200,
-    "HeightCm": 819200,
-    "CellSizeCm": 100
-  },
   "Tags": [
     "utility_autocast_showcase",
     "utility_ai",
