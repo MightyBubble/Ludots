@@ -447,47 +447,71 @@ namespace Ludots.Core.Systems
         }
 
         /// <summary>
-        /// 模板 children 引用图装载期校验：子模板引用必须可解析、图无环、
-        /// 被用作 child 的模板禁止声明 MovementParticipation（spawn 管线不授予写权，
-        /// 会自由移动的单位必须经 AttachOp 挂接）。
+        /// 模板 children 引用图装载期校验：子模板引用必须可解析、内联 children 递归展开、
+        /// 同层 localId 唯一、localPose 严格解析、图无环；被用作 child 的模板默认禁止声明
+        /// MovementParticipation（spawn 管线不授予写权）——attach:false 的可动成员豁免。
         /// </summary>
         private void ValidateTemplateChildrenGraph(HashSet<string> templateIds)
         {
             foreach (var template in TemplateRegistry.GetAll())
             {
-                if (template.Children == null)
-                {
-                    continue;
-                }
-
-                for (int i = 0; i < template.Children.Count; i++)
-                {
-                    EntityTemplateChild child = template.Children[i];
-                    string context = $"Entity template '{template.Id}' children[{i}]";
-                    if (child == null || string.IsNullOrWhiteSpace(child.Template))
-                    {
-                        throw new InvalidOperationException($"{context}: template 引用缺失。");
-                    }
-                    if (!templateIds.Contains(child.Template))
-                    {
-                        throw new InvalidOperationException(
-                            $"{context}: 引用未知子模板 '{child.Template}'。");
-                    }
-
-                    EntityTemplate childTemplate = TemplateRegistry.Get(child.Template);
-                    if (childTemplate.Components != null &&
-                        childTemplate.Components.ContainsKey("MovementParticipation"))
-                    {
-                        throw new InvalidOperationException(
-                            $"{context}: 子模板 '{child.Template}' 声明了 MovementParticipation——模板 children 是结构件，会自由移动的单位必须经 AttachOp 挂接。");
-                    }
-                    Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.Parse(child.LocalPose, context);
-                }
+                ValidateChildNodes(template.Id, template.Children, templateIds);
             }
 
             foreach (var template in TemplateRegistry.GetAll())
             {
                 DetectTemplateChildrenCycle(template.Id, new HashSet<string>(StringComparer.Ordinal), "root");
+            }
+        }
+
+        private void ValidateChildNodes(string ownerTemplateId, System.Collections.Generic.List<EntityTemplateChild>? children, HashSet<string> templateIds)
+        {
+            if (children == null)
+            {
+                return;
+            }
+
+            var seenLocalIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < children.Count; i++)
+            {
+                EntityTemplateChild child = children[i];
+                string context = $"Entity template '{ownerTemplateId}' children[{i}]";
+                if (child == null || string.IsNullOrWhiteSpace(child.Template))
+                {
+                    throw new InvalidOperationException($"{context}: template 引用缺失。");
+                }
+                if (!templateIds.Contains(child.Template))
+                {
+                    throw new InvalidOperationException(
+                        $"{context}: 引用未知子模板 '{child.Template}'。");
+                }
+
+                if (child.LocalId != null)
+                {
+                    if (string.IsNullOrWhiteSpace(child.LocalId) ||
+                        !string.Equals(child.LocalId, child.LocalId.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"{context}: localId 必须是非空且首尾无空白的字符串。");
+                    }
+                    if (!seenLocalIds.Add(child.LocalId))
+                    {
+                        throw new InvalidOperationException(
+                            $"{context}: 同级 localId '{child.LocalId}' 重复——同一父 children 内 localId 必须唯一。");
+                    }
+                }
+
+                EntityTemplate childTemplate = TemplateRegistry.Get(child.Template);
+                if (child.Attach != false &&
+                    childTemplate.Components != null &&
+                    childTemplate.Components.ContainsKey("MovementParticipation"))
+                {
+                    throw new InvalidOperationException(
+                        $"{context}: 子模板 '{child.Template}' 声明了 MovementParticipation——attach:true 的模板 children 是结构件，会自由移动的单位必须 attach:false 或经 AttachOp 挂接。");
+                }
+                Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.Parse(child.LocalPose, context);
+
+                ValidateChildNodes(ownerTemplateId, child.Children, templateIds);
             }
         }
 
@@ -500,15 +524,23 @@ namespace Ludots.Core.Systems
             }
 
             EntityTemplate template = TemplateRegistry.Get(templateId);
-            if (template?.Children != null)
+            DetectInlineChildrenCycle(template?.Children, visiting, chain, templateId);
+            visiting.Remove(templateId);
+        }
+
+        private void DetectInlineChildrenCycle(System.Collections.Generic.List<EntityTemplateChild>? children, HashSet<string> visiting, string chain, string ownerTemplateId)
+        {
+            if (children == null)
             {
-                for (int i = 0; i < template.Children.Count; i++)
-                {
-                    DetectTemplateChildrenCycle(template.Children[i].Template, visiting, $"{chain} -> {templateId}[{i}]");
-                }
+                return;
             }
 
-            visiting.Remove(templateId);
+            for (int i = 0; i < children.Count; i++)
+            {
+                EntityTemplateChild child = children[i];
+                DetectTemplateChildrenCycle(child.Template, visiting, $"{chain} -> {ownerTemplateId}[{i}]");
+                DetectInlineChildrenCycle(child.Children, visiting, $"{chain} -> {ownerTemplateId}[{i}]", ownerTemplateId);
+            }
         }
 
         private static void ValidateTemplateTriggerGraphs(EntityTemplate template)
@@ -687,6 +719,9 @@ namespace Ludots.Core.Systems
                     PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
                     MountInitialInteractionContext(created[i], activeBatchTemplateId, activeBatchTemplate);
                     BufferEntityTriggerGraphs(created[i], activeBatchTemplateId, activeBatchTemplate);
+                    // 注意：batch lane 不展开 children——TemplateSpawnDescriptor.Create 按合同
+                    // 把带 children 的模板判为 Incompatible（逐子挂接只能走单实体 lane），
+                    // 因此能进本 flush 的模板必无 children，无需在此展开。
                 }
 
                 if (hasDirectBootstrap)
@@ -735,6 +770,16 @@ namespace Ludots.Core.Systems
                 {
                     throw new InvalidOperationException(
                         $"Map '{mapConfig.Id}' references unknown entity template '{entityData.Template}'.");
+                }
+
+                // 可寻址路径 = 摆放实例根 instanceId + localId 链；缺 instanceId 的后代会
+                // 落进根名字空间与兄弟撞名。此门必须盖住 batch 与非 batch 两条路径（S3-a）。
+                if (string.IsNullOrWhiteSpace(entityData.InstanceId) &&
+                    EntityTemplate.HasAddressableDescendant(templates[entityData.Template].Children, TemplateRegistry))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' entity template '{entityData.Template}' has addressable descendants (localId) but no InstanceId; " +
+                        "the placed instance root must declare a non-empty, trimmed InstanceId to prefix addressable paths.");
                 }
 
                 bool isBatchCompatible = _templateBatchSpawner.IsBatchCompatible(entityData.Template, templates[entityData.Template]);
@@ -807,9 +852,12 @@ namespace Ludots.Core.Systems
                 SpawnTemplateChildrenAtMapLoad(
                     builder,
                     templates,
+                    mapConfig.Id,
                     entityData.Template,
                     entity,
-                    mapEntityTag);
+                    mapEntityTag,
+                    entityIndex,
+                    string.IsNullOrWhiteSpace(entityData.InstanceId) ? null : entityData.InstanceId);
             }
 
             FlushPendingTemplateBatch();
@@ -847,25 +895,52 @@ namespace Ludots.Core.Systems
         /// <summary>
         /// map 装载 lane 的模板 children 物化：与 runtime spawn 队列同一 EntityBuilder 物化路径、
         /// 同一 AttachedPoseMath 落位数学，仅时序不同（map 装载是同步 lane）。
-        /// 装载期已校验引用与无环，此处递归必然终止。
+        /// 装载期已校验引用与无环，此处递归必然终止。带 localId 的节点以摆放实例根路径
+        /// 前缀累积成可寻址路径，登记进 entityIndex（切A 只留形状，供切D/切F 消费）。
         /// </summary>
         private void SpawnTemplateChildrenAtMapLoad(
             EntityBuilder builder,
             System.Collections.Generic.Dictionary<string, EntityTemplate> templates,
+            string mapId,
             string parentTemplateId,
             Entity parent,
-            MapEntity mapEntityTag)
+            MapEntity mapEntityTag,
+            MapLoadEntityIndex entityIndex,
+            string? parentLocalPath)
         {
             EntityTemplate parentTemplate = templates[parentTemplateId];
-            if (parentTemplate.Children is not { Count: > 0 })
+            SpawnTemplateChildNodes(
+                builder,
+                templates,
+                mapId,
+                parentTemplateId,
+                parentTemplate.Children,
+                parent,
+                mapEntityTag,
+                entityIndex,
+                parentLocalPath);
+        }
+
+        private void SpawnTemplateChildNodes(
+            EntityBuilder builder,
+            System.Collections.Generic.Dictionary<string, EntityTemplate> templates,
+            string mapId,
+            string ownerTemplateId,
+            System.Collections.Generic.List<EntityTemplateChild>? children,
+            Entity parent,
+            MapEntity mapEntityTag,
+            MapLoadEntityIndex entityIndex,
+            string? parentLocalPath)
+        {
+            if (children is not { Count: > 0 })
             {
                 return;
             }
 
-            for (int i = 0; i < parentTemplate.Children.Count; i++)
+            for (int i = 0; i < children.Count; i++)
             {
-                EntityTemplateChild child = parentTemplate.Children[i];
-                string context = $"Map template children '{parentTemplateId}'[{i}] '{child.Template}'";
+                EntityTemplateChild child = children[i];
+                string context = $"Map template children '{ownerTemplateId}'[{i}] '{child.Template}'";
                 builder
                     .UseTemplate(child.Template)
                     .WithEntityContext(context);
@@ -883,18 +958,43 @@ namespace Ludots.Core.Systems
                 PublishTemplateOnSpawnEffect(childEntity, child.Template);
                 BufferEntityTriggerGraphs(childEntity, child.Template, templates[child.Template]);
 
+                string? childLocalPath = null;
+                if (!string.IsNullOrWhiteSpace(child.LocalId))
+                {
+                    childLocalPath = string.IsNullOrEmpty(parentLocalPath)
+                        ? child.LocalId
+                        : parentLocalPath + "." + child.LocalId;
+                    entityIndex.RegisterLocalPath(mapId, childLocalPath, childEntity);
+                }
+
+                // attach:false 的独立出生属切E；本切仍走结构挂接，保留标记与禁令豁免。
                 Ludots.Core.Gameplay.Attachment.AttachmentOps.Attach(
                     _world,
                     arbiter: null,
                     childEntity,
                     parent,
                     Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.Parse(child.LocalPose, context));
+
+                // 先展开被引用模板自身的 children（main 既有先例），再展开本节点的内联 children。
                 SpawnTemplateChildrenAtMapLoad(
                     builder,
                     templates,
+                    mapId,
                     child.Template,
                     childEntity,
-                    mapEntityTag);
+                    mapEntityTag,
+                    entityIndex,
+                    childLocalPath);
+                SpawnTemplateChildNodes(
+                    builder,
+                    templates,
+                    mapId,
+                    ownerTemplateId,
+                    child.Children,
+                    childEntity,
+                    mapEntityTag,
+                    entityIndex,
+                    childLocalPath);
             }
         }
 
