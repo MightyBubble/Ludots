@@ -12,7 +12,7 @@ namespace Ludots.Core.Gameplay.GAS
     /// 仍是槽位 [0,64) 的镜像（迁移期双轨，P4 拆），槽位 [64, Plan) 只存在于本表。
     /// 每帧属性读写禁止字典：行号经 _rowByEntityId 稀疏数组直查，代际校验防实体 id 复用误绑。
     /// </summary>
-    public sealed class WorldAttributeStore
+    public unsafe sealed class WorldAttributeStore
     {
         public const int DefaultRowCapacity = 65_536;
 
@@ -25,6 +25,10 @@ namespace Ludots.Core.Gameplay.GAS
         private readonly ulong[] _definedWords;
         private readonly ulong[] _aggregateDirtyRows;
         private readonly ulong[] _attributeDirtyRows;
+        private readonly ulong[] _tagBits;
+        private readonly ulong[] _tagLastSnapshot;
+        private readonly ulong[] _tagDirtyRows;
+        private readonly int _tagWordCount;
 
         private readonly int[] _rowByEntityId;
         private readonly int[] _worldByEntityId;
@@ -41,6 +45,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             _slotCount = plan.AttributeSlotCount;
+            _tagWordCount = plan.TagWordCount;
             _rowCapacity = rowCapacity;
             int cells = checked(_slotCount * rowCapacity);
             _base = new float[cells];
@@ -51,6 +56,9 @@ namespace Ludots.Core.Gameplay.GAS
             _definedWords = new ulong[definedWordCount];
             _aggregateDirtyRows = new ulong[(rowCapacity + 63) >> 6];
             _attributeDirtyRows = new ulong[(rowCapacity + 63) >> 6];
+            _tagBits = new ulong[checked(_tagWordCount * rowCapacity)];
+            _tagLastSnapshot = new ulong[checked(_tagWordCount * rowCapacity)];
+            _tagDirtyRows = new ulong[(rowCapacity + 63) >> 6];
 
             int entityIdCapacity = 1 << 20;
             _rowByEntityId = new int[entityIdCapacity];
@@ -62,6 +70,8 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         public int SlotCount => _slotCount;
+        public int TagIdSpace => _tagWordCount * 64;
+        public int TagWordCount => _tagWordCount;
         public int RowCapacity => _rowCapacity;
         public int RowCount => _rowCount;
 
@@ -245,6 +255,89 @@ namespace Ludots.Core.Gameplay.GAS
 
         public bool HasAggregateDirty(int row) => (_aggregateDirtyRows[row >> 6] & (1UL << (row & 63))) != 0UL;
         public void ClearAggregateDirty(int row) => _aggregateDirtyRows[row >> 6] &= ~(1UL << (row & 63));
+
+        // ── 标签位列（RFC-0067 P2）：[0,256) 内嵌镜像 + [256, TagIdSpace) 唯一真相 ──
+
+        private int TagCell(int row, int word) => row * _tagWordCount + word;
+
+        private int ValidateTagId(int tagId)
+        {
+            if ((uint)tagId >= (uint)TagIdSpace)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.CAPACITY.ERR.TagSlotOutOfRange: tagId={tagId} 超出本局容量计划 {TagIdSpace} 位（RFC-0067 §3.1）。");
+            }
+
+            return tagId;
+        }
+
+        public bool HasTag(int row, int tagId)
+        {
+            ValidateTagId(tagId);
+            return (_tagBits[TagCell(row, tagId >> 6)] & (1UL << (tagId & 63))) != 0UL;
+        }
+
+        public void SetTag(int row, int tagId)
+        {
+            ValidateTagId(tagId);
+            _tagBits[TagCell(row, tagId >> 6)] |= 1UL << (tagId & 63);
+        }
+
+        public void ClearTag(int row, int tagId)
+        {
+            ValidateTagId(tagId);
+            _tagBits[TagCell(row, tagId >> 6)] &= ~(1UL << (tagId & 63));
+        }
+
+        /// <summary>低槽位镜像：内嵌容器 settle 后同步（全 4 字整体镜像最省分支）。</summary>
+        public void MirrorTagWords(int row, in GameplayTagContainer container)
+        {
+            for (int w = 0; w < 4 && w < _tagWordCount; w++)
+            {
+                _tagBits[TagCell(row, w)] = container.Bits[w];
+            }
+        }
+
+        public bool GetTagLastSnapshot(int row, int tagId)
+        {
+            ValidateTagId(tagId);
+            return (_tagLastSnapshot[TagCell(row, tagId >> 6)] & (1UL << (tagId & 63))) != 0UL;
+        }
+
+        public void SetTagLastSnapshot(int row, int tagId, bool present)
+        {
+            ValidateTagId(tagId);
+            if (present)
+            {
+                _tagLastSnapshot[TagCell(row, tagId >> 6)] |= 1UL << (tagId & 63);
+            }
+            else
+            {
+                _tagLastSnapshot[TagCell(row, tagId >> 6)] &= ~(1UL << (tagId & 63));
+            }
+        }
+
+        /// <summary>建行时按当前位图播种标签快照（与内嵌快照初始化对齐）。</summary>
+        public void SeedTagSnapshotFromBits(int row)
+        {
+            for (int w = 0; w < _tagWordCount; w++)
+            {
+                _tagLastSnapshot[TagCell(row, w)] = _tagBits[TagCell(row, w)];
+            }
+        }
+
+        public void MarkTagDirtyHigh(int row, int tagId)
+        {
+            if (tagId < GameplayTagContainer.MAX_TAG_ID + 1 || (uint)tagId >= (uint)TagIdSpace)
+            {
+                return;
+            }
+
+            _tagDirtyRows[row >> 6] |= 1UL << (row & 63);
+        }
+
+        public bool HasTagDirtyHigh(int row) => (_tagDirtyRows[row >> 6] & (1UL << (row & 63))) != 0UL;
+        public void ClearTagDirtyHigh(int row) => _tagDirtyRows[row >> 6] &= ~(1UL << (row & 63));
 
         /// <summary>整行拷贝（事务影子/存档快照用）。高槽位语义：<paramref name="length"/> 从 fromSlot 起。</summary>
         public void CopyRowTo(int row, float[] baseOut, float[] capOut, float[] currentOut, int fromSlot)

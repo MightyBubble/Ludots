@@ -259,7 +259,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<StringIntRegistry> GraphOutputValueKeyRegistry = new("GraphOutputValueKeyRegistry");
         public static readonly ServiceKey<GraphOutputValueStore> GraphOutputValueStore = new("GraphOutputValueStore");
         public static readonly ServiceKey<GraphReturnWriter> GraphReturnWriter = new("GraphReturnWriter");
-        public static readonly ServiceKey<ExtensionAttributeRegistry> ExtensionAttributeRegistry = new("ExtensionAttributeRegistry");
         public static readonly ServiceKey<AttributeSchemaUpdateQueue> AttributeSchemaUpdateQueue = new("AttributeSchemaUpdateQueue");
         public static readonly ServiceKey<DeferredTriggerQueue> DeferredTriggerQueue = new("DeferredTriggerQueue");
         public static readonly ServiceKey<AttributeSinkRegistry> AttributeSinkRegistry = new("AttributeSinkRegistry");

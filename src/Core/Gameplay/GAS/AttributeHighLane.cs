@@ -54,6 +54,49 @@ namespace Ludots.Core.Gameplay.GAS
             store.ClearAttributeDirtyHigh(row);
         }
 
+        /// <summary>高槽位标签（[256, Plan)）的延迟触发收集：行级高脏位驱动，
+        /// 逐位比较列存 LastSnapshot 与当前位，入队 TagChangedTrigger 并前推快照。</summary>
+        public static void CollectHighTagChanges(
+            World world,
+            Entity entity,
+            DeferredTriggerQueue triggerQueue)
+        {
+            WorldAttributeStore store = WorldAttributeStoreAmbient.Current;
+            if (store == null || store.TagIdSpace <= GameplayTagContainer.MAX_TAG_ID + 1)
+            {
+                return;
+            }
+
+            if (!store.TryGetRow(entity, out int row) || !store.HasTagDirtyHigh(row))
+            {
+                return;
+            }
+
+            for (int tagId = GameplayTagContainer.MAX_TAG_ID + 1; tagId < store.TagIdSpace; tagId++)
+            {
+                if (!store.HasTag(row, tagId) && !store.GetTagLastSnapshot(row, tagId))
+                {
+                    continue;
+                }
+
+                bool isPresent = store.HasTag(row, tagId);
+                bool wasPresent = store.GetTagLastSnapshot(row, tagId);
+                store.SetTagLastSnapshot(row, tagId, isPresent);
+                if (isPresent != wasPresent)
+                {
+                    triggerQueue.EnqueueTagChanged(new TagChangedTrigger
+                    {
+                        Target = entity,
+                        TagId = tagId,
+                        WasPresent = wasPresent,
+                        IsPresent = isPresent,
+                    });
+                }
+            }
+
+            store.ClearTagDirtyHigh(row);
+        }
+
         /// <summary>种子/建行时初始化行快照（与 ComponentRegistry 内嵌快照播种对齐）。</summary>
         public static void SeedLastSnapshot(WorldAttributeStore store, int row, int attributeId)
         {
