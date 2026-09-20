@@ -1,4 +1,5 @@
 using Ludots.Core.Gameplay.Calendar;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -38,7 +39,7 @@ public sealed class CalendarRuntimeTests
         var events = new List<string>();
         runtime.Advance(20, () => new ScriptContext(), (key, ctx) =>
         {
-            string phaseId = ctx.Get<string>(MapTriggerEventPayloadKeys.CalendarPhaseId) ?? string.Empty;
+            string phaseId = ConfigKeyRegistry.GetName(ctx.Get<int>(MapTriggerEventPayloadKeys.CalendarPhaseId));
             int dayIndex = ctx.Get<int>(MapTriggerEventPayloadKeys.CalendarDayIndex);
             events.Add(string.IsNullOrEmpty(phaseId) ? $"{key.Value}:{dayIndex}" : $"{key.Value}:{phaseId}");
         });
@@ -60,7 +61,7 @@ public sealed class CalendarRuntimeTests
         {
             if (key.Value == GameEvents.CalendarEraChanged.Value)
             {
-                eras.Add(ctx.Get<string>(MapTriggerEventPayloadKeys.CalendarEraId)!);
+                eras.Add(ConfigKeyRegistry.GetName(ctx.Get<int>(MapTriggerEventPayloadKeys.CalendarEraId)));
             }
         });
 
@@ -77,7 +78,7 @@ public sealed class CalendarRuntimeTests
         {
             if (key.Value == GameEvents.CalendarDayPhaseChanged.Value)
             {
-                phases.Add(ctx.Get<string>(MapTriggerEventPayloadKeys.CalendarPhaseId)!);
+                phases.Add(ConfigKeyRegistry.GetName(ctx.Get<int>(MapTriggerEventPayloadKeys.CalendarPhaseId)));
             }
         });
 
@@ -165,7 +166,7 @@ public sealed class CalendarRuntimeTests
             () => new ScriptContext(),
             (key, ctx) =>
             {
-                string phaseId = ctx.Get<string>(MapTriggerEventPayloadKeys.CalendarPhaseId) ?? string.Empty;
+                string phaseId = ConfigKeyRegistry.GetName(ctx.Get<int>(MapTriggerEventPayloadKeys.CalendarPhaseId));
                 int dayIndex = ctx.Get<int>(MapTriggerEventPayloadKeys.CalendarDayIndex);
                 fired.Add(string.IsNullOrEmpty(phaseId) ? $"{key.Value}:{dayIndex}" : $"{key.Value}:{phaseId}");
             },
@@ -244,7 +245,7 @@ public sealed class CalendarRuntimeTests
 
         public override Task ExecuteAsync(ScriptContext context)
         {
-            _seen.Add(context.Get<string>(MapTriggerEventPayloadKeys.CalendarPhaseId) ?? string.Empty);
+            _seen.Add(ConfigKeyRegistry.GetName(context.Get<int>(MapTriggerEventPayloadKeys.CalendarPhaseId)));
             return Task.CompletedTask;
         }
     }

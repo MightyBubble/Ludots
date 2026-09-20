@@ -112,38 +112,38 @@ namespace Ludots.Core.Scripting
             }),
             new(GameEvents.CalendarDayAdvanced.Value, EventScope.Global, new EventParamSchema[]
             {
-                new("calendarId", EventParamType.String, MapTriggerEventPayloadKeys.CalendarId),
+                new("calendarId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarId),
                 new("dayIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarDayIndex),
                 new("year", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarYear),
             }),
             new(GameEvents.CalendarCyclePhaseEntered.Value, EventScope.Global, new EventParamSchema[]
             {
-                new("calendarId", EventParamType.String, MapTriggerEventPayloadKeys.CalendarId),
+                new("calendarId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarId),
                 new("dayIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarDayIndex),
-                new("cycleId", EventParamType.String, MapTriggerEventPayloadKeys.CalendarCycleId),
-                new("phaseId", EventParamType.String, MapTriggerEventPayloadKeys.CalendarPhaseId),
+                new("cycleId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarCycleId),
+                new("phaseId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarPhaseId),
                 new("phaseIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarPhaseIndex),
             }),
             new(GameEvents.CalendarCyclePhaseExited.Value, EventScope.Global, new EventParamSchema[]
             {
-                new("calendarId", EventParamType.String, MapTriggerEventPayloadKeys.CalendarId),
+                new("calendarId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarId),
                 new("dayIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarDayIndex),
-                new("cycleId", EventParamType.String, MapTriggerEventPayloadKeys.CalendarCycleId),
-                new("phaseId", EventParamType.String, MapTriggerEventPayloadKeys.CalendarPhaseId),
+                new("cycleId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarCycleId),
+                new("phaseId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarPhaseId),
                 new("phaseIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarPhaseIndex),
             }),
             new(GameEvents.CalendarEraChanged.Value, EventScope.Global, new EventParamSchema[]
             {
-                new("calendarId", EventParamType.String, MapTriggerEventPayloadKeys.CalendarId),
+                new("calendarId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarId),
                 new("dayIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarDayIndex),
-                new("eraId", EventParamType.String, MapTriggerEventPayloadKeys.CalendarEraId),
+                new("eraId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarEraId),
                 new("year", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarYear),
             }),
             new(GameEvents.CalendarDayPhaseChanged.Value, EventScope.Global, new EventParamSchema[]
             {
-                new("calendarId", EventParamType.String, MapTriggerEventPayloadKeys.CalendarId),
+                new("calendarId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarId),
                 new("dayIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarDayIndex),
-                new("phaseId", EventParamType.String, MapTriggerEventPayloadKeys.CalendarPhaseId),
+                new("phaseId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarPhaseId),
             }),
         };
 

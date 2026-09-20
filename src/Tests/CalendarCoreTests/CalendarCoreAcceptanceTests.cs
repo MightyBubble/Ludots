@@ -133,7 +133,7 @@ public sealed class CalendarCoreAcceptanceTests
 
         public override Task ExecuteAsync(ScriptContext context)
         {
-            _heard.Add(context.Get<string>(MapTriggerEventPayloadKeys.CalendarPhaseId) ?? string.Empty);
+            _heard.Add(Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(context.Get<int>(MapTriggerEventPayloadKeys.CalendarPhaseId)));
             return Task.CompletedTask;
         }
     }

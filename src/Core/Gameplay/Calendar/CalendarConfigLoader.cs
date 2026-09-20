@@ -89,6 +89,13 @@ namespace Ludots.Core.Gameplay.Calendar
                 root["dayPhases"],
                 $"{context}.dayPhases");
 
+            for (int i = 0; i < dayPhases.Count; i++)
+            {
+                Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(dayPhases[i].Id);
+            }
+
+            Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(activeCalendarId);
+
             RejectUnknownObjectKeys(
                 root,
                 context,
@@ -201,7 +208,34 @@ namespace Ludots.Core.Gameplay.Calendar
             }
 
             RejectUnknownObjectKeys(node, context, "id", "yearLengthDays", "yearCycleId", "eras", "cycles");
+            RegisterConfigKeys(id, eras, cycles);
             return new CalendarDefinition(id, yearLengthDays, yearCycleId, eras, cycles);
+        }
+
+        /// <summary>
+        /// 配置期符号、运行期 int：历法表装载即把 calendar / cycle / phase / era 符号
+        /// 注册进 ConfigKeyRegistry（幂等），事件载荷与 TriggerGraph payload 过滤在
+        /// 运行期只比较 key id。
+        /// </summary>
+        private static void RegisterConfigKeys(
+            string calendarId,
+            IReadOnlyList<CalendarEraDefinition> eras,
+            IReadOnlyList<CalendarCycleDefinition> cycles)
+        {
+            Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(calendarId);
+            for (int i = 0; i < eras.Count; i++)
+            {
+                Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(eras[i].Id);
+            }
+
+            for (int c = 0; c < cycles.Count; c++)
+            {
+                Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(cycles[c].Id);
+                for (int p = 0; p < cycles[c].Phases.Count; p++)
+                {
+                    Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(cycles[c].Phases[p].Id);
+                }
+            }
         }
 
         private static bool ContainsCycle(IReadOnlyList<CalendarCycleDefinition> cycles, string cycleId)

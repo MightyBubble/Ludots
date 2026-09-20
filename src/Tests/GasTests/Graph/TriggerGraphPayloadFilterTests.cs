@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using Ludots.Core.Gameplay.Calendar;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Map;
@@ -36,7 +37,9 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void PayloadFilter_StringMatchesOnlyEqualValue()
         {
-            var filters = PayloadFilters(("Calendar.PhaseId", "spring"));
+            // 程序化构造仍支持显式 string 过滤（编译器产出的都是 ConfigKey id）。
+            var filters = new TriggerGraphEntryFilters(null, null, null, null, null,
+                payload: new[] { new TriggerGraphEntryPayloadFilter("Calendar.PhaseId", "spring", null) });
             Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(Context(("Calendar.PhaseId", "spring")), filters), Is.True);
             Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(Context(("Calendar.PhaseId", "summer")), filters), Is.False);
         }
@@ -47,6 +50,20 @@ namespace Ludots.Tests.Gas.Graph
             var filters = PayloadFilters(("Calendar.DayIndex", 90));
             Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(Context(("Calendar.DayIndex", 90)), filters), Is.True);
             Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(Context(("Calendar.DayIndex", 91)), filters), Is.False);
+        }
+
+        [Test]
+        public void PayloadFilter_SymbolCompilesToKeyId_MatchesIntPayload()
+        {
+            int springId = ConfigKeyRegistry.Register("spring");
+            var filters = PayloadFilters(("Calendar.PhaseId", "spring"));
+            Assert.That(
+                TriggerGraphEntryFiltersEvaluator.Matches(Context(("Calendar.PhaseId", springId)), filters),
+                Is.True,
+                "an authored symbol filter must match the int key id the runtime fires");
+            Assert.That(
+                TriggerGraphEntryFiltersEvaluator.Matches(Context(("Calendar.PhaseId", springId + 1)), filters),
+                Is.False);
         }
 
         [Test]
@@ -64,13 +81,15 @@ namespace Ludots.Tests.Gas.Graph
         public void PayloadFilter_MultipleFiltersAllMustMatch()
         {
             var filters = PayloadFilters(("Calendar.CycleId", "season"), ("Calendar.PhaseId", "spring"));
+            int seasonId = ConfigKeyRegistry.GetId("season");
+            int springId = ConfigKeyRegistry.GetId("spring");
             Assert.That(
                 TriggerGraphEntryFiltersEvaluator.Matches(
-                    Context(("Calendar.CycleId", "season"), ("Calendar.PhaseId", "spring")), filters),
+                    Context(("Calendar.CycleId", seasonId), ("Calendar.PhaseId", springId)), filters),
                 Is.True);
             Assert.That(
                 TriggerGraphEntryFiltersEvaluator.Matches(
-                    Context(("Calendar.CycleId", "month"), ("Calendar.PhaseId", "spring")), filters),
+                    Context(("Calendar.CycleId", seasonId), ("Calendar.PhaseId", springId + 1)), filters),
                 Is.False);
         }
 
@@ -110,9 +129,10 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(spring.Filters.Payload, Is.Not.Null);
             Assert.That(spring.Filters.Payload!.Select(f => (f.Key, f.StringValue, f.IntValue)), Is.EqualTo(new[]
             {
-                ("Calendar.CycleId", "season", (int?)null),
-                ("Calendar.PhaseId", "spring", (int?)null),
-            }));
+                ("Calendar.CycleId", (string?)null, (int?)ConfigKeyRegistry.GetId("season")),
+                ("Calendar.PhaseId", (string?)null, (int?)ConfigKeyRegistry.GetId("spring")),
+            }),
+                "authored string symbols must compile to ConfigKey ids");
 
             TriggerGraphEntry exactDay = result.Package!.Value.TriggerGraphEntries.Single(e => e.Label == "on_exact_day");
             Assert.That(exactDay.Filters.Payload!.Single().IntValue, Is.EqualTo(90));
@@ -202,6 +222,20 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(entered.Count(c => onMonth5Begin.CheckConditions(c)), Is.EqualTo(0));
         }
 
+        [Test]
+        public void CalendarEventSchemas_DeclareSymbolParamsAsInt_KeyIds()
+        {
+            var schemas = new EventSchemaRegistry();
+
+            Assert.That(schemas.TryGet(GameEvents.CalendarCyclePhaseEntered.Value, out EventSchema entered), Is.True);
+            Assert.That(entered.Params.Single(p => p.Name == "phaseId").Type, Is.EqualTo(EventParamType.Int),
+                "int params are captured by CaptureEntryPayload, so graphs read phase ids via LoadEntryPayloadInt");
+            Assert.That(entered.Params.Single(p => p.Name == "cycleId").Type, Is.EqualTo(EventParamType.Int));
+
+            Assert.That(schemas.TryGet(GameEvents.CalendarDayAdvanced.Value, out EventSchema dayAdvanced), Is.True);
+            Assert.That(dayAdvanced.Params.Single(p => p.Name == "calendarId").Type, Is.EqualTo(EventParamType.Int));
+        }
+
         // ── helpers ──
 
         private static TriggerGraphEntryFilters PayloadFilters(params (string Key, object Value)[] pairs)
@@ -209,12 +243,18 @@ namespace Ludots.Tests.Gas.Graph
             var filters = new List<TriggerGraphEntryPayloadFilter>();
             for (int i = 0; i < pairs.Length; i++)
             {
-                filters.Add(pairs[i].Value is int intValue
-                    ? new TriggerGraphEntryPayloadFilter(pairs[i].Key, null, intValue)
-                    : new TriggerGraphEntryPayloadFilter(pairs[i].Key, (string)pairs[i].Value, null));
+                filters.Add(ResolvePayloadFilter(pairs[i].Key, pairs[i].Value));
             }
 
             return new TriggerGraphEntryFilters(null, null, null, null, null, payload: filters);
+        }
+
+        /// <summary>程序化构造与编译器同一语义：字符串是符号 → ConfigKey id，int 直接比。</summary>
+        private static TriggerGraphEntryPayloadFilter ResolvePayloadFilter(string key, object value)
+        {
+            return value is int intValue
+                ? new TriggerGraphEntryPayloadFilter(key, null, intValue)
+                : new TriggerGraphEntryPayloadFilter(key, null, ConfigKeyRegistry.Register((string)value));
         }
 
         private static ScriptContext Context(params (string Key, object Value)[] pairs)
@@ -300,9 +340,7 @@ namespace Ludots.Tests.Gas.Graph
             var filters = new List<TriggerGraphEntryPayloadFilter>();
             for (int i = 0; i < payloadFilters.Length; i++)
             {
-                filters.Add(payloadFilters[i].Value is int intValue
-                    ? new TriggerGraphEntryPayloadFilter(payloadFilters[i].Key, null, intValue)
-                    : new TriggerGraphEntryPayloadFilter(payloadFilters[i].Key, (string)payloadFilters[i].Value, null));
+                filters.Add(ResolvePayloadFilter(payloadFilters[i].Key, payloadFilters[i].Value));
             }
 
             var entry = new TriggerGraphEntry(

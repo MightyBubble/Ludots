@@ -913,8 +913,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             continue;
                         }
 
+                        // 配置期符号、运行期 int：字符串期望值是符号，编译成 ConfigKey id，
+                        // 派发期对载荷做 int 比较（历法相位订阅即此用法）。
                         (payloadFilters ??= new List<TriggerGraphEntryPayloadFilter>()).Add(
-                            new TriggerGraphEntryPayloadFilter(payloadKey, expected, null));
+                            new TriggerGraphEntryPayloadFilter(
+                                payloadKey,
+                                null,
+                                Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(expected)));
                     }
                     else if (pair.Value.ValueKind == JsonValueKind.Number)
                     {

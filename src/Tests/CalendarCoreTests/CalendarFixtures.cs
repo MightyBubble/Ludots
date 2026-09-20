@@ -22,12 +22,20 @@ internal static class CalendarFixtures
 
     public static CalendarWorldConfig World(string activeCalendarId = Solar360Id, int ticksPerDay = 20, int startDayIndex = 0)
     {
+        IReadOnlyList<CalendarDayPhaseDefinition> dayPhases = DefaultDayPhases();
+        // 与装载器同一符号注册（ParseWorld 的职责在此由 fixture 代办；幂等）。
+        for (int i = 0; i < dayPhases.Count; i++)
+        {
+            Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(dayPhases[i].Id);
+        }
+
+        Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(activeCalendarId);
         return new CalendarWorldConfig(
             TickSource: "Step",
             TicksPerDay: ticksPerDay,
             StartDayIndex: startDayIndex,
             ActiveCalendarId: activeCalendarId,
-            DayPhases: DefaultDayPhases());
+            DayPhases: dayPhases);
     }
 
     public static CalendarDefinition Solar360()

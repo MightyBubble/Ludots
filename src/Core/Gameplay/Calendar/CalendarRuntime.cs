@@ -202,9 +202,10 @@ namespace Ludots.Core.Gameplay.Calendar
                 (hasSubscribers?.Invoke(GameEvents.CalendarDayAdvanced) ?? true))
             {
                 CalendarDateSnapshot active = ProjectActive();
+                int activeCalendarKeyId = RequireKeyId(active.CalendarId);
                 Fire(GameEvents.CalendarDayAdvanced, contextFactory!, fireEvent!, ctx =>
                 {
-                    ctx.Set(MapTriggerEventPayloadKeys.CalendarId, active.CalendarId);
+                    ctx.Set(MapTriggerEventPayloadKeys.CalendarId, activeCalendarKeyId);
                     ctx.Set(MapTriggerEventPayloadKeys.CalendarDayIndex, active.DayIndex);
                     ctx.Set(MapTriggerEventPayloadKeys.CalendarYear, active.Year);
                 });
@@ -227,11 +228,12 @@ namespace Ludots.Core.Gameplay.Calendar
                 if (wantsEra &&
                     !string.Equals(priorDate.EraId, nextDate.EraId, StringComparison.Ordinal))
                 {
+                    int calendarKeyId = RequireKeyId(nextDate.CalendarId);
                     Fire(GameEvents.CalendarEraChanged, contextFactory, fireEvent, ctx =>
                     {
-                        ctx.Set(MapTriggerEventPayloadKeys.CalendarId, nextDate.CalendarId);
+                        ctx.Set(MapTriggerEventPayloadKeys.CalendarId, calendarKeyId);
                         ctx.Set(MapTriggerEventPayloadKeys.CalendarDayIndex, nextDate.DayIndex);
-                        ctx.Set(MapTriggerEventPayloadKeys.CalendarEraId, nextDate.EraId);
+                        ctx.Set(MapTriggerEventPayloadKeys.CalendarEraId, RequireKeyId(nextDate.EraId));
                         ctx.Set(MapTriggerEventPayloadKeys.CalendarYear, nextDate.Year);
                     });
                 }
@@ -249,10 +251,10 @@ namespace Ludots.Core.Gameplay.Calendar
                     {
                         Fire(GameEvents.CalendarCyclePhaseExited, contextFactory, fireEvent, ctx =>
                         {
-                            ctx.Set(MapTriggerEventPayloadKeys.CalendarId, nextDate.CalendarId);
+                            ctx.Set(MapTriggerEventPayloadKeys.CalendarId, RequireKeyId(nextDate.CalendarId));
                             ctx.Set(MapTriggerEventPayloadKeys.CalendarDayIndex, nextDate.DayIndex);
-                            ctx.Set(MapTriggerEventPayloadKeys.CalendarCycleId, priorCycle.CycleId);
-                            ctx.Set(MapTriggerEventPayloadKeys.CalendarPhaseId, priorCycle.PhaseId);
+                            ctx.Set(MapTriggerEventPayloadKeys.CalendarCycleId, RequireKeyId(priorCycle.CycleId));
+                            ctx.Set(MapTriggerEventPayloadKeys.CalendarPhaseId, RequireKeyId(priorCycle.PhaseId));
                             ctx.Set(MapTriggerEventPayloadKeys.CalendarPhaseIndex, priorCycle.PhaseIndex);
                         });
                     }
@@ -261,10 +263,10 @@ namespace Ludots.Core.Gameplay.Calendar
                     {
                         Fire(GameEvents.CalendarCyclePhaseEntered, contextFactory, fireEvent, ctx =>
                         {
-                            ctx.Set(MapTriggerEventPayloadKeys.CalendarId, nextDate.CalendarId);
+                            ctx.Set(MapTriggerEventPayloadKeys.CalendarId, RequireKeyId(nextDate.CalendarId));
                             ctx.Set(MapTriggerEventPayloadKeys.CalendarDayIndex, nextDate.DayIndex);
-                            ctx.Set(MapTriggerEventPayloadKeys.CalendarCycleId, nextCycle.CycleId);
-                            ctx.Set(MapTriggerEventPayloadKeys.CalendarPhaseId, nextCycle.PhaseId);
+                            ctx.Set(MapTriggerEventPayloadKeys.CalendarCycleId, RequireKeyId(nextCycle.CycleId));
+                            ctx.Set(MapTriggerEventPayloadKeys.CalendarPhaseId, RequireKeyId(nextCycle.PhaseId));
                             ctx.Set(MapTriggerEventPayloadKeys.CalendarPhaseIndex, nextCycle.PhaseIndex);
                         });
                     }
@@ -308,10 +310,24 @@ namespace Ludots.Core.Gameplay.Calendar
         {
             Fire(GameEvents.CalendarDayPhaseChanged, contextFactory, fireEvent, ctx =>
             {
-                ctx.Set(MapTriggerEventPayloadKeys.CalendarId, ActiveCalendarId);
+                ctx.Set(MapTriggerEventPayloadKeys.CalendarId, RequireKeyId(ActiveCalendarId));
                 ctx.Set(MapTriggerEventPayloadKeys.CalendarDayIndex, DayIndex);
-                ctx.Set(MapTriggerEventPayloadKeys.CalendarPhaseId, phaseId);
+                ctx.Set(MapTriggerEventPayloadKeys.CalendarPhaseId, RequireKeyId(phaseId));
             });
+        }
+
+        /// <summary>符号在装载期已注册（CalendarConfigLoader.RegisterConfigKeys）；发不出去
+        /// 的 id 说明表装载绕过了装载器，fail fast 而不是发一个没人能匹配的 0。</summary>
+        private static int RequireKeyId(string symbol)
+        {
+            int id = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.GetId(symbol);
+            if (id == Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.InvalidId)
+            {
+                throw new InvalidOperationException(
+                    $"Calendar symbol '{symbol}' is not registered in ConfigKeyRegistry; load calendars through CalendarConfigLoader.");
+            }
+
+            return id;
         }
 
         private static void Fire(
