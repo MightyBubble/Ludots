@@ -176,7 +176,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 
 | 线 | 现状 | 还开着的 |
 |---|---|---|
-| 输入→下令 | 切 0 合同与切 1 全链下单在分支 `graph-input-order-chain`（PR #1530 系），**未进本 main**。宪法两份：配置宪法与概念宪法，在 `mods/showcases/case_e_selection/CaseESelectionMod/docs/`，随该分支进主干 | 意图路由复用已通；瞄准/蓄力/指示器图化、`SubmitCast`、引擎特权键拆除（`InteractionContextIds.Default`、预注册集合键）在切片队列 |
+| 输入→下令 | 分支统一进 PR #1607（`codex/input-order-graph-unified`，基底 `graph-order-migration`，收编切0/切1、stage1、宪法分支；PR #1530 系随之退场）。已交付：**集合单一写点**（CollectionApplier 收编 ContextBound/DomainRouted/CollectionWrite，`EntityCollectionKeys` 常量表清零，键声明化 `Input/collection_keys.json`——宪法不变量三落地）、#1597 QueryFilterControllable(483) 退役归还编号、Q2 byAbilityCategory 槽路由、Q4 按目标结算公式、切片③弩车 GROUND 全链（纯 JSON）。宪法两份随该 PR 进主干 | 线主票 #1398：D1–D14 已清，D15（context 生命周期全图化——出口图+总线事件+节拍挂载，退役 whileActive）开着；Wolf/Tower 效果链断点排查中；`InteractionContextIds.Default` 稳态锚点与其余特权键拆除、瞄准/蓄力/指示器图化、SubmitCast 继续 |
 | UI 面板 | A 线（graph-pinned 原生面板）合同完备：模板严格加载、pin 投影、13 种 subject 集合、四皮三主题、显隐单一写者；G12 12 案可装载有测试。B 线（WebUI PanelKit）合同+描述符在，浏览器呈现靠 mod 手写。**事件链（#1013 下半段）零生产接线——面板能看不能点** | 交互链四刀（U1 门控接管+UiCaptured 退役、U2 事件→语义动作、U3 scope 生命周期+实例受众、U4 手柄焦点）= 阶段 1/2（#1585/#1586）；#1014 关单、#1010 票面重写在阶段 0（#1584） |
 | Activity 内容 | 运行时 A1–A9 已关（schema、实体化、信号、门条件、单层结算、派发三路径）；交付线 #1487 被 CI 离线源红卡住，main 上验收引用缺失 mod 必红 | v5 设计定稿待拍板（#1394，三不变量与管线宪法同源）；#1487 合入与 CI 修复在阶段 0（#1584） |
 | 呈现 | presenter scope 模型、指示器 presenter 化合同已落地；四皮三主题 0 C# 换肤有零编码主用例 | web 皮肤（PanelWebSkinSystem）无直接自动化测试；registry 13 条 artifactDir 死链待清（阶段 0） |
