@@ -25,6 +25,38 @@ namespace Ludots.Core.Engine
 
         public MapSession CurrentMapSession { get; private set; }
 
+        // Board-scoped query facades (#1567 slice 2): one shared world partition, per-board
+        // semantics. Entities stay world-indexed; a board scope swaps in that board's
+        // converter/hex metrics/extent, so hex satellites answer with their own topology.
+        private readonly Dictionary<string, Ludots.Core.Spatial.SpatialQueryService> _boardScopedQueries =
+            new(System.StringComparer.OrdinalIgnoreCase);
+
+        public bool TryGetBoardScopedSpatialQueries(string boardName, out Ludots.Core.Spatial.SpatialQueryService service)
+        {
+            service = null!;
+            MapSession? session = CurrentMapSession;
+            IBoard? board = session?.GetBoard(boardName);
+            if (board == null || _spatialPartition == null)
+            {
+                return false;
+            }
+
+            if (_boardScopedQueries.TryGetValue(board.Name, out service!))
+            {
+                return true;
+            }
+
+            service = new Ludots.Core.Spatial.SpatialQueryService(
+                new Ludots.Core.Spatial.ChunkedGridSpatialPartitionBackend(_spatialPartition, board.WorldSize));
+            service.SetCoordinateConverter(board.CoordinateConverter);
+            if (board is HexGridBoard hexBoard)
+            {
+                service.SetHexMetrics(hexBoard.HexMetrics);
+            }
+            _boardScopedQueries[board.Name] = service;
+            return true;
+        }
+
         private readonly Dictionary<MapId, PendingMapLoadState> _pendingMapLoads = new();
         private readonly Dictionary<MapId, PendingMapResumeState> _pendingMapResumes = new();
         private readonly Dictionary<MapId, MapLoadStatus> _mapLoadStatuses = new();
@@ -100,6 +132,7 @@ namespace Ludots.Core.Engine
 
         private void SetCurrentMapSession(MapSession session)
         {
+            _boardScopedQueries.Clear();
             if (CurrentMapSession != null && !ReferenceEquals(CurrentMapSession, session) &&
                 GetService(CoreServiceKeys.MapLoadCompletionGate) is IMapLoadCompletionGateLifetime gateLifetime)
             {

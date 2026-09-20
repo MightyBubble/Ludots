@@ -303,6 +303,8 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
   const [selectedNodeId, setSelectedNodeId] = useState('');
   const [selectedEdgeId, setSelectedEdgeId] = useState('');
   const [actions, setActions] = useState<ActionLibEntry[]>([]);
+  const [actionHostFilter, setActionHostFilter] = useState('');
+  const [knownHosts, setKnownHosts] = useState<string[]>([]);
   const [functions, setFunctions] = useState<FuncLibEntry[]>([]);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -329,10 +331,14 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     setError('');
   }, []);
 
-  const loadLibs = useCallback(async (source: string) => {
-    const actionRes = await fetch(`/api/ai/action-lib?source=${encodeURIComponent(source)}`);
+  const loadLibs = useCallback(async (source: string, hostFilter: string) => {
+    const actionRes = await fetch(`/api/ai/action-lib?host=${encodeURIComponent(hostFilter)}&source=${encodeURIComponent(source)}`);
     const actionJson = await actionRes.json();
-    setActions(actionJson.ok ? asArray<ActionLibEntry>(actionJson.actions) : []);
+    const actionRows = actionJson.ok ? asArray<ActionLibEntry>(actionJson.actions) : [];
+    setActions(actionRows);
+    if (hostFilter === '') {
+      setKnownHosts(Array.from(new Set(actionRows.map((a) => a.host))).sort());
+    }
     const funcRes = await fetch(`/api/ai/func-lib?source=${encodeURIComponent(source)}`);
     const funcJson = await funcRes.json();
     setFunctions(funcJson.ok ? asArray<FuncLibEntry>(funcJson.functions) : []);
@@ -394,8 +400,8 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
 
   useEffect(() => {
     void loadItems(sourceId);
-    void loadLibs(sourceId);
-  }, [sourceId, loadItems, loadLibs]);
+    void loadLibs(sourceId, actionHostFilter);
+  }, [sourceId, actionHostFilter, loadItems, loadLibs]);
 
   const syncItemsFromFlow = useCallback(
     (nextNodes: Node<TopologyNodeData>[], nextEdges: Edge<TopologyEdgeData>[]) => {
@@ -941,6 +947,19 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                       <option value="AlwaysFailure">AlwaysFailure</option>
                       <option value="HoldRunning">HoldRunning</option>
                       <option value="None">None</option>
+                    </select>
+                  </label>
+                  <label className={labelClass}>
+                    Action host 过滤
+                    <select
+                      className={fieldClass}
+                      value={actionHostFilter}
+                      onChange={(e) => setActionHostFilter(e.target.value)}
+                    >
+                      <option value="">（全部 host）</option>
+                      {knownHosts.map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
                     </select>
                   </label>
                   <label className={labelClass}>

@@ -79,6 +79,10 @@ Out of scope：
 
 每个概念恰好一个名字、一个 owner。`NavTile footprint` 是 `TerrainChunk` 的用途，不再作为独立尺度 owner。
 
+## 板域查询（切 2 服务层已落地）
+
+引擎 `TryGetBoardScopedSpatialQueries(boardName)`：共享世界分区 + 按板语义的查询 facade——实体索引保持板盲（世界系），板域换入该板的转换器/HexMetrics/范围，hex 卫星板以自身拓扑语义作答；缓存随地图会话切换清理。图 op 节点级 `board` 参数（VM 编译面）与 effect preset 的 `boardRef` 参数为后续薄层。
+
 ## 命名 Taxonomy
 
 - `Cell`：sim 原子格。唯一基准字段名为 `CellCm`；历史 `GridCellSizeCm` 仍作为 board config 输入。
