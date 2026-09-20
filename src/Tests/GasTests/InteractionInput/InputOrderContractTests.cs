@@ -3364,7 +3364,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = actor,
                 CommandIntentProfileId = profileHarness.ProfileId(CommandIntentProfileTests.TestProfileId),
-                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
             var dispatch = new CastDispatchProfileRegistry(
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
@@ -3377,7 +3377,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             }));
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { actor }, localPlayer);
