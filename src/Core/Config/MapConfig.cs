@@ -39,7 +39,8 @@ namespace Ludots.Core.Config
         /// <summary>
         /// Root board designation (#1567): the root board's extent anchors the host
         /// world frame and its services become the engine-level spatial services.
-        /// Empty/omitted = first board. Boardless maps have no root and no host world.
+        /// Empty/omitted = first board. Boardless maps have no root; the engine boot
+        /// world (game.json world) remains their host world.
         /// </summary>
         public string RootBoard { get; set; }
 

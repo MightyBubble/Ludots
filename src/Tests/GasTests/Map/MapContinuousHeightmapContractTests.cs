@@ -116,6 +116,24 @@ namespace Ludots.Tests.Gas
         }
 
         [Test]
+        public void LoadMap_WhenMapHasNoBoards_KeepsBootWorldAsHostWorld()
+        {
+            WriteMap("boardless", """
+            {
+              "id": "boardless",
+              "tags": ["menu"]
+            }
+            """);
+
+            using var engine = CreateEngine();
+            engine.LoadMap("boardless");
+
+            Ludots.Core.Spatial.WorldSizeSpec spec = engine.GetService(CoreServiceKeys.WorldSizeSpec);
+            Assert.That(spec.Bounds.Width, Is.EqualTo(409600));
+            Assert.That(spec.Bounds.Height, Is.EqualTo(409600));
+        }
+
+        [Test]
         public void LoadMap_BindsDeclaredContinuousHeightmapThroughCoreService()
         {
             WriteHeightmap("outer.height", 50);

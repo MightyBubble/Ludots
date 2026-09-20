@@ -2,7 +2,7 @@
 
 本页写给要做真实地图的 Mod 作者。它不替代 [空间尺度与分辨率 SSOT](../architecture/spatial-scale-and-resolution-ssot.md)，而是把 SSOT 翻译成“我要做多大的地图、要多细的地形/导航/避障/表现，该从哪些配置入口下手”。
 
-> **状态**：本页 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的合同。rootboard 裁决后：地图可以**无板**；host world 由**根板**锚定（`RootBoard` 指定，缺省第一块板），独立 `World` 尺寸节点已废弃；预算挂 map 级 `Tuning`；板摆放 `OriginXCm/OriginYCm` 已有 schema、显式声明在切 2b 前 fail-closed。旧键对照见文末[迁移对照](#迁移对照1567)。
+> **状态**：本页 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的合同。rootboard 裁决后：地图可以**无板**；host world 永远存在——有板图由**根板**锚定（`RootBoard` 指定，缺省第一块板），无板图沿用 game.json `world` 声明的 boot 世界；独立 `World` 尺寸节点已废弃；预算挂 map 级 `Tuning`；板摆放 `OriginXCm/OriginYCm` 已有 schema、显式声明在切 2b 前 fail-closed。旧键对照见文末[迁移对照](#迁移对照1567)。
 
 交互式入门页见 [`map-scale-authoring-starter.html`](map-scale-authoring-starter.html)。如果你只想先调几个数看世界有多大、网格有多密、FlowWindow 会不会整除、全量/局部 nav bake 大概要多少操作和时间，先打开 HTML；真正落配置前再回到本页查 owner 和约束。Terrain/obstacle/area/agent/bake/editor/Raylib debug 的完整工具链设计见 [`navmesh-authoring-bake-toolchain.md`](navmesh-authoring-bake-toolchain.md)。
 

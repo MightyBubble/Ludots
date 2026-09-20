@@ -102,7 +102,7 @@ flowchart TD
 
 | 域 | 目标键 | 单位 | 含义 | 取代的现状键 |
 |---|---|---|---|---|
-| 世界（host world） | map `RootBoard`（缺省第一块板） | 板名 | 根板锚定 host world；无板图无世界；boot 占位在 game.json `world` | 独立 `World` 尺寸节点（rootboard 裁决后废弃）；宏块数量键 |
+| 世界（host world） | map `RootBoard`（缺省第一块板） | 板名 | 有板图根板锚定；无板图沿用 game.json `world`（boot 世界持续生效，host world 永远存在） | 独立 `World` 尺寸节点（rootboard 裁决后废弃）；宏块数量键 |
 | map | `Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | cells / 个 | map 级分区与 streaming 预算，缺省由引擎推导（4b） | `Boards[].ChunkSizeCells` / `LoadedChunkCapacity` |
 | 板 | `Boards[].WidthCells/HeightCells` + `CellSizeCm` | cells | Grid 板范围（格子数直写） | 宏块数 × 256 换算 |
 | 板 | `Boards[].WidthHexes/HeightHexes` + `HexEdgeLengthCm` | hexes | Hex 板范围，世界足迹经 `HexMetrics` 派生 | 同上（含借 `GridCellSizeCm` 算 hex 板足迹的现状做法） |

@@ -35,7 +35,7 @@
 
 | 域 | 管什么 | 配置的家 | 与 board 的关系 |
 |---|---|---|---|
-| 世界（host world） | 坐标基准；实体空间分区、AOI/streaming、越界边界、相机/minimap 全图 | 根板锚定：map `RootBoard`（缺省第一块板）；无板图无世界；引擎 boot 占位在 `GameConfig.World` | 根板即自己 |
+| 世界（host world） | 坐标基准；实体空间分区、AOI/streaming、越界边界、相机/minimap 全图 | 有板图：根板锚定（map `RootBoard`，缺省第一块板）；无板图：沿用引擎 boot 世界（game.json `world`，`GameConfig.World`）——host world 永远存在 | 根板即自己 |
 | 板 | 业务区域：拓扑、度量、摆放（世界系 origin）、格子语义 | map JSON `Boards[]` | 就是自己 |
 | 导航 | 烘焙源选择、瓦片颗粒度（显式两轴）、层/profile/语义/障碍 | `Navigation/navmesh.json` | board 只是可选源 + 寻址 scope |
 | 执行 | FlowWindow/FlowCell/避障 hash | `MassNavigationConfig.json` | 无 |
