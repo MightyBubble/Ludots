@@ -18,7 +18,7 @@
 | 入口上下文暴露 Extensions | src/Core/Modding/IModContext.cs:17 |
 | 内建处理器注册表 | src/Core/Gameplay/GAS/BuiltinHandlerRegistry.cs |
 | 图 op 执行表 | src/Core/NodeLibraries/GASGraph/GasGraphOpHandlerTable.cs |
-| 表现命令/行为注册表 | src/Core/Presentation/Presenters/PerformerExtensionRegistries.cs |
+| 表现命令/行为注册表 | src/Core/Presentation/Presenters/PresenterExtensionRegistries.cs |
 | 合同正本（四扩展面与铁律 SSOT） | gitbook/architecture/mod-extensible-runtime.md |
 | 注册合同测试 | src/Tests/PresentationTests（ModExtensionRegistrationTests） |
 | 处理器注册 + 数据引用完整示例 | mods/showcases/capability_standard/CapabilityStandardEffectPresetTypeCodeShowcaseMod/CapabilityStandardEffectPresetTypeCodeShowcaseModEntry.cs |

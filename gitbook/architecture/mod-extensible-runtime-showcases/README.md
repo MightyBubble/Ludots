@@ -14,7 +14,7 @@
 | Presenter behavior 扩展 | `CapabilityStandardPresenterBehaviorExtensionShowcaseMod` | 进入地图后 CloudDrift 持续 tick，点击按钮时面板显示行为仍在运行 |
 | Presenter command 扩展 | `CapabilityStandardPresenterCommandExtensionShowcaseMod` | 点击按钮发送信号，面板显示信号被处理的次数 |
 
-`CapabilityStandardGraphOpProviderMod` 不是 root showcase。它只负责提供 `CapabilityStandardGraphOpProviderMod.QueryThreat` 和目标威胁分数契约，供 Graph Op Extension root mod 复用，因此没有独立 Raylib preset。
+> Graph op 扩展（`RegisterGraphOp` + JSON 图引用 mod 算子）的完整链路在 [PR #1495](https://github.com/MightyBubble/Ludots/pull/1495)（issue #861 线）待审合入：控制流编译器扩展、`CapabilityStandardGraphOpProviderMod` 与 `CapabilityStandardGraphOpExtensionShowcaseMod` 两个 root mod、`GraphExtensionOpAuthoringTests`。2026-09-20 基于 main `b2fdd1dbba` 复验：干净合并，过滤测试 12/12 通过。合入前本目录只有上表 4 个可启动 preset；结构清单里的 `CapabilityStandardGraphOpProviderMod/` 在 main 上还没有源码。
 
 ## 结构
 

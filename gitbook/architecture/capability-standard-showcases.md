@@ -29,6 +29,10 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Graph Behavior Integration | `capability_standard_graph_behavior_integration` | `mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod` | **单独短剧**：左巡逻 / 右门岗，串一条故事（BT + HFSM 两种宿主；关卡导演已退役，地图级反应式关卡流见「夜袭三波」） |
 | 残血的分更高 | `capability_standard_graph_score` | `mods/showcases/capability_standard/CapabilityStandardGraphScoreShowcaseMod` | **打分短剧**：选人走 GraphScore，字幕读决策痕迹，自动打残血木桩 |
 | 拼一句上字幕 | `capability_standard_graph_formal_text` | `mods/showcases/capability_standard/CapabilityStandardGraphFormalTextShowcaseMod` | **正式文字短剧**：进图拼「守卫倒下了」与「击杀 1」，只从 PresentationTextSink 上字幕 |
+| Config Shards | `capability_standard_config_shards_showcase` | `mods/showcases/capability_standard/CapabilityStandardConfigShardsShowcaseMod` | **Mod shard 拆分**：独立 ability/effect shard 经 ConfigPipeline 合并装载，按钮触发 Ember Bolt，面板计数 |
+| Effect Preset Type Code | `capability_standard_effect_preset_type_code_showcase` | `mods/showcases/capability_standard/CapabilityStandardEffectPresetTypeCodeShowcaseMod` | **Mod 代码扩展 preset type**：RegisterBuiltinHandler + preset_types shard 声明 Heat Mark，经正式 GAS phase 执行，面板计调用数 |
+| Presenter Behavior Extension | `capability_standard_presenter_behavior_extension_showcase` | `mods/showcases/capability_standard/CapabilityStandardPresenterBehaviorExtensionShowcaseMod` | **Mod 扩展行为**：CloudDrift 注册在 ContinuousTick lane 持续运行，按钮验证行为存活 |
+| Presenter Command Extension | `capability_standard_presenter_command_extension_showcase` | `mods/showcases/capability_standard/CapabilityStandardPresenterCommandExtensionShowcaseMod` | **Mod 扩展指令**：EmitSignalPing 路由到既有 presenter 实例，按钮发信号，面板计数 |
 
 压力矩阵与 &lt;5ms 思考波报告：`docs/benchmarks/graph-behavior-pressure/`（Showcase 主镜头是剧本，万人在无头测试与灰点带）。
 
@@ -58,6 +62,10 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_behavior_integration' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_score' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_formal_text' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_config_shards_showcase' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_effect_preset_type_code_showcase' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_presenter_behavior_extension_showcase' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_presenter_command_extension_showcase' --adapter raylib
 ```
 
 Preset launch commands:
