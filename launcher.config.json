@@ -2393,6 +2393,14 @@
         "value": "mods/showcases/contact_sensor_textbook/ContactSensorTextbookMod",
         "projectPath": "ContactSensorTextbookMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryFilterControllable",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterControllableEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFilterControllableEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

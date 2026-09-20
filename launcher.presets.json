@@ -3296,6 +3296,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterControllable_raylib",
+      "name": "Graph Op QueryFilterControllable Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterControllable"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
